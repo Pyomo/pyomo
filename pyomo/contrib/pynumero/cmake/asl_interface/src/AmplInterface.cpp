@@ -3,29 +3,16 @@
 #endif
 
 #include "AmplInterface.hpp"
-
-// AMPL includes
-#include "asl.h"
+#include "AssertUtils.hpp"
 #include "asl_pfgh.h"
 #include "getstub.h"
 
-#include <cstring>
-#include <string>
-
-#include <algorithm>    // std::transform
-#include <functional>   // std::plus
 #include <vector>
 #include <map>
 
-#include <iostream>
-
-#define MAX_LENGTH 100
-#define MAX_ARGS 100
-
-//AmplInterface::AmplInterface(int argc, char**& argv)
 AmplInterface::AmplInterface()
         :
-        asl_(NULL),
+        _p_asl(NULL),
         obj_sense_(1),
         xinit_(NULL),
         xinit_present_(NULL),
@@ -64,7 +51,7 @@ void AmplInterface::initialize(const char *nlfilename)
     // Create the ASL structure
     ASL_pfgh *asl = (ASL_pfgh *) ASL_alloc(ASL_read_pfgh);
     _ASSERT_(asl);
-    asl_ = asl; // keep the pointer for ourselves to use later...
+    _p_asl = asl; // keep the pointer for ourselves to use later...
 
     // Read the options and stub
     Option_Info *Oinfo = new Option_Info;
@@ -119,8 +106,7 @@ void AmplInterface::initialize(const char *nlfilename)
     _ASSERT_(n_var > 0); // make sure we have continuous variables
     _ASSERT_(nbv == 0 && niv == 0); // can't handle binaries
     _ASSERT_(nwv == 0 && nlnc == 0 && lnc == 0); // can't handle these special variables
-    assert_exit(n_obj == 1, "This code only handles problems with a exactly one objective function");
-
+    _ASSERT_EXIT_(n_obj == 1, "This code only handles problems with a exactly one objective function");
 
     // get initial values for the variables
     want_xpi0 = 1;
@@ -182,7 +168,7 @@ void AmplInterface::initialize(const char *nlfilename)
 }
 
 AmplInterface::~AmplInterface() {
-    ASL_pfgh *asl = asl_;
+    ASL_pfgh *asl = _p_asl;
     delete[] xinit_;
     xinit_ = NULL;
     delete[] xinit_present_;
@@ -193,50 +179,39 @@ AmplInterface::~AmplInterface() {
     laminit_present_ = NULL;
 
     if (asl) {
-        ASL *asl_to_free = (ASL *) asl_;
-        ASL_free(&asl_to_free);
-        asl_ = NULL;
+        ASL *p_asl_to_free = (ASL *) _p_asl;
+        ASL_free(&p_asl_to_free);
+        _p_asl = NULL;
     }
 
 }
 
-
-void AmplInterface::get_nlp_dimensions(int &n_x, int &n_g, int &nnz_jac_g, int &nnz_hes_lag) const {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
-
-    n_x = n_var; // # of variables (variable types have been asserted in the constructor
-    n_g = n_con; // # of constraints
-    nnz_jac_g = nzc; // # of non-zeros in the jacobian
-    nnz_hes_lag = nnz_hes_lag_; // # of non-zeros in the hessian
-}
-
 int AmplInterface::get_n_vars() const {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
     int n_x;
     n_x = n_var;
     return n_x;
 }
 
 int AmplInterface::get_n_constraints() const {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
     int n_c;
     n_c = n_con;
     return n_c;
 }
 
 int AmplInterface::get_nnz_jac_g() const {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
     int nnz_jac_g;
     nnz_jac_g = nzc;
     return nnz_jac_g;
 }
 
 int AmplInterface::get_nnz_hessian_lag() const {
-    ASL_pfgh *asl = asl_;
+    ASL_pfgh *asl = _p_asl;
     _ASSERT_(asl);
     int nnz_hes_lag;
     nnz_hes_lag = nnz_hes_lag_;
@@ -244,8 +219,8 @@ int AmplInterface::get_nnz_hessian_lag() const {
 }
 
 void AmplInterface::get_lower_bounds_x(double *invec, int n) {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
     _ASSERT_(n == n_var);
     for (int i = 0; i < n; i++) {
         invec[i] = LUv[2 * i];
@@ -253,8 +228,8 @@ void AmplInterface::get_lower_bounds_x(double *invec, int n) {
 }
 
 void AmplInterface::get_upper_bounds_x(double *invec, int n) {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
     _ASSERT_(n == n_var);
 
     for (int i = 0; i < n; i++) {
@@ -263,8 +238,8 @@ void AmplInterface::get_upper_bounds_x(double *invec, int n) {
 }
 
 void AmplInterface::get_lower_bounds_g(double *invec, int m) {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
     _ASSERT_(m == n_con);
     for (int i = 0; i < m; i++) {
         invec[i] = LUrhs[2 * i];
@@ -272,8 +247,8 @@ void AmplInterface::get_lower_bounds_g(double *invec, int m) {
 }
 
 void AmplInterface::get_upper_bounds_g(double *invec, int m) {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
     _ASSERT_(m == n_con);
 
     for (int i = 0; i < m; i++) {
@@ -281,27 +256,10 @@ void AmplInterface::get_upper_bounds_g(double *invec, int m) {
     }
 }
 
-void AmplInterface::get_bounds_info(double *xl, double *xu, int n, double *gl, double *gu, int m) {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
-    _ASSERT_(n == n_var);
-    _ASSERT_(m == n_con);
-
-    for (int i = 0; i < n; ++i) {
-        xl[i] = LUv[2 * i];
-        xu[i] = LUv[2 * i + 1];
-    }
-
-    for (int i = 0; i < m; ++i) {
-        gl[i] = LUrhs[2 * i];
-        gu[i] = LUrhs[2 * i + 1];
-    }
-}
-
 // maybe update this to keep a separate one that does not get overwritten
 void AmplInterface::get_init_x(double *invec, int n) {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
     _ASSERT_(n == n_var);
 
     for (int i = 0; i < n; i++) {
@@ -314,8 +272,8 @@ void AmplInterface::get_init_x(double *invec, int n) {
 }
 
 void AmplInterface::get_init_multipliers(double *invec, int n) {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
 
     // get dual starting point
     if (n_con == 0) { return; } // unconstrained problem or do not want to use the exist dual values
@@ -330,36 +288,9 @@ void AmplInterface::get_init_multipliers(double *invec, int n) {
     }
 }
 
-
-void AmplInterface::get_starting_point(double *x, int nx, double *lam, int ng) {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
-    _ASSERT_(nx == n_var);
-
-    for (int i = 0; i < nx; i++) {
-        if (havex0[i]) {
-            x[i] = X0[i];
-        } else {
-            x[i] = 0.0;
-        }
-    }
-
-    // get dual starting point
-    if (n_con == 0) { return; } // unconstrained problem or do not want to use the exist dual values
-    _ASSERT_(ng == n_con);
-
-    for (int i = 0; i < ng; i++) {
-        if (havepi0[i]) {
-            lam[i] = pi0[i];
-        } else {
-            lam[i] = 0.0;
-        }
-    }
-}
-
 bool AmplInterface::eval_f(double *const_x, int nx, double& f) {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
     _ASSERT_(n_obj == 1 && "AMPL problem must have a single objective function");
 
     int nerror = 1;
@@ -374,8 +305,8 @@ bool AmplInterface::eval_f(double *const_x, int nx, double& f) {
 }
 
 bool AmplInterface::eval_deriv_f(double *const_x, double *deriv_f, int nx) {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
     _ASSERT_(n_obj == 1 && "AMPL problem must have a single objective function");
 
     int nerror = 1;
@@ -394,8 +325,8 @@ bool AmplInterface::eval_deriv_f(double *const_x, double *deriv_f, int nx) {
 }
 
 void AmplInterface::struct_jac_g(int *irow, int *jcol, int nnz_jac_g) {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
     _ASSERT_(nnz_jac_g == nzc);
     _ASSERT_(irow && jcol);
 
@@ -412,8 +343,8 @@ void AmplInterface::struct_jac_g(int *irow, int *jcol, int nnz_jac_g) {
 }
 
 bool AmplInterface::eval_jac_g(double *const_x, int nx, double *jac_g_values, int nnz_jac_g) {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
     _ASSERT_(nx == n_var);
     _ASSERT_(nnz_jac_g == nzc);
     _ASSERT_(jac_g_values);
@@ -427,8 +358,8 @@ bool AmplInterface::eval_jac_g(double *const_x, int nx, double *jac_g_values, in
 }
 
 void AmplInterface::struct_hes_lag(int *irow, int *jcol, int nnz_hes_lag) {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
     _ASSERT_(nnz_hes_lag_ == nnz_hes_lag);
 
     // setup the structure
@@ -443,7 +374,7 @@ void AmplInterface::struct_hes_lag(int *irow, int *jcol, int nnz_hes_lag) {
 }
 
 bool AmplInterface::eval_g(double *const_x, int nx, double *g, int ng) {
-    ASL_pfgh *asl = asl_;
+    ASL_pfgh *asl = _p_asl;
     _ASSERT_(nx == n_var);
     _ASSERT_(ng == n_con);
 
@@ -458,8 +389,8 @@ bool AmplInterface::eval_g(double *const_x, int nx, double *g, int ng) {
 }
 
 bool AmplInterface::eval_hes_lag(double *const_x, int nx, double *const_lam, int nc, double *hes_lag, int nnz_hes_lag) {
-    ASL_pfgh *asl = asl_;
-    _ASSERT_(asl_);
+    ASL_pfgh *asl = _p_asl;
+    _ASSERT_(_p_asl);
     _ASSERT_(nx == n_var);
     _ASSERT_(nc == n_con);
     _ASSERT_(n_obj == 1);
@@ -474,7 +405,7 @@ bool AmplInterface::eval_hes_lag(double *const_x, int nx, double *const_lam, int
 
 void AmplInterface::finalize_solution(int status, double *const_x, int nx, double *const_lam, int nc) {
 
-    ASL_pfgh *asl = asl_;
+    ASL_pfgh *asl = _p_asl;
     _ASSERT_(asl);
     _ASSERT_(const_x && const_lam);
     std::string message;
@@ -499,23 +430,23 @@ void AmplInterface::finalize_solution(int status, double *const_x, int nx, doubl
     delete[] cmessage;
 }
 
-AmplInterface_file::AmplInterface_file()
+AmplInterfaceFile::AmplInterfaceFile()
    : AmplInterface()
 {}
 
-FILE* AmplInterface_file::open_nl(ASL_pfgh *asl, char* stub)
+FILE* AmplInterfaceFile::open_nl(ASL_pfgh *asl, char* stub)
 {
-    assert_exit(stub, "No .nl file was specified.");
-    return jac0dim(stub, (int) strlen(stub));
+   _ASSERT_EXIT_(stub, "No .nl file was specified.");
+   return jac0dim(stub, (int) strlen(stub));
 }
 
-AmplInterface_str::AmplInterface_str(char* nl, size_t size)
+AmplInterfaceStr::AmplInterfaceStr(char* nl, size_t size)
    : AmplInterface(),
      nl_content(nl),
      nl_size(size)
 {}
 
-FILE* AmplInterface_str::open_nl(ASL_pfgh *asl, char* stub)
+FILE* AmplInterfaceStr::open_nl(ASL_pfgh *asl, char* stub)
 {
    // Ignore the stub and use the cached NL file content
    #if defined(__APPLE__) && defined(__MACH__)
@@ -533,109 +464,100 @@ FILE* AmplInterface_str::open_nl(ASL_pfgh *asl, char* stub)
 
 extern "C"
 {
-AmplInterface *EXTERNAL_AmplInterface_new_file(char *nlfilename) {
-   AmplInterface* ans = new AmplInterface_file();
-   ans->initialize(nlfilename);
-   return ans;
-}
+   AmplInterface *EXTERNAL_AmplInterface_new_file(char *nlfilename) {
+      AmplInterface* ans = new AmplInterfaceFile();
+      ans->initialize(nlfilename);
+      return ans;
+   }
 
-AmplInterface *EXTERNAL_AmplInterface_new_str(char *nl, size_t size) {
-   AmplInterface* ans = new AmplInterface_str(nl, size);
-   ans->initialize("membuf.nl");
-   return ans;
-}
+   AmplInterface *EXTERNAL_AmplInterface_new_str(char *nl, size_t size) {
+      AmplInterface* ans = new AmplInterfaceStr(nl, size);
+      ans->initialize("membuf.nl");
+      return ans;
+   }
 
-AmplInterface *EXTERNAL_AmplInterface_new(char *nlfilename) {
-   return EXTERNAL_AmplInterface_new_file(nlfilename);
-}
+   AmplInterface *EXTERNAL_AmplInterface_new(char *nlfilename) {
+      return EXTERNAL_AmplInterface_new_file(nlfilename);
+   }
 
-int EXTERNAL_AmplInterface_n_vars(AmplInterface *p_ai) { return p_ai->get_n_vars(); }
+   int EXTERNAL_AmplInterface_n_vars(AmplInterface *p_ai) {
+      return p_ai->get_n_vars();
+   }
 
-int EXTERNAL_AmplInterface_n_constraints(AmplInterface *p_ai) { return p_ai->get_n_constraints(); }
+   int EXTERNAL_AmplInterface_n_constraints(AmplInterface *p_ai) {
+      return p_ai->get_n_constraints();
+   }
 
-int EXTERNAL_AmplInterface_nnz_jac_g(AmplInterface *p_ai) { return p_ai->get_nnz_jac_g(); }
+   int EXTERNAL_AmplInterface_nnz_jac_g(AmplInterface *p_ai) {
+      return p_ai->get_nnz_jac_g();
+   }
 
-int EXTERNAL_AmplInterface_nnz_hessian_lag(AmplInterface *p_ai) { return p_ai->get_nnz_hessian_lag(); }
+   int EXTERNAL_AmplInterface_nnz_hessian_lag(AmplInterface *p_ai) {
+      return p_ai->get_nnz_hessian_lag();
+   }
 
-void EXTERNAL_AmplInterface_get_bounds_info(AmplInterface *p_ai,
-                                            double *xl,
-                                            double *xu,
-                                            int n,
-                                            double *gl,
-                                            double *gu,
-                                            int m) { p_ai->get_bounds_info(xl, xu, n, gl, gu, m); }
+   void EXTERNAL_AmplInterface_x_lower_bounds(AmplInterface *p_ai, double *invec, int n) {
+      p_ai->get_lower_bounds_x(invec, n);
+   }
 
-void EXTERNAL_AmplInterface_x_lower_bounds(AmplInterface *p_ai, double *invec, int n) {
-    p_ai->get_lower_bounds_x(invec, n);
-}
+   void EXTERNAL_AmplInterface_x_upper_bounds(AmplInterface *p_ai, double *invec, int n) {
+      p_ai->get_upper_bounds_x(invec, n);
+   }
 
-void EXTERNAL_AmplInterface_x_upper_bounds(AmplInterface *p_ai, double *invec, int n) {
-    p_ai->get_upper_bounds_x(invec, n);
-}
+   void EXTERNAL_AmplInterface_g_lower_bounds(AmplInterface *p_ai, double *invec, int m) {
+      p_ai->get_lower_bounds_g(invec, m);
+   }
 
-void EXTERNAL_AmplInterface_g_lower_bounds(AmplInterface *p_ai, double *invec, int m) {
-    p_ai->get_lower_bounds_g(invec, m);
-}
+   void EXTERNAL_AmplInterface_g_upper_bounds(AmplInterface *p_ai, double *invec, int m) {
+      p_ai->get_upper_bounds_g(invec, m);
+   }
 
-void EXTERNAL_AmplInterface_g_upper_bounds(AmplInterface *p_ai, double *invec, int m) {
-    p_ai->get_upper_bounds_g(invec, m);
-}
+   void EXTERNAL_AmplInterface_get_init_x(AmplInterface *p_ai, double *invec, int n) {
+      p_ai->get_init_x(invec, n);
+   }
+   
+   void EXTERNAL_AmplInterface_get_init_multipliers(AmplInterface *p_ai, double *invec, int n) {
+      p_ai->get_init_multipliers(invec, n);
+   }
+   
+   bool EXTERNAL_AmplInterface_eval_f(AmplInterface *p_ai, double *invec, int n, double& f) {
+      return p_ai->eval_f(invec, n, f);
+   }
 
-void EXTERNAL_AmplInterface_x_init(AmplInterface *p_ai, double *invec, int n) { p_ai->get_init_x(invec, n); }
+   bool EXTERNAL_AmplInterface_eval_deriv_f(AmplInterface *p_ai, double *const_x, double *deriv_f, int nx) {
+      return p_ai->eval_deriv_f(const_x, deriv_f, nx);
+   }
 
-void EXTERNAL_AmplInterface_lam_init(AmplInterface *p_ai, double *invec, int n) {
-    p_ai->get_init_multipliers(invec, n);
-}
+   bool EXTERNAL_AmplInterface_eval_g(AmplInterface *p_ai, double *const_x, int nx, double *g, int ng) {
+      return p_ai->eval_g(const_x, nx, g, ng);
+   }
 
-void EXTERNAL_AmplInterface_starting_point(AmplInterface *p_ai, double *x, int nx, double *lam,
-                                           int ng) { p_ai->get_starting_point(x, nx, lam, ng); }
+   void EXTERNAL_AmplInterface_struct_jac_g(AmplInterface *p_ai, int *irow, int *jcol, int nnz_jac_g) {
+      p_ai->struct_jac_g(irow, jcol, nnz_jac_g);
+   }
 
-bool EXTERNAL_AmplInterface_eval_f(AmplInterface *p_ai, double *invec, int n, double& f)
-{ return p_ai->eval_f(invec, n, f); }
+   bool EXTERNAL_AmplInterface_eval_jac_g(AmplInterface *p_ai, double *const_x, int nx, double *jac_g_values,
+                                          int nnz_jac_g) {
+      return p_ai->eval_jac_g(const_x, nx, jac_g_values, nnz_jac_g);
+   }
 
-bool EXTERNAL_AmplInterface_eval_deriv_f(AmplInterface *p_ai, double *const_x, double *deriv_f, int nx) {
-    return p_ai->eval_deriv_f(const_x, deriv_f, nx);
-}
+   void EXTERNAL_AmplInterface_struct_hes_lag(AmplInterface *p_ai, int *irow, int *jcol,
+                                              int nnz_hes_lag) {
+      p_ai->struct_hes_lag(irow, jcol, nnz_hes_lag);
+   }
 
-void EXTERNAL_AmplInterface_struct_jac_g(AmplInterface *p_ai, int *irow, int *jcol, int nnz_jac_g) {
-    p_ai->struct_jac_g(irow, jcol, nnz_jac_g);
-}
+   bool EXTERNAL_AmplInterface_eval_hes_lag(AmplInterface *p_ai, double *const_x, int nx,
+                                            double *const_lam, int nc, double *hes_lag, int nnz_hes_lag) {
+      return p_ai->eval_hes_lag(const_x, nx, const_lam, nc, hes_lag, nnz_hes_lag);
+   }
 
-void EXTERNAL_AmplInterface_struct_hes_lag(AmplInterface *p_ai, int *irow, int *jcol,
-                                           int nnz_hes_lag) { p_ai->struct_hes_lag(irow, jcol, nnz_hes_lag); }
-
-bool EXTERNAL_AmplInterface_eval_g(AmplInterface *p_ai, double *const_x, int nx, double *g, int ng) {
-    return p_ai->eval_g(const_x, nx, g, ng);
-}
-
-bool EXTERNAL_AmplInterface_eval_jac_g(AmplInterface *p_ai, double *const_x, int nx, double *jac_g_values,
-                                       int nnz_jac_g) { return p_ai->eval_jac_g(const_x, nx, jac_g_values, nnz_jac_g); }
-
-bool EXTERNAL_AmplInterface_eval_hes_lag(AmplInterface *p_ai, double *const_x, int nx,
-                                         double *const_lam, int nc, double *hes_lag, int nnz_hes_lag) {
-    return p_ai->eval_hes_lag(const_x, nx, const_lam, nc, hes_lag, nnz_hes_lag);
-}
-
-void EXTERNAL_AmplInterface_finalize_solution(AmplInterface *p_ai, int status, double *const_x,
-                                              int nx, double *const_lam, int nc) {
+   void EXTERNAL_AmplInterface_finalize_solution(AmplInterface *p_ai, int status, double *const_x,
+                                                 int nx, double *const_lam, int nc) {
     p_ai->finalize_solution(status, const_x, nx, const_lam, nc);
-}
+   }
 
-void EXTERNAL_AmplInterface_free_memory(AmplInterface *p_ai) { p_ai->~AmplInterface(); }
-
-void EXTERNAL_AmplInterface_map_g_indices(int* invec, int size, int* map, int size_map)
-{
-    std::map<int, int> g_to_c;
-
-    // populate map
-    for(int i=0; i<size_map;++i) {
-        g_to_c.insert(std::pair<int, int>(map[i], i));
-    }
-
-    for(int i=0; i<size;++i) {
-        invec[i] = g_to_c[invec[i]];
-    }
-}
-
+   void EXTERNAL_AmplInterface_free_memory(AmplInterface *p_ai) { 
+      p_ai->~AmplInterface();
+   }
 }
 

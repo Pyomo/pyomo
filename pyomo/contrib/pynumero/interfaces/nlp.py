@@ -550,7 +550,8 @@ class StubNLP(NLP):
         # initial point
         self._init_x = np.zeros(self.nx)
         self._init_y = np.zeros(self.ng)
-        self._asl.get_starting_point(self._init_x, self._init_y)
+        self._asl.get_init_x(self._init_x)
+        self._asl.get_init_multipliers(self._init_y)
 
         # bounds on x
         self._upper_x = np.zeros(self.nx, dtype=np.double)

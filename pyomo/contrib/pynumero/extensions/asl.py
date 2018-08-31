@@ -65,16 +65,6 @@ class AmplInterface(object):
         self.ASLib.EXTERNAL_AmplInterface_nnz_hessian_lag.argtypes = [ctypes.c_void_p]
         self.ASLib.EXTERNAL_AmplInterface_nnz_hessian_lag.restype = ctypes.c_int
 
-        # bounds info
-        self.ASLib.EXTERNAL_AmplInterface_get_bounds_info.argtypes = [ctypes.c_void_p,
-                                                                      array_1d_double,
-                                                                      array_1d_double,
-                                                                      ctypes.c_int,
-                                                                      array_1d_double,
-                                                                      array_1d_double,
-                                                                      ctypes.c_int]
-        self.ASLib.EXTERNAL_AmplInterface_get_bounds_info.restype = None
-
         # lower bounds on x
         self.ASLib.EXTERNAL_AmplInterface_x_lower_bounds.argtypes = [ctypes.c_void_p,
                                                                      array_1d_double,
@@ -100,24 +90,16 @@ class AmplInterface(object):
         self.ASLib.EXTERNAL_AmplInterface_g_upper_bounds.restype = None
 
         # initial value x
-        self.ASLib.EXTERNAL_AmplInterface_x_init.argtypes = [ctypes.c_void_p,
-                                                             array_1d_double,
-                                                             ctypes.c_int]
-        self.ASLib.EXTERNAL_AmplInterface_x_init.restype = None
+        self.ASLib.EXTERNAL_AmplInterface_get_init_x.argtypes = [ctypes.c_void_p,
+                                                                 array_1d_double,
+                                                                 ctypes.c_int]
+        self.ASLib.EXTERNAL_AmplInterface_get_init_x.restype = None
 
         # initial value multipliers
-        self.ASLib.EXTERNAL_AmplInterface_lam_init.argtypes = [ctypes.c_void_p,
-                                                               array_1d_double,
-                                                               ctypes.c_int]
-        self.ASLib.EXTERNAL_AmplInterface_lam_init.restype = None
-
-        # starting point
-        self.ASLib.EXTERNAL_AmplInterface_starting_point.argtypes = [ctypes.c_void_p,
-                                                                     array_1d_double,
-                                                                     ctypes.c_int,
-                                                                     array_1d_double,
-                                                                     ctypes.c_int]
-        self.ASLib.EXTERNAL_AmplInterface_starting_point.restype = None
+        self.ASLib.EXTERNAL_AmplInterface_get_init_multipliers.argtypes = [ctypes.c_void_p,
+                                                                           array_1d_double,
+                                                                           ctypes.c_int]
+        self.ASLib.EXTERNAL_AmplInterface_get_init_multipliers.restype = None
 
         # evaluate objective
         self.ASLib.EXTERNAL_AmplInterface_eval_f.argtypes = [ctypes.c_void_p,
@@ -182,12 +164,14 @@ class AmplInterface(object):
                                                                         ctypes.c_int]
         self.ASLib.EXTERNAL_AmplInterface_finalize_solution.restype = None
 
+        '''
         # mapping
         self.ASLib.EXTERNAL_AmplInterface_map_g_indices.argtypes = [array_1d_int,
                                                                     ctypes.c_int,
                                                                     array_1d_int,
                                                                     ctypes.c_int]
         self.ASLib.EXTERNAL_AmplInterface_map_g_indices.restype = None
+        '''
 
         # destructor
         self.ASLib.EXTERNAL_AmplInterface_free_memory.argtypes = [ctypes.c_void_p]
@@ -260,17 +244,10 @@ class AmplInterface(object):
         self.ASLib.EXTERNAL_AmplInterface_g_upper_bounds(self._obj, invec, len(invec))
 
     def get_init_x(self, invec):
-        self.ASLib.EXTERNAL_AmplInterface_x_init(self._obj, invec, len(invec))
+        self.ASLib.EXTERNAL_AmplInterface_get_init_x(self._obj, invec, len(invec))
 
     def get_init_multipliers(self, invec):
-        self.ASLib.EXTERNAL_AmplInterface_lam_init(self._obj, invec, len(invec))
-
-    def get_starting_point(self, x, lam):
-        self.ASLib.EXTERNAL_AmplInterface_starting_point(self._obj,
-                                                         x,
-                                                         len(x),
-                                                         lam,
-                                                         len(lam))
+        self.ASLib.EXTERNAL_AmplInterface_get_init_multipliers(self._obj, invec, len(invec))
 
     def eval_f(self, x):
         assert x.size == self._nx, "Error: Dimension missmatch."

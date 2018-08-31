@@ -1,115 +1,113 @@
 #ifndef __AMPLINTERFACE_HPP__
 #define __AMPLINTERFACE_HPP__
 
-#include <cstddef>
-#include <vector>
-#include <string>
 #include <iostream>
-#include <cstdlib>
-#include <stdio.h>
-#include "AsserUtils.hpp"
 
-/* forward declaration */
+// Forward declaration for ASL structure
 struct ASL_pfgh;
-struct SufDecl;
-struct SufDesc;
 
-
+/**
+This class provides the C++ side of the PyNumero interface to AMPL
+**/
 class AmplInterface {
 public:
+   AmplInterface();
+   virtual ~AmplInterface();
 
-    AmplInterface();
+   void initialize(const char *nlfilename); 
 
-    virtual ~AmplInterface();
+   virtual FILE* open_nl(ASL_pfgh *asl, char *stub) = 0;
 
-    void initialize(const char *nlfilename); 
+   // number of variables (x)
+   int get_n_vars() const;
+   
+   // number of constraints (g)
+   int get_n_constraints() const;
 
-    virtual FILE* open_nl(ASL_pfgh *asl, char *stub) = 0;
+   // number of nonzeros in the jacobian of g wrt x
+   int get_nnz_jac_g() const;
 
-    void get_nlp_dimensions(int &n_x, int &n_g, int &nnz_jac_g, int &nnz_hes_lag) const;
+   // number of nonzeros in the Hessian of the Lagrangian
+   int get_nnz_hessian_lag() const;
+   
+   // get the lower bounds on x (full dimension)
+   void get_lower_bounds_x(double *invec, int n);
+   
+   // get the upper bounds on x (full dimension)
+   void get_upper_bounds_x(double *invec, int n);
 
-    int get_n_vars() const;
+   // get the lower bounds on g (full dimension)
+   void get_lower_bounds_g(double *invec, int m);
 
-    // find out if this is only equality
-    int get_n_constraints() const;
+   // get the upper bounds on g (full dimension)
+   void get_upper_bounds_g(double *invec, int m);
 
-    int get_nnz_jac_g() const;
+   // get the initial values for x
+   void get_init_x(double *invec, int n);
 
-    int get_nnz_hessian_lag() const;
+   // get the initia values for the multipliers lambda
+   void get_init_multipliers(double *invec, int n);
 
-    void get_lower_bounds_x(double *invec, int n);
+   // evaluate the objective function
+   bool eval_f(double *const_x, int nx, double& f);
 
-    void get_upper_bounds_x(double *invec, int n);
+   // evaluate the gradient of f
+   bool eval_deriv_f(double *const_x, double *deriv_f, int nx);
 
-    void get_lower_bounds_g(double *invec, int m);
+   // evaluate the body of the constraints g
+   bool eval_g(double *const_x, int nx, double *g, int ng);
 
-    void get_upper_bounds_g(double *invec, int m);
+   // get the irow, jcol sparse structure of the Jacobian of g wrt x
+   void struct_jac_g(int *irow, int *jcol, int nnz_jac_g);
 
-    void get_bounds_info(double *xl, double *xu, int n, double *gl, double *gu, int m);
+   // get the Jacobian of g wrt x
+   bool eval_jac_g(double *const_x, int nx, double *jac_g_values, int nnz_jac_g);
 
-    void get_init_x(double *invec, int n);
+   // get the irow, jcol sparse structure of the Hessian of the Lagrangian
+   void struct_hes_lag(int *irow, int *jcol, int nnz_hes_lag);
 
-    void get_init_multipliers(double *invec, int n);
+   // evaluate the Hessian of the Lagrangian
+   // Because of a requirement in AMPL, any time "x" changes
+   // you must make a call to eval_f and eval_g BEFORE calling this method
+   bool eval_hes_lag(double *const_x, int nx, double *const_lam, int nc, double *hes_lag, int nnz_hes_lag);
 
-    void get_starting_point(double *x, int nx, double *lam, int ng);
+   // write the solution to the .sol file
+   void finalize_solution(int status, double *const_x, int nx, double *const_lam, int nc);
 
-    bool eval_f(double *const_x, int nx, double& f);
-
-    // the second integer is just so that we can use the typemaps from numpy
-    bool eval_deriv_f(double *const_x, double *deriv_f, int nx);
-
-    // the second integer is just so that we can use the typemaps from numpy
-    void struct_jac_g(int *irow, int *jcol, int nnz_jac_g);
-
-    bool eval_jac_g(double *const_x, int nx, double *jac_g_values, int nnz_jac_g);
-
-    void struct_hes_lag(int *irow, int *jcol, int nnz_hes_lag);
-
-    bool eval_g(double *const_x, int nx, double *g, int ng);
-
-    // NOTE: This must be called AFTER a call to objval and conval
-    // (i.e. You must call eval_f and eval_c with the same x before calling this)
-    bool eval_hes_lag(double *const_x, int nx, double *const_lam, int nc, double *hes_lag, int nnz_hes_lag);
-
-    void finalize_solution(int status, double *const_x, int nx, double *const_lam, int nc);
-
-/*
-    //void report_solution(int n_x, const double* x) const;
-*/
 private:
 
-    AmplInterface(const AmplInterface &);
-
-    void operator=(const AmplInterface &);
+   // Make these private so the compiler does not give default implementations for them
+   AmplInterface(const AmplInterface &);
+   void operator=(const AmplInterface &);
 
 protected:
-    // ASL pointer
-    ASL_pfgh *asl_;
+   // ASL pointer
+   ASL_pfgh *_p_asl;
 
-    // obj. sense ... -1 = maximize, 1 = minimize
-    double obj_sense_;
+   // obj. sense ... -1 = maximize, 1 = minimize
+   double obj_sense_;
 
-    // initial values cached
-    double *xinit_;
-    char *xinit_present_;
+   // initial values cached
+   double *xinit_;
+   char *xinit_present_;
 
-    double *laminit_;
-    char *laminit_present_;
+   double *laminit_;
+   char *laminit_present_;
 
-    int nnz_hes_lag_;
+   int nnz_hes_lag_;
 
 };
 
-class AmplInterface_file : public AmplInterface {
+class AmplInterfaceFile : public AmplInterface {
 public:
-   AmplInterface_file();
+   AmplInterfaceFile();
 
    virtual FILE* open_nl(ASL_pfgh *asl, char *stub);
 };
 
-class AmplInterface_str : public AmplInterface {
+class AmplInterfaceStr : public AmplInterface {
 public:
-    AmplInterface_str(char* nl, size_t size);
+    AmplInterfaceStr(char* nl, size_t size);
 
     virtual FILE* open_nl(ASL_pfgh *asl, char *stub);
 
