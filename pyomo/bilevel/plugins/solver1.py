@@ -16,7 +16,8 @@ from pyomo.bilevel.components import SubModel
 import pyomo.common
 
 
-@TransformationFactory.register('bilevel_ld', doc='Solver for bilevel problems using linear duality')
+@pyomo.opt.SolverFactory.register('bilevel_ld',
+    doc='Solver for bilevel problems using linear duality')
 class BILEVEL_Solver1(pyomo.opt.OptSolver):
 
     def __init__(self, **kwds):

@@ -16,7 +16,8 @@ import pyomo.common
 from pyomo.core import TransformationFactory, Var, Set
 
 
-@TransformationFactory.register('bilevel_blp_local', doc='Local solver for continuous bilevel linear problems')
+@pyomo.opt.SolverFactory.register('bilevel_blp_local',
+    doc='Local solver for continuous bilevel linear problems')
 class BILEVEL_Solver3(pyomo.opt.OptSolver):
 
     def __init__(self, **kwds):
