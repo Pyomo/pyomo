@@ -1,8 +1,8 @@
-import sys
+import logging
+
 import os
 import numpy as np
 from pyutilib.math import infinity
-from pyutilib.services import TempfileManager
 from pyomo.common.modeling import randint, unique_component_name
 from pyomo.core import Block, Var, Param, Set, VarList, ConstraintList, Constraint, Objective, RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize
 from pyomo.core.expr import current as EXPR
@@ -14,8 +14,12 @@ from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 from pyomo.contrib.trustregion.GeometryGenerator import (
     generate_quadratic_rom_geometry
 )
-from pyomo.contrib.trustregion.readgjh import *
 from pyomo.contrib.trustregion.helper import *
+
+logger = logging.getLogger('pyomo.contrib.trustregion')
+fh = logging.FileHandler('debug_vars.log')
+logger.setLevel(logging.DEBUG)
+logger.addHandler(fh)
 
 class ROMType:
     linear = 0
@@ -30,16 +34,17 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
         self.efSet = efSet
 
     def visit(self, node, values):
-        
-        sys.stdout.write('visit: \n  node = %s\n' % node)
+
+        logger.debug('visit')
+        logger.debug('--node = %s\n', node)
         for i in range(len(values)):
-            sys.stdout.write('  values[%d] = %s\n' % (i,values[i]))
-        
+            logger.debug('----values[%d] = %s\n', i,values[i])
+
         if node.__class__ is not EXPR.ExternalFunctionExpression:
-            sys.stdout.write('  node not ExternalFunctionExpression\n')
+            logger.debug('--node not ExternalFunctionExpression\n')
             return node
         if id(node._fcn) not in self.efSet:
-            sys.stdout.write('  node not in efSet\n')
+            logger.debug('--node not in efSet\n')
             return node
         # At this point we know this is an ExternalFunctionExpression
         # node that we want to replace with an auliliary variable (y)
@@ -49,7 +54,8 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
         seen = ComponentSet()
         # TODO: support more than PythonCallbackFunctions
         assert isinstance(node._fcn, PythonCallbackFunction)
-        #
+        logger.debug('--node is a PythonCallbackFuction\n')
+
         # Note: the first argument to PythonCallbackFunction is the
         # function ID.  Since we are going to complain about constant
         # parameters, we need to skip the first argument when processing
@@ -60,16 +66,10 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
         # things later; i.e., accessing the private _fcn attribute
         # below).
         for arg in list(values)[1:]:
-            
-            sys.stdout.write('    %s:  node is a PythonCallbackFuction\n' % arg)
-            if type(arg) in nonpyomo_leaf_types:
-                # We currently do not allow parameters for
-                # the external functions.
-                sys.stdout.write('  type is %s' % type(arg))
-                raise RuntimeError(
-                    "TrustRegion does not support black boxes with "
-                    "parameter inputs\n\tExpression: %s"
-                    % (node,) )
+
+            logger.debug('----%s = %s; type is %s\n', 
+                         arg, value(arg), type(arg))
+
             if arg.is_expression_type():
                 # All expressions (including simple linear expressions)
                 # are replaced with a single auxiliary variable (and
@@ -79,27 +79,37 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
                 _x.set_value( value(arg) )
                 self.trf.conset.add(_x == arg)
                 new_args.append(_x)
-                sys.stdout.write('    %s:  replacing expression with %s\n' % (arg, value(arg)))
+                logger.debug('------replacing expression %s with %s\n',
+                             arg, value(arg))
+
             else:
-                # The only thing left is bare variables: check for duplicates.
-                sys.stdout.write('     arg = %s\n' % arg)
+
+                # This will process all variables and parameters. First check
+                # for duplicates.
                 if arg in seen:
                     raise RuntimeError(
                         "TrustRegion does not support black boxes with "
                         "duplicate input arguments\n\tExpression: %s"
                         % (node,) )
                 seen.add(arg)
+
+                # Then process fixed vars
                 if arg.is_fixed():
-                    sys.stdout.write('    arg is fixed\n')
+                    logger.debug('----arg is fixed\n')
                     fixed_vars.append(arg)
                     fixed_yn.append(True)
                 else:
+                    logger.debug('----arg is not fixed\n')
                     fixed_yn.append(False)
+
+                # and finally regular variables.
                 new_args.append(arg)
+
         for p in range(len(new_args)):
-            sys.stdout.write('new_args[%d]: %s\n' % (p,new_args[p]))
+            logger.debug('new_args[%d]: %s\n', p, new_args[p])
         for p in range(len(fixed_vars)):
-            sys.stdout.write('fixed_vars:[%d]: %s\n' % (p, fixed_vars[p]))
+            logger.debug('fixed_vars:[%d]: %s\n', p, fixed_vars[p])
+
         _y = self.trf.y.add()
         self.trf.external_fcns.append(node)
         self.trf.exfn_xvars.append(new_args)
@@ -118,12 +128,10 @@ class PyomoInterface:
     All new attributes (including these variables) are stored on block
     "tR"
 
-
-    Note: quadratic ROM is messy, uses full dimension of x variables. clean up later.
-
+    Note: quadratic ROM is messy, uses full dimension of x
+    variables. clean up later.
     '''
 
-    TempfileManager.tempdir = "."
     solver = 'ipopt'
     solver_io = 'nl'
     stream_solver = False # True prints solver output to screen
@@ -206,7 +214,8 @@ class PyomoInterface:
             ## Assume only one active objective function here
             self.objective=obj
 
-        # Make sure at least one external function defined; otherwise no need for TRF solver
+        # Make sure at least one external function defined; otherwise no 
+        # need for TRF solver
         if len(TRF.external_fcns) == 0:
             raise RuntimeError(
                     "TrustRegion requires at least one external function")
@@ -214,8 +223,6 @@ class PyomoInterface:
         if self.objective.sense == maximize:
             self.objective.expr = -1* self.objective.expr
             self.objective.sense = minimize
-
-
 
         # xvars and zvars are lists of x and z varibles as in the paper
         TRF.xvars = []
@@ -237,43 +244,43 @@ class PyomoInterface:
         self.exfn_xvars_ind = []
         self.exfn_fixed_xvars_ind = []
         for varss in TRF.exfn_xvars:
-            sys.stdout.write('varss [')
-            for p in range(len(varss)):
-                sys.stdout.write('%s ' % varss[p])
-            sys.stdout.write(']')
             listtmp = []
             fixedtmp = []
             for var in varss:
-                sys.stdout.write('  var: %s' % var)
+                logger.debug('--var: %s', var)
                 for i in range(len(TRF.xvars)):
                     if(id(var)==id(TRF.xvars[i])):
                         listtmp.append(i)
                         if (TRF.xvars[i].is_fixed()):
                             fixedtmp.append(i)
-                        sys.stdout.write('    listtmp:')
-                        sys.stdout.write(' '.join(str(x) for x in listtmp))
-                        sys.stdout.write('\n    fixedtmp:')
-                        sys.stdout.write(' '.join(str(x) for x in fixedtmp))
+                        lstr = ' '.join(str(x) for x in listtmp)
+                        logger.debug('----listtmp: %s\n', lstr)
+                        fstr = ' '.join(str(x) for x in fixedtmp)
+                        logger.debug('----fixedtmp: %s\n', fstr)
                         break
 
             self.exfn_xvars_ind.append(listtmp)
             self.exfn_fixed_xvars_ind.append(fixedtmp)
         
-        sys.stdout.write('\nTRF:')
+        logger.debug('\nTRF:')
         for i in range(len(TRF.xvars)):
-            sys.stdout.write('  xvars[%d] = %s' % (i,TRF.xvars[i]))
+            logger.debug('--xvars[%d] = %s', i, TRF.xvars[i])
         for i in range(len(TRF.zvars)):
-            sys.stdout.write('  zvars[%d] = %s' % (i, TRF.zvars[i]))
+            logger.debug('--zvars[%d] = %s', i, TRF.zvars[i])
         for i in range(len(TRF.external_fcns)):
-            sys.stdout.write('  external_fcns[%d] = %s'% (i, TRF.external_fcns[i]))
+            logger.debug('--external_fcns[%d] = %s', i, TRF.external_fcns[i])
         for i in range(len(TRF.exfn_xvars)):
             for j in range(len(TRF.exfn_xvars[i])):
-                sys.stdout.write('  exfn_xvars[%d][%d] = %s' % (i, j, TRF.exfn_xvars[i][j]))
+                logger.debug('--exfn_xvars[%d][%d] = %s', i, j, 
+                             TRF.exfn_xvars[i][j])
         for i in range(len(TRF.exfn_fixed_vars)):
             for j in range(len(TRF.exfn_fixed_vars[i])):
-                sys.stdout.write('  fixed_vars[%d][%d] = %s' % (i, j, TRF.exfn_fixed_vars[i][j]))
-        sys.stdout.write('  exfn_xvars_ind:' % self.exfn_xvars_ind)
-        sys.stdout.write('  exfn_fixed_xvars_ind:' % self.exfn_fixed_xvars_ind)
+                logger.debug('--fixed_vars[%d][%d] = %s', i, j, 
+                             TRF.exfn_fixed_vars[i][j])
+        xindstr = ' '.join(str(x) for x in self.exfn_xvars_ind)
+        logger.debug('--self.exfn_xvars_ind: %s', xindstr)
+        findstr = ' '.join(str(x) for x in self.exfn_fixed_xvars_ind)
+        logger.debug('--self.exfn_fixed_xvars_ind: %s', findstr)
 
         return TRF
 
@@ -538,12 +545,9 @@ class PyomoInterface:
         self.deactiveExtraConObj()
         self.activateRomCons(x, rom_params)
 
-        optGJH = SolverFactory('gjh', solver_io='nl')
-
-        optGJH.solve(
-            model, keepfiles=True, tee=False, symbolic_solver_labels=True)
-
-        g, J, varlist, conlist = readgjh()
+        optGJH = SolverFactory('contrib.gjh')
+        optGJH.solve(model, tee=False, symbolic_solver_labels=True)
+        g, J, varlist, conlist = model._gjh_info
 
         l = ConcreteModel()
         l.v = Var(varlist, domain=Reals)
@@ -659,24 +663,33 @@ class PyomoInterface:
                         not_fixed.append(False)
                     else:
                         not_fixed.append(True)
-                # print values
-                print('values:', values)
-                print('not_fixed:', not_fixed)
+
                 for j in range(0, len(values)):
-                    radius = radius_base # * scale[j]
+
+                    logger.debug('***************************')
+                    vstr = ' '.join(str(x) for x in values)
+                    logger.debug('buildROM values:\t\t[%s]\n', vstr)
+                    nfstr = ' '.join(str(x) for x in not_fixed)
+                    logger.debug('buildROM not_fixed: [%s]\n', nfstr)
+
                     if not_fixed[j]:
+                        radius = radius_base # * scale[j]
                         values[j] = values[j] + radius
-                        print('notfixedvalue+radius:', values)
+                        vstr = ' '.join(str(x) for x in values)
+                        logger.debug('notfixedvalue+radius:\t[%s]\n', vstr)
                         y2 = fcn._fcn(*values)
                         rom_params[i].append((y2 - y1[i]) / radius)
                         values[j] = values[j] - radius
-                        print('notfixedvalue-radius:', values)
-                    print('values:', values)
-                    sys.stdout.write('\n')
+                        vstr = ' '.join(str(x) for x in values)
+                        logger.debug('notfixedvalue-radius:\t[%s]\n', vstr)
+                    vstr = ' '.join(str(x) for x in values)
+                    logger.debug('buildROM values:\t\t[%s]', vstr)
+                    logger.debug('***************************')
+
 
         elif(self.romtype==ROMType.quadratic):
-            #Quad ROM
-            # basis = [1, x1, x2,..., xn, x1x1, x1x2,x1x3,...,x1xn,x2x2,x2x3,...,xnxn]
+            # Quad ROM basis = [1, x1, x2,..., xn, x1x1,
+            # x1x2,x1x3,...,x1xn,x2x2,x2x3,...,xnxn]
             if self.geoM is None:
                 self.initialQuad(self.lx)
 
