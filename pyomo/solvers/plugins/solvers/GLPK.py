@@ -18,7 +18,6 @@ from pyutilib.misc import Bunch, Options
 from pyutilib.services import register_executable, registered_executable
 from pyutilib.services import TempfileManager
 
-import pyomo.common.plugin
 from pyomo.opt import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver
@@ -58,10 +57,9 @@ GLP_NOFEAS = 'n'  # no feasible solution exists
 GLP_OPT    = 'o'  # solution is optimal
 
 
+@SolverFactory.register('glpk', doc='The GLPK LP/MIP solver')
 class GLPK(OptSolver):
     """The GLPK LP/MIP solver"""
-
-    pyomo.common.plugin.alias('glpk', doc='The GLPK LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         configure_glpk()
@@ -107,12 +105,11 @@ class GLPK(OptSolver):
         return opt
 
 
-class GLPKSHELL(SystemCallSolver):
-    """Shell interface to the GLPK LP/MIP solver"""
-
-    pyomo.common.plugin.alias(
+@SolverFactory.register(
         '_glpk_shell',
         doc='Shell interface to the GNU Linear Programming Kit')
+class GLPKSHELL(SystemCallSolver):
+    """Shell interface to the GLPK LP/MIP solver"""
 
     def __init__ (self, **kwargs):
         configure_glpk()

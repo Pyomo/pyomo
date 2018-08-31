@@ -1,13 +1,15 @@
 """Transformation to propagate a zero value to terms of a sum."""
 import textwrap
 
+from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.common.plugin import alias
 
 
+@TransformationFactory.register('contrib.propagate_zero_sum',
+          doc="Propagate fixed-to-zero for sums of only positive (or negative) vars.")
 class ZeroSumPropagator(IsomorphicTransformation):
     """Propagates fixed-to-zero for sums of only positive (or negative) vars.
 
@@ -17,9 +19,6 @@ class ZeroSumPropagator(IsomorphicTransformation):
     to zero.
 
     """
-
-    alias('contrib.propagate_zero_sum',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance):
         for constr in instance.component_data_objects(ctype=Constraint,

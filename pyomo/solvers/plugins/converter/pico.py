@@ -8,33 +8,25 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['PicoMIPConverter']
-
 import six
 
 import os.path
 
 import pyutilib.common
 import pyutilib.subprocess
-import pyutilib.services
+import pyomo.common
 
 from pyomo.opt.base import *
-from pyomo.common.plugin import *
 
 
-class PicoMIPConverter(SingletonPlugin):
-
-    implements(IProblemConverter)
-
-    def __init__(self,**kwds):
-        SingletonPlugin.__init__(self,**kwds)
+class PicoMIPConverter(object):
 
     def can_convert(self, from_type, to_type):
         """Returns true if this object supports the specified conversion"""
         #
         # Test if the glpsol executable is available
         #
-        if pyutilib.services.registered_executable("pico_convert") is None:
+        if pyomo.common.registered_executable("pico_convert") is None:
             return False
         #
         # Return True for specific from/to pairs
@@ -50,7 +42,7 @@ class PicoMIPConverter(SingletonPlugin):
         return False
 
     def available(self):
-        cmd = pyutilib.services.registered_executable("pico_convert")
+        cmd = pyomo.common.registered_executable("pico_convert")
         return not cmd is None
 
     def apply(self, *args, **kwargs):
@@ -59,7 +51,7 @@ class PicoMIPConverter(SingletonPlugin):
         """
         if len(args) != 3:
             raise ConverterError("Cannot apply pico_convert with more than one filename or model")
-        cmd = pyutilib.services.registered_executable("pico_convert")
+        cmd = pyomo.common.registered_executable("pico_convert")
         if cmd is None:
             raise ConverterError("The 'pico_convert' application cannot be found")
 

@@ -59,7 +59,7 @@ import pyomo.pysp.phsolverserverutils
 
 def construct_ph_options_parser(usage_string):
 
-    solver_list = SolverFactory.services()
+    solver_list = list(SolverFactory)
     solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
     solver_help = \
     "Specify the solver with which to solve scenario sub-problems.  The "      \

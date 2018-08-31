@@ -13,11 +13,10 @@ import os
 import re
 import logging
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.common
 import pyutilib.misc
 
-import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -26,11 +25,11 @@ from pyomo.solvers.mockmip import MockMIP
 
 logger = logging.getLogger('pyomo.solvers')
 
+
+@SolverFactory.register('xpress', doc='The XPRESS LP/MIP solver')
 class XPRESS(OptSolver):
     """The XPRESS LP/MIP solver
     """
-
-    pyomo.common.plugin.alias('xpress', doc='The XPRESS LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -57,11 +56,11 @@ class XPRESS(OptSolver):
         opt.set_options('solver=amplxpress')
         return opt
 
+
+@SolverFactory.register('_xpress_shell', doc='Shell interface to the XPRESS LP/MIP solver')
 class XPRESS_shell(ILMLicensedSystemCallSolver):
     """Shell interface to the XPRESS LP/MIP solver
     """
-
-    pyomo.common.plugin.alias('_xpress_shell', doc='Shell interface to the XPRESS LP/MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -106,7 +105,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         return False
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("optimizer")
+        executable = pyomo.common.registered_executable("optimizer")
         if executable is None:
             logger.warning("Could not locate the 'optimizer' executable, "
                            "which is required for solver %s" % self.name)
@@ -406,11 +405,11 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
             results.solution.insert(soln)
         solution_file.close()
 
+
+@SolverFactory.register('_mock_xpress')
 class MockXPRESS(XPRESS_shell,MockMIP):
     """A Mock XPRESS solver used for testing
     """
-
-    pyomo.common.plugin.alias('_mock_xpress')
 
     def __init__(self, **kwds):
         try:
@@ -434,5 +433,5 @@ class MockXPRESS(XPRESS_shell,MockMIP):
         return MockMIP._execute_command(self,cmd)
 
 
-pyutilib.services.register_executable(name="optimizer")
+pyomo.common.register_executable(name="optimizer")
 
