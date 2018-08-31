@@ -10,4 +10,4 @@
 
 from pyomo.common.ext import _ImportRedirect
 
-ext = _ImportRedirect('pyomo.ext' if __name__ == '__main__' else __name__ + ".ext", 'pyomoext_%s').module
+ext = _ImportRedirect('pyomo.ext' if __name__ == '__main__' else __name__ + ".ext", 'pyomoext_%s', __file__).module

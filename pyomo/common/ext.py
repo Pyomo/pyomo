@@ -8,6 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import sys
+import imp
+
 
 class _ImportRedirect(object):
     """
