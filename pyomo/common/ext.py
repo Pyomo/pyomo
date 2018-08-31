@@ -20,7 +20,7 @@ class _ImportRedirect(object):
     software (see https://github.com/bottlepy/bottle).
     """
 
-    def __init__(self, name, impmask, modulefile):
+    def __init__(self, name, impmask, modulefile, alternates):
         """ Create a virtual package that redirects imports (see PEP 302). """
         self.name = name
         self.impmask = impmask
@@ -29,9 +29,12 @@ class _ImportRedirect(object):
             '__file__': modulefile,
             '__path__': [],
             '__all__': [],
-            '__loader__': self
+            '__loader__': self,
+            '__package__': self.module.__name__
         })
+        print(self.module.__dict__)
         sys.meta_path.append(self)
+        self.alternates = alternates
 
     def find_module(self, fullname, path=None):
         if '.' not in fullname: return
@@ -42,8 +45,17 @@ class _ImportRedirect(object):
     def load_module(self, fullname):
         if fullname in sys.modules: return sys.modules[fullname]
         modname = fullname.rsplit('.', 1)[1]
-        realname = self.impmask % modname
-        __import__(realname)
+        if modname in self.alternates:
+            realname = self.alternates[modname]
+        else:
+            realname = self.impmask % modname
+        try:
+            __import__(realname)
+        except ModuleNotFoundError as err:
+            print("ERROR importing package '%s'" % fullname)
+            print("  Failed to import Pyomo extension package '%s'" % realname)
+            print("")
+            raise err
         module = sys.modules[fullname] = sys.modules[realname]
         setattr(self.module, modname, module)
         module.__loader__ = self
