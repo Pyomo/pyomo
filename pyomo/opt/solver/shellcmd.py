@@ -116,7 +116,10 @@ class SystemCallSolver(OptSolver):
             return True
         if not OptSolver.available(self,exception_flag):
             return False
-        ans = self.executable()
+        try:
+            ans = self.executable()
+        except NotImplementedError:
+            ans = None
         if ans is None:
             if exception_flag:
                 msg = "No executable found for solver '%s'"
