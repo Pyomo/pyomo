@@ -368,4 +368,4 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
         self._dispatcher_proxies = {}
 
 if pyutilib.pyro.Pyro is None:
-    SolverManagerFactory.deactivate('phpyro')
+    SolverManagerFactory.unregister('phpyro')
