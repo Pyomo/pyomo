@@ -12,16 +12,12 @@ import os.path
 
 from pyutilib.misc import Options
 
-from pyomo.common.plugin import alias, Plugin, implements
-from pyomo.dataportal.factory import IDataManager
+from pyomo.dataportal.factory import DataManagerFactory
 from pyomo.dataportal.process_data import _process_include
 
 
-class PyomoDataCommands(Plugin):
-
-    alias("dat", "Pyomo data command file interface")
-
-    implements(IDataManager, service=False)
+@DataManagerFactory.register("dat", "Pyomo data command file interface")
+class PyomoDataCommands(object):
 
     def __init__(self):
         self._info = []

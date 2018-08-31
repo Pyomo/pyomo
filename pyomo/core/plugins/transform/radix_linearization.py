@@ -8,10 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import alias
 from pyomo.core.expr.current import ProductExpression, PowExpression
 from pyomo.core import Binary, value
-from pyomo.core.base import Transformation, Var, Constraint, ConstraintList, Block, RangeSet
+from pyomo.core.base import Transformation, TransformationFactory, Var, Constraint, ConstraintList, Block, RangeSet
 from pyomo.core.base.var import _VarData
 
 from six import iteritems
@@ -20,6 +19,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+@TransformationFactory.register("core.radix_linearization",
+           doc="Linearize bilinear and quadratic terms through "
+           "radix discretization (multiparametric disaggregation)" )
 class RadixLinearization(Transformation):
     """
     This plugin generates linear relaxations of bilinear problems using
@@ -31,10 +33,6 @@ class RadixLinearization(Transformation):
        disaggregation technique."  J.Glob.Optim 57 pp.1039-1063. 2013.
        (DOI 10.1007/s10898-012-0022-1)
     """
-
-    alias("core.radix_linearization",
-           doc="Linearize bilinear and quadratic terms through "
-           "radix discretization (multiparametric disaggregation)" )
 
     def _create_using(self, model, **kwds):
         precision = kwds.pop('precision',8)

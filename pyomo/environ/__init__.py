@@ -88,10 +88,7 @@ def _import_packages():
         pkg = _sys.modules[pname]
         pkg.load()
 
-from pyomo.common.plugin import PluginGlobals as _PG
-_PG.add_env("pyomo")
 _import_packages()
-_PG.pop_env()
 
 #
 # Expose the symbols from pyomo.core
@@ -101,4 +98,4 @@ from pyomo.core import *
 from pyomo.opt import (
     SolverFactory, SolverManagerFactory, UnknownSolver,
     TerminationCondition, SolverStatus,
-)
+    )

@@ -16,8 +16,7 @@ from math import fabs
 from six import itervalues
 
 from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
-from pyomo.common.plugin import alias
-from pyomo.core.base import Transformation
+from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core.base.component import _ComponentBase
 from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.base.constraint import Constraint
@@ -45,6 +44,9 @@ def target_list(x):
                 )
 
 
+
+@TransformationFactory.register('gdp.fix_disjuncts',
+          doc="Fix disjuncts to their current logical values.")
 class GDP_Disjunct_Fixer(Transformation):
     """Fix disjuncts to their current logical values.
 
@@ -58,9 +60,6 @@ class GDP_Disjunct_Fixer(Transformation):
         # standardized.
         super(GDP_Disjunct_Fixer, self).__init__(*args, **kwargs)
         self._transformedDisjuncts = ComponentSet()
-
-    alias('gdp.fix_disjuncts',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     CONFIG = ConfigBlock("gdp.fix_disjuncts")
     CONFIG.declare('targets', ConfigValue(

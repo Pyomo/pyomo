@@ -40,9 +40,9 @@ try:
 except ImportError:
     xlrd_available=False
 
-from pyomo.common.plugin import alias
 from pyomo.dataportal import TableData
 from pyomo.dataportal.plugins.db_table import pyodbc_available, pyodbc_db_Table, pypyodbc_available, pypyodbc_db_Table
+from pyomo.dataportal.factory import DataManagerFactory
 
 
 class SheetTable(TableData):
@@ -100,9 +100,8 @@ else:
 
 if (win32com_available and _excel_available) or xlrd_available:
 
+    @DataManagerFactory.register("xls", "Excel XLS file interface")
     class SheetTable_xls(SheetTable):
-
-        alias("xls", "Excel XLS file interface")
 
         def __init__(self):
             if win32com_available and _excel_available:
@@ -118,9 +117,8 @@ if (win32com_available and _excel_available) or xlrd_available:
 
 else:
 
+    @DataManagerFactory.register("xls", "Excel XLS file interface")
     class pyodbc_xls(pyodbc_db_base):
-
-        alias("xls", "Excel XLS file interface")
 
         def __init__(self):
             pyodbc_db_base.__init__(self)
@@ -138,9 +136,8 @@ else:
 
 if (win32com_available and _excel_available) or openpyxl_available:
 
+    @DataManagerFactory.register("xlsx", "Excel XLSX file interface")
     class SheetTable_xlsx(SheetTable):
-
-        alias("xlsx", "Excel XLSX file interface")
 
         def __init__(self):
             if win32com_available and _excel_available:
@@ -156,9 +153,8 @@ if (win32com_available and _excel_available) or openpyxl_available:
 
 else:
 
+    @DataManagerFactory.register("xlsx", "Excel XLSX file interface")
     class SheetTable_xlsx(pyodbc_db_base):
-
-        alias("xlsx", "Excel XLSX file interface")
 
         def __init__(self):
             pyodbc_db_base.__init__(self)
@@ -178,9 +174,8 @@ if 0:
     #
     # This class is OK, but the pyodbc interface doesn't work right now.
     #
+    @DataManagerFactory.register("xlsb", "Excel XLSB file interface")
     class SheetTable_xlsb(pyodbc_db_base):
-
-        alias("xlsb", "Excel XLSB file interface")
 
         def __init__(self):
             pyodbc_db_base.__init__(self)
@@ -198,9 +193,8 @@ if 0:
 
 if (win32com_available and _excel_available) or openpyxl_available:
 
+    @DataManagerFactory.register("xlsm", "Excel XLSM file interface")
     class SheetTable_xlsm(SheetTable):
-
-        alias("xlsm", "Excel XLSM file interface")
 
         def __init__(self):
             if win32com_available and _excel_available:
@@ -216,9 +210,8 @@ if (win32com_available and _excel_available) or openpyxl_available:
 
 else:
 
+    @DataManagerFactory.register("xlsm", "Excel XLSM file interface")
     class SheetTable_xlsm(pyodbc_db_base):
-
-        alias("xlsm", "Excel XLSM file interface")
 
         def __init__(self):
             pyodbc_db_base.__init__(self)

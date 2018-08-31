@@ -8,35 +8,29 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['AmplMIPConverter']
-
 import os.path
-
 import pyutilib.subprocess
 import pyutilib.common
-import pyutilib.services
+import pyomo.common
 
 from pyomo.opt.base import *
-from pyomo.common.plugin import *
+from pyomo.opt.base.convert import ProblemConverterFactory
 
 try:
     unicode
 except:
     basestring = unicode = str
 
-class AmplMIPConverter(SingletonPlugin):
 
-    implements(IProblemConverter)
-
-    def __init__(self,**kwds):
-        SingletonPlugin.__init__(self,**kwds)
+@ProblemConverterFactory.register('ampl')
+class AmplMIPConverter(object):
 
     def can_convert(self, from_type, to_type):
         """Returns true if this object supports the specified conversion"""
         #
         # Test if the ampl executable is available
         #
-        if pyutilib.services.registered_executable("ampl") is None:
+        if pyomo.common.registered_executable("ampl") is None:
             return False
         #
         # Return True for specific from/to pairs
@@ -51,7 +45,7 @@ class AmplMIPConverter(SingletonPlugin):
         """Convert an instance of one type into another"""
         if not isinstance(args[2],basestring):
             raise ConverterError("Can only apply ampl to convert file data")
-        cmd = pyutilib.services.registered_executable("ampl").get_path()
+        cmd = pyomo.common.registered_executable("ampl").get_path()
         if cmd is None:
             raise ConverterError("The 'ampl' executable cannot be found")
         script_filename = pyutilib.services.TempfileManager.create_tempfile(suffix = '.ampl')

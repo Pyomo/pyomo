@@ -8,14 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import alias
-
 from pyomo.core import *
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.nonnegative_transform import *
 from pyomo.core.plugins.transform.equality_transform import *
 
 
+@TransformationFactory.register("core.standard_form", doc="Create an equivalent LP model in standard form.")
 class StandardForm(IsomorphicTransformation):
     """
     Produces a standard-form representation of the model. This form has 
@@ -34,8 +33,6 @@ class StandardForm(IsomorphicTransformation):
         pos_suffix          Default _plus
         neg_suffix          Default _neg
     """
-
-    alias("core.standard_form", doc="Create an equivalent LP model in standard form.")
 
     def __init__(self, **kwds):
         kwds['name'] = "standard_form"
