@@ -500,12 +500,7 @@ class OptSolver(object):
 
     def available(self, exception_flag=True):
         """ True if the solver is available """
-        if self._assert_available:
-            return True
-        if exception_flag:
-            from pyutilib.common import ApplicationError
-            raise pyutilib.common.ApplicationError("Solver (%s) not available" % str(self.name))
-        return False
+        return True
 
     def warm_start_capable(self):
         """ True is the solver can accept a warm-start solution """
