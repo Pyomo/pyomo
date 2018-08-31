@@ -119,13 +119,11 @@ def create_test_method(model,
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
-        @unittest.nottest
         def skipping_test(self):
             return self.skipTest(test_case.msg)
         return skipping_test
 
     if is_expected_failure:
-        @unittest.nottest
         @unittest.expectedFailure
         def failing_writer_test(self):
             return writer_test(self)
