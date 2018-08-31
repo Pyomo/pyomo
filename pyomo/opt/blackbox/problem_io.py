@@ -12,7 +12,7 @@
 Define factory used for using OptProblem IO formats.
 """
 
-from pyomo.common.factory import Factory
+from pyomo.common import Factory
 
 
 BlackBoxOptProblemIOFactory = Factory('black box problem IO format')

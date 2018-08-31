@@ -32,7 +32,7 @@ import logging
 import pyutilib.misc
 from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.factory import Factory
+from pyomo.common import Factory
 from pyomo.common.plugin import (
     alias, implements, Interface, Plugin, PluginFactory, CreatePluginFactory,
     PluginError, ExtensionPoint )

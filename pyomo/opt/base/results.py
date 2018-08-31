@@ -10,7 +10,7 @@
 
 __all__ = [ 'AbstractResultsReader', 'ReaderFactory' ]
 
-from pyomo.common.factory import CachedFactory
+from pyomo.common import CachedFactory
 
 
 ReaderFactory = CachedFactory('problem reader')
