@@ -81,11 +81,8 @@ class OptSolverDebug(unittest.TestCase):
 
     def test_avail(self):
         ans = pyomo.opt.SolverFactory("stest2")
-        try:
-            ans.available()
-            self.fail("Expected exception for 'stest2' solver, which is disabled")
-        except pyutilib.common.ApplicationError:
-            pass
+        # No exception should be generated
+        ans.available()
 
 
 
