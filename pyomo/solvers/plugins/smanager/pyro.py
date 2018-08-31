@@ -70,9 +70,7 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
             raise ActionManagerError(
                 "No solver passed to %s, use keyword option 'solver'"
                 % (type(self).__name__) )
-        deactivate_opt = False
         if isinstance(opt, six.string_types):
-            deactivate_opt = True
             opt = SolverFactory(opt, solver_io=kwds.pop('solver_io', None))
 
         #
@@ -173,8 +171,6 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
                                  opt._load_solutions,
                                  opt._select_index,
                                  opt._default_variable_value)
-        if deactivate_opt:
-            opt.deactivate()
 
         return data
 
@@ -262,4 +258,4 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
                                  verbose=self._verbose > 1)
 
 if pyutilib.pyro.Pyro is None:
-    SolverManagerFactory.deactivate('pyro')
+    SolverManagerFactory.unregister('pyro')
