@@ -259,7 +259,7 @@ class GenericExpressionVisitor(object):
         exitNode() is called after the node is completely processed (as
         the walker returns up the tree to the parent node).  It is
         passed the node and the results data structure (defined by
-        enterNode() and possible further modified by
+        enterNode() and possibly further modified by
         acceptChildResult()), and is expected to return the "result" for
         this node.  If not specified, the default action is to return
         the data object from enterNode().
@@ -309,7 +309,7 @@ class GenericExpressionVisitor(object):
 
     """
 
-    extentionPoints = ('enterNode','exitNode','beforeChild','afterChild',
+    extensionPoints = ('enterNode','exitNode','beforeChild','afterChild',
                        'acceptChildResult','finalizeResult')
     def __init__(self, **kwds):
         # This is slightly tricky: We want derived classes to be able to
@@ -317,7 +317,7 @@ class GenericExpressionVisitor(object):
         # to override both.  The hasattr check prevents the "None"
         # defaults from overriding attributes or methods defined on
         # derived classes.
-        for field in self.extentionPoints:
+        for field in self.extensionPoints:
             if field in kwds:
                 setattr(self, field, kwds.pop(field))
             elif not hasattr(self, field):
