@@ -97,6 +97,8 @@ install:
   - "git clone https://github.com/Pyomo/pyomo-model-libraries.git"
   - "python -m pip install git+https://github.com/PyUtilib/pyutilib"
   - "python setup.py develop"
+  - "python -m pip install git+https://github.com/Pyomo/pyomocontrib_simplemodel"
+  - "python setup.py develop"
   #
   # Fetch additional solvers
   #
