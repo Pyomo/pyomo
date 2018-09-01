@@ -54,6 +54,13 @@ class Test(unittest.TestCase):
         else:
             self.skipTest("Skipping test of pyomo.ext.simplemodel")
 
+    def test_error1(self):
+        try:
+            import pyomo.ext.foobar
+            self.fail("ERROR: pyomo.ext.foobar imported without error")
+        except ModuleNotFoundError:
+            pass
+
 
 if __name__ == '__main__':
     unittest.main()
