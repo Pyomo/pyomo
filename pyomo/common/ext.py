@@ -50,7 +50,7 @@ class _ImportRedirect(object):
             realname = self.impmask % modname
         try:
             __import__(realname)
-        except ModuleNotFoundError as err:
+        except ImportError as err:
             print("ERROR importing package '%s'" % fullname)
             print("  Failed to import Pyomo extension package '%s'" % realname)
             print("")
