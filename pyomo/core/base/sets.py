@@ -864,9 +864,8 @@ class SimpleSetBase(Set):
             None, #("Members",),
             lambda k, v: [
                 "Virtual" if not self.concrete or v.virtual \
-                    else sorted(v.value) if _ordered == 'Sorted'\
-                    else v.value         if _ordered == 'Insertion'\
-                    else v.value_list, ] )
+                    else v.value if v.ordered \
+                    else sorted_robust(v), ] )
 
     def _set_repn(self, other):
         """
