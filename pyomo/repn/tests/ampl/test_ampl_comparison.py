@@ -24,9 +24,9 @@ import pyutilib.subprocess
 import pyomo.scripting.pyomo_main as main
 
 skip_tests = ["small16", "small17"]
-if sys.version_info < (3,6):
-    skip_tests.append("small16")
-    skip_tests.append("small17")
+#if sys.version_info < (3,6):
+#    skip_tests.append("small16")
+#    skip_tests.append("small17")
 
 
 # https://github.com/ghackebeil/gjh_asl_json
