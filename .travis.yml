@@ -62,8 +62,6 @@ install:
   - ${DOC} python setup.py develop
  # Install simplemodel (master branch)
   - ${DOC} pip install --quiet git+https://github.com/Pyomo/pyomocontrib_simplemodel
- # Install this package
-  - ${DOC} python setup.py develop
  # Finish setting up coverage tracking for subprocesses
   - DOCKER_SITE_PACKAGES=`${DOC} python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
   - |
