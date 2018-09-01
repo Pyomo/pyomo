@@ -2603,7 +2603,7 @@ class TestSetOrderedRepn(unittest.TestCase):
         m.pprint(ostream=buf)
         self.assertEqual("""1 Set Declarations
     A : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
-        ['2', '1']
+        ['1', '2']
 
 1 Var Declarations
     x : Size=2, Index=A
