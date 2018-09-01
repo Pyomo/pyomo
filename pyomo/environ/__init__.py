@@ -24,6 +24,8 @@ else:
 _packages = [
     'pyomo.opt',
     'pyomo.core',
+    'pyomo.dataportal',
+    'pyomo.duality',
     'pyomo.checker',
     'pyomo.repn',
     'pyomo.pysp',
@@ -34,6 +36,7 @@ _packages = [
     'pyomo.dae',
     'pyomo.bilevel',
     'pyomo.scripting',
+    'pyomo.network',
 ]
 #
 #
@@ -93,6 +96,7 @@ _PG.pop_env()
 #
 # Expose the symbols from pyomo.core
 #
+from pyomo.dataportal import DataPortal
 from pyomo.core import *
 from pyomo.opt import (
     SolverFactory, SolverManagerFactory, UnknownSolver,

@@ -169,7 +169,7 @@ def help_checkers():
 
 def help_datamanagers(options):
     import pyomo.environ
-    from pyomo.core import DataManagerFactory
+    from pyomo.dataportal import DataManagerFactory
     wrapper = textwrap.TextWrapper()
     wrapper.initial_indent = '      '
     wrapper.subsequent_indent = '      '

@@ -28,35 +28,27 @@ import logging
 import pyomo.common.plugin
 from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
                                  NonNegativeFloat, NonNegativeInt)
-from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
-                                                 add_outer_approximation_cuts)
-from pyomo.contrib.gdpopt.loa import solve_LOA_subproblem, solve_LOA_master
-from pyomo.contrib.gdpopt.gloa import solve_GLOA_master, solve_global_NLP
-from pyomo.contrib.gdpopt.master_initialize import (init_custom_disjuncts,
-                                                    init_max_binaries,
-                                                    init_set_covering)
-from pyomo.contrib.gdpopt.util import (GDPoptSolveData, _DoNothing, a_logger,
-                                       algorithm_should_terminate,
+from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
+from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
+from pyomo.contrib.gdpopt.master_initialize import (GDPopt_initialize_master,
+                                                    valid_init_strategies)
+from pyomo.contrib.gdpopt.util import (_DoNothing, a_logger,
                                        build_ordered_component_lists,
                                        clone_orig_model_with_lists,
-                                       copy_var_list_values, model_is_valid,
+                                       copy_var_list_values,
+                                       create_utility_block, model_is_valid,
+                                       process_objective,
                                        record_original_model_statistics,
                                        record_working_model_statistics,
-                                       reformulate_integer_variables)
-from pyomo.core.base import Block, ConstraintList, Suffix, value
-from pyomo.core.kernel import ComponentMap
+                                       reformulate_integer_variables,
+                                       restore_logger_level, time_code)
+from pyomo.core.base import ConstraintList, value
+from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.base import IOptSolver
+from pyomo.opt.results import SolverResults
+from pyutilib.misc import Container
 
-__version__ = (0, 3, 0)
-
-# Valid initialization strategies
-valid_init_strategies = {
-    None: _DoNothing,
-    'set_covering': init_set_covering,
-    'max_binary': init_max_binaries,
-    'fixed_binary': None,
-    'custom_disjuncts': init_custom_disjuncts
-}
+__version__ = (0, 4, 1)
 
 
 class GDPoptSolver(pyomo.common.plugin.Plugin):
@@ -103,29 +95,35 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         default=8, domain=NonNegativeInt,
         description="Limit on the number of set covering iterations."
     ))
-    CONFIG.declare("mip", ConfigValue(
+    CONFIG.declare("mip_solver", ConfigValue(
         default="gurobi",
         description="Mixed integer linear solver to use."
     ))
-    mip_options = CONFIG.declare("mip_options", ConfigBlock(implicit=True))
-    CONFIG.declare("nlp", ConfigValue(
+    mip_solver_args = CONFIG.declare(
+        "mip_solver_args", ConfigBlock(implicit=True))
+    CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
         description="Nonlinear solver to use"))
-    nlp_options = CONFIG.declare("nlp_options", ConfigBlock(implicit=True))
-    CONFIG.declare("master_postsolve", ConfigValue(
+    nlp_solver_args = CONFIG.declare(
+        "nlp_solver_args", ConfigBlock(implicit=True))
+    CONFIG.declare("call_before_master_solve", ConfigValue(
+        default=_DoNothing,
+        description="callback hook before calling the master problem solver"
+    ))
+    CONFIG.declare("call_after_master_solve", ConfigValue(
         default=_DoNothing,
         description="callback hook after a solution of the master problem"
     ))
-    CONFIG.declare("subprob_presolve", ConfigValue(
+    CONFIG.declare("call_before_subproblem_solve", ConfigValue(
         default=_DoNothing,
         description="callback hook before calling the subproblem solver"
     ))
-    CONFIG.declare("subprob_postsolve", ConfigValue(
+    CONFIG.declare("call_after_subproblem_solve", ConfigValue(
         default=_DoNothing,
         description="callback hook after a solution of the "
         "nonlinear subproblem"
     ))
-    CONFIG.declare("subprob_postfeas", ConfigValue(
+    CONFIG.declare("call_after_subproblem_feasible", ConfigValue(
         default=_DoNothing,
         description="callback hook after feasible solution of "
         "the nonlinear subproblem"
@@ -208,26 +206,17 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
         solve_data = GDPoptSolveData()
-        created_GDPopt_block = False
+        solve_data.results = SolverResults()
+        solve_data.timing = Container()
 
         old_logger_level = config.logger.getEffectiveLevel()
-        try:
+        with time_code(solve_data.timing, 'total'), \
+                restore_logger_level(config.logger), \
+                create_utility_block(model, 'GDPopt_utils'):
             if config.tee and old_logger_level > logging.INFO:
                 # If the logger does not already include INFO, include it.
                 config.logger.setLevel(logging.INFO)
             config.logger.info("---Starting GDPopt---")
-
-            # Create a model block on which to store GDPopt-specific utility
-            # modeling objects.
-            if hasattr(model, 'GDPopt_utils'):
-                raise RuntimeError(
-                    "GDPopt needs to create a Block named GDPopt_utils "
-                    "on the model object, but an attribute with that name "
-                    "already exists.")
-            else:
-                created_GDPopt_block = True
-                model.GDPopt_utils = Block(
-                    doc="Container for GDPopt solver utility modeling objects")
 
             solve_data.original_model = model
 
@@ -239,6 +228,7 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
             # Reformulate integer variables to binary
             reformulate_integer_variables(solve_data.working_model, config)
+            process_objective(solve_data, config)
 
             # Save ordered lists of main modeling components, so that data can
             # be easily transferred between future model clones.
@@ -248,12 +238,12 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
 
             # Save model initial values. These are used later to initialize NLP
             # subproblems.
-            GDPopt.initial_var_values = list(
+            solve_data.initial_var_values = list(
                 v.value for v in GDPopt.working_var_list)
 
             # Store the initial model state as the best solution found. If we
             # find no better solution, then we will restore from this copy.
-            solve_data.best_solution_found = list(GDPopt.initial_var_values)
+            solve_data.best_solution_found = solve_data.initial_var_values
 
             # Validate the model to ensure that GDPopt is able to solve it.
             if not model_is_valid(solve_data, config):
@@ -292,10 +282,12 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             solve_data.feasible_solution_improved = False
 
             # Initialize the master problem
-            self._GDPopt_initialize_master(solve_data, config)
+            with time_code(solve_data.timing, 'initialization'):
+                GDPopt_initialize_master(solve_data, config)
 
             # Algorithm main loop
-            self._GDPopt_iteration_loop(solve_data, config)
+            with time_code(solve_data.timing, 'main loop'):
+                GDPopt_iteration_loop(solve_data, config)
 
             # Update values in working model
             copy_var_list_values(
@@ -314,81 +306,6 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
             solve_data.results.problem.lower_bound = solve_data.LB
             solve_data.results.problem.upper_bound = solve_data.UB
 
-        finally:
-            config.logger.setLevel(old_logger_level)
-            if created_GDPopt_block:
-                model.del_component('GDPopt_utils')
+        solve_data.results.solver.timing = solve_data.timing
 
-    def _GDPopt_initialize_master(self, solve_data, config):
-        """Initialize the decomposition algorithm.
-
-        This includes generating the initial cuts require to build the master
-        problem.
-
-        """
-        config.logger.info("---Starting GDPopt initialization---")
-        m = solve_data.working_model
-        if not hasattr(m, 'dual'):  # Set up dual value reporting
-            m.dual = Suffix(direction=Suffix.IMPORT)
-        m.dual.activate()
-
-        # Set up the linear GDP model
-        solve_data.linear_GDP = m.clone()
-        # deactivate nonlinear constraints
-        for c in solve_data.linear_GDP.GDPopt_utils.\
-                working_nonlinear_constraints:
-            c.deactivate()
-
-        # Initialization strategies
-        init_strategy = valid_init_strategies.get(config.init_strategy, None)
-        if init_strategy is not None:
-            init_strategy(solve_data, config)
-        else:
-            raise ValueError(
-                'Unknown initialization strategy: %s. '
-                'Valid strategies include: %s'
-                % (config.init_strategy,
-                   ", ".join(valid_init_strategies.keys())))
-
-    def _GDPopt_iteration_loop(self, solve_data, config):
-        """Algorithm main loop.
-
-        Returns True if successful convergence is obtained. False otherwise.
-
-        """
-        while solve_data.master_iteration < config.iterlim:
-            # print line for visual display
-            solve_data.master_iteration += 1
-            solve_data.mip_iteration = 0
-            solve_data.nlp_iteration = 0
-            config.logger.info(
-                '---GDPopt Master Iteration %s---'
-                % solve_data.master_iteration)
-            # solve MILP master problem
-            if solve_data.current_strategy == 'LOA':
-                mip_results = solve_LOA_master(solve_data, config)
-            elif solve_data.current_strategy == 'GLOA':
-                mip_results = solve_GLOA_master(solve_data, config)
-            if mip_results:
-                _, mip_var_values = mip_results
-            # Check termination conditions
-            if algorithm_should_terminate(solve_data, config):
-                break
-            # Solve NLP subproblem
-            if solve_data.current_strategy == 'LOA':
-                nlp_result = solve_LOA_subproblem(
-                    mip_var_values, solve_data, config)
-                nlp_feasible, nlp_var_values, nlp_duals = nlp_result
-                if nlp_feasible:
-                    add_outer_approximation_cuts(
-                        nlp_var_values, nlp_duals, solve_data, config)
-            elif solve_data.current_strategy == 'GLOA':
-                nlp_result = solve_global_NLP(
-                    mip_var_values, solve_data, config)
-                # TODO add affine cuts
-            add_integer_cut(
-                mip_var_values, solve_data, config, feasible=nlp_feasible)
-
-            # Check termination conditions
-            if algorithm_should_terminate(solve_data, config):
-                break
+        return solve_data.results

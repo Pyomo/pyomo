@@ -54,6 +54,7 @@ try:
         sympy.atanh: lambda x: core.atanh(x),
         sympy.ceiling: lambda x: core.ceil(x),
         sympy.floor: lambda x: core.floor(x),
+        sympy.sqrt: lambda x: core.sqrt(x),
         sympy.Derivative: _nondifferentiable,
     }
 
@@ -75,6 +76,7 @@ try:
         'atanh': sympy.atanh,
         'ceil': sympy.ceiling,
         'floor': sympy.floor,
+        'sqrt': sympy.sqrt,
     }
 except ImportError: #pragma:nocover
     _sympy_available = False

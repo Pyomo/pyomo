@@ -1,6 +1,10 @@
 Pyomo Documentation
 ===================
 
+.. image:: /../logos/pyomo/PyomoNewBlue3.png
+   :scale: 10%
+   :align: right
+
 Pyomo is a Python-based, open-source optimization modeling language
 with a diverse set of optimization capabilities.
 
@@ -15,7 +19,7 @@ with a diverse set of optimization capabilities.
    developer_reference/index.rst
    solvers/persistent_solvers.rst
    library_reference/index.rst
-   pyomo_contrib.rst
+   contribution_guide.rst
    bibliography.rst
 
 Indices and Tables
@@ -40,4 +44,3 @@ Pyomo development is hosted at GitHub:
 See the Pyomo Forum for online discussions of Pyomo:
 
 * http://groups.google.com/group/pyomo-forum/
-

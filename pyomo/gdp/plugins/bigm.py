@@ -19,7 +19,8 @@ from pyomo.core import (
 )
 from pyomo.core.base import Transformation
 from pyomo.core.base.component import ComponentUID, ActiveComponent
-from pyomo.core.kernel import ComponentMap, ComponentSet
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import target_list
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier

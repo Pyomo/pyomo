@@ -7,10 +7,14 @@ from math import fabs, floor, log
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
                         Objective, Reals, Var, minimize, value)
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel import ComponentSet
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory
-from pyomo.opt.results import ProblemSense, SolverResults
+from pyomo.opt.results import ProblemSense
+from six import StringIO
+from pyomo.common.log import LoggingIntercept
+import timeit
+from contextlib import contextmanager
 
 
 class _DoNothing(object):
@@ -31,16 +35,18 @@ class _DoNothing(object):
         return _do_nothing
 
 
-class GDPoptSolveData(object):
-    """Data container to hold solve-instance data.
+class SuppressInfeasibleWarning(LoggingIntercept):
+    """Suppress the infeasible model warning message from solve().
 
-    Key attributes:
-        - original_model: the original model that the user gave us to solve
-        - working_model: the original model after preprocessing
-        - linear_GDP: the linear-discrete master problem
+    The "WARNING: Loading a SolverResults object with a warning status" warning
+    message from calling solve() is often unwanted, but there is no clear way
+    to suppress it.
 
     """
-    pass
+
+    def __init__(self):
+        super(SuppressInfeasibleWarning, self).__init__(
+            StringIO(), 'pyomo.core', logging.WARNING)
 
 
 def model_is_valid(solve_data, config):
@@ -62,18 +68,26 @@ def model_is_valid(solve_data, config):
         if len(GDPopt.working_nonlinear_constraints) > 0:
             config.logger.info(
                 "Your model is an NLP (nonlinear program). "
-                "Using NLP solver %s to solve." % config.nlp)
-            SolverFactory(config.nlp).solve(
-                solve_data.original_model, **config.nlp_options)
+                "Using NLP solver %s to solve." % config.nlp_solver)
+            SolverFactory(config.nlp_solver).solve(
+                solve_data.original_model, **config.nlp_solver_args)
             return False
         else:
             config.logger.info(
                 "Your model is an LP (linear program). "
-                "Using LP solver %s to solve." % config.mip)
-            SolverFactory(config.mip).solve(
-                solve_data.original_model, **config.mip_options)
+                "Using LP solver %s to solve." % config.mip_solver)
+            SolverFactory(config.mip_solver).solve(
+                solve_data.original_model, **config.mip_solver_args)
             return False
 
+    # TODO if any continuous variables are multipled with binary ones, need
+    # to do some kind of transformation (Glover?) or throw an error message
+    return True
+
+
+def process_objective(solve_data, config):
+    m = solve_data.working_model
+    GDPopt = m.GDPopt_utils
     # Handle missing or multiple objectives
     objs = list(m.component_data_objects(
         ctype=Objective, active=True, descend_into=True))
@@ -107,10 +121,6 @@ def model_is_valid(solve_data, config):
     GDPopt.objective = Objective(
         expr=GDPopt.objective_value, sense=main_obj.sense)
 
-    # TODO if any continuous variables are multipled with binary ones, need
-    # to do some kind of transformation (Glover?) or throw an error message
-    return True
-
 
 def a_logger(str_or_logger):
     """Returns a logger when passed either a logger name or logger object."""
@@ -130,14 +140,19 @@ def copy_var_list_values(from_list, to_list, config, skip_stale=False):
             if skip_stale:
                 v_to.stale = False
         except ValueError as err:
-            if 'is not in domain Binary' in err.message:
-                # Check to see if this is just a tolerance issue
-                v_from_val = value(v_from, exception=False)
-                if (fabs(v_from_val - 1) <= config.integer_tolerance or
-                        fabs(v_from_val) <= config.integer_tolerance):
-                    v_to.set_value(round(v_from_val))
-                else:
-                    raise
+            err_msg = getattr(err, 'message', str(err))
+            var_val = value(v_from)
+            rounded_val = round(var_val)
+            # Check to see if this is just a tolerance issue
+            if 'is not in domain Binary' in err_msg and (
+                    fabs(var_val - 1) <= config.integer_tolerance or
+                    fabs(var_val) <= config.integer_tolerance):
+                v_to.set_value(rounded_val)
+            elif 'is not in domain Integers' in err_msg and (
+                    fabs(var_val - rounded_val) <= config.integer_tolerance):
+                v_to.set_value(rounded_val)
+            else:
+                raise
 
 
 def is_feasible(model, config):
@@ -223,9 +238,13 @@ def build_ordered_component_lists(model, prefix='working'):
                 ctype=Disjunction, active=True,
                 descend_into=(Disjunct, Block))))
 
-    # Identify the non-fixed variables in (potentially) active constraints
+    # Identify the non-fixed variables in (potentially) active constraints and
+    # objective functions
     for constr in getattr(GDPopt, '%s_constraints_list' % prefix):
         for v in EXPR.identify_variables(constr.body, include_fixed=False):
+            var_set.add(v)
+    for obj in model.component_data_objects(ctype=Objective, active=True):
+        for v in EXPR.identify_variables(obj.expr, include_fixed=False):
             var_set.add(v)
     # Disjunct indicator variables might not appear in active constraints. In
     # fact, if we consider them Logical variables, they should not appear in
@@ -248,9 +267,9 @@ def build_ordered_component_lists(model, prefix='working'):
 
 
 def record_original_model_statistics(solve_data, config):
-    """Record problem statistics for original model and setup SolverResults."""
+    """Record problem statistics for original model."""
     # Create the solver results object
-    res = solve_data.results = SolverResults()
+    res = solve_data.results
     prob = res.problem
     origGDPopt = solve_data.original_model.GDPopt_utils
     res.problem.name = solve_data.working_model.name
@@ -394,74 +413,6 @@ def validate_disjunctions(model, config):
                 "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
 
 
-def algorithm_is_making_progress(solve_data, config):
-    """Make sure that the algorithm is making sufficient progress
-    at each iteration to continue."""
-
-    # TODO if backtracking is turned on, and algorithm visits the same point
-    # twice without improvement in objective value, turn off backtracking.
-
-    # TODO stop iterations if feasible solutions not progressing for a number
-    # of iterations.
-
-    # If the hybrid algorithm is not making progress, switch to OA.
-    # required_feas_prog = 1E-6
-    # if solve_data.working_model.GDPopt_utils.objective.sense == minimize:
-    #     sign_adjust = 1
-    # else:
-    #     sign_adjust = -1
-
-    # Maximum number of iterations in which feasible bound does not
-    # improve before terminating algorithm
-    # if (len(feas_prog_log) > config.algorithm_stall_after and
-    #     (sign_adjust * (feas_prog_log[-1] + required_feas_prog)
-    #      >= sign_adjust *
-    #      feas_prog_log[-1 - config.algorithm_stall_after])):
-    #     config.logger.info(
-    #         'Feasible solutions not making enough progress '
-    #         'for %s iterations. Algorithm stalled. Exiting.\n'
-    #         'To continue, increase value of parameter '
-    #         'algorithm_stall_after.'
-    #         % (config.algorithm_stall_after,))
-    #     return False
-
-    return True
-
-
-def algorithm_should_terminate(solve_data, config):
-    """Check if the algorithm should terminate.
-
-    Termination conditions based on solver options and progress.
-
-    """
-    # Check bound convergence
-    if solve_data.LB + config.bound_tolerance >= solve_data.UB:
-        config.logger.info(
-            'GDPopt exiting on bound convergence. '
-            'LB: %s + (tol %s) >= UB: %s' %
-            (solve_data.LB, config.bound_tolerance,
-             solve_data.UB))
-        return True
-
-    # Check iteration limit
-    if solve_data.master_iteration >= config.iterlim:
-        config.logger.info(
-            'GDPopt unable to converge bounds '
-            'after %s master iterations.'
-            % (solve_data.master_iteration,))
-        config.logger.info(
-            'Final bound values: LB: %s  UB: %s'
-            % (solve_data.LB, solve_data.UB))
-        return True
-
-    if not algorithm_is_making_progress(solve_data, config):
-        config.logger.debug(
-            'Algorithm is not making enough progress. '
-            'Exiting iteration loop.')
-        return True
-    return False
-
-
 def copy_and_fix_mip_values_to_nlp(var_list, val_list, config):
     """Copy MIP solution values to the corresponding NLP variable list.
 
@@ -485,3 +436,38 @@ def copy_and_fix_mip_values_to_nlp(var_list, val_list, config):
                 var.fix(int(round(val)))
             else:
                 var.fix(val)
+
+
+@contextmanager
+def time_code(timing_data_obj, code_block_name):
+    start_time = timeit.default_timer()
+    yield
+    elapsed_time = timeit.default_timer() - start_time
+    prev_time = timing_data_obj.get(code_block_name, 0)
+    timing_data_obj[code_block_name] = prev_time + elapsed_time
+
+
+@contextmanager
+def restore_logger_level(logger):
+    old_logger_level = logger.getEffectiveLevel()
+    yield
+    logger.setLevel(old_logger_level)
+
+
+@contextmanager
+def create_utility_block(model, name):
+    created_util_block = False
+    # Create a model block on which to store GDPopt-specific utility
+    # modeling objects.
+    if hasattr(model, name):
+        raise RuntimeError(
+            "GDPopt needs to create a Block named %s "
+            "on the model object, but an attribute with that name "
+            "already exists." % name)
+    else:
+        created_util_block = True
+        model.GDPopt_utils = Block(
+            doc="Container for GDPopt solver utility modeling objects")
+    yield
+    if created_util_block:
+        model.del_component(name)

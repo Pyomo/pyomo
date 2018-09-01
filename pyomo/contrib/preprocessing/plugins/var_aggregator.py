@@ -7,7 +7,8 @@ import textwrap
 from pyomo.core.base import Block, Constraint, VarList, Objective
 from pyomo.core.expr.current import ExpressionReplacementVisitor
 from pyomo.core.expr.numvalue import value
-from pyomo.core.kernel import ComponentMap, ComponentSet
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
 from pyomo.common.plugin import alias
@@ -164,8 +165,23 @@ def max_if_not_None(iterable):
 class VariableAggregator(IsomorphicTransformation):
     """Aggregate model variables that are linked by equality constraints.
 
-    TODO: Caution: unclear what happens to "capital-E" Expressions at this point
-    in time.
+    Before:
+
+    .. math::
+
+        x &= y \\\\
+        a &= 2x + 6y + 7 \\\\
+        b &= 5y + 6 \\\\
+
+    After:
+
+    .. math::
+
+        z &= x = y \\\\
+        a &= 8z + 7 \\\\
+        b &= 5z + 6
+
+    .. warning:: TODO: unclear what happens to "capital-E" Expressions at this point in time.
 
     """
 
