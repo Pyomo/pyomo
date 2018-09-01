@@ -6,7 +6,6 @@ import ctypes
 import sys
 import os
 
-
 #TODO: ask about assertions
 #TODO: ask about freeing memory
 
@@ -158,6 +157,7 @@ class AmplInterface(object):
         # finalize solution
         self.ASLib.EXTERNAL_AmplInterface_finalize_solution.argtypes = [ctypes.c_void_p,
                                                                         ctypes.c_int,
+                                                                        ctypes.c_char_p,
                                                                         array_1d_double,
                                                                         ctypes.c_int,
                                                                         array_1d_double,
@@ -324,9 +324,10 @@ class AmplInterface(object):
                                                              self._nnz_hess)
         assert res, "Error in AMPL evaluation"
 
-    def finalize_solution(self, status, x, lam):
+    def finalize_solution(self, ampl_solve_status_num, msg, x, lam):
         self.ASLib.EXTERNAL_AmplInterface_finalize_solution(self._obj,
-                                                            status,
+                                                            ampl_solve_status_num,
+                                                            msg,
                                                             x,
                                                             len(x),
                                                             lam,

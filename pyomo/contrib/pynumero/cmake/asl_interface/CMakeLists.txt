@@ -10,13 +10,13 @@ set(DEFAULT_ASL_PATH "${PROJECT_SOURCE_DIR}/third_party/ASL/solvers")
 if(APPLE)
     set(ASL_SOURCES
     src/AmplInterface.cpp
-    src/AsserUtils.hpp
+    src/AssertUtils.hpp
     src/fmemopen.c
     )
 else()
     set(ASL_SOURCES
     src/AmplInterface.cpp
-    src/AsserUtils.hpp
+    src/AssertUtils.hpp
     )
 endif()
 

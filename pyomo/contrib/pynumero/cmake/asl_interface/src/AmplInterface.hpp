@@ -6,9 +6,8 @@
 // Forward declaration for ASL structure
 struct ASL_pfgh;
 
-/**
-This class provides the C++ side of the PyNumero interface to AMPL
-**/
+// This class provides the C++ side of the 
+// PyNumero interface to AMPL
 class AmplInterface {
 public:
    AmplInterface();
@@ -72,7 +71,19 @@ public:
    bool eval_hes_lag(double *const_x, int nx, double *const_lam, int nc, double *hes_lag, int nnz_hes_lag);
 
    // write the solution to the .sol file
-   void finalize_solution(int status, double *const_x, int nx, double *const_lam, int nc);
+   // pass in the ampl_solve_status_num (this is the "solve_status_num" from
+   // the AMPL documentation. It should be interpretted as follows:
+   //
+   //   number   string       interpretation
+   //   0 -  99   solved       optimal solution found
+   //   100 - 199   solved?      optimal solution indicated, but error likely
+   //   200 - 299   infeasible   constraints cannot be satisfied
+   //   300 - 399   unbounded    objective can be improved without limit
+   //   400 - 499   limit        stopped by a limit that you set (such as on iterations)
+   //   500 - 599   failure      stopped by an error condition in the solver routines
+   //
+   void finalize_solution(int ampl_solve_status_num, char* msg, 
+                          double *const_x, int nx, double *const_lam, int nc);
 
 private:
 
@@ -84,20 +95,15 @@ protected:
    // ASL pointer
    ASL_pfgh *_p_asl;
 
-   // obj. sense ... -1 = maximize, 1 = minimize
-   double obj_sense_;
+   // maximize (-1) or minimize (1)
+   double _obj_direction;
 
-   // initial values cached
-   double *xinit_;
-   char *xinit_present_;
-
-   double *laminit_;
-   char *laminit_present_;
-
+   // caching this (set with single call to sphsetup)
    int nnz_hes_lag_;
 
 };
 
+// File-based specialization of AmplInterface
 class AmplInterfaceFile : public AmplInterface {
 public:
    AmplInterfaceFile();
@@ -105,6 +111,7 @@ public:
    virtual FILE* open_nl(ASL_pfgh *asl, char *stub);
 };
 
+// String-based specialization of AmplInterface
 class AmplInterfaceStr : public AmplInterface {
 public:
     AmplInterfaceStr(char* nl, size_t size);

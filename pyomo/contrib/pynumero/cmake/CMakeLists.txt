@@ -54,6 +54,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -static-libstdc++")
 elseif(APPLE)
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O3 -fpermissive")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -static-libstdc++ -fpermissive")
+#set(CMAKE_CXX_FLAGS_RELEASE "-O2 -static-libstdc++ -fpermissive -static-libgcc")
 # check for linux
 else()
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O3")

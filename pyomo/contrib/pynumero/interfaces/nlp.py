@@ -1364,12 +1364,16 @@ class StubNLP(NLP):
 
         return hess
 
-    def finalize_solution(self, status, x, y):
+    def finalize_solution(self, status_num, status_msg, x, y):
         """
         Write .sol file
 
         Parameters
         ----------
+        status_num : int
+            exit status (as integer code)
+        status_msg : str
+            exit status message
         x : 1d-array
             array with values of primal variables. Size nx
         y : 1d-array
@@ -1379,7 +1383,7 @@ class StubNLP(NLP):
         -------
         None
         """
-        self._asl.finalize_solution(status, x, y)
+        self._asl.finalize_solution(status_num, status_msg, x, y)
 
     def _build_component_names_list(self, filename):
 
