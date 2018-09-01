@@ -23,7 +23,13 @@ from pyomo.common.ext import _ImportRedirect
 #
 # can map to the 'bar' package by having foo->bar in the dictionary.
 #
-_nonstandard_extension_packages = {'simplemodel': 'pyomocontrib_simplemodel'}
+_nonstandard_extension_packages = {
+    'bilevel': 'pyomo.bilevel',
+    'dae': 'pyomo.dae',
+    'gdp': 'pyomo.gdp',
+    'mpec': 'pyomo.mpec',
+    'pysp': 'pyomo.pysp',
+    'simplemodel': 'pyomocontrib_simplemodel'}
 
 
 ext = _ImportRedirect('pyomo.ext' if __name__ == '__main__' else __name__ + ".ext", 
