@@ -58,7 +58,7 @@ class Test(unittest.TestCase):
         try:
             import pyomo.ext.foobar
             self.fail("ERROR: pyomo.ext.foobar imported without error")
-        except ModuleNotFoundError:
+        except ImportError:
             pass
 
 
