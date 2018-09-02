@@ -1,5 +1,5 @@
 from pyomo.contrib.pynumero.sparse import BlockSymMatrix
-from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP2
+from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP
 import matplotlib.pylab as plt
 
 from pyomo.pysp.scenariotree.manager import \
@@ -27,7 +27,7 @@ instance = create_ef_instance(sp.scenario_tree)
 
 #instance = create_model(1.0)
 print("\nHi this is PyNumero")
-nlp = PyomoNLP2(instance)
+nlp = PyomoNLP(instance)
 print("\n----------------------")
 print("Problem statistics:")
 print("----------------------")

@@ -1,5 +1,5 @@
 from pyomo.contrib.pynumero.sparse import BlockSymMatrix
-from pyomo.contrib.pynumero.interfaces import PyomoNLP2
+from pyomo.contrib.pynumero.interfaces import PyomoNLP
 import matplotlib.pylab as plt
 import pyomo.environ as aml
 import pyomo.dae as dae
@@ -54,7 +54,7 @@ discretizer.apply_to(instance, nfe=100, ncp=3, scheme='LAGRANGE-RADAU')
 discretizer.reduce_collocation_points(instance, var=instance.u, ncp=1, contset=instance.t)
 
 # Interface pyomo model with nlp
-nlp = PyomoNLP2(instance)
+nlp = PyomoNLP(instance)
 x = nlp.create_vector_x()
 lam = nlp.create_vector_y()
 
@@ -62,13 +62,13 @@ lam = nlp.create_vector_y()
 jac_c = nlp.jacobian_g(x)
 plt.spy(jac_c)
 plt.title('Jacobian of the constraints\n')
-#plt.show()
+plt.show()
 
 # Evaluate hessian of the lagrangian
 hess_lag = nlp.hessian_lag(x, lam)
 plt.spy(hess_lag)
 plt.title('Hessian of the Lagrangian function\n')
-#plt.show()
+plt.show()
 
 # Build KKT matrix
 kkt = BlockSymMatrix(2)
@@ -76,5 +76,5 @@ kkt[0, 0] = hess_lag
 kkt[1, 0] = jac_c
 plt.spy(kkt.tofullmatrix())
 plt.title('KKT system\n')
-#plt.show()
+plt.show()
 

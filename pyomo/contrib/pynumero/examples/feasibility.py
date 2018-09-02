@@ -1,4 +1,4 @@
-from pyomo.contrib.pynumero.interfaces import PyomoNLP2
+from pyomo.contrib.pynumero.interfaces import PyomoNLP
 import matplotlib.pylab as plt
 import pyomo.environ as aml
 import numpy as np
@@ -26,7 +26,7 @@ solver = aml.SolverFactory('ipopt')
 solver.solve(model, tee=True)
 
 # build nlp initialized at the solution
-nlp = PyomoNLP2(model)
+nlp = PyomoNLP(model)
 
 # get initial point
 print(nlp.variable_order())

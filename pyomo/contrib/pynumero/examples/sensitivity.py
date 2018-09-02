@@ -1,5 +1,5 @@
 import pyomo.environ as aml
-from pyomo.contrib.pynumero.interfaces import PyomoNLP2
+from pyomo.contrib.pynumero.interfaces import PyomoNLP
 from pyomo.contrib.pynumero.sparse import BlockSymMatrix, BlockMatrix
 from pyomo.contrib.pynumero.interfaces.utils import compute_init_lam
 import numpy as np
@@ -33,7 +33,7 @@ opt = aml.SolverFactory('ipopt')
 results = opt.solve(m, tee=True)
 
 #################################################################
-nlp = PyomoNLP2(m)
+nlp = PyomoNLP(m)
 x = nlp.x_init()
 y = compute_init_lam(nlp, x=x)
 
@@ -68,5 +68,5 @@ print(new_x)
 m = create_model(4.45, 1.05)
 opt = aml.SolverFactory('ipopt')
 results = opt.solve(m, tee=True)
-nlp = PyomoNLP2(m)
+nlp = PyomoNLP(m)
 print(nlp.x_init())
