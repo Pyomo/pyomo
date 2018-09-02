@@ -1,5 +1,5 @@
 from pyomo.contrib.pynumero.sparse import BlockSymMatrix
-from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP
+from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP2
 import matplotlib.pylab as plt
 
 from pyomo.pysp.scenariotree.manager import \
@@ -27,7 +27,7 @@ instance = create_ef_instance(sp.scenario_tree)
 
 #instance = create_model(1.0)
 print("\nHi this is PyNumero")
-nlp = PyomoNLP(instance)
+nlp = PyomoNLP2(instance)
 print("\n----------------------")
 print("Problem statistics:")
 print("----------------------")
@@ -38,7 +38,7 @@ print("Total number of constraints: {:>17d}".format(nlp.ng))
 print("Number of nnz in Jacobian: {:>20d}".format(nlp.nnz_jacobian_g))
 print("Number of nnz in hessian of Lagrange: {:>8d}".format(nlp.nnz_hessian_lag))
 
-x = nlp.x_init
+x = nlp.x_init()
 y = nlp.create_vector_y()
 y.fill(1.0)
 

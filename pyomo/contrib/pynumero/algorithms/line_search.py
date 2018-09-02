@@ -4,6 +4,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
 class UnconstrainedLineSearch(object):
 
     def __init__(self, objective_rule, gradient_rule):

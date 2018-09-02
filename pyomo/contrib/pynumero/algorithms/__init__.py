@@ -17,5 +17,5 @@ except ImportError:
 if numpy_available:
     from .line_search import (BasicFilterLineSearch, UnconstrainedLineSearch)
     from .regularization import InertiaCorrectionParams
-    from .unconstrained_newton import newton_unconstrained
-    from .basic_sqp import basic_sqp
+    from .unconstrained_newton import newton_unconstrained, newton_unconstrained2
+    from .basic_sqp import basic_sqp, basic_sqp2

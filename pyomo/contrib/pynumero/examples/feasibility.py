@@ -1,4 +1,4 @@
-from pyomo.contrib.pynumero.interfaces import PyomoNLP
+from pyomo.contrib.pynumero.interfaces import PyomoNLP2
 import matplotlib.pylab as plt
 import pyomo.environ as aml
 import numpy as np
@@ -26,23 +26,23 @@ solver = aml.SolverFactory('ipopt')
 solver.solve(model, tee=True)
 
 # build nlp initialized at the solution
-nlp = PyomoNLP(model)
+nlp = PyomoNLP2(model)
 
 # get initial point
 print(nlp.variable_order())
-x0 = nlp.x_init
-
-# compression matrices on x
-Pxl = nlp.matrix_pxl()
-Pxu = nlp.matrix_pxu()
+x0 = nlp.x_init()
 
 # vectors of finite lower and upper bounds
-xl = Pxl * nlp.xl
-xu = Pxu * nlp.xu
+xl = nlp.xl(condensed=True)
+xu = nlp.xu(condensed=True)
+
+# build expansion matrices
+Pxl = nlp.expansion_matrix_xl()
+Pxu = nlp.expansion_matrix_xu()
 
 # lower and upper inequalities residual
-res_xl = Pxl * x0 - xl
-res_xu = xu - Pxu * x0
+res_xl = Pxl.transpose() * x0 - xl
+res_xu = xu - Pxu.transpose() * x0
 print("Residuals lower bounds x-xl:", res_xl)
 print("Residuals upper bounds xu-x:", res_xu)
 
@@ -54,22 +54,22 @@ print("Residuals equality constraints c(x):", res_c)
 d = nlp.evaluate_d(x0)
 
 # compression matrices
-Pdl = nlp.matrix_pdl()
-Pdu = nlp.matrix_pdu()
+Pdl = nlp.expansion_matrix_dl()
+Pdu = nlp.expansion_matrix_du()
 
 # vectors of finite lower and upper bounds
-dl = Pdl*nlp.dl
-du = Pdu*nlp.du
+dl = nlp.dl(condensed=True)
+du = nlp.du(condensed=True)
 
 # lower and upper inequalities residual
-res_dl = Pdl*d - dl
-res_du = du - Pdu*d
+res_dl = Pdl.transpose() * d - dl
+res_du = du - Pdu.transpose() * d
 print("Residuals lower bounds d-dl:", res_dl)
 print("Residuals upper bounds du-d:", res_du)
 
 feasible = False
-if np.all(res_xl>=0) and np.all(res_xu>=0) \
-    and np.all(res_dl>=0) and np.all(res_du>=0) and \
+if np.all(res_xl >= 0) and np.all(res_xu >= 0) \
+    and np.all(res_dl >= 0) and np.all(res_du >= 0) and \
     np.allclose(res_c, np.zeros(nlp.nc), atol=1e-5):
     feasible = True
 

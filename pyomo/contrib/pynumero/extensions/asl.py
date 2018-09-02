@@ -164,15 +164,6 @@ class AmplInterface(object):
                                                                         ctypes.c_int]
         self.ASLib.EXTERNAL_AmplInterface_finalize_solution.restype = None
 
-        '''
-        # mapping
-        self.ASLib.EXTERNAL_AmplInterface_map_g_indices.argtypes = [array_1d_int,
-                                                                    ctypes.c_int,
-                                                                    array_1d_int,
-                                                                    ctypes.c_int]
-        self.ASLib.EXTERNAL_AmplInterface_map_g_indices.restype = None
-        '''
-
         # destructor
         self.ASLib.EXTERNAL_AmplInterface_free_memory.argtypes = [ctypes.c_void_p]
         self.ASLib.EXTERNAL_AmplInterface_free_memory.restype = None
@@ -325,18 +316,14 @@ class AmplInterface(object):
         assert res, "Error in AMPL evaluation"
 
     def finalize_solution(self, ampl_solve_status_num, msg, x, lam):
+        b_msg = msg.encode('utf-8')
         self.ASLib.EXTERNAL_AmplInterface_finalize_solution(self._obj,
                                                             ampl_solve_status_num,
-                                                            msg,
+                                                            b_msg,
                                                             x,
                                                             len(x),
                                                             lam,
                                                             len(lam))
 
-    def inplace_map(self, arr, map_arr):
-        self.ASLib.EXTERNAL_AmplInterface_map_g_indices(arr,
-                                                        len(arr),
-                                                        map_arr,
-                                                        len(map_arr))
 
 
