@@ -10,10 +10,10 @@
 
 __all__ = [ 'AbstractProblemWriter', 'WriterFactory', 'ProblemConfigFactory', 'BaseProblemConfig' ]
 
-from pyomo.common import CachedFactory, Factory
+from pyomo.common import Factory
 
 
-ProblemConfigFactory = CachedFactory('problem configuration object')
+ProblemConfigFactory = Factory('problem configuration object')
 
 
 class BaseProblemConfig(object):
