@@ -989,18 +989,6 @@ def clone_expression(expr, substitute=None):
 #  _sizeof_expression
 # =====================================================
 
-class _SizeVisitor(SimpleExpressionVisitor):
-
-    def __init__(self):
-        self.counter = 0
-
-    def visit(self, node):
-        self.counter += 1
-
-    def finalize(self):
-        return self.counter
-
-
 def _sizeof_expression(expr):
     """
     Return the number of nodes in the expression tree.
@@ -1012,9 +1000,6 @@ def _sizeof_expression(expr):
         A non-negative integer that is the number of
         interior and leaf nodes in the expression tree.
     """
-    #visitor = _SizeVisitor()
-    #return visitor.xbfs(expr)
-
     def enter(node):
         return None, 1
     def accept(node, data, child_result):
