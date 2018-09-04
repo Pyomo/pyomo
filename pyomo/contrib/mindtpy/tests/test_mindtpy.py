@@ -20,7 +20,7 @@ else:
 @unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
                  "Symbolic differentiation is not available")
 class TestMindtPy(unittest.TestCase):
-    """Tests for the MINDT solver plugin."""
+    """Tests for the MindtPy solver plugin."""
 
     def test_OA(self):
         """Test the outer approximation decomposition algorithm."""
