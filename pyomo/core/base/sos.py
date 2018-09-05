@@ -17,7 +17,7 @@ from six.moves import zip, xrange
 
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import ActiveIndexedComponent, UnindexedComponent_set
 from pyomo.core.base.set_types import PositiveIntegers
@@ -101,6 +101,7 @@ class _SOSConstraintData(ActiveComponentData):
             self._weights.append(w)
 
 
+@ModelComponentFactory.register("SOS constraint expressions.")
 class SOSConstraint(ActiveIndexedComponent):
     """
     Represents an SOS-n constraint.
@@ -354,5 +355,3 @@ class IndexedSOSConstraint(SOSConstraint):
     def __init__(self, *args, **kwds):
         super(IndexedSOSConstraint,self).__init__(*args, **kwds)
 
-
-register_component(SOSConstraint, "SOS constraint expressions.")

@@ -14,13 +14,12 @@ try:
 except:
     import xml.etree.ElementTree as ET
 
-from pyomo.common.plugin import alias
+from pyomo.dataportal.factory import DataManagerFactory
 from pyomo.dataportal import TableData
 
 
+@DataManagerFactory.register("xml", "XML file interface")
 class XMLTable(TableData):
-
-    alias("xml", "XML file interface")
 
     def __init__(self):
         TableData.__init__(self)

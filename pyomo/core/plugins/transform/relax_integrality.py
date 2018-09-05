@@ -8,20 +8,19 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import alias
 from pyomo.core.base import Var
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, Reals, RealInterval
 import pyomo.core.base
+from pyomo.core.base import TransformationFactory
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 
 
+@TransformationFactory.register('core.relax_integrality',\
+          doc="Create a model where integer variables are replaced with real variables.")
 class RelaxIntegrality(NonIsomorphicTransformation):
     """
     This plugin relaxes integrality in a Pyomo model.
     """
-
-    alias('core.relax_integrality',\
-          doc="Create a model where integer variables are replaced with real variables.")
 
     def __init__(self, **kwds):
         kwds['name'] = "relax_integrality"

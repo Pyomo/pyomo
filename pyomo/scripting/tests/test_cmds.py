@@ -15,7 +15,9 @@ from pyutilib.misc.redirect_io import capture_output
 from pyomo.environ import SolverFactory
 from pyomo.scripting.driver_help import help_solvers
 
-class TestScriptingCommands(unittest.TestCase):
+
+class Test(unittest.TestCase):
+
     def test_help_solvers(self):
         with capture_output() as OUT:
             help_solvers()
@@ -33,3 +35,7 @@ class TestScriptingCommands(unittest.TestCase):
                 self.assertTrue(re.search("%s +\* [a-zA-Z]" % solver, OUT))
             else:
                 self.assertTrue(re.search("%s +[a-zA-Z]" % solver, OUT))
+
+
+if __name__ == "__main__":
+    unittest.main()

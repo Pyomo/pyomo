@@ -10,7 +10,7 @@
 
 import weakref
 from pyomo.core.base.var import Var, _VarData
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.dae.contset import ContinuousSet
 from six import iterkeys
 
@@ -31,6 +31,7 @@ class DAE_Error(Exception):
     """Exception raised while processing DAE Models"""
 
 
+@ModelComponentFactory.register("Derivative of a Var in a DAE model.")
 class DerivativeVar(Var):
     """
     Represents derivatives in a model and defines how a
@@ -217,5 +218,3 @@ class DerivativeVar(Var):
         """
         self._expr = expr
 
-register_component(DerivativeVar,
-                   "Derivative of a Var in a DAE model.")

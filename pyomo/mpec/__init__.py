@@ -8,9 +8,4 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import PluginGlobals
-PluginGlobals.add_env("pyomo")
-
 from pyomo.mpec.complementarity import Complementarity, complements, ComplementarityList
-
-PluginGlobals.pop_env()

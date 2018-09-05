@@ -2,13 +2,13 @@
 import textwrap
 
 from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base.suffix import Suffix
 from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.common.plugin import alias
 from pyomo.common.config import ConfigBlock, ConfigValue, add_docstring_list
 
 
@@ -67,8 +67,11 @@ def _detect_fixed_variables(m):
     return new_fixed_vars
 
 
+
+@TransformationFactory.register('contrib.propagate_fixed_vars',
+          doc="Propagate variable fixing for equalities of type x = y.")
 class FixedVarPropagator(IsomorphicTransformation):
-    """Propagates variable fixing for equalities of type :math:`x = y`.
+    """Propagate variable fixing for equalities of type :math:`x = y`.
 
     If :math:`x` is fixed and :math:`y` is not fixed, then this transformation
     will fix :math:`y` to the value of :math:`x`.
@@ -89,9 +92,6 @@ class FixedVarPropagator(IsomorphicTransformation):
     ))
 
     __doc__ = add_docstring_list(__doc__, CONFIG)
-
-    alias('contrib.propagate_fixed_vars',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance, **kwds):
         config = self.CONFIG(kwds)
@@ -138,8 +138,10 @@ class FixedVarPropagator(IsomorphicTransformation):
         del instance._tmp_propagate_fixed
 
 
+@TransformationFactory.register('contrib.propagate_eq_var_bounds',
+          doc="Propagate variable bounds for equalities of type x = y.")
 class VarBoundPropagator(IsomorphicTransformation):
-    """Propagates variable bounds for equalities of type :math:`x = y`.
+    """Propagate variable bounds for equalities of type :math:`x = y`.
 
     If :math:`x` has a tighter bound then :math:`y`, then this transformation
     will adjust the bounds on :math:`y` to match those of :math:`x`.
@@ -157,9 +159,6 @@ class VarBoundPropagator(IsomorphicTransformation):
     ))
 
     __doc__ = add_docstring_list(__doc__, CONFIG)
-
-    alias('contrib.propagate_eq_var_bounds',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance, **kwds):
         config = self.CONFIG(kwds)

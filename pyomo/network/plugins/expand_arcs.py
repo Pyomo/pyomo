@@ -17,9 +17,8 @@ from pyomo.common.modeling import unique_component_name
 
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.core.base.plugin import alias
 from pyomo.core.base.indexed_component import UnindexedComponent_set
-from pyomo.core.base import Transformation, Var, Block, SortComponents
+from pyomo.core.base import Transformation, Var, Block, SortComponents, TransformationFactory
 
 from pyomo.network import Arc
 from pyomo.network.util import replicate_var
@@ -28,9 +27,9 @@ from pyomo.network.util import replicate_var
 obj_iter_kwds = dict(ctype=Arc, active=True, sort=SortComponents.deterministic)
 
 
-class ExpandArcs(Transformation):
-    alias('network.expand_arcs',
+@TransformationFactory.register('network.expand_arcs',
           doc="Expand all Arcs in the model to simple constraints")
+class ExpandArcs(Transformation):
 
     def _apply_to(self, instance, **kwds):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
