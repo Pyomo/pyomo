@@ -176,12 +176,9 @@ ExpressionFactory.ep = ExtensionPoint(IPyomoExpression)
 
 class ModelComponentFactoryClass(Factory):
 
-    def register(self, doc):
+    def register(self, doc=None):
         def fn(cls):
-            name = cls.__name__
-            self._cls[name] = cls
-            self._doc[name] = doc
-            return cls
+            return super(ModelComponentFactoryClass, self).register(cls.__name__, doc)(cls)
         return fn
 
 ModelComponentFactory = ModelComponentFactoryClass('model component')
@@ -217,8 +214,7 @@ class Transformation(object):
         #super(Transformation, self).__init__(**kwds)
 
     #
-    # Support "with" statements. Forgetting to call deactivate
-    # on Plugins is a common source of memory leaks
+    # Support "with" statements.
     #
     def __enter__(self):
         return self
