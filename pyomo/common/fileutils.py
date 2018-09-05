@@ -8,9 +8,27 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import inspect
 import os
+import platform
 import six
 
+
+def thisFile():
+    """Returns the file name for the module that calls this function.
+
+    This function is more reliable than __file__ on platforms like
+    WIndows and in situations where the program has called
+    os.chdir().
+
+    """
+    # __file__ fails if script is called in different ways on Windows
+    # __file__ fails if someone does os.chdir() before
+    # sys.argv[0] also fails because it doesn't not always contains the path
+    callerFrame = inspect.stack()[1]
+    if callerFrame[1] in ('<stdin>','<string>'):
+        return callerFrame[1]
+    return os.path.abspath(inspect.getfile(callerFrame[0]))
 
 def find_file(fname, cwd=True, mode=os.R_OK, ext=None, pathlist=[]):
     """Locate a file, given a set of search parameters
