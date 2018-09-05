@@ -11,7 +11,6 @@
 import os
 import six
 
-_default_env_vars = ['LD_LIBRARY_PATH','PATH']
 
 def find_file(fname, cwd=True, mode=os.R_OK, ext=None, pathlist=[]):
     """Locate a file, given a set of search parameters
@@ -32,8 +31,7 @@ def find_file(fname, cwd=True, mode=os.R_OK, ext=None, pathlist=[]):
     pathlist (list): a list of strings containing paths to search.  Each
         string contains one or more paths separated by
         os.pathsep. (default: [])
-
-    """ % ( _default_env_vars, )
+    """
 
     locations = []
     if cwd:
