@@ -227,7 +227,12 @@ class TrustRegionSolver(plugin.Plugin):
         doc = ''))
 
     def __init__(self, **kwds):
+        # set persistent config options to default CONFIG + kwds modifications
         self.config = self.CONFIG(kwds)
+        print('------------------')
+        print('In __init__')
+        print('sample_radius=%f (persistent)' % self.config.sample_radius)
+        #self.config.display();
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -243,8 +248,16 @@ class TrustRegionSolver(plugin.Plugin):
         return __version__
 
     def solve(self, model, eflist, **kwds):
+        # set local config equal to persistent config + kwds modifications
         config = self.config(kwds)
-        return TRF(model, eflist)
+
+        print('------------------')
+        print('In solve function')
+        print('sample_radius=%f (transient)'  % config.sample_radius)
+        print('sample_radius=%f (persistent)' % self.config.sample_radius)
+        #config.display()
+        print('------------------')
+        return TRF(model, eflist, config)
 
 class GJHSolver(ASL):
     """An interface to the AMPL GJH "solver" for evaluating a model at a
