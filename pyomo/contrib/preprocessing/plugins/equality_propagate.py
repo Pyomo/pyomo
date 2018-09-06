@@ -2,13 +2,14 @@
 import textwrap
 
 from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base.suffix import Suffix
 from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.common.plugin import alias
+from pyomo.common.config import ConfigBlock, ConfigValue, add_docstring_list
 
 
 def _build_equality_set(m):
@@ -66,43 +67,41 @@ def _detect_fixed_variables(m):
     return new_fixed_vars
 
 
-class FixedVarPropagator(IsomorphicTransformation):
-    """Propagates variable fixing for equalities of type x = y.
 
-    If x is fixed and y is not fixed, then this transformation will fix y to
-    the value of x.
+@TransformationFactory.register('contrib.propagate_fixed_vars',
+          doc="Propagate variable fixing for equalities of type x = y.")
+class FixedVarPropagator(IsomorphicTransformation):
+    """Propagate variable fixing for equalities of type :math:`x = y`.
+
+    If :math:`x` is fixed and :math:`y` is not fixed, then this transformation
+    will fix :math:`y` to the value of :math:`x`.
 
     This transformation can also be performed as a temporary transformation,
     whereby the transformed variables are saved and can be later unfixed.
 
+    Keyword arguments below are specified for the ``apply_to`` and
+    ``create_using`` functions.
+
     """
 
-    alias('contrib.propagate_fixed_vars',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
+    CONFIG = ConfigBlock()
+    CONFIG.declare("tmp", ConfigValue(
+        default=False, domain=bool,
+        description="True to store the set of transformed variables and "
+        "their old states so that they can be later restored."
+    ))
 
-    def _apply_to(self, instance, tmp=False):
-        """Apply the transformation.
+    __doc__ = add_docstring_list(__doc__, CONFIG)
 
-        Args:
-            instance (Block): the block on which to search for x == y
-                constraints. Note that variables may be located anywhere in
-                the model.
-            tmp (bool, optional): Whether the variable fixing will be temporary
-
-        Returns:
-            None
-
-        Raises:
-            ValueError: if two fixed variables x = y have different values.
-
-        """
-        if tmp and not hasattr(instance, '_tmp_propagate_fixed'):
+    def _apply_to(self, instance, **kwds):
+        config = self.CONFIG(kwds)
+        if config.tmp and not hasattr(instance, '_tmp_propagate_fixed'):
             instance._tmp_propagate_fixed = ComponentSet()
         eq_var_map, relevant_vars = _build_equality_set(instance)
         #: ComponentSet: The set of all fixed variables
         fixed_vars = ComponentSet((v for v in relevant_vars if v.fixed))
         newly_fixed = _detect_fixed_variables(instance)
-        if tmp:
+        if config.tmp:
             instance._tmp_propagate_fixed.update(newly_fixed)
         fixed_vars.update(newly_fixed)
         processed = ComponentSet()
@@ -126,7 +125,7 @@ class FixedVarPropagator(IsomorphicTransformation):
                                 value(v2)))
                 elif not v2.fixed:
                     v2.fix(value(v1))
-                    if tmp:
+                    if config.tmp:
                         instance._tmp_propagate_fixed.add(v2)
             # Add all variables in the equality set to the set of processed
             # variables.
@@ -139,32 +138,31 @@ class FixedVarPropagator(IsomorphicTransformation):
         del instance._tmp_propagate_fixed
 
 
+@TransformationFactory.register('contrib.propagate_eq_var_bounds',
+          doc="Propagate variable bounds for equalities of type x = y.")
 class VarBoundPropagator(IsomorphicTransformation):
-    """Propagates variable bounds for equalities of type x = y.
+    """Propagate variable bounds for equalities of type :math:`x = y`.
 
-    If x has a tighter bound then y, then this transformation will adjust the
-    bounds on y to match those of x.
+    If :math:`x` has a tighter bound then :math:`y`, then this transformation
+    will adjust the bounds on :math:`y` to match those of :math:`x`.
+
+    Keyword arguments below are specified for the ``apply_to`` and
+    ``create_using`` functions.
 
     """
 
-    alias('contrib.propagate_eq_var_bounds',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
+    CONFIG = ConfigBlock()
+    CONFIG.declare("tmp", ConfigValue(
+        default=False, domain=bool,
+        description="True to store the set of transformed variables and "
+        "their old states so that they can be later restored."
+    ))
 
-    def _apply_to(self, instance, tmp=False):
-        """Apply the transformation.
+    __doc__ = add_docstring_list(__doc__, CONFIG)
 
-        Args:
-            instance (Block): the block on which to search for x == y
-                constraints. Note that variables may be located anywhere in
-                the model.
-            tmp (bool, optional): Whether the bound modifications will be
-                temporary
-
-        Returns:
-            None
-
-        """
-        if tmp and not hasattr(instance, '_tmp_propagate_original_bounds'):
+    def _apply_to(self, instance, **kwds):
+        config = self.CONFIG(kwds)
+        if config.tmp and not hasattr(instance, '_tmp_propagate_original_bounds'):
             instance._tmp_propagate_original_bounds = Suffix(
                 direction=Suffix.LOCAL)
         eq_var_map, relevant_vars = _build_equality_set(instance)
@@ -199,7 +197,7 @@ class VarBoundPropagator(IsomorphicTransformation):
                     .format(v1.name, value(v1.lb), value(v2.ub), v2.name))
 
             for v in var_equality_set:
-                if tmp:
+                if config.tmp:
                     # TODO warn if overwriting
                     instance._tmp_propagate_original_bounds[v] = (
                         v.lb, v.ub)

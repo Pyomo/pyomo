@@ -15,9 +15,9 @@ import pyomo.common
 from pyomo.core import TransformationFactory, Var, Set
 
 
+@pyomo.opt.SolverFactory.register('bilevel_bqp',
+    doc='Global solver for bilevel quadratic problems')
 class BILEVEL_Solver4(pyomo.opt.OptSolver):
-
-    pyomo.common.plugin.alias('bilevel_bqp', doc='Global solver for bilevel quadratic problems')
 
     def __init__(self, **kwds):
         kwds['type'] = 'bilevel_bqp'

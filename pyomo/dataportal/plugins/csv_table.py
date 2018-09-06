@@ -11,13 +11,12 @@
 import os.path
 import csv
 
-from pyomo.common.plugin import alias
 from pyomo.dataportal import TableData
+from pyomo.dataportal.factory import DataManagerFactory
 
 
+@DataManagerFactory.register("csv", "CSV file interface")
 class CSVTable(TableData):
-
-    alias("csv", "CSV file interface")
 
     def __init__(self):
         TableData.__init__(self)

@@ -16,7 +16,6 @@ import re
 
 import pyutilib.misc
 
-from pyomo.common.plugin import alias
 from pyomo.opt.base import results
 from pyomo.opt.base.formats import ResultsFormat
 from pyomo.opt import (SolverResults,
@@ -26,13 +25,13 @@ from pyomo.opt import (SolverResults,
 
 from six.moves import xrange
 
+
+@results.ReaderFactory.register(str(ResultsFormat.sol))
 class ResultsReader_sol(results.AbstractResultsReader):
     """
     Class that reads in a *.sol results file and generates a
     SolverResults object.
     """
-
-    alias(str(ResultsFormat.sol))
 
     def __init__(self, name=None):
         results.AbstractResultsReader.__init__(self,ResultsFormat.sol)

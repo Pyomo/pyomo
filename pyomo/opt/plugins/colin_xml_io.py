@@ -12,8 +12,7 @@
 Define the plugin for COLIN XML IO
 """
 
-from pyomo.common.plugin import *
-from pyomo.opt.blackbox.problem_io import *
+from pyomo.opt.blackbox.problem_io import BlackBoxOptProblemIOFactory
 import xml.dom.minidom
 from pyutilib.misc import tostr
 
@@ -25,14 +24,9 @@ except:
     intlist = [int, float]
 
 
-class ColinXmlIO(SingletonPlugin):
+@BlackBoxOptProblemIOFactory.register('colin')
+class ColinXmlIO(object):
     """The reader/writer for the COLIN XML IO Formats"""
-
-    implements(IBlackBoxOptProblemIO)
-
-    def __init__(self):
-        SingletonPlugin.__init__(self)
-        self.name = 'colin'
 
     def read(self, filename, point):
         """

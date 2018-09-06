@@ -1,9 +1,9 @@
 """Tests detection of fixed variables."""
 import pyutilib.th as unittest
-from pyomo.environ import (ConcreteModel, TransformationFactory, value, Var)
+from pyomo.environ import ConcreteModel, TransformationFactory, Var, value
 
 
-class TestConstraintToVarBoundTransform(unittest.TestCase):
+class TestDetectFixedVars(unittest.TestCase):
     """Tests detection of fixed variables."""
 
     def test_fixed_var_propagate(self):
@@ -32,7 +32,7 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         self.assertFalse(m.v2.fixed)
         xfrm.revert(m)
         self.assertFalse(m.v1.fixed)
-        self.assertEquals(value(m.v1), 1)
+        self.assertEqual(value(m.v1), 1)
 
 
 if __name__ == '__main__':

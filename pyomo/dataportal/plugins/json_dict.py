@@ -10,6 +10,7 @@
 
 import os.path
 import json
+import six
 try:
     import yaml
     yaml_available = True
@@ -18,9 +19,7 @@ except ImportError:
 
 from pyutilib.misc import Options
 
-from pyomo.common.plugin import alias, Plugin, implements
-from pyomo.dataportal.factory import IDataManager
-import six
+from pyomo.dataportal.factory import DataManagerFactory
 
 
 def detuplize(d, sort=False):
@@ -94,11 +93,8 @@ def tuplize(d):
         return {None:d}
 
 
-class JSONDictionary(Plugin):
-
-    alias("json", "JSON file interface")
-
-    implements(IDataManager, service=False)
+@DataManagerFactory.register("json", "JSON file interface")
+class JSONDictionary(object):
 
     def __init__(self):
         self._info = {}
@@ -196,11 +192,8 @@ class JSONDictionary(Plugin):
 
 
 
-class YamlDictionary(Plugin):
-
-    alias("yaml", "YAML file interface")
-
-    implements(IDataManager, service=False)
+@DataManagerFactory.register("yaml", "YAML file interface")
+class YamlDictionary(object):
 
     def __init__(self):
         self._info = {}

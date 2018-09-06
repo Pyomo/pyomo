@@ -20,8 +20,7 @@ import sys
 
 from pyutilib.enum import Enum
 
-from pyomo.common.plugin import ExtensionPoint
-from pyomo.opt.blackbox.problem_io import IBlackBoxOptProblemIO
+from pyomo.opt.blackbox.problem_io import BlackBoxOptProblemIOFactory
 from pyomo.opt.blackbox.point import MixedIntVars, RealVars
 
 response_enum = Enum("FunctionValue", "FunctionValues", "Gradient", "Hessian", "NonlinearConstraintValues", "Jacobian")
@@ -32,8 +31,6 @@ class OptProblem(object):
     A class that defines an application that can be optimized
     by a COLIN optimizer via system calls.
     """
-
-    io_manager = ExtensionPoint(IBlackBoxOptProblemIO)
 
     def __init__(self):
         """
@@ -60,7 +57,7 @@ class OptProblem(object):
         #
         # Parse XML input file
         #
-        iomngr = OptProblem.io_manager.service(format)
+        iomngr = BlackBoxOptProblemIOFactory(format)
         if iomngr is None:
             raise ValueError("Unknown IO format '%s' for COLIN OptProblem" % str(format))
         if not os.path.exists(argv[1]):

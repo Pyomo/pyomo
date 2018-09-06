@@ -11,24 +11,18 @@
 
 __all__ = ['AsynchronousSolverManager', 'SolverManagerFactory']
 
-from pyomo.common.plugin import *
+from pyomo.common import Factory
 from pyomo.opt.parallel.manager import *
 
 
-class ISolverManager(Interface):
-    pass
+
+SolverManagerFactory = Factory('solver manager')
 
 
-SolverManagerFactory = CreatePluginFactory(ISolverManager)
-
-
-class AsynchronousSolverManager(AsynchronousActionManager, Plugin):
-
-    implements(ISolverManager)
+class AsynchronousSolverManager(AsynchronousActionManager):
 
     def __init__(self, **kwds):
         AsynchronousActionManager.__init__(self)
-        Plugin.__init__(self, **kwds)
 
     def solve(self, *args, **kwds):
         return self.execute(*args, **kwds)
@@ -55,4 +49,14 @@ class AsynchronousSolverManager(AsynchronousActionManager, Plugin):
         for action_handle in action_handles:
             results = self.get_results(action_handle)
             instance_map[action_handle].solutions.load_from(results)
+
+    #
+    # Support "with" statements. Forgetting to call deactivate
+    # on Plugins is a common source of memory leaks
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
 

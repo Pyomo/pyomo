@@ -1,37 +1,26 @@
 """Transformation to propagate a zero value to terms of a sum."""
 import textwrap
 
+from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.common.plugin import alias
 
 
+@TransformationFactory.register('contrib.propagate_zero_sum',
+          doc="Propagate fixed-to-zero for sums of only positive (or negative) vars.")
 class ZeroSumPropagator(IsomorphicTransformation):
     """Propagates fixed-to-zero for sums of only positive (or negative) vars.
 
-    If x is fixed to zero and x == x1 + x2 + x3 and x1, x2, x3 are all
-    non-negative or all non-positive, then x1, x2, and x3 will be fixed to
-    zero.
+    If :math:`z` is fixed to zero and :math:`z = x_1 + x_2 + x_3` and
+    :math:`x_1`, :math:`x_2`, :math:`x_3` are all non-negative or all
+    non-positive, then :math:`x_1`, :math:`x_2`, and :math:`x_3` will be fixed
+    to zero.
 
     """
 
-    alias('contrib.propagate_zero_sum',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-
     def _apply_to(self, instance):
-        """Apply the transformation.
-
-        Args:
-            instance (Block): the block on which to search for x == sum(var)
-                constraints. Note that variables may be located anywhere in
-                the model.
-
-        Returns:
-            None
-
-        """
         for constr in instance.component_data_objects(ctype=Constraint,
                                                       active=True,
                                                       descend_into=True):

@@ -10,8 +10,8 @@
 
 import logging
 
-from pyomo.common.plugin import alias
 from pyomo.core.base import (Transformation,
+                             TransformationFactory,
                              Constraint,
                              Block,
                              SortComponents)
@@ -26,9 +26,9 @@ logger = logging.getLogger('pyomo.core')
 # This transformation reworks each Complementarity block to 
 # setup a standard form.
 #
+@TransformationFactory.register('mpec.standard_form', doc="Standard reformulation of complementarity condition")
 class MPEC3_Transformation(Transformation):
 
-    alias('mpec.standard_form', doc="Standard reformulation of complementarity condition")
 
     def __init__(self):
         super(MPEC3_Transformation, self).__init__()
