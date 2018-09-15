@@ -14,7 +14,7 @@ if not AmplInterface.available():
         "Pynumero needs the ASL extension to run NLP tests")
 
 
-from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP, NLPgcd
+from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP, NLP
 from pyomo.contrib.pynumero.interfaces.nlp_compositions import TwoStageStochasticNLP
 from pyomo.contrib.pynumero.sparse import (BlockVector,
                                            BlockMatrix,
@@ -259,7 +259,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         counter = 0
         for name, nlp in self.nlp.nlps():
             counter += 1
-            self.assertIsInstance(nlp, NLPgcd)
+            self.assertIsInstance(nlp, NLP)
         self.assertEqual(counter, self.n_scenarios)
 
     def test_objective(self):

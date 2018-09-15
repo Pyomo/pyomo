@@ -32,7 +32,11 @@ from pyomo.contrib.pynumero.sparse.base import SparseBase
 import numpy as np
 
 
-__all__ = ['COOMatrix', 'COOSymMatrix', 'EmptyMatrix', 'IdentityMatrix']
+__all__ = ['COOMatrix',
+           'COOSymMatrix',
+           'EmptyMatrix',
+           'IdentityMatrix',
+           'DiagonalMatrix']
 
 
 class COOMatrix(SparseBase, scipy_coo_matrix):
@@ -146,15 +150,12 @@ class COOMatrix(SparseBase, scipy_coo_matrix):
         return self
 
     def todok(self, copy=False):
-        # ToDo: decide if we should suppert this
         raise NotImplementedError('Not supported')
 
     def todia(self, copy=False):
-        # ToDo: decide if we should suppert this
         raise NotImplementedError('Not supported')
 
     def tolil(self, copy=False):
-        # ToDo: decide if we should suppert this
         raise NotImplementedError('Not supported')
 
     def tofullmatrix(self):
@@ -286,8 +287,8 @@ class COOSymMatrix(COOMatrix):
             raise RuntimeError('A rectangular matrix is not symmetric')
 
         # check nnz is less than the full lower triangular
-        if self.nnz > self.shape[0]*(self.shape[0] + 1)/2:
-            raise RuntimeError('COOSymMatrix only store lower triangular entries. Too many nnz')
+        #if self.nnz > self.shape[0]*(self.shape[0] + 1)/2:
+        #    raise RuntimeError('COOSymMatrix only store lower triangular entries. Too many nnz')
 
         # check only lower triangular entries
         diff = self.row - self.col
@@ -466,15 +467,12 @@ class COOSymMatrix(COOMatrix):
             return x
 
     def todok(self, copy=False):
-        # ToDo: decide if we should suppert this
         raise NotImplementedError('Not supported')
 
     def todia(self, copy=False):
-        # ToDo: decide if we should suppert this
         raise NotImplementedError('Not supported')
 
     def tolil(self, copy=False):
-        # ToDo: decide if we should suppert this
         raise NotImplementedError('Not supported')
 
     def toscipy(self):
@@ -486,6 +484,15 @@ class COOSymMatrix(COOMatrix):
     def _add_sparse(self, other):
         if isinstance(other, SparseBase):
             if other.is_symmetric:
+                # ToDo: this is a temporary fix. Scipy eliminates zeros when adding.
+                # Need to implement add in c++ or contact scipy to find a fix.
+                if isinstance(other, DiagonalMatrix):
+                    irow = np.concatenate((self.row, other.row))
+                    jcol = np.concatenate((self.col, other.col))
+                    data = np.concatenate((self.data, other.data))
+                    M = COOSymMatrix((data, (irow, jcol)), shape=self.shape)
+                    M.sum_duplicates()
+                    return M
                 return self.tocsr()._add_sparse(other)
             return self.tofullmatrix()._add_sparse(other)
         if issparse(other):
@@ -495,6 +502,15 @@ class COOSymMatrix(COOMatrix):
     def _sub_sparse(self, other):
         if isinstance(other, SparseBase):
             if other.is_symmetric:
+                # ToDo: this is a temporary fix. Scipy eliminates zeros when adding.
+                # Need to implement add in c++ or contact scipy to find a fix.
+                if isinstance(other, DiagonalMatrix):
+                    irow = np.concatenate((self.row, other.row))
+                    jcol = np.concatenate((self.col, other.col))
+                    data = np.concatenate((self.data, -other.data))
+                    M = COOSymMatrix((data, (irow, jcol)), shape=self.shape)
+                    M.sum_duplicates()
+                    return M
                 return self.tocsr()._sub_sparse(other)
             return self.tofullmatrix()._sub_sparse(other)
         if issparse(other):
@@ -635,6 +651,48 @@ class IdentityMatrix(COOSymMatrix):
 
     def __repr__(self):
         return 'IdentityMatrix{}'.format(self.shape)
+
+    def inv(self):
+        """
+        Return inverse of identity matrix
+
+        Returns
+        -------
+        IdentityMatrix
+        """
+
+        return self
+
+
+class DiagonalMatrix(COOSymMatrix):
+
+    def __init__(self, values, eliminate_zeros=False):
+        data = np.array(values, dtype=np.double)
+        nrowcols = len(data)
+        if eliminate_zeros:
+            irows = np.nonzero(data)[0]
+            jcols = irows
+            data = data[irows]
+        else:
+            irows = np.arange(0, nrowcols)
+            jcols = np.arange(0, nrowcols)
+        arg1 = (data, (irows, jcols))
+        super(DiagonalMatrix, self).__init__(arg1, shape=(nrowcols, nrowcols), dtype=np.double, copy=False)
+
+    def __repr__(self):
+        return 'DiagonalMatrix{}'.format(self.shape)
+
+    def inv(self):
+
+        """
+        Returns inverse of diagonal matrix
+
+        Returns
+        -------
+        DiagonalMatrix
+        """
+        data = 1.0 / self.data
+        return DiagonalMatrix(data)
 
 
 if __name__ == "__main__":

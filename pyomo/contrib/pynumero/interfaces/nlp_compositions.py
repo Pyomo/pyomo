@@ -1,4 +1,4 @@
-from pyomo.contrib.pynumero.interfaces.nlp import NLPgcd
+from pyomo.contrib.pynumero.interfaces.nlp import NLP
 from pyomo.contrib.pynumero.sparse import (BlockMatrix,
                              BlockSymMatrix,
                              BlockVector,
@@ -14,7 +14,7 @@ import numpy as np
 __all__ = ['TwoStageStochasticNLP']
 
 
-class TwoStageStochasticNLP(NLPgcd):
+class TwoStageStochasticNLP(NLP):
     """
     Nonlinear program interface for composite NLP that result from
     two-stage stochastic programming problems
@@ -81,7 +81,7 @@ class TwoStageStochasticNLP(NLPgcd):
         self._nlps = list()
         for k in ordered_keys:
             nlp = nlps[k]
-            if not isinstance(nlp, NLPgcd):
+            if not isinstance(nlp, NLP):
                 raise RuntimeError("Scenarios must be NLP objects")
             self._sname_to_sid[k] = len(self._sid_to_sname)
             self._sid_to_sname.append(k)

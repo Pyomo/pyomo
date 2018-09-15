@@ -39,7 +39,7 @@ def basic_sqp(nlp, **kwargs):
 
     Parameters
     ----------
-    nlp : PyomoNLP
+    nlp : NLP
     kwargs
 
     Returns
@@ -67,7 +67,7 @@ def basic_sqp(nlp, **kwargs):
     debug_mode = kwargs.pop('debug_mode', False)
 
     # create vector of variables
-    x = np.copy(nlp.x_init())
+    x = nlp.x_init()
     lam = nlp.create_vector_y()  # initializes multipliers at zero ToDo: change this?
 
     if tee:

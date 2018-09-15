@@ -1,4 +1,4 @@
-from pyomo.contrib.pynumero.interfaces.nlp import NLPgcd
+from pyomo.contrib.pynumero.interfaces.nlp import NLP
 from pyomo.contrib.pynumero.sparse import COOSymMatrix
 
 import numpy as np
@@ -6,7 +6,7 @@ import numpy as np
 __all__ = ['AdmmNLP']
 
 
-class AdmmNLP(NLPgcd):
+class AdmmNLP(NLP):
 
     def __init__(self,
                  nlp,
@@ -19,7 +19,7 @@ class AdmmNLP(NLPgcd):
 
         Parameters
         ----------
-        nlp: NLPgcd
+        nlp: NLP
         complicating_vars: with complicated variable indices
         rho: penalty parameter
 

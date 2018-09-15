@@ -40,7 +40,7 @@ xu = nlp.xu(condensed=True)
 Pxl = nlp.expansion_matrix_xl()
 Pxu = nlp.expansion_matrix_xu()
 
-# lower and upper inequalities residual
+# lower and upper bounds residual
 res_xl = Pxl.transpose() * x0 - xl
 res_xu = xu - Pxu.transpose() * x0
 print("Residuals lower bounds x-xl:", res_xl)

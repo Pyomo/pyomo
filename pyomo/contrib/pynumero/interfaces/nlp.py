@@ -58,13 +58,13 @@ __all__ = ['AmplNLP', 'PyomoNLP']
 
 
 @six.add_metaclass(abc.ABCMeta)
-class NLPgcd(object):
+class NLP(object):
     """
     Base class for nonlinear programs.
 
     Note
     ----
-    Any subclass of NLPgcd must overwrite _build_x_maps and _build_gcd_maps.
+    Any subclass of NLP must overwrite _build_x_maps and _build_gcd_maps.
     Any subclass must call super at the beginning of the __init__() method
 
     Attributes
@@ -494,13 +494,13 @@ class NLPgcd(object):
         """
         Return initial guess of primal variables in a 1d-array.
         """
-        return self._init_x
+        return self._init_x.copy()
 
     def y_init(self):
         """
         Return initial guess of dual variables in a 1d-array.
         """
-        return self._init_y
+        return self._init_y.copy()
 
     def expansion_matrix_xl(self):
         """
@@ -543,6 +543,26 @@ class NLPgcd(object):
         data = np.ones(nnz)
         return CSRMatrix((data, (row, col)), shape=(self.nd, nnz))
 
+    def expansion_matrix_d(self):
+        """
+        Returns expansion matrix inequality constraints
+        """
+        row = self._d_map
+        nnz = len(self._d_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return CSRMatrix((data, (row, col)), shape=(self.ng, nnz))
+
+    def expansion_matrix_c(self):
+        """
+        Returns expansion matrix inequality constraints
+        """
+        row = self._c_map
+        nnz = len(self._c_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return CSRMatrix((data, (row, col)), shape=(self.ng, nnz))
+
     def create_vector_x(self, subset=None):
         """Returns ndarray of primal variables
 
@@ -566,6 +586,30 @@ class NLPgcd(object):
         elif subset == 'u':
             nx_u = len(self._upper_x_map)
             return np.zeros(nx_u, dtype=np.double)
+        else:
+            raise RuntimeError('Subset not recognized')
+
+    def create_vector_s(self, subset=None):
+        """Returns ndarray of slack variables
+
+        Parameters
+        ----------
+        subset : str, optional
+            determines size of vector.
+            `l`: only slack variables with lower bounds
+            `u`: only slack variables with upper bounds
+
+        Returns
+        -------
+        ndarray
+
+        """
+        if subset is None:
+            return self.create_vector_y(subset='d')
+        elif subset == 'l':
+            return self.create_vector_y(subset='dl')
+        elif subset == 'u':
+            return self.create_vector_y(subset='du')
         else:
             raise RuntimeError('Subset not recognized')
 
@@ -768,7 +812,7 @@ class NLPgcd(object):
         return
 
 
-class AslNLP(NLPgcd):
+class AslNLP(NLP):
     """
     ASL nonlinear program interface
 

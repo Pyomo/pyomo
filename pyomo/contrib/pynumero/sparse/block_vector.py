@@ -383,6 +383,12 @@ class BlockVector(object):
                 else:
                     other[idx] = cp.deepcopy(blk)
 
+    def copy(self):
+        bv = BlockVector(self.nblocks)
+        for bid, vv in enumerate(self):
+            bv[bid] = vv.copy()
+        return bv
+
     def _check_mask(self):
         msg = 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
         msg += '\n{}'.format(self.__str__())
@@ -702,6 +708,12 @@ class BlockVector(object):
                 raise NotImplementedError("Should not ge here")
             msg += '{}: {}\n'.format(idx, repn)
         return msg
+
+    def __copy__(self):
+        raise NotImplementedError()
+
+    def __deepcopy__(self, memodict={}):
+        raise NotImplementedError()
 
 if __name__ == "__main__":
 

@@ -492,3 +492,62 @@ class TestPyomoNLP(unittest.TestCase):
     # ToDo: add test of expansion matrices
     # ToDo: add test of dl and du
 
+    def test_expansion_matrix_xl(self):
+
+        xl = self.nlp1.xl(condensed=True)
+        Pxl = self.nlp1.expansion_matrix_xl()
+        print(Pxl.todense())
+        all_xl = Pxl * xl
+        xx = np.copy(self.nlp1.xl())
+        xx[xx == -np.inf] = 0
+        self.assertTrue(np.allclose(all_xl, xx))
+
+    def test_expansion_matrix_xu(self):
+        xu = self.nlp1.xu(condensed=True)
+        Pxu = self.nlp1.expansion_matrix_xu()
+        all_xu = Pxu * xu
+        xx = np.copy(self.nlp1.xu())
+        xx[xx == np.inf] = 0
+        self.assertTrue(np.allclose(all_xu, xx))
+
+    def test_expansion_matrix_dl(self):
+        dl = self.nlp1.dl(condensed=True)
+        Pdl = self.nlp1.expansion_matrix_dl()
+        all_dl = Pdl * dl
+        dd = np.copy(self.nlp1.dl())
+        dd[dd == -np.inf] = 0
+        self.assertTrue(np.allclose(all_dl, dd))
+
+    def test_expansion_matrix_du(self):
+        du = self.nlp1.du(condensed=True)
+        Pdu = self.nlp1.expansion_matrix_du()
+        all_du = Pdu * du
+        dd = np.copy(self.nlp1.du())
+        dd[dd == np.inf] = 0
+        self.assertTrue(np.allclose(all_du, dd))
+
+    def test_expansion_matrix_d(self):
+
+        d = self.nlp1.create_vector_s()
+        d.fill(1.0)
+        Pd = self.nlp1.expansion_matrix_d()
+        g = Pd * d
+        cnames = self.nlp1.constraint_order()
+        dd = np.zeros(self.nlp1.ng)
+        for i in range(self.nlp1.ng):
+            if 'd' in cnames[i]:
+                dd[i] = 1.0
+        self.assertTrue(np.allclose(g, dd))
+
+    def test_expansion_matrix_c(self):
+
+        c = self.nlp1.create_vector_y(subset='c')
+        c.fill(1.0)
+        Pc = self.nlp1.expansion_matrix_c()
+        g = Pc * c
+        cnames = self.nlp1.constraint_order()
+        cc = np.zeros(self.nlp1.ng)
+        for i in range(self.nlp1.ng):
+            if 'c' in cnames[i]:
+                cc[i] = 1.0
+        self.assertTrue(np.allclose(g, cc))
