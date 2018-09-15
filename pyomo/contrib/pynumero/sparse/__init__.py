@@ -14,7 +14,13 @@ try:
 except ImportError:
     numpy_available = False
 
-if numpy_available:
+try:
+    import scipy 
+    scipy_available = True
+except ImportError:
+    scipy_available = False
+    
+if numpy_available and scipy_available:
     from .base import SparseBase
     from .coo import *
     from .csc import *
@@ -22,4 +28,8 @@ if numpy_available:
     from .block_vector import *
     from .block_matrix import *
     from .extract import tril, triu
-
+else:
+    if not numpy_available:
+        raise ImportError("Install numpy")
+    if not scipy_available:
+        raise ImportError("Install scipy")

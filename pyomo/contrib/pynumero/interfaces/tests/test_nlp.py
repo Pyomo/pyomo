@@ -496,7 +496,6 @@ class TestPyomoNLP(unittest.TestCase):
 
         xl = self.nlp1.xl(condensed=True)
         Pxl = self.nlp1.expansion_matrix_xl()
-        print(Pxl.todense())
         all_xl = Pxl * xl
         xx = np.copy(self.nlp1.xl())
         xx[xx == -np.inf] = 0
