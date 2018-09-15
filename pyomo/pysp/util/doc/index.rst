@@ -3,7 +3,7 @@ rapper Documentation
 
 This is an advanced topic.
 
-The `pyomo.pysp.util.rapper` package built on the Pyomo optimization
+The `pyomo.pysp.util.rapper` package is built on the Pyomo optimization
 modeling language ([PyomoJournal]_, [PyomoBookII]_) to provide a thin
 wrapper for some functionality of PySP [PySPJournal]_ associated with
 the `runef` and `runph` commands. The package is designed mainly for

@@ -1,11 +1,18 @@
 Demonstration of rapper Capabilities
 ====================================
 
+..
+   doctest:: I can't stop output from PySP so I can't test. And also:
+
+   I think it is a bad idea to try to insist that output is the same
+   every time this runs. I have other tests of this code, so it should
+   be enough for the doctest just make sure there are no exceptions.
+
 We provide a series of examples intended to show different things that
 can be done with rapper.
 
 .. testsetup:: *
-
+	       
    import tempfile
    import sys
    import os
@@ -13,30 +20,26 @@ can be done with rapper.
    import pyomo as pyomoroot
 
    tdir = tempfile.mkdtemp()    #TemporaryDirectory().name
-   sys.path.insert(1,self.tdir)
+   sys.path.insert(1, tdir)
 
    savecwd = os.getcwd()
-   os.chdir(self.tdir)
+   os.chdir(tdir)
 
    p = str(pyomoroot.__path__)
    l = p.find("'")
    r = p.find("'", l+1)
    pyomorootpath = p[l+1:r]
-   farmpath = pyomorootpath + os.sep + ".." + os.sep + "examples" + \
-              os.sep + "pysp" + os.sep + "farmer"
+   farmpath = pyomorootpath + os.sep + ".." + os.sep + "examples" + os.sep + "pysp" + os.sep + "farmer"
    farmpath = os.path.abspath(farmpath)
         
    farmer_concrete_file = farmpath + os.sep + \
                           "concrete" + os.sep + "ReferenceModel.py"
 
-   shutil.copyfile(self.farmer_concrete_file,
-                   self.tdir + os.sep + "ReferenceModel.py")
+   shutil.copyfile(farmer_concrete_file,
+                   tdir + os.sep + "ReferenceModel.py")
         
-   abstract_tree = CreateAbstractScenarioTreeModel()
    shutil.copyfile(farmpath + os.sep +"scenariodata" + os.sep + "ScenarioStructure.dat",
-                   self.tdir + os.sep + "ScenarioStructure.dat")
-   farmer_concrete_tree = \
-       abstract_tree.create_instance(self.tdir + os.sep + "ScenarioStructure.dat")
+                   tdir + os.sep + "ScenarioStructure.dat")
 
 .. doctest::
 
@@ -49,14 +52,14 @@ can be done with rapper.
 
    The next line establishes the solver to be used.
    
-   >>> solvername = "gurobi"
+   >>> solvername = "cplex"
 
    The next two lines show one way to create a concrete scenario tree. There are
    others that can be found in `pyomo.pysp.scenariotree.tree_structure_model`.
 
    >>> abstract_tree = CreateAbstractScenarioTreeModel()
    >>> concrete_tree = \
-   >>>     abstract_tree.create_instance("ScenarioStructure.dat")
+   ...     abstract_tree.create_instance("ScenarioStructure.dat")
 
 
 Emulate some aspects of `runef`
@@ -67,28 +70,32 @@ Emulate some aspects of `runef`
    `pysp_instance_creation_callback` function.
 
    >>> stsolver = rapper.StochSolver("ReferenceModel.py",
-   >>>            tree_model = concrete_tree)
+   ...            tree_model = concrete_tree)
 
    This object has a `solve_ef` method (as well as a `solve_ph` method)
    
-   >>> ef_sol = stsolver.solve_ef(solvername)
+   >>> ef_sol = stsolver.solve_ef(solvername) 
 
    The return status from the solver can be tested.
 
    >>> if ef_sol.solver.termination_condition != \
-   >>>            pyo.TerminationCondition.optimal:
-   >>>     print ("oops! not optimal:",ef_sol.solver.termination_condition)
+   ...            pyo.TerminationCondition.optimal:
+   ...     print ("oops! not optimal:",ef_sol.solver.termination_condition) 
 
    There is an iterator to loop over the root node solution:
    
    >>> for varname, varval in stsolver.root_Var_solution():
-   >>>     print (varname, str(varval))
+   ...    print (varname, str(varval)) 
 
    There is also a function to compute compute the objective
    function value.
    
    >>> obj = stsolver.root_E_obj()
-   >>> print ("Expecatation take over scenarios=", obj)
+   >>> print ("Expecatation take over scenarios=", obj) # doctest: +ELLIPSIS
+   
+.. testoutput::
+   :hide:
+   :options: +ELLIPSIS
 
    Also, `stsolver.scenario_tree` has the solution (csvw is imported
    from PySP and is not part of `rapper`.)
@@ -103,7 +110,7 @@ Again, but with mip gap reported
    a new one; however, we can re-used the scenario tree.
 
    >>> stsolver = rapper.StochSolver("ReferenceModel.py",
-   >>>            tree_model = concrete_tree)
+   ...            tree_model = concrete_tree)
 
    We add a solver option to get the mip gap
    
@@ -112,8 +119,8 @@ Again, but with mip gap reported
    and we add the option to `solve_ef` to return the gap and
    the `tee` option to see the solver output as well.
    
-   >>> res, gap = stsolver.solve_ef(solvername, sopts = sopts, tee=True, need_gap = True)
-   >>> print ("ef gap=",gap)
+   >>> res, gap = stsolver.solve_ef(solvername, sopts = sopts, tee=True, need_gap = True) # doctest: +ELLIPSIS
+   >>> print ("ef gap=",gap) # doctest: +ELLIPSIS
 
 PH
 ^^
@@ -129,28 +136,38 @@ PH
    >>> phopts['--max-iterations'] = '3'
 
    >>> stsolver = rapper.StochSolver("ReferenceModel.py",
-   >>>                               tree_model = concrete_tree,
-   >>>                               phopts = phopts)
+   ...                               tree_model = concrete_tree,
+   ...                               phopts = phopts)
 
    The `solve_ph` method is similar to `solve_ef`, but requires
    a `default_rho` and accepts PH options:
    
    >>> ph = stsolver.solve_ph(subsolver = solvername, default_rho = 1,
-   >>>                        phopts=phopts)
+   ...                        phopts=phopts) # doctest: +ELLIPSIS
 
    With PH, it is important to be careful to distinguish x-bar from x-hat.
    
-   >>> obj = stsolver.root_E_obj() # E[xbar]
+   >>> obj = stsolver.root_E_obj() 
 
    We can compute and x-hat (using the current PH options):
    
-   >>> obj, xhat = rapper.xhat_from_ph(ph)
+   >>> obj, xhat = rapper.xhat_from_ph(ph) 
 
    There is a utility for obtaining the x-hat values:
    
    >>> for nodename, varname, varvalue in rapper.xhat_walker(xhat):
-   >>>     print (nodename, varname, varvalue)
+   ...     print (nodename, varname, varvalue) # doctest: +ELLIPSIS
+   
+.. testoutput::
+   :hide:
+   :options: +ELLIPSIS
+	     
    
 .. testcleanup:: *
 
-   os.cwd(savecwd)
+   os.chdir(savecwd)
+
+.. testoutput::
+   :hide:
+   :options: +ELLIPSIS
+	     
