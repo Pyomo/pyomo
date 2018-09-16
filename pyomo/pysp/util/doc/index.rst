@@ -18,6 +18,7 @@ is somewhat orthogonal to the functionality provided by
 
    demorapper.rst
    stochsolverapi.rst
+   rap.rst
    bibliography.rst
 
 Indices and Tables

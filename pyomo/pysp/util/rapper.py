@@ -59,10 +59,11 @@ class StochSolver:
       fsfile (str): is a file that contains the the scenario callback.
       fsfct (str): function name in the file, which defaults to
         "pysp_instance_creation_callback"
-      tree_model: gives the tree as a concrete model
-        if it is None, then look for a function in fsfile called
+      tree_model: gives the tree as a concrete model.
+        If it is None, then look for a function in fsfile called
         "pysp_scenario_tree_model_callback" that will return it.
-      phopts: dictionary of ph options; needed if there is bundling.
+      phopts: dictionary of ph options; needed during construction 
+              if there is bundling.
 
     Attributes:
        scenario_tree: scenario tree object (that includes data)
