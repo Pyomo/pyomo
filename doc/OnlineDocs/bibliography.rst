@@ -13,3 +13,4 @@ Bibliography
 
 .. [PyomoJournal] William E. Hart; Jean-Paul Watson; David L. Woodruff: "Pyomo: modeling and solving mathematical programs in Python," Mathematical Programming Computation, Volume 3, Number 3, August 2011
 
+.. [PySPJournal] Jean-Paul Watson; David L. Woodruff; William E. Hart: "Pyomo: modeling and solving mathematical programs in Python," Mathematical Programming Computation, Volume 4, Number 2, June 2012, Pages 109-142
