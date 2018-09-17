@@ -11,10 +11,11 @@
 from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.solvers.plugins.solvers.gurobi_direct import GurobiDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.common.plugin import alias
 from pyomo.core.expr.numvalue import value
+from pyomo.opt.base import SolverFactory
 
 
+@SolverFactory.register('gurobi_persistent', doc='Persistent python interface to Gurobi')
 class GurobiPersistent(PersistentSolver, GurobiDirect):
     """
     A class that provides a persistent interface to Gurobi. Direct solver interfaces do not use any file io.
@@ -36,7 +37,6 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
     options: dict
         Dictionary of solver options
     """
-    alias('gurobi_persistent', doc='Persistent python interface to Gurobi')
 
     def __init__(self, **kwds):
         kwds['type'] = 'gurobi_persistent'

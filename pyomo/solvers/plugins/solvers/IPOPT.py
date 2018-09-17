@@ -10,10 +10,9 @@
 
 import os
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.misc
 
-import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -27,12 +26,12 @@ try:
 except:
     basestring = str
 
+
+@SolverFactory.register('ipopt', doc='The Ipopt NLP solver')
 class IPOPT(SystemCallSolver):
     """
     An interface to the Ipopt optimizer that uses the AMPL Solver Library.
     """
-
-    pyomo.common.plugin.alias('ipopt', doc='The Ipopt NLP solver')
 
     def __init__(self, **kwds):
         #
@@ -62,7 +61,7 @@ class IPOPT(SystemCallSolver):
         return ResultsFormat.sol
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("ipopt")
+        executable = pyomo.common.registered_executable("ipopt")
         if executable is None:
             logger.warning("Could not locate the 'ipopt' executable, "
                            "which is required for solver %s" % self.name)
@@ -203,4 +202,4 @@ class IPOPT(SystemCallSolver):
                             assert "degrees of freedom" in res.solver.message
             return res
 
-pyutilib.services.register_executable(name="ipopt")
+pyomo.common.register_executable(name="ipopt")

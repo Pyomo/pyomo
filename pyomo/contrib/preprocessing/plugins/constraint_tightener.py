@@ -1,14 +1,15 @@
 import logging
 import textwrap
 
-from pyomo.core import Constraint, value
+from pyomo.core import Constraint, value, TransformationFactory
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.common.plugin import alias
 
 logger = logging.getLogger('pyomo.contrib.preprocessing')
 
 
+@TransformationFactory.register('core.tighten_constraints_from_vars',
+          doc="Tightens upper and lower bound on linear constraints.")
 class TightenContraintFromVars(IsomorphicTransformation):
     """Tightens upper and lower bound on constraints based on variable bounds.
 
@@ -18,9 +19,6 @@ class TightenContraintFromVars(IsomorphicTransformation):
     For now, this only operates on linear constraints.
 
     """
-
-    alias('core.tighten_constraints_from_vars',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance):
         for constr in instance.component_data_objects(

@@ -12,11 +12,10 @@
 import os
 import six
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.common
 import pyutilib.misc
 
-import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -29,11 +28,11 @@ import logging
 logger = logging.getLogger('pyomo.solvers')
 
 
+@SolverFactory.register('asl', doc='Interface for solvers using the AMPL Solver Library')
 class ASL(SystemCallSolver):
     """A generic optimizer that uses the AMPL Solver Library to interface with applications.
     """
 
-    pyomo.common.plugin.alias('asl', doc='Interface for solvers using the AMPL Solver Library')
 
     def __init__(self, **kwds):
         #
@@ -74,11 +73,11 @@ class ASL(SystemCallSolver):
             logger.warning("No solver option specified for ASL solver interface")
             return None
         try:
-            pyutilib.services.register_executable(self.options.solver)
+            pyomo.common.register_executable(self.options.solver)
         except:
             logger.warning("No solver option specified for ASL solver interface")
             return None
-        executable = pyutilib.services.registered_executable(self.options.solver)
+        executable = pyomo.common.registered_executable(self.options.solver)
         if executable is None:
             logger.warning("Could not locate the '%s' executable, which is required for solver %s" % (self.options.solver, self.name))
             self.enable = False
@@ -206,11 +205,10 @@ class ASL(SystemCallSolver):
         return SystemCallSolver._postsolve(self)
 
 
+@SolverFactory.register('_mock_asl')
 class MockASL(ASL,MockMIP):
     """A Mock ASL solver used for testing
     """
-
-    pyomo.common.plugin.alias('_mock_asl')
 
     def __init__(self, **kwds):
         try:
@@ -218,6 +216,7 @@ class MockASL(ASL,MockMIP):
         except pyutilib.common.ApplicationError: #pragma:nocover
             pass                        #pragma:nocover
         MockMIP.__init__(self,"asl")
+        self._assert_available = True
 
     def available(self, exception_flag=True):
         return ASL.available(self,exception_flag)

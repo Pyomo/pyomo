@@ -75,12 +75,6 @@ class OptConvertDebug(unittest.TestCase):
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
         pyutilib.services.TempfileManager.tempdir = old_tempdir
-        #
-        # Reset all options
-        #
-        #for ep in pyomo.common.plugin.ExtensionPoint(pyomo.common.plugin.IOption):
-            #ep.reset()
-        pass
 
     def test_nl_nl1(self):
         """ Convert from NL to NL """
@@ -146,7 +140,7 @@ class OptConvertDebug(unittest.TestCase):
             ans = pyomo.opt.convert_problem( (currdir+"unknown.nl",), None, [pyomo.opt.ProblemFormat.cpxlp])
             self.fail("Expected pyomo.opt.ConverterError exception")
         except pyutilib.common.ApplicationError:
-            if pyutilib.services.registered_executable("pico_convert").enabled():
+            if pyomo.common.registered_executable("pico_convert").enabled():
                 self.fail("Expected ApplicationError because pico_convert is not available")
             return
         except pyomo.opt.ConverterError:
@@ -154,7 +148,7 @@ class OptConvertDebug(unittest.TestCase):
 
     def test_error9(self):
         """ The Opt configuration has not been initialized """
-        cmd = pyutilib.services.registered_executable("pico_convert")
+        cmd = pyomo.common.registered_executable("pico_convert")
         if not cmd is None:
             cmd.disable()
         try:

@@ -12,7 +12,7 @@ import os
 import os.path
 
 import pyutilib.autotest
-import pyutilib.services
+import pyomo.common
 from pyutilib.misc import Options
 
 from pyomo.common.plugin import *
@@ -28,7 +28,7 @@ class PyomoMIPTestDriver(Plugin):
 
     def setUpClass(self, cls, options):
         try:
-            cls.pico_convert =  pyutilib.services.registered_executable("pico_convert")
+            cls.pico_convert =  pyomo.common.registered_executable("pico_convert")
             cls.pico_convert_available= (not cls.pico_convert is None)
         except pyutilib.common.ApplicationError:
             cls.pico_convert_available=False

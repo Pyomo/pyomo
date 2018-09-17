@@ -10,13 +10,9 @@
 
 __all__ = ['pyomo_callback',
         'IPyomoExpression', 'ExpressionFactory', 'ExpressionRegistration',
-        'IModelComponent',
-        'ModelComponentFactory',
-        'register_component',
         'IPyomoPresolver', 'IPyomoPresolveAction',
         'IParamRepresentation',
         'ParamRepresentationFactory',
-        'IModelTransformation',
         'IPyomoScriptPreprocess',
         'IPyomoScriptCreateModel',
         'IPyomoScriptCreateDataPortal',
@@ -27,8 +23,8 @@ __all__ = ['pyomo_callback',
         'IPyomoScriptPrintResults',
         'IPyomoScriptSaveResults',
         'IPyomoScriptPostprocess',
+        'ModelComponentFactory',
         'Transformation',
-        'IModelTransformation',
         'TransformationFactory',
         ]
 
@@ -36,6 +32,7 @@ import logging
 import pyutilib.misc
 from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import unique_component_name
+from pyomo.common import Factory
 from pyomo.common.plugin import (
     alias, implements, Interface, Plugin, PluginFactory, CreatePluginFactory,
     PluginError, ExtensionPoint )
@@ -177,26 +174,14 @@ def ExpressionFactory(name=None, args=[]):
 ExpressionFactory.ep = ExtensionPoint(IPyomoExpression)
 
 
-class IModelComponent(Interface):
-    pass
+class ModelComponentFactoryClass(Factory):
 
-ModelComponentFactory = CreatePluginFactory(IModelComponent)
+    def register(self, doc=None):
+        def fn(cls):
+            return super(ModelComponentFactoryClass, self).register(cls.__name__, doc)(cls)
+        return fn
 
-def register_component(cls, description):
-    class TMP(Plugin):
-        implements(IModelComponent, service=False)
-        alias(cls.__name__, description)
-        component = cls
-
-
-class IModelTransformation(Interface):
-
-    def apply(self, model, **kwds):
-        """Apply a model transformation and return a new model instance"""
-
-    def __call__(self, model, **kwds):
-        """Use this plugin instance as a functor to apply a transformation"""
-        return self.apply(model, **kwds)
+ModelComponentFactory = ModelComponentFactoryClass('model component')
 
 
 class IParamRepresentation(Interface):
@@ -220,16 +205,22 @@ class TransformationData(object):
         return self._data[name]
 
 
-class Transformation(Plugin):
+class Transformation(object):
     """
     Base class for all model transformations.
     """
-
-    implements(IModelTransformation, service=False)
-
     def __init__(self, **kwds):
         kwds["name"] = kwds.get("name", "transformation")
-        super(Transformation, self).__init__(**kwds)
+        #super(Transformation, self).__init__(**kwds)
+
+    #
+    # Support "with" statements.
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
 
     @deprecated(
         "Transformation.apply() has been deprecated.  Please use either "
@@ -284,12 +275,12 @@ class Transformation(Plugin):
         return instance
 
 
-TransformationFactory = CreatePluginFactory(IModelTransformation)
+TransformationFactory = Factory('transformation type')
 
 @deprecated()
 def apply_transformation(*args, **kwds):
     if len(args) is 0:
-        return TransformationFactory.services()
+        return list(TransformationFactory)
     xfrm = TransformationFactory(args[0])
     if len(args) == 1 or xfrm is None:
         return xfrm
