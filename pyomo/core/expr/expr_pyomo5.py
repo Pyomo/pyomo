@@ -57,7 +57,7 @@ __all__ = (
 'NPV_SumExpression',
 'NPV_UnaryFunctionExpression',
 'NPV_AbsExpression',
-'GenericExpressionVisitor',
+'StreamBasedExpressionVisitor',
 'SimpleExpressionVisitor',
 'ExpressionValueVisitor',
 'ExpressionReplacementVisitor',
@@ -225,11 +225,14 @@ class linear_expression(object):
 #
 #-------------------------------------------------------
 
-class GenericExpressionVisitor(object):
-    """This class implements a generic event-based expression walker.
+class StreamBasedExpressionVisitor(object):
+    """This class implements a generic stream-based expression walker.
 
-    The following events are triggered as expression trees are walked
-    (with a depth-first strategy):
+    This visitor walks an expression tree using a depth-first strategy
+    and generates a full event stream similar to other tree visitors
+    (e.g., the expat XML parser).  The following events are triggered
+    through callback functions as the traversal enters and leaves nodes
+    in the tree:
 
       enterNode(N1)
       {for N2 in N1.args:}
@@ -302,7 +305,7 @@ class GenericExpressionVisitor(object):
         the walker returns the result obtained from the exitNode
         callback on the root node.
 
-    Consumers interact with this class by either deriving from it and
+    Clients interact with this class by either deriving from it and
     implementing the necessary callbacks (see above), assigning callable
     functions to an instance of this class, or passing the callback
     functions as arguments to this class' constructor.
@@ -1007,7 +1010,7 @@ def _sizeof_expression(expr):
         return None, 1
     def accept(node, data, child_result):
         return data + child_result
-    return GenericExpressionVisitor(
+    return StreamBasedExpressionVisitor(
         enterNode=enter,
         acceptChildResult=accept,
     ).walk_expression(expr)

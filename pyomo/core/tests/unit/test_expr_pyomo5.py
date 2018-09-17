@@ -6380,7 +6380,7 @@ class WalkerTests_ReplaceInternal(unittest.TestCase):
         self.assertEqual(f.arg(0).nargs(), 4)
 
 
-class TestGenericExpressionVisitor(unittest.TestCase):
+class TestStreamBasedExpressionVisitor(unittest.TestCase):
     def setUp(self):
         self.m = m = ConcreteModel()
         m.x = Var()
@@ -6391,10 +6391,10 @@ class TestGenericExpressionVisitor(unittest.TestCase):
     def test_bad_args(self):
         with self.assertRaisesRegexp(
                 RuntimeError, "Unrecognized keyword arguments: {'foo': None}"):
-            EXPR.GenericExpressionVisitor(foo=None)
+            EXPR.StreamBasedExpressionVisitor(foo=None)
 
     def test_default(self):
-        walker = EXPR.GenericExpressionVisitor()
+        walker = EXPR.StreamBasedExpressionVisitor()
         ans = walker.walk_expression(self.e)
         ref = [
             [[],[]],
@@ -6408,7 +6408,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
             if type(child) in nonpyomo_leaf_types \
                or not child.is_expression_type():
                 return False, [child]
-        walker = EXPR.GenericExpressionVisitor(beforeChild=before)
+        walker = EXPR.StreamBasedExpressionVisitor(beforeChild=before)
         ans = walker.walk_expression(self.e)
         m = self.m
         ref = [
@@ -6431,7 +6431,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
             return None, 1
         def accept(node, data, child_result):
             return data + child_result
-        walker = EXPR.GenericExpressionVisitor(
+        walker = EXPR.StreamBasedExpressionVisitor(
             enterNode=enter, acceptChildResult=accept)
         # 4 operators, 6 leaf nodes
         self.assertEquals(walker.walk_expression(self.e), 10)
@@ -6446,7 +6446,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
                or not node.is_expression_type():
                 return (), [node]
             return node.args, []
-        walker = EXPR.GenericExpressionVisitor(
+        walker = EXPR.StreamBasedExpressionVisitor(
             enterNode=enter)
         m = self.m
 
@@ -6473,7 +6473,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
                or not node.is_expression_type():
                 return (), node
             return node.args, []
-        walker = EXPR.GenericExpressionVisitor(
+        walker = EXPR.StreamBasedExpressionVisitor(
             enterNode=enter)
         m = self.m
 
@@ -6505,7 +6505,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
                 return result
             else:
                 return[result]
-        walker = EXPR.GenericExpressionVisitor(
+        walker = EXPR.StreamBasedExpressionVisitor(
             enterNode=enter, finalizeResult=finalize)
         m = self.m
 
@@ -6532,7 +6532,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
                 return data
             else:
                 return [node]
-        walker = EXPR.GenericExpressionVisitor(exitNode=exit)
+        walker = EXPR.StreamBasedExpressionVisitor(exitNode=exit)
         m = self.m
 
         ans = walker.walk_expression(self.e)
@@ -6562,7 +6562,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
             counts[1] += 1
         def after(node, child):
             counts[2] += 1
-        walker = EXPR.GenericExpressionVisitor(
+        walker = EXPR.StreamBasedExpressionVisitor(
             beforeChild=before, acceptChildResult=accept, afterChild=after)
         ans = walker.walk_expression(self.e)
         m = self.m
@@ -6581,7 +6581,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
             return data
         def enter(node):
             return node.args, ans
-        walker = EXPR.GenericExpressionVisitor(
+        walker = EXPR.StreamBasedExpressionVisitor(
             enterNode=enter, beforeChild=before, acceptChildResult=accept)
         ans = walker.walk_expression(self.e)
         m = self.m
@@ -6602,7 +6602,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
             return node.args, ans
         def finalize(result):
             return len(result)
-        walker = EXPR.GenericExpressionVisitor(
+        walker = EXPR.StreamBasedExpressionVisitor(
             enterNode=enter, beforeChild=before, acceptChildResult=accept,
             finalizeResult=finalize)
         ans = walker.walk_expression(self.e)
@@ -6627,7 +6627,7 @@ class TestGenericExpressionVisitor(unittest.TestCase):
             ans.append("After %s (from %s)" % (name(child), name(node)))
         def finalize(result):
             ans.append("Finalize")
-        walker = EXPR.GenericExpressionVisitor(
+        walker = EXPR.StreamBasedExpressionVisitor(
             enterNode=enter, exitNode=exit, beforeChild=before, 
             acceptChildResult=accept, afterChild=after, finalizeResult=finalize)
         self.assertIsNone( walker.walk_expression(self.e) )
@@ -6686,7 +6686,7 @@ Finalize""")
                 return str(x)
             else:
                 return x.name
-        class all_callbacks(EXPR.GenericExpressionVisitor):
+        class all_callbacks(EXPR.StreamBasedExpressionVisitor):
             def __init__(self):
                 self.ans = []
                 super(all_callbacks, self).__init__()
