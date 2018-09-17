@@ -1209,6 +1209,12 @@ management system. See the section on the
 SMPS writer for a
 description of how to use this functionality.
 
+PySP in scripts
+---------------
+
+See rappersection_ for information about putting Python scripts
+around PySP functionality.
+
 .. rubric:: References
 
 .. [BirgeLouveauxBook]
