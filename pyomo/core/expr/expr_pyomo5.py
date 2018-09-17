@@ -309,15 +309,18 @@ class GenericExpressionVisitor(object):
 
     """
 
-    extensionPoints = ('enterNode','exitNode','beforeChild','afterChild',
-                       'acceptChildResult','finalizeResult')
+    # The list of event methods that can either be implemented by
+    # derived classes or specified as callback functions to the class
+    # constructor:
+    client_methods = ('enterNode','exitNode','beforeChild','afterChild',
+                      'acceptChildResult','finalizeResult')
     def __init__(self, **kwds):
         # This is slightly tricky: We want derived classes to be able to
         # override the "None" defaults here, and for keyword arguments
         # to override both.  The hasattr check prevents the "None"
         # defaults from overriding attributes or methods defined on
         # derived classes.
-        for field in self.extensionPoints:
+        for field in self.client_methods:
             if field in kwds:
                 setattr(self, field, kwds.pop(field))
             elif not hasattr(self, field):
