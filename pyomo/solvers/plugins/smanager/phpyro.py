@@ -20,7 +20,6 @@ import pyutilib.pyro
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyutilib.pyro import Pyro as _pyro
 from pyutilib.pyro.util import _connection_problem
-import pyomo.common.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
 
@@ -32,10 +31,9 @@ from six.moves import xrange
 # a specialized asynchronous solver manager for Progressive Hedging.
 #
 
-class SolverManager_PHPyro(AsynchronousSolverManager):
-
-    pyomo.common.plugin.alias('phpyro',
+@SolverManagerFactory.register('phpyro',
                             doc="Specialized PH solver manager that uses pyro")
+class SolverManager_PHPyro(AsynchronousSolverManager):
 
     def __init__(self, host=None, port=None, verbose=False):
 
@@ -370,4 +368,4 @@ class SolverManager_PHPyro(AsynchronousSolverManager):
         self._dispatcher_proxies = {}
 
 if pyutilib.pyro.Pyro is None:
-    SolverManagerFactory.deactivate('phpyro')
+    SolverManagerFactory.unregister('phpyro')

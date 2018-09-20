@@ -4,15 +4,18 @@ from math import fabs
 
 from six import iteritems
 
+from pyomo.core.base.plugin import TransformationFactory
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
                                  add_docstring_list)
-from pyomo.common.plugin import alias
 from pyomo.core.base.var import Var
 from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 
 
+@TransformationFactory.register(
+        'contrib.detect_fixed_vars',
+        doc="Detect variables that are de-facto fixed but not considered fixed.")
 class FixedVarDetector(IsomorphicTransformation):
     """Detects variables that are de-facto fixed but not considered fixed.
 
@@ -37,9 +40,6 @@ class FixedVarDetector(IsomorphicTransformation):
     ))
 
     __doc__ = add_docstring_list(__doc__, CONFIG)
-
-    alias('contrib.detect_fixed_vars',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance, **kwargs):
         config = self.CONFIG(kwargs)

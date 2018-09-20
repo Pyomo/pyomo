@@ -1222,8 +1222,6 @@ class ProgressiveHedging(_PHBase):
 
             phsolverserverutils.release_phsolverservers(self)
 
-        for object_name, object_solver in iteritems(self._solver_map):
-            object_solver.deactivate()
         self._solver_map.clear()
 
         # cleanup the scenario instances for post-processing -

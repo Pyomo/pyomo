@@ -12,8 +12,8 @@ import logging
 from six import iteritems
 
 import pyomo.common
-from pyomo.common.plugin import alias
 from pyomo.core.base import (Transformation,
+                             TransformationFactory,
                              Var,
                              Constraint,
                              Objective,
@@ -39,9 +39,9 @@ logger = logging.getLogger('pyomo.core')
 # specified, then the entire model is dualized.
 # This returns a new Block object.
 #
+@TransformationFactory.register('duality.linear_dual', doc="Dualize a linear model")
 class LinearDual_PyomoTransformation(Transformation):
 
-    alias('duality.linear_dual', doc="Dualize a linear model")
 
     def __init__(self):
         super(LinearDual_PyomoTransformation, self).__init__()

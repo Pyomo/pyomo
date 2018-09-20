@@ -11,9 +11,9 @@
 import logging
 from six import iterkeys
 
-from pyomo.common.plugin import alias
 from pyomo.core.expr import inequality
 from pyomo.core.base import (Transformation,
+                             TransformationFactory,
                              Constraint,
                              Block,
                              SortComponents,
@@ -25,9 +25,9 @@ from pyomo.gdp.disjunct import Disjunct, Disjunction
 logger = logging.getLogger('pyomo.core')
 
 
+@TransformationFactory.register('mpec.simple_disjunction', doc="Disjunctive transformations of complementarity conditions when all variables are non-negative")
 class MPEC2_Transformation(Transformation):
 
-    alias('mpec.simple_disjunction', doc="Disjunctive transformations of complementarity conditions when all variables are non-negative")
 
     def __init__(self):
         super(MPEC2_Transformation, self).__init__()

@@ -202,6 +202,12 @@ def update_contset_indexed_component(comp, expansion_map):
     if comp.type() is Param:
         return
 
+    # Integral components are handled after every ContinuousSet has been
+    # discretized. Import is deferred to here due to circular references.
+    from pyomo.dae import Integral
+    if comp.type() is Integral:
+        return
+
     # Skip components that do not have a 'dim' attribute. This assumes that
     # all components that could be indexed by a ContinuousSet have the 'dim'
     # attribute

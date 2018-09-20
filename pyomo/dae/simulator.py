@@ -13,7 +13,6 @@ from pyomo.dae.diffvar import DAE_Error
 
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import NumericValue, native_numeric_types
-from pyomo.core.base.plugin import register_component
 from pyomo.core.base.template_expr import IndexTemplate, _GetItemIndexer
 
 from six import iterkeys, itervalues
@@ -34,8 +33,8 @@ except ImportError:
 scipy_available = True
 try:
     import platform
-    if platform.python_implementation() == "PyPy":
-        # The scipy is importable into PyPy, but ODE integrators don't work. (2/18)
+    if platform.python_implementation() == "PyPy":  # pragma:nocover
+        # scipy is importable into PyPy, but ODE integrators don't work. (2/18)
         raise ImportError
     import scipy.integrate as scipy
 except ImportError:
@@ -44,7 +43,7 @@ except ImportError:
 casadi_available = True
 try:
     import casadi
-    casadi_intrinsic = {\
+    casadi_intrinsic = {
             'log': casadi.log,
             'log10': casadi.log10,
             'sin': casadi.sin,
@@ -76,7 +75,7 @@ def _check_getitemexpression(expr, i):
     the RHS. If not, return None.
     """
     if type(expr.arg(i)._base) is DerivativeVar:
-        return [expr.arg(i), expr.arg(1-i)]
+        return [expr.arg(i), expr.arg(1 - i)]
     else:
         return None
 
@@ -91,37 +90,38 @@ def _check_productexpression(expr, i):
     return None.
     """
     expr_ = expr.arg(i)
-    stack = [(expr_,1)]
+    stack = [(expr_, 1)]
     pterms = []
     dv = None
     
     while stack:
-        curr,e_ = stack.pop()
+        curr, e_ = stack.pop()
         if curr.__class__ is EXPR.ProductExpression:
-            stack.append((curr.arg(0),e_))
-            stack.append((curr.arg(1),e_))
+            stack.append((curr.arg(0), e_))
+            stack.append((curr.arg(1), e_))
         elif curr.__class__ is EXPR.ReciprocalExpression:
-            stack.append((curr.arg(0),- e_))
-        elif type(curr) is EXPR.GetItemExpression and type(curr._base) is DerivativeVar:
-            dv = (curr,e_)
+            stack.append((curr.arg(0), - e_))
+        elif type(curr) is EXPR.GetItemExpression and \
+             type(curr._base) is DerivativeVar:
+            dv = (curr, e_)
         else:
-            pterms.append((curr,e_))
+            pterms.append((curr, e_))
 
     if dv is None:
         return None
 
     numer = 1
     denom = 1
-    for term,e_ in pterms:
+    for term, e_ in pterms:
         if e_ == 1:
             denom *= term 
         else:
             numer *= term 
-    curr,e_ = dv
+    curr, e_ = dv
     if e_ == 1:
-        return [curr, expr.arg(1-i)*numer/denom]
+        return [curr, expr.arg(1 - i) * numer / denom]
     else:
-        return [curr, denom/(expr.arg(1-i)*numer)]
+        return [curr, denom / (expr.arg(1 - i) * numer)]
 
 
 def _check_negationexpression(expr, i):
@@ -135,19 +135,22 @@ def _check_negationexpression(expr, i):
     """
     arg = expr.arg(i).arg(0)
 
-    if type(arg) is EXPR.GetItemExpression and type(arg._base) is DerivativeVar:
-        return [arg, - expr.arg(1-i)]
+    if type(arg) is EXPR.GetItemExpression and \
+       type(arg._base) is DerivativeVar:
+        return [arg, - expr.arg(1 - i)]
 
     if type(arg) is EXPR.ProductExpression:
         lhs = arg.arg(0)
         rhs = arg.arg(1)
 
-        if not (type(lhs) in native_numeric_types or not lhs.is_potentially_variable()):
+        if not (type(lhs) in native_numeric_types or
+                    not lhs.is_potentially_variable()):
             return None
-        if not (type(rhs) is EXPR.GetItemExpression and type(rhs._base) is DerivativeVar):
+        if not (type(rhs) is EXPR.GetItemExpression and
+                        type(rhs._base) is DerivativeVar):
             return None
 
-        return [rhs, - expr.arg(1-i)/lhs]
+        return [rhs, - expr.arg(1 - i) / lhs]
 
     return None
 
@@ -161,29 +164,35 @@ def _check_viewsumexpression(expr, i):
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
     return None.
     """
-    sumexp = expr.arg(i)       # Get the side of the equality expression with the derivative variable
+    # Get the side of the equality expression with the derivative variable
+    sumexp = expr.arg(i)
     items = []
     dv = None
     dvcoef = 1
 
     for idx, item in enumerate(sumexp.args):
         if dv is not None:
-            items.append( item )
+            items.append(item)
         elif type(item) is EXPR.GetItemExpression and \
            type(item._base) is DerivativeVar:
             dv = item
         elif type(item) is EXPR.ProductExpression:
-            lhs = item.arg(0)       # This will contain the constant coefficient if there is one
-            rhs = item.arg(1)       # This is a potentially variable expression
-            if (type(lhs) in native_numeric_types or not lhs.is_potentially_variable()) and \
-               (type(rhs) is EXPR.GetItemExpression and type(rhs._base) is DerivativeVar):
+            # This will contain the constant coefficient if there is one
+            lhs = item.arg(0)
+            # This is a potentially variable expression
+            rhs = item.arg(1)
+            if (type(lhs) in native_numeric_types or
+                    not lhs.is_potentially_variable()) \
+                and (type(rhs) is EXPR.GetItemExpression and
+                             type(rhs._base) is DerivativeVar):
                 dv = rhs
                 dvcoef = lhs
         else:
             items.append(item)
 
     if dv is not None:
-        RHS = expr.arg(1-i)         # Form the "other" side of the equality expression
+        # Form the "other" side of the equality expression
+        RHS = expr.arg(1 - i)
         for item in items:
             RHS -= item
         RHS = RHS / dvcoef
@@ -200,7 +209,7 @@ if scipy_available:
         """
 
         def __init__(self, templatemap):
-            super(Pyomo2Scipy_Visitor,self).__init__()
+            super(Pyomo2Scipy_Visitor, self).__init__()
             self.templatemap = templatemap
 
         def visiting_potential_leaf(self, node):
@@ -214,7 +223,7 @@ if scipy_available:
                     self.templatemap[_id].construct()
                     _args = []
                     self.templatemap[_id]._name = "%s[%s]" % (
-                        node._base.name, ','.join(str(x) for x in _id._args) )
+                        node._base.name, ','.join(str(x) for x in _id._args))
                 return True, self.templatemap[_id]
 
             return super(
@@ -235,7 +244,8 @@ def convert_pyomo2scipy(expr, templatemap):
         a new expression tree with all substitutions done
     """
     if not scipy_available:
-        raise DAE_Error("SciPy is not installed.  Cannot substitute SciPy intrinsic functions.")
+        raise DAE_Error("SciPy is not installed. Cannot substitute SciPy "
+                        "intrinsic functions.")
     visitor = Pyomo2Scipy_Visitor(templatemap)
     return visitor.dfs_postorder_stack(expr)
 
@@ -245,16 +255,15 @@ if casadi_available:
         """
         Expression walker that replaces 
 
-	       * _UnaryFunctionExpression instances with unary
-		     functions that point to casadi intrinsic
-		     functions.
+           * _UnaryFunctionExpression instances with unary functions that
+             point to casadi intrinsic functions.
 
-           * _GetItemExpressions with _GetItemIndexer objects
-             that references CasADi variables.
-	    """
+           * _GetItemExpressions with _GetItemIndexer objects that references
+             CasADi variables.
+        """
 
         def __init__(self, templatemap):
-            super(Substitute_Pyomo2Casadi_Visitor,self).__init__()
+            super(Substitute_Pyomo2Casadi_Visitor, self).__init__()
             self.templatemap = templatemap
 
         def visit(self, node, values):
@@ -277,8 +286,8 @@ if casadi_available:
                 return True, self.templatemap[_id]
 
             if type(node) in native_numeric_types or \
-                not node.is_expression_type() or\
-                type(node) is IndexTemplate:
+               not node.is_expression_type() or \
+               type(node) is IndexTemplate:
                 return True, node
 
             return False, None
@@ -289,13 +298,12 @@ if casadi_available:
         Expression walker that evaluates an expression 
         generated by the Substitute_Pyomo2Casadi_Visitor walker.
 
-        In Coopr3 this walker was not necessary because the
-        expression could be simply evaluated.  But in Pyomo5,
-        the evaluation logic was changed to be non-recursive, which
-        involves checks on the types of leaves in the expression tree.
-        Hence, the evaluation logic fails if leaves in the tree
-        are not standard Pyomo5 variable types.
-	    """
+        In Coopr3 this walker was not necessary because the expression could
+        be simply evaluated.  But in Pyomo5, the evaluation logic was
+        changed to be non-recursive, which involves checks on the types of
+        leaves in the expression tree. Hence, the evaluation logic fails if
+        leaves in the tree are not standard Pyomo5 variable types.
+        """
 
         def visit(self, node, values):
             """ Visit nodes that have been expanded """
@@ -337,7 +345,8 @@ def substitute_pyomo2casadi(expr, templatemap):
         a new expression tree with all substitutions done
     """
     if not casadi_available:
-        raise DAE_Error("CASADI is not installed.  Cannot substitute CasADi variables and intrinsic functions.")
+        raise DAE_Error("CASADI is not installed.  Cannot substitute CasADi "
+                        "variables and intrinsic functions.")
     visitor = Substitute_Pyomo2Casadi_Visitor(templatemap)
     return visitor.dfs_postorder_stack(expr)
 
@@ -359,7 +368,8 @@ def convert_pyomo2casadi(expr):
         a CasADi expression tree.
     """
     if not casadi_available:
-        raise DAE_Error("CASADI is not installed.  Cannot convert a Pyomo expression to a Casadi expression.")
+        raise DAE_Error("CASADI is not installed.  Cannot convert a Pyomo "
+                        "expression to a Casadi expression.")
     visitor = Convert_Pyomo2Casadi_Visitor()
     return visitor.dfs_postorder_stack(expr)
 
@@ -422,6 +432,11 @@ class Simulator:
 
         # Ensure that there is at least one derivative in the model
         derivs = m.component_map(DerivativeVar)
+        derivs = list(derivs.keys())
+
+        if hasattr(m, '_pyomo_dae_reclassified_derivativevars'):
+            for d in m._pyomo_dae_reclassified_derivativevars:
+                derivs.append(d.name)
         if len(derivs) == 0:
             raise DAE_Error("Cannot simulate a model with no derivatives")
 
@@ -540,7 +555,6 @@ class Simulator:
                     if type(tempexp.arg(1)) is EXPR.NegationExpression:
                         args = _check_negationexpression(tempexp, 1)
 
-
                 # At this point if args is not None then args[0] contains
                 # the _GetItemExpression for the DerivativeVar and args[1]
                 # contains the RHS expression. If args is None then the
@@ -597,7 +611,7 @@ class Simulator:
         algvars = []
 
         for item in iterkeys(templatemap):
-            if item._base.name in derivs.keys():
+            if item._base.name in derivs:
                 # Make sure there are no DerivativeVars in the
                 # template map
                 raise DAE_Error(
@@ -920,7 +934,8 @@ class Simulator:
         xalltemp = [self._templatemap[i] for i in self._diffvars]
         xall = casadi.vertcat(*xalltemp)
 
-        odealltemp = [convert_pyomo2casadi(self._rhsdict[i]) for i in self._derivlist]
+        odealltemp = [convert_pyomo2casadi(self._rhsdict[i])
+                      for i in self._derivlist]
         odeall = casadi.vertcat(*odealltemp)
         dae = {'x': xall, 'ode': odeall}
 

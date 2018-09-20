@@ -15,9 +15,7 @@ import os, sys, math, logging, shutil, time
 from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.opt import ProblemFormat, SolverFactory
 
-import pyomo.common.plugin
-from pyomo.opt.base import IOptSolver
-import pyutilib.services
+import pyomo.common
 
 from pyomo.opt.base.solvers import _extract_version
 import pyutilib.subprocess
@@ -36,12 +34,10 @@ from pyomo.opt.results import (SolverResults, SolverStatus, Solution,
 
 logger = logging.getLogger('pyomo.solvers')
 
-pyutilib.services.register_executable(name="gams")
+pyomo.common.register_executable(name="gams")
 
-class _GAMSSolver(pyomo.common.plugin.Plugin):
+class _GAMSSolver(object):
     """Aggregate of common methods for GAMS interfaces"""
-
-    pyomo.common.plugin.implements(IOptSolver)
 
     def __init__(self, **kwds):
         self._version = None
@@ -57,8 +53,6 @@ class _GAMSSolver(pyomo.common.plugin.Plugin):
         self._capabilities.sos2 = False
 
         self.options = Options()
-
-        pyomo.common.plugin.Plugin.__init__(self, **kwds)
 
     def version(self):
         """Returns a 4-tuple describing the solver executable version."""
@@ -101,6 +95,18 @@ class _GAMSSolver(pyomo.common.plugin.Plugin):
             ans[token[:index]] = val
         return ans
 
+    #
+    # Support "with" statements.
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
+
+
+
+@SolverFactory.register('gams', doc='The GAMS modeling language')
 class GAMSSolver(_GAMSSolver):
     """
     A generic interface to GAMS solvers.
@@ -111,8 +117,6 @@ class GAMSSolver(_GAMSSolver):
         solver_io='shell' or 'gms' to use command line to call gams
             Requires the gams executable be on your system PATH.
     """
-    pyomo.common.plugin.alias('gams', doc='The GAMS modeling language')
-
     def __new__(cls, *args, **kwds):
         try:
             mode = kwds['solver_io']
@@ -131,14 +135,14 @@ class GAMSSolver(_GAMSSolver):
             return
 
 
+@SolverFactory.register('_gams_direct',
+        doc='Direct python interface to the GAMS modeling language')
 class GAMSDirect(_GAMSSolver):
     """
     A generic python interface to GAMS solvers.
 
     Visit Python API page on gams.com for installation help.
     """
-    pyomo.common.plugin.alias('_gams_direct',
-        doc='Direct python interface to the GAMS modeling language')
 
     def available(self, exception_flag=True):
         """True if the solver is available."""
@@ -559,14 +563,14 @@ class GAMSDirect(_GAMSSolver):
         return results
 
 
+@SolverFactory.register('_gams_shell',
+        doc='Shell interface to the GAMS modeling language')
 class GAMSShell(_GAMSSolver):
     """A generic shell interface to GAMS solvers."""
-    pyomo.common.plugin.alias('_gams_shell',
-        doc='Shell interface to the GAMS modeling language')
 
     def available(self, exception_flag=True):
         """True if the solver is available."""
-        exe = pyutilib.services.registered_executable("gams")
+        exe = pyomo.common.registered_executable("gams")
         if exception_flag is False:
             return exe is not None
         else:
@@ -578,7 +582,7 @@ class GAMSShell(_GAMSSolver):
                     "solver functionality is not available.")
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("gams")
+        executable = pyomo.common.registered_executable("gams")
         if executable is None:
             logger.warning("Could not locate the 'gams' executable, "
                            "which is required for solver gams")

@@ -24,7 +24,7 @@ from pyomo.core.base import (SortComponents,
 from pyomo.core.base.numvalue import (is_fixed,
                                       value,
                                       ZeroConstant)
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.constraint import (Constraint,
                                         IndexedConstraint,
                                         SimpleConstraint,
@@ -619,6 +619,8 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         raise NotImplementedError("MatrixConstraint row elements can not "
                                   "be updated")
 
+@ModelComponentFactory.register(
+                   "A set of constraint expressions in Ax=b form.")
 class MatrixConstraint(collections.Mapping,
                        IndexedConstraint):
 
@@ -700,5 +702,3 @@ class MatrixConstraint(collections.Mapping,
     def __delitem__(self):
         raise NotImplementedError
 
-register_component(MatrixConstraint,
-                   "A set of constraint expressions in Ax=b form.")

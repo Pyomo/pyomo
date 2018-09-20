@@ -14,7 +14,7 @@ from pyomo.core.kernel.block import IBlock
 from pyomo.opt.base.solvers import OptSolver
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 import pyutilib.common
-import pyutilib.services
+import pyomo.common
 import pyomo.opt.base.solvers
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet

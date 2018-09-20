@@ -28,6 +28,7 @@ from pyomo.environ import *
 import pyomo.kernel
 from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.expr_pyomo5 import _sizeof_expression
 from pyomo.core.expr.numvalue import native_types, nonpyomo_leaf_types, NumericConstant, as_numeric, is_potentially_variable
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.param import _ParamData, SimpleParam
@@ -6377,6 +6378,382 @@ class WalkerTests_ReplaceInternal(unittest.TestCase):
         self.assertEqual("y[1] + y[2] + y[2] + y[3]  ==  0.0", str(f))
         self.assertIs(type(f.arg(0)), EXPR.SumExpression)
         self.assertEqual(f.arg(0).nargs(), 4)
+
+
+class TestStreamBasedExpressionVisitor(unittest.TestCase):
+    def setUp(self):
+        self.m = m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        self.e = m.x**2 + m.y + m.z*(m.x+m.y)
+
+    def test_bad_args(self):
+        with self.assertRaisesRegexp(
+                RuntimeError, "Unrecognized keyword arguments: {'foo': None}"):
+            EXPR.StreamBasedExpressionVisitor(foo=None)
+
+    def test_default(self):
+        walker = EXPR.StreamBasedExpressionVisitor()
+        ans = walker.walk_expression(self.e)
+        ref = [
+            [[],[]],
+            [],
+            [[],[[],[]],]
+        ]
+        self.assertEqual(ans, ref)
+
+    def test_beforeChild(self):
+        def before(node, child):
+            if type(child) in nonpyomo_leaf_types \
+               or not child.is_expression_type():
+                return False, [child]
+        walker = EXPR.StreamBasedExpressionVisitor(beforeChild=before)
+        ans = walker.walk_expression(self.e)
+        m = self.m
+        ref = [
+            [[m.x], [2]],
+            [m.y],
+            [[m.z], [[m.x], [m.y]]]
+        ]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(m.x)
+        ref = []
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(2)
+        ref = []
+        self.assertEqual(str(ans), str(ref))
+
+    def test_reduce_in_accept(self):
+        def enter(node):
+            return None, 1
+        def accept(node, data, child_result):
+            return data + child_result
+        walker = EXPR.StreamBasedExpressionVisitor(
+            enterNode=enter, acceptChildResult=accept)
+        # 4 operators, 6 leaf nodes
+        self.assertEquals(walker.walk_expression(self.e), 10)
+
+    def test_sizeof_expression(self):
+        self.assertEquals(_sizeof_expression(self.e), 10)
+
+    def test_enterNode(self):
+        # This is an alternative way to implement the beforeChild test:
+        def enter(node):
+            if type(node) in nonpyomo_leaf_types \
+               or not node.is_expression_type():
+                return (), [node]
+            return node.args, []
+        walker = EXPR.StreamBasedExpressionVisitor(
+            enterNode=enter)
+        m = self.m
+
+        ans = walker.walk_expression(self.e)
+        ref = [
+            [[m.x], [2]],
+            [m.y],
+            [[m.z], [[m.x], [m.y]]]
+        ]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(m.x)
+        ref = [m.x]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(2)
+        ref = [2]
+        self.assertEqual(str(ans), str(ref))
+
+    def test_enterNode_noLeafList(self):
+        # This is an alternative way to implement the beforeChild test:
+        def enter(node):
+            if type(node) in nonpyomo_leaf_types \
+               or not node.is_expression_type():
+                return (), node
+            return node.args, []
+        walker = EXPR.StreamBasedExpressionVisitor(
+            enterNode=enter)
+        m = self.m
+
+        ans = walker.walk_expression(self.e)
+        ref = [
+            [m.x, 2],
+            m.y,
+            [m.z, [m.x, m.y]]
+        ]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(m.x)
+        ref = m.x
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(2)
+        ref = 2
+        self.assertEqual(str(ans), str(ref))
+
+    def test_enterNode_withFinalize(self):
+        # This is an alternative way to implement the beforeChild test:
+        def enter(node):
+            if type(node) in nonpyomo_leaf_types \
+               or not node.is_expression_type():
+                return (), node
+            return node.args, []
+        def finalize(result):
+            if type(result) is list:
+                return result
+            else:
+                return[result]
+        walker = EXPR.StreamBasedExpressionVisitor(
+            enterNode=enter, finalizeResult=finalize)
+        m = self.m
+
+        ans = walker.walk_expression(self.e)
+        ref = [
+            [m.x, 2],
+            m.y,
+            [m.z, [m.x, m.y]]
+        ]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(m.x)
+        ref = [m.x]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(2)
+        ref = [2]
+        self.assertEqual(str(ans), str(ref))
+
+    def test_exitNode(self):
+        # This is an alternative way to implement the beforeChild test:
+        def exit(node, data):
+            if data:
+                return data
+            else:
+                return [node]
+        walker = EXPR.StreamBasedExpressionVisitor(exitNode=exit)
+        m = self.m
+
+        ans = walker.walk_expression(self.e)
+        ref = [
+            [[m.x], [2]],
+            [m.y],
+            [[m.z], [[m.x], [m.y]]]
+        ]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(m.x)
+        ref = [m.x]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(2)
+        ref = [2]
+        self.assertEqual(str(ans), str(ref))
+
+    def test_beforeChild_acceptChildResult_afterChild(self):
+        counts = [0,0,0]
+        def before(node, child):
+            counts[0] += 1
+            if type(child) in nonpyomo_leaf_types \
+               or not child.is_expression_type():
+                return False, None
+        def accept(node, data, child_result):
+            counts[1] += 1
+        def after(node, child):
+            counts[2] += 1
+        walker = EXPR.StreamBasedExpressionVisitor(
+            beforeChild=before, acceptChildResult=accept, afterChild=after)
+        ans = walker.walk_expression(self.e)
+        m = self.m
+        self.assertEqual(ans, None)
+        self.assertEquals(counts, [9,9,9])
+
+    def test_enterNode_acceptChildResult_beforeChild(self):
+        ans = []
+        def before(node, child):
+            if type(child) in nonpyomo_leaf_types \
+               or not child.is_expression_type():
+                return False, child
+        def accept(node, data, child_result):
+            if data is not child_result:
+                data.append(child_result)
+            return data
+        def enter(node):
+            return node.args, ans
+        walker = EXPR.StreamBasedExpressionVisitor(
+            enterNode=enter, beforeChild=before, acceptChildResult=accept)
+        ans = walker.walk_expression(self.e)
+        m = self.m
+        ref = [m.x, 2, m.y, m.z, m.x, m.y]
+        self.assertEqual(str(ans), str(ref))
+
+    def test_finalize(self):
+        ans = []
+        def before(node, child):
+            if type(child) in nonpyomo_leaf_types \
+               or not child.is_expression_type():
+                return False, child
+        def accept(node, data, child_result):
+            if data is not child_result:
+                data.append(child_result)
+            return data
+        def enter(node):
+            return node.args, ans
+        def finalize(result):
+            return len(result)
+        walker = EXPR.StreamBasedExpressionVisitor(
+            enterNode=enter, beforeChild=before, acceptChildResult=accept,
+            finalizeResult=finalize)
+        ans = walker.walk_expression(self.e)
+        self.assertEqual(ans, 6)
+
+    def test_all_function_pointers(self):
+        ans = []
+        def name(x):
+            if type(x) in nonpyomo_leaf_types:
+                return str(x)
+            else:
+                return x.name
+        def enter(node):
+            ans.append("Enter %s" % (name(node)))
+        def exit(node, data):
+            ans.append("Exit %s" % (name(node)))
+        def before(node, child):
+            ans.append("Before %s (from %s)" % (name(child), name(node)))
+        def accept(node, data, child_result):
+            ans.append("Accept into %s" % (name(node)))
+        def after(node, child):
+            ans.append("After %s (from %s)" % (name(child), name(node)))
+        def finalize(result):
+            ans.append("Finalize")
+        walker = EXPR.StreamBasedExpressionVisitor(
+            enterNode=enter, exitNode=exit, beforeChild=before, 
+            acceptChildResult=accept, afterChild=after, finalizeResult=finalize)
+        self.assertIsNone( walker.walk_expression(self.e) )
+        self.assertEqual("\n".join(ans),"""Enter sum
+Before pow (from sum)
+Enter pow
+Before x (from pow)
+Enter x
+Exit x
+Accept into pow
+After x (from pow)
+Before 2 (from pow)
+Enter 2
+Exit 2
+Accept into pow
+After 2 (from pow)
+Exit pow
+Accept into sum
+After pow (from sum)
+Before y (from sum)
+Enter y
+Exit y
+Accept into sum
+After y (from sum)
+Before prod (from sum)
+Enter prod
+Before z (from prod)
+Enter z
+Exit z
+Accept into prod
+After z (from prod)
+Before sum (from prod)
+Enter sum
+Before x (from sum)
+Enter x
+Exit x
+Accept into sum
+After x (from sum)
+Before y (from sum)
+Enter y
+Exit y
+Accept into sum
+After y (from sum)
+Exit sum
+Accept into prod
+After sum (from prod)
+Exit prod
+Accept into sum
+After prod (from sum)
+Exit sum
+Finalize""")
+
+    def test_all_derived_class(self):
+        def name(x):
+            if type(x) in nonpyomo_leaf_types:
+                return str(x)
+            else:
+                return x.name
+        class all_callbacks(EXPR.StreamBasedExpressionVisitor):
+            def __init__(self):
+                self.ans = []
+                super(all_callbacks, self).__init__()
+            def enterNode(self, node):
+                self.ans.append("Enter %s" % (name(node)))
+            def exitNode(self, node, data):
+                self.ans.append("Exit %s" % (name(node)))
+            def beforeChild(self, node, child):
+                self.ans.append("Before %s (from %s)"
+                                % (name(child), name(node)))
+            def acceptChildResult(self, node, data, child_result):
+                self.ans.append("Accept into %s" % (name(node)))
+            def afterChild(self, node, child):
+                self.ans.append("After %s (from %s)"
+                                % (name(child), name(node)))
+            def finalizeResult(self, result):
+                self.ans.append("Finalize")
+        walker = all_callbacks()
+        self.assertIsNone( walker.walk_expression(self.e) )
+        self.assertEqual("\n".join(walker.ans),"""Enter sum
+Before pow (from sum)
+Enter pow
+Before x (from pow)
+Enter x
+Exit x
+Accept into pow
+After x (from pow)
+Before 2 (from pow)
+Enter 2
+Exit 2
+Accept into pow
+After 2 (from pow)
+Exit pow
+Accept into sum
+After pow (from sum)
+Before y (from sum)
+Enter y
+Exit y
+Accept into sum
+After y (from sum)
+Before prod (from sum)
+Enter prod
+Before z (from prod)
+Enter z
+Exit z
+Accept into prod
+After z (from prod)
+Before sum (from prod)
+Enter sum
+Before x (from sum)
+Enter x
+Exit x
+Accept into sum
+After x (from sum)
+Before y (from sum)
+Enter y
+Exit y
+Accept into sum
+After y (from sum)
+Exit sum
+Accept into prod
+After sum (from prod)
+Exit prod
+Accept into sum
+After prod (from sum)
+Exit sum
+Finalize""")
 
 
 class TestEvaluateExpression(unittest.TestCase):

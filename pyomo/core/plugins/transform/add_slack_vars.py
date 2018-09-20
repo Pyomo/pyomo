@@ -3,7 +3,6 @@ from pyomo.core import *
 from pyomo.gdp import *
 from pyomo.opt import SolverFactory
 
-from pyomo.common.plugin import alias
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 
@@ -15,15 +14,15 @@ logger = logging.getLogger('pyomo.core')
 # DEBUG
 from nose.tools import set_trace
 
+
+@TransformationFactory.register('core.add_slack_variables', \
+          doc="Create a model where we add slack variables to every constraint "
+          "and add new objective penalizing the sum of the slacks")
 class AddSlackVariables(NonIsomorphicTransformation):
     """
     This plugin adds slack variables to every constraint or to the constraints
     specified in targets
     """
-
-    alias('core.add_slack_variables', \
-          doc="Create a model where we add slack variables to every constraint "
-          "and add new objective penalizing the sum of the slacks")
 
     def __init__(self, **kwds):
         kwds['name'] = "add_slack_vars"

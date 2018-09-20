@@ -5,15 +5,17 @@ from __future__ import division
 import textwrap
 from math import fabs
 
+from pyomo.core.base.plugin import TransformationFactory
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
                                  add_docstring_list)
-from pyomo.common.plugin import alias
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
 
 
+@TransformationFactory.register('contrib.constraints_to_var_bounds',
+          doc="Change constraints to be a bound on the variable.")
 class ConstraintToVarBoundTransform(IsomorphicTransformation):
     """Change constraints to be a bound on the variable.
 
@@ -38,9 +40,6 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
     ))
 
     __doc__ = add_docstring_list(__doc__, CONFIG)
-
-    alias('contrib.constraints_to_var_bounds',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, model, **kwds):
         config = self.CONFIG(kwds)

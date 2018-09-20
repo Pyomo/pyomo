@@ -18,19 +18,18 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-from pyomo.common.plugin import alias
 import pyomo.opt
 from pyomo.opt.parallel.manager import (ActionManagerError,
                                         ActionStatus,
                                         ActionHandle)
-from pyomo.opt.parallel.async_solver import AsynchronousSolverManager
+from pyomo.opt.parallel.async_solver import AsynchronousSolverManager, SolverManagerFactory
 
 import six
 from six import string_types
 
-class SolverManager_Serial(AsynchronousSolverManager):
 
-    alias("serial", doc="Synchronously execute solvers locally")
+@SolverManagerFactory.register("serial", doc="Synchronously execute solvers locally")
+class SolverManager_Serial(AsynchronousSolverManager):
 
     def clear(self):
         """
