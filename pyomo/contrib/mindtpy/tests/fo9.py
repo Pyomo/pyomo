@@ -1038,3 +1038,5 @@ def build_model():
     m.c343 = Constraint(expr=9 / m.x154 - m.x164 <= 0)
 
     m.c344 = Constraint(expr=9 / m.x164 - m.x154 <= 0)
+
+    return m
