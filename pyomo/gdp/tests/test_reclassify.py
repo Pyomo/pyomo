@@ -65,6 +65,22 @@ class TestDisjunctReclassify(unittest.TestCase):
         with self.assertRaises(GDP_Error):
             TransformationFactory('gdp.reclassify').apply_to(m)
 
+    def test_deactivate_nested_disjunction(self):
+        m = ConcreteModel()
+        m.d1 = Disjunct()
+        m.d1.d1 = Disjunct()
+        m.d1.d2 = Disjunct()
+        m.d1.disj = Disjunction(expr=[m.d1.d1, m.d1.d2])
+        m.d2 = Disjunct()
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m.d1.deactivate()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        # for disj in m.component_data_objects(Disjunction, active=True):
+        #     print(disj.name)
+        # There should be no active Disjunction objects.
+        self.assertIsNone(
+            next(m.component_data_objects(Disjunction, active=True), None))
+
 
 if __name__ == '__main__':
     unittest.main()
