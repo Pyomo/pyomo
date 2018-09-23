@@ -17,9 +17,8 @@ from pyomo.common.modeling import unique_component_name
 
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.core.base.plugin import alias
 from pyomo.core.base.indexed_component import UnindexedComponent_set
-from pyomo.core.base import Transformation, Var, Block, SortComponents
+from pyomo.core.base import Transformation, Var, Block, SortComponents, TransformationFactory
 
 from pyomo.network import Arc
 from pyomo.network.util import replicate_var
@@ -28,9 +27,9 @@ from pyomo.network.util import replicate_var
 obj_iter_kwds = dict(ctype=Arc, active=True, sort=SortComponents.deterministic)
 
 
-class ExpandArcs(Transformation):
-    alias('network.expand_arcs',
+@TransformationFactory.register('network.expand_arcs',
           doc="Expand all Arcs in the model to simple constraints")
+class ExpandArcs(Transformation):
 
     def _apply_to(self, instance, **kwds):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
@@ -138,7 +137,7 @@ class ExpandArcs(Transformation):
                 _len = (
                     -1 if not v.is_indexed()
                     else len(v))
-                ref[k] = (v, _len, p, p._rules[k][0])
+                ref[k] = (v, _len, p, p.rule_for(k))
 
         if not ref:
             logger.warning(
@@ -189,7 +188,7 @@ class ExpandArcs(Transformation):
                         "Port mismatch: Port variable '%s' has "
                         "mismatched indices on ports '%s' and '%s'" %
                         (k, v[2].name, p.name))
-                if p._rules[k][0] is not v[3]:
+                if p.rule_for(k) is not v[3]:
                     raise ValueError(
                         "Port mismatch: Port variable '%s' has "
                         "different rules on ports '%s' and '%s'" %

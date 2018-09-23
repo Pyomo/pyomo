@@ -26,10 +26,9 @@ from pyomo.core.base import (
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.kernel.base import ICategorizedObject
 from pyomo.opt import ProblemFormat
-from pyomo.opt.base import AbstractProblemWriter
+from pyomo.opt.base import AbstractProblemWriter, WriterFactory
 from pyomo.repn.util import valid_expr_ctypes_minlp, \
     valid_active_ctypes_minlp
-import pyomo.common.plugin
 
 import logging
 
@@ -254,8 +253,8 @@ def _get_bound(exp):
     raise ValueError("non-fixed bound or weight: " + str(exp))
 
 
+@WriterFactory.register('gams', 'Generate the corresponding GAMS file')
 class ProblemWriter_gams(AbstractProblemWriter):
-    pyomo.common.plugin.alias('gams', 'Generate the corresponding GAMS file')
 
     def __init__(self):
         AbstractProblemWriter.__init__(self, ProblemFormat.gams)
@@ -631,11 +630,11 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 (2 if (categorized_vars.binary or categorized_vars.ints)
                  else 0)]
 
-        if (solver is not None and
-            mtype.upper() not in valid_solvers[solver.upper()]):
-            raise ValueError("GAMS writer passed solver (%s) "
-                             "unsuitable for model type (%s)"
-                             % (solver, mtype))
+        if solver is not None:
+            if mtype.upper() not in valid_solvers[solver.upper()]:
+                raise ValueError("GAMS writer passed solver (%s) "
+                                 "unsuitable for model type (%s)"
+                                 % (solver, mtype))
             output_file.write("option %s=%s;\n" % (mtype, solver))
 
         if add_options is not None:

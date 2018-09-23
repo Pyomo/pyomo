@@ -1,11 +1,11 @@
 Model Data Management
 =====================
 
-.. autoclass:: pyomo.core.base.DataPortal.DataPortal
+.. autoclass:: pyomo.dataportal.DataPortal.DataPortal
    :members:
    :special-members:
 
-.. autoclass:: pyomo.core.data.TableData.TableData
+.. autoclass:: pyomo.dataportal.TableData.TableData
    :members:
    :special-members:
 

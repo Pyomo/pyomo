@@ -15,7 +15,7 @@ import six
 import pyutilib.services
 import pyutilib.misc
 
-import pyomo.common.plugin
+from pyomo.opt.base.solvers import SolverFactory
 from pyomo.opt.base import *
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
@@ -24,10 +24,9 @@ from pyomo.solvers.plugins.solvers.ASL import ASL
 logger = logging.getLogger('pyomo.solvers')
 
 
+@SolverFactory.register('path', doc='Nonlinear MCP solver')
 class PATHAMPL(ASL):
     """An interface to the PATH MCP solver."""
-
-    pyomo.common.plugin.alias('path', doc='Nonlinear MCP solver')
 
     def __init__(self, **kwds):
         #
@@ -43,7 +42,7 @@ class PATHAMPL(ASL):
         self._capabilities.linear = True
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("pathampl")
+        executable = pyomo.common.registered_executable("pathampl")
         if executable is None:                      #pragma:nocover
             logger.warning("Could not locate the 'pathampl' executable, which is required for solver %s" % self.name)
             self.enable = False
@@ -55,4 +54,4 @@ class PATHAMPL(ASL):
         return ASL.create_command_line(self, executable, problem_files)
 
 
-pyutilib.services.register_executable(name="pathampl")
+pyomo.common.register_executable(name="pathampl")

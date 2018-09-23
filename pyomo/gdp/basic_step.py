@@ -48,7 +48,7 @@ def apply_basic_step(disjunctions_or_constraints):
     constraints = list(obj for obj in disjunctions_or_constraints
                        if obj.type() == Constraint)
     for d in disjunctions:
-        if not d.parent_component().xor:
+        if not d.xor:
             raise ValueError(
                 "Basic steps can only be applied to XOR'd disjunctions\n\t"
                 "(raised by disjunction %s)" % (d.name,))

@@ -308,7 +308,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         check_linear_coef(self, repn, model.a, 1)
         check_linear_coef(self, repn, model.d[0].indicator_var, cons1lb)
         self.assertEqual(repn.constant, -cons1lb)
-        self.assertIs(c['lb'].lower, model.d[0].c.lower)
+        self.assertEqual(c['lb'].lower, model.d[0].c.lower)
         self.assertIsNone(c['lb'].upper)
 
         # second constraint
@@ -321,7 +321,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         check_linear_coef(self, repn, model.a, 1)
         check_linear_coef(self, repn, model.d[1].indicator_var, cons2lb)
         self.assertEqual(repn.constant, -cons2lb)
-        self.assertIs(c['lb'].lower, model.d[1].c1.lower)
+        self.assertEqual(c['lb'].lower, model.d[1].c1.lower)
         self.assertIsNone(c['lb'].upper)
         self.assertTrue(c['ub'].active)
         repn = generate_standard_repn(c['ub'].body)
@@ -331,7 +331,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         check_linear_coef(self, repn, model.d[1].indicator_var, cons2ub)
         self.assertEqual(repn.constant, -cons2ub)
         self.assertIsNone(c['ub'].lower)
-        self.assertIs(c['ub'].upper, model.d[1].c1.upper)
+        self.assertEqual(c['ub'].upper, model.d[1].c1.upper)
 
         # third constraint
         c = disjBlock[1].component("d[1].c2")
@@ -344,7 +344,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         check_linear_coef(self, repn, model.d[1].indicator_var, cons3ub)
         self.assertEqual(repn.constant, -cons3ub)
         self.assertIsNone(c['ub'].lower)
-        self.assertIs(c['ub'].upper, model.d[1].c2.upper)
+        self.assertEqual(c['ub'].upper, model.d[1].c2.upper)
 
     def test_suffix_M_None(self):
         m = models.makeTwoTermDisj()

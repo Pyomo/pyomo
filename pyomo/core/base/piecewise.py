@@ -48,7 +48,7 @@ from pyutilib.enum import Enum
 from pyutilib.misc import flatten_tuple
 
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.sos import SOSConstraint
@@ -894,6 +894,7 @@ class _BIGMPiecewise(object):
         return M_final
 
 
+@ModelComponentFactory.register("Constraints that contain piecewise linear expressions.")
 class Piecewise(Block):
     """
     Adds piecewise constraints to a Pyomo model for functions of the
@@ -1381,4 +1382,3 @@ class IndexedPiecewise(Piecewise):
     def __str__(self):
         return str(self.name)
 
-register_component(Piecewise, "Constraints that contain piecewise linear expressions.")

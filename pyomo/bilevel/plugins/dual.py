@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import alias
 from pyomo.core.base import Constraint, Objective, Block
 from pyomo.repn import generate_standard_repn
 from pyomo.core.base.plugin import TransformationFactory
@@ -19,9 +18,8 @@ import logging
 logger = logging.getLogger('pyomo.core')
 
 
+@TransformationFactory.register('bilevel.linear_dual', doc="Dualize a SubModel block")
 class LinearDual_BilevelTransformation(Base_BilevelTransformation):
-
-    alias('bilevel.linear_dual', doc="Dualize a SubModel block")
 
     def __init__(self):
         super(LinearDual_BilevelTransformation, self).__init__()

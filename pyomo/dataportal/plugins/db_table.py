@@ -44,8 +44,8 @@ try:
 except ImportError:
     pymysql_available=False
 
-from pyomo.common.plugin import alias
 from pyomo.dataportal import TableData
+from pyomo.dataportal.factory import DataManagerFactory
 
 
 # format=
@@ -172,9 +172,8 @@ or that there is a bug in the ODBC connector.
             return None
 
 
+@DataManagerFactory.register('pyodbc', "%s database interface" % 'pyodbc')
 class pyodbc_db_Table(db_Table):
-
-    alias('pyodbc', "%s database interface" % 'pyodbc')
 
     _drivers = {  'mdb' : "Microsoft Access Driver (*.mdb)",
                   'xls' : "Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)",
@@ -522,9 +521,8 @@ class ODBCConfig():
         return sections
 
 
+@DataManagerFactory.register('pypyodbc', "%s database interface" % 'pypyodbc')
 class pypyodbc_db_Table(pyodbc_db_Table):
-
-    alias('pypyodbc', "%s database interface" % 'pypyodbc')
 
     def __init__(self):
         pyodbc_db_Table.__init__(self)
@@ -542,9 +540,8 @@ class pypyodbc_db_Table(pyodbc_db_Table):
         return pyodbc_db_Table.connect(self, connection, options)
 
 
+@DataManagerFactory.register('sqlite3', "sqlite3 database interface")
 class sqlite3_db_Table(db_Table):
-
-    alias('sqlite3', "sqlite3 database interface")
 
     def __init__(self):
         db_Table.__init__(self)
@@ -569,9 +566,8 @@ class sqlite3_db_Table(db_Table):
         return con
 
 
+@DataManagerFactory.register('pymysql', "pymysql database interface")
 class pymysql_db_Table(db_Table):
-
-    alias('pymysql', "pymysql database interface")
 
     def __init__(self):
         db_Table.__init__(self)

@@ -8,40 +8,39 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [ 'IProblemWriter', 'AbstractProblemWriter', 'WriterFactory', 'ProblemConfigFactory', 'BaseProblemConfig' ]
+__all__ = [ 'AbstractProblemWriter', 'WriterFactory', 'ProblemConfigFactory', 'BaseProblemConfig' ]
 
-from pyomo.common.plugin import *
-
-
-class IProblemConfig(Interface):
-    """Interface for classes that create configuration blocks."""
-
-ProblemConfigFactory = CreatePluginFactory(IProblemConfig)
+from pyomo.common import Factory
 
 
-class BaseProblemConfig(Plugin):
+ProblemConfigFactory = Factory('problem configuration object')
+
+
+class BaseProblemConfig(object):
     """Base class for plugins generating problem configurations"""
-
-    implements(IProblemConfig)
 
     def config_block(self):
         pass
 
 
-class IProblemWriter(Interface):
-    """Interface for classes that can write optimization problems."""
-
-WriterFactory = CreatePluginFactory(IProblemWriter)
+WriterFactory = Factory('problem writer')
 
 
-class AbstractProblemWriter(Plugin):
+class AbstractProblemWriter(object):
     """Base class that can write optimization problems."""
 
-    implements(IProblemWriter)
-
     def __init__(self, problem_format): #pragma:nocover
-        Plugin.__init__(self)
         self.format=problem_format
 
     def __call__(self, model, filename, solver_capability, **kwds): #pragma:nocover
         raise TypeError("Method __call__ undefined in writer for format "+str(self.format))
+
+    #
+    # Support "with" statements.
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
+

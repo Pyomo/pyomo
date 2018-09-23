@@ -101,7 +101,7 @@ class AMPLExternalFunction(ExternalFunction):
         self._so = None
         ExternalFunction.__init__(self, *args, **kwds)
 
-    def evaluate(self, args):
+    def _evaluate(self, args, fgh, fixed):
         if self._so is None:
             self.load_library()
         if self._function not in self._known_functions:
@@ -117,9 +117,23 @@ class AMPLExternalFunction(ExternalFunction):
                 args_.append(arg.value)
             else:
                 args_.append(arg)
-        arglist = _ARGLIST( *args_ )
+        arglist = _ARGLIST( args_, fgh, fixed )
         fcn = self._known_functions[self._function][0]
-        return fcn(byref(arglist))
+        f = fcn(byref(arglist))
+        return f, arglist
+
+    def evaluate(self, args):
+        return self._evaluate(args, 0, None)[0]
+
+    def evaluate_fgh(self, args, fixed=None):
+        if fixed is None:
+            fixed = tuple( arg.__class__ in native_types or arg.is_fixed()
+                           for arg in args )
+        N = len(args)
+        f, arglist = self._evaluate(args, 2, fixed)
+        g = [arglist.derivs[i] for i in range(N)]
+        h = [arglist.hes[i] for i in range((N+N**2)//2)]
+        return f, g, h
 
     def load_library(self):
         try:
@@ -251,23 +265,27 @@ class _ARGLIST(Structure):
         ('nsout', c_int), # number of symbolic OUT and INOUT args
         ]
 
-    def __init__(self, *args):
+    def __init__(self, args, fgh=0, fixed=None):
         super(_ARGLIST, self).__init__()
         N = len(args)
         self.n = self.nr = N
         self.at = (c_int*N)()
         self.ra = (c_double*N)()
         self.sa = None
-        self.derivs = (c_double*N)()
-        self.hes = (c_double*(N*N))()
+        if fgh > 0:
+            self.derivs = (c_double*N)(0.)
+        if fgh > 1:
+            self.hes = (c_double*((N+N*N)//2))(0.)
 
         for i,v in enumerate(args):
             self.at[i] = i
             self.ra[i] = v
-            self.derivs[i] = 0.
-        for i in six.moves.xrange(N*N):
-            self.hes[i] = 0.
 
+        if fixed:
+            self.dig = (c_byte*N)(0)
+            for i,v in enumerate(fixed):
+                if v:
+                    self.dig[i] = 1
 
 # The following "fake" class resolves a circular reference issue in the
 # _AMPLEXPORTS datastructure

@@ -28,7 +28,6 @@ import time
 from pyutilib.math.util import isclose
 from pyutilib.misc import PauseGC
 
-import pyomo.common.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import *
 from pyomo.core.expr import current as EXPR
@@ -261,18 +260,18 @@ class RepnWrapper(object):
         self.linear_vars = linear
         self.nonlinear_vars = nonlinear
 
+
+@WriterFactory.register('nl', 'Generate the corresponding AMPL NL file.')
 class ProblemWriter_nl(AbstractProblemWriter):
 
-    pyomo.common.plugin.alias(str(ProblemFormat.nl),
-                            'Generate the corresponding AMPL NL file.')
 
     def __init__(self):
+        AbstractProblemWriter.__init__(self, ProblemFormat.nl)
         self._ampl_var_id = {}
         self._ampl_con_id = {}
         self._ampl_obj_id = {}
         self._OUTPUT = None
         self._varID_map = None
-        AbstractProblemWriter.__init__(self, ProblemFormat.nl)
 
     def __call__(self,
                  model,

@@ -285,17 +285,7 @@ class block(IBlock):
             format = pyomo.opt.base.guess_format(filename)
         problem_writer = pyomo.opt.WriterFactory(format)
 
-        # TODO: I have no idea how to properly check if the
-        #       WriterFactory lookup failed. When it does
-        #       fail, it seems to return something of type:
-        # 'pyutilib.component.core.core.PluginFactoryFunctor'
-        #       which is not a class in the global namespace
-        #       of that module. So for now, I am simply
-        #       checking for a few methods that exist on this
-        #       strange class.
-        if (problem_writer is None) or \
-           (hasattr(problem_writer, 'get_class') and \
-            hasattr(problem_writer, 'services')):
+        if problem_writer is None:
             raise ValueError(
                 "Cannot write model in format '%s': no model "
                 "writer registered for that format"

@@ -20,9 +20,8 @@ from six import iterkeys, iteritems, StringIO
 from six.moves import xrange
 
 from pyutilib.misc import PauseGC
-import pyomo.common.plugin
 from pyomo.opt import ProblemFormat
-from pyomo.opt.base import AbstractProblemWriter
+from pyomo.opt.base import AbstractProblemWriter, WriterFactory
 from pyomo.core.base import \
     (SymbolMap, TextLabeler,
      NumericLabeler, Constraint, SortComponents,
@@ -47,10 +46,9 @@ def _get_bound(exp):
     raise ValueError("non-fixed bound or weight: " + str(exp))
 
 
+@WriterFactory.register('cpxlp', 'Generate the corresponding CPLEX LP file')
+@WriterFactory.register('lp', 'Generate the corresponding CPLEX LP file')
 class ProblemWriter_cpxlp(AbstractProblemWriter):
-
-    pyomo.common.plugin.alias('cpxlp', 'Generate the corresponding CPLEX LP file')
-    pyomo.common.plugin.alias('lp', 'Generate the corresponding CPLEX LP file')
 
     def __init__(self):
 
@@ -890,3 +888,4 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         del variable_symbol_map
 
         return symbol_map
+
