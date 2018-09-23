@@ -23,7 +23,6 @@ from __future__ import division
 import logging
 
 import pyomo
-from pyomo.common.plugin import Plugin
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_master
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
 from pyomo.contrib.mindtpy.util import (MindtPySolveData, a_logger,
@@ -32,24 +31,18 @@ from pyomo.contrib.mindtpy.util import (MindtPySolveData, a_logger,
 from pyomo.contrib.gdpopt.util import _DoNothing
 from pyomo.core import (Block, ConstraintList, NonNegativeReals, RangeSet, Set,
                         Suffix, Var)
-from pyomo.opt import IOptSolver, SolverResults
+from pyomo.opt import SolverResults, SolverFactory
 from pyomo.common.config import ConfigBlock, ConfigValue, PositiveFloat, PositiveInt, In
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 __version__ = (0, 1, 0)
 
-
-class MindtPySolver(Plugin):
+@SolverFactory.register('mindtpy',
+    doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo')
+class MindtPySolver(object):
     """A decomposition-based MINLP solver.
     """
-
-    pyomo.common.plugin.implements(IOptSolver)
-    pyomo.common.plugin.alias(
-        'mindtpy',
-        doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo')
-
-    # _metasolver = False
 
     CONFIG = ConfigBlock("MindtPy")
     CONFIG.declare("bound_tolerance", ConfigValue(
@@ -192,10 +185,6 @@ class MindtPySolver(Plugin):
         description="Apply an initial feasibility step.",
         domain=bool
     ))
-
-    # From Qi: this causes issues.
-    # I'm not sure exactly why, but commenting for now.
-    # __doc__ += CONFIG.generate_yaml_template()
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -373,3 +362,12 @@ class MindtPySolver(Plugin):
             config.logger.setLevel(old_logger_level)
             if created_MindtPy_block:
                 model.del_component('MindtPy_utils')
+
+    #
+    # Support "with" statements.
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
