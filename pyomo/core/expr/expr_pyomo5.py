@@ -60,6 +60,7 @@ __all__ = (
 'StreamBasedExpressionVisitor',
 'SimpleExpressionVisitor',
 'ExpressionValueVisitor',
+'replace_expressions',
 'ExpressionReplacementVisitor',
 'LinearDecompositionError',
 'SumExpressionBase',
@@ -726,6 +727,36 @@ class ExpressionValueVisitor(object):
             else:
                 return self.finalize(ans)
 
+def replace_expressions(expr,
+                        substitution_map,
+                        descend_into_named_expressions=True,
+                        remove_named_expressions=False):
+    """
+
+    Parameters
+    ----------
+    expr : Pyomo expression
+       The source expression
+    substitution_map : dict
+       A dictionary mapping object ids in the source to the replacement objects.
+    descend_into_named_expressions : bool
+       True if replacement should go into named expression objects, False to halt at
+       a named expression
+    remove_named_expressions : bool
+       True if the named expressions should be replaced with a standard expression,
+       and False if the named expression should be left in place
+
+    Returns
+    -------
+       Pyomo expression : returns the new expression object
+    """
+    new_expr = ExpressionReplacementVisitor(
+            substitute=substitution_map,
+            descend_into_named_expressions=descend_into_named_expressions,
+            remove_named_expressions=remove_named_expressions
+            ).dfs_postorder_stack(expr)
+    return new_expr
+
 
 class ExpressionReplacementVisitor(object):
     """
@@ -930,12 +961,22 @@ class ExpressionReplacementVisitor(object):
                 if id(ans) == id(_obj):
                     ans = self.construct_node(_obj, _result[1:])
                 if ans.__class__ is MonomialTermExpression:
-                    if ( ( ans._args_[0].__class__ not in native_numeric_types
-                           and ans._args_[0].is_potentially_variable )
-                         or
-                         ( ans._args_[1].__class__ in native_numeric_types
-                           or not ans._args_[1].is_potentially_variable() ) ):
-                        ans.__class__ = ProductExpression
+                    # CDL This code wass trying to determine if we needed to change the MonomialTermExpression
+                    # to a ProductExpression, but it fails for the case of a MonomialExpression
+                    # that has its rhs Var replaced with another MonomialExpression (and might
+                    # fail for other cases as well.
+                    # Rather than trying to update the logic to catch all cases, I am choosing
+                    # to execute the actual product operator code instead to ensure things are
+                    # consistent
+                    # See WalkerTests.test_replace_expressions_with_monomial_term  in test_expr_pyomo5.py
+                    # to see the behavior
+                    # if ( ( ans._args_[0].__class__ not in native_numeric_types
+                    #        and ans._args_[0].is_potentially_variable )
+                    #      or
+                    #      ( ans._args_[1].__class__ in native_numeric_types
+                    #        or not ans._args_[1].is_potentially_variable() ) ):
+                    #     ans.__class__ = ProductExpression
+                    ans = ans._args_[0] * ans._args_[1]
                 elif ans.__class__ in NPV_expression_types:
                     # For simplicity, not-potentially-variable expressions are
                     # replaced with their potentially variable counterparts.
