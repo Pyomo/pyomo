@@ -2,4 +2,4 @@ python:
     version: 2
     setup_py_install: true
 
-requirements_file:readthedocs_requirements.txt
+requirements_file:.readthedocs_requirements.txt
