@@ -47,5 +47,6 @@ class TestUtilComponents(unittest.TestCase):
         self.assertEquals(model.b.scaled_bz.name, 'b.scaled_bz')
 
 if __name__ == '__main__':
-    t = TestUtilComponents()
-    t.test_rename_components()
+    # t = TestUtilComponents()
+    # t.test_rename_components()
+    unittest.main()

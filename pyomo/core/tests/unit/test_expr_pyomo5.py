@@ -6821,4 +6821,4 @@ class TestEvaluateExpression(unittest.TestCase):
         self.assertRaises(TemplateExpressionError, EXPR.evaluate_expression, e, constant=True)
 
 if __name__ == "__main__":
-   unittest.main()
+    unittest.main()
