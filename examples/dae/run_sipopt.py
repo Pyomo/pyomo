@@ -19,9 +19,10 @@
 
 
 from pyomo.environ import *
-from pyomo.core import *
 from pyomo.core.base import _ConstraintData, _ObjectiveData, _ExpressionData
-from pyomo.core.base.expr import clone_expression, identify_variables
+from pyomo.core.expr.current import (clone_expression, identify_variables, 
+                                     ExpressionReplacementVisitor)
+from pyomo.common.modeling import unique_component_name
 from pyomo.opt import SolverFactory
 
 from HIV_Transmission_discrete import m
@@ -38,6 +39,7 @@ paramPerturbMap = ComponentMap(zip(paramSubList,perturbList))
 #Expand parameter component
 perturbSubMap = {}
 paramFullList = []
+#varSubList = []
 for parameter in paramSubList:
     #Loop over each ParamData in the paramter (will this work on sparse params?)
     for kk in parameter:
@@ -50,12 +52,15 @@ for parameter in paramSubList:
 
 m.b=Block()
 
+varSubList = []
 #add variable components for identified parameters
 #Parameters must be mutable
-m.b.add_component(unique_component_name(m,m.aa.local_name+'_var'),Var())
-m.b.add_component(m.eps.local_name+'_var',Var())
-m.b.add_component(m.qq.local_name+'_var',Var(m.qq._data.keys()))
-
+for parameter in paramSubList:
+    tempName = unique_component_name(m,parameter.local_name) 
+#    m.b.add_component(tempName,Var(parameter._data.keys()))
+    m.b.add_component(tempName,Var(parameter.index_set()))
+    myVar = m.b.component(tempName)
+    varSubList.append(myVar)
 
 #----------------------------------------------------------#
 # Should we consider cloning the whole model? 
@@ -67,11 +72,12 @@ m.b.add_component(m.qq.local_name+'_var',Var(m.qq._data.keys()))
 #	- If we clone the whole model we can muck up 
 #	whatever we want to and leave the user's model in
 #	original form.
+# Maybe set an option, then the user can decide.
 #----------------------------------------------------------#
 
 
 #Param substitution map
-varSubList = [m.b.aa_var, m.b.eps_var, m.b.qq_var]
+#varSubList = [m.b.aa_var, m.b.eps_var, m.b.qq_var]
 paramCompMap = ComponentMap(zip(paramSubList, varSubList))
 
 #Loop through components to build substitution map
@@ -95,20 +101,12 @@ for parameter in paramSubList:
 for cc in list(m.component_data_objects(Objective,
                                         active=True,
                                         descend_into=True)):
-    m.b.add_component(cc.local_name,
-                      Objective(expr=clone_expression(cc.expr,
-                                          substitute=variableSubMap)))
+    tempName=unique_component_name(m,cc.local_name)    
+    m.b.add_component(tempName,
+                  Objective(expr=ExpressionReplacementVisitor(
+                  substitute=variableSubMap,
+                  remove_named_expressions=True).dfs_postorder_stack(cc.expr)))
     cc.deactivate()
-
-#
-#subtitute the Expressions
-for cc in list(m.component_data_objects(Expression,
-                                   active=True,
-                                   descend_into=True)):	
-    m.b.add_component(cc.local_name,
-                      Expression(expr=
-                                clone_expression(cc.expr,
-                                                 substitute=variableSubMap)))
 
     #-------------------------------------------------------------------#
     #Can NOT Deactive Expressions. Need to consider how to handle model 
@@ -124,30 +122,47 @@ for cc in list(m.component_data_objects(Expression,
     #  list for constraint substitutions
     #  *****should ask about this*****
     #---------------------------------------#
+
+m.b.constList = ConstraintList()
 for cc in list(m.component_data_objects(Constraint, 
                                    active=True,
                                    descend_into=True)):
     if cc.equality:
-        m.b.add_component(cc.local_name,
-                          Constraint(expr=
-                                     clone_expression(cc.expr,
-                                                   substitute=variableSubMap)))
+        m.b.constList.add(expr= ExpressionReplacementVisitor(
+                    substitute=variableSubMap,
+                    remove_named_expressions=True).dfs_postorder_stack(cc.expr))
+#        m.b.add_component(cc.local_name,
+#                          Constraint(expr=
+#                                     clone_expression(cc.expr,
+#                                                   substitute=variableSubMap)))
     else:
         if cc.lower==None or cc.upper==None:
-            m.b.add_component(cc.local_name,
-                              Constraint(expr=
-                                         clone_expression(cc.expr,
-                                                   substitute=variableSubMap)))
+            m.b.constList.add(expr=ExpresssionReplacementVisitor(
+                    substitute=variableSubMap,
+                    remove_named_expressions=True).dfs_postorder_stack(cc.expr))
+#            m.b.add_component(cc.local_name,
+#                              Constraint(expr=
+#                                         clone_expression(cc.expr,
+#                                                   substitute=variableSubMap)))
         else:
-            m.b.add_component(cc.local_name,
-                              Constraint(expr=
-                                         clone_expression(cc.lower,
-                                                   substitute=variableSubMap)
-                                         <=clone_expression(cc.body,
-                                                   substitute=variableSubMap)
-                                         <=clone_expression(cc.upper,
-                                                   substitute_variableSubMap)))
-        
+            m.b.constList.add(expr=ExpressionReplacementVisitor(
+                    substitute=variableSubMap,
+                    remove_named_expressions=True).dfs_postorder_stack(cc.expr)
+                <=ExpressionReplacementVisitor(
+                    substitute=variableSubMap,
+                    remove_named_expressions=True).dfs_postorder_stack(cc.expr)
+                <=ExpressionReplacementVisitor(
+                    substitute_variableSubMap,
+                    remove_named_expressions=True).dfs_postorder_stack(cc.expr))
+#            m.b.add_component(cc.local_name,
+#                              Constraint(expr=
+#                                         clone_expression(cc.lower,
+#                                                   substitute=variableSubMap)
+#                                         <=clone_expression(cc.body,
+#                                                   substitute=variableSubMap)
+#                                         <=clone_expression(cc.upper,
+#                                                   substitute_variableSubMap)))
+#        
     cc.deactivate()
 
 
@@ -167,46 +182,46 @@ for ii in paramFullList:
 #           sIPOPT
 #----------------------------------------#
     
-##Create the ipopt_sens (aka sIPOPT) solver plugin using the ASL interface
-#solver = 'ipopt_sens'
-#solver_io = 'nl'
-#stream_solver = True    #True prints solver output to screen
-#keepfiles = False   #True prints intermediate file names (.nl, .sol, ....)
-#opt = SolverFactory(solver, solver_io=solver_io)
+#Create the ipopt_sens (aka sIPOPT) solver plugin using the ASL interface
+solver = 'ipopt_sens'
+solver_io = 'nl'
+stream_solver = True    #True prints solver output to screen
+keepfiles = False   #True prints intermediate file names (.nl, .sol, ....)
+opt = SolverFactory(solver, solver_io=solver_io)
+
+if opt is None:
+    print("")
+    print("ERROR: Unable to create solver plugin for 'ipopt_sens' ")
+    print("")
+    exit(1)
+    
+#Declare Suffixes
+m.sens_state_0 = Suffix(direction=Suffix.EXPORT)
+m.sens_state_1 = Suffix(direction=Suffix.EXPORT)
+m.sens_state_value_1 = Suffix(direction=Suffix.EXPORT)
+m.sens_sol_state_1 = Suffix(direction=Suffix.IMPORT)
+m.sens_init_constr = Suffix(direction=Suffix.EXPORT)
+
+
+#set sIPOPT data
+opt.options['run_sens'] = 'yes'
+
+kk=1
+for ii in paramFullList:
+    m.sens_state_0[variableSubMap[id(ii)]] = kk
+    m.sens_state_1[variableSubMap[id(ii)]] = kk
+    m.sens_state_value_1[variableSubMap[id(ii)]] = value(perturbSubMap[id(ii)])
+    m.sens_init_constr[m.b.paramConst[kk]] = kk
+    kk += 1    
+
+#Send the model to the ipopt_sens and collect the solution
+results = opt.solve(m, keepfiles=keepfiles, tee=stream_solver)
 #
-#if opt is None:
-#    print("")
-#    print("ERROR: Unable to create solver plugin for 'ipopt_sens' ")
-#    print("")
-#    exit(1)
-#    
-##Declare Suffixes
-#m.sens_state_0 = Suffix(direction=Suffix.EXPORT)
-#m.sens_state_1 = Suffix(direction=Suffix.EXPORT)
-#m.sens_state_value_1 = Suffix(direction=Suffix.EXPORT)
-#m.sens_sol_state_1 = Suffix(direction=Suffix.IMPORT)
-#m.sens_init_constr = Suffix(direction=Suffix.EXPORT)
-#
-#
-##set sIPOPT data
-#opt.options['run_sens'] = 'yes'
-#
-#kk=1
-#for ii in paramFullList:
-#    m.sens_state_0[variableSubMap[id(ii)]] = kk
-#    m.sens_state_1[variableSubMap[id(ii)]] = kk
-#    m.sens_state_value_1[variableSubMap[id(ii)]] = perturbSubMap[id(ii)]
-#    m.sens_init_constr[variableSubMap[id(ii)]] = kk-1
-#    
-#
-##Send the model to the ipopt_sens and collect the solution
-#results = opt.solve(m, keepfiles=keepfiles, tee=stream_solver)
-#
-##Print solution
-#print("Nominal and perturbed solution:")
-#for vv in [m.b.qq_var[(0,0)],m.L[m.tf]]:
-#    print("%5s %14g %14g" % (vv, value(vv), m.sens_sol_state_1[vv]))
+#Print solution
+print("Nominal and perturbed solution:")
+for vv in [varSubList[1],m.L[m.tf]]:
+    print("%5s %14g %14g" % (vv, value(vv), m.sens_sol_state_1[vv]))
+###
 ##
 #
-#
-#
+# return m.sens_sol_state_1
