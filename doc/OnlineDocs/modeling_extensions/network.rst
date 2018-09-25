@@ -108,10 +108,10 @@ created for each port member will be indexed by the same indexing set as
 the port member itself.
 
 During transformation, a new block is created on the model for each arc
-(located on the arc's parent block), which serves to contain all of the auto
-generated constraints for that arc. At the end of transformation, a reference
-is created on the arc that points to this new block, available via the arc
-property `arc.expanded_block`.
+(located on the arc's parent block), which serves to contain all of the
+auto generated constraints for that arc. At the end of the
+transformation, a reference is created on the arc that points to this
+new block, available via the arc property `arc.expanded_block`.
 
 The constraints produced by this transformation depend on the rule assigned
 for each port member and can be different between members on the same port.
