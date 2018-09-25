@@ -1,3 +1,4 @@
+from pyomo.contrib.pynumero.extensions.utils import find_pynumero_library
 from pkg_resources import resource_filename
 import numpy.ctypeslib as npct
 import numpy as np
@@ -7,16 +8,9 @@ import sys
 import os
 
 
-#TODO: check for 32 or 64 bit and raise error if not supported
 class SparseLibInterface(object):
     def __init__(self):
-        if os.name in ['nt', 'dos']:
-            fname = 'lib/Windows/libpynumero_SPARSE.dll'
-        elif sys.platform in ['darwin']:
-            fname = 'lib/Darwin/libpynumero_SPARSE.dylib'
-        else:
-            fname = 'lib/Linux/libpynumero_SPARSE.so'
-        self.libname = resource_filename(__name__, fname)
+        self.libname = find_pynumero_library('pynumero_SPARSE')
         self.lib = None
 
     def __call__(self):
@@ -25,6 +19,8 @@ class SparseLibInterface(object):
         return self.lib
 
     def available(self):
+        if self.libname is None:
+            return False
         return os.path.exists(self.libname)
 
     def _setup(self):

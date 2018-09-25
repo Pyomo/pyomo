@@ -1,3 +1,4 @@
+from pyomo.contrib.pynumero.extensions.utils import find_pynumero_library
 from pkg_resources import resource_filename
 import numpy.ctypeslib as npct
 import numpy as np
@@ -8,21 +9,16 @@ import os
 
 
 class AmplInterface(object):
-    if os.name in ['nt', 'dos']:
-        libname = 'lib/Windows/libpynumero_ASL.dll'
-    elif sys.platform in ['darwin']:
-        libname = 'lib/Darwin/libpynumero_ASL.dylib'
-    else:
-        libname = 'lib/Linux/libpynumero_ASL.so'
-    libname = resource_filename(__name__, libname)
+
+    libname = find_pynumero_library('pynumero_ASL')
 
     @classmethod
     def available(cls):
+        if cls.libname is None:
+            return False
         return os.path.exists(cls.libname)
 
     def __init__(self, filename=None, nl_buffer=None):
-
-        #TODO: check for 32 or 64 bit and raise error if not supported?
 
         if not AmplInterface.available():
             raise RuntimeError(
