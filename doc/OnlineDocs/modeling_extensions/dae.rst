@@ -5,7 +5,7 @@ Dynamic Optimization with pyomo.DAE
    :scale: 35%
    :align: right
 
-The pyomo.DAE modeling extension allows users to incorporate systems of
+The pyomo.DAE modeling extension [PyomoDAE]_ allows users to incorporate systems of
 differential algebraic equations (DAE)s in a Pyomo model. The modeling
 components in this extension are able to represent ordinary or partial
 differential equations. The differential equations do not have to be
