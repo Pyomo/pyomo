@@ -10,10 +10,10 @@ Interrogating Pyomo Models
    >>> model.n = pyo.Param(default=4)
    >>> model.x = pyo.Var(pyo.RangeSet(model.n), within=pyo.Binary)
    >>> def o_rule(model):
-   >>>    return pyo.summation(model.x)
+   ...    return pyo.summation(model.x)
    >>> model.o = pyo.Objective(rule=o_rule)
-   >>> model.c = pyo.ConstraintList()
-   >>> SolverFactory('glpk').solve(model)
+   >>> model.c = pyo.Constraint(expr=model.x[2] + model.x[3] >= 1)
+   >>> r = SolverFactory('glpk').solve(model)
 
 Show solver output by adding the `tee=True` option when calling the
 `solve` function
