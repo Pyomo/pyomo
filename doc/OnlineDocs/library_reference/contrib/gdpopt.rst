@@ -35,8 +35,8 @@ An example which includes the modeling approach may be found below.
   Create a simple model
   >>> model = ConcreteModel()
 
-  >>> model.x = Var(bound=(-1.2, 2))
-  >>> model.y = Var()
+  >>> model.x = Var(bounds=(-1.2, 2))
+  >>> model.y = Var(bounds=(-10,10))
 
   >>> model.fix_x = Disjunct()
   >>> model.fix_x.c = Constraint(expr=model.x == 0)
@@ -48,7 +48,7 @@ An example which includes the modeling approach may be found below.
   >>> model.objective = Objective(expr=model.x, sense=minimize)
 
   Solve the model using GDPopt
-  >>> SolverFactory('gdpopt').solve(model)
+  >>> SolverFactory('gdpopt').solve(model, mip_solver='glpk') # doctest: +SKIP
 
 The solution may then be displayed by using the commands
 
@@ -58,7 +58,10 @@ The solution may then be displayed by using the commands
   >>> model.display()
   >>> model.pprint()
 
-.. note:: When troubleshooting, it can often be helpful to turn on verbose output using the ``tee`` flag.
+.. note:: 
+
+   When troubleshooting, it can often be helpful to turn on verbose
+   output using the ``tee`` flag.
 
 .. code::
 
@@ -67,7 +70,10 @@ The solution may then be displayed by using the commands
 GDPopt implementation and optional arguments
 --------------------------------------------
 
-.. warning:: GDPopt optional arguments should be considered beta code and are subject to change.
+.. warning:: 
+
+   GDPopt optional arguments should be considered beta code and are
+   subject to change.
 
 .. autoclass:: pyomo.contrib.gdpopt.GDPopt.GDPoptSolver
     :members:
