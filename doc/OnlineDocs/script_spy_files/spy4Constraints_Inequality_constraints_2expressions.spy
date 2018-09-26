@@ -1,0 +1,9 @@
+model.x = Var()
+
+def aRule(model):
+   return model.x >= 2
+model.Boundx = Constraint(rule=aRule)
+
+def bRule(model):
+   return (2, model.x, None)
+model.boundx = Constraint(rule=bRule)

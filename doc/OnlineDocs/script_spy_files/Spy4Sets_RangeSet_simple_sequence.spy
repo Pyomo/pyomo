@@ -1,0 +1,1 @@
+model.G = RangeSet(1.5, 10, 3.5)

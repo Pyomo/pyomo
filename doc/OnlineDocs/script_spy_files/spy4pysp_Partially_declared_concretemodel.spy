@@ -1,0 +1,23 @@
+model = ConcreteModel()
+
+# data that is initialized on a per-scenario basis
+#p = ...
+#q = ...
+
+# variables declared as second-stage on the
+# PySP scenario tree
+model.z = Var()
+model.y = Var()
+
+# indexed constraint
+model.r_index = Set(initialize=[3, 6, 9])
+def r_rule(model, i):
+    return p + i <= 1 *model.z + model.y * 5 <= 10 + q + i
+model.r = Constraint(model.r_index, rule=r_rule)
+
+# singleton constraint
+model.c = Constraint(expr= p * model.z >= 1)
+
+# a sub-block with a singleton constraint
+model.b = Block()
+model.b.c = Constraint(expr= q * model.y >= 1)

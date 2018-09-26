@@ -1,0 +1,1 @@
+model.C = Set(model.A * model.B)
