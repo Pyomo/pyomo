@@ -41,10 +41,10 @@ model.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
 ### Send the model to ipopt and collect the solution
 print("")
 print("INITIAL SOLVE")
-results = opt.solve(model,keepfiles=keepfiles,tee=stream_solver)
-# load the results (including any values for previously declared
-# IMPORT / IMPORT_EXPORT Suffix components)
-model.solutions.load_from(results)
+# results including any values for previously declared IMPORT /
+# IMPORT_EXPORT Suffix components will be automatically loaded into the
+# model
+opt.solve(model,keepfiles=keepfiles,tee=stream_solver)
 ###
 
 ### Set Ipopt options for warm-start
@@ -64,10 +64,7 @@ opt.options['mu_init'] = 1e-6
 print("") 
 print("WARM-STARTED SOLVE")
 # The solver plugin will scan the model for all active suffixes
-# valid for importing, which it will store into the results object
-results = opt.solve(model,keepfiles=keepfiles,tee=stream_solver)
-# load the results (including any values for previously declared
-# IMPORT / IMPORT_EXPORT Suffix components)
-model.solutions.load_from(results)
+# valid for importing, which it will load into the model
+opt.solve(model,keepfiles=keepfiles,tee=stream_solver)
 ###
 
