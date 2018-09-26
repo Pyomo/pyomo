@@ -7,6 +7,10 @@ Bibliography
 
 .. [AIMMS] http://www.aimms.com/
 
+.. [BirgeLouveauxBook] J.R. Birge and F. Louveaux. Introduction to
+                        Stochastic Programming. Springer Series in
+                        Operations Research. New York. Springer, 1997
+
 .. [GAMS] http://www.gams.com
 
 .. [PyomoBookI] Hart, W.E.; Laird, C.; Watson, J.-P.; Woodruff, D.L.:
@@ -30,5 +34,5 @@ Bibliography
 
 .. [Vielma_et_al] Vielma, J.P, Ahmed, S., Nemhauser, G., "Mixed-Integer
                   Models for Non-separable Piecewise Linear
-                  Optimization: Unifying framework and Extensions,"
+                  Optimization: Unifying framework and Extensions",
                   Operations Research 58, 2010. pp. 303-315.
