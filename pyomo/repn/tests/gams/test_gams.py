@@ -246,6 +246,7 @@ class Test(unittest.TestCase):
         m.y = Var()
         m.z = Var(bounds=(0, 6))
         m.c = Constraint(expr=(m.x * m.y * -2) == 0)
+        m.c2 = Constraint(expr=m.z ** -1.5 == 0)
         m.o = Objective(expr=m.z)
         m.y.fix(-7)
         m.x.fix(4)
@@ -253,7 +254,9 @@ class Test(unittest.TestCase):
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
         self.assertEqual(expression_to_string(
-            m.x * m.z - m.y, tc, smap=smap), "(4)*x1 + (-1)*(-7)")
+            m.c.body, tc, smap=smap), "(4)*(-7)*(-2)")
+        self.assertEqual(expression_to_string(
+            m.c2.body, tc, smap=smap), "x1 ** (-1.5)")
 
 
 class TestGams_writer(unittest.TestCase):
