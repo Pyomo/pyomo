@@ -29,23 +29,23 @@ Repeated Solves
    >>> model.n = pyo.Param(default=4)
    >>> model.x = pyo.Var(pyo.RangeSet(model.n), within=pyo.Binary)
    >>> def o_rule(model):
-   >>>    return pyo.summation(model.x)
+   ...    return pyo.summation(model.x)
    >>> model.o = pyo.Objective(rule=o_rule)
    >>> model.c = pyo.ConstraintList()
-   >>> SolverFactory('glpk').solve(model)
+   >>> SolverFactory('glpk').solve(model) # doctest: +SKIP
 
    Iterate to eliminate the previously found solution
    >>> for i in range(5):
-   >>>    expr = 0
-   >>>    for j in model.x:
-   >>>        if pyo.value(model.x[j]) == 0:
-   >>>            expr += model.x[j]
-   >>>        else:
-   >>>            expr += (1 - model.x[j])
-   >>>    model.c.add( expr >= 1 )
-   >>>    results = opt.solve(model)
-   >>>    print ("\n===== iteration",i)
-   >>>    model.display()
+   ...    expr = 0
+   ...    for j in model.x:
+   ...        if pyo.value(model.x[j]) == 0:
+   ...            expr += model.x[j]
+   ...        else:
+   ...            expr += (1 - model.x[j])
+   ...    model.c.add( expr >= 1 )
+   ...    results = opt.solve(model)
+   ...    print ("\n===== iteration",i)
+   ...    model.display() # doctest: +SKIP
 
 To illustrate Python scripts for Pyomo we consider an example that is in
 the file ``iterative1.py`` and is executed using the command
