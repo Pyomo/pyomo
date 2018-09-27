@@ -16,7 +16,7 @@ __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
 __date__ = 'August 14, 2017'
 __version__ = 1.4
 
-solvername = "cplex" # could use almost any solver
+solvername = "gurobi" # could use almost any solver
 
 class Testrapper(unittest.TestCase):
     """ Test the rapper code."""
@@ -30,6 +30,7 @@ class Testrapper(unittest.TestCase):
 
         """ During debugging, local files might get in the way
         of finding the file in the temp dir, so we cd there."""
+        self.savecwd = os.getcwd()
         os.chdir(self.tdir)
 
         p = str(pyomoroot.__path__)
@@ -51,13 +52,21 @@ class Testrapper(unittest.TestCase):
                         self.tdir + os.sep + "ScenarioStructure.dat")
         self.farmer_concrete_tree = \
                 abstract_tree.create_instance("ScenarioStructure.dat")
-        
+
     def tearDown(self):
-        pass
+        os.chdir(self.savecwd)
+
+    def test_fct_contruct(self):
+        """ give a callback function rather than a string"""
+        from ReferenceModel import pysp_instance_creation_callback
+        stsolver = rapper.StochSolver(None,
+                                      fsfct = pysp_instance_creation_callback,
+                                tree_model = self.farmer_concrete_tree)
 
     def test_ef_solve(self):
         """ solve the ef and check some post solution code"""
         stsolver = rapper.StochSolver("ReferenceModel.py",
+                                      fsfct = "pysp_instance_creation_callback",
                                 tree_model = self.farmer_concrete_tree)
         ef_sol = stsolver.solve_ef(solvername)
         assert(ef_sol.solver.termination_condition \
@@ -71,14 +80,16 @@ class Testrapper(unittest.TestCase):
     def test_ef_solve_with_gap(self):
         """ solve the ef and report gap"""
         stsolver = rapper.StochSolver("ReferenceModel.py",
+                                      fsfct = "pysp_instance_creation_callback",
                                 tree_model = self.farmer_concrete_tree)
         res, gap = stsolver.solve_ef(solvername, tee=True, need_gap=True)
 
     def test_ph_solve(self):
-        """ use ph; assumes concrete two-stage json passes"""
+        """ use ph"""
         phopts = {'--max-iterations': '2'}
         stsolver = rapper.StochSolver("ReferenceModel.py",
                                       tree_model = self.farmer_concrete_tree,
+                                      fsfct = "pysp_instance_creation_callback",
                                       phopts = phopts)
         ph = stsolver.solve_ph(subsolver = solvername, default_rho = 1,
                                phopts=phopts)
@@ -90,5 +101,6 @@ class Testrapper(unittest.TestCase):
             pass
         assert(nodename == 'RootNode')
 
+# see also foo.py        
 if __name__ == '__main__':
     unittest.main()
