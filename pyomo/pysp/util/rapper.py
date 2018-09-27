@@ -8,9 +8,25 @@ Author: David L. Woodruff, started February 2017
 from pyomo.environ import *
 from pyomo.pysp.scenariotree.instance_factory \
     import ScenarioTreeInstanceFactory
-from pyomo.pysp.ef import create_ef_instance
+import pyomo.pysp.ef as pyspef # import (create_ef_instance, solve_ef)
+from pyomo.pysp.ef_writer_script import ExtensiveFormAlgorithm
+from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
+from pyomo.pysp.scenariotree.instance_factory import \
+                ScenarioTreeInstanceFactory
+
 import pyomo.pysp.phinit as phinit
 import os
+
+def _optiondict_2_list(phopts, args_list = None):
+    """ A little utility to change the format of options"""
+    if args_list is None:
+        args_list = []
+    if phopts is not None:
+        for key in phopts:
+            args_list.append(key)
+            if phopts[key] is not None:
+                args_list.append(phopts[key])
+    return args_list
 
 def _kwfromphopts(phopts):
     """
@@ -51,17 +67,21 @@ def _kwfromphopts(phopts):
 
 #==================================
 class StochSolver:
-    """A class for solving stochastic versions of concrete models.
+    """A class for solving stochastic versions of concrete models and
+    abstract models.
     Inspired by the IDAES use case and by daps ability to create tree models.
     Author: David L. Woodruff, February 2017
     
     Args: 
-      fsfile (str): is a file that contains the the scenario callback.
-      fsfct (str): function name in the file, which defaults to
-        "pysp_instance_creation_callback"
-      tree_model: gives the tree as a concrete model.
-        If it is None, then look for a function in fsfile called
-        "pysp_scenario_tree_model_callback" that will return it.
+      fsfile (str): is a path to the file that contains the scenario 
+                    callback for concrete or the reference model for abstract.
+      fsfct (str, or fct, or None): 
+         str   callback function name in the file
+         fct   callback function
+         None  it is a AbstractModel
+      tree_model (concrete model, or path): 
+        gives the tree as a concrete model (which could be a fct)
+        or path to AMPL data file.
       phopts: dictionary of ph options; needed during construction 
               if there is bundling.
 
@@ -70,44 +90,59 @@ class StochSolver:
 
     """
     def __init__(self, fsfile,
-                 fsfct = "pysp_instance_creation_callback",
+                 fsfct = None,
                  tree_model = None,
                  phopts = None):
         """Initialize a StochSolver object.
         """
-        fsfile = fsfile.replace('.py','')  # import does not like .py
-        # __import__ only gives the top level module
-        # probably need to be dealing with modules installed via setup.py
-        m = __import__(fsfile)
-        for n in fsfile.split(".")[1:]:
-            m = getattr(m, n)
-        scen_function = getattr(m, fsfct)
+        if fsfct is None:
+            args_list = _optiondict_2_list(phopts)
+            parser = phinit.construct_ph_options_parser("")
+            options = parser.parse_args(args_list)
 
-        if tree_model is None:
-            tree_maker = getattr(m, \
-                                 "pysp_scenario_tree_model_callback")
-
-            tree = tree_maker()
-            tree_model = tree.as_concrete_model()
-
-            # DLW March 21: still not correct
             scenario_instance_factory = \
-                ScenarioTreeInstanceFactory("ReferenceModel.py", tree_model)
-            #ScenarioTreeInstanceFactory(scen_function, tree_model)
+                ScenarioTreeInstanceFactory(fsfile, tree_model)
+            # delete this comment; options are probabl wrong format
+            self.scenario_tree = \
+                    phinit.GenerateScenarioTreeForPH(options,
+                                                     scenario_instance_factory)
+        else:  # concrete model
+            if  callable(fsfct):
+                scen_function = fsfct
+            else: # better be a string
+                fsfile = fsfile.replace('.py','')  # import does not like .py
+                # __import__ only gives the top level module
+                # probably need to be dealing with modules installed via setup.py
+                m = __import__(fsfile)
+                for n in fsfile.split(".")[1:]:
+                    m = getattr(m, n)
+                scen_function = getattr(m, fsfct)
 
-        else: 
-            # DLW March 21: still not correct
-            scenario_instance_factory = \
-                ScenarioTreeInstanceFactory(scen_function, tree_model)
+            if tree_model is None:
+                tree_maker = getattr(m, \
+                                     "pysp_scenario_tree_model_callback")
+
+                tree = tree_maker()
+                tree_model = tree.as_concrete_model()
+
+                # DLW March 21: still not correct
+                scenario_instance_factory = \
+                    ScenarioTreeInstanceFactory("ReferenceModel.py", tree_model)
+                #ScenarioTreeInstanceFactory(scen_function, tree_model)
+
+            else: 
+                # DLW March 21: still not correct
+                scenario_instance_factory = \
+                    ScenarioTreeInstanceFactory(scen_function, tree_model)
 
 
-        kwargs = _kwfromphopts(phopts)
-        self.scenario_tree = \
-            scenario_instance_factory.generate_scenario_tree(**kwargs) #verbose = True)
-        instances = scenario_instance_factory. \
-                    construct_instances_for_scenario_tree(self.scenario_tree)
-        self.scenario_tree.linkInInstances(instances)        
- 
+            kwargs = _kwfromphopts(phopts)
+            self.scenario_tree = \
+                scenario_instance_factory.generate_scenario_tree(**kwargs) #verbose = True)
+            instances = scenario_instance_factory. \
+                        construct_instances_for_scenario_tree(self.scenario_tree)
+            self.scenario_tree.linkInInstances(instances)        
+
     #=========================
     def make_ef(self, verbose=False):
         """ Make an ef object (used by solve_ef)
@@ -118,7 +153,7 @@ class StochSolver:
         Returns:
             ef_instance: the ef object
         """
-        return create_ef_instance(self.scenario_tree, verbose_output=verbose)
+        return pyspef.create_ef_instance(self.scenario_tree, verbose_output=verbose)
     
     def solve_ef(self, subsolver, sopts = None, tee = False, need_gap = False):
         """Solve the stochastic program directly using the extensive form.
@@ -195,11 +230,7 @@ class StochSolver:
         phargslist = ['--default-rho',str(default_rho)]
         phargslist.append('--solver')
         phargslist.append(str(subsolver))
-        if phopts is not None:
-            for key in phopts:
-                phargslist.append(key)
-                if phopts[key] is not None:
-                    phargslist.append(phopts[key])
+        phargslist = _optiondict_2_list(phopts, args_list = phargslist)
                     
         # Subproblem options go to PH as space-delimited, equals-separated pairs.
         if sopts is not None:
@@ -283,3 +314,93 @@ def xhat_walker(xhat):
             yield (nodename, varname, varvalue)
 
 
+#=============================
+def Abstract_ef(args_list, verbose = False):
+    """
+    Basically runef for an abstract model
+
+    Args:
+        args_list (list): EF (or PH) options in a list
+            e.g., ['--default-rho',str(default_rho)]
+
+    Returns:
+        solve_result, scenario_tree
+    """
+    parser = phinit.construct_ph_options_parser("")
+    args_list.append('--default-rho')
+    args_list.append('1')  # TBD !!! see if it is already there
+    options = parser.parse_args(args_list)
+    
+    #DLW: got these lines from lagrangeParam (no idea??? keine Ahnung)
+    ####options._ef_options = parser._ef_options
+    ####options._ef_options.import_argparse(options)
+    # end keine Ahnung
+    
+    print ("hello")
+    from pyomo.pysp.scenariotree.instance_factory import \
+        ScenarioTreeInstanceFactory
+    scenario_instance_factory = \
+        ScenarioTreeInstanceFactory(options.model_directory,
+                                    options.instance_directory)
+    full_scenario_tree = \
+            phinit.GenerateScenarioTreeForPH(options,
+                                      scenario_instance_factory)
+    pyspef.create_ef_instance(full_scenario_tree, verbose_output=verbose)
+
+    ### tbd sopts and see solve_ef above....
+    
+    """
+    ph_object = phinit.PHFromScratch(options)
+    try:
+        ph_object = phinit.PHFromScratch(options._ef_options)
+    except:
+        print ("Internal error: ph construction failed.")
+        if ph_object is not None:
+            ph_object.release_components()
+        raise
+    
+    with ExtensiveFormAlgorithm(ph_object,
+                                options._ef_options,
+                                options_prefix="_ef") as ef:
+        ef.build_ef()
+        # Instance preprocessing is managed within the
+        # ph object automatically when required for a
+        # solve. Since we are solving the instances
+        # outside of the ph object, we will inform it
+        # that it should complete the instance
+        # preprocessing early
+        ph._preprocess_scenario_instances()
+        ef.solve()
+        xhat_obj = ef.objective
+"""
+
+#=============================
+def Abstract_ph(args_list):
+    """
+    Basically runph for an abstract model
+
+    Args:
+        args_list (list): PH options in a list
+            e.g., ['--default-rho',str(default_rho)]
+
+    Returns:
+        solve_result, scenario_tree
+    """
+    # construct a PH solver object
+    pass
+    """
+    # Build up the options for the PH object.
+    parser = phinit.construct_ph_options_parser("")
+    args_list.append('--default-rho')
+    args_list.append('1')  # TBD !!! see if it is already there
+    options = parser.parse_args(args_list)
+    
+    try:
+        ph_object = phinit.PHFromScratch(options)
+    except:
+        print ("Internal error: ph construction failed.")
+        if ph_object is not None:
+            ph_object.release_components()
+        raise
+
+"""
