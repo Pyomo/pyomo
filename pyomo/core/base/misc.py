@@ -161,11 +161,11 @@ def sorted_robust(arg):
     # copy.  Tuples are OK because tuple(a) will not copy a if it is
     # already a tuple.
     if type(arg) is not list:
-        data = tuple(arg)
+        arg = tuple(arg)
     try:
-        return sorted(data)
+        return sorted(arg)
     except:
-        return sorted(data, key=_robust_sort_keyfcn())
+        return sorted(arg, key=_robust_sort_keyfcn())
 
 
 def _safe_to_str(obj):
