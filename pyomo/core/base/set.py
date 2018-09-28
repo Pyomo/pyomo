@@ -922,6 +922,29 @@ class Set(IndexedComponent):
         timer.report()
 
 
+class InfiniteSimpleSet(_InfiniteSetData, Set):
+    def __init__(self, *args, **kwds):
+        _InfiniteSetData.__init__(self, component=self)
+        Set.__init__(self, *args, **kwds)
+
+class FiniteSimpleSet(_FiniteSetData, Set):
+    def __init__(self, *args, **kwds):
+        _FiniteSetData.__init__(self, component=self)
+        Set.__init__(self, *args, **kwds)
+
+class OrderedSimpleSet(_OrderedSetData, Set):
+    def __init__(self, *args, **kwds):
+        _OrderedSetData.__init__(self, component=self)
+        Set.__init__(self, *args, **kwds)
+
+class SortedSimpleSet(_SortedSetData, Set):
+    def __init__(self, *args, **kwds):
+        _SortedSetData.__init__(self, component=self)
+        Set.__init__(self, *args, **kwds)
+
+class IndexedSet(Set):
+    pass
+
 ############################################################################
 # Set Operators
 ############################################################################
