@@ -6,10 +6,10 @@ Modeling Objects.  A more complete description is contained in the
 [PyomoBookII]_ book. Pyomo supports the formulation and analysis of
 mathematical models for complex optimization applications.  This
 capability is commonly associated with commerically available algebraic
-modeling languages (AMLs) such as AMPL [AMPL]_, AIMMS [AIMMS]_, and GAMS
-[GAMS]_.  Pyomo's modeling objects are embedded within Python, a
-full-featured, high-level programming language that contains a rich set
-of supporting libraries.
+modeling languages (AMLs) such as [AMPL]_, [AIMMS]_, and [GAMS]_.
+Pyomo's modeling objects are embedded within Python, a full-featured,
+high-level programming language that contains a rich set of supporting
+libraries.
 
 Modeling is a fundamental process in many aspects of scientific
 research, engineering and business.  Modeling involves the formulation
@@ -31,7 +31,7 @@ Mathematical models represent system knowledge with a formalized
 language.  The following mathematical concepts are central to modern
 modeling activities:
 
-variables
+Variables
 *********
     
     Variables represent unknown or changing parts of a model (e.g.,
@@ -39,21 +39,21 @@ variables
     outcome). The values taken by the variables are often referred to as
     a *solution* and are usually an output of the optimization process.
 
-parameters
+Parameters
 **********
     
     Parameters represents the data that must be supplied to perform the
     optimization. In fact, in some settings the word *data* is used in
     place of the word *parameters*.
 
-relations
+Relations
 *********
     
     These are equations, inequalities or other mathematical
     relationships that define how different parts of a model are
     connected to each other.
 
-goals
+Goals
 *****
     
     These are functions that reflect goals and objectives for the system

@@ -2,7 +2,7 @@ Simple Models
 =============
 
 A Simple Abstract Pyomo Model
------------------------------
+*****************************
 We repeat the abstract model already given:
 
 .. math::
