@@ -96,6 +96,9 @@ def simple_set_rule( fn ):
         return value
     return wrapper_function
 
+
+class _UnknownSetDimen(object): pass
+
 # What do sets do?
 #
 # ALL:
@@ -397,7 +400,7 @@ class _FiniteSetMixin(object):
 
 class _FiniteSetData(_SetData, _FiniteSetMixin):
     """A general unordered iterable Set"""
-    __slots__ = ('_values', '_domain')
+    __slots__ = ('_values', '_domain', '_validate', '_dimen')
 
     def __init__(self, component, domain=None):
         super(_FiniteSetData, self).__init__(component)
@@ -406,6 +409,8 @@ class _FiniteSetData(_SetData, _FiniteSetMixin):
             self._domain = Any
         else:
             self._domain = domain
+        self._dimen = _UnknownSetDimen
+        self._validate = None
 
     def __getstate__(self):
         """
@@ -437,22 +442,60 @@ class _FiniteSetData(_SetData, _FiniteSetMixin):
     def data(self):
         return tuple(self._values)
 
-    def add(self, value):
-        if self._domain is not None and value not in self._domain:
+    def _verify(self, value):
+        if value not in self._domain:
             raise ValueError("Cannot add value %s to set %s.\n"
                              "\tThe value is not in the Set's domain"
                              % (value, self.name,))
-        value = flatten_tuple(value)
+        if type(value) is tuple:
+            value = flatten_tuple(value)
+        # We wrap this check in a try-except because some values (like lists)
+        #  are not hashable and can raise exceptions.
         try:
             if value in self._values:
                 logger.warning(
                     "Element %s already exists in set %s; no action taken"
                     % (value, self.name))
-            self._values.add(value)
+                return False
         except:
             exc = exc_info()
             raise TypeError("Unable to insert '%s' into set %s:\n\t%s: %s"
                             % (value, self.name, exc[0].__name__, exc[1]))
+        if self._validate is not None:
+            flag = False
+            try:
+                flag = apply_indexed_rule(
+                    self, self._validate, self.parent(), value)
+            except:
+                logger.error(
+                    "Exception raised while validating element '%s' for Set %s"
+                    % (value, self.name))
+                raise
+            if not flag:
+                raise ValueError(
+                    "The value=%s violates the validation rule of set=%s"
+                    % (value, self.name))
+        # If the Set has a fixed dimension, checck that this element is
+        # compatible.
+        if self._dimen is not None:
+            if type(value) is tuple:
+                _d = len(value)
+            else:
+                _d = 1
+            if self._dimen is _UnknownSetDimen:
+                # The first thing added to a Set with unknown dimension sets
+                # its dimension
+                self._dimen = _d
+            elif _d != self._dimen:
+                raise ValueError(
+                    "The value=%s has dimension %s and is not valid for "
+                    "Set %s which has dimen=%s"
+                    % (value, _d, self.name, self._dimen))
+        return True
+
+    def add(self, value):
+        if self._verify(value):
+            self._values.add(value)
 
     def remove(self, val):
         self._values.remove(val)
