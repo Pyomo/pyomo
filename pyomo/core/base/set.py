@@ -1448,3 +1448,15 @@ class _SetProduct_OrderedSet(_SetProduct_FiniteSet, _OrderedSetMixin):
                 "Cannot identify position of %s in Set %s: item not in Set"
                 % (val, self.name))
         return (set0.ord(val[:_idx])-1) * len(set0) + set1.ord(val[_idx:])
+
+############################################################################
+
+class _AnySet(_SetData, Set):
+    def __init__(self, **kwds):
+        _SetData.__init__(self, component=self)
+        Set.__init__(self, **kwds)
+
+    def __contains__(self, val):
+        return True
+
+Any = _AnySet(name='Any', doc="A global Pyomo Set that admits any value")
