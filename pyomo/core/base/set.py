@@ -7,19 +7,22 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ['Set', 'set_options', 'simple_set_rule', 'SetOf']
 
 import itertools
-from sys import exc_info
 import logging
+
+from six import iteritems
+from six.moves import xrange
+from sys import exc_info
 
 from pyutilib.misc.misc import flatten_tuple
 
 from pyomo.common.deprecation import deprecated
 from pyomo.common.errors import DeveloperError
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent
-from pyomo.core.base.misc import sorted_robust
+from pyomo.core.base.misc import sorted_robust, apply_indexed_rule
 
 logger = logging.getLogger('pyomo.core')
 
@@ -124,10 +127,14 @@ class _UnknownSetDimen(object): pass
 # A trivial class that we can use to test if an object is a "legitimate"
 # set (either SimpleSet, or a member of an IndexedSet)
 class _SetDataBase(ComponentData):
+    """The base for all objects that can be used as a component indexing set.
+    """
     pass
 
+
 class _SetData(_SetDataBase):
-    """The base for all objects that can be used as a component indexing set.
+    """The base for all Pyomo AML objects that can be used as a component
+    indexing set.
 
     Derived versions of this class can be used as the Index for any
     IndexedComponent (including IndexedSet)."""
@@ -967,7 +974,7 @@ class _SetOperator(_SetData):
     # Note: because None of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
-    @staticmethod()
+    @staticmethod
     def _processArgs(self, *sets):
         implicit = []
         ans = []
@@ -1374,7 +1381,7 @@ class _SetProduct_InfiniteSet(_SetProduct):
             return val[:-set1.dimen] in set0 and val[-set1.dimen:] in set1
         # At this point, neither base set has a fixed dimention.  The
         # only thing we can do is test all possible split points.
-        for i in range(len(val)):
+        for i in xrange(len(val)):
             if val[:i] in set0 and val[i:] in set1:
                 return True
         return False
@@ -1431,7 +1438,7 @@ class _SetProduct_OrderedSet(_SetProduct_FiniteSet, _OrderedSetMixin):
         else:
             # At this point, neither base set has a fixed dimention.  The
             # only thing we can do is test all possible split points.
-            for i in range(len(val)):
+            for i in xrange(len(val)):
                 if val[:i] in self._sets[0] and val[i:] in self._sets[1]:
                     _idx = i
                     break
