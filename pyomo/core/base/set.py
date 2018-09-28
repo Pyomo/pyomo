@@ -557,7 +557,14 @@ class _OrderedSetMixin(_FiniteSetMixin):
 
 class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
     """
-    This class defines the data for an ordered set.
+    This class defines the base class for an ordered set of concrete data.
+
+    In older Pyomo terms, this defines a "concrete" ordered set - that is,
+    a set that "owns" the list of set members.  While this class actually
+    implements a set ordered by insertion order, we make the "official"
+    _IndertionOrderSetData an empty derivative class, so that
+
+         issubclass(_SortedSetData, _InsertionOrderSetData) == False
 
     Constructor Arguments:
         component   The Set object that owns this data.
@@ -565,18 +572,12 @@ class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
     Public Class Attributes:
     """
 
-    __slots__ = ('_is_sorted','_ordered_values')
-    _InsertionOrder = 1
-    _Sorted = 2
-    _SortNeeded = 3
-    _DataOK = set([_InsertionOrder, _Sorted])
-
+    __slots__ = ('_ordered_values',)
 
     def __init__(self, component):
         super(_OrderedSetData, self).__init__(component)
         self._values = {}
         self._ordered_values = []
-        self._is_sorted = None
 
     def __getstate__(self):
         """
@@ -594,41 +595,21 @@ class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
         """
         Return an iterator for the set.
         """
-        if self._is_sorted not in self._DataOK:
-            self._sort()
         return iter(self._ordered_values)
 
     def data(self):
-        if self._is_sorted not in self._DataOK:
-            self._sort()
         return tuple(self._ordered_values)
 
     def add(self, value):
-        # Note that the sorted status has no bearing on insertion,
-        # so there is no reason to check if the data is correctly sorted
-        if self._domain is not None and value not in self._domain:
-            raise ValueError("Cannot add value %s to set %s.\n"
-                             "\tThe value is not in the Set's domain"
-                             % (value, self.name,))
-        value = flatten_tuple(value)
-        try:
-            if value in self._values:
-                logger.warning(
-                    "Element %s already exists in set %s; no action taken"
-                    % (value, self.name))
-            else:
-                self._values[value] = len(self._values)
-                self._ordered_values.append(value)
-                if self._is_sorted == self._Sorted:
-                    self._is_sorted = self._SortNeeded
-        except:
-            exc = exc_info()
-            raise TypeError("Unable to insert '%s' into set %s:\n\t%s: %s"
-                            % (value, self.name, exc[0].__name__, exc[1]))
+        if self._verify(value):
+            self._values[value] = len(self._values)
+            self._ordered_values.append(value)
 
     def remove(self, val):
         idx = self._values.pop(val)
         self._ordered_values.pop(idx)
+        for i in xrange(idx, len(self._ordered_values)):
+            self._values[self._ordered_values[i]] -= 1
 
     def discard(self, val):
         try:
@@ -647,8 +628,6 @@ class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
         The public Set API is 1-based, even though the
         internal _lookup and _values are (pythonically) 0-based.
         """
-        if self._is_sorted not in self._DataOK:
-            self._sort()
         return self._ordered_values[self._to_0_based_index(item)]
 
     def ord(self, item):
@@ -659,8 +638,6 @@ class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
 
         If the search item is not in the Set, then an IndexError is raised.
         """
-        if self._is_sorted not in self._DataOK:
-            self._sort()
         try:
             return self._values[item] + 1
         except KeyError:
@@ -669,21 +646,112 @@ class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
                 % (item, self.name))
 
     def sorted(self):
-        data = self.data()
-        if self._is_sorted == self._Sorted:
-            return data
-        else:
-            return sorted_robust(data)
+        return sorted_robust(self.data())
+
+
+class _InsertionOrderSetData(_OrderedSetData):
+    """
+    This class defines the data for a ordered set where the items are ordered
+    in insertion order (similar to Python's OrderedSet.
+
+    Constructor Arguments:
+        component   The Set object that owns this data.
+
+    Public Class Attributes:
+    """
+    pass
+
+
+class _SortedSetData(_OrderedSetData):
+    """
+    This class defines the data for a sorted set.
+
+    Constructor Arguments:
+        component   The Set object that owns this data.
+
+    Public Class Attributes:
+    """
+
+    __slots__ = ('_is_sorted',)
+
+    def __init__(self, component):
+        super(_SortedSetData, self).__init__(component)
+        # An empty set is sorted...
+        self._is_sorted = True
+
+    def __getstate__(self):
+        """
+        This method must be defined because this class uses slots.
+        """
+        state = super(_SortedSetData, self).__getstate__()
+        for i in _SortedSetData.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    # Note: because None of the slots on this class need to be edited,
+    # we don't need to implement a specialized __setstate__ method.
+
+    def __iter__(self):
+        """
+        Return an iterator for the set.
+        """
+        if not self._is_sorted:
+            self._sort()
+        return super(_SortedSetData, self).__iter__()
+
+    def data(self):
+        if not self._is_sorted:
+            self._sort()
+        return super(_SortedSetData, self).data()
+
+    def add(self, value):
+        # Note that the sorted status has no bearing on insertion,
+        # so there is no reason to check if the data is correctly sorted
+        if self._verify(value):
+            self._values[value] = len(self._values)
+            self._ordered_values.append(value)
+            self._is_sorted = False
+
+    # Note: removing data does not affect the sorted flag
+    #def remove(self, val):
+
+    def clear(self):
+        super(_SortedSetData, self).clear()
+        self._is_sorted = True
+
+    def __getitem__(self, item):
+        """
+        Return the specified member of the set.
+
+        The public Set API is 1-based, even though the
+        internal _lookup and _values are (pythonically) 0-based.
+        """
+        if not self._is_sorted:
+            self._sort()
+        return super(_SortedSetData, self).__getitem__(item)
+
+    def ord(self, item):
+        """
+        Return the position index of the input value.
+
+        Note that Pyomo Set objects have positions starting at 1 (not 0).
+
+        If the search item is not in the Set, then an IndexError is raised.
+        """
+        if not self._is_sorted:
+            self._sort()
+        return super(_SortedSetData, self).ord(item)
+
+    def sorted(self):
+        return self.data()
 
     def _sort(self):
-        if self._is_sorted is None:
-            self._is_sorted = self.parent_component().ordering(self)
-        if self._is_sorted == self._SortNeeded:
-            self._ordered_values = sorted_robust(self._ordered_values)
-            self._values = dict(
-                (j, i) for i, j in enumerate(self._ordered_values) )
-            self._is_sorted = self._Sorted
+        self._ordered_values = sorted_robust(self._ordered_values)
+        self._values = dict(
+            (j, i) for i, j in enumerate(self._ordered_values) )
+        self._is_sorted = True
 
+############################################################################
 
 class Set(IndexedComponent):
     """
@@ -734,18 +802,63 @@ class Set(IndexedComponent):
                              dictionary
     """
 
+    class InsertionOrder(object): pass
+    class SortedOrder(object): pass
+    _ValidOrderedAuguments = {None, False, InsertionOrder, SortedOrder}
+
     def __new__(cls, *args, **kwds):
         if cls != Set:
             return super(Set, cls).__new__(cls)
+
+        finite = kwds.pop('finite', True)
+        ordered = kwds.pop('ordered', False)
+        if ordered is True:
+            ordered = Set.InsertionOrder
+        if ordered not in Set._ValidOrderedAuguments:
+            raise TypeError(
+                "Set 'ordered' argument is not valid (must be one of {%s})" % (
+                    ', '.join(sorted(
+                        'Set.'+x.__name__ if isinstance(x,type) else str(x)
+                        for x in Set._ValidOrderedAuguments))))
+        if ordered and not finite:
+            raise TypeError("Ordered sets must be finite")
+
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            if kwds.get('ordered',False) is False:
-                return SimpleSet.__new__(SimpleSet)
-            else:
+            if ordered is Set.InsertionOrder:
                 return OrderedSimpleSet.__new__(OrderedSimpleSet)
+            elif ordered is Set.SortedOrder:
+                return SortedSimpleSet.__new__(SortedSimpleSet)
+            elif finite:
+                return FiniteSimpleSet.__new__(FiniteSimpleSet)
+            else:
+                return InfiniteSimpleSet.__new__(InfiniteSimpleSet)
         else:
-            return IndexedSet.__new__(IndexedSet)
+            newObj = IndexedSet.__new__(IndexedSet)
+            if ordered is Set.InsertionOrder:
+                newObj._ComponentDataClass = _OrderedSetData
+            elif ordered is Set.SortedOrder:
+                newObj._ComponentDataClass = _SortedSetData
+            elif finite:
+                newObj._ComponentDataClass = _FiniteSetData
+            else:
+                newObj._ComponentDataClass = _InfiniteSetData
+            return newObj
 
+    def __init__(self, *args, **kwds):
+        kwds.setdefault('ctype', Set)
+        kwds.pop('finite',None)
+        kwds.pop('ordered',None)
+        IndexedComponent.__init__(self, *args, **kwds)
 
+    def construct(self, data=None):
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Constructing Set, name=%s, from data=%r"
+                             % (self.name, data))
+        if self._constructed:
+            return
+        timer = ConstructionTimer(self)
+        self._constructed=True
+        timer.report()
 
 
 ############################################################################
