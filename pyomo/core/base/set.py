@@ -172,6 +172,24 @@ class _SetData(_SetDataBase):
             return False
         return self.ranges() == other.ranges()
 
+    def _pprint(self):
+        """
+        Return data that will be printed for this component.
+        """
+        return (
+            [("Dim", self.dim()),
+             ("Size", len(self)),
+             ("Bounds", self.bounds())],
+            iteritems( {None: self} ),
+            ("Finite","Ordered","Sorted","Domain","Members",),
+            lambda k, v: [
+                isinstance(v, _FiniteSetData),
+                isinstance(v, _OrderedSetData),
+                isinstance(v, _SortedSetData),
+                v._domain,
+                v.ordered(),
+            ])
+
     def isdisjoint(self, other):
         # For efficiency, if the other is not a Set, we will try converting
         # it to a Python set() for efficient lookup.
