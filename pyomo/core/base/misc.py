@@ -124,29 +124,35 @@ class _robust_sort_keyfcn(object):
         argument of the sort key.
 
         """
-        _type = type(val)
         try:
-            return self._typemap[_type](val)
+            i, _typename = self._typemap[val.__class__]
         except KeyError:
             # If this is not a type we have seen before, determine what
             # to use for the second value in the tuple.
+            _type = val.__class__
             _typename = _type.__name__
             try:
                 # 1: Check if the type is comparable.  In Python 3, sorted()
                 #    uses "<" to compare objects.
                 val < val
-                fcn = self._typemap[_type] = lambda x: (_typename, x)
+                i = 1
             except:
                 try:
                     # 2: try converting the value to string
                     str(val)
-                    fcn = self._typemap[_type] = lambda x: (_typename, repr(x))
+                    i = 2
                 except:
                     # 3: fallback on id().  Not deterministic
                     #    (run-to-run), but at least is consistent within
                     #    this run.
-                    fcn = self._typemap[_type] = lambda x: (_typename, id(x))
-        return fcn(val)
+                    i = 3
+            self._typemap[_type] = i, _typename
+        if i == 1:
+            return _typename, val
+        elif i == 2:
+            return _typename, str(val)
+        else:
+            return _typename, id(val)
 
 
 def sorted_robust(arg):
