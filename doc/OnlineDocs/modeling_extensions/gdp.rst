@@ -8,10 +8,12 @@ A disjunction is a set of collections of variables, parameters, and
 constraints that are linked by an OR (really exclusive or)
 constraint. The simplest case is a 2-term disjunction:
 
-D1 V D2
+.. math::
 
-That is, either the constraints in the collection D1 are enforced, OR
-the constraints in the collection D2 are enforced.
+   D_1 \vee D_2
+
+That is, either the constraints in the collection D\ :sub:`1` are
+enforced, OR the constraints in the collection D\ :sub:`2` are enforced.
 
 In pyomo, we model each collection using a special type of block called
 a ``Disjunct``. Each ``Disjunct`` is a block that contains an implicitly
