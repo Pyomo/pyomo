@@ -13,9 +13,8 @@ Models through Generalized Disjunctive Programming (Grossmann) paper
 from __future__ import division
 
 from pyomo.environ import (ConcreteModel, NonNegativeReals, Objective, Param,
-                           Set, Var, TransformationFactory, SolverFactory)
+                           Set, SolverFactory, TransformationFactory, Var)
 
-from pyomo.gdp import Disjunction
 
 # x and y are flipped from article
 # not same rectangles as article
@@ -26,13 +25,13 @@ def build_rect_strip_packing_model():
 
     # Width and Length of each rectangle
     model.rect_width = Param(
-        model.rectangles, initialize={0: 3, 1: 3, 2: 2, 3: 2, 4: 3, 5: 5, 
-                                        6: 7, 7: 7})
+        model.rectangles, initialize={0: 3, 1: 3, 2: 2, 3: 2, 4: 3, 5: 5,
+                                      6: 7, 7: 7})
     # parameter indexed by each rectangle
     # same as height?
     model.rect_length = Param(
-        model.rectangles, initialize={0: 4, 1: 3, 2: 2, 3: 2, 4: 3, 5: 3, 
-                                        6: 4, 7: 4})
+        model.rectangles, initialize={0: 4, 1: 3, 2: 2, 3: 2, 4: 3, 5: 3,
+                                      6: 4, 7: 4})
 
     model.strip_width = Param(
         initialize=10, doc="Available width of the strip")
@@ -85,12 +84,12 @@ def build_rect_strip_packing_model():
 
     return model
 
-model = build_rect_strip_packing_model()
 
-TransformationFactory('gdp.chull').apply_to(model)
+if __name__ == "__main__":
+    model = build_rect_strip_packing_model()
 
-opt = SolverFactory('gurobi')
+    TransformationFactory('gdp.chull').apply_to(model)
 
-results = opt.solve (model, tee=True)
+    opt = SolverFactory('gurobi')
 
-
+    results = opt.solve(model, tee=True)
