@@ -36,10 +36,10 @@ environment:
     #  CATEGORY: "nightly"
     #  EXTRAS: YES
 
-    - PYTHON_VERSION: 3.5
-      PYTHON: "C:\\Miniconda35-x64"
-      CATEGORY: "nightly"
-      EXTRAS: YES
+    #- PYTHON_VERSION: 3.5
+    #  PYTHON: "C:\\Miniconda35-x64"
+    #  CATEGORY: "nightly"
+    #  EXTRAS: YES
 
     - PYTHON_VERSION: 3.6
       PYTHON: "C:\\Miniconda36-x64"
@@ -69,7 +69,7 @@ install:
   - conda config --set always_yes yes
   - conda update -q -y conda
   - conda config --set auto_update_conda false
-  - conda install anaconda
+  # - conda install anaconda
   #
   - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme"
   - python -m pip install codecov
@@ -82,6 +82,8 @@ install:
   #
   # Install pyomo.extras
   #
+  - "IF DEFINED EXTRAS (%ANACONDA% numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill mkl=2017.0.3)"
+  # These packages are not in anaconda, need to get them from conda-forge
   - "IF DEFINED EXTRAS (%CONDAFORGE% pymysql pyro4)"
   #- "IF DEFINED EXTRAS (%CONDAFORGE% numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
   #- "IF DEFINED EXTRAS (%CONDAFORGE% mkl)"
