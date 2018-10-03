@@ -11,6 +11,15 @@
 import itertools
 import logging
 
+from math import copysign
+try:
+    from math import remainder
+except ImportError:
+    def remainder(a,b):
+        ans = a % b
+        if ans > abs(b/2.):
+            ans -= b
+        return ans
 from six import iteritems
 from six.moves import xrange
 from sys import exc_info
@@ -123,6 +132,185 @@ class _UnknownSetDimen(object): pass
 # When we do math, the least specific set dictates the API of the resulting set.
 
 
+class _ClosedNumericRange(object):
+    """A representation of a closed numeric range.
+
+    This class represents a contiguous range of numbers.  The class mimics
+    the Pyomo (*not* Python) `range` API, with a Start, End, and Step.  The
+    Step is a non-negative numeric value (float is OK).  If the Step is 0,
+    the range is continuous.  The End *is* included in the range.
+
+    While the class name implies that the range is always closed, it is
+    not strictly finite, as None is allowed for then End value (and the
+    Start value, for continuous ranges only).
+
+    """
+
+    _EPS = 1e-15
+
+    def __init__(self, start, end, step):
+        if int(step) != step:
+            raise ValueError(
+                "_ClosedNumericRange step must be int (got %s)" % (step,))
+        step = int(step)
+        if start is None:
+            if step:
+                raise ValueError("_ClosedNumericRange: start must not be None "
+                                 "for non-continuous steps")
+        elif end is not None:
+            if step == 0 and end < start:
+                raise ValueError(
+                    "_ClosedNumericRange: start must be <= end for "
+                    "continuous ranges (got %s..%s)" % (start,end)
+                )
+            elif (end-start)*step < 0:
+                raise ValueError(
+                    "_ClosedNumericRange: start, end ordering incompatible "
+                    "with step direction (got [%s:%s:%s])" % (start,end,step)
+                )
+            if step:
+                n = int( (end - start) / step )
+                end = start + n*step
+        if start == end:
+            # If this is a scalar, we will force the step to be 0 (so that
+            # things like [1:5:10] == [1:50:100] are easier to validate)
+            step = 0
+        self.start = start
+        self.end = end
+        self.step = step
+
+    def __str__(self):
+        if self.step == 0:
+            return "[%s,%s]" % (self.start, self.end)
+        elif self.step == 1:
+            return "[%s:%s]" % (self.start, self.end)
+        else:
+            return "[%s:%s:%s]" % (self.start, self.end, self.step)
+
+    def __eq__(self, other):
+        assert type(other) is _ClosedNumericRange
+        return self.start, self.end, self.step == \
+               other.start, other.end, other.step
+
+    def __contains__(self, item):
+        if self.step:
+            _dir = copysign(1, self.step)
+            return (
+                (item - self.start) * copysign(1, self.step) >= 0
+                and (self.end is None or
+                     _dir*(self.end - self.start) >= _dir*(item - self.start))
+                and abs(remainder(item-self.start, self.step)) <= self._EPS
+            )
+        else:
+            return (self.start is None or item >= self.start) \
+                   and (self.end is None or item <= self.end)
+
+    @staticmethod
+    def _continuous_discrete_disjoint(cont, disc):
+        if cont.start is None or cont.start < disc.start:
+            return False
+        if cont.end is None or (
+                disc.end is not None and cont.end > disc.end):
+            return False
+        if cont.end - cont.start > abs(disc.step):
+            return False
+        rStart = remainder(cont.start - disc.start, disc.step)
+        rEnd = remainder(cont.end - disc.start, disc.step)
+        EPS = _ClosedNumericRange._EPS
+        return abs(rStart) > EPS and abs(rEnd) > EPS \
+               and rStart - rEnd > 0
+
+    @staticmethod
+    def _firstNonNull(minimize, *args):
+        ans = None
+        for x in args:
+            if ans is None:
+                ans = x
+            elif minimize:
+                if x is not None and x < ans:
+                    ans = x
+            else:
+                if x is not None and x > ans:
+                    ans = x
+        return ans
+
+    def isdisjoint(self, other):
+        # First, do a simple sanity check on the endpoints
+        s1, e1 = self.start, self.end
+        if self.step < 0:
+            s1, e1 = e1, s1
+        s2, e2 = other.start, other.end
+        if other.step < 0:
+            s2, e2 = e2, s2
+        if (e1 is not None and s2 is not None and e1 < s2) \
+                or (e2 is not None and s1 is not None and e2 < s1):
+            return True
+        # Now, check continuous sets
+        if not self.step or not other.step:
+            # We now need to check a continuous set is a subset of a discrete
+            # set and the continuous set sits between discrete points
+            if self.step:
+                return _ClosedNumericRange._continuous_discrete_disjoint(other, self)
+            elif other.step:
+                return _ClosedNumericRange._continuous_discrete_disjoint(self, other)
+            else:
+                return False
+        # both sets are discrete
+        if self.step == other.step:
+            return abs(remainder(other.start-self.start, self.step)) \
+                   > self._EPS
+        # Two infinite discrete sets will *eventually* have a common point.
+        # This is trivial for integer steps.  It is not true for float steps
+        # with infinite precision (think a step of PI).  However, for finite
+        # precision maths, the "float" times a sufficient power of two is an
+        # integer.  Is this a distinction we want to make?  Personally,
+        # anyone making a discrete set with a non-integer step is asking for
+        # trouble.  Maybe the better solution is to require that the step be
+        # integer.
+        elif self.end is None and other.end is None and self.step*other.step > 0:
+            return False
+        # OK - just check all the members of one set against the other
+        end = _ClosedNumericRange._firstNonNull(
+            self.step > 0,
+            self.end,
+            _ClosedNumericRange._firstNonNull(
+                self.step < 0, other.start, other.end)
+        )
+        i = 0
+        item = self.start
+        while (self.step>0 and item < end) or (self.step<0 and item>end):
+            if item in other:
+                return False
+            i += 1
+            item = self.start + self.step*i
+        return True
+
+    def issubset(self, other):
+        # First, do a simple sanity check on the endpoints
+        s1, e1 = self.start, self.end
+        if self.step < 0:
+            s1, e1 = e1, s1
+        s2, e2 = other.start, other.end
+        if other.step < 0:
+            s2, e2 = e2, s2
+        if s1 is None:
+            if s2 is not None:
+                return False
+        elif s2 is not None and s1 < s2:
+            return False
+        if e1 is None:
+            if e2 is not None:
+                return False
+        elif e2 is not None and e1 > e2:
+            return False
+        if e2.step == 0:
+            return True
+        elif e1.step == 0:
+            return False
+        EPS = _ClosedNumericRange._EPS
+        if abs(remainder(self.step, other.step)) > EPS:
+            return False
+        return abs(remainder(other.start-self.start, other.step)) <= EPS
 
 # A trivial class that we can use to test if an object is a "legitimate"
 # set (either SimpleSet, or a member of an IndexedSet)
