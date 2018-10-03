@@ -30,6 +30,8 @@ if numpy_available and scipy_available:
     from .extract import tril, triu
 else:
     if not numpy_available:
-        raise ImportError("Install numpy")
+        #raise ImportError("Install numpy")
+        print("WARNING: Install numpy to use pynumero")
     if not scipy_available:
-        raise ImportError("Install scipy")
+        #raise ImportError("Install scipy")
+        print("WARNING: Install scipy to use pynumero")
