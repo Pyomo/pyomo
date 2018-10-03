@@ -21,6 +21,7 @@ from pyomo.contrib.pynumero.sparse.base import SparseBase
 from pyomo.contrib.pynumero.sparse.coo import (COOMatrix,
                                                COOSymMatrix,
                                                IdentityMatrix,
+                                               DiagonalMatrix,
                                                EmptyMatrix)
 
 from pyomo.contrib.pynumero.sparse.csr import CSRMatrix, CSRSymMatrix
@@ -127,6 +128,11 @@ class TestCOOMatrix(unittest.TestCase):
         self.assertIsInstance(mm, CSRMatrix)
         self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
 
+        D = DiagonalMatrix(np.ones(m.shape[1]))
+        mm = m + D
+        mm_dense = m.todense() + D.todense()
+        self.assertTrue(np.allclose(mm.todense(), mm_dense))
+
     def test_sub_sparse(self):
         m = self.basic_m
         mm = m - m
@@ -152,6 +158,11 @@ class TestCOOMatrix(unittest.TestCase):
         mm2 = test_m
         self.assertIsInstance(mm, CSRMatrix)
         self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
+
+        D = DiagonalMatrix(np.ones(m.shape[1]))
+        mm = m - D
+        mm_dense = m.todense() - D.todense()
+        self.assertTrue(np.allclose(mm.todense(), mm_dense))
 
     def test_mul_sparse_matrix(self):
 
@@ -233,6 +244,17 @@ class TestCOOMatrix(unittest.TestCase):
         mm = sm.toarray()
         self.assertTrue(np.allclose(mm, test_m, atol=1e-6))
 
+    def test_todok(self):
+        with self.assertRaises(Exception) as context:
+            self.basic_m.todok()
+
+    def test_todia(self):
+        with self.assertRaises(Exception) as context:
+            self.basic_m.todia()
+
+    def test_tolil(self):
+        with self.assertRaises(Exception) as context:
+            self.basic_m.tolil()
 
 @unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestCOOSymMatrix(unittest.TestCase):
@@ -547,6 +569,18 @@ class TestCOOSymMatrix(unittest.TestCase):
         # ToDo: add test with block matrix
 
     # ToDo: add tests for getallnnz
+
+    def test_todok(self):
+        with self.assertRaises(Exception) as context:
+            self.basic_m.todok()
+
+    def test_todia(self):
+        with self.assertRaises(Exception) as context:
+            self.basic_m.todia()
+
+    def test_tolil(self):
+        with self.assertRaises(Exception) as context:
+            self.basic_m.tolil()
 
 @unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestEmptyMatrix(unittest.TestCase):

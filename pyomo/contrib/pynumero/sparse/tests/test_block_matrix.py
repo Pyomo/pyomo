@@ -18,6 +18,7 @@ from pyomo.contrib.pynumero.sparse import (COOMatrix,
                                            SparseBase,
                                            BlockVector)
 
+
 class TestBlockMatrix(unittest.TestCase):
     def setUp(self):
         row = np.array([0, 3, 1, 2, 3, 0])
@@ -33,6 +34,10 @@ class TestBlockMatrix(unittest.TestCase):
         bm[1, 1] = m
         bm[0, 1] = m
         self.basic_m = bm
+
+        self.composed_m = BlockMatrix(2, 2)
+        self.composed_m[0, 0] = self.block_m
+        self.composed_m[1, 1] = self.basic_m
 
     def test_is_symmetric(self):
         self.assertFalse(self.basic_m.is_symmetric)
@@ -168,6 +173,119 @@ class TestBlockMatrix(unittest.TestCase):
     # ToDo: add tests for matrices with zeros in the diagonal
     # ToDo: add tests for getallnnz
     # ToDo: add tests for block matrices with coo and csc matrices
+
+    def test_nnz(self):
+        self.assertEqual(self.block_m.nnz*3, self.basic_m.nnz)
+
+    def test_block_shapes(self):
+        shapes = self.basic_m.block_shapes()
+        for i in range(self.basic_m.bshape[0]):
+            for j in range(self.basic_m.bshape[1]):
+                self.assertEqual(shapes[i][j], self.block_m.shape)
+
+    def test_dot(self):
+        A_dense = self.basic_m.todense()
+        A_block = self.basic_m
+        x = np.ones(A_dense.shape[1])
+        block_x = BlockVector(2)
+        block_x[0] = np.ones(self.block_m.shape[1])
+        block_x[1] = np.ones(self.block_m.shape[1])
+        flat_res = A_block.dot(x).flatten()
+        block_res = A_block.dot(block_x)
+        self.assertTrue(np.allclose(A_dense.dot(x), flat_res))
+        self.assertTrue(np.allclose(A_dense.dot(x), block_res.flatten()))
+        self.assertEqual(block_res.bshape[0], 2)
+
+    def test_reset_brow(self):
+        self.basic_m.reset_brow(0)
+        for j in range(self.basic_m.bshape[1]):
+            self.assertIsNone(self.basic_m[0, j])
+
+    def test_reset_bcol(self):
+        self.basic_m.reset_bcol(0)
+        for j in range(self.basic_m.bshape[0]):
+            self.assertIsNone(self.basic_m[j, 0])
+
+    def test_getallnnz(self):
+        self.assertEqual(self.block_m.nnz * 3, self.basic_m.getallnnz())
+        self.assertEqual(self.block_m.nnz * 4, self.composed_m.getallnnz())
+
+    def test_to_scipy(self):
+
+        block = self.block_m
+        m = self.basic_m
+        scipy_mat = bmat([[block, block], [None, block]], format='coo')
+        dinopy_mat = m.toscipy()
+        drow = np.sort(dinopy_mat.row)
+        dcol = np.sort(dinopy_mat.col)
+        ddata = np.sort(dinopy_mat.data)
+        srow = np.sort(scipy_mat.row)
+        scol = np.sort(scipy_mat.col)
+        sdata = np.sort(scipy_mat.data)
+        self.assertListEqual(drow.tolist(), srow.tolist())
+        self.assertListEqual(dcol.tolist(), scol.tolist())
+        self.assertListEqual(ddata.tolist(), sdata.tolist())
+
+    def test_has_empty_rows(self):
+        self.assertFalse(self.basic_m.has_empty_rows())
+
+    def test_has_empty_cols(self):
+        self.assertFalse(self.basic_m.has_empty_cols())
+
+    def test_transpose(self):
+
+        A_dense = self.basic_m.todense()
+        A_block = self.basic_m
+        A_dense_t = A_dense.transpose()
+        A_block_t = A_block.transpose()
+        self.assertTrue(np.allclose(A_dense_t, A_block_t.todense()))
+
+        A_dense = self.composed_m.todense()
+        A_block = self.composed_m
+        A_dense_t = A_dense.transpose()
+        A_block_t = A_block.transpose()
+        self.assertTrue(np.allclose(A_dense_t, A_block_t.todense()))
+
+    def test_repr(self):
+        self.assertEqual(len(self.basic_m.__repr__()), 17)
+
+    def test_str(self):
+        self.assertEqual(len(self.basic_m.__str__()), 85)
+
+    def test_set_item(self):
+
+        self.basic_m[1, 0] = None
+        self.assertIsNone(self.basic_m[1, 0])
+        self.basic_m[1, 1] = None
+        self.assertIsNone(self.basic_m[1, 1])
+        self.assertEqual(self.basic_m._brow_lengths[1], 0)
+        self.basic_m[1, 1] = self.block_m
+        self.assertEqual(self.basic_m._brow_lengths[1], self.block_m.shape[1])
+
+    def test_add(self):
+
+        A_dense = self.basic_m.todense()
+        A_block = self.basic_m
+
+        aa = A_dense + A_dense
+        mm = A_block + A_block
+
+        self.assertTrue(np.allclose(aa, mm.todense()))
+
+        mm = A_block.__radd__(A_block)
+        self.assertTrue(np.allclose(aa, mm.todense()))
+
+    def test_sub(self):
+
+        A_dense = self.basic_m.todense()
+        A_block = self.basic_m
+
+        aa = A_dense - A_dense
+        mm = A_block - A_block
+
+        self.assertTrue(np.allclose(aa, mm.todense()))
+        mm = A_block.__rsub__(A_block)
+        self.assertTrue(np.allclose(aa, mm.todense()))
 
 class TestSymBlockMatrix(unittest.TestCase):
 

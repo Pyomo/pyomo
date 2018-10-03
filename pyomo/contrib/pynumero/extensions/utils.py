@@ -35,9 +35,3 @@ def found_pynumero_libraries():
     if p1 is not None and p2 is not None:
         return True
     return False
-
-if __name__ == "__main__":
-
-    pp = find_pynumero_library('pynumero_ASL')
-    print(pp)
-    print(found_pynumero_libraries())

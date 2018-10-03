@@ -971,9 +971,9 @@ class AslNLP(NLP):
         self._d_mask = abs_bounds_difference >= tolerance_equalities
         self._d_map = self._d_mask.nonzero()[0]
 
-        self._lower_g_mask = np.isfinite(self._lower_g) * self._d_mask
+        self._lower_g_mask = np.isfinite(self._lower_g) * self._d_mask + self._c_mask
         self._lower_g_map = self._lower_g_mask.nonzero()[0]
-        self._upper_g_mask = np.isfinite(self._upper_g) * self._d_mask
+        self._upper_g_mask = np.isfinite(self._upper_g) * self._d_mask + self._c_mask
         self._upper_g_map = self._upper_g_mask.nonzero()[0]
 
         self._lower_d_mask = np.isin(self._d_map, self._lower_g_map)
@@ -1430,7 +1430,7 @@ class AmplNLP(AslNLP):
             return res[indices]
         return res
 
-    def Jacobian_g(self, x, matrix_format='coo', var_names=None, var_indices=None,
+    def Jacobian_g(self, x, var_names=None, var_indices=None,
                  constraint_indices=None, constraint_names=None):
 
         if var_indices is not None and var_names is not None:
@@ -1493,27 +1493,11 @@ class AmplNLP(AslNLP):
             cid_to_ncid = {cid: idx for idx, cid in enumerate(indices_constraints)}
             new_row_indices = np.array([cid_to_ncid[cid] for cid in old_const_indices])
 
-        if matrix_format == 'coo':
-            return COOMatrix((data, (new_row_indices, new_col_indices)),
-                             shape=(nrows, ncols))
-        if matrix_format == 'csr':
-            return CSRMatrix((data, (new_row_indices, new_col_indices)),
-                             shape=(nrows, ncols))
-        if matrix_format == 'csc':
-            return CSCMatrix((data, (new_row_indices, new_col_indices)),
-                             shape=(nrows, ncols))
-        if matrix_format == 'dok':
-            dok = dok_matrix((nrows, ncols), dtype=np.float64)
-            for i, v in enumerate(data):
-                dok[new_row_indices[i], new_col_indices[i]] = v
-            return dok
-
-        raise RuntimeError('Matrix format not recognized')
+        return COOMatrix((data, (new_row_indices, new_col_indices)), shape=(nrows, ncols))
 
     def Hessian_lag(self,
                     x,
                     lam,
-                    matrix_format='coo',
                     var_names_rows=None,
                     var_indices_rows=None,
                     var_names_cols=None,
@@ -1604,22 +1588,9 @@ class AmplNLP(AslNLP):
             cid_to_ncid = {cid: idx for idx, cid in enumerate(indices_rows)}
             new_row_indices = np.array([cid_to_ncid[cid] for cid in old_row_indices])
 
-        if matrix_format == 'coo':
-            return COOMatrix((data, (new_row_indices, new_col_indices)),
-                             shape=(nrows, ncols))
-        if matrix_format == 'csr':
-            return CSRMatrix((data, (new_row_indices, new_col_indices)),
-                             shape=(nrows, ncols))
-        if matrix_format == 'csc':
-            return CSCMatrix((data, (new_row_indices, new_col_indices)),
-                             shape=(nrows, ncols))
-        if matrix_format == 'dok':
-            dok = dok_matrix((nrows, ncols), dtype=np.float64)
-            for i, v in enumerate(data):
-                dok[new_row_indices[i], new_col_indices[i]] = v
-            return dok
 
-        raise RuntimeError('Matrix format not recognized')
+        return COOMatrix((data, (new_row_indices, new_col_indices)), shape=(nrows, ncols))
+
 
     def variable_order(self):
         return [name for name in self._vid_to_name]

@@ -100,12 +100,12 @@ class TestAdmmNLP(unittest.TestCase):
         c_map = [0, 1]
         self.assertListEqual(self.nlp._c_map.tolist(), c_map)
         self.assertFalse(self.nlp._d_map.tolist())
-        lower_g_mask = [False, False]
+        lower_g_mask = [True, True]
         self.assertListEqual(self.nlp._lower_g_mask.tolist(), lower_g_mask)
-        upper_g_mask = [False, False]
+        upper_g_mask = [True, True]
         self.assertListEqual(self.nlp._upper_g_mask.tolist(), upper_g_mask)
-        self.assertFalse(self.nlp._lower_g_map.tolist())
-        self.assertFalse(self.nlp._upper_g_map.tolist())
+        self.assertTrue(self.nlp._lower_g_map.tolist())
+        self.assertTrue(self.nlp._upper_g_map.tolist())
 
 
     def test_nnz_hessian_lag(self):

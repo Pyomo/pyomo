@@ -115,8 +115,11 @@ class BlockVector(object):
             assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                                                               other.nblocks)
             return sum(self[i].dot(other[i]) for i in range(self.nblocks))
+        elif isinstance(other, np.ndarray):
+            bv = self.flatten()
+            return bv.dot(other)
         else:
-            return NotImplemented
+            raise NotImplementedError()
 
     def sum(self):
         """

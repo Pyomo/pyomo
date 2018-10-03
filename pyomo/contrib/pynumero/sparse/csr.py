@@ -9,8 +9,7 @@ from scipy.sparse._sparsetools import csr_tocsc
 from scipy.sparse import issparse
 
 try:
-    from pyomo.contrib.pynumero.extensions.sparseutils import (sym_csr_matvec,
-                                                               csr_matvec_no_diag,
+    from pyomo.contrib.pynumero.extensions.sparseutils import (csr_matvec_no_diag,
                                                                csc_matvec_no_diag)
 except ImportError as e:
     print('{}'.format(e))
@@ -99,6 +98,15 @@ class CSRMatrix(SparseBase, scipy_csr_matrix):
     def tocsr(self, copy=False):
         # copy only there to agree with the signature
         return self
+
+    def todok(self, copy=False):
+        raise NotImplementedError('Not supported')
+
+    def todia(self, copy=False):
+        raise NotImplementedError('Not supported')
+
+    def tolil(self, copy=False):
+        raise NotImplementedError('Not supported')
 
     def tofullmatrix(self):
         return self

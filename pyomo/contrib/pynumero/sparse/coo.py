@@ -718,31 +718,4 @@ class DiagonalMatrix(COOSymMatrix):
         return DiagonalMatrix(data)
 
 
-if __name__ == "__main__":
-
-    row = np.array([0, 3, 1, 0])
-    col = np.array([0, 3, 1, 2])
-    data = np.array([4, 5, 7, 9])
-    m = COOMatrix((data, (row, col)), shape=(4, 4))
-    print(m.toarray())
-    print(m.is_symmetric)
-    d = m.diagonal()
-    print(d[d!=0])
-
-    print(m.__repr__())
-
-    row = np.array([0, 3, 1, 2, 3])
-    col = np.array([0, 0, 1, 2, 3])
-    data = np.array([2, 1, 3, 4, 5])
-    m = COOSymMatrix((data, (row, col)), shape=(4, 4))
-    print(m.toarray())
-    print(m.is_symmetric)
-    print(m.__repr__())
-    mcoo = m.tofullcoo()
-    print(mcoo.toarray())
-    print(mcoo.is_symmetric)
-
-    x = np.ones(m.shape[0])
-    print(mcoo.dot(x))
-    print(m.dot(x))
 

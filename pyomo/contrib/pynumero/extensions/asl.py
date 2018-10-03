@@ -11,7 +11,6 @@ import os
 class AmplInterface(object):
 
     libname = find_pynumero_library('pynumero_ASL')
-
     @classmethod
     def available(cls):
         if cls.libname is None:

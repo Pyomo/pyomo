@@ -15,6 +15,7 @@ if not AmplInterface.available():
 import pyomo.environ as pe
 from pyomo.contrib.pynumero.sparse.coo import COOMatrix, COOSymMatrix
 from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP, AmplNLP
+import tempfile
 
 
 def create_basic_model():
@@ -109,6 +110,16 @@ class TestPyomoNLP(unittest.TestCase):
         self.assertTrue(np.allclose(xu, self.nlp2.xu()))
         self.assertTrue(np.allclose(xu, self.nlp2.xu(condensed=True)))
 
+    def test_gl(self):
+        gl = [1., 0.5, -np.inf, -100., -500.]
+        gu = [1., 0.5, 100., np.inf, np.inf]
+        self.assertTrue(np.allclose(gl, self.nlp1.gl()))
+        self.assertTrue(np.allclose(gu, self.nlp1.gu()))
+        gl = [1., 0.5, -100., -500.]
+        gu = [1., 0.5, 100.]
+        self.assertTrue(np.allclose(gl, self.nlp1.gl(condensed=True)))
+        self.assertTrue(np.allclose(gu, self.nlp1.gu(condensed=True)))
+
     def test_x_init(self):
         x_init = np.array(range(1, 4))
         self.assertTrue(np.allclose(self.nlp1.x_init(), x_init))
@@ -152,6 +163,18 @@ class TestPyomoNLP(unittest.TestCase):
         self.assertTrue(np.allclose(d, self.nlp2.create_vector_y(subset='d')))
         self.assertTrue(np.allclose(d, self.nlp2.create_vector_y(subset='dl')))
         self.assertTrue(np.allclose(d, self.nlp2.create_vector_y(subset='du')))
+
+    def test_create_vector_s(self):
+        g = np.zeros(3)
+        self.assertTrue(np.allclose(g, self.nlp1.create_vector_s()))
+        dl = np.zeros(2)
+        self.assertTrue(np.allclose(dl, self.nlp1.create_vector_s(subset='l')))
+        du = np.zeros(1)
+        self.assertTrue(np.allclose(du, self.nlp1.create_vector_s(subset='u')))
+        d = np.zeros(0)
+        self.assertTrue(np.allclose(d, self.nlp2.create_vector_s()))
+        self.assertTrue(np.allclose(d, self.nlp2.create_vector_s(subset='l')))
+        self.assertTrue(np.allclose(d, self.nlp2.create_vector_s(subset='u')))
 
     def test_nnz_jacobian_g(self):
         self.assertEqual(self.nlp1.nnz_jacobian_g, 11)
@@ -240,6 +263,15 @@ class TestPyomoNLP(unittest.TestCase):
         self.nlp1.evaluate_c(x, out=res_)
         self.assertTrue(np.allclose(res_, res))
 
+        x = np.ones(self.nlp1.nx)
+        res = np.array([-1.0, -0.5])
+        g = self.nlp1.evaluate_g(x)
+        res_eval = self.nlp1.evaluate_c(x, evaluated_g=g)
+        self.assertTrue(np.allclose(res_eval, res))
+        res_ = self.nlp1.create_vector_y(subset='c')
+        self.nlp1.evaluate_c(x, out=res_, evaluated_g=g)
+        self.assertTrue(np.allclose(res_, res))
+
         x = self.nlp2.create_vector_x()
         res = -np.ones(self.p2.nx)
         self.assertTrue(np.allclose(self.nlp2.evaluate_c(x), res))
@@ -253,6 +285,15 @@ class TestPyomoNLP(unittest.TestCase):
         self.assertTrue(np.allclose(self.nlp1.evaluate_d(x), res))
         res_ = self.nlp1.create_vector_y(subset='d')
         self.nlp1.evaluate_d(x, out=res_)
+        self.assertTrue(np.allclose(res_, res))
+
+        x = np.ones(self.nlp1.nx)
+        res = np.array([2.0, 2.0, 3.0])
+        g = self.nlp1.evaluate_g(x)
+        res_eval = self.nlp1.evaluate_d(x, evaluated_g=g)
+        self.assertTrue(np.allclose(res_eval, res))
+        res_ = self.nlp1.create_vector_y(subset='d')
+        self.nlp1.evaluate_d(x, out=res_, evaluated_g=g)
         self.assertTrue(np.allclose(res_, res))
 
         x = self.nlp2.create_vector_x()
@@ -550,3 +591,98 @@ class TestPyomoNLP(unittest.TestCase):
             if 'c' in cnames[i]:
                 cc[i] = 1.0
         self.assertTrue(np.allclose(g, cc))
+
+    def test_variable_order(self):
+        self.assertEqual(len(self.nlp1.variable_order()), 3)
+
+    def test_constraint_order(self):
+        self.assertEqual(len(self.nlp1.constraint_order()), 5)
+
+    def test_variable_idx(self):
+        self.assertTrue(0 <= self.nlp1.variable_idx(self.p1.x[1]) <= 3)
+
+    def test_constraint_idx(self):
+        self.assertTrue(0 <= self.nlp1.constraint_idx(self.p1.c1) <= 5)
+
+@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
+class TestAmplNLP(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # test problem 1
+        cls.p1 = create_basic_model()
+        temporal_dir = tempfile.mkdtemp()
+        filename = os.path.join(temporal_dir, "pynumero_pyomo")
+        cls.p1.write(filename+'.nl', io_options={"symbolic_solver_labels": True})
+        cls.nlp = AmplNLP(filename+'.nl',
+                          row_filename=filename+'.row',
+                          col_filename=filename+'.col')
+
+    def test_constructor(self):
+
+        self.assertEqual(len(self.nlp._name_to_cid), 5)
+        self.assertEqual(len(self.nlp._name_to_vid), 3)
+
+    def test_variable_order(self):
+
+        self.assertEqual(len(self.nlp.variable_order()), 3)
+
+    def test_Grad_objective(self):
+
+        x = self.nlp.create_vector_x()
+        x.fill(1.0)
+        sdf = np.array([0, 2], np.double)
+        self.assertTrue(np.allclose(sdf, self.nlp.Grad_objective(x, var_names=['x[1]', 'x[2]'])))
+        var_indices = [self.nlp.variable_idx('x[1]'), self.nlp.variable_idx('x[2]')]
+        self.assertTrue(np.allclose(sdf, self.nlp.Grad_objective(x, var_indices=var_indices)))
+
+    def test_Jacobian_g(self):
+        x = self.nlp.create_vector_x()
+        x.fill(1.0)
+        jac = self.nlp.Jacobian_g(x)
+        self.assertEqual(3, jac.shape[1])
+        self.assertEqual(5, jac.shape[0])
+        self.assertIsInstance(jac, COOMatrix)
+        values = np.array([2.0, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1])
+        self.assertTrue(np.allclose(values, jac.data))
+
+        jac = self.nlp.Jacobian_g(x, constraint_names=['c1'])
+        self.assertEqual(3, jac.shape[1])
+        self.assertEqual(1, jac.shape[0])
+        self.assertIsInstance(jac, COOMatrix)
+        values = np.array([2.0, -1])
+        self.assertTrue(np.allclose(values, jac.data))
+
+        jac = self.nlp.Jacobian_g(x, constraint_indices=[self.nlp.constraint_idx('c1')])
+        self.assertEqual(3, jac.shape[1])
+        self.assertEqual(1, jac.shape[0])
+        self.assertIsInstance(jac, COOMatrix)
+        values = np.array([2.0, -1])
+        self.assertTrue(np.allclose(values, jac.data))
+
+    def test_Hessian_lag(self):
+        x = self.nlp.create_vector_x()
+        l = self.nlp.create_vector_y()
+        l[0] = 1
+        values = np.array([2.0, 2.0])
+
+        hes = self.nlp.Hessian_lag(x, l)
+        self.assertEqual(hes.shape[0], 3)
+        self.assertEqual(hes.shape[1], 3)
+        self.assertTrue(np.allclose(values, hes.data))
+
+        hes = self.nlp.Hessian_lag(x, l,
+                                   var_names_rows=['x[1]', 'x[2]'],
+                                   var_names_cols=['x[1]', 'x[2]'])
+        self.assertEqual(hes.shape[0], 2)
+        self.assertEqual(hes.shape[1], 2)
+        self.assertTrue(np.allclose(values, hes.data))
+
+        var_indices_rows = [self.nlp.variable_idx('x[1]'), self.nlp.variable_idx('x[2]')]
+        var_indices_cols = [self.nlp.variable_idx('x[1]'), self.nlp.variable_idx('x[2]')]
+        hes = self.nlp.Hessian_lag(x, l,
+                                   var_indices_rows=var_indices_rows,
+                                   var_indices_cols=var_indices_cols)
+        self.assertEqual(hes.shape[0], 2)
+        self.assertEqual(hes.shape[1], 2)
+        self.assertTrue(np.allclose(values, hes.data))

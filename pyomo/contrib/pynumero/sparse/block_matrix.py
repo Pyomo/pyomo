@@ -530,7 +530,7 @@ class BlockMatrix(SparseBase):
 
         self._check_mask()
 
-        result = BlockMatrix(self.bshape)
+        result = BlockMatrix(self.bshape[0], self.bshape[1])
         m, n = self.bshape
         assert other.shape == self.shape, 'dimensions missmatch {} != {}'.format(self.shape, other.shape)
         if isinstance(other, BlockMatrix):
@@ -539,7 +539,7 @@ class BlockMatrix(SparseBase):
             for i in range(m):
                 for j in range(n):
                     if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
-                        result[i, j] = self._blocks[i, j] + other
+                        result[i, j] = self._blocks[i, j] + other[i, j]
                     elif not self.is_empty_block(i, j) and other.is_empty_block(i, j):
                         result[i, j] = self._blocks[i, j]
                     elif self.is_empty_block(i, j) and not other.is_empty_block(i, j):
@@ -556,7 +556,7 @@ class BlockMatrix(SparseBase):
     def __sub__(self, other):
 
         self._check_mask()
-        result = BlockMatrix(self.bshape)
+        result = BlockMatrix(self.bshape[0], self.bshape[1])
         m, n = self.bshape
         assert other.shape == self.shape, 'dimensions missmatch {} != {}'.format(self.shape, other.shape)
         if isinstance(other, BlockMatrix):
@@ -565,7 +565,7 @@ class BlockMatrix(SparseBase):
             for i in range(m):
                 for j in range(n):
                     if self._block_mask[i, j] and other._block_mask[i, j]:
-                        result[i, j] = self._blocks[i, j] - other
+                        result[i, j] = self._blocks[i, j] - other[i, j]
                     elif self._block_mask[i, j] and not other._block_mask[i, j]:
                         result[i, j] = self._blocks[i, j]
                     elif not self._block_mask[i, j] and other._block_mask[i, j]:
@@ -578,7 +578,7 @@ class BlockMatrix(SparseBase):
 
     def __rsub__(self, other):
         self._check_mask()
-        result = BlockMatrix(self.bshape)
+        result = BlockMatrix(self.bshape[0], self.bshape[1])
         m, n = self.bshape
         assert other.shape == self.shape, 'dimensions missmatch {} != {}'.format(self.shape, other.shape)
         if isinstance(other, BlockMatrix):
@@ -587,7 +587,7 @@ class BlockMatrix(SparseBase):
             for i in range(m):
                 for j in range(n):
                     if self._block_mask[i, j] and other._block_mask[i, j]:
-                        result[i, j] = other - self._blocks[i, j]
+                        result[i, j] = other[i, j] - self._blocks[i, j]
                     elif self._block_mask[i, j] and not other._block_mask[i, j]:
                         result[i, j] = -self._blocks[i, j]
                     elif not self._block_mask[i, j] and other._block_mask[i, j]:
@@ -1088,45 +1088,4 @@ class BlockSymMatrix(BlockMatrix):
     def __itruediv__(self, other):
         raise NotImplementedError('implicit divide not supported yet')
 
-if __name__ == "__main__":
-
-    print("Simple sparse matrix")
-    row = np.array([0, 3, 1, 2, 3, 0])
-    col = np.array([0, 0, 1, 2, 3, 3])
-    data = np.array([2, 1, 3, 4, 5, 1])
-    m = COOMatrix((data, (row, col)), shape=(4, 4))
-
-    #m1 = COOMatrix(([], ([], [])), shape=(0, 4))
-    print(m.todense())
-    #print(m*np.ones(4))
-
-    print("Building block matrix")
-
-    bm = BlockMatrix(2, 2)
-    bm[0, 0] = m
-    bm[1, 1] = m
-
-    print(bm.block_shapes())
-
-
-    bm2 = BlockMatrix(2, 2)
-    bm2[0, 0] = bm
-    bm2[1, 1] = m
-
-    print(bm.__repr__())
-    print(bm)
-    print(bm.tocoo().toarray())
-    print('\n',bm2.__repr__())
-    print(bm2)
-    print(bm2.tocoo().toarray())
-    bm3 = bm * 2.0
-    print('\n', bm3.__repr__())
-    print(bm3)
-    print(bm3.tocoo().toarray())
-
-    print('Dot product')
-    x = np.ones(bm3.shape[1], dtype=np.float64)
-    #x = BlockVector(bm3.row_block_shapes())
-    x.fill(1.0)
-    print(bm3.dot(x))
 

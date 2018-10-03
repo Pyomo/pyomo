@@ -9,9 +9,8 @@ from scipy.sparse.sputils import (upcast,
 from scipy.sparse import _sparsetools
 
 try:
-    from pyomo.contrib.pynumero.extensions.sparseutils import (sym_csc_matvec,
-                                                 csr_matvec_no_diag,
-                                                 csc_matvec_no_diag)
+    from pyomo.contrib.pynumero.extensions.sparseutils import (csr_matvec_no_diag,
+                                                               csc_matvec_no_diag)
 except ImportError as e:
     print('{}'.format(e))
     raise ImportError('Error importing sparseutils while running coo interface. '
@@ -99,6 +98,15 @@ class CSCMatrix(SparseBase, scipy_csc_matrix):
         # copy only there to agree with the signature
         return self
 
+    def todok(self, copy=False):
+        raise NotImplementedError('Not supported')
+
+    def todia(self, copy=False):
+        raise NotImplementedError('Not supported')
+
+    def tolil(self, copy=False):
+        raise NotImplementedError('Not supported')
+
     def toscipy(self):
         return scipy_csc_matrix(self)
 
@@ -150,6 +158,7 @@ class CSCMatrix(SparseBase, scipy_csc_matrix):
     def _mul_sparse_matrix(self, other):
 
         if isinstance(other, SparseBase):
+
             if other.is_symmetric:
                 expanded_other = other.tofullmatrix()
                 result = super()._mul_sparse_matrix(expanded_other)
@@ -286,6 +295,9 @@ class CSCSymMatrix(CSCMatrix):
     def tofullmatrix(self):
         return self.tofullcsc()
 
+    def todok(self, copy=False):
+        raise NotImplementedError('Not supported')
+
     def todia(self, copy=False):
         raise NotImplementedError('Not supported')
 
@@ -331,18 +343,9 @@ class CSCSymMatrix(CSCMatrix):
         # csr_matvec or csc_matvec
         fnl = getattr(_sparsetools, self.format + '_matvec')
         fnl(M, N, self.indptr, self.indices, self.data, other, resultl)
-
         upper = self.transpose()
-        #fnu = getattr(_sparsetools, upper.format + '_matvec')
-        #fnu(M, N, upper.indptr, upper.indices, upper.data, other, resultu)
         csr_matvec_no_diag(M, upper.indptr, upper.indices, upper.data, other, resultu)
-        #diagonal = self.diagonal()
-
-        # result = np.zeros(M, dtype=upcast_char(self.dtype.char, other.dtype.char))
-        # sym_csc_matvec(N, self.indptr, self.indices, self.data, other, result)
-        # return result
-
-        return resultl + resultu # - np.multiply(other, diagonal)
+        return resultl + resultu
 
     def _mul_multivector(self, other):
         raise NotImplementedError('Not supported')
@@ -388,36 +391,3 @@ class CSCSymMatrix(CSCMatrix):
         return 'CSCSymMatrix{}'.format(self.shape)
 
 
-if __name__ == "__main__":
-
-    row = np.array([0, 3, 1, 0])
-    col = np.array([0, 3, 1, 2])
-    data = np.array([4, 5, 7, 9])
-    m = CSCMatrix((data, (row, col)), shape=(4, 4))
-    print(m.toarray())
-    print(m.is_symmetric)
-
-    row = np.array([0, 3, 1, 2, 3])
-    col = np.array([0, 0, 1, 2, 3])
-    data = np.array([2, 1, 3, 4, 5])
-    m = CSCSymMatrix((data, (row, col)), shape=(4, 4))
-    print(m.toarray())
-    print(m.is_symmetric)
-
-    mcsc = m.tofullcsc()
-    print(mcsc.toarray())
-    print(mcsc.is_symmetric)
-
-    x = np.ones(m.shape[0])
-    print(mcsc.dot(x))
-    print(m.dot(x))
-
-    row = np.array([0, 1, 4, 1, 2, 7, 2, 3, 5, 3, 4, 5, 4, 7, 5, 6, 6, 7])
-    col = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6, 7])
-    data = np.array([27, 5, 12, 56, 66, 34, 94, 31, 41, 7, 98, 72, 24, 33, 78, 47, 98, 41])
-    big_m = CSCSymMatrix((data, (row, col)), shape=(8, 8))
-    print(big_m.toarray())
-    print(big_m.is_symmetric)
-    x = np.ones(big_m.shape[0])
-    print(big_m.tofullcsc().dot(x))
-    print(big_m.dot(x))

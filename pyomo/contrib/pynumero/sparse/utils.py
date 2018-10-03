@@ -5,6 +5,7 @@ from scipy.sparse.sputils import isscalarlike
 import numpy as np
 
 
+"""
 def read_matrix(filename, matrix_format='coo', verbose=False, offset=1):
     from pyomo.contrib.pynumero.sparse import (COOMatrix,
                                                COOSymMatrix,
@@ -23,9 +24,9 @@ def read_matrix(filename, matrix_format='coo', verbose=False, offset=1):
 
         if verbose:
             print(header)
-            print("n_rows: {}".format(m))
-            print("n_cols: {}".format(n))
-            print("n_nz: {}".format(nnz))
+            print('n_rows: {}'.format(m))
+            print('n_cols: {}'.format(n))
+            print('n_nz: {}'.format(nnz))
 
         irows = np.zeros(nnz)
         jcols = np.zeros(nnz)
@@ -69,12 +70,12 @@ def write_matrix(filename, matrix, offset=1):
         m = matrix.tocoo()
         name = m.name
         if name is None:
-            name = "unamed_matrix"
-        f.write("Matrix {}\n".format(name))
-        f.write("{} {} {}\n".format(m.shape[0], m.shape[1], m.nnz))
+            name = 'unamed_matrix'
+        f.write('Matrix {}\n'.format(name))
+        f.write('{} {} {}\n'.format(m.shape[0], m.shape[1], m.nnz))
         for i in range(m.nnz):
-            f.write("{} {} {}\n".format(m.row[i] + offset, m.col[i] + offset, m.data[i]))
-
+            f.write('{} {} {}\n'.format(m.row[i] + offset, m.col[i] + offset, m.data[i]))
+"""
 
 def is_symmetric_dense(mat):
 

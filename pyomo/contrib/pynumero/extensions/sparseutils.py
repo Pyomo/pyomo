@@ -41,6 +41,34 @@ class SparseLibInterface(object):
             ]
         self.lib.EXTERNAL_SPARSE_sym_coo_matvec.restype = None
 
+        self.lib.EXTERNAL_SPARSE_csr_matvec_no_diag.argtypes = [
+            ctypes.c_int,
+            array_1d_int,
+            ctypes.c_int,
+            array_1d_int,
+            array_1d_double,
+            ctypes.c_int,
+            array_1d_double,
+            ctypes.c_int,
+            array_1d_double,
+            ctypes.c_int
+        ]
+        self.lib.EXTERNAL_SPARSE_csr_matvec_no_diag.restype = None
+
+        self.lib.EXTERNAL_SPARSE_csc_matvec_no_diag.argtypes = [
+            ctypes.c_int,
+            array_1d_int,
+            ctypes.c_int,
+            array_1d_int,
+            array_1d_double,
+            ctypes.c_int,
+            array_1d_double,
+            ctypes.c_int,
+            array_1d_double,
+            ctypes.c_int
+        ]
+        self.lib.EXTERNAL_SPARSE_csc_matvec_no_diag.restype = None
+
 SparseLib = SparseLibInterface()
 
 # define 1d array
@@ -58,14 +86,35 @@ def sym_coo_matvec(irow, jcol, values, x, result):
                                                result,
                                                len(result))
 
-def sym_csr_matvec():
-    raise RuntimeError("TODO")
 
-def sym_csc_matvec():
-    raise RuntimeError("TODO")
+def csr_matvec_no_diag(nrows, row_ptr, col_ptr, data_ptr, x_ptr, result):
+    datap = data_ptr.astype(np.double, casting='safe')
+    xp = x_ptr.astype(np.double, casting='safe')
+    SparseLib().EXTERNAL_SPARSE_csr_matvec_no_diag(nrows,
+                                                   row_ptr,
+                                                   len(row_ptr),
+                                                   col_ptr,
+                                                   datap,
+                                                   len(datap),
+                                                   xp,
+                                                   len(xp),
+                                                   result,
+                                                   len(result)
+                                                   )
 
-def csr_matvec_no_diag():
-    raise RuntimeError("TODO")
 
-def csc_matvec_no_diag():
-    raise RuntimeError("TODO")
+def csc_matvec_no_diag(ncols, col_ptr, row_ptr, data_ptr, x_ptr, result):
+    datap = data_ptr.astype(np.double, casting='safe')
+    xp = x_ptr.astype(np.double, casting='safe')
+
+    SparseLib().EXTERNAL_SPARSE_csc_matvec_no_diag(ncols,
+                                                   col_ptr,
+                                                   len(col_ptr),
+                                                   row_ptr,
+                                                   datap,
+                                                   len(datap),
+                                                   xp,
+                                                   len(xp),
+                                                   result,
+                                                   len(result)
+                                                   )
