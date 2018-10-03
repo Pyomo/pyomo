@@ -33,7 +33,11 @@ class ScaleModel(Transformation):
         * :py:meth:`propagate_solution <pyomo.core.plugins.transform.scaling.ScaleModel.propagate_solution>`
 
 
-    Examples:
+    Examples
+    --------
+
+    .. doctest::
+
         >>> from pyomo.environ import *
         >>> # create the model
         >>> model = ConcreteModel()
@@ -49,13 +53,13 @@ class ScaleModel(Transformation):
         >>> # transform the model 
         >>> scaled_model = TransformationFactory('core.scale_model').create_using(model)
         >>> # print the value of the objective function to show scaling has occurred
-        >>> print(value(model.scaled_x))
+        >>> print(value(model.x))
         1.0
         >>> print(value(scaled_model.scaled_x))
         0.2
         >>> print(value(scaled_model.scaled_x.lb))
         -1.0
-        >>> print(value(model.scaled_obj))
+        >>> print(value(model.obj))
         101000000.0
         >>> print(value(scaled_model.scaled_obj))
         101.0
