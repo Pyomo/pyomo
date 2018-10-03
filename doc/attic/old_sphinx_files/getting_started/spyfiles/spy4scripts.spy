@@ -1,0 +1,149 @@
+###NOTE: as of May 16, this will not even come close to running. DLW
+### and it is "wrong" in a lot of places.
+### Someone should edit this file, then delete these comment lines. DLW may 16
+
+"""
+David L. Woodruff and Mingye Yang, Spring 2018
+Code snippets for scripts.rst in testable form
+"""
+import pyomo.environ as pyo
+
+instance = pyo.ConcreteModel()
+instance.I = pyo.Set(initialize=[1,2,3])
+instance.sigma = pyo.Param(mutable=True, initialize=2.3)
+instance.Theta = pyo.Param(instance.I, mutable=True)
+for i in instance.I:
+    instance.Theta[i] = i
+ParamName = "Theta"
+idx = 1
+NewVal = 1134
+
+instance.ParamName[idx].value = NewVal
+
+ParamName = "sigma"
+
+instance.ParamName.value = NewVal
+
+instance.x = pyo.Var([1,2,3], initialize=0)
+instance.y = pyo.Var()
+
+if instance.x[2] == 0:
+    instance.x[2].setlb(1)
+    instance.x[2].setub(1)
+else:
+    instance.x[2].setlb(0)
+    instance.x[2].setub(0)
+
+instance.y.value = 2
+instance.y.fixed = True
+
+model=ConcreteModel()
+model.obj1 = pyo.Objective(expr = 0)
+model.obj2 = pyo.Objective(expr = 0)
+
+model.obj1.deactivate()
+model.obj2.activate()
+
+def pyomo_preprocess(options=None):
+   if options == None:
+      print ("No command line options were given.")
+   else:
+      print ("Command line arguments were: %s" % options)
+
+
+def pyomo_preprocess(**kwds):
+   options = kwds.get('options',None)
+   if options == None:
+      print ("No command line options were given.")
+   else:
+      print ("Command line arguments were: %s" % options)
+
+def pyomo_preprocess(options=None):
+    pass
+
+for v in instance.component_objects(pyo.Var, active=True):
+    print("Variable",v)
+    for index in v:
+        print ("   ",index, pyo.value(v[index]))
+
+for v in instance.component_data_objects(pyo.Var, active=True):
+    print(v, pyo.value(v))
+
+
+instance.iVar = pyo.Var([1,2,3], initialize=1, domain=pyo.Boolean)
+instance.sVar = pyo.Var(initialize=1, domain=pyo.Boolean)
+# dlw may 2018: the next snippet does not trigger any fixing ("active?")
+for var in instance.component_data_objects(pyo.Var, active=True):
+    if var.domain is pyo.IntegerSet or var.domain is pyo.BooleanSet:
+        print ("fixing "+str(v))
+        var.fixed = True # fix the current value
+
+def pyomo_print_results(options, instance, results):
+    for v in instance.component_objects(pyo.Var, active=True):
+        print ("Variable "+str(v))
+        varobject = getattr(instance, v)
+        for index in varobject:
+            print ("   ",index, varobject[index].value)
+
+for parmobject in instance.component_objects(pyo.Param, active=True):
+    print ("Parameter "+str(parmobject.name))
+    for index in parmobject:
+        print ("   ",index, parmobject[index].value)
+
+def pyomo_print_results(options, instance, results):
+    # display all duals
+    print ("Duals")
+    for c in instance.component_objects(pyo.Constraint, active=True):
+        print ("   Constraint",c)
+        cobject = getattr(instance, c)
+        for index in cobject:
+            print ("      ", index, instance.dual[cobject[index]])
+
+"""
+xxxxxxxxxxxxxxxxxxxx high alert!!!! xxxxxx testing blocked from here to the end xxxxxxxxxxxxxx
+results = opt.solve(instance)
+#print ("The solver returned a status of:"+str(results.solver.status))
+
+from pyomo.opt import SolverStatus, TerminationCondition
+
+#...
+
+if (results.solver.status == SolverStatus.ok) and (results.solver.termination_condition == TerminationCondition.optimal):
+     print ("this is feasible and optimal")
+elif results.solver.termination_condition == TerminationCondition.infeasible:
+     print ("do something about it? or exit?")
+else:
+     # something else is wrong
+     print (str(results.solver))
+
+from pyomo.opt import TerminationCondition
+
+...
+
+results = opt.solve(model, load_solutions=False)
+if results.solver.termination_condition == TerminationCondition.optimal:
+    model.solutions.load_from(results)
+else:
+    print ("Solution is not optimal")
+    # now do something about it? or exit? ...
+
+results = opt.solve(instance, tee=True)
+
+optimizer = pyo.SolverFactory['cbc']
+optimizer.options["threads"] = 4
+
+results = optimizer.solve(instance, options="threads=4", tee=True)
+
+opt = pyo.SolverFactory("ipopt", executable="../ipopt")
+
+instance = model.create()
+instance.y[0] = 1
+instance.y[1] = 0
+
+opt = pyo.SolverFactory("cplex")
+
+results = opt.solve(instance, warmstart=True)
+
+from pyutilib.services import TempfileManager
+TempfileManager.tempdir = YourDirectoryNameGoesHere
+"""
