@@ -27,7 +27,7 @@ environment:
     #  CATEGORY: "nightly"
 
     - PYTHON_VERSION: 2.7
-      PYTHON: "C:\\Miniconda-x64"
+      PYTHON: "C:\\Miniconda"
       CATEGORY: "nightly"
       EXTRAS: YES
 
@@ -37,12 +37,12 @@ environment:
     #  EXTRAS: YES
 
     - PYTHON_VERSION: 3.5
-      PYTHON: "C:\\Miniconda35-x64"
+      PYTHON: "C:\\Miniconda35"
       CATEGORY: "nightly"
       EXTRAS: YES
 
     - PYTHON_VERSION: 3.6
-      PYTHON: "C:\\Miniconda36-x64"
+      PYTHON: "C:\\Miniconda36"
       CATEGORY: "nightly"
       EXTRAS: YES
 
