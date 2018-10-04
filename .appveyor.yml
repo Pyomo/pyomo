@@ -66,14 +66,14 @@ install:
   # (intermittently one or the other suffers from NumPy failing to load the
   # MKL DLL; See #542, #577
   #
-  - SET USING_MINICONDA=1
+  #- SET USING_MINICONDA=1
   #
   # Update conda, then force it to NOT update itself again
   #
   # Somehow, the update from anaconda stalls for Python 3.4. So we're not specifying the channel here.
   #
   - conda config --set always_yes yes
-  - conda update -q -y conda
+  #- conda update -q -y conda
   - conda config --set auto_update_conda false
   #
   # If we are using full Anaconda instead of Appveyor's MiniConda,
