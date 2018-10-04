@@ -14,16 +14,16 @@ The package requires a *compatible* mpi installation.
 Verify Installation
 ----------------------
 
-Use these commands to verify parallel installation::
+In a Unix terminal window, use these commands to verify parallel installation::
 
-    cd parmest/examples/semibatch
+    cd pyomo/contrib/parmest/examples/semibatch
     time mpiexec -np 2 python sb_drive_parmest.py
     time python sb_drive_parmest.py
 
 The first one should be faster. Both take many minutes.
 	
-Notes
-------------------
+Notes for Mac Users
+-------------------
 
 In preliminary testing, this only worked with Python 3.5 using the following for installation::
 

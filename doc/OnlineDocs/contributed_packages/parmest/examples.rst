@@ -3,8 +3,10 @@
 Examples
 ========
 
+Examples can be found in the subdirectories of `pyomo/contrib/parmest/examples`.
+
 Generally, two Python files are used to run parmest (although it can be
-implemented using one or many):
+done using one or many):
 
 * Driver: This file contains code that uses parmest to compute parameter estimation and confidence regions.
 
@@ -28,16 +30,16 @@ The callback file includes:
 
 The main program is included for easy testing of the model declaration.
 
-.. literalinclude:: ../parmest/examples/rooney_biegler/rooney_biegler.py
+.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/rooney_biegler/rooney_biegler.py
    :language: python
    
 Driver
 ^^^^^^
 
-The driver file creates a :class:`~parmest.parmest.ParmEstimator` object using the file that contains the callback
+The driver file creates a :class:`~pyomo.contrib.parmest.parmest.ParmEstimator` object using the file that contains the callback
 and uses its methods for parameter estimation.
 
-.. literalinclude:: ../parmest/examples/rooney_biegler/rb_drive_parmest.py
+.. literalinclude::  ../../../../pyomo/contrib/parmest/examples/rooney_biegler/rb_drive_parmest.py
    :language: python
 
 .. _AllInOne:
@@ -53,7 +55,7 @@ possible to supply a module and a function name as a string). Note
 that this example uses the PySP callback signature, while the example
 above uses the parmest callback signature.
 
-.. literalinclude:: ../parmest/examples/rooney_biegler/all_in_one.py
+.. literalinclude::  ../../../../pyomo/contrib/parmest/examples/rooney_biegler/all_in_one.py
    :language: python
 
 	      
@@ -72,16 +74,16 @@ The callback file includes:
 
 The main program is included for easy testing of the model declaration.
 
-.. literalinclude:: ../parmest/examples/semibatch/semibatch.py
+.. literalinclude::  ../../../../pyomo/contrib/parmest/examples/semibatch/semibatch.py
    :language: python
    
 Driver
 ^^^^^^
 
-The driver file creates a class:`~parmest.parmest.ParmEstimator` object using the file that contains the callback
+The driver file creates a class:`~pyomo.contrib.parmest.parmest.ParmEstimator` object using the file that contains the callback
 and uses its methods for parameter estimation.
 
-.. literalinclude:: ../parmest/examples/semibatch/sb_drive_parmest.py
+.. literalinclude::  ../../../../pyomo/contrib/parmest/examples/semibatch/sb_drive_parmest.py
    :language: python
    
 MEA Example
@@ -92,11 +94,11 @@ MEA is an IDAES model.
 Callback
 ^^^^^^^^
 
-.. literalinclude:: ../parmest/examples/mea/mea_estimate_pysp.py
+.. literalinclude::  ../../../../pyomo/contrib/parmest/examples/mea/mea_estimate_pysp.py
    :language: python
 
 Driver
 ^^^^^^
 
-.. literalinclude:: ../parmest/examples/mea/mea_drive_parmest.py
+.. literalinclude::  ../../../../pyomo/contrib/parmest/examples/mea/mea_drive_parmest.py
    :language: python

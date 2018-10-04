@@ -4,20 +4,21 @@ Parameter Estimation using parmest
 =======================================
 
 To use parmest, the user writes a Python code
-that creates a :class:`~parmest.parmest.ParmEstimator` object and uses its methods for parameter
+that creates a :class:`~pyomo.contrib.parmest.parmest.ParmEstimator` object and uses its methods for parameter
 estimation, confidence region estimation, and scenario creation. Once
 a parameter estimator object is created, one typically wants to call member
-function such as :class:`~parmest.parmest.ParmEstimator.theta_est`, 
-:class:`~parmest.parmest.ParmEstimator.bootstrap` and 
-:class:`~parmest.parmest.ParmEstimator.likelihood_ratio`. Examples
+function such as :class:`~pyomo.contrib.parmest.parmest.ParmEstimator.theta_est`, 
+:class:`~pyomo.contrib.parmest.parmest.ParmEstimator.bootstrap` and 
+:class:`~pyomo.contrib.parmest.parmest.ParmEstimator.likelihood_ratio`. Examples
 are provided in the :ref:`examplesection` Section.
 
-A :class:`~parmest.parmest.ParmEstimator` object can be created using 
+A :class:`~pyomo.contrib.parmest.parmest.ParmEstimator` object can be created using 
 the following code. A description of each argument is listed below.
   
     >>> import parmest
-    >>> pest = parmest.ParmEstimator(model_file, callback, cost_expression, 
-    ...                              exp_numbers_list, theta_list, cb_data)
+    >>> pest = pyomo.contrib.parmest.ParmEstimator(model_file, callback,
+    ...                              cost_expression, exp_numbers_list,
+    ...                              theta_list, cb_data)
  
 .. _CallbackSpec:
 

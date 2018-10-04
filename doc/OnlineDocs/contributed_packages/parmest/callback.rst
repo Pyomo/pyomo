@@ -100,9 +100,9 @@ from a database of some sort; however, for test applications, the
 experiment data will often be assigned to an object in Python variables in the
 global namespace of the py file with the callback function. In other
 applications, the callback may rely on data passed to the 
-:class:`~parmest.parmest.ParmEstimator` object.
+:class:`~pyomo.contrib.parmest.parmest.ParmEstimator` object.
 
 The numbering given to the experiments must be used by the 
-:class:`~parmest.parmest.ParmEstimator` object; 
+:class:`~pyomo.contrib.parmest.parmest.ParmEstimator` object; 
 see :ref:`NumbersList` for more information.
 

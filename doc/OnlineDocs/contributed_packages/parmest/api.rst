@@ -5,14 +5,14 @@ API
 
 Parmest Module
 ---------------
-.. automodule:: parmest.parmest
+.. automodule:: pyomo.contrib.parmest.parmest
     :members:
     :undoc-members:
     :show-inheritance:
 
 Graphics Module
 ---------------
-.. automodule:: parmest.graphics
+.. automodule:: pyomo.contrib.parmest.graphics
     :members:
     :undoc-members:
     :show-inheritance:
