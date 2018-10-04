@@ -66,7 +66,7 @@ install:
   # (intermittently one or the other suffers from NumPy failing to load the
   # MKL DLL; See #542, #577
   #
-  #- SET USING_MINICONDA=1
+  - SET USING_MINICONDA=1
   #
   # Update conda, then force it to NOT update itself again
   #
