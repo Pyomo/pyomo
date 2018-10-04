@@ -43,7 +43,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
         self.num_samples = 6
         self.sample_list = range(self.num_samples)
         self.fsfilename = \
-            "parmest.examples.rooney_biegler.rooney_biegler"
+            "pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler"
         self.callback_funcname = "instance_creation_callback"
         experiment_data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
                                       [4,16.0],[5,15.6],[6,19.8]],
@@ -168,7 +168,7 @@ class parmest_object_Tester_SB(unittest.TestCase):
 
         np.random.seed(1134)
 
-        from parmest.examples.semibatch.semibatch import pysp_instance_creation_callback
+        from pyomo.contrib.parmest.examples.semibatch.semibatch import pysp_instance_creation_callback
         # non-string callback specification
         self.pest = parmest.ParmEstimator(None, pysp_instance_creation_callback,
                                      "SecondStageCost", exp_list, thetalist) 
