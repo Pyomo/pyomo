@@ -10,9 +10,9 @@ import glob
 import subprocess
 import numpy as np
 import pandas as pd
-import parmest.parmest as parmest
-import parmest as parmestbase
-import parmest.graphics as graphics
+import pyomo.contrib.parmest.parmest as parmest
+import pyomo.contrib.parmest as parmestbase
+import pyomo.contrib.parmest.graphics as graphics
 import pyomo.environ as pyo
 
 __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
@@ -152,7 +152,7 @@ class parmest_object_Tester_SB(unittest.TestCase):
     def setUp(self):
         self.tempdirpath = tempfile.mkdtemp()
         # assuming we are in the test subdir
-        import parmest.examples.semibatch as sbroot
+        import pyomo.contrib.parmest.examples.semibatch as sbroot
         p = str(sbroot.__path__)
         l = p.find("'")
         r = p.find("'", l+1)

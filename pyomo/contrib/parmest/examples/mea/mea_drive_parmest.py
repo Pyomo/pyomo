@@ -1,9 +1,9 @@
 # parmest example using mea
 
 import numpy as np
-import parmest.parmest as parmest
-import parmest.mpi_utils as mpiu
-import parmest.graphics as grph
+import pyomo.contrib.parmest.parmest as parmest
+import pyomo.contrib.parmest.mpi_utils as mpiu
+import pyomo.contrib.parmest.graphics as grph
 
 if __name__ == "__main__":
 

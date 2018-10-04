@@ -2,9 +2,9 @@
 # model and callback.  Data is supplied to the through files in the callback.
 
 import numpy as np
-import parmest.parmest as parmest
-import parmest.graphics as grph
-import parmest.mpi_utils as mpiu
+import pyomo.contrib.parmest.parmest as parmest
+import pyomo.contrib.parmest.graphics as grph
+import pyomo.contrib.parmest.mpi_utils as mpiu
 
 num_experiments = 10
 exp_list = range(1,num_experiments+1) # callback uses one-based file names

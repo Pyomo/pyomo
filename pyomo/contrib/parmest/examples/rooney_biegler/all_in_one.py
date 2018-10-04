@@ -60,8 +60,8 @@ def pysp_instance_creation_callback(scenario_tree_model,
 if __name__ == '__main__':
     # Very simple, with just theta estimation and bootstrap
     # Not done in parallel.
-    import parmest.parmest as parmest
-    import parmest.graphics as grph
+    import pyomo.contrib.parmest.parmest as parmest
+    import pyomo.contrib.parmest.graphics as grph
 
     # prepare for the parmest object construction
     num_samples = 6

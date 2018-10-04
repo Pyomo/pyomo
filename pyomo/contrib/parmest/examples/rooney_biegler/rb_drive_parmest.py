@@ -3,9 +3,9 @@
 
 import numpy as np
 import pandas as pd
-import parmest.parmest as parmest
-import parmest.graphics as grph
-import parmest.mpi_utils as mpiu
+import pyomo.contrib.parmest.parmest as parmest
+import pyomo.contrib.parmest.graphics as grph
+import pyomo.contrib.parmest.mpi_utils as mpiu
 
 # prepare for the parmest object construction
 experiment_data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
