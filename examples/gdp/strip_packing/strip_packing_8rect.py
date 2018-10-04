@@ -91,5 +91,4 @@ if __name__ == "__main__":
     TransformationFactory('gdp.chull').apply_to(model)
 
     opt = SolverFactory('gurobi')
-
     results = opt.solve(model, tee=True)
