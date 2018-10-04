@@ -81,6 +81,11 @@ install:
   #
   - IF NOT DEFINED USING_MINICONDA (conda install anaconda)
   #
+  # Create a virtual environment for this build
+  #
+  conda create -n pyomo_test_env python=%PYTHON_VERSION%
+  activate pyomo_test_env
+  #
   - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme codecov"
   #- python -m pip install codecov
   #
