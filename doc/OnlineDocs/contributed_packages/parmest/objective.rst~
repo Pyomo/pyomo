@@ -1,0 +1,62 @@
+.. _callbacksection:
+
+Requirements for the callback function
+======================================
+
+The modeller must provide a function that instantiates
+the model for each experiment, which is the same function
+that needs to be supplied to PySP if the modeler chooses
+to use PySP directly for parameter esimation and eschew the
+use of parmest. 
+Any function name can be used, but the path of least resistance is to use
+the name ``pysp_instance_creation_callback`` for the callback.
+
+.. doctest::
+   
+   >>> def pysp_instance_creation_callback(scenario_tree_model,
+                                    scenario_name,
+                                    node_names):
+.. doctest::
+   :hide:
+
+    >>>     pass
+
+The experiments are assumed to be numbered and the experiment numbers
+will be placed by parmest as the last part of the ``scenario_name``
+that is passed into the callback. It is good practice to 
+
+.. doctest::
+   
+   >>> import re
+
+and then start the callback function with a line like
+
+.. doctest::
+   :hide:
+
+    >>> scenario_name = Scenario1
+
+.. doctest::
+
+   >>> i = int(re.compile(r'(\d+)$').search(scenario_name).group(1))
+
+which will place the experiment number in the Python variable ``i``.
+
+Rooney Biegler Example
+----------------------
+
+This example defines the model and provides the callback function for
+the example given in [RooneyBiegler]_.  The use of a global data structure is allowed, but not required. The main program is included for easy testing of the model declaration.
+
+.. literalinclude:: ../parmest/examples/rooney_biegler/rooney_biegler_callback_2.py
+   :language: python
+
+Semibatch Example
+-----------------
+
+The semibatch example was created from [SemiBatch]_ by Bethany Nicolson.
+
+.. literalinclude:: ../parmest/examples/semibatch/parameter_estimation/semibatch.py
+   :language: python
+
+	      
