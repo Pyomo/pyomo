@@ -360,7 +360,7 @@ class ParmEstimator(object):
                                   fsfct = self.gmodel_maker,
                                   tree_model = tree_model)
         """
-        stsolver = st.StochSolver(fsfile = "parmest.parmest",
+        stsolver = st.StochSolver(fsfile = "pyomo.contrib.parmest.parmest",
                                   fsfct = "_pysp_instance_creation_callback",
                                   tree_model = tree_model)
         if solver == "ef_ipopt":
