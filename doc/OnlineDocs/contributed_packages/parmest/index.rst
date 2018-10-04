@@ -1,5 +1,5 @@
-parmest Documentation
-======================
+parmest
+=======
 
 parmest is a Python package built on the Pyomo optimization modeling
 language ([PyomoJournal]_, [PyomoBookII]_) to support parameter estimation from experiments along with

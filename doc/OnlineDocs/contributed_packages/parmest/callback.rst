@@ -21,7 +21,7 @@ The parmest signature is shown below:
 .. doctest::
    
    >>> def instance_creation_callback(experiment_number = None, cb_data = None):
-           pass
+   ...    pass
 .. doctest::
    :hide:
 
