@@ -1,8 +1,14 @@
+"""Simple example of nonlinear problem modeled with GDP framework.
+Taken from Example 1 of the paper "New Algorithms for Nonlinear Generalized Disjunctive Programming" by Lee and Grossmann
+
+This GDP problem has one disjunction containing three terms, and exactly one of them must be true. The literature can be found here:
+http://egon.cheme.cmu.edu/Papers/LeeNewAlgo.pdf
+
+"""
+
 from pyomo.environ import (ConcreteModel, Constraint, NonNegativeReals,
                            Objective, Var, minimize)
 from pyomo.gdp import Disjunct, Disjunction
-
-# TODO add reference to literature for where this came from
 
 
 def build_model():
