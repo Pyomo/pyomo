@@ -93,7 +93,7 @@ install:
   # Install pyomo.extras
   #
   # If we are using Miniconda, we need to install additional packages
-  that usually come with the full Anaconda distribution
+  # that usually come with the full Anaconda distribution
   #
   - SET MINICONDA_EXTRAS=""
   - IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill)
