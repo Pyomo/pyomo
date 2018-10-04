@@ -8,10 +8,10 @@ import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as st
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
 from pyomo.opt import SolverFactory
-import parmest.mpi_utils as mpiu
-import parmest.ipopt_solver_wrapper as Carl
+import pyomo.contrib.parmest.mpi_utils as mpiu
+import pyomo.contrib.parmest.ipopt_solver_wrapper as Carl
 
-__version__ = 0.09
+__version__ = 0.1
 
 #=============================================
 def _object_from_string(instance, vstr):
