@@ -1,0 +1,6 @@
+def pyomo_print_results(options, instance, results):
+    for v in instance.component_objects(pyo.Var, active=True):
+        print ("Variable "+str(v))
+        varobject = getattr(instance, v)
+        for index in varobject:
+            print ("   ",index, varobject[index].value)

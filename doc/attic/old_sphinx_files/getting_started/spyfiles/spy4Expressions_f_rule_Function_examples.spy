@@ -1,0 +1,12 @@
+# A function that changes with index
+def f(model,j,x):
+   if (j == 2):
+      return x**2 + 1.0
+   else:
+      return x**2 + 5.0
+
+# A nonlinear function
+f = lambda model,x : exp(x) + value(model.p)
+
+# A step function
+f = [0,0,1,1,2,2]

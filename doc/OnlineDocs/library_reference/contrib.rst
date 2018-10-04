@@ -16,6 +16,7 @@ Contributed packages distributed with Pyomo:
    :maxdepth: 1
 
    contrib/preprocessing.rst
+   contrib/gdpopt.rst
 
 Contributed packages distributed independently of Pyomo, but accessible
 through ``pyomo.contrib``:
