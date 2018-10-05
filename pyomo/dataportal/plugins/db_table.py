@@ -213,8 +213,11 @@ class pyodbc_db_Table(db_Table):
         except Exception:
             e = sys.exc_info()[1]
             code = e.args[0]
-            if code == 'IM002' or code == '08001':
+            if code == 'IM002' or code == '08001' and 'HOME' in os.environ:
                 # Need a DSN! Try to add it to $HOME/.odbc.ini ...
+                #
+                # Note: this only works on *nix platforms.  It appears
+                # that ODBC.INI is stored in the registry on windows
                 odbcIniPath = os.path.join(os.environ['HOME'], '.odbc.ini')
                 if os.path.exists(odbcIniPath):
                     shutil.copy(odbcIniPath, odbcIniPath + '.orig')
