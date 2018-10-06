@@ -14,11 +14,26 @@ are provided in the :ref:`examplesection` Section.
 
 A :class:`~pyomo.contrib.parmest.parmest.ParmEstimator` object can be created using 
 the following code. A description of each argument is listed below.
-  
-    >>> import parmest
-    >>> pest = pyomo.contrib.parmest.ParmEstimator(model_file, callback,
+
+.. testsetup:: *
+
+    theta_list = ['asymptote', 'rate_constant']
+    num_samples = 6
+    exp_numbers_list = range(self.num_samples)
+    model_file = \
+            "pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler"
+    callback = "instance_creation_callback"
+    cb_data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
+                                   [4,16.0],[5,15.6],[6,19.8]],
+                                   columns=['hour', 'y'])
+
+
+..doctest::
+
+    >>> import pyomo.contrib.parmest.parmest as parmest
+    >>> pest = parmest.ParmEstimator(model_file, callback,
     ...                              cost_expression, exp_numbers_list,
-    ...                              theta_list, cb_data)
+    ...                              theta_list, cb_data=cb_data)
  
 .. _CallbackSpec:
 
