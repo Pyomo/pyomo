@@ -21,12 +21,13 @@ from math import fabs
 from pyomo.common.plugin import alias
 from pyomo.core.base.objective import maximize
 from pyomo.core.base.var import Var
-from pyomo.core.kernel.numvalue import value
+from pyomo.core import value
 from pyomo.environ import *
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
+from six.moves import range
 
 logger = logging.getLogger('pyomo.contrib.multistart')
 
@@ -86,7 +87,9 @@ class MultiStart(object):
         models = []
         results = []
         # store the model from the initial values
-        m = copy.deepcopy(model)
+        model._vars_list = list(model.component_data_objects(
+            ctype=Var, descend_into=True))
+        m = model.clone()
         result = solver.solve(m)
         if result.solver.status is SolverStatus.ok and result.solver.termination_condition is TerminationCondition.optimal:
             val = value(m.obj.expr)
@@ -98,7 +101,7 @@ class MultiStart(object):
         if iterations == -1:
             while not self.should_stop(objectives, hcs_param):
                 num_iter += 1
-                m = copy.deepcopy(model)
+                m = model.clone()
                 self.reinitialize_all(m, 'rand')
                 result = solver.solve(m)
                 if result.solver.status is SolverStatus.ok and result.solver.termination_condition is TerminationCondition.optimal:
@@ -108,8 +111,8 @@ class MultiStart(object):
                     results.append(result)
         # if HCS rule is not specified, iterate, while reinitializing with given strategy
         else:
-            for i in xrange(iterations):
-                m = copy.deepcopy(model)
+            for i in range(iterations):
+                m = model.clone()
 
                 self.reinitialize_all(m, strategy)
                 result = solver.solve(m)
@@ -129,18 +132,11 @@ class MultiStart(object):
             print(objectives[i])
             opt_result = results[i]
 
-        oldvars = list(model.component_data_objects(
-            ctype=Var, descend_into=True))
-        newvars = list(newmodel.component_data_objects(
-            ctype=Var, descend_into=True))
-
         # reassign the given models vars to the new models vars
-        for i in xrange(len(oldvars)):
-            var = oldvars[i]
-            newvar = newvars[i]
+        for i, var in enumerate(model._vars_list):
             if not var.is_fixed() and not var.is_binary() and not var.is_integer() \
                     and not (var is None or var.lb is None or var.ub is None or strategy is None):
-                var.value = newvar.value
+                var.value = newmodel._vars_list[i].value
 
         return opt_result
 
@@ -193,10 +189,11 @@ class MultiStart(object):
 
     # determines if the missing mass of unseen local optima is acceptable
     # based on the High Confidence stopping rule.
-    def should_stop(self, solutions, (stopping_mass, stopping_delta)):
+    def should_stop(self, solutions, hcs_param):
         f = self.num_one_occurrences(solutions)
         print(type(solutions))
         n = len(solutions)
+        (stopping_mass, stopping_delta) = hcs_param
         d = stopping_delta
         c = stopping_mass
         confidence = f / n + (2 * math.sqrt(2) + math.sqrt(3)
