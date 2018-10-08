@@ -28,6 +28,7 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from six.moves import range
+import math
 
 logger = logging.getLogger('pyomo.contrib.multistart')
 
@@ -124,12 +125,10 @@ class MultiStart(object):
         if model.obj.sense == maximize:
             i = self.argmax(objectives)
             newmodel = models[i]
-            print(objectives[i])
             opt_result = results[i]
         else:
             i = self.argmin(objectives)
             newmodel = models[i]
-            print(objectives[i])
             opt_result = results[i]
 
         # reassign the given models vars to the new models vars
@@ -191,7 +190,6 @@ class MultiStart(object):
     # based on the High Confidence stopping rule.
     def should_stop(self, solutions, hcs_param):
         f = self.num_one_occurrences(solutions)
-        print(type(solutions))
         n = len(solutions)
         (stopping_mass, stopping_delta) = hcs_param
         d = stopping_delta
