@@ -6,7 +6,8 @@ Common applications include stamping of components from a metal sheet or
 cutting fabric.
 
 Example taken from Systematic Modeling of Discrete-Continuous Optimization
-Models through Generalized Disjunctive Programming (Grossmann) paper
+Models through Generalized Disjunctive Programming paper, table 8.
+DOI: 10.1002/aic.14088
 
 """
 
