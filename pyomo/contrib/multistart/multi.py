@@ -18,15 +18,12 @@ import textwrap
 from math import fabs
 
 
-from pyomo.common.plugin import alias
+
 from pyomo.core.base.objective import maximize
 from pyomo.core.base.var import Var
 from pyomo.core import value
-from pyomo.environ import *
 from pyomo.opt.base import *
-from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
-from pyomo.opt.solver import *
 from six.moves import range
 import math
 
