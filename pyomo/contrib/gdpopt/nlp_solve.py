@@ -207,6 +207,6 @@ def solve_global_NLP(mip_var_values, solve_data, config):
     nlp_model.dual.deactivate()  # global solvers may not give dual info
 
     nlp_result = solve_NLP(nlp_model, solve_data, config)
-    if nlp_result[0]:  # NLP is feasible
+    if nlp_result.feasible:  # NLP is feasible
         update_nlp_progress_indicators(nlp_model, solve_data, config)
     return nlp_result
