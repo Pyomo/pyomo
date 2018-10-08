@@ -13,11 +13,10 @@ from __future__ import division
 
 import copy
 import logging
-import math
 import random
 import textwrap
+from math import fabs
 
-import numpy as np
 
 from pyomo.common.plugin import alias
 from pyomo.core.base.objective import maximize
@@ -31,8 +30,9 @@ from pyomo.opt.solver import *
 
 logger = logging.getLogger('pyomo.contrib.multistart')
 
-
-class MultiStart(OptSolver):
+@SolverFactory.register('multistart',
+        doc='MultiStart solver for NLPs')
+class MultiStart(object):
     """Solver wrapper that initializes at multiple starting points.
 
     For theoretical underpinning, see https://www.semanticscholar.org/paper/How-many-random-restarts-are-enough-Dick-Wong/55b248b398a03dc1ac9a65437f88b835554329e0
@@ -57,8 +57,19 @@ class MultiStart(OptSolver):
             both are bounded 0<x<=1
 
     """
-    alias('multistart', doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
+    #alias('multistart', doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
+    pyomo.common.plugin.alias(
+        'multistart',
+        doc='Multistart solver for non-linear programming')
 
+    def available(self, exception_flag=True):
+        """Check if solver is available.
+
+        TODO: For now, it is always available. However, sub-solvers may not
+        always be available, and so this should reflect that possibility.
+
+        """
+        return True
     def solve(self, model, **kwds):
         # initialize keyword args
         strategy = kwds.pop('strategy', 'rand')
@@ -99,6 +110,7 @@ class MultiStart(OptSolver):
         else:
             for i in xrange(iterations):
                 m = copy.deepcopy(model)
+
                 self.reinitialize_all(m, strategy)
                 result = solver.solve(m)
                 if result.solver.status is SolverStatus.ok and result.solver.termination_condition is TerminationCondition.optimal:
@@ -107,12 +119,14 @@ class MultiStart(OptSolver):
                     models.append(m)
                     results.append(result)
         if model.obj.sense == maximize:
-            i = np.argmax(objectives)
+            i = self.argmax(objectives)
             newmodel = models[i]
+            print(objectives[i])
             opt_result = results[i]
         else:
-            i = np.argmin(objectives)
+            i = self.argmin(objectives)
             newmodel = models[i]
+            print(objectives[i])
             opt_result = results[i]
 
         oldvars = list(model.component_data_objects(
@@ -126,7 +140,8 @@ class MultiStart(OptSolver):
             newvar = newvars[i]
             if not var.is_fixed() and not var.is_binary() and not var.is_integer() \
                     and not (var is None or var.lb is None or var.ub is None or strategy is None):
-                var.value = value(newvar)
+                var.value = newvar.value
+
         return opt_result
 
     def reinitialize_all(self, model, strategy):
@@ -142,8 +157,8 @@ class MultiStart(OptSolver):
             return (abs(bound - val) * random.random()) + min(bound, val)
 
         def rand_distributed(val, lb, ub, divisions=9):
-            linspace = np.linspace(lb, ub, divisions)
-            return np.random.choice(linspace)
+            linspace = self.linspace(lb, ub, divisions)
+            return random.choice(linspace)
 
         for var in model.component_data_objects(ctype=Var, descend_into=True):
             if not var.is_fixed() and not var.is_binary() and not var.is_integer() \
@@ -180,9 +195,21 @@ class MultiStart(OptSolver):
     # based on the High Confidence stopping rule.
     def should_stop(self, solutions, (stopping_mass, stopping_delta)):
         f = self.num_one_occurrences(solutions)
+        print(type(solutions))
         n = len(solutions)
         d = stopping_delta
         c = stopping_mass
         confidence = f / n + (2 * math.sqrt(2) + math.sqrt(3)
                               ) * math.sqrt(math.log(3 / d) / n)
         return confidence < c
+
+#Helper functions to remove numpy dependency
+    #Returns index of largest value in list lst
+    def argmax(self,lst):
+        return max(range(len(lst)),key = lambda i : lst[i])
+    #Returns index of smallest value in list lst
+    def argmin(self,lst):
+        return min(range(len(lst)),key = lambda i : lst[i])
+    #Linearly spaced range. Credit to https://stackoverflow.com/a/6683724
+    def linspace(self,lower, upper, n):
+        return [lower + x*(upper-lower)/(n-1) for x in range(n)]
