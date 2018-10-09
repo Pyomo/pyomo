@@ -172,6 +172,12 @@ or that there is a bug in the ODBC connector.
         except ImportError:
             return None
 
+#
+# NOTE: The pyodbc interface currently doesn't work.  Notably, nothing
+# sets the "table" or "query" options, which causes db_table.read() to
+# fail.  This interface has been disabled by overriding pyodbc_available
+# in sheet.py
+#
 
 @DataManagerFactory.register('pyodbc', "%s database interface" % 'pyodbc')
 class pyodbc_db_Table(db_Table):
