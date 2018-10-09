@@ -9,36 +9,26 @@ returns the best of the solutions.
 
 Using Multistart Solver
 -----------------------
-To use the multistart solver, define your Pyomo model as usual
+To use the multistart solver, define your Pyomo model as usual:
 
->>> import pyomo.environ as pe
->>> m = pe.ConcreteModel()
->>> m.x = pe.Var()
->>> m.y = pe.Var()
->>> m.obj = pe.Objective(expr=m.x**2 + m.y**2)
->>> m.c = pe.Constraint(expr=m.y >= -2*m.x + 5)
+.. doctest::
 
-Instantiate the multistart solver through the SolverFactory
+  Required import
+  >>> from pyomo.environ import *
 
->>> opt = pe.SolverFactory('multistart')
+  Create a simple model
+  >>> m = ConcreteModel()
+  >>> m.x = Var()
+  >>> m.y = Var()
+  >>> m.obj = Objective(expr=m.x**2 + m.y**2)
+  >>> m.c = Constraint(expr=m.y >= -2*m.x + 5)
 
-This returns an instance of :py:class:`Multistart`. To solve our Model
-we use the solve command
+  Invoke the multistart solver
+  >>> SolverFactory('multistart').solve(m)  # doctest: +SKIP
 
->>> # Keywords:
->>> # 'strategy': specify the restart strategy, defaults to random
->>> #             "rand"
->>> #             "midpoint_guess_and_bound"
->>> #             "rand_guess_and_bound"
->>> #             "rand_distributed"
->>> # 'solver' : specify any solver within the SolverFactory, defaults to ipopt
->>> # 'iterations' : specify the number of iterations, defaults to 10.
->>> #                 if -1 is specified, the high confidence stopping rule will be used
->>> # 'HCS_param' : specify the tuple (m,d)
->>> #               defaults to (m,d) = (.5,.5)
->>> #               only use with random strategy
->>> #               The stopping mass m is the maximum allowable estimated missing mass of optima
->>> #               The stopping delta d = 1-the confidence level required for the stopping rule
->>> #               For both parameters, the lower the parameter the more stricter the rule.
->>> #               both are bounded 0<x<=1
->>> optsolver.solve(m2,iterations = 10);
+
+Multistart wrapper implementation and optional arguments
+--------------------------------------------------------
+
+.. autoclass:: pyomo.contrib.multistart.multi.MultiStart
+    :members:
