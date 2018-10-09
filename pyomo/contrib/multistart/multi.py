@@ -11,42 +11,37 @@
 
 from __future__ import division
 
-import copy
 import logging
-import random
-import textwrap
-from math import fabs
-
-
-
-from pyomo.core.base.objective import maximize
-from pyomo.core.base.var import Var
-from pyomo.core import value
-from pyomo.opt.base import *
-from pyomo.opt.results import *
-from six.moves import range
 import math
+import random
+
+from six.moves import range
+
+from pyomo.core import Var, maximize, value
+from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 
 logger = logging.getLogger('pyomo.contrib.multistart')
 
+
 @SolverFactory.register('multistart',
-        doc='MultiStart solver for NLPs')
+                        doc='MultiStart solver for NLPs')
 class MultiStart(object):
     """Solver wrapper that initializes at multiple starting points.
 
-    For theoretical underpinning, see https://www.semanticscholar.org/paper/How-many-random-restarts-are-enough-Dick-Wong/55b248b398a03dc1ac9a65437f88b835554329e0
+    For theoretical underpinning, see
+    https://www.semanticscholar.org/paper/How-many-random-restarts-are-enough-Dick-Wong/55b248b398a03dc1ac9a65437f88b835554329e0
 
     Keywords:
         strategy: specify the restart strategy, defaults to rand
             - "rand": pure random choice
             - "midpoint_guess_and_bound": midpoint between current and
-                                       farthest bound
+                farthest bound
             - "rand_guess_and_bound": midpoint between current and
-                                       farthest bound
+                farthest bound
             - "rand_distributed": random choice among evenly distributed values
         solver: solver to use, defaults to ipopt
         iterations: specify the number of iterations, defaults to 10.
-                        if -1 is specified, the high confidence stopping rule will be used
+            if -1 is specified, the high confidence stopping rule will be used
         HCS_param: specify the tuple (m,d)
             defaults to (m,d) = (.5,.5)
             only use with random strategy
@@ -56,10 +51,6 @@ class MultiStart(object):
             both are bounded 0<x<=1
 
     """
-    #alias('multistart', doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
-    pyomo.common.plugin.alias(
-        'multistart',
-        doc='Multistart solver for non-linear programming')
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -69,6 +60,7 @@ class MultiStart(object):
 
         """
         return True
+
     def solve(self, model, **kwds):
         # initialize keyword args
         strategy = kwds.pop('strategy', 'rand')
@@ -171,9 +163,11 @@ class MultiStart(object):
 # once the estimated mass of missing optima is within an acceptable range, with
 # some confidence.
 
-    # determines the number of optima that have only been observed once.
-    # needed to estimate missing mass of optima
     def num_one_occurrences(self, lst):
+        """
+        Determines the number of optima that have only been observed once.
+        Needed to estimate missing mass of optima.
+        """
         dist = {}
         for x in lst:
             if x in dist:
@@ -183,9 +177,11 @@ class MultiStart(object):
         one_offs = [x for x in dist if dist[x] == 1]
         return len(one_offs)
 
-    # determines if the missing mass of unseen local optima is acceptable
-    # based on the High Confidence stopping rule.
     def should_stop(self, solutions, hcs_param):
+        """
+        Determines if the missing mass of unseen local optima is acceptable
+        based on the High Confidence stopping rule.
+        """
         f = self.num_one_occurrences(solutions)
         n = len(solutions)
         (stopping_mass, stopping_delta) = hcs_param
@@ -195,13 +191,15 @@ class MultiStart(object):
                               ) * math.sqrt(math.log(3 / d) / n)
         return confidence < c
 
-#Helper functions to remove numpy dependency
-    #Returns index of largest value in list lst
-    def argmax(self,lst):
-        return max(range(len(lst)),key = lambda i : lst[i])
-    #Returns index of smallest value in list lst
-    def argmin(self,lst):
-        return min(range(len(lst)),key = lambda i : lst[i])
-    #Linearly spaced range. Credit to https://stackoverflow.com/a/6683724
-    def linspace(self,lower, upper, n):
-        return [lower + x*(upper-lower)/(n-1) for x in range(n)]
+# Helper functions to remove numpy dependency
+    def argmax(self, lst):
+        """Returns index of largest value in list lst"""
+        return max(range(len(lst)), key=lambda i: lst[i])
+
+    def argmin(self, lst):
+        """Returns index of smallest value in list lst"""
+        return min(range(len(lst)), key=lambda i: lst[i])
+
+    def linspace(self, lower, upper, n):
+        """Linearly spaced range."""
+        return [lower + x * (upper - lower) / (n - 1) for x in range(n)]

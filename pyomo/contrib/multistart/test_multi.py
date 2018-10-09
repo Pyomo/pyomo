@@ -1,13 +1,17 @@
-import pyutilib.th as unittest
-from pyomo.environ import *
 from six.moves import range
-from math import fabs
+
+import pyutilib.th as unittest
+from pyomo.environ import (
+    ConcreteModel, Objective, SolverFactory, Var, maximize, sin, value
+)
 
 
-# due to stochastic nature of the random restarts, these tests just demonstrate,
-# that for a small sample, the test will not do worse than the standard solver.
-# this is non-exhaustive due to the randomness
 class MultistartTests(unittest.TestCase):
+    """
+    Due to stochastic nature of the random restarts, these tests just
+    demonstrate, that for a small sample, the test will not do worse than the
+    standard solver. this is non-exhaustive due to the randomness.
+    """
 
     # test standard random restarts
     def test_as_good_with_iteration_rand(self):
@@ -20,48 +24,44 @@ class MultistartTests(unittest.TestCase):
         for i in range(10):
 
             m2 = build_model()
-            optsolver = SolverFactory('multistart')
-            optsolver.solve(m2, iterations=10)
+            SolverFactory('multistart').solve(m2, iterations=10)
             self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
-            #self.assertTrue(value(m2.obj.expr) >= value(m.obj.expr))
             del m2
 
-    #test that other strategies do no worse
     def test_as_good_with_iteration_other_strategies(self):
+        """Test that other strategies do no worse"""
         # initialize model with data
         m = build_model()
 
         # create ipopt solver
-        optsolver = SolverFactory('ipopt')
-        optsolver.solve(m)
+        SolverFactory('ipopt').solve(m)
         for i in range(10):
 
             m2 = build_model()
-            optsolver = SolverFactory('multistart')
-            optsolver.solve(m2,iterations = 10, strategy='rand_distributed')
+            SolverFactory('multistart').solve(
+                m2, iterations=10, strategy='rand_distributed')
 
             self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
             del m2
         for i in range(10):
-
             m2 = build_model()
-            oxptsolver = SolverFactory('multistart')
-            optsolver.solve(m2,iterations = 10, strategy='midpoint_guess_and_bound')
+            SolverFactory('multistart').solve(
+                m2, iterations=10, strategy='midpoint_guess_and_bound')
 
             self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
             del m2
         for i in range(10):
-
             m2 = build_model()
-            optsolver = SolverFactory('multistart')
-            optsolver.solve(m2,iterations = 10, strategy='rand_guess_and_bound')
+            SolverFactory('multistart').solve(
+                m2, iterations=10, strategy='rand_guess_and_bound')
 
             self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
             del m2
-    # test that the high confidence stopping rule with very lenient parameters
-    # does no worse.
 
     def test_as_good_with_HCS_rule(self):
+        """test that the high confidence stopping rule with very lenient
+        parameters does no worse.
+        """
         # initialize model with data
         m = build_model()
 
@@ -71,25 +71,20 @@ class MultistartTests(unittest.TestCase):
         for i in range(5):
 
             m2 = build_model()
-            optsolver = SolverFactory('multistart')
-            optsolver.solve(m2, iterations=-1, HCS_param=(.99, .99))
+            SolverFactory('multistart').solve(
+                m2, iterations=-1, HCS_param=(.99, .99))
 
             self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
             del m2
 
-# simple non-convex model with many multiple minima
-
 
 def build_model():
+    """Simple non-convex model with many local minima"""
     model = ConcreteModel()
     model.x1 = Var(initialize=1, bounds=(0, 100))
 
     def obj_rule(amodel):
         return model.x1 * sin(model.x1)
-
-
-
-
 
     model.obj = Objective(rule=obj_rule, sense=maximize)
     return model
