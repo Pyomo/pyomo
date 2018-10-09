@@ -20,13 +20,12 @@ from pyomo.opt.base import IOptSolver
 from pyomo.opt.results import ProblemSense, SolverResults
 
 import heapq
-class GDPlbbSolver(pyomo.util.plugin.Plugin):
+
+@SolverFactory.register('gdplbb',doc='Branch and Bound based GDP Solver')
+
+
+class GDPlbbSolver(opject):
     """A branch and bound-based GDP solver."""
-
-    pyomo.util.plugin.implements(IOptSolver)
-    pyomo.util.plugin.alias('gdplbb',
-                            doc='The GDPlbb logic-based Branch and Bound GDP solver')
-
 
     def solve(self, model, **kwds):
         heap = []
