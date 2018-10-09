@@ -334,6 +334,10 @@ class pyodbc_db_Table(db_Table):
         return connection
 
     def _get_driver(self, ctype):
+        # Given a list of possible drivers for this ctype, look to find
+        # a match in the pyodbc.drivvers() list.  If a match is found,
+        # return it.  Otherwise (arbitrarily) return the first one.  If
+        # the ctype is not known, return None.
         drivers = self._drivers.get(ctype,[])
         for driver in drivers:
             if driver in pyodbc.drivers():
