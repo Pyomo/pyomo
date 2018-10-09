@@ -93,8 +93,8 @@ install:
   #- "SET CONDAENV=%PYTHON%\\envs\\pyomo_test_env"
   - "echo %PATH%"
   #
-  - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme codecov"
-  #- python -m pip install codecov
+  - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme"
+  - python -m pip install codecov
   ## TESTING
   - dir
   - dir scripts
