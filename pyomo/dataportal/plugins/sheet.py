@@ -119,7 +119,7 @@ if (win32com_available and _excel_available) or xlrd_available:
         def requirements(self):
             return "win32com or xlrd"
 
-elif pypyodbc_available:
+elif pyodbc_available:
 
     @DataManagerFactory.register("xls", "Excel XLS file interface")
     class pyodbc_xls(pyodbc_db_base):
