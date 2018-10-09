@@ -72,7 +72,7 @@ class MultistartTests(unittest.TestCase):
 
             m2 = build_model()
             SolverFactory('multistart').solve(
-                m2, iterations=-1, HCS_param=(.99, .99))
+                m2, iterations=-1, stopping_mass=0.99, stopping_delta=0.99)
 
             self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
             del m2
