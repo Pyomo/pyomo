@@ -19,6 +19,7 @@ import re
 import sys
 import shutil
 from decimal import Decimal
+from six import iteritems
 
 try:
     import pyodbc
@@ -175,12 +176,16 @@ or that there is a bug in the ODBC connector.
 @DataManagerFactory.register('pyodbc', "%s database interface" % 'pyodbc')
 class pyodbc_db_Table(db_Table):
 
-    _drivers = {  'mdb' : "Microsoft Access Driver (*.mdb)",
-                  'xls' : "Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)",
-                 'xlsx' : "Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)",
-                 'xlsm' : "Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)",
-                 'xlsb' : "Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)",
-                'mysql' : "MySQL" }
+    _drivers = {
+        'mdb': ["Microsoft Access Driver (*.mdb)"],
+        'xls': ["Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)","Microsoft Excel Driver (*.xls)"],
+        'xlsx': ["Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)"],
+        'xlsm': ["Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)"],
+        'xlsb': ["Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)"],
+        'mysql': ["MySQL"]
+    }
+    _drivers['access'] = _drivers['mdb']
+    _drivers['excel'] = _drivers['xls']
 
     def __init__(self):
         db_Table.__init__(self)
@@ -213,27 +218,45 @@ class pyodbc_db_Table(db_Table):
         except Exception:
             e = sys.exc_info()[1]
             code = e.args[0]
-            if (code == 'IM002' or code == '08001') and 'HOME' in os.environ:
-                # Need a DSN! Try to add it to $HOME/.odbc.ini ...
-                #
-                # Note: this only works on *nix platforms.  It appears
-                # that ODBC.INI is stored in the registry on windows
-                odbcIniPath = os.path.join(os.environ['HOME'], '.odbc.ini')
-                if os.path.exists(odbcIniPath):
-                    shutil.copy(odbcIniPath, odbcIniPath + '.orig')
-                    config = ODBCConfig(filename=odbcIniPath)
+            if code == 'IM002' or code == '08001':
+                if 'HOME' in os.environ:
+                    # Need a DSN! Try to add it to $HOME/.odbc.ini ...
+                    #
+                    # Note: this only works on *nix platforms.  It appears
+                    # that ODBC.INI is stored in the registry on windows
+                    #
+                    # [JDS, 8 Oct 18]: I am not convinced that writing a
+                    # .odbc.ini file is necessary; see the "else" branch
+                    # below.
+                    #
+                    odbcIniPath = os.path.join(os.environ['HOME'], '.odbc.ini')
+                    if os.path.exists(odbcIniPath):
+                        shutil.copy(odbcIniPath, odbcIniPath + '.orig')
+                        config = ODBCConfig(filename=odbcIniPath)
+                    else:
+                        config = ODBCConfig()
+
+                    dsninfo = self.create_dsn_dict(connection, config)
+                    dsnid = re.sub('[^A-Za-z0-9]', '', dsninfo['Database']) # Strip filenames of funny characters
+                    dsn = 'PYOMO{0}'.format(dsnid)
+
+                    config.add_source(dsn, dsninfo['Driver'])
+                    config.add_source_spec(dsn, dsninfo)
+                    config.write(odbcIniPath)
+
+                    connstr = "DRIVER={{{0}}};DSN={1}".format(dsninfo['Driver'], dsn)
                 else:
+                    # Attempt to re-generate the connection string with a Driver
                     config = ODBCConfig()
+                    dsninfo = self.create_dsn_dict(connection, config)
+                    connstr = []
+                    for k,v in iteritems(dsninfo):
+                        if ' ' in v and (v[0] != "{" or v[-1] != "}"):
+                            connstr.append("%s={%s}" % (k.upper(),v))
+                        else:
+                            connstr.append("%s=%s" % (k.upper(),v))
+                    connstr = ";".join(connstr)
 
-                dsninfo = self.create_dsn_dict(connection, config)
-                dsnid = re.sub('[^A-Za-z0-9]', '', dsninfo['Database']) # Strip filenames of funny characters
-                dsn = 'PYOMO{0}'.format(dsnid)
-
-                config.add_source(dsn, dsninfo['Driver'])
-                config.add_source_spec(dsn, dsninfo)
-                config.write(odbcIniPath)
-
-                connstr = "DRIVER={{{0}}};DSN={1}".format(dsninfo['Driver'], dsn)
                 conn = db_Table.connect(self, connstr, options, extras) # Will raise its own exception on failure
 
             # Propagate the exception
@@ -296,11 +319,23 @@ class pyodbc_db_Table(db_Table):
         return result
 
     def create_connection_string(self, ctype, connection, options):
-        if ctype in ['xls', 'xlsx', 'xlsm', 'xlsb', 'excel']:
-            return "DRIVER={Microsoft Excel Driver (*.xls, *.xlsx, *.xlsm, *.xlsb)}; Dbq=%s;" % connection
-        if ctype in ['mdb', 'access']:
-            return "DRIVER={Microsoft Access Driver (*.mdb)}; Dbq=%s;" % connection
+        driver = self._get_driver(ctype)
+        if driver:
+            if ' ' in driver and (driver[0] != "{" or driver[-1] != "}"):
+                return "DRIVER={%s};Dbq=%s;" % (driver, connection)
+            else:
+                return "DRIVER=%s;Dbq=%s;" % (driver, connection)
         return connection
+
+    def _get_driver(self, ctype):
+        drivers = self._drivers.get(ctype,[])
+        for driver in drivers:
+            if driver in pyodbc.drivers():
+                return driver
+        if drivers:
+            return drivers[0]
+        else:
+            return None
 
 
 class ODBCError(Exception):
