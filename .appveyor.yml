@@ -26,10 +26,10 @@ environment:
     #  PYTHON: "C:\\Miniconda36-x64"
     #  CATEGORY: "nightly"
 
-    ##- PYTHON_VERSION: 2.7
-    ##  PYTHON: "C:\\Miniconda"
-    ##  CATEGORY: "nightly"
-    ##  EXTRAS: YES
+    - PYTHON_VERSION: 2.7
+      PYTHON: "C:\\Miniconda"
+      CATEGORY: "nightly"
+      EXTRAS: YES
 
     #- PYTHON_VERSION: 3.4
     #  PYTHON: "C:\\Miniconda34-x64"
@@ -41,15 +41,15 @@ environment:
       CATEGORY: "nightly"
       EXTRAS: YES
 
-    ##- PYTHON_VERSION: 3.6
-    ##  PYTHON: "C:\\Miniconda36"
-    ##  CATEGORY: "nightly"
-    ##  EXTRAS: YES
+    - PYTHON_VERSION: 3.6
+      PYTHON: "C:\\Miniconda36"
+      CATEGORY: "nightly"
+      EXTRAS: YES
 
-    ##- PYTHON_VERSION: 3.7
-    ##  PYTHON: "C:\\Miniconda37"
-    ##  CATEGORY: "nightly"
-    ##  EXTRAS: YES
+    - PYTHON_VERSION: 3.7
+      PYTHON: "C:\\Miniconda37"
+      CATEGORY: "nightly"
+      EXTRAS: YES
 
 
 install:
@@ -94,20 +94,13 @@ install:
   - "echo %PATH%"
   #
   - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme"
+  #
+  # While we would like to install codecov using conda (for
+  # consistency), there are cases (most recently, in Python 3.5) where
+  # the installation is not reliable and codecov is not available after
+  # being installed.
+  #
   - python -m pip install codecov
-  ## TESTING
-  - dir
-  - dir scripts
-  - dir %PYTHON%\Scripts
-  - dir %PYTHON%\Library\bin
-  - dir %PYTHON%\lib\site-packages
-  #- dir %PYTHON%\envs\pyomo_test_env
-  #- dir %CONDAENV%\Scripts
-  #- dir %CONDAENV%\site-packages
-  #- dir %CONDAENV%\Lib\site-packages
-  #- dir %CONDAENV%\libs\site-packages
-  - python -m codecov
-  ## TESTING
   #
   # Install GAMS
   #
