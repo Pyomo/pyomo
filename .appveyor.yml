@@ -179,4 +179,6 @@ on_success:
   - "cd %BUILD_DIR%"
   - dir .cov*
   - "coverage combine %BUILD_DIR%"
-  - codecov -X gcov
+  # On some appveyor platforms, the codecov script does not appear to be
+  # in the PATH.  We will directly import the module (installed above)
+  - python -m codecov -X gcov
