@@ -90,7 +90,7 @@ install:
   #
   - conda create -n pyomo_test_env python=%PYTHON_VERSION%
   - activate pyomo_test_env
-  - "SET CONDAENV=%PYTHON%\envs\pyomo_test_env"
+  - "SET CONDAENV=%PYTHON%\\envs\\pyomo_test_env"
   - "echo %PATH%"
   #
   - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme codecov"
