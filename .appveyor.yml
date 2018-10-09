@@ -90,6 +90,8 @@ install:
   #
   - conda create -n pyomo_test_env python=%PYTHON_VERSION%
   - activate pyomo_test_env
+  - "SET CONDAENV=%PYTHON%\envs\pyomo_test_env"
+  - "echo %PATH%"
   #
   - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme codecov"
   #- python -m pip install codecov
@@ -100,6 +102,10 @@ install:
   - dir %PYTHON%\Library\bin
   - dir %PYTHON%\lib\site-packages
   - dir %PYTHON%\envs\pyomo_test_env
+  - dir %CONDAENV%\Scripts
+  - dir %CONDAENV%\site-packages
+  - dir %CONDAENV%\Lib\site-packages
+  - dir %CONDAENV%\libs\site-packages
   - python -m codecov
   ## TESTING
   #
