@@ -3,28 +3,61 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Pyomo 5.4.4
+Current Development
 -------------------------------------------------------------------------------
 
-- GDP updates (#410)
-  - add support for implicit declaration of multi-constraint Disjuncts
-  - switch to using ConfigBlocks for chull, bigm relaxations
+- Removing testing and support for Python 2.6 (#322)
+- Resolved Python 3.4 build errors on Appveyor. (#438)
+- Wrap Vars in value() for assignment to numpy vectors (#436)
+- Adding TerminationCondition and SolverStatus to pyomo.environ (#429)
+- Resolved problems with ExternalFunctions with fixed arguments (#442)
+- Adding the Pyomo5 expression system, which supports PyPy (#272)
+- Efficiency improvements when processing unhashable indexes (#467)
+- Bug fix processing exp() expressions in Pyomo5 (#471)
+- Optimizations to minimize use of NumericConstant objects (#469)
+- Resolving scaling issue with Pyomo expressions (#475)
+- Resolving issue when path names with spaces appear in CPLEX run file (#485)
+- Adding relative_to argument for getname() (#495)
+- Refactoring pyomo.util into pyomo.common for the general utilities that do
+  not depend on the rest of Pyomo, and the user-focused modeling utilities in
+  pyomo.util. (#502)
+- Transformations map create_using arguments through the model clone (#497)
+- unique_component_name now checks all attributes (not just components) (#497)
+
+-------------------------------------------------------------------------------
+Pyomo 5.5
+-------------------------------------------------------------------------------
+
+- Move preprocessing transformations to contrib (#426)
+  - Moves bounds_to_vars and propagate_zero_sum into contrib.preprocessing and
+    changes aliases to contrib.bounds_to_vars and contrib.propagate_zero_sum.
+- Improved external function support
+  - Fixing AMPLFUNC environment variable management for "derived ASL
+    solvers (ipopt, conopt, scipampl) (#423)
+  - Adding support for using the AMPL GSL library (#427)
+- PySP updates
+  - Fixing atypical methods in PySP for generating a scenario tree and
+    associated instances (#422, #424)
+  - Adding support in PySP for new persistent solver API (#397)
+  - Fixing bug in Eckstein-Combettes PySP-PH extension for
+    handling unused model variables (#396)
+- GDP updates
+  - add support for implicit declaration of multi-constraint Disjuncts (#410)
+  - switch to using ConfigBlocks for chull, bigm relaxations (#410)
+  - fix for Big-M with disjuncts containing indexed blocks (#421)
 - Fix for discretizing block hierarchical models with
   circular references (#406, #353)
 - Fix formatting for small numbers in Baron file writer (#405)
 - Allow retrieving a mutable Param even when no initial or
   default value is specified (#393)
 - Python3 fix for Set.pprint
-- Adding support in PySP for new persistent solver API (#397)
-- Fixing bug in Eckstein-Combettes PySP-PH extension for
-  handling unused model variables (#396)
 - Make handling of trivially non-binding constraints consistent across
   the various solver interfaces (#392)
 - Fix to pprint for Params that store non-numeric values
 - Removing use of namespace_packages in setup.py
-- Modifying transformation that detects trivial constraints
-  to maintain a list of the constraints that were
-  deactivated (#385)
+- Modifying transformation that detects trivial constraints to maintain
+  a list of the constraints that were deactivated (#385)
+- Documentation updates (#425)
 
 -------------------------------------------------------------------------------
 Pyomo 5.4.3
@@ -48,6 +81,7 @@ Pyomo 5.4.1
 Pyomo 5.4
 -------------------------------------------------------------------------------
 
+=======
 - Remove checks for is_indexed from PersistentSolver methods (#366)
 - GDP rewrite (#354)
 - Updated gdp.chull to handle named expressions (#318)
@@ -174,7 +208,7 @@ Pyomo 5.1
 - Reworked the solver testing infrastructure to enable enumeration of all
   test scenarios, which is used by 'pyomo test-solvers' (#78)
 - Fixes for xpress solver options writer (#79)
-- Resolved an issue where Pyomo was unnecessarily cloning most inequality 
+- Resolved an issue where Pyomo was unnecessarily cloning most inequality
   expressions (#80)
 - Reworked the Pyomo *.DAT file parser and post-parse processing logic. This
   eliminates parse ambiguities that were causing test failures.
@@ -208,7 +242,7 @@ Pyomo 5.0
 - Updates to ExternalFunction logic
 - Renamed the component name() method to getname() and added a 'name' property
 - Fix to allow creating undefined (and uninitialized) mutable params
-- Added more careful checks in Set() and Param() to ensure that an abstract set 
+- Added more careful checks in Set() and Param() to ensure that an abstract set
   expression is not evaluated
 - Added DAE examples to Pyomo
 
@@ -222,7 +256,7 @@ Pyomo 4.4.1
 Pyomo 4.4
 -------------------------------------------------------------------------------
 
-- Output a warning in benders when the solver interface used to solve the 
+- Output a warning in benders when the solver interface used to solve the
   master problem does not report a solution gap
 - Document DAE transformations (#28)
 - Allow use of ellipsis in the middle of the indices when slicing
@@ -233,11 +267,11 @@ Pyomo 4.4
 - Renaming "BasicExternalFunction" to "AMPLExternalFunction"
 - Allowing Params to be used in setting bounds on a ContinuousSet.
 - Use HTTPS with NEOS
-- Allow a mutable Parameter that has not been initialized with a value to 
+- Allow a mutable Parameter that has not been initialized with a value to
   be used in the rhs of an equality constraint. (#13)
-- Updates to SolverFactor to better support functionality offered by the 
+- Updates to SolverFactor to better support functionality offered by the
   'executable' keyword for SystemCallSolver.
-- Updates to writers to enforce consistent output ordering in quadratic 
+- Updates to writers to enforce consistent output ordering in quadratic
   expressions.
 - Improving the error message for Constraint rules that return None
 - Adding PySP solver interface to the SD solver
@@ -247,7 +281,7 @@ Pyomo 4.4
 - Partial fix for infinite recursion reported (#6). This will support
   creating scalar (simple) components by passing a set([None]) in
   as the index.
-- Extending component slicing ability to nested (hierarchical) slices. 
+- Extending component slicing ability to nested (hierarchical) slices.
 
 -------------------------------------------------------------------------------
 Pyomo 4.3 (4.3.11381)
@@ -271,9 +305,9 @@ Pyomo 4.3 (4.3.11345)
 
 - Various fixes to the NEOS solver plugin and to the SOL parser for
   certain NEOS solvers.
-- Fixed a bug that caused an exception to occur when dynamically adding blocks 
+- Fixed a bug that caused an exception to occur when dynamically adding blocks
   to a ConcreteModel.
-- Miscellaneous fixes to PySP scripting examples. 
+- Miscellaneous fixes to PySP scripting examples.
 
 -------------------------------------------------------------------------------
 Pyomo 4.3 (4.3.11328)
@@ -300,7 +334,7 @@ Pyomo 4.3 (4.3.11323)
     - Deprecated the --with-extras option
     - Added "--venv-only" option for setting up a local python virtual
       environment with no additional packages (apart from pip, setuptools, and
-      potentially wheel). 
+      potentially wheel).
     - Fixes when installing from zip files offline.
   - get-pyomo-extras.py
     - Misc fixes and updates
@@ -321,11 +355,11 @@ Pyomo 4.3 (4.3.11323)
   - Changes to allow objectives to be used inside expressions, and to
     allow objectives to be sent through the solver plugins
   - Updating blocks so that models can be created and populated using rule options
-  - Added a domain property method to IndexedVar so it cannot be treated as having 
+  - Added a domain property method to IndexedVar so it cannot be treated as having
     a single domain
   - Added the Var() 'dense' option.  This defaults to True, which defines variables
     densely.  But sparse variables are defined when dense==False.
-  - Change to define a SOS constraint over the declared index set for a variable 
+  - Change to define a SOS constraint over the declared index set for a variable
     unless an explicit index set is provided.
   - Changes to ensure that most components do not define their data densely.
 - pyomo.dae
@@ -376,12 +410,12 @@ Pyomo 4.3 (4.3.11323)
   - Updated the Pyro mip server to improve its efficiency
 - pyomo.solvers
   - Updates to xpress plugin to use the ASL interface to xpress.
-  - Fixed a major issue with the gap computation in the CPLEX direct/persistent 
+  - Fixed a major issue with the gap computation in the CPLEX direct/persistent
     solver plugins
   - Significant speed-up of the the CPLEX persistent plugin.
   - Added the 'mps' mode for various solvers.
   - Changes to the Pyro solver manager to allow out-of-order results collection
- 
+
 -------------------------------------------------------------------------------
 Pyomo 4.2 (4.2.10784)
 -------------------------------------------------------------------------------
@@ -443,7 +477,7 @@ Pyomo 4.2 (4.2.10782)
 - other
   - Updated the get-pyomo-extras.py script to install conditional dependencies
     for Pyomo (e.g. xlrd and ipython)
-  - Adding logic to explicitly identify metasolvers.  This information is 
+  - Adding logic to explicitly identify metasolvers.  This information is
     reflected in the 'pyomo help -s' command.
   - Deprecated 'pyomo.os', which was not being actively supported.
   - Added the 'pyomo info' subcommand to provide information about the Python
@@ -453,7 +487,7 @@ Pyomo 4.2 (4.2.10782)
 Pyomo 4.1 (4.1.10519)
 -------------------------------------------------------------------------------
 
-- Resolving bugs in NEOS solver interface due to change in solver options 
+- Resolving bugs in NEOS solver interface due to change in solver options
   management.
 
 -------------------------------------------------------------------------------
@@ -468,7 +502,7 @@ Pyomo 4.1 (4.1.10509)
 Pyomo 4.1 (4.1.10505)
 -------------------------------------------------------------------------------
 
-- Allow the dim() method to be called without the equality operator, which 
+- Allow the dim() method to be called without the equality operator, which
   enables its use on unconstructed components
 - RangeSet inherits from OrderedSimpleSet
 - Added missing __slots__ declarations in set classes
@@ -483,7 +517,7 @@ Pyomo 4.1 (4.1.10486)
 - Removed explicit specification of model preprocessing
 - Resolved many issues with writing and solving MPECs
 - Changes to MPEC meta-solver names
-- The solution output for runph has been changed to 
+- The solution output for runph has been changed to
 - Pyomo subcommands can now use configuration files (e.g. pyomo solve config.json)
 - New JSON/YAML format for parameter data
 - Added a script to install pyomo.extras
@@ -528,7 +562,7 @@ The following are highlights of this release:
 
 - Modeling
    * Added a RealInterval domain
-   * Major rework of coopr.dae. Can now represent higher order and partial 
+   * Major rework of coopr.dae. Can now represent higher order and partial
      differential equations. Also added more discretization schemes.
 
 - Solvers
@@ -809,7 +843,7 @@ Pyomo 2.5.3890
     * Added support for generalized disjunctive programs (in pyomo.gdp)
     * Constraints can now be specified in "compound" form:  lb <= expr <= ub
     * Significant robustness enhancements for model expressions
-    * Improved error handling for constraint generation 
+    * Improved error handling for constraint generation
 
 - Other
     * Python 2.5 is deprecated due to performance issues
@@ -857,11 +891,11 @@ Pyomo 2.4.3199
   - Better support for Gurobi solver
   - Direct CPLEX solver interface
   - Interface to ipopt and nonlinear solvers via asl (just to be clear)
-  - ASL solver interface can now be specified with the form 
-        --solver=asl:PICO 
+  - ASL solver interface can now be specified with the form
+        --solver=asl:PICO
 
 - Usability enchancements
-  - Numerous bug fixes. 
+  - Numerous bug fixes.
   - Updated messages to provide clearer indication of modeling errors
 
 -------------------------------------------------------------------------------
@@ -879,7 +913,7 @@ Pyomo 2.3.2581
 
 - New conversion scripts to generate LP or NL files from Pyomo models
 
-- Solvers now extract standard suffix information 
+- Solvers now extract standard suffix information
 
 - Various fixes to PySP solvers
 
@@ -1001,7 +1035,7 @@ Pyomo 1.1
     this facility has been setup to support the application of Pyomo
     solvers with subclasses of the AsynchronousSolverManager.
 
-  - Created a distributed solver manager that uses the Pyro 
+  - Created a distributed solver manager that uses the Pyro
     RPC package.
 
   - Rework of MIP solver interfaces for CPLEX, GLPK, PICO and CBC.
@@ -1074,7 +1108,7 @@ Pyomo 1.1
     preprocessors to specific target solvers (e.g. tailoring preprocessing
     for the NL writer, or tailoring preprocessing for MILP models).
 
-  _ The Constraint and Objective classes were reworked to integrate 
+  _ The Constraint and Objective classes were reworked to integrate
     their data into a single _data dictionary. This simplified
     the management of id and label information.
 
@@ -1229,4 +1263,3 @@ Pyomo 1.0
 -------------------------------------------------------------------------------
 
 - Initial release.
-

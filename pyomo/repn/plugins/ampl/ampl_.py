@@ -25,38 +25,31 @@ import operator
 import os
 import time
 
+from pyutilib.math.util import isclose
 from pyutilib.misc import PauseGC
 
-import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import *
-from pyomo.core.base import *
-from pyomo.core.base import expr, SymbolMap, Block
-import pyomo.core.base.expr_common
-from pyomo.core.base.var import Var
-from pyomo.core.base import _ExpressionData, Expression, SortComponents
-from pyomo.core.base.numvalue import (NumericConstant,
+from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numvalue import (NumericConstant,
                                       native_numeric_types,
                                       value)
+from pyomo.core.base import *
+from pyomo.core.base import SymbolMap, Block
+from pyomo.core.base.var import Var
+from pyomo.core.base import _ExpressionData, Expression, SortComponents
 from pyomo.core.base import var
 from pyomo.core.base import param
 import pyomo.core.base.suffix
-from pyomo.repn.ampl_repn import (generate_ampl_repn,
-                                  AmplRepn)
+from pyomo.repn.standard_repn import StandardRepn, generate_standard_repn
 
-import pyomo.core.kernel.component_suffix
-from pyomo.core.kernel.component_block import IBlockStorage
-from pyomo.core.kernel.component_expression import IIdentityExpression
-from pyomo.core.kernel.component_variable import IVariable
-from pyomo.repn import LinearCanonicalRepn
+import pyomo.core.kernel.suffix
+from pyomo.core.kernel.block import IBlock
+from pyomo.core.kernel.expression import IIdentityExpression
+from pyomo.core.kernel.variable import IVariable
 
 from six import itervalues, iteritems
 from six.moves import xrange, zip
-
-_using_pyomo4_trees = False
-if pyomo.core.base.expr_common.mode == \
-   pyomo.core.base.expr_common.Mode.pyomo4_trees:
-    _using_pyomo4_trees = True
 
 logger = logging.getLogger('pyomo.core')
 
@@ -78,7 +71,10 @@ _intrinsic_function_operators = {
     'acosh':  'o52',
     'atanh':  'o47',
     'pow':    'o5',
-    'abs':    'o15'}
+    'abs':    'o15',
+    'ceil':   'o13',
+    'floor':  'o14'
+}
 
 # build string templates
 def _build_op_template():
@@ -89,42 +85,36 @@ def _build_op_template():
     prod_comment = "\t#*"
     div_template = "o3{C}\n"
     div_comment = "\t#/"
-    if _using_pyomo4_trees:
-        _op_template[expr._ProductExpression] = prod_template
-        _op_comment[expr._ProductExpression] = prod_comment
-        _op_template[expr._DivisionExpression] = div_template
-        _op_comment[expr._DivisionExpression] = div_comment
-    else:
-        _op_template[expr._ProductExpression] = (prod_template,
-                                                 div_template)
-        _op_comment[expr._ProductExpression] = (prod_comment,
-                                                div_comment)
+    _op_template[EXPR.ProductExpression] = prod_template
+    _op_comment[EXPR.ProductExpression] = prod_comment
+    _op_template[EXPR.ReciprocalExpression] = div_template
+    _op_comment[EXPR.ReciprocalExpression] = div_comment
     del prod_template
     del prod_comment
     del div_template
     del div_comment
 
-    _op_template[expr._ExternalFunctionExpression] = ("f%d %d{C}\n", #function
+    _op_template[EXPR.ExternalFunctionExpression] = ("f%d %d{C}\n", #function
                                                       "h%d:%s{C}\n") #string arg
-    _op_comment[expr._ExternalFunctionExpression] = ("\t#%s", #function
+    _op_comment[EXPR.ExternalFunctionExpression] = ("\t#%s", #function
                                                      "")      #string arg
 
     for opname in _intrinsic_function_operators:
         _op_template[opname] = _intrinsic_function_operators[opname]+"{C}\n"
         _op_comment[opname] = "\t#"+opname
 
-    _op_template[expr.Expr_if] = "o35{C}\n"
-    _op_comment[expr.Expr_if] = "\t#if"
+    _op_template[EXPR.Expr_ifExpression] = "o35{C}\n"
+    _op_comment[EXPR.Expr_ifExpression] = "\t#if"
 
-    _op_template[expr._InequalityExpression] = ("o21{C}\n", # and
+    _op_template[EXPR.InequalityExpression] = ("o21{C}\n", # and
                                                 "o22{C}\n", # <
                                                 "o23{C}\n") # <=
-    _op_comment[expr._InequalityExpression] = ("\t#and", # and
+    _op_comment[EXPR.InequalityExpression] = ("\t#and", # and
                                                "\t#lt",  # <
                                                "\t#le")  # <=
 
-    _op_template[expr._EqualityExpression] = "o24{C}\n"
-    _op_comment[expr._EqualityExpression] = "\t#eq"
+    _op_template[EXPR.EqualityExpression] = "o24{C}\n"
+    _op_comment[EXPR.EqualityExpression] = "\t#eq"
 
     _op_template[var._VarData] = "v%d{C}\n"
     _op_comment[var._VarData] = "\t#%s"
@@ -135,19 +125,15 @@ def _build_op_template():
     _op_template[NumericConstant] = "n%r{C}\n"
     _op_comment[NumericConstant] = ""
 
-    _op_template[expr._SumExpression] = (
+    _op_template[EXPR.SumExpressionBase] = (
         "o54{C}\n%d\n", # nary +
         "o0{C}\n",      # +
         "o2\n" + _op_template[NumericConstant] ) # * coef
-    _op_comment[expr._SumExpression] = ("\t#sumlist", # nary +
+    _op_comment[EXPR.SumExpressionBase] = ("\t#sumlist", # nary +
                                         "\t#+",       # +
                                         _op_comment[NumericConstant]) # * coef
-    if _using_pyomo4_trees:
-        _op_template[expr._LinearExpression] = _op_template[expr._SumExpression]
-        _op_comment[expr._LinearExpression] = _op_comment[expr._SumExpression]
-
-        _op_template[expr._NegationExpression] = "o16{C}\n"
-        _op_comment[expr._NegationExpression] = "\t#-"
+    _op_template[EXPR.NegationExpression] = "o16{C}\n"
+    _op_comment[EXPR.NegationExpression] = "\t#-"
 
     return _op_template, _op_comment
 
@@ -267,25 +253,25 @@ class ModelSOS(object):
 
 class RepnWrapper(object):
 
-    __slots__ = ('repn','_linear_vars','_nonlinear_vars')
+    __slots__ = ('repn','linear_vars','nonlinear_vars')
 
     def __init__(self,repn,linear,nonlinear):
         self.repn = repn
-        self._linear_vars = linear
-        self._nonlinear_vars = nonlinear
+        self.linear_vars = linear
+        self.nonlinear_vars = nonlinear
 
+
+@WriterFactory.register('nl', 'Generate the corresponding AMPL NL file.')
 class ProblemWriter_nl(AbstractProblemWriter):
 
-    pyomo.util.plugin.alias(str(ProblemFormat.nl),
-                            'Generate the corresponding AMPL NL file.')
 
     def __init__(self):
+        AbstractProblemWriter.__init__(self, ProblemFormat.nl)
         self._ampl_var_id = {}
         self._ampl_con_id = {}
         self._ampl_obj_id = {}
         self._OUTPUT = None
         self._varID_map = None
-        AbstractProblemWriter.__init__(self, ProblemFormat.nl)
 
     def __call__(self,
                  model,
@@ -400,6 +386,57 @@ class ProblemWriter_nl(AbstractProblemWriter):
         self._op_string = None
         return filename, symbol_map
 
+    def _print_quad_term(self, v1, v2):
+        OUTPUT = self._OUTPUT
+        if v1 is not v2:
+            prod_str = self._op_string[EXPR.ProductExpression]
+            OUTPUT.write(prod_str)
+            self._print_nonlinear_terms_NL(v1)
+            self._print_nonlinear_terms_NL(v2)
+        else:
+            intr_expr_str = self._op_string['pow']
+            OUTPUT.write(intr_expr_str)
+            self._print_nonlinear_terms_NL(v1)
+            OUTPUT.write(self._op_string[NumericConstant] % (2))
+
+    def _print_standard_quadratic_NL(self,
+                                     quadratic_vars,
+                                     quadratic_coefs):
+        OUTPUT = self._OUTPUT
+        nary_sum_str, binary_sum_str, coef_term_str = \
+            self._op_string[EXPR.SumExpressionBase]
+        assert len(quadratic_vars) == len(quadratic_coefs)
+        if len(quadratic_vars) == 1:
+            pass
+        else:
+            if len(quadratic_vars) == 2:
+                OUTPUT.write(binary_sum_str)
+            else:
+                assert len(quadratic_vars) > 2
+                OUTPUT.write(nary_sum_str % (len(quadratic_vars)))
+            # now we need to do a sort to ensure deterministic output
+            # as the compiled quadratic representation does not preserve
+            # any ordering
+            old_quadratic_vars = quadratic_vars
+            old_quadratic_coefs = quadratic_coefs
+            self_varID_map = self._varID_map
+            quadratic_vars = []
+            quadratic_coefs = []
+            for (i, (v1, v2)) in sorted(enumerate(old_quadratic_vars),
+                                        key=lambda x: (self_varID_map[id(x[1][0])],
+                                                       self_varID_map[id(x[1][1])])):
+                quadratic_coefs.append(old_quadratic_coefs[i])
+                if self_varID_map[id(v1)] <= self_varID_map[id(v2)]:
+                    quadratic_vars.append((v1,v2))
+                else:
+                    quadratic_vars.append((v2,v1))
+        for i in range(len(quadratic_vars)):
+            coef = quadratic_coefs[i]
+            v1, v2 = quadratic_vars[i]
+            if coef != 1:
+                OUTPUT.write(coef_term_str % (coef))
+            self._print_quad_term(v1, v2)
+
     def _print_nonlinear_terms_NL(self, exp):
         OUTPUT = self._OUTPUT
         exp_type = type(exp)
@@ -411,7 +448,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             # be a list of tuples where [0] is the coeff and [1] is
             # the expr to write
             nary_sum_str, binary_sum_str, coef_term_str = \
-                self._op_string[expr._SumExpression]
+                self._op_string[EXPR.SumExpressionBase]
             n = len(exp)
             if n > 2:
                 OUTPUT.write(nary_sum_str % (n))
@@ -437,208 +474,163 @@ class ProblemWriter_nl(AbstractProblemWriter):
             OUTPUT.write(self._op_string[NumericConstant]
                          % (exp))
 
-        elif exp.is_expression():
-            if _using_pyomo4_trees and (exp_type is expr._LinearExpression):
+        elif exp.is_expression_type():
+            #
+            # Identify NPV expressions
+            #
+            if not exp.is_potentially_variable():
+                OUTPUT.write(self._op_string[NumericConstant] % (value(exp)))
+            #
+            # We are assuming that _Constant_* expression objects
+            # have been preprocessed to form constant values.
+            #
+            elif exp.__class__ is EXPR.SumExpression:
                 nary_sum_str, binary_sum_str, coef_term_str = \
-                    self._op_string[expr._LinearExpression]
-                n = len(exp._args)
-                if n > 2:
-                    OUTPUT.write(nary_sum_str % (n))
-                    if exp._const != 0:
-                        OUTPUT.write(binary_sum_str)
-                        OUTPUT.write(self._op_string[NumericConstant]
-                                     % (exp._const))
-                    for child_exp in exp._args:
-                        child_coef = exp._coef[id(child_exp)]
-                        if child_coef != 1:
-                            OUTPUT.write(coef_term_str % (value(child_coef)))
-                        self._print_nonlinear_terms_NL(child_exp)
+                    self._op_string[EXPR.SumExpressionBase]
+                n = exp.nargs()
+                const = 0
+                vargs = []
+                for v in exp.args:
+                    if v.__class__ in native_numeric_types:
+                        const += v
+                    else:
+                        vargs.append(v)
+                if not isclose(const, 0.0):
+                    vargs.append(const)
+                n = len(vargs)
+                if n == 2:
+                    OUTPUT.write(binary_sum_str)
+                    self._print_nonlinear_terms_NL(vargs[0])
+                    self._print_nonlinear_terms_NL(vargs[1])
                 else:
-                    assert n > 0
-                    if exp._const != 0:
-                        OUTPUT.write(binary_sum_str)
-                        OUTPUT.write(self._op_string[NumericConstant]
-                                     % (exp._const))
-                    for i in xrange(n-1):
-                        OUTPUT.write(binary_sum_str)
-                        child_exp = exp._args[i]
-                        child_coef = exp._coef[id(child_exp)]
-                        if child_coef != 1:
-                            OUTPUT.write(coef_term_str % (value(child_coef)))
+                    OUTPUT.write(nary_sum_str % (n))
+                    for child_exp in vargs:
                         self._print_nonlinear_terms_NL(child_exp)
-                    child_exp = exp._args[n-1]
-                    child_coef = exp._coef[id(child_exp)]
-                    if child_coef != 1:
-                        OUTPUT.write(coef_term_str % (value(child_coef)))
-                    self._print_nonlinear_terms_NL(child_exp)
 
-            elif _using_pyomo4_trees and (exp_type is expr._SumExpression):
+            elif exp_type is EXPR.SumExpressionBase:
                 nary_sum_str, binary_sum_str, coef_term_str = \
-                    self._op_string[expr._SumExpression]
-                n = len(exp._args)
-                if n > 2:
-                    OUTPUT.write(nary_sum_str % (n))
-                    for child_exp in exp._args:
-                        self._print_nonlinear_terms_NL(child_exp)
-                else:
-                    for i in xrange(0,n-1):
-                        OUTPUT.write(binary_sum_str)
-                        self._print_nonlinear_terms_NL(exp._args[i])
-                    self._print_nonlinear_terms_NL(exp._args[n-1])
+                    self._op_string[EXPR.SumExpressionBase]
+                OUTPUT.write(binary_sum_str)
+                self._print_nonlinear_terms_NL(exp.arg(0))
+                self._print_nonlinear_terms_NL(exp.arg(1))
 
-            elif exp_type is expr._SumExpression:
-                assert not _using_pyomo4_trees
-                nary_sum_str, binary_sum_str, coef_term_str = \
-                    self._op_string[expr._SumExpression]
-                n = len(exp._args)
-                if n > 2:
-                    OUTPUT.write(nary_sum_str % (n))
-                    if exp._const != 0:
-                        OUTPUT.write(binary_sum_str)
-                        OUTPUT.write(self._op_string[NumericConstant]
-                                     % (exp._const))
-                    for i in xrange(0,n):
-                        if exp._coef[i] != 1:
-                            OUTPUT.write(coef_term_str % (exp._coef[i]))
-                        self._print_nonlinear_terms_NL(exp._args[i])
-                else:
-                    if exp._const != 0:
-                        OUTPUT.write(binary_sum_str)
-                        OUTPUT.write(self._op_string[NumericConstant]
-                                     % (exp._const))
-                    for i in xrange(0,n-1):
-                        OUTPUT.write(binary_sum_str)
-                        if exp._coef[i] != 1:
-                            OUTPUT.write(coef_term_str % (exp._coef[i]))
-                        self._print_nonlinear_terms_NL(exp._args[i])
-                    if exp._coef[n-1] != 1:
-                        OUTPUT.write(coef_term_str % (exp._coef[n-1]))
-                    self._print_nonlinear_terms_NL(exp._args[n-1])
+            elif exp_type is EXPR.MonomialTermExpression:
+                prod_str = self._op_string[EXPR.ProductExpression]
+                OUTPUT.write(prod_str)
+                self._print_nonlinear_terms_NL(value(exp.arg(0)))
+                self._print_nonlinear_terms_NL(exp.arg(1))
 
-            elif (not _using_pyomo4_trees) and \
-                 (exp_type is expr._ProductExpression):
-                denom_exists = False
-                prod_str, div_str = self._op_string[expr._ProductExpression]
-                if len(exp._denominator) == 0:
-                    pass
-                else:
-                    OUTPUT.write(div_str)
-                    denom_exists = True
-                if exp._coef != 1:
-                    OUTPUT.write(prod_str)
-                    OUTPUT.write(self._op_string[NumericConstant]
-                                 % (exp._coef))
-                if len(exp._numerator) == 0:
-                    OUTPUT.write("n1\n")
-                # print out the numerator
-                child_counter = 0
-                max_count = len(exp._numerator)-1
-                for child_exp in exp._numerator:
-                    if child_counter < max_count:
-                        OUTPUT.write(prod_str)
-                    self._print_nonlinear_terms_NL(child_exp)
-                    child_counter += 1
-                if denom_exists:
-                    # print out the denominator
-                    child_counter = 0
-                    max_count = len(exp._denominator)-1
-                    for child_exp in exp._denominator:
-                        if child_counter < max_count:
-                            OUTPUT.write(prod_str)
-                        self._print_nonlinear_terms_NL(child_exp)
-                        child_counter += 1
+            elif exp_type is EXPR.ProductExpression:
+                prod_str = self._op_string[EXPR.ProductExpression]
+                OUTPUT.write(prod_str)
+                self._print_nonlinear_terms_NL(exp.arg(0))
+                self._print_nonlinear_terms_NL(exp.arg(1))
 
-            elif _using_pyomo4_trees and (exp_type is expr._ProductExpression):
-                prod_str = self._op_string[expr._ProductExpression]
-                child_counter = 0
-                max_count = len(exp._args)-1
-                for child_exp in exp._args:
-                    if child_counter < max_count:
-                        OUTPUT.write(prod_str)
-                    self._print_nonlinear_terms_NL(child_exp)
-                    child_counter += 1
+            elif exp_type is EXPR.ReciprocalExpression:
+                assert exp.nargs() == 1
+                div_str = self._op_string[EXPR.ReciprocalExpression]
+                OUTPUT.write(div_str)
+                self._print_nonlinear_terms_NL(1.0)
+                self._print_nonlinear_terms_NL(exp.arg(0))
 
-            elif _using_pyomo4_trees and (exp_type is expr._DivisionExpression):
-                div_str = self._op_string[expr._DivisionExpression]
-                child_counter = 0
-                max_count = len(exp._args)-1
-                for child_exp in exp._args:
-                    if child_counter < max_count:
-                        OUTPUT.write(div_str)
-                    self._print_nonlinear_terms_NL(child_exp)
-                    child_counter += 1
+            elif exp_type is EXPR.NegationExpression:
+                assert exp.nargs() == 1
+                OUTPUT.write(self._op_string[EXPR.NegationExpression])
+                self._print_nonlinear_terms_NL(exp.arg(0))
 
-            elif _using_pyomo4_trees and (exp_type is expr._NegationExpression):
-                assert len(exp._args) == 1
-                OUTPUT.write(self._op_string[expr._NegationExpression])
-                self._print_nonlinear_terms_NL(exp._args[0])
-
-            elif exp_type is expr._ExternalFunctionExpression:
+            elif exp_type is EXPR.ExternalFunctionExpression:
+                # We have found models where external functions with
+                # strictly fixed/constant arguments causes AMPL to
+                # SEGFAULT.  To be safe, we will collapse fixed
+                # arguments to scalars and if the entire expression is
+                # constant, we will eliminate the external function
+                # call entirely.
+                if exp.is_fixed():
+                    self._print_nonlinear_terms_NL(exp())
+                    return
                 fun_str, string_arg_str = \
-                    self._op_string[expr._ExternalFunctionExpression]
+                    self._op_string[EXPR.ExternalFunctionExpression]
                 if not self._symbolic_solver_labels:
                     OUTPUT.write(fun_str
                                  % (self.external_byFcn[exp._fcn._function][1],
-                                    len(exp._args)))
+                                    exp.nargs()))
                 else:
                     # Note: exp.name fails
                     OUTPUT.write(fun_str
                                  % (self.external_byFcn[exp._fcn._function][1],
-                                    len(exp._args),
+                                    exp.nargs(),
                                     exp.name))
-                for arg in exp._args:
+                for arg in exp.args:
                     if isinstance(arg, basestring):
                         OUTPUT.write(string_arg_str % (len(arg), arg))
+                    elif arg.is_fixed():
+                        self._print_nonlinear_terms_NL(arg())
                     else:
                         self._print_nonlinear_terms_NL(arg)
-            elif (exp_type is expr._PowExpression) or \
-                 isinstance(exp, expr._IntrinsicFunctionExpression):
+
+            elif exp_type is EXPR.PowExpression:
+                intr_expr_str = self._op_string['pow']
+                OUTPUT.write(intr_expr_str)
+                self._print_nonlinear_terms_NL(exp.arg(0))
+                self._print_nonlinear_terms_NL(exp.arg(1))
+
+            elif isinstance(exp, EXPR.UnaryFunctionExpression):
+                assert exp.nargs() == 1
                 intr_expr_str = self._op_string.get(exp.name)
                 if intr_expr_str is not None:
                     OUTPUT.write(intr_expr_str)
                 else:
-                    logger.error("Unsupported intrinsic function ({0})",
-                                 exp.name)
+                    logger.error("Unsupported unary function ({0})".format(exp.name))
                     raise TypeError("ASL writer does not support '%s' expressions"
                                     % (exp.name))
+                self._print_nonlinear_terms_NL(exp.arg(0))
 
-                for child_exp in exp._args:
-                    self._print_nonlinear_terms_NL(child_exp)
-            elif exp_type is expr.Expr_if:
-                OUTPUT.write(self._op_string[expr.Expr_if])
+            elif exp_type is EXPR.Expr_ifExpression:
+                OUTPUT.write(self._op_string[EXPR.Expr_ifExpression])
                 self._print_nonlinear_terms_NL(exp._if)
                 self._print_nonlinear_terms_NL(exp._then)
                 self._print_nonlinear_terms_NL(exp._else)
-            elif exp_type is expr._InequalityExpression:
+
+            elif exp_type is EXPR.InequalityExpression:
                 and_str, lt_str, le_str = \
-                    self._op_string[expr._InequalityExpression]
-                len_args = len(exp._args)
-                assert len_args in [2,3]
-                left = exp._args[0]
-                middle = exp._args[1]
-                right = None
-                if len_args == 3:
-                    right = exp._args[2]
-                    OUTPUT.write(and_str)
+                    self._op_string[EXPR.InequalityExpression]
+                left = exp.arg(0)
+                right = exp.arg(1)
+                if exp._strict:
+                    OUTPUT.write(lt_str)
+                else:
+                    OUTPUT.write(le_str)
+                self._print_nonlinear_terms_NL(left)
+                self._print_nonlinear_terms_NL(right)
+
+            elif exp_type is EXPR.RangedExpression:
+                and_str, lt_str, le_str = \
+                    self._op_string[EXPR.InequalityExpression]
+                left = exp.arg(0)
+                middle = exp.arg(1)
+                right = exp.arg(2)
+                OUTPUT.write(and_str)
                 if exp._strict[0]:
                     OUTPUT.write(lt_str)
                 else:
                     OUTPUT.write(le_str)
                 self._print_nonlinear_terms_NL(left)
                 self._print_nonlinear_terms_NL(middle)
-                if not right is None:
-                    if exp._strict[1]:
-                        OUTPUT.write(lt_str)
-                    else:
-                        OUTPUT.write(le_str)
-                    self._print_nonlinear_terms_NL(middle)
-                    self._print_nonlinear_terms_NL(right)
-            elif exp_type is expr._EqualityExpression:
-                OUTPUT.write(self._op_string[expr._EqualityExpression])
-                self._print_nonlinear_terms_NL(exp._args[0])
-                self._print_nonlinear_terms_NL(exp._args[1])
+                if exp._strict[1]:
+                    OUTPUT.write(lt_str)
+                else:
+                    OUTPUT.write(le_str)
+                self._print_nonlinear_terms_NL(middle)
+                self._print_nonlinear_terms_NL(right)
+
+            elif exp_type is EXPR.EqualityExpression:
+                OUTPUT.write(self._op_string[EXPR.EqualityExpression])
+                self._print_nonlinear_terms_NL(exp.arg(0))
+                self._print_nonlinear_terms_NL(exp.arg(1))
+
             elif isinstance(exp, (_ExpressionData, IIdentityExpression)):
                 self._print_nonlinear_terms_NL(exp.expr)
+
             else:
                 raise ValueError(
                     "Unsupported expression type (%s) in _print_nonlinear_terms_NL"
@@ -654,12 +646,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 OUTPUT.write(self._op_string[var._VarData]
                              % (self.ampl_var_id[self._varID_map[id(exp)]],
                                 self._name_labeler(exp)))
+
         elif isinstance(exp,param._ParamData):
             OUTPUT.write(self._op_string[param._ParamData]
                          % (value(exp)))
+
         elif isinstance(exp,NumericConstant) or exp.is_fixed():
             OUTPUT.write(self._op_string[NumericConstant]
                          % (value(exp)))
+
         else:
             raise ValueError(
                 "Unsupported expression type (%s) in _print_nonlinear_terms_NL"
@@ -813,7 +808,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         trivial_labeler = _Counter(cntr)
 
         #
-        # Count number of objectives and build the ampl_repns
+        # Count number of objectives and build the repns
         #
         n_objs = 0
         n_nonlinear_objs = 0
@@ -822,13 +817,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
         ObjNonlinearVarsInt = set()
         for block in all_blocks_list:
 
-            gen_obj_ampl_repn = \
-                getattr(block, "_gen_obj_ampl_repn", True)
+            gen_obj_repn = \
+                getattr(block, "_gen_obj_repn", True)
 
             # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_ampl_repn'):
-                block._ampl_repn = ComponentMap()
-            block_ampl_repn = block._ampl_repn
+            if not hasattr(block,'_repn'):
+                block._repn = ComponentMap()
+            block_repn = block._repn
 
             for active_objective in block.component_data_objects(Objective,
                                                                  active=True,
@@ -839,36 +834,56 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if len(objname) > max_rowname_len:
                         max_rowname_len = len(objname)
 
-                if gen_obj_ampl_repn:
-                    ampl_repn = generate_ampl_repn(active_objective.expr)
-                    block_ampl_repn[active_objective] = ampl_repn
+                if gen_obj_repn:
+                    repn = generate_standard_repn(active_objective.expr,
+                                                  quadratic=False)
+                    block_repn[active_objective] = repn
+                    linear_vars = repn.linear_vars
+                    nonlinear_vars = repn.nonlinear_vars
                 else:
-                    ampl_repn = block_ampl_repn[active_objective]
+                    repn = block_repn[active_objective]
+                    linear_vars = repn.linear_vars
+                    # By default, the NL writer generates
+                    # StandardRepn objects without the more
+                    # expense quadratic processing, but
+                    # there is no guarantee of this if we
+                    # are using a cached repn object, so we
+                    # must check for the quadratic form.
+                    if repn.is_nonlinear() and (repn.nonlinear_expr is None):
+                        assert repn.is_quadratic()
+                        assert len(repn.quadratic_vars) > 0
+                        nonlinear_vars = {}
+                        for v1, v2 in repn.quadratic_vars:
+                            nonlinear_vars[id(v1)] = v1
+                            nonlinear_vars[id(v2)] = v2
+                        nonlinear_vars = nonlinear_vars.values()
+                    else:
+                        nonlinear_vars = repn.nonlinear_vars
 
                 try:
-                    wrapped_ampl_repn = RepnWrapper(
-                        ampl_repn,
-                        list(self_varID_map[id(var)] for var in ampl_repn._linear_vars),
-                        list(self_varID_map[id(var)] for var in ampl_repn._nonlinear_vars))
+                    wrapped_repn = RepnWrapper(
+                        repn,
+                        list(self_varID_map[id(var)] for var in linear_vars),
+                        list(self_varID_map[id(var)] for var in nonlinear_vars))
                 except KeyError as err:
                     self._symbolMapKeyError(err, model, self_varID_map,
-                                            ampl_repn._linear_vars +
-                                            ampl_repn._nonlinear_vars)
+                                            list(linear_vars) +
+                                            list(nonlinear_vars))
                     raise
 
-                LinearVars.update(wrapped_ampl_repn._linear_vars)
-                ObjNonlinearVars.update(wrapped_ampl_repn._nonlinear_vars)
+                LinearVars.update(wrapped_repn.linear_vars)
+                ObjNonlinearVars.update(wrapped_repn.nonlinear_vars)
 
-                ObjVars.update(wrapped_ampl_repn._linear_vars)
-                ObjVars.update(wrapped_ampl_repn._nonlinear_vars)
+                ObjVars.update(wrapped_repn.linear_vars)
+                ObjVars.update(wrapped_repn.nonlinear_vars)
 
                 obj_ID = trivial_labeler(active_objective)
-                Objectives_dict[obj_ID] = (active_objective, wrapped_ampl_repn)
+                Objectives_dict[obj_ID] = (active_objective, wrapped_repn)
                 self_ampl_obj_id[obj_ID] = n_objs
                 symbol_map.addSymbols([(active_objective, "o%d"%n_objs)])
 
                 n_objs += 1
-                if ampl_repn.is_nonlinear():
+                if repn.is_nonlinear():
                     n_nonlinear_objs += 1
 
         # I don't think this is necessarily true for the entire code base,
@@ -887,7 +902,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             subsection_timer.reset()
 
         #
-        # Count number of constraints and build the ampl_repns
+        # Count number of constraints and build the repns
         #
         n_ranges = 0
         n_single_sided_ineq = 0
@@ -908,13 +923,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
         for block in all_blocks_list:
             all_repns = list()
 
-            gen_con_ampl_repn = \
-                getattr(block, "_gen_con_ampl_repn", True)
+            gen_con_repn = \
+                getattr(block, "_gen_con_repn", True)
 
             # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_ampl_repn'):
-                block._ampl_repn = ComponentMap()
-            block_ampl_repn = block._ampl_repn
+            if not hasattr(block,'_repn'):
+                block._repn = ComponentMap()
+            block_repn = block._repn
 
             # Initializing the constraint dictionary
             for constraint_data in block.component_data_objects(Constraint,
@@ -922,71 +937,81 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                                                 sort=sorter,
                                                                 descend_into=False):
 
+                if (not constraint_data.has_lb()) and \
+                   (not constraint_data.has_ub()):
+                    assert not constraint_data.equality
+                    continue  # non-binding, so skip
+
                 if symbolic_solver_labels:
                     conname = name_labeler(constraint_data)
                     if len(conname) > max_rowname_len:
                         max_rowname_len = len(conname)
 
                 if constraint_data._linear_canonical_form:
-                    canonical_repn = constraint_data.canonical_form()
-                    ampl_repn = AmplRepn()
-                    ampl_repn._nonlinear_vars = tuple()
-                    ampl_repn._linear_vars = canonical_repn.variables
-                    ampl_repn._linear_terms_coef = canonical_repn.linear
-                    ampl_repn._constant = canonical_repn.constant
-                elif isinstance(constraint_data, LinearCanonicalRepn):
-                    canonical_repn = constraint_data
-                    ampl_repn = AmplRepn()
-                    ampl_repn._nonlinear_vars = tuple()
-                    ampl_repn._linear_vars = canonical_repn.variables
-                    ampl_repn._linear_terms_coef = canonical_repn.linear
-                    ampl_repn._constant = canonical_repn.constant
+                    repn = constraint_data.canonical_form()
+                    linear_vars = repn.linear_vars
+                    nonlinear_vars = repn.nonlinear_vars
                 else:
-                    if gen_con_ampl_repn:
-                        ampl_repn = generate_ampl_repn(constraint_data.body)
-                        block_ampl_repn[constraint_data] = ampl_repn
+                    if gen_con_repn:
+                        repn = generate_standard_repn(constraint_data.body,
+                                                      quadratic=False)
+                        block_repn[constraint_data] = repn
+                        linear_vars = repn.linear_vars
+                        nonlinear_vars = repn.nonlinear_vars
                     else:
-                        ampl_repn = block_ampl_repn[constraint_data]
-
-                if (not constraint_data.has_lb()) and \
-                   (not constraint_data.has_ub()):
-                    assert not constraint_data.equality
-                    continue  # non-binding, so skip
+                        repn = block_repn[constraint_data]
+                        linear_vars = repn.linear_vars
+                        # By default, the NL writer generates
+                        # StandardRepn objects without the more
+                        # expense quadratic processing, but
+                        # there is no guarantee of this if we
+                        # are using a cached repn object, so we
+                        # must check for the quadratic form.
+                        if repn.is_nonlinear() and (repn.nonlinear_expr is None):
+                            assert repn.is_quadratic()
+                            assert len(repn.quadratic_vars) > 0
+                            nonlinear_vars = {}
+                            for v1, v2 in repn.quadratic_vars:
+                                nonlinear_vars[id(v1)] = v1
+                                nonlinear_vars[id(v2)] = v2
+                            nonlinear_vars = nonlinear_vars.values()
+                        else:
+                            nonlinear_vars = repn.nonlinear_vars
 
                 ### GAH: Even if this is fixed, it is still useful to
                 ###      write out these types of constraints
                 ###      (trivial) as a feasibility check for fixed
                 ###      variables, in which case the solver will pick
                 ###      up on the model infeasibility.
-                if skip_trivial_constraints and ampl_repn.is_fixed():
+                if skip_trivial_constraints and repn.is_fixed():
                     continue
 
                 con_ID = trivial_labeler(constraint_data)
                 try:
-                    wrapped_ampl_repn = RepnWrapper(
-                        ampl_repn,
-                        list(self_varID_map[id(var)] for var in ampl_repn._linear_vars),
-                        list(self_varID_map[id(var)] for var in ampl_repn._nonlinear_vars))
+                    wrapped_repn = RepnWrapper(
+                        repn,
+                        list(self_varID_map[id(var)] for var in linear_vars),
+                        list(self_varID_map[id(var)] for var in nonlinear_vars))
                 except KeyError as err:
                     self._symbolMapKeyError(err, model, self_varID_map,
-                                            ampl_repn._linear_vars +
-                                            ampl_repn._nonlinear_vars)
+                                            list(linear_vars) +
+                                            list(nonlinear_vars))
                     raise
 
-                if ampl_repn.is_nonlinear():
+                if repn.is_nonlinear():
                     nonlin_con_order_list.append(con_ID)
                     n_nonlinear_constraints += 1
                 else:
                     lin_con_order_list.append(con_ID)
 
-                Constraints_dict[con_ID] = (constraint_data, wrapped_ampl_repn)
+                Constraints_dict[con_ID] = (constraint_data, wrapped_repn)
 
-                LinearVars.update(wrapped_ampl_repn._linear_vars)
-                ConNonlinearVars.update(wrapped_ampl_repn._nonlinear_vars)
+                LinearVars.update(wrapped_repn.linear_vars)
+                ConNonlinearVars.update(wrapped_repn.nonlinear_vars)
 
                 nnz_grad_constraints += \
-                    len(set(wrapped_ampl_repn._linear_vars).union(
-                        wrapped_ampl_repn._nonlinear_vars))
+                    len(set(wrapped_repn.linear_vars).union(
+                        wrapped_repn.nonlinear_vars))
 
                 L = None
                 U = None
@@ -1001,7 +1026,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 if constraint_data.equality:
                     assert L == U
 
-                offset = ampl_repn._constant
+                offset = repn.constant
                 _type = getattr(constraint_data, '_complementarity', None)
                 _vid = getattr(constraint_data, '_vid', None)
                 if not _type is None:
@@ -1014,7 +1039,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         n_ranges += 1
                     elif _type == 4:
                         n_unbounded += 1
-                    if ampl_repn.is_nonlinear():
+                    if repn.is_nonlinear():
                         ccons_nonlin += 1
                     else:
                         ccons_lin += 1
@@ -1180,52 +1205,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
             subsection_timer.report("Partition variable types")
             subsection_timer.reset()
 
-        ##################################################
-        ############ # LQM additions start here ##########
-        ##################################################
-
-        ###
-        # Generate file containing matrices for continuity variables between blocks.
-        # This checks for a LOCAL suffix 'lqm' on variables.
-        ###
-        lqm_suffix = model.component("lqm")
-        if (lqm_suffix is None) or \
-           (not (lqm_suffix.type() is Suffix)) or \
-           (not lqm_suffix.active) or \
-           (not (lqm_suffix.getDirection() is Suffix.LOCAL)):
-            lqm_suffix = None
-        if lqm_suffix is not None:
-            lqm_var_column_ids = []
-            for var_ID in full_var_list:
-                lqm = lqm_suffix.get(Vars_dict[var_ID])
-                if lqm != -1:
-                    # store the column index (and translate to one-based indexing
-                    lqm_var_column_ids.append(self_ampl_var_id[var_ID]+1)
-
-            num_lqm_vars = len(lqm_var_column_ids)
-            if num_lqm_vars > 0:
-                lqm_output_name = OUTPUT.name.split('.')[0]+".lqm"
-                LQM_OUTPUT = open(lqm_output_name,'w')
-                LQM_OUTPUT.write("Matrix Li\n")
-                LQM_OUTPUT.write("%d\n"%(len(full_var_list)))
-                LQM_OUTPUT.write("%d\n"%(num_lqm_vars))
-                LQM_OUTPUT.write("%d\n"%(num_lqm_vars))
-                # The matrix uses one based indexing
-                for row_id, col_id in enumerate(lqm_var_column_ids,1):
-                    LQM_OUTPUT.write("%d %d 1\n" % (row_id, col_id))
-                LQM_OUTPUT.write("Matrix Qi\n")
-                LQM_OUTPUT.write("%d\n" % (num_lqm_vars))
-                LQM_OUTPUT.write("%d\n" % (num_lqm_vars))
-                LQM_OUTPUT.write("%d\n" % (num_lqm_vars))
-                # one based indexing
-                for counter in xrange(1,num_lqm_vars+1):
-                    LQM_OUTPUT.write("%d %d -1\n" % (counter, counter))
-                LQM_OUTPUT.close()
-
-        ##################################################
-        ############ # LQM additions end here ############
-        ##################################################
-
 #        end_time = time.clock()
 #        print (end_time - start_time)
 
@@ -1371,12 +1350,12 @@ class ProblemWriter_nl(AbstractProblemWriter):
         obj_tag = 2
         prob_tag = 3
         suffix_dict = {}
-        if isinstance(model, IBlockStorage):
-            suffix_gen = lambda b: pyomo.core.kernel.component_suffix.\
-                         export_suffix_generator(b,
-                                                 active=True,
-                                                 return_key=True,
-                                                 descend_into=False)
+        if isinstance(model, IBlock):
+            suffix_gen = lambda b: ((suf.storage_key, suf) \
+                                    for suf in pyomo.core.kernel.suffix.\
+                                    export_suffix_generator(b,
+                                                            active=True,
+                                                            descend_into=False))
         else:
             suffix_gen = lambda b: pyomo.core.base.suffix.\
                          active_export_suffix_generator(b)
@@ -1534,7 +1513,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         cu = [0 for i in xrange(len(full_var_list))]
         for con_ID in nonlin_con_order_list:
-            con_data, wrapped_ampl_repn = Constraints_dict[con_ID]
+            con_data, wrapped_repn = Constraints_dict[con_ID]
             row_id = self_ampl_con_id[con_ID]
             OUTPUT.write("C%d" % (row_id))
             if symbolic_solver_labels:
@@ -1542,16 +1521,25 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 OUTPUT.write("\t#%s" % (lbl))
                 rowf.write(lbl+"\n")
             OUTPUT.write("\n")
-            self._print_nonlinear_terms_NL(wrapped_ampl_repn.repn._nonlinear_expr)
 
-            for var_ID in set(wrapped_ampl_repn._linear_vars).union(
-                    wrapped_ampl_repn._nonlinear_vars):
+            if wrapped_repn.repn.nonlinear_expr is not None:
+                assert not wrapped_repn.repn.is_quadratic()
+                self._print_nonlinear_terms_NL(
+                    wrapped_repn.repn.nonlinear_expr)
+            else:
+                assert wrapped_repn.repn.is_quadratic()
+                self._print_standard_quadratic_NL(
+                    wrapped_repn.repn.quadratic_vars,
+                    wrapped_repn.repn.quadratic_coefs)
+
+            for var_ID in set(wrapped_repn.linear_vars).union(
+                    wrapped_repn.nonlinear_vars):
                 cu[self_ampl_var_id[var_ID]] += 1
 
         for con_ID in lin_con_order_list:
-            con_data, wrapped_ampl_repn = Constraints_dict[con_ID]
+            con_data, wrapped_repn = Constraints_dict[con_ID]
             row_id = self_ampl_con_id[con_ID]
-            con_vars = set(wrapped_ampl_repn._linear_vars)
+            con_vars = set(wrapped_repn.linear_vars)
             for var_ID in con_vars:
                 cu[self_ampl_var_id[var_ID]] += 1
             OUTPUT.write("C%d" % (row_id))
@@ -1569,7 +1557,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "O" lines
         #
-        for obj_ID, (obj, wrapped_ampl_repn) in iteritems(Objectives_dict):
+        for obj_ID, (obj, wrapped_repn) in iteritems(Objectives_dict):
 
             k = 0
             if not obj.is_minimizing():
@@ -1582,16 +1570,24 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 rowf.write(lbl+"\n")
             OUTPUT.write("\n")
 
-            if wrapped_ampl_repn.repn.is_linear():
+            if wrapped_repn.repn.is_linear():
                 OUTPUT.write(self._op_string[NumericConstant]
-                             % (wrapped_ampl_repn.repn._constant))
+                             % (wrapped_repn.repn.constant))
             else:
-                if wrapped_ampl_repn.repn._constant != 0:
-                    _, binary_sum_str, _ = self._op_string[expr._SumExpression]
+                if wrapped_repn.repn.constant != 0:
+                    _, binary_sum_str, _ = self._op_string[EXPR.SumExpressionBase]
                     OUTPUT.write(binary_sum_str)
                     OUTPUT.write(self._op_string[NumericConstant]
-                                 % (wrapped_ampl_repn.repn._constant))
-                self._print_nonlinear_terms_NL(wrapped_ampl_repn.repn._nonlinear_expr)
+                                 % (wrapped_repn.repn.constant))
+                if wrapped_repn.repn.nonlinear_expr is not None:
+                    assert not wrapped_repn.repn.is_quadratic()
+                    self._print_nonlinear_terms_NL(
+                        wrapped_repn.repn.nonlinear_expr)
+                else:
+                    assert wrapped_repn.repn.is_quadratic()
+                    self._print_standard_quadratic_NL(
+                        wrapped_repn.repn.quadratic_vars,
+                        wrapped_repn.repn.quadratic_coefs)
 
         if symbolic_solver_labels:
             rowf.close()
@@ -1739,37 +1735,37 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         for nc, con_ID in enumerate(itertools.chain(nonlin_con_order_list,
                                                     lin_con_order_list)):
-            con_data, wrapped_ampl_repn = Constraints_dict[con_ID]
-            num_nonlinear_vars = len(wrapped_ampl_repn._nonlinear_vars)
-            num_linear_vars = len(wrapped_ampl_repn._linear_vars)
-            if num_nonlinear_vars == 0:
-                if num_linear_vars > 0:
+            con_data, wrapped_repn = Constraints_dict[con_ID]
+            numnonlinear_vars = len(wrapped_repn.nonlinear_vars)
+            numlinear_vars = len(wrapped_repn.linear_vars)
+            if numnonlinear_vars == 0:
+                if numlinear_vars > 0:
                     linear_dict = dict((var_ID, coef)
                                        for var_ID, coef in
-                                       zip(wrapped_ampl_repn._linear_vars,
-                                           wrapped_ampl_repn.repn._linear_terms_coef))
-                    OUTPUT.write("J%d %d\n"%(nc, num_linear_vars))
+                                       zip(wrapped_repn.linear_vars,
+                                           wrapped_repn.repn.linear_coefs))
+                    OUTPUT.write("J%d %d\n"%(nc, numlinear_vars))
                     OUTPUT.writelines(
                         "%d %r\n" % (self_ampl_var_id[con_var],
                                      linear_dict[con_var])
                         for con_var in sorted(linear_dict.keys()))
-            elif num_linear_vars == 0:
+            elif numlinear_vars == 0:
                 nl_con_vars = \
-                    sorted(wrapped_ampl_repn._nonlinear_vars)
-                OUTPUT.write("J%d %d\n"%(nc, num_nonlinear_vars))
+                    sorted(wrapped_repn.nonlinear_vars)
+                OUTPUT.write("J%d %d\n"%(nc, numnonlinear_vars))
                 OUTPUT.writelines(
                     "%d 0\n"%(self_ampl_var_id[con_var])
                     for con_var in nl_con_vars)
             else:
-                con_vars = set(wrapped_ampl_repn._nonlinear_vars)
+                con_vars = set(wrapped_repn.nonlinear_vars)
                 nl_con_vars = sorted(
                     con_vars.difference(
-                        wrapped_ampl_repn._linear_vars))
-                con_vars.update(wrapped_ampl_repn._linear_vars)
+                        wrapped_repn.linear_vars))
+                con_vars.update(wrapped_repn.linear_vars)
                 linear_dict = dict(
                     (var_ID, coef) for var_ID, coef in
-                    zip(wrapped_ampl_repn._linear_vars,
-                        wrapped_ampl_repn.repn._linear_terms_coef))
+                    zip(wrapped_repn.linear_vars,
+                        wrapped_repn.repn.linear_coefs))
                 OUTPUT.write("J%d %d\n"%(nc, len(con_vars)))
                 OUTPUT.writelines(
                     "%d %r\n" % (self_ampl_var_id[con_var],
@@ -1787,16 +1783,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "G" lines
         #
-        for obj_ID, (obj, wrapped_ampl_repn) in \
+        for obj_ID, (obj, wrapped_repn) in \
                iteritems(Objectives_dict):
 
             grad_entries = {}
             for idx, obj_var in enumerate(
-                    wrapped_ampl_repn._linear_vars):
+                    wrapped_repn.linear_vars):
                 grad_entries[self_ampl_var_id[obj_var]] = \
-                    wrapped_ampl_repn.repn._linear_terms_coef[idx]
-            for obj_var in wrapped_ampl_repn._nonlinear_vars:
-                if obj_var not in wrapped_ampl_repn._linear_vars:
+                    wrapped_repn.repn.linear_coefs[idx]
+            for obj_var in wrapped_repn.nonlinear_vars:
+                if obj_var not in wrapped_repn.linear_vars:
                     grad_entries[self_ampl_var_id[obj_var]] = 0
             len_ge = len(grad_entries)
             if len_ge > 0:
@@ -1850,15 +1846,3 @@ class ProblemWriter_nl(AbstractProblemWriter):
             for e in _errors:
                 logger.error(e)
             err.args = err.args + tuple(_errors)
-
-
-# Switch from Python to C generate_ampl_repn function when possible
-#try:
-#    py_generate_ampl_repn = generate_ampl_repn
-#    from cAmpl import generate_ampl_repn
-#except ImportError:
-#    del py_generate_ampl_repn
-
-# Alternative: import C implementation under another name for testing
-#from cAmpl import generate_ampl_repn as cgar
-#__all__.append('cgar')

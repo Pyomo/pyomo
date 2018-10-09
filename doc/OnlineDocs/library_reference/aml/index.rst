@@ -1,35 +1,46 @@
 AML Library Reference
 =====================
 
-Modeling Components:
+The following modeling components make up the core of the Pyomo
+Algebraic Modeling Language (AML).  These classes are all available
+through the `pyomo.environ` namespace.
+
+.. currentmodule:: pyomo.environ
 
 .. autosummary::
 
-   pyomo.core.base.sets.Set
-   pyomo.core.base.var.Var
-   pyomo.core.base.constraint.Constraint
-   pyomo.core.base.objective.Objective
-   pyomo.core.base.block.Block
+   ConcreteModel
+   AbstractModel
+   Block
+   Set
+   RangeSet
+   Param
+   Var
+   Objective
+   Constraint
+   Reference
 
-Member Documentation
-~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: pyomo.core.base.sets.Set
+
+AML Component Documentation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: Block
    :show-inheritance:
    :members:
    :inherited-members:
-.. autoclass:: pyomo.core.base.var.Var
+
+#.. autoclass:: Constraint
+#   :show-inheritance:
+#   :members:
+#   :inherited-members:
+
+#.. autoclass:: Objective
+#   :show-inheritance:
+#   :members:
+#   :inherited-members:
+
+.. autoclass:: Var
    :show-inheritance:
    :members:
    :inherited-members:
-.. autoclass:: pyomo.core.base.constraint.Constraint
-   :show-inheritance:
-   :members:
-   :inherited-members:
-.. autoclass:: pyomo.core.base.objective.Objective
-   :show-inheritance:
-   :members:
-   :inherited-members:
-.. autoclass:: pyomo.core.base.block.Block
-   :show-inheritance:
-   :members:
-   :inherited-members:
+
+.. autofunction:: Reference

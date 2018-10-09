@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -12,11 +12,7 @@ import glob
 import sys
 import os
 import subprocess
-try:
-    from subprocess import check_output as _run_cmd
-except:
-    # python 2.6
-    from subprocess import check_call as _run_cmd
+from subprocess import check_output as _run_cmd
 import driver
 
 config = sys.argv[1]
@@ -25,6 +21,12 @@ hname = hname.split('.')[0]
 
 print("\nStarting jenkins.py")
 print("Configuration=%s" % config)
+
+if os.environ.get('WORKSPACE', None) is None:
+    sys.stdout.write(
+        "\n(INFO) WORKSPACE environment vatiable not found."
+        "\n       Assuming WORKSPACE==%s\n\n" % (os.getcwd(),) )
+    os.environ['WORKSPACE'] = os.getcwd()
 
 os.environ['CONFIGFILE'] = os.environ['WORKSPACE']+'/src/pyomo/admin/config.ini'
 #
@@ -85,14 +87,16 @@ elif config == "core":
         _run_cmd("python/bin/pyomo install-extras", shell=True)
     elif _run_cmd is subprocess.check_output:
         output = _run_cmd("python/bin/pyomo install-extras", shell=True)
-        print(output.decode('ascii'))
+        if hasattr(output, 'encode'):
+            output = output.encode('utf-8','replace')
+        print(output.decode('utf-8'))
     else:
         assert False
     # Test
     os.environ['TEST_PACKAGES'] = ' '.join([
-            'pyomo.checker','pyomo.core','pyomo.environ','pyomo.opt',
-            'pyomo.repn','pyomo.scripting','pyomo.solvers','pyomo.util',
-            'pyomo.version'])
+            'pyomo.checker','pyomo.common','pyomo.core','pyomo.environ',
+            'pyomo.opt','pyomo.repn','pyomo.scripting','pyomo.solvers',
+            'pyomo.util','pyomo.version'])
     print("-" * 60)
     print("Performing tests")
     print("-" * 60)
@@ -120,7 +124,9 @@ elif config == "booktests" or config == "book":
         output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py -v", shell=True)
     elif _run_cmd is subprocess.check_output:
         output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py -v", shell=True)
-        print(output.decode('ascii'))
+        if hasattr(output, 'encode'):
+            output = output.encode('utf-8','replace')
+        print(output.decode('utf-8'))
     else:
         assert False
     # Test
@@ -130,4 +136,5 @@ elif config == "booktests" or config == "book":
 elif config == "perf":
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
     driver.perform_build('pyomo', cat='performance')
-
+else:
+    raise RuntimeError("Unknown Jenkins configuration: '%s'" % (config,))

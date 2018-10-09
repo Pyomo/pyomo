@@ -11,8 +11,9 @@
 import logging
 from six import iterkeys
 
-from pyomo.util.plugin import alias
+from pyomo.core.expr import inequality
 from pyomo.core.base import (Transformation,
+                             TransformationFactory,
                              Constraint,
                              Block,
                              SortComponents,
@@ -24,9 +25,9 @@ from pyomo.gdp.disjunct import Disjunct, Disjunction
 logger = logging.getLogger('pyomo.core')
 
 
+@TransformationFactory.register('mpec.simple_disjunction', doc="Disjunctive transformations of complementarity conditions when all variables are non-negative")
 class MPEC2_Transformation(Transformation):
 
-    alias('mpec.simple_disjunction', doc="Disjunctive transformations of complementarity conditions when all variables are non-negative")
 
     def __init__(self):
         super(MPEC2_Transformation, self).__init__()
@@ -71,7 +72,7 @@ class MPEC2_Transformation(Transformation):
                             _data.expr2.c1 = Constraint(expr= _e2[1] <= 0)
                             #
                             _data.expr3 = Disjunct()
-                            _data.expr3.c0 = Constraint(expr= _e1[0] <= _e1[1] <= _e1[2])
+                            _data.expr3.c0 = Constraint(expr= inequality(_e1[0], _e1[1], _e1[2]))
                             _data.expr3.c1 = Constraint(expr= _e2[1] == 0)
                             _data.complements = Disjunction(expr=(_data.expr1, _data.expr2, _data.expr3))
                     else:

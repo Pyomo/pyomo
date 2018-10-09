@@ -13,20 +13,40 @@ import logging
 import textwrap
 from math import fabs
 
-from pyomo.core.base import Transformation
+from six import itervalues
+
+from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
+from pyomo.core.base import Transformation, TransformationFactory
+from pyomo.core.base.component import _ComponentBase
 from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.kernel.numvalue import value
+from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import GDP_Error
 from pyomo.gdp.disjunct import (Disjunct, Disjunction, _DisjunctData,
                                 _DisjunctionData)
-from pyomo.util.plugin import alias
-from six import itervalues
 
 logger = logging.getLogger('pyomo.gdp.fix_disjuncts')
 
 
+def target_list(x):
+    if isinstance(x, _ComponentBase):
+        return [x]
+    elif hasattr(x, '__iter__'):
+        ans = []
+        for i in x:
+            if isinstance(i, _ComponentBase):
+                ans.append(i)
+            else:
+                raise ValueError(
+                    "Expected Component or list of Components."
+                    "\n\tReceived %s" % (type(i),)
+                )
+
+
+
+@TransformationFactory.register('gdp.fix_disjuncts',
+          doc="Fix disjuncts to their current logical values.")
 class GDP_Disjunct_Fixer(Transformation):
     """Fix disjuncts to their current logical values.
 
@@ -38,39 +58,54 @@ class GDP_Disjunct_Fixer(Transformation):
     def __init__(self, *args, **kwargs):
         # TODO This uses an integer tolerance. At some point, these should be
         # standardized.
-        self.integer_tolerance = kwargs.pop('int_tol', 1E-6)
         super(GDP_Disjunct_Fixer, self).__init__(*args, **kwargs)
         self._transformedDisjuncts = ComponentSet()
 
-    alias('gdp.fix_disjuncts',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
+    CONFIG = ConfigBlock("gdp.fix_disjuncts")
+    CONFIG.declare('targets', ConfigValue(
+        default=None,
+        domain=target_list,
+        description="target or list of targets that will be fixed",
+    ))
+    CONFIG.declare('integer_tolerance', ConfigValue(
+        default=1E-6,
+        domain=NonNegativeFloat,
+        description="tolerance on binary variable 0, 1 values"
+    ))
 
-    def _apply_to(self, instance):
-        """Apply the transformation to the given instance.
+    def _apply_to(self, instance, **kwds):
+        """Apply the transformation on the targets in the given instance.
 
-        The instance ctype is expected to be Block, Disjunct, or Disjunction.
+        The instance is expected to be Block-like.
+
+        The target ctype is expected to be Block, Disjunct, or Disjunction.
         For a Block or Disjunct, the transformation will fix all disjuncts
-        found in disjunctions within the container.
+        found in disjunctions within the container. If no target is specified,
+        the whole instance is transformed.
 
         """
-        t = instance
-        if not t.active:
-            return  # do nothing for inactive containers
+        config = self.config = self.CONFIG(kwds.pop('options', {}))
+        config.set_value(kwds)
 
-        # screen for allowable instance types
-        if (type(t) not in (_DisjunctData, _BlockData, _DisjunctionData) and
-                t.type() not in (Disjunct, Block, Disjunction)):
-            raise GDP_Error(
-                "Target %s was not a Block, Disjunct, or Disjunction. "
-                "It was of type %s and can't be transformed."
-                % (t.name, type(t)))
+        targets = config.targets if config.targets is not None else (instance,)
+        for t in targets:
+            if not t.active:
+                return  # do nothing for inactive containers
 
-        # if the object is indexed, transform all of its _ComponentData
-        if t.is_indexed():
-            for obj in itervalues(t):
-                self._transformObject(obj)
-        else:
-            self._transformObject(t)
+            # screen for allowable instance types
+            if (type(t) not in (_DisjunctData, _BlockData, _DisjunctionData)
+                    and t.type() not in (Disjunct, Block, Disjunction)):
+                raise GDP_Error(
+                    "Target %s was not a Block, Disjunct, or Disjunction. "
+                    "It was of type %s and can't be transformed."
+                    % (t.name, type(t)))
+
+            # if the object is indexed, transform all of its _ComponentData
+            if t.is_indexed():
+                for obj in itervalues(t):
+                    self._transformObject(obj)
+            else:
+                self._transformObject(t)
 
     def _transformObject(self, obj):
         # If the object is a disjunction, transform it.
@@ -107,7 +142,8 @@ class GDP_Disjunct_Fixer(Transformation):
 
         # Process the disjuncts associatd with the disjunction that have not
         # already been transformed.
-        for disj in ComponentSet(disjunction.disjuncts) - self._transformedDisjuncts:
+        for disj in (ComponentSet(disjunction.disjuncts)
+                     - self._transformedDisjuncts):
             self._transformDisjunctData(disj)
         # Update the set of transformed disjuncts with those from this
         # disjunction
@@ -115,13 +151,13 @@ class GDP_Disjunct_Fixer(Transformation):
 
     def _transformDisjunctData(self, obj):
         """Fix the disjunct either to a Block or a deactivated Block."""
-        if fabs(value(obj.indicator_var) - 1) <= self.integer_tolerance:
+        if fabs(value(obj.indicator_var) - 1) <= self.config.integer_tolerance:
             # Disjunct is active. Convert to Block.
             obj.parent_block().reclassify_component_type(obj, Block)
             obj.indicator_var.fix(1)
             # Process the components attached to this disjunct.
             self._transformContainer(obj)
-        elif fabs(value(obj.indicator_var)) <= self.integer_tolerance:
+        elif fabs(value(obj.indicator_var)) <= self.config.integer_tolerance:
             obj.parent_block().reclassify_component_type(obj, Block)
             obj.indicator_var.fix(0)
             # Deactivate all constituent constraints and disjunctions

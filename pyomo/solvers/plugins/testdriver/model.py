@@ -15,24 +15,24 @@ import sys
 import re
 
 import pyutilib.autotest
-import pyutilib.services
+import pyomo.common
 
-import pyomo.util.plugin
+import pyomo.common.plugin
 import pyomo.opt
 
 old_tempdir = None
 
-class PyomoTestDriver(pyomo.util.plugin.Plugin):
+class PyomoTestDriver(pyomo.common.plugin.Plugin):
 
-    pyomo.util.plugin.implements(pyutilib.autotest.ITestDriver)
+    pyomo.common.plugin.implements(pyutilib.autotest.ITestDriver)
 
-    pyomo.util.plugin.alias('pyomo.core')
+    pyomo.common.plugin.alias('pyomo.core')
 
     def setUpClass(self, cls, options):
         global old_tempdir 
         old_tempdir = pyutilib.services.TempfileManager.tempdir
         try:
-            cls.pico_convert =  pyutilib.services.registered_executable("pico_convert")
+            cls.pico_convert =  pyomo.common.registered_executable("pico_convert")
             cls.pico_convert_available= (not cls.pico_convert is None)
         except pyutilib.common.ApplicationError:
             cls.pico_convert_available=False

@@ -8,40 +8,19 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
 from pyomo.core.base.expression import (Expression,
                                         _GeneralExpressionData,
-                                        SimpleExpression)
+                                        SimpleExpression,
+                                        IndexedExpression)
+from pyomo.dae.misc import create_access_function, create_partial_expression
 
 __all__ = ('Integral', )
 
 
-def create_access_function(var):
-    """
-    This method returns a function that returns a component by calling
-    it rather than indexing it
-    """
-    def _fun(*args):
-        return var[args]
-    return _fun
-
-
-def create_partial_expression(scheme, expr, ind, loc):
-    """
-    This method returns a function which applies a discretization scheme
-    to an expression along a particular indexind set. This is admittedly a
-    convoluted looking implementation. The idea is that we only apply a
-    discretization scheme to one indexing set at a time but we also want
-    the function to be expanded over any other indexing sets.
-    """
-    def _fun(*args):
-        return scheme(lambda i:
-                      expr(*(args[0:loc] + (i,) + args[loc + 1:])), ind)
-    return lambda *args: _fun(*args)(args[loc])
-
-
+@ModelComponentFactory.register("Integral Expression in a DAE model.")
 class Integral(Expression):
     """
     Represents an integral over a continuous domain
@@ -91,9 +70,9 @@ class Integral(Expression):
             # ContinuousSet
             if len(args) != 1:
                 raise ValueError(
-                    "The Integral %s is indexed by multiple ContinuousSets. "
+                    "Integral indexed by multiple ContinuousSets. "
                     "The desired ContinuousSet must be specified using the "
-                    "keyword argument 'wrt'" % self.name)
+                    "keyword argument 'wrt'")
             wrt = args[0]
 
         if type(wrt) is not ContinuousSet:
@@ -111,7 +90,7 @@ class Integral(Expression):
         if loc is None:
             raise ValueError(
                 "The ContinuousSet '%s' was not found in the indexing sets "
-                "of the Integral '%s'" % (wrt.name, self.name))
+                "of the Integral" % wrt.name)
         self.loc = loc
 
         # Remove the index that the integral is being expanded over
@@ -129,7 +108,7 @@ class Integral(Expression):
         intexp = kwds.pop('rule', intexp)
         if intexp is None:
             raise ValueError(
-                "Must specify an integral expression for Integral '%s'" % self)
+                "Must specify an integral expression")
 
         def _trap_rule(m, *a):
             ds = sorted(m.find_component(wrt.local_name))
@@ -142,14 +121,14 @@ class Integral(Expression):
         kwds.setdefault('ctype', Integral)
         Expression.__init__(self, *arg, **kwds)
 
-    def get_differentialset(self):
+    def get_continuousset(self):
         """ Return the :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`
         the integral is being taken over
         """
         return self._wrt
 
 
-class SimpleIntegral(_GeneralExpressionData, Integral):
+class SimpleIntegral(SimpleExpression, Integral):
     """
         An integral that will have no indexing sets after applying a numerical
         integration transformation
@@ -168,74 +147,8 @@ class SimpleIntegral(_GeneralExpressionData, Integral):
             return False
         return True
 
-    #
-    # Override abstract interface methods to first check for
-    # construction
-    #
 
-    @property
-    def expr(self):
-        """Return expression on this expression."""
-        if self._constructed:
-            return _GeneralExpressionData.expr.fget(self)
-        raise ValueError(
-            "Accessing the expression of integral '%s' before the Integral "
-            "has been constructed (there is currently no value to return)."
-            % self.name)
-
-    def set_value(self, expr):
-        """Set the expression on this expression."""
-        if self._constructed:
-            return _GeneralExpressionData.set_value(self, expr)
-        raise ValueError(
-            "Setting the expression of integral '%s' "
-            "before the Integral has been constructed (there "
-            "is currently no object to set)."
-            % self.name)
-
-    def is_constant(self):
-        """A boolean indicating whether this expression is constant."""
-        if self._constructed:
-            return _GeneralExpressionData.is_constant(self)
-        raise ValueError(
-            "Accessing the is_constant flag of integral '%s' "
-            "before the Integral has been constructed (there "
-            "is currently no value to return)."
-            % self.name)
-
-    def is_fixed(self):
-        """A boolean indicating whether this expression is fixed."""
-        if self._constructed:
-            return _GeneralExpressionData.is_fixed(self)
-        raise ValueError(
-            "Accessing the is_fixed flag of integral '%s' "
-            "before the Integral has been constructed (there "
-            "is currently no value to return)."
-            % self.name)
-
-    #
-    # Like the SimpleExpression class,
-    # Leaving this method for backward compatibility reasons.
-    # (probably should be removed)
-    #
-    def add(self, index, expr):
-        """Add an expression with a given index."""
-        if index is not None:
-            raise KeyError(
-                "SimpleIntegral object '%s' does not accept "
-                "index values other than None. Invalid value: %s"
-                % (self.name, index))
-        if (type(expr) is tuple) and \
-           (expr == Expression.Skip):
-            raise ValueError(
-                "Expression.Skip can not be assigned "
-                "to an Expression that is not indexed: %s"
-                % self.name)
-        self.set_value(expr)
-        return self
-
-
-class IndexedIntegral(Integral):
+class IndexedIntegral(IndexedExpression, Integral):
     """
     An integral that will be indexed after applying a numerical integration
     transformation
@@ -262,20 +175,4 @@ class IndexedIntegral(Integral):
                     return False
         return True
 
-    #
-    # Leaving this method for backward compatibility reasons
-    # Note: It allows adding members outside of self._index.
-    #       This has always been the case. Not sure there is
-    #       any reason to maintain a reference to a separate
-    #       index set if we allow this.
-    #
-    def add(self, index, expr):
-        """Add an expression with a given index."""
-        if (type(expr) is tuple) and \
-           (expr == Expression.Skip):
-            return None
-        cdata = _GeneralExpressionData(expr, component=self)
-        self._data[index] = cdata
-        return cdata
 
-register_component(Integral, "Integral Expression in a DAE model.")

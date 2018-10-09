@@ -8,19 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.core.kernel
+from pyomo.core.expr.numvalue import *
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.objective import (minimize,
+                                         maximize)
 from pyomo.core.base.config import PyomoOptions
 
-from pyomo.core.kernel import (ComponentMap,
-                               minimize,
-                               maximize)
-
-from pyomo.core.base.plugin import *
-from pyomo.core.base.expr import *
-from pyomo.core.base.numvalue import *
+from pyomo.core.base.expression import *
 from pyomo.core.base.label import *
-from pyomo.core.base.DataPortal import *
-from pyomo.core.base.symbol_map import *
 
 #
 # Components
@@ -38,16 +33,18 @@ from pyomo.core.base.sos import *
 from pyomo.core.base.piecewise import *
 from pyomo.core.base.suffix import *
 from pyomo.core.base.external import *
-from pyomo.core.base.expression import *
+from pyomo.core.base.symbol_map import *
+from pyomo.core.base.reference import Reference
 #
 from pyomo.core.base.set_types import *
 from pyomo.core.base.misc import *
 from pyomo.core.base.block import *
 from pyomo.core.base.PyomoModel import *
+from pyomo.core.base.plugin import *
 #
 import pyomo.core.base._pyomo
 #
-from pyomo.core.base.util import *
+import pyomo.core.base.util
 from pyomo.core.base.rangeset import *
 
 from pyomo.core.base.instance2dat import *

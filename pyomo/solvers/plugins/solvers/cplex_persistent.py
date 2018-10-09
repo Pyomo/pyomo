@@ -8,16 +8,17 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.core.expr.numvalue import value
 from pyomo.core.base.PyomoModel import ConcreteModel
-from pyomo.solvers.plugins.solvers.cplex_direct import CPLEXDirect
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.util.plugin import alias
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.core.base.sos import SOSConstraint
-from pyomo.core.kernel.numvalue import value
+from pyomo.solvers.plugins.solvers.cplex_direct import CPLEXDirect
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+from pyomo.opt.base import SolverFactory
 
 
+@SolverFactory.register('cplex_persistent', doc='Persistent python interface to CPLEX')
 class CPLEXPersistent(PersistentSolver, CPLEXDirect):
     """
     A class that provides a persistent interface to Cplex. Direct solver interfaces do not use any file io.
@@ -39,7 +40,6 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
     options: dict
         Dictionary of solver options
     """
-    alias('cplex_persistent', doc='Persistent python interface to CPLEX')
 
     def __init__(self, **kwds):
         kwds['type'] = 'cplex_persistent'

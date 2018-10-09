@@ -15,13 +15,13 @@ __all__ = ('Suffix',
 import logging
 import pprint
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponent
 
 from six import iteritems, itervalues
-from pyomo.util.deprecation import deprecated
+from pyomo.common.deprecation import deprecated
 
 logger = logging.getLogger('pyomo.core')
 
@@ -133,6 +133,7 @@ def suffix_generator(a_block, datatype=False):
 #       __setstate__ works correctly on the ActiveComponent base class.
 
 
+@ModelComponentFactory.register("Declare a container for extraneous model data")
 class Suffix(ComponentMap, ActiveComponent):
     """A model suffix, representing extraneous model data"""
 
@@ -451,5 +452,3 @@ class Suffix(ComponentMap, ActiveComponent):
         """Not implemented."""
         raise NotImplementedError("Suffix components are not comparable")
 
-
-register_component(Suffix, "Declare a container for extraneous model data")

@@ -8,26 +8,63 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.util.plugin import alias
+import copy
+
+from pyomo.core.expr import current as EXPR
+
 from pyomo.core import *
-from pyomo.core.base.var import SimpleVar, _VarData
-from pyomo.core.base.expr import (_SumExpression,
-                                  _ProductExpression,
-                                  _AbsExpression,
-                                  _PowExpression)
 from pyomo.core.base.expression import _ExpressionData
+from pyomo.core.base.var import SimpleVar, _VarData
 from pyomo.core.base.misc import create_name
 from pyomo.core.plugins.transform.util import partial
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.util import collectAbstractComponents
 
+
+class VarmapVisitor(EXPR.ExpressionReplacementVisitor):
+
+    def __init__(self, varmap):
+        super(VarmapVisitor, self).__init__()
+        self.varmap = varmap
+
+    def visiting_potential_leaf(self, node):
+        if node.__class__ in nonpyomo_leaf_types:
+            return True, node
+        #
+        # Clone leaf nodes in the expression tree
+        #
+        if node.is_variable_type():
+            if node.local_name in self.varmap:
+                return True, self.varmap[node.local_name]
+            else: 
+                return True, node
+
+        if isinstance(node, EXPR.LinearExpression):
+            with EXPR.nonlinear_expression() as expr:
+                for c, v in zip(node.linear_coefs, node.linear_vars):
+                    if hasattr(v, 'local_name'):
+                        expr += c * self.varmap.get(v.local_name)
+                    else:
+                        expr += c * v
+            return True, expr
+
+        return False, None
+
+
+def _walk_expr(expr, varMap):
+    """
+    Walks an expression tree, making the replacements defined in varMap
+    """
+    visitor = VarmapVisitor(varMap)
+    return visitor.dfs_postorder_stack(expr)
+
+
+@TransformationFactory.register("core.nonnegative_vars", doc="Create an equivalent model in which all variables lie in the nonnegative orthant.")
 class NonNegativeTransformation(IsomorphicTransformation):
     """
     Creates a new, equivalent model by forcing all variables to lie in
     the nonnegative orthant by introducing auxiliary variables.
     """
-
-    alias("core.nonnegative_vars", doc="Create an equivalent model in which all variables lie in the nonnegative orthant.")
 
     def __init__(self, **kwds):
         kwds["name"] = kwds.pop("name", "vars")
@@ -267,9 +304,9 @@ class NonNegativeTransformation(IsomorphicTransformation):
             exprMap = {}
 
             for (ndx, cdata) in con._data.items():
-                lower = self._walk_expr(cdata.lower, var_map)
-                body  = self._walk_expr(cdata.body,  var_map)
-                upper = self._walk_expr(cdata.upper, var_map)
+                lower = _walk_expr(cdata.lower, var_map)
+                body  = _walk_expr(cdata.body,  var_map)
+                upper = _walk_expr(cdata.upper, var_map)
 
                 # Lie if ndx is None. Pyomo treats 'None' indices specially.
                 if ndx is None:
@@ -295,7 +332,7 @@ class NonNegativeTransformation(IsomorphicTransformation):
             exprMap = {}
 
             for (ndx, odata) in obj._data.items():
-                exprMap[ndx] = self._walk_expr(odata.expr, var_map)
+                exprMap[ndx] = _walk_expr(odata.expr, var_map)
 
             # Add to list of expression maps
             objectiveExprs[objName] = exprMap
@@ -345,55 +382,6 @@ class NonNegativeTransformation(IsomorphicTransformation):
             _obj.construct()
 
         return nonneg
-
-    @staticmethod
-    def _walk_expr(expr, varMap):
-        """
-        Walks an expression tree, making the replacements defined in varMap
-        """
-
-        # Attempt to replace a simple variable
-        if isinstance(expr, SimpleVar):
-            if expr.local_name in varMap:
-                return varMap[expr.local_name]
-            else:
-                return expr
-
-        # Attempt to replace an indexed variable
-        if isinstance(expr, _VarData):
-            if expr.local_name in varMap:
-                return varMap[expr.local_name]
-            else:
-                return expr
-
-        # Iterate through the numerator and denominator of a product term
-        if isinstance(expr, _ProductExpression):
-            i = 0
-            while i < len(expr._numerator):
-                expr._numerator[i] = NonNegativeTransformation._walk_expr(
-                    expr._numerator[i],
-                    varMap)
-                i += 1
-
-            i = 0
-            while i < len(expr._denominator):
-                expr._denominator[i] = NonNegativeTransformation._walk_expr(
-                    expr.denominator[i],
-                    varMap)
-                i += 1
-
-        # Iterate through the terms in a sum, absolute value term, or power
-        # term
-        if isinstance(expr, (_SumExpression, _AbsExpression, _PowExpression,
-                             _ExpressionData)):
-            i = 0
-            while i < len(expr._args):
-                expr._args[i] = NonNegativeTransformation._walk_expr(
-                    expr._args[i],
-                    varMap)
-                i += 1
-
-        return expr
 
     @staticmethod
     def boundsConstraintRule(lb, ub, attr, vars, model):

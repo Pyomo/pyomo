@@ -25,39 +25,86 @@ import gzip
 import base64
 import tempfile
 import logging
-try:
+
+class NEOS(object):
+    # NEOS currently only supports HTTPS access
+    scheme = 'https'
+    host = 'neos-server.org'
+    port = '3333'
+    # Legacy NEOS HTTP interface
+    #urlscheme = 'http'
+    #port = '3332'
+
+
+if sys.version_info[0] < 3:
+    from urlparse import urlparse
     import httplib
-except:
-    import http.client as httplib
-try:
     import xmlrpclib
-except:                                 #pragma:nocover
+    # ProxiedTransport from Python 2.x documentation
+    # (https://docs.python.org/2/library/xmlrpclib.html)
+    class ProxiedTransport(xmlrpclib.Transport):
+        def set_proxy(self, proxy):
+            self.proxy = urlparse(proxy)
+            if not self.proxy.hostname:
+                # User omitted scheme from the proxy; assume http
+                self.proxy = urlparse('http://'+proxy)
+
+        def make_connection(self, host):
+            target = urlparse(host)
+            if target.scheme:
+                self.realhost = target.geturl()
+            else:
+                self.realhost = '%s://%s' % (NEOS.scheme, target.geturl())
+
+            # Empirically, the connection class in Python 2.7 needs to
+            # match the PROXY connection scheme, and the final endpoint
+            # scheme needs to be specified in the POST below.
+            if self.proxy.scheme == 'https':
+                connClass = httplib.HTTPSConnection
+            else:
+                connClass = httplib.HTTPConnection
+            return connClass(self.proxy.hostname, self.proxy.port)
+
+
+        def send_request(self, connection, handler, request_body):
+            connection.putrequest(
+                "POST", '%s%s' % (self.realhost, handler))
+
+        def send_host(self, connection, host):
+            connection.putheader('Host', self.realhost)
+
+else: # Python 3.x
+    from urllib.parse import urlparse
+    import http.client as httplib
     import xmlrpc.client as xmlrpclib
+    # ProxiedTransport from Python 3.x documentation
+    # (https://docs.python.org/3/library/xmlrpc.client.html)
+    class ProxiedTransport(xmlrpclib.Transport):
+        def set_proxy(self, host):
+            self.proxy = urlparse(host)
+            if not self.proxy.hostname:
+                # User omitted scheme from the proxy; assume http
+                self.proxy = urlparse('http://'+proxy)
+
+        def make_connection(self, host):
+            scheme = urlparse(host).scheme
+            if not scheme:
+                scheme = NEOS.scheme
+
+            # Empirically, the connection class in Python 3.x needs to
+            # match the final endpoint connection scheme, NOT the proxy
+            # scheme.  The set_tunnel host then should NOT have a scheme
+            # attached to it.
+            if scheme == 'https':
+                connClass = httplib.HTTPSConnection
+            else:
+                connClass = httplib.HTTPConnection
+
+            connection = connClass(self.proxy.hostname, self.proxy.port)
+            connection.set_tunnel(host)
+            return connection
 
 logger = logging.getLogger('pyomo.solvers')
-
-if True:
-    urlscheme = 'https'
-    port = '3333'
-else:
-    urlscheme = 'http'
-    port = '3332'
-
-#
-# Proxy Transport class provided by NoboNobo.
-# See: http://www.python.org/doc/2.5.2/lib/xmlrpc-client-example.html
-#
-class ProxiedTransport(xmlrpclib.Transport):
-    def set_proxy(self, proxy):
-        self.proxy = proxy
-    def make_connection(self, host):
-        self.realhost = host
-        h = six.moves.http_client.HTTP(self.proxy)
-        return h
-    def send_request(self, connection, handler, request_body):
-        connection.putrequest("POST", '%s://%s%s' % (urlscheme, self.realhost, handler))
-    def send_host(self, connection, host):
-        connection.putheader('Host', self.realhost)
 
 
 class kestrelAMPL:
@@ -67,21 +114,24 @@ class kestrelAMPL:
 
     def setup_connection(self):
         # on *NIX, the proxy can show up either upper or lowercase.
-        # Prefer lower case, and prefer HTTPS over HTTP if the urlscheme
-        # is https.
+        # Prefer lower case, and prefer HTTPS over HTTP if the
+        # NEOS.scheme is https.
         proxy = os.environ.get(
             'http_proxy', os.environ.get(
                 'HTTP_PROXY', ''))
-        if urlscheme == 'https':
+        if NEOS.scheme == 'https':
             proxy = os.environ.get(
                 'https_proxy', os.environ.get(
                     'HTTPS_PROXY', proxy))
+        transport = None
         if proxy:
-            p = ProxiedTransport()
-            p.set_proxy(proxy)
-            self.neos = xmlrpclib.ServerProxy(urlscheme+"://www.neos-server.org:"+port,transport=p)
-        else:
-            self.neos = xmlrpclib.ServerProxy(urlscheme+"://www.neos-server.org:"+port)
+            transport = ProxiedTransport()
+            transport.set_proxy(proxy)
+
+        self.neos = xmlrpclib.ServerProxy(
+            "%s://%s:%s" % (NEOS.scheme, NEOS.host, NEOS.port),
+            transport=transport)
+
         logger.info("Connecting to the NEOS server ... ")
         try:
             result = self.neos.ping()

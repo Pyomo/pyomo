@@ -8,15 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Var', '_VarData', 'VarList']
+__all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar']
 
 import logging
 from weakref import ref as weakref_ref
 
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.numvalue import NumericValue, value, is_fixed
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
@@ -136,11 +136,23 @@ class _VarData(ComponentData, NumericValue):
         """Returns False because this is not a constant in an expression."""
         return False
 
-    def _potentially_variable(self):
+    def is_parameter_type(self):
+        """Returns False because this is not a parameter object."""
+        return False
+
+    def is_variable_type(self):
         """Returns True because this is a variable."""
         return True
 
-    def _polynomial_degree(self, result):
+    def is_expression_type(self):
+        """Returns False because this is not an expression"""
+        return False
+
+    def is_potentially_variable(self):
+        """Returns True because this is a variable."""
+        return True
+
+    def _compute_polynomial_degree(self, result):
         """
         If the variable is fixed, it represents a constant
         is a polynomial with degree 0. Otherwise, it has
@@ -252,6 +264,18 @@ class _VarData(ComponentData, NumericValue):
         raise NotImplementedError
 
     free=unfix
+
+    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
+        """Return the component name"""
+        if self.fixed and compute_values:
+            try:
+                return str(self())
+            except:
+                pass
+        if smap:
+            return smap.getSymbol(self, labeler)
+        return self.name
+
 
 class _GeneralVarData(_VarData):
     """
@@ -433,6 +457,8 @@ class _GeneralVarData(_VarData):
 
     free = unfix
 
+
+@ModelComponentFactory.register("Decision variables.")
 class Var(IndexedComponent):
     """A numeric variable, which may be defined over an index.
 
@@ -508,6 +534,10 @@ class Var(IndexedComponent):
             self._bounds_init_value = bounds
         elif bounds is not None:
             raise ValueError("Variable 'bounds' keyword must be a tuple or function")
+
+    def is_expression_type(self):
+        """Returns False because this is not an expression"""
+        return False
 
     def flag_as_stale(self):
         """
@@ -736,7 +766,7 @@ class Var(IndexedComponent):
                  )
 
 class SimpleVar(_GeneralVarData, Var):
-    """"A single variable."""
+    """A single variable."""
 
     def __init__(self, *args, **kwd):
         _GeneralVarData.__init__(self,
@@ -915,6 +945,8 @@ class IndexedVar(Var):
 
     free=unfix
 
+
+@ModelComponentFactory.register("List of decision variables.")
 class VarList(IndexedVar):
     """
     Variable-length indexed variable objects used to construct Pyomo models.
@@ -953,6 +985,3 @@ class VarList(IndexedVar):
         next_idx = len(self._index) + 1
         self._index.add(next_idx)
         return self[next_idx]
-
-register_component(Var, "Decision variables.")
-register_component(VarList, "List of decision variables.")

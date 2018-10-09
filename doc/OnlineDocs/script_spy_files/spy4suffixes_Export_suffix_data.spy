@@ -1,0 +1,13 @@
+from pyomo.environ import *
+
+model = ConcreteModel()
+model.y = Var([1,2,3],within=NonNegativeReals)
+
+model.sosno = Suffix(direction=Suffix.EXPORT)
+model.ref = Suffix(direction=Suffix.EXPORT)
+
+# Add entry for each index of model.y
+model.sosno.set_value(model.y,1)
+model.ref[model.y[1]] = 0
+model.ref[model.y[2]] = 1
+model.ref[model.y[3]] = 2

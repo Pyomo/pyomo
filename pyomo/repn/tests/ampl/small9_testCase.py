@@ -36,7 +36,7 @@ model.con1 = Constraint(expr= model.x*model.y*model.z + model.x == 1.0)
 model.con2 = Constraint(expr= model.x*model.p*model.z + model.x == 1.0)
 model.con3 = Constraint(expr= model.x*model.q*model.z + model.x == 1.0)
 # Pyomo differs from AMPL in these cases that involve immutable params (q).
-# These never actually become constraints in Pyomo, and for good reason.
+# These never actually become constants in Pyomo, and for good reason.
 model.con4 = Constraint(expr= model.x*model.y*model.z == 1.0)
 model.con5 = Constraint(expr= model.x*model.p*model.z == 1.0)
 model.con6 = Constraint(rule= simple_constraint_rule(model.x*model.q*model.z == 0.0) )

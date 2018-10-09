@@ -1,0 +1,1 @@
+results = optimizer.solve(instance, options="threads=4", tee=True)

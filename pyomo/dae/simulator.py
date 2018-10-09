@@ -11,16 +11,9 @@ from pyomo.core.base import Constraint, Param, value, Suffix, Block
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
-from pyomo.core.base.plugin import register_component
-from pyomo.core.base import expr as EXPR
-from pyomo.core.base import expr_common as common
-from pyomo.core.base.template_expr import (
-    IndexTemplate,
-    _GetItemIndexer,
-    substitute_template_expression,
-    substitute_getitem_with_param,
-    substitute_template_with_value,
-)
+from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numvalue import NumericValue, native_numeric_types
+from pyomo.core.base.template_expr import IndexTemplate, _GetItemIndexer
 
 from six import iterkeys, itervalues
 
@@ -39,6 +32,10 @@ except ImportError:
 # Check integrator availability
 scipy_available = True
 try:
+    import platform
+    if platform.python_implementation() == "PyPy":  # pragma:nocover
+        # scipy is importable into PyPy, but ODE integrators don't work. (2/18)
+        raise ImportError
     import scipy.integrate as scipy
 except ImportError:
     scipy_available = False
@@ -46,6 +43,25 @@ except ImportError:
 casadi_available = True
 try:
     import casadi
+    casadi_intrinsic = {
+            'log': casadi.log,
+            'log10': casadi.log10,
+            'sin': casadi.sin,
+            'cos': casadi.cos,
+            'tan': casadi.tan,
+            'cosh': casadi.cosh,
+            'sinh': casadi.sinh,
+            'tanh': casadi.tanh,
+            'asin': casadi.asin,
+            'acos': casadi.acos,
+            'atan': casadi.atan,
+            'exp': casadi.exp,
+            'sqrt': casadi.sqrt,
+            'asinh': casadi.asinh,
+            'acosh': casadi.acosh,
+            'atanh': casadi.atanh,
+            'ceil': casadi.ceil,
+            'floor': casadi.floor}
 except ImportError:
     casadi_available = False
 
@@ -53,13 +69,13 @@ except ImportError:
 def _check_getitemexpression(expr, i):
     """
     Accepts an equality expression and an index value. Checks the
-    GetItemExpression at expr._args[i] to see if it is a
+    GetItemExpression at expr.arg(i) to see if it is a
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
     GetItemExpression for the :py:class:`DerivativeVar<DerivativeVar>` and
     the RHS. If not, return None.
     """
-    if type(expr._args[i]._base) is DerivativeVar:
-        return [expr._args[i], expr._args[i - 1]]
+    if type(expr.arg(i)._base) is DerivativeVar:
+        return [expr.arg(i), expr.arg(1 - i)]
     else:
         return None
 
@@ -67,202 +83,295 @@ def _check_getitemexpression(expr, i):
 def _check_productexpression(expr, i):
     """
     Accepts an equality expression and an index value. Checks the
-    ProductExpression at expr._args[i] to see if it contains a
+    ProductExpression at expr.arg(i) to see if it contains a
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
     GetItemExpression for the
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
     return None.
     """
-    if common.mode is common.Mode.coopr3_trees:
-        num = expr._args[i]._numerator
-        denom = expr._args[i]._denominator
-        coef = expr._args[i]._coef
-
-        dv = None
-        # Check if there is a DerivativeVar in the numerator
-        for idx, obj in enumerate(num):
-            if type(obj) is EXPR._GetItemExpression and \
-               type(obj._base) is DerivativeVar:
-                dv = obj
-                num = num[0:idx] + num[idx + 1:]
-                break
-        if dv is not None:
-            RHS = expr._args[i - 1] / coef
-            for obj in num:
-                RHS *= (1 / obj)
-            for obj in denom:
-                RHS = RHS * obj
-            return [dv, RHS]
+    expr_ = expr.arg(i)
+    stack = [(expr_, 1)]
+    pterms = []
+    dv = None
+    
+    while stack:
+        curr, e_ = stack.pop()
+        if curr.__class__ is EXPR.ProductExpression:
+            stack.append((curr.arg(0), e_))
+            stack.append((curr.arg(1), e_))
+        elif curr.__class__ is EXPR.ReciprocalExpression:
+            stack.append((curr.arg(0), - e_))
+        elif type(curr) is EXPR.GetItemExpression and \
+             type(curr._base) is DerivativeVar:
+            dv = (curr, e_)
         else:
-            # Check if there is a DerivativeVar in the denominator
-            for idx, obj in enumerate(denom):
-                if type(obj) is EXPR._GetItemExpression and \
-                   type(obj._base) is DerivativeVar:
-                    dv = obj
-                    denom = denom[0:idx] + denom[idx + 1:]
-                    break
-            if dv is not None:
-                tempnum = coef
-                for obj in num:
-                    tempnum *= obj
+            pterms.append((curr, e_))
 
-                tempdenom = expr._args[i - 1]
-                for obj in denom:
-                    tempdenom *= obj
+    if dv is None:
+        return None
 
-                RHS = tempnum / tempdenom
-                return [dv, RHS]                
+    numer = 1
+    denom = 1
+    for term, e_ in pterms:
+        if e_ == 1:
+            denom *= term 
+        else:
+            numer *= term 
+    curr, e_ = dv
+    if e_ == 1:
+        return [curr, expr.arg(1 - i) * numer / denom]
     else:
-        raise TypeError(
-            "Simulator is unable to handle pyomo4 expression trees.")
+        return [curr, denom / (expr.arg(1 - i) * numer)]
+
+
+def _check_negationexpression(expr, i):
+    """
+    Accepts an equality expression and an index value. Checks the
+    NegationExpression at expr.arg(i) to see if it contains a
+    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
+    GetItemExpression for the
+    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
+    return None.
+    """
+    arg = expr.arg(i).arg(0)
+
+    if type(arg) is EXPR.GetItemExpression and \
+       type(arg._base) is DerivativeVar:
+        return [arg, - expr.arg(1 - i)]
+
+    if type(arg) is EXPR.ProductExpression:
+        lhs = arg.arg(0)
+        rhs = arg.arg(1)
+
+        if not (type(lhs) in native_numeric_types or
+                    not lhs.is_potentially_variable()):
+            return None
+        if not (type(rhs) is EXPR.GetItemExpression and
+                        type(rhs._base) is DerivativeVar):
+            return None
+
+        return [rhs, - expr.arg(1 - i) / lhs]
+
     return None
 
 
-def _check_sumexpression(expr, i):
+def _check_viewsumexpression(expr, i):
     """
     Accepts an equality expression and an index value. Checks the
-    SumExpression at expr._args[i] to see if it contains a
+    Sum expression at expr.arg(i) to see if it contains a
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
     GetItemExpression for the
     :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
     return None.
     """
-    sumexp = expr._args[i]
-    items = sumexp._args
-    coefs = sumexp._coef
+    # Get the side of the equality expression with the derivative variable
+    sumexp = expr.arg(i)
+    items = []
     dv = None
     dvcoef = 1
 
-    for idx, item in enumerate(items):
-        if type(item) is EXPR._GetItemExpression and \
+    for idx, item in enumerate(sumexp.args):
+        if dv is not None:
+            items.append(item)
+        elif type(item) is EXPR.GetItemExpression and \
            type(item._base) is DerivativeVar:
             dv = item
-            dvcoef = coefs[idx]
-            items = items[0:idx] + items[idx + 1:]
-            coefs = coefs[0:idx] + coefs[idx + 1:]
-            break
+        elif type(item) is EXPR.ProductExpression:
+            # This will contain the constant coefficient if there is one
+            lhs = item.arg(0)
+            # This is a potentially variable expression
+            rhs = item.arg(1)
+            if (type(lhs) in native_numeric_types or
+                    not lhs.is_potentially_variable()) \
+                and (type(rhs) is EXPR.GetItemExpression and
+                             type(rhs._base) is DerivativeVar):
+                dv = rhs
+                dvcoef = lhs
+        else:
+            items.append(item)
 
     if dv is not None:
-        RHS = expr._args[i - 1]
-        for idx, item in enumerate(items):
-            RHS -= coefs[idx] * item
+        # Form the "other" side of the equality expression
+        RHS = expr.arg(1 - i)
+        for item in items:
+            RHS -= item
         RHS = RHS / dvcoef
         return [dv, RHS]
 
     return None
 
 
-def substitute_getitem_with_casadi_sym(expr, _map):
-    """
-    Replaces _GetItemExpression objects with casadi sym objects
-    """
-    if type(expr) is IndexTemplate:
-        return expr
+if scipy_available:
+    class Pyomo2Scipy_Visitor(EXPR.ExpressionReplacementVisitor):
+        """
+        Expression walker that replaces _GetItemExpression
+        instances with mutable parameters.
+        """
 
-    _id = _GetItemIndexer(expr)
-    if _id not in _map:
-        name = "%s[%s]" % (
-            expr._base.name, ','.join(str(x) for x in _id._args))
-        _map[_id] = casadi.SX.sym(name)
-    return _map[_id]
+        def __init__(self, templatemap):
+            super(Pyomo2Scipy_Visitor, self).__init__()
+            self.templatemap = templatemap
 
+        def visiting_potential_leaf(self, node):
+            if type(node) is IndexTemplate:
+                return True, node
 
-def substitute_intrinsic_function_with_casadi(expr):
-    """
-    Replaces intrinsic functions in Pyomo expressions with casadi
-    versions of those functions.
-    """
-    functionmap = {'log': casadi.log,
-                   'log10': casadi.log10,
-                   'sin': casadi.sin,
-                   'cos': casadi.cos,
-                   'tan': casadi.tan,
-                   'cosh': casadi.cosh,
-                   'sinh': casadi.sinh,
-                   'tanh': casadi.tanh,
-                   'asin': casadi.asin,
-                   'acos': casadi.acos,
-                   'atan': casadi.atan,
-                   'exp': casadi.exp,
-                   'sqrt': casadi.sqrt,
-                   'asinh': casadi.asinh,
-                   'acosh': casadi.acosh,
-                   'atanh': casadi.atanh,
-                   'ceil': casadi.ceil,
-                   'floor': casadi.floor}
-    expr._operator = functionmap[expr.name]
-    return expr
+            if type(node) is EXPR.GetItemExpression:
+                _id = _GetItemIndexer(node)
+                if _id not in self.templatemap:
+                    self.templatemap[_id] = Param(mutable=True)
+                    self.templatemap[_id].construct()
+                    _args = []
+                    self.templatemap[_id]._name = "%s[%s]" % (
+                        node._base.name, ','.join(str(x) for x in _id._args))
+                return True, self.templatemap[_id]
+
+            return super(
+                Pyomo2Scipy_Visitor, self).visiting_potential_leaf(node)
 
 
-def substitute_intrinsic_function(expr, substituter, *args):
+def convert_pyomo2scipy(expr, templatemap):
+    """Substitute _GetItem nodes in an expression tree.
+
+    This substition function is used to replace Pyomo _GetItem
+    nodes with mutable Params.
+
+    Args:
+        templatemap: dictionary mapping _GetItemIndexer objects to
+            mutable params
+
+    Returns:
+        a new expression tree with all substitutions done
     """
+    if not scipy_available:
+        raise DAE_Error("SciPy is not installed. Cannot substitute SciPy "
+                        "intrinsic functions.")
+    visitor = Pyomo2Scipy_Visitor(templatemap)
+    return visitor.dfs_postorder_stack(expr)
+
+
+if casadi_available:
+    class Substitute_Pyomo2Casadi_Visitor(EXPR.ExpressionReplacementVisitor):
+        """
+        Expression walker that replaces 
+
+           * _UnaryFunctionExpression instances with unary functions that
+             point to casadi intrinsic functions.
+
+           * _GetItemExpressions with _GetItemIndexer objects that references
+             CasADi variables.
+        """
+
+        def __init__(self, templatemap):
+            super(Substitute_Pyomo2Casadi_Visitor, self).__init__()
+            self.templatemap = templatemap
+
+        def visit(self, node, values):
+            """Replace a node if it's a unary function."""
+            if type(node) is EXPR.UnaryFunctionExpression:
+                return EXPR.UnaryFunctionExpression(
+                                values[0], 
+                                node._name, 
+                                casadi_intrinsic[node._name])
+            return node
+
+        def visiting_potential_leaf(self, node):
+            """Replace a node if it's a _GetItemExpression."""
+            if type(node) is EXPR.GetItemExpression:
+                _id = _GetItemIndexer(node)
+                if _id not in self.templatemap:
+                    name = "%s[%s]" % (
+                        node._base.name, ','.join(str(x) for x in _id._args))
+                    self.templatemap[_id] = casadi.SX.sym(name)
+                return True, self.templatemap[_id]
+
+            if type(node) in native_numeric_types or \
+               not node.is_expression_type() or \
+               type(node) is IndexTemplate:
+                return True, node
+
+            return False, None
+
+
+    class Convert_Pyomo2Casadi_Visitor(EXPR.ExpressionValueVisitor):
+        """
+        Expression walker that evaluates an expression 
+        generated by the Substitute_Pyomo2Casadi_Visitor walker.
+
+        In Coopr3 this walker was not necessary because the expression could
+        be simply evaluated.  But in Pyomo5, the evaluation logic was
+        changed to be non-recursive, which involves checks on the types of
+        leaves in the expression tree. Hence, the evaluation logic fails if
+        leaves in the tree are not standard Pyomo5 variable types.
+        """
+
+        def visit(self, node, values):
+            """ Visit nodes that have been expanded """
+            return node._apply_operation(values)
+
+        def visiting_potential_leaf(self, node):
+            """ 
+            Visiting a potential leaf.
+
+            Return True if the node is not expanded.
+            """
+            if node.__class__ in native_numeric_types:
+                return True, node
+
+            if node.__class__ is casadi.SX:
+                return True, node
+
+            if node.is_variable_type():
+                return True, value(node)
+
+            if not node.is_expression_type():
+                return True, value(node)
+
+            return False, None
+
+
+def substitute_pyomo2casadi(expr, templatemap):
+    """Substitute IndexTemplates in an expression tree.
+
     This substition function is used to replace Pyomo intrinsic
-    functions with CasADi functions before sending expressions to a
-    CasADi integrator
+    functions with CasADi functions.
 
-    This substituter is copied from template_expr.py with some minor
-    modifications to make it compatible with CasADi expressions. 
-    TODO: We need a generalized expression tree walker to avoid
-    copying code like this
+    Args:
+        expr: a Pyomo expression
+        templatemap: dictionary mapping _GetItemIndexer objects to
+            mutable params
+
+    Returns:
+        a new expression tree with all substitutions done
     """
+    if not casadi_available:
+        raise DAE_Error("CASADI is not installed.  Cannot substitute CasADi "
+                        "variables and intrinsic functions.")
+    visitor = Substitute_Pyomo2Casadi_Visitor(templatemap)
+    return visitor.dfs_postorder_stack(expr)
 
-    # Again, due to circular imports, we cannot import expr at the
-    # module scope because this module gets imported by expr
-    from pyomo.core.base import expr as EXPR
-    from pyomo.core.base import expr_common as common
-    from pyomo.core.base.numvalue import (
-        NumericValue, native_numeric_types, as_numeric)
 
-    if type(expr) is casadi.SX:
-        return expr
+def convert_pyomo2casadi(expr):
+    """Convert a Pyomo expression tree to Casadi.
 
-    _stack = [[[expr.clone()], 0, 1, None]]
-    _stack_idx = 0
-    while _stack_idx >= 0:
-        _ptr = _stack[_stack_idx]
-        while _ptr[1] < _ptr[2]:
-            _obj = _ptr[0][_ptr[1]]
-            _ptr[1] += 1            
-            _subType = type(_obj)
-            if _subType is EXPR._IntrinsicFunctionExpression:
-                if type(_ptr[0]) is tuple:
-                    _list = list(_ptr[0])
-                    _list[_ptr[1] - 1] = substituter(_obj, *args)
-                    _ptr[0] = tuple(_list)
-                    _ptr[3]._args = _list
-                else:
-                    _ptr[0][_ptr[1] - 1] = substituter(_obj, *args)
-            elif _subType in native_numeric_types or \
-                    type(_obj) is casadi.SX or not _obj.is_expression():
-                continue
-            elif _subType is EXPR._ProductExpression:
-                # _ProductExpression is fundamentally different in
-                # Coopr3 / Pyomo4 expression systems and must be handled
-                # specially.
-                if common.mode is common.Mode.coopr3_trees:
-                    _lists = (_obj._numerator, _obj._denominator)
-                else:
-                    _lists = (_obj._args,)
-                for _list in _lists:
-                    if not _list:
-                        continue
-                    _stack_idx += 1
-                    _ptr = [_list, 0, len(_list), _obj]
-                    if _stack_idx < len(_stack):
-                        _stack[_stack_idx] = _ptr
-                    else:
-                        _stack.append(_ptr)
-            else:
-                if not _obj._args:
-                    continue
-                _stack_idx += 1
-                _ptr = [_obj._args, 0, len(_obj._args), _obj]
-                if _stack_idx < len(_stack):
-                    _stack[_stack_idx] = _ptr
-                else:
-                    _stack.append(_ptr)
-        _stack_idx -= 1
-    return _stack[0][0][0]
+    This function replaces a Pyomo expression with a CasADi expression.
+    This assumes that the `substitute_pyomo2casadi` function has
+    been called, so the Pyomo expression contains CasADi variables
+    and intrinsic functions.  The resulting expression can be used
+    with the CasADi integrator.
+
+    Args:
+        expr: a Pyomo expression with CasADi variables and intrinsic
+            functions
+
+    Returns:
+        a CasADi expression tree.
+    """
+    if not casadi_available:
+        raise DAE_Error("CASADI is not installed.  Cannot convert a Pyomo "
+                        "expression to a Casadi expression.")
+    visitor = Convert_Pyomo2Casadi_Visitor()
+    return visitor.dfs_postorder_stack(expr)
 
 
 class Simulator:
@@ -295,7 +404,6 @@ class Simulator:
                 logger.warning("The scipy module is not available. You may "
                                "build the Simulator object but you will not "
                                "be able to run the simulation.")
-            substituter = substitute_getitem_with_param
         else:
             if not casadi_available:
                 # Initializing the simulator for use with casadi requires
@@ -303,7 +411,6 @@ class Simulator:
                 # here instead of a warning. 
                 raise ValueError("The casadi module is not available. "
                                   "Cannot simulate model.")
-            substituter = substitute_getitem_with_casadi_sym
 
         # Check for active Blocks and throw error if any are found
         if len(list(m.component_data_objects(Block, active=True,
@@ -325,6 +432,11 @@ class Simulator:
 
         # Ensure that there is at least one derivative in the model
         derivs = m.component_map(DerivativeVar)
+        derivs = list(derivs.keys())
+
+        if hasattr(m, '_pyomo_dae_reclassified_derivativevars'):
+            for d in m._pyomo_dae_reclassified_derivativevars:
+                derivs.append(d.name)
         if len(derivs) == 0:
             raise DAE_Error("Cannot simulate a model with no derivatives")
 
@@ -389,47 +501,59 @@ class Simulator:
                     tempidx = i[0:csidx] + (cstemplate,) + i[csidx:]
                     tempexp = conrule(m, *tempidx)
 
-                # Check to make sure it's an _EqualityExpression
-                if not type(tempexp) is EXPR._EqualityExpression:
+                # Check to make sure it's an EqualityExpression
+                if not type(tempexp) is EXPR.EqualityExpression:
                     continue
             
                 # Check to make sure it's a differential equation with
                 # separable RHS
                 args = None
                 # Case 1: m.dxdt[t] = RHS 
-                if type(tempexp._args[0]) is EXPR._GetItemExpression:
+                if type(tempexp.arg(0)) is EXPR.GetItemExpression:
                     args = _check_getitemexpression(tempexp, 0)
             
                 # Case 2: RHS = m.dxdt[t]
                 if args is None:
-                    if type(tempexp._args[1]) is EXPR._GetItemExpression:
+                    if type(tempexp.arg(1)) is EXPR.GetItemExpression:
                         args = _check_getitemexpression(tempexp, 1)
 
                 # Case 3: m.p*m.dxdt[t] = RHS
                 if args is None:
-                    if type(tempexp._args[0]) is EXPR._ProductExpression:
+                    if type(tempexp.arg(0)) is EXPR.ProductExpression or \
+                       type(tempexp.arg(0)) is EXPR.ReciprocalExpression:
                         args = _check_productexpression(tempexp, 0)
 
                 # Case 4: RHS =  m.p*m.dxdt[t]
                 if args is None:
-                    if type(tempexp._args[1]) is EXPR._ProductExpression:
+                    if type(tempexp.arg(1)) is EXPR.ProductExpression or \
+                       type(tempexp.arg(1)) is EXPR.ReciprocalExpression:
                         args = _check_productexpression(tempexp, 1)
 
-                # Case 5: m.dxdt[t] + CONSTANT = RHS 
+                # Case 5: m.dxdt[t] + sum(ELSE) = RHS
                 # or CONSTANT + m.dxdt[t] = RHS
                 if args is None:
-                    if type(tempexp._args[0]) is EXPR._SumExpression:
-                        args = _check_sumexpression(tempexp, 0)
+                    if type(tempexp.arg(0)) is EXPR.SumExpression:
+                        args = _check_viewsumexpression(tempexp, 0)
 
-                # Case 6: RHS = m.dxdt[t] + CONSTANT
+                # Case 6: RHS = m.dxdt[t] + sum(ELSE)
                 if args is None:
-                    if type(tempexp._args[1]) is EXPR._SumExpression:
-                        args = _check_sumexpression(tempexp, 1)
+                    if type(tempexp.arg(1)) is EXPR.SumExpression:
+                        args = _check_viewsumexpression(tempexp, 1)
 
                 # Case 7: RHS = m.p*m.dxdt[t] + CONSTANT
                 # This case will be caught by Case 6 if p is immutable. If
                 # p is mutable then this case will not be detected as a
                 # separable differential equation
+
+                # Case 8: - dxdt[t] = RHS
+                if args is None:
+                    if type(tempexp.arg(0)) is EXPR.NegationExpression:
+                        args = _check_negationexpression(tempexp, 0)
+
+                # Case 9: RHS = - dxdt[t]
+                if args is None:
+                    if type(tempexp.arg(1)) is EXPR.NegationExpression:
+                        args = _check_negationexpression(tempexp, 1)
 
                 # At this point if args is not None then args[0] contains
                 # the _GetItemExpression for the DerivativeVar and args[1]
@@ -446,12 +570,8 @@ class Simulator:
                             "trying to simulate a DAE model you must use "
                             "CasADi as the integration package."
                             % str(con.name))
-                    tempexp = tempexp._args[0] - tempexp._args[1]
-                    algexp = substitute_template_expression(tempexp,
-                                                            substituter,
-                                                            templatemap)
-                    algexp = substitute_intrinsic_function(
-                        algexp, substitute_intrinsic_function_with_casadi)
+                    tempexp = tempexp.arg(0) - tempexp.arg(1)
+                    algexp = substitute_pyomo2casadi(tempexp, templatemap)
                     alglist.append(algexp)
                     continue
             
@@ -465,15 +585,10 @@ class Simulator:
                         "DerivativeVar %s" % str(dvkey))
             
                 derivlist.append(dvkey)
-                tempexp = substitute_template_expression(
-                    RHS, substituter, templatemap)
                 if self._intpackage is 'casadi':
-                    # After substituting GetItemExpression objects
-                    # replace intrinsic Pyomo functions with casadi
-                    # functions 
-                    tempexp = substitute_intrinsic_function(
-                        tempexp, substitute_intrinsic_function_with_casadi)
-                rhsdict[dvkey] = tempexp
+                    rhsdict[dvkey] = substitute_pyomo2casadi(RHS, templatemap)
+                else:
+                    rhsdict[dvkey] = convert_pyomo2scipy(RHS, templatemap)
         # Check to see if we found a RHS for every DerivativeVar in
         # the model
         # FIXME: Not sure how to rework this for multi-index case
@@ -496,7 +611,7 @@ class Simulator:
         algvars = []
 
         for item in iterkeys(templatemap):
-            if item._base.name in derivs.keys():
+            if item._base.name in derivs:
                 # Make sure there are no DerivativeVars in the
                 # template map
                 raise DAE_Error(
@@ -521,6 +636,14 @@ class Simulator:
                 return residual
             self._rhsfun = _rhsfun   
             
+        # Add any diffvars not added by expression walker to self._templatemap
+        if self._intpackage == 'casadi':
+            for _id in diffvars:
+                if _id not in templatemap:
+                    name = "%s[%s]" % (
+                        _id._base.name, ','.join(str(x) for x in _id._args))
+                    templatemap[_id] = casadi.SX.sym(name)
+
         self._contset = contset
         self._cstemplate = cstemplate
         self._diffvars = diffvars
@@ -811,7 +934,8 @@ class Simulator:
         xalltemp = [self._templatemap[i] for i in self._diffvars]
         xall = casadi.vertcat(*xalltemp)
 
-        odealltemp = [value(self._rhsdict[i]) for i in self._derivlist]
+        odealltemp = [convert_pyomo2casadi(self._rhsdict[i])
+                      for i in self._derivlist]
         odeall = casadi.vertcat(*odealltemp)
         dae = {'x': xall, 'ode': odeall}
 
@@ -819,7 +943,7 @@ class Simulator:
             zalltemp = [self._templatemap[i] for i in self._simalgvars]
             zall = casadi.vertcat(*zalltemp)
 
-            algalltemp = [value(i) for i in self._alglist]
+            algalltemp = [convert_pyomo2casadi(i) for i in self._alglist]
             algall = casadi.vertcat(*algalltemp)
             dae['z'] = zall
             dae['alg'] = algall
@@ -844,7 +968,7 @@ class Simulator:
 
         time = casadi.SX.sym('time')
 
-        odealltemp = [time * value(self._rhsdict[i])
+        odealltemp = [time * convert_pyomo2casadi(self._rhsdict[i])
                       for i in self._derivlist]
         odeall = casadi.vertcat(*odealltemp)
 
@@ -859,7 +983,7 @@ class Simulator:
             zalltemp = [self._templatemap[i] for i in self._simalgvars]
             zall = casadi.vertcat(*zalltemp)
             # Need to do anything special with time scaling??
-            algalltemp = [value(i) for i in self._alglist]
+            algalltemp = [convert_pyomo2casadi(i) for i in self._alglist]
             algall = casadi.vertcat(*algalltemp)
             dae['z'] = zall
             dae['alg'] = algall

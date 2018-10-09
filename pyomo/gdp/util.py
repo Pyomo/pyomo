@@ -10,10 +10,9 @@
 
 from six import string_types
 
-from pyomo.core.kernel.numvalue import native_types
-
-import pyomo.core.base.expr as EXPR
-import pyomo.core.base.expr_coopr3 as coopr3
+import pyomo.core.expr.current as EXPR
+from pyomo.core.expr.numvalue import nonpyomo_leaf_types, native_numeric_types
+from copy import deepcopy
 
 from pyomo.core.base.component import _ComponentBase, ComponentUID
 from pyomo.opt import TerminationCondition, SolverStatus
@@ -45,36 +44,38 @@ def verify_successful_solve(results):
         return NONOPTIMAL
 
 
-def clone_without_expression_components(expr, substitute):
-    ans = [EXPR.clone_expression(expr, substitute=substitute)]
-    _stack = [ (ans, 0, 1) ]
-    while _stack:
-        _argList, _idx, _len = _stack.pop()
-        while _idx < _len:
-            _sub = _argList[_idx]
-            _idx += 1
-            if type(_sub) in native_types:
-                pass
-            elif _sub.is_expression():
-                _stack.append(( _argList, _idx, _len ))
-                if not isinstance(_sub, EXPR._ExpressionBase):
-                    _argList[_idx-1] = EXPR.clone_expression(
-                        _sub._args[0], substitute=substitute )
-                elif type(_sub) is coopr3._ProductExpression:
-                    if _sub._denominator:
-                        _stack.append(
-                            (_sub._denominator, 0, len(_sub._denominator)) )
-                    _argList = _sub._numerator
-                else:
-                    _argList = _sub._args
-                    # HACK: As we may have to replace arguments, if the
-                    # _args is a tuple, then we will convert it to a
-                    # list.
-                    if type(_argList) is tuple:
-                        _argList = _sub._args = list(_argList)
-                _idx = 0
-                _len = len(_argList)
-    return ans[0]
+def clone_without_expression_components(expr, substitute=None):
+    """A function that is used to clone an expression.
+
+    Cloning is roughly equivalent to calling ``copy.deepcopy``.
+    However, the :attr:`clone_leaves` argument can be used to
+    clone only interior (i.e. non-leaf) nodes in the expression
+    tree.   Note that named expression objects are treated as
+    leaves when :attr:`clone_leaves` is :const:`True`, and hence
+    those subexpressions are not cloned.
+
+    This function uses a non-recursive
+    logic, which makes it more scalable than the logic in
+    ``copy.deepcopy``.
+
+    Args:
+        expr: The expression that will be cloned.
+        substitute (dict): A dictionary mapping object ids to
+            objects.  This dictionary has the same semantics as
+            the memo object used with ``copy.deepcopy``.  Defaults
+            to None, which indicates that no user-defined
+            dictionary is used.
+
+    Returns:
+        The cloned expression.
+    """
+    if substitute is None:
+        substitute = {}
+    #
+    visitor = EXPR.ExpressionReplacementVisitor(substitute=substitute,
+                                                remove_named_expressions=True)
+    return visitor.dfs_postorder_stack(expr)
+
 
 
 def target_list(x):

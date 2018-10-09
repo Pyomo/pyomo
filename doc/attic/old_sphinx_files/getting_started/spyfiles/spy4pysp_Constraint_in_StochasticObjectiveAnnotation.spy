@@ -1,0 +1,12 @@
+model = AbstractModel()
+
+# a first-stage variable
+model.x = Var()
+
+# a second-stage variable
+model.y = Var()
+
+# a param initialized with scenario-specific data
+model.p = Param()
+
+

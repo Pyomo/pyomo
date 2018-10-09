@@ -10,12 +10,15 @@
 
 import sys
 import logging
+
+import pyutilib.th as unittest
 from pyutilib.misc import Options
+
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.solvers import test_solver_cases
 import pyomo.kernel
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.block import IBlock
 
 # For expected failures that appear in all known version
 _trunk_version =  (float('inf'), float('inf'), float('inf'), float('inf'))
@@ -260,6 +263,7 @@ ExpectedFailures['baron', 'bar', 'MILP_unbounded'] = \
 #
 
 
+@unittest.nottest
 def test_scenarios(arg=None):
     """
     Generate scenarios
@@ -293,6 +297,7 @@ def test_scenarios(arg=None):
             yield (model, solver, io), Options(status=status, msg=msg, model=_model, solver=None, testcase=_solver_case)
 
 
+@unittest.nottest
 def run_test_scenarios(options):
     logging.disable(logging.WARNING)
 
@@ -338,7 +343,7 @@ def run_test_scenarios(options):
             stat[key] = (True, "")
         else:
             # Validate the solution returned by the solver
-            if isinstance(model_class.model, IBlockStorage):
+            if isinstance(model_class.model, IBlock):
                 model_class.model.load_solution(results.solution)
             else:
                 model_class.model.solutions.load_from(

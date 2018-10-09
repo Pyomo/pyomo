@@ -16,11 +16,11 @@ import weakref
 
 from ctypes import (
     Structure, POINTER, CFUNCTYPE, cdll, byref,
-    c_int, c_long, c_double, c_byte, c_char_p, c_void_p )
+    c_int, c_long, c_ulong, c_double, c_byte, c_char_p, c_void_p )
 
-from pyomo.core.base.numvalue import as_numeric
+from pyomo.core.expr.numvalue import native_types, NonNumericValue
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import Component
-from pyomo.core.base import expr as EXPR
 
 __all__  = ( 'ExternalFunction', )
 
@@ -31,7 +31,9 @@ except:
 
 logger = logging.getLogger('pyomo.core')
 
+
 class ExternalFunction(Component):
+
     def __new__(cls, *args, **kwds):
         if cls != ExternalFunction:
             return super(ExternalFunction, cls).__new__(cls)
@@ -54,11 +56,32 @@ class ExternalFunction(Component):
         self._index = None
 
     def __call__(self, *args):
-        idxs = reversed(six.moves.xrange(len(args)))
-        for i in idxs:
-            if type(args[i]) is types.GeneratorType:
-                args = args[:i] + tuple(args[i]) + args[i+1:]
-        return EXPR._ExternalFunctionExpression(self, args)
+        args_ = []
+        for arg in args:
+            if type(arg) is types.GeneratorType:
+                args_.extend(val for val in arg)
+            else:
+                args_.append(arg)
+        #
+        # Loop and do two thing:
+        #   1. Wrap non-numeric arguments
+        #   2. See if we have a potentially variable argument
+        #
+        pv = False
+        for i,arg in enumerate(args_):
+            try:
+                # Q: Is there a better way to test if a value is an object
+                #    not in native_types and not a standard expression type?
+                if arg.__class__ in native_types or arg.is_expression_type():
+                    pass
+                if not arg.__class__ in native_types and arg.is_potentially_variable():
+                    pv = True
+            except AttributeError:    
+                args_[i] = NonNumericValue(arg)
+        #
+        if pv:
+            return EXPR.ExternalFunctionExpression(args_, self)
+        return EXPR.NPV_ExternalFunctionExpression(args_, self)
 
     def evaluate(self, args):
         raise NotImplementedError(
@@ -66,6 +89,7 @@ class ExternalFunction(Component):
 
 
 class AMPLExternalFunction(ExternalFunction):
+
     def __init__(self, *args, **kwds):
         if args:
             raise ValueError(
@@ -77,7 +101,7 @@ class AMPLExternalFunction(ExternalFunction):
         self._so = None
         ExternalFunction.__init__(self, *args, **kwds)
 
-    def evaluate(self, args):
+    def _evaluate(self, args, fgh, fixed):
         if self._so is None:
             self.load_library()
         if self._function not in self._known_functions:
@@ -86,10 +110,30 @@ class AMPLExternalFunction(ExternalFunction):
                 "external library %s.\n\tAvailable functions: (%s)"
                 % ( self._function, self._library,
                     ', '.join(self._known_functions.keys()) ) )
-
-        arglist = _ARGLIST( *args )
+        #
+        args_ = []
+        for arg in args:
+            if arg.__class__ is NonNumericValue:
+                args_.append(arg.value)
+            else:
+                args_.append(arg)
+        arglist = _ARGLIST( args_, fgh, fixed )
         fcn = self._known_functions[self._function][0]
-        return fcn(byref(arglist))
+        f = fcn(byref(arglist))
+        return f, arglist
+
+    def evaluate(self, args):
+        return self._evaluate(args, 0, None)[0]
+
+    def evaluate_fgh(self, args, fixed=None):
+        if fixed is None:
+            fixed = tuple( arg.__class__ in native_types or arg.is_fixed()
+                           for arg in args )
+        N = len(args)
+        f, arglist = self._evaluate(args, 2, fixed)
+        g = [arglist.derivs[i] for i in range(N)]
+        h = [arglist.hes[i] for i in range((N+N**2)//2)]
+        return f, g, h
 
     def load_library(self):
         try:
@@ -106,14 +150,25 @@ class AMPLExternalFunction(ExternalFunction):
                 self._so = cdll.LoadLibrary(self._library)
 
         self._known_functions = {}
+        AE = _AMPLEXPORTS()
+        AE.ASLdate = 20160307
         def addfunc(name, f, _type, nargs, funcinfo, ae):
             # trap for Python 3, where the name comes in as bytes() and
             # not a string
             if not isinstance(name, six.string_types):
                 name = name.decode()
             self._known_functions[str(name)] = (f, _type, nargs, funcinfo, ae)
-        AE = _AMPLEXPORTS()
         AE.Addfunc = _AMPLEXPORTS.ADDFUNC(addfunc)
+        def addrandinit(ae, rss, v):
+            # TODO: This should support the randinit ASL option
+            rss(v, 1)
+        AE.Addrandinit = _AMPLEXPORTS.ADDRANDINIT(addrandinit)
+        def atreset(ae, a, b):
+            logger.warning(
+                "AMPL External function: ignoring AtReset call in external "
+                "library.  This may result in a memory leak or other "
+                "undesirable behavior.")
+        AE.AtReset = _AMPLEXPORTS.ATRESET(atreset)
 
         FUNCADD = CFUNCTYPE( None, POINTER(_AMPLEXPORTS) )
         FUNCADD(('funcadd_ASL', self._so))(byref(AE))
@@ -152,11 +207,17 @@ class PythonCallbackFunction(ExternalFunction):
     def evaluate(self, args):
         if args.__class__ is types.GeneratorType:
             args = tuple(args)
-        _id = args[0]
+        args_ = []
+        for arg in args:
+            if arg.__class__ is NonNumericValue:
+                args_.append(arg.value)
+            else:
+                args_.append(arg)
+        _id = args_[0]
         if _id != self._fcn_id:
             raise RuntimeError(
                 "PythonCallbackFunction called with invalid Global ID" )
-        return self._fcn(*args[1:])
+        return self._fcn(*args_[1:])
 
 
 class _ARGLIST(Structure):
@@ -204,23 +265,27 @@ class _ARGLIST(Structure):
         ('nsout', c_int), # number of symbolic OUT and INOUT args
         ]
 
-    def __init__(self, *args):
+    def __init__(self, args, fgh=0, fixed=None):
         super(_ARGLIST, self).__init__()
         N = len(args)
         self.n = self.nr = N
         self.at = (c_int*N)()
         self.ra = (c_double*N)()
         self.sa = None
-        self.derivs = (c_double*N)()
-        self.hes = (c_double*(N*N))()
+        if fgh > 0:
+            self.derivs = (c_double*N)(0.)
+        if fgh > 1:
+            self.hes = (c_double*((N+N*N)//2))(0.)
 
         for i,v in enumerate(args):
             self.at[i] = i
             self.ra[i] = v
-            self.derivs[i] = 0.
-        for i in six.moves.xrange(N*N):
-            self.hes[i] = 0.
 
+        if fixed:
+            self.dig = (c_byte*N)(0)
+            for i,v in enumerate(fixed):
+                if v:
+                    self.dig[i] = 1
 
 # The following "fake" class resolves a circular reference issue in the
 # _AMPLEXPORTS datastructure
@@ -248,6 +313,18 @@ class _AMPLEXPORTS(Structure):
         c_char_p, AMPLFUNC, c_int, c_int, c_void_p,
         POINTER(_AMPLEXPORTS) )
 
+    RANDSEEDSETTER = CFUNCTYPE(
+        None,
+        c_void_p, c_ulong )
+
+    ADDRANDINIT = CFUNCTYPE(
+        None,
+        POINTER(_AMPLEXPORTS), RANDSEEDSETTER, c_void_p )
+
+    ATRESET = CFUNCTYPE(
+        None,
+        POINTER(_AMPLEXPORTS), c_void_p, c_void_p )
+
     _fields_ = [
 	('StdErr', c_void_p),
 	('Addfunc', ADDFUNC),
@@ -261,7 +338,7 @@ class _AMPLEXPORTS(Structure):
 	('Crypto', c_void_p),
 	('asl', c_char_p),
 	('AtExit', c_void_p),
-	('AtReset', c_void_p),
+	('AtReset', ATRESET),
 	('Tempmem', c_void_p),
 	('Add_table_handler', c_void_p),
 	('Private', c_char_p),
@@ -308,5 +385,5 @@ class _AMPLEXPORTS(Structure):
 	('SnprintF', c_void_p),
 	('VsnprintF', c_void_p),
 	('Addrand', c_void_p),
-	('Addrandinit', c_void_p),
+	('Addrandinit', ADDRANDINIT),
 	]

@@ -12,10 +12,16 @@
 import os
 import time
 import subprocess
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
+import sys
+import collections
+if sys.version_info[:2] >= (3,6):
+    _ordered_dict_ = dict
+else:
+    try:
+        _ordered_dict_ = collections.OrderedDict
+    except ImportError:                         #pragma:nocover
+        import ordereddict
+        _ordered_dict_ = ordereddict.OrderedDict
 
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyomo.pysp.util.misc import (_get_test_nameserver,
@@ -79,7 +85,7 @@ class TestScenarioTreeManagerMisc(unittest.TestCase):
         model.stage_cost = Expression([1,2])
         model.stage_cost[1].expr = model.x
         model.stage_cost[2].expr = 0.0
-        model.o = Objective(expr=summation(model.stage_cost))
+        model.o = Objective(expr=sum_product(model.stage_cost))
         model.c = Constraint(expr=model.x >= model.y)
 
         scenario_tree_model = CreateConcreteTwoStageScenarioTreeModel(3)
@@ -153,16 +159,16 @@ def _PerBundleChained_noargs(worker, bundle):
 
 class _ScenarioTreeManagerTesterBase(object):
 
-    _bundle_dict3 = OrderedDict()
+    _bundle_dict3 = _ordered_dict_()
     _bundle_dict3['Bundle1'] = ['Scenario1']
     _bundle_dict3['Bundle2'] = ['Scenario2']
     _bundle_dict3['Bundle3'] = ['Scenario3']
 
-    _bundle_dict2 = OrderedDict()
+    _bundle_dict2 = _ordered_dict_()
     _bundle_dict2['Bundle1'] = ['Scenario1', 'Scenario2']
     _bundle_dict2['Bundle2'] = ['Scenario3']
 
-    _bundle_dict1 = OrderedDict()
+    _bundle_dict1 = _ordered_dict_()
     _bundle_dict1['Bundle1'] = ['Scenario1','Scenario2','Scenario3']
 
     @unittest.nottest
@@ -184,13 +190,13 @@ class _ScenarioTreeManagerTesterBase(object):
         options.scenario_tree_random_seed = 1
 
     @unittest.nottest
-    def _run_function_tests(self, manager, async=False, oneway=False, delay=False):
-        assert not (async and oneway)
+    def _run_function_tests(self, manager, async_call=False, oneway_call=False, delay=False):
+        assert not (async_call and oneway_call)
         class_name, test_name = self.id().split('.')[-2:]
         print("Running function tests on %s.%s" % (class_name, test_name))
         data = []
-        init = manager.initialize(async=async)
-        if async:
+        init = manager.initialize(async_call=async_call)
+        if async_call:
             init = init.complete()
         self.assertEqual(all(_v is True for _v in init.values()), True)
         self.assertEqual(sorted(init.keys()), sorted(manager.worker_names))
@@ -219,27 +225,27 @@ class _ScenarioTreeManagerTesterBase(object):
                 "_Single",
                 module_name=None,
                 invocation_type=InvocationType.Single,
-                oneway=oneway,
-                async=async)
+                oneway_call=oneway_call,
+                async_call=async_call)
         # bad invocation type
         with self.assertRaises(ValueError):
             manager.invoke_function(
                 "_Single",
                 module_name=thisfile,
                 invocation_type="_not_an_invocation_type_",
-                oneway=oneway,
-                async=async)
-        # bad oneway and async combo
+                oneway_call=oneway_call,
+                async_call=async_call)
+        # bad oneway_call and async_call combo
         with self.assertRaises(ValueError):
             manager.invoke_function(
                 "_Single",
                 module_name=thisfile,
                 invocation_type=InvocationType.Single,
-                oneway=True,
-                async=True)
+                oneway_call=True,
+                async_call=True)
         # bad paused state
         if isinstance(manager, ScenarioTreeManagerClientPyro) and \
-           (not async) and (not oneway) and (not delay):
+           (not async_call) and (not oneway_call) and (not delay):
             self.assertEqual(manager._transmission_paused, False)
             manager.pause_transmit()
             self.assertEqual(manager._transmission_paused, True)
@@ -248,8 +254,8 @@ class _ScenarioTreeManagerTesterBase(object):
                     "_Single",
                     module_name=thisfile,
                     invocation_type=InvocationType.Single,
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
             manager.unpause_transmit()
             self.assertEqual(manager._transmission_paused, False)
         if dill_available or \
@@ -259,10 +265,10 @@ class _ScenarioTreeManagerTesterBase(object):
             results = manager.invoke_function(
                 _Single,
                 invocation_type=InvocationType.Single,
-                oneway=oneway,
-                async=async)
+                oneway_call=oneway_call,
+                async_call=async_call)
             if not delay:
-                if async:
+                if async_call:
                     results = results.complete()
             data.append(('_Single', results))
             if isinstance(manager, ScenarioTreeManagerClientPyro):
@@ -272,8 +278,8 @@ class _ScenarioTreeManagerTesterBase(object):
                         _Single,
                         module_name=thisfile,
                         invocation_type=InvocationType.Single,
-                        oneway=oneway,
-                        async=async)
+                        oneway_call=oneway_call,
+                        async_call=async_call)
 
         elif isinstance(manager, ScenarioTreeManagerClientPyro):
             # requires dill
@@ -281,18 +287,18 @@ class _ScenarioTreeManagerTesterBase(object):
                 manager.invoke_function(
                     _Single,
                     invocation_type=InvocationType.Single,
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
         print("")
         print("Running InvocationType.Single...")
         results = manager.invoke_function(
             "_Single",
             module_name=thisfile,
             invocation_type=InvocationType.Single,
-            oneway=oneway,
-            async=async)
+            oneway_call=oneway_call,
+            async_call=async_call)
         if not delay:
-            if async:
+            if async_call:
                 results = results.complete()
         data.append(('_Single', results))
         print("Running InvocationType.PerScenario...")
@@ -300,10 +306,10 @@ class _ScenarioTreeManagerTesterBase(object):
             "_PerScenario",
             module_name=thisfile,
             invocation_type=InvocationType.PerScenario,
-            oneway=oneway,
-            async=async)
+            oneway_call=oneway_call,
+            async_call=async_call)
         if not delay:
-            if async:
+            if async_call:
                 results = results.complete()
         data.append(('_PerScenario', results))
         print("Running InvocationType.PerScenarioChained...")
@@ -312,10 +318,10 @@ class _ScenarioTreeManagerTesterBase(object):
             module_name=thisfile,
             function_args=(None,),
             invocation_type=InvocationType.PerScenarioChained,
-            oneway=oneway,
-            async=async)
+            oneway_call=oneway_call,
+            async_call=async_call)
         if not delay:
-            if async:
+            if async_call:
                 results = results.complete()
         data.append(('_PerScenarioChained', results))
         print("Running InvocationType.PerScenarioChained (no args)...")
@@ -323,10 +329,10 @@ class _ScenarioTreeManagerTesterBase(object):
             "_PerScenarioChained_noargs",
             module_name=thisfile,
             invocation_type=InvocationType.PerScenarioChained,
-            oneway=oneway,
-            async=async)
+            oneway_call=oneway_call,
+            async_call=async_call)
         if not delay:
-            if async:
+            if async_call:
                 results = results.complete()
         data.append(('_PerScenarioChained_noargs', results))
 
@@ -342,8 +348,8 @@ class _ScenarioTreeManagerTesterBase(object):
                     module_name=thisfile,
                     function_args=(None,),
                     invocation_type=InvocationType.PerScenarioChained,
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
             manager.unpause_transmit()
             self.assertEqual(manager._transmission_paused, False)
 
@@ -352,10 +358,10 @@ class _ScenarioTreeManagerTesterBase(object):
             "_PerScenario",
             module_name=thisfile,
             invocation_type=InvocationType.OnScenario('Scenario1'),
-            oneway=oneway,
-            async=async)
+            oneway_call=oneway_call,
+            async_call=async_call)
         if not delay:
-            if async:
+            if async_call:
                 results = results.complete()
         data.append(('_OnScenario', results))
         print("Running InvocationType.OnScenarios...")
@@ -363,10 +369,10 @@ class _ScenarioTreeManagerTesterBase(object):
             "_PerScenario",
             module_name=thisfile,
             invocation_type=InvocationType.OnScenarios(['Scenario1', 'Scenario3']),
-            oneway=oneway,
-            async=async)
+            oneway_call=oneway_call,
+            async_call=async_call)
         if not delay:
-            if async:
+            if async_call:
                 results = results.complete()
         data.append(('_OnScenarios', results))
         print("Running InvocationType.OnScenariosChained...")
@@ -375,10 +381,10 @@ class _ScenarioTreeManagerTesterBase(object):
             module_name=thisfile,
             function_args=(None,),
             invocation_type=InvocationType.OnScenariosChained(['Scenario1', 'Scenario3']),
-            oneway=oneway,
-            async=async)
+            oneway_call=oneway_call,
+            async_call=async_call)
         if not delay:
-            if async:
+            if async_call:
                 results = results.complete()
         data.append(('_OnScenariosChained', results))
         print("Running InvocationType.OnScenariosChained (no args)...")
@@ -386,10 +392,10 @@ class _ScenarioTreeManagerTesterBase(object):
             "_PerScenarioChained_noargs",
             module_name=thisfile,
             invocation_type=InvocationType.OnScenariosChained(['Scenario3', 'Scenario2']),
-            oneway=oneway,
-            async=async)
+            oneway_call=oneway_call,
+            async_call=async_call)
         if not delay:
-            if async:
+            if async_call:
                 results = results.complete()
         data.append(('_OnScenariosChained_noargs', results))
 
@@ -405,8 +411,8 @@ class _ScenarioTreeManagerTesterBase(object):
                     module_name=thisfile,
                     function_args=(None,),
                     invocation_type=InvocationType.OnScenariosChained(['Scenario1', 'Scenario3']),
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
             manager.unpause_transmit()
             self.assertEqual(manager._transmission_paused, False)
 
@@ -416,10 +422,10 @@ class _ScenarioTreeManagerTesterBase(object):
                 "_PerBundle",
                 module_name=thisfile,
                 invocation_type=InvocationType.PerBundle,
-                oneway=oneway,
-                async=async)
+                oneway_call=oneway_call,
+                async_call=async_call)
             if not delay:
-                if async:
+                if async_call:
                     results = results.complete()
             data.append(('_PerBundle', results))
             print("Running InvocationType.PerBundleChained...")
@@ -428,10 +434,10 @@ class _ScenarioTreeManagerTesterBase(object):
                 module_name=thisfile,
                 function_args=(None,),
                 invocation_type=InvocationType.PerBundleChained,
-                oneway=oneway,
-                async=async)
+                oneway_call=oneway_call,
+                async_call=async_call)
             if not delay:
-                if async:
+                if async_call:
                     results = results.complete()
             data.append(('_PerBundleChained', results))
             print("Running InvocationType.PerBundleChained (no args)...")
@@ -439,10 +445,10 @@ class _ScenarioTreeManagerTesterBase(object):
                 "_PerBundleChained_noargs",
                 module_name=thisfile,
                 invocation_type=InvocationType.PerBundleChained,
-                oneway=oneway,
-                async=async)
+                oneway_call=oneway_call,
+                async_call=async_call)
             if not delay:
-                if async:
+                if async_call:
                     results = results.complete()
             data.append(('_PerBundleChained_noargs', results))
 
@@ -451,10 +457,10 @@ class _ScenarioTreeManagerTesterBase(object):
                 "_PerBundle",
                 module_name=thisfile,
                 invocation_type=InvocationType.OnBundle('Bundle1'),
-                oneway=oneway,
-                async=async)
+                oneway_call=oneway_call,
+                async_call=async_call)
             if not delay:
-                if async:
+                if async_call:
                     results = results.complete()
             data.append(('_OnBundle', results))
             print("Running InvocationType.OnBundles...")
@@ -466,10 +472,10 @@ class _ScenarioTreeManagerTesterBase(object):
                 "_PerBundle",
                 module_name=thisfile,
                 invocation_type=InvocationType.OnBundles([b.name for b in manager.scenario_tree.bundles]),
-                oneway=oneway,
-                async=async)
+                oneway_call=oneway_call,
+                async_call=async_call)
             if not delay:
-                if async:
+                if async_call:
                     results = results.complete()
             data.append(('_OnBundles', results))
             print("Running InvocationType.OnBundlesChained...")
@@ -478,10 +484,10 @@ class _ScenarioTreeManagerTesterBase(object):
                 module_name=thisfile,
                 function_args=(None,),
                 invocation_type=InvocationType.OnBundlesChained(_bundle_names),
-                oneway=oneway,
-                async=async)
+                oneway_call=oneway_call,
+                async_call=async_call)
             if not delay:
-                if async:
+                if async_call:
                     results = results.complete()
             data.append(('_OnBundlesChained', results))
             print("Running InvocationType.OnBundlesChained (no args)...")
@@ -489,10 +495,10 @@ class _ScenarioTreeManagerTesterBase(object):
                 "_PerBundleChained_noargs",
                 module_name=thisfile,
                 invocation_type=InvocationType.OnBundlesChained(_bundle_names),
-                oneway=oneway,
-                async=async)
+                oneway_call=oneway_call,
+                async_call=async_call)
             if not delay:
-                if async:
+                if async_call:
                     results = results.complete()
             data.append(('_OnBundlesChained_noargs', results))
         else:
@@ -501,44 +507,44 @@ class _ScenarioTreeManagerTesterBase(object):
                     "_PerBundle",
                     module_name=thisfile,
                     invocation_type=InvocationType.PerBundle,
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
             with self.assertRaises(ValueError):
                 manager.invoke_function(
                     "_PerBundleChained",
                     module_name=thisfile,
                     function_args=(None,),
                     invocation_type=InvocationType.PerBundleChained,
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
             with self.assertRaises(ValueError):
                 manager.invoke_function(
                     "_PerBundle",
                     module_name=thisfile,
                     invocation_type=InvocationType.OnBundle('Bundle1'),
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
             with self.assertRaises(ValueError):
                 manager.invoke_function(
                     "_PerBundle",
                     module_name=thisfile,
                     invocation_type=InvocationType.OnBundles(['B1','B2']),
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
             with self.assertRaises(ValueError):
                 manager.invoke_function(
                     "_PerBundleChained",
                     module_name=thisfile,
                     function_args=(None,),
                     invocation_type=InvocationType.OnBundlesChained(['B1','B2']),
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
 
         for name, results in data:
             if delay:
-                if async:
+                if async_call:
                     results = results.complete()
-            if oneway:
+            if oneway_call:
                 self.assertEqual(id(results), id(None))
             else:
                 if name == "_Single":
@@ -654,15 +660,15 @@ class _ScenarioTreeManagerTesterBase(object):
         data['_Single'] = {}
         for worker_name in manager.worker_names:
 
-            # bad oneway and async combo
+            # bad oneway_call and async_call combo
             with self.assertRaises(ValueError):
                 manager.invoke_function_on_worker(
                     worker_name,
                     "_Single",
                     module_name=thisfile,
                     invocation_type=InvocationType.Single,
-                    oneway=True,
-                    async=True)
+                    oneway_call=True,
+                    async_call=True)
 
             if dill_available or \
                isinstance(manager, ScenarioTreeManagerClientPyro):
@@ -672,8 +678,8 @@ class _ScenarioTreeManagerTesterBase(object):
                     worker_name,
                     _Single,
                     invocation_type=InvocationType.Single,
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
                 if isinstance(manager, ScenarioTreeManagerClientPyro):
                     # module name must be None
                     with self.assertRaises(ValueError):
@@ -682,8 +688,8 @@ class _ScenarioTreeManagerTesterBase(object):
                             "_Single",
                             module_name=None,
                             invocation_type=InvocationType.Single,
-                            oneway=oneway,
-                            async=async)
+                            oneway_call=oneway_call,
+                            async_call=async_call)
 
             else:
                 if isinstance(manager, ScenarioTreeManagerClientPyro):
@@ -693,18 +699,18 @@ class _ScenarioTreeManagerTesterBase(object):
                             worker_name,
                             _Single,
                             invocation_type=InvocationType.Single,
-                            oneway=oneway,
-                            async=async)
+                            oneway_call=oneway_call,
+                            async_call=async_call)
                 results = manager.invoke_function_on_worker(
                     worker_name,
                     "_Single",
                     module_name=thisfile,
                     invocation_type=InvocationType.Single,
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
 
             if not delay:
-                if async:
+                if async_call:
                     results = results.complete()
             data['_Single'][worker_name] = results
 
@@ -716,10 +722,10 @@ class _ScenarioTreeManagerTesterBase(object):
                 "_PerScenario",
                 module_name=thisfile,
                 invocation_type=InvocationType.PerScenario,
-                oneway=oneway,
-                async=async)
+                oneway_call=oneway_call,
+                async_call=async_call)
             if not delay:
-                if async:
+                if async_call:
                     results = results.complete()
             data['_PerScenario'][worker_name] = results
         print("Running InvocationType.PerScenarioChained on individual workers...")
@@ -732,8 +738,8 @@ class _ScenarioTreeManagerTesterBase(object):
                 module_name=thisfile,
                 function_args=results,
                 invocation_type=InvocationType.PerScenarioChained,
-                async=async)
-            if async:
+                async_call=async_call)
+            if async_call:
                 results = results.complete()
         data['_PerScenarioChained'] = results
         print("Running InvocationType.PerScenarioChained (no args) on individual workers...")
@@ -744,9 +750,9 @@ class _ScenarioTreeManagerTesterBase(object):
                 "_PerScenarioChained_noargs",
                 module_name=thisfile,
                 invocation_type=InvocationType.PerScenarioChained,
-                async=async)
+                async_call=async_call)
             if not delay:
-                if async:
+                if async_call:
                     results = results.complete()
             data['_PerScenarioChained_noargs'][worker_name] = results
 
@@ -759,10 +765,10 @@ class _ScenarioTreeManagerTesterBase(object):
                 "_PerScenario",
                 module_name=thisfile,
                 invocation_type=InvocationType.OnScenario(manager.get_scenarios_for_worker(worker_name)[0]),
-                oneway=oneway,
-                async=async)
+                oneway_call=oneway_call,
+                async_call=async_call)
             if not delay:
-                if async:
+                if async_call:
                     results = results.complete()
             data['_OnScenario'][worker_name] = results
         print("Running InvocationType.OnScenarios on individual workers...")
@@ -774,10 +780,10 @@ class _ScenarioTreeManagerTesterBase(object):
                 "_PerScenario",
                 module_name=thisfile,
                 invocation_type=InvocationType.OnScenarios(manager.get_scenarios_for_worker(worker_name)),
-                oneway=oneway,
-                async=async)
+                oneway_call=oneway_call,
+                async_call=async_call)
             if not delay:
-                if async:
+                if async_call:
                     results = results.complete()
             data['_OnScenarios'][worker_name] = results
         print("Running InvocationType.OnScenariosChained on individual workers...")
@@ -791,9 +797,9 @@ class _ScenarioTreeManagerTesterBase(object):
                 module_name=thisfile,
                 function_args=results,
                 invocation_type=InvocationType.OnScenariosChained(manager.get_scenarios_for_worker(worker_name)),
-                oneway=oneway,
-                async=async)
-            if async:
+                oneway_call=oneway_call,
+                async_call=async_call)
+            if async_call:
                 results = results.complete()
         data['_OnScenariosChained'] = results
         print("Running InvocationType.OnScenariosChained (no args) on individual workers...")
@@ -805,10 +811,10 @@ class _ScenarioTreeManagerTesterBase(object):
                 "_PerScenarioChained_noargs",
                 module_name=thisfile,
                 invocation_type=InvocationType.OnScenariosChained(manager.get_scenarios_for_worker(worker_name)),
-                oneway=oneway,
-                async=async)
+                oneway_call=oneway_call,
+                async_call=async_call)
             if not delay:
-                if async:
+                if async_call:
                     results = results.complete()
             data['_OnScenariosChained_noargs'][worker_name] = results
 
@@ -821,10 +827,10 @@ class _ScenarioTreeManagerTesterBase(object):
                     "_PerBundle",
                     module_name=thisfile,
                     invocation_type=InvocationType.PerBundle,
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
                 if not delay:
-                    if async:
+                    if async_call:
                         results = results.complete()
                 data['_PerBundle'][worker_name] = results
             print("Running InvocationType.PerBundleChained on individual workers...")
@@ -837,8 +843,8 @@ class _ScenarioTreeManagerTesterBase(object):
                     module_name=thisfile,
                     function_args=results,
                     invocation_type=InvocationType.PerBundleChained,
-                    async=async)
-                if async:
+                    async_call=async_call)
+                if async_call:
                     results = results.complete()
             data['_PerBundleChained'] = results
             print("Running InvocationType.PerBundleChained (no args) on individual workers...")
@@ -849,9 +855,9 @@ class _ScenarioTreeManagerTesterBase(object):
                     "_PerBundleChained_noargs",
                     module_name=thisfile,
                     invocation_type=InvocationType.PerBundleChained,
-                    async=async)
+                    async_call=async_call)
                 if not delay:
-                    if async:
+                    if async_call:
                         results = results.complete()
                 data['_PerBundleChained_noargs'][worker_name] = results
 
@@ -864,10 +870,10 @@ class _ScenarioTreeManagerTesterBase(object):
                     "_PerBundle",
                     module_name=thisfile,
                     invocation_type=InvocationType.OnBundle(manager.get_bundles_for_worker(worker_name)[0]),
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
                 if not delay:
-                    if async:
+                    if async_call:
                         results = results.complete()
                 data['_OnBundle'][worker_name] = results
             print("Running InvocationType.OnBundles on individual workers...")
@@ -879,10 +885,10 @@ class _ScenarioTreeManagerTesterBase(object):
                     "_PerBundle",
                     module_name=thisfile,
                     invocation_type=InvocationType.OnBundles(manager.get_bundles_for_worker(worker_name)),
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
                 if not delay:
-                    if async:
+                    if async_call:
                         results = results.complete()
                 data['_OnBundles'][worker_name] = results
             print("Running InvocationType.OnBundlesChained on individual workers...")
@@ -895,8 +901,8 @@ class _ScenarioTreeManagerTesterBase(object):
                     module_name=thisfile,
                     function_args=results,
                     invocation_type=InvocationType.OnBundlesChained(manager.get_bundles_for_worker(worker_name)),
-                    async=async)
-                if async:
+                    async_call=async_call)
+                if async_call:
                     results = results.complete()
             data['_OnBundlesChained'] = results
             print("Running InvocationType.OnBundlesChained (no args) on individual workers...")
@@ -907,9 +913,9 @@ class _ScenarioTreeManagerTesterBase(object):
                     "_PerBundleChained_noargs",
                     module_name=thisfile,
                     invocation_type=InvocationType.OnBundlesChained(manager.get_bundles_for_worker(worker_name)),
-                    async=async)
+                    async_call=async_call)
                 if not delay:
-                    if async:
+                    if async_call:
                         results = results.complete()
                 data['_OnBundlesChained_noargs'][worker_name] = results
 
@@ -921,10 +927,10 @@ class _ScenarioTreeManagerTesterBase(object):
                (name != '_OnScenariosChained') and \
                (name != '_OnBundlesChained'):
                 if delay:
-                    if async:
+                    if async_call:
                         for worker_name in results:
                             results[worker_name] = results[worker_name].complete()
-            if oneway:
+            if oneway_call:
                 if (name != '_PerScenarioChained') and \
                    (name != '_PerBundleChained') and \
                    (name != '_OnScenariosChained') and \
@@ -1059,17 +1065,17 @@ class _ScenarioTreeManagerTesterBase(object):
         # Test invoke_method
         #
 
-        # bad oneway and async combo
+        # bad oneway_call and async_call combo
         with self.assertRaises(ValueError):
             manager.invoke_method(
                 "junk",
                 method_args=(None,),
                 method_kwds={'a': None},
-                oneway=True,
-                async=True)
+                oneway_call=True,
+                async_call=True)
         # bad paused state
         if isinstance(manager, ScenarioTreeManagerClientPyro) and \
-           (not async) and (not oneway) and (not delay):
+           (not async_call) and (not oneway_call) and (not delay):
             self.assertEqual(manager._transmission_paused, False)
             manager.pause_transmit()
             self.assertEqual(manager._transmission_paused, True)
@@ -1078,8 +1084,8 @@ class _ScenarioTreeManagerTesterBase(object):
                     "junk",
                     method_args=(None,),
                     method_kwds={'a': None},
-                    oneway=oneway,
-                    async=async)
+                    oneway_call=oneway_call,
+                    async_call=async_call)
             manager.unpause_transmit()
             self.assertEqual(manager._transmission_paused, False)
 
@@ -1087,11 +1093,11 @@ class _ScenarioTreeManagerTesterBase(object):
             "junk",
             method_args=(None,),
             method_kwds={'a': None},
-            oneway=oneway,
-            async=async)
-        if async:
+            oneway_call=oneway_call,
+            async_call=async_call)
+        if async_call:
             result = result.complete()
-        if oneway:
+        if oneway_call:
             self.assertEqual(id(result), id(None))
         else:
             self.assertEqual(sorted(result.keys()),
@@ -1107,26 +1113,26 @@ class _ScenarioTreeManagerTesterBase(object):
 
         results = {}
         for worker_name in manager.worker_names:
-            # bad oneway and async combo
+            # bad oneway_call and async_call combo
             with self.assertRaises(ValueError):
                 manager.invoke_method_on_worker(worker_name,
                                                 "junk",
                                                 method_args=(None,),
                                                 method_kwds={'a': None},
-                                                oneway=True,
-                                                async=True)
+                                                oneway_call=True,
+                                                async_call=True)
             results[worker_name] = \
                 manager.invoke_method_on_worker(worker_name,
                                                 "junk",
                                                 method_args=(None,),
                                                 method_kwds={'a': None},
-                                                oneway=oneway,
-                                                async=async)
-        if async:
+                                                oneway_call=oneway_call,
+                                                async_call=async_call)
+        if async_call:
             results = dict((worker_name, results[worker_name].complete())
                            for worker_name in results)
 
-        if oneway:
+        if oneway_call:
             for worker_name in results:
                 self.assertEqual(id(results[worker_name]), id(None))
         else:
@@ -1137,116 +1143,116 @@ class _ScenarioTreeManagerTesterBase(object):
 
     @unittest.nottest
     def _scenarios_test(self,
-                        async=False,
-                        oneway=False,
+                        async_call=False,
+                        oneway_call=False,
                         delay=False):
         self._setup(self.options)
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager,
-                                     async=async,
-                                     oneway=oneway,
+                                     async_call=async_call,
+                                     oneway_call=oneway_call,
                                      delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), False)
         self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
     def _bundles1_test(self,
-                       async=False,
-                       oneway=False,
+                       async_call=False,
+                       oneway_call=False,
                        delay=False):
         options = PySPConfigBlock()
         self._setup(self.options)
         self.options.scenario_bundle_specification = self._bundle_dict1
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager,
-                                     async=async,
-                                     oneway=oneway,
+                                     async_call=async_call,
+                                     oneway_call=oneway_call,
                                      delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
     def _bundles2_test(self,
-                       async=False,
-                       oneway=False,
+                       async_call=False,
+                       oneway_call=False,
                        delay=False):
         options = PySPConfigBlock()
         self._setup(self.options)
         self.options.scenario_bundle_specification = self._bundle_dict2
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager,
-                                     async=async,
-                                     oneway=oneway,
+                                     async_call=async_call,
+                                     oneway_call=oneway_call,
                                      delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
     def _bundles3_test(self,
-                       async=False,
-                       oneway=False,
+                       async_call=False,
+                       oneway_call=False,
                        delay=False):
         options = PySPConfigBlock()
         self._setup(self.options)
         self.options.scenario_bundle_specification = self._bundle_dict3
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager,
-                                     async=async,
-                                     oneway=oneway,
+                                     async_call=async_call,
+                                     oneway_call=oneway_call,
                                      delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
 
     def test_scenarios(self):
-        self._scenarios_test(async=False,
-                             oneway=False,
+        self._scenarios_test(async_call=False,
+                             oneway_call=False,
                              delay=False)
-    def test_scenarios_async(self):
-        self._scenarios_test(async=True,
-                             oneway=False,
+    def test_scenarios_async_call(self):
+        self._scenarios_test(async_call=True,
+                             oneway_call=False,
                              delay=False)
-    def test_scenarios_async_delay(self):
-        self._scenarios_test(async=True,
-                             oneway=False,
+    def test_scenarios_async_call_delay(self):
+        self._scenarios_test(async_call=True,
+                             oneway_call=False,
                              delay=True)
 
     def test_bundles1(self):
-        self._bundles1_test(async=False,
-                            oneway=False,
+        self._bundles1_test(async_call=False,
+                            oneway_call=False,
                             delay=False)
-    def test_bundles1_async(self):
-        self._bundles1_test(async=True,
-                            oneway=False,
+    def test_bundles1_async_call(self):
+        self._bundles1_test(async_call=True,
+                            oneway_call=False,
                             delay=False)
-    def test_bundles1_async_delay(self):
-        self._bundles1_test(async=True,
-                            oneway=False,
+    def test_bundles1_async_call_delay(self):
+        self._bundles1_test(async_call=True,
+                            oneway_call=False,
                             delay=True)
 
     def test_bundles2(self):
-        self._bundles2_test(async=False,
-                            oneway=False,
+        self._bundles2_test(async_call=False,
+                            oneway_call=False,
                             delay=False)
-    def test_bundles2_async(self):
-        self._bundles2_test(async=True,
-                            oneway=False,
+    def test_bundles2_async_call(self):
+        self._bundles2_test(async_call=True,
+                            oneway_call=False,
                             delay=False)
-    def test_bundles2_async_delay(self):
-        self._bundles2_test(async=True,
-                            oneway=False,
+    def test_bundles2_async_call_delay(self):
+        self._bundles2_test(async_call=True,
+                            oneway_call=False,
                             delay=True)
 
     def test_bundles3(self):
-        self._bundles3_test(async=False,
-                            oneway=False,
+        self._bundles3_test(async_call=False,
+                            oneway_call=False,
                             delay=False)
-    def test_bundles3_async(self):
-        self._bundles3_test(async=True,
-                            oneway=False,
+    def test_bundles3_async_call(self):
+        self._bundles3_test(async_call=True,
+                            oneway_call=False,
                             delay=False)
-    def test_bundles3_async_delay(self):
-        self._bundles3_test(async=True,
-                            oneway=False,
+    def test_bundles3_async_call_delay(self):
+        self._bundles3_test(async_call=True,
+                            oneway_call=False,
                             delay=True)
 
     def test_random_bundles(self):
@@ -1271,8 +1277,8 @@ class TestScenarioTreeManagerClientSerial(
 
     def setUp(self):
         self.options = PySPConfigBlock()
-        self.async = False
-        self.oneway = False
+        self.async_call = False
+        self.oneway_call = False
         self.delay = False
         ScenarioTreeManagerClientSerial.register_options(self.options)
 
@@ -1366,107 +1372,107 @@ class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
 
     @unittest.nottest
     def _scenarios_1server_test(self,
-                                async=False,
-                                oneway=False,
+                                async_call=False,
+                                oneway_call=False,
                                 delay=False):
         self._setup(self.options, servers=1)
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager,
-                                     async=async,
-                                     oneway=oneway,
+                                     async_call=async_call,
+                                     oneway_call=oneway_call,
                                      delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), False)
         self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
     def _bundles1_1server_test(self,
-                               async=False,
-                               oneway=False,
+                               async_call=False,
+                               oneway_call=False,
                                delay=False):
         self._setup(self.options, servers=1)
         self.options.scenario_bundle_specification = self._bundle_dict1
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager,
-                                     async=async,
-                                     oneway=oneway,
+                                     async_call=async_call,
+                                     oneway_call=oneway_call,
                                      delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
     def _bundles2_1server_test(self,
-                               async=False,
-                               oneway=False,
+                               async_call=False,
+                               oneway_call=False,
                                delay=False):
         self._setup(self.options, servers=1)
         self.options.scenario_bundle_specification = self._bundle_dict2
         with self.cls(self.options, **_init_kwds) as manager:
-            self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
+            self._run_function_tests(manager, async_call=async_call, oneway_call=oneway_call, delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
     def _bundles3_1server_test(self,
-                               async=False,
-                               oneway=False,
+                               async_call=False,
+                               oneway_call=False,
                                delay=False):
         self._setup(self.options, servers=1)
         self.options.scenario_bundle_specification = self._bundle_dict3
         with self.cls(self.options, **_init_kwds) as manager:
-            self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
+            self._run_function_tests(manager, async_call=async_call, oneway_call=oneway_call, delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
 
     def test_scenarios_1server(self):
-        self._scenarios_1server_test(async=False,
-                                     oneway=False,
+        self._scenarios_1server_test(async_call=False,
+                                     oneway_call=False,
                                      delay=False)
-    def test_scenarios_1server_async(self):
-        self._scenarios_1server_test(async=True,
-                                     oneway=False,
+    def test_scenarios_1server_async_call(self):
+        self._scenarios_1server_test(async_call=True,
+                                     oneway_call=False,
                                      delay=False)
-    def test_scenarios_1server_async_delay(self):
-        self._scenarios_1server_test(async=True,
-                                     oneway=False,
+    def test_scenarios_1server_async_call_delay(self):
+        self._scenarios_1server_test(async_call=True,
+                                     oneway_call=False,
                                      delay=True)
 
     def test_bundles1_1server(self):
-        self._bundles1_1server_test(async=False,
-                                    oneway=False,
+        self._bundles1_1server_test(async_call=False,
+                                    oneway_call=False,
                                     delay=False)
-    def test_bundles1_1server_async(self):
-        self._bundles1_1server_test(async=True,
-                                    oneway=False,
+    def test_bundles1_1server_async_call(self):
+        self._bundles1_1server_test(async_call=True,
+                                    oneway_call=False,
                                     delay=False)
-    def test_bundles1_1server_async_delay(self):
-        self._bundles1_1server_test(async=True,
-                                    oneway=False,
+    def test_bundles1_1server_async_call_delay(self):
+        self._bundles1_1server_test(async_call=True,
+                                    oneway_call=False,
                                     delay=True)
 
     def test_bundles2_1server(self):
-        self._bundles2_1server_test(async=False,
-                                    oneway=False,
+        self._bundles2_1server_test(async_call=False,
+                                    oneway_call=False,
                                     delay=False)
-    def test_bundles2_1server_async(self):
-        self._bundles2_1server_test(async=True,
-                                    oneway=False,
+    def test_bundles2_1server_async_call(self):
+        self._bundles2_1server_test(async_call=True,
+                                    oneway_call=False,
                                     delay=False)
-    def test_bundles2_1server_async_delay(self):
-        self._bundles2_1server_test(async=True,
-                                    oneway=False,
+    def test_bundles2_1server_async_call_delay(self):
+        self._bundles2_1server_test(async_call=True,
+                                    oneway_call=False,
                                     delay=True)
 
     def test_bundles3_1server(self):
-        self._bundles3_1server_test(async=False,
-                                    oneway=False,
+        self._bundles3_1server_test(async_call=False,
+                                    oneway_call=False,
                                     delay=False)
-    def test_bundles3_1server_async(self):
-        self._bundles3_1server_test(async=True,
-                                    oneway=False,
+    def test_bundles3_1server_async_call(self):
+        self._bundles3_1server_test(async_call=True,
+                                    oneway_call=False,
                                     delay=False)
-    def test_bundles3_1server_async_delay(self):
-        self._bundles3_1server_test(async=True,
-                                    oneway=False,
+    def test_bundles3_1server_async_call_delay(self):
+        self._bundles3_1server_test(async_call=True,
+                                    oneway_call=False,
                                     delay=True)
 
     def test_random_bundles_1server(self):

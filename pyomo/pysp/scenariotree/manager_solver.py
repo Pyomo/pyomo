@@ -109,7 +109,7 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
                        ephemeral_solver_options,
                        disable_warmstart,
                        check_status,
-                       async):
+                       async_call):
 
         assert object_type in ('bundles', 'scenarios')
 
@@ -125,7 +125,7 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
                 object_type,
                 _async_solve_result.complete(),
                 check_status))
-        if not async:
+        if not async_call:
             result = result.complete()
         return result
 
@@ -179,7 +179,7 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
                 users catch errors early on and should be
                 set to :const:`False` in situations where
                 more advanced status handling is necessary.
-            async (bool): When set to :const:`True`, an
+            async_call (bool): When set to :const:`True`, an
                 async results object is returned that allows
                 the solves to be completed
                 asynchronously. Default is
@@ -192,7 +192,7 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
         Returns:
             A :class:`ScenarioTreeSolveResults` object storing \
             basic status information for each subproblem. If \
-            the :attr:`async` keyword is set to :const:`True` \
+            the :attr:`async_call` keyword is set to :const:`True` \
             then an :class:`AsyncResult` object is returned.
 
         Examples:
@@ -207,7 +207,7 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
             The following lines do the same by first
             initiating an asynchronous solve request.
 
-            >>> job = sp.solve_subproblems(async=True)
+            >>> job = sp.solve_subproblems(async_call=True)
             >>> # ... do other things ... #
             >>> results = job.complete()
             >>> results.pprint()
@@ -231,7 +231,7 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
                         ephemeral_solver_options=None,
                         disable_warmstart=False,
                         check_status=True,
-                        async=False):
+                        async_call=False):
         """Solve scenarios (ignoring bundles even if they exists).
 
         Args:
@@ -253,7 +253,7 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
                 users catch errors early on and should be
                 set to :const:`False` in situations where
                 more advanced status handling is necessary.
-            async (bool): When set to :const:`True`, an
+            async_call (bool): When set to :const:`True`, an
                 async results object is returned that allows
                 the solves to be completed
                 asynchronously. Default is
@@ -266,7 +266,7 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
         Returns:
             A :class:`ScenarioTreeSolveResults` object storing \
             basic status information for each subproblem. If \
-            the :attr:`async` keyword is set to :const:`True` \
+            the :attr:`async_call` keyword is set to :const:`True` \
             then an :class:`AsyncResult` object is returned.
 
         Examples:
@@ -281,7 +281,7 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
             The following lines do the same by first
             initiating an asynchronous solve request.
 
-            >>> job = sp.solve_scenarios(async=True)
+            >>> job = sp.solve_scenarios(async_call=True)
             >>> # ... do other things ... #
             >>> results = job.complete()
             >>> results.pprint()
@@ -296,14 +296,14 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
                                    ephemeral_solver_options,
                                    disable_warmstart,
                                    check_status,
-                                   async)
+                                   async_call)
 
     def solve_bundles(self,
                       bundles=None,
                       ephemeral_solver_options=None,
                       disable_warmstart=False,
                       check_status=True,
-                      async=False):
+                      async_call=False):
         """Solve bundles (they must exists).
 
         Args:
@@ -325,7 +325,7 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
                 users catch errors early on and should be
                 set to :const:`False` in situations where
                 more advanced status handling is necessary.
-            async (bool): When set to :const:`True`, an
+            async_call (bool): When set to :const:`True`, an
                 async results object is returned that allows
                 the solves to be completed
                 asynchronously. Default is
@@ -338,7 +338,7 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
         Returns:
             A :class:`ScenarioTreeSolveResults` object storing \
             basic status information for each subproblem. If \
-            the :attr:`async` keyword is set to :const:`True` \
+            the :attr:`async_call` keyword is set to :const:`True` \
             then an :class:`AsyncResult` object is returned.
 
         Examples:
@@ -353,7 +353,7 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
             The following lines do the same by first
             initiating an asynchronous solve request.
 
-            >>> job = sp.solve_bundles(async=True)
+            >>> job = sp.solve_bundles(async_call=True)
             >>> # ... do other things ... #
             >>> results = job.complete()
             >>> results.pprint()
@@ -373,7 +373,7 @@ class ScenarioTreeManagerSolver(PySPConfiguredObject):
                                    ephemeral_solver_options,
                                    disable_warmstart,
                                    check_status,
-                                   async)
+                                   async_call)
 
     def _process_solve_results(self,
                                object_type,
@@ -604,7 +604,7 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
             assert self._preprocessor is None
 
         if self._solver_manager is not None:
-            self._solver_manager.deactivate()
+            #self._solver_manager.deactivate()
             self._solver_manager = None
             if self.get_option("solver_manager_pyro_shutdown"):
                 print("Shutting down Pyro components for solver manager.")
@@ -613,11 +613,11 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
                     port=self.get_option("solver_manager_pyro_port"),
                     num_retries=0,
                     caller_name=self.__class__.__name__)
-        for solver in self._scenario_solvers.values():
-            solver.deactivate()
+        #for solver in self._scenario_solvers.values():
+        #    solver.deactivate()
         self._scenario_solvers = {}
-        for solver in self._bundle_solvers.values():
-            solver.deactivate()
+        #for solver in self._bundle_solvers.values():
+        #    solver.deactivate()
         self._bundle_solvers = {}
         self._preprocessor = None
         self._objective_sense = None
@@ -987,7 +987,7 @@ def ScenarioTreeManagerSolverFactory(sp, *args, **kwds):
         results are undefined.
 
         >>> with ScenarioTreeManagerSolverFactory(sp) as manager:
-        >>>    job = manager.solve_subproblems(async=True)
+        >>>    job = manager.solve_subproblems(async_call=True)
         >>>    reuslts = job.complete()
         >>> results.pprint()
     """

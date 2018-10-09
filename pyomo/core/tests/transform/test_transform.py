@@ -19,7 +19,6 @@ import pyutilib.th as unittest
 import pyutilib.services
 
 import pyomo.opt
-from pyomo.util.plugin import Plugin
 from pyomo.environ import *
 
 
@@ -51,15 +50,7 @@ class Test(unittest.TestCase):
 
     def test_transform_dir(self):
         model = AbstractModel()
-        self.assertTrue(set(TransformationFactory.services()) >= set(['core.relax_integrality']))
-
-    def test_transform_error1(self):
-        model = AbstractModel()
-        try:
-            TransformationFactory.services('foo')
-            self.fail("Expected ValueError")
-        except TypeError:
-            pass
+        self.assertTrue(set(TransformationFactory) >= set(['core.relax_integrality']))
 
     def test_relax_integrality1(self):
         # Coverage of the _clear_attribute method
@@ -110,12 +101,6 @@ class Test(unittest.TestCase):
         self.assertEqual(rinst.d[1].bounds, instance.d[1].bounds)
         self.assertEqual(rinst.e[1].bounds, instance.e[1].bounds)
         self.assertEqual(rinst.f[1].bounds, instance.f[1].bounds)
-
-    def Xtest_apply_transformation2(self):
-        self.assertEqual(apply_transformation('foo'),None)
-        self.assertTrue(isinstance(apply_transformation('core.relax_integrality'),Plugin))
-        self.assertTrue(isinstance(apply_transformation('core.relax_integrality'),Plugin))
-        self.assertEqual(apply_transformation('foo', self.model),None)
 
     def test_nonnegativity_transformation_1(self):
         self.model.a = Var()
@@ -280,14 +265,14 @@ class Test(unittest.TestCase):
         self.model.z4 = Var(self.model.S, self.model.T, domain=domainRule, bounds=(-10, 10))
 
         def objRule(model):
-            return sum(5*summation(model.__getattribute__(c+n)) \
+            return sum(5*sum_product(model.__getattribute__(c+n)) \
                        for c in ('x', 'y', 'z') for n in ('1', '2', '3', '4'))
 
         self.model.obj = Objective(rule=objRule)
 
-        transform = NonNegativeTransformation()
+        transform = TransformationFactory('core.nonnegative_vars')
         instance=self.model.create_instance()
-        transformed = transform(instance)
+        transformed = transform.create_using(instance)
 
         opt = SolverFactory("glpk")
 
@@ -397,7 +382,7 @@ class Test(unittest.TestCase):
                 self.model.__getattribute__("z"+n))))
 
         def objRule(model):
-            return sum(5*summation(model.__getattribute__(c+n)) \
+            return sum(5*sum_product(model.__getattribute__(c+n)) \
                        for c in ('x', 'y', 'z') for n in ('1', '2', '3', '4'))
 
         self.model.obj = Objective(rule=objRule)
@@ -482,7 +467,7 @@ class Test(unittest.TestCase):
         self.model.z4 = Var(self.model.S, self.model.T, domain=domainRule, bounds=(-10, 10))
 
         def objRule(model):
-            return sum(5*summation(model.__getattribute__(c+n)) \
+            return sum(5*sum_product(model.__getattribute__(c+n)) \
                        for c in ('x', 'y', 'z') for n in ('1', '2', '3', '4'))
 
         self.model.obj = Objective(rule=objRule)
@@ -600,7 +585,7 @@ class Test(unittest.TestCase):
                 self.model.__getattribute__("z"+n))))
 
         def objRule(model):
-            return sum(5*summation(model.__getattribute__(c+n)) \
+            return sum(5*sum_product(model.__getattribute__(c+n)) \
                        for c in ('x', 'y', 'z') for n in ('1', '2', '3', '4'))
 
         self.model.obj = Objective(rule=objRule)

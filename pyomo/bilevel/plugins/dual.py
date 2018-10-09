@@ -8,9 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.util.plugin import alias
 from pyomo.core.base import Constraint, Objective, Block
-from pyomo.repn import generate_canonical_repn
+from pyomo.repn import generate_standard_repn
 from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base import Var, Set
 from pyomo.bilevel.plugins.transform import Base_BilevelTransformation
@@ -19,9 +18,8 @@ import logging
 logger = logging.getLogger('pyomo.core')
 
 
+@TransformationFactory.register('bilevel.linear_dual', doc="Dualize a SubModel block")
 class LinearDual_BilevelTransformation(Base_BilevelTransformation):
-
-    alias('bilevel.linear_dual', doc="Dualize a SubModel block")
 
     def __init__(self):
         super(LinearDual_BilevelTransformation, self).__init__()
@@ -61,7 +59,7 @@ class LinearDual_BilevelTransformation(Base_BilevelTransformation):
         """
         Generate the dual of a submodel
         """ 
-        transform = TransformationFactory('core.linear_dual')
+        transform = TransformationFactory('duality.linear_dual')
         return transform._dualize(submodel, unfixed)
 
     def _xfrm_bilinearities(self, dual):
@@ -75,7 +73,7 @@ class LinearDual_BilevelTransformation(Base_BilevelTransformation):
                 if degree > 2:
                     raise "RuntimeError: Cannot transform a model with polynomial degree %d" % degree
                 if degree == 2:
-                    terms = generate_canonical_repn(con.body)
-                    for term in terms:
-                        print("%s %s %s" % (name, ndx, term))
+                    terms = generate_standard_repn(con.body)
+                    for i, var in enumerate(terms.quadratic_vars):
+                        print("%s %s %s" % (i, str(var), str(terms.quadratic_coefs[i])))
 

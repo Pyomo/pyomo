@@ -19,7 +19,7 @@ import pyutilib.subprocess
 import pyutilib.pyro
 from pyutilib.misc import Options
 from pyomo.opt import SolverResults
-from pyomo.util._command import pyomo_command
+from pyomo.common._command import pyomo_command
 import pyomo.scripting.pyomo_parser
 
 @pyomo_command('pyomo_ns', "Launch a Pyro name server for Pyomo")

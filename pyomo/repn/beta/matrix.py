@@ -24,13 +24,13 @@ from pyomo.core.base import (SortComponents,
 from pyomo.core.base.numvalue import (is_fixed,
                                       value,
                                       ZeroConstant)
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.constraint import (Constraint,
                                         IndexedConstraint,
                                         SimpleConstraint,
                                         _ConstraintData)
-from pyomo.repn.canonical_repn import (generate_canonical_repn,
-                                       LinearCanonicalRepn)
+from pyomo.core.expr.numvalue import native_numeric_types
+from pyomo.repn import generate_standard_repn
 
 from six import iteritems
 from six.moves import xrange
@@ -138,10 +138,8 @@ def compile_block_linear_constraints(parent_block,
     SparseMat_pRows = [0]
     for block in all_blocks:
 
-        if hasattr(block, '_canonical_repn'):
-            del block._canonical_repn
-        if hasattr(block, '_ampl_repn'):
-            del block._ampl_repn
+        if hasattr(block, '_repn'):
+            del block._repn
 
         for constraint in block.component_objects(Constraint,
                                                   active=True,
@@ -163,7 +161,7 @@ def compile_block_linear_constraints(parent_block,
                 # before iterating:
                 for index, constraint_data in list(iteritems(constraint)):
 
-                    if constraint_data.body.polynomial_degree() <= 1:
+                    if constraint_data.body.__class__ in native_numeric_types or constraint_data.body.polynomial_degree() <= 1:
 
                         # collect for removal
                         if singleton:
@@ -172,23 +170,23 @@ def compile_block_linear_constraints(parent_block,
                             constraint_data_to_remove.append((constraint, index))
                             constraint_containers_to_check.add((block, constraint))
 
-                        canonical_repn = generate_canonical_repn(constraint_data.body)
+                        repn = generate_standard_repn(constraint_data.body)
 
-                        assert isinstance(canonical_repn, LinearCanonicalRepn)
+                        assert repn.nonlinear_expr is None
 
                         row_variable_symbols = []
                         row_coefficients = []
-                        if canonical_repn.variables is None:
+                        if len(repn.linear_vars) == 0:
                             if skip_trivial_constraints:
                                 continue
                         else:
                             row_variable_symbols = \
                                 [VarIDToVarSymbol[id(vardata)]
-                                 for vardata in canonical_repn.variables]
+                                 for vardata in repn.linear_vars]
                             referenced_variable_symbols.update(
                                 row_variable_symbols)
-                            assert canonical_repn.linear is not None
-                            row_coefficients = canonical_repn.linear
+                            assert repn.linear_coefs is not None
+                            row_coefficients = repn.linear_coefs
 
                         SparseMat_pRows.append(SparseMat_pRows[-1] + \
                                                len(row_variable_symbols))
@@ -200,9 +198,7 @@ def compile_block_linear_constraints(parent_block,
 
                         L = _get_bound(constraint_data.lower)
                         U = _get_bound(constraint_data.upper)
-                        constant = value(canonical_repn.constant)
-                        if constant is None:
-                            constant = 0
+                        constant = value(repn.constant)
 
                         Ranges.append(L - constant if (L is not None) else 0)
                         Ranges.append(U - constant if (U is not None) else 0)
@@ -325,7 +321,12 @@ def compile_block_linear_constraints(parent_block,
                                                 RangeTypes,
                                                 ColumnIndexToVarObject))
 
-class _LinearConstraintData(_ConstraintData, LinearCanonicalRepn):
+#class _LinearConstraintData(_ConstraintData,LinearCanonicalRepn):
+#
+# This change breaks this class, but it's unclear whether this
+# is being used...
+#
+class _LinearConstraintData(_ConstraintData):
     """
     This class defines the data for a single linear constraint
         in canonical form.
@@ -459,6 +460,20 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
             if exception:
                 raise
             return None
+
+    def has_lb(self):
+        """Returns :const:`False` when the lower bound is
+        :const:`None` or negative infinity"""
+        lb = self.lower
+        return (lb is not None) and \
+            (lb != float('-inf'))
+
+    def has_ub(self):
+        """Returns :const:`False` when the upper bound is
+        :const:`None` or positive infinity"""
+        ub = self.upper
+        return (ub is not None) and \
+            (ub != float('inf'))
 
     def lslack(self):
         """
@@ -604,6 +619,8 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         raise NotImplementedError("MatrixConstraint row elements can not "
                                   "be updated")
 
+@ModelComponentFactory.register(
+                   "A set of constraint expressions in Ax=b form.")
 class MatrixConstraint(collections.Mapping,
                        IndexedConstraint):
 
@@ -685,5 +702,3 @@ class MatrixConstraint(collections.Mapping,
     def __delitem__(self):
         raise NotImplementedError
 
-register_component(MatrixConstraint,
-                   "A set of constraint expressions in Ax=b form.")

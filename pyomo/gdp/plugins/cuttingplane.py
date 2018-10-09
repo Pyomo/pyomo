@@ -20,11 +20,10 @@ try:
 except:
     from ordereddict import OrderedDict
 
-from pyomo.util.modeling import unique_component_name
-from pyomo.util.plugin import alias
+from pyomo.common.modeling import unique_component_name
 from pyomo.core import (
     Any, Block, Constraint, Objective, Param, Var, SortComponents,
-    Transformation, TransformationFactory, value
+    Transformation, TransformationFactory, value, TransformationFactory
 )
 from pyomo.opt import SolverFactory
 
@@ -48,10 +47,10 @@ from nose.tools import set_trace
 SOLVER = 'ipopt'
 stream_solvers = False
 
-class CuttingPlane_Transformation(Transformation):
 
-    alias('gdp.cuttingplane', doc="Relaxes a linear disjunctive model by "
+@TransformationFactory.register('gdp.cuttingplane', doc="Relaxes a linear disjunctive model by "
           "adding cuts from convex hull to Big-M relaxation.")
+class CuttingPlane_Transformation(Transformation):
 
     def __init__(self):
         super(CuttingPlane_Transformation, self).__init__()

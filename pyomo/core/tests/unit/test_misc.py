@@ -59,7 +59,7 @@ class PyomoModel(unittest.TestCase):
         display(instance.obj,ostream=OUTPUT)
         display(instance.x,ostream=OUTPUT)
         display(instance.con,ostream=OUTPUT)
-        expr.to_string(ostream=OUTPUT)
+        OUTPUT.write(expr.to_string())
         model = AbstractModel()
         instance = model.create_instance()
         display(instance,ostream=OUTPUT)
@@ -90,7 +90,7 @@ class PyomoModel(unittest.TestCase):
         display(instance.obj,ostream=OUTPUT)
         display(instance.x,ostream=OUTPUT)
         display(instance.con,ostream=OUTPUT)
-        expr.to_string(ostream=OUTPUT)
+        OUTPUT.write(expr.to_string())
         model = AbstractModel()
         instance = model.create_instance()
         display(instance,ostream=OUTPUT)
@@ -148,6 +148,7 @@ class PyomoBadModels ( unittest.TestCase ):
 
 
 class TestApplyIndexedRule(unittest.TestCase):
+
     def test_rules_with_None_in_set(self):
         def noarg_rule(b):
             b.args = ()
@@ -164,6 +165,22 @@ class TestApplyIndexedRule(unittest.TestCase):
 
         m.b3 = Block([(None,1)], rule=twoarg_rule)
         self.assertEqual(m.b3[None,1].args, ((None,1)))
+
+
+class TestComponent(unittest.TestCase):
+
+    def test_getname(self):
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.v = Var()
+        self.assertEqual(m.b.v.getname(fully_qualified=True, relative_to=m.b), 'v')
+
+    def test_getname_error(self):
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.v = Var()
+        m.c = Block()
+        self.assertRaises(RuntimeError, m.b.v.getname, fully_qualified=True, relative_to=m.c)
 
 if __name__ == "__main__":
     unittest.main()

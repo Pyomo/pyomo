@@ -39,7 +39,7 @@ def read(*rnames):
     return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
 
 requires = [
-    'PyUtilib>=5.6.2',
+    'PyUtilib>=5.6.3',
     'appdirs',
     'ply',
     'six>=1.4',
@@ -50,6 +50,35 @@ if sys.version_info < (2, 7):
     requires.append('ordereddict')
 
 from setuptools import setup
+import sys
+
+if 'develop' in sys.argv:
+    using_cython = False
+else:
+    using_cython = True
+if '--with-cython' in sys.argv:
+    using_cython = True
+    sys.argv.remove('--with-cython')
+
+ext_modules = []
+if using_cython:
+    try:
+        import platform
+        if not platform.python_implementation() == "CPython":
+            raise RuntimeError()
+        from Cython.Build import cythonize
+        #
+        # Note: The Cython developers recommend that you destribute C source
+        # files to users.  But this is fine for evaluating the utility of Cython
+        #
+        import shutil
+        files = ["pyomo/core/expr/expr_pyomo5.pyx", "pyomo/core/expr/numvalue.pyx", "pyomo/core/util.pyx", "pyomo/repn/standard_repn.pyx", "pyomo/repn/plugins/cpxlp.pyx", "pyomo/repn/plugins/gams_writer.pyx", "pyomo/repn/plugins/baron_writer.pyx", "pyomo/repn/plugins/ampl/ampl_.pyx"]
+        for f in files:
+            shutil.copyfile(f[:-1], f)
+        ext_modules = cythonize(files)
+    except:
+        using_cython = False
+
 packages = _find_packages('pyomo')
 
 setup(name='Pyomo',
@@ -62,7 +91,7 @@ setup(name='Pyomo',
       #     pyomo/pyomo/version/__init__.py
       #     pyomo/RELEASE.txt
       #
-      version='5.5.0',
+      version='5.5.1',
       maintainer='William E. Hart',
       maintainer_email='wehart@sandia.gov',
       url='http://pyomo.org',
@@ -81,7 +110,6 @@ setup(name='Pyomo',
         'Operating System :: Unix',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
@@ -95,6 +123,8 @@ setup(name='Pyomo',
       packages=packages,
       keywords=['optimization'],
       install_requires=requires,
+      ext_modules = ext_modules,
+      python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
       entry_points="""
         [console_scripts]
         runbenders=pyomo.pysp.benders:Benders_main

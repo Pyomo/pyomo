@@ -10,10 +10,9 @@
 
 import os
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.misc
 
-import pyomo.util.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -27,12 +26,12 @@ try:
 except:
     basestring = str
 
+
+@SolverFactory.register('ipopt', doc='The Ipopt NLP solver')
 class IPOPT(SystemCallSolver):
     """
     An interface to the Ipopt optimizer that uses the AMPL Solver Library.
     """
-
-    pyomo.util.plugin.alias('ipopt', doc='The Ipopt NLP solver')
 
     def __init__(self, **kwds):
         #
@@ -52,19 +51,17 @@ class IPOPT(SystemCallSolver):
         # Note: Undefined capabilities default to 'None'
         self._capabilities = pyutilib.misc.Options()
         self._capabilities.linear = True
-        # Should we set this to False? Doing so might cause
-        # a headache for some folks.
-        self._capabilities.integer = True
+        self._capabilities.integer = False
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
-        self._capabilities.sos1 = True
-        self._capabilities.sos2 = True
+        self._capabilities.sos1 = False
+        self._capabilities.sos2 = False
 
     def _default_results_format(self, prob_format):
         return ResultsFormat.sol
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("ipopt")
+        executable = pyomo.common.registered_executable("ipopt")
         if executable is None:
             logger.warning("Could not locate the 'ipopt' executable, "
                            "which is required for solver %s" % self.name)
@@ -112,6 +109,16 @@ class IPOPT(SystemCallSolver):
         # Define command line
         #
         env=os.environ.copy()
+        #
+        # Merge the PYOMO_AMPLFUNC (externals defined within
+        # Pyomo/Pyomo) with any user-specified external function
+        # libraries
+        #
+        if 'PYOMO_AMPLFUNC' in env:
+            if 'AMPLFUNC' in env:
+                env['AMPLFUNC'] += "\n" + env['PYOMO_AMPLFUNC']
+            else:
+                env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
 
         cmd = [executable, problem_files[0], '-AMPL']
         if self._timer:
@@ -195,4 +202,4 @@ class IPOPT(SystemCallSolver):
                             assert "degrees of freedom" in res.solver.message
             return res
 
-pyutilib.services.register_executable(name="ipopt")
+pyomo.common.register_executable(name="ipopt")

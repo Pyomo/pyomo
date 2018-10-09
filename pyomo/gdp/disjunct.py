@@ -13,10 +13,10 @@ import sys
 from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
-from pyomo.util.modeling import unique_component_name
-from pyomo.util.timing import ConstructionTimer
+from pyomo.common.modeling import unique_component_name
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
-    register_component, Binary, Block, Var, ConstraintList, Any
+    ModelComponentFactory, Binary, Block, Var, ConstraintList, Any
 )
 from pyomo.core.base.component import (
     ActiveComponent, ActiveComponentData, ComponentData
@@ -114,6 +114,8 @@ class _DisjunctData(_BlockData):
     def _activate_without_unfixing_indicator(self):
         super(_DisjunctData, self).activate()
 
+
+@ModelComponentFactory.register("Disjunctive blocks.")
 class Disjunct(Block):
 
     _ComponentDataClass = _DisjunctData
@@ -224,7 +226,7 @@ class _DisjunctionData(ActiveComponentData):
                 e_iter = [e]
             for _tmpe in e_iter:
                 try:
-                    isexpr = _tmpe.is_expression()
+                    isexpr = _tmpe.is_expression_type()
                 except AttributeError:
                     isexpr = False
                 if not isexpr or not _tmpe.is_relational():
@@ -256,6 +258,7 @@ class _DisjunctionData(ActiveComponentData):
             self.disjuncts.append(disjunct)
 
 
+@ModelComponentFactory.register("Disjunction expressions.")
 class Disjunction(ActiveIndexedComponent):
     Skip = (0,)
     _ComponentDataClass = _DisjunctionData
@@ -434,6 +437,3 @@ class SimpleDisjunction(_DisjunctionData, Disjunction):
 class IndexedDisjunction(Disjunction):
     pass
 
-
-register_component(Disjunct, "Disjunctive blocks.")
-register_component(Disjunction, "Disjunction expressions.")

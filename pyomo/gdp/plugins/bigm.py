@@ -17,16 +17,16 @@ from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, Any, value
 )
-from pyomo.core.base import Transformation
+from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core.base.component import ComponentUID, ActiveComponent
-from pyomo.core.kernel import ComponentMap, ComponentSet
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import target_list
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
-from pyomo.repn import LinearCanonicalRepn, generate_canonical_repn
-from pyomo.util.config import ConfigBlock, ConfigValue
-from pyomo.util.modeling import unique_component_name
-from pyomo.util.plugin import alias
+from pyomo.repn import generate_standard_repn
+from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.modeling import unique_component_name
 from six import iterkeys, iteritems
 
 logger = logging.getLogger('pyomo.gdp.bigm')
@@ -40,6 +40,7 @@ def _to_dict(val):
     return {None: val}
 
 
+@TransformationFactory.register('gdp.bigm', doc="Relax disjunctive model using big-M terms.")
 class BigM_Transformation(Transformation):
     """Relax disjunctive model using big-M terms.
 
@@ -57,7 +58,7 @@ class BigM_Transformation(Transformation):
        3) if 'None' is in the bigM argument dict
        4) if the constraint or the constraint parent_component appear in
           a BigM Suffix attached to any parent_block() beginning with the
-          constraint's parent_block and moving up to the the root model.
+          constraint's parent_block and moving up to the root model.
        5) if None appears in a BigM Suffix attached to any
           parent_block() between the constraint and the root model.
        6) if the constraint is linear, estimate M using the variable bounds
@@ -76,7 +77,7 @@ class BigM_Transformation(Transformation):
             'relaxedConstraints': ComponentMap(constraint: relaxed_constraint)
         }
 
-    In addition, any block or disjunct containind a relaxed disjunction
+    In addition, any block or disjunct containing a relaxed disjunction
     will have a "_gdp_transformation_info" dict with the following
     entry:
 
@@ -93,8 +94,6 @@ class BigM_Transformation(Transformation):
         'src': <source disjunct>
         'srcConstraints': ComponentMap(relaxed_constraint: constraint)
     """
-
-    alias('gdp.bigm', doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     CONFIG = ConfigBlock("gdp.bigm")
     CONFIG.declare('targets', ConfigValue(
@@ -314,6 +313,8 @@ class BigM_Transformation(Transformation):
         obj.deactivate()
 
     def _transformDisjunctionData(self, obj, transBlock, bigM, index):
+        if not obj.active:
+            return  # Do not process a deactivated disjunction
         parent_component = obj.parent_component()
         transBlock.disjContainers.add(parent_component)
         orConstraint = self._getXorConstraint(parent_component)
@@ -360,7 +361,7 @@ class BigM_Transformation(Transformation):
                 else:
                     raise GDP_Error(
                         "The disjunct %s is deactivated, but the "
-                        "indicator_var is fixed to %. This makes no sense."
+                        "indicator_var is fixed to %s. This makes no sense."
                         % ( obj.name, value(obj.indicator_var) ))
             if not infodict.get('relaxed', False):
                 raise GDP_Error(
@@ -643,18 +644,17 @@ class BigM_Transformation(Transformation):
 
     def _estimate_M(self, expr, name):
         # Calculate a best guess at M
-        repn = generate_canonical_repn(expr)
+        repn = generate_standard_repn(expr)
         M = [0, 0]
 
-        if isinstance(repn, LinearCanonicalRepn):
+        if not repn.is_nonlinear():
             if repn.constant is not None:
                 for i in (0, 1):
                     if M[i] is not None:
                         M[i] += repn.constant
 
-            for i, coef in enumerate(repn.linear or []):
-                var = repn.variables[i]
-                coef = repn.linear[i]
+            for i, coef in enumerate(repn.linear_coefs or []):
+                var = repn.linear_vars[i]
                 bounds = (value(var.lb), value(var.ub))
                 for i in (0, 1):
                     # reverse the bounds if the coefficient is negative

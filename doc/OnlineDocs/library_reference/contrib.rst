@@ -12,10 +12,13 @@ managed as *optional* Pyomo packages.
 
 Contributed packages distributed with Pyomo:
 
-*
+.. toctree::
+   :maxdepth: 1
+
+   contrib/preprocessing.rst
+   contrib/gdpopt.rst
 
 Contributed packages distributed independently of Pyomo, but accessible
 through ``pyomo.contrib``:
 
 * `pyomo.contrib.simplemodel <http://pyomocontrib-simplemodel.readthedocs.io/en/latest/source.html>`_
-

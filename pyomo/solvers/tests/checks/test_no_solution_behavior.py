@@ -20,7 +20,7 @@ import pyutilib.th as unittest
 
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
-from pyomo.util.log import LoggingIntercept
+from pyomo.common.log import LoggingIntercept
 
 import six
 from six import StringIO
@@ -35,6 +35,7 @@ _cleanup_expected_failures = True
 # A function that returns a function that gets
 # added to a test class.
 #
+@unittest.nottest
 def create_test_method(model,
                        solver,
                        io,

@@ -1,0 +1,23 @@
+from pyomo.environ import *
+
+model = AbstractModel()
+
+model.I=Set()
+model.K=Set()
+model.V=Set(model.K)
+
+def kv_init(model):
+    return ((k,v) for k in model.K for v in model.V[k])
+model.KV=Set(dimen=2, initialize=kv_init)
+
+model.a = Param(model.I, model.K)
+
+model.y = Var(model.I)
+model.x = Var(model.I, model.KV)
+
+#include a constraint
+#x[i,k,v] <= a[i,k]*y[i], for i in model.I, k in model.K, v in model.V[k]
+
+def c1Rule(model,i,k,v):
+   return model.x[i,k,v] <= model.a[i,k]*model.y[i]
+model.c1 = Constraint(model.I,model.KV,rule=c1Rule)

@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.util.plugin import PluginGlobals
+from pyomo.common.plugin import PluginGlobals
 PluginGlobals.add_env("pyomo")
 
 import pyomo.pysp.annotations

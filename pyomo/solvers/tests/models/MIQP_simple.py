@@ -38,7 +38,7 @@ class MIQP_simple(_BaseTestModel):
 
         model.obj = Objective(expr=model.x**2 + 3.0*model.y**2)
         model.c1 = Constraint(expr=model.a <= model.y)
-        model.c2 = Constraint(expr=2.0 <= model.x/model.a - model.y <= 10)
+        model.c2 = Constraint(expr=(2.0, model.x/model.a - model.y, 10))
 
     def warmstart_model(self):
         assert self.model is not None
@@ -70,4 +70,4 @@ class MIQP_simple_kernel(MIQP_simple):
 
         model.obj = pmo.objective(model.x**2 + 3.0*model.y**2)
         model.c1 = pmo.constraint(model.a <= model.y)
-        model.c2 = pmo.constraint(2.0 <= model.x/model.a - model.y <= 10)
+        model.c2 = pmo.constraint((2.0, model.x/model.a - model.y, 10))

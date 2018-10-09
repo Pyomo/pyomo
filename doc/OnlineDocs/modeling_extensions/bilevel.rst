@@ -1,9 +1,6 @@
 Bilevel Programming
 ===================
 
-TODO
+``pyomo.bilevel`` provides extensions supporting modeling of multi-level
+optimization problems.
 
-.. doctest::
-
-    >>> print('Hello World')
-    Hello World

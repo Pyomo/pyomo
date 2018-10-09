@@ -1,0 +1,7 @@
+
+if pyo.value(instance.x[2]) == 0:
+    instance.x[2].fix(1)
+else:
+    instance.x[2].fix(0)
+
+results = opt.solve(instance)

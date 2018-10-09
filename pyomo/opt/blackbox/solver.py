@@ -17,6 +17,7 @@ class COLINSolver(OptSolver):
     def __init__(self, **kwds):
         """ Constructor """
         OptSolver.__init__(self,**kwds)
+        self._assert_available=True
         self._valid_problem_formats=[ProblemFormat.colin_optproblem]
         self._valid_result_formats = {}
         self._valid_result_formats[ProblemFormat.colin_optproblem] = [ResultsFormat.osrl,ResultsFormat.results]

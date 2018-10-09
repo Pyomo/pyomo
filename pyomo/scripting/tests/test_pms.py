@@ -53,7 +53,7 @@ class Test(unittest.TestCase):
         model.A = RangeSet(1,4)
         model.x = Var(model.A, bounds=(-1,1))
         def obj_rule(model):
-            return summation(model.x)
+            return sum_product(model.x)
         model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = 0

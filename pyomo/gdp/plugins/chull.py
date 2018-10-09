@@ -12,20 +12,24 @@ import weakref
 import logging
 import textwrap
 
-import pyomo.util.config as cfg
-from pyomo.util.modeling import unique_component_name
-from pyomo.util.plugin import alias
+import pyomo.common.config as cfg
+from pyomo.common.modeling import unique_component_name
+from pyomo.core.expr.numvalue import native_numeric_types, ZeroConstant
+from pyomo.core.expr import current as EXPR
+from pyomo.core import *
+from pyomo.core.base.block import SortComponents
+from pyomo.core.base.component import ComponentUID, ActiveComponent
+from pyomo.core.base import _ExpressionData
+from pyomo.core.base.var import _VarData
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
+import pyomo.core.expr.current as EXPR
+from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy,
-    Any, Reals, NumericConstant, value
+    Any, Reals, value
 )
-from pyomo.core.base import expr as EXPR, Transformation
-from pyomo.core.base.component import ActiveComponent
-from pyomo.core.base.var import _VarData
-from pyomo.core.kernel import ComponentMap, ComponentSet
-from pyomo.core.base.expr import identify_variables
-from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import clone_without_expression_components, target_list
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
@@ -38,6 +42,7 @@ from nose.tools import set_trace
 logger = logging.getLogger('pyomo.gdp.chull')
 
 
+@TransformationFactory.register('gdp.chull', doc="Relax disjunctive model by forming the convex hull.")
 class ConvexHull_Transformation(Transformation):
     """Relax disjunctive model by forming the convex hull.
 
@@ -89,8 +94,6 @@ class ConvexHull_Transformation(Transformation):
         'boundConstraintToSrcVar': ComponentMap(bigm_constraint: orig_var),
 
     """
-
-    alias('gdp.chull', doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
 
     CONFIG = cfg.ConfigBlock('gdp.chull')
@@ -391,7 +394,7 @@ class ConvexHull_Transformation(Transformation):
                     # we aren't going to disaggregate fixed
                     # variables. This means there is trouble if they are
                     # unfixed later...
-                    for var in identify_variables(
+                    for var in EXPR.identify_variables(
                             cons.body, include_fixed=False):
                         # Note the use of a list so that we will
                         # eventually disaggregate the vars in a
@@ -584,9 +587,9 @@ class ConvexHull_Transformation(Transformation):
 
         var_substitute_map = dict((id(v), newV) for v, newV in
                                   iteritems(chull['disaggregatedVars']))
-        zero_substitute_map = dict((id(v), NumericConstant(0)) for v, newV in
+        zero_substitute_map = dict((id(v), ZeroConstant) for v, newV in
                                    iteritems(chull['disaggregatedVars']))
-        zero_substitute_map.update((id(v), NumericConstant(0))
+        zero_substitute_map.update((id(v), ZeroConstant)
                                    for v in localVars)
 
         # Transform each component within this disjunct
@@ -771,7 +774,7 @@ class ConvexHull_Transformation(Transformation):
                 if NL:
                     newConsExpr = expr == c.lower*y
                 else:
-                    v = list(identify_variables(expr))
+                    v = list(EXPR.identify_variables(expr))
                     if len(v) == 1 and not c.lower:
                         # Setting a variable to 0 in a disjunct is
                         # *very* common.  We should recognize that in

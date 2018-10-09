@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -20,7 +20,7 @@ import argparse
 import pyutilib.subprocess
 from pyutilib.misc import Options
 
-from pyomo.util import get_pyomo_commands
+from pyomo.common import get_pyomo_commands
 import pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
@@ -144,13 +144,13 @@ def help_writers():
     print("")
     print("Pyomo Problem Writers")
     print("---------------------")
-    for writer in sorted(WriterFactory.services()):
+    for writer in sorted(WriterFactory):
         print("  "+writer)
         print(wrapper.fill(WriterFactory.doc(writer)))
 
 def help_checkers():
     import pyomo.environ
-    import pyomo.util.plugin
+    import pyomo.common.plugin
     from pyomo.checker import IModelChecker
     wrapper = textwrap.TextWrapper()
     wrapper.initial_indent = '      '
@@ -158,7 +158,7 @@ def help_checkers():
     print("")
     print("Pyomo Model Checkers")
     print("--------------------")
-    ep = pyomo.util.plugin.ExtensionPoint(IModelChecker)
+    ep = pyomo.common.plugin.ExtensionPoint(IModelChecker)
     tmp = {}
     for checker in ep.extensions():
         for alias in getattr(checker, '_factory_aliases', set()):
@@ -169,24 +169,24 @@ def help_checkers():
 
 def help_datamanagers(options):
     import pyomo.environ
-    from pyomo.core import DataManagerFactory
+    from pyomo.dataportal import DataManagerFactory
     wrapper = textwrap.TextWrapper()
     wrapper.initial_indent = '      '
     wrapper.subsequent_indent = '      '
     print("")
     print("Pyomo Data Managers")
     print("-------------------")
-    for xform in sorted(DataManagerFactory.services()):
+    for xform in sorted(DataManagerFactory):
         print("  "+xform)
         print(wrapper.fill(DataManagerFactory.doc(xform)))
 
 def help_api(options):
-    import pyomo.util
-    services = pyomo.util.PyomoAPIFactory.services()
+    import pyomo.common
+    services = pyomo.common.PyomoAPIFactory.services()
     #
     f = {}
     for name in services:
-        f[name] = pyomo.util.PyomoAPIFactory(name)
+        f[name] = pyomo.common.PyomoAPIFactory(name)
     #
     ns = {}
     for name in services:
@@ -299,7 +299,7 @@ def help_transformations():
     print("")
     print("Pyomo Model Transformations")
     print("---------------------------")
-    for xform in sorted(TransformationFactory.services()):
+    for xform in sorted(TransformationFactory):
         print("  "+xform)
         print(wrapper.fill(TransformationFactory.doc(xform)))
 
@@ -312,7 +312,7 @@ def help_solvers():
 
     print(wrapper.fill("Pyomo uses 'solver managers' to execute 'solvers' that perform optimization and other forms of model analysis.  A solver directly executes an optimizer, typically using an executable found on the user's PATH environment.  Solver managers support a flexible mechanism for asyncronously executing solvers either locally or remotely.  The following solver managers are available in Pyomo:"))
     print("")
-    solvermgr_list = pyomo.opt.SolverManagerFactory.services()
+    solvermgr_list = list(pyomo.opt.SolverManagerFactory)
     solvermgr_list = sorted( filter(lambda x: '_' != x[0], solvermgr_list) )
     n = max(map(len, solvermgr_list))
     wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))
@@ -329,17 +329,21 @@ def help_solvers():
     print("------------------------")
     print(wrapper.fill("The serial, pyro and phpyro solver managers support the following solver interfaces:"))
     print("")
-    solver_list = pyomo.opt.SolverFactory.services()
+    solver_list = list(pyomo.opt.SolverFactory)
     solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
     n = max(map(len, solver_list))
     wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))
     try:
         # Disable warnings
-        logger.disable(logging.WARNING)
+        logging.disable(logging.WARNING)
         for s in solver_list:
             # Create a solver, and see if it is available
             with pyomo.opt.SolverFactory(s) as opt:
-                if s == 'py' or opt._metasolver:
+                if s == 'py' or (hasattr(opt, "_metasolver") and opt._metasolver):
+                    # py is a metasolver, but since we don't specify a subsolver
+                    # for this test, opt is actually an UnknownSolver, so we
+                    # can't try to get the _metasolver attribute from it.
+                    # Also, default to False if the attribute isn't implemented
                     msg = '    %-'+str(n)+'s   + %s'
                 elif opt.available(False):
                     msg = '    %-'+str(n)+'s   * %s'
@@ -348,7 +352,7 @@ def help_solvers():
                 print(wrapper.fill(msg % (s, pyomo.opt.SolverFactory.doc(s))))
     finally:
         # Reset logging level
-        logger.disable(logging.NOTSET)
+        logging.disable(logging.NOTSET)
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
     print(wrapper.fill("An asterisk indicates solvers that are currently available to be run from Pyomo with the serial solver manager. A plus indicates meta-solvers, that are always available."))
@@ -491,9 +495,7 @@ def setup_help_parser(parser):
 
 help_parser = setup_help_parser(
   pyomo.scripting.pyomo_parser.add_subparser('help',
-        func=help_exec, 
+        func=help_exec,
         help='Print help information.',
         description="This pyomo subcommand is used to print information about Pyomo's subcommands and installed Pyomo services."
         ))
-
-

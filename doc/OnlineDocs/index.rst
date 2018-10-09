@@ -1,29 +1,31 @@
-.. Pyomo documentation master file, created by
-   sphinx-quickstart on Tue Jul 26 21:20:02 2016.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Pyomo Documentation
+===================
 
-Pyomo Documentation (DRAFT)
-===========================
+.. image:: /../logos/pyomo/PyomoNewBlue3.png
+   :scale: 10%
+   :align: right
 
 Pyomo is a Python-based, open-source optimization modeling language
 with a diverse set of optimization capabilities.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   getting_started/index.rst
-   tutorial/index.rst
-   core_components/index.rst
-   data/index.rst
-   scripting/index.rst
+   installation.rst
+   citing_pyomo.rst
+   pyomo_overview/index.rst
+   pyomo_modeling_components/index.rst
+   solving_pyomo_models.rst
+   working_models.rst
+   working_abstractmodels/index.rst
    modeling_extensions/index.rst
-   solvers/persistent_solvers.rst
+   tutorial_examples.rst
+   model_debugging/index.rst
+   advanced_topics/index.rst
+   developer_reference/index.rst
    library_reference/index.rst
-   problem_reference/index.rst
-   pyomo_contrib.rst
+   contribution_guide.rst
    bibliography.rst
-
 
 Indices and Tables
 ------------------
@@ -47,4 +49,3 @@ Pyomo development is hosted at GitHub:
 See the Pyomo Forum for online discussions of Pyomo:
 
 * http://groups.google.com/group/pyomo-forum/
-
