@@ -95,9 +95,11 @@ install:
   #- python -m pip install codecov
   ## TESTING
   - dir
+  - dir scripts
   - dir %PYTHON%\Scripts
   - dir %PYTHON%\Library\bin
   - dir %PYTHON%\lib\site-packages
+  - dir %PYTHON%\envs\pyomo_test_env
   - python -m codecov
   ## TESTING
   #
