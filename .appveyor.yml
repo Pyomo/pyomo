@@ -101,7 +101,7 @@ install:
   - dir %PYTHON%\Scripts
   - dir %PYTHON%\Library\bin
   - dir %PYTHON%\lib\site-packages
-  - dir %PYTHON%\envs\pyomo_test_env
+  #- dir %PYTHON%\envs\pyomo_test_env
   #- dir %CONDAENV%\Scripts
   #- dir %CONDAENV%\site-packages
   #- dir %CONDAENV%\Lib\site-packages
