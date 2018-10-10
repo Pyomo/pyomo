@@ -1,6 +1,12 @@
 # Provide some test for parmest
 # Author: Started by David L. Woodruff (summer 2018)
 
+try:
+    import numpy as np
+    import pandas as pd
+    imports_not_present = False
+except:
+    imports_not_present = True
 import unittest
 import tempfile
 import sys
@@ -8,8 +14,6 @@ import os
 import shutil
 import glob
 import subprocess
-import numpy as np
-import pandas as pd
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest as parmestbase
 import pyomo.contrib.parmest.graphics as graphics
@@ -36,7 +40,7 @@ class Object_from_string_Tester(unittest.TestCase):
         pyo_Var_obj = parmest._object_from_string(self.instance, "x[b]")
         fixstatus = pyo_Var_obj.fixed
 
-
+@unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
 class parmest_object_Tester_RB(unittest.TestCase):
     def setUp(self):
         self.thetalist = ['asymptote', 'rate_constant']
@@ -148,6 +152,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
         self.assertAlmostEqual(objval, 4.4675, places=2)
         
 #=====================================================================
+@unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
 class parmest_object_Tester_SB(unittest.TestCase):
     def setUp(self):
         self.tempdirpath = tempfile.mkdtemp()
