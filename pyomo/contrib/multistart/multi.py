@@ -12,16 +12,16 @@
 from __future__ import division
 
 import logging
-import math
-import random
-
-from six.moves import range
 
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, In, add_docstring_list
 )
-from pyomo.core import Var, maximize, value
-from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
+from pyomo.common.modeling import unique_component_name
+from pyomo.contrib.multistart.high_conf_stop import should_stop
+from pyomo.contrib.multistart.reinit import reinitialize_variables
+from pyomo.core import Var, minimize, value, Objective
+from pyomo.opt import SolverFactory, SolverStatus
+from pyomo.opt import TerminationCondition as tc
 
 logger = logging.getLogger('pyomo.contrib.multistart')
 
@@ -48,15 +48,19 @@ class MultiStart(object):
         description="Specify the restart strategy. Defaults to rand.",
         doc="""Specify the restart strategy.
 
-        - "rand": pure random choice
-        - "midpoint_guess_and_bound": midpoint between current and farthest bound
-        - "rand_guess_and_bound": midpoint between current and farthest bound
+        - "rand": random choice between variable bounds
+        - "midpoint_guess_and_bound": midpoint between current value and farthest bound
+        - "rand_guess_and_bound": random choice between current value and farthest bound
         - "rand_distributed": random choice among evenly distributed values
         """
     ))
     CONFIG.declare("solver", ConfigValue(
         default="ipopt",
         description="solver to use, defaults to ipopt"
+    ))
+    CONFIG.declare("solver_args", ConfigValue(
+        default={},
+        description="Dictionary of keyword arguments to pass to the solver."
     ))
     CONFIG.declare("iterations", ConfigValue(
         default=10,
@@ -79,6 +83,18 @@ class MultiStart(object):
         The lower the parameter, the stricter the rule.
         Value bounded in (0, 1]."""
     ))
+    CONFIG.declare("suppress_unbounded_warning", ConfigValue(
+        default=False, domain=bool,
+        description="True to suppress warning for skipping unbounded variables."
+    ))
+    CONFIG.declare("HCS_max_iterations", ConfigValue(
+        default=1000,
+        description="Maximum number of iterations before interrupting the high confidence stopping rule."
+    ))
+    CONFIG.declare("HCS_tolerance", ConfigValue(
+        default=0,
+        description="Tolerance on HCS objective value equality. Defaults to Python float equality precision."
+    ))
 
     __doc__ = add_docstring_list(__doc__, CONFIG)
 
@@ -99,139 +115,92 @@ class MultiStart(object):
         # initialize the solver
         solver = SolverFactory(config.solver)
 
-        # store objective values and their respective models, and
-        # results from solver
+        # Model sense
+        objectives = model.component_data_objects(Objective, active=True)
+        obj = next(objectives, None)
+        if next(objectives, None) is not None:
+            raise RuntimeError("Multistart solver is unable to handle model with multiple active objectives.")
+        if obj is None:
+            raise RuntimeError("Multistart solver is unable to handle model with no active objective.")
+
+        # store objective values and objective/result information for best
+        # solution obtained
         objectives = []
-        models = []
-        results = []
-        # store the model from the initial values
-        model._vars_list = list(model.component_data_objects(
-            ctype=Var, descend_into=True))
-        m = model.clone()
-        result = solver.solve(m)
-        if result.solver.status is SolverStatus.ok and result.solver.termination_condition is TerminationCondition.optimal:
-            val = value(m.obj.expr)
-            objectives.append(val)
-            models.append(m)
-            results.append(result)
-        num_iter = 0
-        # if HCS rule is specified, reinitialize completely randomly until rule specifies stopping
-        if config.iterations == -1:
-            while not self.should_stop(objectives, (
-                    config.stopping_mass, config.stopping_delta)):
+        obj_sign = 1 if obj.sense == minimize else -1
+        best_objective = float('inf') * obj_sign
+        best_model = model
+        best_result = None
+
+        try:
+            # create temporary variable list for value transfer
+            tmp_var_list_name = unique_component_name(model, "_vars_list")
+            setattr(model, tmp_var_list_name,
+                    list(model.component_data_objects(
+                        ctype=Var, descend_into=True)))
+
+            best_result = result = solver.solve(model, **config.solver_args)
+            if (result.solver.status is SolverStatus.ok and
+                    result.solver.termination_condition is tc.optimal):
+                obj_val = value(model.obj.expr)
+                best_objective = obj_val
+                objectives.append(obj_val)
+            num_iter = 0
+            max_iter = config.iterations
+            # if HCS rule is specified, reinitialize completely randomly until
+            # rule specifies stopping
+            using_HCS = config.iterations == -1
+            HCS_completed = False
+            if using_HCS:
+                assert config.strategy == "rand", \
+                    "High confidence stopping rule requires rand strategy."
+                max_iter = config.HCS_max_iterations
+
+            while num_iter < max_iter:
+                if using_HCS and should_stop(
+                        objectives, config.stopping_mass,
+                        config.stopping_delta, config.HCS_tolerance):
+                    HCS_completed = True
+                    break
                 num_iter += 1
-                m = model.clone()
-                self.reinitialize_all(m, 'rand')
-                result = solver.solve(m)
-                if result.solver.status is SolverStatus.ok and result.solver.termination_condition is TerminationCondition.optimal:
-                    val = value(m.obj.expr)
-                    objectives.append(val)
-                    models.append(m)
-                    results.append(result)
-        # if HCS rule is not specified, iterate, while reinitializing with given strategy
-        else:
-            for i in range(config.iterations):
-                m = model.clone()
+                # at first iteration, solve the originally passed model
+                m = model.clone() if num_iter > 1 else model
+                reinitialize_variables(m, config)
+                result = solver.solve(m, **config.solver_args)
+                if (result.solver.status is SolverStatus.ok and
+                        result.solver.termination_condition is tc.optimal):
+                    obj_val = value(m.obj.expr)
+                    objectives.append(obj_val)
+                    if obj_val * obj_sign < obj_sign * best_objective:
+                        # objective has improved
+                        best_objective = obj_val
+                        best_model = m
+                        best_result = result
+                if num_iter == 1:
+                    # if it's the first iteration, set the best_model and
+                    # best_result regardless of solution status in case the model
+                    # is infeasible.
+                    best_model = m
+                    best_result = result
 
-                self.reinitialize_all(m, config.strategy)
-                result = solver.solve(m)
-                if result.solver.status is SolverStatus.ok and result.solver.termination_condition is TerminationCondition.optimal:
-                    val = value(m.obj.expr)
-                    objectives.append(val)
-                    models.append(m)
-                    results.append(result)
-        if model.obj.sense == maximize:
-            i = argmax(objectives)
-            newmodel = models[i]
-            opt_result = results[i]
-        else:
-            i = argmin(objectives)
-            newmodel = models[i]
-            opt_result = results[i]
+            if using_HCS and not HCS_completed:
+                logger.warning(
+                    "High confidence stopping rule was unable to complete "
+                    "after %s iterations. To increase this limit, change the "
+                    "HCS_max_iterations flag." % num_iter)
 
-        # reassign the given models vars to the new models vars
-        for i, var in enumerate(model._vars_list):
-            if not var.is_fixed() and not var.is_binary() and not var.is_integer() \
-                    and not (var is None or var.lb is None or var.ub is None or config.strategy is None):
-                var.value = newmodel._vars_list[i].value
+            # if no better result was found than initial solve, then return that
+            # without needing to copy variables.
+            if best_model is model:
+                return best_result
 
-        return opt_result
+            # reassign the given models vars to the new models vars
+            orig_var_list = getattr(model, tmp_var_list_name)
+            best_soln_var_list = getattr(best_model, tmp_var_list_name)
+            for orig_var, new_var in zip(orig_var_list, best_soln_var_list):
+                if not orig_var.is_fixed():
+                    orig_var.value = new_var.value
 
-    def reinitialize_all(self, model, strategy):
-        def rand(val, lb, ub):
-            return (ub - lb) * random.random() + lb
-
-        def midpoint_guess_and_bound(val, lb, ub):
-            bound = ub if ((ub - val) >= (val - lb)) else lb
-            return (bound + val) // 2
-
-        def rand_guess_and_bound(val, lb, ub):
-            bound = ub if ((ub - val) >= (val - lb)) else lb
-            return (abs(bound - val) * random.random()) + min(bound, val)
-
-        def rand_distributed(val, lb, ub, divisions=9):
-            lsp = linspace(lb, ub, divisions)
-            return random.choice(lsp)
-
-        for var in model.component_data_objects(ctype=Var, descend_into=True):
-            if not var.is_fixed() and not var.is_binary() and not var.is_integer() \
-                    and not (var is None or var.lb is None or var.ub is None or strategy is None):
-                val = value(var)
-                lb = var.lb
-                ub = var.ub
-                # apply strategy to bounds/variable
-                strategies = {"rand": rand,
-                              "midpoint_guess_and_bound": midpoint_guess_and_bound,
-                              "rand_guess_and_bound": rand_guess_and_bound,
-                              "rand_distributed": rand_distributed
-                              }
-                var.value = strategies[strategy](val, lb, ub)
-
-# High Confidence Stopping rule
-# This stopping operates by estimating the amount of missing optima, and stops
-# once the estimated mass of missing optima is within an acceptable range, with
-# some confidence.
-
-    def num_one_occurrences(self, lst):
-        """
-        Determines the number of optima that have only been observed once.
-        Needed to estimate missing mass of optima.
-        """
-        dist = {}
-        for x in lst:
-            if x in dist:
-                dist[x] += 1
-            else:
-                dist[x] = 1
-        one_offs = [x for x in dist if dist[x] == 1]
-        return len(one_offs)
-
-    def should_stop(self, solutions, hcs_param):
-        """
-        Determines if the missing mass of unseen local optima is acceptable
-        based on the High Confidence stopping rule.
-        """
-        f = self.num_one_occurrences(solutions)
-        n = len(solutions)
-        (stopping_mass, stopping_delta) = hcs_param
-        d = stopping_delta
-        c = stopping_mass
-        confidence = f / n + (2 * math.sqrt(2) + math.sqrt(3)
-                              ) * math.sqrt(math.log(3 / d) / n)
-        return confidence < c
-
-
-# Helper functions to remove numpy dependency
-def argmax(lst):
-    """Returns index of largest value in list lst"""
-    return max(range(len(lst)), key=lambda i: lst[i])
-
-
-def argmin(lst):
-    """Returns index of smallest value in list lst"""
-    return min(range(len(lst)), key=lambda i: lst[i])
-
-
-def linspace(lower, upper, n):
-    """Linearly spaced range."""
-    return [lower + x * (upper - lower) / (n - 1) for x in range(n)]
+            return best_result
+        finally:
+            # Remove temporary variable list
+            delattr(model, tmp_var_list_name)

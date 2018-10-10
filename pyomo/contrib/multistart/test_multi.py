@@ -2,10 +2,16 @@ from six.moves import range
 
 import pyutilib.th as unittest
 from pyomo.environ import (
-    ConcreteModel, Objective, SolverFactory, Var, maximize, sin, value
+    ConcreteModel, NonNegativeReals, Objective, SolverFactory, Var, maximize,
+    sin, value, Constraint
 )
+from six import StringIO
+import logging
+from pyomo.common.log import LoggingIntercept
+from pyomo.contrib.multistart.high_conf_stop import should_stop
 
 
+@unittest.skipIf(not SolverFactory('ipopt').available(), "IPOPT not available")
 class MultistartTests(unittest.TestCase):
     """
     Due to stochastic nature of the random restarts, these tests just
@@ -22,7 +28,6 @@ class MultistartTests(unittest.TestCase):
         optsolver = SolverFactory('ipopt')
         optsolver.solve(m)
         for i in range(10):
-
             m2 = build_model()
             SolverFactory('multistart').solve(m2, iterations=10)
             self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
@@ -36,25 +41,21 @@ class MultistartTests(unittest.TestCase):
         # create ipopt solver
         SolverFactory('ipopt').solve(m)
         for i in range(10):
-
             m2 = build_model()
             SolverFactory('multistart').solve(
                 m2, iterations=10, strategy='rand_distributed')
-
             self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
             del m2
         for i in range(10):
             m2 = build_model()
             SolverFactory('multistart').solve(
                 m2, iterations=10, strategy='midpoint_guess_and_bound')
-
             self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
             del m2
         for i in range(10):
             m2 = build_model()
             SolverFactory('multistart').solve(
                 m2, iterations=10, strategy='rand_guess_and_bound')
-
             self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
             del m2
 
@@ -66,27 +67,77 @@ class MultistartTests(unittest.TestCase):
         m = build_model()
 
         # create ipopt solver
-        optsolver = SolverFactory('ipopt')
-        optsolver.solve(m)
+        SolverFactory('ipopt').solve(m)
         for i in range(5):
-
             m2 = build_model()
             SolverFactory('multistart').solve(
                 m2, iterations=-1, stopping_mass=0.99, stopping_delta=0.99)
-
             self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
             del m2
+
+    def test_missing_bounds(self):
+        m = ConcreteModel()
+        m.x = Var(domain=NonNegativeReals)
+        m.obj = Objective(expr=m.x)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
+            SolverFactory('multistart').solve(m)
+            self.assertIn("Unable to reinitialize value of unbounded "
+                          "variable x with bounds (0, None).",
+                          output.getvalue().strip())
+
+    def test_var_value_None(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.obj = Objective(expr=m.x)
+        SolverFactory('multistart').solve(m)
+
+    def test_model_infeasible(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.c = Constraint(expr=m.x >= 2)
+        m.o = Objective(expr=m.x)
+        SolverFactory('multistart').solve(m, iterations=2)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
+            SolverFactory('multistart').solve(
+                m, iterations=-1, HCS_max_iterations=3)
+            self.assertIn("High confidence stopping rule was unable to "
+                          "complete after 3 iterations.",
+                          output.getvalue().strip())
+
+    def test_should_stop(self):
+        soln = [0] * 149
+        self.assertFalse(should_stop(soln, 0.5, 0.5, 0.001))
+        soln += [0.001]
+        self.assertTrue(should_stop(soln, 0.5, 0.5, 0.001))
+        soln = [0] * 149 + [0.01]
+        self.assertFalse(should_stop(soln, 0.5, 0.5, 0.001))
+        soln = [0] * 149 + [-0.001]
+        self.assertTrue(should_stop(soln, 0.5, 0.5, 0.001))
+
+    def test_multiple_obj(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.o = Objective(expr=m.x)
+        m.o2 = Objective(expr=m.x)
+        with self.assertRaisesRegex(RuntimeError, "multiple active objectives"):
+            SolverFactory('multistart').solve(m)
+
+    def test_no_obj(self):
+        m = ConcreteModel()
+        m.x = Var()
+        with self.assertRaisesRegex(RuntimeError, "no active objective"):
+            SolverFactory('multistart').solve(m)
 
 
 def build_model():
     """Simple non-convex model with many local minima"""
     model = ConcreteModel()
     model.x1 = Var(initialize=1, bounds=(0, 100))
-
-    def obj_rule(amodel):
-        return model.x1 * sin(model.x1)
-
-    model.obj = Objective(rule=obj_rule, sense=maximize)
+    model.x2 = Var(initialize=5, bounds=(5, 6))
+    model.x2.fix(5)
+    model.obj = Objective(expr=model.x1 * sin(model.x1), sense=maximize)
     return model
 
 
