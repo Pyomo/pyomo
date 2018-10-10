@@ -16,7 +16,8 @@ import glob
 import subprocess
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest as parmestbase
-import pyomo.contrib.parmest.graphics as graphics
+if not imports_not_present:
+    import pyomo.contrib.parmest.graphics as graphics
 import pyomo.environ as pyo
 
 __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
