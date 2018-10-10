@@ -19,7 +19,7 @@ from pyomo.common.config import (
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.multistart.high_conf_stop import should_stop
 from pyomo.contrib.multistart.reinit import reinitialize_variables
-from pyomo.core import Var, minimize, value, Objective
+from pyomo.core import Objective, Var, minimize, value
 from pyomo.opt import SolverFactory, SolverStatus
 from pyomo.opt import TerminationCondition as tc
 
@@ -119,9 +119,11 @@ class MultiStart(object):
         objectives = model.component_data_objects(Objective, active=True)
         obj = next(objectives, None)
         if next(objectives, None) is not None:
-            raise RuntimeError("Multistart solver is unable to handle model with multiple active objectives.")
+            raise RuntimeError(
+                "Multistart solver is unable to handle model with multiple active objectives.")
         if obj is None:
-            raise RuntimeError("Multistart solver is unable to handle model with no active objective.")
+            raise RuntimeError(
+                "Multistart solver is unable to handle model with no active objective.")
 
         # store objective values and objective/result information for best
         # solution obtained
@@ -177,8 +179,8 @@ class MultiStart(object):
                         best_result = result
                 if num_iter == 1:
                     # if it's the first iteration, set the best_model and
-                    # best_result regardless of solution status in case the model
-                    # is infeasible.
+                    # best_result regardless of solution status in case the
+                    # model is infeasible.
                     best_model = m
                     best_result = result
 
@@ -188,8 +190,8 @@ class MultiStart(object):
                     "after %s iterations. To increase this limit, change the "
                     "HCS_max_iterations flag." % num_iter)
 
-            # if no better result was found than initial solve, then return that
-            # without needing to copy variables.
+            # if no better result was found than initial solve, then return
+            # that without needing to copy variables.
             if best_model is model:
                 return best_result
 

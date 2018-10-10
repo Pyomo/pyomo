@@ -1,14 +1,15 @@
+import logging
+
+from six import StringIO
 from six.moves import range
 
 import pyutilib.th as unittest
-from pyomo.environ import (
-    ConcreteModel, NonNegativeReals, Objective, SolverFactory, Var, maximize,
-    sin, value, Constraint
-)
-from six import StringIO
-import logging
 from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.multistart.high_conf_stop import should_stop
+from pyomo.environ import (
+    ConcreteModel, Constraint, NonNegativeReals, Objective, SolverFactory, Var,
+    maximize, sin, value
+)
 
 
 @unittest.skipIf(not SolverFactory('ipopt').available(), "IPOPT not available")
