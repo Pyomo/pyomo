@@ -225,33 +225,3 @@ m.LDiffCon = Constraint(m.t, rule=_L)
 
 
 
-
-
-
-
-#------------------------------#
-#  Testing sIPOPT interface
-#------------------------------#
-
-
-#Set Pertubrations
-m.epsDelta = Param(initialize =0.75)
-
-vp_profile = {0:0.75}
-vt_profile = {0:0.75}
-
-m.u_input = Suffix(direction=Suffix.LOCAL)
-m.u_input[m.vp] = vp_profile
-m.u_input[m.vt] = vt_profile
-
-sim = Simulator(m, package='scipy')
-tsim, profiles = sim.simulate(numpoints=100, varying_inputs=m.u_input)
-
-discretizer = TransformationFactory('dae.collocation')
-discretizer.apply_to(m, nfe=10, ncp=3, scheme='LAGRANGE-RADAU')
-
-sim.initialize_model()
-
-results, z_L, z_U = sipopt(m, [m.eps], [m.epsDelta], cloneModel=True, streamSoln=True)
-
-

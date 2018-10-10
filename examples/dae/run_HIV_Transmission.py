@@ -9,7 +9,6 @@
 
 from pyomo.environ import *
 from pyomo.dae import *
-#from HIV_Transmission import m
 from HIV_Transmission import m
 
 ##########################################
