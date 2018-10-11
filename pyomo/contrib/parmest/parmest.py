@@ -1,6 +1,10 @@
 import re
-import numpy as np
-import pandas as pd
+try:
+    import numpy as np
+    import pandas as pd
+except:
+    # some travis tests want to import, but not run much (dlw Oct 2018)
+    print ("WARNING: numpy and/or pandas could not be imported.")
 import importlib as im
 import itertools
 import types
