@@ -7,7 +7,7 @@ try:
     imports_not_present = False
 except:
     imports_not_present = True
-import unittest
+import pyutilib.th as unittest
 import tempfile
 import sys
 import os
