@@ -179,7 +179,8 @@ class TestBlockVector(unittest.TestCase):
         v1 = self.ones
         result = v + v1
         self.assertListEqual(result.tolist(), [2]*v.size)
-        self.assertRaises(RuntimeError, v.__add__, 1.0)
+        result = v + 2
+        self.assertListEqual(result.tolist(), [3] * v.size)
         self.assertRaises(RuntimeError, v.__add__, v1.flatten())
 
     def test_radd(self):
@@ -187,7 +188,8 @@ class TestBlockVector(unittest.TestCase):
         v1 = self.ones
         result = v + v1
         self.assertListEqual(result.tolist(), [2] * v.size)
-        self.assertRaises(RuntimeError, v.__radd__, 1.0)
+        result = 2 + v
+        self.assertListEqual(result.tolist(), [3] * v.size)
         self.assertRaises(RuntimeError, v.__radd__, v1.flatten())
 
     def test_sub(self):
@@ -195,7 +197,8 @@ class TestBlockVector(unittest.TestCase):
         v1 = self.ones
         result = v - v1
         self.assertListEqual(result.tolist(), [0] * v.size)
-        self.assertRaises(RuntimeError, v.__sub__, 1.0)
+        result = v - 1.0
+        self.assertListEqual(result.tolist(), [0] * v.size)
         self.assertRaises(RuntimeError, v.__sub__, v1.flatten())
 
     def test_rsub(self):
@@ -203,7 +206,8 @@ class TestBlockVector(unittest.TestCase):
         v1 = self.ones
         result = v1.__rsub__(v)
         self.assertListEqual(result.tolist(), [0] * v.size)
-        self.assertRaises(RuntimeError, v.__rsub__, 1.0)
+        result = 1.0 - v
+        self.assertListEqual(result.tolist(), [0] * v.size)
         self.assertRaises(RuntimeError, v.__rsub__, v1.flatten())
 
     def test_mul(self):
@@ -211,7 +215,8 @@ class TestBlockVector(unittest.TestCase):
         v1 = v.clone(5, copy=True)
         result = v1 * v
         self.assertListEqual(result.tolist(), [5] * v.size)
-        self.assertRaises(RuntimeError, v.__mul__, 1.0)
+        result = v * 5.0
+        self.assertListEqual(result.tolist(), [5] * v.size)
         self.assertRaises(RuntimeError, v.__mul__, v1.flatten())
 
     def test_rmul(self):
@@ -219,7 +224,8 @@ class TestBlockVector(unittest.TestCase):
         v1 = v.clone(5, copy=True)
         result = v1.__rmul__(v)
         self.assertListEqual(result.tolist(), [5] * v.size)
-        self.assertRaises(RuntimeError, v.__rmul__, 1.0)
+        result = v * 5.0
+        self.assertListEqual(result.tolist(), [5] * v.size)
         self.assertRaises(RuntimeError, v.__rmul__, v1.flatten())
 
     """

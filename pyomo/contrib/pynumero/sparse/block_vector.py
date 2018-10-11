@@ -35,18 +35,14 @@ class BlockVector(object):
 
         if isinstance(vectors, int):
 
-            blocks = [None for i in range(vectors)]
-
-            self._blocks = np.asarray(blocks, dtype='object')
+            self._blocks =[None for i in range(vectors)]
             self._block_mask = np.zeros(vectors, dtype=bool)
             self._brow_lengths = np.zeros(vectors, dtype=np.int64)
             self._nblocks = vectors
 
         elif isinstance(vectors, list):
-
             nblocks = len(vectors)
-            blocks = [None for i in range(nblocks)]
-            self._blocks = np.asarray(blocks, dtype='object')
+            self._blocks = [None for i in range(nblocks)]
             self._block_mask = np.zeros(nblocks, dtype=bool)
             self._brow_lengths = np.zeros(nblocks, dtype=np.int64)
             self._nblocks = nblocks
@@ -412,9 +408,9 @@ class BlockVector(object):
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Not supported addition of block vector with numpy array. Use non-member function')
         elif np.isscalar(other):
-            msg = 'Not supported addition of block vector with scalar. Use non-member function'
-            msg += ' or clone the block vector, fill it and add it'
-            raise RuntimeError(msg)
+            for idx, blk in enumerate(self._blocks):
+                result[idx] = blk + other
+            return result
         else:
             return NotImplemented
 
@@ -433,11 +429,11 @@ class BlockVector(object):
                 result[idx] = blk - other[idx]
             return result
         elif isinstance(other, np.ndarray):
-            raise RuntimeError('Not supported substraction of block vector with numpy array. Use non-member function')
+            raise RuntimeError('Not supported subtraction of block vector with numpy array. Use pynumero.subtract')
         elif np.isscalar(other):
-            msg = 'Not supported substraction of block vector with scalar. Use non-member function'
-            msg += ' or clone the block vector, fill it and add it'
-            raise RuntimeError(msg)
+            for idx, blk in enumerate(self._blocks):
+                result[idx] = blk - other
+            return result
         else:
             raise NotImplemented
 
@@ -453,11 +449,11 @@ class BlockVector(object):
                 result[idx] = other[idx] - blk
             return result
         elif isinstance(other, np.ndarray):
-            raise RuntimeError('Not supported substraction of block vector with numpy array. Use non-member function')
+            raise RuntimeError('Not supported subtraction of block vector with numpy array. Use pynumero.subtract')
         elif np.isscalar(other):
-            msg = 'Not supported substraction of block vector with scalar. Use non-member function'
-            msg += ' or clone the block vector, fill it and substract it'
-            raise RuntimeError(msg)
+            for idx, blk in enumerate(self._blocks):
+                result[idx] = other - blk
+            return result
         else:
             return NotImplemented
 
@@ -473,11 +469,11 @@ class BlockVector(object):
                 result[idx] = blk * other[idx]
             return result
         elif isinstance(other, np.ndarray):
-            raise RuntimeError('Not supported multiplication of block vector with numpy array. Use non-member function')
+            raise RuntimeError('Not supported multiplication of block vector with numpy array. Use pynumero.multiply')
         elif np.isscalar(other):
-            msg = 'Not supported multiplication of block vector with scalar. Use non-member function'
-            msg += ' or clone the block vector, fill it and multiply it'
-            raise RuntimeError(msg)
+            for idx, blk in enumerate(self._blocks):
+                result[idx] = blk * other
+            return result
         else:
             return NotImplemented
 
@@ -496,11 +492,11 @@ class BlockVector(object):
                 result[idx] = blk / other[idx]
             return result
         elif isinstance(other, np.ndarray):
-            raise RuntimeError('Not supported division of block vector with numpy array. Use non-member function')
+            raise RuntimeError('Not supported division of block vector with numpy array. Use pynumero.divide')
         elif np.isscalar(other):
-            msg = 'Not supported division of block vector with scalar. Use non-member function'
-            msg += ' or clone the block vector, fill it and divide it'
-            raise RuntimeError(msg)
+            for idx, blk in enumerate(self._blocks):
+                result[idx] = blk / other
+            return result
         else:
             raise NotImplemented
 
@@ -516,11 +512,11 @@ class BlockVector(object):
                 result[idx] = other[idx] / blk
             return result
         elif isinstance(other, np.ndarray):
-            raise RuntimeError('Not supported division of block vector with numpy array. Use non-member function')
+            raise RuntimeError('Not supported division of block vector with numpy array. Use pynumero.divide')
         elif np.isscalar(other):
-            msg = 'Not supported division of block vector with scalar. Use non-member function'
-            msg += ' or clone the block vector, fill it and divide it'
-            raise RuntimeError(msg)
+            for idx, blk in enumerate(self._blocks):
+                result[idx] = other / blk
+            return result
         else:
             raise NotImplemented
 
@@ -538,9 +534,9 @@ class BlockVector(object):
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Not supported division of block vector with numpy array. Use non-member function')
         elif np.isscalar(other):
-            msg = 'Not supported division of block vector with scalar. Use non-member function'
-            msg += ' or clone the block vector, fill it and divide it'
-            raise RuntimeError(msg)
+            for idx, blk in enumerate(self._blocks):
+                result[idx] = blk // other
+            return result
         else:
             return NotImplemented
 
@@ -558,9 +554,9 @@ class BlockVector(object):
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Not supported division of block vector with numpy array. Use non-member function')
         elif np.isscalar(other):
-            msg = 'Not supported division of block vector with scalar. Use non-member function'
-            msg += ' or clone the block vector, fill it and divide it'
-            raise RuntimeError(msg)
+            for idx, blk in enumerate(self._blocks):
+                result[idx] = other // blk
+            return result
         else:
             return NotImplemented
 
