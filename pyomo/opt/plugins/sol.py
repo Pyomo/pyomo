@@ -215,7 +215,7 @@ class ResultsReader_sol(results.AbstractResultsReader):
                             suf_line = fin.readline().split()
                             key = "v"+suf_line[0]
                             if key not in soln_variable:
-                                soln_variable[key] = {"Value": None}
+                                soln_variable[key] = {}
                             soln_variable[key][suffix_name] = \
                                 convert_function(suf_line[1])
                     elif kind == 1: # Con
