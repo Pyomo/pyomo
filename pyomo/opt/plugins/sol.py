@@ -224,9 +224,14 @@ class ResultsReader_sol(results.AbstractResultsReader):
                             key = "c"+suf_line[0]
                             if key not in soln_constraint:
                                 soln_constraint[key] = {}
-                            # convert the first letter of the suffix name to upper case,
-                            # mainly for pretty-print / output purposes. these are lower-cased
-                            # when loaded into real suffixes, so it is largely redundant.
+                            # GH: About the comment below: This makes for a
+                            # confusing results object and more confusing tests.
+                            # We should not muck with the names of suffixes
+                            # coming out of the sol file.
+                            #
+                            #   convert the first letter of the suffix name to upper case,
+                            #   mainly for pretty-print / output purposes. these are lower-cased
+                            #   when loaded into real suffixes, so it is largely redundant.
                             translated_suffix_name = suffix_name[0].upper() + suffix_name[1:]
                             soln_constraint[key][translated_suffix_name] = \
                                 convert_function(suf_line[1])
