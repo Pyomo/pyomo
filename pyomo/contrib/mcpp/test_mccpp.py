@@ -31,6 +31,13 @@ class TestMcCormick(unittest.TestCase):
         self.assertEqual(ccAffine[48], 11.565547348257398)
         self.assertEqual(cvAffine[48], -23.131094696514797)
 
+    def test_var(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-1, 1), initialize=3)
+        mc_var = mc(m.x)
+        self.assertEqual(mc_var.lower(), -1)
+        self.assertEqual(mc_var.upper(), 1)
+
 
 def make2dPlot(expr, numticks=10, show_plot=False):
     mc_ccVals = [None] * (numticks + 1)
