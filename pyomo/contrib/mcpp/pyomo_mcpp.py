@@ -34,22 +34,30 @@ NPV_expressions = set(
 
 
 class MCPP_visitor(StreamBasedExpressionVisitor):
+    """Creates an MC++ expression from the corresponding Pyomo expression.
 
-    # This class walks a pyomo expression tree and builds up the
-    # corresponding expression of type McCormick.
+    This class walks a pyomo expression tree and builds up the corresponding
+    expression of type McCormick.
+
+    """
 
     def __init__(self, mcpp_lib, expression):
         super(MCPP_visitor, self).__init__()
         self.expr = expression
-        self.i = 0
         self.mcpp = mcpp_lib
+        self.declare_mcpp_library_calls()
         vars = list(identify_variables(expression, include_fixed=False))
         self.num_vars = len(vars)
         # Map expression variables to MC variables
         self.known_vars = ComponentMap()
         # Map expression variables to their index
         self.var_to_idx = ComponentMap()
+        # Pre-register all variables
+        for i, var in enumerate(vars):
+            self.var_to_idx[var] = i
+            self.known_vars[var] = self.register_var(var)
 
+    def declare_mcpp_library_calls(self):
         # Create MC type variable
         self.mcpp.new_createVar.argtypes = [ctypes.c_double,
                                             ctypes.c_double,
@@ -179,8 +187,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             # i.e., int, float, string
             return False, self.mcpp.new_createConstant(child)
         elif not child.is_expression_type():
-            # this means the node is either a Param, Var, or
-            # NumericConstant
+            # node is either a Param, Var, or NumericConstant
             return False, self.register_num(child)
         else:
             # this is an expression node
@@ -191,28 +198,11 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         if num.is_fixed():
             return self.mcpp.new_createConstant(value(num))
         else:
-            if num not in self.known_vars:
-                self.var_to_idx[num] = self.i
-                lb = num.lb
-                ub = num.ub
-                if lb is None:
-                    lb = -500000
-                    logger.warning(
-                        'Var %s missing lower bound. Assuming a value of %s'
-                        % (num.name, lb))
-                if num.ub is None:
-                    ub = 500000
-                    logger.warning(
-                        'Var %s missing upper bound. Assuming a value of %s'
-                        % (num.name, ub))
-                self.known_vars[num] = self.mcpp.new_createVar(
-                    lb, value(num), ub, self.num_vars, self.i)
-                self.i += 1
             return self.known_vars[num]
 
     def register_var(self, var):
+        """Registers a new variable."""
         var_idx = self.var_to_idx[var]
-        print('registering var %s with index %s' % (var.name, var_idx))
         lb = var.lb
         ub = var.ub
         if lb is None:
