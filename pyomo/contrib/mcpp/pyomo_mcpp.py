@@ -43,10 +43,14 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         self.expr = expression
         self.i = 0
         self.mcpp = mcpp_lib
+        vars = list(identify_variables(expression, include_fixed=False))
+        self.num_vars = len(vars)
+        # Map expression variables to MC variables
         if known_vars is None:
             known_vars = ComponentMap()
         self.known_vars = known_vars
-        self.varsIndex = ComponentMap()
+        # Map expression variables to their index
+        self.vars_to_idx = ComponentMap()
 
         # Create MC type variable
         self.mcpp.new_createVar.argtypes = [ctypes.c_double,
@@ -190,10 +194,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             return self.mcpp.new_createConstant(value(num))
         else:
             if num not in self.known_vars:
-                count = 0
-                for i in identify_variables(self.expr):
-                    count += 1
-                self.varsIndex[num] = self.i
+                self.vars_to_idx[num] = self.i
                 lb = num.lb
                 ub = num.ub
                 if lb is None:
@@ -207,7 +208,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                         'Var %s missing upper bound. Assuming a value of %s'
                         % (num.name, ub))
                 self.known_vars[num] = self.mcpp.new_createVar(
-                    lb, value(num), ub, count, self.i)
+                    lb, value(num), ub, self.num_vars, self.i)
                 self.i += 1
             return self.known_vars[num]
 
@@ -297,15 +298,15 @@ class McCormick(object):
 
     def subcc(self):
         ans = ComponentMap()
-        for key in self.visitor.varsIndex:
-            i = self.visitor.varsIndex[key]
+        for key in self.visitor.vars_to_idx:
+            i = self.visitor.vars_to_idx[key]
             ans[key] = self.mcpp_lib.new_subcc(self.expr, i)
         return ans
 
     def subcv(self):
         ans = ComponentMap()
-        for key in self.visitor.varsIndex:
-            i = self.visitor.varsIndex[key]
+        for key in self.visitor.vars_to_idx:
+            i = self.visitor.vars_to_idx[key]
             ans[key] = self.mcpp_lib.new_subcv(self.expr, i)
         return ans
 
