@@ -9,6 +9,7 @@ from pyomo.solvers.plugins.solvers.ASL import ASL
 from pyutilib.misc.config import ConfigBlock, ConfigValue
 from pyomo.util.config import ( 
     PositiveInt, PositiveFloat, NonNegativeFloat, In)
+from pyomo.core import Var, value
 
 from pyomo.contrib.trustregion.TRF import TRF
 from pyomo.contrib.trustregion.readgjh import readgjh
@@ -241,7 +242,7 @@ class TrustRegionSolver(OptSolver):
         #
         # Call base class constructor
         #
-        OptSolver.__init__(self, self.config)
+        #OptSolver.__init__(self, self.config.iteritems())
 
 
     def available(self, exception_flag=True):
