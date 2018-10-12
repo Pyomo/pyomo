@@ -170,26 +170,8 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         elif isinstance(node, NPV_AbsExpression):
             ans = self.mcpp.new_NPV(value(data[0]))
         elif not node.is_expression_type():
-            # this means the node is either a Param, Var, or
-            # NumericConstant
-            if node.is_fixed():
-                return self.mcpp.new_createConstant(value(node))
-            else:
-                if node not in self.known_vars:
-                    count = 0
-                    for i in identify_variables(self.expr):
-                        count += 1
-                    self.varsIndex[node] = self.i
-                    if node.lb is None:
-                        node.setlb(0)
-                    if node.ub is None:
-                        node.setub(500000)
-                    self.known_vars[node] = self.mcpp.new_createVar(
-                        node.lb, value(node), node.ub, count, self.i)
-                    self.i += 1
-                return self.known_vars[node]
+            return self.register_num(node)
         else:
-            print(node.is_expression_type())
             raise RuntimeError("Unhandled expression type: %s" % (type(node)))
 
         return ans
@@ -202,25 +184,29 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         elif not child.is_expression_type():
             # this means the node is either a Param, Var, or
             # NumericConstant
-            if child.is_fixed():
-                return False, self.mcpp.new_createConstant(value(child))
-            else:
-                if child not in self.known_vars:
-                    count = 0
-                    for i in identify_variables(self.expr):
-                        count += 1
-                    self.varsIndex[child] = self.i
-                    if child.lb is None:
-                        child.setlb(0)
-                    if child.ub is None:
-                        child.setub(500000)
-                    self.known_vars[child] = self.mcpp.new_createVar(
-                        child.lb, value(child), child.ub, count, self.i)
-                    self.i += 1
-                return False, self.known_vars[child]
+            return False, self.register_num(child)
         else:
             # this is an expression node
             return True, None
+
+    def register_num(self, num):
+        """Registers a new number: Param, Var, or NumericConstant."""
+        if num.is_fixed():
+            return self.mcpp.new_createConstant(value(num))
+        else:
+            if num not in self.known_vars:
+                count = 0
+                for i in identify_variables(self.expr):
+                    count += 1
+                self.varsIndex[num] = self.i
+                if num.lb is None:
+                    num.setlb(0)
+                if num.ub is None:
+                    num.setub(500000)
+                self.known_vars[num] = self.mcpp.new_createVar(
+                    num.lb, value(num), num.ub, count, self.i)
+                self.i += 1
+            return self.known_vars[num]
 
     def finalizeResult(self, node_result):
         return node_result
