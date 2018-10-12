@@ -1,3 +1,4 @@
+import logging
 
 from pyutilib.services import TempfileManager
 from pyutilib.services import register_executable
@@ -8,6 +9,11 @@ from pyomo.solvers.plugins.solvers.ASL import ASL
 from pyomo.contrib.trustregion.TRF import TRF
 from pyomo.contrib.trustregion.readgjh import readgjh
 import pyomo.contrib.trustregion.param as param
+
+logger = logging.getLogger('pyomo.contrib.trustregion')
+fh = logging.FileHandler('debug_vars.log')
+#logger.setLevel(logging.DEBUG)
+logger.addHandler(fh)
 
 def load():
     pass

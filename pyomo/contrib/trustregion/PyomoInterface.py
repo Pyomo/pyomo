@@ -1,3 +1,5 @@
+import logging
+
 import os
 import numpy as np
 from pyutilib.math import infinity
@@ -13,6 +15,11 @@ from pyomo.contrib.trustregion.GeometryGenerator import (
     generate_quadratic_rom_geometry
 )
 from pyomo.contrib.trustregion.helper import *
+
+logger = logging.getLogger('pyomo.contrib.trustregion')
+fh = logging.FileHandler('debug_vars.log')
+#logger.setLevel(logging.DEBUG)
+logger.addHandler(fh)
 
 class ROMType:
     linear = 0
