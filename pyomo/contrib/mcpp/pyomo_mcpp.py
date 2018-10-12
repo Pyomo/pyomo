@@ -316,6 +316,7 @@ class McCormick(object):
 
     def changePoint(self, var, point):
         var.set_value(point)
+        # WARNING: TODO: this has side effects
         self.visitor = MCPP_visitor(self.mcpp_lib, self.oExpr)
         self.mcppExpression = self.visitor.walk_expression(self.oExpr)
         self.expr = self.mcppExpression
