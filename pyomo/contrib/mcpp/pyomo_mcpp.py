@@ -24,8 +24,6 @@ logger = logging.getLogger('pyomo.contrib.mcpp')
 
 path = os.path.dirname(__file__)
 
-mcpp_lib = ctypes.CDLL(path + '/mcppInterface.so')
-
 NPV_expressions = set(
     (NPV_AbsExpression, NPV_ExternalFunctionExpression,
      NPV_NegationExpression, NPV_PowExpression,
@@ -263,7 +261,7 @@ class McCormick(object):
     def __init__(self, expression):
         self.mcpp_lib = ctypes.CDLL(path + '/mcppInterface.so')
         self.oExpr = expression
-        self.visitor = MCPP_visitor(mcpp_lib, expression)
+        self.visitor = MCPP_visitor(self.mcpp_lib, expression)
         self.mcppExpression = self.visitor.walk_expression(expression)
         self.expr = self.mcppExpression
 
@@ -318,6 +316,6 @@ class McCormick(object):
 
     def changePoint(self, var, point):
         var.set_value(point)
-        self.visitor = MCPP_visitor(mcpp_lib, self.oExpr)
+        self.visitor = MCPP_visitor(self.mcpp_lib, self.oExpr)
         self.mcppExpression = self.visitor.walk_expression(self.oExpr)
         self.expr = self.mcppExpression
