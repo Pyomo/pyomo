@@ -132,6 +132,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
         retcode = ret.returncode
         assert(retcode == 0)
         
+    @unittest.skip("Travis won't run mpiexec even with --allow-run-as-root; we need sudo: false in the .travis.yml file for this to work")
     def test_parallel_parmest(self):
         """ use mpiexec and mpi4py """
         p = str(parmestbase.__path__)
