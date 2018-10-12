@@ -169,6 +169,25 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             ans = self.mcpp.new_NPV(value(data[0]))
         elif isinstance(node, NPV_AbsExpression):
             ans = self.mcpp.new_NPV(value(data[0]))
+        elif not node.is_expression_type():
+            # this means the node is either a Param, Var, or
+            # NumericConstant
+            if node.is_fixed():
+                return self.mcpp.new_createConstant(value(node))
+            else:
+                if node not in self.known_vars:
+                    count = 0
+                    for i in identify_variables(self.expr):
+                        count += 1
+                    self.varsIndex[node] = self.i
+                    if node.lb is None:
+                        node.setlb(0)
+                    if node.ub is None:
+                        node.setub(500000)
+                    self.known_vars[node] = self.mcpp.new_createVar(
+                        node.lb, value(node), node.ub, count, self.i)
+                    self.i += 1
+                return self.known_vars[node]
         else:
             print(node.is_expression_type())
             raise RuntimeError("Unhandled expression type: %s" % (type(node)))
