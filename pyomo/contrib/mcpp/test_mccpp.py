@@ -1,11 +1,18 @@
 from __future__ import division
 
+import logging
 from math import pi
 
+from six import StringIO
+
 import pyutilib.th as unittest
-from pyomo.core import ConcreteModel, Expression, Var, cos, exp, sin, value
-from pyomo.core.expr.current import identify_variables
+from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc
+from pyomo.core import (
+    ConcreteModel, Expression, Var, acos, asin, atan, cos, exp, quicksum, sin,
+    tan, value
+)
+from pyomo.core.expr.current import identify_variables
 
 
 class TestMcCormick(unittest.TestCase):
@@ -37,6 +44,30 @@ class TestMcCormick(unittest.TestCase):
         mc_var = mc(m.x)
         self.assertEqual(mc_var.lower(), -1)
         self.assertEqual(mc_var.upper(), 1)
+        m.no_ub = Var(bounds=(0, None), initialize=3)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.mcpp', logging.WARNING):
+            mc_var = mc(m.no_ub)
+            self.assertIn("Var no_ub missing upper bound.",
+                          output.getvalue().strip())
+            self.assertEqual(mc_var.lower(), 0)
+            self.assertEqual(mc_var.upper(), 500000)
+        m.no_lb = Var(bounds=(None, -3), initialize=-1)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.mcpp', logging.WARNING):
+            mc_var = mc(m.no_lb)
+            self.assertIn("Var no_lb missing lower bound.",
+                          output.getvalue().strip())
+            self.assertEqual(mc_var.lower(), -500000)
+            self.assertEqual(mc_var.upper(), -3)
+        m.no_val = Var(bounds=(0, 1))
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.mcpp', logging.WARNING):
+            mc_var = mc(m.no_val)
+            self.assertIn("Var no_val missing value.",
+                          output.getvalue().strip())
+            self.assertEqual(mc_var.lower(), 0)
+            self.assertEqual(mc_var.upper(), 1)
 
     def test_fixed_var(self):
         m = ConcreteModel()
@@ -46,6 +77,49 @@ class TestMcCormick(unittest.TestCase):
         mc_expr = mc(m.x * m.y)
         self.assertEqual(mc_expr.lower(), -100)
         self.assertEqual(mc_expr.upper(), 160)
+
+    def test_reciprocal(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(1, 2), initialize=1)
+        m.y = Var(bounds=(2, 3), initialize=2)
+        mc_expr = mc(m.x / m.y)
+        self.assertEqual(mc_expr.lower(), 1 / 3)
+        self.assertEqual(mc_expr.upper(), 1)
+
+    def test_nonpyomo_numeric(self):
+        mc_expr = mc(-2)
+        self.assertEqual(mc_expr.lower(), -2)
+        self.assertEqual(mc_expr.upper(), -2)
+
+    def test_linear_expression(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(1, 2), initialize=1)
+        with self.assertRaises(NotImplementedError):
+            mc_expr = mc(quicksum([m.x, m.x], linear=True))
+            self.assertEqual(mc_expr.lower(), 2)
+            self.assertEqual(mc_expr.upper(), 4)
+
+    def test_trig(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(pi / 4, pi / 2), initialize=pi / 4)
+        mc_expr = mc(tan(atan((m.x))))
+        self.assertAlmostEqual(mc_expr.lower(), pi / 4)
+        self.assertAlmostEqual(mc_expr.upper(), pi / 2)
+        m.y = Var(bounds=(0, sin(pi / 4)), initialize=0)
+        mc_expr = mc(asin((m.y)))
+        self.assertEqual(mc_expr.lower(), 0)
+        self.assertAlmostEqual(mc_expr.upper(), pi / 4)
+        m.z = Var(bounds=(0, cos(pi / 4)), initialize=0)
+        mc_expr = mc(acos((m.z)))
+        self.assertAlmostEqual(mc_expr.lower(), pi / 4)
+        self.assertAlmostEqual(mc_expr.upper(), pi / 2)
+
+    def test_abs(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-1, 1), initialize=0)
+        mc_expr = mc(abs((m.x)))
+        self.assertEqual(mc_expr.lower(), 0)
+        self.assertEqual(mc_expr.upper(), 1)
 
 
 def make2dPlot(expr, numticks=10, show_plot=False):

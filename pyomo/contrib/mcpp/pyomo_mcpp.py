@@ -143,18 +143,23 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             assert (type(data[0]) == int),\
                 "Argument to pow() must be an integer"
             ans = self.mcpp.new_power(data[0], data[1])
-        elif isinstance(node, MonomialTermExpression):
-            ans = self.mcpp.new_monomial(data[0], data[1])
         elif isinstance(node, ReciprocalExpression):
-            ans = self.mcpp.new_reciprocal(data[0], data[1])
+            ans = self.mcpp.new_reciprocal(
+                self.mcpp.new_createConstant(1), data[0])
         elif isinstance(node, NegationExpression):
             ans = self.mcpp.new_negation(data[0])
         elif isinstance(node, AbsExpression):
             ans = self.mcpp.new_abs(data[0])
         elif isinstance(node, LinearExpression):
-            ans = data[0]
-            for arg in data[1:]:
-                ans = self.mcpp.new_add(ans, arg)
+            raise NotImplementedError(
+                'Quicksum has bugs that prevent proper usage of MC++.')
+            # ans = self.mcpp.new_createConstant(node.constant)
+            # for coef, var in zip(node.linear_coefs, node.linear_vars):
+            #     ans = self.mcpp.new_add(
+            #         ans,
+            #         self.mcpp.new_mult(
+            #             self.mcpp.new_createConstant(coef),
+            #             self.register_num(var)))
         elif isinstance(node, UnaryFunctionExpression):
             if (node.name == "exp"):
                 ans = self.mcpp.new_exponential(data[0])
@@ -172,8 +177,10 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                 ans = self.mcpp.new_atrigTan(data[0])
         elif any(isinstance(node, npv) for npv in NPV_expressions):
             ans = self.mcpp.new_NPV(value(data[0]))
+        elif type(node) in nonpyomo_leaf_types:
+            ans = self.mcpp.new_createConstant(node)
         elif not node.is_expression_type():
-            return self.register_num(node)
+            ans = self.register_num(node)
         else:
             raise RuntimeError("Unhandled expression type: %s" % (type(node)))
 
@@ -203,18 +210,24 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         var_idx = self.var_to_idx[var]
         lb = var.lb
         ub = var.ub
+        var_val = value(var, exception=False)
         if lb is None:
             lb = -500000
             logger.warning(
-                'Var %s missing lower bound. Assuming a value of %s'
+                'Var %s missing lower bound. Assuming LB of %s'
                 % (var.name, lb))
-        if var.ub is None:
+        if ub is None:
             ub = 500000
             logger.warning(
-                'Var %s missing upper bound. Assuming a value of %s'
+                'Var %s missing upper bound. Assuming UB of %s'
                 % (var.name, ub))
+        if var_val is None:
+            var_val = (lb + ub) / 2
+            logger.warning(
+                'Var %s missing value. Assuming midpoint value of %s'
+                % (var.name, var_val))
         return self.mcpp.new_createVar(
-            lb, value(var), ub, self.num_vars, var_idx)
+            lb, var_val, ub, self.num_vars, var_idx)
 
     def finalizeResult(self, node_result):
         return node_result
