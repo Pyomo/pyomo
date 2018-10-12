@@ -48,7 +48,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         # Map expression variables to MC variables
         self.known_vars = ComponentMap()
         # Map expression variables to their index
-        self.vars_to_idx = ComponentMap()
+        self.var_to_idx = ComponentMap()
 
         # Create MC type variable
         self.mcpp.new_createVar.argtypes = [ctypes.c_double,
@@ -192,7 +192,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             return self.mcpp.new_createConstant(value(num))
         else:
             if num not in self.known_vars:
-                self.vars_to_idx[num] = self.i
+                self.var_to_idx[num] = self.i
                 lb = num.lb
                 ub = num.ub
                 if lb is None:
@@ -296,15 +296,15 @@ class McCormick(object):
 
     def subcc(self):
         ans = ComponentMap()
-        for key in self.visitor.vars_to_idx:
-            i = self.visitor.vars_to_idx[key]
+        for key in self.visitor.var_to_idx:
+            i = self.visitor.var_to_idx[key]
             ans[key] = self.mcpp_lib.new_subcc(self.expr, i)
         return ans
 
     def subcv(self):
         ans = ComponentMap()
-        for key in self.visitor.vars_to_idx:
-            i = self.visitor.vars_to_idx[key]
+        for key in self.visitor.var_to_idx:
+            i = self.visitor.var_to_idx[key]
             ans[key] = self.mcpp_lib.new_subcv(self.expr, i)
         return ans
 
