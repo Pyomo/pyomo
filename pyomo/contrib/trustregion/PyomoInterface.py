@@ -17,9 +17,6 @@ from pyomo.contrib.trustregion.GeometryGenerator import (
 from pyomo.contrib.trustregion.helper import *
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
-fh = logging.FileHandler('debug_vars.log')
-#logger.setLevel(logging.DEBUG)
-logger.addHandler(fh)
 
 class ROMType:
     linear = 0

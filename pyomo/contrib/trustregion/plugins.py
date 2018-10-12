@@ -12,7 +12,7 @@ import pyomo.contrib.trustregion.param as param
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 fh = logging.FileHandler('debug_vars.log')
-#logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 logger.addHandler(fh)
 
 def load():
