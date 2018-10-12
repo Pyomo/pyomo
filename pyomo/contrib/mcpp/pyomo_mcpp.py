@@ -5,6 +5,7 @@ from __future__ import division
 
 import ctypes
 import os
+import logging
 
 from pyomo.core import value
 from pyomo.core.expr.current import identify_variables
@@ -18,6 +19,8 @@ from pyomo.core.expr.expr_pyomo5 import (
     nonpyomo_leaf_types
 )
 from pyomo.core.kernel.component_map import ComponentMap
+
+logger = logging.getLogger('pyomo.contrib.mcpp')
 
 path = os.path.dirname(__file__)
 
@@ -191,12 +194,20 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                 for i in identify_variables(self.expr):
                     count += 1
                 self.varsIndex[num] = self.i
-                if num.lb is None:
-                    num.setlb(0)
+                lb = num.lb
+                ub = num.ub
+                if lb is None:
+                    lb = -500000
+                    logger.warning(
+                        'Var %s missing lower bound. Assuming a value of %s'
+                        % (num.name, lb))
                 if num.ub is None:
-                    num.setub(500000)
+                    ub = 500000
+                    logger.warning(
+                        'Var %s missing upper bound. Assuming a value of %s'
+                        % (num.name, ub))
                 self.known_vars[num] = self.mcpp.new_createVar(
-                    num.lb, value(num), num.ub, count, self.i)
+                    lb, value(num), ub, count, self.i)
                 self.i += 1
             return self.known_vars[num]
 
