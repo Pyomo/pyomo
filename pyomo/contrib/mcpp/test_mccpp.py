@@ -17,7 +17,7 @@ from pyomo.core.expr.current import identify_variables
 
 class TestMcCormick(unittest.TestCase):
 
-    def test_trig_functions(self):
+    def test_mc_2d(self):
         m = ConcreteModel()
         m.x = Var(bounds=(pi / 6, pi / 3), initialize=pi / 4)
         m.e = Expression(expr=cos(pow(m.x, 2)) * sin(pow(m.x, -3)))
