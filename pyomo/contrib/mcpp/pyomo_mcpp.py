@@ -23,6 +23,12 @@ path = os.path.dirname(__file__)
 
 mcpp_lib = ctypes.CDLL(path + '/mcppInterface.so')
 
+NPV_expressions = set(
+    (NPV_AbsExpression, NPV_ExternalFunctionExpression,
+     NPV_NegationExpression, NPV_PowExpression,
+     NPV_ProductExpression, NPV_ReciprocalExpression, NPV_SumExpression,
+     NPV_UnaryFunctionExpression))
+
 
 class MCPP_visitor(StreamBasedExpressionVisitor):
 
@@ -153,21 +159,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                 ans = self.mcpp.new_atrigCos(data[0])
             if (node.name == "atan"):
                 ans = self.mcpp.new_atrigTan(data[0])
-        elif isinstance(node, NPV_NegationExpression):
-            ans = self.mcpp.new_NPV(value(data[0]))
-        elif isinstance(node, NPV_ExternalFunctionExpression):
-            ans = self.mcpp.new_NPV(value(data[0]))
-        elif isinstance(node, NPV_PowExpression):
-            ans = self.mcpp.new_NPV(value(data[0]))
-        elif isinstance(node, NPV_ProductExpression):
-            ans = self.mcpp.new_NPV(value(data[0]))
-        elif isinstance(node, NPV_ReciprocalExpression):
-            ans = self.mcpp.new_NPV(value(data[0]))
-        elif isinstance(node, NPV_SumExpression):
-            ans = self.mcpp.new_NPV(value(data[0]))
-        elif isinstance(node, NPV_UnaryFunctionExpression):
-            ans = self.mcpp.new_NPV(value(data[0]))
-        elif isinstance(node, NPV_AbsExpression):
+        elif any(isinstance(node, npv) for npv in NPV_expressions):
             ans = self.mcpp.new_NPV(value(data[0]))
         elif not node.is_expression_type():
             return self.register_num(node)
