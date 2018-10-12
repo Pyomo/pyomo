@@ -210,6 +210,24 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                 self.i += 1
             return self.known_vars[num]
 
+    def register_var(self, var):
+        var_idx = self.var_to_idx[var]
+        print('registering var %s with index %s' % (var.name, var_idx))
+        lb = var.lb
+        ub = var.ub
+        if lb is None:
+            lb = -500000
+            logger.warning(
+                'Var %s missing lower bound. Assuming a value of %s'
+                % (var.name, lb))
+        if var.ub is None:
+            ub = 500000
+            logger.warning(
+                'Var %s missing upper bound. Assuming a value of %s'
+                % (var.name, ub))
+        return self.mcpp.new_createVar(
+            lb, value(var), ub, self.num_vars, var_idx)
+
     def finalizeResult(self, node_result):
         return node_result
 
