@@ -141,8 +141,8 @@ class parmest_object_Tester_RB(unittest.TestCase):
         rbpath = parmestpath + os.sep + "examples" + os.sep + \
                    "rooney_biegler" + os.sep + "rb_drive_parmest.py"
         rbpath = os.path.abspath(rbpath) # paranoia strikes deep...
-        ret = subprocess.run(["mpiexec", "-n", "2",
-                                  "python", rbpath])
+        ret = subprocess.run(["mpiexec", "-n", "2", 
+                                  "python", rbpath, "--allow-run-as-root"])
         retcode = ret.returncode
         assert(retcode == 0)
         
