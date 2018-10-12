@@ -38,6 +38,15 @@ class TestMcCormick(unittest.TestCase):
         self.assertEqual(mc_var.lower(), -1)
         self.assertEqual(mc_var.upper(), 1)
 
+    def test_fixed_var(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-50, 80), initialize=3)
+        m.y = Var(bounds=(0, 6), initialize=2)
+        m.y.fix()
+        mc_expr = mc(m.x * m.y)
+        self.assertEqual(mc_expr.lower(), -100)
+        self.assertEqual(mc_expr.upper(), 160)
+
 
 def make2dPlot(expr, numticks=10, show_plot=False):
     mc_ccVals = [None] * (numticks + 1)
