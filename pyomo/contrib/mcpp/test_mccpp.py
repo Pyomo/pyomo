@@ -5,7 +5,7 @@ from math import pi
 import pyutilib.th as unittest
 from pyomo.core import ConcreteModel, Expression, Var, cos, exp, sin, value
 from pyomo.core.expr.current import identify_variables
-from pyomo_mcpp import McCormick as mc
+from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc
 
 
 class TestMcCormick(unittest.TestCase):
