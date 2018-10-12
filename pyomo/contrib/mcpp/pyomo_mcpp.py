@@ -38,7 +38,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
     # This class walks a pyomo expression tree and builds up the
     # corresponding expression of type McCormick.
 
-    def __init__(self, mcpp_lib, expression, known_vars=None):
+    def __init__(self, mcpp_lib, expression):
         super(MCPP_visitor, self).__init__()
         self.expr = expression
         self.i = 0
@@ -46,9 +46,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         vars = list(identify_variables(expression, include_fixed=False))
         self.num_vars = len(vars)
         # Map expression variables to MC variables
-        if known_vars is None:
-            known_vars = ComponentMap()
-        self.known_vars = known_vars
+        self.known_vars = ComponentMap()
         # Map expression variables to their index
         self.vars_to_idx = ComponentMap()
 
