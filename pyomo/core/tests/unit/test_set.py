@@ -10,8 +10,13 @@
 
 import pyutilib.th as unittest
 
-from pyomo.core.base.set import _ClosedNumericRange
+from pyomo.core.base.set import _ClosedNumericRange, Any, Reals, Integers
 
+try:
+    import numpy as np
+    numpy_available = True
+except ImportError:
+    numpy_available = False
 
 class TestNumericRange(unittest.TestCase):
     def test_init(self):
@@ -326,3 +331,30 @@ class TestNumericRange(unittest.TestCase):
         self.assertTrue(CNR(8, 0, -2).issubset(CNR(10, 0, -2)))
         self.assertFalse(CNR(10, 0, -2).issubset(CNR(10, 0, -4)))
         self.assertTrue(CNR(10, 0, -2).issubset(CNR(10, 0, -1)))
+
+class InfiniteSetTester(unittest.TestCase):
+    def test_Reals(self):
+        self.assertIn(0, Reals)
+        self.assertIn(1.5, Reals)
+        self.assertIn(100, Reals),
+        self.assertIn(-100, Reals),
+        self.assertNotIn('A', Reals)
+        self.assertNotIn(None, Reals)
+
+    def test_Integers(self):
+        self.assertIn(0, Integers)
+        self.assertNotIn(1.5, Integers)
+        self.assertIn(100, Integers),
+        self.assertIn(-100, Integers),
+        self.assertNotIn('A', Integers)
+        self.assertNotIn(None, Integers)
+
+    @unittest.skipIf(not numpy_available, "NumPy required for these tests")
+    def test_numpy_compatible(self):
+        self.assertIn(np.intc(1), Reals)
+        self.assertIn(np.float64(1), Reals)
+        self.assertIn(np.float64(1.5), Reals)
+
+        self.assertIn(np.intc(1), Integers)
+        self.assertIn(np.float64(1), Integers)
+        self.assertNotIn(np.float64(1.5), Integers)

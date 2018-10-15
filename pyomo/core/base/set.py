@@ -585,11 +585,13 @@ class _SetData(_SetDataBase):
 class _InfiniteSetData(_SetData):
     __slots__ = ('_ranges',)
 
-    def __init__(self, *ranges):
+    def __init__(self, component, ranges=None):
+        super(_InfiniteSetData, self).__init__(component)
+        ranges = tuple(ranges)
         for r in ranges:
-            if not isinstance(r, _InfiniteRange):
-                raise TypeError( "Arguments to _InfiniteSetData must be "
-                                 "_InfiniteRange objects" )
+            if not isinstance(r, _ClosedNumericRange):
+                raise TypeError( "_InfiniteSetData range argument must be an "
+                                 "interable of _ClosedNumericRange objects" )
         self._ranges = ranges
 
     def __getstate__(self):
@@ -644,6 +646,10 @@ class _FiniteSetMixin(object):
             ub = None
         return lb,ub
 
+    def ranges(self):
+        # This is way inefficient, but should always work: the ranges in a
+        # Finite set is the list of scalars
+        return tuple(_ClosedNumericRange(i,i,0) for i in self)
 
 class _FiniteSetData(_SetData, _FiniteSetMixin):
     """A general unordered iterable Set"""
@@ -1153,24 +1159,25 @@ class Set(IndexedComponent):
 
 
 class InfiniteSimpleSet(_InfiniteSetData, Set):
-    def __init__(self, *args, **kwds):
-        _InfiniteSetData.__init__(self, component=self)
-        Set.__init__(self, *args, **kwds)
+    def __init__(self, **kwds):
+        _InfiniteSetData.__init__(
+            self, component=self, ranges=kwds.pop('ranges'))
+        Set.__init__(self, **kwds)
 
 class FiniteSimpleSet(_FiniteSetData, Set):
-    def __init__(self, *args, **kwds):
+    def __init__(self, **kwds):
         _FiniteSetData.__init__(self, component=self)
-        Set.__init__(self, *args, **kwds)
+        Set.__init__(self, **kwds)
 
 class OrderedSimpleSet(_OrderedSetData, Set):
-    def __init__(self, *args, **kwds):
+    def __init__(self, **kwds):
         _OrderedSetData.__init__(self, component=self)
-        Set.__init__(self, *args, **kwds)
+        Set.__init__(self, **kwds)
 
 class SortedSimpleSet(_SortedSetData, Set):
-    def __init__(self, *args, **kwds):
+    def __init__(self, **kwds):
         _SortedSetData.__init__(self, component=self)
-        Set.__init__(self, *args, **kwds)
+        Set.__init__(self, **kwds)
 
 class IndexedSet(Set):
     pass
@@ -1683,3 +1690,8 @@ class _AnySet(_SetData, Set):
         return True
 
 Any = _AnySet(name='Any', doc="A global Pyomo Set that admits any value")
+
+Reals = InfiniteSimpleSet(ranges=(_ClosedNumericRange(None,None,0),))
+
+Integers = InfiniteSimpleSet(
+    ranges=(_ClosedNumericRange(0,None,1), _ClosedNumericRange(0,None, -1)))
