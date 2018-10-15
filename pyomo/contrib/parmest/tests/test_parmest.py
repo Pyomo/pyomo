@@ -152,7 +152,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
         else:
             retcode = subprocess.call(rlist)
         assert(retcode == 0)
-        
+
     @unittest.skip("Most folks don't have k_aug installed")
     def test_theta_k_aug_for_Hessian(self):
         # this will fail if k_aug is not installed
@@ -193,22 +193,5 @@ class parmest_object_Tester_SB(unittest.TestCase):
     def quicky(self):
         objval, thetavals = self.pest.theta_est()
         
-    def test_diagnostic_mode(self):
-        print ("SB diagnostic")
-        self.pest.diagnostic_mode = True
-
-        objval, thetavals = self.pest.theta_est()
-
-        search_ranges = {}
-        search_ranges = {}
-        search_ranges["E1"] = np.arange(30000, 31000, 1000)
-        search_ranges["E2"] = np.arange(39000, 40000, 1000) 
-        search_ranges["k1"] = np.arange(2, 4, 2) 
-        search_ranges["k2"] = np.arange(20, 80, 40)
-
-        self.pest.likelihood_ratio(search_ranges=search_ranges)
-
-        self.pest.diagnostic_mode = False
-  
 if __name__ == '__main__':
     unittest.main()
