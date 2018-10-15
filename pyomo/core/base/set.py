@@ -207,15 +207,27 @@ class _ClosedNumericRange(object):
 
     @staticmethod
     def _continuous_discrete_disjoint(cont, disc):
-        if cont.start is None or cont.start < disc.start:
+        # At this point, we know the ranges overlap (tested for at the
+        # beginning of isdisjoint()
+        d_lb = disc.start if disc.step > 0 else disc.end
+        d_ub = disc.end if disc.step > 0 else disc.start
+        if cont.start is None or (
+                d_lb is not None and cont.start <= d_lb):
             return False
         if cont.end is None or (
-                disc.end is not None and cont.end > disc.end):
+                d_ub is not None and cont.end >= d_ub):
             return False
-        if cont.end - cont.start > abs(disc.step):
+        if cont.end - cont.start >= abs(disc.step):
             return False
-        rStart = remainder(cont.start - disc.start, disc.step)
-        rEnd = remainder(cont.end - disc.start, disc.step)
+        # At this point, the continuous set is shorter than the discrete
+        # step.  We need to see if the continuous set ovverlaps one of the
+        # points, or lies completely between two.
+        #
+        # Note, taking the absolute value of the step is safe because we are
+        # seeing if the continuous range overlaps a discrete point in the
+        # underlying (unbounded) discrete sequence grounded by disc.start
+        rStart = remainder(cont.start - disc.start, abs(disc.step))
+        rEnd = remainder(cont.end - disc.start, abs(disc.step))
         EPS = _ClosedNumericRange._EPS
         return abs(rStart) > EPS and abs(rEnd) > EPS \
                and rStart - rEnd > 0
@@ -254,6 +266,7 @@ class _ClosedNumericRange(object):
             elif other.step:
                 return _ClosedNumericRange._continuous_discrete_disjoint(self, other)
             else:
+                # 2 continuous sets, with overlapping end points: not disjoint
                 return False
         # both sets are discrete
         if self.step == other.step:
@@ -278,7 +291,7 @@ class _ClosedNumericRange(object):
         )
         i = 0
         item = self.start
-        while (self.step>0 and item < end) or (self.step<0 and item>end):
+        while (self.step>0 and item <= end) or (self.step<0 and item >= end):
             if item in other:
                 return False
             i += 1
@@ -293,6 +306,8 @@ class _ClosedNumericRange(object):
         s2, e2 = other.start, other.end
         if other.step < 0:
             s2, e2 = e2, s2
+        # Checks for unbounded ranges and to make sure self's endpoints are
+        # within other's endpoints.
         if s1 is None:
             if s2 is not None:
                 return False
@@ -303,13 +318,20 @@ class _ClosedNumericRange(object):
                 return False
         elif e2 is not None and e1 > e2:
             return False
-        if e2.step == 0:
+        # If other is continuous, then by definition, self is a subset (
+        # regardless of step)
+        if other.step == 0:
             return True
-        elif e1.step == 0:
+        # If other is discrete and self is continuous, then self can't be a
+        # subset
+        elif self.step == 0:
             return False
+        # At this point, both sets are discrete.  Self's period must be a
+        # positive integer multiple of other's ...
         EPS = _ClosedNumericRange._EPS
         if abs(remainder(self.step, other.step)) > EPS:
             return False
+        # ...and they must shart a point in common
         return abs(remainder(other.start-self.start, other.step)) <= EPS
 
 # A trivial class that we can use to test if an object is a "legitimate"
