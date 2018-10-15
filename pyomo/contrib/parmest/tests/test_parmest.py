@@ -128,8 +128,11 @@ class parmest_object_Tester_RB(unittest.TestCase):
         rbpath = parmestpath + os.sep + "examples" + os.sep + \
                    "rooney_biegler" + os.sep + "rooney_biegler.py"
         rbpath = os.path.abspath(rbpath) # paranoia strikes deep...
-        ret = subprocess.run(["python", rbpath])
-        retcode = ret.returncode
+        if sys.version_info >= (3,0):
+            ret = subprocess.run(["python", rbpath])
+            retcode = ret.returncode
+        else:
+            retcode = subprocess.call(["python", rbpath])
         assert(retcode == 0)
         
     @unittest.skip("Travis won't run mpiexec even with --allow-run-as-root; we need sudo: false in the .travis.yml file for this to work")
@@ -142,9 +145,12 @@ class parmest_object_Tester_RB(unittest.TestCase):
         rbpath = parmestpath + os.sep + "examples" + os.sep + \
                    "rooney_biegler" + os.sep + "rb_drive_parmest.py"
         rbpath = os.path.abspath(rbpath) # paranoia strikes deep...
-        ret = subprocess.run(["mpiexec", "-n", "2", 
-                                  "python", rbpath, "--allow-run-as-root"])
-        retcode = ret.returncode
+        rlist = ["mpiexec", "-n", "2", "python", rbpath, "--allow-run-as-root"]
+        if sys.version_info >= (3,0):
+            ret = subprocess.run(rlist)
+            retcode = ret.returncode
+        else:
+            retcode = subprocess.call(rlist)
         assert(retcode == 0)
         
     @unittest.skip("Most folks don't have k_aug installed")
