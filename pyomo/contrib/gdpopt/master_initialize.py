@@ -32,6 +32,17 @@ def GDPopt_initialize_master(solve_data, config):
         m.dual = Suffix(direction=Suffix.IMPORT)
     m.dual.activate()
 
+    # Set up solve functions
+    solve_data.mip_solve_function = solve_linear_GDP
+    if config.strategy == 'LOA':
+        solve_data.nlp_solve_function = solve_NLP
+        solve_data.cut_generation_function = add_outer_approximation_cuts
+        solve_data.integer_cut_function = add_integer_cut
+    elif config.strategy == 'GLOA':
+        solve_data.nlp_solve_function = solve_global_NLP
+        solve_data.cut_generation_function = add_affine_cuts
+        solve_data.integer_cut_function = add_integer_cut
+
     # Set up the linear GDP model
     solve_data.linear_GDP = m.clone()
     # deactivate nonlinear constraints
@@ -71,7 +82,7 @@ def init_custom_disjuncts(solve_data, config):
         ):
             if orig_disj in active_disjunct_set:
                 clone_disj.indicator_var.fix(1)
-        mip_result = solve_linear_GDP(linear_GDP, solve_data, config)
+        mip_result = solve_data.mip_solve_function(linear_GDP, solve_data, config)
         if mip_result.feasible:
             # use the mip variable values to create the NLP subproblem
             nlp_model = solve_data.working_model.clone()
@@ -81,11 +92,11 @@ def init_custom_disjuncts(solve_data, config):
                 mip_result.var_values, config)
             TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
             solve_data.nlp_iteration += 1
-            nlp_result = solve_NLP(nlp_model, solve_data, config)
+            nlp_result = solve_data.nlp_solve_function(nlp_model, solve_data, config)
             if nlp_result.feasible:
                 update_nlp_progress_indicators(nlp_model, solve_data, config)
-                add_outer_approximation_cuts(nlp_result, solve_data, config)
-            add_integer_cut(
+                solve_data.cut_generation_function(nlp_result, solve_data, config)
+            solve_data.integer_cut_function(
                 mip_result.var_values, solve_data,
                 config, feasible=nlp_result.feasible)
         else:
@@ -107,7 +118,7 @@ def init_fixed_disjuncts(solve_data, config):
         "solving subproblem with original user-specified disjunct values.")
     linear_GDP = solve_data.linear_GDP.clone()
     TransformationFactory('gdp.fix_disjuncts').apply_to(linear_GDP)
-    mip_result = solve_linear_GDP(linear_GDP, solve_data, config)
+    mip_result = solve_data.mip_solve_function(linear_GDP, solve_data, config)
     if mip_result.feasible:
         # use the mip variable values to create the NLP subproblem
         nlp_model = solve_data.working_model.clone()
@@ -117,11 +128,11 @@ def init_fixed_disjuncts(solve_data, config):
             mip_result.var_values, config)
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
         solve_data.nlp_iteration += 1
-        nlp_result = solve_NLP(nlp_model, solve_data, config)
+        nlp_result = solve_data.nlp_solve_function(nlp_model, solve_data, config)
         if nlp_result.feasible:
             update_nlp_progress_indicators(nlp_model, solve_data, config)
-            add_outer_approximation_cuts(nlp_result, solve_data, config)
-        add_integer_cut(
+            solve_data.cut_generation_function(nlp_result, solve_data, config)
+        solve_data.integer_cut_function(
             mip_result.var_values, solve_data, config,
             feasible=nlp_result.feasible)
     else:
@@ -154,7 +165,7 @@ def init_max_binaries(solve_data, config):
         expr=sum(binary_vars), sense=maximize)
 
     # Solve
-    mip_results = solve_linear_GDP(linear_GDP, solve_data, config)
+    mip_results = solve_data.mip_solve_function(linear_GDP, solve_data, config)
     if mip_results.feasible:
         # use the mip variable values to create the NLP subproblem
         nlp_model = solve_data.working_model.clone()
@@ -163,12 +174,12 @@ def init_max_binaries(solve_data, config):
                                        mip_results.var_values, config)
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
         solve_data.nlp_iteration += 1
-        nlp_result = solve_NLP(nlp_model, solve_data, config)
+        nlp_result = solve_data.nlp_solve_function(nlp_model, solve_data, config)
         if nlp_result.feasible:
             update_nlp_progress_indicators(nlp_model, solve_data, config)
-            add_outer_approximation_cuts(
+            solve_data.cut_generation_function(
                 nlp_result, solve_data, config)
-        add_integer_cut(
+        solve_data.integer_cut_function(
             mip_results.var_values, solve_data, config,
             feasible=nlp_result.feasible)
     else:
@@ -217,10 +228,7 @@ def init_set_covering(solve_data, config):
                                        mip_result.var_values, config)
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
         solve_data.nlp_iteration += 1
-        if config.strategy == 'LOA':
-            nlp_result = solve_NLP(nlp_model, solve_data, config)
-        else:
-            nlp_result = solve_global_NLP(nlp_model, solve_data, config)
+        nlp_result = solve_data.nlp_solve_function(nlp_model, solve_data, config)
         if nlp_result.feasible:
             # if successful, updated sets
             active_disjuncts = list(
@@ -231,11 +239,8 @@ def init_set_covering(solve_data, config):
                 for (needed_cover, was_active) in zip(disjunct_needs_cover,
                                                       active_disjuncts))
             update_nlp_progress_indicators(nlp_model, solve_data, config)
-            if config.strategy == 'LOA':
-                add_outer_approximation_cuts(nlp_result, solve_data, config)
-            else:
-                add_affine_cuts(nlp_result, solve_data, config)
-        add_integer_cut(
+            solve_data.cut_generation_function(nlp_result, solve_data, config)
+        solve_data.integer_cut_function(
             mip_result.var_values, solve_data, config,
             feasible=nlp_result.feasible)
 
@@ -251,8 +256,7 @@ def init_set_covering(solve_data, config):
     return True
 
 
-def solve_set_cover_MIP(linear_GDP_model, disj_needs_cover,
-                        solve_data, config):
+def solve_set_cover_MIP(linear_GDP_model, disj_needs_cover, solve_data, config):
     """Solve the set covering MIP to determine next configuration."""
     m = linear_GDP_model
     GDPopt = linear_GDP_model.GDPopt_utils
@@ -277,7 +281,7 @@ def solve_set_cover_MIP(linear_GDP_model, disj_needs_cover,
         if (constr.local_name == 'GDPopt_OA_cuts'):
             constr.deactivate()
 
-    mip_results = solve_linear_GDP(m, solve_data, config)
+    mip_results = solve_data.mip_solve_function(m, solve_data, config)
     if mip_results.feasible:
         config.logger.info('Solved set covering MIP')
     else:
