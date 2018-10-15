@@ -58,19 +58,6 @@ class TestGDPopt(unittest.TestCase):
             tee=False)
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
-    @unittest.skipIf(not SolverFactory('baron').available(), "Baron not available.")
-    def test_GLOA_8PP(self):
-        """Test the global logic-based outer approximation algorithm."""
-        exfile = import_file(
-            join(exdir, 'eight_process', 'eight_proc_model.py'))
-        eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt').solve(
-            eight_process, strategy='GLOA',
-            mip_solver=required_solvers[1],
-            nlp_solver='gams',
-            nlp_solver_args={'solver': 'baron'})
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
-
     def test_LOA_strip_pack_default_init(self):
         """Test logic-based outer approximation with strip packing."""
         exfile = import_file(
@@ -83,19 +70,6 @@ class TestGDPopt(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
-    def test_GLOA_strip_pack_default_init(self):
-        """Test logic-based outer approximation with strip packing."""
-        exfile = import_file(
-            join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
-        strip_pack = exfile.build_rect_strip_packing_model()
-        SolverFactory('gdpopt').solve(
-            strip_pack, strategy='GLOA',
-            mip_solver=required_solvers[1],
-            nlp_solver='gams',
-            nlp_solver_args={'solver': 'baron'})
-        self.assertTrue(
-            fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
-
     def test_LOA_constrained_layout_default_init(self):
         """Test LOA with constrained layout."""
         exfile = import_file(
@@ -105,22 +79,6 @@ class TestGDPopt(unittest.TestCase):
             cons_layout, strategy='LOA',
             mip_solver=required_solvers[1],
             nlp_solver=required_solvers[0])
-        objective_value = value(cons_layout.min_dist_cost.expr)
-        self.assertTrue(
-            fabs(objective_value - 41573) <= 200,
-            "Objective value of %s instead of 41573" % objective_value)
-
-    def test_GLOA_constrained_layout_default_init(self):
-        """Test LOA with constrained layout."""
-        exfile = import_file(
-            join(exdir, 'constrained_layout', 'cons_layout_model.py'))
-        cons_layout = exfile.build_constrained_layout_model()
-        SolverFactory('gdpopt').solve(
-            cons_layout, strategy='GLOA',
-            mip_solver=required_solvers[1],
-            nlp_solver='gams',
-            nlp_solver_args={'solver': 'baron'},
-            tee=False)
         objective_value = value(cons_layout.min_dist_cost.expr)
         self.assertTrue(
             fabs(objective_value - 41573) <= 200,
@@ -215,6 +173,58 @@ class TestGDPopt(unittest.TestCase):
             call_after_subproblem_feasible=assert_correct_disjuncts_active)
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+
+@unittest.skipIf(not subsolvers_available,
+                 "Required subsolvers %s are not available"
+                 % (required_solvers,))
+class TestGLOA(unittest.TestCase):
+    """Tests for global logic-based outer approximation."""
+
+    @unittest.skipIf(not SolverFactory('baron').available(), "Baron not available.")
+    def test_GLOA_8PP(self):
+        """Test the global logic-based outer approximation algorithm."""
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        SolverFactory('gdpopt').solve(
+            eight_process, strategy='GLOA', tee=True,
+            mip_solver=required_solvers[1],
+            nlp_solver='gams',
+            nlp_solver_args=dict(
+                solver='baron',
+                io_options={'add_options': ['option optcr=0.0001;']}))
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+    def test_GLOA_strip_pack_default_init(self):
+        """Test logic-based outer approximation with strip packing."""
+        exfile = import_file(
+            join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
+        strip_pack = exfile.build_rect_strip_packing_model()
+        SolverFactory('gdpopt').solve(
+            strip_pack, strategy='GLOA',
+            mip_solver=required_solvers[1],
+            nlp_solver='gams',
+            nlp_solver_args={'solver': 'baron'})
+        self.assertTrue(
+            fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
+
+    def test_GLOA_constrained_layout_default_init(self):
+        """Test LOA with constrained layout."""
+        exfile = import_file(
+            join(exdir, 'constrained_layout', 'cons_layout_model.py'))
+        cons_layout = exfile.build_constrained_layout_model()
+        SolverFactory('gdpopt').solve(
+            cons_layout, strategy='GLOA',
+            mip_solver=required_solvers[1],
+            nlp_solver='gams',
+            nlp_solver_args={'solver': 'baron'},
+            tee=False)
+        objective_value = value(cons_layout.min_dist_cost.expr)
+        self.assertTrue(
+            fabs(objective_value - 41573) <= 200,
+            "Objective value of %s instead of 41573" % objective_value)
+
 
 
 if __name__ == '__main__':
