@@ -193,6 +193,13 @@ class _ClosedNumericRange(object):
                other.start, other.end, other.step
 
     def __contains__(self, item):
+        # NumericRanges must hold items that are comparable to ints
+        try:
+            if item.__class__(0) != 0:
+                return False
+        except:
+            return False
+
         if self.step:
             _dir = copysign(1, self.step)
             return (

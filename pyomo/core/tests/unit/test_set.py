@@ -103,6 +103,17 @@ class TestNumericRange(unittest.TestCase):
     def test_contains(self):
         CNR = _ClosedNumericRange
 
+        # Test non-numeric values
+        self.assertNotIn(None, CNR(None, None, 0))
+        self.assertNotIn(None, CNR(0, 10, 0))
+        self.assertNotIn(None, CNR(0, None, 1))
+        self.assertNotIn(None, CNR(0, 10, 1))
+
+        self.assertNotIn('1', CNR(None, None, 0))
+        self.assertNotIn('1', CNR(0, 10, 0))
+        self.assertNotIn('1', CNR(0, None, 1))
+        self.assertNotIn('1', CNR(0, 10, 1))
+
         # Test continuous ranges
         self.assertIn(0, CNR(0, 10, 0))
         self.assertIn(0, CNR(None, 10, 0))
