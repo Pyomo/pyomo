@@ -11,7 +11,6 @@
 import logging
 from six import iteritems
 
-from pyomo.common.plugin import alias
 from pyomo.core.expr.current import ProductExpression
 from pyomo.core import *
 from pyomo.core.base.set_types import BooleanSet
@@ -22,9 +21,8 @@ from pyomo.repn import generate_standard_repn
 logger = logging.getLogger('pyomo.gdp')
 
 
+@TransformationFactory.register('gdp.bilinear', doc="Creates a disjunctive model where bilinear terms are replaced with disjunctive expressions.")
 class Bilinear_Transformation(Transformation):
-
-    alias('gdp.bilinear', doc="Creates a disjunctive model where bilinear terms are replaced with disjunctive expressions.")
 
     def __init__(self):
         super(Bilinear_Transformation, self).__init__()

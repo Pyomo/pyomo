@@ -13,18 +13,14 @@ __all__ = ['TableData']
 from six.moves import xrange
 
 from pyutilib.misc import Options
-from pyomo.common.plugin import Plugin, implements
-from pyomo.dataportal.factory import IDataManager
 from pyomo.dataportal.process_data import _process_data
 
 
-class TableData(Plugin):
+class TableData(object):
     """
     A class used to read/write data from/to a table in an external
     data source.
     """
-
-    implements(IDataManager, service=False)
 
     def __init__(self):
         """

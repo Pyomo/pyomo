@@ -14,13 +14,14 @@ import logging
 import types
 
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
 
 logger = logging.getLogger('pyomo.core')
 
 
+@ModelComponentFactory.register("A component that performs tests during model construction.  The action rule is applied to every index value.")
 class BuildCheck(IndexedComponent):
     """
     A build check, which executes a rule for all valid indices.  If
@@ -66,5 +67,3 @@ class BuildCheck(IndexedComponent):
                 if not res:
                     raise ValueError("BuildCheck %r identified error with index %r" % (self.name, str(index)))
         timer.report()
-
-register_component(BuildCheck, "A component that performs tests during model construction.  The action rule is applied to every index value.")

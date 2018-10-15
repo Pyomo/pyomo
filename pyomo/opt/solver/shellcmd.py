@@ -27,6 +27,7 @@ from pyomo.opt.results import SolverStatus, SolverResults
 
 logger = logging.getLogger('pyomo.opt')
 
+
 class SystemCallSolver(OptSolver):
     """ A generic command line solver """
 
@@ -115,7 +116,10 @@ class SystemCallSolver(OptSolver):
             return True
         if not OptSolver.available(self,exception_flag):
             return False
-        ans = self.executable()
+        try:
+            ans = self.executable()
+        except NotImplementedError:
+            ans = None
         if ans is None:
             if exception_flag:
                 msg = "No executable found for solver '%s'"
@@ -160,7 +164,7 @@ class SystemCallSolver(OptSolver):
     #       adding an optional search_path keyword to the
     #       _default_executable method implemented by
     #       derived classes. How to propagate that through
-    #       the pyutilib.services.registered_executable
+    #       the pyomo.common.registered_executable
     #       framework once it gets there is another question
     #       (that I won't be dealing with today).
     #

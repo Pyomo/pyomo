@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import alias
 from pyomo.core.expr.current import ExpressionBase
 from pyomo.core.expr.numvalue import as_numeric
 from pyomo.core import Constraint, Objective
@@ -17,12 +16,11 @@ from pyomo.core.base.util import sequence
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 
 
+@TransformationFactory.register('core.remove_fixed_vars', doc="Create an equivalent model that omits all fixed variables.")
 class EliminateFixedVars(IsomorphicTransformation):
     """
     Create an equivalent model that omits all fixed variables.
     """
-
-    alias('core.remove_fixed_vars', doc="Create an equivalent model that omits all fixed variables.")
 
     def __init__(self, **kwds):
         kwds['name'] = "eliminate_fixed_vars"

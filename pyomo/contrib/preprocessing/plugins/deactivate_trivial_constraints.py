@@ -3,17 +3,18 @@
 import logging
 import textwrap
 
+from pyomo.core.base.plugin import TransformationFactory
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
                                  add_docstring_list)
-from pyomo.common.plugin import alias
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 
-logger = logging.getLogger('pyomo.contrib.preprocessing')
 
-
+@TransformationFactory.register(
+        'contrib.deactivate_trivial_constraints',
+        doc="Deactivate trivial constraints.")
 class TrivialConstraintDeactivator(IsomorphicTransformation):
     """Deactivates trivial constraints.
 
@@ -49,8 +50,6 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
 
     __doc__ = add_docstring_list(__doc__, CONFIG)
 
-    alias('contrib.deactivate_trivial_constraints',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance, **kwargs):
         config = self.CONFIG(kwargs)

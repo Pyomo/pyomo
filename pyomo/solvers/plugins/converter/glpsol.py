@@ -8,31 +8,25 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['GlpsolMIPConverter']
-
 import os
 import six
 
 import pyutilib.subprocess
 import pyutilib.common
-import pyutilib.services
+import pyomo.common
 from pyomo.opt.base import *
-from pyomo.common.plugin import *
+from pyomo.opt.base.convert import ProblemConverterFactory
 
 
-class GlpsolMIPConverter(SingletonPlugin):
-
-    implements(IProblemConverter)
-
-    def __init__(self,**kwds):
-        SingletonPlugin.__init__(self,**kwds)
+@ProblemConverterFactory.register('glpsol')
+class GlpsolMIPConverter(object):
 
     def can_convert(self, from_type, to_type):
         """Returns true if this object supports the specified conversion"""
         #
         # Test if the glpsol executable is available
         #
-        if pyutilib.services.registered_executable("glpsol") is None:
+        if pyomo.common.registered_executable("glpsol") is None:
             return False
         #
         # Return True for specific from/to pairs
@@ -40,7 +34,7 @@ class GlpsolMIPConverter(SingletonPlugin):
         if from_type == ProblemFormat.mod and to_type == ProblemFormat.cpxlp:
             return True
         if from_type == ProblemFormat.mod and to_type == ProblemFormat.mps:
-            if pyutilib.services.registered_executable("ampl") is None:
+            if pyomo.common.registered_executable("ampl") is None:
                 #
                 # Only convert mod->mps with ampl
                 #
@@ -51,7 +45,7 @@ class GlpsolMIPConverter(SingletonPlugin):
         """Convert an instance of one type into another"""
         if not isinstance(args[2],six.string_types):
             raise ConverterError("Can only apply glpsol to convert file data")
-        cmd = pyutilib.services.registered_executable("glpsol").get_path()
+        cmd = pyomo.common.registered_executable("glpsol").get_path()
         if cmd is None:
             raise ConverterError("The 'glpsol' executable cannot be found")
         cmd = cmd +" --math"

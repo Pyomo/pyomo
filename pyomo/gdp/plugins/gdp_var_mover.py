@@ -16,10 +16,9 @@ detect variables inside of Disjuncts or deactivated Blocks.
 
 import logging
 import textwrap
-from pyomo.common.plugin import alias
 from pyomo.core.base import Transformation, Block, Constraint
 from pyomo.gdp import Disjunct, GDP_Error
-from pyomo.core import TraversalStrategy
+from pyomo.core import TraversalStrategy, TransformationFactory
 from pyomo.common.deprecation import deprecated
 
 from six import itervalues
@@ -27,6 +26,8 @@ from six import itervalues
 logger = logging.getLogger('pyomo.gdp')
 
 
+
+@TransformationFactory.register('gdp.varmover', doc="Move indicator vars to top block.")
 class HACK_GDP_Var_Mover(Transformation):
     """Move indicator vars to top block.
 
@@ -34,8 +35,6 @@ class HACK_GDP_Var_Mover(Transformation):
     so the writers can find them.
 
     """
-
-    alias('gdp.varmover', doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     @deprecated(msg="The gdp.varmover transformation has been deprecated in "
                 "favor of the gdp.reclassify transformation.")
@@ -53,6 +52,8 @@ class HACK_GDP_Var_Mover(Transformation):
             instance.add_component("_gdp_moved_IV_%s" % (count,), var)
 
 
+@TransformationFactory.register('gdp.reclassify',
+          doc="Reclassify Disjuncts to Blocks.")
 class HACK_GDP_Disjunct_Reclassifier(Transformation):
     """Reclassify Disjuncts to Blocks.
 
@@ -60,9 +61,6 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
     can find the variables
 
     """
-
-    alias('gdp.reclassify',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance, **kwds):
         assert not kwds  # no keywords expected to the transformation

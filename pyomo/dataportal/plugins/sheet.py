@@ -40,9 +40,9 @@ try:
 except ImportError:
     xlrd_available=False
 
-from pyomo.common.plugin import alias
 from pyomo.dataportal import TableData
 from pyomo.dataportal.plugins.db_table import pyodbc_available, pyodbc_db_Table, pypyodbc_available, pypyodbc_db_Table
+from pyomo.dataportal.factory import DataManagerFactory
 
 
 class SheetTable(TableData):
@@ -97,12 +97,15 @@ if pyodbc_available or not pypyodbc_available:
 else:
     pyodbc_db_base = pypyodbc_db_Table
 
+#
+# FIXME: The pyodbc interface doesn't work right now.  We will disable it.
+#
+pyodbc_available = False
 
 if (win32com_available and _excel_available) or xlrd_available:
 
+    @DataManagerFactory.register("xls", "Excel XLS file interface")
     class SheetTable_xls(SheetTable):
-
-        alias("xls", "Excel XLS file interface")
 
         def __init__(self):
             if win32com_available and _excel_available:
@@ -116,11 +119,10 @@ if (win32com_available and _excel_available) or xlrd_available:
         def requirements(self):
             return "win32com or xlrd"
 
-else:
+elif pyodbc_available:
 
+    @DataManagerFactory.register("xls", "Excel XLS file interface")
     class pyodbc_xls(pyodbc_db_base):
-
-        alias("xls", "Excel XLS file interface")
 
         def __init__(self):
             pyodbc_db_base.__init__(self)
@@ -138,9 +140,8 @@ else:
 
 if (win32com_available and _excel_available) or openpyxl_available:
 
+    @DataManagerFactory.register("xlsx", "Excel XLSX file interface")
     class SheetTable_xlsx(SheetTable):
-
-        alias("xlsx", "Excel XLSX file interface")
 
         def __init__(self):
             if win32com_available and _excel_available:
@@ -154,33 +155,32 @@ if (win32com_available and _excel_available) or openpyxl_available:
         def requirements(self):
             return "win32com or openpyxl"
 
-else:
-
-    class SheetTable_xlsx(pyodbc_db_base):
-
-        alias("xlsx", "Excel XLSX file interface")
-
-        def __init__(self):
-            pyodbc_db_base.__init__(self)
-
-        def requirements(self):
-            return "pyodbc or pypyodbc"
-
-        def open(self):
-            if self.filename is None:
-                raise IOError("No filename specified")
-            if not os.path.exists(self.filename):
-                raise IOError("Cannot find file '%s'" % self.filename)
-            return pyodbc_db_base.open(self)
-
-
-if 0:
+elif pyodbc_available:
     #
     # This class is OK, but the pyodbc interface doesn't work right now.
     #
-    class SheetTable_xlsb(pyodbc_db_base):
 
-        alias("xlsb", "Excel XLSB file interface")
+    @DataManagerFactory.register("xlsx", "Excel XLSX file interface")
+    class SheetTable_xlsx(pyodbc_db_base):
+
+        def __init__(self):
+            pyodbc_db_base.__init__(self)
+
+        def requirements(self):
+            return "pyodbc or pypyodbc"
+
+        def open(self):
+            if self.filename is None:
+                raise IOError("No filename specified")
+            if not os.path.exists(self.filename):
+                raise IOError("Cannot find file '%s'" % self.filename)
+            return pyodbc_db_base.open(self)
+
+
+if pyodbc_available:
+
+    @DataManagerFactory.register("xlsb", "Excel XLSB file interface")
+    class SheetTable_xlsb(pyodbc_db_base):
 
         def __init__(self):
             pyodbc_db_base.__init__(self)
@@ -198,9 +198,8 @@ if 0:
 
 if (win32com_available and _excel_available) or openpyxl_available:
 
+    @DataManagerFactory.register("xlsm", "Excel XLSM file interface")
     class SheetTable_xlsm(SheetTable):
-
-        alias("xlsm", "Excel XLSM file interface")
 
         def __init__(self):
             if win32com_available and _excel_available:
@@ -214,11 +213,10 @@ if (win32com_available and _excel_available) or openpyxl_available:
         def requirements(self):
             return "win32com or openpyxl"
 
-else:
+elif pyodbc_available:
 
+    @DataManagerFactory.register("xlsm", "Excel XLSM file interface")
     class SheetTable_xlsm(pyodbc_db_base):
-
-        alias("xlsm", "Excel XLSM file interface")
 
         def __init__(self):
             pyodbc_db_base.__init__(self)

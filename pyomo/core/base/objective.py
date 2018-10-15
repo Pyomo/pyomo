@@ -24,7 +24,7 @@ import inspect
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr import current as EXPR
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
                                                UnindexedComponent_set)
@@ -222,6 +222,7 @@ class _GeneralObjectiveData(_GeneralExpressionDataImpl,
                              "'minimize' (%s) or 'maximize' (%s). Invalid "
                              "value: %s'" % (minimize, maximize, sense))
 
+@ModelComponentFactory.register("Expressions that are minimized or maximized.")
 class Objective(ActiveIndexedComponent):
     """
     This modeling component defines an objective expression.
@@ -586,6 +587,8 @@ class IndexedObjective(Objective):
         """Add an objective with a given index."""
         return self.__setitem__(index, expr)
 
+
+@ModelComponentFactory.register("A list of objective expressions.")
 class ObjectiveList(IndexedObjective):
     """
     An objective component that represents a list of objectives.
@@ -671,7 +674,3 @@ class ObjectiveList(IndexedObjective):
             ans.set_sense(sense)
         return ans
 
-register_component(Objective,
-                   "Expressions that are minimized or maximized.")
-register_component(ObjectiveList,
-                   "A list of objective expressions.")

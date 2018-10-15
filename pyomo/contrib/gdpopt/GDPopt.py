@@ -25,9 +25,9 @@ from __future__ import division
 
 import logging
 
-import pyomo.common.plugin
 from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
-                                 NonNegativeFloat, NonNegativeInt)
+                                 NonNegativeFloat, NonNegativeInt,
+                                 add_docstring_list)
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
 from pyomo.contrib.gdpopt.master_initialize import (GDPopt_initialize_master,
@@ -44,21 +44,22 @@ from pyomo.contrib.gdpopt.util import (_DoNothing, a_logger,
                                        restore_logger_level, time_code)
 from pyomo.core.base import ConstraintList, value
 from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.opt.base import IOptSolver
+from pyomo.opt.base import SolverFactory
 from pyomo.opt.results import SolverResults
 from pyutilib.misc import Container
 
 __version__ = (0, 4, 1)
 
 
-class GDPoptSolver(pyomo.common.plugin.Plugin):
-    """A decomposition-based GDP solver."""
-
-    pyomo.common.plugin.implements(IOptSolver)
-    pyomo.common.plugin.alias(
-        'gdpopt',
+@SolverFactory.register('gdpopt',
         doc='The GDPopt decomposition-based '
         'Generalized Disjunctive Programming (GDP) solver')
+class GDPoptSolver(object):
+    """A decomposition-based GDP solver.
+
+    Keyword arguments below are specified for the ``solve`` function.
+
+    """
 
     _metasolver = False
 
@@ -175,6 +176,8 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         description="The method to use for reformulating integer variables "
         "into binary for this solver."
     ))
+
+    __doc__ = add_docstring_list(__doc__, CONFIG)
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -309,3 +312,13 @@ class GDPoptSolver(pyomo.common.plugin.Plugin):
         solve_data.results.solver.timing = solve_data.timing
 
         return solve_data.results
+
+    #
+    # Support "with" statements.
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
+

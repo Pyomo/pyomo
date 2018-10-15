@@ -6,13 +6,16 @@ import textwrap
 
 from pyomo.core import quicksum
 from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.expr import current as EXPR
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
-from pyomo.common.plugin import alias
 from pyutilib.math.util import isclose
 
 
+@TransformationFactory.register(
+        'contrib.remove_zero_terms',
+        doc="Remove terms 0 * var in constraints")
 class RemoveZeroTerms(IsomorphicTransformation):
     """Looks for :math:`0 v` in a constraint and removes it.
 
@@ -22,10 +25,6 @@ class RemoveZeroTerms(IsomorphicTransformation):
     .. note:: TODO: support nonlinear expressions
 
     """
-
-    alias(
-        'contrib.remove_zero_terms',
-        doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, model):
         """Apply the transformation."""

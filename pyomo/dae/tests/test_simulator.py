@@ -1137,8 +1137,7 @@ class TestCasadiSubstituters(unittest.TestCase):
         e = m.dv[t] + m.v[t] + m.y + t
         templatemap = {}
         e2 = substitute_pyomo2casadi(e, templatemap)
-        #e2 = substitute_template_expression(
-        #    e, substitute_getitem_with_casadi_sym, templatemap)
+
         self.assertEqual(len(templatemap), 2)
         self.assertIs(type(e2.arg(0)), casadi.SX)
         self.assertIs(type(e2.arg(1)), casadi.SX)
@@ -1157,10 +1156,7 @@ class TestCasadiSubstituters(unittest.TestCase):
 
         e = m.v[t] 
         templatemap = {}
-        #e2 = substitute_template_expression(
-        #    e, substitute_getitem_with_casadi_sym, templatemap)
-        #e3 = substitute_intrinsic_function(
-        #    e2, substitute_intrinsic_function_with_casadi)
+
         e3 = substitute_pyomo2casadi(e, templatemap)
         self.assertIs(type(e3), casadi.SX)
         
@@ -1176,10 +1172,7 @@ class TestCasadiSubstituters(unittest.TestCase):
 
         e = sin(m.dv[t]) + log(m.v[t]) + sqrt(m.y) + m.v[t] + t
         templatemap = {}
-        #e2 = substitute_template_expression(
-        #    e, substitute_getitem_with_casadi_sym, templatemap)
-        #e3 = substitute_intrinsic_function(
-        #    e2, substitute_intrinsic_function_with_casadi)
+
         e3 = substitute_pyomo2casadi(e, templatemap)
         self.assertIs(e3.arg(0)._fcn, casadi.sin)
         self.assertIs(e3.arg(1)._fcn, casadi.log)
@@ -1197,10 +1190,7 @@ class TestCasadiSubstituters(unittest.TestCase):
 
         e = sin(m.dv[t] + m.v[t]) + log(m.v[t] * m.y + m.dv[t]**2)
         templatemap = {}
-        #e2 = substitute_template_expression(
-        #    e, substitute_getitem_with_casadi_sym, templatemap)
-        #e3 = substitute_intrinsic_function(
-        #    e2, substitute_intrinsic_function_with_casadi)
+
         e3 = substitute_pyomo2casadi(e, templatemap)
         self.assertIs(e3.arg(0)._fcn, casadi.sin)
         self.assertIs(e3.arg(1)._fcn, casadi.log)
@@ -1217,10 +1207,7 @@ class TestCasadiSubstituters(unittest.TestCase):
 
         e = m.v[t] * sin(m.dv[t] + m.v[t]) * t
         templatemap = {}
-        #e2 = substitute_template_expression(
-        #    e, substitute_getitem_with_casadi_sym, templatemap)
-        #e3 = substitute_intrinsic_function(
-        #    e2, substitute_intrinsic_function_with_casadi)
+
         e3 = substitute_pyomo2casadi(e, templatemap)
         self.assertIs(type(e3.arg(0).arg(0)), casadi.SX)
         self.assertIs(e3.arg(0).arg(1)._fcn, casadi.sin)
@@ -1275,6 +1262,41 @@ class TestSimulationInterface():
         # os.system('diff ' + ofile + ' ' + bfile)
         self.assertFileEqualsBaseline(ofile, bfile, tolerance=0.01)
 
+    def _test_disc_first(self, tname):
+
+        ofile = join(currdir, tname + '.' + self.sim_mod + '.out')
+        bfile = join(currdir, tname + '.' + self.sim_mod + '.txt')
+        setup_redirect(ofile)
+
+        # create model
+        exmod = import_file(join(exdir, tname + '.py'))
+        m = exmod.create_model()
+
+        # Discretize model
+        discretizer = TransformationFactory('dae.collocation')
+        discretizer.apply_to(m, nfe=10, ncp=5)
+
+        # Simulate model
+        sim = Simulator(m, package=self.sim_mod)
+
+        if hasattr(m, 'var_input'):
+            tsim, profiles = sim.simulate(numpoints=100,
+                                          varying_inputs=m.var_input)
+        else:
+            tsim, profiles = sim.simulate(numpoints=100)
+
+        # Initialize model
+        sim.initialize_model()
+
+        self._print(m, profiles)
+
+        reset_redirect()
+        if not os.path.exists(bfile):
+            os.rename(ofile, bfile)
+
+        # os.system('diff ' + ofile + ' ' + bfile)
+        self.assertFileEqualsBaseline(ofile, bfile, tolerance=0.01)
+
 
 @unittest.skipIf(not scipy_available, "Scipy is not available")
 class TestScipySimulation(unittest.TestCase, TestSimulationInterface):
@@ -1284,9 +1306,17 @@ class TestScipySimulation(unittest.TestCase, TestSimulationInterface):
         tname = 'simulator_ode_example'
         self._test(tname)
 
+    def test_ode_example2(self):
+        tname = 'simulator_ode_example'
+        self._test_disc_first(tname)
+
     def test_ode_multindex_example(self):
         tname = 'simulator_ode_multindex_example'
         self._test(tname)
+
+    def test_ode_multindex_example2(self):
+        tname = 'simulator_ode_multindex_example'
+        self._test_disc_first(tname)
 
 
 @unittest.skipIf(not casadi_available, "Casadi is not available")
@@ -1297,17 +1327,33 @@ class TestCasadiSimulation(unittest.TestCase, TestSimulationInterface):
         tname = 'simulator_ode_example'
         self._test(tname)
 
+    def test_ode_example2(self):
+        tname = 'simulator_ode_example'
+        self._test_disc_first(tname)
+
     def test_ode_multindex_example(self):
         tname = 'simulator_ode_multindex_example'
         self._test(tname)
+
+    def test_ode_multindex_example2(self):
+        tname = 'simulator_ode_multindex_example'
+        self._test_disc_first(tname)
 
     def test_dae_example(self):
         tname = 'simulator_dae_example'
         self._test(tname)
 
+    def test_dae_example2(self):
+        tname = 'simulator_dae_example'
+        self._test_disc_first(tname)
+
     def test_dae_multindex_example(self):
         tname = 'simulator_dae_multindex_example'
         self._test(tname)
+
+    def test_dae_multindex_example2(self):
+        tname = 'simulator_dae_multindex_example'
+        self._test_disc_first(tname)
 
 
 if __name__ == "__main__":

@@ -137,7 +137,7 @@ class Test(unittest.TestCase):
 
 
 #class TestBaron_writer(unittest.TestCase):
-class TestBaron_writer(object):
+class XTestBaron_writer(object):
 
     def _cleanup(self, fname):
         try:
