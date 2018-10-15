@@ -1691,7 +1691,42 @@ class _AnySet(_SetData, Set):
 
 Any = _AnySet(name='Any', doc="A global Pyomo Set that admits any value")
 
-Reals = InfiniteSimpleSet(ranges=(_ClosedNumericRange(None,None,0),))
+Reals = InfiniteSimpleSet(
+    name='Reals',
+    doc='A global Pyomo Set that admits any real (floating point) value',
+    ranges=(_ClosedNumericRange(None,None,0),))
+
+NonNegativeReals = InfiniteSimpleSet(
+    name='NonNegativeReals',
+    doc='A global Pyomo Set admitting any real value in [0, +inf)',
+    ranges=(_ClosedNumericRange(0,None,0),))
+
+NonPositiveReals = InfiniteSimpleSet(
+    name='NonPositiveReals',
+    doc='A global Pyomo Set admitting any real value in (-inf, 0]',
+    ranges=(_ClosedNumericRange(None,0,0),))
 
 Integers = InfiniteSimpleSet(
+    name='Integers',
+    doc='A global Pyomo Set admitting any integer value',
     ranges=(_ClosedNumericRange(0,None,1), _ClosedNumericRange(0,None, -1)))
+
+NonNegativeIntegers = InfiniteSimpleSet(
+    name='NonNegativeIntegers',
+    doc='A global Pyomo Set admitting any integer value in [0, +inf)',
+    ranges=(_ClosedNumericRange(0,None,1),))
+
+NonPositiveIntegers = InfiniteSimpleSet(
+    name='NonPositiveIntegers',
+    doc='A global Pyomo Set admitting any integer value in (-inf, 0]',
+    ranges=(_ClosedNumericRange(0,None,-1),))
+
+NegativeIntegers = InfiniteSimpleSet(
+    name='NegativeIntegers',
+    doc='A global Pyomo Set admitting any integer value in (-inf, -1]',
+    ranges=(_ClosedNumericRange(-1,None,-1),))
+
+PositiveIntegers = InfiniteSimpleSet(
+    name='PositiveIntegers',
+    doc='A global Pyomo Set admitting any integer value in [1, +inf)',
+    ranges=(_ClosedNumericRange(1,None,1),))
