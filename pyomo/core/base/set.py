@@ -137,7 +137,7 @@ class _ClosedNumericRange(object):
 
     This class represents a contiguous range of numbers.  The class mimics
     the Pyomo (*not* Python) `range` API, with a Start, End, and Step.  The
-    Step is a non-negative numeric value (float is OK).  If the Step is 0,
+    Step is a signed numeric value (float is OK).  If the Step is 0,
     the range is continuous.  The End *is* included in the range.
 
     While the class name implies that the range is always closed, it is
@@ -343,6 +343,7 @@ class _ClosedNumericRange(object):
             return False
         # ...and they must shart a point in common
         return abs(remainder(other.start-self.start, other.step)) <= EPS
+
 
 # A trivial class that we can use to test if an object is a "legitimate"
 # set (either SimpleSet, or a member of an IndexedSet)
@@ -583,6 +584,11 @@ class _SetData(_SetDataBase):
 
 
 class _InfiniteSetData(_SetData):
+    """Data class for a infinite set.
+
+    This Set implements an interface to an *infinite set*.  As there are an
+    infinite number of members, Infinite Sets are not iterable."""
+
     __slots__ = ('_ranges',)
 
     def __init__(self, component, ranges=None):
