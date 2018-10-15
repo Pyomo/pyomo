@@ -96,6 +96,9 @@ def add_affine_cuts(nlp_result, solve_data, config):
     for constr in constraints_in_True_disjuncts(m):
         # for constr in GDPopt.working_nonlinear_constraints:
 
+        if constr not in GDPopt.working_constraints_list:
+            continue
+
         # if constr.body.polynomial_degree() in (1, 0):
         #     continue
 
@@ -109,7 +112,8 @@ def add_affine_cuts(nlp_result, solve_data, config):
         cvStart = mc_eqn.convex()
         ub_int = mc_eqn.upper()
         lb_int = mc_eqn.lower()
-        varList = list(EXPR.identify_variables(constr.body))
+        vars_in_constr = list(
+            EXPR.identify_variables(constr.body))
         parent_block = constr.parent_block()
         # Create a block on which to put outer approximation cuts.
         aff_utils = parent_block.component('GDPopt_aff')
@@ -119,14 +123,18 @@ def add_affine_cuts(nlp_result, solve_data, config):
             aff_utils.GDPopt_aff_cons = ConstraintList()
             aff_utils.GDPopt_aff_vars = VarList()
         aff_cuts = aff_utils.GDPopt_aff_cons
+        # aff_cuts.add(expr=sum(
+        #     ccSlope[var] * (var - var.value) for var in vars_in_constr) + ccStart >= lb_int)
+        # aff_cuts.add(expr=sum(
+        #     cvSlope[var] * (var - var.value) for var in vars_in_constr) + cvStart <= ub_int)
         Slack_var = aff_utils.GDPopt_aff_vars.add()
         Slack_var.setlb(lb_int)
         Slack_var.setub(ub_int)
         Slack_var.set_value(value(constr.body))
         aff_cuts.add(expr=sum(ccSlope[var] * (var - value(var))
-                              for var in varList) + ccStart >= Slack_var)
+                              for var in vars_in_constr) + ccStart >= Slack_var)
         aff_cuts.add(expr=sum(cvSlope[var] * (var - value(var))
-                              for var in varList) + cvStart <= Slack_var)
+                              for var in vars_in_constr) + cvStart <= Slack_var)
         if constr.upper is not None:
             aff_cuts.add(expr=Slack_var <= constr.upper)
         if constr.lower is not None:

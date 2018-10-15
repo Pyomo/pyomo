@@ -7,9 +7,10 @@ from __future__ import division
 from math import fabs
 
 from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
-                                                 add_outer_approximation_cuts)
+                                                 add_outer_approximation_cuts,
+                                                 add_affine_cuts)
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
-from pyomo.contrib.gdpopt.nlp_solve import (solve_NLP,
+from pyomo.contrib.gdpopt.nlp_solve import (solve_NLP, solve_global_NLP,
                                             update_nlp_progress_indicators)
 from pyomo.contrib.gdpopt.util import (_DoNothing,
                                        copy_and_fix_mip_values_to_nlp)
@@ -216,7 +217,10 @@ def init_set_covering(solve_data, config):
                                        mip_result.var_values, config)
         TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
         solve_data.nlp_iteration += 1
-        nlp_result = solve_NLP(nlp_model, solve_data, config)
+        if config.strategy == 'LOA':
+            nlp_result = solve_NLP(nlp_model, solve_data, config)
+        else:
+            nlp_result = solve_global_NLP(nlp_model, solve_data, config)
         if nlp_result.feasible:
             # if successful, updated sets
             active_disjuncts = list(
@@ -227,7 +231,10 @@ def init_set_covering(solve_data, config):
                 for (needed_cover, was_active) in zip(disjunct_needs_cover,
                                                       active_disjuncts))
             update_nlp_progress_indicators(nlp_model, solve_data, config)
-            add_outer_approximation_cuts(nlp_result, solve_data, config)
+            if config.strategy == 'LOA':
+                add_outer_approximation_cuts(nlp_result, solve_data, config)
+            else:
+                add_affine_cuts(nlp_result, solve_data, config)
         add_integer_cut(
             mip_result.var_values, solve_data, config,
             feasible=nlp_result.feasible)
