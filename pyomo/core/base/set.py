@@ -269,9 +269,11 @@ class _ClosedNumericRange(object):
             # We now need to check a continuous set is a subset of a discrete
             # set and the continuous set sits between discrete points
             if self.step:
-                return _ClosedNumericRange._continuous_discrete_disjoint(other, self)
+                return _ClosedNumericRange._continuous_discrete_disjoint(
+                    other, self)
             elif other.step:
-                return _ClosedNumericRange._continuous_discrete_disjoint(self, other)
+                return _ClosedNumericRange._continuous_discrete_disjoint(
+                    self, other)
             else:
                 # 2 continuous sets, with overlapping end points: not disjoint
                 return False
@@ -287,7 +289,8 @@ class _ClosedNumericRange(object):
         # anyone making a discrete set with a non-integer step is asking for
         # trouble.  Maybe the better solution is to require that the step be
         # integer.
-        elif self.end is None and other.end is None and self.step*other.step > 0:
+        elif self.end is None and other.end is None \
+                and self.step*other.step > 0:
             return False
         # OK - just check all the members of one set against the other
         end = _ClosedNumericRange._firstNonNull(
@@ -564,7 +567,8 @@ class _SetData(_SetDataBase):
         """
         Return True if the set is a strict subset of 'other'
 
-        TODO: verify that this is more efficient than an explicit implimentation.
+        TODO: verify that this is sufficiently efficient
+             (vs. an explicit implimentation).
         """
         return self <= other and not self == other
 
@@ -572,7 +576,8 @@ class _SetData(_SetDataBase):
         """
         Return True if the set is a strict superset of 'other'
 
-        TODO: verify that this is more efficient than an explicit implimentation.
+        TODO: verify that this is sufficiently efficient
+             (vs. an explicit implimentation).
         """
         return self >= other and not self == other
 
@@ -1131,6 +1136,7 @@ class Set(IndexedComponent):
 
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', Set)
+        # Drop the finite and ordered flags: these were processed by __new__
         kwds.pop('finite',None)
         kwds.pop('ordered',None)
         IndexedComponent.__init__(self, *args, **kwds)
