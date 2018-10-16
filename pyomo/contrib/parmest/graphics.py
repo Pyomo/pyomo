@@ -9,12 +9,7 @@ try:
     from scipy import stats
 except:
     pass
-try:
-    import seaborn as sns
-    have_seaborn = True
-except:
-    have_seaborn = False
-    print ('WARNING: seaborn not imported; most plots will not be produced')
+import seaborn as sns
 
 
 def _get_variables(ax,columns):
@@ -136,22 +131,21 @@ def pairwise_plot(theta_est, theta_star=None, axis_limits=None, filename=None):
 
     columns = theta_est.columns
 
-    if have_seaborn:
-        g = sns.PairGrid(theta_est)
-        g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False)
+    g = sns.PairGrid(theta_est)
+    g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False)
 
-        g.map_upper(_add_scatter, columns=columns, theta_star=theta_star)
-        g.map_lower(_add_scatter, columns=columns, theta_star=theta_star)
+    g.map_upper(_add_scatter, columns=columns, theta_star=theta_star)
+    g.map_lower(_add_scatter, columns=columns, theta_star=theta_star)
 
-        if axis_limits is not None:
-            for ax in g.fig.get_axes():
-                xvar, yvar, (xloc, yloc) = _get_variables(ax,columns)
-                if xloc != yloc: # not on diagonal
-                    ax.set_ylim(axis_limits[yvar])
-                    ax.set_xlim(axis_limits[xvar])
+    if axis_limits is not None:
+        for ax in g.fig.get_axes():
+            xvar, yvar, (xloc, yloc) = _get_variables(ax,columns)
+            if xloc != yloc: # not on diagonal
+                ax.set_ylim(axis_limits[yvar])
+                ax.set_xlim(axis_limits[xvar])
 
-        if filename is not None:
-            plt.savefig(filename)
+    if filename is not None:
+        plt.savefig(filename)
 
 def pairwise_likelihood_ratio_plot(theta_SSE, objval, alpha, S, 
                                    axis_limits=None, filename=None):
@@ -188,24 +182,23 @@ def pairwise_likelihood_ratio_plot(theta_SSE, objval, alpha, S,
                                 theta_est[col].max()+temp/10]
     columns = theta_est.columns
     
-    if have_seaborn:
-        g = sns.PairGrid(theta_est)
-        g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False)
+    g = sns.PairGrid(theta_est)
+    g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False)
 
-        g.map_upper(_add_scatter, columns=columns)
+    g.map_upper(_add_scatter, columns=columns)
 
-        g.map_lower(_add_SSE_contour, columns=columns, SSE=theta_SSE, compare=compare)
-        g.map_lower(_add_scatter, columns=columns)
+    g.map_lower(_add_SSE_contour, columns=columns, SSE=theta_SSE, compare=compare)
+    g.map_lower(_add_scatter, columns=columns)
 
-        if axis_limits is not None:
-            for ax in g.fig.get_axes():
-                xvar, yvar, (xloc, yloc) = _get_variables(ax,columns)
-                if xloc != yloc: # not on diagonal
-                    ax.set_ylim(axis_limits[yvar])
-                    ax.set_xlim(axis_limits[xvar])
+    if axis_limits is not None:
+        for ax in g.fig.get_axes():
+            xvar, yvar, (xloc, yloc) = _get_variables(ax,columns)
+            if xloc != yloc: # not on diagonal
+                ax.set_ylim(axis_limits[yvar])
+                ax.set_xlim(axis_limits[xvar])
 
-        if filename is not None:
-            plt.savefig(filename)
+    if filename is not None:
+        plt.savefig(filename)
     
     return alpha_region
 
@@ -252,28 +245,27 @@ def pairwise_bootstrap_plot(theta_est, theta_star, alpha, axis_limits=None,
     columns = theta_est.columns
     ncells = 100
     
-    if have_seaborn:
-        g = sns.PairGrid(theta_est)
-        g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False)
-        #g.map_diag(sns.distplot, fit=stats.norm, hist=False,  fit_kws={'color': 'b'}) #, kde=False, norm_hist=False) # histogram and kde estimate
-        #g.map_diag(sns.kdeplot) #, color='r')
+    g = sns.PairGrid(theta_est)
+    g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False)
+    #g.map_diag(sns.distplot, fit=stats.norm, hist=False,  fit_kws={'color': 'b'}) #, kde=False, norm_hist=False) # histogram and kde estimate
+    #g.map_diag(sns.kdeplot) #, color='r')
 
-        g.map_upper(_add_scatter, columns=columns, theta_star=theta_star)
-        g.map_lower(_add_scatter, columns=columns, theta_star=theta_star)
+    g.map_upper(_add_scatter, columns=columns, theta_star=theta_star)
+    g.map_lower(_add_scatter, columns=columns, theta_star=theta_star)
 
-        g.map_lower(_add_rectangle_CI, columns=columns, alpha=alpha)
-        g.map_lower(_add_multivariate_normal_CI, columns=columns, ncells=ncells, 
-                    alpha=mvn_score, mvn_dist=mvn_dist, theta_star=theta_star)
-        g.map_lower(_add_gaussian_kde_CI, columns=columns, ncells=ncells, 
-                    alpha=kde_score, kde_dist=kde_dist, theta_star=theta_star)
+    g.map_lower(_add_rectangle_CI, columns=columns, alpha=alpha)
+    g.map_lower(_add_multivariate_normal_CI, columns=columns, ncells=ncells, 
+                alpha=mvn_score, mvn_dist=mvn_dist, theta_star=theta_star)
+    g.map_lower(_add_gaussian_kde_CI, columns=columns, ncells=ncells, 
+                alpha=kde_score, kde_dist=kde_dist, theta_star=theta_star)
 
-        if axis_limits is not None:
-            for ax in g.fig.get_axes():
-                xvar, yvar, (xloc, yloc) = _get_variables(ax,columns)
-                if xloc != yloc: # not on diagonal
-                    ax.set_ylim(axis_limits[yvar])
-                    ax.set_xlim(axis_limits[xvar])
-        if filename is not None:
-            plt.savefig(filename)
+    if axis_limits is not None:
+        for ax in g.fig.get_axes():
+            xvar, yvar, (xloc, yloc) = _get_variables(ax,columns)
+            if xloc != yloc: # not on diagonal
+                ax.set_ylim(axis_limits[yvar])
+                ax.set_xlim(axis_limits[xvar])
+    if filename is not None:
+        plt.savefig(filename)
         
     return mvn_dist, kde_dist
