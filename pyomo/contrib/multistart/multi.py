@@ -206,3 +206,9 @@ class MultiStart(object):
         finally:
             # Remove temporary variable list
             delattr(model, tmp_var_list_name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
