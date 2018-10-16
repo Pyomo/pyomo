@@ -72,7 +72,9 @@ def solve_NLP(nlp_model, solve_data, config):
 
     subprob_terminate_cond = results.solver.termination_condition
     if (subprob_terminate_cond is tc.optimal or
-            subprob_terminate_cond is tc.locallyOptimal):
+            subprob_terminate_cond is tc.locallyOptimal or
+            subprob_terminate_cond is tc.feasible
+       ):
         pass
     elif subprob_terminate_cond is tc.infeasible:
         config.logger.info('NLP subproblem was locally infeasible.')
