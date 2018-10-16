@@ -17,6 +17,8 @@ def solve_NLP(nlp_model, solve_data, config):
     config.logger.info(
         'Solving nonlinear subproblem for '
         'fixed binaries and logical realizations.')
+
+    # Error checking for unfixed discrete variables
     unfixed_discrete_vars = detect_unfixed_discrete_vars(nlp_model)
     if unfixed_discrete_vars:
         discrete_var_names = list(v.name for v in unfixed_discrete_vars)

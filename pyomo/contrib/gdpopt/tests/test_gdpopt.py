@@ -15,7 +15,7 @@ from pyutilib.misc import import_file
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', '..', 'examples', 'gdp'))
 
-required_solvers = ('ipopt', 'gams')
+required_solvers = ('ipopt', 'glpk')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:
