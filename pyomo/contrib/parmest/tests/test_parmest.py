@@ -135,7 +135,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
             retcode = subprocess.call(["python", rbpath])
         assert(retcode == 0)
         
-    @unittest.skip("Travis won't run mpiexec even with --allow-run-as-root; we need sudo: false in the .travis.yml file for this to work")
+    ####@unittest.skip("Travis won't run mpiexec even with --allow-run-as-root; we might need sudo: false in the .travis.yml file for this to work")
     def test_parallel_parmest(self):
         """ use mpiexec and mpi4py """
         p = str(parmestbase.__path__)
@@ -145,7 +145,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
         rbpath = parmestpath + os.sep + "examples" + os.sep + \
                    "rooney_biegler" + os.sep + "rb_drive_parmest.py"
         rbpath = os.path.abspath(rbpath) # paranoia strikes deep...
-        rlist = ["mpiexec", "-n", "2", "python", rbpath, "--allow-run-as-root"]
+        rlist = ["mpiexec", "--allow-run-as-root", "-n", "2", "python", rbpath]
         if sys.version_info >= (3,0):
             ret = subprocess.run(rlist)
             retcode = ret.returncode
