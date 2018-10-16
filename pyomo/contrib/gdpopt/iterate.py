@@ -4,7 +4,7 @@ from __future__ import division
 from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_outer_approximation_cuts,
                                                  add_affine_cuts)
-from pyomo.contrib.gdpopt.mip_solve import solve_GLOA_master, solve_LOA_master
+from pyomo.contrib.gdpopt.mip_solve import solve_LOA_master
 from pyomo.contrib.gdpopt.nlp_solve import (solve_global_NLP,
                                             solve_local_NLP)
 from pyomo.opt import TerminationCondition as tc
@@ -30,10 +30,7 @@ def GDPopt_iteration_loop(solve_data, config):
 
         # solve linear master problem
         with time_code(solve_data.timing, 'mip'):
-            if solve_data.current_strategy == 'LOA':
-                mip_result = solve_LOA_master(solve_data, config)
-            elif solve_data.current_strategy == 'GLOA':
-                mip_result = solve_GLOA_master(solve_data, config)
+            mip_result = solve_LOA_master(solve_data, config)
 
         # Check termination conditions
         if algorithm_should_terminate(solve_data, config):
