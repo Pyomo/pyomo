@@ -121,24 +121,25 @@ def add_affine_cuts(nlp_result, solve_data, config):
             aff_utils = parent_block.GDPopt_aff = Block(
                 doc="Block holding affine constraints")
             aff_utils.GDPopt_aff_cons = ConstraintList()
-            aff_utils.GDPopt_aff_vars = VarList()
+#             aff_utils.GDPopt_aff_vars = VarList()
         aff_cuts = aff_utils.GDPopt_aff_cons
-        # aff_cuts.add(expr=sum(
-        #     ccSlope[var] * (var - var.value) for var in vars_in_constr) + ccStart >= lb_int)
-        # aff_cuts.add(expr=sum(
-        #     cvSlope[var] * (var - var.value) for var in vars_in_constr) + cvStart <= ub_int)
-        Slack_var = aff_utils.GDPopt_aff_vars.add()
-        Slack_var.setlb(lb_int)
-        Slack_var.setub(ub_int)
-        Slack_var.set_value(value(constr.body))
-        aff_cuts.add(expr=sum(ccSlope[var] * (var - value(var))
-                              for var in vars_in_constr) + ccStart >= Slack_var)
-        aff_cuts.add(expr=sum(cvSlope[var] * (var - value(var))
-                              for var in vars_in_constr) + cvStart <= Slack_var)
-        if constr.upper is not None:
-            aff_cuts.add(expr=Slack_var <= constr.upper)
-        if constr.lower is not None:
-            aff_cuts.add(expr=Slack_var >= constr.lower)
+        aff_cuts.add(expr=sum(
+            ccSlope[var] * (var - var.value) for var in vars_in_constr) + ccStart >= lb_int)
+        aff_cuts.add(expr=sum(
+            cvSlope[var] * (var - var.value) for var in vars_in_constr) + cvStart <= ub_int)
+        aff_cuts.pprint()
+#         Slack_var = aff_utils.GDPopt_aff_vars.add()
+#         Slack_var.setlb(lb_int)
+#         Slack_var.setub(ub_int)
+#         Slack_var.set_value(value(constr.body))
+#         aff_cuts.add(expr=sum(ccSlope[var] * (var - value(var))
+#                               for var in vars_in_constr) + ccStart >= Slack_var)
+#         aff_cuts.add(expr=sum(cvSlope[var] * (var - value(var))
+#                               for var in vars_in_constr) + cvStart <= Slack_var)
+#         if constr.upper is not None:
+#             aff_cuts.add(expr=Slack_var <= constr.upper)
+#         if constr.lower is not None:
+#             aff_cuts.add(expr=Slack_var >= constr.lower)
 
 
 def add_integer_cut(var_values, solve_data, config, feasible=False):
