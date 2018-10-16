@@ -14,7 +14,6 @@ import re
 import sys
 
 from pyutilib.common import ApplicationError
-from pyomo.common.plugin import alias
 from pyutilib.misc import Bunch, Options
 from pyutilib.services import register_executable, registered_executable
 from pyutilib.services import TempfileManager
@@ -48,12 +47,11 @@ GLP_OPT    = 5  # solution is optimal
 GLP_UNBND  = 6  # solution is unbounded
 
 
-class GLPKSHELL_4_42(SystemCallSolver):
-    """Shell interface to the GLPK LP/MIP solver"""
-
-    pyomo.common.plugin.alias(
+@SolverFactory.register(
         '_glpk_shell_4_42',
         doc='Shell interface to the GNU Linear Programming Kit (4.42-4.59)')
+class GLPKSHELL_4_42(SystemCallSolver):
+    """Shell interface to the GLPK LP/MIP solver"""
 
     def __init__ (self, **kwargs):
         configure_glpk()
@@ -409,10 +407,9 @@ class GLPKSHELL_4_42(SystemCallSolver):
 
 
 
+@SolverFactory.register('_glpk_shell_old', doc='Shell interface to the GNU Linear Programming Kit (before 4.42)')
 class GLPKSHELL_old(SystemCallSolver):
     """Shell interface to the GLPK LP/MIP solver"""
-
-    alias('_glpk_shell_old', doc='Shell interface to the GNU Linear Programming Kit (before 4.42)')
 
     def __init__(self, **kwds):
         configure_glpk()
@@ -981,11 +978,10 @@ class GLPKSHELL_old(SystemCallSolver):
                                eval(soln.objective(0))
 
 
+@SolverFactory.register('_mock_glpk')
 class MockGLPK(GLPKSHELL_old,MockMIP):
     """A Mock GLPK solver used for testing
     """
-
-    alias('_mock_glpk')
 
     def __init__(self, **kwds):
         try:

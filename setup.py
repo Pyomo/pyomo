@@ -72,7 +72,7 @@ if using_cython:
         # files to users.  But this is fine for evaluating the utility of Cython
         #
         import shutil
-        files = ["pyomo/core/expr/expr_pyomo5.pyx", "pyomo/core/expr/numvalue.pyx", "pyomo/core/util.pyx", "pyomo/repn/standard_repn.pyx"]
+        files = ["pyomo/core/expr/expr_pyomo5.pyx", "pyomo/core/expr/numvalue.pyx", "pyomo/core/util.pyx", "pyomo/repn/standard_repn.pyx", "pyomo/repn/plugins/cpxlp.pyx", "pyomo/repn/plugins/gams_writer.pyx", "pyomo/repn/plugins/baron_writer.pyx", "pyomo/repn/plugins/ampl/ampl_.pyx"]
         for f in files:
             shutil.copyfile(f[:-1], f)
         ext_modules = cythonize(files)

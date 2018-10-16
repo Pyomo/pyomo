@@ -13,9 +13,9 @@ logger = logging.getLogger('pyomo.core')
 
 from six import itervalues
 
-from pyomo.common.plugin import alias
 from pyomo.core.base import ( 
     Transformation,
+    TransformationFactory,
     Binary,
     Boolean,
     Integers,
@@ -50,10 +50,9 @@ _discrete_relaxation_map = {
 # This transformation relaxes known discrete domains to their continuous
 # counterparts
 #
-class RelaxDiscreteVars(Transformation):
-
-    alias( 'core.relax_discrete', 
+@TransformationFactory.register( 'core.relax_discrete', 
            doc="Relax known discrete domains to continuous counterparts" )
+class RelaxDiscreteVars(Transformation):
 
     def __init__(self):
         super(RelaxDiscreteVars, self).__init__()
@@ -96,10 +95,9 @@ class RelaxDiscreteVars(Transformation):
 #
 # This transformation fixes known discrete domains to their current values
 #
-class FixDiscreteVars(Transformation):
-
-    alias( 'core.fix_discrete', 
+@TransformationFactory.register('core.fix_discrete', 
            doc="Fix known discrete domains to continuous counterparts" )
+class FixDiscreteVars(Transformation):
 
     def __init__(self):
         super(FixDiscreteVars, self).__init__()

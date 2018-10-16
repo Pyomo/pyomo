@@ -10,13 +10,14 @@
 
 __all__ = ['SubModel']
 
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import Component
 from pyomo.core.base.block import SimpleBlock
 
 # TODO: Do we need to have SimpleSubModel and IndexedSubModel classes?
 
 
+@ModelComponentFactory.register("A submodel in a bilevel program")
 class SubModel(SimpleBlock):
 
     def __init__(self, *args, **kwargs):
@@ -45,4 +46,3 @@ class SubModel(SimpleBlock):
         else:
             self._var = _var
 
-register_component(SubModel, "A submodel in a bilevel program")

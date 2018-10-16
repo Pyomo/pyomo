@@ -50,6 +50,10 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
     if not SolverFactory(config.mip_solver).available():
         raise RuntimeError(
             "MIP solver %s is not available." % config.mip_solver)
+
+    # Callback immediately before solving NLP subproblem
+    config.call_before_master_solve(m, solve_data)
+
     # We use LoggingIntercept in order to suppress the stupid "Loading a
     # SolverResults object with a warning status" warning message.
     with SuppressInfeasibleWarning():
@@ -71,7 +75,7 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
     mip_result.disjunct_values = list(
         disj.indicator_var.value for disj in GDPopt.working_disjuncts_list)
 
-    if terminate_cond is tc.optimal:
+    if terminate_cond is tc.optimal or terminate_cond is tc.locallyOptimal:
         pass
     elif terminate_cond is tc.infeasible:
         config.logger.info(

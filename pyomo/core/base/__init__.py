@@ -34,6 +34,7 @@ from pyomo.core.base.piecewise import *
 from pyomo.core.base.suffix import *
 from pyomo.core.base.external import *
 from pyomo.core.base.symbol_map import *
+from pyomo.core.base.reference import Reference
 #
 from pyomo.core.base.set_types import *
 from pyomo.core.base.misc import *

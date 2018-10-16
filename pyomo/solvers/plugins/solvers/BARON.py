@@ -15,10 +15,10 @@ import subprocess
 import re
 import tempfile
 
-import pyutilib.services
+import pyomo.common
+import pyutilib
 from pyutilib.misc import Options
 
-import pyomo.common.plugin as plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -33,11 +33,11 @@ from six.moves import xrange, zip
 
 logger = logging.getLogger('pyomo.solvers')
 
+@SolverFactory.register('baron',  doc='The BARON MINLP solver')
 class BARONSHELL(SystemCallSolver):
     """The BARON MINLP solver
     """
 
-    plugin.alias('baron',  doc='The BARON MINLP solver')
 
     def __init__(self, **kwds):
         #
@@ -158,7 +158,7 @@ class BARONSHELL(SystemCallSolver):
             return True
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("baron")
+        executable = pyomo.common.registered_executable("baron")
         if executable is None:
             logger.warning("Could not locate the 'baron' executable, "
                            "which is required for solver %s" % self.name)
@@ -569,4 +569,4 @@ the Pyomo model and BARON version) to the Pyomo Developers.""")
             # Fill the solution for most cases, except errors
             results.solution.insert(soln)
 
-pyutilib.services.register_executable(name="baron")
+pyomo.common.register_executable(name="baron")

@@ -19,31 +19,27 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 import pyutilib.services
 
-import pyomo.common.plugin
 import pyomo.opt
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
-class TestSolver1(pyomo.opt.OptSolver):
 
-    pyomo.common.plugin.alias('stest1')
+class TestSolver1(pyomo.opt.OptSolver):
 
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
         kwds['doc'] = 'TestSolver1 Documentation'
         pyomo.opt.OptSolver.__init__(self,**kwds)
 
-    def enabled(self):
-        return False
-
 
 class OptSolverDebug(unittest.TestCase):
 
     def setUp(self):
-        pyomo.opt.SolverFactory.activate('stest1')
+        pyomo.opt.SolverFactory.register('stest1')(TestSolver1)
         pyutilib.services.TempfileManager.tempdir = currdir
 
     def tearDown(self):
+        pyomo.opt.SolverFactory.unregister('stest1')
         pyutilib.services.TempfileManager.clear_tempfiles()
         pyutilib.services.TempfileManager.tempdir = old_tempdir
 
@@ -77,11 +73,8 @@ class OptSolverDebug(unittest.TestCase):
 
     def test_avail(self):
         ans = pyomo.opt.SolverFactory("stest1")
-        try:
-            ans.available()
-            self.fail("Expected exception for 'stest1' solver, which is disabled")
-        except pyutilib.common.ApplicationError:
-            pass
+        # This should not generate an exception
+        ans.available()
 
     def test_problem_format(self):
         opt = pyomo.opt.SolverFactory("stest1")

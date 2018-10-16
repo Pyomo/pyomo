@@ -12,13 +12,12 @@ import sys
 import os.path
 import re
 
-from pyomo.common.plugin import alias
+from pyomo.dataportal.factory import DataManagerFactory
 from pyomo.dataportal import TableData
 
 
+@DataManagerFactory.register("tab", "TAB file interface")
 class TextTable(TableData):
-
-    alias("tab", "TAB file interface")
 
     def __init__(self):
         TableData.__init__(self)

@@ -65,8 +65,7 @@ class mock_all(unittest.TestCase):
         pyutilib.services.TempfileManager.clear_tempfiles()
         pyutilib.services.TempfileManager.unique_files()
         os.chdir(tmpdir)
-        if self.asl is not None:
-            self.asl.deactivate()
+        self.asl = None
 
     def test_path(self):
         """ Verify that the ASL path is what is expected """

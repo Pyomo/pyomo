@@ -1,0 +1,1 @@
+model.F = Set(model.A, dimen=3)

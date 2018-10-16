@@ -20,11 +20,11 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 import pyutilib.services
 
-import pyomo.common.plugin
 import pyomo.opt
 import pyomo.opt.blackbox
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
+
 
 class TestProblem1(pyomo.opt.blackbox.MixedIntOptProblem):
 
@@ -40,8 +40,6 @@ class TestProblem1(pyomo.opt.blackbox.MixedIntOptProblem):
 
 
 class TestSolverManager(pyomo.opt.parallel.AsynchronousSolverManager):
-
-    pyomo.common.plugin.alias('smtest')
 
     def __init__(self, **kwds):
         kwds['type'] = 'smtest_type'
@@ -117,11 +115,6 @@ class Test(unittest.TestCase):
     def setUpClass(cls):
         import pyomo.environ
 
-    #def run(self, result=None):
-        #self.smtest_plugin = pyomo.opt.SolverManagerRegistration("smtest", TestSolverManager)
-        #unittest.TestCase.run(self,result)
-        #self.smtest_plugin.deactivate()
-
     def setUp(self):
         self.do_setup(False)
         pyutilib.services.TempfileManager.tempdir = currdir
@@ -131,6 +124,7 @@ class Test(unittest.TestCase):
         self.ps = pyomo.opt.SolverFactory('ps')
 
     def tearDown(self):
+        pyomo.opt.SolverManagerFactory.unregister('smtest')
         pyutilib.services.TempfileManager.clear_tempfiles()
         pyutilib.services.TempfileManager.tempdir = old_tempdir
 
@@ -189,7 +183,8 @@ class Test(unittest.TestCase):
         """
         Testing the pyomo.opt solver factory
         """
-        ans = sorted(pyomo.opt.SolverManagerFactory.services())
+        pyomo.opt.parallel.SolverManagerFactory.register('smtest')(TestSolverManager)
+        ans = sorted(pyomo.opt.SolverManagerFactory)
         tmp = ["smtest"]
         self.assertTrue(set(tmp) <= set(ans))
 
@@ -197,6 +192,7 @@ class Test(unittest.TestCase):
         """
         Testing that we get a specific solver instance
         """
+        pyomo.opt.parallel.SolverManagerFactory.register('smtest')(TestSolverManager)
         ans = pyomo.opt.SolverManagerFactory("none")
         self.assertEqual(ans, None)
         ans = pyomo.opt.SolverManagerFactory("smtest")
@@ -209,11 +205,9 @@ class Test(unittest.TestCase):
         """
         Testing methods in the solverwriter factory registration process
         """
-        pyomo.opt.SolverManagerFactory.deactivate("smtest")
-        self.assertTrue(not 'smtest' in pyomo.opt.SolverManagerFactory.services())
-        pyomo.opt.SolverManagerFactory.activate("smtest")
-        self.assertTrue('smtest' in pyomo.opt.SolverManagerFactory.services())
-
+        self.assertTrue(not 'smtest' in pyomo.opt.SolverManagerFactory)
+        pyomo.opt.parallel.SolverManagerFactory.register('smtest')(TestSolverManager)
+        self.assertTrue('smtest' in pyomo.opt.SolverManagerFactory)
 
     def test_delayed_serial1(self):
         """

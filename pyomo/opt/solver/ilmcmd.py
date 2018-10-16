@@ -14,7 +14,7 @@ import re
 import sys
 import os
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.subprocess
 import pyutilib.common
 
@@ -35,7 +35,7 @@ class ILMLicensedSystemCallSolver(SystemCallSolver):
             return True
         if not pyomo.opt.solver.shellcmd.SystemCallSolver.available(self, exception_flag):
             return False
-        executable = pyutilib.services.registered_executable("ilmlist")
+        executable = pyomo.common.registered_executable("ilmlist")
         if not executable is None:
             try:
                 if sys.platform[0:3] == "win":
@@ -64,4 +64,4 @@ class ILMLicensedSystemCallSolver(SystemCallSolver):
                     return False
         return True
 
-pyutilib.services.register_executable(name="ilmlist")
+pyomo.common.register_executable(name="ilmlist")

@@ -19,4 +19,4 @@ def predefined_sets():
 
 
 def model_components():
-    return [(name,ModelComponentFactory.doc(name)) for name in ModelComponentFactory.services()]
+    return [(name,ModelComponentFactory.doc(name)) for name in ModelComponentFactory]

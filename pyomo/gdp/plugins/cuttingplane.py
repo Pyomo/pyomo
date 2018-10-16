@@ -23,10 +23,9 @@ except:
 
 from pyomo.common.config import ConfigBlock, ConfigValue, PositiveFloat
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.plugin import alias
 from pyomo.core import (
     Any, Block, Constraint, Objective, Param, Var, SortComponents,
-    Transformation, TransformationFactory, value
+    Transformation, TransformationFactory, value, TransformationFactory
 )
 from pyomo.core.base.symbolic import differentiate
 from pyomo.core.expr.current import identify_variables
@@ -48,10 +47,18 @@ logger = logging.getLogger('pyomo.gdp.cuttingplane')
 # DEBUG
 from nose.tools import set_trace
 
-class CuttingPlane_Transformation(Transformation):
+# TODO: this should be an option probably, right?
+# do I have other options that won't be mad about the quadratic objective in the
+# separation problem?
+SOLVER = 'ipopt'
+stream_solvers = False
 
-    alias('gdp.cuttingplane', doc="Relaxes a linear disjunctive model by "
-          "adding cuts from convex hull to Big-M relaxation.")
+
+@TransformationFactory.register('gdp.cuttingplane', 
+                                doc="Relaxes a linear disjunctive model by "
+                                "adding cuts from convex hull to Big-M "
+                                "relaxation.")
+class CuttingPlane_Transformation(Transformation):
 
     CONFIG = ConfigBlock("gdp.cuttingplane")
     CONFIG.declare('solver', ConfigValue(

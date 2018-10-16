@@ -3,8 +3,6 @@ import pyutilib.th as unittest
 from pyomo.environ import (ConcreteModel, Constraint, TransformationFactory,
                            Var, value)
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
-
 
 class TestConstraintToVarBoundTransform(unittest.TestCase):
     """Tests explicit bound to variable bound transformation."""
@@ -27,10 +25,9 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
 
         m2 = TransformationFactory(
             'contrib.constraints_to_var_bounds').create_using(m)
-        self.assertEquals(value(m2.v1.lb), 2)
-        self.assertEquals(value(m2.v1.ub), 2)
-        # at this point in time, do not expect for v1 to be fixed
-        self.assertFalse(m2.v1.fixed)
+        self.assertEqual(value(m2.v1.lb), 2)
+        self.assertEqual(value(m2.v1.ub), 2)
+        self.assertTrue(m2.v1.fixed)
 
         self.assertEqual(value(m2.v2.lb), -2)
         self.assertFalse(m2.v2.has_ub())
@@ -41,17 +38,16 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         self.assertEqual(value(m2.v4.ub), 5)
         self.assertFalse(m2.v4.has_lb())
 
-        self.assertEquals(value(m2.v6.lb), 2)
+        self.assertEqual(value(m2.v6.lb), 2)
         self.assertFalse(m2.v6.has_ub())
         self.assertEqual(value(m2.v6, exception=False), None)
 
         del m2  # to keep from accidentally using it below
 
         TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
-        self.assertEquals(value(m.v1.lb), 2)
-        self.assertEquals(value(m.v1.ub), 2)
-        # at this point in time, do not expect for v1 to be fixed
-        self.assertFalse(m.v1.fixed)
+        self.assertEqual(value(m.v1.lb), 2)
+        self.assertEqual(value(m.v1.ub), 2)
+        self.assertTrue(m.v1.fixed)
 
         self.assertEqual(value(m.v2.lb), -2)
         self.assertFalse(m.v2.has_ub())
@@ -62,7 +58,7 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         self.assertEqual(value(m.v4.ub), 5)
         self.assertFalse(m.v4.has_lb())
 
-    def test_zero_coefficient(self):
+    def test_skip_trivial_constraints(self):
         """Tests handling of zero coefficients."""
         m = ConcreteModel()
         m.x = Var()
@@ -73,9 +69,20 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         m.y.fix(0)
         TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
         self.assertEqual(m.c.body.polynomial_degree(), 1)
-        self.assertFalse(m.c.active)
+        self.assertTrue(m.c.active)
         self.assertFalse(m.x.has_lb())
         self.assertFalse(m.x.has_ub())
+
+    def test_detect_fixed_false(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint(expr=m.x == 3)
+        TransformationFactory('contrib.constraints_to_var_bounds').apply_to(
+            m, detect_fixed=False)
+        self.assertFalse(m.c.active)
+        self.assertTrue(m.x.has_lb())
+        self.assertTrue(m.x.has_ub())
+        self.assertFalse(m.x.fixed)
 
 
 if __name__ == '__main__':

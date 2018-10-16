@@ -8,10 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import PluginGlobals
-PluginGlobals.add_env("pyomo")
-
 from pyomo.network.arc import *
 from pyomo.network.port import *
-
-PluginGlobals.pop_env()
+from pyomo.network.decomposition import *

@@ -14,12 +14,11 @@ import os
 
 from six import iteritems
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.common
 import pyutilib.common
 import pyutilib.misc
 
-import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -30,11 +29,10 @@ import logging
 logger = logging.getLogger('pyomo.solvers')
 
 
+@SolverFactory.register('pico', doc='The PICO LP/MIP solver')
 class PICO(OptSolver):
     """The PICO LP/MIP solver
     """
-
-    pyomo.common.plugin.alias('pico', doc='The PICO LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -72,11 +70,10 @@ class PICO(OptSolver):
         return opt
 
 
+@SolverFactory.register('_pico_shell', doc='Shell interface to the PICO MIP solver')
 class PICOSHELL(SystemCallSolver):
     """Shell interface to the PICO LP/MIP solver
     """
-
-    pyomo.common.plugin.alias('_pico_shell', doc='Shell interface to the PICO MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -122,7 +119,7 @@ class PICOSHELL(SystemCallSolver):
         return ResultsFormat.soln
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("PICO")
+        executable = pyomo.common.registered_executable("PICO")
         if executable is None:
             logger.warning("Could not locate the 'PICO' executable, which is required for solver %s" % self.name)
             self.enable = False
@@ -417,11 +414,10 @@ class PICOSHELL(SystemCallSolver):
         INPUT.close()
 
 
+@SolverFactory.register('_mock_pico')
 class MockPICO(PICOSHELL,MockMIP):
     """A Mock PICO solver used for testing
     """
-
-    pyomo.common.plugin.alias('_mock_pico')
 
     def __init__(self, **kwds):
         try:

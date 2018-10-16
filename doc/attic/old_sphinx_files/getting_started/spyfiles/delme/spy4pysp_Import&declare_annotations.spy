@@ -1,0 +1,4 @@
+from pyomo.pysp.annotations import *
+model.stoch_rhs = StochasticConstraintBoundsAnnotation()
+model.stoch_matrix = StochasticConstraintBodyAnnotation()
+model.stoch_objective = StochasticObjectiveAnnotation()

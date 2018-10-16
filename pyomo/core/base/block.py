@@ -22,7 +22,7 @@ from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.plugin import *  # register_component, ModelComponentFactory
+from pyomo.core.base.plugin import *  # ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
     ComponentUID
 from pyomo.core.base.sets import Set,  _SetDataBase
@@ -510,9 +510,9 @@ class _BlockData(ActiveComponentData):
     #    pass
 
     def __getattr__(self, val):
-        if val in ModelComponentFactory.services():
+        if val in ModelComponentFactory:
             return _component_decorator(
-                self, ModelComponentFactory.get_class(val).component)
+                self, ModelComponentFactory.get_class(val))
         # Since the base classes don't support getattr, we can just
         # throw the "normal" AttributeError
         raise AttributeError("'%s' object has no attribute '%s'"
@@ -1558,7 +1558,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # to the end of the list of the list.
         #
         dynamic_items = set()
-        for item in [ModelComponentFactory.get_class(name).component for name in ModelComponentFactory.services()]:
+        #for item in [ModelComponentFactory.get_class(name).component for name in ModelComponentFactory]:
+        for item in [ModelComponentFactory.get_class(name) for name in ModelComponentFactory]:
             if not item in items:
                 dynamic_items.add(item)
         # extra items get added alphabetically (so output is consistent)
@@ -1700,6 +1701,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         return filename, smap_id
 
 
+@ModelComponentFactory.register("A component that contains one or more model components.")
 class Block(ActiveIndexedComponent):
     """
     Blocks are indexed components that contain other components
@@ -2033,5 +2035,3 @@ def components_data(block, ctype,
 #
 _BlockData._Block_reserved_words = set(dir(Block()))
 
-register_component(
-    Block, "A component that contains one or more model components.")

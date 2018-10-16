@@ -16,14 +16,14 @@ from six import next, iteritems, itervalues
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.core.base.plugin import alias
-from pyomo.core.base import Transformation, Connector, Constraint, \
+from pyomo.core.base import Transformation, TransformationFactory, Connector, Constraint, \
     ConstraintList, Var, VarList, TraversalStrategy, SortComponents
 from pyomo.core.base.connector import _ConnectorData, SimpleConnector
 
-class ExpandConnectors(Transformation):
-    alias('core.expand_connectors', 
+
+@TransformationFactory.register('core.expand_connectors', 
           doc="Expand all connectors in the model to simple constraints")
+class ExpandConnectors(Transformation):
 
     def _apply_to(self, instance, **kwds):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover

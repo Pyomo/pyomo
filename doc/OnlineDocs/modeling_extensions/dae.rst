@@ -1,11 +1,11 @@
 Dynamic Optimization with pyomo.DAE
 ===================================
 
-.. image:: Pyomo_DAE_Logo_150.png
-   :scale: 35 %
+.. image:: /../logos/dae/Pyomo-DAE-150.png
+   :scale: 35%
    :align: right
 
-The pyomo.DAE modeling extension allows users to incorporate systems of
+The pyomo.DAE modeling extension [PyomoDAE]_ allows users to incorporate systems of
 differential algebraic equations (DAE)s in a Pyomo model. The modeling
 components in this extension are able to represent ordinary or partial
 differential equations. The differential equations do not have to be
@@ -103,7 +103,7 @@ abstract Pyomo model using the example data file.
    in the data file when a model instance is created.
    >>> model.t = ContinuousSet()
 
-.. note:: 
+.. note::
    If a separate data file is used to initialize a
    :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>`, it is done using
    the 'set' command and not 'continuousset'
@@ -115,7 +115,7 @@ abstract Pyomo model using the example data file.
    See the documentation for :py:class:`Set <pyomo.environ.Set>` for additional
    options.
 
-.. warning:: 
+.. warning::
    Be careful using a :py:class:`ContinuousSet
    <pyomo.dae.ContinuousSet>` as an implicit index in an expression,
    i.e. ``sum(m.v[i] for i in m.myContinuousSet)``. The expression will
@@ -130,7 +130,7 @@ abstract Pyomo model using the example data file.
    :py:class:`Set <pyomo.environ.Set>` methods can be used to access the lower
    and upper boundaries of the
    :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>` respectively
- 
+
 DerivativeVar
 *************
 
@@ -175,7 +175,7 @@ argument. Any keyword argument that is valid for a Pyomo
    to model.t and model.l and set bounds
    >>> model.dz2 = DerivativeVar(model.z, wrt=(model.t, model.l), bounds=(-10, 10))
 
-.. note:: 
+.. note::
    The 'initialize' keyword argument will initialize the value of a
    derivative and is **not** the same as specifying an initial
    condition. Initial or boundary conditions should be specified using a
@@ -315,7 +315,7 @@ in a function and supplied to the 'rule' keyword argument. Finally, a user must
 specify a :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` that the integral
 is being evaluated over. This is done using the 'wrt' keyword argument.
 
-.. note:: 
+.. note::
    The :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` specified using the
    'wrt' keyword argument must be explicitly specified as one of the indexing
    sets (meaning it must be supplied as a positional argument). This is to
@@ -380,7 +380,7 @@ discretization points. Two families of discretization schemes have been
 implemented in pyomo.DAE, Finite Difference and Collocation. These schemes are
 described in more detail below.
 
-.. note:: 
+.. note::
     The schemes described here are for derivatives only. All integrals will
     be transformed using the trapezoid rule.
 
