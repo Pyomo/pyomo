@@ -181,7 +181,7 @@ def update_nlp_progress_indicators(solved_model, solve_data, config):
            solve_data.UB, ub_improved))
 
 
-def solve_LOA_subproblem(mip_var_values, solve_data, config):
+def solve_local_NLP(mip_var_values, solve_data, config):
     """Set up and solve the local LOA subproblem."""
     nlp_model = solve_data.working_model.clone()
     solve_data.nlp_iteration += 1
