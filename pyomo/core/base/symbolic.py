@@ -65,6 +65,13 @@ try:
         sympy.Tuple: lambda *x: x,
     }
 
+    _pyomo_operator_map = {
+        EXPR.SumExpression: sympy.Add,
+        EXPR.ProductExpression: sympy.Mul,
+        EXPR.NPV_ProductExpression: sympy.Mul,
+        EXPR.MonomialTermExpression: sympy.Mul,
+    }
+
     _functionMap = {
         'exp': sympy.exp,
         'log': sympy.log,
@@ -134,7 +141,7 @@ def differentiate(expr, wrt=None, wrt_list=None):
     #
     pyomo_vars = list(EXPR.identify_variables(expr))
     pyomo_vars = sorted(pyomo_vars, key=lambda x: str(x))
-    sympy_vars = [sympy.var('x%s'% i) for i in range(len(pyomo_vars))]
+    sympy_vars = sympy.symbols('x:%d' % len(pyomo_vars))
     sympy2pyomo = dict( zip(sympy_vars, pyomo_vars) )
     pyomo2sympy = dict( (id(pyomo_vars[i]), sympy_vars[i])
                          for i in range(len(pyomo_vars)) )
@@ -188,9 +195,11 @@ class SympifyVisitor(EXPR.ExpressionValueVisitor):
     def visit(self, node, values):
         if node.__class__ is EXPR.UnaryFunctionExpression:
             return _functionMap[node._name](values[0])
-        else:
+        _op = _pyomo_operator_map.get(node.__class__, None)
+        if _op is None:
             return node._apply_operation(values)
-
+        else:
+            return _op(*tuple(values))
     def visiting_potential_leaf(self, node):
         #
         # Don't replace native or sympy types
@@ -198,19 +207,19 @@ class SympifyVisitor(EXPR.ExpressionValueVisitor):
         if type(node) in self.native_or_sympy_types:
             return True, node
         #
+        # We will descend into all expressions...
+        #
+        if node.is_expression_type():
+            return False, None
+        #
         # Replace pyomo variables with sympy variables
         #
         if id(node) in self.pyomo2sympy:
             return True, self.pyomo2sympy[id(node)]
         #
-        # Replace constants
+        # Everything else is a constant...
         #
-        if not node.is_potentially_variable():
-            return True, value(node)
-        #
-        # Don't replace anything else
-        #
-        return False, None
+        return True, value(node)
 
     def finalize(self, ans):
         return ans
