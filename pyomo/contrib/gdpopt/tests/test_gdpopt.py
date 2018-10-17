@@ -11,20 +11,24 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Objective, SolverFactory, Var, value
 from pyomo.gdp import Disjunct, Disjunction
 from pyutilib.misc import import_file
+from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', '..', 'examples', 'gdp'))
 
-required_solvers = ('ipopt', 'glpk')
-if all(SolverFactory(s).available() for s in required_solvers):
-    subsolvers_available = True
-else:
-    subsolvers_available = False
+mip_solver = 'glpk'
+nlp_solver = 'ipopt'
+global_nlp_solver = 'gams'
+global_nlp_solver_args = dict(solver='baron')
+LOA_solvers = (mip_solver, nlp_solver)
+GLOA_solvers = (mip_solver, global_nlp_solver)
+LOA_solvers_available = all(SolverFactory(s).available() for s in LOA_solvers)
+GLOA_solvers_available = all(SolverFactory(s).available() for s in GLOA_solvers)
 
 
-@unittest.skipIf(not subsolvers_available,
+@unittest.skipIf(not LOA_solvers_available,
                  "Required subsolvers %s are not available"
-                 % (required_solvers,))
+                 % (LOA_solvers,))
 @unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
                  "Symbolic differentiation is not available")
 class TestGDPopt(unittest.TestCase):
@@ -41,8 +45,9 @@ class TestGDPopt(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
             SolverFactory('gdpopt').solve(
-                m, strategy='LOA', mip_solver=required_solvers[1],
-                nlp_solver=required_solvers[0])
+                m, strategy='LOA',
+                mip_solver=mip_solver,
+                nlp_solver=nlp_solver)
             self.assertIn("Set covering problem was infeasible.",
                           output.getvalue().strip())
 
@@ -53,8 +58,8 @@ class TestGDPopt(unittest.TestCase):
         eight_process = exfile.build_eight_process_flowsheet()
         SolverFactory('gdpopt').solve(
             eight_process, strategy='LOA',
-            mip_solver=required_solvers[1],
-            nlp_solver=required_solvers[0],
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver,
             tee=False)
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
@@ -65,8 +70,8 @@ class TestGDPopt(unittest.TestCase):
         strip_pack = exfile.build_rect_strip_packing_model()
         SolverFactory('gdpopt').solve(
             strip_pack, strategy='LOA',
-            mip_solver=required_solvers[1],
-            nlp_solver=required_solvers[0])
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver)
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
@@ -77,8 +82,8 @@ class TestGDPopt(unittest.TestCase):
         cons_layout = exfile.build_constrained_layout_model()
         SolverFactory('gdpopt').solve(
             cons_layout, strategy='LOA',
-            mip_solver=required_solvers[1],
-            nlp_solver=required_solvers[0])
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver)
         objective_value = value(cons_layout.min_dist_cost.expr)
         self.assertTrue(
             fabs(objective_value - 41573) <= 200,
@@ -91,8 +96,8 @@ class TestGDPopt(unittest.TestCase):
         eight_process = exfile.build_eight_process_flowsheet()
         SolverFactory('gdpopt').solve(
             eight_process, strategy='LOA', init_strategy='max_binary',
-            mip_solver=required_solvers[1],
-            nlp_solver=required_solvers[0])
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver)
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
@@ -103,8 +108,8 @@ class TestGDPopt(unittest.TestCase):
         strip_pack = exfile.build_rect_strip_packing_model()
         SolverFactory('gdpopt').solve(
             strip_pack, strategy='LOA', init_strategy='max_binary',
-            mip_solver=required_solvers[1],
-            nlp_solver=required_solvers[0])
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver)
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
@@ -128,8 +133,8 @@ class TestGDPopt(unittest.TestCase):
                 disj.indicator_var.set_value(0)
         SolverFactory('gdpopt').solve(
             eight_process, strategy='LOA', init_strategy='fix_disjuncts',
-            mip_solver=required_solvers[1],
-            nlp_solver=required_solvers[0])
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver)
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
@@ -168,20 +173,20 @@ class TestGDPopt(unittest.TestCase):
         SolverFactory('gdpopt').solve(
             eight_process, strategy='LOA', init_strategy='custom_disjuncts',
             custom_init_disjuncts=initialize,
-            mip_solver=required_solvers[1],
-            nlp_solver=required_solvers[0],
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver,
             call_after_subproblem_feasible=assert_correct_disjuncts_active)
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
 
-@unittest.skipIf(not subsolvers_available,
+@unittest.skipIf(not GLOA_solvers_available,
                  "Required subsolvers %s are not available"
-                 % (required_solvers,))
+                 % (GLOA_solvers,))
+@unittest.skipIf(not mcpp_available(), "MC++ is not available")
 class TestGLOA(unittest.TestCase):
     """Tests for global logic-based outer approximation."""
 
-    @unittest.skipIf(not SolverFactory('baron').available(), "Baron not available.")
     def test_GLOA_8PP(self):
         """Test the global logic-based outer approximation algorithm."""
         exfile = import_file(
@@ -189,11 +194,10 @@ class TestGLOA(unittest.TestCase):
         eight_process = exfile.build_eight_process_flowsheet()
         SolverFactory('gdpopt').solve(
             eight_process, strategy='GLOA', tee=False,
-            mip_solver='glpk',
-            nlp_solver='gams',
-            nlp_solver_args=dict(
-                solver='baron',
-                io_options={'add_options': ['option optcr=0.0001;']}))
+            mip_solver=mip_solver,
+            nlp_solver=global_nlp_solver,
+            nlp_solver_args=global_nlp_solver_args
+        )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
     def test_GLOA_strip_pack_default_init(self):
@@ -203,9 +207,9 @@ class TestGLOA(unittest.TestCase):
         strip_pack = exfile.build_rect_strip_packing_model()
         SolverFactory('gdpopt').solve(
             strip_pack, strategy='GLOA',
-            mip_solver='glpk',
-            nlp_solver='gams',
-            nlp_solver_args={'solver': 'baron'})
+            mip_solver=mip_solver,
+            nlp_solver=global_nlp_solver,
+            nlp_solver_args=global_nlp_solver_args)
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
@@ -216,9 +220,9 @@ class TestGLOA(unittest.TestCase):
         cons_layout = exfile.build_constrained_layout_model()
         SolverFactory('gdpopt').solve(
             cons_layout, strategy='GLOA',
-            mip_solver=required_solvers[1],
-            nlp_solver='gams',
-            nlp_solver_args={'solver': 'baron'},
+            mip_solver=mip_solver,
+            nlp_solver=global_nlp_solver,
+            nlp_solver_args=global_nlp_solver_args,
             tee=False)
         objective_value = value(cons_layout.min_dist_cost.expr)
         self.assertTrue(

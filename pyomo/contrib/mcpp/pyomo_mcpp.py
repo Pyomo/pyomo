@@ -23,6 +23,12 @@ logger = logging.getLogger('pyomo.contrib.mcpp')
 
 path = os.path.dirname(__file__)
 
+
+def mcpp_available():
+    """True if the MC++ shared object file exists. False otherwise."""
+    return os.path.isfile(path + '/mcppInterface.so')
+
+
 NPV_expressions = set(
     (NPV_AbsExpression, NPV_ExternalFunctionExpression,
      NPV_NegationExpression, NPV_PowExpression,
