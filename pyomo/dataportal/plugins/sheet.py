@@ -97,6 +97,10 @@ if pyodbc_available or not pypyodbc_available:
 else:
     pyodbc_db_base = pypyodbc_db_Table
 
+#
+# FIXME: The pyodbc interface doesn't work right now.  We will disable it.
+#
+pyodbc_available = False
 
 if (win32com_available and _excel_available) or xlrd_available:
 
@@ -115,7 +119,7 @@ if (win32com_available and _excel_available) or xlrd_available:
         def requirements(self):
             return "win32com or xlrd"
 
-else:
+elif pyodbc_available:
 
     @DataManagerFactory.register("xls", "Excel XLS file interface")
     class pyodbc_xls(pyodbc_db_base):
@@ -151,7 +155,10 @@ if (win32com_available and _excel_available) or openpyxl_available:
         def requirements(self):
             return "win32com or openpyxl"
 
-else:
+elif pyodbc_available:
+    #
+    # This class is OK, but the pyodbc interface doesn't work right now.
+    #
 
     @DataManagerFactory.register("xlsx", "Excel XLSX file interface")
     class SheetTable_xlsx(pyodbc_db_base):
@@ -170,10 +177,8 @@ else:
             return pyodbc_db_base.open(self)
 
 
-if 0:
-    #
-    # This class is OK, but the pyodbc interface doesn't work right now.
-    #
+if pyodbc_available:
+
     @DataManagerFactory.register("xlsb", "Excel XLSB file interface")
     class SheetTable_xlsb(pyodbc_db_base):
 
@@ -208,7 +213,7 @@ if (win32com_available and _excel_available) or openpyxl_available:
         def requirements(self):
             return "win32com or openpyxl"
 
-else:
+elif pyodbc_available:
 
     @DataManagerFactory.register("xlsm", "Excel XLSM file interface")
     class SheetTable_xlsm(pyodbc_db_base):
