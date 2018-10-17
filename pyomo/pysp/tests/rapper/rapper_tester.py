@@ -1,7 +1,7 @@
 # Provide some test for rapper
 # Author: David L. Woodruff (circa March 2017 and Sept 2018)
 
-import unittest
+import pyutilib.th as unittest
 import tempfile
 import sys
 import os
