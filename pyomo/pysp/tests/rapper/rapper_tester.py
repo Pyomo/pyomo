@@ -63,6 +63,13 @@ class Testrapper(unittest.TestCase):
                                       fsfct = pysp_instance_creation_callback,
                                 tree_model = self.farmer_concrete_tree)
 
+    def test_no_fsfct_no_tree(self):
+        """verify that deprecated concrete with no fsfct is an error"""
+        with self.assertRaises(RuntimeError):
+            stsolver = rapper.StochSolver("ReferenceModel.py",
+                                          fsfct = None,
+                                          tree_model = None)
+
     def test_ef_solve(self):
         """ solve the ef and check some post solution code"""
         stsolver = rapper.StochSolver("ReferenceModel.py",
