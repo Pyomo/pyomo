@@ -246,17 +246,19 @@ class SymbolicDerivatives(unittest.TestCase):
 
     def test_nondifferentiable(self):
         m = ConcreteModel()
-        m.x = Var()
+        m.foo = Var()
 
         self.assertRaisesRegexp(
             NondifferentiableError,
-            "The sub-expression '.*' is not differentiable with respect to x",
-            differentiate, ceil(m.x), wrt=m.x)
+            "The sub-expression '.*' is not differentiable "
+            "with respect to .*foo",
+            differentiate, ceil(m.foo), wrt=m.foo)
 
         self.assertRaisesRegexp(
             NondifferentiableError,
-            "The sub-expression '.*' is not differentiable with respect to x",
-            differentiate, floor(m.x), wrt=m.x)
+            "The sub-expression '.*' is not differentiable "
+            "with respect to .*foo",
+            differentiate, floor(m.foo), wrt=m.foo)
 
     def test_errors(self):
         m = ConcreteModel()

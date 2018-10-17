@@ -30,9 +30,15 @@ try:
         return sum(x_ for x_ in x)
 
     def _nondifferentiable(*x):
+        if type(x[1]) is tuple:
+            # sympy >= 1.3 returns tuples (var, order)
+            wrt = x[1][0]
+        else:
+            # early versions of sympy returned the bare var
+            wrt = x[1]
         raise NondifferentiableError(
             "The sub-expression '%s' is not differentiable with respect to %s"
-            % (x[0],x[1]) )
+            % (x[0], wrt) )
 
     _operatorMap = {
         sympy.Add: _sum,
@@ -56,6 +62,7 @@ try:
         sympy.floor: lambda x: core.floor(x),
         sympy.sqrt: lambda x: core.sqrt(x),
         sympy.Derivative: _nondifferentiable,
+        sympy.Tuple: lambda *x: x,
     }
 
     _functionMap = {
