@@ -54,7 +54,11 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             if arg is None:
                 tmp.append('Undefined')
             elif arg.__class__ in native_numeric_types:
-                tmp.append(val)
+                if arg < 0:
+                    # Wrap negative values in parens to avoid double operator
+                    tmp.append("(%s)" % val)
+                else:
+                    tmp.append(val)
             elif arg.__class__ in native_types:
                 tmp.append("'{0}'".format(val))
             elif arg.is_variable_type():

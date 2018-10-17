@@ -16,6 +16,7 @@ import re
 import tempfile
 
 import pyomo.common
+import pyutilib
 from pyutilib.misc import Options
 
 from pyomo.opt.base import *

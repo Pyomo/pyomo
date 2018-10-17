@@ -1,22 +1,1223 @@
 Stochastic Programming
 ======================
 
+.. image:: /../logos/pysp/PySP-logo-Web2.png
+   :scale: 35%
+   :align: right
+
 To express a stochastic program in PySP, the user specifies both the
 deterministic base model and the scenario tree model with associated
 uncertain parameters. Both concrete and abstract model representations
 are supported.
 
-Given the deterministic and scenario tree models, PySP provides
-multiple paths for the solution of the corresponding stochastic
-program. One alternative involves forming the extensive form and
-invoking an appropriate deterministic solver for the entire problem
-once. For more complex stochastic programs, we provide a generic
-implementation of Rockafellar and Wets' Progressive Hedging algorithm,
-with additional specializations for approximating mixed-integer
-stochastic programs as well as other decomposition methods. By
-leveraging the combination of a high-level programming language
-(Python) and the embedding of the base deterministic model in that
-language (Pyomo), we are able to provide completely generic and highly
-configurable solver implementations.
+Given the deterministic and scenario tree models, PySP provides multiple
+paths for the solution of the corresponding stochastic program. One
+alternative involves forming the extensive form and invoking an
+appropriate deterministic solver for the entire problem once. For more
+complex stochastic programs, we provide a generic implementation of
+Rockafellar and Wets' Progressive Hedging algorithm, with additional
+specializations for approximating mixed-integer stochastic programs as
+well as other decomposition methods. By leveraging the combination of a
+high-level programming language (Python) and the embedding of the base
+deterministic model in that language (Pyomo), we are able to provide
+completely generic and highly configurable solver implementations.
 
-See the Pysp section :ref:`pysp-overview` in Getting Started for more information.
+This section describes PySP: (Pyomo Stochastic Programming), where
+parameters are allowed to be uncertain.
+
+Overview of Modeling Components and Processes
+---------------------------------------------
+
+The sequence of activities is typically the following:
+
+- Create a deterministic model and declare components
+- Develop base-case data for the deterministic model
+- Test, verify and validate the deterministic model
+- Model the stochastic processes
+- Develop a way to generate scenarios (in the form of a tree if there
+  are more than two stages)
+- Create the data files need to describe the stochastics
+- Use PySP to solve stochastic problem
+
+When viewed from the standpoint of file creation, the process is
+
+- Create an abstract model for the deterministic problem in a file
+  called ``ReferenceModel.py``
+- Specify the stochastics in a file called ``ScenarioStructure.dat``
+- Specify scenario data
+
+Birge and Louveaux's Farmer Problem
+-----------------------------------
+
+Birge and Louveaux [BirgeLouveauxBook]_ make use of the example of a
+farmer who has 500 acres that can be planted in wheat, corn or sugar
+beets, at a per acre cost of 150, 230 and 260 (Euros, presumably),
+respectively. The farmer needs to have at least 200 tons of wheat and
+240 tons of corn to use as feed, but if enough is not grown, those crops
+can be purchased for 238 and 210, respectively.  Corn and wheat grown in
+excess of the feed requirements can be sold for 170 and 150,
+respectively. A price of 36 per ton is guaranteed for the first 6000
+tons grown by any farmer, but beets in excess of that are sold for 10
+per ton. The yield is 2.5, 3, and 20 tons per acre for wheat, corn and
+sugar beets, respectively.
+
+ReferenceModel.py
+^^^^^^^^^^^^^^^^^
+
+So far, this is a deterministic problem because we are assuming that we
+know all the data. The Pyomo model for this problem shown here is in the
+file ``ReferenceModel.py`` in the sub-directory
+``examples/pysp/farmer/models`` that is distributed with Pyomo.
+
+.. literalinclude:: ../script_spy_files/pysp/farmer/models/ReferenceModel.py
+   :language: python
+
+Example Data
+^^^^^^^^^^^^
+
+The data introduced here are in the file AverageScenario.dat in the
+sub-directory examples/pysp/farmer/scenariodata that is distributed with
+Pyomo. These data are given for illustration. The file
+ReferenceModel.dat is not required by PySP.
+
+.. literalinclude:: ../script_spy_files/pysp/farmer/scenariodata/AverageScenario.dat
+   :language: python
+
+Any of these data could be modeled as uncertain, but we will consider
+only the possibility that the yield per acre could be higher or lower
+than expected. Assume that there is a probability of 1/3 that the yields
+will be the average values that were given (i.e., wheat 2.5; corn 3; and
+beets 20). Assume that there is a 1/3 probability that they will be
+lower (2, 2.4, 16) and 1/3 probability they will be higher (3, 3.6, 24).
+We refer to each full set of data as a *scenario* and collectively we
+call them a *scenario* *tree*.  In this case the scenario tree is very
+simple: there is a root node and three leaf nodes: one corresponding to
+each scenario. The acreage-to-plant decisions are root node decisions
+because they must be made without knowing what the yield will be.  The
+other variables are so-called *second* *stage* decisions, because they
+will depend on which scenario is realized.
+
+ScenarioStructure.dat
+^^^^^^^^^^^^^^^^^^^^^
+
+PySP requires that users describe the scenario tree using specific
+constructs in a file named ``ScenarioStructure.dat``; for the farmer
+problem, this file can be found in the pyomo sub-directory
+``examples/pysp/farmer/scenariodata`` that is distributed with Pyomo.
+
+.. literalinclude:: ../script_spy_files/pysp/farmer/scenariodata/ScenarioStructure.dat
+   :language: python
+
+This data file is verbose and somewhat redundant, but in most
+applications it is generated by software rather than by a person, so
+this is not an issue.  Generally, the left-most part of each expression
+(e.g. ''set Stages :='') is required and uses reserved words (e.g.,
+``Stages``) and the other names are supplied by the user (e.g.,
+''FirstStage'' could be any name). Every assignment is terminated with a
+semi-colon. We will now consider the assignments in this file one at a
+time.
+
+The first assignments provides names for the stages and the words "set
+Stages" are required, as are the := symbols.  Any names can be used. In
+this example, we used "FirstStage" and "SecondStage" but we could have
+used "EtapPrimero" and "ZweiteEtage" if we had wanted to. Whatever names
+are given here will continue to be used to refer to the stages in the
+rest of the file. The order of the names is important. A simple way to
+think of it is that generally, the names must be in time order
+(technically, they need to be in order of information discovery, but
+that is usually time-order).  Stages refers to decision stages, which
+may, or may not, correspond directly with time stages.  In the farmer
+example, decisions about how much to plant are made in the first stage
+and "decisions" (which are pretty obvious, but which are decision
+variables nonetheless) about how much to sell at each price and how much
+needs to be bought are second stage decisions because they are made
+after the yield is known.
+
+::
+
+  set Stages := FirstStage SecondStage ;
+
+Node names are constructed next. The words "set Nodes" are required, but
+any names may be assigned to the nodes. In two stage stochastic problems
+there is a root node, which we chose to name "RootNode" and then there
+is a node for each scenario.
+
+::
+
+  set Nodes := RootNode
+             BelowAverageNode
+             AverageNode
+             AboveAverageNode ;
+
+Nodes are associated with time stages with an assignment beginning with
+the required words "param Nodestage." The assignments must make use of
+previously defined node and stage names. Every node must be assigned a
+stage.
+
+::
+
+  param NodeStage := RootNode         FirstStage
+                   BelowAverageNode SecondStage
+                   AverageNode      SecondStage
+                   AboveAverageNode SecondStage ;
+
+The structure of the scenario tree is defined using assignment of
+children to each node that has them. Since this is a two stage problem,
+only the root node has children. The words "param Children" are required
+for every node that has children and the name of the node is in square
+brackets before the colon-equals assignment symbols. A list of children
+is assigned.
+
+::
+
+  set Children[RootNode] := BelowAverageNode
+                          AverageNode
+                          AboveAverageNode ;
+
+The probability for each node, conditional on observing the parent node
+is given in an assignment that begins with the required words "param
+ConditionalProbability." The root node always has a conditional
+probability of 1, but it must always be given anyway. In this example,
+the second stage nodes are equally likely.
+
+::
+
+  param ConditionalProbability := RootNode          1.0
+                                BelowAverageNode  0.33333333
+                                AverageNode       0.33333334
+                                AboveAverageNode  0.33333333 ;
+
+Scenario names are given in an assignment that begins with the required
+words "set Scenarios" and provides a list of the names of the
+scenarios. Any names may be given. In many applications they are given
+unimaginative names generated by software such as "Scen1" and the
+like. In this example, there are three scenarios and the names reflect
+the relative values of the yields.
+
+::
+
+  set Scenarios := BelowAverageScenario
+                 AverageScenario
+                 AboveAverageScenario ;
+
+Leaf nodes, which are nodes with no children, are associated with
+scenarios. This assignment must be one-to-one and it is initiated with
+the words "param ScenarioLeafNode" followed by the colon-equals
+assignment characters.
+
+::
+
+  param ScenarioLeafNode :=
+                    BelowAverageScenario BelowAverageNode
+                    AverageScenario      AverageNode
+                    AboveAverageScenario AboveAverageNode ;
+
+Variables are associated with stages using an assignment that begins
+with the required words "set StageVariables" and the name of a stage in
+square brackets followed by the colon-equals assignment
+characters. Variable names that have been defined in the file
+ReferenceModel.py can be assigned to stages. Any variables that are not
+assigned are assumed to be in the last stage.  Variable indexes can be
+given explicitly and/or wildcards can be used.  Note that the variable
+names appear without the prefix "model."  In the farmer example,
+DevotedAcreage is the only first stage variable.
+
+::
+
+  set StageVariables[FirstStage] :=  DevotedAcreage[*] ;
+  set StageVariables[SecondStage] := QuantitySubQuotaSold[*]
+                                     QuantitySuperQuotaSold[*]
+                                     QuantityPurchased[*] ;
+
+.. note::
+
+   Variable names appear without the prefix "model."
+
+.. note::
+
+   Wildcards can be used, but fully general Python slicing is not supported.
+
+For reporting purposes, it is useful to define auxiliary variables in
+``ReferenceModel.py`` that will be assigned the cost associated with
+each stage. This variables do not impact algorithms, but the values are
+output by some software during execution as well as upon completion. The
+names of the variables are assigned to stages using the "param
+StageCost" assignment. The stages are previously defined in
+``ScenarioStructure.dat`` and the variables are previously defined in
+``ReferenceModel.py``.
+
+::
+
+  param StageCost := FirstStage  FirstStageCost
+                   SecondStage SecondStageCost ;
+
+Scenario data specification
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+So far, we have given a model in the file named ``ReferenceModel.py``, a
+set of deterministic data in the file named ``ReferenceModel.py``, and a
+description of the stochastics in the file named
+``ScenarioStructure.dat``. All that remains is to give the data for each
+scenario.  There are two ways to do that in PySP: *scenario-based* and
+*node-based*. The default is scenario-based so we will describe that
+first.
+
+For scenario-based data, the full data for each scenario is given in a
+``.dat`` file with the root name that is the name of the scenario.  So,
+for example, the file named ``AverageScenario.dat`` must contain all the
+data for the model for the scenario named "AvererageScenario." It turns
+out that this file can be created by simply copying the file
+``ReferenceModel.dat`` as shown above because it contains a full set of
+data for the "AverageScenario" scenario. The files
+``BelowAverageScenario.dat`` and ``AboveAverageScenario.dat`` will
+differ from this file and from each other only in their last line, where
+the yield is specified.  These three files are distributed with Pyomo
+and are in the pyomo sub-directory ``examples/pysp/farmer/scenariodata``
+along with ``ScenarioStructure.dat`` and ``ReferenceModel.dat``.
+
+Scenario-based data wastes resources by specifying the same thing over
+and over again. In many cases, that does not matter and it is convenient
+to have full scenario data files available (for one thing, the scenarios
+can easily be run independently using the ``pyomo`` command). However,
+in many other settings, it is better to use a node-based specification
+where the data that is unique to each node is specified in a .dat file
+with a root name that matches the node name. In the farmer example, the
+file ``RootNode.dat`` will be the same as ``ReferenceModel.dat`` except
+that it will lack the last line that specifies the yield. The files
+``BelowAverageNode.dat``, ``AverageNode.dat``, and
+``AboveAverageNode.dat`` will contain only one line each to specify the
+yield. If node-based data is to be used, then the
+``ScenarioStructure.dat`` file must contain the following line:
+
+::
+
+  param ScenarioBasedData := False ;
+
+An entire set of files for node-based data for the farmer problem are
+distributed with Pyomo in the sub-directory
+``examples/pysp/farmer/nodedata``
+
+Finding Solutions for Stochastic Models
+---------------------------------------
+
+PySP provides a variety of tools for finding solutions to stochastic
+programs.
+
+runef
+^^^^^
+
+The ``runef`` command puts together the so-called *extensive* *form*
+version of the model. It creates a large model that has constraints to
+ensure that variables at a node have the same value. For example, in the
+farmer problem, all of the ``DevotedAcres`` variables must have the same
+value regardless of which scenario is ultimately realized. The objective
+can be the expected value of the objective function, or the CVaR, or a
+weighted combination of the two. Expected value is the default. A full
+set of options for ``runef`` can be obtained using the command:
+
+::
+
+  runef --help
+
+The pyomo distribution contains the files need to run the farmer example
+in the sub-directories to the sub-directory ``examples/pysp/farmer`` so
+if this is the current directory and if CPLEX is installed, the
+following command will cause formation of the EF and its solution using
+CPLEX.
+
+::
+
+  runef -m models -i nodedata --solver=cplex --solve
+
+The option ``-m models`` has one dash and is short-hand for the option
+``--model-directory=models`` and note that the full option uses two
+dashes. The ``-i`` is equivalent to ``--instance-directory=`` in the
+same fashion. The default solver is CPLEX, so the solver option is not
+really needed. With the ``--solve`` option, runef would simply write an
+.lp data file that could be passed to a solver.
+
+runph
+^^^^^
+
+The runph command executes an implementation of Progressive Hedging (PH)
+that is intended to support scripting and extension.
+
+The pyomo distribution contains the files need to run the farmer example
+in the sub-directories to the sub-directory ``examples/pysp/farmer`` so
+if this is the current directory and if CPLEX is installed, the
+following command will cause PH to execute using the default sub-problem
+solver, which is CPLEX.
+
+::
+
+  runph -m models -i nodedata
+
+The option ``-m models`` has one dash and is short-hand for the option
+``--model-directory=models`` and note that the full option uses two
+dashes. The ``-i`` is equivalent to ``--instance-directory=`` in the
+same fashion.
+
+After about 33 iterations, the algorithm will achieve the default level
+of convergence and terminate. A lot of output is generated and among the
+output is the following solution information:
+
+::
+
+  Variable=DevotedAcreage
+	Index: [CORN] 		 (Scenarios:  BelowAverageScenario   AverageScenario   AboveAverageScenario   )
+		Values:       79.9844      80.0000      79.9768     Max-Min=      0.0232     Avg=     79.9871
+	Index: [SUGAR_BEETS] 		 (Scenarios:  BelowAverageScenario   AverageScenario   AboveAverageScenario   )
+		Values:      249.9848     249.9770     250.0000     Max-Min=      0.0230     Avg=    249.9873
+	Index: [WHEAT] 		 (Scenarios:  BelowAverageScenario   AverageScenario   AboveAverageScenario   )
+		Values:      170.0308     170.0230     170.0232     Max-Min=      0.0078     Avg=    170.0256
+
+  Cost Variable=FirstStageCost
+	Tree Node=RootNode 		 (Scenarios:  BelowAverageScenario   AverageScenario   AboveAverageScenario   )
+	Values:   108897.0836  108897.4725  108898.1476     Max-Min=      1.0640     Avg= 108897.5679
+
+For problems with no, or few, integer variables, the default level of
+convergence leaves root-node variables almost converged. Since the
+acreage to be planted cannot depend on the scenario that will be
+realized in the future, the average, which is labeled "Avg" in this
+output, would be used.  A farmer would probably interpret acreages of
+79.9871, 249.9873, and 170.0256 to be 80, 250, and 170.  In real-world
+applications, PH is embedded in scripts that produce output in a format
+desired by a decision maker.
+
+But in real-world applications, the default settings for PH seldom work
+well enough. In addition to post-processing the output, a number of
+parameters need to be adjusted and sometimes scripting to extend or
+augment the algorithm is needed to improve convergence rates.  A full
+set of options can be obtained with the command:
+
+::
+
+  runph --help
+
+Note that there are two dashes before ``help``.
+
+By default, PH uses quadratic objective functions after iteration zero;
+in some settings it may be desirable to linearize the quadratic
+terms. This is required to use a solver such as glpk for MIPs because it
+does not support quadratic MIPs. The directive
+``--linearize-nonbinary-penalty-terms=n`` causes linearization of the
+penalty terms using n pieces. For example, to use glpk on the farmer,
+assuming glpk is installed and the command is given when the current
+directory is the ``examples/pysp/farmer``, the following command will
+use default settings for most parameters and four pieces to approximate
+quadratic terms in sub-problems:
+
+::
+
+  runph -i nodedata -m models --solver=glpk --linearize-nonbinary-penalty-terms=4
+
+Use of the ``linearize-nonbinary-penalty-terms`` option requires that
+all variables not in the final stage have bounds.
+
+Final Solution
+^^^^^^^^^^^^^^
+
+At each iteration, PH computes an average for each variable over the
+nodes of the scenario tree. We refer to this as X-bar. For many
+problems, particularly those with integer restrictions, X-bar might not
+be feasible for every scenario unless PH happens to be fully converged
+(in the primal variables). Consequently, the software computes a
+solution system X-hat that is more likely to be feasible for every
+scenario and will be equivalent to X-bar under full convergence. This
+solution is reported upon completion of PH and its expected value is
+report if it is feasible for all scenarios.
+
+Methods for computing X-hat are controlled by the ``--xhat-method``
+command-line option. For example
+
+::
+
+  --xhat-method=closest-scenario
+
+causes X-hat to be set to the scenario that is closest to X-bar (in a
+z-score sense). Other options, such as ``voting`` and ``rounding``,
+assign values of X-bar to X-hat except for binary and general integer
+variables, where the values are set by probability weighted voting by
+scenarios and rounding from X-bar, respectively.
+
+Solution Output Control
+^^^^^^^^^^^^^^^^^^^^^^^
+
+To get the full solution, including leaf node solution values, use the
+``runph`` ``--output-scenario-tree-solution`` option.
+
+In both ``runph`` and ``runef`` the solution can be written in csv
+format using the
+``--solution-writer=pyomo.pysp.plugins.csvsolutionwriter`` option.
+
+Summary of PySP File Names
+--------------------------
+
+PySP scripts such as ``runef`` and ``runph`` require files that specify
+the model and data using files with specific names.  All files can be in
+the current directory, but typically, the file ``ReferenceModel.py`` is
+in a directory that is specified using ``--model-directory=`` option
+(the short version of this option is ``-i``) and the data files are in a
+directory specified in the ``--instance-directory=`` option (the short
+version of this option is ``-m``).
+
+.. note::
+
+   A file name other than ``ReferenceModel.py`` can be used if the file
+   name is given in addition to the directory name as an argument to the
+   ``--instance-directory`` option. For example, on a Windows machine
+   ``--instance-directory=models\MyModel.py`` would specify the file
+   ``MyModel.py`` in the local directory ``models``.
+
+- ``ReferenceModel.py``: A full Pyomo model for a singe scenario. There
+  should be no scenario indexes in this model because they are implicit.
+- ``ScenarioStructure.dat``: Specifies the nature of the stochastics. It
+  also specifies whether the rest of the data is node-based or
+  scenario-based.  It is scenario-based unless ``ScenarioStructure.dat``
+  contains the line
+
+::
+
+  param ScenarioBasedData := False ;
+
+If scenario-based, then there is a data file for each scenario that
+specifies a full set of data for the scenario. The name of the file is
+the name of the scenario with ``.dat`` appended. The names of the
+scenarios are given in the ``ScenarioStructure.dat`` file.
+
+If node-based, then there is a file with data for each node that
+specifies only that data that is unique for the node.  The name of the
+file is the name of the node with ``.dat`` appended. The names of the
+nodes are given in the ``ScenarioStructure.dat`` file.
+
+.. _ParallelPySP:
+
+Solving Sub-problems in Parallel and/or Remotely
+------------------------------------------------
+
+The Python package called Pyro provides capabilities that are used to
+enable PH to make use of multiple solver processes for sub-problems and
+allows both ``runef`` and ``runph`` to make use remote solvers. We will
+focus on PH in our discussion here.
+
+There are two solver management systems available for ``runph``, one is
+based on a ``pyro_mip_server`` and the other is based on a
+``phsolverserver``. Regardless of which is used, a name server and a
+dispatch server must be running and accessible to the ``runph``
+process. The name server is launched using the command ``pyomo_ns`` and
+then the dispatch server is launched with ``dispatch_srvr``. Note that
+both commands contain an underscore. Both programs keep running until
+terminated by an external signal, so it is common to pipe their output
+to a file.
+
+Solvers are controlled by solver servers. The pyro mip solver server is
+launched with the command ``pyro_mip_server``. This command may be
+repeated to launch as many solvers as are desired. The ``runph`` then
+needs a ``--solver-manager=pyro`` option to signal that ``runph`` should
+not launch its own solver, but should send subproblems to be dispatched
+to parallel solvers.  To summarize the commands:
+
+- Once: ``pyomo_ns``
+- Once: ``dispatch_srvr``
+- Multiple times: ``pyro_mip_server``
+- Once: ``runph ... --solver-manager=pyro ...``
+
+.. note::
+
+   The ``runph`` option ``--shutdown-pyro`` will cause a shutdown signal
+   to be sent to ``pyomo_ns``, ``dispatch_srvr`` and all
+   ``pyro_mip_server`` programs upon termination of ``runph``.
+
+Instead of using ``pyro_mip_server``, one can use ``phsolverserver`` in
+its place.  You can get a list of arguments using ``pyrosolverserver
+--help``, which does not launch a solver server (it just displays help
+and terminates).  If you use the phsolverserver, then use
+``--solver-manager=phpyro`` as an argument to runph rather than
+``--solver-manager=pyro``.
+
+.. warning::
+
+   Unlike the normal ``pyro_mip_server``, there must be one
+   ``phsolverserver`` for each sub-problem.  One can use fewer
+   phsolverservers than there are scenarios by adding the command-line
+   option “--phpyro-required-workers=X”. This will partition the jobs
+   among the available workers,
+
+Generating SMPS Input Files From PySP Models
+--------------------------------------------
+
+This document explains how to convert a PySP model into a set of files
+representing the SMPS format for stochastic linear programs. Conversion
+can be performed through the command line by invoking the SMPS converter
+using the command ``python -m pyomo.pysp.convert.smps``. This command is
+available starting with Pyomo version 5.1. Prior to version 5.1, the
+same functionality was available via the command ``pysp2smps`` (starting
+at Pyomo version 4.2).
+
+SMPS is a standard for expressing stochastic mathematical programs that
+is based on the ancient MPS format for linear programs, which is
+matrix-based. Modern algebraic modeling languages such as Pyomo offer a
+lot of flexibility so it is a challenge to take models expressed in
+Pyomo/PySP and force them into SMPS format.  The conversions can be
+inefficient and error prone because Pyomo allows flexible expressions
+and model construction so the resulting matrix may not be the same for
+each set of input data. We provide tools for conversion to SMPS because
+some researchers have tools that read SMPS and exploit its limitations
+on problem structure; however, the user should be aware that the
+conversion is not always possible.
+
+Currently, these routines only support two-stage stochastic
+programs. Support for models with more than two time stages will be
+considered in the future as this tool matures.
+
+Additional Requirements for SMPS Conversion
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To enable proper conversion of a PySP model to a set of SMPS files, the
+following additional requirements must be met:
+
+1. The reference Pyomo model must include annotations that identify
+   stochastic data locations in the second-stage problem.
+2. All model variables must be declared in the ScenarioStructure.dat
+   file.
+3. The set of constraints and variables, and the overall sparsity
+   structure of the objective and constraint matrix must not change
+   across scenarios.
+
+The bulk of this section discusses in-depth the annotations mentioned in
+the first point. The second point may come as a surprise to users that
+are not aware of the ability to *not* declare variables in the
+ScenarioStructure.dat file. Indeed, for most of the code in PySP, it is
+only critical that the variables for which non-anticipativity must be
+enforced need to be declared. That is, for a two-stage stochastic
+program, all second-stage variables can be left out of the
+ScenarioStructure.dat file when using commands such as ``runef`` and
+``runph``. However, conversion to SMPS format requires all variables to
+be properly assigned a decision stage by the user.
+
+.. note::
+
+   Variables can be declared as *primary* by assigning them to a stage
+   using the ``StageVariables`` assignment, or declared as *auxiliary*
+   variables, which are assigned to a stage using
+   ``StageDerivedVariables`` assignment. For algorithms such as PH, the
+   distinction is meaningful and those variables that are fully
+   determined by primary variables and the data should generally be
+   assigned to ``StageDerivedVariables`` for their stage.
+
+The third point may also come as a surprise, but the ability to handle a
+non-uniform problem structure in most PySP tools falls directly from the
+fact that the non-anticipativity conditions are all that is required in
+many cases. However, the conversion to SMPS format is based on a matrix
+representation of the problem where the stochastic coefficients are
+provided as a set of sparse matrix coordinates. This subsequently
+requires that the row and column dimensions as well as the sparsity
+structure of the problem does not change across scenarios.
+
+.. _SMPS-Annotations:
+
+Annotating Models for SMPS File Generation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Annotations are necessary for alerting the SMPS conversion routines of
+the locations of data that needs to be updated when changing from one
+scenario to another. Knowing these sparse locations allows decomposition
+algorithms to employ efficient methods for solving a stochastic
+program. In order to use the SMPS conversion tool, at least one of the
+following annotations must be declared on the reference Pyomo model:
+
+- **PySP_StochasticRHSAnnotation**: indicates the existence of
+  stochastic constraint right-hand-sides (or bounds) in second-stage
+  constraints
+- **PySP_StochasticMatrixAnnotation**: indicates the existence of
+  stochastic variable coefficients in second-stage constraints
+- **PySP_StochasticObjectiveAnnotation**: indicates the existence
+  stochastic cost coefficients in the second-stage cost function
+
+These will be discussed in further detail in the remaining sections. The
+following code snippet demonstrates how to import these annotations and
+declare them on a model.
+
+.. literalinclude:: ../script_spy_files/spy4pysp_Import&declare_annotations.spy
+   :language: python
+
+Populating these annotations with entries is optional, and simply
+declaring them on the reference Pyomo model will alert the SMPS
+conversion routines that all coefficients appearing on the second-stage
+model should be assumed stochastic. That is, adding the lines in the
+previous code snippet alone implies that: (i) all **second-stage
+constraints** have stochastic bounds, (ii) all **first- and second-stage
+variables** appearing in **second-stage constraints** have stochastic
+coefficients, and (iii) all **first- and second-stage variables**
+appearing in the objective have stochastic coefficients.
+
+PySP can attempt to determine the *stage*-ness of a constraint by
+examining the set of variables that appear in the constraint
+expression. E.g., a first-stage constraint is characterized as having
+only first-stage variables appearing in its expression. A second-stage
+constraint has at least one second-stage variable appearing in its
+expression. The stage of a variable is declared in the scenario tree
+provided to PySP. This method of constraint stage classification is not
+perfect. That is, one can very easily define a model with a constraint
+that uses only first-stage variables in an expression involving
+stochastic data. This constraint would be incorrectly identified as
+first-stage by the method above, even though the existence of stochastic
+data necessarily implies it is second-stage. To deal with cases such as
+this, an additional annotation is made available that is named
+**PySP_ConstraintStageAnnotation**.  This annotation will be discussed
+further in a later section.
+
+It is often the case that relatively few coefficients on a stochastic
+program change across scenarios. In these situations, adding explicit
+declarations within these annotations will allow for a more sparse
+representation of the problem and, consequently, more efficient solution
+by particular decomposition methods. Adding declarations to these
+annotations is performed by calling the ``declare`` method, passing some
+component as the initial argument. Any remaining argument requirements
+for this method are specific to each annotation.  Valid types for the
+component argument typically include:
+
+- ``Constraint``: includes single constraint objects as well as
+  constraint containers
+- ``Objective``: includes single objective objects as well as objective
+  containers
+- ``Block``: includes Pyomo models as well as single block objects and
+  block containers
+
+Any remaining details for adding declarations to the annotations
+mentioned thus far will be discussed in later sections. The remainder of
+this section discusses the semantics of these declarations based on the
+type for the component argument.
+
+When the ``declare`` method is called with a component such as an
+indexed ``Constraint`` or a ``Block`` (model), the SMPS conversion
+routines will interpret this as meaning all constraints found within
+that indexed ``Constraint`` or on that ``Block`` (that have not been
+deactivated) should be considered. As an example, we consider the
+following partially declared concrete Pyomo model:
+
+.. literalinclude:: ../script_spy_files/spy4pysp_Partially_declared_concretemodel.spy
+   :language: python
+
+Here the local Python variables ``p`` and ``q`` serve as placeholders
+for data that changes with each scenario.
+
+The following are equivalent annotations of the model, each declaring
+all of the constraints shown above as having stochastic right-hand-side
+data:
+
+- Implicit form
+
+  .. literalinclude:: ../script_spy_files/spy4pysp_Model_implicit_form.spy
+     :language: python
+
+- Implicit form for ``Block`` (model) assignment
+
+  .. literalinclude:: ../script_spy_files/spy4pysp_Model_implicit_block.spy
+     :language: python
+
+- Explicit form for singleton constraint with implicit form for indexed
+  constraint and sub-block
+
+  .. literalinclude:: ../script_spy_files/spy4pysp_Explicit_singletonconstraint_implicit_indexedconstraint&subblock.spy
+     :language: python
+
+- Explicit form for singleton constraints at the model and sub-block
+  level with implicit form for indexed constraint
+
+  .. literalinclude:: ../script_spy_files/spy4pysp_Explicit_singletonconstraint&subblock_implicit_indexedconstraint.spy
+     :language: python
+
+- Fully explicit form for singleton constraints as well as all indices
+  of indexed constraint
+
+  .. literalinclude:: ../script_spy_files/spy4pysp_Explicit_singletonconstraint_explicit_indexedconstraint.spy
+     :language: python
+
+Note that the equivalence of the first three bullet forms to the last
+two bullet forms relies on the following conditions being met: (1)
+``model.z`` and ``model.y`` are declared on the second stage of the PySP
+scenario tree and (2) at least one of these second-stage variables
+appears in each of the constraint expressions above. Together, these two
+conditions cause each of the constraints above to be categorized as
+second-stage; thus, causing them to be considered by the SMPS conversion
+routines in the implicit declarations used by the first three bullet
+forms.
+
+.. warning::
+
+   Pyomo simplifies product expressions such that terms with 0
+   coefficients are removed from the final expression. This can
+   sometimes create issues with determining the correct stage
+   classification of a constraint as well as result in different
+   sparsity patterns across scenarios. This issue is discussed further
+   in the later section entitled Edge-Cases.
+
+When it comes to catching errors in model annotations, there is a minor
+difference between the first bullet form from above (empty annotation)
+and the others. In the empty case, PySP will use exactly the set of
+second-stage constraints it is aware of. This set will either be
+determined through inspection of the constraint expressions or through
+the user-provided constraint-stage classifications declared using the
+**PySP_ConstraintStageAnnotation** annotation type.  In the case where
+the stochastic annotation is not empty, PySP will verify that all
+constraints declared within it belong to the set of second-stage
+constraints it is aware of. If this verification fails, an error will be
+reported. This behavior is meant to aid users in debugging problems
+associated with non-uniform sparsity structure across scenarios that
+are, for example, caused by 0 coefficients in product expressions.
+
+*Annotations on AbstractModel Objects*
+
+Pyomo models defined using the ``AbstractModel`` object require the
+modeler to take further steps when making these annotations. In the
+``AbstractModel`` setting, these assignments must take place within a
+``BuildAction``, which is executed only after the model has been
+constructed with data. As an example, the last bullet form from the
+previous section could be written in the following way to allow
+execution with either an ``AbstractModel`` or a ``ConcreteModel``:
+
+.. literalinclude:: ../script_spy_files/spy4pysp_Annotation_Abstractmodel.spy
+   :language: python
+
+Note that the use of ``m`` rather than ``model`` in the
+``annotate_rule`` function is meant to draw attention to the fact that
+the model object being passed into the function as the first argument
+may not be the same object as the model outside of the function. This is
+in fact the case in the ``AbstractModel`` setting, whereas for the
+``ConcreteModel`` setting they are the same object. We often use
+``model`` in both places to avoid errors caused by forgetting to use the
+correct object inside the function (Python scoping rules handle the
+rest). Also note that a ``BuildAction`` must be declared on the model
+after the declaration of any components being accessed inside its rule
+function.
+
+*Stochastic Constraint Bounds (RHS)*
+
+If stochastic elements appear on the right-hand-side of constraints (or
+as constants in the body of constraint expressions), these locations
+should be declared using the **PySP_StochasticRHSAnnotation** annotation
+type. When components are declared with this annotation, there are no
+additional required arguments for the ``declare`` method. However, to
+allow for more flexibility when dealing with double-sided inequality
+constraints, the ``declare`` method can be called with at most one of
+the keywords ``lb`` or ``ub`` set to ``False`` to signify that one of
+the bounds is not stochastic. The following code snippet shows example
+declarations with this annotation for various constraint types.
+
+.. literalinclude:: ../script_spy_files/spy4pysp_Stochastic_constraint_bounds.spy
+   :language: python
+
+Note that simply declaring the **PySP_StochasticRHSAnnotation**
+annotation type and leaving it empty will alert the SMPS conversion
+routines that all constraints identified as second-stage should be
+treated as having stochastic right-hand-side data. Calling the
+``declare`` method on at least one component implies that the set of
+constraints considered should be limited to what is declared within the
+annotation.
+
+*Stochastic Constraint Matrix*
+
+If coefficients of variables change in the second-stage constraint
+matrix, these locations should be declared using the
+**PySP_StochasticMatrixAnnotation** annotation type. When components are
+declared with this annotation, there are no additional required
+arguments for the ``declare`` method. Calling the ``declare`` method
+with the single component argument signifies that all variables
+encountered in the constraint expression (including first- and
+second-stage variables) should be treated as having stochastic
+coefficients. This can be limited to a specific subset of variables by
+calling the ``declare`` method with the ``variables`` keyword set to an
+explicit list of variable objects. The following code snippet shows
+example declarations with this annotation for various constraint types.
+
+.. literalinclude:: ../script_spy_files/spy4pysp_Stochastic_constraint_matrix.spy
+   :language: python
+
+As is the case with the **PySP_StochasticRHSAnnotation** annotation
+type, simply declaring the **PySP_StochasticMatrixAnnotation**
+annotation type and leaving it empty will alert the SMPS conversion
+routines that all constraints identified as second-stage should be
+considered, and, additionally, that all variables encountered in these
+constraints should be considered to have stochastic
+coefficients. Calling the ``declare`` method on at least one component
+implies that the set of constraints considered should be limited to what
+is declared within the annotation.
+
+*Stochastic Objective Elements*
+
+If the cost coefficients of any variables are stochastic in the
+second-stage cost expression, this should be noted using the
+**PySP_StochasticObjectiveAnnotation** annotation type. This annotation
+uses the same semantics for the ``declare`` method as the
+**PySP_StochasticMatrixAnnotation** annotation type, but with one
+additional consideration regarding any constants in the objective
+expression.  Constants in the objective are treated as stochastic and
+automatically handled by the SMPS code. If the objective expression does
+not contain any constant terms or these constant terms do not change
+across scenarios, this behavior can be disabled by setting the keyword
+``include_constant`` to ``False`` in a call to the ``declare`` method.
+
+.. literalinclude:: ../script_spy_files/spy4pysp_Stochastic_objective_elements.spy
+   :language: python
+
+Similar to the previous annotation type, simply declaring the
+**PySP_StochasticObjectiveAnnotation** annotation type and leaving it
+empty will alert the SMPS conversion routines that all variables
+appearing in the single active model objective expression should be
+considered to have stochastic coefficients.
+
+*Annotating Constraint Stages*
+
+Annotating the model with constraint stages is sometimes necessary to
+identify to the SMPS routines that certain constraints belong in the
+second time-stage even though they lack references to any second-stage
+variables. Annotation of constraint stages is achieved using the
+**PySP_ConstraintStageAnnotation** annotation type. If this annotation
+is added to the model, it is assumed that it will be fully populated
+with explicit stage assignments for every constraint in the model. The
+``declare`` method should be called giving a ``Constraint`` or ``Block``
+as the first argument and a positive integer as the second argument (1
+signifies the first time stage). Example:
+
+.. literalinclude:: ../script_spy_files/spy4pysp_Annotating_constraint_stages.spy
+   :language: python
+
+.. _Edge-Cases:
+
+*Edge Cases*
+
+The section discusses various points that may give users some trouble,
+and it attempts to provide more details about the common pitfalls
+associated with translating a PySP model to SMPS format.
+
+- *Moving a Stochastic Objective to the Constraint Matrix*
+
+It is often the case that decomposition algorithms theoretically support
+stochastic cost coefficients but the software implementation has not yet
+added support for them. This situation is easy to work around in
+PySP. One can simply augment the model with an additional constraint and
+variable that *computes* the objective, and then use this variable in
+the objective rather than directly using the second-stage cost
+expression. Consider the following reference Pyomo model that has
+stochastic cost coefficients for both a first-stage and a second-stage
+variable in the second-stage cost expression:
+
+.. literalinclude:: ../script_spy_files/spy4pysp_1&2stage_in_2stage_expression.spy
+   :language: python
+
+The code snippet below re-expresses this model using an objective
+consisting of the original first-stage cost expression plus a
+second-stage variable ``SecondStageCostVar`` that represents the
+second-stage cost. This is enforced by restricting the variable to be
+equal to the second-stage cost expression using an additional equality
+constraint named ``ComputeSecondStageCost``. Additionally, the
+**PySP_StochasticObjectiveAnnotation** annotation type is replaced with
+the **PySP_StochasticMatrixAnnotation** annotation type.
+
+.. literalinclude:: ../script_spy_files/spy4pysp_Reexpressed_model_using_new_variable.spy
+   :language: python
+
+- *Stochastic Constant Terms*
+
+The standard description of a linear program does not allow for a
+constant term in the objective function because this has no weight on
+the problem solution. Additionally, constant terms appearing in a
+constraint expression must be lumped into the right-hand-side
+vector. However, when modeling with an AML such as Pyomo, constant terms
+very naturally fall out of objective and constraint expressions.
+
+If a constant terms falls out of a constraint expression and this term
+changes across scenarios, it is critical that this is accounted for by
+including the constraint in the **PySP_StochasticRHSAnnotation**
+annotation type. Otherwise, this would lead to an incorrect
+representation of the stochastic program in SMPS format. As an example,
+consider the following:
+
+.. literalinclude:: ../script_spy_files/spy4pysp_Constraint_in_PySP_StochasticRHSAnnotation.spy
+   :language: python
+
+Note that in the expression for constraint ``c``, there is a fixed
+parameter ``p`` involved in the variable expression on the
+left-hand-side of the inequality. When an expression is written this
+way, it can be easy to forget that the value of this parameter will be
+pushed to the bound of the constraint when it is converted into linear
+canonical form. Remember to declare these constraints within the
+**PySP_StochasticRHSAnnotation** annotation type.
+
+A constant term appearing in the objective expression presents a similar
+issue. Whether or not this term is stochastic, it must be dealt with
+when certain outputs expect the problem to be expressed as a linear
+program. The SMPS code in PySP will deal with this situation for you by
+implicitly adding a new second-stage variable to the problem in the
+final output file that uses the constant term as its coefficient in the
+objective and that is fixed to a value of 1.0 using a trivial equality
+constraint. The default behavior when declaring the
+**PySP_StochasticObjectiveAnnotation** annotation type will be to assume
+this constant term in the objective is stochastic. This helps ensure
+that the relative scenario costs reported by algorithms using the SMPS
+files will match that of the PySP model for a given solution. When
+moving a stochastic objective into the constraint matrix using the
+method discussed in the previous subsection, it is important to be aware
+of this behavior. A stochastic constant term in the objective would
+necessarily translate into a stochastic constraint right-hand-side when
+moved to the constraint matrix.
+
+- *Stochastic Variable Bounds*
+
+Although not directly supported, stochastic variable bounds can be
+expressed using explicit constraints along with the
+**PySP_StochasticRHSAnnotation** annotation type to achieve the same
+effect.
+
+- *Problems Caused by Zero Coefficients*
+
+Expressions that involve products with some terms having 0 coefficients
+can be problematic when the zeros can become nonzero in certain
+scenarios. This can cause the sparsity structure of the LP to change
+across scenarios because Pyomo simplifies these expressions when they
+are created such that terms with a 0 coefficient are dropped. This can
+result in an invalid SMPS conversion. Of course, this issue is not
+limited to explicit product expressions, but can arise when the user
+implicitly assigns a variable a zero coefficient by outright excluding
+it from an expression. For example, both constraints in the following
+code snippet suffer from this same underlying issue, which is that the
+variable ``model.y`` will be excluded from the constraint expressions in
+a subset of scenarios (depending on the value of ``q``) either directly
+due to a 0 coefficient in a product expressions or indirectly due to
+user-defined logic that is based off of the values of stochastic data.
+
+.. literalinclude:: ../script_spy_files/spy4pysp_Variable_excluded_in_subsetscenerios.spy
+   :language: python
+
+The SMPS conversion routines will attempt some limited checking to help
+prevent this kind of situation from silently turning the SMPS
+representation to garbage, but it must ultimately be up to the user to
+ensure this is not an issue. This is in fact the most challenging aspect
+of converting PySP's AML-based problem representation to the
+structure-preserving LP representation used in the SMPS format.
+
+One way to deal with the 0 coefficient issue, which works for both cases
+discussed in the example above, is to create a *zero* ``Expression``
+object. E.g.,
+
+.. literalinclude:: ../script_spy_files/spy4pysp_Create_zero_expression_object.spy
+   :language: python
+
+This component can be used to add variables to a linear expression so
+that the resulting expression retains a reference to them. This behavior
+can be verified by examining the output from the following example:
+
+.. literalinclude:: ../script_spy_files/spy4pysp_Retain_variable_reference_expression.spy
+   :language: python
+
+Generating SMPS Input Files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section explains how the SMPS conversion utilities available in
+PySP can be invoked from the command line. Starting with Pyomo version
+5.1, the SMPS writer can be invoked using the command ``python -m
+pyomo.pysp.convert.smps``.  Prior to version 5.1, this functionality was
+available via the ``pysp2smps`` command (starting at Pyomo version
+4.2). Use the ``--help`` option with the main command to see a detailed
+description of the command-line options available:
+
+::
+
+  $ python -m pyomo.pysp.convert.smps --help
+
+Next, we discuss some of the basic inputs to this command.
+
+Consider the baa99 example inside the ``pysp/baa99`` subdirectory that
+is distributed with the Pyomo examples (``examples/pysp/baa99``).  Both
+the reference model and the scenario tree structure are defined in the
+file ``ReferenceModel.py`` using PySP callback functions. This model has
+been annotated to enable conversion to the SMPS format. Assuming one is
+in this example's directory, SMPS files can be generated for the model
+by executing the following shell command:
+
+::
+
+  $ python -m pyomo.pysp.convert.smps -m ReferenceModel.py --basename baa99 \
+     --output-directory sdinput/baa99
+
+Assuming successful execution, this would result in the following files
+being created:
+
+- ``sdinput/baa99/baa99.cor``
+- ``sdinput/baa99/baa99.tim``
+- ``sdinput/baa99/baa99.sto``
+- ``sdinput/baa99/baa99.cor.symbols``
+
+The first file is the core problem file written in MPS format. The
+second file indicates at which row and column the first and second time
+stages begin. The third file contains the location and values of
+stochastic data in the problem for each scenario. This file is generated
+by merging the individual output for each scenario in the scenario tree
+into separate BLOCK sections. The last file contains a mapping for
+non-anticipative variables from the symbols used in the above files to a
+unique string that can be used to recover the variable on any Pyomo
+model. It is mainly used by PySP's solver interfaces to load a solver
+solution.
+
+To ensure that the problem structure is the same and that all locations
+of stochastic data have been annotated properly, the script creates
+additional auxiliary files that are compared across scenarios. The
+command-line option ``--keep-auxiliary-files`` can be used to retain the
+auxiliary files that were generated for the template scenario used to
+write the core file. When this option is used with the above example,
+the following additional files will appear in the output directory:
+
+- ``sdinput/baa99/baa99.mps.det``
+- ``sdinput/baa99/baa99.sto.struct``
+- ``sdinput/baa99/baa99.row``
+- ``sdinput/baa99/baa99.col``
+
+The ``.mps.det`` file is simply the core file for the reference scenario
+with the values for all stochastic coefficients set to zero. If this
+does not match for every scenario, then there are places in the model
+that still need to be declared on one or more of the stochastic data
+annotations. The ``.row`` and the ``.col`` files indicate the ordering
+of constraints and variables, respectively, that was used to write the
+core file. The ``.sto.struct`` file lists the nonzero locations of the
+stochastic data in terms of their row and column location in the core
+file. These files are created for each scenario instance in the scenario
+tree and placed inside of a subdirectory named ``scenario_files`` within
+the output directory. These files will be removed removed unless
+validation fails or the ``--keep-scenario-files`` option is used.
+
+The SMPS writer also supports parallel execution. This can significantly
+reduce the overall time required to produce the SMPS files when there
+are many scenarios. Parallel execution using PySP's Pyro-based tools can
+be performed using the steps below. Note that each of these commands can
+be launched in the background inside the same shell or in their own
+separate shells.
+
+1. Start the Pyro name server:
+
+   ::
+
+      $ pyomo_ns -n localhost
+
+2. Start the Pyro dispatch server:
+
+   ::
+
+      $ dispatch_srvr -n localhost --daemon-host localhost
+
+
+3. Start 8 ScenarioTree Servers (for the 625 baa99 scenarios)
+   
+   ::
+
+      $ mpirun -np 8 scenariotreeserver --pyro-host=localhost
+
+
+4. Run ``python -m pyomo.pysp.convert.smps`` using the Pyro ScenarioTree Manager
+
+   ::
+
+      $ python -m pyomo.pysp.convert.smps -m ReferenceModel.py --basename baa99 \
+         --output-directory sdinput/baa99 \
+         --pyro-required-scenariotreeservers=8 \
+         --pyro-host=localhost --scenario-tree-manager=pyro
+
+An annotated version of the farmer example is also provided. The model
+file can be found in the ``pysp/farmer/smps_model`` examples
+subdirectory. Note that the scenario tree for this model is defined in a
+separate file. When invoking the SMPS writer, a scenario tree structure
+file can be provided via the ``--scenario-tree-location (-s)``
+command-line option.  For example, assuming one is in the
+``pysp/farmer`` subdirectory, the farmer model can be converted to SMPS
+files using the command:
+
+::
+
+  $ python -m pyomo.pysp.convert.smps -m smps_model/ReferenceModel.py \
+     -s scenariodata/ScenarioStructure.dat --basename farmer \
+     --output-directory sdinput/farmer
+
+Note that, by default, the files created by the SMPS writer use
+shortened symbols that do not match the names of the variables and
+constraints declared on the Pyomo model. This is for efficiency reasons,
+as using fully qualified component names can result in significantly
+larger files. However, it can be useful in debugging situations to
+generate the SMPS files using the original component names.  To do this,
+simply add the command-line option ``--symbolic-solver-labels`` to the
+command string.
+
+The SMPS writer supports other formats for the core problem file (e.g.,
+the LP format). The command-line option ``--core-format`` can be used to
+control this setting. Refer to the command-line help string for more
+information about the list of available format.
+
+Generating DDSIP Input Files From PySP Models
+---------------------------------------------
+
+PySP provides support for creating DDSIP inputs, and some support for
+reading DDSIP solutions back into PySP is under development. Use of
+these utilties requires additional model annotations that declare the
+location of stochastic data coefficients. See the section on converting
+PySP models to SMPS for more information.
+
+To access the DDSIP writer via the command line, use ``python
+-m pyomo.pysp.convert.ddsip``. To access the full solver interface to
+DDSIP, which writes the input files, invokes the DDSIP solver, and reads
+the solution, use ``python -m pyomo.pysp.solvers.ddsip``.  For example,
+to get a list of command arguments, use:
+
+::
+
+  $ python -m pyomo.pysp.convert.ddsip --help
+
+.. note::
+
+   Not all of the command arguments are relevant for DDSIP.
+
+For researchers that simply want to write out the files needed by DDSIP,
+the ``--output-directory`` option can be used with the DDSIP writer to
+specifiy the directory where files should be created. The DDSIP solver
+interface creates these files in a temporary directory. To have the
+DDSIP solver interface retain these files after it exits, use the
+``--keep-solver-files`` command-line option. The following example
+invokes the DDSIP solver on the networkflow example that ships with
+PySP. In order to test it, one must first ``cd`` into to the networkflow
+example directory and then execute the command:
+
+::
+
+  $ python -m pyomo.pysp.solvers.ddsip \
+     -s 1ef10 -m smps_model --solver-options="NODELIM=1”
+
+The ``--solver-options`` command line argument can be used set the
+values of any DDSIP options that are written to the DDSIP configuration
+file; multiple options should be space-separated. See DDSIP
+documentation for a list of options.
+
+Here is the same example modified to simply create the DDSIP input files
+in an output directory named ``ddsip_networkflow``:
+
+::
+
+  $ python -m pyomo.pysp.convert.ddsip \
+     -s 1ef10 -m smps_model --output-directory ddsip_networkflow \
+     --symbolic-solver-labels
+
+The option ``--symbolic-solver-labels`` tells the DDSIP writer to
+produce the file names using symbols that match names on the original
+Pyomo model. This can significantly increase file size, so it is not
+done by default. When the DDSIP writer is invoked, a minimal DDSIP
+configuration file is created in the output directory that specifies the
+required problem structure information. Any additional DDSIP options
+must be manually added to this file by the user.
+
+As with the SMPS writer, the DDSIP writer and solver interface support
+PySP's Pyro-based parallel scenario tree management system. See the
+section on the SMPS writer for a description of how to use this
+functionality.
+
+PySP in scripts
+---------------
+
+See :ref:`rappersection` for information about putting Python scripts
+around PySP functionality.
