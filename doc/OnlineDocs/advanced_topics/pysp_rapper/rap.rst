@@ -29,7 +29,7 @@ By Woody and https://www.song-lyrics-generator.org.uk
    You complain about unscriptability.
    I gotta love it though - somebody still speaks for the mat.
    
-   I'm rappin' to the ape,
+   I'm rappin' with a cape,
    And I'm gonna move your escape.
    
    Easy, big, indented, like a solution
