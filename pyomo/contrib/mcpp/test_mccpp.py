@@ -7,7 +7,7 @@ from six import StringIO
 
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
-from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc
+from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, mcpp_available
 from pyomo.core import (
     ConcreteModel, Expression, Var, acos, asin, atan, cos, exp, quicksum, sin,
     tan, value
@@ -15,6 +15,7 @@ from pyomo.core import (
 from pyomo.core.expr.current import identify_variables
 
 
+@unittest.skipIf(not mcpp_available(), "MC++ is not available")
 class TestMcCormick(unittest.TestCase):
 
     def test_mc_2d(self):
