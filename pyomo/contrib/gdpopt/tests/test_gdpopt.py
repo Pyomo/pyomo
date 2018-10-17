@@ -230,6 +230,19 @@ class TestGLOA(unittest.TestCase):
             fabs(objective_value - 41573) <= 200,
             "Objective value of %s instead of 41573" % objective_value)
 
+    def test_GLOA_ex_633_trespalacios(self):
+        """Test LOA with Francisco thesis example."""
+        exfile = import_file(join(exdir, 'small_lit', 'ex_633_trespalacios.py'))
+        model = exfile.build_simple_nonconvex_gdp()
+        SolverFactory('gdpopt').solve(
+            model, strategy='GLOA',
+            mip_solver=mip_solver,
+            nlp_solver=global_nlp_solver,
+            nlp_solver_args=global_nlp_solver_args,
+            tee=False)
+        objective_value = value(model.obj.expr)
+        self.assertAlmostEqual(objective_value, 4.46, 2)
+
 
 
 if __name__ == '__main__':
