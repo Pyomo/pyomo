@@ -18,8 +18,8 @@ exdir = normpath(join(currdir, '..', '..', '..', '..', 'examples', 'gdp'))
 
 mip_solver = 'glpk'
 nlp_solver = 'ipopt'
-global_nlp_solver = 'gams'
-global_nlp_solver_args = dict(solver='baron')
+global_nlp_solver = 'baron'
+global_nlp_solver_args = dict()
 LOA_solvers = (mip_solver, nlp_solver)
 GLOA_solvers = (mip_solver, global_nlp_solver)
 LOA_solvers_available = all(SolverFactory(s).available() for s in LOA_solvers)
@@ -221,6 +221,7 @@ class TestGLOA(unittest.TestCase):
         SolverFactory('gdpopt').solve(
             cons_layout, strategy='GLOA',
             mip_solver=mip_solver,
+            iterlim=36,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args,
             tee=False)
