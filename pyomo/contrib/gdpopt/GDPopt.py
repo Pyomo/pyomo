@@ -1,26 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Decomposition solver for Generalized Disjunctive Programming (GDP) problems.
-
-The GDPopt (Generalized Disjunctive Programming optimizer) solver applies a
-variety of decomposition-based approaches to solve Generalized Disjunctive
-Programming (GDP) problems. GDP models can include nonlinear, continuous
-variables and constraints, as well as logical conditions.
-
-These approaches include:
-
-- Outer approximation
-- Partial surrogate cuts [pending]
-- Generalized Bender decomposition [pending]
-
-This solver implementation was developed by Carnegie Mellon University in the
-research group of Ignacio Grossmann.
-
-For nonconvex problems, the bounds self.LB and self.UB may not be rigorous.
-
-Questions: Please make a post at StackOverflow and/or contact Qi Chen
-<https://github.com/qtothec>.
-
-"""
+"""Main driver module for GDPopt solver."""
 from __future__ import division
 
 import logging
@@ -55,9 +34,28 @@ __version__ = (0, 4, 1)
         doc='The GDPopt decomposition-based '
         'Generalized Disjunctive Programming (GDP) solver')
 class GDPoptSolver(object):
-    """A decomposition-based GDP solver.
+    """Decomposition solver for Generalized Disjunctive Programming (GDP) problems.
 
-    Keyword arguments below are specified for the ``solve`` function.
+    The GDPopt (Generalized Disjunctive Programming optimizer) solver applies a
+    variety of decomposition-based approaches to solve Generalized Disjunctive
+    Programming (GDP) problems. GDP models can include nonlinear, continuous
+    variables and constraints, as well as logical conditions.
+
+    These approaches include:
+
+    - Outer approximation
+    - Partial surrogate cuts [pending]
+    - Generalized Bender decomposition [pending]
+
+    This solver implementation was developed by Carnegie Mellon University in the
+    research group of Ignacio Grossmann.
+
+    For nonconvex problems, the bounds self.LB and self.UB may not be rigorous.
+
+    Questions: Please make a post at StackOverflow and/or contact Qi Chen
+    <https://github.com/qtothec>.
+
+    Keyword arguments below are specified for the :code:`solve` function.
 
     """
 
