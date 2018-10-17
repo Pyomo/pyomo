@@ -5,6 +5,7 @@ the functionality in runef and runph for ConcreteModels
 Author: David L. Woodruff, started February 2017
 """
 
+import inspect
 from pyomo.environ import *
 from pyomo.pysp.scenariotree.instance_factory \
     import ScenarioTreeInstanceFactory
@@ -96,16 +97,23 @@ class StochSolver:
         """Initialize a StochSolver object.
         """
         if fsfct is None:
+            # Changed in October 2018: None implies AbstractModel
             args_list = _optiondict_2_list(phopts)
             parser = phinit.construct_ph_options_parser("")
             options = parser.parse_args(args_list)
 
             scenario_instance_factory = \
                 ScenarioTreeInstanceFactory(fsfile, tree_model)
-            # delete this comment; options are probabl wrong format
-            self.scenario_tree = \
+
+            try:
+                self.scenario_tree = \
                     phinit.GenerateScenarioTreeForPH(options,
                                                      scenario_instance_factory)
+            except:
+                print ("ERROR in StochSolver called from",inspect.stack()[1][3])
+                raise RuntimeError("fsfct is None, so assuming",
+                      "AbstractModel but could not find all ingredients.")
+                
         else:  # concrete model
             if  callable(fsfct):
                 scen_function = fsfct

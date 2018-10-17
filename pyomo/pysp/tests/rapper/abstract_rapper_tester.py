@@ -1,7 +1,7 @@
 # Provide some test for rapper
-# Author: David L. Woodruff (circa March 2017 and Sept 2018)
+# Author: David L. Woodruff (Sept 2018)
 
-import unittest
+import pyutilib.th as unittest
 import tempfile
 import sys
 import os
@@ -13,8 +13,7 @@ from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioT
 import pyomo as pyomoroot
 
 __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
-__date__ = 'August 14, 2017'
-__version__ = 1.4
+__version__ = 1.5
 
 solvername = "gurobi" # could use almost any solver
 
