@@ -119,16 +119,17 @@ class StochSolver:
                 scen_function = getattr(m, fsfct)
 
             if tree_model is None:
-                tree_maker = getattr(m, \
-                                     "pysp_scenario_tree_model_callback")
+                treecbname = "pysp_scenario_tree_model_callback"
+                tree_maker = getattr(m, treecbname)
 
                 tree = tree_maker()
-                tree_model = tree.as_concrete_model()
-
-                # DLW March 21: still not correct
-                scenario_instance_factory = \
-                    ScenarioTreeInstanceFactory("ReferenceModel.py", tree_model)
-                #ScenarioTreeInstanceFactory(scen_function, tree_model)
+                if isinstance(tree, Pyo.ConcreteModel):
+                    tree_model = tree
+                else:
+                    raise RuntimeError("The tree returned by",treecbname,
+                                       "must be a ConcreteModel") 
+                    
+                scenario_instance_factory = ScenarioTreeInstanceFactory(scen_function, tree_model)
 
             else: 
                 # DLW March 21: still not correct
