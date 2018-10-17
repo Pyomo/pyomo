@@ -146,7 +146,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                 ans = self.mcpp.new_add(ans, arg)
         elif isinstance(node, PowExpression):
             assert (type(data[0]) == int),\
-                "Argument to pow() must be an integer"
+                "Argument to pow() must be an integer. Received %s" % (data[0],)
             ans = self.mcpp.new_power(data[0], data[1])
         elif isinstance(node, ReciprocalExpression):
             ans = self.mcpp.new_reciprocal(

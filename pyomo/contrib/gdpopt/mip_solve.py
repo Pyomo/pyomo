@@ -114,6 +114,7 @@ def distinguish_mip_infeasible_or_unbounded(m, config):
     """
     tmp_args = deepcopy(config.mip_solver_args)
     # TODO This solver option is specific to Gurobi.
+    tmp_args['options'] = tmp_args.get('options', {})
     tmp_args['options']['DualReductions'] = 0
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.mip_solver).solve(m, **tmp_args)
