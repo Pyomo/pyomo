@@ -439,7 +439,9 @@ def copy_and_fix_mip_values_to_nlp(var_list, val_list, config):
 
 
 def constraints_in_True_disjuncts(model):
-    """Yield active constraints in disjuncts where the indicator value is set or fixed to True."""
+    """Yield constraints in disjuncts where the indicator value is set or fixed to True."""
+    for constr in model.component_data_objects(Constraint):
+        yield constr
     observed_disjuncts = ComponentSet()
     for disjctn in model.component_data_objects(Disjunction):
         # get all the disjuncts in the disjunction. Check which ones are True.
@@ -448,7 +450,7 @@ def constraints_in_True_disjuncts(model):
                 continue
             observed_disjuncts.add(disj)
             if disj.indicator_var.value == 1:
-                for constr in disj.component_data_objects(Constraint, active=True):
+                for constr in disj.component_data_objects(Constraint):
                     yield constr
 
 

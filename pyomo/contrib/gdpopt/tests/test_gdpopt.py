@@ -188,8 +188,8 @@ class TestGLOA(unittest.TestCase):
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
         SolverFactory('gdpopt').solve(
-            eight_process, strategy='GLOA', tee=True,
-            mip_solver=required_solvers[1],
+            eight_process, strategy='GLOA', tee=False,
+            mip_solver='glpk',
             nlp_solver='gams',
             nlp_solver_args=dict(
                 solver='baron',
@@ -203,7 +203,7 @@ class TestGLOA(unittest.TestCase):
         strip_pack = exfile.build_rect_strip_packing_model()
         SolverFactory('gdpopt').solve(
             strip_pack, strategy='GLOA',
-            mip_solver=required_solvers[1],
+            mip_solver='glpk',
             nlp_solver='gams',
             nlp_solver_args={'solver': 'baron'})
         self.assertTrue(
