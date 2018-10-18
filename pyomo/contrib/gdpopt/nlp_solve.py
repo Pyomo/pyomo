@@ -46,7 +46,8 @@ def solve_NLP(nlp_model, solve_data, config):
         # Remove terms in equal to zero summations
         'contrib.propagate_zero_sum',
         # Remove trivial constraints
-        'contrib.deactivate_trivial_constraints']
+        'contrib.deactivate_trivial_constraints',
+    ]
     for xfrm in preprocessing_transformations:
         TransformationFactory(xfrm).apply_to(nlp_model)
 

@@ -104,6 +104,11 @@ def add_affine_cuts(nlp_result, solve_data, config):
 
         # TODO check that constraint is on active Disjunct
 
+        vars_in_constr = list(
+            EXPR.identify_variables(constr.body))
+        if any(var.value is None for var in vars_in_constr):
+            continue  # a variable has no values
+
         # mcpp stuff
         mc_eqn = mc(constr.body)
         ccSlope = mc_eqn.subcc()
@@ -113,8 +118,6 @@ def add_affine_cuts(nlp_result, solve_data, config):
         ub_int = min(constr.upper, mc_eqn.upper()) if constr.has_ub() else mc_eqn.upper()
         lb_int = max(constr.lower, mc_eqn.lower()) if constr.has_lb() else mc_eqn.lower()
 
-        vars_in_constr = list(
-            EXPR.identify_variables(constr.body))
         parent_block = constr.parent_block()
         # Create a block on which to put outer approximation cuts.
         aff_utils = parent_block.component('GDPopt_aff')
