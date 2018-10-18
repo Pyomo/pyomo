@@ -31,3 +31,9 @@ def build_model():
     m.obj = Objective(expr=(m.x1 - 3)**2 + (m.x2 - 2)**2 + m.c, sense=minimize)
 
     return m
+
+if __name__ == "__main__":
+    model = build_model()
+    results = SolverFactory('gdpopt').solve(m, tee=True)
+    print(results)
+
