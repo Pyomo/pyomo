@@ -17,7 +17,7 @@ from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, Any, value
 )
-from pyomo.core.base import Transformation
+from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core.base.component import ComponentUID, ActiveComponent
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
@@ -27,7 +27,6 @@ from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from pyomo.repn import generate_standard_repn
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.plugin import alias
 from six import iterkeys, iteritems
 
 logger = logging.getLogger('pyomo.gdp.bigm')
@@ -41,6 +40,7 @@ def _to_dict(val):
     return {None: val}
 
 
+@TransformationFactory.register('gdp.bigm', doc="Relax disjunctive model using big-M terms.")
 class BigM_Transformation(Transformation):
     """Relax disjunctive model using big-M terms.
 
@@ -94,8 +94,6 @@ class BigM_Transformation(Transformation):
         'src': <source disjunct>
         'srcConstraints': ComponentMap(relaxed_constraint: constraint)
     """
-
-    alias('gdp.bigm', doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     CONFIG = ConfigBlock("gdp.bigm")
     CONFIG.declare('targets', ConfigValue(

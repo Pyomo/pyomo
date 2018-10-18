@@ -17,7 +17,6 @@ from pyomo.core import (Constraint, Objective, ConstraintList,
                            TransformationFactory, maximize, minimize, value)
 from pyomo.opt import SolverFactory
 from pyomo.gdp.disjunct import Disjunct
-from pyomo.common.plugin import alias
 from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.opt import TerminationCondition as tc
 import textwrap
@@ -71,6 +70,8 @@ def disjunctive_ub(var, scope):
     return disjunctive_bound(var, scope)[1]
 
 
+@TransformationFactory.register('contrib.compute_disj_var_bounds',
+          doc="Compute disjunctive bounds in a given model.")
 class ComputeDisjunctiveVarBounds(Transformation):
     """Compute disjunctive bounds in a given model.
 
@@ -84,9 +85,6 @@ class ComputeDisjunctiveVarBounds(Transformation):
         model (Component): The model under which to look for disjuncts.
 
     """
-
-    alias('contrib.compute_disj_var_bounds',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, model):
         """Apply the transformation.

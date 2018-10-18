@@ -1,0 +1,13 @@
+model.foo.clear_value(model.y)
+
+try:
+   print(model.foo[model.y[1]])       # -> raise KeyError
+except KeyError:
+   pass
+
+try:
+   del model.foo[model.y[1]]          # -> raise KeyError
+except KeyError:
+   pass
+
+model.foo.clear_value(model.y[1])      # -> does nothing

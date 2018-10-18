@@ -16,7 +16,7 @@ from weakref import ref as weakref_ref
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.numvalue import NumericValue, value, is_fixed
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
@@ -458,6 +458,7 @@ class _GeneralVarData(_VarData):
     free = unfix
 
 
+@ModelComponentFactory.register("Decision variables.")
 class Var(IndexedComponent):
     """A numeric variable, which may be defined over an index.
 
@@ -944,6 +945,8 @@ class IndexedVar(Var):
 
     free=unfix
 
+
+@ModelComponentFactory.register("List of decision variables.")
 class VarList(IndexedVar):
     """
     Variable-length indexed variable objects used to construct Pyomo models.
@@ -982,6 +985,3 @@ class VarList(IndexedVar):
         next_idx = len(self._index) + 1
         self._index.add(next_idx)
         return self[next_idx]
-
-register_component(Var, "Decision variables.")
-register_component(VarList, "List of decision variables.")

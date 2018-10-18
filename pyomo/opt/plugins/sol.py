@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -16,7 +16,6 @@ import re
 
 import pyutilib.misc
 
-from pyomo.common.plugin import alias
 from pyomo.opt.base import results
 from pyomo.opt.base.formats import ResultsFormat
 from pyomo.opt import (SolverResults,
@@ -26,13 +25,13 @@ from pyomo.opt import (SolverResults,
 
 from six.moves import xrange
 
+
+@results.ReaderFactory.register(str(ResultsFormat.sol))
 class ResultsReader_sol(results.AbstractResultsReader):
     """
     Class that reads in a *.sol results file and generates a
     SolverResults object.
     """
-
-    alias(str(ResultsFormat.sol))
 
     def __init__(self, name=None):
         results.AbstractResultsReader.__init__(self,ResultsFormat.sol)
@@ -213,7 +212,10 @@ class ResultsReader_sol(results.AbstractResultsReader):
                     if kind == 0: # Var
                         for cnt in xrange(nvalues):
                             suf_line = fin.readline().split()
-                            soln_variable["v"+suf_line[0]][suffix_name] = \
+                            key = "v"+suf_line[0]
+                            if key not in soln_variable:
+                                soln_variable[key] = {}
+                            soln_variable[key][suffix_name] = \
                                 convert_function(suf_line[1])
                     elif kind == 1: # Con
                         for cnt in xrange(nvalues):
@@ -221,9 +223,14 @@ class ResultsReader_sol(results.AbstractResultsReader):
                             key = "c"+suf_line[0]
                             if key not in soln_constraint:
                                 soln_constraint[key] = {}
-                            # convert the first letter of the suffix name to upper case,
-                            # mainly for pretty-print / output purposes. these are lower-cased
-                            # when loaded into real suffixes, so it is largely redundant.
+                            # GH: About the comment below: This makes for a
+                            # confusing results object and more confusing tests.
+                            # We should not muck with the names of suffixes
+                            # coming out of the sol file.
+                            #
+                            #   convert the first letter of the suffix name to upper case,
+                            #   mainly for pretty-print / output purposes. these are lower-cased
+                            #   when loaded into real suffixes, so it is largely redundant.
                             translated_suffix_name = suffix_name[0].upper() + suffix_name[1:]
                             soln_constraint[key][translated_suffix_name] = \
                                 convert_function(suf_line[1])

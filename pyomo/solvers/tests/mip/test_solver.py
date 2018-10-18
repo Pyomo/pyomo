@@ -22,7 +22,6 @@ import pyutilib.common
 
 import pyomo.opt
 import pyomo.solvers.plugins.solvers
-from pyomo.common.plugin import alias
 
 old_tempdir = None
 def setUpModule():
@@ -33,9 +32,8 @@ def setUpModule():
 def tearDownModule():
     pyutilib.services.TempfileManager.tempdir = old_tempdir
 
-class TestSolver2(pyomo.opt.OptSolver):
 
-    alias('stest2')
+class TestSolver2(pyomo.opt.OptSolver):
 
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
@@ -44,9 +42,14 @@ class TestSolver2(pyomo.opt.OptSolver):
     def enabled(self):
         return False
 
+
 class OptSolverDebug(unittest.TestCase):
 
+    def setUp(self):
+        pyomo.opt.SolverFactory.register('stest2')(TestSolver2)
+
     def tearDown(self):
+        pyomo.opt.SolverFactory.unregister('stest2')
         pyutilib.services.TempfileManager.clear_tempfiles()
 
     def test_solver_init1(self):
@@ -78,11 +81,8 @@ class OptSolverDebug(unittest.TestCase):
 
     def test_avail(self):
         ans = pyomo.opt.SolverFactory("stest2")
-        try:
-            ans.available()
-            self.fail("Expected exception for 'stest2' solver, which is disabled")
-        except pyutilib.common.ApplicationError:
-            pass
+        # No exception should be generated
+        ans.available()
 
 
 

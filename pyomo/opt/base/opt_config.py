@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.services
+import pyomo.common
 
 #
 # Create plugins, which are automatically registered in the 'pyomo.opt'
@@ -18,8 +18,8 @@ def validate_pico(filename):
     if filename.startswith('/usr/bin') or filename.startswith('/bin'):
         return False
     return True
-pyutilib.services.register_executable(name="PICO", validate=validate_pico)
-pyutilib.services.register_executable(name="pico_convert")
-pyutilib.services.register_executable(name="glpsol")
-pyutilib.services.register_executable(name="ampl")
-pyutilib.services.register_executable(name="timer")
+pyomo.common.register_executable(name="PICO", validate=validate_pico)
+pyomo.common.register_executable(name="pico_convert")
+pyomo.common.register_executable(name="glpsol")
+pyomo.common.register_executable(name="ampl")
+pyomo.common.register_executable(name="timer")

@@ -28,6 +28,7 @@ from pyomo.solvers.tests.testcases import test_scenarios
 # A function that returns a function that gets
 # added to a test class.
 #
+@unittest.nottest
 def create_test_method(model, solver, io,
                        test_case,
                        symbolic_labels):

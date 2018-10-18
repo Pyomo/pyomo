@@ -8,8 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ('IOptSolver',
-           'OptSolver',
+__all__ = ('OptSolver',
            'SolverFactory',
            'UnknownSolver',
            'check_available_solvers')
@@ -21,7 +20,7 @@ import time
 import logging
 
 from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
-from pyomo.common.plugin import *
+from pyomo.common import Factory
 import pyutilib.common
 import pyutilib.misc
 import pyutilib.services
@@ -65,35 +64,10 @@ def _extract_version(x, length=4):
     return None #(0,0,0,0)[:length]
 
 
-class IOptSolver(Interface):
-    """Interface class for creating optimization solvers"""
-
-    def available(self, exception_flag=True):
-        """Determine if this optimizer is available."""
-
-    def warm_start_capable(self):
-        """ True is the solver can accept a warm-start solution."""
-
-    def solve(self, *args, **kwds):
-        """Perform optimization and return an SolverResults object."""
-
-    def reset(self):
-        """Reset the state of an optimizer"""
-
-    def set_options(self, istr):
-        """Set the options in the optimizer from a string."""
-
-    def __bool__(self):
-        """Alias for self.available()"""
-
-
-class UnknownSolver(Plugin):
-
-    implements(IOptSolver)
+class UnknownSolver(object):
 
     def __init__(self, *args, **kwds):
         #super(UnknownSolver,self).__init__(**kwds)
-        Plugin.__init__(self, **kwds)
 
         #
         # The 'type' is the class type of the solver instance
@@ -101,7 +75,7 @@ class UnknownSolver(Plugin):
         if "type" in kwds:
             self.type = kwds["type"]
         else:  #pragma:nocover
-            raise PluginError(
+            raise ValueError(
                 "Expected option 'type' for UnknownSolver constructor")
 
         self.options = {}
@@ -109,11 +83,20 @@ class UnknownSolver(Plugin):
         self._kwds = kwds
 
     #
-    # The following implement the base IOptSolver interface
+    # Support "with" statements. Forgetting to call deactivate
+    # on Plugins is a common source of memory leaks
     #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
 
     def available(self, exception_flag=True):
         """Determine if this optimizer is available."""
+        if exception_flag:
+            from pyutilib.common import ApplicationError
+            raise pyutilib.common.ApplicationError("Solver (%s) not available" % str(self.name))
         return False
 
     def warm_start_capable(self):
@@ -153,65 +136,52 @@ The original solver was created with the following parameters:
 + "\n\toptions: %s" % ( self.options, ) )
 
 
-#
-# A SolverFactory is an instance of a plugin factory that is
-# customized with a custom __call__ method
-SolverFactory = CreatePluginFactory(IOptSolver)
-#
-# This is the custom __call__ method
-#
-def __solver_call__(self, _name=None, args=[], **kwds):
-    if _name is None:
-        return self
-    _name=str(_name)
-    if ':' in _name:
-        _name, subsolver = _name.split(':',1)
-        kwds['solver'] = subsolver
-    elif 'solver' in kwds:
-        subsolver = kwds['solver']
-    else:
-        subsolver = None
-    opt = None
-    try:
-        if _name in IOptSolver._factory_active:
-            opt = PluginFactory(IOptSolver._factory_cls[_name], args, **kwds)
-        else:
-            mode = kwds.get('solver_io', 'nl')
-            if mode is None:
-                mode = 'nl'
-            _implicit_solvers = {'nl': 'asl', 'os': '_ossolver' }
-            if "executable" not in kwds:
-                kwds["executable"] = _name
-            if mode in _implicit_solvers:
-                if _implicit_solvers[mode] not in IOptSolver._factory_cls:
-                    raise RuntimeError(
-                        "  The solver plugin was not registered.\n"
-                        "  Please confirm that the 'pyomo.environ' package has been imported.")
-                    #"solver plugin - cannot construct solver plugin with "
-                    #"IO mode=%s" % (_implicit_solvers[mode], mode) )
-                opt = PluginFactory(
-                    IOptSolver._factory_cls[_implicit_solvers[mode]],
-                    args, **kwds )
-                if opt is not None:
-                    opt.set_options('solver='+_name)
-    except:
-        err = sys.exc_info()[1]
-        logger.warning("Failed to create solver with name '%s':\n%s"
-                     % (_name, err))
-        opt = None
-    if opt is not None and _name != "py" and subsolver is not None:
-        # py just creates instance of its subsolver, no need for this option
-        opt.set_options('solver='+subsolver)
-    if opt is None:
-        opt = UnknownSolver( type=_name, *args, **kwds )
-        opt.name = _name
-    opt.deactivate()
-    return opt
+class SolverFactoryClass(Factory):
 
-#
-# Adding the the custom __call__ method to SolverFactory
-#
-pyutilib.misc.add_method(SolverFactory, __solver_call__, name='__call__')
+    def __call__(self, _name=None, **kwds):
+        if _name is None:
+            return self
+        _name=str(_name)
+        if ':' in _name:
+            _name, subsolver = _name.split(':',1)
+            kwds['solver'] = subsolver
+        elif 'solver' in kwds:
+            subsolver = kwds['solver']
+        else:
+            subsolver = None
+        opt = None
+        try:
+            if _name in self._cls:
+                opt = self._cls[_name](**kwds)
+            else:
+                mode = kwds.get('solver_io', 'nl')
+                if mode is None:
+                    mode = 'nl'
+                _implicit_solvers = {'nl': 'asl' }
+                if "executable" not in kwds:
+                    kwds["executable"] = _name
+                if mode in _implicit_solvers:
+                    if _implicit_solvers[mode] not in self._cls:
+                        raise RuntimeError(
+                            "  The solver plugin was not registered.\n"
+                            "  Please confirm that the 'pyomo.environ' package has been imported.")
+                    opt = self._cls[_implicit_solvers[mode]](**kwds)
+                    if opt is not None:
+                        opt.set_options('solver='+_name)
+        except:
+            err = sys.exc_info()[1]
+            logger.warning("Failed to create solver with name '%s':\n%s"
+                         % (_name, err))
+            opt = None
+        if opt is not None and _name != "py" and subsolver is not None:
+            # py just creates instance of its subsolver, no need for this option
+            opt.set_options('solver='+subsolver)
+        if opt is None:
+            opt = UnknownSolver( type=_name, **kwds )
+            opt.name = _name
+        return opt
+
+SolverFactory = SolverFactoryClass('solver type')
 
 #
 # TODO: It is impossible to load CBC with NL file-io using this function,
@@ -262,10 +232,18 @@ def _raise_ephemeral_error(name, keyword=""):
         "solve." % (name, keyword))
 
 
-class OptSolver(Plugin):
+class OptSolver(object):
     """A generic optimization solver"""
 
-    implements(IOptSolver)
+    #
+    # Support "with" statements. Forgetting to call deactivate
+    # on Plugins is a common source of memory leaks
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
 
     #
     # Adding to help track down invalid code after making
@@ -329,15 +307,13 @@ class OptSolver(Plugin):
 
     def __init__(self, **kwds):
         """ Constructor """
-
-        Plugin.__init__(self, **kwds)
         #
         # The 'type' is the class type of the solver instance
         #
         if "type" in kwds:
             self.type = kwds["type"]
         else:                           #pragma:nocover
-            raise PluginError("Expected option 'type' for OptSolver constructor")
+            raise ValueError("Expected option 'type' for OptSolver constructor")
 
         #
         # The 'name' is either the class type of the solver instance, or a
@@ -524,13 +500,7 @@ class OptSolver(Plugin):
 
     def available(self, exception_flag=True):
         """ True if the solver is available """
-        if self._assert_available:
-            return True
-        tmp = self.enabled()
-        if exception_flag and not tmp:
-            raise pyutilib.common.ApplicationError("OptSolver plugin %s is disabled"
-                                                   % self.name)
-        return tmp
+        return True
 
     def warm_start_capable(self):
         """ True is the solver can accept a warm-start solution """

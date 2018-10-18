@@ -2,8 +2,7 @@
 from pyutilib.services import TempfileManager
 from pyutilib.services import register_executable
 
-from pyomo.common import plugin
-from pyomo.opt.base import IOptSolver
+from pyomo.opt.base import SolverFactory, OptSolver
 from pyomo.solvers.plugins.solvers.ASL import ASL
 
 from pyomo.contrib.trustregion.TRF import TRF
@@ -13,7 +12,11 @@ import pyomo.contrib.trustregion.param as param
 def load():
     pass
 
-class TrustRegionSolver(plugin.Plugin):
+@SolverFactory.register(
+        'trustregion',
+        doc='Trust region filter method for black box/glass box optimization'
+    )
+class TrustRegionSolver(OptSolver):
     """
     A trust region filter method for black box / glass box optimizaiton
     Solves nonlinear optimization problems containing external function calls
@@ -26,11 +29,12 @@ class TrustRegionSolver(plugin.Plugin):
     """
     #    + param.CONFIG.generte_yaml_template()
 
-    plugin.implements(IOptSolver)
-    plugin.alias(
-        'trustregion',
-        doc='Trust region filter method for black box/glass box optimization'
-    )
+    def __init__(self, **kwds):
+        #
+        # Call base class constructor
+        #
+        kwds['type'] = 'trustregion'
+        OptSolver.__init__(self, **kwds)
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -50,13 +54,11 @@ class TrustRegionSolver(plugin.Plugin):
         #config = param.CONFIG(kwds)
         return TRF(model, eflist)#, config)
 
+
+@SolverFactory.register('contrib.gjh', doc='Interface to the AMPL GJH "solver"')
 class GJHSolver(ASL):
     """An interface to the AMPL GJH "solver" for evaluating a model at a
     point."""
-
-    plugin.implements(IOptSolver)
-    plugin.alias(
-        'contrib.gjh', doc='Interface to the AMPL GJH "solver"')
 
     def __init__(self, **kwds):
         kwds['type'] = 'gjh'
