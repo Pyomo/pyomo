@@ -22,7 +22,7 @@ import pyomo.common
 
 logger = logging.getLogger('pyomo.common.download')
 
-pyomo.common.DownloadFactory = Factory('library downloaders')
+DownloadFactory = pyomo.common.Factory('library downloaders')
 
 class FileDownloader(object):
     def __init__(self, insecure=False):

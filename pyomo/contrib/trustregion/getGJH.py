@@ -10,6 +10,7 @@
 
 import logging
 import os
+import stat
 import sys
 from pyomo.common.download import FileDownloader
 
@@ -51,7 +52,7 @@ def get_gjh(downloader=None):
 def main(argv):
     downloader = FileDownloader()
     downloader.parse_args(argv)
-    get_gsl(downloader)
+    get_gjh(downloader)
 
 if __name__ == '__main__':
     logger.setLevel(logging.INFO)
