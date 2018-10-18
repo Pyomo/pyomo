@@ -398,7 +398,7 @@ class StreamBasedExpressionVisitor(object):
                         # We are aborting processing of this child node.
                         # Tell this node to accept the child result and
                         # we will move along
-                        if self.acceptChildResult:
+                        if self.acceptChildResult is not None:
                             data = self.acceptChildResult(
                                 node, data, child_result)
                         elif data is not None:
