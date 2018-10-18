@@ -286,9 +286,6 @@ class SymbolicDerivatives(unittest.TestCase):
         expr = m.x[1]+m.x[2]*m.x[3]**2
         ans = differentiate(expr, wrt_list=jacs)
 
-        for i in m.I:
-            print i, ans[idxMap[i]]
-
         self.assertEqual(len(ans), len(m.I))
         self.assertEqual(str(ans[0]), "1.0")
         self.assertEqual(str(ans[1]), "x[3]**2.0")
@@ -310,11 +307,6 @@ class SymbolicDerivatives(unittest.TestCase):
 
         expr = m.x[1]+m.x[2]*m.x[3]**2
         ans = differentiate(expr, wrt_list=hessian)
-
-        for i in m.I:
-            for j in m.I:
-                print i, j, ans[idxMap[i,j]]
-
 
         self.assertEqual(len(ans), len(m.I)**2)
         for i in m.I:
