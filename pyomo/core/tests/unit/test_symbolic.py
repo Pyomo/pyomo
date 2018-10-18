@@ -14,8 +14,8 @@ import pyomo.environ
 from pyomo.common import DeveloperError
 from pyomo.core import *
 from pyomo.core.base.symbolic import (
-    differentiate, NondifferentiableError,
-    _sympy_available, _map_sympy2pyomo,
+    differentiate, NondifferentiableError, PyomoSympyBimap,
+    _sympy_available, sympy2pyomo_expression,
 )
 
 def s(e):
@@ -244,6 +244,71 @@ class SymbolicDerivatives(unittest.TestCase):
         self.assertTrue(e.is_expression_type())
         self.assertEqual(s(e), s(0.5 * m.x**-0.5))
 
+    def test_param(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.p = Param(mutable=True, initialize=5)
+
+        e = differentiate(m.p*m.x, wrt=m.x)
+        self.assertIs(type(e), float)
+        self.assertEqual(e, 5.0)
+
+    def test_jacobian(self):
+        m = ConcreteModel()
+        m.I = RangeSet(4)
+        m.x = Var(m.I)
+
+        idxMap = {}
+        jac = []
+        for i in m.I:
+            idxMap[i] = len(jac)
+            jac.append(m.x[i])
+
+        expr = m.x[1]+m.x[2]*m.x[3]**2
+        ans = differentiate(expr, wrt_list=jac)
+
+        for i in m.I:
+            print i, ans[idxMap[i]]
+
+        self.assertEqual(len(ans), len(m.I))
+        self.assertEqual(str(ans[0]), "1.0")
+        self.assertEqual(str(ans[1]), "x[3]**2.0")
+        self.assertEqual(str(ans[2]), "2.0*x[2]*x[3]")
+        # 0 calculated by bypassing sympy
+        self.assertEqual(str(ans[3]), "0.0")
+
+    def test_hessian(self):
+        m = ConcreteModel()
+        m.I = RangeSet(4)
+        m.x = Var(m.I)
+
+        idxMap = {}
+        hessian = []
+        for i in m.I:
+            for j in m.I:
+                idxMap[i,j] = len(hessian)
+                hessian.append((m.x[i], m.x[j]))
+
+        expr = m.x[1]+m.x[2]*m.x[3]**2
+        ans = differentiate(expr, wrt_list=hessian)
+
+        for i in m.I:
+            for j in m.I:
+                print i, j, ans[idxMap[i,j]]
+
+
+        self.assertEqual(len(ans), len(m.I)**2)
+        for i in m.I:
+            for j in m.I:
+                self.assertEqual(str(ans[idxMap[i,j]]), str(ans[idxMap[j,i]]))
+        # 0 calculated by sympy
+        self.assertEqual(str(ans[idxMap[1,1]]), "0.0")
+        self.assertEqual(str(ans[idxMap[2,2]]), "0.0")
+        self.assertEqual(str(ans[idxMap[3,3]]), "2.0*x[2]")
+        # 0 calculated by bypassing sympy
+        self.assertEqual(str(ans[idxMap[4,4]]), "0.0")
+        self.assertEqual(str(ans[idxMap[2,3]]), "2.0*x[3]")
+
     def test_nondifferentiable(self):
         m = ConcreteModel()
         m.foo = Var()
@@ -269,14 +334,22 @@ class SymbolicDerivatives(unittest.TestCase):
             "Must specify exactly one of wrt and wrt_list",
             differentiate, m.x, wrt=m.x, wrt_list=[m.x])
 
-        x = pyomo.core.base.symbolic.sympy.Symbol('x')
+        obj_map = PyomoSympyBimap()
         class bogus(object):
             def __init__(self):
-                self._args = (x,)
+                self._args = (obj_map.getSympySymbol(m.x),)
         self.assertRaisesRegexp(
             DeveloperError,
             "sympy expression .* not found in the operator map",
-            _map_sympy2pyomo, bogus(), {x:m.x})
+            sympy2pyomo_expression, bogus(), obj_map)
+
+class SymbolicDerivatives_importTest(unittest.TestCase):
+    def test_sympy_avail_flag(self):
+        if _sympy_available:
+            import sympy
+        else:
+            with self.assertRaises(ImportError):
+                import sympy
 
 if __name__ == "__main__":
     unittest.main()
