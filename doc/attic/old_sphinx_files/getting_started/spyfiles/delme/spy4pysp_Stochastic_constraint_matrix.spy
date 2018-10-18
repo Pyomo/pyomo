@@ -1,0 +1,28 @@
+from pyomo.pysp.annotations import StochasticConstraintBodyAnnotation
+
+model = ConcreteModel()
+
+# data that is initialized on a per-scenario basis
+#p = ...
+#q = ...
+
+# a first-stage variable
+model.x = Var()
+
+# a second-stage variable
+model.y = Var()
+
+# declare the annotation
+model.stoch_matrix = StochasticConstraintBodyAnnotation()
+
+# a singleton constraint with stochastic coefficients
+# both the first- and second-stage variable
+model.c = Constraint(expr= p * model.x + q * model.y == 1)
+model.stoch_matrix.declare(model.c)
+# an assignment that is equivalent to the previous one
+model.stoch_matrix.declare(model.c, variables=[model.x, model.y])
+
+# a singleton range constraint with a stochastic coefficient
+# for the first-stage variable only
+model.r = Constraint(expr= 0 <= p * model.x - 2.0 * model.y <= 10)
+model.stoch_matrix.declare(model.r, variables=[model.x])

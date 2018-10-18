@@ -10,9 +10,9 @@ VARIABLES
 	GAMS_OBJECTIVE
 	x1;
 
-c1.. power(x1, 3) - x1 =e= 0.0 ;
-c2.. 10*(power(x1, 3) - x1) =e= 0.0 ;
-c3.. (power(x1, 3) - x1)*0.1 =e= 0.0 ;
+c1.. power(x1, 3) + (-1)*x1 =e= 0.0 ;
+c2.. 10*(power(x1, 3) + (-1)*x1) =e= 0.0 ;
+c3.. (power(x1, 3) + (-1)*x1)*0.1 =e= 0.0 ;
 c4.. GAMS_OBJECTIVE =e= x1 ;
 
 x1.l = 0.5;

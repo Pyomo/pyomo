@@ -360,8 +360,9 @@ class CBCSHELL(SystemCallSolver):
             if len(tokens) >= 3 and tokens[0] == "Objective" and tokens[1] == "value:":
                 # parser for log file generetated with discrete variable
                 soln.objective['__default_objective__']['Value'] = float(tokens[2])
-            if len(tokens) > 4 and tokens[0] == "Optimal" and tokens[2] == "objective":
+            if len(tokens) > 4 and tokens[0] == "Optimal" and tokens[2] == "objective" and tokens[4] != "and":
                 # parser for log file generetated without discrete variable
+                # see pull request #339: last check avoids lines like "Optimal - objective gap and complementarity gap both smallish and small steps"
                 soln.status = SolutionStatus.optimal
                 soln.objective['__default_objective__']['Value'] = float(tokens[4])
             if len(tokens) > 6 and tokens[4] == "best" and tokens[5] == "objective":

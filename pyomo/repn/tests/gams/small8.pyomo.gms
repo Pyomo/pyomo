@@ -15,7 +15,7 @@ VARIABLES
 	x3;
 
 c1_lo.. 2.0 =l= x1*x1 ;
-c2_hi.. x1 - 0.5*x2 =l= 0.0 ;
+c2_hi.. x1 + (-0.5)*x2 =l= 0.0 ;
 c3_hi.. x3 - (x1 + 2.0) =l= 0.0 ;
 c4.. GAMS_OBJECTIVE =e= x3 + x2*x2 + x1 ;
 

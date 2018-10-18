@@ -6040,6 +6040,16 @@ class WalkerTests(unittest.TestCase):
         self.assertEqual("2*(z[0]*x[0] + z[1]*x[1] + z[2]*x[2])", str(e))
         self.assertEqual("2*(z[0]*w[4] + z[1]*w[5] + z[2]*w[6])", str(f))
 
+    def test_replace_expressions_with_monomial_term(self):
+        M = ConcreteModel()
+        M.x = Var()
+        e = 2.0*M.x
+        substitution_map = {id(M.x): 3.0*M.x}
+        new_e = EXPR.replace_expressions(e, substitution_map=substitution_map)
+        self.assertEqual('6.0*x', str(new_e))
+        # See comment about this test in ExpressionReplacementVisitor
+        # old code would print '2.0*3.0*x'
+
     def test_identify_components(self):
         M = ConcreteModel()
         M.x = Var()

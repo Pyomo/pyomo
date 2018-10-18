@@ -26,7 +26,8 @@ from __future__ import division
 import logging
 
 from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
-                                 NonNegativeFloat, NonNegativeInt)
+                                 NonNegativeFloat, NonNegativeInt,
+                                 add_docstring_list)
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
 from pyomo.contrib.gdpopt.master_initialize import (GDPopt_initialize_master,
@@ -54,7 +55,11 @@ __version__ = (0, 4, 1)
         doc='The GDPopt decomposition-based '
         'Generalized Disjunctive Programming (GDP) solver')
 class GDPoptSolver(object):
-    """A decomposition-based GDP solver."""
+    """A decomposition-based GDP solver.
+
+    Keyword arguments below are specified for the ``solve`` function.
+
+    """
 
     _metasolver = False
 
@@ -171,6 +176,8 @@ class GDPoptSolver(object):
         description="The method to use for reformulating integer variables "
         "into binary for this solver."
     ))
+
+    __doc__ = add_docstring_list(__doc__, CONFIG)
 
     def available(self, exception_flag=True):
         """Check if solver is available.
