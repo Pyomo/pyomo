@@ -57,8 +57,14 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
             print("***The GUROBI solver plugin cannot extract solution suffix="+suffix)
             return
 
+    # Check for ISV Key License
+    if 'ISV_Key' in options:
+        isv_key_env = Env.OtherEnv(*options['ISV_Key'])
+    else:
+        isv_key_env = None
+
     # Load the lp model
-    model = read(model_file)
+    model = read(model_file, env=isv_key_env)
 
     # if the use wants to extract duals or reduced costs and the
     # model has quadratic constraints then we need to set the
@@ -75,7 +81,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
         return
 
     if warmstart_file is not None:
-        model.read(warmstart_file)
+        model.read(warmstart_file, env=isv_key_env)
 
     # set the mipgap if specified.
     if mipgap is not None:
@@ -86,22 +92,23 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     # key is specified, so you have to stare at the
     # output to see if it was accepted.
     for key, value in options.items():
-        # When options come from the pyomo command, all
-        # values are string types, so we try to cast
-        # them to a numeric value in the event that
-        # setting the parameter fails.
-        try:
-            model.setParam(key, value)
-        except TypeError:
-            # we place the exception handling for checking
-            # the cast of value to a float in another
-            # function so that we can simply call raise here
-            # instead of except TypeError as e / raise e,
-            # because the latter does not preserve the
-            # Gurobi stack trace
-            if not _is_numeric(value):
-                raise
-            model.setParam(key, float(value))
+        if key != 'ISV_Key':  # ISV_Key not supported by Gurobi
+            # When options come from the pyomo command, all
+            # values are string types, so we try to cast
+            # them to a numeric value in the event that
+            # setting the parameter fails.
+            try:
+                model.setParam(key, value)
+            except TypeError:
+                # we place the exception handling for checking
+                # the cast of value to a float in another
+                # function so that we can simply call raise here
+                # instead of except TypeError as e / raise e,
+                # because the latter does not preserve the
+                # Gurobi stack trace
+                if not _is_numeric(value):
+                    raise
+                model.setParam(key, float(value))
 
 
     if 'relax_integrality' in options:
