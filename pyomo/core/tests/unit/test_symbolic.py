@@ -253,19 +253,38 @@ class SymbolicDerivatives(unittest.TestCase):
         self.assertIs(type(e), float)
         self.assertEqual(e, 5.0)
 
+    def test_Expression_component(self):
+        m = ConcreteModel()
+        m.s = Set(initialize=['A', 'B'])
+        m.x = Var(m.s, domain=NonNegativeReals)
+
+        def y_rule(m, s):
+            return m.x[s] * 2
+        m.y = Expression(m.s, rule=y_rule)
+
+        expr = 1 - m.y['A'] ** 2
+        jacs = differentiate(expr, wrt_list=[m.x['A'], m.x['B']])
+        self.assertEqual(str(jacs[0]), "-8.0*x[A]")
+        self.assertEqual(str(jacs[1]), "0.0")
+
+        expr = 1 - m.y['B'] ** 2
+        jacs = differentiate(expr, wrt_list=[m.x['A'], m.x['B']])
+        self.assertEqual(str(jacs[0]), "0.0")
+        self.assertEqual(str(jacs[1]), "-8.0*x[B]")
+
     def test_jacobian(self):
         m = ConcreteModel()
         m.I = RangeSet(4)
         m.x = Var(m.I)
 
         idxMap = {}
-        jac = []
+        jacs = []
         for i in m.I:
-            idxMap[i] = len(jac)
-            jac.append(m.x[i])
+            idxMap[i] = len(jacs)
+            jacs.append(m.x[i])
 
         expr = m.x[1]+m.x[2]*m.x[3]**2
-        ans = differentiate(expr, wrt_list=jac)
+        ans = differentiate(expr, wrt_list=jacs)
 
         for i in m.I:
             print i, ans[idxMap[i]]
@@ -342,6 +361,7 @@ class SymbolicDerivatives(unittest.TestCase):
             DeveloperError,
             "sympy expression .* not found in the operator map",
             sympy2pyomo_expression, bogus(), obj_map)
+
 
 class SymbolicDerivatives_importTest(unittest.TestCase):
     def test_sympy_avail_flag(self):
