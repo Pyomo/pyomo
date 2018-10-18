@@ -2,15 +2,19 @@
 from pyutilib.services import TempfileManager
 from pyutilib.services import register_executable
 
+from pyomo.common.download import DownloadFactory
 from pyomo.opt.base import SolverFactory, OptSolver
 from pyomo.solvers.plugins.solvers.ASL import ASL
 
 from pyomo.contrib.trustregion.TRF import TRF
 from pyomo.contrib.trustregion.readgjh import readgjh
 import pyomo.contrib.trustregion.param as param
+import pyomo.contrib.trustregion.getGJH
 
 def load():
     pass
+
+DownloadFactory.register('gjh')(pyomo.contrib.trustregion.getGJH.main)
 
 @SolverFactory.register(
         'trustregion',

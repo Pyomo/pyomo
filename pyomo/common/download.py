@@ -18,9 +18,11 @@ import sys
 import zipfile
 
 from six.moves.urllib.request import urlopen
-
+import pyomo.common
 
 logger = logging.getLogger('pyomo.common.download')
+
+pyomo.common.DownloadFactory = Factory('library downloaders')
 
 class FileDownloader(object):
     def __init__(self, insecure=False):

@@ -12,9 +12,14 @@
 # set up as soon as possible
 import pyomo.common.log
 
+from pyutilib.factory.executable import (
+    register_executable, registered_executable, unregister_executable
+)
+from pyutilib.factory.factory import (
+    Factory, CachedFactory
+)
+
 import pyomo.common.config
 from pyomo.common.errors import DeveloperError
 from pyomo.common._task import pyomo_api, PyomoAPIData, PyomoAPIFactory
 from pyomo.common._command import pyomo_command, get_pyomo_commands
-from pyutilib.factory.executable import register_executable, registered_executable, unregister_executable
-from pyutilib.factory.factory import Factory, CachedFactory

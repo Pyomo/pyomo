@@ -59,6 +59,6 @@ if __name__ == '__main__':
         main(sys.argv[1:])
     except Exception as e:
         print(e.message)
-        print("Usage: %s [--insecure] target" % os.path.basename(sys.argv[0]))
+        print("Usage: %s [--insecure] [target]" % os.path.basename(sys.argv[0]))
         sys.exit(1)
 
