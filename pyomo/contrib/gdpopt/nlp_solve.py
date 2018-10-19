@@ -17,6 +17,8 @@ def solve_NLP(nlp_model, solve_data, config):
     config.logger.info(
         'Solving nonlinear subproblem for '
         'fixed binaries and logical realizations.')
+
+    # Error checking for unfixed discrete variables
     unfixed_discrete_vars = detect_unfixed_discrete_vars(nlp_model)
     if unfixed_discrete_vars:
         discrete_var_names = list(v.name for v in unfixed_discrete_vars)
@@ -44,7 +46,8 @@ def solve_NLP(nlp_model, solve_data, config):
         # Remove terms in equal to zero summations
         'contrib.propagate_zero_sum',
         # Remove trivial constraints
-        'contrib.deactivate_trivial_constraints']
+        'contrib.deactivate_trivial_constraints',
+    ]
     for xfrm in preprocessing_transformations:
         TransformationFactory(xfrm).apply_to(nlp_model)
 
@@ -70,7 +73,9 @@ def solve_NLP(nlp_model, solve_data, config):
 
     subprob_terminate_cond = results.solver.termination_condition
     if (subprob_terminate_cond is tc.optimal or
-            subprob_terminate_cond is tc.locallyOptimal):
+            subprob_terminate_cond is tc.locallyOptimal or
+            subprob_terminate_cond is tc.feasible
+       ):
         pass
     elif subprob_terminate_cond is tc.infeasible:
         config.logger.info('NLP subproblem was locally infeasible.')
@@ -181,7 +186,7 @@ def update_nlp_progress_indicators(solved_model, solve_data, config):
            solve_data.UB, ub_improved))
 
 
-def solve_LOA_subproblem(mip_var_values, solve_data, config):
+def solve_local_NLP(mip_var_values, solve_data, config):
     """Set up and solve the local LOA subproblem."""
     nlp_model = solve_data.working_model.clone()
     solve_data.nlp_iteration += 1
@@ -207,6 +212,6 @@ def solve_global_NLP(mip_var_values, solve_data, config):
     nlp_model.dual.deactivate()  # global solvers may not give dual info
 
     nlp_result = solve_NLP(nlp_model, solve_data, config)
-    if nlp_result[0]:  # NLP is feasible
+    if nlp_result.feasible:  # NLP is feasible
         update_nlp_progress_indicators(nlp_model, solve_data, config)
     return nlp_result

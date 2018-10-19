@@ -1,32 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Decomposition solver for Generalized Disjunctive Programming (GDP) problems.
-
-The GDPopt (Generalized Disjunctive Programming optimizer) solver applies a
-variety of decomposition-based approaches to solve Generalized Disjunctive
-Programming (GDP) problems. GDP models can include nonlinear, continuous
-variables and constraints, as well as logical conditions.
-
-These approaches include:
-
-- Outer approximation
-- Partial surrogate cuts [pending]
-- Generalized Bender decomposition [pending]
-
-This solver implementation was developed by Carnegie Mellon University in the
-research group of Ignacio Grossmann.
-
-For nonconvex problems, the bounds self.LB and self.UB may not be rigorous.
-
-Questions: Please make a post at StackOverflow and/or contact Qi Chen
-<https://github.com/qtothec>.
-
-"""
+"""Main driver module for GDPopt solver."""
 from __future__ import division
 
 import logging
 
 from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
-                                 NonNegativeFloat, NonNegativeInt)
+                                 NonNegativeFloat, NonNegativeInt,
+                                 add_docstring_list)
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
 from pyomo.contrib.gdpopt.master_initialize import (GDPopt_initialize_master,
@@ -54,7 +34,30 @@ __version__ = (0, 4, 1)
         doc='The GDPopt decomposition-based '
         'Generalized Disjunctive Programming (GDP) solver')
 class GDPoptSolver(object):
-    """A decomposition-based GDP solver."""
+    """Decomposition solver for Generalized Disjunctive Programming (GDP) problems.
+
+    The GDPopt (Generalized Disjunctive Programming optimizer) solver applies a
+    variety of decomposition-based approaches to solve Generalized Disjunctive
+    Programming (GDP) problems. GDP models can include nonlinear, continuous
+    variables and constraints, as well as logical conditions.
+
+    These approaches include:
+
+    - Outer approximation
+    - Partial surrogate cuts [pending]
+    - Generalized Bender decomposition [pending]
+
+    This solver implementation was developed by Carnegie Mellon University in the
+    research group of Ignacio Grossmann.
+
+    For nonconvex problems, the bounds self.LB and self.UB may not be rigorous.
+
+    Questions: Please make a post at StackOverflow and/or contact Qi Chen
+    <https://github.com/qtothec>.
+
+    Keyword arguments below are specified for the :code:`solve` function.
+
+    """
 
     _metasolver = False
 
@@ -171,6 +174,8 @@ class GDPoptSolver(object):
         description="The method to use for reformulating integer variables "
         "into binary for this solver."
     ))
+
+    __doc__ = add_docstring_list(__doc__, CONFIG)
 
     def available(self, exception_flag=True):
         """Check if solver is available.

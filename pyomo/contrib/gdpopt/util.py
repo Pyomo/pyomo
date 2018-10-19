@@ -438,6 +438,22 @@ def copy_and_fix_mip_values_to_nlp(var_list, val_list, config):
                 var.fix(val)
 
 
+def constraints_in_True_disjuncts(model):
+    """Yield constraints in disjuncts where the indicator value is set or fixed to True."""
+    for constr in model.component_data_objects(Constraint):
+        yield constr
+    observed_disjuncts = ComponentSet()
+    for disjctn in model.component_data_objects(Disjunction):
+        # get all the disjuncts in the disjunction. Check which ones are True.
+        for disj in disjctn.disjuncts:
+            if disj in observed_disjuncts:
+                continue
+            observed_disjuncts.add(disj)
+            if disj.indicator_var.value == 1:
+                for constr in disj.component_data_objects(Constraint):
+                    yield constr
+
+
 @contextmanager
 def time_code(timing_data_obj, code_block_name):
     start_time = timeit.default_timer()
