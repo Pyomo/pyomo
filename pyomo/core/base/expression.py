@@ -72,7 +72,7 @@ class _ExpressionData(NumericValue):
 
     @property
     def args(self):
-        yield self.expr
+        return (self.expr,)
 
     def nargs(self):
         return 1
