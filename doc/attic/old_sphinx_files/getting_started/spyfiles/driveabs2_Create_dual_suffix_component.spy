@@ -1,0 +1,3 @@
+# Create a 'dual' suffix component on the instance
+# so the solver plugin will know which suffixes to collect
+instance.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)

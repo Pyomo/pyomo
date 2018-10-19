@@ -1,0 +1,7 @@
+instance = model.create()
+instance.y[0] = 1
+instance.y[1] = 0
+
+opt = pyo.SolverFactory("cplex")
+
+results = opt.solve(instance, warmstart=True)

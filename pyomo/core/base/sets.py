@@ -1682,7 +1682,7 @@ class IndexedSet(Set):
         # Create a _SetData object if one doesn't already exist
         #
         if key in self._data:
-            self._data[key].value.clear()
+            self._data[key].clear()
         else:
             self._data[key] = self._SetData(self, self._bounds)
         #
