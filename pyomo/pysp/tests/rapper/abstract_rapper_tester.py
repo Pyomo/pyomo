@@ -38,7 +38,13 @@ class Test_abstract_rapper(unittest.TestCase):
                                     "scenariodata"
         
     def tearDown(self):
-        pass
+        # from GH: This step is key, as Python keys off the name of the module, not the location.
+        #       So, different reference models in different directories won't be detected.
+        #       If you don't do this, the symptom is a model that doesn't have the attributes
+        #       that the data file expects.
+        if "ReferenceModel" in sys.modules:
+            del sys.modules["ReferenceModel"]
+
 
 
     def test_Abstract_Construction(self):
