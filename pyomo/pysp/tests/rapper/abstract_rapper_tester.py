@@ -15,7 +15,7 @@ import pyomo as pyomoroot
 __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
 __version__ = 1.5
 
-solvername = "gurobi" # could use almost any solver
+solvername = "ipopt" # could use almost any solver
 
 class Test_abstract_rapper(unittest.TestCase):
     """ Test the rapper code."""

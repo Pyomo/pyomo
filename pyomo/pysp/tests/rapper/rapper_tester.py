@@ -16,7 +16,7 @@ __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
 __date__ = 'August 14, 2017'
 __version__ = 1.4
 
-solvername = "gurobi" # could use almost any solver
+solvername = "ipopt" # could use almost any solver
 
 class Testrapper(unittest.TestCase):
     """ Test the rapper code."""
