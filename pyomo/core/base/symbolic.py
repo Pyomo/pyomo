@@ -8,13 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import StringIO
+from six import StringIO, iterkeys
 import pyutilib.misc
 from pyomo import core
-from pyomo.core.expr import current as EXPR
-from pyomo.core.expr import native_types
 from pyomo.common import DeveloperError
+from pyomo.core.expr import current as EXPR, native_types
 from pyomo.core.expr.numvalue import value
+from pyomo.core.kernel.component_map import ComponentMap
 
 _sympy_available = True
 try:
@@ -30,9 +30,15 @@ try:
         return sum(x_ for x_ in x)
 
     def _nondifferentiable(*x):
+        if type(x[1]) is tuple:
+            # sympy >= 1.3 returns tuples (var, order)
+            wrt = x[1][0]
+        else:
+            # early versions of sympy returned the bare var
+            wrt = x[1]
         raise NondifferentiableError(
             "The sub-expression '%s' is not differentiable with respect to %s"
-            % (x[0],x[1]) )
+            % (x[0], wrt) )
 
     _operatorMap = {
         sympy.Add: _sum,
@@ -56,6 +62,14 @@ try:
         sympy.floor: lambda x: core.floor(x),
         sympy.sqrt: lambda x: core.sqrt(x),
         sympy.Derivative: _nondifferentiable,
+        sympy.Tuple: lambda *x: x,
+    }
+
+    _pyomo_operator_map = {
+        EXPR.SumExpression: sympy.Add,
+        EXPR.ProductExpression: sympy.Mul,
+        EXPR.NPV_ProductExpression: sympy.Mul,
+        EXPR.MonomialTermExpression: sympy.Mul,
     }
 
     _functionMap = {
@@ -78,7 +92,7 @@ try:
         'floor': sympy.floor,
         'sqrt': sympy.sqrt,
     }
-except ImportError: #pragma:nocover
+except ImportError:
     _sympy_available = False
 
 # A "public" attribute indicating that differentiate() can be called
@@ -90,6 +104,26 @@ class NondifferentiableError(ValueError):
     """A Pyomo-specific ValueError raised for non-differentiable expressions"""
     pass
 
+class PyomoSympyBimap(object):
+    def __init__(self):
+        self.pyomo2sympy = ComponentMap()
+        self.sympy2pyomo = {}
+        self.i = 0
+
+    def getPyomoSymbol(self, sympy_object, default=None):
+        return self.sympy2pyomo.get(sympy_object, default)
+
+    def getSympySymbol(self, pyomo_object):
+        if pyomo_object in self.pyomo2sympy:
+            return self.pyomo2sympy[pyomo_object]
+        sympy_obj = sympy.Symbol("x%d" % self.i)
+        self.i += 1
+        self.pyomo2sympy[pyomo_object] = sympy_obj
+        self.sympy2pyomo[sympy_obj] = pyomo_object
+        return sympy_obj
+
+    def sympyVars(self):
+        return iterkeys(self.sympy2pyomo)
 
 def differentiate(expr, wrt=None, wrt_list=None):
     """Return derivative of expression.
@@ -109,11 +143,22 @@ def differentiate(expr, wrt=None, wrt_list=None):
     """
     if not _sympy_available:
         raise RuntimeError(
-            "The sympy module is not available.  "
+            "The sympy module is not available.\n\t"
             "Cannot perform automatic symbolic differentiation.")
     if not (( wrt is None ) ^ ( wrt_list is None )):
         raise ValueError(
             "differentiate(): Must specify exactly one of wrt and wrt_list")
+    #
+    # Convert the Pyomo expression to a sympy expression
+    #
+    objectMap, sympy_expr = sympify_expression(expr)
+    #
+    # The partial_derivs dict holds intermediate sympy expressions that
+    # we can re-use.  We will prepopulate it with None for all vars that
+    # appear in the expression (so that we can detect wrt combinations
+    # that are, by definition, 0)
+    #
+    partial_derivs = dict((x,None) for x in objectMap.sympyVars())
     #
     # Setup the WRT list
     #
@@ -123,45 +168,42 @@ def differentiate(expr, wrt=None, wrt_list=None):
         # Copy the list because we will normalize things in place below
         wrt_list = list(wrt_list)
     #
-    # Setup mapping dictionaries
+    # Convert WRT vars into sympy vars
     #
-    pyomo_vars = list(EXPR.identify_variables(expr))
-    pyomo_vars = sorted(pyomo_vars, key=lambda x: str(x))
-    sympy_vars = [sympy.var('x%s'% i) for i in range(len(pyomo_vars))]
-    sympy2pyomo = dict( zip(sympy_vars, pyomo_vars) )
-    pyomo2sympy = dict( (id(pyomo_vars[i]), sympy_vars[i])
-                         for i in range(len(pyomo_vars)) )
-    #
-    # Process WRT information
-    #
-    ans = []
+    ans = [None]*len(wrt_list)
     for i, target in enumerate(wrt_list):
         if target.__class__ is not tuple:
-            wrt_list[i] = target = (target,)
-        mismatch_target = False
-        for var in target:
-            if id(var) not in pyomo2sympy:
-                mismatch_target = True
+            target = (target,)
+        wrt_list[i] = tuple(objectMap.getSympySymbol(x) for x in target)
+        for x in wrt_list[i]:
+            if x not in partial_derivs:
+                ans[i] = 0.
                 break
-        wrt_list[i] = tuple( pyomo2sympy.get(id(var),None) for var in target )
-        ans.append(0 if mismatch_target else None)
     #
-    # If there is nothing to do, do nothing
+    # We assume that users will not request duplicate derivatives.  We
+    # will only cache up to the next-to last partial, and if a user
+    # requests the exact same derivative twice, then we will just
+    # re-calculate it.
     #
-    if all(i is not None for i in ans):
-        return ans if wrt is None else ans[0]
+    last_partial_idx = max(len(x) for x in wrt_list) - 1
     #
-    # Create sympy expression
-    #
-    sympy_expr = sympify_expression(expr, sympy2pyomo, pyomo2sympy)
-    #
-    # Differentiate for each WRT variable, and map the
-    # result back into a Pyomo expression tree.
+    # Calculate all the derivatives
     #
     for i, target in enumerate(wrt_list):
-        if ans[i] is None:
-            sympy_ans = sympy_expr.diff(*target)
-            ans[i] = _map_sympy2pyomo(sympy_ans, sympy2pyomo)
+        if ans[i] is not None:
+            continue
+        part = sympy_expr
+        for j, wrt_var in enumerate(target):
+            if j == last_partial_idx:
+                part = sympy.diff(part, wrt_var)
+            else:
+                partial_target = target[:j+1]
+                if partial_target in partial_derivs:
+                    part = partial_derivs[partial_target]
+                else:
+                    part = sympy.diff(part, wrt_var)
+                    partial_derivs[partial_target] = part
+        ans[i] = sympy2pyomo_expression(part, objectMap)
     #
     # Return the answer
     #
@@ -172,71 +214,52 @@ def differentiate(expr, wrt=None, wrt_list=None):
 # sympify_expression
 # =====================================================
 
-class SympifyVisitor(EXPR.ExpressionValueVisitor):
+class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
 
-    def __init__(self, native_or_sympy_types, pyomo2sympy):
-        self.native_or_sympy_types = native_or_sympy_types
-        self.pyomo2sympy = pyomo2sympy
+    def __init__(self, object_map):
+        super(Pyomo2SympyVisitor, self).__init__()
+        self.object_map = object_map
 
-    def visit(self, node, values):
+    def exitNode(self, node, values):
         if node.__class__ is EXPR.UnaryFunctionExpression:
             return _functionMap[node._name](values[0])
-        else:
+        _op = _pyomo_operator_map.get(node.__class__, None)
+        if _op is None:
             return node._apply_operation(values)
+        else:
+            return _op(*tuple(values))
 
-    def visiting_potential_leaf(self, node):
+    def beforeChild(self, node, child):
         #
         # Don't replace native or sympy types
         #
-        if type(node) in self.native_or_sympy_types:
-            return True, node
+        if type(child) in native_types:
+            return False, child
+        #
+        # We will descend into all expressions...
+        #
+        if child.is_expression_type():
+            return True, None
         #
         # Replace pyomo variables with sympy variables
         #
-        if id(node) in self.pyomo2sympy:
-            return True, self.pyomo2sympy[id(node)]
+        if child.is_potentially_variable():
+            return False, self.object_map.getSympySymbol(child)
         #
-        # Replace constants
+        # Everything else is a constant...
         #
-        if not node.is_potentially_variable():
-            return True, value(node)
-        #
-        # Don't replace anything else
-        #
-        return False, None
+        return False, value(child)
 
-    def finalize(self, ans):
-        return ans
+class Sympy2PyomoVisitor(EXPR.StreamBasedExpressionVisitor):
 
-def sympify_expression(expr, sympySymbols, pyomo2sympy):
-    #
-    # Handle simple cases
-    #
-    if expr.__class__ in native_types:
-        return expr
-    if not expr.is_expression_type():
-        if id(expr) in pyomo2sympy:
-            return pyomo2sympy[id(expr)]
-        return expr
-    #
-    # Create the visitor and call it.
-    #
-    native_or_sympy_types = set(native_types)
-    native_or_sympy_types.add( type(list(sympySymbols)[0]) )
-    visitor = SympifyVisitor(native_or_sympy_types, pyomo2sympy)
-    return visitor.dfs_postorder_stack(expr)
+    def __init__(self, object_map):
+        super(Sympy2PyomoVisitor, self).__init__()
+        self.object_map = object_map
 
+    def enterNode(self, node):
+        return (node._args, [])
 
-# =====================================================
-# _map_sympy2pyomo
-# =====================================================
-
-class Sympy2PyomoVisitor(pyutilib.misc.ValueVisitor):
-
-    def __init__(self, sympy2pyomo):
-        self.sympy2pyomo = sympy2pyomo
-
-    def visit(self, node, values):
+    def exitNode(self, node, values):
         """ Visit nodes that have been expanded """
         _sympyOp = node
         _op = _operatorMap.get( type(_sympyOp), None )
@@ -246,30 +269,31 @@ class Sympy2PyomoVisitor(pyutilib.misc.ValueVisitor):
                 "map" % type(_sympyOp) )
         return _op(*tuple(values))
 
-    def visiting_potential_leaf(self, node):
-        """
-        Visiting a potential leaf.
+    def beforeChild(self, node, child):
+        if not child._args:
+            item = self.object_map.getPyomoSymbol(child, None)
+            if item is None:
+                item = float(child.evalf())
+            return False, item
+        return True, None
 
-        Return True if the node is not expanded.
-        """
-        if not node._args:
-            if node in self.sympy2pyomo:
-                return True, self.sympy2pyomo[node]
-            else:
-                return True, float(node.evalf())
-        return False, None
+def sympify_expression(expr):
+    """Convert a Pyomo expression to a Sympy expression"""
+    #
+    # Create the visitor and call it.
+    #
+    object_map = PyomoSympyBimap()
+    visitor = Pyomo2SympyVisitor(object_map)
+    is_expr, ans = visitor.beforeChild(None, expr)
+    if not is_expr:
+        return object_map, ans
 
-    def children(self, node):
-        return list(node._args)
+    return object_map, visitor.walk_expression(expr)
 
-    def finalize(self, ans):
+
+def sympy2pyomo_expression(expr, object_map):
+    visitor = Sympy2PyomoVisitor(object_map)
+    is_expr, ans = visitor.beforeChild(None, expr)
+    if not is_expr:
         return ans
-
-def _map_sympy2pyomo(expr, sympy2pyomo):
-    if not expr._args:
-        if expr in sympy2pyomo:
-            return sympy2pyomo[expr]
-        else:
-            return float(expr.evalf())
-    visitor = Sympy2PyomoVisitor(sympy2pyomo)
-    return visitor.dfs_postorder_stack(expr)
+    return visitor.walk_expression(expr)

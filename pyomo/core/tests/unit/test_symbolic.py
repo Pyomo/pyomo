@@ -14,8 +14,8 @@ import pyomo.environ
 from pyomo.common import DeveloperError
 from pyomo.core import *
 from pyomo.core.base.symbolic import (
-    differentiate, NondifferentiableError,
-    _sympy_available, _map_sympy2pyomo,
+    differentiate, NondifferentiableError, PyomoSympyBimap,
+    _sympy_available, sympy2pyomo_expression,
 )
 
 def s(e):
@@ -244,19 +244,97 @@ class SymbolicDerivatives(unittest.TestCase):
         self.assertTrue(e.is_expression_type())
         self.assertEqual(s(e), s(0.5 * m.x**-0.5))
 
-    def test_nondifferentiable(self):
+    def test_param(self):
         m = ConcreteModel()
         m.x = Var()
+        m.p = Param(mutable=True, initialize=5)
+
+        e = differentiate(m.p*m.x, wrt=m.x)
+        self.assertIs(type(e), float)
+        self.assertEqual(e, 5.0)
+
+    def test_Expression_component(self):
+        m = ConcreteModel()
+        m.s = Set(initialize=['A', 'B'])
+        m.x = Var(m.s, domain=NonNegativeReals)
+
+        def y_rule(m, s):
+            return m.x[s] * 2
+        m.y = Expression(m.s, rule=y_rule)
+
+        expr = 1 - m.y['A'] ** 2
+        jacs = differentiate(expr, wrt_list=[m.x['A'], m.x['B']])
+        self.assertEqual(str(jacs[0]), "-8.0*x[A]")
+        self.assertEqual(str(jacs[1]), "0.0")
+
+        expr = 1 - m.y['B'] ** 2
+        jacs = differentiate(expr, wrt_list=[m.x['A'], m.x['B']])
+        self.assertEqual(str(jacs[0]), "0.0")
+        self.assertEqual(str(jacs[1]), "-8.0*x[B]")
+
+    def test_jacobian(self):
+        m = ConcreteModel()
+        m.I = RangeSet(4)
+        m.x = Var(m.I)
+
+        idxMap = {}
+        jacs = []
+        for i in m.I:
+            idxMap[i] = len(jacs)
+            jacs.append(m.x[i])
+
+        expr = m.x[1]+m.x[2]*m.x[3]**2
+        ans = differentiate(expr, wrt_list=jacs)
+
+        self.assertEqual(len(ans), len(m.I))
+        self.assertEqual(str(ans[0]), "1.0")
+        self.assertEqual(str(ans[1]), "x[3]**2.0")
+        self.assertEqual(str(ans[2]), "2.0*x[2]*x[3]")
+        # 0 calculated by bypassing sympy
+        self.assertEqual(str(ans[3]), "0.0")
+
+    def test_hessian(self):
+        m = ConcreteModel()
+        m.I = RangeSet(4)
+        m.x = Var(m.I)
+
+        idxMap = {}
+        hessian = []
+        for i in m.I:
+            for j in m.I:
+                idxMap[i,j] = len(hessian)
+                hessian.append((m.x[i], m.x[j]))
+
+        expr = m.x[1]+m.x[2]*m.x[3]**2
+        ans = differentiate(expr, wrt_list=hessian)
+
+        self.assertEqual(len(ans), len(m.I)**2)
+        for i in m.I:
+            for j in m.I:
+                self.assertEqual(str(ans[idxMap[i,j]]), str(ans[idxMap[j,i]]))
+        # 0 calculated by sympy
+        self.assertEqual(str(ans[idxMap[1,1]]), "0.0")
+        self.assertEqual(str(ans[idxMap[2,2]]), "0.0")
+        self.assertEqual(str(ans[idxMap[3,3]]), "2.0*x[2]")
+        # 0 calculated by bypassing sympy
+        self.assertEqual(str(ans[idxMap[4,4]]), "0.0")
+        self.assertEqual(str(ans[idxMap[2,3]]), "2.0*x[3]")
+
+    def test_nondifferentiable(self):
+        m = ConcreteModel()
+        m.foo = Var()
 
         self.assertRaisesRegexp(
             NondifferentiableError,
-            "The sub-expression '.*' is not differentiable with respect to x",
-            differentiate, ceil(m.x), wrt=m.x)
+            "The sub-expression '.*' is not differentiable "
+            "with respect to .*foo",
+            differentiate, ceil(m.foo), wrt=m.foo)
 
         self.assertRaisesRegexp(
             NondifferentiableError,
-            "The sub-expression '.*' is not differentiable with respect to x",
-            differentiate, floor(m.x), wrt=m.x)
+            "The sub-expression '.*' is not differentiable "
+            "with respect to .*foo",
+            differentiate, floor(m.foo), wrt=m.foo)
 
     def test_errors(self):
         m = ConcreteModel()
@@ -267,14 +345,23 @@ class SymbolicDerivatives(unittest.TestCase):
             "Must specify exactly one of wrt and wrt_list",
             differentiate, m.x, wrt=m.x, wrt_list=[m.x])
 
-        x = pyomo.core.base.symbolic.sympy.Symbol('x')
+        obj_map = PyomoSympyBimap()
         class bogus(object):
             def __init__(self):
-                self._args = (x,)
+                self._args = (obj_map.getSympySymbol(m.x),)
         self.assertRaisesRegexp(
             DeveloperError,
             "sympy expression .* not found in the operator map",
-            _map_sympy2pyomo, bogus(), {x:m.x})
+            sympy2pyomo_expression, bogus(), obj_map)
+
+
+class SymbolicDerivatives_importTest(unittest.TestCase):
+    def test_sympy_avail_flag(self):
+        if _sympy_available:
+            import sympy
+        else:
+            with self.assertRaises(ImportError):
+                import sympy
 
 if __name__ == "__main__":
     unittest.main()

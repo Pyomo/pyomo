@@ -114,7 +114,7 @@ install:
   # that usually come with the full Anaconda distribution
   #
   - SET MINICONDA_EXTRAS=""
-  - IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill)
+  - IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn)
   #
   - "IF DEFINED EXTRAS (%CONDAFORGE% pymysql pyro4 %MINICONDA_EXTRAS%)"
   #- "IF DEFINED EXTRAS (%CONDAFORGE% numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
