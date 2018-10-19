@@ -793,6 +793,12 @@ class TestBlock(unittest.TestCase):
             descend_into=SubclassOf(Block),
         )]
         self.assertEqual(HM.PrefixDFS_block_subclass, result)
+        result = [x.name for x in m.component_objects(
+            ctype=Block,
+            descent_order=TraversalStrategy.PrefixDepthFirstSearch,
+            descend_into=SubclassOf(Var,Block),
+        )]
+        self.assertEqual(HM.PrefixDFS_block_subclass, result)
 
     def test_iterate_mixed_hierarchy_PostfixDFS_block(self):
         HM = MixedHierarchicalModel()
@@ -824,6 +830,12 @@ class TestBlock(unittest.TestCase):
             descend_into=SubclassOf(Block),
         )]
         self.assertEqual(HM.PostfixDFS_block_subclass, result)
+        result = [x.name for x in m.component_objects(
+            ctype=Block,
+            descent_order=TraversalStrategy.PostfixDepthFirstSearch,
+            descend_into=SubclassOf(Var,Block),
+        )]
+        self.assertEqual(HM.PostfixDFS_block_subclass, result)
 
     def test_iterate_mixed_hierarchy_BFS_block(self):
         HM = MixedHierarchicalModel()
@@ -853,6 +865,12 @@ class TestBlock(unittest.TestCase):
             ctype=Block,
             descent_order=TraversalStrategy.BFS,
             descend_into=SubclassOf(Block),
+        )]
+        self.assertEqual(HM.BFS_block_subclass, result)
+        result = [x.name for x in m.component_objects(
+            ctype=Block,
+            descent_order=TraversalStrategy.BFS,
+            descend_into=SubclassOf(Var,Block),
         )]
         self.assertEqual(HM.BFS_block_subclass, result)
 
@@ -1339,7 +1357,17 @@ class TestBlock(unittest.TestCase):
         tester( m.component_map(SubclassOf(Var), active=True),
                 "active SubclassOf(Var) component 'a' not found in block foo" )
         tester( m.component_map(SubclassOf(Var), active=False),
-                "inactive SubclassOf(Var) component 'a' not found in block foo" )
+                "inactive SubclassOf(Var) component "
+                "'a' not found in block foo" )
+
+        tester( m.component_map(SubclassOf(Var,Block)),
+                "SubclassOf(Var,Block) component 'a' not found in block foo" )
+        tester( m.component_map(SubclassOf(Var,Block), active=True),
+                "active SubclassOf(Var,Block) component "
+                "'a' not found in block foo" )
+        tester( m.component_map(SubclassOf(Var,Block), active=False),
+                "inactive SubclassOf(Var,Block) component "
+                "'a' not found in block foo" )
 
         tester( m.component_map([Var,Param]),
                 "Param or Var component 'a' not found in block foo" )

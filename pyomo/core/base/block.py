@@ -131,9 +131,10 @@ class SubclassOf(object):
 
         model.component_data_objects(Var, descend_into=SubclassOf(Block))
     """
-    def __init__(self, ctype):
+    def __init__(self, *ctype):
         self.ctype = ctype
-        self.__name__ = 'SubclassOf(%s)' % (ctype.__name__,)
+        self.__name__ = 'SubclassOf(%s)' % (
+            ','.join(x.__name__ for x in ctype),)
 
     def __contains__(self, item):
         return issubclass(item, self.ctype)
