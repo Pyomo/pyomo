@@ -1,4 +1,4 @@
-from pyomo.contrib.pynumero.sparse import BlockVector
+from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 import numpy as np
 
 __all__ = ['ceil', 'floor', 'exp', 'log', 'log10', 'sqrt', 'sin',

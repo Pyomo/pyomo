@@ -427,6 +427,7 @@ class TestCOOSymMatrix(unittest.TestCase):
         tvalues = [36., 17., 19., 12., 8., 15.]
         self.assertListEqual(values.tolist(), tvalues)
 
+    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_add_sparse(self):
         m = self.basic_m
         mm = m + m
@@ -470,6 +471,7 @@ class TestCOOSymMatrix(unittest.TestCase):
         self.assertIsInstance(mm, CSRMatrix)
         self.assertListEqual(mm.toarray().flatten().tolist(), test_m.flatten().tolist())
 
+    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_sub_sparse(self):
         m = self.basic_m
         mm = m - m
@@ -513,6 +515,7 @@ class TestCOOSymMatrix(unittest.TestCase):
         self.assertIsInstance(mm, CSRMatrix)
         self.assertListEqual(mm.toarray().flatten().tolist(), test_m.flatten().tolist())
 
+    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_mul_sparse_matrix(self):
 
         # test symmetric times symmetric

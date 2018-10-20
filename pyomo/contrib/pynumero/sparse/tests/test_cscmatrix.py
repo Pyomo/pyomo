@@ -419,6 +419,7 @@ class TestCSCSymMatrix(unittest.TestCase):
         self.assertListEqual(col.tolist(), tcol.tolist())
         self.assertListEqual(data.tolist(), tdata.tolist())
 
+    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_getrow(self):
         m = self.g_matrix
         m_row = m.getrow(0)
@@ -428,6 +429,7 @@ class TestCSCSymMatrix(unittest.TestCase):
         tvalues = [36., 17., 19., 12.,  8., 15.]
         self.assertListEqual(values.tolist(), tvalues)
 
+    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_getcol(self):
         m = self.g_matrix
         m_col = m.getcol(0)
@@ -437,6 +439,7 @@ class TestCSCSymMatrix(unittest.TestCase):
         tvalues = [36., 17., 19., 12., 8., 15.]
         self.assertListEqual(values.tolist(), tvalues)
 
+    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_add_sparse(self):
         m = self.basic_m
         mm = m + m
@@ -480,6 +483,7 @@ class TestCSCSymMatrix(unittest.TestCase):
         self.assertIsInstance(mm, CSRMatrix)
         self.assertListEqual(mm.toarray().flatten().tolist(), test_m.flatten().tolist())
 
+    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_sub_sparse(self):
         m = self.basic_m
         mm = m - m
@@ -523,6 +527,7 @@ class TestCSCSymMatrix(unittest.TestCase):
         self.assertIsInstance(mm, CSRMatrix)
         self.assertListEqual(mm.toarray().flatten().tolist(), test_m.flatten().tolist())
 
+    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_mul_sparse_matrix(self):
         # test symmetric times symmetric
         m = self.g_matrix
