@@ -38,9 +38,6 @@ By Woody and https://www.song-lyrics-generator.org.uk
    I can't take the unscriptability, can't take the script.
    I woulda tried to code I guess I got no transcript.
    
-   I'm rappin' to the escape,
-   And I'm gonna move your ape.
-   
    Yea, yaz, in a PySP state of mind.
    
    When I was young my uncle had a nondescript.
