@@ -135,7 +135,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
             retcode = subprocess.call(["python", rbpath])
         assert(retcode == 0)
         
-    ##@unittest.skip("Presently having trouble with mpiexec on Travis for 3.5")
+    @unittest.skip("Presently having trouble with mpiexec on appveyor")
     def test_parallel_parmest(self):
         """ use mpiexec and mpi4py """
         p = str(parmestbase.__path__)
