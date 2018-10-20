@@ -6,6 +6,7 @@ except ImportError:
 
 if numpy_available:
     from .sparse.intrinsic import *
+else:
     print("WARNING: Numpy not available. Install numpy before using pynumero")
 
 
