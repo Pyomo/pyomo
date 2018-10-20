@@ -41,18 +41,18 @@ def add_oa_cut(var_values, duals, solve_data, config):
     sign_adjust = -1 if MindtPy.objective.sense == minimize else 1
 
     # Copy values over
-    for var, val in zip(MindtPy.var_list, var_values):
+    for var, val in zip(MindtPy.working_var_list, var_values):
         if val is not None and not var.fixed:
             var.value = val
 
     # Copy duals over
-    for constr, dual_value in zip(MindtPy.constraints, duals):
+    for constr, dual_value in zip(MindtPy.working_constraints_list, duals):
         m.dual[constr] = dual_value
 
     # generate new constraints
     # TODO some kind of special handling if the dual is phenomenally small?
     jacs = solve_data.jacobians
-    for constr in MindtPy.nonlinear_constraints:
+    for constr in MindtPy.working_nonlinear_constraints:
         rhs = ((0 if constr.upper is None else constr.upper) +
                (0 if constr.lower is None else constr.lower))
         MindtPy.MindtPy_linear_cuts.oa_cuts.add(

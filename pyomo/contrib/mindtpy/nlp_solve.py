@@ -3,7 +3,8 @@ from __future__ import division
 
 from pyomo.contrib.mindtpy.cut_generation import (add_gbd_cut, add_oa_cut,
                                                   add_psc_cut, add_int_cut)
-from pyomo.contrib.mindtpy.util import copy_values, add_feas_slacks
+from pyomo.contrib.mindtpy.util import add_feas_slacks
+from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
                         minimize, value)
 from pyomo.core.kernel.component_map import ComponentMap
@@ -19,13 +20,13 @@ def solve_NLP_subproblem(solve_data, config):
     config.logger.info('NLP %s: Solve subproblem for fixed binaries.'
                        % (solve_data.nlp_iter,))
     # Set up NLP
-    for v in MindtPy.binary_vars:
+    for v in MindtPy.working_binary_vars:
         v.fix(int(value(v) + 0.5))
 
     # restore original variable values
     for nlp_var, orig_var in zip(
-            MindtPy.var_list,
-            solve_data.original_model.MindtPy_utils.var_list):
+            MindtPy.orig_var_list,
+            solve_data.original_model.MindtPy_utils.orig_var_list):
         if not nlp_var.fixed and not nlp_var.is_binary():
             nlp_var.value = orig_var.value
 
@@ -48,12 +49,15 @@ def solve_NLP_subproblem(solve_data, config):
             m, **config.nlp_solver_args)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
-        copy_values(m, solve_data.working_model, config)
-        var_values = list(v.value for v in MindtPy.var_list)
+        copy_var_list_values(
+            m.MindtPy_utils.working_var_list,
+            solve_data.working_model.MindtPy_utils.working_var_list,
+            config)
+        var_values = list(v.value for v in MindtPy.working_var_list)
         for c in m.tmp_duals:
             if m.dual.get(c, None) is None:
                 m.dual[c] = m.tmp_duals[c]
-        duals = list(m.dual[c] for c in MindtPy.constraints)
+        duals = list(m.dual[c] for c in MindtPy.working_constraints_list)
         if MindtPy.objective.sense == minimize:
             solve_data.UB = min(value(MindtPy.objective.expr), solve_data.UB)
             solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
@@ -156,7 +160,10 @@ def solve_NLP_feas(solve_data, config):
             m, **config.nlp_solver_args)
     subprob_terminate_cond = feas_soln.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
-        copy_values(m, solve_data.working_model, config)
+        copy_var_list_values(
+            m.MindtPy_utils.working_var_list,
+            solve_data.working_model.MindtPy_utils.working_var_list,
+            config)
     elif subprob_terminate_cond is tc.infeasible:
         raise ValueError('Feasibility NLP infeasible. '
                          'This should never happen.')
