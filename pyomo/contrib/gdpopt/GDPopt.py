@@ -13,7 +13,6 @@ from pyomo.contrib.gdpopt.master_initialize import (GDPopt_initialize_master,
                                                     valid_init_strategies)
 from pyomo.contrib.gdpopt.util import (_DoNothing, a_logger,
                                        build_ordered_component_lists,
-                                       clone_orig_model_with_lists,
                                        copy_var_list_values,
                                        create_utility_block, model_is_valid,
                                        process_objective,
@@ -164,6 +163,9 @@ class GDPoptSolver(object):
         default=1E-8,
         description="Tolerance on variable bounds."
     ))
+    CONFIG.declare("zero_tolerance", ConfigValue(
+        default=1E-15,
+        description="Tolerance on variable equal to zero."))
     CONFIG.declare("round_NLP_binaries", ConfigValue(
         default=True,
         description="flag to round binary values to exactly 0 or 1. "
@@ -213,7 +215,7 @@ class GDPoptSolver(object):
         old_logger_level = config.logger.getEffectiveLevel()
         with time_code(solve_data.timing, 'total'), \
                 restore_logger_level(config.logger), \
-                create_utility_block(model, 'GDPopt_utils'):
+                create_utility_block(model, 'GDPopt_utils', solve_data):
             if config.tee and old_logger_level > logging.INFO:
                 # If the logger does not already include INFO, include it.
                 config.logger.setLevel(logging.INFO)
@@ -221,7 +223,8 @@ class GDPoptSolver(object):
 
             solve_data.original_model = model
 
-            solve_data.working_model = clone_orig_model_with_lists(model)
+            build_ordered_component_lists(model, solve_data, prefix='orig')
+            solve_data.working_model = model.clone()
             GDPopt = solve_data.working_model.GDPopt_utils
             record_original_model_statistics(solve_data, config)
 
@@ -233,9 +236,11 @@ class GDPoptSolver(object):
 
             # Save ordered lists of main modeling components, so that data can
             # be easily transferred between future model clones.
-            build_ordered_component_lists(solve_data.working_model)
+            build_ordered_component_lists(
+                solve_data.working_model, solve_data, prefix='working')
             record_working_model_statistics(solve_data, config)
-            solve_data.results.solver.name = 'GDPopt ' + str(self.version())
+            solve_data.results.solver.name = 'GDPopt %s - %s' % (
+                str(self.version()), config.strategy)
 
             # Save model initial values. These are used later to initialize NLP
             # subproblems.
@@ -319,4 +324,3 @@ class GDPoptSolver(object):
 
     def __exit__(self, t, v, traceback):
         pass
-
