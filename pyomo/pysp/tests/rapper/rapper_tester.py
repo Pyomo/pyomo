@@ -77,6 +77,13 @@ class Testrapper(unittest.TestCase):
                                           fsfct = None,
                                           tree_model = None)
 
+    def test_construct_default_tree_error(self):
+        """verify that construction of concrete with default tree name gives error when it should"""
+        with self.assertRaises(AttributeError):
+            stsolver = rapper.StochSolver("ReferenceModel.py",
+                                          fsfct = "pysp_instance_creation_callback",
+                                          tree_model = None)
+
     def test_ef_solve(self):
         """ solve the ef and check some post solution code"""
         stsolver = rapper.StochSolver("ReferenceModel.py",
