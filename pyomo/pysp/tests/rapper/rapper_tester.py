@@ -67,7 +67,7 @@ class Testrapper(unittest.TestCase):
         """ give a callback function rather than a string"""
         from ReferenceModel import pysp_instance_creation_callback
         stsolver = rapper.StochSolver(None,
-                                      fsfct = pysp_instance_creation_callback,
+                                fsfct = pysp_instance_creation_callback,
                                 tree_model = self.farmer_concrete_tree)
 
     def test_no_fsfct_no_tree(self):
