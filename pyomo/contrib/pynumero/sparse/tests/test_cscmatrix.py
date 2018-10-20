@@ -75,6 +75,7 @@ class TestCSCMatrix(unittest.TestCase):
         tvalues = [4.0, 0.0, 0.0, 0.0]
         self.assertListEqual(values.tolist(), tvalues)
 
+    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_add_sparse(self):
         m = self.basic_m
         mm = m + m
@@ -103,6 +104,7 @@ class TestCSCMatrix(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             mm = m2 + m.toscipy()
 
+    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_sub_sparse(self):
         m = self.basic_m
         mm = m - m
@@ -132,6 +134,7 @@ class TestCSCMatrix(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             mm = m2 - m.toscipy()
 
+    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_mul_sparse_matrix(self):
         #from pyomo.contrib.pynumero.sparse.block_matrix import BlockMatrix
 

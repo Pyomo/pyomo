@@ -94,6 +94,7 @@ class TestCOOMatrix(unittest.TestCase):
         tvalues = [4.0, 0.0, 0.0, 0.0]
         self.assertListEqual(values.tolist(), tvalues)
 
+    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_add_sparse(self):
         m = self.basic_m
         mm = m + m
@@ -130,6 +131,7 @@ class TestCOOMatrix(unittest.TestCase):
         mm_dense = m.todense() + D.todense()
         self.assertTrue(np.allclose(mm.todense(), mm_dense))
 
+    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_sub_sparse(self):
         m = self.basic_m
         mm = m - m
@@ -161,6 +163,7 @@ class TestCOOMatrix(unittest.TestCase):
         mm_dense = m.todense() - D.todense()
         self.assertTrue(np.allclose(mm.todense(), mm_dense))
 
+    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_mul_sparse_matrix(self):
 
         # test unsymmetric times unsymmetric
