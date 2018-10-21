@@ -28,7 +28,7 @@ import pyomo.environ as pyo
 
 __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
 __date__ = 'July 2018'
-__version__ = 0.2
+__version__ = 0.21
 
 testdir = os.path.dirname(os.path.abspath(__file__))
 
