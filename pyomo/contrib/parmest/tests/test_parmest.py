@@ -38,7 +38,8 @@ class Object_from_string_Tester(unittest.TestCase):
         self.instance.IDX = pyo.Set(initialize=['a', 'b', 'c'])
         self.instance.x = pyo.Var(self.instance.IDX, initialize=1134)
         # TBD add a block
-        np.random.seed(1134)
+        if not imports_not_present:
+            np.random.seed(1134)
         
     def tearDown(self):
         pass
