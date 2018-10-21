@@ -1,9 +1,12 @@
 # Provide some test for parmest
 # Author: Started by David L. Woodruff (summer 2018)
 
-# the next two lines are to avoid $DISPLAY errors on Travis (DLW Oct 2018)
-import matplotlib
-matplotlib.use('Agg')
+# the matpolotlib stuff is to avoid $DISPLAY errors on Travis (DLW Oct 2018)
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+except:
+    pass
 try:
     import numpy as np
     import pandas as pd
