@@ -1,6 +1,9 @@
 # Provide some test for parmest
 # Author: Started by David L. Woodruff (summer 2018)
 
+# the next two lines are to avoid $DISPLAY errors on Travis (DLW Oct 2018)
+import matplotlib
+matplotlib.use('Agg')
 try:
     import numpy as np
     import pandas as pd
@@ -32,6 +35,7 @@ class Object_from_string_Tester(unittest.TestCase):
         self.instance.IDX = pyo.Set(initialize=['a', 'b', 'c'])
         self.instance.x = pyo.Var(self.instance.IDX, initialize=1134)
         # TBD add a block
+        np.random.seed(1134)
         
     def tearDown(self):
         pass
