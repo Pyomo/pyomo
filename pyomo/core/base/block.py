@@ -118,7 +118,35 @@ class _component_decorator(object):
             self._component, self._block, *args, **kwds)
 
 
+class SubclassOf(object):
+    """This mocks up a tuple-like interface based on subclass relationship.
+
+    Instances of this class present a somewhat tuple-like interface for
+    use in PseudoMap ctype / descend_into.  The constructor takes a
+    single ctype argument.  When used with PseudoMap (through Block APIs
+    like component_objects()), it will match any ctype that is a
+    subclass of the reference ctype.
+
+    This allows, for example:
+
+        model.component_data_objects(Var, descend_into=SubclassOf(Block))
+    """
+    def __init__(self, *ctype):
+        self.ctype = ctype
+        self.__name__ = 'SubclassOf(%s)' % (
+            ','.join(x.__name__ for x in ctype),)
+
+    def __contains__(self, item):
+        return issubclass(item, self.ctype)
+
+    def __len__(self):
+        return 1
+
+    def __getitem__(self, item):
+        return self
+
 class SortComponents(object):
+
     """
     This class is a convenient wrapper for specifying various sort
     ordering.  We pass these objects to the "sort" argument to various
@@ -315,7 +343,8 @@ class _BlockData(ActiveComponentData):
                     return sum(x[2] for x in itervalues(self._block._ctypes))
                 else:
                     return sum(self._block._ctypes.get(x, (0, 0, 0))[2]
-                               for x in self._ctypes)
+                               for x in self._block._ctypes
+                               if x in self._ctypes)
             #
             # If _active is True or False, then we have to count by brute force.
             #
@@ -347,8 +376,8 @@ class _BlockData(ActiveComponentData):
             # at the end of the list.
             _decl_order = self._block._decl_order
             _idx_list = sorted((self._block._ctypes[x][0]
-                                for x in self._ctypes
-                                if x in self._block._ctypes),
+                                for x in self._block._ctypes
+                                if x in self._ctypes),
                                reverse=True)
             while _idx_list:
                 _idx = _idx_list.pop()
