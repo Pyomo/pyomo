@@ -5,7 +5,7 @@ PyNumero is distributed within the python optimization module pyomo.
 
 To build PyNumero from github (currently on a fork)::
 	
-	git clone https://github.com/santiagoropb/pyomo.git
+	git clone https://github.com/Pyomo/pyomo.git
 	cd pyomo/pyomo
 	git checkout pynumero_release2
 	python setup.py develop
@@ -15,20 +15,9 @@ Future releases of PyNumero will distribute binaries via conda-forge and pip.
 However, the current release requires the user to compile the libraries.
 
 There are two alternatives to compile the libraries. The first alternative,
-relies on linking the PyNumero libraries against ASL from ampl-mp. If conda
-is available, ampl-mp can be installed with the following command::
+relies on conda the conda-forge channel to install pynumero libraries (PREFERRED)::
 
-        conda install -c conda-forge ampl-mp
-
-Then one can compile the libraries as follows::
-
-        cd pyomo/contrib/pynumero/cmake
-        mkdir build
-        cd build
-        mp_dir=$(find ~/ -type d -name "ampl-mp*")
-        cmake .. -DMP_PATH=$mp_dir
-        make
-	cp lib/libpynumero_* ../../extensions/lib/Linux/
+        conda install -c conda-forge pynumero_libraries
 
 The second alternative compiles ASL and links it against the pynumero libraries::
 
@@ -104,19 +93,3 @@ The following python packages are required for PyNumero:
 
 Packages can be installed using pip.
 
-Optional dependencies
--------------------------
-
-PyNumero requires the following software for compilation of libraries:
-
-* cmake: used to build libraries. If anaconda is available, cmake can be installed from
-  conda-forge
-
-  conda install -c conda-forge cmake
-
-* Compilers: C, C++ and gfortran compilers
-
-* ampl-mp (optional): used in the compilation of binaries. If conda is available, ampl-mp
-  can be installed from conda-forge
-
-  conda install -c conda-forge ampl-mp 
