@@ -73,7 +73,12 @@ def algorithm_should_terminate(solve_data, config):
             'LB: %s + (tol %s) >= UB: %s' %
             (solve_data.LB, config.bound_tolerance,
              solve_data.UB))
-        solve_data.results.solver.termination_condition = tc.optimal
+        if solve_data.LB == float('inf') and solve_data.UB == float('inf'):
+            solve_data.results.solver.termination_condition = tc.infeasible
+        elif solve_data.LB == float('-inf') and solve_data.UB == float('-inf'):
+            solve_data.results.solver.termination_condition = tc.infeasible
+        else:
+            solve_data.results.solver.termination_condition = tc.optimal
         return True
 
     # Check iteration limit
