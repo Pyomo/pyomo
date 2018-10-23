@@ -4,22 +4,21 @@ from __future__ import division
 
 import logging
 
-from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
-                                 NonNegativeFloat, NonNegativeInt,
-                                 add_docstring_list)
+from pyomo.common.config import (
+    ConfigBlock, ConfigList, ConfigValue, In, NonNegativeFloat, NonNegativeInt,
+    add_docstring_list
+)
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
-from pyomo.contrib.gdpopt.master_initialize import (GDPopt_initialize_master,
-                                                    valid_init_strategies)
-from pyomo.contrib.gdpopt.util import (_DoNothing, a_logger,
-                                       build_ordered_component_lists,
-                                       copy_var_list_values,
-                                       create_utility_block, model_is_valid,
-                                       process_objective,
-                                       record_original_model_statistics,
-                                       record_working_model_statistics,
-                                       reformulate_integer_variables,
-                                       restore_logger_level, time_code)
+from pyomo.contrib.gdpopt.master_initialize import (
+    GDPopt_initialize_master, valid_init_strategies
+)
+from pyomo.contrib.gdpopt.util import (
+    _DoNothing, a_logger, build_ordered_component_lists, copy_var_list_values,
+    create_utility_block, model_is_valid, process_objective,
+    record_original_model_statistics, record_working_model_statistics,
+    reformulate_integer_variables, restore_logger_level, time_code
+)
 from pyomo.core.base import ConstraintList, value
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.base import SolverFactory
@@ -29,9 +28,10 @@ from pyutilib.misc import Container
 __version__ = (0, 5, 0)
 
 
-@SolverFactory.register('gdpopt',
-        doc='The GDPopt decomposition-based '
-        'Generalized Disjunctive Programming (GDP) solver')
+@SolverFactory.register(
+    'gdpopt',
+    doc='The GDPopt decomposition-based '
+    'Generalized Disjunctive Programming (GDP) solver')
 class GDPoptSolver(object):
     """Decomposition solver for Generalized Disjunctive Programming (GDP) problems.
 
