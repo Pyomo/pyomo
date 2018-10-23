@@ -26,7 +26,7 @@ from pyomo.opt.base import SolverFactory
 from pyomo.opt.results import SolverResults
 from pyutilib.misc import Container
 
-__version__ = (0, 4, 1)
+__version__ = (0, 5, 0)
 
 
 @SolverFactory.register('gdpopt',
