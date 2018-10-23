@@ -104,6 +104,11 @@ class GDPoptSolver(object):
         description="Nonlinear solver to use"))
     nlp_solver_args = CONFIG.declare(
         "nlp_solver_args", ConfigBlock(implicit=True))
+    CONFIG.declare("nlp_presolve", ConfigValue(
+        default=True,
+        description="Flag to enable or disable NLP presolve. Default=True.",
+        domain=bool
+    ))
     CONFIG.declare("call_before_master_solve", ConfigValue(
         default=_DoNothing,
         description="callback hook before calling the master problem solver"
