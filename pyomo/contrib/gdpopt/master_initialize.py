@@ -227,6 +227,8 @@ def init_set_covering(solve_data, config):
             'Iteration limit reached for set covering initialization '
             'without covering all disjuncts.')
         return False
+
+    config.logger.info("Initialization complete.")
     return True
 
 
