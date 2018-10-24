@@ -28,23 +28,62 @@ class GDPlbbSolver(opject):
     """A branch and bound-based GDP solver."""
 
     def solve(self, model, **kwds):
+        """
+        PSEUDOCODE
+        Initialize minheap h ordered by objective value
+        root = model.clone
+        root.init_active_disj = list of currently active disjunctions
+        root.curr_active_disj = []
+        for each disj in root.init_active_disj
+        	Deactivate disj
+        Apply Sat Solver to root
+        if infeasible
+        	Return no-solution EXIT
+        solve root
+        push (root,root.obj.value()) onto minheap h
+
+        while not heap.empty()
+        	pop (m,v) from heap
+        	if len(m.init_active_disj == len(m.curr_active_disj):
+        		copy m to model
+        		return good-solution EXIT
+        	find disj D in m.init_active_disj such that disj is not in m.curr_active_disj
+
+        	for each disjunct d in D
+        		set d false
+        	for each disjunct d in D
+        		set d true
+        		mnew = m.clone
+        		Apply Sat Solver to mnew
+        		if mnew infeasible
+        			Return no-solution EXIT
+        		solve(mnew)
+        		push (mnew,menw.obj.value()) onto minheap h
+        		set d false
+        """
+
+        solver = SolverFactory('(SOME MINLP SOLVER)')
+
         heap = []
         root = model.clone()
-        incumbent = root
-        initial_inactive_disjunctions = model.component_data_objects(
-            ctype = Disjunction, active=false): #ComponentSet() from contrib preprocessing plugins equality propogate
+        root.init_active_disjunctions = model.component_data_objects(
+            ctype = Disjunction, active=True):
+        root.curr_active_disjunctions = []
+        for djn in root.init_active_disjunctions
+            djn.deactivate()
+        #Satisfiability check would go here
 
-        deactivate(all disjunctions)
-        num_inactive disjunct
-        #Solve root as MINLP subproblems
-        #See fix_disjuncts.py
-        minlp_solve(root) #some epsilon
-        heapq.heappush(h,(root.obj,root))
-        while len(h)>0:
-            current = heapq.heappop(h)[1]
-            if(len(inactive_disjunctions) == ): #TO BEGIN WITH
-                incumbent = current
-                break
+        solver.solve(root)
+
+        heapq.heappush(heap,(value(root.obj.expr),root))
+
+        while len(heap)>0:
+            mdl = heapq.heappop(h)[1]
+            if(len(mdl.init_active_disjunctions) ==  0):
+                ASSIGN VALS FROM mdl TO model
+                return
+-----------------------------------------------------------------------
+
             disjunction = inactive_disjunctions[0]
             activate(disjunction)
             for each clause in disjunction:
