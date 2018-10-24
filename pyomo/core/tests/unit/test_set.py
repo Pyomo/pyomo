@@ -1094,6 +1094,20 @@ class ArraySet(PyomoModel):
             self.fail("fail test_mul")
 
 
+    def test_override_values(self):
+        m = ConcreteModel()
+        m.I = Set([1,2,3])
+        m.I[1] = [1,2,3]
+        self.assertEqual(sorted(m.I[1]), [1,2,3])
+        m.I[1] = [4,5,6]
+        self.assertEqual(sorted(m.I[1]), [4,5,6])
+
+        m.J = Set([1,2,3], ordered=True)
+        m.J[1] = [1,3,2]
+        self.assertEqual(list(m.J[1]), [1,3,2])
+        m.J[1] = [5,4,6]
+        self.assertEqual(list(m.J[1]), [5,4,6])
+
 class ArraySet2(PyomoModel):
 
     def setUp(self):

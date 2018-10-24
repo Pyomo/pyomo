@@ -27,7 +27,7 @@ environment:
     #  CATEGORY: "nightly"
 
     - PYTHON_VERSION: 2.7
-      PYTHON: "C:\\Miniconda-x64"
+      PYTHON: "C:\\Miniconda"
       CATEGORY: "nightly"
       EXTRAS: YES
 
@@ -37,12 +37,17 @@ environment:
     #  EXTRAS: YES
 
     - PYTHON_VERSION: 3.5
-      PYTHON: "C:\\Miniconda35-x64"
+      PYTHON: "C:\\Miniconda35"
       CATEGORY: "nightly"
       EXTRAS: YES
 
     - PYTHON_VERSION: 3.6
-      PYTHON: "C:\\Miniconda36-x64"
+      PYTHON: "C:\\Miniconda36"
+      CATEGORY: "nightly"
+      EXTRAS: YES
+
+    - PYTHON_VERSION: 3.7
+      PYTHON: "C:\\Miniconda37"
       CATEGORY: "nightly"
       EXTRAS: YES
 
@@ -62,16 +67,39 @@ install:
   - "SET ANACONDA=%CONDA_INSTALL% -c anaconda"
   - "SET CONDAFORGE=%CONDA_INSTALL% -c conda-forge --no-update-dependencies"
   #
+  # Determine if we will use Appveyor's Miniconda or install Anaconda
+  # (intermittently one or the other suffers from NumPy failing to load the
+  # MKL DLL; See #542, #577
+  #
+  - SET USING_MINICONDA=1
+  #
   # Update conda, then force it to NOT update itself again
   #
   # Somehow, the update from anaconda stalls for Python 3.4. So we're not specifying the channel here.
   #
   - conda config --set always_yes yes
-  - conda update -q -y conda
+  #- conda update -q -y conda
   - conda config --set auto_update_conda false
-  - conda install anaconda
+  #
+  # If we are using full Anaconda instead of Appveyor's MiniConda,
+  # install it
+  #
+  - IF NOT DEFINED USING_MINICONDA (conda install anaconda)
+  #
+  # Create a virtual environment for this build
+  #
+  #- conda create -n pyomo_test_env python=%PYTHON_VERSION%
+  #- activate pyomo_test_env
+  #- "SET CONDAENV=%PYTHON%\\envs\\pyomo_test_env"
+  - "echo %PATH%"
   #
   - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme"
+  #
+  # While we would like to install codecov using conda (for
+  # consistency), there are cases (most recently, in Python 3.5) where
+  # the installation is not reliable and codecov is not available after
+  # being installed.
+  #
   - python -m pip install codecov
   #
   # Install GAMS
@@ -82,7 +110,13 @@ install:
   #
   # Install pyomo.extras
   #
-  - "IF DEFINED EXTRAS (%CONDAFORGE% pymysql pyro4)"
+  # If we are using Miniconda, we need to install additional packages
+  # that usually come with the full Anaconda distribution
+  #
+  - SET MINICONDA_EXTRAS=""
+  - IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn)
+  #
+  - "IF DEFINED EXTRAS (%CONDAFORGE% pymysql pyro4 %MINICONDA_EXTRAS%)"
   #- "IF DEFINED EXTRAS (%CONDAFORGE% numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
   #- "IF DEFINED EXTRAS (%CONDAFORGE% mkl)"
   #
@@ -158,4 +192,6 @@ on_success:
   - "cd %BUILD_DIR%"
   - dir .cov*
   - "coverage combine %BUILD_DIR%"
-  - codecov -X gcov
+  # On some appveyor platforms, the codecov script does not appear to be
+  # in the PATH.  We will directly import the module (installed above)
+  - python -m codecov -X gcov

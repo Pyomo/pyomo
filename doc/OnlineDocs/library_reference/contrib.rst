@@ -17,6 +17,7 @@ Contributed packages distributed with Pyomo:
 
    contrib/preprocessing.rst
    contrib/gdpopt.rst
+   contrib/multistart.rst
 
 Contributed packages distributed independently of Pyomo, but accessible
 through ``pyomo.contrib``:
