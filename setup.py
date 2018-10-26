@@ -48,7 +48,6 @@ if sys.version_info < (2, 7):
     requires.append('argparse')
     requires.append('unittest2')
     requires.append('ordereddict')
-git push origin 5.5.1
 
 from setuptools import setup
 packages = _find_packages('pyomo')
