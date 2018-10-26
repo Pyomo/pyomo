@@ -58,10 +58,10 @@ def _object_from_string(instance, vstr):
 def _ef_ROOT_node_Object_from_string(efinstance, vstr):
     """
     Wrapper for _object_from_string for PySP extensive forms
-    but only for Vars at the node named ROOT.
-    DLW April 2018: needs work to generalized.
+    but only for Vars at the node named RootNode.
+    DLW April 2018: needs work to be generalized.
     """
-    efvstr = "MASTER_BLEND_VAR_Node_ROOT["+vstr+"]"
+    efvstr = "MASTER_BLEND_VAR_RootNode["+vstr+"]"
     return _object_from_string(efinstance, efvstr)
 
 #=============================================
