@@ -6,8 +6,43 @@ Pyomo CHANGELOG
 Current Development
 -------------------------------------------------------------------------------
 
+- PySP updates
+  - Python 3.7 support (#463)
+  - Fix bugs in finance example (#564,#578)
+  - Added a wrapper for PySP to create a scripting interace (#689,#727)
+- GDP updates
+  - function in contrib for computing disjunctive variable bounds (#481)
+  - fix for Big-M processing inactive disjunction data (#490)
+  - fixes in var mover (#498)
+  - Resolve errors with Pyomo5 expressions (#514)
+  - Add examples from literature (#581,#702)
+  - Implemented improper basic steps (#582)
+  - Improve BigM test robustness (#659)
+- DAE updates
+  - Added support for external functions (#526)
+  - Bugfix in Casadi interface (#544)
+  - Code overhaul and improved test coverage (#660)
+- Documenation updates
+  - Converted old asciidoc documentation to Sphinx (#486,#574)
+  - Scripting section updates (#543)
+  - Document PR process (#628)
+  - Document Pyomo.Network (#651)
+  - Document preprocessing transformations (#653)
+  - Reorganized the Sphinx documentation to make it easier to navigate
+    and merge old and new documentation sections (#699)
+  - Create more prominent section for documentation on contrib packages (#729)
+- GAMS writer updates
+  - fix for power() expressions (#454)
+  - fix for fixed variables (#510)
+  - ShortNameLabeler to limit symbol names (#512)
+  - Sphinx documentation (#518)
+  - Add warning about zero division in variable evaluation (#529)
+  - Use tmpdir for subprocess files (#530)
+  - Integrate options attribute (#558)
+  - Change writer ctype checking (#593,#641)
+  - Fix double-operator due to negative constant (#698)
 - Removing testing and support for Python 2.6 (#322)
-- Resolved Python 3.4 build errors on Appveyor. (#438)
+- Resolved several build errors on Appveyor (#438,#539,#552,#577,#705)  
 - Wrap Vars in value() for assignment to numpy vectors (#436)
 - Adding TerminationCondition and SolverStatus to pyomo.environ (#429)
 - Resolved problems with ExternalFunctions with fixed arguments (#442)
@@ -23,6 +58,56 @@ Current Development
   pyomo.util. (#502)
 - Transformations map create_using arguments through the model clone (#497)
 - unique_component_name now checks all attributes (not just components) (#497)
+- Reconfigured Travis CI to run tests using DockerHub images, work on PRs 
+  from forks, run Python 3.7 (#479,#517,#600)
+- GDPopt updates to use config blocks, support integer variables,
+  documentation, callback renaming, new initialization strategy 
+  (#513,#541,#595,#599,#633,#650)
+- Remove imports from pyomo.core.expr to make expression system 
+  self-contained (#520)
+- Move kernel util (#522)
+- Removed coopr3 and pyomo4 expression logic (#524)
+- Preprocessing transformation for variable aggregation (#533)
+- Updated README.md to include link for performance plots (#534)
+- Updates to dualization and bilevel solvers (#535)
+- Update trustregion package for Pyomo5 expressions (#536, 
+- Fix pyomo help -s command (#551)
+- Implicitly order Pyomo sets based on insertion order (#568)
+- Kernel updates simplifying handling of active status on containers, 
+  save storage key on child, warn overwriting container index, fix
+  linear_canonical_form flag on linear_constraint (#569,#570,#571,#589,#598)
+- Corrected Ipopt capabilities (#573)
+- Model size report utility (#579)
+- Replaced Pyomo connector infrastructure with Pyomo.Network and 
+  added sequential modular simulation capability (#583,#648)
+- Fix for spaces in cplex file names (#586)
+- Fix to solver tempfiles (#590)
+- Prevent crash when solver returns suffixes but not values for 
+  variables (#596)
+- Create pyomo.dualize (#606)
+- Add pyomo.dataportal subpackage (#607)
+- More efficient string manipulation in LP writer (#610)
+- Make is_fixed describe 0*temp as a fixed expression (#615)
+- Preprocessiong transformation for induced linearity (#617)
+- Fix generation of bounds for fixed variables in LP writer (#623)
+- Jenkins driver updates to fix errors when files are moved/renamed, 
+  delete coverage info from previous builds, decode unicode in 
+  booktests driver (#627,#629,#630,#631,#704)
+- Silence invalid error messages logged with Template Expressions (#634)
+- Bugfix in Gurobi direct interface (#635)
+- Add support for sqrt function in differentiate() (#642)
+- Fix NEOS interface when behind a proxy in Python 3.x (#644) 
+- Add Reference "component" (#655)
+- Replace PyUtilib factories with native Pyomo factories (#661)
+- Add method to return F,G,H from AMPL external functions (#666,#668)
+- Implemented a general-purpose expression visitor (#671)
+- Cythonized writers in pyomo.repn (#675)
+- Implemented a scaling transformation (#694)
+- Contributed package for parameter estimation (#706)
+- Fix for overriding values in IndexedSets (#710)
+- Update symbolic differentiation to be compatible with sympy 1.3
+  and performance improvements (#715,#719)
+- Add 'SubclassOf' to support finding components based on sub class (#723)
 
 -------------------------------------------------------------------------------
 Pyomo 5.5
