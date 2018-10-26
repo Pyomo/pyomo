@@ -48,6 +48,7 @@ if sys.version_info < (2, 7):
     requires.append('argparse')
     requires.append('unittest2')
     requires.append('ordereddict')
+git push origin 5.5.1
 
 from setuptools import setup
 packages = _find_packages('pyomo')
@@ -59,7 +60,7 @@ setup(name='Pyomo',
       #
       # When cutting a release, ALSO update _major/_minor/_revnum in
       #
-      #     pyomo/pyomo/version/__init__.py
+      #     pyomo/pyomo/version/info.py
       #     pyomo/RELEASE.txt
       #
       version='5.5.1',
@@ -87,6 +88,7 @@ setup(name='Pyomo',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: Jython',
         'Programming Language :: Python :: Implementation :: PyPy',
