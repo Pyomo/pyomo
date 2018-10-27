@@ -232,10 +232,11 @@ class CuttingPlane_Transformation(Transformation):
                                "did not solve normally. Stopping cutting "
                                "plane generation.\n\n%s" % (results,))
                 return
-            print("x* ===============================")
-            instance_rBigM.x.pprint()
-            instance_rBigM.y.pprint()
-            print("==================================")
+            # DEBUG
+            # print("x* ===============================")
+            # instance_rBigM.x.pprint()
+            # instance_rBigM.y.pprint()
+            # print("==================================")
 
             rBigM_objVal = value(rBigM_obj)
             logger.warning("gdp.cuttingplane: rBigM objective = %s"
@@ -301,9 +302,10 @@ class CuttingPlane_Transformation(Transformation):
         cut_number = len(transBlock.cuts)
         logger.warning("gdp.cuttingplane: Creating (but not yet adding) cut %s."
                        % (cut_number,))
-        print("CURRENT SOLN (to separation problem):")
-        for var in rCHull_vars:
-            print(var.name + '\t' + str(value(var)))
+        # DEBUG
+        # print("CURRENT SOLN (to separation problem):")
+        # for var in rCHull_vars:
+        #     print(var.name + '\t' + str(value(var)))
 
         # loop through all constraints in rCHull and figure out which are active
         # or slightly violated. For each we will get the tangent plane at xhat
@@ -312,16 +314,18 @@ class CuttingPlane_Transformation(Transformation):
         # the hyperplane normal to this composite through xbar (projected into
         # the original space).
         normal_vectors = []
-        print("-------------------------------")
-        print("These constraints are tight:")
+        # DEBUG
+        # print("-------------------------------")
+        # print("These constraints are tight:")
         for constraint in instance_rCHull.component_data_objects(
                 Constraint,
                 active=True,
                 descend_into=Block,
                 sort=SortComponents.deterministic):
             if self.constraint_tight(instance_rCHull, constraint):
-                print(constraint.name)
-                print constraint.expr
+                # DEBUG
+                # print(constraint.name)
+                # print constraint.expr
                 # get normal vector to tangent plane to this constraint at xhat
                 f = constraint.body
                 firstDerivs = differentiate(f, wrt_list=rCHull_vars)
@@ -332,9 +336,10 @@ class CuttingPlane_Transformation(Transformation):
             [(v, sum(value(normal_vectors[i][v]) \
                      for i in range(len(normal_vectors)))) \
              for v in rCHull_vars])
-        print "COMPOSITE NORMAL, cut number %s" % cut_number
-        for x,v in composite_normal.iteritems():
-            print(x.name + '\t' + str(v))
+        # DEBUG
+        # print "COMPOSITE NORMAL, cut number %s" % cut_number
+        # for x,v in composite_normal.iteritems():
+        #     print(x.name + '\t' + str(v))
 
         # add a cut which is tangent to the composite normal at xhat:
         # (we are projecting out the disaggregated variables)
@@ -345,9 +350,10 @@ class CuttingPlane_Transformation(Transformation):
         for x_bigm, x_rbigm, x_chull, x_star in var_info:
             cutexpr_bigm += composite_normal[x_chull]*(x_bigm - x_chull.value)
             cutexpr_rBigM += composite_normal[x_chull]*(x_rbigm - x_chull.value)
-        print("++++++++++++++++++++++++++++++++++++++++++")
-        print("So this is the cut expression:")
-        print(cutexpr_bigm)
+        # DEBUG
+        # print("++++++++++++++++++++++++++++++++++++++++++")
+        # print("So this is the cut expression:")
+        # print(cutexpr_bigm)
 
         return({'bigm': cutexpr_bigm, 'rBigM': cutexpr_rBigM})
 

@@ -47,6 +47,7 @@ class OneVarDisj(unittest.TestCase):
 
 class TwoTermDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    # check that we have a transformation block and that the cuts are on it.
     def test_transformation_block(self):
         m = models.makeTwoTermDisj_boxes()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
@@ -70,7 +71,8 @@ class TwoTermDisj(unittest.TestCase):
     def test_create_using(self):
         m = models.makeTwoTermDisj_boxes()
 
-        # TODO: this is duplicate code with other transformation tests
+        # TODO: this is duplicate code with other transformation tests. Someday
+        # it would be nice to centralize it...
         modelcopy = TransformationFactory('gdp.cuttingplane').create_using(m)
         modelcopy_buf = StringIO()
         modelcopy.pprint(ostream=modelcopy_buf)
@@ -113,19 +115,19 @@ class Grossmann_TestCases(unittest.TestCase):
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        # we expect one cut
         self.assertEqual(len(cuts), 1)
 
         cut0 = cuts[0]
         self.assertEqual(cut0.upper, 0)
         self.assertIsNone(cut0.lower)
         cut0_expr = cut0.body
-        # we check that the cut is tight at the upper righthand
-        # corners of the two regions:
+        # we check that the cut is tight at the upper righthand corners of the
+        # two regions (within a tolerance (in either direction))
         m.x.fix(2)
         m.y.fix(10)
         m.disjunct1.indicator_var.fix(1)
         m.disjunct2.indicator_var.fix(0)
-        # As long as this is within MIP tolerance, we are happy:
         self.assertAlmostEqual(value(cut0_expr), 0)
 
         m.x.fix(10)
@@ -167,6 +169,7 @@ class Grossmann_TestCases(unittest.TestCase):
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
         self.assertEqual(len(cuts), 1)
 
+        # fix to optimal solution
         m.x.fix(2)
         m.y.fix(8)
         m.disjunct1.indicator_var.fix(1)
@@ -213,9 +216,9 @@ class Grossmann_TestCases(unittest.TestCase):
         self.assertGreaterEqual(0, value(cut))
 
 class NonlinearConvex(unittest.TestCase):
-    # TODO: this is a really weak test because it is not actually *this*
-    # apply_to call that raises the exception. But on the other hand that
-    # exception is tested in bigm, so maybe it doesn't matter much.
+    # This is a really weak test because it is not actually *this* apply_to call
+    # that raises the exception. But that exception is tested in bigm, so maybe
+    # it doesn't matter much.
     @raises(GDP_Error)
     def test_complain_if_no_bigm(self):
         m = models.twoDisj_nonlin_convex()
@@ -223,22 +226,32 @@ class NonlinearConvex(unittest.TestCase):
 
     def test_cuts_with_tighter_m(self):
         m = models.twoDisj_nonlin_convex()
+
+        # DEBUG
+        # sanity check
+        #sanity = TransformationFactory('gdp.bigm').create_using(m, bigM=68)
+        #results = SolverFactory('baron').solve(sanity, tee=True)
+        #print results
+
+        # I think this is the issue with this problem. The optimal solution is
+        # nasty... I might do better to a construct a problem with an integer
+        # optimal solution. Because then I could have some faith in this test...
+
+        # x = 5.89442707753, y = 5.44721382244
+        #set_trace()
+
         # This bigM value comes from the fact that both disjunts are contained
-        # in the box defined by the box 0 <= x <= 6, 0 <= y <= 6.
+        # in the box defined by 0 <= x <= 6, 0 <= y <= 6.
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=68)
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
 
         self.assertEqual(len(cuts), 1)
-
-        set_trace()
 
         m.x.fix(5.928)
         m.y.fix(5.372)
         m.circle1.indicator_var.fix(0)
         m.circle2.indicator_var.fix(1)
 
-        set_trace()
-        
         # cuts off optimal solution by about 0.5
         self.assertGreaterEqual(0, value(cuts[0].body))
 
@@ -254,15 +267,11 @@ class NonlinearConvex(unittest.TestCase):
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
         self.assertEqual(len(cuts), 5)
 
-        set_trace()
-        
         m.x.fix(5.928)
         m.y.fix(5.372)
         m.circle1.indicator_var.fix(0)
         m.circle2.indicator_var.fix(1)
 
-        set_trace()
-        
         self.assertGreaterEqual(0, value(cuts[0].body))
         
         
