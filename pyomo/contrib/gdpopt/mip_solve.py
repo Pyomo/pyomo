@@ -38,9 +38,11 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
         # Remove terms in equal to zero summations
         'contrib.propagate_zero_sum',
         # Remove trivial constraints
-        'contrib.deactivate_trivial_constraints']
-    for xfrm in preprocessing_transformations:
-        TransformationFactory(xfrm).apply_to(m)
+        'contrib.deactivate_trivial_constraints',
+    ]
+    if config.mip_presolve:
+        for xfrm in preprocessing_transformations:
+            TransformationFactory(xfrm).apply_to(m)
 
     # Deactivate extraneous IMPORT/EXPORT suffixes
     getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()

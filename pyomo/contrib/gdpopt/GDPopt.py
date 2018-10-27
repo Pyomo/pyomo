@@ -97,6 +97,11 @@ class GDPoptSolver(object):
         default="gurobi",
         description="Mixed integer linear solver to use."
     ))
+    CONFIG.declare("mip_presolve", ConfigValue(
+        default="true",
+        description="Flag to enable or diable Pyomo MIP presolve. Default=True.",
+        domain=bool
+    ))
     mip_solver_args = CONFIG.declare(
         "mip_solver_args", ConfigBlock(implicit=True))
     CONFIG.declare("nlp_solver", ConfigValue(
