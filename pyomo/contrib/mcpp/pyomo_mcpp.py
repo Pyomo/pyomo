@@ -134,6 +134,10 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         self.mcpp.new_exponential.argtypes = [ctypes.c_void_p]
         self.mcpp.new_exponential.restype = ctypes.c_void_p
 
+        # log(MC Variable)
+        self.mcpp.new_logarithm.argtypes = [ctypes.c_void_p]
+        self.mcpp.new_logarithm.restype = ctypes.c_void_p
+
         self.mcpp.new_NPV.argtypes = [ctypes.c_void_p]
         self.mcpp.new_NPV.restype = ctypes.c_void_p
 
@@ -168,18 +172,22 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         elif isinstance(node, UnaryFunctionExpression):
             if (node.name == "exp"):
                 ans = self.mcpp.new_exponential(data[0])
-            if (node.name == "sin"):
+            elif (node.name == "log"):
+                ans = self.mcpp.new_logarithm(data[0])
+            elif (node.name == "sin"):
                 ans = self.mcpp.new_trigSin(data[0])
-            if (node.name == "cos"):
+            elif (node.name == "cos"):
                 ans = self.mcpp.new_trigCos(data[0])
-            if (node.name == "tan"):
+            elif (node.name == "tan"):
                 ans = self.mcpp.new_trigTan(data[0])
-            if (node.name == "asin"):
+            elif (node.name == "asin"):
                 ans = self.mcpp.new_atrigSin(data[0])
-            if (node.name == "acos"):
+            elif (node.name == "acos"):
                 ans = self.mcpp.new_atrigCos(data[0])
-            if (node.name == "atan"):
+            elif (node.name == "atan"):
                 ans = self.mcpp.new_atrigTan(data[0])
+            else:
+                raise NotImplementedError("Unknown unary function: %s" % (node.name,))
         elif any(isinstance(node, npv) for npv in NPV_expressions):
             ans = self.mcpp.new_NPV(value(data[0]))
         elif type(node) in nonpyomo_leaf_types:

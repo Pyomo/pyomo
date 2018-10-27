@@ -156,6 +156,14 @@ MC *exponential(MC *var1)
     return ans;
 }
 
+MC *logarithm(MC *var1)
+{
+    MC F = log(*var1);
+
+    MC *ans = new MC(F);
+    return ans;
+}
+
 //Get usable information from MC++
 double lower(MC *expr)
 {
@@ -307,6 +315,12 @@ extern "C"
     MC *new_exponential(MC *ptr1)
     {
         MC *ans = exponential(ptr1);
+        return ans;
+    }
+
+    MC *new_logarithm(MC *ptr1)
+    {
+        MC *ans = logarithm(ptr1);
         return ans;
     }
 
