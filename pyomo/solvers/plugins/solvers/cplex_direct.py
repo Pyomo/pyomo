@@ -13,6 +13,7 @@ import re
 import sys
 import pyomo.common
 from pyutilib.misc import Bunch
+from pyutilib.services import TempfileManager
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
@@ -663,7 +664,7 @@ class CPLEXDirect(DirectSolver):
 
         # finally, clean any temporary files registered with the temp file
         # manager, created populated *directly* by this plugin.
-        pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
+        TempfileManager.pop(remove=not self._keepfiles)
 
         return DirectOrPersistentSolver._postsolve(self)
 
