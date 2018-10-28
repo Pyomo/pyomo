@@ -77,9 +77,9 @@ def create_test_method(model,
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
-        def skipping_test(self):
+        def skipping_this(self):
             return self.skipTest(test_case.msg)
-        return skipping_test
+        return skipping_this
 
     # Return a normal test
     return failed_solve_test
