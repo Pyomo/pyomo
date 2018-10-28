@@ -1,3 +1,12 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 from scipy.sparse import csr_matrix as scipy_csr_matrix
 from scipy.sparse import coo_matrix as scipy_coo_matrix
 from scipy.sparse.sputils import (upcast,
