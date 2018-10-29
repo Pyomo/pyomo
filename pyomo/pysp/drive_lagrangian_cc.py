@@ -334,7 +334,6 @@ def run(args=None):
 #####################################################################################
 
    finally:
-
       # delete temporary unarchived directories
       scenario_instance_factory.close()
 

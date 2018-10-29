@@ -2598,17 +2598,16 @@ class ScenarioTree(object):
                 print("\tParent=%s" % (tree_node._parent._name))
             else:
                 print("\tParent=" + "None")
-
+            label_printed = False
             if (len(tree_node._stage._variable_templates) > 0) or \
                (len(tree_node._variable_templates) > 0):
-                print("\tVariables: ")
-                variable_names = set(tree_node._stage._variable_templates).union(
-                    tree_node._variable_templates)
-                for variable_name in sorted(variable_names):
-                    indices = sorted(tree_node._variable_indices[variable_name])
-                    for index in indices:
-                        id_ = tree_node._name_index_to_id[variable_name,index]
+                for name in sorted(tree_node._variable_indices):
+                    for index in sorted(tree_node._variable_indices[name]):
+                        id_ = tree_node._name_index_to_id[name,index]
                         if id_ in tree_node._standard_variable_ids:
+                            if not label_printed:
+                                print("\tVariables: ")
+                                label_printed = True
                             # if a solution has not yet been stored /
                             # snapshotted, then the value won't be in the solution map
                             try:
@@ -2616,26 +2615,25 @@ class ScenarioTree(object):
                             except KeyError:
                                 value = None
                             if (value is not None) and (math.fabs(value) > epsilon):
-                                print("\t\t"+variable_name+indexToString(index)+"="+str(value))
-
+                                print("\t\t"+name+indexToString(index)+"="+str(value))
+            label_printed = False
             if (len(tree_node._stage._derived_variable_templates) > 0) or \
                (len(tree_node._derived_variable_templates) > 0):
-                print("\tDerived Variables: ")
-                variable_names = set(tree_node._stage._derived_variable_templates).union(
-                    tree_node._derived_variable_templates)
-                for variable_name in sorted(variable_names):
-                    indices = sorted(tree_node._variable_indices[variable_name])
-                    for index in indices:
-                        id_ = tree_node._name_index_to_id[variable_name,index]
+                for name in sorted(tree_node._variable_indices):
+                    for index in sorted(tree_node._variable_indices[name]):
+                        id_ = tree_node._name_index_to_id[name,index]
                         if id_ in tree_node._derived_variable_ids:
+                            if not label_printed:
+                                print("\tDerived Variables: ")
+                                label_printed = True
                             # if a solution has not yet been stored /
                             # snapshotted, then the value won't be in the solution map
                             try:
-                                val = tree_node._solution[id_]
-                            except:
-                                val = None
-                            if (val is not None) and (math.fabs(value) > epsilon):
-                                print("\t\t"+variable_name+indexToString(index)+"="+str(val))
+                                value = tree_node._solution[id_]
+                            except KeyError:
+                                value = None
+                            if (value is not None) and (math.fabs(value) > epsilon):
+                                print("\t\t"+name+indexToString(index)+"="+str(value))
             print("")
 
     #

@@ -463,7 +463,6 @@ def run(args=None):
       Result = LagrangeMorePR()
 #####################################################################################
    finally:
-
       # delete temporary unarchived directories
       scenario_instance_factory.close()
 
