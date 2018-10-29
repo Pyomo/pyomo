@@ -122,6 +122,5 @@ class Testrapper(unittest.TestCase):
             pass
         assert(nodename == 'RootNode')
 
-# see also foo.py        
 if __name__ == '__main__':
     unittest.main()
