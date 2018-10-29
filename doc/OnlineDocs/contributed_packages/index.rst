@@ -15,8 +15,10 @@ Contributed packages distributed with Pyomo:
 .. toctree::
    :maxdepth: 1
 
-   contrib/preprocessing.rst
-   contrib/gdpopt.rst
+   preprocessing.rst
+   gdpopt.rst
+   multistart.rst
+   parmest/index.rst
 
 Contributed packages distributed independently of Pyomo, but accessible
 through ``pyomo.contrib``:

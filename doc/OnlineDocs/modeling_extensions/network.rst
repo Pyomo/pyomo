@@ -294,7 +294,8 @@ The following code demonstrates basic usage of the
 :py:class:`SequentialDecomposition <pyomo.network.SequentialDecomposition>`
 class:
 
-.. code-block:: python
+.. doctest::
+    :skipif: not __import__("pyomo.network").network.decomposition.imports_available
 
     >>> from pyomo.environ import *
     >>> from pyomo.network import *
