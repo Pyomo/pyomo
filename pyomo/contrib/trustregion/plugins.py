@@ -260,17 +260,16 @@ class TrustRegionSolver(OptSolver):
 
     def solve(self, model, eflist, **kwds):
         # set customized config parameters
-        config = self.config(kwds)
+        self._local_config = self.config(kwds)
 
         # first store all data we will need to change in original model as a tuple
         # [0]=Var component, [1]=external function list, [2]=config block
-        model._tmp_trf_data = (list(model.component_data_objects(Var)), eflist, config)
+        model._tmp_trf_data = (list(model.component_data_objects(Var)), eflist, self._local_config)
         # now clone the model
         inst = model.clone()
 
         # call TRF on cloned model
         TRF(inst, inst._tmp_trf_data[1], inst._tmp_trf_data[2])
-        print('done with TRF')
 
         # copy potentially changed variable values back to original model and return
         for inst_var, orig_var in zip(inst._tmp_trf_data[0], model._tmp_trf_data[0]):
