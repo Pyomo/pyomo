@@ -16,7 +16,15 @@ except ImportError:
 if numpy_available:
     from .sparse.intrinsic import *
 else:
-    print("WARNING: Numpy not available. Install numpy before using pynumero")
+    # In general, generating output in __init__.py is undesirable, as
+    # many __init__.py get imported automatically by pyomo.environ.
+    # Fortunately, at the moment, pynumero doesn't implement any
+    # plugins, so pyomo.environ ignores it.  When we start implementing
+    # general solvers in pynumero we will want to remove / move this
+    # warning somewhere deeper in the code.
+    import logging
+    _logger = logging.getLogger('pyomo.contrib.pynumero')
+    _logger.warn("Numpy not available. Install numpy before using pynumero")
 
 
 
