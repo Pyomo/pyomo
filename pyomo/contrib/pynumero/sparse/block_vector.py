@@ -372,11 +372,10 @@ class BlockVector(object):
         return bv
 
     def _check_mask(self):
-        msg = 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-        msg += '\n{}'.format(self.__str__())
         if not np.all(self._block_mask):
-            print(self)
-            raise RuntimeError(msg)
+            raise RuntimeError(
+                "Operation not allowed with None blocks. Specify all blocks "
+                "in BlockVector\n%s" % (self,))
         for idx, blk in enumerate(self._blocks):
             if isinstance(blk, BlockVector):
                 blk._check_mask()

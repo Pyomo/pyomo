@@ -29,9 +29,11 @@ if numpy_available and scipy_available:
     from .block_matrix import *
     from .extract import tril, triu
 else:
+    import logging
+    _logger = logging.getLogger('pyomo.contrib.pynumero.sparse')
     if not numpy_available:
         #raise ImportError("Install numpy")
-        print("WARNING: Install numpy to use pynumero")
+        _logger.warn("Install numpy to use pynumero")
     if not scipy_available:
         #raise ImportError("Install scipy")
-        print("WARNING: Install scipy to use pynumero")
+        _logger.warn("Install scipy to use pynumero")

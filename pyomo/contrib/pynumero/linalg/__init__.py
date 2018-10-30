@@ -16,4 +16,6 @@ except ImportError:
 if numpy_available:
     from .intrinsics import *
 else:
-    print("WARNING: Numpy not available. Install numpy before using pynumero")
+    import logging
+    logging.getLogger('pyomo.contrib.pynumero.linalg').warn(
+        "Numpy not available. Install numpy before using pynumero")

@@ -23,8 +23,8 @@ else:
     # general solvers in pynumero we will want to remove / move this
     # warning somewhere deeper in the code.
     import logging
-    _logger = logging.getLogger('pyomo.contrib.pynumero')
-    _logger.warn("Numpy not available. Install numpy before using pynumero")
+    logging.getLogger('pyomo.contrib.pynumero').warn(
+        "Numpy not available. Install numpy before using pynumero")
 
 
 
