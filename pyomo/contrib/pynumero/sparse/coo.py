@@ -594,7 +594,7 @@ class COOSymMatrix(COOMatrix):
 
         if isinstance(other, SparseBase):
             raise RuntimeError('not implemented yet')
-        super().__add__(other)
+        super(COOSymMatrix, self).__add__(other)
 
     def __radd__(self, other):  # other + self
         return self.__add__(other)

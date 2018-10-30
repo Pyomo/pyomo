@@ -167,7 +167,7 @@ class CSRMatrix(SparseBase, scipy_csr_matrix):
         if isinstance(other, SparseBase):
             if other.is_symmetric:
                 expanded_other = other.tofullmatrix()
-                result = super()._mul_sparse_matrix(expanded_other)
+                result = super(CSRMatrix, self)._mul_sparse_matrix(expanded_other)
                 if self.shape[0] == expanded_other.shape[1]:
                     if _is_symmetric_numerically(result):
                         return _convert_matrix_to_symmetric(result, check_symmetry=False)
@@ -176,13 +176,13 @@ class CSRMatrix(SparseBase, scipy_csr_matrix):
             if isinstance(other, BlockMatrix):
                 raise NotImplementedError("Not supported yet")
                 expanded_other = other.tocsr()
-                result = super()._mul_sparse_matrix(expanded_other)
+                result = super(CSRMatrix, self)._mul_sparse_matrix(expanded_other)
                 if self.shape[0] == expanded_other.shape[1]:
                     if _is_symmetric_numerically(result):
                         return _convert_matrix_to_symmetric(result, check_symmetry=False)
                 return result
 
-            result = super()._mul_sparse_matrix(other)
+            result = super(CSRMatrix, self)._mul_sparse_matrix(other)
             if self.shape[0] == other.shape[1]:
                 if _is_symmetric_numerically(result):
                     return _convert_matrix_to_symmetric(result, check_symmetry=False)
@@ -223,12 +223,14 @@ class CSRSymMatrix(CSRMatrix):
         error_msg = "Symmetric matrices only store lower triangular"
         assert not expand_symmetry, error_msg
 
-        super().__init__(arg1,
-                         shape=shape,
-                         dtype=dtype,
-                         copy=copy,
-                         expand_symmetry=expand_symmetry,
-                         **kwargs)
+        super(CSRSymMatrix, self).__init__(
+            arg1,
+            shape=shape,
+            dtype=dtype,
+            copy=copy,
+            expand_symmetry=expand_symmetry,
+            **kwargs
+        )
 
 
         # add check to veryfy square matrix

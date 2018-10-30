@@ -170,7 +170,7 @@ class CSCMatrix(SparseBase, scipy_csc_matrix):
 
             if other.is_symmetric:
                 expanded_other = other.tofullmatrix()
-                result = super()._mul_sparse_matrix(expanded_other)
+                result = super(CSCMatrix, self)._mul_sparse_matrix(expanded_other)
                 if self.shape[0] == expanded_other.shape[1]:
                     if _is_symmetric_numerically(result):
                         return _convert_matrix_to_symmetric(result, check_symmetry=False)
@@ -179,13 +179,13 @@ class CSCMatrix(SparseBase, scipy_csc_matrix):
             if isinstance(other, BlockMatrix):
                 raise NotImplementedError("Not supported yet")
                 expanded_other = other.tocsc()
-                result = super()._mul_sparse_matrix(expanded_other)
+                result = super(CSCMatrix, self)._mul_sparse_matrix(expanded_other)
                 if self.shape[0] == expanded_other.shape[1]:
                     if _is_symmetric_numerically(result):
                         return _convert_matrix_to_symmetric(result, check_symmetry=False)
                 return result
 
-            result = super()._mul_sparse_matrix(other)
+            result = super(CSCMatrix, self)._mul_sparse_matrix(other)
             if self.shape[0] == other.shape[1]:
                 if _is_symmetric_numerically(result):
                     return _convert_matrix_to_symmetric(result, check_symmetry=False)
@@ -222,12 +222,14 @@ class CSCSymMatrix(CSCMatrix):
 
         error_msg = "Symmetric matrices only store lower triangular"
         assert not expand_symmetry, error_msg
-        super().__init__(arg1,
-                         shape=shape,
-                         dtype=dtype,
-                         copy=copy,
-                         expand_symmetry=expand_symmetry,
-                         **kwargs)
+        super(CSCSymMatrix, self).__init__(
+            arg1,
+            shape=shape,
+            dtype=dtype,
+            copy=copy,
+            expand_symmetry=expand_symmetry,
+            **kwargs
+        )
 
         # add check to verify square matrix
         if self.shape[0] != self.shape[1]:
