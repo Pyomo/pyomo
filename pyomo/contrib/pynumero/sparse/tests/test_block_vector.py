@@ -838,7 +838,7 @@ class TestBlockVector(unittest.TestCase):
                        np.log1p, np.logical_not, np.exp2, np.expm1,
                        np.sign, np.rint, np.square, np.positive,
                        np.negative, np.rad2deg, np.deg2rad,
-                       np.conjugate]
+                       np.conjugate, np.reciprocal]
 
         for fun in unary_funcs:
             v2[0] = fun(v[0])

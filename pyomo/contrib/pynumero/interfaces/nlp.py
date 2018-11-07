@@ -903,6 +903,8 @@ class AslNLP(NLP):
         # internal pointer for evaluation of g
         self._g_rhs = self._upper_g.copy()
         self._g_rhs[~self._c_mask] = 0.0
+        self._lower_g[self._c_mask] = 0.0
+        self._upper_g[self._c_mask] = 0.0
 
         # set number of equatity and inequality constraints from maps
         self._nc = len(self._c_map)
@@ -1063,6 +1065,7 @@ class AslNLP(NLP):
         array_like
 
         """
+        #substract = kwargs.pop('substract', True)
         if out is None:
             res = self.create_vector_y()
         else:
@@ -1071,7 +1074,6 @@ class AslNLP(NLP):
             res = out
 
         self._asl.eval_g(x, res)
-        #res -= self._g_rhs
         np.subtract(res, self._g_rhs, res)
         return res
 

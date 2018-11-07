@@ -7,7 +7,8 @@ To build PyNumero from github::
 	
 	git clone https://github.com/Pyomo/pyomo.git
 	cd pyomo/pyomo
-	python setup.py develop
+	python setup.py install
+	pip install scipy
 
 PyNumero relies on c++ libraries for fast evaluation of NLP functions.
 Future releases of PyNumero will distribute binaries via conda-forge and pip.

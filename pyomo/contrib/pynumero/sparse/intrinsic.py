@@ -10,194 +10,7 @@
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 import numpy as np
 
-__all__ = ['ceil', 'floor', 'exp', 'log', 'log10', 'sqrt', 'sin',
-           'conjugate', 'cos', 'tan', 'arctan', 'arcsinh', 'sinh',
-           'cosh', 'abs', 'absolute', 'fabs', 'around', 'log2',
-           'arcsin', 'arccos', 'arccosh', 'sum', 'min', 'max', 'mean',
-           'prod', 'add', 'subtract', 'divide', 'multiply']
-
-
-def _unary_operation(x, fname):
-    if isinstance(x, np.ndarray):
-        f = getattr(np, fname)
-        return f(x)
-    elif isinstance(x, BlockVector):
-        v = BlockVector(x.nblocks)
-        for i in range(x.nblocks):
-            v[i] = _unary_operation(x[i], fname)
-        return v
-    else:
-        raise NotImplementedError()
-
-
-def _reduce_operation(x, fname):
-    f = getattr(np, fname)
-    if isinstance(x, np.ndarray):
-        return f(x)
-    elif isinstance(x, BlockVector):
-        flat_x = x.flatten()
-        return f(flat_x)
-    else:
-        raise NotImplementedError()
-    
-    
-def _binary_operation(x1, x2, fname, keep_blocks=False):
-    f = getattr(np, fname)
-    if (isinstance(x1, np.ndarray) or np.isscalar(x1)) and (isinstance(x2, np.ndarray)or np.isscalar(x2)):
-        return f(x1, x2)
-    elif (isinstance(x1, np.ndarray) or np.isscalar(x1)) and isinstance(x2, BlockVector):
-        flat_x = x2.flatten()
-        res = f(x1, flat_x)
-        if not keep_blocks:
-            return res
-        v = x2.clone()
-        v.copyfrom(res)
-        return res
-    elif (isinstance(x2, np.ndarray)or np.isscalar(x2)) and isinstance(x1, BlockVector):
-        flat_x = x1.flatten()
-        res = f(flat_x, x2)
-        if not keep_blocks:
-            return res
-        v = x1.clone()
-        v.copyfrom(res)
-        return res
-    elif isinstance(x1, BlockVector) and isinstance(x2, BlockVector):
-        flat_x1 = x1.flatten()
-        flat_x2 = x2.flatten()
-        res = f(flat_x1, flat_x2)
-        if not keep_blocks:
-            return res
-        v = x1.clone()
-        v.copyfrom(res)
-        return res
-    else:
-        raise NotImplementedError()
-
-
-def ceil(x):
-    return _unary_operation(x, 'ceil')
-
-
-def floor(x):
-    return _unary_operation(x, 'floor')
-
-
-def exp(x):
-    return _unary_operation(x, 'exp')
-
-
-def conjugate(x):
-    return _unary_operation(x, 'conjugate')
-
-
-def sin(x):
-    return _unary_operation(x, 'sin')
-
-
-def cos(x):
-    return _unary_operation(x, 'cos')
-
-
-def tan(x):
-    return _unary_operation(x, 'tan')
-
-
-def arctan(x):
-    return _unary_operation(x, 'arctan')
-
-
-def arcsinh(x):
-    return _unary_operation(x, 'arcsinh')
-
-
-def sinh(x):
-    return _unary_operation(x, 'sinh')
-
-
-def cosh(x):
-    return _unary_operation(x, 'cosh')
-
-
-def abs(x):
-    return _unary_operation(x, 'abs')
-
-
-def absolute(x):
-    return _unary_operation(x, 'absolute')
-
-
-def fabs(x):
-    return _unary_operation(x, 'fabs')
-
-
-def around(x):
-    return _unary_operation(x, 'around')
-
-
-def sqrt(x):
-    return _unary_operation(x, 'sqrt')
-
-
-def log(x):
-    return _unary_operation(x, 'log')
-
-
-def log2(x):
-    return _unary_operation(x, 'log2')
-
-
-def log10(x):
-    return _unary_operation(x, 'log10')
-
-
-def arcsin(x):
-    return _unary_operation(x, 'arcsin')
-
-
-def arccos(x):
-    return _unary_operation(x, 'arccos')
-
-
-def arccosh(x):
-    return _unary_operation(x, 'arccosh')
-
-
-# reduce operations
-def sum(x):
-    return _reduce_operation(x, 'sum')
-
-
-def mean(x):
-    return _reduce_operation(x, 'mean')
-
-
-def max(x):
-    return _reduce_operation(x, 'max')
-
-
-def min(x):
-    return _reduce_operation(x, 'min')
-
-
-def prod(x):
-    return _reduce_operation(x, 'prod')
-
-
-# binary operations
-def add(x1, x2, keep_blocks=False):
-    return _binary_operation(x1, x2, 'add', keep_blocks=keep_blocks)
-
-
-def subtract(x1, x2, keep_blocks=False):
-    return _binary_operation(x1, x2, 'subtract', keep_blocks=keep_blocks)
-
-
-def multiply(x1, x2, keep_blocks=False):
-    return _binary_operation(x1, x2, 'multiply', keep_blocks=keep_blocks)
-
-
-def divide(x1, x2, keep_blocks=False):
-    return _binary_operation(x1, x2, 'divide', keep_blocks=keep_blocks)
+__all__ = ['allclose', 'concatenate', 'where', 'isin']
 
 
 def allclose(x1, x2, rtol, atol):
@@ -210,7 +23,191 @@ def concatenate(arrays):
     return np.concatenate([a.flatten() for a in arrays])
 
 
+def where(*args):
+
+    condition = args[0]
+
+    if len(args) == 2:
+        raise ValueError('either both or neither of x and y should be given')
+    if len(args) > 3:
+        raise TypeError('where() takes at most 3 arguments ({} given)'.format(len(args)))
+
+    n_args = len(args)
+    if isinstance(condition, BlockVector):
+        if n_args == 1:
+            assert not condition.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+            res = BlockVector(condition.nblocks)
+            for i in range(condition.nblocks):
+                _args = [condition[i]]
+                res[i] = where(*_args)[0]
+            return (res,)
+        else:
+            x = args[1]
+            y = args[2]
+            if isinstance(x, BlockVector) and isinstance(y, BlockVector):
+                assert not condition.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                assert not x.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                assert not y.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                assert condition.nblocks == x.nblocks, 'Operation on BlockVectors need the same number of blocks on each operand'
+                assert x.nblocks == y.nblocks, 'Operation on BlockVectors need the same number of blocks on each operand'
+                res = BlockVector(condition.nblocks)
+                for i in range(condition.nblocks):
+                    _args = [condition[i], x[i], y[i]]
+                    res[i] = where(*_args)
+                return res
+            elif isinstance(x, np.ndarray) and isinstance(y, BlockVector):
+                assert not condition.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                assert not y.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                assert condition.nblocks == y.nblocks, 'Operation on BlockVectors need the same number of blocks on each operand'
+                assert x.size == condition.size, 'Operation on BlockVectors need the same number of blocks on each operand'
+                assert x.size == y.size, 'Operation on BlockVectors need the same number of blocks on each operand'
+                res = BlockVector(condition.nblocks)
+                accum = 0
+                for i in range(condition.nblocks):
+                    nelements = condition._brow_lengths[i]
+                    _args = [condition[i], x[accum: accum + nelements], y[i]]
+                    res[i] = where(*_args)
+                    accum += nelements
+                return res
+
+            elif isinstance(x, BlockVector) and isinstance(y, np.ndarray):
+                assert not condition.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                assert not x.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                assert condition.nblocks == x.nblocks, 'Operation on BlockVectors need the same number of blocks on each operand'
+                assert x.size == condition.size, 'Operation on BlockVectors need the same number of blocks on each operand'
+                assert x.size == y.size, 'Operation on BlockVectors need the same number of blocks on each operand'
+                res = BlockVector(condition.nblocks)
+                accum = 0
+                for i in range(condition.nblocks):
+                    nelements = condition._brow_lengths[i]
+                    _args = [condition[i], x[i], y[accum: accum + nelements]]
+                    res[i] = where(*_args)
+                    accum += nelements
+                return res
+
+            elif np.isscalar(x) and isinstance(y, BlockVector):
+                assert not condition.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                assert not y.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                assert condition.nblocks == y.nblocks, 'Operation on BlockVectors need the same number of blocks on each operand'
+                assert condition.size == y.size, 'Operation on BlockVectors need the same number of blocks on each operand'
+                res = BlockVector(condition.nblocks)
+                accum = 0
+                for i in range(condition.nblocks):
+                    nelements = condition._brow_lengths[i]
+                    _args = [condition[i], x, y[i]]
+                    res[i] = where(*_args)
+                    accum += nelements
+                return res
+
+            elif isinstance(x, BlockVector) and np.isscalar(y):
+                assert not condition.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                assert not x.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                assert condition.nblocks == x.nblocks, 'Operation on BlockVectors need the same number of blocks on each operand'
+                assert x.size == condition.size, 'Operation on BlockVectors need the same number of blocks on each operand'
+                res = BlockVector(condition.nblocks)
+                accum = 0
+                for i in range(condition.nblocks):
+                    nelements = condition._brow_lengths[i]
+                    _args = [condition[i], x[i], y]
+                    res[i] = where(*_args)
+                    accum += nelements
+                return res
+
+            elif isinstance(x, np.ndarray) and isinstance(y, np.ndarray):
+                assert not condition.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                assert x.size == condition.size, 'Operation on BlockVectors need the same number of blocks on each operand'
+                assert x.size == y.size, 'Operation on BlockVectors need the same number of blocks on each operand'
+                res = BlockVector(condition.nblocks)
+                accum = 0
+                for i in range(condition.nblocks):
+                    nelements = condition._brow_lengths[i]
+                    _args = [condition[i], x[accum: accum + nelements], y[accum: accum + nelements]]
+                    res[i] = where(*_args)
+                    accum += nelements
+                return res
+
+            elif isinstance(x, np.ndarray) and np.isscalar(y):
+                assert not condition.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                assert x.size == condition.size, 'Operation on BlockVectors need the same number of blocks on each operand'
+                res = BlockVector(condition.nblocks)
+                accum = 0
+                for i in range(condition.nblocks):
+                    nelements = condition._brow_lengths[i]
+                    _args = [condition[i], x[accum: accum + nelements], y]
+                    res[i] = where(*_args)
+                    accum += nelements
+                return res
+
+            elif np.isscalar(x) and isinstance(y, np.ndarray):
+                assert not condition.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                assert condition.size == y.size, 'Operation on BlockVectors need the same number of blocks on each operand'
+                res = BlockVector(condition.nblocks)
+                accum = 0
+                for i in range(condition.nblocks):
+                    nelements = condition._brow_lengths[i]
+                    _args = [condition[i], x, y[accum: accum + nelements]]
+                    res[i] = where(*_args)
+                    accum += nelements
+                return res
+
+            elif np.isscalar(x) and np.isscalar(y):
+                assert not condition.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+                res = BlockVector(condition.nblocks)
+                for i in range(condition.nblocks):
+                    _args = [condition[i], x, y]
+                    res[i] = where(*_args)
+                return res
+
+            else:
+                raise NotImplementedError()
+    else:
+        if n_args == 1:
+            return np.where(*args)
+        else:
+
+            x = args[1]
+            y = args[2]
+            if isinstance(x, BlockVector):
+                # ToDo: add logger to give warning here
+                x = x.flatten()
+            if isinstance(y, BlockVector):
+                # ToDo: add logger to give warning here
+                y = y.flatten()
+            _args = [condition, x, y]
+            return np.where(*_args)
 
 
+def isin(element, test_elements, assume_unique=False, invert=False):
 
+    if isinstance(element, BlockVector) and isinstance(test_elements, BlockVector):
+        assert not element.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not test_elements.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert element.nblocks == test_elements.nblocks, 'Operation on BlockVectors need the same number of blocks on each operand'
+        res = BlockVector(element.nblocks)
+        for i in range(element.nblocks):
+            res[i] = isin(element[i],
+                          test_elements[i],
+                          assume_unique=assume_unique,
+                          invert=invert)
+        return res
 
+    elif isinstance(element, BlockVector) and isinstance(test_elements, np.ndarray):
+
+        assert not element.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        res = BlockVector(element.nblocks)
+        for i in range(element.nblocks):
+            res[i] = isin(element[i],
+                          test_elements,
+                          assume_unique=assume_unique,
+                          invert=invert)
+        return res
+
+    elif isinstance(element, np.ndarray) and isinstance(test_elements, np.ndarray):
+
+        return np.isin(element,
+                       test_elements,
+                       assume_unique=assume_unique,
+                       invert=invert)
+
+    else:
+        raise NotImplementedError()
