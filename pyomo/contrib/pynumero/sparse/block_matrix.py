@@ -321,7 +321,7 @@ class BlockMatrix(SparseBase):
 
     def _mul_sparse_matrix(self, other):
 
-        assert other.shape == self.shape, "Dimension missmatch"
+        assert other.shape == self.shape, "Dimension mismatch"
 
         if not isinstance(other, BlockMatrix):
             return self.tocsr()._mul_sparse_matrix(other)
@@ -461,7 +461,7 @@ class BlockMatrix(SparseBase):
     def __setitem__(self, key, value):
 
         if isinstance(key, slice):
-            raise NotImplementedError
+            raise NotImplementedError('slices not supported for BlockMatrix')
 
         if not isinstance(key, tuple):
             raise RuntimeError('Wrong index')
@@ -541,9 +541,11 @@ class BlockMatrix(SparseBase):
 
         result = BlockMatrix(self.bshape[0], self.bshape[1])
         m, n = self.bshape
-        assert other.shape == self.shape, 'dimensions missmatch {} != {}'.format(self.shape, other.shape)
+        assert other.shape == self.shape, \
+            'dimensions mismatch {} != {}'.format(self.shape, other.shape)
         if isinstance(other, BlockMatrix):
-            assert other.bshape == self.bshape, 'dimensions missmatch {} != {}'.format(self.bshape, other.bshape)
+            assert other.bshape == self.bshape, \
+                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
             other._check_mask()
             for i in range(m):
                 for j in range(n):
@@ -556,8 +558,12 @@ class BlockMatrix(SparseBase):
                     else:
                         result[i, j] = None
             return result
+        elif isinstance(other, SparseBase) and not isinstance(other, BlockMatrix):
+            raise NotImplementedError('Sparse Matrix with BlockMatrix addition not supported')
+        elif np.isscalar(other):
+            raise NotImplementedError('Scalar with BlockMatrix addition not supported')
         else:
-            return NotImplemented
+            raise NotImplementedError('input not recognized for addition')
 
     def __radd__(self, other):
         return self.__add__(other)
@@ -567,9 +573,11 @@ class BlockMatrix(SparseBase):
         self._check_mask()
         result = BlockMatrix(self.bshape[0], self.bshape[1])
         m, n = self.bshape
-        assert other.shape == self.shape, 'dimensions missmatch {} != {}'.format(self.shape, other.shape)
+        assert other.shape == self.shape, \
+            'dimensions mismatch {} != {}'.format(self.shape, other.shape)
         if isinstance(other, BlockMatrix):
-            assert other.bshape == self.bshape, 'dimensions missmatch {} != {}'.format(self.bshape, other.bshape)
+            assert other.bshape == self.bshape, \
+                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
             other._check_mask()
             for i in range(m):
                 for j in range(n):
@@ -582,16 +590,22 @@ class BlockMatrix(SparseBase):
                     else:
                         result[i, j] = None
             return result
+        elif isinstance(other, SparseBase) and not isinstance(other, BlockMatrix):
+            raise NotImplementedError('Sparse Matrix with BlockMatrix subtraction not supported')
+        elif np.isscalar(other):
+            raise NotImplementedError('Scalar with BlockMatrix subtraction not supported')
         else:
-            raise NotImplementedError
+            raise NotImplementedError('input not recognized for subtraction')
 
     def __rsub__(self, other):
         self._check_mask()
         result = BlockMatrix(self.bshape[0], self.bshape[1])
         m, n = self.bshape
-        assert other.shape == self.shape, 'dimensions missmatch {} != {}'.format(self.shape, other.shape)
+        assert other.shape == self.shape, \
+            'dimensions mismatch {} != {}'.format(self.shape, other.shape)
         if isinstance(other, BlockMatrix):
-            assert other.bshape == self.bshape, 'dimensions missmatch {} != {}'.format(self.bshape, other.bshape)
+            assert other.bshape == self.bshape, \
+                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
             other._check_mask()
             for i in range(m):
                 for j in range(n):
@@ -604,8 +618,12 @@ class BlockMatrix(SparseBase):
                     else:
                         result[i, j] = None
             return result
+        elif isinstance(other, SparseBase) and not isinstance(other, BlockMatrix):
+            raise NotImplementedError('Sparse Matrix with BlockMatrix subtraction not supported')
+        elif np.isscalar(other):
+            raise NotImplementedError('Scalar with BlockMatrix subtraction not supported')
         else:
-            return NotImplemented
+            raise NotImplementedError('input not recognized for subtraction')
 
     def __mul__(self, other):
         self._check_mask()
@@ -614,13 +632,12 @@ class BlockMatrix(SparseBase):
             result = BlockMatrix(bm, bn)
             ii, jj = np.nonzero(self._block_mask)
             for i, j in zip(ii, jj):
-                    if not self.is_empty_block(i, j):
-                        scaled = self._blocks[i, j] * other
-                        result[i, j] = scaled
+                    scaled = self._blocks[i, j] * other
+                    result[i, j] = scaled
             return result
         elif isinstance(other, BlockVector):
-            assert bn == other.bshape[0], 'Dimension missmatch'
-            assert self.shape[1] == other.shape[0], 'Dimension missmatch'
+            assert bn == other.bshape[0], 'Dimension mismatch'
+            assert self.shape[1] == other.shape[0], 'Dimension mismatch'
             other._check_mask()
             nblocks = self.bshape[0]
             result = BlockVector(nblocks)
@@ -633,7 +650,7 @@ class BlockMatrix(SparseBase):
                         result[i] += A * x
             return result
         elif isinstance(other, np.ndarray):
-            assert self.shape[1] == other.shape[0], 'Dimension missmatch'
+            assert self.shape[1] == other.shape[0], 'Dimension mismatch'
             nblocks = self.bshape[0]
             result = BlockVector(nblocks)
             for i in range(bm):
@@ -647,7 +664,7 @@ class BlockMatrix(SparseBase):
                         counter += A.shape[0]
             return result
         else:
-            return NotImplemented
+            raise NotImplementedError('input not recognized for multiplication')
 
     def __rmul__(self, other):
         self._check_mask()
@@ -656,21 +673,26 @@ class BlockMatrix(SparseBase):
             result = BlockMatrix(bm, bn)
             ii, jj = np.nonzero(self._block_mask)
             for i, j in zip(ii, jj):
-                    if not self.is_empty_block(i, j):
-                        scaled = self._blocks[i, j] * other
-                        result[i, j] = scaled
+                    scaled = self._blocks[i, j] * other
+                    result[i, j] = scaled
             return result
         else:
             raise NotImplementedError('Not implemented yet')
 
     def __iadd__(self, other):
-        raise NotImplementedError('implicit add not supported yet')
+        raise NotImplementedError('implicit add not supported for BlockMatrix')
 
     def __isub__(self, other):
-        raise NotImplementedError('implicit sub not supported yet')
+        raise NotImplementedError('implicit sub not supported for BlockMatrix')
 
     def __imul__(self, other):
-        raise NotImplementedError('implicit multiply not supported yet')
+        self._check_mask()
+        if np.isscalar(other):
+            ii, jj = np.nonzero(self._block_mask)
+            for i, j in zip(ii, jj):
+                self._blocks[i, j] = self._blocks[i, j] * other
+            return self
+        raise NotImplementedError('only scalar support for implicit multiplication')
 
     def __itruediv__(self, other):
         raise NotImplementedError('implicit divide not supported yet')
@@ -1003,7 +1025,7 @@ class BlockSymMatrix(BlockMatrix):
 
     def _mul_sparse_matrix(self, other):
 
-        assert other.shape == self.shape, "Dimension missmatch"
+        assert other.shape == self.shape, "Dimension mismatch"
 
         if not isinstance(other, BlockMatrix):
             expanded_sym = self.tofullcsr()
@@ -1024,8 +1046,8 @@ class BlockSymMatrix(BlockMatrix):
             return result
 
         elif isinstance(other, BlockVector):
-            assert bm == other.bshape[0], 'Dimension missmatch'
-            assert self.shape[1] == other.shape[0], 'Dimension missmatch'
+            assert bm == other.bshape[0], 'Dimension mismatch'
+            assert self.shape[1] == other.shape[0], 'Dimension mismatch'
             other._check_mask()
             nblocks = self.bshape[0]
             result = BlockVector(nblocks)
@@ -1048,7 +1070,7 @@ class BlockSymMatrix(BlockMatrix):
             return result
 
         elif isinstance(other, np.ndarray):
-            assert self.shape[1] == other.shape[0], 'Dimension missmatch'
+            assert self.shape[1] == other.shape[0], 'Dimension mismatch'
             nblocks = self.bshape[0]
 
             block_x = BlockVector(nblocks)
@@ -1086,13 +1108,19 @@ class BlockSymMatrix(BlockMatrix):
         raise NotImplementedError('Not implemented')
 
     def __iadd__(self, other):
-        raise NotImplementedError('implicit add not supported yet')
+        raise NotImplementedError('implicit addition not supported')
 
     def __isub__(self, other):
-        raise NotImplementedError('implicit sub not supported yet')
+        raise NotImplementedError('implicit subtraction not supported')
 
     def __imul__(self, other):
-        raise NotImplementedError('implicit multiply not supported yet')
+        self._check_mask()
+        if np.isscalar(other):
+            ii, jj = np.nonzero(self._block_mask)
+            for i, j in zip(ii, jj):
+                self._blocks[i, j] = self._blocks[i, j] * other
+            return self
+        raise NotImplementedError('only scalar support for implicit multiplication')
 
     def __itruediv__(self, other):
         raise NotImplementedError('implicit divide not supported yet')

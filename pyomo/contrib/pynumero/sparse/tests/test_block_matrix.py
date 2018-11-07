@@ -152,6 +152,10 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertListEqual(res_dinopy.tolist(), res_scipy.tolist())
         self.assertListEqual(res_dinopy_flat.tolist(), res_scipy.tolist())
 
+        dense_mat = dinopy_mat.todense()
+        self.basic_m *= 5.0
+        self.assertTrue(np.allclose(dense_mat, self.basic_m.todense()))
+
     def test_getitem(self):
 
         m = BlockMatrix(3, 3)
@@ -296,6 +300,7 @@ class TestBlockMatrix(unittest.TestCase):
         mm = A_block.__rsub__(A_block)
         self.assertTrue(np.allclose(aa, mm.todense()))
 
+
 class TestSymBlockMatrix(unittest.TestCase):
 
     def setUp(self):
@@ -384,6 +389,8 @@ class TestSymBlockMatrix(unittest.TestCase):
 
         self.assertListEqual(dinopy_res.tolist(), scipy_res.tolist())
 
+        self.basic_m *= 5.0
+        self.assertTrue(np.allclose(self.basic_m.todense(), dense_m, atol=1e-3))
     # ToDo: Add test for transpose
 
 

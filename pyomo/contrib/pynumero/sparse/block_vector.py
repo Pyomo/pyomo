@@ -94,7 +94,8 @@ class BlockVector(np.ndarray):
                        np.isfinite, np.isinf, np.isnan, np.log1p,
                        np.logical_not, np.expm1, np.exp2, np.sign,
                        np.rint, np.square, np.positive, np.negative,
-                       np.rad2deg, np.deg2rad, np.conjugate]
+                       np.rad2deg, np.deg2rad, np.conjugate, np.reciprocal,
+                       ]
 
         binary_funcs = [np.add, np.multiply, np.divide, np.subtract,
                         np.greater, np.greater_equal, np.less, np.less_equal,
@@ -103,7 +104,6 @@ class BlockVector(np.ndarray):
                         np.logical_or, np.logical_xor, np.logaddexp,
                         np.logaddexp2, np.remainder, np.heaviside,
                         np.hypot]
-
         # args = []
         # for i, input_ in enumerate(inputs):
         #     if isinstance(input_, BlockVector):
@@ -217,6 +217,8 @@ class BlockVector(np.ndarray):
                                                             *args, **kwargs)
         else:
             raise NotImplementedError()
+
+
 
     @property
     def nblocks(self):

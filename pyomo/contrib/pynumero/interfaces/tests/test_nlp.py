@@ -101,6 +101,38 @@ class TestPyomoNLP(unittest.TestCase):
         upper_map = [1]
         self.assertListEqual(self.nlp1._upper_x_map.tolist(), upper_map)
 
+    def test_g_maps(self):
+        lower_mask = np.array([True, True, False, True, True], dtype=bool)
+        self.assertTrue(np.allclose(self.nlp1._lower_g_mask, lower_mask))
+        lower_map = [0, 1, 3, 4]
+        self.assertTrue(np.allclose(self.nlp1._lower_g_map, lower_map))
+        upper_mask = np.array([True, True, True, False, False], dtype=bool)
+        self.assertTrue(np.allclose(self.nlp1._upper_g_mask, upper_mask))
+        upper_map = [0, 1, 2]
+        self.assertTrue(np.allclose(self.nlp1._upper_g_map, upper_map))
+
+    def test_c_maps(self):
+        c_mask = np.array([True, True, False, False, False], dtype=bool)
+        self.assertTrue(np.allclose(self.nlp1._c_mask, c_mask))
+        c_map = np.array([0, 1])
+        self.assertTrue(np.allclose(self.nlp1._c_map, c_map))
+
+    def test_d_maps(self):
+
+        d_mask = np.array([False, False, True, True, True], dtype=bool)
+        self.assertTrue(np.allclose(self.nlp1._d_mask, d_mask))
+        d_map = np.array([2, 3, 4])
+        self.assertTrue(np.allclose(self.nlp1._d_map, d_map))
+
+        lower_mask = np.array([False, True, True], dtype=bool)
+        self.assertTrue(np.allclose(self.nlp1._lower_d_mask, lower_mask))
+        lower_map = [1, 2]
+        self.assertTrue(np.allclose(self.nlp1._lower_d_map, lower_map))
+        upper_mask = np.array([True, False, False], dtype=bool)
+        self.assertTrue(np.allclose(self.nlp1._upper_d_mask, upper_mask))
+        upper_map = [0]
+        self.assertTrue(np.allclose(self.nlp1._upper_d_map, upper_map))
+
     def test_xl(self):
         xl = np.array([-np.inf, 0, 0])
         self.assertTrue(np.allclose(xl, self.nlp1.xl()))
@@ -120,14 +152,28 @@ class TestPyomoNLP(unittest.TestCase):
         self.assertTrue(np.allclose(xu, self.nlp2.xu(condensed=True)))
 
     def test_gl(self):
-        gl = [1., 0.5, -np.inf, -100., -500.]
-        gu = [1., 0.5, 100., np.inf, np.inf]
+        gl = [0.0, 0.0, -np.inf, -100., -500.]
         self.assertTrue(np.allclose(gl, self.nlp1.gl()))
-        self.assertTrue(np.allclose(gu, self.nlp1.gu()))
-        gl = [1., 0.5, -100., -500.]
-        gu = [1., 0.5, 100.]
+        gl = [0.0, 0.0, -100., -500.]
         self.assertTrue(np.allclose(gl, self.nlp1.gl(condensed=True)))
+
+    def test_gu(self):
+        gu = [0.0, 0.0, 100., np.inf, np.inf]
+        self.assertTrue(np.allclose(gu, self.nlp1.gu()))
+        gu = [0.0, 0.0, 100.]
         self.assertTrue(np.allclose(gu, self.nlp1.gu(condensed=True)))
+
+    def test_dl(self):
+        dl = [-np.inf, -100., -500.]
+        self.assertTrue(np.allclose(dl, self.nlp1.dl()))
+        dl = [-100., -500.]
+        self.assertTrue(np.allclose(dl, self.nlp1.dl(condensed=True)))
+
+    def test_du(self):
+        du = [100., np.inf, np.inf]
+        self.assertTrue(np.allclose(du, self.nlp1.du()))
+        du = [100.]
+        self.assertTrue(np.allclose(du, self.nlp1.du(condensed=True)))
 
     def test_x_init(self):
         x_init = np.array(range(1, 4))
