@@ -527,8 +527,10 @@ class TestReference(unittest.TestCase):
         m.b = Block([1,2])
         m.b[1].x = Var(m.js)
         m.b[1].y = Var()
+        m.b[1].z = Var([1,2])
         m.b[2].x = Param(initialize=0)
         m.b[2].y = Var()
+        m.b[2].z = Var([1,2])
 
         m.x = Reference(m.b[:].x[...])
         self.assertIs(type(m.x), IndexedComponent)
@@ -539,6 +541,10 @@ class TestReference(unittest.TestCase):
         m.y1 = Reference(m.b[:].y[...], ctype=None)
         self.assertIs(type(m.y1), IndexedComponent)
         self.assertIs(m.y1.type(), IndexedComponent)
+
+        m.z = Reference(m.b[:].z)
+        self.assertIs(type(m.z), IndexedComponent)
+        self.assertIs(m.z.type(), IndexedComponent)
 
 if __name__ == "__main__":
     unittest.main()

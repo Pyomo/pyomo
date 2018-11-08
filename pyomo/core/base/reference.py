@@ -14,7 +14,7 @@ from six import PY3, iteritems, advance_iterator
 from pyutilib.misc import flatten_tuple
 from pyomo.common import DeveloperError
 from pyomo.core.base.sets import SetOf, _SetProduct, _SetDataBase
-from pyomo.core.base.component import Component
+from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set
 )
@@ -437,6 +437,15 @@ def Reference(reference, ctype=_NotSpecified):
     index = []
     for obj in _iter:
         ctypes.add(obj.type())
+        if not isinstance(obj, ComponentData):
+            # This object is not a ComponentData (likely it is a pure
+            # IndexedComponent container).  As the Reference will treat
+            # it as if it *were* a ComponentData, we will skip ctype
+            # identification and return a base IndexedComponent, thereby
+            # preventing strange exceptions in the writers and with
+            # things like pprint().  Of course, all of this logic is
+            # skipped if the User knows better and forced a ctype on us.
+            ctypes.add(0)
         if index is not None:
             index = _identify_wildcard_sets(_iter._iter_stack, index)
         # Note that we want to walk the entire slice, unless we can
