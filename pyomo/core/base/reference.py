@@ -270,6 +270,10 @@ def _identify_wildcard_sets(iter_stack, index):
             offset = 0
             wildcard_sets = {}
             for j,s in enumerate(_get_base_sets(level.component.index_set())):
+                if s is UnindexedComponent_set:
+                    wildcard_sets[j] = s
+                    offset += 1
+                    continue
                 if s.dimen is None:
                     return None
                 wild = sum( 1 for k in range(s.dimen)
@@ -434,8 +438,12 @@ def Reference(reference, ctype=_NotSpecified):
         wildcards = sum((sorted(iteritems(lvl)) for lvl in index
                          if lvl is not None), [])
         index = wildcards[0][1]
-        for idx in wildcards[1:]:
-            index = index * idx[1]
+        if not isinstance(index, _SetDataBase):
+            index = SetOf(index)
+        for lvl, idx in wildcards[1:]:
+            if not isinstance(idx, _SetDataBase):
+                idx = SetOf(idx)
+            index = index * idx
     if ctype is _NotSpecified:
         if len(ctypes) == 1:
             ctype = ctypes.pop()
