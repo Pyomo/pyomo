@@ -237,7 +237,7 @@ class NLP(object):
         self._lower_d_mask = None
         self._upper_d_mask = None
         self._c_mask = None
-        self._d_mask = None  # ToDo: think if this is needed or simply use negate _c_mask
+        self._d_mask = None
 
         # maps
         self._lower_x_map = None
@@ -1907,4 +1907,12 @@ class PyomoNLP(AslNLP):
         if constraint.is_indexed():
             raise RuntimeError("Constraint must be not indexed")
         return self._conToIndex[constraint]
+
+
+
+
+
+
+
+
 
