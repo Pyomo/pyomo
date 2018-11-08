@@ -684,6 +684,16 @@ value() function.""" % ( self.name, i ))
                 "for scalar instances."
                 % (self.__class__.__name__,))
 
+    def _pprint(self):
+        """Print component information."""
+        return ( [("Size", len(self)),
+                  ("Index", self._index if self.is_indexed() else None),
+                  ],
+                 iteritems(self._data),
+                 ( "Object",),
+                 lambda k, v: [ type(v) ]
+                 )
+
     def id_index_map(self):
         """
         Return an dictionary id->index for
