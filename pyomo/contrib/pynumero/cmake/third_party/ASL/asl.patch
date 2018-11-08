@@ -1,0 +1,55 @@
+diff --git a/src/asl/solvers/asl.h b/src/asl/solvers/asl.h
+index 1394f64..4c4b4af 100644
+--- a/asl.h
++++ b/asl.h
+@@ -1015,6 +1015,7 @@ QPinfo {
+  extern void introuble_ASL(ASL*, const char *who, real a, int jv);
+  extern void introuble2_ASL(ASL*, const char *who, real a, real b, int jv);
+  extern FILE *jac0dim_ASL(ASL*, const char *stub, ftnlen stub_len);
++ extern FILE *jac0dim_FILE_ASL(ASL*, FILE* nl);
+  extern int  jac1dim_ASL(ASL*, const char *stub, fint *M, fint *N, fint *NO,
+ 			fint *NZ, fint *MXROW, fint *MXCOL, ftnlen stub_len);
+  extern int  jac2dim_ASL (ASL*, const char *stub, fint *M, fint *N, fint *NO,
+@@ -1136,6 +1137,7 @@ extern void set_max_dtoa_threads(unsigned int);
+ #define getenv getenv_ASL
+ #define int_catch(f,v) intcatch_ASL((ASL*)asl,f,v)
+ #define jac0dim(stub,len) jac0dim_ASL((ASL*)asl,stub,len)
++#define jac0dim_FILE(nl) jac0dim_FILE_ASL((ASL*)asl,nl)
+ #define jac1dim(s,m,n,no,nz,mxr,mxc,L) jac1dim_ASL((ASL*)asl,s,m,n,no,nz,mxr,mxc,L)
+ #define jac2dim(s,m,n,no,nz,mxr,mxc,L) jac2dim_ASL((ASL*)asl,s,m,n,no,nz,mxr,mxc,L)
+ #define jacdim(stub,M,N,NO,NZ,MXR,MXC,len) jac_dim_ASL((ASL*)asl,stub,M,N,NO,NZ,MXR,MXC,len)
+diff --git a/src/asl/solvers/jac0dim.c b/src/asl/solvers/jac0dim.c
+index 0bdf3eb..a88648c 100644
+--- a/jac0dim.c
++++ b/jac0dim.c
+@@ -99,10 +99,8 @@ read2(EdRead *R, int *x, int *y)
+ jac0dim_ASL(ASL *asl, const char *stub, ftnlen stub_len)
+ {
+ 	FILE *nl;
+-	int i, k, nlv;
+-	char *s, *se;
+-	const char *opfmt;
+-	EdRead ER, *R;
++	int i;
++	char *s;
+ 
+ 	if (!asl)
+ 		badasl_ASL(asl,0,"jac0dim");
+@@ -130,6 +128,17 @@ jac0dim_ASL(ASL *asl, const char *stub, ftnlen stub_len)
+ 		fprintf(Stderr, "can't open %s\n", filename);
+ 		exit(1);
+ 		}
++        return jac0dim_FILE_ASL(asl, nl);
++}
++
++FILE *
++jac0dim_FILE_ASL(ASL *asl, FILE *nl)
++{
++	int i, k, nlv;
++	char *s, *se;
++	const char *opfmt;
++	EdRead ER, *R;
++
+ 	R = EdReadInit_ASL(&ER, asl, nl, 0);
+ 	R->Line = 0;
+ 	s = read_line(R);

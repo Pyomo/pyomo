@@ -440,7 +440,6 @@ def run(args=None):
                        " specified in call to PH constructor")
    if isinstance(solver_manager,
                  pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
-      solver_manager.deactivate()
       raise ValueError("PHPyro can not be used as the solver manager")
 
    try:
@@ -464,8 +463,6 @@ def run(args=None):
       Result = LagrangeMorePR()
 #####################################################################################
    finally:
-
-      solver_manager.deactivate()
       # delete temporary unarchived directories
       scenario_instance_factory.close()
 
