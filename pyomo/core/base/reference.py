@@ -69,7 +69,7 @@ class _fill_in_known_wildcards(object):
                 for i in range(_slice.explicit_index_count))
         except IndexError:
             raise KeyError(
-                "Insufficient values for slice of indexed component '%s'"
+                "Insufficient values for slice of indexed component '%s' "
                 "(found evaluating slice index %s)"
                 % (_slice.component.name, self.base_key))
 
@@ -201,9 +201,13 @@ def _get_base_sets(_set):
         yield _set
 
 def _identify_wildcard_sets(iter_stack, index):
+    # if we have already decided that there isn't a comon index for the
+    # slices, there is nothing more we can do.  Bail.
     if index is None:
         return index
 
+    # Walk the iter_stack that led to the current item and try to
+    # identify the component wildcard sets
     tmp = [None]*len(iter_stack)
     for i, level in enumerate(iter_stack):
         if level is not None:
@@ -217,9 +221,10 @@ def _identify_wildcard_sets(iter_stack, index):
                 if wild == s.dimen:
                     wildcard_sets[j] = s
                 elif wild != 0:
-                    # This is a multidimensional set, and we are slicing
-                    # through part of it.  We can't extract that subset,
-                    # so we quit.
+                    # This subset is "touched" by an explicit slice, but
+                    # the whole set is not (i.e. there is a fixed
+                    # component to this subset).  Therefore, as we
+                    # cannot extract that subset, we quit.
                     return None
                 offset += s.dimen
             if offset != level.explicit_index_count:
@@ -235,10 +240,13 @@ def _identify_wildcard_sets(iter_stack, index):
     assert len(index) == len(tmp)
     for i, level in enumerate(tmp):
         assert (index[i] is None) == (level is None)
+        # No slices at this level in the slice
         if level is None:
             continue
+        # if there are a differing number of subsets
         if len(index[i]) != len(level):
             return None
+        # if any subset differs
         if any(index[i].get(j,None) is not _set for j,_set in iteritems(level)):
             return None
     return index

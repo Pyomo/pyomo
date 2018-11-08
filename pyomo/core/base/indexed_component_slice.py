@@ -67,7 +67,7 @@ class _IndexedComponent_slice(object):
         This supports notation similar to:
 
             del model.b[:].c.x = 5
-        
+
         and immediately evaluates the slice.
         """
         # Don't overload any pre-existing attributes
@@ -97,7 +97,7 @@ class _IndexedComponent_slice(object):
         This supports notation similar to:
 
             del model.b[:].c.x[1,:] = 5
-        
+
         and immediately evaluates the slice.
         """
         self._call_stack.append( (
@@ -112,7 +112,7 @@ class _IndexedComponent_slice(object):
         This supports notation similar to:
 
             del model.b[:].c.x[1,:]
-        
+
         and immediately evaluates the slice.
         """
         self._call_stack.append( (
@@ -126,7 +126,7 @@ class _IndexedComponent_slice(object):
 
         Creating a slice of a component returns a _IndexedComponent_slice
         object.  Subsequent attempts to call items hit this method.  We
-        handle the __call__ method separately based on the item ( identifier
+        handle the __call__ method separately based on the item (identifier
         immediately before the "()") being called:
 
         - if the item was 'component', then we defer resolution of this call
@@ -223,6 +223,7 @@ class _slice_generator(object):
                 # derived class may implement a non-standard storage
                 # mechanism (e.g., Param)
                 return self.component[index]
+
 
 # Mock up a callable object with a "check_complete" method
 def _advance_iter(_iter):
