@@ -427,15 +427,22 @@ def Reference(reference, ctype=_NotSpecified):
 
     _data = _ReferenceDict(reference)
     _iter = iter(reference)
-    ctypes = set()
+    if ctype is _NotSpecified:
+        ctypes = set()
+    else:
+        # If the caller specified a ctype, then we will prepopulate the
+        # list to improve our chances of avoiding a scan of the entire
+        # Reference
+        ctypes = set((1,2))
     index = []
     for obj in _iter:
         ctypes.add(obj.type())
-        index = _identify_wildcard_sets(_iter._iter_stack, index)
+        if index is not None:
+            index = _identify_wildcard_sets(_iter._iter_stack, index)
         # Note that we want to walk the entire slice, unless we can
         # prove that BOTH there aren't common indexing sets AND there is
         # more than one ctype.
-        if index is None and len(ctypes) > 1:
+        elif len(ctypes) > 1:
             break
     if index is None:
         index = SetOf(_ReferenceSet(_data))
