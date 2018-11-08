@@ -432,6 +432,11 @@ def Reference(reference, ctype=_NotSpecified):
     for obj in _iter:
         ctypes.add(obj.type())
         index = _identify_wildcard_sets(_iter._iter_stack, index)
+        # Note that we want to walk the entire slice, unless we can
+        # prove that BOTH there aren't common indexing sets AND there is
+        # more than one ctype.
+        if index is None and len(ctypes) > 1:
+            break
     if index is None:
         index = SetOf(_ReferenceSet(_data))
     else:
