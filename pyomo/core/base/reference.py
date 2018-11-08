@@ -9,11 +9,15 @@
 #  ___________________________________________________________________________
 
 import collections
-from six import iteritems, advance_iterator
+from six import PY3, iteritems, advance_iterator
 
 from pyutilib.misc import flatten_tuple
-from pyomo.core.base.sets import SetOf, _SetProduct
-from pyomo.core.base.indexed_component import IndexedComponent
+from pyomo.common import DeveloperError
+from pyomo.core.base.sets import SetOf, _SetProduct, _SetDataBase
+from pyomo.core.base.component import Component
+from pyomo.core.base.indexed_component import (
+    IndexedComponent, UnindexedComponent_set
+)
 from pyomo.core.base.indexed_component_slice import (
     _IndexedComponent_slice, _IndexedComponent_slice_iter
 )
@@ -59,14 +63,21 @@ class _fill_in_known_wildcards(object):
             raise StopIteration()
         self.known_slices.add(_slice)
 
-        if _slice.ellipsis is not None:
-            raise RuntimeError(
-                "Cannot lookup elements in a _ReferenceDict when the "
-                "underlying slice object contains ellipsis")
+        if _slice.ellipsis is None:
+            idx_count = _slice.explicit_index_count
+        elif not _slice.component.is_indexed():
+            idx_count = 1
+        else:
+            idx_count = _slice.component.index_set().dimen
+            if idx_count is None:
+                raise SliceEllipsisLookupError(
+                    "Cannot lookup elements in a _ReferenceDict when the "
+                    "underlying slice object contains ellipsis over a jagged "
+                    "(dimen=None) Set")
         try:
             idx = tuple(
                 _slice.fixed[i] if i in _slice.fixed else self.key.pop(0)
-                for i in range(_slice.explicit_index_count))
+                for i in range(idx_count))
         except IndexError:
             raise KeyError(
                 "Insufficient values for slice of indexed component '%s' "
@@ -91,6 +102,9 @@ class _fill_in_known_wildcards(object):
                            % ( self.base_key, ))
 
 
+class SliceEllipsisLookupError(Exception):
+    pass
+
 class _ReferenceDict(collections.MutableMapping):
     def __init__(self, component_slice):
         self._slice = component_slice
@@ -99,6 +113,15 @@ class _ReferenceDict(collections.MutableMapping):
         try:
             return advance_iterator(self._get_iter(self._slice, key))
         except StopIteration:
+            raise KeyError("KeyError: %s" % (key,))
+        except SliceEllipsisLookupError:
+            if type(key) is tuple and len(key) == 1:
+                key = key[0]
+            # Brute force (linear time) lookup
+            _iter = iter(self._slice)
+            for item in _iter:
+                if _iter.get_last_index_wildcards() == key:
+                    return item
             raise KeyError("KeyError: %s" % (key,))
 
     def __setitem__(self, key, val):
@@ -260,8 +283,12 @@ def _identify_wildcard_sets(iter_stack, index):
                     # cannot extract that subset, we quit.
                     return None
                 offset += s.dimen
-            if offset != level.explicit_index_count:
-                return None
+            # I believe that this check is not necessary: weirdnesses
+            # with elipsis should get caught by the check for s.dimen
+            # above.
+            #
+            #if offset != level.explicit_index_count:
+            #    return None
             tmp[i] = wildcard_sets
     if not index:
         return tmp
@@ -384,10 +411,16 @@ def Reference(reference, ctype=_NotSpecified):
               4 :     1 :    10 :  None : False : False :  Reals
 
     """
-    if not isinstance(reference, _IndexedComponent_slice):
+    if isinstance(reference, _IndexedComponent_slice):
+        pass
+    elif isinstance(reference, Component):
+        reference = reference[...]
+    else:
         raise TypeError(
             "First argument to Reference constructors must be a "
-            "component slice (received %s)" % (type(reference).__name__,))
+            "component or component slice (received %s)"
+            % (type(reference).__name__,))
+
     _data = _ReferenceDict(reference)
     _iter = iter(reference)
     ctypes = set()
