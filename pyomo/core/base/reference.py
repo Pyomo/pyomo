@@ -135,7 +135,7 @@ class _ReferenceDict(collections.MutableMapping):
         elif op == _IndexedComponent_slice.slice_info:
             tmp._call_stack[-1] = (
                 _IndexedComponent_slice.set_item,
-                tmp,
+                tmp._call_stack[-1][1],
                 val )
         elif op == _IndexedComponent_slice.get_attribute:
             tmp._call_stack[-1] = (
