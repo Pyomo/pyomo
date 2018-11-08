@@ -971,8 +971,7 @@ class AslNLP(NLP):
         bounds_difference = self._upper_g - self._lower_g
         inconsistent_bounds = np.any(bounds_difference < 0.0)
         if inconsistent_bounds:
-            # TODO: improve error message
-            raise RuntimeError("Inconsistent bounds on g")
+            raise RuntimeError("Inconsistent bounds on g. gL > gU")
 
         # build x lower and upper bound maps
         abs_bounds_difference = np.absolute(bounds_difference)
@@ -1065,7 +1064,6 @@ class AslNLP(NLP):
         array_like
 
         """
-        #substract = kwargs.pop('substract', True)
         if out is None:
             res = self.create_vector_y()
         else:
@@ -1675,51 +1673,77 @@ class PyomoNLP(AslNLP):
         finally:
             shutil.rmtree(temporal_dir)
 
-    # Query methods
-    def Grad_objective(self, x, variables=None):
+    def grad_objective(self, x, out=None, **kwargs):
 
-        df = self.create_vector_x()
+        subset_variables = kwargs.pop('subset_variables', None)
 
-        self._asl.eval_deriv_f(x, df)
+        if subset_variables is None:
+            return super(PyomoNLP, self).grad_objective(x,
+                                                        out=out,
+                                                        **kwargs)
 
-        if variables is not None:
-            var_indices = []
-            for v in variables:
-                if v.is_indexed():
-                    for vd in v.values():
-                        var_id = self._varToIndex[vd]
-                        var_indices.append(var_id)
-                else:
-                    var_id = self._varToIndex[v]
+        if out is not None:
+            msg = 'out not supported with subset of variables'
+            raise RuntimeError(msg)
+        df = super(PyomoNLP, self).grad_objective(x, out=out, **kwargs)
+
+        var_indices = []
+        for v in subset_variables:
+            if v.is_indexed():
+                for vd in v.values():
+                    var_id = self._varToIndex[vd]
                     var_indices.append(var_id)
-            return df[var_indices]
+            else:
+                var_id = self._varToIndex[v]
+                var_indices.append(var_id)
+        return df[var_indices]
 
-        return df
+    def evaluate_g(self, x, out=None, **kwargs):
 
-    def Evaluate_g(self, x, constraints=None):
+        subset_constraints = kwargs.pop('subset_constraints', None)
 
-        res = self.evaluate_g(x)
+        if subset_constraints is None:
+            return super(PyomoNLP, self).evaluate_g(x,
+                                                    out=out,
+                                                    **kwargs)
 
-        if constraints is not None:
-            con_indices = []
-            for c in constraints:
-                if c.is_indexed():
-                    for cd in c.values():
-                        con_id = self._conToIndex[cd]
-                        con_indices.append(con_id)
-                else:
-                    con_id = self._conToIndex[c]
+        if out is not None:
+            msg = 'out not supported with subset of constraints'
+            raise RuntimeError(msg)
+
+        res = super(PyomoNLP, self).evaluate_g(x,
+                                               out=out,
+                                               **kwargs)
+        con_indices = []
+        for c in subset_constraints:
+            if c.is_indexed():
+                for cd in c.values():
+                    con_id = self._conToIndex[cd]
                     con_indices.append(con_id)
-            return res[con_indices]
+            else:
+                con_id = self._conToIndex[c]
+                con_indices.append(con_id)
+        return res[con_indices]
 
-        return res
+    def jacobian_g(self, x, out=None, **kwargs):
 
-    def Jacobian_g(self, x, variables=None, constraints=None):
+        subset_variables = kwargs.pop('subset_variables', None)
+        subset_constraints = kwargs.pop('subset_constraints', None)
+
+        if subset_variables is None and subset_constraints is None:
+            return super(PyomoNLP, self).jacobian_g(x,
+                                                    out=out,
+                                                    **kwargs)
+
+        if out is not None:
+            msg = 'out not supported with subset of ' \
+                  'variables or constraints'
+            raise RuntimeError(msg)
 
         subset_vars = False
-        if variables is not None:
+        if subset_variables is not None:
             var_indices = []
-            for v in variables:
+            for v in subset_variables:
                 if v.is_indexed():
                     for vd in v.values():
                         var_id = self._varToIndex[vd]
@@ -1730,10 +1754,10 @@ class PyomoNLP(AslNLP):
             indices_vars = var_indices
             subset_vars = True
 
-        subset_constraints = False
-        if constraints is not None:
+        subset_constr = False
+        if subset_constraints is not None:
             con_indices = []
-            for c in constraints:
+            for c in subset_constraints:
                 if c.is_indexed():
                     for cd in c.values():
                         con_id = self._conToIndex[cd]
@@ -1742,7 +1766,7 @@ class PyomoNLP(AslNLP):
                     con_id = self._conToIndex[c]
                     con_indices.append(con_id)
             indices_constraints = con_indices
-            subset_constraints = True
+            subset_constr = True
 
         if subset_vars:
             jcols_bool = np.isin(self._jcols_jac_g, indices_vars)
@@ -1751,7 +1775,7 @@ class PyomoNLP(AslNLP):
             jcols_bool = np.ones(self.nnz_jacobian_g, dtype=bool)
             ncols = self.nx
 
-        if subset_constraints:
+        if subset_constr:
             irows_bool = np.isin(self._irows_jac_g, indices_constraints)
             nrows = len(indices_constraints)
         else:
@@ -1761,9 +1785,8 @@ class PyomoNLP(AslNLP):
         vals_bool = irows_bool * jcols_bool
         vals_indices = np.where(vals_bool)
 
-        vals_jac = np.zeros(self.nnz_jacobian_g, np.double)
-        self._asl.eval_jac_g(x, vals_jac)
-        data = vals_jac[vals_indices]
+        jac = super(PyomoNLP, self).jacobian_g(x, out=out, **kwargs)
+        data = jac.data[vals_indices]
 
         # map indices to new indices
         new_col_indices = self._jcols_jac_g[vals_indices]
@@ -1781,17 +1804,25 @@ class PyomoNLP(AslNLP):
         return COOMatrix((data, (new_row_indices, new_col_indices)),
                          shape=(nrows, ncols))
 
-    def Hessian_lag(self,
-                    x,
-                    lam,
-                    variables_rows=None,
-                    variables_cols=None,
-                    eval_f_c=True):
+    def hessian_lag(self, x, y, out=None, **kwargs):
+
+        subset_variables_row = kwargs.pop('subset_variables_row', None)
+        subset_variables_col = kwargs.pop('subset_variables_col', None)
+
+        if subset_variables_row is None and subset_variables_col is None:
+            return super(PyomoNLP, self).hessian_lag(x,
+                                                     y,
+                                                     out=out,
+                                                     **kwargs)
+
+        if out is not None:
+            msg = 'out not supported with subset of variables'
+            raise RuntimeError(msg)
 
         subset_cols = False
-        if variables_cols is not None:
+        if subset_variables_col is not None:
             var_indices_cols = []
-            for v in variables_cols:
+            for v in subset_variables_col:
                 if v.is_indexed():
                     for vd in v.values():
                         var_id = self._varToIndex[vd]
@@ -1804,9 +1835,9 @@ class PyomoNLP(AslNLP):
             subset_cols = True
 
         subset_rows = False
-        if variables_rows is not None:
+        if subset_variables_row is not None:
             var_indices_rows = []
-            for v in variables_rows:
+            for v in subset_variables_row:
                 if v.is_indexed():
                     for vd in v.values():
                         var_id = self._varToIndex[vd]
@@ -1816,11 +1847,6 @@ class PyomoNLP(AslNLP):
                     var_indices_rows.append(var_id)
             indices_rows = var_indices_rows
             subset_rows = True
-
-        if eval_f_c:
-            res = self.create_vector_y()
-            self._asl.eval_g(x, res)
-            self._asl.eval_f(x)
 
         if subset_cols:
             jcols_bool = np.isin(self._jcols_hess, indices_cols)
@@ -1839,9 +1865,8 @@ class PyomoNLP(AslNLP):
         vals_bool = irows_bool * jcols_bool
         vals_indices = np.where(vals_bool)
 
-        vals_hess = np.zeros(self.nnz_hessian_lag, 'd')
-        self._asl.eval_hes_lag(x, lam, vals_hess)
-        data = vals_hess[vals_indices]
+        hess = super(PyomoNLP, self).hessian_lag(x, y, out=out, **kwargs)
+        data = hess.data[vals_indices]
 
         # map indices to new indices
         new_col_indices = self._jcols_hess[vals_indices]
