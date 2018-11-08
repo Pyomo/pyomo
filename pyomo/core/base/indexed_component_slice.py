@@ -161,6 +161,10 @@ class _IndexedComponent_slice(object):
         _iter = self.__iter__()
         return (_iter.get_last_index_wildcards() for _ in _iter)
 
+    def wildcard_items(self):
+        _iter = self.__iter__()
+        return ((_iter.get_last_index_wildcards(), _) for _ in _iter)
+
     def expanded_keys(self):
         _iter = self.__iter__()
         return (_iter.get_last_index() for _ in _iter)
@@ -452,17 +456,25 @@ class _IndexedComponent_slice_iter(object):
                 return _comp
 
     def get_last_index(self):
-        return sum(
+        ans = sum(
             ( x.last_index for x in self._iter_stack if x is not None ),
             ()
         )
+        if len(ans) == 1:
+            return ans[0]
+        else:
+            return ans
 
     def get_last_index_wildcards(self):
-        return sum(
+        ans = sum(
             ( tuple( x.last_index[i]
                      for i in range(len(x.last_index))
                      if i not in x.fixed )
               for x in self._iter_stack if x is not None ),
             ()
         )
+        if len(ans) == 1:
+            return ans[0]
+        else:
+            return ans
 

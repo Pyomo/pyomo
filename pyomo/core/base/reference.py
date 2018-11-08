@@ -171,12 +171,45 @@ class _ReferenceDict(collections.MutableMapping):
         except (AttributeError, KeyError):
             return False
 
+    def iteritems(self):
+        """Return the wildcard, value tuples for this ReferenceDict
+
+        This method is necessary because the default implementation
+        iterates over the keys and looks the values up in the
+        dictionary.  Unfortunately some slices have structures that make
+        looking up components by the wildcard keys very expensive
+        (linear time; e.g., the use of elipses with jagged sets).  By
+        implementing this method without using lookups, general methods
+        that iterate over everything (like component.pprint()) will
+        still be linear and not quadratic time.
+
+        """
+        return self._slice.wildcard_items()
+
+    def itervalues(self):
+        """Return the values for this ReferenceDict
+
+        This method is necessary because the default implementation
+        iterates over the keys and looks the values up in the
+        dictionary.  Unfortunately some slices have structures that make
+        looking up components by the wildcard keys very expensive
+        (linear time; e.g., the use of elipses with jagged sets).  By
+        implementing this method without using lookups, general methods
+        that iterate over everything (like component.pprint()) will
+        still be linear and not quadratic time.
+
+        """
+        return iter(self._slice)
+
     def _get_iter(self, _slice, key):
         if key.__class__ not in (tuple, list):
             key = (key,)
         return _IndexedComponent_slice_iter(
             _slice, _fill_in_known_wildcards(flatten_tuple(key)))
 
+if PY3:
+    _ReferenceDict.items = _ReferenceDict.iteritems
+    _ReferenceDict.values = _ReferenceDict.itervalues
 
 class _ReferenceSet(collections.Set):
     def __init__(self, ref_dict):
