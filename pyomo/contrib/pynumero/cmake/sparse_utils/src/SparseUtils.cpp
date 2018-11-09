@@ -231,6 +231,7 @@ void sym_csr_diagonal(int* row_pointer,
     }
 }
 
+// ToDo: This does not seem right. However is not used in the python side
 void sym_csc_diagonal(int* col_pointer,
                       int ncolp,
                       int* row_indices,
@@ -255,6 +256,58 @@ void sym_csc_diagonal(int* col_pointer,
         }
 
     }
+}
+
+int sym_csr_allnnz(int* row_pointer,
+                   int* col_indices,
+                   int nrows)
+{
+    int row, col;
+    int off_diagonals = 0;
+    int on_diagonals = 0;
+
+    for (int i=0; i<nrows; ++i)
+    {
+        row = i;
+        for(int jj = row_pointer[row]; jj < row_pointer[row+1]; ++jj)
+        {
+            col = col_indices[jj];
+            if(col==row){
+                ++on_diagonals;
+            }
+            else{
+                ++off_diagonals;
+            }
+        }
+    }
+    return 2*off_diagonals + on_diagonals;
+}
+
+int sym_csc_allnnz(int* col_pointer,
+                   int* row_indices,
+                   int ncols)
+{
+
+    int row, col;
+    int off_diagonals = 0;
+    int on_diagonals = 0;
+    for (int j=0; j<ncols; ++j)
+    {
+        col = j;
+        int col_start = col_pointer[col];
+        int col_end = col_pointer[col+1];
+        for(int ii = col_start; ii < col_end; ++ii)
+        {
+            row = row_indices[ii];
+            if(row == col){
+                ++on_diagonals;
+            }
+            else{
+                ++off_diagonals;
+            }
+        }
+    }
+    return 2 * off_diagonals + on_diagonals;
 }
 
 extern "C"
@@ -334,5 +387,15 @@ void EXTERNAL_SPARSE_sym_csc_diagonal(int* col_pointer,
                                       double* diag,
                                       int ncols)
 { sym_csc_diagonal(col_pointer, ncolp, row_indices, values, nnz, diag, ncols);}
+
+int EXTERNAL_SPARSE_sym_csr_allnnz(int* row_pointer,
+                                   int* col_indices,
+                                   int nrows)
+{ return sym_csr_allnnz(row_pointer, col_indices, nrows);}
+
+int EXTERNAL_SPARSE_sym_csc_allnnz(int* col_pointer,
+                                   int* row_indices,
+                                   int ncols)
+{ return sym_csc_allnnz(col_pointer, row_indices, ncols);}
 
 }

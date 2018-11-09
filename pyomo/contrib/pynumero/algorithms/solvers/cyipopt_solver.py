@@ -58,7 +58,11 @@ class _CyIpoptProblem(object):
         return self._jac_g.row, self._jac_g.col
 
     def hessian(self, x, lagrange, obj_factor):
-        self._nlp.hessian_lag(x, lagrange, out=self._hess_lag, eval_f_c=False)
+        self._nlp.hessian_lag(x,
+                              lagrange,
+                              out=self._hess_lag,
+                              eval_f_c=False,
+                              obj_factor=obj_factor)
         return self._hess_lag.data
 
     def intermediate(
@@ -103,7 +107,9 @@ class IpoptSolver(object):
         x0 = nlp.x_init()
 
         # this is needed until NLP hessian takes obj_factor as an input
-        cyipopt_solver.addOption('nlp_scaling_method', 'none')
+        if not self._nlp._future_libraries:
+            cyipopt_solver.addOption('nlp_scaling_method', 'none')
+
         x, info = cyipopt_solver.solve(x0)
         return x, info
 
@@ -191,12 +197,7 @@ if __name__ == "__main__":
     nlp = PyomoNLP(model)
     print(nlp.x_init())
     solver = IpoptSolver(nlp)
-    #solver.solve()
-    x = nlp.x_init()
-    jac = nlp.jacobian_g(x)
-    print(jac.todense())
-    jac+=jac
-    print(jac.todense())
+    solver.solve()
 
 
 

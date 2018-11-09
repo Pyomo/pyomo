@@ -249,6 +249,9 @@ class NLP(object):
         self._c_map = None
         self._d_map = None
 
+        # ToDo: remove this after new libraries get merged in conda_forge
+        self._future_libraries = False
+
     @abc.abstractmethod
     def _initialize_nlp_components(self, *args, **kwargs):
         """
@@ -860,6 +863,9 @@ class AslNLP(NLP):
         # ampl interface
         self._asl = _asl.AmplInterface(self._model)
 
+        # ToDo: remove this after new pynumero libraries get merged in conda-forge
+        self._future_libraries = self._asl.future_libraries
+
         # initialize components
         self._initialize_nlp_components()
 
@@ -1295,6 +1301,7 @@ class AslNLP(NLP):
         """
 
         eval_f_c = kwargs.pop('eval_f_c', True)
+        obj_factor = kwargs.pop('obj_factor', 1.0)
 
         if eval_f_c:
             res = self.create_vector_y()
@@ -1303,7 +1310,7 @@ class AslNLP(NLP):
         if out is None:
 
             data = np.zeros(self.nnz_hessian_lag, np.double)
-            self._asl.eval_hes_lag(x, y, data)
+            self._asl.eval_hes_lag(x, y, data, obj_factor=obj_factor)
 
             hess = COOSymMatrix((data, (self._irows_hess, self._jcols_hess)),
                                 shape=(self.nx, self.nx))
@@ -1314,7 +1321,7 @@ class AslNLP(NLP):
             assert out.nnz == self.nnz_hessian_lag, "hessian has {} nnz".format(self.nnz_hessian_lag)
 
             data = out.data
-            self._asl.eval_hes_lag(x, y, data)
+            self._asl.eval_hes_lag(x, y, data, obj_factor=obj_factor)
             hess = out
 
         return hess

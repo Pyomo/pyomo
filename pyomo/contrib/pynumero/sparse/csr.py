@@ -19,7 +19,8 @@ from scipy.sparse import issparse
 
 try:
     from pyomo.contrib.pynumero.extensions.sparseutils import (csr_matvec_no_diag,
-                                                               csc_matvec_no_diag)
+                                                               csc_matvec_no_diag,
+                                                               sym_csr_allnnz)
 except ImportError as e:
     print('{}'.format(e))
     raise ImportError('Error importing sparseutils while running coo interface. '
@@ -403,8 +404,9 @@ class CSRSymMatrix(CSRMatrix):
         return self.tofullmatrix().getrow(i)
 
     def getallnnz(self):
-        # ToDo: add support for this
-        raise NotImplementedError("Operation not supported yet")
+        return sym_csr_allnnz(self.indptr,
+                              self.indices,
+                              self.shape[0])
 
     def __repr__(self):
         return 'CSRSymMatrix{}'.format(self.shape)
@@ -424,6 +426,7 @@ if __name__ == "__main__":
     m = CSRSymMatrix((data, (row, col)), shape=(4, 4))
     print(m.toarray())
     print(m.is_symmetric)
+    print("hola", m.getallnnz())
 
     mcsr = m.tofullcsr()
     print(mcsr.toarray())
@@ -443,3 +446,6 @@ if __name__ == "__main__":
     print(big_m.tofullcsr().dot(x))
     print(big_m.dot(x))
     print(big_m.toarray())
+
+    print(big_m.tofullcsr().nnz)
+    print(big_m.getallnnz())

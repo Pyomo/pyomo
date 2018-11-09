@@ -78,6 +78,27 @@ class SparseLibInterface(object):
         ]
         self.lib.EXTERNAL_SPARSE_csc_matvec_no_diag.restype = None
 
+        # temporary try/except block while changes get merged in pynumero_libraries
+        self.future_libraries = False
+        try:
+            self.lib.EXTERNAL_SPARSE_sym_csr_allnnz.argtypes = [
+                array_1d_int,
+                array_1d_int,
+                ctypes.c_int
+            ]
+            self.lib.EXTERNAL_SPARSE_sym_csr_allnnz.restype = ctypes.c_int
+
+            self.lib.EXTERNAL_SPARSE_sym_csc_allnnz.argtypes = [
+                array_1d_int,
+                array_1d_int,
+                ctypes.c_int
+            ]
+            self.lib.EXTERNAL_SPARSE_sym_csc_allnnz.restype = ctypes.c_int
+            self.future_libraries = True
+        except Exception:
+            self.future_libraries = False
+
+
 SparseLib = SparseLibInterface()
 
 # define 1d array
@@ -127,3 +148,23 @@ def csc_matvec_no_diag(ncols, col_ptr, row_ptr, data_ptr, x_ptr, result):
                                                    result,
                                                    len(result)
                                                    )
+
+
+def sym_csr_allnnz(rowp, col_indices, nrows):
+    sp = SparseLib()
+    if SparseLib.future_libraries:
+        return sp.EXTERNAL_SPARSE_sym_csr_allnnz(rowp,
+                                                 col_indices,
+                                                 nrows)
+    else:
+        raise NotImplementedError('sym_csr_allnnz not available')
+
+
+def sym_csc_allnnz(colp, row_indices, ncols):
+    sp = SparseLib()
+    if SparseLib.future_libraries:
+        return sp.EXTERNAL_SPARSE_sym_csc_allnnz(colp,
+                                                 row_indices,
+                                                 ncols)
+    else:
+        raise NotImplementedError('sym_csc_allnnz not available')
