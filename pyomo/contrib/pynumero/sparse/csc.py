@@ -19,7 +19,8 @@ from scipy.sparse import _sparsetools
 
 try:
     from pyomo.contrib.pynumero.extensions.sparseutils import (csr_matvec_no_diag,
-                                                               csc_matvec_no_diag)
+                                                               csc_matvec_no_diag,
+                                                               sym_csc_allnnz)
 except ImportError as e:
     print('{}'.format(e))
     raise ImportError('Error importing sparseutils while running coo interface. '
@@ -395,10 +396,49 @@ class CSCSymMatrix(CSCMatrix):
         return self.tofullmatrix().getrow(i)
 
     def getallnnz(self):
-        # ToDo: add support for this
-        raise NotImplementedError("Operation not supported yet")
+        return sym_csc_allnnz(self.indptr,
+                              self.indices,
+                              self.shape[1])
 
     def __repr__(self):
         return 'CSCSymMatrix{}'.format(self.shape)
 
+if __name__ == "__main__":
+
+    row = np.array([0, 3, 1, 0])
+    col = np.array([0, 3, 1, 2])
+    data = np.array([4, 5, 7, 9])
+    m = CSCMatrix((data, (row, col)), shape=(4, 4))
+    print(m.toarray())
+    print(m.is_symmetric)
+
+    row = np.array([0, 3, 1, 2, 3])
+    col = np.array([0, 0, 1, 2, 3])
+    data = np.array([2, 1, 3, 4, 5])
+    m = CSCSymMatrix((data, (row, col)), shape=(4, 4))
+    print(m.toarray())
+    print(m.is_symmetric)
+    print("hola", m.getallnnz())
+
+    mcsr = m.tofullcsr()
+    print(mcsr.toarray())
+    print(mcsr.is_symmetric)
+
+    x = np.ones(m.shape[0])
+    print(mcsr.dot(x))
+    print(m.dot(x))
+
+    row = np.array([0, 1, 4, 1, 2, 7, 2, 3, 5, 3, 4, 5, 4, 7, 5, 6, 6, 7])
+    col = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6, 7])
+    data = np.array([27, 5, 12, 56, 66, 34, 94, 31, 41, 7, 98, 72, 24, 33, 78, 47, 98, 41])
+    big_m = CSCSymMatrix((data, (row, col)), shape=(8, 8))
+    print(big_m.toarray())
+    print(big_m.is_symmetric)
+    x = np.ones(big_m.shape[0])
+    print(big_m.tofullcsc().dot(x))
+    print(big_m.dot(x))
+    print(big_m.toarray())
+
+    print(big_m.tofullcsc().nnz)
+    print(big_m.getallnnz())
 

@@ -87,4 +87,12 @@ void sym_csc_diagonal(int* col_pointer,
                       double* diag,
                       int ncols);
 
+int sym_csr_allnnz(int* row_pointer,
+                   int* col_indices,
+                   int nrows);
+
+int sym_csc_allnnz(int* col_pointer,
+                   int* row_indices,
+                   int ncols);
+
 #endif
