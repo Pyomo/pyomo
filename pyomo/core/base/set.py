@@ -620,7 +620,7 @@ class _InfiniteSetData(_SetData):
         return False
 
     def ranges(self):
-        return self._ranges
+        return iter(self._ranges)
 
 
 class _FiniteSetMixin(object):
@@ -1256,7 +1256,7 @@ class _SetUnion(_SetOperator):
                 else:
                     i += 1
             ans.append(ref)
-        return ans
+        return iter(ans)
 
 class _SetUnion_InfiniteSet(_SetUnion):
     __slots__ = tuple()
@@ -1343,13 +1343,11 @@ class _SetIntersection(_SetData):
         return cls.__new__(cls)
 
     def ranges(self):
-        ans = []
         for a,b in itertools.product(
                 self._sets[0].ranges(), self._sets[1].ranges() ):
             ref = a.intersection(b)
             if ref is not None:
-                ans.append(ref)
-        return ans
+                yield ref
 
 
 class _SetIntersection_InfiniteSet(_SetIntersection):
@@ -1429,15 +1427,13 @@ class _SetDifference(_SetOperator):
         return cls.__new__(cls)
 
     def ranges(self):
-        ans = []
         for a in self._sets[0].ranges():
             for b in self._sets[1].ranges():
                 a = a.difference(b)
                 if a is None:
                     break
             if a is not None:
-                ans.append(a)
-        return ans
+                yield a
 
 
 class _SetDifference_InfiniteSet(_SetDifference):
@@ -1510,7 +1506,8 @@ class _SetSymmetricDifference(_SetOperator):
         return cls.__new__(cls)
 
     def ranges(self):
-        ans = []
+        # Note: the following loop implements for (a,b), (b,a)
+        assert len(self._sets) == 2
         for set_a, set_b in (self._sets, reversed(self._sets)):
             for a in set_a:
                 for b in set_b:
@@ -1518,8 +1515,7 @@ class _SetSymmetricDifference(_SetOperator):
                     if a is None:
                         break
                 if a is not None:
-                    ans.append(a)
-        return ans
+                    yield a
 
 
 class _SetSymmetricDifference_InfiniteSet(_SetSymmetricDifference):
@@ -1695,6 +1691,9 @@ class _AnySet(_SetData, Set):
 
     def __contains__(self, val):
         return True
+
+    def ranges(self):
+        yield _AnyRange()
 
 Any = _AnySet(name='Any', doc="A global Pyomo Set that admits any value")
 
