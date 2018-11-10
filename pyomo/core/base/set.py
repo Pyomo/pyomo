@@ -554,7 +554,7 @@ class _SetData(_SetDataBase):
             return True
         elif other_is_finite:
             return False
-        return self.ranges() == other.ranges()
+        return self.issubset(other) and other.issubset(self)
 
     def _pprint(self):
         """
@@ -616,7 +616,7 @@ class _SetData(_SetDataBase):
             return False
         else:
             for r in self.ranges():
-                if not any( r.issubset(s) for s in other.ranges() ):
+                if r.range_difference(other.ranges()):
                     return False
             return True
 
@@ -639,10 +639,7 @@ class _SetData(_SetDataBase):
         elif self.is_finite():
             return False
         else:
-            for r in self.ranges():
-                if not any( s.issubset(r) for s in other.ranges() ):
-                    return False
-            return True
+            return other.issubset(self)
 
     def union(self, *args):
         """
