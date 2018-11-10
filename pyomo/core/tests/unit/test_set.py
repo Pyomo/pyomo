@@ -455,6 +455,43 @@ class InfiniteSetTester(unittest.TestCase):
             InfiniteSimpleSet(ranges=(CNR(10,None,-1), CNR(10,None,1))),
             InfiniteSimpleSet(ranges=(CNR(0,None,1), CNR(0,None,-1)))
         )
+        self.assertEqual(
+            InfiniteSimpleSet(ranges=(CNR(0,None,-1), CNR(0,None,1))),
+            InfiniteSimpleSet(ranges=(CNR(10,None,1), CNR(10,None,-1)))
+        )
+
+        # Odd positive integers and even positive integers are positive
+        # integers
+        self.assertEqual(
+            PositiveIntegers,
+            InfiniteSimpleSet(ranges=(CNR(1,None,2), CNR(2,None,2)))
+        )
+
+        # Nututally prime sets of ranges
+        self.assertEqual(
+            InfiniteSimpleSet(ranges=(CNR(1,None,2), CNR(2,None,2))),
+            InfiniteSimpleSet(ranges=(
+                CNR(1,None,3), CNR(2,None,3), CNR(3,None,3)
+            ))
+        )
+
+        # Omitting one of the subranges breaks equality
+        # Nututally prime sets of ranges
+        self.assertNotEqual(
+            InfiniteSimpleSet(ranges=(CNR(1,None,2), CNR(2,None,2))),
+            InfiniteSimpleSet(ranges=(
+                CNR(1,None,3), CNR(2,None,3)
+            ))
+        )
+
+        # Changing the reference point breaks equality
+        # Nututally prime sets of ranges
+        self.assertNotEqual(
+            InfiniteSimpleSet(ranges=(CNR(0,None,2), CNR(0,None,2))),
+            InfiniteSimpleSet(ranges=(
+                CNR(1,None,3), CNR(2,None,3), CNR(3,None,3)
+            ))
+        )
 
         # # Concerns:
         #   - union blindly calls the nonexistant CNR.union() method

@@ -353,6 +353,7 @@ class _ClosedNumericRange(object):
 
     @staticmethod
     def _lt(a,b):
+        "Return True if a is strictly less than b, with None == -inf"
         if a is None:
             return b is not None
         if b is None:
@@ -361,6 +362,7 @@ class _ClosedNumericRange(object):
 
     @staticmethod
     def _gt(a,b):
+        "Return True if a is strictly greater than b, with None == +inf"
         if a is None:
             return b is not None
         if b is None:
@@ -369,18 +371,53 @@ class _ClosedNumericRange(object):
 
     @staticmethod
     def _min(a,b):
-        if a is None or b is None:
-            return None
+        """Modified implementation of min() with special None handling
+
+        In _ClosedNumericRange objects, None can represent {positive,
+        negative} infintiy.  In the context that this method is used,
+        None will always be negative infinity, so None is less than any
+        non-None value.
+
+        """
+        if a is None:
+            return b
+        elif b is None:
+            return a
         return min(a, b)
 
     @staticmethod
     def _max(a,b):
-        if a is None or b is None:
-            return None
+        """Modified implementation of max() with special None handling
+
+        In _ClosedNumericRange objects, None can represent {positive,
+        negative} infintiy.  In the context that this method is used,
+        None will always be positive infinity, so None is greater than
+        any non-None value.
+
+        """
+        if a is None:
+            return b
+        elif b is None:
+            return b
         return max(a, b)
 
     @staticmethod
     def _split_ranges(cnr, new_step):
+        """Split a discrete range into a list of ranges using a new step.
+
+        This takes a single _ClosedNumericRange and splits it into a set
+        of new ranges, all of which use a new step.  The new_step must
+        be a multiple of the current step.  CNR objects with a step of 0
+        are returned unchanged.
+
+        Parameters
+        ----------
+            cnr: `_ClosedNumericRange`
+                The range to split
+            new_step: `int`
+                The new step to use for returned ranges
+
+        """
         if cnr.step == 0 or new_step == 0:
             return [cnr]
 
@@ -396,6 +433,13 @@ class _ClosedNumericRange(object):
         return _subranges
 
     def range_difference(self, other_ranges):
+        """Return the difference between this range and a set of other ranges.
+
+        Paramters
+        ---------
+            other_ranges: `iterable`
+                An iterable of other range objects to subtract from this range
+        """
         other_ranges = list(other_ranges)
         # Find the Least Common Multiple of all the range steps.  We
         # will split discrete ranges into separate ranges with this step
