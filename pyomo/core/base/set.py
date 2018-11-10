@@ -30,8 +30,13 @@ from pyutilib.misc.misc import flatten_tuple
 from pyomo.common.deprecation import deprecated
 from pyomo.common.errors import DeveloperError
 from pyomo.common.timing import ConstructionTimer
+from pyomo.core.expr.numvalue import (
+    native_types, native_numeric_types, as_numeric
+)
 from pyomo.core.base.component import Component, ComponentData
-from pyomo.core.base.indexed_component import IndexedComponent
+from pyomo.core.base.indexed_component import (
+    IndexedComponent, UnindexedComponent_set
+)
 from pyomo.core.base.misc import sorted_robust, apply_indexed_rule
 
 logger = logging.getLogger('pyomo.core')
@@ -806,7 +811,17 @@ class _FiniteSetMixin(object):
     def ranges(self):
         # This is way inefficient, but should always work: the ranges in a
         # Finite set is the list of scalars
-        return tuple(_ClosedNumericRange(i,i,0) for i in self)
+        for i in self:
+            if i.__class__ in native_numeric_types:
+                yield _ClosedNumericRange(i,i,0)
+            elif i.__class__ in native_types:
+                yield _NonNumericRange(i)
+            else:
+                try:
+                    as_numeric(i)
+                    yield _ClosedNumericRange(i,i,0)
+                except:
+                    yield _NonNumericRange(i)
 
 class _FiniteSetData(_SetData, _FiniteSetMixin):
     """A general unordered iterable Set"""
