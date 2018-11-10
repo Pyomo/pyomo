@@ -2,15 +2,20 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
 import pyutilib.th as unittest
 
-from pyomo.core.base.set import _ClosedNumericRange, Any, Reals, Integers
+from pyomo.core.base.set import (
+    _ClosedNumericRange, _AnyRange, _AnySet,
+    Any, Reals, NonNegativeReals, Integers, PositiveIntegers,
+    InfiniteSimpleSet,
+)
+CNR = _ClosedNumericRange
 
 try:
     import numpy as np
@@ -18,10 +23,9 @@ try:
 except ImportError:
     numpy_available = False
 
+
 class TestNumericRange(unittest.TestCase):
     def test_init(self):
-        CNR = _ClosedNumericRange
-
         a = CNR(None, None, 0)
         self.assertIsNone(a.start)
         self.assertIsNone(a.end)
@@ -85,18 +89,14 @@ class TestNumericRange(unittest.TestCase):
         with self.assertRaisesRegexp(
                 ValueError, '.*start, end ordering incompatible with step'):
             CNR(0, 1, -2)
-        
-    def test_str(self):
-        CNR = _ClosedNumericRange
 
+    def test_str(self):
         self.assertEqual(str(CNR(1, 10, 0)), "[1,10]")
         self.assertEqual(str(CNR(1, 10, 1)), "[1:10]")
         self.assertEqual(str(CNR(1, 10, 3)), "[1:10:3]")
         self.assertEqual(str(CNR(1, 1, 1)), "[1,1]")
 
     def test_eq(self):
-        CNR = _ClosedNumericRange
-
         self.assertEqual(CNR(1, 1, 1), CNR(1, 1, 1))
         self.assertEqual(CNR(1, None, 0), CNR(1, None, 0))
         self.assertEqual(CNR(0, 10, 3), CNR(0, 9, 3))
@@ -106,8 +106,6 @@ class TestNumericRange(unittest.TestCase):
         self.assertNotEqual(CNR(0, 10, 3), CNR(0, 8, 3))
 
     def test_contains(self):
-        CNR = _ClosedNumericRange
-
         # Test non-numeric values
         self.assertNotIn(None, CNR(None, None, 0))
         self.assertNotIn(None, CNR(0, 10, 0))
@@ -181,7 +179,6 @@ class TestNumericRange(unittest.TestCase):
         self.assertNotIn(1.1, CNR(0, None, 2))
 
     def test_isdisjoint(self):
-        CNR = _ClosedNumericRange
         def _isdisjoint(expected_result, a, b):
             self.assertIs(expected_result, a.isdisjoint(b))
             self.assertIs(expected_result, b.isdisjoint(a))
@@ -267,8 +264,6 @@ class TestNumericRange(unittest.TestCase):
         _isdisjoint(False, CNR(0, None, 5), CNR(28, None, -7))
 
     def test_issubset(self):
-        CNR = _ClosedNumericRange
-
         # Continuous-continuous
         self.assertTrue(CNR(0, 10, 0).issubset(CNR(0, 10, 0)))
         self.assertTrue(CNR(1, 10, 0).issubset(CNR(0, 10, 0)))
@@ -332,6 +327,28 @@ class TestNumericRange(unittest.TestCase):
         self.assertFalse(CNR(10, 0, -2).issubset(CNR(10, 0, -4)))
         self.assertTrue(CNR(10, 0, -2).issubset(CNR(10, 0, -1)))
 
+class TestAnyRange(unittest.TestCase):
+    def test_str(self):
+        self.assertEqual(str(_AnyRange()), '[*]')
+
+    def test_range_relational(self):
+        a = _AnyRange()
+        b = _AnyRange()
+        self.assertTrue(a.issubset(b))
+        self.assertEqual(a, b)
+
+        c = CNR(None, None, 0)
+        self.assertFalse(a.issubset(c))
+        self.assertTrue(c.issubset(b))
+        self.assertNotEqual(a, c)
+
+    def test_contains(self):
+        a = _AnyRange()
+        self.assertIn(None, a)
+        self.assertIn(0, a)
+        self.assertIn('a', a)
+
+
 class InfiniteSetTester(unittest.TestCase):
     def test_Reals(self):
         self.assertIn(0, Reals)
@@ -349,6 +366,14 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertNotIn('A', Integers)
         self.assertNotIn(None, Integers)
 
+    def test_Any(self):
+        self.assertIn(0, Any)
+        self.assertIn(1.5, Any)
+        self.assertIn(100, Any),
+        self.assertIn(-100, Any),
+        self.assertIn('A', Any)
+        self.assertIn(None, Any)
+
     @unittest.skipIf(not numpy_available, "NumPy required for these tests")
     def test_numpy_compatible(self):
         self.assertIn(np.intc(1), Reals)
@@ -358,3 +383,82 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertIn(np.intc(1), Integers)
         self.assertIn(np.float64(1), Integers)
         self.assertNotIn(np.float64(1.5), Integers)
+
+    def test_relational_operators(self):
+        Any2 = _AnySet()
+        self.assertTrue(Any.issubset(Any2))
+        self.assertTrue(Any.issuperset(Any2))
+        self.assertFalse(Any.isdisjoint(Any2))
+
+        Reals2 = InfiniteSimpleSet(ranges=(CNR(None,None,0),))
+        self.assertTrue(Reals.issubset(Reals2))
+        self.assertTrue(Reals.issuperset(Reals2))
+        self.assertFalse(Reals.isdisjoint(Reals2))
+
+        Integers2 = InfiniteSimpleSet(ranges=(CNR(0,None,-1), CNR(0,None,1)))
+        self.assertTrue(Integers.issubset(Integers2))
+        self.assertTrue(Integers.issuperset(Integers2))
+        self.assertFalse(Integers.isdisjoint(Integers2))
+
+        # Reals / Integers
+        self.assertTrue(Integers.issubset(Reals))
+        self.assertFalse(Integers.issuperset(Reals))
+        self.assertFalse(Integers.isdisjoint(Reals))
+
+        self.assertFalse(Reals.issubset(Integers))
+        self.assertTrue(Reals.issuperset(Integers))
+        self.assertFalse(Reals.isdisjoint(Integers))
+
+        # Any / Reals
+        self.assertTrue(Reals.issubset(Any))
+        self.assertFalse(Reals.issuperset(Any))
+        self.assertFalse(Reals.isdisjoint(Any))
+
+        self.assertFalse(Any.issubset(Reals))
+        self.assertTrue(Any.issuperset(Reals))
+        self.assertFalse(Any.isdisjoint(Reals))
+
+        # Integers / Positive Integers
+        self.assertFalse(Integers.issubset(PositiveIntegers))
+        self.assertTrue(Integers.issuperset(PositiveIntegers))
+        self.assertFalse(Integers.isdisjoint(PositiveIntegers))
+
+        self.assertTrue(PositiveIntegers.issubset(Integers))
+        self.assertFalse(PositiveIntegers.issuperset(Integers))
+        self.assertFalse(PositiveIntegers.isdisjoint(Integers))
+
+
+    def test_equality(self):
+        self.assertEqual(Any, _AnySet())
+        self.assertEqual(
+            Reals,
+            InfiniteSimpleSet(ranges=(CNR(None,None,0),))
+        )
+        self.assertEqual(
+            Integers,
+            InfiniteSimpleSet(ranges=(CNR(0,None,-1), CNR(0,None,1)))
+        )
+
+        self.assertNotEqual(Integers, Reals)
+        self.assertNotEqual(Reals, Integers)
+        self.assertNotEqual(Reals, Any)
+        self.assertNotEqual(Any, Reals)
+
+        # For equality, ensure that the ranges can be in any order
+        self.assertEqual(
+            InfiniteSimpleSet(ranges=(CNR(0,None,-1), CNR(0,None,1))),
+            InfiniteSimpleSet(ranges=(CNR(0,None,1), CNR(0,None,-1)))
+        )
+
+        # And integer ranges can be grounded at different points
+        self.assertEqual(
+            InfiniteSimpleSet(ranges=(CNR(10,None,-1), CNR(10,None,1))),
+            InfiniteSimpleSet(ranges=(CNR(0,None,1), CNR(0,None,-1)))
+        )
+
+        # # Concerns:
+        #   - union blindly calls the nonexistant CNR.union() method
+        #   - need to distinguish between finite and infinite sets?
+        #   - need to standardize on where the reference point for
+        #     discrete sets is (0?)
+
