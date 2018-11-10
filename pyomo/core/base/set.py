@@ -136,10 +136,10 @@ class _UnknownSetDimen(object): pass
 class _ClosedNumericRange(object):
     """A representation of a closed numeric range.
 
-    This class represents a contiguous range of numbers.  The class mimics
-    the Pyomo (*not* Python) `range` API, with a Start, End, and Step.  The
-    Step is a signed numeric value (float is OK).  If the Step is 0,
-    the range is continuous.  The End *is* included in the range.
+    This class represents a contiguous range of numbers.  The class
+    mimics the Pyomo (*not* Python) `range` API, with a Start, End, and
+    Step.  The Step is a signed int.  If the Step is 0, the range is
+    continuous.  The End *is* included in the range.
 
     While the class name implies that the range is always closed, it is
     not strictly finite, as None is allowed for then End value (and the
@@ -1715,7 +1715,7 @@ NonPositiveReals = InfiniteSimpleSet(
 Integers = InfiniteSimpleSet(
     name='Integers',
     doc='A global Pyomo Set admitting any integer value',
-    ranges=(_ClosedNumericRange(0,None,1), _ClosedNumericRange(0,None, -1)))
+    ranges=(_ClosedNumericRange(0,None,1), _ClosedNumericRange(0,None,-1)))
 
 NonNegativeIntegers = InfiniteSimpleSet(
     name='NonNegativeIntegers',
