@@ -345,6 +345,155 @@ class _ClosedNumericRange(object):
         # ...and they must shart a point in common
         return abs(remainder(other.start-self.start, other.step)) <= EPS
 
+    @staticmethod
+    def _lt(a,b):
+        if a is None:
+            return b is not None
+        if b is None:
+            return False
+        return a < b
+
+    @staticmethod
+    def _gt(a,b):
+        if a is None:
+            return b is not None
+        if b is None:
+            return False
+        return a > b
+
+    @staticmethod
+    def _min(a,b):
+        if a is None or b is None:
+            return None
+        return min(a, b)
+
+    @staticmethod
+    def _max(a,b):
+        if a is None or b is None:
+            return None
+        return max(a, b)
+
+    @staticmethod
+    def _split_ranges(cnr, new_step):
+        if cnr.step == 0 or new_step == 0:
+            return [cnr]
+
+        assert new_step >= abs(cnr.step)
+        assert new_step % cnr.step == 0
+        _dir = 1 if cnr.step > 0 else -1
+        _subranges = []
+        for i in range(abs(new_step // cnr.step)):
+            if cnr.end is None or _dir*(cnr.start + i*cnr.step) <= _dir*cnr.end:
+                _subranges.append(_ClosedNumericRange(
+                    cnr.start + i*cnr.step, cnr.end, _dir*new_step
+                ))
+        return _subranges
+
+    def range_difference(self, other_ranges):
+        other_ranges = list(other_ranges)
+        # Find the Least Common Multiple of all the range steps.  We
+        # will split discrete ranges into separate ranges with this step
+        # so that we can easily compare them.
+        if self.step:
+            steps = {abs(self.step)}
+            for s in other_ranges:
+                steps.add(abs(s.step))
+            if 0 in steps:
+                steps.remove(0)
+            for step1 in sorted(steps):
+                for step2 in sorted(steps):
+                    if step1 % step2 == 0 and step1 > step2:
+                        steps.remove(step2)
+            lcm = steps.pop()
+            for step in steps:
+                lcm *= step
+        else:
+            lcm = 0
+
+        ans = []
+        # Split this range into subranges
+        _this = _ClosedNumericRange._split_ranges(self, lcm)
+        # Split the other range(s) into subranges
+        _other = []
+        for s in other_ranges:
+            _other.extend(_ClosedNumericRange._split_ranges(s, lcm))
+        # For each lhs subrange, t
+        for t in _this:
+            # Compare it against each rhs range and only keep the
+            # subranges of this range that are outside the lhs range
+            _subranges = [t]
+            for s in _other:
+                if s.step and (lcm == 0 or (s.start-t.start) % lcm != 0 ):
+                    continue
+                tmp = []
+                for ref in _subranges:
+                    if ref.step >= 0:
+                        r_min, r_max = ref.start, ref.end
+                    else:
+                        r_min, r_max = ref.end, ref.start
+                    if s.step >= 0:
+                        s_min, s_max = s.start, s.end
+                    else:
+                        s_min, s_max = s.end, s.start
+
+                    if _ClosedNumericRange._lt(r_min, s_min):
+                        if s_min is not None and lcm:
+                            s_min -= 1
+
+                        if r_min is None:
+                            tmp.append(_ClosedNumericRange(
+                                _ClosedNumericRange._min(r_max, s_min),
+                                r_min,
+                                -1*lcm
+                            ))
+                        else:
+                            tmp.append(_ClosedNumericRange(
+                                r_min,
+                                _ClosedNumericRange._min(r_max, s_min),
+                                lcm
+                            ))
+
+                    if _ClosedNumericRange._gt(r_max, s_max):
+                        if s_max is not None and lcm:
+                            s_max += 1
+                        tmp.append(_ClosedNumericRange(
+                            _ClosedNumericRange._max(r_min, s_max),
+                            r_max,
+                            lcm
+                        ))
+                _subranges = tmp
+            ans.extend(_subranges)
+        return ans
+
+class _AnyRange(object):
+    """A range object for representing Any sets"""
+
+    def __init__(self):
+        self.start = None
+        self.end = None
+        self.step = 0
+
+    def __str__(self):
+        return "[*]"
+
+    def __eq__(self, other):
+        return isinstance(other, _AnyRange)
+
+    def __contains__(self, item):
+        return True
+
+    def isdisjoint(self, other):
+        return False
+
+    def issubset(self, other):
+        return isinstance(other, _AnyRange)
+
+    def range_difference(self, other):
+        for o in other:
+            if isinstance(o, _AnyRange):
+                return []
+        else:
+            return [self]
 
 # A trivial class that we can use to test if an object is a "legitimate"
 # set (either SimpleSet, or a member of an IndexedSet)
