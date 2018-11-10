@@ -190,8 +190,9 @@ class _ClosedNumericRange(object):
 
     def __eq__(self, other):
         assert type(other) is _ClosedNumericRange
-        return self.start, self.end, self.step == \
-               other.start, other.end, other.step
+        return self.start == other.start \
+            and self.end == other.end \
+            and self.step == other.step
 
     def __contains__(self, item):
         # NumericRanges must hold items that are comparable to ints
