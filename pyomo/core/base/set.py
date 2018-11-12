@@ -637,6 +637,10 @@ class _AnyRange(object):
         else:
             return [self]
 
+    def range_intersection(self, other):
+        return other
+
+
 # A trivial class that we can use to test if an object is a "legitimate"
 # set (either SimpleSet, or a member of an IndexedSet)
 class _SetDataBase(ComponentData):
