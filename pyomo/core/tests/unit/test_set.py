@@ -330,11 +330,35 @@ class TestNumericRange(unittest.TestCase):
     def test_range_difference(self):
         self.assertEqual(
             CNR(0,None,1).range_difference([CNR(1,None,0)]),
-            [CNR(0,0,1)],
+            [CNR(0,0,0)],
         )
         self.assertEqual(
             CNR(0,None,1).range_difference([CNR(0,0,0)]),
             [CNR(1,None,1)],
+        )
+        self.assertEqual(
+            CNR(0,None,2).range_difference([CNR(10,None,3)]),
+            [CNR(0,None,6), CNR(2,None,6), CNR(4,4,0)],
+        )
+
+        # test ranges running in the other direction
+        self.assertEqual(
+            CNR(10,0,-1).range_difference([CNR(7,4,-2)]),
+            [CNR(10,0,-2), CNR(1,3,2), CNR(9,9,0)],
+        )
+        self.assertEqual(
+            CNR(0,None,-1).range_difference([CNR(-10,10,0)]),
+            [CNR(-11,None,-1)],
+        )
+
+        # Test non-overlapping ranges
+        self.assertEqual(
+            CNR(0,4,0).range_difference([CNR(5,10,0)]),
+            [CNR(0,4,0)],
+        )
+        self.assertEqual(
+            CNR(5,10,0).range_difference([CNR(0,4,0)]),
+            [CNR(5,10,0)],
         )
 
         # Test continuous ranges
@@ -380,7 +404,6 @@ class TestNumericRange(unittest.TestCase):
             [CNR(-10,None,-1)],
         )
 
-
         # Test continuous ranges
         self.assertEqual(
             CNR(0,5,0).range_intersection([CNR(5,10,0)]),
@@ -411,6 +434,30 @@ class TestAnyRange(unittest.TestCase):
         self.assertIn(None, a)
         self.assertIn(0, a)
         self.assertIn('a', a)
+
+    def test_range_difference(self):
+        self.assertEqual(
+            _AnyRange().range_difference([CNR(0,None,1)]),
+            [_AnyRange()]
+        )
+        self.assertEqual(
+            CNR(0,None,1).range_difference([_AnyRange()]),
+            []
+        )
+
+    def test_range_intersection(self):
+        self.assertEqual(
+            _AnyRange().range_intersection([CNR(0,None,1)]),
+            [CNR(0,None,1)]
+        )
+        self.assertEqual(
+            CNR(0,None,1).range_intersection([_AnyRange()]),
+            [CNR(0,None,1)]
+        )
+        self.assertEqual(
+            CNR(0,None,-1).range_intersection([_AnyRange()]),
+            [CNR(0,None,-1)]
+        )
 
 
 class InfiniteSetTester(unittest.TestCase):
