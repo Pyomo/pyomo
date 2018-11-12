@@ -94,7 +94,7 @@ class TestNumericRange(unittest.TestCase):
         self.assertEqual(str(CNR(1, 10, 0)), "[1,10]")
         self.assertEqual(str(CNR(1, 10, 1)), "[1:10]")
         self.assertEqual(str(CNR(1, 10, 3)), "[1:10:3]")
-        self.assertEqual(str(CNR(1, 1, 1)), "[1,1]")
+        self.assertEqual(str(CNR(1, 1, 1)), "[1]")
 
     def test_eq(self):
         self.assertEqual(CNR(1, 1, 1), CNR(1, 1, 1))
