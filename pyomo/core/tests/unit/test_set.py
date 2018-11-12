@@ -346,6 +346,51 @@ class TestNumericRange(unittest.TestCase):
             [CNR(0,5,0)],
         )
 
+    def test_range_intersection(self):
+        self.assertEqual(
+            CNR(0,None,1).range_intersection([CNR(1,None,0)]),
+            [CNR(1,None,1)],
+        )
+        self.assertEqual(
+            CNR(0,None,1).range_intersection([CNR(0,0,0)]),
+            [CNR(0,0,0)],
+        )
+        self.assertEqual(
+            CNR(0,None,2).range_intersection([CNR(1,None,3)]),
+            [CNR(4,None,6)],
+        )
+
+        # Test non-overlapping ranges
+        self.assertEqual(
+            CNR(0,4,0).range_intersection([CNR(5,10,0)]),
+            [],
+        )
+        self.assertEqual(
+            CNR(5,10,0).range_intersection([CNR(0,4,0)]),
+            [],
+        )
+
+        # test ranges running in the other direction
+        self.assertEqual(
+            CNR(10,0,-1).range_intersection([CNR(7,4,-2)]),
+            [CNR(5,7,2)],
+        )
+        self.assertEqual(
+            CNR(0,None,-1).range_intersection([CNR(None,-10,0)]),
+            [CNR(-10,None,-1)],
+        )
+
+
+        # Test continuous ranges
+        self.assertEqual(
+            CNR(0,5,0).range_intersection([CNR(5,10,0)]),
+            [CNR(5,5,0)],
+        )
+        self.assertEqual(
+            CNR(0,None,0).range_intersection([CNR(5,None,0)]),
+            [CNR(5,None,0)],
+        )
+
 class TestAnyRange(unittest.TestCase):
     def test_str(self):
         self.assertEqual(str(_AnyRange()), '[*]')

@@ -364,6 +364,17 @@ class _ClosedNumericRange(object):
         return a < b
 
     @staticmethod
+    def _nooverlap(a,b):
+        """Return True if a is strictly before b.
+
+        Note: a(None) == +inf and b(None) == -inf
+
+        """
+        if a is None or b is None:
+            return False
+        return a < b
+
+    @staticmethod
     def _gt(a,b):
         "Return True if a is strictly greater than b, with None == +inf"
         if a is None:
@@ -435,6 +446,24 @@ class _ClosedNumericRange(object):
                 ))
         return _subranges
 
+    def _lcm(self,other_ranges):
+        if self.step:
+            steps = {abs(self.step)}
+            for s in other_ranges:
+                steps.add(abs(s.step))
+            if 0 in steps:
+                steps.remove(0)
+            for step1 in sorted(steps):
+                for step2 in sorted(steps):
+                    if step1 % step2 == 0 and step1 > step2:
+                        steps.remove(step2)
+            lcm = steps.pop()
+            for step in steps:
+                lcm *= step
+        else:
+            lcm = 0
+        return lcm
+
     def range_difference(self, other_ranges):
         """Return the difference between this range and a set of other ranges.
 
@@ -453,27 +482,14 @@ class _ClosedNumericRange(object):
         other_ranges = list(other_ranges)
         # Find the Least Common Multiple of all the range steps.  We
         # will split discrete ranges into separate ranges with this step
-        # so that we can easily compare them.
-        if self.step:
-            steps = {abs(self.step)}
-            for s in other_ranges:
-                steps.add(abs(s.step))
-            if 0 in steps:
-                steps.remove(0)
-            for step1 in sorted(steps):
-                for step2 in sorted(steps):
-                    if step1 % step2 == 0 and step1 > step2:
-                        steps.remove(step2)
-            lcm = steps.pop()
-            for step in steps:
-                lcm *= step
-        else:
+        # so that we can more easily compare them.
+        lcm = self._lcm(other_ranges)
+        if self.step == 0:
             logger.warn(
                 "_ClosedNumericRange.range_difference() does not fully "
                 "support closed continuous ranges and gives mathematically "
                 "invalid answers (the set should be open, but the endpoints "
                 "from the subtracted sets are still present in the result.")
-            lcm = 0
 
         ans = []
         # Split this range into subranges
@@ -529,6 +545,65 @@ class _ClosedNumericRange(object):
                 _subranges = tmp
             ans.extend(_subranges)
         return ans
+
+    def range_intersection(self, other_ranges):
+        """Return the intersection between this range and a set of other ranges.
+
+        Paramters
+        ---------
+            other_ranges: `iterable`
+                An iterable of other range objects to intersect with this range
+
+        """
+        other_ranges = list(other_ranges)
+        # Find the Least Common Multiple of all the range steps.  We
+        # will split discrete ranges into separate ranges with this step
+        # so that we can more easily compare them.
+        lcm = self._lcm(other_ranges)
+
+        ans = []
+        # Split this range into subranges
+        _this = _ClosedNumericRange._split_ranges(self, lcm)
+        # Split the other range(s) into subranges
+        _other = []
+        for s in other_ranges:
+            _other.extend(_ClosedNumericRange._split_ranges(s, lcm))
+        # For each lhs subrange, t
+        for t in _this:
+            # Compare it against each rhs range and only keep the
+            # subranges of this range that are inside the lhs range
+            for s in _other:
+                if s.step and t.step and (s.start-t.start) % lcm != 0:
+                    continue
+                if t.step >= 0:
+                    t_min, t_max = t.start, t.end
+                else:
+                    t_min, t_max = t.end, t.start
+                if s.step >= 0:
+                    s_min, s_max = s.start, s.end
+                else:
+                    s_min, s_max = s.end, s.start
+
+                if _ClosedNumericRange._nooverlap(s_max, t_min):
+                    continue
+                if _ClosedNumericRange._nooverlap(t_max, s_min):
+                    continue
+                step = abs(t.step if t.step else s.step)
+                intersect_start = _ClosedNumericRange._max(t_min, s_min)
+                if step and intersect_start is None:
+                    ans.append(_ClosedNumericRange(
+                        _ClosedNumericRange._min(t_max, s_max),
+                        intersect_start,
+                        -1*step
+                    ))
+                else:
+                    ans.append(_ClosedNumericRange(
+                        intersect_start,
+                        _ClosedNumericRange._min(t_max, s_max),
+                        step
+                    ))
+        return ans
+
 
 class _AnyRange(object):
     """A range object for representing Any sets"""
@@ -1465,19 +1540,8 @@ class _SetUnion(_SetOperator):
         return cls.__new__(cls)
 
     def ranges(self):
-        ans = list( self._sets[0].ranges() )
-        other = list( self._sets[1].ranges() )
-        while other:
-            ref = other.pop()
-            i = 0
-            while i < len(ans):
-                if not ref.isdisjoint(ans[i]):
-                    ref = ref.union(ans[i])
-                    ans.pop(i)
-                else:
-                    i += 1
-            ans.append(ref)
-        return iter(ans)
+        return itertools.chain(self._sets[i].ranges() for i in (0,1))
+
 
 class _SetUnion_InfiniteSet(_SetUnion):
     __slots__ = tuple()
@@ -1492,7 +1556,7 @@ class _SetUnion_FiniteSet(_SetUnion_InfiniteSet, _FiniteSetMixin):
     def __iter__(self):
         set0 = self._sets[0]
         return itertools.chain(
-            iter(set0),
+            set0,
             (_ for _ in self._sets[1] if _ not in set0)
         )
 
@@ -1564,11 +1628,9 @@ class _SetIntersection(_SetData):
         return cls.__new__(cls)
 
     def ranges(self):
-        for a,b in itertools.product(
-                self._sets[0].ranges(), self._sets[1].ranges() ):
-            ref = a.intersection(b)
-            if ref is not None:
-                yield ref
+        for a in self._sets[0].ranges():
+            for r in a.range_intersection(self._sets[1].ranges()):
+                yield r
 
 
 class _SetIntersection_InfiniteSet(_SetIntersection):
@@ -1649,12 +1711,8 @@ class _SetDifference(_SetOperator):
 
     def ranges(self):
         for a in self._sets[0].ranges():
-            for b in self._sets[1].ranges():
-                a = a.difference(b)
-                if a is None:
-                    break
-            if a is not None:
-                yield a
+            for r in a.range_difference(self._sets[1].ranges()):
+                yield r
 
 
 class _SetDifference_InfiniteSet(_SetDifference):
@@ -1731,13 +1789,8 @@ class _SetSymmetricDifference(_SetOperator):
         assert len(self._sets) == 2
         for set_a, set_b in (self._sets, reversed(self._sets)):
             for a in set_a:
-                for b in set_b:
-                    a = a.difference(b)
-                    if a is None:
-                        break
-                if a is not None:
-                    yield a
-
+                for r in set_a.range_difference(set_b.ranges()):
+                    yield r
 
 class _SetSymmetricDifference_InfiniteSet(_SetSymmetricDifference):
     __slots__ = tuple()
