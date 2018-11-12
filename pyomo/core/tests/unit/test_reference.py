@@ -16,7 +16,7 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-from six import itervalues
+from six import itervalues, StringIO
 
 from pyomo.environ import *
 from pyomo.core.base.var import IndexedVar
@@ -346,6 +346,19 @@ class TestReference(unittest.TestCase):
         self.assertIs(m.t[1], m.y[1])
         with self.assertRaises(KeyError):
             m.t[3]
+
+    def test_reference_indexedcomponent_pprint(self):
+        m = ConcreteModel()
+        m.x = Var([1,2], initialize={1:4,2:8})
+        m.r = Reference(m.x, ctype=IndexedComponent)
+        buf = StringIO()
+        m.r.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue(),
+"""r : Size=2, Index=x_index
+    Key : Object
+      1 : <class 'pyomo.core.base.var._GeneralVarData'>
+      2 : <class 'pyomo.core.base.var._GeneralVarData'>
+""")
 
     def test_single_reference(self):
         m = ConcreteModel()
