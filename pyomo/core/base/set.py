@@ -521,7 +521,7 @@ class _ClosedNumericRange(object):
 
                     if _ClosedNumericRange._lt(r_min, s_min):
                         if s_min is not None and lcm:
-                            s_min -= 1
+                            s_min -= lcm
 
                         if r_min is None:
                             tmp.append(_ClosedNumericRange(
@@ -538,7 +538,7 @@ class _ClosedNumericRange(object):
 
                     if _ClosedNumericRange._gt(r_max, s_max):
                         if s_max is not None and lcm:
-                            s_max += 1
+                            s_max += lcm
                         tmp.append(_ClosedNumericRange(
                             _ClosedNumericRange._max(r_min, s_max),
                             r_max,
