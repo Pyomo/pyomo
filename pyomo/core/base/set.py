@@ -196,6 +196,8 @@ class _ClosedNumericRange(object):
         else:
             return "[%s:%s:%s]" % (self.start, self.end, self.step)
 
+    __repr__ = __str__
+
     def __eq__(self, other):
         assert type(other) is _ClosedNumericRange
         return self.start == other.start \
