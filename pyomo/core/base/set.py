@@ -438,10 +438,17 @@ class _ClosedNumericRange(object):
     def range_difference(self, other_ranges):
         """Return the difference between this range and a set of other ranges.
 
+        FIXME: There is a known limitation with range_difference():
+        Subtracting a range from another continuous closed range should
+        result in an open range.  However, at this moment Open ranges
+        aren't supported and this method returns a closed range that
+        includes endpoints that mathematically should have been removed.
+
         Paramters
         ---------
             other_ranges: `iterable`
                 An iterable of other range objects to subtract from this range
+
         """
         other_ranges = list(other_ranges)
         # Find the Least Common Multiple of all the range steps.  We
@@ -461,6 +468,11 @@ class _ClosedNumericRange(object):
             for step in steps:
                 lcm *= step
         else:
+            logger.warn(
+                "_ClosedNumericRange.range_difference() does not fully "
+                "support closed continuous ranges and gives mathematically "
+                "invalid answers (the set should be open, but the endpoints "
+                "from the subtracted sets are still present in the result.")
             lcm = 0
 
         ans = []

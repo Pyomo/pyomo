@@ -327,6 +327,25 @@ class TestNumericRange(unittest.TestCase):
         self.assertFalse(CNR(10, 0, -2).issubset(CNR(10, 0, -4)))
         self.assertTrue(CNR(10, 0, -2).issubset(CNR(10, 0, -1)))
 
+    def test_range_difference(self):
+        self.assertEqual(
+            CNR(0,None,1).range_difference([CNR(1,None,0)]),
+            [CNR(0,0,1)],
+        )
+        self.assertEqual(
+            CNR(0,None,1).range_difference([CNR(0,0,0)]),
+            [CNR(1,None,1)],
+        )
+
+        # Test continuous ranges
+
+        # FIXME: Subtracting a closed range from a closed range SHOULD
+        # result in an open range.
+        self.assertEqual(
+            CNR(0,None,0).range_difference([CNR(5,None,0)]),
+            [CNR(0,5,0)],
+        )
+
 class TestAnyRange(unittest.TestCase):
     def test_str(self):
         self.assertEqual(str(_AnyRange()), '[*]')
