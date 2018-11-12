@@ -439,7 +439,7 @@ class _ClosedNumericRange(object):
 
         assert new_step >= abs(cnr.step)
         assert new_step % cnr.step == 0
-        _dir = 1 if cnr.step > 0 else -1
+        _dir = copysign(1, cnr.step)
         _subranges = []
         for i in range(abs(new_step // cnr.step)):
             if cnr.end is None or _dir*(cnr.start + i*cnr.step) <= _dir*cnr.end:
@@ -527,7 +527,7 @@ class _ClosedNumericRange(object):
                             tmp.append(_ClosedNumericRange(
                                 _ClosedNumericRange._min(r_max, s_min),
                                 r_min,
-                                -1*lcm
+                                -lcm
                             ))
                         else:
                             tmp.append(_ClosedNumericRange(
@@ -590,13 +590,14 @@ class _ClosedNumericRange(object):
                     continue
                 if _ClosedNumericRange._nooverlap(t_max, s_min):
                     continue
+
                 step = abs(t.step if t.step else s.step)
                 intersect_start = _ClosedNumericRange._max(t_min, s_min)
                 if step and intersect_start is None:
                     ans.append(_ClosedNumericRange(
                         _ClosedNumericRange._min(t_max, s_max),
                         intersect_start,
-                        -1*step
+                        -step
                     ))
                 else:
                     ans.append(_ClosedNumericRange(
