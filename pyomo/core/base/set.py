@@ -414,7 +414,7 @@ class _ClosedNumericRange(object):
         if a is None:
             return b
         elif b is None:
-            return b
+            return a
         return max(a, b)
 
     @staticmethod
