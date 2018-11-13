@@ -88,12 +88,13 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
 
 def add_affine_cuts(nlp_result, solve_data, config):
     m = solve_data.linear_GDP
+    config.logger.info("Adding affine cuts.")
     GDPopt = m.GDPopt_utils
     for var, val in zip(GDPopt.working_var_list, nlp_result.var_values):
         if val is not None and not var.fixed:
             var.value = val
 
-    for constr in constraints_in_True_disjuncts(m):
+    for constr in constraints_in_True_disjuncts(m, config):
         # for constr in GDPopt.working_nonlinear_constraints:
 
         if constr not in GDPopt.working_nonlinear_constraints:
@@ -126,10 +127,14 @@ def add_affine_cuts(nlp_result, solve_data, config):
                 doc="Block holding affine constraints")
             aff_utils.GDPopt_aff_cons = ConstraintList()
         aff_cuts = aff_utils.GDPopt_aff_cons
-        aff_cuts.add(expr=sum(
-            ccSlope[var] * (var - var.value) for var in vars_in_constr) + ccStart >= lb_int)
-        aff_cuts.add(expr=sum(
-            cvSlope[var] * (var - var.value) for var in vars_in_constr) + cvStart <= ub_int)
+        concave_cut = sum(ccSlope[var] * (var - var.value)
+                          for var in vars_in_constr
+                          ) + ccStart >= lb_int
+        convex_cut = sum(cvSlope[var] * (var - var.value)
+                         for var in vars_in_constr
+                         ) + cvStart <= ub_int
+        aff_cuts.add(expr=concave_cut)
+        aff_cuts.add(expr=convex_cut)
 
 
 def add_integer_cut(var_values, solve_data, config, feasible=False):
