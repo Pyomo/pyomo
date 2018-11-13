@@ -44,10 +44,10 @@ class GDPlbbSolver(opject):
 
         while not heap.empty()
         	pop (m,v) from heap
-        	if len(m.init_active_disj == len(m.curr_active_disj):
+        	if len(m.init_active_disj == 0):
         		copy m to model
         		return good-solution EXIT
-        	find disj D in m.init_active_disj such that disj is not in m.curr_active_disj
+        	find disj D in m.init_active_disj
 
         	for each disjunct d in D
         		set d false
@@ -62,48 +62,52 @@ class GDPlbbSolver(opject):
         		set d false
         """
 
-        solver = SolverFactory('(SOME MINLP SOLVER)')
+        solver = SolverFactory('baron')
+        #baron through gams
+
 
         heap = []
         root = model.clone()
-        root.init_active_disjunctions = model.component_data_objects(
-            ctype = Disjunction, active=True):
+        root.init_active_disjunctions = list(model.component_data_objects(
+            ctype = Disjunction, active=True))
         root.curr_active_disjunctions = []
         for djn in root.init_active_disjunctions
             djn.deactivate()
         #Satisfiability check would go here
 
-        solver.solve(root)
+        obj_value = minlp_solve(root,solver)#fix
 
-        heapq.heappush(heap,(value(root.obj.expr),root))
-
+        heapq.heappush(heap,(obj_value,root))
         while len(heap)>0:
             mdl = heapq.heappop(h)[1]
             if(len(mdl.init_active_disjunctions) ==  0):
                 ASSIGN VALS FROM mdl TO model
                 return
------------------------------------------------------------------------
-
-            disjunction = inactive_disjunctions[0]
-            activate(disjunction)
-            for each clause in disjunction:
-                new = current.clone()
-                set clause True and fix
-                ##convert to MINLP
-                minlp_solve(new)
-                heapq.heappush(h,(new.obj,new))
-        return incumbent
-
-    def deactivate_disjunctions(self,model):
-        for d in model.component_data_objects(ctype = Disjunction,active = True):
-            #deactivate disjunctions
-
+            disjunction = mdl.init_active_disjunctions.pop(0)
+            disjunction.activate()
+            mdl.curr_active_disjunctions.append(disjunction)
+            for disj in list(disjunction.disjuncts)
+                disj.indicator_var = 0
+            for disj in list(disjunction.disjuncts)
+                disj.indicator_var = 1
+                mnew = model.clone()
+                disj.indicator_var = 0
+                obj_value = minlp_solve(mnew,solver) #fix
+                heapq.heappush(heap,(obj_value,root))
 
 
 
     def validate_model(self,model):
+        #Validates that model has only exclusive disjunctions
+
         for d in model.component_data_objects(
             ctype = Disjunction, active=True):
             if(not d.xor):
                 raise ValueError('GDPlbb unable to handle '
                                 'non-exclusive disjunctions')
+
+    def minlp_solve(self,gdp,solver):
+        minlp = gdp.clone()
+        TransformationFactory('gdp.fix_disjuncts').apply_to(minlp)
+        #TO FINISH
+        
