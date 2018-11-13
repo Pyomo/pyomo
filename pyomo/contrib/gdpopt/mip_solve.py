@@ -81,8 +81,8 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
         pass
     elif terminate_cond is tc.infeasible:
         config.logger.info(
-            'Linear GDP is infeasible. '
-            'Problem may have no more feasible discrete configurations.')
+            'Linear GDP is now infeasible. '
+            'GDPopt has finished exploring feasible discrete configurations.')
         mip_result.feasible = False
     elif terminate_cond is tc.maxTimeLimit:
         # TODO check that status is actually ok and everything is feasible
