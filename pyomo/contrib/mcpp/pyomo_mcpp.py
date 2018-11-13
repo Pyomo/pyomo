@@ -7,7 +7,8 @@ import ctypes
 import logging
 import os
 
-from pyomo.core import value
+from pyomo.core import value, Expression
+from pyomo.core.base.block import SubclassOf
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.expr.expr_pyomo5 import (
     AbsExpression, LinearExpression, NegationExpression, NPV_AbsExpression,
@@ -149,9 +150,13 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             for arg in data[1:]:
                 ans = self.mcpp.new_add(ans, arg)
         elif isinstance(node, PowExpression):
-            assert (type(data[0]) == int),\
-                "Argument to pow() must be an integer. Received %s" % (data[0],)
-            ans = self.mcpp.new_power(data[0], data[1])
+            if type(node.arg(1)) == int:
+                ans = self.mcpp.new_power(data[0], data[1])
+            else:
+                # Non-integer exponent. Must reformulate.
+                # We use x^n = exp(n*log(x))
+                ans = self.mcpp.new_exponential(
+                    self.mcpp.new_mult(data[1], self.mcpp.new_logarithm(data[0])))
         elif isinstance(node, ReciprocalExpression):
             ans = self.mcpp.new_reciprocal(
                 self.mcpp.new_createConstant(1), data[0])
@@ -186,6 +191,8 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                 ans = self.mcpp.new_atrigCos(data[0])
             elif (node.name == "atan"):
                 ans = self.mcpp.new_atrigTan(data[0])
+            elif (node.name == "sqrt"):
+                ans = self.mcpp.new_power(data[0], self.mcpp.new_createConstant(0.5))
             else:
                 raise NotImplementedError("Unknown unary function: %s" % (node.name,))
         elif any(isinstance(node, npv) for npv in NPV_expressions):
@@ -194,6 +201,8 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             ans = self.mcpp.new_createConstant(node)
         elif not node.is_expression_type():
             ans = self.register_num(node)
+        elif type(node) in SubclassOf(Expression):
+            ans = data[0]
         else:
             raise RuntimeError("Unhandled expression type: %s" % (type(node)))
 

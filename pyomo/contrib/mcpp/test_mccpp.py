@@ -122,6 +122,15 @@ class TestMcCormick(unittest.TestCase):
         self.assertEqual(mc_expr.lower(), 0)
         self.assertEqual(mc_expr.upper(), 1)
 
+    def test_lmtd(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0.1, 500), initialize=33.327)
+        m.y = Var(bounds=(0.1, 500), initialize=14.436)
+        m.z = Var(bounds=(0, 90), initialize=22.5653)
+        mc_expr = mc(m.z - (m.x * m.y * (m.x + m.y) / 2) ** (1/3))
+        self.assertAlmostEqual(mc_expr.convex(), -407.95444629965016)
+        self.assertAlmostEqual(mc_expr.lower(), -499.99999999999983)
+
 
 def make2dPlot(expr, numticks=10, show_plot=False):
     mc_ccVals = [None] * (numticks + 1)
