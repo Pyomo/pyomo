@@ -89,6 +89,10 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                                         ctypes.c_void_p]
         self.mcpp.new_power.restype = ctypes.c_void_p
 
+        # sqrt function
+        self.mcpp.new_sqrt.argtypes = [ctypes.c_void_p]
+        self.mcpp.new_sqrt.restype = ctypes.c_void_p
+
         # MC constant * MC Variable
         self.mcpp.new_monomial.argtypes = [ctypes.c_void_p,
                                            ctypes.c_void_p]
@@ -192,7 +196,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             elif (node.name == "atan"):
                 ans = self.mcpp.new_atrigTan(data[0])
             elif (node.name == "sqrt"):
-                ans = self.mcpp.new_power(data[0], self.mcpp.new_createConstant(0.5))
+                ans = self.mcpp.new_sqrt(data[0])
             else:
                 raise NotImplementedError("Unknown unary function: %s" % (node.name,))
         elif any(isinstance(node, npv) for npv in NPV_expressions):

@@ -52,6 +52,13 @@ MC *power(MC *var1, MC *var2)
     return ans;
 }
 
+MC *sqrt(MC *var)
+{
+    MC F = sqrt(*var);
+    MC *ans = new MC(F);
+    return ans;
+}
+
 
 MC *monomial(MC *var1, MC *var2)
 {
@@ -238,6 +245,12 @@ extern "C"
     MC *new_power(MC *var1, MC *var2)
     {
         MC *ans = power(var1, var2);
+        return ans;
+    }
+
+    MC *new_sqrt(MC *var)
+    {
+        MC *ans = sqrt(var);
         return ans;
     }
 
