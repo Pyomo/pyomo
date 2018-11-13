@@ -331,13 +331,15 @@ You can silence this warning by one of three ways:
             from pyomo.core.expr import current as EXPR
             if index.__class__ is EXPR.GetItemExpression:
                 return index
-            index = self._validate_index(index)
-            # _processUnhashableIndex could have found a slice, or
-            # _validate could have found an Ellipsis and returned a
-            # slicer
-            if index.__class__ is _IndexedComponent_slice:
-                return index
-            obj = self._data.get(index, _NotFound)
+            validated_index = self._validate_index(index)
+            if validated_index is not index:
+                index = validated_index
+                # _processUnhashableIndex could have found a slice, or
+                # _validate could have found an Ellipsis and returned a
+                # slicer
+                if index.__class__ is _IndexedComponent_slice:
+                    return index
+                obj = self._data.get(index, _NotFound)
             #
             # Call the _getitem_when_not_present helper to retrieve/return
             # the default value
@@ -466,11 +468,13 @@ You can silence this warning by one of three ways:
             # indices will be already be normalized, so we defer the
             # "automatic" call to normalize_index until now for the
             # sake of efficiency.
-            idx = normalize_index(idx)
-            if idx in self._data:
-                return idx
-            if idx in self._index:
-                return idx
+            normalized_idx = normalize_index(idx)
+            if normalized_idx is not idx:
+                idx = normalized_idx
+                if idx in self._data:
+                    return idx
+                if idx in self._index:
+                    return idx
         # There is the chance that the index contains an Ellipsis,
         # so we should generate a slicer
         if idx is Ellipsis or idx.__class__ is tuple and Ellipsis in idx:
@@ -679,6 +683,16 @@ value() function.""" % ( self.name, i ))
                 "Derived component %s failed to define set_value() "
                 "for scalar instances."
                 % (self.__class__.__name__,))
+
+    def _pprint(self):
+        """Print component information."""
+        return ( [("Size", len(self)),
+                  ("Index", self._index if self.is_indexed() else None),
+                  ],
+                 iteritems(self._data),
+                 ( "Object",),
+                 lambda k, v: [ type(v) ]
+                 )
 
     def id_index_map(self):
         """

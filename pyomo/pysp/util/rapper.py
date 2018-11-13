@@ -80,8 +80,9 @@ class StochSolver:
          str   callback function name in the file
          fct   callback function
          None  it is a AbstractModel
-      tree_model (concrete model, or path): 
+      tree_model (concrete model, or networkx tree, or path): 
         gives the tree as a concrete model (which could be a fct)
+        or a valid networkx scenario tree
         or path to AMPL data file.
       phopts: dictionary of ph options; needed during construction 
               if there is bundling.
