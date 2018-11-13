@@ -28,29 +28,8 @@ def solve_NLP(nlp_model, solve_data, config):
 
     GDPopt = nlp_model.GDPopt_utils
 
-    preprocessing_transformations = [
-        # Propagate variable bounds
-        'contrib.propagate_eq_var_bounds',
-        # Detect fixed variables
-        'contrib.detect_fixed_vars',
-        # Propagate fixed variables
-        'contrib.propagate_fixed_vars',
-        # Remove zero terms in linear expressions
-        'contrib.remove_zero_terms',
-        # Remove terms in equal to zero summations
-        'contrib.propagate_zero_sum',
-        # Transform bound constraints
-        'contrib.constraints_to_var_bounds',
-        # Detect fixed variables
-        'contrib.detect_fixed_vars',
-        # Remove terms in equal to zero summations
-        'contrib.propagate_zero_sum',
-        # Remove trivial constraints
-        'contrib.deactivate_trivial_constraints',
-    ]
     if config.nlp_presolve:
-        for xfrm in preprocessing_transformations:
-            TransformationFactory(xfrm).apply_to(nlp_model)
+        preprocess_NLP(nlp_model, config)
 
     initialize_NLP(nlp_model, solve_data)
 
@@ -122,6 +101,24 @@ def detect_unfixed_discrete_vars(model):
                 constr.body, include_fixed=False)
             if v.is_binary())
     return var_set
+
+
+def preprocess_NLP(m, config):
+    """Applies preprocessing transformations to the model."""
+    xfrm = TransformationFactory
+    xfrm('contrib.propagate_eq_var_bounds').apply_to(m)
+    xfrm('contrib.detect_fixed_vars').apply_to(
+        m, tolerance=config.variable_tolerance)
+    xfrm('contrib.propagate_fixed_vars').apply_to(m)
+    xfrm('contrib.remove_zero_terms').apply_to(m)
+    xfrm('contrib.propagate_zero_sum').apply_to(m)
+    xfrm('contrib.constraints_to_var_bounds').apply_to(
+        m, tolerance=config.variable_tolerance)
+    xfrm('contrib.detect_fixed_vars').apply_to(
+        m, tolerance=config.variable_tolerance)
+    xfrm('contrib.propagate_zero_sum').apply_to(m)
+    xfrm('contrib.deactivate_trivial_constraints').apply_to(
+        m, tolerance=config.constraint_tolerance)
 
 
 def initialize_NLP(model, solve_data):
