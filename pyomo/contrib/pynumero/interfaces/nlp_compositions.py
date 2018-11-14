@@ -856,7 +856,7 @@ class TwoStageStochasticNLP(NLP):
         int
 
         """
-        return self._sname_to_sidp[scneario_name]
+        return self._sname_to_sid[scneario_name]
 
     def block_name(self, bid):
         """

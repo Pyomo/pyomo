@@ -16,6 +16,31 @@ except ImportError:
 import numpy as np
 from pyomo.contrib.pynumero.interfaces import PyomoNLP
 import pyomo.environ as aml
+import sys
+import os
+
+
+def redirect_stdout():
+    sys.stdout.flush() # <--- important when redirecting to files
+
+    # Duplicate stdout (file descriptor 1)
+    # to a different file descriptor number
+    newstdout = os.dup(1)
+
+    # /dev/null is used just to discard what is being printed
+    devnull = os.open('/dev/null', os.O_WRONLY)
+
+    # Duplicate the file descriptor for /dev/null
+    # and overwrite the value for stdout (file descriptor 1)
+    os.dup2(devnull, 1)
+
+    # Close devnull after duplication (no longer needed)
+    os.close(devnull)
+
+    # Use the original stdout to still be able
+    # to print to stdout within python
+    sys.stdout = os.fdopen(newstdout, 'w')
+    return newstdout
 
 
 class _CyIpoptProblem(object):
@@ -94,23 +119,35 @@ class IpoptSolver(object):
         self._problem = _CyIpoptProblem(nlp)
         self._options = options
 
-    def solve(self):
+    def solve(self, x0=None, tee=False):
 
-        cyipopt_solver = ipopt.problem(n=nlp.nx,
-                                       m=nlp.ng,
+        cyipopt_solver = ipopt.problem(n=self._nlp.nx,
+                                       m=self._nlp.ng,
                                        problem_obj=self._problem,
-                                       lb=nlp.xl(),
-                                       ub=nlp.xu(),
-                                       cl=nlp.gl(),
-                                       cu=nlp.gu()
+                                       lb=self._nlp.xl(),
+                                       ub=self._nlp.xu(),
+                                       cl=self._nlp.gl(),
+                                       cu=self._nlp.gu()
                                        )
-        x0 = nlp.x_init()
+        if x0 is None:
+            xstart = self._nlp.x_init()
+        else:
+            assert isinstance(x0, np.ndarray)
+            assert x0.size == self._nlp.nx
+            xstart = x0
 
         # this is needed until NLP hessian takes obj_factor as an input
         if not self._nlp._future_libraries:
             cyipopt_solver.addOption('nlp_scaling_method', 'none')
 
-        x, info = cyipopt_solver.solve(x0)
+        if not tee:
+            newstdout = redirect_stdout()
+
+        x, info = cyipopt_solver.solve(xstart)
+
+        if not tee:
+            os.dup2(newstdout, 1)
+
         return x, info
 
 
@@ -197,8 +234,9 @@ if __name__ == "__main__":
     nlp = PyomoNLP(model)
     print(nlp.x_init())
     solver = IpoptSolver(nlp)
-    solver.solve()
-
+    x, info = solver.solve(tee=False)
+    print(x)
+    print(info)
 
 
 
