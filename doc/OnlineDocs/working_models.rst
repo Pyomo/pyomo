@@ -32,7 +32,8 @@ Repeated Solves
    ...    return pyo.summation(model.x)
    >>> model.o = pyo.Objective(rule=o_rule)
    >>> model.c = pyo.ConstraintList()
-   >>> SolverFactory('glpk').solve(model) # doctest: +SKIP
+   >>> opt = SolverFactory('glpk')
+   >>> opt.solve(model) # doctest: +SKIP
 
    Iterate to eliminate the previously found solution
    >>> for i in range(5):
