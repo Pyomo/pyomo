@@ -4,41 +4,47 @@ from math import fabs
 
 from six import iteritems
 
+from pyomo.core.base.plugin import TransformationFactory
+from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
+                                 add_docstring_list)
 from pyomo.core.base.var import Var
 from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.common.plugin import alias
 
 
+@TransformationFactory.register(
+        'contrib.detect_fixed_vars',
+        doc="Detect variables that are de-facto fixed but not considered fixed.")
 class FixedVarDetector(IsomorphicTransformation):
     """Detects variables that are de-facto fixed but not considered fixed.
 
-    Descends through the model. For each variable found, check to see if var.lb
-    is within some tolerance of var.ub. If so, fix the variable to the value of
-    var.lb.
+    For each variable :math:`v` found on the model, check to see if its lower
+    bound :math:`v^{LB}` is within some tolerance of its upper bound
+    :math:`v^{UB}`. If so, fix the variable to the value of :math:`v^{LB}`.
+
+    Keyword arguments below are specified for the ``apply_to`` and
+    ``create_using`` functions.
 
     """
 
-    alias(
-        'contrib.detect_fixed_vars',
-        doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
+    CONFIG = ConfigBlock("FixedVarDetector")
+    CONFIG.declare("tmp", ConfigValue(
+        default=False, domain=bool,
+        description="True to store the set of transformed variables and "
+        "their old values so that they can be restored."
+    ))
+    CONFIG.declare("tolerance", ConfigValue(
+        default=1E-13, domain=NonNegativeFloat,
+        description="tolerance on bound equality (LB == UB)"
+    ))
+
+    __doc__ = add_docstring_list(__doc__, CONFIG)
 
     def _apply_to(self, instance, **kwargs):
-        """Apply the transformation.
+        config = self.CONFIG(kwargs)
 
-        Args:
-            instance: Pyomo model object to transform.
-
-        Kwargs:
-            tmp: True to store the set of transformed variables and their old
-                values so that they can be restored.
-            tol: tolerance on bound equality (LB == UB)
-        """
-        tmp = kwargs.pop('tmp', False)
-        tol = kwargs.pop('tolerance', 1E-13)
-
-        if tmp:
+        if config.tmp:
             instance._xfrm_detect_fixed_vars_old_values = ComponentMap()
 
         for var in instance.component_data_objects(
@@ -47,8 +53,8 @@ class FixedVarDetector(IsomorphicTransformation):
                 # if the variable is already fixed, or if it is missing a
                 # bound, we skip it.
                 continue
-            if fabs(value(var.lb - var.ub)) <= tol:
-                if tmp:
+            if fabs(value(var.lb) - value(var.ub)) <= config.tolerance:
+                if config.tmp:
                     instance._xfrm_detect_fixed_vars_old_values[var] = \
                         var.value
                 var.fix(var.lb)

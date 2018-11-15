@@ -144,7 +144,6 @@ def add_solver_group(parser):
         help='Specify the technique that is used to manage solver executions.',
         action='store',
         dest='smanager_type',
-        #choices=SolverManagerFactory.services(),
         default='serial')
     group.add_argument('--solver-manager-pyro-host',
       help="The hostname to bind on when searching for a Pyro nameserver.",

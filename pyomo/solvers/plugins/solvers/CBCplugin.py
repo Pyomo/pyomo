@@ -16,12 +16,11 @@ import logging
 
 from six import iteritems
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.misc
 import pyutilib.common
 import pyutilib.subprocess
 
-import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -46,9 +45,9 @@ def configure_cbc():
         return
     # manually look for the cbc executable to prevent the
     # CBC.execute() from logging an error when CBC is missing
-    if pyutilib.services.registered_executable("cbc") is None:
+    if pyomo.common.registered_executable("cbc") is None:
         return
-    cbc_exec = pyutilib.services.registered_executable("cbc").get_path()
+    cbc_exec = pyomo.common.registered_executable("cbc").get_path()
     results = pyutilib.subprocess.run( [cbc_exec,"-stop"], timelimit=1 )
     _cbc_version = _extract_version(results[1])
     results = pyutilib.subprocess.run(
@@ -57,11 +56,11 @@ def configure_cbc():
     if _cbc_version is not None:
         _cbc_old_version = _cbc_version < (2,7,0,0)
 
+
+@SolverFactory.register('cbc', doc='The CBC LP/MIP solver')
 class CBC(OptSolver):
     """The CBC LP/MIP solver
     """
-
-    pyomo.common.plugin.alias('cbc', doc='The CBC LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         configure_cbc()
@@ -119,11 +118,11 @@ class CBC(OptSolver):
         return opt
 
 
+
+@SolverFactory.register('_cbc_shell',  doc='Shell interface to the CBC LP/MIP solver')
 class CBCSHELL(SystemCallSolver):
     """Shell interface to the CBC LP/MIP solver
     """
-
-    pyomo.common.plugin.alias('_cbc_shell',  doc='Shell interface to the CBC LP/MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -184,7 +183,7 @@ class CBCSHELL(SystemCallSolver):
     #    SystemCallSolver._presolve(self, *args, **kwds)
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("cbc")
+        executable = pyomo.common.registered_executable("cbc")
         if executable is None:
             logger.warning("Could not locate the 'cbc' executable, which is required for solver %s" % self.name)
             self.enable = False
@@ -361,8 +360,9 @@ class CBCSHELL(SystemCallSolver):
             if len(tokens) >= 3 and tokens[0] == "Objective" and tokens[1] == "value:":
                 # parser for log file generetated with discrete variable
                 soln.objective['__default_objective__']['Value'] = float(tokens[2])
-            if len(tokens) > 4 and tokens[0] == "Optimal" and tokens[2] == "objective":
+            if len(tokens) > 4 and tokens[0] == "Optimal" and tokens[2] == "objective" and tokens[4] != "and":
                 # parser for log file generetated without discrete variable
+                # see pull request #339: last check avoids lines like "Optimal - objective gap and complementarity gap both smallish and small steps"
                 soln.status = SolutionStatus.optimal
                 soln.objective['__default_objective__']['Value'] = float(tokens[4])
             if len(tokens) > 6 and tokens[4] == "best" and tokens[5] == "objective":
@@ -589,11 +589,10 @@ class CBCSHELL(SystemCallSolver):
             INPUT.close()
 
 
+@SolverFactory.register('_mock_cbc')
 class MockCBC(CBCSHELL,MockMIP):
     """A Mock CBC solver used for testing
     """
-
-    pyomo.common.plugin.alias('_mock_cbc')
 
     def __init__(self, **kwds):
         try:
@@ -623,4 +622,4 @@ class MockCBC(CBCSHELL,MockMIP):
             return (args, ProblemFormat.mps, None)
 
 
-pyutilib.services.register_executable(name="cbc")
+pyomo.common.register_executable(name="cbc")

@@ -59,7 +59,7 @@ import pyomo.pysp.phsolverserverutils
 
 def construct_ph_options_parser(usage_string):
 
-    solver_list = SolverFactory.services()
+    solver_list = list(SolverFactory)
     solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
     solver_help = \
     "Specify the solver with which to solve scenario sub-problems.  The "      \
@@ -909,7 +909,6 @@ def PHAlgorithmBuilder(options, scenario_tree):
                           pyomo.solvers.plugins.smanager.pyro.SolverManager_Pyro):
                 if ph._shutdown_pyro_workers:
                     solver_manager.shutdown_workers()
-            solver_manager.deactivate()
 
         print("Failed to initialize progressive hedging algorithm")
         raise
@@ -1000,7 +999,6 @@ def PHCleanup(ph):
                         pyomo.solvers.plugins.smanager.pyro.SolverManager_Pyro):
             if ph._shutdown_pyro_workers:
                 ph._solver_manager.shutdown_workers()
-        ph._solver_manager.deactivate()
 
     if ph._scenario_tree is not None:
 

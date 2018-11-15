@@ -18,7 +18,7 @@ from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import ComponentData
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.indexed_component import (
     IndexedComponent,
     UnindexedComponent_set, )
@@ -72,7 +72,7 @@ class _ExpressionData(NumericValue):
 
     @property
     def args(self):
-        yield self.expr
+        return (self.expr,)
 
     def nargs(self):
         return 1
@@ -243,6 +243,8 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl,
         self._component = weakref_ref(component) if (component is not None) \
                           else None
 
+
+@ModelComponentFactory.register("Named expressions that can be used in other expressions.")
 class Expression(IndexedComponent):
     """
     A shared expression container, which may be defined over a index.
@@ -521,6 +523,3 @@ class IndexedExpression(Expression):
         self._data[index] = cdata
         return cdata
 
-register_component(
-    Expression,
-    "Named expressions that can be used in other expressions.")

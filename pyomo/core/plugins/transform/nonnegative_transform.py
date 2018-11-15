@@ -10,7 +10,6 @@
 
 import copy
 
-from pyomo.common.plugin import alias
 from pyomo.core.expr import current as EXPR
 
 from pyomo.core import *
@@ -60,13 +59,12 @@ def _walk_expr(expr, varMap):
     return visitor.dfs_postorder_stack(expr)
 
 
+@TransformationFactory.register("core.nonnegative_vars", doc="Create an equivalent model in which all variables lie in the nonnegative orthant.")
 class NonNegativeTransformation(IsomorphicTransformation):
     """
     Creates a new, equivalent model by forcing all variables to lie in
     the nonnegative orthant by introducing auxiliary variables.
     """
-
-    alias("core.nonnegative_vars", doc="Create an equivalent model in which all variables lie in the nonnegative orthant.")
 
     def __init__(self, **kwds):
         kwds["name"] = kwds.pop("name", "vars")

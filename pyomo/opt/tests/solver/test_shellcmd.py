@@ -47,6 +47,7 @@ _test_names = ["cplex", "ipopt", "bonmin", "cbc", "glpk", "gurobi", "junk___"]
 
 is_windows = os.name == 'nt'
 
+
 class TestSystemCallSolver(unittest.TestCase):
 
     @classmethod
@@ -107,10 +108,10 @@ class TestSystemCallSolver(unittest.TestCase):
             self.assertEqual(id(opt._user_executable), id(None))
             # both cases should fail because this class is only
             # a partial implementation
-            with self.assertRaises(NotImplementedError):
+            with self.assertRaises(ApplicationError):
                 opt.available(exception_flag=True)
-            with self.assertRaises(NotImplementedError):
-                opt.available(exception_flag=False)
+            #with self.assertRaises(ApplicationError):
+            #    opt.available(exception_flag=False)
 
     def test_reset_executable(self):
         with SystemCallSolver(type='test') as opt:
@@ -249,6 +250,8 @@ class TestSystemCallSolver(unittest.TestCase):
         try:
             for name in _test_names:
                 with SolverFactory(name, executable=isexe_nopath) as opt:
+                    if isinstance(opt, UnknownSolver):
+                        continue
                     self.assertEqual(opt._user_executable, isexe_abspath)
                     self.assertEqual(opt.executable(), isexe_abspath)
         finally:
@@ -260,18 +263,24 @@ class TestSystemCallSolver(unittest.TestCase):
     def test_SolverFactory_executable_isexe_relpath(self):
         for name in _test_names:
             with SolverFactory(name, executable=isexe_relpath) as opt:
+                if isinstance(opt, UnknownSolver):
+                    continue
                 self.assertEqual(opt._user_executable, isexe_abspath)
                 self.assertEqual(opt.executable(), isexe_abspath)
 
     def test_executable_isexe_abspath(self):
         for name in _test_names:
             with SolverFactory(name, executable=isexe_abspath) as opt:
+                if isinstance(opt, UnknownSolver):
+                    continue
                 self.assertEqual(opt._user_executable, isexe_abspath)
                 self.assertEqual(opt.executable(), isexe_abspath)
 
     def test_executable_isexe_abspath_user(self):
         for name in _test_names:
             with SolverFactory(name, executable=isexe_abspath_user) as opt:
+                if isinstance(opt, UnknownSolver):
+                    continue
                 self.assertEqual(opt._user_executable, isexe_abspath)
                 self.assertEqual(opt.executable(), isexe_abspath)
 

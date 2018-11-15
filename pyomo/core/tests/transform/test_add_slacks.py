@@ -10,7 +10,6 @@ import pyutilib.services
 import random
 
 import pyomo.opt
-from pyomo.common.plugin import Plugin
 from pyomo.environ import *
 import pyomo.core.expr.current as EXPR
 

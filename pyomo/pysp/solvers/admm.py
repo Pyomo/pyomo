@@ -965,8 +965,8 @@ def runadmm(options):
 
         if options.output_scenario_tree_solution:
             print("Final solution (scenario tree format):")
-            manager.scenario_tree.snapshotSolutionFromScenarios()
-            manager.scenario_tree.pprintSolution()
+            sp.scenario_tree.snapshotSolutionFromScenarios()
+            sp.scenario_tree.pprintSolution()
             sp.scenario_tree.pprintCosts()
 
     print("")

@@ -10,4 +10,4 @@ scripts using Pyomo.
    :maxdepth: 1
 
    expressions/index.rst
-   opt/index.rst
+

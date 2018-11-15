@@ -16,16 +16,14 @@
 from pyomo.opt.base import results
 from pyomo.opt.base.formats import ResultsFormat
 from pyomo.opt import SolverResults
-from pyomo.common.plugin import alias
 
 
+@results.ReaderFactory.register(str(ResultsFormat.yaml))
 class ResultsReader_yaml(results.AbstractResultsReader):
     """
     Class that reads in a *.yml file and generates a
     SolverResults object.
     """
-
-    alias(str(ResultsFormat.yaml))
 
     def __init__(self):
         results.AbstractResultsReader.__init__(self, ResultsFormat.yaml)
@@ -42,13 +40,12 @@ class ResultsReader_yaml(results.AbstractResultsReader):
 
 
 
+@results.ReaderFactory.register(str(ResultsFormat.json))
 class ResultsReader_json(results.AbstractResultsReader):
     """
     Class that reads in a *.jsn file and generates a
     SolverResults object.
     """
-
-    alias(str(ResultsFormat.json))
 
     def __init__(self):
         results.AbstractResultsReader.__init__(self, ResultsFormat.json)

@@ -144,7 +144,7 @@ def help_writers():
     print("")
     print("Pyomo Problem Writers")
     print("---------------------")
-    for writer in sorted(WriterFactory.services()):
+    for writer in sorted(WriterFactory):
         print("  "+writer)
         print(wrapper.fill(WriterFactory.doc(writer)))
 
@@ -176,7 +176,7 @@ def help_datamanagers(options):
     print("")
     print("Pyomo Data Managers")
     print("-------------------")
-    for xform in sorted(DataManagerFactory.services()):
+    for xform in sorted(DataManagerFactory):
         print("  "+xform)
         print(wrapper.fill(DataManagerFactory.doc(xform)))
 
@@ -299,7 +299,7 @@ def help_transformations():
     print("")
     print("Pyomo Model Transformations")
     print("---------------------------")
-    for xform in sorted(TransformationFactory.services()):
+    for xform in sorted(TransformationFactory):
         print("  "+xform)
         print(wrapper.fill(TransformationFactory.doc(xform)))
 
@@ -312,7 +312,7 @@ def help_solvers():
 
     print(wrapper.fill("Pyomo uses 'solver managers' to execute 'solvers' that perform optimization and other forms of model analysis.  A solver directly executes an optimizer, typically using an executable found on the user's PATH environment.  Solver managers support a flexible mechanism for asyncronously executing solvers either locally or remotely.  The following solver managers are available in Pyomo:"))
     print("")
-    solvermgr_list = pyomo.opt.SolverManagerFactory.services()
+    solvermgr_list = list(pyomo.opt.SolverManagerFactory)
     solvermgr_list = sorted( filter(lambda x: '_' != x[0], solvermgr_list) )
     n = max(map(len, solvermgr_list))
     wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))
@@ -329,7 +329,7 @@ def help_solvers():
     print("------------------------")
     print(wrapper.fill("The serial, pyro and phpyro solver managers support the following solver interfaces:"))
     print("")
-    solver_list = pyomo.opt.SolverFactory.services()
+    solver_list = list(pyomo.opt.SolverFactory)
     solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
     n = max(map(len, solver_list))
     wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))

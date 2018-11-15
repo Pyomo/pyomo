@@ -18,20 +18,13 @@ Define the plugin for DAKOTA TEXT IO
 
 import re
 
-from pyomo.common.plugin import *
 from pyutilib.math import as_number
+from pyomo.opt.blackbox.problem_io import BlackBoxOptProblemIOFactory
 
-from pyomo.opt.blackbox.problem_io import *
 
-
-class DakotaTextIO(SingletonPlugin):
+@BlackBoxOptProblemIOFactory.register('dakota')
+class DakotaTextIO(object):
     """The reader/writer for the DAKOTA TEXT IO Formats"""
-
-    implements(IBlackBoxOptProblemIO)
-
-    def __init__(self):
-        SingletonPlugin.__init__(self)
-        self.name = 'dakota'
 
     def read(self, filename, point):
         """

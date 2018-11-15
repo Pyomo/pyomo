@@ -1,0 +1,16 @@
+PyNumero relies on a patched version of the ASL that supports direct
+memory transfer of the NL file.  The included getASL.sh script automates
+the process of fetching and patching the ASL source.
+
+Quick installations for fetching and building the ASL:
+
+      ./getASL.sh
+      cd solvers
+      ./configurehere
+      make
+
+If your networking environment prevents the secure download of the ASL
+from GitHub, you can run the download "insecurely" with:
+
+     ./getASL.sh --insecure
+

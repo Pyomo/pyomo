@@ -4,9 +4,6 @@ from pyomo.environ import (ConcreteModel, TransformationFactory,
                            value, Var)
 
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
-
-
 class TestInitVars(unittest.TestCase):
     """Tests initialization of uninitialized variables."""
 

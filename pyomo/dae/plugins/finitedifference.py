@@ -10,18 +10,18 @@
 
 import logging
 
-from pyomo.core.base.plugin import alias
-from pyomo.core.base import Transformation
-from pyomo.core import *
-from pyomo.dae import *
+from pyomo.core.base import Transformation, TransformationFactory
+from pyomo.core import Var, Expression, Objective
+from pyomo.dae import ContinuousSet, DerivativeVar, Integral
+
 from pyomo.dae.misc import generate_finite_elements
 from pyomo.dae.misc import expand_components
 from pyomo.dae.misc import create_partial_expression
 from pyomo.dae.misc import add_discretization_equations
 from pyomo.dae.misc import block_fully_discretized
-from pyomo.core.base.block import TraversalStrategy
+from pyomo.dae.diffvar import DAE_Error
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.dae')
 
 
 def _central_transform(v, s):
@@ -109,13 +109,13 @@ def _backward_transform_order2(v, s):
     return _bwd_fun
 
 
+@TransformationFactory.register('dae.finite_difference', doc="Discretizes a DAE model using "
+          "a finite difference method transforming the model into an NLP.")
 class Finite_Difference_Transformation(Transformation):
     """
     Transformation that applies finite difference methods to
     DAE, ODE, or PDE models.
     """
-    alias('dae.finite_difference', doc="Discretizes a DAE model using "
-          "a finite difference method transforming the model into an NLP.")
 
     def __init__(self):
         super(Finite_Difference_Transformation, self).__init__()
@@ -124,11 +124,6 @@ class Finite_Difference_Transformation(Transformation):
             'BACKWARD': (_backward_transform, _backward_transform_order2),
             'CENTRAL': (_central_transform, _central_transform_order2),
             'FORWARD': (_forward_transform, _forward_transform_order2)}
-
-    def _setup(self, instance):
-        instance = instance.clone()
-        instance.construct()
-        return instance
 
     def _apply_to(self, instance, **kwds):
         """
@@ -161,6 +156,10 @@ class Finite_Difference_Transformation(Transformation):
                                  (tmpds.get_discretization_info()['scheme'],
                                   tmpds.name))
 
+        if tmpnfe < 1:
+            raise ValueError(
+                "The number of finite elements must be at least 1")
+
         if None in self._nfe:
             raise ValueError(
                 "A general discretization scheme has already been applied to "
@@ -169,7 +168,7 @@ class Finite_Difference_Transformation(Transformation):
                 "set, you must declare a new transformation object")
 
         if len(self._nfe) == 0 and tmpds is None:
-            # Same discretization on all differentialsets
+            # Same discretization on all ContinuousSets
             self._nfe[None] = tmpnfe
             currentds = None
         else:
@@ -195,14 +194,15 @@ class Finite_Difference_Transformation(Transformation):
                 generate_finite_elements(ds, self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds) - 1 > self._nfe[currentds]:
-                        print("***WARNING: More finite elements were found in "
-                              "ContinuousSet '%s' than the number of finite "
-                              "elements specified in apply. The larger number "
-                              "of finite elements will be used." % ds.name)
+                        logger.warn("More finite elements were found in "
+                                    "ContinuousSet '%s' than the number of "
+                                    "finite elements specified in apply. The "
+                                    "larger number of finite elements will be "
+                                    "used." % ds.name)
 
                 self._nfe[ds.name] = len(ds) - 1
                 self._fe[ds.name] = sorted(ds)
-                # Adding discretization information to the differentialset
+                # Adding discretization information to the ContinuousSet
                 # object itself so that it can be accessed outside of the
                 # discretization object
                 disc_info = ds.get_discretization_info()
@@ -238,6 +238,23 @@ class Finite_Difference_Transformation(Transformation):
             if d.is_fully_discretized():
                 add_discretization_equations(d.parent_block(), d)
                 d.parent_block().reclassify_component_type(d, Var)
+
+                # Keep track of any reclassified DerivativeVar components so
+                # that the Simulator can easily identify them if the model
+                # is simulated after discretization
+                # TODO: Update the discretization transformations to use
+                # a Block to add things to the model and store discretization
+                # information. Using a list for now because the simulator
+                # does not yet support models containing active Blocks
+                reclassified_list = getattr(block,
+                                    '_pyomo_dae_reclassified_derivativevars',
+                                    None)
+                if reclassified_list is None:
+                    block._pyomo_dae_reclassified_derivativevars = list()
+                    reclassified_list = \
+                        block._pyomo_dae_reclassified_derivativevars
+
+                reclassified_list.append(d)
 
         # Reclassify Integrals if all ContinuousSets have been discretized
         if block_fully_discretized(block):

@@ -10,7 +10,10 @@
 
 import sys
 import logging
+
+import pyutilib.th as unittest
 from pyutilib.misc import Options
+
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.solvers import test_solver_cases
@@ -260,6 +263,7 @@ ExpectedFailures['baron', 'bar', 'MILP_unbounded'] = \
 #
 
 
+@unittest.nottest
 def test_scenarios(arg=None):
     """
     Generate scenarios
@@ -293,6 +297,7 @@ def test_scenarios(arg=None):
             yield (model, solver, io), Options(status=status, msg=msg, model=_model, solver=None, testcase=_solver_case)
 
 
+@unittest.nottest
 def run_test_scenarios(options):
     logging.disable(logging.WARNING)
 

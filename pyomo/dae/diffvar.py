@@ -10,7 +10,7 @@
 
 import weakref
 from pyomo.core.base.var import Var, _VarData
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.dae.contset import ContinuousSet
 from six import iterkeys
 
@@ -30,104 +30,8 @@ def create_access_function(var):
 class DAE_Error(Exception):
     """Exception raised while processing DAE Models"""
 
-# Depricated functionality for creating a derivative on the fly
-#
-# def derivative(self, *args):
-#     """
-#     This function allows the user to use a derivative without
-#     declaring a DerivativeVar. It will add a DerivativeVar component
-#     to the model if one doesn't already exist. The argument to this
-#     method is the ContinuousSet(s) that the derivative is being taken
-#     with respect to.
-#     """
-#     wrt = [i for i in args]
-#     svar = self.parent_component()
-#     idx = self.index()
-#
-#     try:
-#         num_contset = len(svar._contset)
-#     except:
-#         svar._contset = {}
-#         svar._derivative = {}
-#         if svar.dim() == 0:
-#             raise DAE_Error("The variable %s is not indexed by any "
-#                             ":py:class:`ContinuousSets<pyomo.dae"
-#                             ".ContinuousSet>`. A derivative may only be "
-#                             "taken with respect to a continuous domain"
-#                             % (svar))
-#         elif svar.dim() == 1:
-#             sidx_sets = svar._index
-#             if sidx_sets.type() is ContinuousSet:
-#                 svar._contset[sidx_sets] = 0
-#         else:
-#             sidx_sets = svar._implicit_subsets
-#             for i,s in enumerate(sidx_sets):
-#                 if s.type() is ContinuousSet:
-#                     svar._contset[s] = i
-#             num_contset = len(svar._contset)
-#
-#     if len(args)==0:
-#         if num_contset != 1:
-#             raise ValueError(
-#                 "The Var %s is indexed by multiple ContinuousSets. The "
-#                 "desired ContinuousSet must be specified" % (svar))
-#         args = (self.model().find_component(next(iterkeys(svar._contset))), )
-#     try:
-#         deriv = self.model().find_component(svar.get_derivative(*args))
-#     except:
-#         nme = '_'
-#         for i in args:
-#             nme = nme+'d'+i.local_name
-#         self.model().add_component('d' + svar.local_name + nme,
-#                                    DerivativeVar(svar, wrt=args))
-#         deriv = svar.get_derivative(*args)
-#
-#     try:
-#         return deriv[idx]
-#     except:
-#         new_indices = set(deriv._index)-set(iterkeys(deriv._data))
-#         deriv._add_members(new_indices)
-#         deriv._initialize_members(new_indices)
-#         return deriv[idx]
-#
-#
-# def get_derivative(self, *args):
-#     """
-#     Returns the dictionary mapping derivatives to their DerivativeVar or
-#     returns a certain DerivativeVar specified by the keyword arguments
-#     """
-#     try:
-#         if len(args) == 0:
-#             return self._derivative
-#         else:
-#             key = [str(i) for i in args]
-#             key.sort()
-#             key = tuple(key)
-#             return self._derivative[key]()
-#     except AttributeError:
-#         return {}
-#
-#
-# def is_fully_discretized(self):
-#     """
-#     Checks to see if all ContinuousSets indexing this Var have been
-#     discretized
-#     """
-#     for i in self._contset:
-#         if 'scheme' not in i.get_discretization_info():
-#             return False
-#         return True
-#
-# # The following code adds a few methods and attributes to Var and
-# # _VarData which allow them to be indexed by discretized and
-# # differentiated. All Vars in the model will have these methods and
-# # attributes after importing pyomo.dae.
-#
-# _VarData.derivative = derivative
-# Var.get_derivative = get_derivative
-# Var.is_fully_discretized = is_fully_discretized
 
-
+@ModelComponentFactory.register("Derivative of a Var in a DAE model.")
 class DerivativeVar(Var):
     """
     Represents derivatives in a model and defines how a
@@ -244,7 +148,7 @@ class DerivativeVar(Var):
             raise DAE_Error(
                 "Cannot create a new derivative variable for variable "
                 "%s: derivative already defined as %s"
-                % (sVar.name, sVar.get_derivative(*tuple(wrt)).name))
+                % (sVar.name, sVar._derivative[wrtkey]().name))
 
         sVar._derivative[wrtkey] = weakref.ref(self)
         self._sVar = sVar
@@ -314,5 +218,3 @@ class DerivativeVar(Var):
         """
         self._expr = expr
 
-register_component(DerivativeVar,
-                   "Derivative of a Var in a DAE model.")

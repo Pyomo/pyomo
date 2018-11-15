@@ -4,14 +4,13 @@ from __future__ import division
 
 import textwrap
 
-from pyomo.core.base import Block, Constraint, VarList, Objective
+from pyomo.core.base import Block, Constraint, VarList, Objective, TransformationFactory
 from pyomo.core.expr.current import ExpressionReplacementVisitor
 from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
-from pyomo.common.plugin import alias
 import logging
 
 logger = logging.getLogger('pyomo.contrib.preprocessing')
@@ -162,16 +161,30 @@ def max_if_not_None(iterable):
     return max(non_nones or [None])  # min( [] or [None] ) -> None
 
 
+@TransformationFactory.register('contrib.aggregate_vars',
+          doc="Aggregate model variables that are linked by equality constraints.")
 class VariableAggregator(IsomorphicTransformation):
     """Aggregate model variables that are linked by equality constraints.
 
-    TODO: Caution: unclear what happens to "capital-E" Expressions at this point
-    in time.
+    Before:
+
+    .. math::
+
+        x &= y \\\\
+        a &= 2x + 6y + 7 \\\\
+        b &= 5y + 6 \\\\
+
+    After:
+
+    .. math::
+
+        z &= x = y \\\\
+        a &= 8z + 7 \\\\
+        b &= 5z + 6
+
+    .. warning:: TODO: unclear what happens to "capital-E" Expressions at this point in time.
 
     """
-
-    alias('contrib.aggregate_vars',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, model, detect_fixed_vars=True):
         """Apply the transformation to the given model."""
