@@ -1,21 +1,27 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Feb 17 15:41:08 2017
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+#
+# Model Reference: "A Dynamic HIV-Transmission Model for Evaluating the Costs and 
+#	Benefits of Vaccine Programs", D.M. Edwards, R.D. Shachter, and D.K. Owen
+#	1998, Interfaces
+#
 
-@author: eacques
-"""
 
-# Sample Problem HIV Transmission Model
 
 from __future__ import division
 from pyomo.environ import *
 from pyomo.dae import *
 from pyomo.dae.simulator import Simulator
-from sensitivity_toolbox import sipopt
+from pyomo.contrib.sensitivity_toolbox.sensitivity_toolbox import sipopt
 
 #Define Model
-
 m = ConcreteModel()
 
 m.tf = Param(initialize=20)
@@ -42,7 +48,6 @@ m.aaDelta = Param(initialize = .000100001)
 
 
 #Set Parameters
-
 m.eps = Param(initialize = 0.75, mutable=True)
 
 m.sig = Param(initialize = 0.15, mutable=True)
@@ -141,9 +146,7 @@ m.qq = Param(m.ij, initialize=q, mutable=True)
 m.aa = Param(initialize = 0.0001, mutable=True)
 
 #Set Variables
-
 m.yy = Var(m.t,m.ij)
-#m.L = Var(m.t, initialize=-76811)
 m.L = Var(m.t)
 
 m.vp = Var(m.t, initialize=0.75, bounds=(0,0.75))
@@ -173,7 +176,6 @@ m.L[0].fix(0)
 
 
 #ODEs
-
 def _yy00(m, t): 
     return sum(m.pp[kk]*m.yy[t,kk] for kk in m.ij)*m.dyy[t,(0,0)] == \
 	   	sum(m.pp[kk]*m.yy[t,kk] for kk in m.ij)*(m.II[(0,0)]-\
@@ -234,7 +236,6 @@ m.LDiffCon = Constraint(m.t, rule=_L)
 
 
 ### Simulate the Model
-
 vp_profile = {0:0.75}
 vt_profile = {0:0.75}
 
@@ -257,8 +258,9 @@ sim.initialize_model()
 
 
 ### Call sipopt
-results, z_L, z_U = sipopt(m,[m.eps,m.qq],[m.epsDelta,m.qqDelta],
-                             cloneModel=True,streamSoln=True)
+m_sipopt = sipopt(m,[m.eps,m.qq],
+                    [m.epsDelta,m.qqDelta],
+                    streamSoln=True)
 
 
 

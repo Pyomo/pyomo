@@ -27,24 +27,60 @@ def sipopt(instance,paramSubList,perturbList,cloneModel=True,
     into the design structure required to call sipopt to get an approximation
     perturbed solution with updated bounds on the decision variable. 
     
-    Args:
-        instance     : ConcreteModel: pyomo model object
-        paramSubList : Param	    : list of mutable parameters
-        perturbList  : Param	    : list of perturbed parameter values
-            -length(paramSubList) must equal length(perturbList)
-        cloneModel   : boolean	    : indicator to clone the model
-            -default = True, model is expected to be cloned
-            -if set to False, the original model will be altered
-        streamSoln   : boolean	    : indicator to stream IPOPT solution
-        keepfiles    : boolean	    : indicator to print intermediate file names
+    Arguments:
+        instance     : ConcreteModel: Expectation No Exceptions
+            pyomo model object
+
+        paramSubList : Param         
+            list of mutable parameters
+            Exception : "paramSubList argument is expecting a List of Params"	    
+
+        perturbList  : Param	    
+            list of perturbed parameter values
+            Exception : "perturbList argument is expecting a List of Params"
+
+            length(paramSubList) must equal length(perturbList)
+            Exception : "paramSubList will not map to perturbList"  
+
+
+        cloneModel   : boolean      : default=True	    
+            indicator to clone the model
+                -if set to False, the original model will be altered
+
+        streamSoln   : boolean      : default=False	    
+            indicator to stream IPOPT solution
+
+        keepfiles    : boolean	    : default=False 
+            indicator to print intermediate file names
     
     Returns:
-        m		  : ConcreteModel : converted model for sipopt
-        m.sol_state_1     : Suffix	  : approximated results @ perturbation
-        m.sol_state_1_z_L : Suffix        : updated lower bound
-        m.sol_state_1_z_U : Suffix        : updated upper bound
+        m		  : ConcreteModel
+            converted model for sipopt
+
+        m.sol_state_1     : Suffix	  
+            approximated results at perturbation
+
+        m.sol_state_1_z_L : Suffix        
+            updated lower bound
+
+        m.sol_state_1_z_U : Suffix        
+            updated upper bound
     """
 
+    #Verify User Inputs    
+    if len(paramSubList)!=len(perturbList):
+        raise Exception("Length of paramSubList argument does not equal "
+                        "length of perturbList")
+
+    for pp in paramSubList:
+        if pp.type() is not Param:
+            raise Exception("paramSubList argument is expecting a list of Params")
+        
+    for pp in perturbList:
+        if pp.type() is not Param:
+            raise Exception("perturbList argument is expecting a list of Params")
+
+    #Based on user input clone model or use orignal model for anlaysis
     if cloneModel:
         m = instance.clone()
     else:
@@ -61,7 +97,6 @@ def sipopt(instance,paramSubList,perturbList,cloneModel=True,
         b.add_component(tempName,Var(parameter.index_set()))
         myVar = b.component(tempName)
         varSubList.append(myVar)
-
  
     paramCompMap = ComponentMap(zip(paramSubList, varSubList))
     variableSubMap = ComponentMap()
@@ -144,10 +179,9 @@ def sipopt(instance,paramSubList,perturbList,cloneModel=True,
     m.sens_sol_state_1_z_L = Suffix(direction=Suffix.IMPORT)
     m.sens_sol_state_1_z_U = Suffix(direction=Suffix.IMPORT)
 
-
     #set sIPOPT data
     opt.options['run_sens'] = 'yes'
-
+    
     kk=1
     for ii in paramDataList:
         m.sens_state_0[variableSubMap[ii]] = kk
@@ -159,7 +193,4 @@ def sipopt(instance,paramSubList,perturbList,cloneModel=True,
     #Send the model to the ipopt_sens and collect the solution
     results = opt.solve(m, keepfiles=keepfiles, tee=streamSoln)
 
-    return [m,
-            m.sens_sol_state_1, 
-            m.sens_sol_state_1_z_L, 
-            m.sens_sol_state_1_z_U]
+    return m
