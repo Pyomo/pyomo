@@ -84,6 +84,8 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
                 return "{0} * {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.PowExpression:
             return "{0} ^ {1}".format(tmp[0], tmp[1])
+        elif node.__class__ is EXPR.UnaryFunctionExpression and node.name == "sqrt":
+            return "{0} ^ 0.5".format(tmp[0])
         else:
             return node._to_string(tmp, None, self.smap, True)
 
