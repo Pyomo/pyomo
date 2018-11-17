@@ -465,13 +465,19 @@ class _ClosedNumericRange(object):
         _dir = copysign(1, cnr.step)
         _subranges = []
         for i in range(abs(new_step // cnr.step)):
-            if cnr.end is None or _dir*(cnr.start + i*cnr.step) <= _dir*cnr.end:
-                _subranges.append(_ClosedNumericRange(
-                    cnr.start + i*cnr.step, cnr.end, _dir*new_step
-                ))
+            if ( cnr.end is not None
+                 and _dir*(cnr.start + i*cnr.step) > _dir*cnr.end ):
+                # Once we walk past the end of the range, we are done
+                # (all remaining offsets will be farther past the end)
+                break
+
+            _subranges.append(_ClosedNumericRange(
+                cnr.start + i*cnr.step, cnr.end, _dir*new_step
+            ))
         return _subranges
 
     def _lcm(self,other_ranges):
+        """This computes an approximate Least Common Multiple step"""
         if self.step:
             steps = {abs(self.step)}
             for s in other_ranges:
