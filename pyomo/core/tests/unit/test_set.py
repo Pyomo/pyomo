@@ -329,6 +329,32 @@ class TestNumericRange(unittest.TestCase):
         self.assertFalse(CNR(10, 0, -2).issubset(CNR(10, 0, -4)))
         self.assertTrue(CNR(10, 0, -2).issubset(CNR(10, 0, -1)))
 
+    def test_lcm(self):
+        self.assertEqual(
+            CNR(0,None,3)._lcm((CNR(0,None,1),)),
+            3
+        )
+        self.assertEqual(
+            CNR(0,None,3)._lcm((CNR(0,None,0),)),
+            3
+        )
+        self.assertEqual(
+            CNR(0,None,0)._lcm((CNR(0,None,1),)),
+            0
+        )
+        self.assertEqual(
+            CNR(0,None,3)._lcm((CNR(0,None,2),)),
+            6
+        )
+        self.assertEqual(
+            CNR(0,None,3)._lcm((CNR(0,None,2),CNR(0,None,5))),
+            30
+        )
+        self.assertEqual(
+            CNR(0,None,3)._lcm((CNR(0,None,2),CNR(0,None,10))),
+            30
+        )
+
     def test_range_difference(self):
         self.assertEqual(
             CNR(0,None,1).range_difference([CNR(1,None,0)]),
@@ -341,6 +367,12 @@ class TestNumericRange(unittest.TestCase):
         self.assertEqual(
             CNR(0,None,2).range_difference([CNR(10,None,3)]),
             [CNR(0,None,6), CNR(2,None,6), CNR(4,4,0)],
+        )
+
+        # test relatively prime ranges that don't expand to all offsets
+        self.assertEqual(
+            CNR(0,7,2).range_difference([CNR(6,None,10)]),
+            [CNR(0,0,0), CNR(2,2,0), CNR(4,4,0)],
         )
 
         # test ranges running in the other direction
@@ -548,6 +580,10 @@ class InfiniteSetTester(unittest.TestCase):
 
 
     def test_equality(self):
+        self.assertEqual(Any, Any)
+        self.assertEqual(Reals, Reals)
+        self.assertEqual(PositiveIntegers, PositiveIntegers)
+
         self.assertEqual(Any, _AnySet())
         self.assertEqual(
             Reals,
@@ -594,8 +630,8 @@ class InfiniteSetTester(unittest.TestCase):
             ))
         )
 
-        # Omitting one of the subranges breaks equality
         # Nututally prime sets of ranges
+        #  ...omitting one of the subranges breaks equality
         self.assertNotEqual(
             InfiniteSimpleSet(ranges=(CNR(1,None,2), CNR(2,None,2))),
             InfiniteSimpleSet(ranges=(
@@ -603,8 +639,8 @@ class InfiniteSetTester(unittest.TestCase):
             ))
         )
 
-        # Changing the reference point breaks equality
-        # Nututally prime sets of ranges
+        # Mututally prime sets of ranges
+        #  ...changing a reference point (so redundant CNR) breaks equality
         self.assertNotEqual(
             InfiniteSimpleSet(ranges=(CNR(0,None,2), CNR(0,None,2))),
             InfiniteSimpleSet(ranges=(
