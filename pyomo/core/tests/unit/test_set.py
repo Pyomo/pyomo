@@ -8,6 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import pickle
+
 import pyutilib.th as unittest
 
 from pyomo.core.base.set import (
@@ -413,6 +415,12 @@ class TestNumericRange(unittest.TestCase):
             CNR(0,None,0).range_intersection([CNR(5,None,0)]),
             [CNR(5,None,0)],
         )
+
+    def test_pickle(self):
+        a = CNR(0,100,5)
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a,b)
+        self.assertEqual(a,b)
 
 class TestAnyRange(unittest.TestCase):
     def test_str(self):

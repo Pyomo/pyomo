@@ -151,7 +151,7 @@ class _ClosedNumericRange(object):
     Start value, for continuous ranges only).
 
     """
-
+    __slots__ = ('start','end','step')
     _EPS = 1e-15
 
     def __init__(self, start, end, step):
@@ -184,6 +184,29 @@ class _ClosedNumericRange(object):
         self.start = start
         self.end = end
         self.step = step
+
+    def __getstate__(self):
+        """
+        Retrieve the state of this object as a dictionary.
+
+        This method must be defined because this class uses slots.
+        """
+        state = {} #super(_ClosedNumericRange, self).__getstate__()
+        for i in _ClosedNumericRange.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    def __setstate__(self, state):
+        """
+        Set the state of this object using values from a state dictionary.
+
+        This method must be defined because this class uses slots.
+        """
+        for key, val in iteritems(state):
+            # Note: per the Python data model docs, we explicitly
+            # set the attribute using object.__setattr__() instead
+            # of setting self.__dict__[key] = val.
+            object.__setattr__(self, key, val)
 
     def __str__(self):
         if self.step == 0:
@@ -647,7 +670,7 @@ class _AnyRange(object):
 class _SetDataBase(ComponentData):
     """The base for all objects that can be used as a component indexing set.
     """
-    pass
+    __slots__ = ()
 
 
 class _SetData(_SetDataBase):
