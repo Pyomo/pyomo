@@ -288,6 +288,10 @@ class _ClosedNumericRange(object):
                     ans = x
         return ans
 
+    def is_finite(self):
+        return self.start is not None and self.end is not None \
+            and self.step != 0
+
     def isdisjoint(self, other):
         # First, do a simple sanity check on the endpoints
         s1, e1 = self.start, self.end
@@ -710,7 +714,7 @@ class _SetData(_SetDataBase):
         else:
             other_is_finite = True
             try:
-                other = set(other)
+                other = SetOf(other)
             except:
                 pass
         if self.is_finite():
@@ -725,24 +729,6 @@ class _SetData(_SetDataBase):
         elif other_is_finite:
             return False
         return self.issubset(other) and other.issubset(self)
-
-    def _pprint(self):
-        """
-        Return data that will be printed for this component.
-        """
-        return (
-            [("Dim", self.dim()),
-             ("Size", len(self)),
-             ("Bounds", self.bounds())],
-            iteritems( {None: self} ),
-            ("Finite","Ordered","Sorted","Domain","Members",),
-            lambda k, v: [
-                isinstance(v, _FiniteSetData),
-                isinstance(v, _OrderedSetData),
-                isinstance(v, _SortedSetData),
-                v._domain,
-                v.ordered(),
-            ])
 
     def isdisjoint(self, other):
         # For efficiency, if the other is not a Set, we will try converting
@@ -906,45 +892,6 @@ class _SetData(_SetDataBase):
         return self >= other and not self == other
 
 
-class _InfiniteSetData(_SetData):
-    """Data class for a infinite set.
-
-    This Set implements an interface to an *infinite set*.  As there are an
-    infinite number of members, Infinite Sets are not iterable."""
-
-    __slots__ = ('_ranges',)
-
-    def __init__(self, component, ranges=None):
-        super(_InfiniteSetData, self).__init__(component)
-        ranges = tuple(ranges)
-        for r in ranges:
-            if not isinstance(r, _ClosedNumericRange):
-                raise TypeError( "_InfiniteSetData range argument must be an "
-                                 "interable of _ClosedNumericRange objects" )
-        self._ranges = ranges
-
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        state = super(_InfiniteSetData, self).__getstate__()
-        for i in _InfiniteSetData.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
-    # Note: because None of the slots on this class need to be edited,
-    # we don't need to implement a specialized __setstate__ method.
-
-    def __contains__(self, val):
-        for r in self._ranges:
-            if val in r:
-                return True
-        return False
-
-    def ranges(self):
-        return iter(self._ranges)
-
-
 class _FiniteSetMixin(object):
     __slots__ = ()
 
@@ -1103,7 +1050,7 @@ class _FiniteSetData(_SetData, _FiniteSetMixin):
         for x in val:
             self.add(x)
 
-class _OrderedSetMixin(_FiniteSetMixin):
+class _OrderedSetMixin(object):
     __slots__ = ()
 
     def is_ordered(self):
@@ -1294,10 +1241,15 @@ class _InsertionOrderSetData(_OrderedSetData):
 
     Public Class Attributes:
     """
-    pass
+    __slots__ = ()
 
 
-class _SortedSetData(_OrderedSetData):
+class _SortedSetMixin(object):
+    ""
+    __slots__ = ()
+
+
+class _SortedSetData(_OrderedSetData, _SortedSetMixin):
     """
     This class defines the data for a sorted set.
 
@@ -1386,6 +1338,7 @@ class _SortedSetData(_OrderedSetData):
             (j, i) for i, j in enumerate(self._ordered_values) )
         self._is_sorted = True
 
+
 ############################################################################
 
 class Set(IndexedComponent):
@@ -1445,7 +1398,6 @@ class Set(IndexedComponent):
         if cls != Set:
             return super(Set, cls).__new__(cls)
 
-        finite = kwds.pop('finite', True)
         ordered = kwds.pop('ordered', False)
         if ordered is True:
             ordered = Set.InsertionOrder
@@ -1455,34 +1407,26 @@ class Set(IndexedComponent):
                     ', '.join(sorted(
                         'Set.'+x.__name__ if isinstance(x,type) else str(x)
                         for x in Set._ValidOrderedAuguments))))
-        if ordered and not finite:
-            raise TypeError("Ordered sets must be finite")
-
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             if ordered is Set.InsertionOrder:
                 return OrderedSimpleSet.__new__(OrderedSimpleSet)
             elif ordered is Set.SortedOrder:
                 return SortedSimpleSet.__new__(SortedSimpleSet)
-            elif finite:
-                return FiniteSimpleSet.__new__(FiniteSimpleSet)
             else:
-                return InfiniteSimpleSet.__new__(InfiniteSimpleSet)
+                return FiniteSimpleSet.__new__(FiniteSimpleSet)
         else:
             newObj = IndexedSet.__new__(IndexedSet)
             if ordered is Set.InsertionOrder:
                 newObj._ComponentDataClass = _OrderedSetData
             elif ordered is Set.SortedOrder:
                 newObj._ComponentDataClass = _SortedSetData
-            elif finite:
-                newObj._ComponentDataClass = _FiniteSetData
             else:
-                newObj._ComponentDataClass = _InfiniteSetData
+                newObj._ComponentDataClass = _FiniteSetData
             return newObj
 
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', Set)
-        # Drop the finite and ordered flags: these were processed by __new__
-        kwds.pop('finite',None)
+        # Drop the ordered flag: this was processed by __new__
         kwds.pop('ordered',None)
         IndexedComponent.__init__(self, *args, **kwds)
 
@@ -1496,12 +1440,24 @@ class Set(IndexedComponent):
         self._constructed=True
         timer.report()
 
+    def _pprint(self):
+        """
+        Return data that will be printed for this component.
+        """
+        return (
+            [("Dim", self.dim()),
+             ("Size", len(self)),
+             ("Bounds", self.bounds())],
+            iteritems(self),
+            ("Finite","Ordered","Sorted","Domain","Members",),
+            lambda k, v: [
+                v.is_finite(),#isinstance(v, _FiniteSetMixin),
+                v.is_ordered(), #isinstance(v, _OrderedSetMixin),
+                isinstance(v, _SortedSetMixin),
+                v._domain,
+                v.ordered(),
+            ])
 
-class InfiniteSimpleSet(_InfiniteSetData, Set):
-    def __init__(self, **kwds):
-        _InfiniteSetData.__init__(
-            self, component=self, ranges=kwds.pop('ranges'))
-        Set.__init__(self, **kwds)
 
 class FiniteSimpleSet(_FiniteSetData, Set):
     def __init__(self, **kwds):
@@ -1520,6 +1476,224 @@ class SortedSimpleSet(_SortedSetData, Set):
 
 class IndexedSet(Set):
     pass
+
+############################################################################
+
+class _InfiniteRangeSetData(_SetData):
+    """Data class for a infinite set.
+
+    This Set implements an interface to an *infinite set* defined by one
+    or more _ClosedNumericRange objeccts.  As there are an infinite
+    number of members, Infinite Range Sets are not iterable.
+
+    """
+
+    __slots__ = ('_ranges',)
+
+    def __init__(self, component, ranges=None):
+        super(_InfiniteRangeSetData, self).__init__(component)
+        ranges = tuple(ranges)
+        for r in ranges:
+            if not isinstance(r, _ClosedNumericRange):
+                raise TypeError(
+                    "_InfiniteRangeSetData range argument must be an "
+                    "interable of _ClosedNumericRange objects")
+        self._ranges = ranges
+
+    def __getstate__(self):
+        """
+        This method must be defined because this class uses slots.
+        """
+        state = super(_InfiniteRangeSetData, self).__getstate__()
+        for i in _InfiniteRangeSetData.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    # Note: because None of the slots on this class need to be edited,
+    # we don't need to implement a specialized __setstate__ method.
+
+    def __contains__(self, val):
+        return any(val in r for r in self._ranges)
+
+    def ranges(self):
+        return iter(self._ranges)
+
+    def bounds(self):
+        _bnds = list((r.start, r.end) if r.step >= 0 else (r.end, r.start)
+                     for r in self._ranges)
+        lb, ub = _bnds.pop()
+        for _lb, _ub in _bnds:
+            if lb is not None:
+                if _lb is None:
+                    lb = None
+                else:
+                    lb = min(lb, _lb)
+            if ub is not None:
+                if _ub is None:
+                    ub = None
+                else:
+                    ub = max(ub, _ub)
+        return lb, ub
+
+
+class _FiniteRangeSetData( _InfiniteRangeSetData, _SortedSetMixin,
+                           _OrderedSetMixin, _FiniteSetMixin):
+    def __iter__(self):
+        def _range_gen(r):
+            start, end = (r.start, r.end) if r.step > 0 else (r.end, r.start)
+            step = abs(r.step)
+            n = start
+            i = 0
+            while n <= end:
+                yield n
+                i += 1
+                n = start + i*step
+
+        if len(self._ranges) == 1:
+            for x in _range_gen(self._ranges[0]):
+                yield x
+            return
+        iters = []
+        for r in self._ranges:
+            try:
+                i = _range_gen(r)
+                iters.append([next(i), i])
+            except StopIteration:
+                pass
+        if not iters:
+            return
+        iters.sort()
+        n = None
+        while iters:
+            if n != iters[0][0]:
+                n = iters[0][0]
+                yield n
+            try:
+                iters[0][0] = next(iters[0][1])
+                iters.sort()
+            except StopIteration:
+                iters.pop(0)
+
+    def __len__(self):
+        if len(self._ranges) == 1:
+            r = self._ranges[0]
+            return (r.end - r.start) // r.step + 1
+        else:
+            return sum(1 for _ in self)
+
+    def __getitem__(self, item):
+        assert int(item) == item
+        if len(self._ranges) == 1:
+            r = self._ranges[0]
+            ans = r.start + (item-1)*r.step
+            if ans <= r.end:
+                return ans
+        else:
+            try:
+                return self.data()[item]
+            except IndexError:
+                pass
+        raise IndexError("sorted set index out of range")
+
+    def is_finite(self):
+        return True
+
+    def ord(self, item):
+        if len(self._ranges) == 1:
+            i = float(item - r.start) / r.step
+            if i - int(i+0.5) < EPS:
+                return int(i+0.5) + 1
+        else:
+            try:
+                return self.data.index(item) + 1
+            except ValueError:
+                pass
+        raise IndexError(
+            "Cannot identify position of %s in Set %s: item not in Set"
+            % (item, self.name))
+
+    def sorted(self):
+        return self.data()
+
+
+
+class RangeSet(Component):
+    """
+    A set object that represents a set of numeric values
+
+    """
+
+    def __new__(cls, *args, **kwds):
+        if cls != RangeSet:
+            return super(RangeSet, cls).__new__(cls)
+
+        if 'ranges' in kwds:
+            if any(not r.is_finite() for r in kwds['ranges']):
+                return InfiniteSimpleRangeSet.__new__(InfiniteSimpleRangeSet)
+        if None in args or (len(args) > 2 and args[2] == 0):
+            return InfiniteSimpleRangeSet.__new__(InfiniteSimpleRangeSet)
+        else:
+            return FiniteSimpleRangeSet.__new__(FiniteSimpleRangeSet)
+
+
+    def __init__(self, *args, **kwds):
+        kwds.setdefault('ctype', RangeSet)
+        ranges = kwds.pop('ranges', [])
+        _init_class = kwds.pop('_init_class')
+        Component.__init__(self, **kwds)
+
+        if type(ranges) is tuple:
+            ranges = list(ranges)
+        elif type(ranges) is not list:
+            ranges = [ranges]
+        if len(args) == 1:
+            ranges.append(_ClosedNumericRange(1,args[0],1))
+        elif len(args) == 2:
+            ranges.append(_ClosedNumericRange(args[0],args[1],1))
+        elif len(args) == 3:
+            ranges.append(_ClosedNumericRange(*args))
+        elif args:
+            raise ValueError("RangeSet expects 3 or fewer positional "
+                             "arguments (received %s)" % (len(args),))
+        _init_class.__init__(self, component=self, ranges=ranges)
+
+    def construct(self, data=None):
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Constructing Set, name=%s, from data=%r"
+                             % (self.name, data))
+        if self._constructed:
+            return
+        timer = ConstructionTimer(self)
+        self._constructed=True
+        timer.report()
+
+    def _pprint(self):
+        """
+        Return data that will be printed for this component.
+        """
+        return (
+            [("Dim", 0),
+             ("Dimen", 1),
+             ("Size", len(self) if self.is_finite() else 'Inf'),
+             ("Bounds", self.bounds())],
+            iteritems( {None: self} ),
+            ("Finite","Members",),
+            lambda k, v: [
+                v.is_finite(),#isinstance(v, _FiniteSetMixin),
+                ', '.join(str(r) for r in self.ranges()),
+            ])
+
+
+class InfiniteSimpleRangeSet(_InfiniteRangeSetData, RangeSet):
+    def __init__(self, *args, **kwds):
+        kwds.setdefault('_init_class', _InfiniteRangeSetData)
+        RangeSet.__init__(self, *args, **kwds)
+
+class FiniteSimpleRangeSet(_FiniteRangeSetData, RangeSet):
+    def __init__(self, *args, **kwds):
+        kwds.setdefault('_init_class', _FiniteRangeSetData)
+        RangeSet.__init__(self, *args, **kwds)
+
 
 ############################################################################
 # Set Operators
@@ -2007,42 +2181,42 @@ class _AnySet(_SetData, Set):
 
 Any = _AnySet(name='Any', doc="A global Pyomo Set that admits any value")
 
-Reals = InfiniteSimpleSet(
+Reals = RangeSet(
     name='Reals',
     doc='A global Pyomo Set that admits any real (floating point) value',
     ranges=(_ClosedNumericRange(None,None,0),))
 
-NonNegativeReals = InfiniteSimpleSet(
+NonNegativeReals = RangeSet(
     name='NonNegativeReals',
     doc='A global Pyomo Set admitting any real value in [0, +inf)',
     ranges=(_ClosedNumericRange(0,None,0),))
 
-NonPositiveReals = InfiniteSimpleSet(
+NonPositiveReals = RangeSet(
     name='NonPositiveReals',
     doc='A global Pyomo Set admitting any real value in (-inf, 0]',
     ranges=(_ClosedNumericRange(None,0,0),))
 
-Integers = InfiniteSimpleSet(
+Integers = RangeSet(
     name='Integers',
     doc='A global Pyomo Set admitting any integer value',
     ranges=(_ClosedNumericRange(0,None,1), _ClosedNumericRange(0,None,-1)))
 
-NonNegativeIntegers = InfiniteSimpleSet(
+NonNegativeIntegers = RangeSet(
     name='NonNegativeIntegers',
     doc='A global Pyomo Set admitting any integer value in [0, +inf)',
     ranges=(_ClosedNumericRange(0,None,1),))
 
-NonPositiveIntegers = InfiniteSimpleSet(
+NonPositiveIntegers = RangeSet(
     name='NonPositiveIntegers',
     doc='A global Pyomo Set admitting any integer value in (-inf, 0]',
     ranges=(_ClosedNumericRange(0,None,-1),))
 
-NegativeIntegers = InfiniteSimpleSet(
+NegativeIntegers = RangeSet(
     name='NegativeIntegers',
     doc='A global Pyomo Set admitting any integer value in (-inf, -1]',
     ranges=(_ClosedNumericRange(-1,None,-1),))
 
-PositiveIntegers = InfiniteSimpleSet(
+PositiveIntegers = RangeSet(
     name='PositiveIntegers',
     doc='A global Pyomo Set admitting any integer value in [1, +inf)',
     ranges=(_ClosedNumericRange(1,None,1),))

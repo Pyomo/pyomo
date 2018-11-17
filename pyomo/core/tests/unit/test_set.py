@@ -15,7 +15,7 @@ import pyutilib.th as unittest
 from pyomo.core.base.set import (
     _ClosedNumericRange, _AnyRange, _AnySet,
     Any, Reals, NonNegativeReals, Integers, PositiveIntegers,
-    InfiniteSimpleSet,
+    RangeSet,
 )
 CNR = _ClosedNumericRange
 
@@ -541,12 +541,12 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertTrue(Any.issuperset(Any2))
         self.assertFalse(Any.isdisjoint(Any2))
 
-        Reals2 = InfiniteSimpleSet(ranges=(CNR(None,None,0),))
+        Reals2 = RangeSet(ranges=(CNR(None,None,0),))
         self.assertTrue(Reals.issubset(Reals2))
         self.assertTrue(Reals.issuperset(Reals2))
         self.assertFalse(Reals.isdisjoint(Reals2))
 
-        Integers2 = InfiniteSimpleSet(ranges=(CNR(0,None,-1), CNR(0,None,1)))
+        Integers2 = RangeSet(ranges=(CNR(0,None,-1), CNR(0,None,1)))
         self.assertTrue(Integers.issubset(Integers2))
         self.assertTrue(Integers.issuperset(Integers2))
         self.assertFalse(Integers.isdisjoint(Integers2))
@@ -587,11 +587,11 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertEqual(Any, _AnySet())
         self.assertEqual(
             Reals,
-            InfiniteSimpleSet(ranges=(CNR(None,None,0),))
+            RangeSet(ranges=(CNR(None,None,0),))
         )
         self.assertEqual(
             Integers,
-            InfiniteSimpleSet(ranges=(CNR(0,None,-1), CNR(0,None,1)))
+            RangeSet(ranges=(CNR(0,None,-1), CNR(0,None,1)))
         )
 
         self.assertNotEqual(Integers, Reals)
@@ -601,31 +601,31 @@ class InfiniteSetTester(unittest.TestCase):
 
         # For equality, ensure that the ranges can be in any order
         self.assertEqual(
-            InfiniteSimpleSet(ranges=(CNR(0,None,-1), CNR(0,None,1))),
-            InfiniteSimpleSet(ranges=(CNR(0,None,1), CNR(0,None,-1)))
+            RangeSet(ranges=(CNR(0,None,-1), CNR(0,None,1))),
+            RangeSet(ranges=(CNR(0,None,1), CNR(0,None,-1)))
         )
 
         # And integer ranges can be grounded at different points
         self.assertEqual(
-            InfiniteSimpleSet(ranges=(CNR(10,None,-1), CNR(10,None,1))),
-            InfiniteSimpleSet(ranges=(CNR(0,None,1), CNR(0,None,-1)))
+            RangeSet(ranges=(CNR(10,None,-1), CNR(10,None,1))),
+            RangeSet(ranges=(CNR(0,None,1), CNR(0,None,-1)))
         )
         self.assertEqual(
-            InfiniteSimpleSet(ranges=(CNR(0,None,-1), CNR(0,None,1))),
-            InfiniteSimpleSet(ranges=(CNR(10,None,1), CNR(10,None,-1)))
+            RangeSet(ranges=(CNR(0,None,-1), CNR(0,None,1))),
+            RangeSet(ranges=(CNR(10,None,1), CNR(10,None,-1)))
         )
 
         # Odd positive integers and even positive integers are positive
         # integers
         self.assertEqual(
             PositiveIntegers,
-            InfiniteSimpleSet(ranges=(CNR(1,None,2), CNR(2,None,2)))
+            RangeSet(ranges=(CNR(1,None,2), CNR(2,None,2)))
         )
 
         # Nututally prime sets of ranges
         self.assertEqual(
-            InfiniteSimpleSet(ranges=(CNR(1,None,2), CNR(2,None,2))),
-            InfiniteSimpleSet(ranges=(
+            RangeSet(ranges=(CNR(1,None,2), CNR(2,None,2))),
+            RangeSet(ranges=(
                 CNR(1,None,3), CNR(2,None,3), CNR(3,None,3)
             ))
         )
@@ -633,8 +633,8 @@ class InfiniteSetTester(unittest.TestCase):
         # Nututally prime sets of ranges
         #  ...omitting one of the subranges breaks equality
         self.assertNotEqual(
-            InfiniteSimpleSet(ranges=(CNR(1,None,2), CNR(2,None,2))),
-            InfiniteSimpleSet(ranges=(
+            RangeSet(ranges=(CNR(1,None,2), CNR(2,None,2))),
+            RangeSet(ranges=(
                 CNR(1,None,3), CNR(2,None,3)
             ))
         )
@@ -642,15 +642,22 @@ class InfiniteSetTester(unittest.TestCase):
         # Mututally prime sets of ranges
         #  ...changing a reference point (so redundant CNR) breaks equality
         self.assertNotEqual(
-            InfiniteSimpleSet(ranges=(CNR(0,None,2), CNR(0,None,2))),
-            InfiniteSimpleSet(ranges=(
+            RangeSet(ranges=(CNR(0,None,2), CNR(0,None,2))),
+            RangeSet(ranges=(
                 CNR(1,None,3), CNR(2,None,3), CNR(3,None,3)
             ))
         )
 
-        # # Concerns:
-        #   - union blindly calls the nonexistant CNR.union() method
-        #   - need to distinguish between finite and infinite sets?
-        #   - need to standardize on where the reference point for
-        #     discrete sets is (0?)
-
+        # Sets can be compared against non-set objects
+        self.assertEqual(
+            RangeSet(0,4,1),
+            [0,1,2,3,4]
+        )
+        self.assertEqual(
+            RangeSet(0,4),
+            [0,1,2,3,4]
+        )
+        self.assertEqual(
+            RangeSet(4),
+            [1,2,3,4]
+        )
