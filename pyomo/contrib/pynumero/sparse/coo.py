@@ -589,18 +589,6 @@ class COOSymMatrix(COOMatrix):
     def __repr__(self):
         return 'COOSymMatrix{}'.format(self.shape)
 
-    """
-    def __add__(self, other):  # self + other
-
-        if isinstance(other, SparseBase):
-            raise RuntimeError('not implemented yet')
-        super(COOSymMatrix, self).__add__(other)
-
-    def __radd__(self, other):  # other + self
-        return self.__add__(other)
-        
-    """
-
 
 # this mimics an empty matrix
 class EmptyMatrix(COOMatrix):
