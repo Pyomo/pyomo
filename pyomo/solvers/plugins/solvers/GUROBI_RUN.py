@@ -57,14 +57,23 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
             print("***The GUROBI solver plugin cannot extract solution suffix="+suffix)
             return
 
-    # Check for ISV Key License
-    if 'ISV_Key' in options:
-        isv_key_env = Env.OtherEnv(*options['ISV_Key'])
+    # Handle Gurobi environment options
+
+    env_class = {
+        None: Env,
+        'Env': Env,
+        'CloudEnv': Env.CloudEnv,
+        'ClientEnv': Env.ClientEnv,
+        'OtherEnv': Env.OtherEnv,
+    }[options.get('env_type', None)]
+
+    if 'env_options' in options:
+        env = env_class(*options['env_options'])
     else:
-        isv_key_env = None
+        env = None
 
     # Load the lp model
-    model = read(model_file, env=isv_key_env)
+    model = read(model_file, env=env)
 
     # if the use wants to extract duals or reduced costs and the
     # model has quadratic constraints then we need to set the
@@ -81,7 +90,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
         return
 
     if warmstart_file is not None:
-        model.read(warmstart_file, env=isv_key_env)
+        model.read(warmstart_file, env=env)
 
     # set the mipgap if specified.
     if mipgap is not None:
