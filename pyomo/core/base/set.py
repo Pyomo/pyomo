@@ -227,10 +227,10 @@ class _ClosedNumericRange(object):
             and self.end == other.end \
             and self.step == other.step
 
-    def __contains__(self, item):
+    def __contains__(self, value):
         # NumericRanges must hold items that are comparable to ints
         try:
-            if item.__class__(0) != 0:
+            if value.__class__(0) != 0:
                 return False
         except:
             return False
@@ -238,14 +238,14 @@ class _ClosedNumericRange(object):
         if self.step:
             _dir = copysign(1, self.step)
             return (
-                (item - self.start) * copysign(1, self.step) >= 0
+                (value - self.start) * copysign(1, self.step) >= 0
                 and (self.end is None or
-                     _dir*(self.end - self.start) >= _dir*(item - self.start))
-                and abs(remainder(item-self.start, self.step)) <= self._EPS
+                     _dir*(self.end - self.start) >= _dir*(value - self.start))
+                and abs(remainder(value - self.start, self.step)) <= self._EPS
             )
         else:
-            return (self.start is None or item >= self.start) \
-                   and (self.end is None or item <= self.end)
+            return (self.start is None or value >= self.start) \
+                   and (self.end is None or value <= self.end)
 
     @staticmethod
     def _continuous_discrete_disjoint(cont, disc):
@@ -655,7 +655,7 @@ class _AnyRange(object):
     def __eq__(self, other):
         return isinstance(other, _AnyRange)
 
-    def __contains__(self, item):
+    def __contains__(self, value):
         return True
 
     def isdisjoint(self, other):
@@ -691,7 +691,7 @@ class _SetData(_SetDataBase):
     IndexedComponent (including IndexedSet)."""
     __slots__ = tuple()
 
-    def __contains__(self, idx):
+    def __contains__(self, value):
         raise DeveloperError("Derived set class (%s) failed to "
                              "implement __contains__" % (type(self).__name__,))
 
@@ -963,11 +963,11 @@ class _FiniteSetData(_SetData, _FiniteSetMixin):
     # Note: because None of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
-    def __contains__(self, item):
+    def __contains__(self, value):
         """
         Return True if the set contains a given value.
         """
-        return item in self._values
+        return value in self._values
 
     def __iter__(self):
         return iter(self._values)
