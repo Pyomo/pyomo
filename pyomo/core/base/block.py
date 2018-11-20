@@ -1580,18 +1580,20 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # that expected by a user.
         #
         import pyomo.core.base.component_order
-        items = pyomo.core.base.component_order.items + [Block]
+        items = list(pyomo.core.base.component_order.items)
+        items_set = set(items)
+        items_set.add(Block)
         #
         # Collect other model components that are registered
         # with the IModelComponent extension point.  These are appended
         # to the end of the list of the list.
         #
         dynamic_items = set()
-        #for item in [ModelComponentFactory.get_class(name).component for name in ModelComponentFactory]:
-        for item in [ModelComponentFactory.get_class(name) for name in ModelComponentFactory]:
-            if not item in items:
+        for item in self._ctypes:
+            if not item in items_set:
                 dynamic_items.add(item)
         # extra items get added alphabetically (so output is consistent)
+        items.append(Block)
         items.extend(sorted(dynamic_items, key=lambda x: x.__name__))
 
         for item in items:

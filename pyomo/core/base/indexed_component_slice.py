@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 from six import PY3, iteritems, advance_iterator
+from pyomo.common import DeveloperError
 
 class _IndexedComponent_slice(object):
     """Special class for slicing through hierarchical component trees
@@ -67,7 +68,7 @@ class _IndexedComponent_slice(object):
         This supports notation similar to:
 
             del model.b[:].c.x = 5
-        
+
         and immediately evaluates the slice.
         """
         # Don't overload any pre-existing attributes
@@ -97,7 +98,7 @@ class _IndexedComponent_slice(object):
         This supports notation similar to:
 
             del model.b[:].c.x[1,:] = 5
-        
+
         and immediately evaluates the slice.
         """
         self._call_stack.append( (
@@ -112,7 +113,7 @@ class _IndexedComponent_slice(object):
         This supports notation similar to:
 
             del model.b[:].c.x[1,:]
-        
+
         and immediately evaluates the slice.
         """
         self._call_stack.append( (
@@ -126,7 +127,7 @@ class _IndexedComponent_slice(object):
 
         Creating a slice of a component returns a _IndexedComponent_slice
         object.  Subsequent attempts to call items hit this method.  We
-        handle the __call__ method separately based on the item ( identifier
+        handle the __call__ method separately based on the item (identifier
         immediately before the "()") being called:
 
         - if the item was 'component', then we defer resolution of this call
@@ -160,6 +161,10 @@ class _IndexedComponent_slice(object):
     def wildcard_keys(self):
         _iter = self.__iter__()
         return (_iter.get_last_index_wildcards() for _ in _iter)
+
+    def wildcard_items(self):
+        _iter = self.__iter__()
+        return ((_iter.get_last_index_wildcards(), _) for _ in _iter)
 
     def expanded_keys(self):
         _iter = self.__iter__()
@@ -224,12 +229,17 @@ class _slice_generator(object):
                 # mechanism (e.g., Param)
                 return self.component[index]
 
+
 # Mock up a callable object with a "check_complete" method
 def _advance_iter(_iter):
     return advance_iterator(_iter)
 def _advance_iter_check_complete():
     pass
 _advance_iter.check_complete = _advance_iter_check_complete
+
+# A dummy class that we can use as a named entity below
+class _NotIterable(object): pass
+
 
 class _IndexedComponent_slice_iter(object):
     def __init__(self, component_slice, advance_iter=_advance_iter):
@@ -238,13 +248,18 @@ class _IndexedComponent_slice_iter(object):
         # slice) or None (if this level is either a SimpleComponent,
         # attribute, method, or is explicitly indexed).
         self._slice = component_slice
-        if self._slice._call_stack[0][0] != _IndexedComponent_slice.slice_info:
-            raise DeveloperError("Unexpected call_stack flag encountered: %s"
-                                 % self._slice._call_stack[0][0])
         self.advance_iter = advance_iter
-        self._slice = component_slice
-        self._iter_stack = [None]*len(self._slice._call_stack)
-        self._iter_stack[0] = _slice_generator(*self._slice._call_stack[0][1])
+        call_stack = self._slice._call_stack
+        self._iter_stack = [None]*len(call_stack)
+        if call_stack[0][0] == _IndexedComponent_slice.slice_info:
+            self._iter_stack[0] = _slice_generator(*call_stack[0][1])
+        elif call_stack[0][0] == _IndexedComponent_slice.set_item:
+            assert len(call_stack) == 1
+            # defer creating the iterator until later
+            self._iter_stack[0] = _NotIterable # Something not None
+        else:
+            raise DeveloperError("Unexpected call_stack flag encountered: %s"
+                                 % call_stack[0][0])
 
     def __iter__(self):
         """This class implements the iterator API"""
@@ -265,8 +280,11 @@ class _IndexedComponent_slice_iter(object):
                 idx -= 1
             # Get the next element in the deepest active slice
             try:
-                _comp = self.advance_iter(self._iter_stack[idx])
-                idx += 1
+                if self._iter_stack[idx] is _NotIterable:
+                    _comp = self._slice._call_stack[0][1][0]
+                else:
+                    _comp = self.advance_iter(self._iter_stack[idx])
+                    idx += 1
             except StopIteration:
                 if not idx:
                     # Top-level iterator is done.  We are done.
@@ -347,6 +365,24 @@ class _IndexedComponent_slice_iter(object):
                         break
                 elif _call[0] == _IndexedComponent_slice.set_item:
                     assert idx == len(self._slice._call_stack) - 1
+                    # We have a somewhat unusual situation when someone
+                    # makes a _ReferenceDict to m.x[:] and then wants to
+                    # set one of the attributes.  In that situation,
+                    # there is only one level in the _call_stack, and we
+                    # need to iterate over it here (so we do not allow
+                    # the outer portion of this loop to handle the
+                    # iteration).  This is indicated by setting the
+                    # _iter_stack value to _NotIterable.
+                    if self._iter_stack[idx] is _NotIterable:
+                        _iter = _slice_generator(*_call[1])
+                        while True:
+                            # This ends when the _slice_generator raises
+                            # a StopIteration exception
+                            self.advance_iter(_iter)
+                            # Check to make sure the custom iterator
+                            # (i.e._fill_in_known_wildcards) is complete
+                            self.advance_iter.check_complete()
+                            _comp[_iter.last_index] = _call[2]
                     # The problem here is that _call[1] may be a slice.
                     # If it is, but we are in something like a
                     # _ReferenceDict, where the caller actually wants a
@@ -451,17 +487,25 @@ class _IndexedComponent_slice_iter(object):
                 return _comp
 
     def get_last_index(self):
-        return sum(
+        ans = sum(
             ( x.last_index for x in self._iter_stack if x is not None ),
             ()
         )
+        if len(ans) == 1:
+            return ans[0]
+        else:
+            return ans
 
     def get_last_index_wildcards(self):
-        return sum(
+        ans = sum(
             ( tuple( x.last_index[i]
                      for i in range(len(x.last_index))
                      if i not in x.fixed )
               for x in self._iter_stack if x is not None ),
             ()
         )
+        if len(ans) == 1:
+            return ans[0]
+        else:
+            return ans
 
