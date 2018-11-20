@@ -947,7 +947,7 @@ class _FiniteSetMixin(object):
                 except:
                     yield _NonNumericRange(i)
 
-class _FiniteSetData(_SetData, _FiniteSetMixin):
+class _FiniteSetData(_FiniteSetMixin, _SetData):
     """A general unordered iterable Set"""
     __slots__ = ('_values', '_domain', '_validate', '_dimen')
 
@@ -1147,7 +1147,7 @@ class _OrderedSetMixin(object):
                 "-1 .. -len(set)")
 
 
-class _OrderedSetData(_FiniteSetData, _OrderedSetMixin):
+class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
     """
     This class defines the base class for an ordered set of concrete data.
 
