@@ -9,15 +9,16 @@
 #  ___________________________________________________________________________
 
 import pickle
+from six import StringIO
 
 import pyutilib.th as unittest
 
 from pyomo.core.base.set import (
-    _ClosedNumericRange, _AnyRange, _AnySet,
+    _ClosedNumericRange as CNR, _AnyRange, _AnySet,
     Any, Reals, NonNegativeReals, Integers, PositiveIntegers,
-    RangeSet,
+    RangeSet, Set, SetOf
 )
-CNR = _ClosedNumericRange
+from pyomo.environ import ConcreteModel
 
 try:
     import numpy as np
@@ -648,6 +649,40 @@ class InfiniteSetTester(unittest.TestCase):
             ))
         )
 
+class TestBasicSets(unittest.TestCase):
+    def test_equality(self):
+        m = ConcreteModel()
+        m.I = RangeSet(3)
+        m.NotI = RangeSet(4)
+
+        m.J = SetOf([1,2,3])
+        m.NotJ = SetOf([1,2,3,4])
+
+        # Sets are equal to themselves
+        self.assertEqual(m.I, m.I)
+        self.assertEqual(m.J, m.J)
+
+        # RangeSet to SetOf
+        self.assertEqual(m.I, m.J)
+        self.assertEqual(m.J, m.I)
+
+        # ordering shouldn't matter
+        self.assertEqual(SetOf([1,3,4,2]), SetOf({1,2,3,4}))
+        self.assertEqual(SetOf({1,2,3,4}), SetOf([1,3,4,2]))
+
+        # Inequality...
+        self.assertNotEqual(m.I, m.NotI)
+        self.assertNotEqual(m.NotI, m.I)
+        self.assertNotEqual(m.I, m.NotJ)
+        self.assertNotEqual(m.NotJ, m.I)
+        self.assertNotEqual(m.J, m.NotJ)
+        self.assertNotEqual(m.NotJ, m.J)
+        self.assertNotEqual(m.I, RangeSet(1,3,0))
+        self.assertNotEqual(RangeSet(1,3,0), m.I)
+
+        self.assertNotEqual(SetOf([1,3,5,2]), SetOf({1,2,3,4}))
+        self.assertNotEqual(SetOf({1,2,3,4}), SetOf([1,3,5,2]))
+
         # Sets can be compared against non-set objects
         self.assertEqual(
             RangeSet(0,4,1),
@@ -661,3 +696,52 @@ class InfiniteSetTester(unittest.TestCase):
             RangeSet(4),
             [1,2,3,4]
         )
+
+    def test_is_functions(self):
+        i = RangeSet(3)
+        self.assertTrue(i.is_finite())
+        self.assertTrue(i.is_ordered())
+
+        i = RangeSet(1,3)
+        self.assertTrue(i.is_finite())
+        self.assertTrue(i.is_ordered())
+
+        i = RangeSet(1,3,0)
+        self.assertFalse(i.is_finite())
+        self.assertFalse(i.is_ordered())
+
+        i = SetOf({1,2,3})
+        self.assertTrue(i.is_finite())
+        self.assertFalse(i.is_ordered())
+
+        i = SetOf([1,2,3])
+        self.assertTrue(i.is_finite())
+        self.assertTrue(i.is_ordered())
+
+        i = SetOf((1,2,3))
+        self.assertTrue(i.is_finite())
+        self.assertTrue(i.is_ordered())
+
+    def test_pprint(self):
+        m = ConcreteModel()
+        m.I = RangeSet(3)
+        m.NotI = RangeSet(1,3,0)
+        m.J = SetOf([1,2,3])
+
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue().strip(), """
+2 RangeSet Declarations
+    I : Dim=0, Dimen=1, Size=3, Bounds=(1, 3)
+        Key  : Finite : Members
+        None :   True :   [1:3]
+    NotI : Dim=0, Dimen=1, Size=Inf, Bounds=(1, 3)
+        Key  : Finite : Members
+        None :  False :   [1,3]
+
+1 SetOf Declarations
+    J : Dim=0, Dimen=1, Size=3, Bounds=(1, 3)
+        Key  : Members
+        None : [1, 2, 3]
+
+3 Declarations: I NotI J""".strip())
