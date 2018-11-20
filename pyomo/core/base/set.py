@@ -702,7 +702,8 @@ class _SetData(_SetDataBase):
                              "implement __contains__" % (type(self).__name__,))
 
     def __len__(self):
-        return None
+        raise DeveloperError("Derived set class (%s) failed to "
+                             "implement __len__" % (type(self).__name__,))
 
     def is_finite(self):
         """Returns True if this is a finite discrete (iterable) Set"""
@@ -1668,7 +1669,7 @@ class RangeSet(Component):
 
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
-                logger.debug("Constructing Set, name=%s, from data=%r"
+                logger.debug("Constructing RangeSet, name=%s, from data=%r"
                              % (self.name, data))
         if self._constructed:
             return
