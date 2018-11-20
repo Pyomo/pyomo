@@ -1489,6 +1489,53 @@ class IndexedSet(Set):
 
 ############################################################################
 
+class SetOf(_FiniteSetMixin, _SetData, Component):
+    """"""
+    def __init__(self, reference, **kwds):
+        kwds.setdefault('ctype', SetOf)
+        _SetData.__init__(self, component=self)
+        Component.__init__(self, **kwds)
+        self._ref = reference
+
+        self.dimen = None
+
+    def __contains__(self, value):
+        # Note that the efficience of this depends on the reference object
+        return value in self._ref
+
+    def __len__(self):
+        return len(self._ref)
+
+    def __iter__(self):
+        return iter(self._ref)
+
+    def construct(self, data=None):
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Constructing SetOf, name=%s, from data=%r"
+                             % (self.name, data))
+        if self._constructed:
+            return
+        timer = ConstructionTimer(self)
+        self._constructed=True
+        timer.report()
+
+    def _pprint(self):
+        """
+        Return data that will be printed for this component.
+        """
+        return (
+            [("Dim", 0),
+             ("Dimen", self.dimen),
+             ("Size", len(self)),
+             ("Bounds", self.bounds())],
+            iteritems( {None: self} ),
+            ("Members",),
+            lambda k, v: [
+                str(v._ref),
+            ])
+
+############################################################################
+
 class _InfiniteRangeSetData(_SetData):
     """Data class for a infinite set.
 
