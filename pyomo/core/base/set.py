@@ -227,6 +227,9 @@ class _ClosedNumericRange(object):
             and self.end == other.end \
             and self.step == other.step
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __contains__(self, value):
         # NumericRanges must hold items that are comparable to ints
         try:
@@ -655,6 +658,9 @@ class _AnyRange(object):
     def __eq__(self, other):
         return isinstance(other, _AnyRange)
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __contains__(self, value):
         return True
 
@@ -729,6 +735,9 @@ class _SetData(_SetDataBase):
         elif other_is_finite:
             return False
         return self.issubset(other) and other.issubset(self)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def isdisjoint(self, other):
         # For efficiency, if the other is not a Set, we will try converting
