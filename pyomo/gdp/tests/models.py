@@ -529,6 +529,21 @@ def twoDisj_nonlin_convex():
     m.obj = Objective(expr=2*m.x + m.y, sense=maximize)
     return m
 
+def twoDisj_twoCircles_easy():
+    m = ConcreteModel()
+    m.x = Var(bounds=(0,8))
+    m.y = Var(bounds=(0,10))
+
+    m.upper_circle = Disjunct()
+    m.upper_circle.cons = Constraint(expr=(m.x - 1)**2 + (m.y - 6)**2 <= 2)
+    m.lower_circle = Disjunct()
+    m.lower_circle.cons = Constraint(expr=(m.x - 4)**2 + (m.y - 2)**2 <= 2)
+
+    m.disjunction = Disjunction(expr=[m.upper_circle, m.lower_circle])
+    
+    m.obj = Objective(expr=m.x + m.y, sense=maximize)
+    return m
+
 # TODO: these are things to use to test targets. Because I think you should be
 # able to solve m.b below and get what you expect, not have all the constraints
 # from your disjunctions get moved onto the model.

@@ -46,6 +46,9 @@ logger = logging.getLogger('pyomo.gdp.cuttingplane')
 
 # DEBUG
 from nose.tools import set_trace
+# ESJ: so far this is a bad idea. Still need to try it in the direction of the
+# optimal solution to rBigM though.
+tiny_step = 1e-6
 
 # TODO: this should be an option probably, right?
 # do I have other options that won't be mad about the quadratic objective in the
@@ -140,7 +143,7 @@ class CuttingPlane_Transformation(Transformation):
 
         #
         # Generate the CHull relaxation (used for the separation
-        # problem to generate cutting planes
+        # problem to generate cutting planes)
         #
         instance_rCHull = chullRelaxation.create_using(instance)
         # This relies on relaxIntegrality relaxing variables on deactivated
@@ -232,21 +235,21 @@ class CuttingPlane_Transformation(Transformation):
                                "did not solve normally. Stopping cutting "
                                "plane generation.\n\n%s" % (results,))
                 return
-            # DEBUG
-            # print("x* ===============================")
-            # instance_rBigM.x.pprint()
-            # instance_rBigM.y.pprint()
-            # print("==================================")
 
             rBigM_objVal = value(rBigM_obj)
             logger.warning("gdp.cuttingplane: rBigM objective = %s"
                            % (rBigM_objVal,))
 
             # copy over xstar
+            # DEBUG
+            #print("x*:")
             for x_bigm, x_rbigm, x_chull, x_star in var_info:
                 x_star.value = x_rbigm.value
                 # initialize the X values
+                # ESJ: Isn't this initializing with an infeasible point?
                 x_chull.value = x_rbigm.value
+                # DEBUG
+                #print("%s: %s" % (x_rbigm.name, x_star.value))
 
             # compare objectives: check absolute difference close to 0, relative
             # difference further from 0.
@@ -254,22 +257,40 @@ class CuttingPlane_Transformation(Transformation):
             improving = math.isinf(obj_diff) or \
                         ( abs(obj_diff) > epsilon if abs(rBigM_objVal) < 1 else
                           abs(obj_diff/prev_obj) > epsilon )
+            
+            # ESJ: This makes more sense to me. You should add the cut if you
+            # improved this iteration. The case where you don't add it is when
+            # you just discovered that you have done enough. But they way we had
+            # it, if you have a problem where you can get one good cut, we got
+            # 0.
+            # if improving and cuts is not None:
+            #     cut_number = len(transBlock.cuts)
+            #     logger.warning("GDP.cuttingplane: Adding cut %s to BM model." 
+            #                    % (cut_number,))
+            #     transBlock.cuts.add(cut_number, cuts['bigm'] <= 0)
+
+            # solve separation problem to get xhat.
+            opt.solve(instance_rCHull, tee=stream_solver)
+            # DEBUG
+            #print("x_hat:")
+            #for x_hat in rCHull_vars:
+            #    print("%s: %s" % (x_hat.name, x_hat.value))
+
+            cuts = self._create_cuts(var_info, rCHull_vars, instance_rCHull, 
+                                     transBlock, transBlock_rBigM)
+            
+            # add cut to rBigm
+            transBlock_rBigM.cuts.add(len(transBlock_rBigM.cuts), 
+                                      cuts['rBigM'] <= 0)
+            
+            # DEBUG
+            #print("adding this cut to rBigM:\n%s <= 0" % cuts['rBigM'])
 
             if improving and cuts is not None:
                 cut_number = len(transBlock.cuts)
                 logger.warning("GDP.cuttingplane: Adding cut %s to BM model." 
                                % (cut_number,))
                 transBlock.cuts.add(cut_number, cuts['bigm'] <= 0)
-
-            # solve separation problem to get xhat.
-            opt.solve(instance_rCHull, tee=stream_solver)
-
-            cuts = self._create_cuts(var_info, rCHull_vars, instance_rCHull, 
-                                     transBlock, transBlock_rBigM)
-            
-            # add cut to rBigm
-            transBlock_rBigM.cuts.add(
-                len(transBlock_rBigM.cuts), cuts['rBigM'] <= 0)
             
             prev_obj = rBigM_objVal
 
@@ -331,6 +352,7 @@ class CuttingPlane_Transformation(Transformation):
                 firstDerivs = differentiate(f, wrt_list=rCHull_vars)
                 normal_vectors.append(
                     ComponentMap(zip(rCHull_vars, firstDerivs)))
+                #set_trace()
 
         composite_normal = ComponentMap(
             [(v, sum(value(normal_vectors[i][v]) \
@@ -347,9 +369,36 @@ class CuttingPlane_Transformation(Transformation):
         cutexpr_rBigM = 0
         # TODO: I don't think we need x_star in var_info anymore. Or maybe at
         # all?
+        # DEBUG:
+        #print("FOR COMPARISON:\ncomposite\tx_hat - xstar")
         for x_bigm, x_rbigm, x_chull, x_star in var_info:
-            cutexpr_bigm += composite_normal[x_chull]*(x_bigm - x_chull.value)
-            cutexpr_rBigM += composite_normal[x_chull]*(x_rbigm - x_chull.value)
+            # cutexpr_bigm += composite_normal[x_chull]*(x_bigm - x_chull.value)
+            # cutexpr_rBigM += composite_normal[x_chull]*(x_rbigm - x_chull.value)
+            # DEBUG: old way
+            cutexpr_bigm += 2*(x_star.value - x_chull.value)*\
+                            (x_bigm - x_chull.value)
+            cutexpr_rBigM += 2*(x_star.value - x_chull.value)*\
+                             (x_rbigm - x_chull.value)
+            # DEBUG:
+            # print("%s\t%s" % 
+            #       (composite_normal[x_chull], x_star.value - x_chull.value))
+
+            # DEBUG: Let's try moving out along composite_normal
+            # cutexpr_bigm += composite_normal[x_chull]*\
+            #                 (x_bigm - (x_chull.value + \
+            #                            tiny_step*composite_normal[x_chull]))
+            # cutexpr_rBigM += composite_normal[x_chull]*\
+            #                  (x_rbigm - (x_chull.value + \
+            #                            tiny_step*composite_normal[x_chull]))
+
+            # DEBUG some more: Let's try moving out along vector towards opt
+            # solution to rBigM
+            # backOff = x_star.value - x_chull.value
+            # cutexpr_bigm += composite_normal[x_chull]*\
+            #                 (x_bigm - (x_chull.value + tiny_step*backOff))
+            # cutexpr_rBigM += composite_normal[x_chull]*\
+            #                  (x_rbigm - (x_chull.value + tiny_step*backOff))
+
         # DEBUG
         # print("++++++++++++++++++++++++++++++++++++++++++")
         # print("So this is the cut expression:")
@@ -362,8 +411,19 @@ class CuttingPlane_Transformation(Transformation):
         val = value(constraint.body)
         if constraint.lower is not None:
             if isclose(val, constraint.lower.value):
+                if val > constraint.lower.value:
+                    difference = val - constraint.lower.value
+                    # print("DEBUG: We're in interior of constraint %s LB by %s" 
+                    #       % (constraint.name, difference))
+                    # DEBUG: an experiment...
+                    #return False
                 return True
         if constraint.upper is not None:
             if isclose(val, constraint.upper.value):
+                if val < constraint.upper.value:
+                    difference = constraint.upper.value - val
+                    # print("DEBUG: We're in interior of constraint %s UB by %s"
+                    #       % (constraint.name, difference))
+                    #return False
                 return True
         return False
