@@ -196,6 +196,13 @@ The final lines in the outer for loop find a solution and display it:
    moved to the instance, you would use
 
    >>> results = opt.solve(instance, load_solutions=False) # doctest: +SKIP
+   
+   This approach can be usefull if there is a concern that the solver
+   did not terminate with an optimal solution. For example,
+   
+   >>> results = opt.solve(instance, load_solutions=False) #doctest: +SKIP
+   >>> if results.solver.termination_condition == TerminationCondition.optimal:
+   >>>     instance.solutions.load_from(results)
 
 Changing the Model or Data and Re-solving
 -----------------------------------------
