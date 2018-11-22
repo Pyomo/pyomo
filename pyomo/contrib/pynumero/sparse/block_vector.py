@@ -25,6 +25,7 @@ import copy as cp
 
 __all__ = ['BlockVector']
 
+
 class BlockVector(np.ndarray):
     """
     Structured Vector interface

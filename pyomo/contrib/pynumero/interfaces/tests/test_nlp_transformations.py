@@ -63,10 +63,6 @@ class AdmmModel(Transformation):
             vv = vid.find_component_on(model)
             if v.is_indexed():
                 raise RuntimeError('Indexed variables not supported')
-                # sorted_keys = sorted(list(vv.keys()))
-                # for k in sorted_keys:
-                #     cloned_vars.append(vv[k])
-                #     original_vars.append(v[k])
             else:
                 cloned_vars.append(vv)
                 original_vars.append(v)
@@ -96,11 +92,16 @@ class AdmmModel(Transformation):
             raise RuntimeError('Multiple objectives not supported')
         obj = list(objectives.values())[0]
 
+        def rule_linkin_exprs(m, i):
+            return cloned_vars[i] - m._z[i]
+        # store non-anticipativity expression
+        model._linking_residuals = aml.Expression(range(nz), rule=rule_linkin_exprs)
+
         dual_term = 0.0
         penalty_term = 0.0
         for zid in range(nz):
-            dual_term += (cloned_vars[zid] - model._z[zid]) * model._w[zid]
-            penalty_term += (cloned_vars[zid] - model._z[zid])**2
+            dual_term += (model._linking_residuals[zid]) * model._w[zid]
+            penalty_term += (model._linking_residuals[zid])**2
 
         # multiplier terms in objective
         model._dual_obj_term = aml.Expression(expr=dual_term)

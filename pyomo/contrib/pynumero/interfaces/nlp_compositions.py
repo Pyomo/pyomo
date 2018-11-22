@@ -149,6 +149,7 @@ class TwoStageStochasticNLP(NLP):
                        [np.zeros(self.nz, dtype=np.double) for i in range(self.nblocks)])
 
         # lower and upper bounds
+
         self._lower_x = BlockVector([nlp.xl() for nlp in self._nlps] +
                                     [np.full(self.nz, -np.inf, dtype=np.double)])
         self._upper_x = BlockVector([nlp.xu() for nlp in self._nlps] +

@@ -47,9 +47,9 @@ class _CyIpoptProblem(object):
 
     def __init__(self, nlp):
         self._nlp = nlp
-
+        self._is_composite = False
         if hasattr(nlp, 'nblocks'):
-            raise NotImplementedError('Not supported for composite nlps yet')
+            self._is_composite = True
 
         x = nlp.x_init()
         y = nlp.y_init()
@@ -57,30 +57,51 @@ class _CyIpoptProblem(object):
 
         # get structures
         self._df = nlp.grad_objective(x)
-        self._g = nlp.evaluate_g(x, substract=False)
-        self._jac_g = nlp.jacobian_g(x)
-        self._hess_lag = nlp.hessian_lag(x, y)
+        self._g = nlp.evaluate_g(x)
+        if not self._is_composite:
+            self._jac_g = nlp.jacobian_g(x)
+            self._hess_lag = nlp.hessian_lag(x, y)
+        else:
+            self._jac_g = nlp.jacobian_g(x)
+            expanded = self._jac_g.tocoo()
+            self._jac_row = expanded.row
+            self._jac_col = expanded.col
+
+            self._hess_lag = nlp.hessian_lag(x, y)
+            expanded = self._hess_lag.tocoo()
+            self._hess_row = expanded.row
+            self._hess_col = expanded.col
 
     def objective(self, x):
         return self._nlp.objective(x)
 
     def gradient(self, x):
         self._nlp.grad_objective(x, out=self._df)
-        return self._df
+        if not self._is_composite:
+            return self._df
+        return self._df.flatten()
 
     def constraints(self, x):
         self._nlp.evaluate_g(x, out=self._g)
-        return self._g
+        if not self._is_composite:
+            return self._g
+        return self._g.flatten()
 
     def jacobian(self, x):
         self._nlp.jacobian_g(x, out=self._jac_g)
-        return self._jac_g.data
+        if not self._is_composite:
+            return self._jac_g.data
+        return self._jac_g.coo_data()
 
     def hessianstructure(self):
-        return self._hess_lag.row, self._hess_lag.col
+        if not self._is_composite:
+            return self._hess_lag.row, self._hess_lag.col
+        return self._hess_row, self._hess_col
 
     def jacobianstructure(self):
-        return self._jac_g.row, self._jac_g.col
+        if not self._is_composite:
+            return self._jac_g.row, self._jac_g.col
+        return self._jac_row, self._jac_col
 
     def hessian(self, x, lagrange, obj_factor):
         self._nlp.hessian_lag(x,
@@ -88,7 +109,9 @@ class _CyIpoptProblem(object):
                               out=self._hess_lag,
                               eval_f_c=False,
                               obj_factor=obj_factor)
-        return self._hess_lag.data
+        if not self._is_composite:
+            return self._hess_lag.data
+        return self._hess_lag.coo_data()
 
     def intermediate(
             self,
@@ -113,24 +136,48 @@ class IpoptSolver(object):
 
         self._nlp = nlp
 
+        self._is_composite = False
         if hasattr(nlp, 'nblocks'):
-            raise NotImplementedError('Not supported for composite nlps yet')
+            self._is_composite = True
 
         self._problem = _CyIpoptProblem(nlp)
+
         self._options = options
+        if options is not None:
+            assert isinstance(options, dict)
+        else:
+            self._options = dict()
 
     def solve(self, x0=None, tee=False):
 
-        cyipopt_solver = ipopt.problem(n=self._nlp.nx,
-                                       m=self._nlp.ng,
-                                       problem_obj=self._problem,
-                                       lb=self._nlp.xl(),
-                                       ub=self._nlp.xu(),
-                                       cl=self._nlp.gl(),
-                                       cu=self._nlp.gu()
-                                       )
+        if not self._is_composite:
+            cyipopt_solver = ipopt.problem(n=self._nlp.nx,
+                                           m=self._nlp.ng,
+                                           problem_obj=self._problem,
+                                           lb=self._nlp.xl(),
+                                           ub=self._nlp.xu(),
+                                           cl=self._nlp.gl(),
+                                           cu=self._nlp.gu()
+                                           )
+        else:
+            xl = self._nlp.xl()
+            xu = self._nlp.xu()
+            gl = self._nlp.gl()
+            gu = self._nlp.gu()
+            nx = int(self._nlp.nx)
+            ng = int(self._nlp.ng)
+            cyipopt_solver = ipopt.problem(n=nx,
+                                           m=ng,
+                                           problem_obj=self._problem,
+                                           lb=xl.flatten(),
+                                           ub=xu.flatten(),
+                                           cl=gl.flatten(),
+                                           cu=gu.flatten()
+                                           )
         if x0 is None:
             xstart = self._nlp.x_init()
+            if self._is_composite:
+                xstart = xstart.flatten()
         else:
             assert isinstance(x0, np.ndarray)
             assert x0.size == self._nlp.nx
@@ -139,6 +186,10 @@ class IpoptSolver(object):
         # this is needed until NLP hessian takes obj_factor as an input
         if not self._nlp._future_libraries:
             cyipopt_solver.addOption('nlp_scaling_method', 'none')
+
+        # add options
+        for k, v in self._options.items():
+            cyipopt_solver.addOption(k, v)
 
         if not tee:
             newstdout = redirect_stdout()
@@ -234,7 +285,7 @@ if __name__ == "__main__":
     nlp = PyomoNLP(model)
     print(nlp.x_init())
     solver = IpoptSolver(nlp)
-    x, info = solver.solve(tee=False)
+    x, info = solver.solve(tee=True)
     print(x)
     print(info)
 

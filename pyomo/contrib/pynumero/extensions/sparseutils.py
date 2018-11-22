@@ -107,8 +107,12 @@ array_1d_int = npct.ndpointer(dtype=np.intc, ndim=1, flags='CONTIGUOUS')
 
 def sym_coo_matvec(irow, jcol, values, x, result):
     data = values.astype(np.double, casting='safe')
-    SparseLib().EXTERNAL_SPARSE_sym_coo_matvec(irow,
-                                               jcol,
+    irow32 = irow.astype(np.intc)
+    jcol32 = jcol.astype(np.intc)
+    #print(max(irow))
+    #print(max(jcol))
+    SparseLib().EXTERNAL_SPARSE_sym_coo_matvec(irow32,
+                                               jcol32,
                                                data,
                                                len(irow),
                                                x,
