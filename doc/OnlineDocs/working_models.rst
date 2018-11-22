@@ -71,14 +71,6 @@ computer to solve the problem or even to iterate over solutions. This
 example is provided just to illustrate some elementary aspects of
 scripting.
 
-.. note::
-
-   The built-in code for printing solutions prints only non-zero
-   variable values. So if you run this code, no variable values will be
-   output for the first solution found because all of the variables are
-   zero. However, other information about the solution, such as the
-   objective value, will be displayed.
-
 .. literalinclude:: script_spy_files/iterative1.spy
    :language: python
 
@@ -190,6 +182,20 @@ The final lines in the outer for loop find a solution and display it:
 
 .. literalinclude:: script_spy_files/iterative1_Find_and_display_solution.spy
    :language: python
+
+.. note::
+   
+   The assignment of the solve output to a results object is somewhat
+   anachronistic. Many scripts just use
+
+   >>> opt.solve(instance) # doctest: +SKIP
+
+   since the results are moved to the instance by default, leaving
+   the results object with little of interest. If, for some reason,
+   you want the results to stay in the results object and *not* be
+   moved to the instance, you would use
+
+   >>> results = opt.solve(instance, load_solutions=False) # doctest: +SKIP
 
 Changing the Model or Data and Re-solving
 -----------------------------------------
