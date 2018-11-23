@@ -650,6 +650,26 @@ class InfiniteSetTester(unittest.TestCase):
         )
 
 class TestBasicSets(unittest.TestCase):
+    def test_RangeSet_constructor(self):
+        i = RangeSet(3)
+        self.assertEqual(len(i), 3)
+        self.assertEqual(len(list(i.ranges())), 1)
+
+        i = RangeSet(1,3)
+        self.assertEqual(len(i), 3)
+        self.assertEqual(len(list(i.ranges())), 1)
+
+        i = RangeSet(1,3,0)
+        with self.assertRaisesRegexp(
+                TypeError, ".*'InfiniteSimpleRangeSet' has no len()"):
+            len(i)
+        self.assertEqual(len(list(i.ranges())), 1)
+
+        with self.assertRaisesRegexp(
+                TypeError, ".*'InfiniteSimpleRangeSet' has no len()"):
+            len(Integers)
+        self.assertEqual(len(list(Integers.ranges())), 2)
+
     def test_equality(self):
         m = ConcreteModel()
         m.I = RangeSet(3)
@@ -698,18 +718,6 @@ class TestBasicSets(unittest.TestCase):
         )
 
     def test_is_functions(self):
-        i = RangeSet(3)
-        self.assertTrue(i.is_finite())
-        self.assertTrue(i.is_ordered())
-
-        i = RangeSet(1,3)
-        self.assertTrue(i.is_finite())
-        self.assertTrue(i.is_ordered())
-
-        i = RangeSet(1,3,0)
-        self.assertFalse(i.is_finite())
-        self.assertFalse(i.is_ordered())
-
         i = SetOf({1,2,3})
         self.assertTrue(i.is_finite())
         self.assertFalse(i.is_ordered())
@@ -721,6 +729,18 @@ class TestBasicSets(unittest.TestCase):
         i = SetOf((1,2,3))
         self.assertTrue(i.is_finite())
         self.assertTrue(i.is_ordered())
+
+        i = RangeSet(3)
+        self.assertTrue(i.is_finite())
+        self.assertTrue(i.is_ordered())
+
+        i = RangeSet(1,3)
+        self.assertTrue(i.is_finite())
+        self.assertTrue(i.is_ordered())
+
+        i = RangeSet(1,3,0)
+        self.assertFalse(i.is_finite())
+        self.assertFalse(i.is_ordered())
 
     def test_pprint(self):
         m = ConcreteModel()
@@ -741,7 +761,7 @@ class TestBasicSets(unittest.TestCase):
 
 1 SetOf Declarations
     J : Dim=0, Dimen=1, Size=3, Bounds=(1, 3)
-        Key  : Members
-        None : [1, 2, 3]
+        Key  : Ordered : Members
+        None :    True : [1, 2, 3]
 
 3 Declarations: I NotI J""".strip())
