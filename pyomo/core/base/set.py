@@ -1625,8 +1625,10 @@ class _InfiniteRangeSetData(_SetData):
         return lb, ub
 
 
-class _FiniteRangeSetData( _InfiniteRangeSetData, _SortedSetMixin,
-                           _OrderedSetMixin, _FiniteSetMixin):
+class _FiniteRangeSetData( _SortedSetMixin,
+                           _OrderedSetMixin,
+                           _FiniteSetMixin,
+                           _InfiniteRangeSetData ):
     def __iter__(self):
         def _range_gen(r):
             start, end = (r.start, r.end) if r.step > 0 else (r.end, r.start)
@@ -1691,9 +1693,6 @@ class _FiniteRangeSetData( _InfiniteRangeSetData, _SortedSetMixin,
                 pass
         raise IndexError("sorted set index out of range")
 
-    def is_finite(self):
-        return True
-
     def ord(self, item):
         if len(self._ranges) == 1:
             i = float(item - r.start) / r.step
@@ -1711,6 +1710,8 @@ class _FiniteRangeSetData( _InfiniteRangeSetData, _SortedSetMixin,
     def sorted(self):
         return self.data()
 
+    def ranges(self):
+        return self._ranges
 
 
 class RangeSet(Component):
@@ -1720,7 +1721,7 @@ class RangeSet(Component):
     """
 
     def __new__(cls, *args, **kwds):
-        if cls != RangeSet:
+        if cls is not RangeSet:
             return super(RangeSet, cls).__new__(cls)
 
         if 'ranges' in kwds:
