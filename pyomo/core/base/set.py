@@ -121,11 +121,11 @@ class _UnknownSetDimen(object): pass
 #
 # ALL:
 #   __contains__
-#   __len__ (Note: None for all infinite sets)
 #
 # Note: FINITE implies DISCRETE. Infinite discrete sets cannot be iterated
 #
 # FINITE: ALL +
+#   __len__ (Note: Python len() requires __len__ to return non-negative int)
 #   __iter__, __reversed__
 #   add()
 #   sorted(), ordered()
@@ -701,10 +701,6 @@ class _SetData(_SetDataBase):
         raise DeveloperError("Derived set class (%s) failed to "
                              "implement __contains__" % (type(self).__name__,))
 
-    def __len__(self):
-        raise DeveloperError("Derived set class (%s) failed to "
-                             "implement __len__" % (type(self).__name__,))
-
     def is_finite(self):
         """Returns True if this is a finite discrete (iterable) Set"""
         return False
@@ -907,6 +903,10 @@ class _FiniteSetMixin(object):
 
     def __reversed__(self):
         return reversed(self.__iter__())
+
+    def __len__(self):
+        raise DeveloperError("Derived finite set class (%s) failed to "
+                             "implement __len__" % (type(self).__name__,))
 
     def is_finite(self):
         """Returns True if this is a finite discrete (iterable) Set"""
@@ -1922,10 +1922,6 @@ class _SetIntersection_FiniteSet(_SetIntersection_InfiniteSet, _FiniteSetMixin):
         """
         Return the number of elements in the set.
         """
-        # There is no easy way to tell how many duplicates there are in
-        # the second set.  Our only choice is to count them.  We will
-        # try and be a little efficient by using len() for the first
-        # set, though.
         return sum(1 for _ in self)
 
 
