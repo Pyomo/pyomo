@@ -1491,13 +1491,19 @@ class IndexedSet(Set):
 
 class SetOf(_FiniteSetMixin, _SetData, Component):
     """"""
+    def __new__(cls, reference, **kwds):
+        if cls is not SetOf:
+            return super(SetOf, cls).__new__(cls)
+        if isinstance(reference, (tuple, list)):
+            return _OrderedSetOf.__new__(_OrderedSetOf, reference)
+        else:
+            return _UnorderedSetOf.__new__(_UnorderedSetOf, reference)
+
     def __init__(self, reference, **kwds):
         kwds.setdefault('ctype', SetOf)
         _SetData.__init__(self, component=self)
         Component.__init__(self, **kwds)
         self._ref = reference
-
-        self.dimen = None
 
     def __contains__(self, value):
         # Note that the efficience of this depends on the reference object
@@ -1519,6 +1525,23 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
         self._constructed=True
         timer.report()
 
+    @property
+    def dimen(self):
+        _iter = iter(self)
+        try:
+            x = next(_iter)
+            if type(x) is tuple:
+                ans = len(x)
+            else:
+                ans = 1
+        except:
+            return None
+        for x in _iter:
+            _this = len(x) if type(x) is tuple else 1
+            if _this != ans:
+                return None
+        return ans
+
     def _pprint(self):
         """
         Return data that will be printed for this component.
@@ -1529,10 +1552,19 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
              ("Size", len(self)),
              ("Bounds", self.bounds())],
             iteritems( {None: self} ),
-            ("Members",),
+            ("Ordered", "Members",),
             lambda k, v: [
+                v.is_ordered(),
                 str(v._ref),
             ])
+
+class _OrderedSetOf(_OrderedSetMixin, SetOf):
+    pass
+
+class _UnorderedSetOf(SetOf):
+    pass
+
+
 
 ############################################################################
 
