@@ -1024,7 +1024,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
                 raise ValueError(
                     "The value=%s violates the validation rule of set=%s"
                     % (value, self.name))
-        # If the Set has a fixed dimension, checck that this element is
+        # If the Set has a fixed dimension, check that this element is
         # compatible.
         if self._dimen is not None:
             if type(value) is tuple:
@@ -1606,10 +1606,17 @@ class _FiniteRangeSetData( _InfiniteRangeSetData, _SortedSetMixin,
                 i += 1
                 n = start + i*step
 
+        # If there is only a single underlying range, then we will
+        # iterate over it
         if len(self._ranges) == 1:
             for x in _range_gen(self._ranges[0]):
                 yield x
             return
+
+        # The trick here is that we need to remove any duplicates from
+        # the multiple ranges.  We will set up iterators for each range,
+        # pull the first element from each iterator, sort and yield the
+        # lowest value.
         iters = []
         for r in self._ranges:
             try:
