@@ -1098,8 +1098,12 @@ class _OrderedSetMixin(object):
         If the search item is not in the Set, or the next element is beyond
         the end of the set, then an IndexError is raised.
         """
-        position = self.ord(item)
-        return self[position+step]
+        position = self.ord(item)+step
+        if position < 1:
+            raise IndexError("Cannot advance before the beginning of the Set")
+        if position > len(self):
+            raise IndexError("Cannot advance past the end of the Set")
+        return self[position]
 
     def nextw(self, item, step=1):
         """
