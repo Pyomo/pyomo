@@ -1213,14 +1213,14 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
         self._values.clear()
         self._ordered_values.clear()
 
-    def __getitem__(self, item):
+    def __getitem__(self, index):
         """
         Return the specified member of the set.
 
         The public Set API is 1-based, even though the
         internal _lookup and _values are (pythonically) 0-based.
         """
-        return self._ordered_values[self._to_0_based_index(item)]
+        return self._ordered_values[self._to_0_based_index(index)]
 
     def ord(self, item):
         """
@@ -1313,7 +1313,7 @@ class _SortedSetData(_OrderedSetData, _SortedSetMixin):
         super(_SortedSetData, self).clear()
         self._is_sorted = True
 
-    def __getitem__(self, item):
+    def __getitem__(self, index):
         """
         Return the specified member of the set.
 
@@ -1322,7 +1322,7 @@ class _SortedSetData(_OrderedSetData, _SortedSetMixin):
         """
         if not self._is_sorted:
             self._sort()
-        return super(_SortedSetData, self).__getitem__(item)
+        return super(_SortedSetData, self).__getitem__(index)
 
     def ord(self, item):
         """
@@ -1555,12 +1555,15 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
                 str(v._ref),
             ])
 
-class _OrderedSetOf(_OrderedSetMixin, SetOf):
-    pass
-
 class _UnorderedSetOf(SetOf):
     pass
 
+class _OrderedSetOf(_OrderedSetMixin, SetOf):
+    def __getitem__(self, index):
+        return self._ref[self._to_0_based_index(index)]
+
+    def ord(self, item):
+        return self._ref.index(item) + 1
 
 
 ############################################################################
@@ -1676,16 +1679,17 @@ class _FiniteRangeSetData( _SortedSetMixin,
         else:
             return sum(1 for _ in self)
 
-    def __getitem__(self, item):
-        assert int(item) == item
+    def __getitem__(self, index):
+        assert int(index) == index
+        idx = self._to_0_based_index(index)
         if len(self._ranges) == 1:
             r = self._ranges[0]
-            ans = r.start + (item-1)*r.step
+            ans = r.start + (idx)*r.step
             if ans <= r.end:
                 return ans
         else:
             try:
-                return self.data()[item]
+                return self.data()[idx]
             except IndexError:
                 pass
         raise IndexError("sorted set index out of range")
@@ -1876,8 +1880,8 @@ class _SetUnion_FiniteSet(_SetUnion_InfiniteSet, _FiniteSetMixin):
 class _SetUnion_OrderedSet(_SetUnion_FiniteSet, _OrderedSetMixin):
     __slots__ = tuple()
 
-    def __getitem__(self, item):
-        idx = self._to_0_based_index(item)
+    def __getitem__(self, index):
+        idx = self._to_0_based_index(index)
         set0_len = len(self._sets[0])
         if idx < set0_len:
             return self._sets[0][idx]
@@ -1962,8 +1966,8 @@ class _SetIntersection_FiniteSet(_SetIntersection_InfiniteSet, _FiniteSetMixin):
 class _SetIntersection_OrderedSet(_SetIntersection_FiniteSet, _OrderedSetMixin):
     __slots__ = tuple()
 
-    def __getitem__(self, item):
-        idx = self._to_0_based_index(item)
+    def __getitem__(self, index):
+        idx = self._to_0_based_index(index)
         _iter = iter(self)
         while idx:
             next(_iter)
@@ -2036,8 +2040,8 @@ class _SetDifference_FiniteSet(_SetDifference_InfiniteSet, _FiniteSetMixin):
 class _SetDifference_OrderedSet(_SetDifference_FiniteSet, _OrderedSetMixin):
     __slots__ = tuple()
 
-    def __getitem__(self, item):
-        idx = self._to_0_based_index(item)
+    def __getitem__(self, index):
+        idx = self._to_0_based_index(index)
         _iter = iter(self)
         while idx:
             next(_iter)
@@ -2118,8 +2122,8 @@ class _SetSymmetricDifference_OrderedSet(_SetSymmetricDifference_FiniteSet,
                                          _OrderedSetMixin):
     __slots__ = tuple()
 
-    def __getitem__(self, item):
-        idx = self._to_0_based_index(item)
+    def __getitem__(self, index):
+        idx = self._to_0_based_index(index)
         _iter = iter(self)
         while idx:
             next(_iter)
@@ -2207,8 +2211,8 @@ class _SetProduct_FiniteSet(_SetProduct_InfiniteSet, _FiniteSetMixin):
 class _SetProduct_OrderedSet(_SetProduct_FiniteSet, _OrderedSetMixin):
     __slots__ = tuple()
 
-    def __getitem__(self, item):
-        idx = self._to_0_based_index(item)
+    def __getitem__(self, index):
+        idx = self._to_0_based_index(index)
         I_len = len(self._sets[0])
         i = idx // I_len
         a = self._sets[0][i]
@@ -2219,7 +2223,7 @@ class _SetProduct_OrderedSet(_SetProduct_FiniteSet, _OrderedSetMixin):
             b = (b,)
         return a + b
 
-    def ord(self, val):
+    def ord(self, item):
         """
         Return the position index of the input value.
 
@@ -2228,30 +2232,30 @@ class _SetProduct_OrderedSet(_SetProduct_FiniteSet, _OrderedSetMixin):
         If the search item is not in the Set, then an IndexError is raised.
         """
         set0, set1 = self._sets
-        if len(val) == 2 and val[0] in set0 and val[1] in set1:
-            return (set0.ord(val[0])-1) * len(set0) + set1.ord(val[1])
+        if len(item) == 2 and item[0] in set0 and item[1] in set1:
+            return (set0.ord(item[0])-1) * len(set0) + set1.ord(item[1])
 
-        val = flatten_tuple(val)
+        item = flatten_tuple(item)
         _idx = None
         if set0.dimen \
-           and val[:set0.dimen] in set0 and val[set0.dimen:] in set1:
+           and item[:set0.dimen] in set0 and item[set0.dimen:] in set1:
             _idx = set0.dimen
         elif set1.dimen \
-             and val[:-set1.dimen] in set1 and val[-set1.dimen:] in set1:
+             and item[:-set1.dimen] in set1 and item[-set1.dimen:] in set1:
             _idx = -set1.dimen
         else:
             # At this point, neither base set has a fixed dimention.  The
             # only thing we can do is test all possible split points.
-            for i in xrange(len(val)):
-                if val[:i] in self._sets[0] and val[i:] in self._sets[1]:
+            for i in xrange(len(item)):
+                if item[:i] in self._sets[0] and item[i:] in self._sets[1]:
                     _idx = i
                     break
 
         if _idx is None:
             raise IndexError(
                 "Cannot identify position of %s in Set %s: item not in Set"
-                % (val, self.name))
-        return (set0.ord(val[:_idx])-1) * len(set0) + set1.ord(val[_idx:])
+                % (item, self.name))
+        return (set0.ord(item[:_idx])-1) * len(set0) + set1.ord(item[_idx:])
 
 ############################################################################
 
