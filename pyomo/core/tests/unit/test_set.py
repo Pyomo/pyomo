@@ -765,3 +765,142 @@ class TestBasicSets(unittest.TestCase):
         None :    True : [1, 2, 3]
 
 3 Declarations: I NotI J""".strip())
+
+    def test_isdisjoint(self):
+        i = SetOf({1,2,3})
+        self.assertTrue(i.isdisjoint({4,5,6}))
+        self.assertFalse(i.isdisjoint({3,4,5,6}))
+
+        self.assertTrue(i.isdisjoint(SetOf({4,5,6})))
+        self.assertFalse(i.isdisjoint(SetOf({3,4,5,6})))
+
+        self.assertTrue(i.isdisjoint(RangeSet(4,6,0)))
+        self.assertFalse(i.isdisjoint(RangeSet(3,6,0)))
+
+        self.assertTrue(RangeSet(4,6,0).isdisjoint(i))
+        self.assertFalse(RangeSet(3,6,0).isdisjoint(i))
+
+    def test_issubset(self):
+        i = SetOf({1,2,3})
+        self.assertTrue(i.issubset({1,2,3,4}))
+        self.assertFalse(i.issubset({3,4,5,6}))
+
+        self.assertTrue(i.issubset(SetOf({1,2,3,4})))
+        self.assertFalse(i.issubset(SetOf({3,4,5,6})))
+
+        self.assertTrue(i.issubset(RangeSet(1,4,0)))
+        self.assertFalse(i.issubset(RangeSet(3,6,0)))
+
+        self.assertTrue(RangeSet(1,3,0).issubset(RangeSet(0,100,0)))
+        self.assertFalse(RangeSet(1,3,0).issubset(i))
+        self.assertFalse(RangeSet(3,6,0).issubset(i))
+
+    def test_issuperset(self):
+        i = SetOf({1,2,3})
+        self.assertTrue(i.issuperset({1,2}))
+        self.assertFalse(i.issuperset({3,4,5,6}))
+
+        self.assertTrue(i.issuperset(SetOf({1,2})))
+        self.assertFalse(i.issuperset(SetOf({3,4,5,6})))
+
+        self.assertFalse(i.issuperset(RangeSet(1,3,0)))
+        self.assertFalse(i.issuperset(RangeSet(3,6,0)))
+
+        self.assertTrue(RangeSet(1,3,0).issuperset(RangeSet(1,2,0)))
+        self.assertTrue(RangeSet(1,3,0).issuperset(i))
+        self.assertFalse(RangeSet(3,6,0).issuperset(i))
+
+    def test_unordered_setof(self):
+        i = SetOf({1,3,2,0})
+
+        self.assertTrue(i.is_finite())
+        self.assertFalse(i.is_ordered())
+
+        self.assertEqual(i.ordered(), (0,1,2,3))
+        self.assertEqual(i.sorted(), (0,1,2,3))
+        self.assertEqual( tuple(reversed(i)),
+                          tuple(reversed(list(i))) )
+
+    def test_ordered_setof(self):
+        i = SetOf([1,3,2,0])
+
+        self.assertTrue(i.is_finite())
+        self.assertTrue(i.is_ordered())
+
+        self.assertEqual(i.ordered(), (1,3,2,0))
+        self.assertEqual(i.sorted(), (0,1,2,3))
+        self.assertEqual(tuple(reversed(i)), (0,2,3,1))
+
+        self.assertEqual(i[2], 3)
+        self.assertEqual(i[-1], 0)
+        with self.assertRaisesRegexp(
+                IndexError, "Valid index values for sets are 1 .. len\(set\) "
+                "or -1 .. -len\(set\)"):
+            i[0]
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot index a Set past the last element"):
+            i[5]
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot index a Set before the first element"):
+            i[-5]
+
+        self.assertEqual(i.ord(3), 2)
+        with self.assertRaisesRegexp(ValueError, "5 is not in list"):
+            i.ord(5)
+
+        self.assertEqual(i.first(), 1)
+        self.assertEqual(i.last(), 0)
+
+        self.assertEqual(i.next(3), 2)
+        self.assertEqual(i.prev(2), 3)
+        self.assertEqual(i.nextw(3), 2)
+        self.assertEqual(i.prevw(2), 3)
+        self.assertEqual(i.next(3,2), 0)
+        self.assertEqual(i.prev(2,2), 1)
+        self.assertEqual(i.nextw(3,2), 0)
+        self.assertEqual(i.prevw(2,2), 1)
+
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot advance past the end of the Set"):
+            i.next(0)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot advance before the beginning of the Set"):
+            i.prev(1)
+        self.assertEqual(i.nextw(0), 1)
+        self.assertEqual(i.prevw(1), 0)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot advance past the end of the Set"):
+            i.next(0,2)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot advance before the beginning of the Set"):
+            i.prev(1,2)
+        self.assertEqual(i.nextw(0,2), 3)
+        self.assertEqual(i.prevw(1,2), 2)
+
+        i = SetOf([1, None, 'a'])
+
+        self.assertTrue(i.is_finite())
+        self.assertTrue(i.is_ordered())
+
+        self.assertEqual(i.ordered(), (1,None,'a'))
+        self.assertEqual(i.sorted(), (None,1,'a'))
+        self.assertEqual(tuple(reversed(i)), ('a',None,1))
+
+
+    def test_ranges(self):
+        i = SetOf([1,3,2,0])
+        r = list(i.ranges())
+        self.assertEqual(len(r), 4)
+        for idx, x in enumerate(r):
+            self.assertIsInstance(x, CNR)
+            self.assertTrue(x.is_finite())
+            self.assertEqual(x.start, i[idx+1])
+            self.assertEqual(x.end, i[idx+1])
+            self.assertEqual(x.step, 0)
+
+    def test_bounds(self):
+        self.assertEqual(SetOf([1,3,2,0]).bounds(), (0,3))
+        self.assertEqual(SetOf([1,3.0,2,0]).bounds(), (0,3.0))
+        self.assertEqual(SetOf([None,1,'a']).bounds(), (None,None))
+        self.assertEqual(SetOf(['apple','cat','bear']).bounds(),
+                         ('apple','cat'))
