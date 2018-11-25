@@ -979,7 +979,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
             state[i] = getattr(self, i)
         return state
 
-    # Note: because None of the slots on this class need to be edited,
+    # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
     def __contains__(self, value):
@@ -1189,7 +1189,7 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
             state[i] = getattr(self, i)
         return state
 
-    # Note: because None of the slots on this class need to be edited,
+    # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
     def __iter__(self):
@@ -1294,7 +1294,7 @@ class _SortedSetData(_OrderedSetData, _SortedSetMixin):
             state[i] = getattr(self, i)
         return state
 
-    # Note: because None of the slots on this class need to be edited,
+    # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
     def __iter__(self):
@@ -1615,7 +1615,7 @@ class _InfiniteRangeSetData(_SetData):
             state[i] = getattr(self, i)
         return state
 
-    # Note: because None of the slots on this class need to be edited,
+    # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
     def __contains__(self, val):
