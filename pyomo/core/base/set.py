@@ -916,7 +916,7 @@ class _FiniteSetMixin(object):
         return tuple(self)
 
     def sorted(self):
-        return sorted_robust(self.data())
+        return tuple(sorted_robust(self.data()))
 
     def ordered(self):
         return self.sorted()
@@ -1072,9 +1072,6 @@ class _OrderedSetMixin(object):
 
     def ordered(self):
         return self.data()
-
-    def sorted(self):
-        return sorted_robust(self.data())
 
     def first(self):
         return self[1]
