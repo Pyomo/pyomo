@@ -1237,9 +1237,6 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
                 "Cannot identify position of %s in Set %s: item not in Set"
                 % (item, self.name))
 
-    def sorted(self):
-        return sorted_robust(self.data())
-
 
 class _InsertionOrderSetData(_OrderedSetData):
     """
@@ -1706,9 +1703,6 @@ class _FiniteRangeSetData( _SortedSetMixin,
         raise IndexError(
             "Cannot identify position of %s in Set %s: item not in Set"
             % (item, self.name))
-
-    def sorted(self):
-        return self.data()
 
     def ranges(self):
         return self._ranges
