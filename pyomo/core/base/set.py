@@ -930,7 +930,16 @@ class _FiniteSetMixin(object):
             ub = max(self)
         except:
             ub = None
-        return lb,ub
+        # Python2/3 consistency: We will follow the Python3 convention
+        # and not assume numeric/nonnumeric types are comparable.  If a
+        # set is mixed non-numeric type, then we will report the bounds
+        # as None.
+        if type(lb) is not type(ub) and (
+                type(lb) not in native_numeric_types
+                or type(ub) not in native_numeric_types):
+            return None,None
+        else:
+            return lb,ub
 
     def ranges(self):
         # This is way inefficient, but should always work: the ranges in a
