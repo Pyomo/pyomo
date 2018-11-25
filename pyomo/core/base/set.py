@@ -293,7 +293,7 @@ class _ClosedNumericRange(object):
 
     def is_finite(self):
         return self.start is not None and self.end is not None \
-            and self.step != 0
+            and (self.step != 0 or self.start == self.end)
 
     def isdisjoint(self, other):
         # First, do a simple sanity check on the endpoints
