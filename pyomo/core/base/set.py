@@ -1734,6 +1734,8 @@ class _FiniteRangeSetData( _SortedSetMixin,
     def ranges(self):
         return self._ranges
 
+    def bounds(self):
+        return _InfiniteRangeSetData.bounds(self)
 
 class RangeSet(Component):
     """
