@@ -902,7 +902,7 @@ class _FiniteSetMixin(object):
     __slots__ = ()
 
     def __reversed__(self):
-        return reversed(self.__iter__())
+        return reversed(self.data())
 
     def __len__(self):
         raise DeveloperError("Derived finite set class (%s) failed to "
@@ -987,6 +987,9 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         Return the number of elements in the set.
         """
         return len(self._values)
+
+    def __reversed__(self):
+        return reversed(self._values)
 
     def data(self):
         return tuple(self._values)
@@ -1189,6 +1192,9 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
         """
         return iter(self._ordered_values)
 
+    def __reversed__(self):
+        return reversed(self._ordered_values)
+
     def data(self):
         return tuple(self._ordered_values)
 
@@ -1292,6 +1298,11 @@ class _SortedSetData(_OrderedSetData, _SortedSetMixin):
         if not self._is_sorted:
             self._sort()
         return super(_SortedSetData, self).__iter__()
+
+    def __reversed__(self):
+        if not self._is_sorted:
+            self._sort()
+        return super(_SortedSetData, self).__reversed__()
 
     def data(self):
         if not self._is_sorted:
