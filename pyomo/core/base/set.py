@@ -1650,21 +1650,23 @@ class _FiniteRangeSetData( _SortedSetMixin,
                            _OrderedSetMixin,
                            _FiniteSetMixin,
                            _InfiniteRangeSetData ):
-    def __iter__(self):
-        def _range_gen(r):
-            start, end = (r.start, r.end) if r.step > 0 else (r.end, r.start)
-            step = abs(r.step)
-            n = start
-            i = 0
-            while n <= end:
-                yield n
-                i += 1
-                n = start + i*step
 
+    @staticmethod
+    def _range_gen(r):
+        start, end = (r.start, r.end) if r.step > 0 else (r.end, r.start)
+        step = abs(r.step)
+        n = start
+        i = 0
+        while n <= end:
+            yield n
+            i += 1
+            n = start + i*step
+
+    def __iter__(self):
         # If there is only a single underlying range, then we will
         # iterate over it
         if len(self._ranges) == 1:
-            for x in _range_gen(self._ranges[0]):
+            for x in _FiniteRangeSetData._range_gen(self._ranges[0]):
                 yield x
             return
 
@@ -1675,7 +1677,7 @@ class _FiniteRangeSetData( _SortedSetMixin,
         iters = []
         for r in self._ranges:
             try:
-                i = _range_gen(r)
+                i = _FiniteRangeSetData._range_gen(r)
                 iters.append([next(i), i])
             except StopIteration:
                 pass
