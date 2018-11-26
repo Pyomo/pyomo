@@ -719,12 +719,14 @@ class _SetData(_SetDataBase):
     def __eq__(self, other):
         if self is other:
             return True
-        if isinstance(other, _SetData):
+        try:
             other_is_finite = other.is_finite()
-        else:
+        except:
             other_is_finite = True
             try:
-                other = SetOf(other)
+                # For efficiency, if the other is not a Set, we will try
+                # converting it to a Python set() for efficient lookup.
+                other = set(other)
             except:
                 pass
         if self.is_finite():
@@ -744,13 +746,13 @@ class _SetData(_SetDataBase):
         return not self.__eq__(other)
 
     def isdisjoint(self, other):
-        # For efficiency, if the other is not a Set, we will try converting
-        # it to a Python set() for efficient lookup.
-        if isinstance(other, _SetData):
+        try:
             other_is_finite = other.is_finite()
-        else:
+        except:
             other_is_finite = True
             try:
+                # For efficiency, if the other is not a Set, we will try
+                # converting it to a Python set() for efficient lookup.
                 other = set(other)
             except:
                 pass
@@ -768,11 +770,13 @@ class _SetData(_SetDataBase):
             all(r.isdisjoint(s) for r in self.ranges() for s in other.ranges())
 
     def issubset(self, other):
-        if isinstance(other, _SetData):
+        try:
             other_is_finite = other.is_finite()
-        else:
+        except:
             other_is_finite = True
             try:
+                # For efficiency, if the other is not a Set, we will try
+                # converting it to a Python set() for efficient lookup.
                 other = set(other)
             except:
                 pass
@@ -792,9 +796,9 @@ class _SetData(_SetDataBase):
     def issuperset(self, other):
         # For efficiency, if the other is not a Set, we will try converting
         # it to a Python set() for efficient lookup.
-        if isinstance(other, _SetData):
+        try:
             other_is_finite = other.is_finite()
-        else:
+        except:
             other_is_finite = True
             try:
                 other = set(other)
