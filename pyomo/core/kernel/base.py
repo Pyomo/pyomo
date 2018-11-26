@@ -143,12 +143,6 @@ class ICategorizedObject(object):
             representing the name of the object in the
             context of its parent; otherwise (if no parent
             exists), this method returns :const:`None`.
-
-        .. warning::
-            Name generation can be slow. See the
-            generate_names method, found on most containers,
-            for a way to generate a static set of component
-            names.
         """
         assert fully_qualified or \
             (relative_to is None)
