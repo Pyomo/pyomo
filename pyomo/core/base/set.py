@@ -176,7 +176,14 @@ class _ClosedNumericRange(object):
                 )
             if step:
                 n = int( (end - start) / step )
-                end = start + n*step
+                new_end = start + n*step
+                assert abs(end - new_end) < abs(step)
+                end = new_end
+                # It is important (for iterating) that all finite
+                # discrete ranges have positive steps
+                if step < 0:
+                    start, end = end, start
+                    step *= -1
         if start == end:
             # If this is a scalar, we will force the step to be 0 (so that
             # things like [1:5:10] == [1:50:100] are easier to validate)
