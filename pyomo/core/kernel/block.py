@@ -345,8 +345,7 @@ class block(IBlock):
         # this top level model
         valid_import_suffixes = \
             dict((obj.storage_key, obj)
-                 for obj in import_suffix_generator(self,
-                                                    active=True))
+                 for obj in import_suffix_generator(self))
 
         # To ensure that import suffix data gets properly
         # overwritten (e.g., the case where nonzero dual
@@ -368,8 +367,7 @@ class block(IBlock):
         # Load variable data
         #
         from pyomo.core.kernel.variable import IVariable
-        for var in self.components(ctype=IVariable,
-                                   active=True):
+        for var in self.components(ctype=IVariable):
             var.stale = True
         var_skip_attrs = ['id','canonical_label']
         seen_var_ids = set()

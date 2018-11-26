@@ -210,7 +210,7 @@ class suffix(ISuffix):
 
 def export_suffix_generator(blk,
                             datatype=_noarg,
-                            active=None,
+                            active=True,
                             descend_into=True):
     """
     Generates an efficient traversal of all suffixes that
@@ -244,7 +244,7 @@ def export_suffix_generator(blk,
 
 def import_suffix_generator(blk,
                             datatype=_noarg,
-                            active=None,
+                            active=True,
                             descend_into=True):
     """
     Generates an efficient traversal of all suffixes that
@@ -278,7 +278,7 @@ def import_suffix_generator(blk,
 
 def local_suffix_generator(blk,
                            datatype=_noarg,
-                           active=None,
+                           active=True,
                            descend_into=True):
     """
     Generates an efficient traversal of all suffixes that
@@ -312,7 +312,7 @@ def local_suffix_generator(blk,
 
 def suffix_generator(blk,
                      datatype=_noarg,
-                     active=None,
+                     active=True,
                      descend_into=True):
     """
     Generates an efficient traversal of all suffixes that

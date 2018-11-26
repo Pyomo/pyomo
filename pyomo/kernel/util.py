@@ -26,7 +26,7 @@ import six
 
 def preorder_traversal(node,
                        ctype=_no_ctype,
-                       active=None,
+                       active=True,
                        descend=True):
     """
     A generator that yields each object in the storage tree
@@ -37,12 +37,12 @@ def preorder_traversal(node,
         ctype: Indicates the category of components to
             include. The default value indicates that all
             categories should be included.
-        active (:const:`True`/:const:`None`): Set to
-            :const:`True` to indicate that only active
-            objects should be included. The default
-            value of :const:`None` indicates that all
-            components (including those that have been
-            deactivated) should be included.
+        active (:const:`True`/:const:`None`): Controls
+            whether or not to filter the iteration to
+            include only the active part of the storage
+            tree. The default is :const:`True`. Setting this
+            keyword to :const:`None` causes the active
+            status of objects to be ignored.
         descend (bool, function): Controls if a container
             object should be descended into during the
             traversal. When a function is supplied, each

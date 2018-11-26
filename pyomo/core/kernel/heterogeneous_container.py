@@ -14,10 +14,9 @@ from pyomo.core.kernel.base import \
      _convert_descend_into,
      ICategorizedObjectContainer)
 
-
 def heterogeneous_containers(node,
                              ctype=_no_ctype,
-                             active=None,
+                             active=True,
                              descend_into=True):
     """
     A generator that yields all heterogeneous containers
@@ -30,12 +29,12 @@ def heterogeneous_containers(node,
         ctype: Indicates the category of objects to
             include. The default value indicates that
             all categories should be included.
-        active (:const:`True`/:const:`None`): Set to
-            :const:`True` to indicate that only active
-            objects should be included. The default
-            value of :const:`None` indicates that all
-            components (including those that have been
-            deactivated) should be included.
+        active (:const:`True`/:const:`None`): Controls
+            whether or not to filter the iteration to
+            include only the active part of the storage
+            tree. The default is :const:`True`. Setting this
+            keyword to :const:`None` causes the active
+            status of objects to be ignored.
         descend_into (bool, function): Indicates whether or
             not to descend into a heterogeneous
             container. Default is True, which is equivalent
@@ -126,18 +125,18 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
     #
 
     def collect_ctypes(self,
-                       active=None,
+                       active=True,
                        descend_into=True):
         """Returns the set of object category types that can
         be found under this container.
 
         Args:
-            active (:const:`True`/:const:`None`): Set to
-                :const:`True` to indicate that only active
-                objects should be included. The default
-                value of :const:`None` indicates that all
-                components (including those that have been
-                deactivated) should be included.
+            active (:const:`True`/:const:`None`): Controls
+                whether or not to filter the iteration to
+                include only the active part of the storage
+                tree. The default is :const:`True`. Setting
+                this keyword to :const:`None` causes the
+                active status of objects to be ignored.
             descend_into (bool, function): Indicates whether
                 or not to descend into a heterogeneous
                 container. Default is True, which is
@@ -206,7 +205,7 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
 
     def components(self,
                    ctype=_no_ctype,
-                   active=None,
+                   active=True,
                    descend_into=True):
         """
         Generates an efficient traversal of all components
@@ -218,12 +217,12 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
             ctype: Indicates the category of components to
                 include. The default value indicates that
                 all categories should be included.
-            active (:const:`True`/:const:`None`): Set to
-                :const:`True` to indicate that only active
-                objects should be included. The default
-                value of :const:`None` indicates that all
-                components (including those that have been
-                deactivated) should be included.
+            active (:const:`True`/:const:`None`): Controls
+                whether or not to filter the iteration to
+                include only the active part of the storage
+                tree. The default is :const:`True`. Setting
+                this keyword to :const:`None` causes the
+                active status of objects to be ignored.
             descend_into (bool, function): Indicates whether
                 or not to descend into a heterogeneous
                 container. Default is True, which is

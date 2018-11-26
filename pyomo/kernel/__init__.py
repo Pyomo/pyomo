@@ -174,6 +174,8 @@ from pyomo.core.kernel.heterogeneous_container import (heterogeneous_containers,
 def _component_data_objects(self, *args, **kwds):
     # this is not yet handled
     kwds.pop('sort', None)
+    if 'active' not in kwds:
+        kwds['active'] = None
     for component in self.components(*args, **kwds):
         yield component
 IHeterogeneousContainer.component_data_objects = \
