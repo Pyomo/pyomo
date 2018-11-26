@@ -10,6 +10,7 @@
 
 from pyomo.core.kernel.base import \
     (_no_ctype,
+     _convert_descend_into,
      ICategorizedObjectContainer)
 
 class IHomogeneousContainer(ICategorizedObjectContainer):
@@ -68,59 +69,12 @@ class IHomogeneousContainer(ICategorizedObjectContainer):
             return
 
         for child in self.children():
-            if (not child._is_container) or \
-               child._is_heterogeneous_container:
-                if (active is None) or \
-                   child.active:
-                    yield child
-            else:
-                assert child._is_container
-                for obj in child.components(active=active):
-                    yield obj
-
-    def preorder_traversal(self,
-                           active=None,
-                           descend=None):
-        """
-        A generator that visits each node in the storage
-        tree using a preorder traversal.
-
-        Args:
-            active (:const:`True`/:const:`None`): Set to
-                :const:`True` to indicate that only active
-                objects should be included. The default
-                value of :const:`None` indicates that all
-                components (including those that have been
-                deactivated) should be included.
-            descend: A function that can be used to control
-                if a container object should be descended
-                into. When the return value is False, the
-                traversal will not continue into children
-                of the container.
-        """
-        assert active in (None, True)
-
-        # if not active, then nothing below is active
-        if (active is not None) and \
-           (not self.active):
-            return
-
-        if (descend is not None) and \
-           (not descend(self)):
-            yield self
-            return
-        else:
-            yield self
-
-        for child in self.children():
-            if (not child._is_container) or \
-               child._is_heterogeneous_container:
-                if (active is None) or \
-                   child.active:
-                    yield child
-            else:
-                assert child._is_container
-                for obj in child.preorder_traversal(
-                        active=active,
-                        descend=descend):
-                    yield obj
+            if (active is None) or \
+               child.active:
+                if (not child._is_container) or \
+                   child._is_heterogeneous_container:
+                        yield child
+                else:
+                    assert child._is_container
+                    for obj in child.components(active=active):
+                        yield obj

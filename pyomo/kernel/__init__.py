@@ -25,6 +25,7 @@ from pyomo.opt import (SolverFactory,
 from pyomo.core.expr import *
 import pyomo.core.kernel
 from pyomo.kernel.util import (generate_names,
+                               preorder_traversal,
                                pprint)
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
@@ -168,7 +169,8 @@ del pyomo
 # Ducktyping to work with a solver interfaces. Ideally,
 # everything below here could be deleted one day.
 #
-from pyomo.core.kernel.heterogeneous_container import IHeterogeneousContainer
+from pyomo.core.kernel.heterogeneous_container import (heterogeneous_containers,
+                                                       IHeterogeneousContainer)
 def _component_data_objects(self, *args, **kwds):
     # this is not yet handled
     kwds.pop('sort', None)
@@ -185,17 +187,9 @@ def _component_objects(self, *args, **kwds):
     assert kwds.pop('descent_order', None) is None
     active = kwds.pop('active', None)
     descend_into = kwds.pop('descend_into', True)
-    if not descend_into:
-        assert active in (None, True)
-        # if not active, then nothing below is active
-        if (active is not None) and \
-           (not self.active):
-            return
-        items = (self,)
-    else:
-        items = self.heterogeneous_containers(active=active,
-                                              descend_into=True)
-    for item in items:
+    for item in heterogeneous_containers(self,
+                                         active=active,
+                                         descend_into=descend_into):
         for child in item.children(*args, **kwds):
             yield child
 IHeterogeneousContainer.component_objects = \

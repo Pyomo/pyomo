@@ -34,6 +34,17 @@ class _no_ctype(object):
 # solver interfaces) to Kernel classes
 _convert_ctype = {}
 
+def _convert_descend_into(value):
+    """Converts the descend_into keyword to a function"""
+    if hasattr(value, "__call__"):
+        return value
+    elif value:
+        return _convert_descend_into._true
+    else:
+        return _convert_descend_into._false
+_convert_descend_into._true = lambda x: True
+_convert_descend_into._false = lambda x: False
+
 class ICategorizedObject(object):
     """
     Interface for objects that maintain a weak reference to
@@ -315,8 +326,4 @@ class ICategorizedObjectContainer(ICategorizedObject):
     def components(self, *args, **kwds):
         """A generator over the set of components stored
         under this container."""
-        raise NotImplementedError     #pragma:nocover
-
-    def preorder_traversal(self, *args, **kwds):
-        """A generator over all descendents in prefix order."""
         raise NotImplementedError     #pragma:nocover
