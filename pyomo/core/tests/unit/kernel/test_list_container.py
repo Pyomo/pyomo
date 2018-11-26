@@ -699,7 +699,7 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         for c in clist:
             self.assertEqual(c.active, False)
         self.assertNotEqual(len(list(clist.components())),
-                            len(list(clist.components(active=True))))
+                            len(list(clist.components(active=None))))
         self.assertEqual(len(list(clist.components(active=True))), 0)
 
         test_c = clist[0]
@@ -715,7 +715,7 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         for c in clist:
             self.assertEqual(c.active, False)
         self.assertNotEqual(len(list(clist.components())),
-                            len(list(clist.components(active=True))))
+                            len(list(clist.components(active=None))))
         self.assertEqual(len(list(clist.components(active=True))), 0)
 
         clist.remove(test_c)
@@ -747,10 +747,12 @@ class _TestActiveListContainerBase(_TestListContainerBase):
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
+        for c in clist.components():
+            self.assertEqual(c.active, True)
         for c in clist.components(active=True):
             self.assertEqual(c.active, True)
         self.assertNotEqual(len(list(clist.components())),
-                            len(list(clist.components(active=True))))
+                            len(list(clist.components(active=None))))
         self.assertEqual(len(list(clist.components(active=True))), 1)
 
         m.activate(shallow=False)
@@ -782,7 +784,7 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         for c in clist:
             self.assertEqual(c.active, False)
         self.assertNotEqual(len(list(clist.components())),
-                            len(list(clist.components(active=True))))
+                            len(list(clist.components(active=None))))
         self.assertEqual(len(list(clist.components(active=True))), 0)
 
         clist[len(clist)-1] = self._ctype_factory()
@@ -805,15 +807,17 @@ class _TestActiveListContainerBase(_TestListContainerBase):
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
-        for i, c in enumerate(clist.components()):
+        for i, c in enumerate(clist.components(active=None)):
             if i == len(clist)-1:
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
+        for c in clist.components():
+            self.assertEqual(c.active, True)
         for c in clist.components(active=True):
             self.assertEqual(c.active, True)
         self.assertNotEqual(len(list(clist.components())),
-                            len(list(clist.components(active=True))))
+                            len(list(clist.components(active=None))))
         self.assertEqual(len(list(clist.components(active=True))), 1)
 
         clist.activate(shallow=False)
@@ -845,7 +849,7 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         for i, c in enumerate(clist):
             self.assertEqual(c.active, False)
         self.assertNotEqual(len(list(clist.components())),
-                            len(list(clist.components(active=True))))
+                            len(list(clist.components(active=None))))
         self.assertEqual(len(list(clist.components(active=True))), 0)
 
         clist[-1].activate()
@@ -868,15 +872,17 @@ class _TestActiveListContainerBase(_TestListContainerBase):
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
-        for i, c in enumerate(clist.components()):
+        for i, c in enumerate(clist.components(active=None)):
             if i == len(clist)-1:
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
+        for c in clist.components():
+            self.assertEqual(c.active, True)
         for c in clist.components(active=True):
             self.assertEqual(c.active, True)
         self.assertNotEqual(len(list(clist.components())),
-                            len(list(clist.components(active=True))))
+                            len(list(clist.components(active=None))))
         self.assertEqual(len(list(clist.components(active=True))), 1)
 
         clist.deactivate(shallow=False)
@@ -972,6 +978,7 @@ class _TestActiveListContainerBase(_TestListContainerBase):
             return x.active and (not x._is_heterogeneous_container)
         descend.seen = []
         order = list(pmo.preorder_traversal(clist,
+                                            active=None,
                                             descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
                          [c.name for c in order])
@@ -1016,6 +1023,7 @@ class _TestActiveListContainerBase(_TestListContainerBase):
             return x.active and (not x._is_heterogeneous_container)
         descend.seen = []
         order = list(pmo.preorder_traversal(clist,
+                                            active=None,
                                             descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
                          [c.name for c in order])
@@ -1052,6 +1060,7 @@ class _TestActiveListContainerBase(_TestListContainerBase):
             return x.active
         descend.seen = []
         order = list(pmo.preorder_traversal(clist,
+                                            active=None,
                                             descend=descend))
         self.assertEqual(len(descend.seen), 1)
         self.assertIs(descend.seen[0], clist)

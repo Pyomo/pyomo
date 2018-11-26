@@ -513,7 +513,7 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
         for c in ctuple:
             self.assertEqual(c.active, False)
         self.assertNotEqual(len(list(ctuple.components())),
-                            len(list(ctuple.components(active=True))))
+                            len(list(ctuple.components(active=None))))
         self.assertEqual(len(list(ctuple.components(active=True))), 0)
 
         test_c = ctuple[0]
@@ -544,7 +544,7 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
         for c in ctuple.components(active=True):
             self.assertEqual(c.active, True)
         self.assertNotEqual(len(list(ctuple.components())),
-                            len(list(ctuple.components(active=True))))
+                            len(list(ctuple.components(active=None))))
         self.assertEqual(len(list(ctuple.components(active=True))), 1)
 
         m.activate(shallow=False)
@@ -576,7 +576,7 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
         for c in ctuple:
             self.assertEqual(c.active, False)
         self.assertNotEqual(len(list(ctuple.components())),
-                            len(list(ctuple.components(active=True))))
+                            len(list(ctuple.components(active=None))))
         self.assertEqual(len(list(ctuple.components(active=True))), 0)
 
         ctuple.activate(shallow=False)
@@ -608,7 +608,7 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
         for i, c in enumerate(ctuple):
             self.assertEqual(c.active, False)
         self.assertNotEqual(len(list(ctuple.components())),
-                            len(list(ctuple.components(active=True))))
+                            len(list(ctuple.components(active=None))))
         self.assertEqual(len(list(ctuple.components(active=True))), 0)
 
         ctuple[-1].activate()
@@ -631,15 +631,17 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
-        for i, c in enumerate(ctuple.components()):
+        for i, c in enumerate(ctuple.components(active=None)):
             if i == len(ctuple)-1:
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
+        for c in ctuple.components():
+            self.assertEqual(c.active, True)
         for c in ctuple.components(active=True):
             self.assertEqual(c.active, True)
         self.assertNotEqual(len(list(ctuple.components())),
-                            len(list(ctuple.components(active=True))))
+                            len(list(ctuple.components(active=None))))
         self.assertEqual(len(list(ctuple.components(active=True))), 1)
 
         ctuple.deactivate(shallow=False)
@@ -729,6 +731,7 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
             return x.active
         descend.seen = []
         order = list(pmo.preorder_traversal(ctuple,
+                                            active=None,
                                             descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
                          [c.name for c in order])
@@ -773,6 +776,7 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
             return x.active
         descend.seen = []
         order = list(pmo.preorder_traversal(ctuple,
+                                            active=None,
                                             descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
                          [c.name for c in order])
@@ -809,6 +813,7 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
             return x.active
         descend.seen = []
         order = list(pmo.preorder_traversal(ctuple,
+                                            active=None,
                                             descend=descend))
         self.assertEqual(len(descend.seen), 1)
         self.assertIs(descend.seen[0], ctuple)
@@ -833,6 +838,7 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
             return x.active
         descend.seen = []
         order = list(pmo.preorder_traversal(ctuple,
+                                            active=None,
                                             descend=descend))
         self.assertEqual(len(descend.seen), 1)
         self.assertIs(descend.seen[0], ctuple)

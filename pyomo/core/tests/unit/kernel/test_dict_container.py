@@ -659,7 +659,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         for c in cdict.values():
             self.assertEqual(c.active, False)
         self.assertNotEqual(len(list(cdict.components())),
-                            len(list(cdict.components(active=True))))
+                            len(list(cdict.components(active=None))))
         self.assertEqual(len(list(cdict.components(active=True))), 0)
 
         test_key = list(children.keys())[0]
@@ -675,7 +675,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         for c in cdict.values():
             self.assertEqual(c.active, False)
         self.assertNotEqual(len(list(cdict.components())),
-                            len(list(cdict.components(active=True))))
+                            len(list(cdict.components(active=None))))
         self.assertEqual(len(list(cdict.components(active=True))), 0)
 
         del cdict[test_key]
@@ -709,7 +709,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         for c in cdict.components(active=True):
             self.assertEqual(c.active, True)
         self.assertNotEqual(len(list(cdict.components())),
-                            len(list(cdict.components(active=True))))
+                            len(list(cdict.components(active=None))))
         self.assertEqual(len(list(cdict.components(active=True))), 1)
 
 
@@ -743,7 +743,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         for c in cdict.values():
             self.assertEqual(c.active, False)
         self.assertNotEqual(len(list(cdict.components())),
-                            len(list(cdict.components(active=True))))
+                            len(list(cdict.components(active=None))))
         self.assertEqual(len(list(cdict.components(active=True))), 0)
 
         cdict.activate(shallow=False)
@@ -793,7 +793,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         for c in cdict.components(active=True):
             self.assertEqual(c.active, True)
         self.assertNotEqual(len(list(cdict.components())),
-                            len(list(cdict.components(active=True))))
+                            len(list(cdict.components(active=None))))
         self.assertEqual(len(list(cdict.components(active=True))), 1)
 
     def test_preorder_traversal(self):
@@ -871,6 +871,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
             return x.active and (not x._is_heterogeneous_container)
         descend.seen = []
         order = list(pmo.preorder_traversal(cdict,
+                                            active=None,
                                             descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
                          [c.name for c in order])
@@ -913,6 +914,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
             return x.active and (not x._is_heterogeneous_container)
         descend.seen = []
         order = list(pmo.preorder_traversal(cdict,
+                                            active=None,
                                             descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
                          [c.name for c in order])
@@ -947,6 +949,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
             return x.active
         descend.seen = []
         order = list(pmo.preorder_traversal(cdict,
+                                            active=None,
                                             descend=descend))
         self.assertEqual(len(descend.seen), 1)
         self.assertIs(descend.seen[0], cdict)
