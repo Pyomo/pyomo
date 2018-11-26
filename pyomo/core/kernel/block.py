@@ -100,7 +100,8 @@ class block(IBlock):
     #
 
     def child_ctypes(self):
-        """Collect all object category types stored on this block."""
+        """Returns the set of child object category types
+        stored in this container."""
         if self._byctype is None:
             # empty
             return ()

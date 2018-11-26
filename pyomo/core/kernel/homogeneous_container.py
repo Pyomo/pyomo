@@ -46,9 +46,8 @@ class IHomogeneousContainer(ICategorizedObjectContainer):
         """
         Generates an efficient traversal of all components
         stored under this container. Components are
-        categorized objects that are either not containers,
-        or are heterogeneous containers having a category
-        type different from their children.
+        categorized objects that are either (1) not
+        containers, or (2) are heterogeneous containers.
 
         Args:
             active (:const:`True`/:const:`None`): Set to
@@ -59,7 +58,7 @@ class IHomogeneousContainer(ICategorizedObjectContainer):
                 deactivated) should be included.
 
         Returns:
-            iterator of objects in the storage tree
+            iterator of components in the storage tree
         """
         assert active in (None, True)
 

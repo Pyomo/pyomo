@@ -75,6 +75,11 @@ class DictContainer(IHomogeneousContainer,
         if len(kwds):
             self.update(**kwds)
 
+    def _fast_insert(self, key, item):
+        item._parent = weakref.ref(self)
+        item._storage_key = key
+        self._data[key] = item
+
     #
     # Define the ICategorizedObjectContainer abstract methods
     #
@@ -92,11 +97,6 @@ class DictContainer(IHomogeneousContainer,
     def children(self):
         """A generator over the children of this container."""
         return itervalues(self._data)
-
-    def _fast_insert(self, key, item):
-        item._parent = weakref.ref(self)
-        item._storage_key = key
-        self._data[key] = item
 
     #
     # Define the MutableMapping abstract methods

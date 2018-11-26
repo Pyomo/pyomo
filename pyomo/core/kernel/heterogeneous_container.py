@@ -128,8 +128,8 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
     def collect_ctypes(self,
                        active=None,
                        descend_into=True):
-        """Returns the set of child object category types
-        under this container.
+        """Returns the set of object category types that can
+        be found under this container.
 
         Args:
             active (:const:`True`/:const:`None`): Set to
@@ -191,7 +191,7 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
 
     def child_ctypes(self, *args, **kwds):
         """Returns the set of child object category types
-        for this container."""
+        stored in this container."""
         raise NotImplementedError     #pragma:nocover
 
     #
@@ -211,9 +211,8 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
         """
         Generates an efficient traversal of all components
         stored under this container. Components are
-        categorized objects that are either not containers,
-        or are heterogeneous containers having a category
-        type different from their children.
+        categorized objects that are either (1) not
+        containers, or (2) are heterogeneous containers.
 
         Args:
             ctype: Indicates the category of components to
