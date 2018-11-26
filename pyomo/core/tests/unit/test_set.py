@@ -309,6 +309,7 @@ class TestNumericRange(unittest.TestCase):
         self.assertTrue(CNR(0, 10, 1).issubset(CNR(0, 10, 0)))
 
         self.assertFalse(CNR(0, None, 0).issubset(CNR(0, None, 1)))
+        self.assertFalse(CNR(None, 0, 0).issubset(CNR(0, None, -1)))
         self.assertFalse(CNR(0, 10, 0).issubset(CNR(0, 10, 1)))
 
         # Discrete - discrete
@@ -433,6 +434,10 @@ class TestNumericRange(unittest.TestCase):
         self.assertEqual(
             CNR(10,0,-1).range_intersection([CNR(7,4,-2)]),
             [CNR(5,7,2)],
+        )
+        self.assertEqual(
+            CNR(10,0,-1).range_intersection([CNR(7,None,-2)]),
+            [CNR(1,7,2)],
         )
         self.assertEqual(
             CNR(0,None,-1).range_intersection([CNR(None,-10,0)]),
@@ -649,7 +654,7 @@ class InfiniteSetTester(unittest.TestCase):
             ))
         )
 
-class TestBasicSets(unittest.TestCase):
+class Test_SetOf_and_RangeSet(unittest.TestCase):
     def test_RangeSet_constructor(self):
         i = RangeSet(3)
         self.assertEqual(len(i), 3)
@@ -717,6 +722,17 @@ class TestBasicSets(unittest.TestCase):
             [1,2,3,4]
         )
 
+        # It can even work for non-iterable objects (that can't be cast
+        # to set())
+        class _NonIterable(object):
+            def __init__(self):
+                self.data = set({1,3,5})
+            def __contains__(self, val):
+                return val in self.data
+            def __len__(self):
+                return len(self.data)
+        self.assertEqual(SetOf({1,3,5}), _NonIterable())
+
     def test_is_functions(self):
         i = SetOf({1,2,3})
         self.assertTrue(i.is_finite())
@@ -780,6 +796,18 @@ class TestBasicSets(unittest.TestCase):
         self.assertTrue(RangeSet(4,6,0).isdisjoint(i))
         self.assertFalse(RangeSet(3,6,0).isdisjoint(i))
 
+        # It can even work for non-iterable objects (that can't be cast
+        # to set())
+        class _NonIterable(object):
+            def __init__(self):
+                self.data = set({1,3,5})
+            def __contains__(self, val):
+                return val in self.data
+            def __len__(self):
+                return len(self.data)
+        self.assertTrue(SetOf({2,4}).isdisjoint(_NonIterable()))
+        self.assertFalse(SetOf({2,3,4}).isdisjoint(_NonIterable()))
+
     def test_issubset(self):
         i = SetOf({1,2,3})
         self.assertTrue(i.issubset({1,2,3,4}))
@@ -795,6 +823,18 @@ class TestBasicSets(unittest.TestCase):
         self.assertFalse(RangeSet(1,3,0).issubset(i))
         self.assertFalse(RangeSet(3,6,0).issubset(i))
 
+        # It can even work for non-iterable objects (that can't be cast
+        # to set())
+        class _NonIterable(object):
+            def __init__(self):
+                self.data = set({1,3,5})
+            def __contains__(self, val):
+                return val in self.data
+            def __len__(self):
+                return len(self.data)
+        self.assertTrue(SetOf({1,5}).issubset(_NonIterable()))
+        self.assertFalse(SetOf({1,3,4}).issubset(_NonIterable()))
+
     def test_issuperset(self):
         i = SetOf({1,2,3})
         self.assertTrue(i.issuperset({1,2}))
@@ -809,6 +849,18 @@ class TestBasicSets(unittest.TestCase):
         self.assertTrue(RangeSet(1,3,0).issuperset(RangeSet(1,2,0)))
         self.assertTrue(RangeSet(1,3,0).issuperset(i))
         self.assertFalse(RangeSet(3,6,0).issuperset(i))
+
+        # It can even work for non-iterable objects (that can't be cast
+        # to set())
+        class _NonIterable(object):
+            def __init__(self):
+                self.data = set({1,3,5})
+            def __contains__(self, val):
+                return val in self.data
+            def __len__(self):
+                return len(self.data)
+        # self.assertFalse(SetOf({1,5}).issuperset(_NonIterable()))
+        # self.assertTrue(SetOf({1,3,4,5}).issuperset(_NonIterable()))
 
     def test_unordered_setof(self):
         i = SetOf({1,3,2,0})
@@ -904,3 +956,60 @@ class TestBasicSets(unittest.TestCase):
         self.assertEqual(SetOf([None,1,'a']).bounds(), (None,None))
         self.assertEqual(SetOf(['apple','cat','bear']).bounds(),
                          ('apple','cat'))
+
+        self.assertEqual(
+            RangeSet(ranges=(CNR(0,10,2),CNR(3,20,2))).bounds(),
+            (0,19)
+        )
+        self.assertEqual(
+            RangeSet(ranges=(CNR(None,None,0),CNR(0,10,2))).bounds(),
+            (None,None)
+        )
+        self.assertEqual(
+            RangeSet(ranges=(CNR(100,None,-2),CNR(0,10,2))).bounds(),
+            (None,100)
+        )
+        self.assertEqual(
+            RangeSet(ranges=(CNR(-10,None,2),CNR(0,10,2))).bounds(),
+            (-10,None)
+        )
+        self.assertEqual(
+            RangeSet(ranges=(CNR(0,10,2),CNR(None,None,0))).bounds(),
+            (None,None)
+        )
+        self.assertEqual(
+            RangeSet(ranges=(CNR(0,10,2),CNR(100,None,-2))).bounds(),
+            (None,100)
+        )
+        self.assertEqual(
+            RangeSet(ranges=(CNR(0,10,2),CNR(-10,None,2))).bounds(),
+            (-10,None)
+        )
+
+    def test_dimen(self):
+        self.assertEqual(SetOf([]).dimen, None)
+        self.assertEqual(SetOf([1,2,3]).dimen, 1)
+        self.assertEqual(SetOf([(1,2),(2,3),(4,5)]).dimen, 2)
+        self.assertEqual(SetOf([1,(2,3)]).dimen, None)
+
+    def test_range_iter(self):
+        i = RangeSet(0,10,2)
+        self.assertEqual(tuple(i), (0,2,4,6,8,10))
+
+        i = RangeSet(ranges=(CNR(0,5,2),CNR(6,10,2)))
+        self.assertEqual(tuple(i), (0,2,4,6,8,10))
+
+        i = RangeSet(ranges=(CNR(0,10,2),CNR(0,10,2)))
+        self.assertEqual(tuple(i), (0,2,4,6,8,10))
+
+        i = RangeSet(ranges=(CNR(0,10,2),CNR(10,0,-2)))
+        self.assertEqual(tuple(i), (0,2,4,6,8,10))
+
+        i = RangeSet(ranges=(CNR(0,10,2),CNR(1,10,2)))
+        self.assertEqual(tuple(i), tuple(range(11)))
+
+        i = RangeSet(ranges=(CNR(0,30,10),CNR(12,14,1)))
+        self.assertEqual(tuple(i), (0,10,12,13,14,20,30))
+
+        i = RangeSet(ranges=(CNR(0,0,0),CNR(3,3,0),CNR(2,2,0)))
+        self.assertEqual(tuple(i), (0,2,3))
