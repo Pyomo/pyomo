@@ -21,12 +21,12 @@ else:
         import ordereddict
         _ordered_dict_ = ordereddict.OrderedDict
 try:
-    # python 3.7+
-    from collections.abc import MutableMapping as _MutableMapping
-    from collections.abc import Mapping as _Mapping
+    # python3
+    from collections.abc import MutableMapping as collections_MutableMapping
+    from collections.abc import Mapping as collections_Mapping
 except:                                           #pragma:nocover
-    from collections import MutableMapping as _MutableMapping
-    from collections import Mapping as _Mapping
+    from collections import MutableMapping as collections_MutableMapping
+    from collections import Mapping as collections_Mapping
 
 from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
@@ -45,7 +45,7 @@ logger = logging.getLogger('pyomo.core')
 # closer to a Python 3-only world these types of objects are
 # not memory bottlenecks.
 class DictContainer(IHomogeneousContainer,
-                    _MutableMapping):
+                    collections_MutableMapping):
     """
     A partial implementation of the IHomogeneousContainer
     interface that provides dict-like storage functionality.
@@ -174,7 +174,7 @@ class DictContainer(IHomogeneousContainer,
     # plain dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, _Mapping):
+        if not isinstance(other, collections_Mapping):
             return False
         return dict((key, (type(val), id(val)))
                     for key, val in self.items()) == \

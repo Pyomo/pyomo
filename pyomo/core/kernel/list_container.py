@@ -9,10 +9,10 @@
 #  ___________________________________________________________________________
 
 try:
-    # python 3.7+
-    from collections.abc import MutableSequence as _MutableSequence
+    # python3
+    from collections.abc import MutableSequence as collections_MutableSequence
 except:                                           #pragma:nocover
-    from collections import MutableSequence as _MutableSequence
+    from collections import MutableSequence as collections_MutableSequence
 import logging
 
 from pyomo.core.kernel.tuple_container import TupleContainer
@@ -22,7 +22,7 @@ from six.moves import xrange as range
 logger = logging.getLogger('pyomo.core')
 
 class ListContainer(TupleContainer,
-                    _MutableSequence):
+                    collections_MutableSequence):
     """
     A partial implementation of the IHomogeneousContainer
     interface that provides list-like storage functionality.
