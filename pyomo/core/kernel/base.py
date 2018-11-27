@@ -11,17 +11,17 @@
 import copy
 import weakref
 
-def _not_implemented_property(*args, **kwds):
+def _not_implemented(*args, **kwds):
     raise NotImplementedError("This property is abstract")     #pragma:nocover
 
 def _abstract_readwrite_property(**kwds):
-    p = property(fget=_not_implemented_property,
-                 fset=_not_implemented_property,
+    p = property(fget=_not_implemented,
+                 fset=_not_implemented,
                  **kwds)
     return p
 
 def _abstract_readonly_property(**kwds):
-    p = property(fget=_not_implemented_property,
+    p = property(fget=_not_implemented,
                  **kwds)
     return p
 

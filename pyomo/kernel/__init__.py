@@ -44,6 +44,7 @@ from pyomo.core.kernel.matrix_constraint import \
     matrix_constraint
 from pyomo.core.kernel.parameter import \
     (parameter,
+     functional_value,
      parameter_tuple,
      parameter_list,
      parameter_dict)

@@ -224,7 +224,7 @@ def pprint(obj, indent=0, stream=sys.stdout):
                   % (str(obj), clsname, obj.active, str(obj.expr)))
         elif obj.ctype is pyomo.core.kernel.parameter.IParameter:
             stream.write(prefix+"%s: %s(active=%s, value=%s)\n"
-                  % (str(obj), clsname, obj.active, str(obj.value)))
+                  % (str(obj), clsname, obj.active, str(obj())))
         elif obj.ctype is pyomo.core.kernel.sos.ISOS:
             stream.write(prefix+"%s: %s(active=%s, level=%s, entries=%s)\n"
                   % (str(obj),
