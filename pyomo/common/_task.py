@@ -236,17 +236,28 @@ def pyomo_api(fn=None, implements=None, outputs=None, namespace=None):
 
         if six.PY2:
             argspec = inspect.getargspec(fn)
+            if argspec.keywords is not None:
+                logger.error("Attempting to declare Pyomo task with function "
+                             "'%s' that contains variable keyword arguments" % _alias)
+                return                                      #pragma:nocover
         else:
             argspec = inspect.getfullargspec(fn)
-        if not argspec.varargs is None:
+            if argspec.varkw is not None:
+                logger.error("Attempting to declare Pyomo task with function "
+                             "'%s' that contains variable keyword arguments" % _alias)
+                return                                     #pragma:nocover
+            # Not supporting new keyword-only definitions until someone
+            # who maintains this code decides the code that uses argspec below here
+            # is worth updating. Note that this attribute is an empty list when
+            # there are not keyword-only arguments.
+            if argspec.kwonlyargs:
+                logger.error("Attempting to declare Pyomo task with function "
+                             "'%s' that contains keyword-only arguments" % _alias)
+                return                                      #pragma:nocover
+        if argspec.varargs is not None:
             logger.error("Attempting to declare Pyomo task with function "
                          "'%s' that contains variable arguments" % _alias)
             return                                      #pragma:nocover
-        if not argspec.keywords is None:
-            logger.error("Attempting to declare Pyomo task with function "
-                         "'%s' that contains variable keyword arguments" % _alias)
-            return                                      #pragma:nocover
-
         if _alias in PyomoAPIFactory.services():
             logger.error("Cannot define API %s, since this API name is already defined" % _alias)
             return                                      #pragma:nocover
