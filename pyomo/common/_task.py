@@ -129,7 +129,7 @@ class PyomoTask(PyomoTaskPlugin):
         # Process data
         #
         data = self._kwds.get('data', None)
-        if not data is None and type(data) is dict:
+        if (data is not None) and (type(data) is dict):
             _data = PyomoAPIData()
             _data.update(data)
             self._kwds['data'] = _data
@@ -140,7 +140,7 @@ class PyomoTask(PyomoTaskPlugin):
         def nested_lookup(kwds, lookup):
             lookups = lookup.split('.')
             obj = kwds[lookups[0]]
-            if not data is None and lookups[0] == 'data':
+            if (data is not None) and (lookups[0] == 'data'):
                 data.declare(lookups[1])
             for key in lookups[1:]:
                 #print key, obj
@@ -166,7 +166,7 @@ class PyomoTask(PyomoTaskPlugin):
         #
         # Process retval
         #
-        if retval is None or id(data) == id(retval):
+        if (retval is None) or (id(data) == id(retval)):
             self._retval = PyomoAPIData(data=data)
         elif isinstance(retval, PyomoAPIData):
             if not id(data) == id(retval):
@@ -264,7 +264,7 @@ def pyomo_api(fn=None, implements=None, outputs=None, namespace=None):
             def __init__(self, *args, **kwargs):
                 kwargs['fn'] = fn
                 PyomoTask.__init__(self, *args, **kwargs)
-                if not fn is None:
+                if fn is not None:
                     if len(argspec.args) is 0:
                         nargs = 0
                     elif argspec.defaults is None:
