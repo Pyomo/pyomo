@@ -278,7 +278,30 @@ class TestHeterogeneousContainer(unittest.TestCase):
 
     def test_components(self):
         model = self.model.clone()
-        order = list(str(obj) for obj in model.components())
+        checked = []
+        def descend_into(x):
+            self.assertTrue(x._is_heterogeneous_container)
+            checked.append(x.name)
+            return True
+        order = list(str(obj) for obj in model.components(
+            descend_into=descend_into))
+        self.assertEqual(checked,
+                         ['b',
+                          'B[0]',
+                          'B[1][0]',
+                          'j',
+                          'J[0]',
+                          'J[1][0]',
+                          'J[1][0].b',
+                          'k',
+                          'K[0]',
+                          'K[0].b',
+                          'K[0].B[0]',
+                          'K[0].B[1][0]',
+                          'K[0].j',
+                          'K[0].J[0]',
+                          'K[0].J[1][0]',
+                          'K[0].J[1][0].b'])
         self.assertEqual(order,
                          ['v','V[0]','V[1][0]',
                           'c','C[0]','C[1][0]',
@@ -376,16 +399,21 @@ class TestHeterogeneousContainer(unittest.TestCase):
         def f(x):
             # do not descend below heterogeneous containers
             # stored on self.model
+            self.assertTrue(x._is_heterogeneous_container)
             parent = x.parent
             while parent is not None:
                 if parent is self.model:
                     return False
                 parent = parent.parent
             return True
-        order = list(str(obj) for obj in heterogeneous_containers(
+        order1 = list(str(obj) for obj in heterogeneous_containers(
             self.model,
             descend_into=f))
-        self.assertEqual(order,
+        order2 = list(str(obj) for obj in heterogeneous_containers(
+            self.model,
+            descend_into=lambda x: True if (x is self.model) else False))
+        self.assertEqual(order1, order2)
+        self.assertEqual(order1,
                          ['<block>',
                           'b',
                           'B[0]',
