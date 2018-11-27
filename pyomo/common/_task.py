@@ -16,6 +16,7 @@ __all__ = ['pyomo_api', 'IPyomoTask', 'PyomoAPIFactory', 'PyomoAPIData']
 
 import inspect
 import logging
+import six
 from six import iteritems, with_metaclass
 
 import pyutilib.workflow
@@ -233,7 +234,10 @@ def pyomo_api(fn=None, implements=None, outputs=None, namespace=None):
             _alias =  namespace+'.'+fn.__name__
         _name = _alias.replace('_', '.')
 
-        argspec = inspect.getargspec(fn)
+        if six.PY2:
+            argspec = inspect.getargspec(fn)
+        else:
+            argspec = inspect.getfullargspec(fn)
         if not argspec.varargs is None:
             logger.error("Attempting to declare Pyomo task with function "
                          "'%s' that contains variable arguments" % _alias)
