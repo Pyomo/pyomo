@@ -8,7 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import collections
+try:
+    # python3
+    from collections.abc import MutableMapping as collections_MutableMapping
+    from collections.abc import Set as collections_Set
+except:                                           #pragma:nocover
+    from collections import MutableMapping as collections_MutableMapping
+    from collections import Set as collections_Set
+
 from six import PY3, iteritems, advance_iterator
 
 from pyutilib.misc import flatten_tuple
@@ -105,7 +112,7 @@ class _fill_in_known_wildcards(object):
 class SliceEllipsisLookupError(Exception):
     pass
 
-class _ReferenceDict(collections.MutableMapping):
+class _ReferenceDict(collections_MutableMapping):
     def __init__(self, component_slice):
         self._slice = component_slice
 
@@ -234,7 +241,7 @@ if PY3:
     _ReferenceDict.items = _ReferenceDict.iteritems
     _ReferenceDict.values = _ReferenceDict.itervalues
 
-class _ReferenceSet(collections.Set):
+class _ReferenceSet(collections_Set):
     def __init__(self, ref_dict):
         self._ref = ref_dict
 
