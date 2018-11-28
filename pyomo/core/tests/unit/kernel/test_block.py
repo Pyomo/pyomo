@@ -475,8 +475,16 @@ class TestHeterogeneousContainer(unittest.TestCase):
 
 class TestMisc(unittest.TestCase):
 
+    def test_reserved_attributes(self):
+        b = block()
+        self.assertTrue(len(block._block_reserved_words) > 0)
+        for name in block._block_reserved_words:
+            with self.assertRaises(ValueError):
+                setattr(b, name, 1)
+        with self.assertRaises(AttributeError):
+            b.active = 1
+
     def test_pprint(self):
-        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
@@ -484,22 +492,22 @@ class TestMisc(unittest.TestCase):
         B.s = suffix()
         B.b = block()
         B.v = variable()
-        pyomo.kernel.pprint(B)
+        pmo.pprint(B)
         B.c = constraint()
         B.e = expression()
         B.o = objective()
         B.p = parameter()
         B.s = sos([])
-        pyomo.kernel.pprint(B)
+        pmo.pprint(B)
         b = block()
         b.B = B
-        pyomo.kernel.pprint(B)
-        pyomo.kernel.pprint(b)
+        pmo.pprint(B)
+        pmo.pprint(b)
         m = block()
         m.b = b
-        pyomo.kernel.pprint(B)
-        pyomo.kernel.pprint(b)
-        pyomo.kernel.pprint(m)
+        pmo.pprint(B)
+        pmo.pprint(b)
+        pmo.pprint(m)
 
     def test_ctype(self):
         b = block()

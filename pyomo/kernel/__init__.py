@@ -229,3 +229,7 @@ def _type(self):
     return self._ctype
 ICategorizedObject.type = _type
 del ICategorizedObject
+
+# update the reserved block attributes now that
+# new hacked methods have been placed on blocks
+block._refresh_block_reserved_words()
