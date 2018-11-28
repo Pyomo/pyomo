@@ -8,18 +8,17 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-try:
-    # python 3.7+
-    from collections.abc import MutableMapping as _MutableMapping
-    from collections.abc import Mapping as _Mapping
-except:                                           #pragma:nocover
-    from collections import MutableMapping as _MutableMapping
-    from collections import Mapping as _Mapping
-
 import six
 from six import itervalues
 
-class ComponentMap(_MutableMapping):
+if six.PY3:
+    from collections.abc import MutableMapping as collections_MutableMapping
+    from collections.abc import Mapping as collections_Mapping
+else:
+    from collections import MutableMapping as collections_MutableMapping
+    from collections import Mapping as collections_Mapping
+
+class ComponentMap(collections_MutableMapping):
     """
     This class is a replacement for dict that allows Pyomo
     modeling components to be used as entry keys. The
@@ -132,7 +131,7 @@ class ComponentMap(_MutableMapping):
     # plain dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, _Mapping):
+        if not isinstance(other, collections_Mapping):
             return False
         return dict(((type(key), id(key)), val)
                     for key, val in self.items()) == \
