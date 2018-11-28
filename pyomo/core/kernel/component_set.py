@@ -8,16 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-try:
-    # python3
-    from collections.abc import MutableSet as collections_MutableSet
-    from collections.abc import Set as collections_Set
-except:                                           #pragma:nocover
-    from collections import MutableSet as collections_MutableSet
-    from collections import Set as collections_Set
-
 import six
 from six import itervalues, iteritems
+
+if six.PY3:
+    from collections.abc import MutableSet as collections_MutableSet
+    from collections.abc import Set as collections_Set
+else:
+    from collections import MutableSet as collections_MutableSet
+    from collections import Set as collections_Set
 
 class ComponentSet(collections_MutableSet):
     """

@@ -8,16 +8,17 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-try:
-    # python3
-    from collections.abc import MutableSequence as collections_MutableSequence
-except:                                           #pragma:nocover
-    from collections import MutableSequence as collections_MutableSequence
 import logging
 
 from pyomo.core.kernel.tuple_container import TupleContainer
 
+import six
 from six.moves import xrange as range
+
+if six.PY3:
+    from collections.abc import MutableSequence as collections_MutableSequence
+else:
+    from collections import MutableSequence as collections_MutableSequence
 
 logger = logging.getLogger('pyomo.core')
 

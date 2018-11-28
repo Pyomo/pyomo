@@ -8,16 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-try:
-    # python3
-    from collections.abc import MutableMapping as collections_MutableMapping
-    from collections.abc import Set as collections_Set
-except:                                           #pragma:nocover
-    from collections import MutableMapping as collections_MutableMapping
-    from collections import Set as collections_Set
-
-from six import PY3, iteritems, advance_iterator
-
 from pyutilib.misc import flatten_tuple
 from pyomo.common import DeveloperError
 from pyomo.core.base.sets import SetOf, _SetProduct, _SetDataBase
@@ -28,6 +18,16 @@ from pyomo.core.base.indexed_component import (
 from pyomo.core.base.indexed_component_slice import (
     _IndexedComponent_slice, _IndexedComponent_slice_iter
 )
+
+import six
+from six import iteritems, advance_iterator
+
+if six.PY3:
+    from collections.abc import MutableMapping as collections_MutableMapping
+    from collections.abc import Set as collections_Set
+else:
+    from collections import MutableMapping as collections_MutableMapping
+    from collections import Set as collections_Set
 
 _NotSpecified = object()
 
@@ -237,7 +237,7 @@ class _ReferenceDict(collections_MutableMapping):
         return _IndexedComponent_slice_iter(
             _slice, _fill_in_known_wildcards(flatten_tuple(key)))
 
-if PY3:
+if six.PY3:
     _ReferenceDict.items = _ReferenceDict.iteritems
     _ReferenceDict.values = _ReferenceDict.itervalues
 

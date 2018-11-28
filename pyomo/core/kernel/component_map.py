@@ -8,16 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-try:
-    # python3
-    from collections.abc import MutableMapping as collections_MutableMapping
-    from collections.abc import Mapping as collections_Mapping
-except:                                           #pragma:nocover
-    from collections import MutableMapping as collections_MutableMapping
-    from collections import Mapping as collections_Mapping
-
 import six
 from six import itervalues
+
+if six.PY3:
+    from collections.abc import MutableMapping as collections_MutableMapping
+    from collections.abc import Mapping as collections_Mapping
+else:
+    from collections import MutableMapping as collections_MutableMapping
+    from collections import Mapping as collections_Mapping
 
 class ComponentMap(collections_MutableMapping):
     """

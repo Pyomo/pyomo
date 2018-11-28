@@ -9,18 +9,19 @@
 #  ___________________________________________________________________________
 
 import weakref
-try:
-    # python3
-    from collections.abc import Sequence as collections_Sequence
-    from collections.abc import Set as collections_Set
-except:                                           #pragma:nocover
-    from collections import Sequence as collections_Sequence
-    from collections import Set as collections_Set
 
 from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 
+import six
 from six.moves import xrange as range
+
+if six.PY3:
+    from collections.abc import Sequence as collections_Sequence
+    from collections.abc import Set as collections_Set
+else:
+    from collections import Sequence as collections_Sequence
+    from collections import Set as collections_Set
 
 class TupleContainer(IHomogeneousContainer,
                      collections_Sequence):
