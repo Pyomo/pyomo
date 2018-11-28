@@ -76,6 +76,21 @@ class block(IBlock):
 
     _lbs_count = 4
     _ctype = IBlock
+    _block_reserved_words = set()
+
+    @staticmethod
+    def _refresh_block_reserved_words():
+        block._block_reserved_words = set(dir(block()))
+        # these private attributes are frequently modified
+        block._block_reserved_words.remove('_parent')
+        block._block_reserved_words.remove('_storage_key')
+        block._block_reserved_words.remove('_active')
+        block._block_reserved_words.remove('_byctype')
+        block._block_reserved_words.remove('_order')
+        # this is protected because it is
+        # defined as a property with a setter
+        # that explicitly disallows this
+        block._block_reserved_words.remove('active')
 
     def __init__(self):
         # bypass __setatrr__ for this class
@@ -171,6 +186,9 @@ class block(IBlock):
     #
 
     def __setattr__(self, name, obj):
+        if name in self._block_reserved_words:
+            raise ValueError("Attempting to modify a reserved "
+                             "block attribute: %s" % (name,))
         needs_del = False
         same_obj = False
         if name in self._order:
@@ -500,3 +518,7 @@ class block(IBlock):
 define_simple_containers(globals(),
                          "block",
                          IBlock)
+
+# populate the initial set of reserved block attributes so
+# that users can not overwrite them when building a model
+block._refresh_block_reserved_words()
