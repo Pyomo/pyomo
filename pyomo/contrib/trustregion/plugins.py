@@ -7,7 +7,7 @@ from pyomo.opt.base import SolverFactory, OptSolver
 from pyomo.solvers.plugins.solvers.ASL import ASL
 
 from pyutilib.misc.config import ConfigBlock, ConfigValue
-from pyomo.util.config import ( 
+from pyomo.common.config import ( 
     PositiveInt, PositiveFloat, NonNegativeFloat, In)
 from pyomo.core import Var, value
 
@@ -41,9 +41,13 @@ class TrustRegionSolver(OptSolver):
 
     CONFIG = ConfigBlock('Trust Region')
 
+    CONFIG.declare('solver', ConfigValue(
+        default='ipopt',
+        description='solver to use, defaults to ipopt',
+        doc = ''))
+
     CONFIG.declare('type', ConfigValue(
         default = 'trustregion',
-        domain = str,
         description = '',
         doc = ''))
 
@@ -218,7 +222,7 @@ class TrustRegionSolver(OptSolver):
     CONFIG.declare('print variables', ConfigValue(
         default = False,
         domain = bool,
-        description = 'TODO: remove??',
+        description = '',
         doc = ''))
 
     # Sample Radius reset parameter
@@ -238,11 +242,22 @@ class TrustRegionSolver(OptSolver):
     def __init__(self, **kwds):
         # set persistent config options
         self.config = self.CONFIG(kwds)
+        #print(self.config.value())
 
         #
         # Call base class constructor
         #
-        #OptSolver.__init__(self, self.config.iteritems())
+ 
+        kwds['type'] = 'trustregion'
+        kwds['solver'] = 'ipopt'
+        #print(kwds)
+        OptSolver.__init__(self, **kwds)
+
+        #OptSolver.__init__(self, self.config.value())
+
+
+        #self.config.solver = 'ipopt'
+        #self.config.type = 'trustregion'
 
 
     def available(self, exception_flag=True):

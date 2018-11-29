@@ -3,7 +3,7 @@
 import pyutilib.th as unittest
 
 from pyutilib.misc.config import ConfigBlock, ConfigValue, ConfigList
-from pyomo.util.config import ( 
+from pyomo.common.config import ( 
     PositiveInt, PositiveFloat, NonNegativeFloat, In)
 from pyomo.core import Var, value
 
@@ -48,7 +48,7 @@ class TestTrustRegionConfigBlock(unittest.TestCase):
         return status
 
 
-    def test1(self):
+    def test_config_vars(self):
 
         # Initialized with 1.0
         self.optTRF = SolverFactory('trustregion')
@@ -61,7 +61,7 @@ class TestTrustRegionConfigBlock(unittest.TestCase):
         self.assertEqual(self.optTRF._local_config.trust_radius, 1.0)
 
 
-    def test2(self):
+    def test_solve_with_new_kwdval(self):
 
         # Initialized with 1.0
         self.optTRF = SolverFactory('trustregion')
@@ -74,7 +74,7 @@ class TestTrustRegionConfigBlock(unittest.TestCase):
         self.assertEqual(self.optTRF._local_config.trust_radius, 2.0)
 
     
-    def test3(self):
+    def test_update_kwdval(self):
 
         # Initialized with 1.0  
         self.optTRF = SolverFactory('trustregion')
@@ -88,7 +88,7 @@ class TestTrustRegionConfigBlock(unittest.TestCase):
         self.assertEqual(self.optTRF._local_config.trust_radius, 4.0)
 
 
-    def test4(self):
+    def test_update_kwdval_solve_with_new_kwdval(self):
 
         # Initialized with 1.0  
         self.optTRF = SolverFactory('trustregion')
@@ -105,7 +105,7 @@ class TestTrustRegionConfigBlock(unittest.TestCase):
         self.assertEqual(self.optTRF._local_config.trust_radius, 2.0)
     
 
-    def test5(self):
+    def test_initialize_with_kwdval(self):
 
         # Initialized with 3.0
         self.optTRF = SolverFactory('trustregion', trust_radius=3.0)
@@ -118,7 +118,7 @@ class TestTrustRegionConfigBlock(unittest.TestCase):
         self.assertEqual(self.optTRF._local_config.trust_radius, 3.0)
         
 
-    def test6(self):
+    def initialize_with_kwdval_solve_with_new_kwdval(self):
 
         # Initialized with 3.0
         self.optTRF = SolverFactory('trustregion', trust_radius=3.0)

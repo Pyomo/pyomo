@@ -2,7 +2,6 @@ import numpy as np
 from math import pow
 from numpy import inf
 from numpy.linalg import norm
-from pyomo.contrib.trustregion.param import *
 from pyomo.contrib.trustregion.filterMethod import (
     FilterElement, Filter)
 from pyomo.contrib.trustregion.helper import (cloneXYZ, packXYZ,
@@ -90,7 +89,8 @@ def TRF(m, eflist, config):
                 raise Exception("Criticality Check fails!\n")
 
         # Save the iteration information to the logger
-        logger.newIter(iteration,xk,yk,zk,thetak,objk,chik)
+        logger.newIter(iteration,xk,yk,zk,thetak,objk,chik,
+                       config.print_variables)
 
         # Check for Termination
         if (thetak < config.ep_i and

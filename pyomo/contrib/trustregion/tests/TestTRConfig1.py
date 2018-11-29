@@ -3,7 +3,7 @@
 import pyutilib.th as unittest
 
 from pyutilib.misc.config import ConfigBlock, ConfigValue, ConfigList
-from pyomo.util.config import ( 
+from pyomo.common.config import ( 
     PositiveInt, PositiveFloat, NonNegativeFloat, In)
 from pyomo.core import Var, value
 
