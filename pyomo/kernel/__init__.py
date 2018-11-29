@@ -71,6 +71,7 @@ from pyomo.core.kernel.sos import \
      sos_dict)
 from pyomo.core.kernel.suffix import \
     (suffix,
+     suffix_dict,
      export_suffix_generator,
      import_suffix_generator,
      local_suffix_generator,
