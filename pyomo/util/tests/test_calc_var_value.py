@@ -12,6 +12,7 @@ import pyutilib.th as unittest
 
 from pyomo.environ import ConcreteModel, Var, Constraint, value
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
+from pyomo.core.base.symbolic import _sympy_available
 
 class Test_calc_var(unittest.TestCase):
     def test_initialize_value(self):
@@ -61,6 +62,7 @@ class Test_calc_var(unittest.TestCase):
         calculate_variable_from_constraint(m.x, m.c)
         self.assertEqual(value(m.x), 2)
 
+    @unittest.skipIf(not _sympy_available, "this test requires sympy")
     def test_nonlinear(self):
         m = ConcreteModel()
         m.x = Var()
