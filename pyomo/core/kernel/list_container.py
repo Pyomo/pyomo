@@ -60,11 +60,8 @@ class ListContainer(TupleContainer,
                     % (self[i].name,
                        self[i].__class__.__name__,
                        item.__class__.__name__))
-                obj_ = self._data[i]
-                item._parent = obj_._parent
-                item._storage_key = obj_._storage_key
-                obj_._parent = None
-                obj_._storage_key = None
+                self._data[i]._clear_parent_and_storage_key()
+                item._update_parent_and_storage_key(self, i)
                 self._data[i] = item
                 return
             elif self._data[i] is item:
@@ -99,9 +96,7 @@ class ListContainer(TupleContainer,
         self._insert(i, item)
 
     def __delitem__(self, i):
-        obj = self._data[i]
-        obj._parent = None
-        obj._storage_key = None
+        self._data[i]._clear_parent_and_storage_key()
         del self._data[i]
 
     #

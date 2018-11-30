@@ -481,6 +481,12 @@ class TestMisc(unittest.TestCase):
         for name in block._block_reserved_words:
             with self.assertRaises(ValueError):
                 setattr(b, name, 1)
+        with self.assertRaises(ValueError):
+            b._active = 1
+        with self.assertRaises(ValueError):
+            b._parent = 1
+        with self.assertRaises(ValueError):
+            b._storage_key = 1
         with self.assertRaises(AttributeError):
             b.active = 1
 

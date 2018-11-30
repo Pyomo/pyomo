@@ -110,13 +110,27 @@ class ICategorizedObject(object):
             "Assignment not allowed. Use the "
             "(de)activate method")
 
+    ### The following group of methods use object.__setattr__
+    ### to update the _parent, _storage_key, and _active flags.
+    ### This is done to allow the block implementation (block.py)
+    ### to protect them from being overwritten with user added
+    ### components in its __setattr__ method
+    def _update_parent_and_storage_key(self, parent, key):
+        object.__setattr__(self, "_parent", weakref.ref(parent))
+        object.__setattr__(self, "_storage_key", key)
+
+    def _clear_parent_and_storage_key(self):
+        object.__setattr__(self, "_parent", None)
+        object.__setattr__(self, "_storage_key", None)
+
     def activate(self):
         """Activate this object."""
-        self._active = True
+        object.__setattr__(self, "_active", True)
 
     def deactivate(self):
         """Deactivate this object."""
-        self._active = False
+        object.__setattr__(self, "_active", False)
+    ###
 
     def getname(self,
                 fully_qualified=False,
@@ -201,13 +215,14 @@ class ICategorizedObject(object):
         descendents of this object will reference the same
         object on the clone.
         """
-        save_parent, self._parent = self._parent, None
+        save_parent = self._parent
+        object.__setattr__(self, "_parent", None)
         try:
             new_block = copy.deepcopy(self,
                                       {'__categorized_object_scope__':
                                        {id(self): True, id(None): False}})
         finally:
-            self._parent = save_parent
+            object.__setattr__(self, "_parent", save_parent)
         return new_block
 
     #
@@ -272,7 +287,8 @@ class ICategorizedObject(object):
         # make sure _parent is a weakref
         # if it is not None
         if self._parent is not None:
-            self._parent = weakref.ref(self._parent)
+            self._update_parent_and_storage_key(self._parent,
+                                                self._storage_key)
 
 class ICategorizedObjectContainer(ICategorizedObject):
     """
