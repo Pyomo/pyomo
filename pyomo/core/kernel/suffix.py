@@ -10,9 +10,6 @@
 
 import logging
 
-import pyutilib.math
-
-from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
      _abstract_readwrite_property,
@@ -21,8 +18,6 @@ from pyomo.core.kernel.dict_container import DictContainer
 from pyomo.core.kernel.container_utils import \
     define_homogeneous_container_type
 from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.set_types import (RealSet,
-                                         IntegerSet)
 
 import six
 
@@ -210,7 +205,7 @@ class suffix(ISuffix):
 
 def export_suffix_generator(blk,
                             datatype=_noarg,
-                            active=None,
+                            active=True,
                             descend_into=True):
     """
     Generates an efficient traversal of all suffixes that
@@ -221,18 +216,20 @@ def export_suffix_generator(blk,
         datatype: Restricts the suffixes included in the
             returned generator to those matching the
             provided suffix datatype.
-        active (:const:`True`/:const:`None`): Set to
-            :const:`True` to indicate that only active
-            suffixes should be included. The default value
-            of :const:`None` indicates that all suffixes
-            (including those that have been deactivated)
-            should be included.
-        descend_into (bool): Indicates whether or not to
-            include suffixes on sub-blocks. Default is
-            :const:`True`.
+        active (:const:`True`/:const:`None`): Controls
+            whether or not to filter the iteration to
+            include only the active part of the storage
+            tree. The default is :const:`True`. Setting this
+            keyword to :const:`None` causes the active
+            status of objects to be ignored.
+        descend_into (bool, function): Indicates whether or
+            not to descend into a heterogeneous
+            container. Default is True, which is equivalent
+            to `lambda x: True`, meaning all heterogeneous
+            containers will be descended into.
 
     Returns:
-        iterator of suffixes or (key,suffix) tuples
+        iterator of suffixes
     """
     for suf in filter(lambda x: (x.export_enabled and \
                                  ((datatype is _noarg) or \
@@ -244,7 +241,7 @@ def export_suffix_generator(blk,
 
 def import_suffix_generator(blk,
                             datatype=_noarg,
-                            active=None,
+                            active=True,
                             descend_into=True):
     """
     Generates an efficient traversal of all suffixes that
@@ -255,18 +252,20 @@ def import_suffix_generator(blk,
         datatype: Restricts the suffixes included in the
             returned generator to those matching the
             provided suffix datatype.
-        active (:const:`True`/:const:`None`): Set to
-            :const:`True` to indicate that only active
-            suffixes should be included. The default value
-            of :const:`None` indicates that all suffixes
-            (including those that have been deactivated)
-            should be included.
-        descend_into (bool): Indicates whether or not to
-            include suffixes on sub-blocks. Default is
-            :const:`True`.
+        active (:const:`True`/:const:`None`): Controls
+            whether or not to filter the iteration to
+            include only the active part of the storage
+            tree. The default is :const:`True`. Setting this
+            keyword to :const:`None` causes the active
+            status of objects to be ignored.
+        descend_into (bool, function): Indicates whether or
+            not to descend into a heterogeneous
+            container. Default is True, which is equivalent
+            to `lambda x: True`, meaning all heterogeneous
+            containers will be descended into.
 
     Returns:
-        iterator of suffixes or (key,suffix) tuples
+        iterator of suffixes
     """
     for suf in filter(lambda x: (x.import_enabled and \
                                  ((datatype is _noarg) or \
@@ -278,7 +277,7 @@ def import_suffix_generator(blk,
 
 def local_suffix_generator(blk,
                            datatype=_noarg,
-                           active=None,
+                           active=True,
                            descend_into=True):
     """
     Generates an efficient traversal of all suffixes that
@@ -289,18 +288,20 @@ def local_suffix_generator(blk,
         datatype: Restricts the suffixes included in the
             returned generator to those matching the
             provided suffix datatype.
-        active (:const:`True`/:const:`None`): Set to
-            :const:`True` to indicate that only active
-            suffixes should be included. The default value
-            of :const:`None` indicates that all suffixes
-            (including those that have been deactivated)
-            should be included.
-        descend_into (bool): Indicates whether or not to
-            include suffixes on sub-blocks. Default is
-            :const:`True`.
+        active (:const:`True`/:const:`None`): Controls
+            whether or not to filter the iteration to
+            include only the active part of the storage
+            tree. The default is :const:`True`. Setting this
+            keyword to :const:`None` causes the active
+            status of objects to be ignored.
+        descend_into (bool, function): Indicates whether or
+            not to descend into a heterogeneous
+            container. Default is True, which is equivalent
+            to `lambda x: True`, meaning all heterogeneous
+            containers will be descended into.
 
     Returns:
-        iterator of suffixes or (key,suffix) tuples
+        iterator of suffixes
     """
     for suf in filter(lambda x: (x.direction is suffix.LOCAL and \
                                  ((datatype is _noarg) or \
@@ -312,7 +313,7 @@ def local_suffix_generator(blk,
 
 def suffix_generator(blk,
                      datatype=_noarg,
-                     active=None,
+                     active=True,
                      descend_into=True):
     """
     Generates an efficient traversal of all suffixes that
@@ -323,18 +324,20 @@ def suffix_generator(blk,
         datatype: Restricts the suffixes included in the
             returned generator to those matching the
             provided suffix datatype.
-        active (:const:`True`/:const:`None`): Set to
-            :const:`True` to indicate that only active
-            suffixes should be included. The default value
-            of :const:`None` indicates that all suffixes
-            (including those that have been deactivated)
-            should be included.
-        descend_into (bool): Indicates whether or not to
-            include suffixes on sub-blocks. Default is
-            :const:`True`.
+        active (:const:`True`/:const:`None`): Controls
+            whether or not to filter the iteration to
+            include only the active part of the storage
+            tree. The default is :const:`True`. Setting this
+            keyword to :const:`None` causes the active
+            status of objects to be ignored.
+        descend_into (bool, function): Indicates whether or
+            not to descend into a heterogeneous
+            container. Default is True, which is equivalent
+            to `lambda x: True`, meaning all heterogeneous
+            containers will be descended into.
 
     Returns:
-        iterator of suffixes or (key,suffix) tuples
+        iterator of suffixes
     """
     for suf in filter(lambda x: ((datatype is _noarg) or \
                                  (x.datatype is datatype)),

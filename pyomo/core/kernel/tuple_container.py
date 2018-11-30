@@ -8,8 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import weakref
-
 from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 
@@ -58,8 +56,7 @@ class TupleContainer(IHomogeneousContainer,
                 self._insert(len(self), item)
 
     def _fast_insert(self, i, item):
-        item._parent = weakref.ref(self)
-        item._storage_key = i
+        item._update_parent_and_storage_key(self, i)
         self._data.insert(i, item)
 
     def _insert(self, i, item):
