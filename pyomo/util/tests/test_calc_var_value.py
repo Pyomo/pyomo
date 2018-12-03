@@ -10,7 +10,7 @@
 
 import pyutilib.th as unittest
 
-from pyomo.environ import ConcreteModel, Var, Constraint, value
+from pyomo.environ import ConcreteModel, Var, Constraint, value, exp
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.core.base.symbolic import _sympy_available
 
@@ -66,12 +66,41 @@ class Test_calc_var(unittest.TestCase):
     def test_nonlinear(self):
         m = ConcreteModel()
         m.x = Var()
-        m.c = Constraint(expr=m.x**2 == 16)
 
-        calculate_variable_from_constraint(m.x, m.c)
+        m.c = Constraint(expr=m.x**2 == 16)
+        m.x.set_value(1.0) # set an initial value
+        calculate_variable_from_constraint(m.x, m.c, linesearch=False)
         self.assertAlmostEqual(value(m.x), 4)
 
+        # test that infeasible constraint throws error
         m.d = Constraint(expr=m.x**2 == -1)
+        m.x.set_value(1.25) # set the initial value
         with self.assertRaisesRegexp(
-                RuntimeError, 'Iteration limit \(10\) reached'):
-            calculate_variable_from_constraint(m.x, m.d, iterlim=10)
+               RuntimeError, 'Iteration limit \(10\) reached'):
+           calculate_variable_from_constraint(m.x, m.d, iterlim=10, linesearch=False)
+
+        # same problem should throw a linesearch error if linesearch is on
+        m.x.set_value(1.25) # set the initial value
+        with self.assertRaises(RuntimeError):
+           calculate_variable_from_constraint(m.x, m.d, iterlim=10, linesearch=True)
+
+
+        # should succeed with or without a linesearch
+        m.e = Constraint(expr=(m.x - 2.0)**2 - 1 == 0)
+        m.x.set_value(3.1)
+        calculate_variable_from_constraint(m.x, m.e, linesearch=False)
+
+        m.x.set_value(3.1)
+        calculate_variable_from_constraint(m.x, m.e, linesearch=True)
+
+
+        # we expect this to succeed with the linesearch
+        m.e = Constraint(expr=1.0/(1.0+exp(-m.x))-0.5 == 0)
+        m.x.set_value(3.0)
+        calculate_variable_from_constraint(m.x, m.e, linesearch=True)
+
+        # we expect this to fail without a linesearch
+        m.x.set_value(3.0)
+        with self.assertRaises(RuntimeError):
+            calculate_variable_from_constraint(m.x, m.e, linesearch=False)
+
