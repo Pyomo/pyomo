@@ -79,7 +79,7 @@ The following code defines a class for building a convex second-order cone const
 Reduced Memory Usage
 ^^^^^^^^^^^^^^^^^^^^
 
-The :python:`pyomo.kernel` library offers significant opportunities to reduce memory requirements for highly structured models. The situation where this is most apparent is when expressing a model in terms of many small blocks consisting of singleton components. As an example consider expressing a model consisting of a large number of voltage transformers. One option for doing so might be to define a `Transformer` component as a subclass of :python:`pyomo.kernel.block`. The example below defines such a component, including some helper methods for connecting input and output voltage variables and updating the transformer ratio.
+The :python:`pyomo.kernel` library offers significant opportunities to reduce memory requirements for highly structured models. The situation where this is most apparent is when expressing a model in terms of many small blocks consisting of singleton components. As an example, consider expressing a model consisting of a large number of voltage transformers. One option for doing so might be to define a `Transformer` component as a subclass of :python:`pyomo.kernel.block`. The example below defines such a component, including some helper methods for connecting input and output voltage variables and updating the transformer ratio.
 
 .. literalinclude:: examples/transformer_kernel.spy
    :language: python
