@@ -1,0 +1,7 @@
+def cd_(m,i,j):
+    return m.vd[i] == j
+m.cd = aml.Constraint(m.s,
+                      m.q,
+                      rule=cd_)
+
+

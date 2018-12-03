@@ -1,0 +1,4 @@
+def od_(m, i):
+    return -m.vd[i]
+m.od = aml.Objective(m.s,
+                     rule=od_)

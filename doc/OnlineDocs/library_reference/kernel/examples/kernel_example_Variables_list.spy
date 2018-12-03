@@ -1,0 +1,6 @@
+# used 0-based indexing
+m.vl = pmo.variable_list()
+for j in m.q:
+    m.vl.append(
+        pmo.variable(lb=i))
+
