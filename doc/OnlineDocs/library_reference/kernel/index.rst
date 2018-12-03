@@ -3,7 +3,7 @@
 
 .. warning::
 
-   The :python:`pyomo.kernel` API has not yet been approved by the core developer team. It is fully tested and functional, however, the interface maybe change as it becomes integrated with the rest of Pyomo.
+   The :python:`pyomo.kernel` API has not yet been approved by the core developer team. It is fully tested and functional, however, the interface may change as it becomes integrated with the rest of Pyomo.
 
 .. note::
 
