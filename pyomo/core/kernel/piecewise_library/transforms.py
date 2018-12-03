@@ -340,7 +340,7 @@ class PiecewiseLinearFunction(object):
         if i == 0:
             xP = _value(self.breakpoints[i])
             if xP == x:
-                return _value(self.values[i])
+                return float(_value(self.values[i]))
         elif i != len(self.breakpoints):
             xL = _value(self.breakpoints[i-1])
             xU = _value(self.breakpoints[i])
