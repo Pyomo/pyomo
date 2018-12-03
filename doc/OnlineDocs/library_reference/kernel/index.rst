@@ -56,7 +56,7 @@ The existing components and containers in :python:`pyomo.kernel` are designed to
 
 The next series of coding examples go into more detail on how to implement derived components or containers.
 
-The following code block shows a class definition for a non-negative variable, starting from :python:`pyomo.core.variable` as a base class.
+The following code block shows a class definition for a non-negative variable, starting from :python:`pyomo.kernel.variable` as a base class.
 
 .. literalinclude:: examples/kernel_subclassing_Nonnegative.spy
    :language: python
