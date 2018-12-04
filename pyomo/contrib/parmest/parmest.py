@@ -258,14 +258,18 @@ class ParmEstimator(object):
     ----------
     gmodel_file : `string`
         Name of py file that has the gmodel_maker function
-    gmodel_maker: `string`
-        Name if function that makes a concrete pyomo model (gmodel) 
-        that is solved for g for a given scenario
+    gmodel_maker: `string` or `function`
+        Refers to the function that returns a concrete pyomo model 
+        (gmodel) that is solved for g for a given scenario.
+        If `string` then the name of a function in the file
+        given by `gmodel_file`.
+        If `function` then it is the function that is called
+        and `gmodel_file` is ignored.
     qName: `string`
         The name of the `Expression` (or) `Var` in gmodel that has q 
         after optimization 
     numbers_list: `list` of `int`: 
-        Numbers to name experiments (or Samples) 
+        Numbers to specify the experiments (or Samples) 
         (indexes based on this are 1-based)
     thetalist: `list` of `string`
         List of component names (Vars or mutable Params) in gmodel.
@@ -278,10 +282,8 @@ class ParmEstimator(object):
                  gmodel_maker, qName, numbers_list, thetalist,
                  cb_data = None,
                  tee=False):
-        # NOTE: as of Dec 2017 this needs to be able to
-        #       take a string with a number suffix....
-        self.gmodel_file = gmodel_file
-        self.gmodel_maker = gmodel_maker
+        self.gmodel_file = gmodel_file # passed through to rapper
+        self.gmodel_maker = gmodel_maker  # passed through to rapper
         self.qName = qName
         self.numbers_list = numbers_list
         self.thetalist = thetalist
