@@ -1,0 +1,224 @@
+6 Set Declarations
+    cd_index : Dim=0, Dimen=2, Size=6, Domain=None, Ordered=True, Bounds=None
+        Virtual
+    cl_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        [1, 2, 3]
+    ol_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        [1, 2, 3]
+    s : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=Insertion, Bounds=(1, 2)
+        [1, 2]
+    sd_index : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=(1, 2)
+        [1, 2]
+    vl_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        [1, 2, 3]
+
+1 RangeSet Declarations
+    q : Dim=0, Dimen=1, Size=3, Domain=Integers, Ordered=True, Bounds=(1, 3)
+        Virtual
+
+2 Param Declarations
+    p : Size=1, Index=None, Domain=Any, Default=None, Mutable=True
+        Key  : Value
+        None :     0
+    pd : Size=2, Index=s, Domain=Any, Default=None, Mutable=True
+        Key : Value
+          1 :     0
+          2 :     1
+
+4 Var Declarations
+    f : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+    v : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     1 :   1.0 :     4 : False : False :  Reals
+    vd : Size=2, Index=s
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :  None :  None :     9 : False :  True :  Reals
+          2 :  None :  None :     9 : False :  True :  Reals
+    vl : Size=3, Index=vl_index
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :     1 :  None :  None : False :  True :  Reals
+          2 :     2 :  None :  None : False :  True :  Reals
+          3 :     3 :  None :  None : False :  True :  Reals
+
+2 Expression Declarations
+    e : Size=1, Index=None
+        Key  : Expression
+        None : - v
+    ed : Size=2, Index=s
+        Key : Expression
+          1 : - vd[1]
+          2 : - vd[2]
+
+3 Objective Declarations
+    o : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : - v
+    od : Size=2, Index=s, Active=True
+        Key : Active : Sense    : Expression
+          1 :   True : minimize : - vd[1]
+          2 :   True : minimize : - vd[2]
+    ol : Size=3, Index=ol_index, Active=True
+        Key : Active : Sense    : Expression
+          1 :   True : minimize : - vl[1]
+          2 :   True : minimize : - vl[2]
+          3 :   True : minimize : - vl[3]
+
+3 Constraint Declarations
+    c : Size=1, Index=None, Active=True
+        Key  : Lower : Body          : Upper : Active
+        None :  -Inf : vd[1] + vd[2] :   9.0 :   True
+    cd : Size=6, Index=cd_index, Active=True
+        Key    : Lower : Body  : Upper : Active
+        (1, 1) :   1.0 : vd[1] :   1.0 :   True
+        (1, 2) :   2.0 : vd[1] :   2.0 :   True
+        (1, 3) :   3.0 : vd[1] :   3.0 :   True
+        (2, 1) :   1.0 : vd[2] :   1.0 :   True
+        (2, 2) :   2.0 : vd[2] :   2.0 :   True
+        (2, 3) :   3.0 : vd[2] :   3.0 :   True
+    cl : Size=3, Index=cl_index, Active=True
+        Key : Lower : Body      : Upper : Active
+          1 :  -5.0 : vl[1] - v :   5.0 :   True
+          2 :  -5.0 : vl[2] - v :   5.0 :   True
+          3 :  -5.0 : vl[3] - v :   5.0 :   True
+
+3 SOSConstraint Declarations
+   sd : 	Size=2 	Index= sd_index
+	1
+		Type=1
+		Weight : Variable
+		1 : vd[1]
+		2 : vd[2]
+	2
+		Type=1
+		Weight : Variable
+		1 : vl[1]
+		2 : vl[2]
+		3 : vl[3]
+   sos1 : 	Size=1 
+		Type=1
+		Weight : Variable
+		1 : vl[1]
+		2 : vl[2]
+		3 : vl[3]
+   sos2 : 	Size=1 
+		Type=2
+		Weight : Variable
+		1 : vd[1]
+		2 : vd[2]
+
+2 Block Declarations
+    b : Size=1, Index=None, Active=True
+        0 Declarations: 
+    2 Set Declarations
+        SOS2_constraint_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+            [1, 2, 3]
+        SOS2_y_index : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=(0, 3)
+            [0, 1, 2, 3]
+
+    1 Var Declarations
+        SOS2_y : Size=4, Index=pw.SOS2_y_index
+            Key : Lower : Value : Upper : Fixed : Stale : Domain
+              0 :     0 :  None :  None : False :  True : NonNegativeReals
+              1 :     0 :  None :  None : False :  True : NonNegativeReals
+              2 :     0 :  None :  None : False :  True : NonNegativeReals
+              3 :     0 :  None :  None : False :  True : NonNegativeReals
+
+    1 Constraint Declarations
+        SOS2_constraint : Size=3, Index=pw.SOS2_constraint_index, Active=True
+            Key : Lower : Body                                                                  : Upper : Active
+              1 :   0.0 : v - (pw.SOS2_y[0] + 2*pw.SOS2_y[1] + 3*pw.SOS2_y[2] + 4*pw.SOS2_y[3]) :   0.0 :   True
+              2 :   0.0 :   f - (pw.SOS2_y[0] + 2*pw.SOS2_y[1] + pw.SOS2_y[2] + 2*pw.SOS2_y[3]) :   0.0 :   True
+              3 :   1.0 :             pw.SOS2_y[0] + pw.SOS2_y[1] + pw.SOS2_y[2] + pw.SOS2_y[3] :   1.0 :   True
+
+    1 SOSConstraint Declarations
+   SOS2_sosconstraint : 	Size=1 
+		Type=2
+		Weight : Variable
+		1 : pw.SOS2_y[0]
+		2 : pw.SOS2_y[1]
+		3 : pw.SOS2_y[2]
+		4 : pw.SOS2_y[3]
+
+    5 Declarations: SOS2_y_index SOS2_y SOS2_constraint_index SOS2_constraint SOS2_sosconstraint
+
+1 Suffix Declarations
+    dual : Direction=Suffix.IMPORT, Datatype=Suffix.FLOAT
+        Key : Value
+
+27 Declarations: b s q p pd v vd vl_index vl c cd_index cd cl_index cl e ed o od ol_index ol sos1 sos2 sd_index sd dual f pw
+<block>: block(active=True, ctype=IBlock)
+  - b: block(active=True, ctype=IBlock)
+  - p: parameter(active=True, value=0)
+  - pd: parameter_dict(active=True, ctype=IParameter)
+   - pd[1]: parameter(active=True, value=0)
+   - pd[2]: parameter(active=True, value=1)
+  - pl: parameter_list(active=True, ctype=IParameter)
+   - pl[0]: parameter(active=True, value=0)
+   - pl[1]: parameter(active=True, value=1)
+   - pl[2]: parameter(active=True, value=2)
+  - v: variable(active=True, value=1, bounds=(1,4), domain_type=RealSet, fixed=False, stale=True)
+  - vd: variable_dict(active=True, ctype=IVariable)
+   - vd[1]: variable(active=True, value=None, bounds=(None,9), domain_type=RealSet, fixed=False, stale=True)
+   - vd[2]: variable(active=True, value=None, bounds=(None,9), domain_type=RealSet, fixed=False, stale=True)
+  - vl: variable_list(active=True, ctype=IVariable)
+   - vl[0]: variable(active=True, value=None, bounds=(2,None), domain_type=RealSet, fixed=False, stale=True)
+   - vl[1]: variable(active=True, value=None, bounds=(2,None), domain_type=RealSet, fixed=False, stale=True)
+   - vl[2]: variable(active=True, value=None, bounds=(2,None), domain_type=RealSet, fixed=False, stale=True)
+  - c: constraint(active=True, expr=vd[1] + vd[2]  <=  9.0)
+  - cd: constraint_dict(active=True, ctype=IConstraint)
+   - cd[(1, 0)]: constraint(active=True, expr=vd[1]  ==  0.0)
+   - cd[(1, 1)]: constraint(active=True, expr=vd[1]  ==  1.0)
+   - cd[(1, 2)]: constraint(active=True, expr=vd[1]  ==  2.0)
+   - cd[(2, 0)]: constraint(active=True, expr=vd[2]  ==  0.0)
+   - cd[(2, 1)]: constraint(active=True, expr=vd[2]  ==  1.0)
+   - cd[(2, 2)]: constraint(active=True, expr=vd[2]  ==  2.0)
+  - cl: constraint_list(active=True, ctype=IConstraint)
+   - cl[0]: constraint(active=True, expr=-5  <=  vl[0] - v  <=  5)
+   - cl[1]: constraint(active=True, expr=-5  <=  vl[1] - v  <=  5)
+   - cl[2]: constraint(active=True, expr=-5  <=  vl[2] - v  <=  5)
+  - e: expression(active=True, expr=- v)
+  - ed: expression_dict(active=True, ctype=IExpression)
+   - ed[1]: expression(active=True, expr=- vd[1])
+   - ed[2]: expression(active=True, expr=- vd[2])
+  - el: expression_list(active=True, ctype=IExpression)
+   - el[0]: expression(active=True, expr=- vl[0])
+   - el[1]: expression(active=True, expr=- vl[1])
+   - el[2]: expression(active=True, expr=- vl[2])
+  - o: objective(active=True, expr=- v)
+  - od: objective_dict(active=True, ctype=IObjective)
+   - od[1]: objective(active=True, expr=- vd[1])
+   - od[2]: objective(active=True, expr=- vd[2])
+  - ol: objective_list(active=True, ctype=IObjective)
+   - ol[0]: objective(active=True, expr=- vl[0])
+   - ol[1]: objective(active=True, expr=- vl[1])
+   - ol[2]: objective(active=True, expr=- vl[2])
+  - sos1: sos(active=True, level=1, entries=['(vd[1],1)', '(vd[2],2)'])
+  - sos2: sos(active=True, level=2, entries=['(vl[0],1)', '(vl[1],2)', '(vl[2],3)'])
+  - sd: sos_dict(active=True, ctype=ISOS)
+   - sd[1]: sos(active=True, level=1, entries=['(vd[1],1)', '(vd[2],2)'])
+   - sd[2]: sos(active=True, level=1, entries=['(vl[0],1)', '(vl[1],2)', '(vl[2],3)'])
+  - sl: sos_list(active=True, ctype=ISOS)
+   - sl[0]: sos(active=True, level=1, entries=['(vl[1],1)', '(vd[1],2)'])
+   - sl[1]: sos(active=True, level=1, entries=['(vl[2],1)', '(vd[2],2)'])
+  - dual: suffix(active=True, size=0)
+  - suffixes: suffix_dict(active=True, ctype=ISuffix)
+   - suffixes[dual]: suffix(active=True, size=0)
+  - f: variable(active=True, value=None, bounds=(None,None), domain_type=RealSet, fixed=False, stale=True)
+  - pw: piecewise_sos2(active=True, ctype=IBlock)
+   - pw._inout: expression_tuple(active=True, ctype=IExpression)
+    - pw._inout[0]: expression(active=True, expr=v)
+    - pw._inout[1]: expression(active=True, expr=f)
+   - pw.v: variable_tuple(active=True, ctype=IVariable)
+    - pw.v[0]: variable(active=True, value=None, bounds=(0,None), domain_type=RealSet, fixed=False, stale=True)
+    - pw.v[1]: variable(active=True, value=None, bounds=(0,None), domain_type=RealSet, fixed=False, stale=True)
+    - pw.v[2]: variable(active=True, value=None, bounds=(0,None), domain_type=RealSet, fixed=False, stale=True)
+    - pw.v[3]: variable(active=True, value=None, bounds=(0,None), domain_type=RealSet, fixed=False, stale=True)
+   - pw.c: constraint_list(active=True, ctype=IConstraint)
+    - pw.c[0]: linear_constraint(active=True, expr=pw.v[0] + 2*pw.v[1] + 3*pw.v[2] + 4*pw.v[3] - v  ==  0.0)
+    - pw.c[1]: linear_constraint(active=True, expr=pw.v[0] + 2*pw.v[1] + pw.v[2] + 2*pw.v[3] - f  ==  0.0)
+    - pw.c[2]: linear_constraint(active=True, expr=pw.v[0] + pw.v[1] + pw.v[2] + pw.v[3]  ==  1.0)
+   - pw.s: sos(active=True, level=2, entries=['(pw.v[0],1)', '(pw.v[1],2)', '(pw.v[2],3)', '(pw.v[3],4)'])
+2.0 KB
+8.4 KB

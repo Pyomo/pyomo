@@ -1,0 +1,6 @@
+# pd[1] = 0, pd[2] = 1
+def pd_(m, i):
+    return m.s.ord(i) - 1
+m.pd = aml.Param(m.s,
+                 mutable=True,
+                 rule=pd_)

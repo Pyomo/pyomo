@@ -1,0 +1,5 @@
+# uses 0-based indexing
+m.sl = pmo.sos_list()
+for i in m.s:
+    m.sl.append(pmo.sos1(
+        [m.vl[i], m.vd[i]]))
