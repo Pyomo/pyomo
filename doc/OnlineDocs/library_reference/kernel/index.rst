@@ -3,9 +3,9 @@
 
 .. warning::
 
-   The :python:`pyomo.kernel` API has not yet been approved by the core developer team. It is fully tested and functional; however, the interface may change as it becomes integrated with the rest of Pyomo.
+   The :python:`pyomo.kernel` API is still in the beta phase of devleopement. It is fully tested and functional; however, the interface may change as it becomes further integrated with the rest of Pyomo.
 
-.. note::
+.. warning::
 
    Models built with :python:`pyomo.kernel` components are not yet compatible with pyomo extension modules (e.g., :python:`pyomo.pysp`, :python:`pyomo.dae`, :python:`pyomo.gdp`).
 
