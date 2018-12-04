@@ -54,7 +54,7 @@ The existing components and containers in :python:`pyomo.kernel` are designed to
    model.w = Widget()
    model.w.x = pyomo.kernel.variable()
 
-The next series of coding examples go into more detail on how to implement derived components or containers.
+The next series of examples goes into more detail on how to implement derived components or containers.
 
 The following code block shows a class definition for a non-negative variable, starting from :python:`pyomo.kernel.variable` as a base class.
 
