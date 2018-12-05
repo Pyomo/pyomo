@@ -253,7 +253,7 @@ ExpectedFailures['baron', 'bar', 'QCP_simple'] = \
     "found during preprocessing.")
 
 ExpectedFailures['baron', 'bar', 'MILP_unbounded'] = \
-    (lambda v: v < (17,4,1,0),
+    (lambda v: v < (17,4,1,0) or (v >= (18,5,9,0) and v < (18,11,15,0)),
      "Baron fails to report a MILP model as unbounded")
 
 #
