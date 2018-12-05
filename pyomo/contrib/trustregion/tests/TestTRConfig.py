@@ -10,7 +10,14 @@ from pyomo.core import Var, value
 from pyomo.environ import *
 from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 
+try:
+    import numpy
+    numpy_available = True
+except ImportError:
+    numpy_available = False
 
+
+@unittest.skipIf(not numpy_available, "Cannot test the trustregion solver without numpy")
 class TestTrustRegionConfigBlock(unittest.TestCase):
     def setUp(self):
         
