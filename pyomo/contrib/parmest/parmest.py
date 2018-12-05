@@ -726,4 +726,61 @@ class ParmEstimator(object):
         store_all_SSE = pd.DataFrame(data=global_all_SSE, columns=dfcols)
 
         return store_all_SSE
+    
+class _SecondStateCostExpr(object):
+    def __init__(self, ssc_function, data):
+        self._ssc_function = ssc_function
+        self._data = data
+    def __call__(self, model):
+        return self._ssc_function(model, self._data)
         
+class Estimator(ParmEstimator):
+    
+    def __init__(self, model_function, data, thetalist, ssc_function=None, 
+                 ssc_name="SecondStageCost", tee=False):
+        self.model_function = model_function
+        self.data = data
+        self.thetalist = thetalist 
+        self.ssc_function = ssc_function 
+        
+        # This just maps into the old structure
+        self.gmodel_file = None
+        self.gmodel_maker = self._instance_creation_callback
+        self.qName = ssc_name
+        self.numbers_list = list(range(len(data)))
+        self.cb_data = data
+        self.tee = tee
+        self.diagnostic_mode = False
+
+    def parmestify_model(self, data):
+        from pyomo.core import Objective
+        
+        model = self.model_function(data)
+        
+        if self.ssc_function:
+            for obj in model.component_objects(Objective):
+                obj.deactivate()
+        
+            def FirstStageCost_rule(model):
+                return 0
+            model.FirstStageCost = pyo.Expression(rule=FirstStageCost_rule)
+            model.SecondStageCost = pyo.Expression(rule=_SecondStateCostExpr(self.ssc_function, data))
+            
+            def TotalCost_rule(model):
+                return model.FirstStageCost + model.SecondStageCost
+            model.Total_Cost_Objective = pyo.Objective(rule=TotalCost_rule, sense=pyo.minimize)
+        
+        return model
+    
+    def _instance_creation_callback(self, experiment_number=None, cb_data=None):
+        
+        if isinstance(cb_data, pd.DataFrame):
+            # Keep single experiments as a Dataframe (not a Series)
+            exp_data = cb_data.loc[experiment_number,:].to_frame().transpose() 
+        elif isinstance(cb_data, dict):
+            exp_data = cb_data[experiment_number]
+        else:
+            print('Unexpected data format')
+        model = self.parmestify_model(exp_data)
+        
+        return model
