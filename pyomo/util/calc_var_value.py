@@ -101,7 +101,7 @@ def calculate_variable_from_constraint(variable, constraint,
     expr_deriv = differentiate(expr, wrt=variable)
 
     if type(expr_deriv) in native_numeric_types and expr_deriv == 0:
-        raise ValueError("variable derivative == 0, cannot solve for variable")
+        raise ValueError("Variable derivative == 0, cannot solve for variable")
 
     if abs(value(expr_deriv)) < 1e-12:
         raise RuntimeError('Initial value for variable results in derivative value that is '
