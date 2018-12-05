@@ -62,6 +62,21 @@ class Test_calc_var(unittest.TestCase):
         calculate_variable_from_constraint(m.x, m.c)
         self.assertEqual(value(m.x), 2)
 
+    def test_exceptions(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=0)
+        m.y = Var(initialize=0)
+
+        m.lt = Constraint(expr=m.x <= m.y)
+        with self.assertRaisesRegexp(
+                ValueError, "Constraint must be an equality constraint"):
+            calculate_variable_from_constraint(m.x, m.lt)
+
+        m.c = Constraint(expr=m.y == 1)
+        with self.assertRaisesRegexp(
+                ValueError, "Variable derivative == 0"):
+            calculate_variable_from_constraint(m.x, m.c)
+
     @unittest.skipIf(not _sympy_available, "this test requires sympy")
     def test_nonlinear(self):
         m = ConcreteModel()
