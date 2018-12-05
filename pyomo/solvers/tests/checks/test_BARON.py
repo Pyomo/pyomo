@@ -9,11 +9,11 @@ from pyomo.solvers.tests.solvers import test_solver_cases
 baron_available = test_solver_cases('baron', 'bar').available
 
 
+@unittest.skipIf(not baron_available,
+                 "The 'BARON' solver is not available")
 class BaronTest(unittest.TestCase):
     """Test the BARON interface."""
 
-    @unittest.skipIf(not baron_available,
-                     "The 'BARON' solver is not available")
     def test_log10(self):
         # Tests the special transformation for log10
         with SolverFactory("baron") as opt:
