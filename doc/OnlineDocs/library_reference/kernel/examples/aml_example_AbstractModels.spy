@@ -1,0 +1,5 @@
+m = aml.AbstractModel()
+# ... define model ...
+instance = \
+    m.create_instance(datafile)
+

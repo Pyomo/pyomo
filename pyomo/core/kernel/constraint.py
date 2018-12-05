@@ -398,15 +398,8 @@ class constraint(_MutableBoundsConstraintMixin,
 
     @property
     def expr(self):
-        """The full constraint expression:
-
-            - lb <= body <= ub: for range constraints
-            - lb <= body: for lower bounding constraints
-            - ub >= body: for upper bounding constraints
-            - body == rhs: for equality constraints
-        """
+        """Get or set the expression on this constraint."""
         return super(constraint,self).expr
-
     @expr.setter
     def expr(self, expr):
 

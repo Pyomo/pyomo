@@ -273,6 +273,7 @@ class Test_piecewise(unittest.TestCase):
         self.assertTrue(f.parent is None)
         self.assertEqual(f.ctype, IBlock)
         self.assertEqual(f(1), 0)
+        self.assertIs(type(f(1)), float)
         with self.assertRaises(ValueError):
             f(0.9)
         with self.assertRaises(ValueError):
@@ -285,8 +286,11 @@ class Test_piecewise(unittest.TestCase):
         self.assertTrue(f.parent is None)
         self.assertEqual(f.ctype, IBlock)
         self.assertEqual(f(1), 0)
+        self.assertIs(type(f(1)), float)
         self.assertEqual(f(1.5), 2)
+        self.assertIs(type(f(1.5)), float)
         self.assertEqual(f(2), 4)
+        self.assertIs(type(f(2)), float)
         with self.assertRaises(ValueError):
             f(0.9)
         with self.assertRaises(ValueError):
@@ -300,6 +304,7 @@ class Test_piecewise(unittest.TestCase):
         self.assertTrue(f.parent is None)
         self.assertEqual(f.ctype, IBlock)
         self.assertEqual(f(1), 0)
+        self.assertIs(type(f(1)), float)
         with self.assertRaises(ValueError):
             f(0.9)
         with self.assertRaises(ValueError):
@@ -312,10 +317,15 @@ class Test_piecewise(unittest.TestCase):
         self.assertTrue(f.parent is None)
         self.assertEqual(f.ctype, IBlock)
         self.assertEqual(f(1), 1)
+        self.assertIs(type(f(1)), float)
         self.assertEqual(f(1.5), 1.5)
+        self.assertIs(type(f(1.5)), float)
         self.assertEqual(f(2), 2)
+        self.assertIs(type(f(2)), float)
         self.assertEqual(f(2.5), 1.5)
+        self.assertIs(type(f(2.5)), float)
         self.assertEqual(f(3), 1)
+        self.assertIs(type(f(3)), float)
         with self.assertRaises(ValueError):
             f(0.9)
         with self.assertRaises(ValueError):
@@ -329,10 +339,15 @@ class Test_piecewise(unittest.TestCase):
         self.assertTrue(f.parent is None)
         self.assertEqual(f.ctype, IBlock)
         self.assertEqual(f(1), 1)
+        self.assertIs(type(f(1)), float)
         self.assertEqual(f(1.5), 1.5)
+        self.assertIs(type(f(1.5)), float)
         self.assertEqual(f(2), 2) # lower semicontinuous
+        self.assertIs(type(f(2)), float)
         self.assertEqual(f(2.5), 3.5)
+        self.assertIs(type(f(2.5)), float)
         self.assertEqual(f(3), 4)
+        self.assertIs(type(f(3)), float)
         with self.assertRaises(ValueError):
             f(0.9)
         with self.assertRaises(ValueError):

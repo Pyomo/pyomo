@@ -1,0 +1,24 @@
+class NonNegativeVariable(pyomo.kernel.variable):
+    """A non-negative variable."""
+    __slots__ = ()
+
+    def __init__(self, **kwds):
+        if 'lb' not in kwds:
+            kwds['lb'] = 0
+        if kwds['lb'] < 0:
+            raise ValueError("lower bound must be non-negative")
+        super(NonNegativeVariable, self).__init__(**kwds)
+
+    #
+    # restrict assignments to x.lb to non-negative numbers
+    #
+    @property
+    def lb(self):
+        # calls the base class property getter
+        return pyomo.kernel.variable.lb.fget(self)
+    @lb.setter
+    def lb(self, lb):
+        if lb < 0:
+            raise ValueError("lower bound must be non-negative")
+        # calls the base class property setter
+        pyomo.kernel.variable.lb.fset(self, lb)
