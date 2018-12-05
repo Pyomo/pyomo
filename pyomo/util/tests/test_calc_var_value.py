@@ -72,10 +72,16 @@ class Test_calc_var(unittest.TestCase):
                 ValueError, "Constraint must be an equality constraint"):
             calculate_variable_from_constraint(m.x, m.lt)
 
-        m.c = Constraint(expr=m.y == 1)
+        m.c = Constraint(expr=m.y**2 == -1)
         with self.assertRaisesRegexp(
                 ValueError, "Variable derivative == 0"):
             calculate_variable_from_constraint(m.x, m.c)
+
+        with self.assertRaisesRegexp(
+                RuntimeError, "Initial value for variable results in a "
+                "derivative value that is very close to zero."):
+            calculate_variable_from_constraint(m.y, m.c)
+
 
     @unittest.skipIf(not _sympy_available, "this test requires sympy")
     def test_nonlinear(self):
