@@ -108,8 +108,8 @@ def calculate_variable_from_constraint(variable, constraint,
 
     if abs(value(expr_deriv)) < 1e-12:
         raise RuntimeError(
-            'Initial value for variable results in derivative value that is '
-            'very close to zero. Please provide a different initial guess.')
+            'Initial value for variable results in a derivative value that is '
+            'very close to zero.\n\tPlease provide a different initial guess.')
 
     iter_left = iterlim
     while abs(value(expr)) > eps and iter_left:
@@ -126,7 +126,7 @@ def calculate_variable_from_constraint(variable, constraint,
         if abs(fpk) < 1e-12:
             raise RuntimeError(
                 "Newton's method encountered a derivative that was too "
-                "close to zero.\nPlease provide a different initial guess "
+                "close to zero.\n\tPlease provide a different initial guess "
                 "or enable the linesearch if you have not.")
         pk = -fk/fpk
         alpha = 1.0
