@@ -92,12 +92,15 @@ class Test_calc_var(unittest.TestCase):
         m.x.set_value(1.25) # set the initial value
         with self.assertRaisesRegexp(
                RuntimeError, 'Iteration limit \(10\) reached'):
-           calculate_variable_from_constraint(m.x, m.d, iterlim=10, linesearch=False)
+           calculate_variable_from_constraint(
+               m.x, m.d, iterlim=10, linesearch=False)
 
         # same problem should throw a linesearch error if linesearch is on
         m.x.set_value(1.25) # set the initial value
-        with self.assertRaises(RuntimeError):
-           calculate_variable_from_constraint(m.x, m.d, iterlim=10, linesearch=True)
+        with self.assertRaisesRegexp(
+                RuntimeError, "Linesearch iteration limit reached"):
+           calculate_variable_from_constraint(
+               m.x, m.d, iterlim=10, linesearch=True)
 
 
         # should succeed with or without a linesearch
@@ -116,6 +119,8 @@ class Test_calc_var(unittest.TestCase):
 
         # we expect this to fail without a linesearch
         m.x.set_value(3.0)
-        with self.assertRaises(RuntimeError):
+        with self.assertRaisesRegexp(
+                RuntimeError, "Newton's method encountered a derivative "
+                "that was too close to zero"):
             calculate_variable_from_constraint(m.x, m.e, linesearch=False)
 
