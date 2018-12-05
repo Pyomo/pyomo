@@ -18,6 +18,7 @@ class Test_calc_var(unittest.TestCase):
     def test_initialize_value(self):
         m = ConcreteModel()
         m.x = Var()
+        m.y = Var(initialize=0)
         m.c = Constraint(expr=m.x == 5)
 
         m.x.set_value(None)
@@ -54,6 +55,12 @@ class Test_calc_var(unittest.TestCase):
         calculate_variable_from_constraint(m.x, m.c)
         self.assertEqual(value(m.x), 5)
 
+        m.lt = Constraint(expr=m.x <= m.y)
+        with self.assertRaisesRegexp(
+                ValueError, "Constraint must be an equality constraint"):
+            calculate_variable_from_constraint(m.x, m.lt)
+
+
     def test_linear(self):
         m = ConcreteModel()
         m.x = Var()
@@ -62,31 +69,12 @@ class Test_calc_var(unittest.TestCase):
         calculate_variable_from_constraint(m.x, m.c)
         self.assertEqual(value(m.x), 2)
 
-    def test_exceptions(self):
-        m = ConcreteModel()
-        m.x = Var(initialize=0)
-        m.y = Var(initialize=0)
-
-        m.lt = Constraint(expr=m.x <= m.y)
-        with self.assertRaisesRegexp(
-                ValueError, "Constraint must be an equality constraint"):
-            calculate_variable_from_constraint(m.x, m.lt)
-
-        m.c = Constraint(expr=m.y**2 == -1)
-        with self.assertRaisesRegexp(
-                ValueError, "Variable derivative == 0"):
-            calculate_variable_from_constraint(m.x, m.c)
-
-        with self.assertRaisesRegexp(
-                RuntimeError, "Initial value for variable results in a "
-                "derivative value that is very close to zero."):
-            calculate_variable_from_constraint(m.y, m.c)
-
 
     @unittest.skipIf(not _sympy_available, "this test requires sympy")
     def test_nonlinear(self):
         m = ConcreteModel()
         m.x = Var()
+        m.y = Var(initialize=0)
 
         m.c = Constraint(expr=m.x**2 == 16)
         m.x.set_value(1.0) # set an initial value
@@ -107,6 +95,19 @@ class Test_calc_var(unittest.TestCase):
                 RuntimeError, "Linesearch iteration limit reached"):
            calculate_variable_from_constraint(
                m.x, m.d, iterlim=10, linesearch=True)
+
+        # same problem should raise an error if initialized at 0
+        m.x = 0
+        with self.assertRaisesRegexp(
+                RuntimeError, "Initial value for variable results in a "
+                "derivative value that is very close to zero."):
+            calculate_variable_from_constraint(m.x, m.c)
+
+        # same problem should raise a value error if we are asked to
+        # solve for a variable that is not present
+        with self.assertRaisesRegexp(
+                ValueError, "Variable derivative == 0"):
+            calculate_variable_from_constraint(m.y, m.c)
 
 
         # should succeed with or without a linesearch
