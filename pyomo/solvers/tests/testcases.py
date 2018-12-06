@@ -84,8 +84,9 @@ ExpectedFailures['cbc', 'lp', 'LP_duals_maximize'] = \
     "practice this should be reported as a negative number. A ticket has "
     "been filed at:\nhttps://projects.coin-or.org/Cbc/ticket/125")
 
+# This is known to fail through 2.9.7, but appears to be fixed in 2.9.9
 ExpectedFailures['cbc', 'nl', 'MILP_unbounded'] = \
-    (lambda v: v <= _trunk_version,
+    (lambda v: v <= (2,9,7,0),
      "Cbc fails to report a MILP model as unbounded when it"
      "is defined as an NL file.")
 
@@ -247,8 +248,9 @@ ExpectedFailures['baron', 'bar', 'QP_simple'] = \
     "Baron will not return dual solution when a solution is "
     "found during preprocessing.")
 
+# Known to fail through 17.4.1, but was resolved by 18.5.9
 ExpectedFailures['baron', 'bar', 'QCP_simple'] = \
-    (lambda v: v <= _trunk_version,
+    (lambda v: v <= (17,4,1),
     "Baron will not return dual solution when a solution is "
     "found during preprocessing.")
 
