@@ -23,7 +23,7 @@ class BaronTest(unittest.TestCase):
             m.c = Constraint(expr=log10(m.x) >= 2)
             m.obj = Objective(expr=m.x, sense=minimize)
 
-            results = opt.solve(m, keepfiles=True)
+            results = opt.solve(m)
 
             self.assertEqual(results.solver.termination_condition,
                              TerminationCondition.optimal)
@@ -37,7 +37,7 @@ class BaronTest(unittest.TestCase):
             m.c = Constraint(expr=abs(m.x) >= 2)
             m.obj = Objective(expr=m.x, sense=minimize)
 
-            results = opt.solve(m, keepfiles=True)
+            results = opt.solve(m)
 
             self.assertEqual(results.solver.termination_condition,
                              TerminationCondition.optimal)
@@ -52,7 +52,7 @@ class BaronTest(unittest.TestCase):
             m.c = Constraint(expr=m.x ** m.y >= 20)
             m.obj = Objective(expr=m.x, sense=minimize)
 
-            results = opt.solve(m, keepfiles=True)
+            results = opt.solve(m)
 
             self.assertEqual(results.solver.termination_condition,
                              TerminationCondition.optimal)
