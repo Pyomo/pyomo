@@ -19,19 +19,14 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 import pyutilib.services
 
-import pyomo.common.plugin
 import pyomo.opt
 import pyomo.opt.plugins.sol
 from pyomo.opt.base.solvers import UnknownSolver
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
-pyomo.common.plugin.push('pyomo.opt')
-
 
 class TestWriter(pyomo.opt.AbstractProblemWriter):
-
-    pyomo.common.plugin.alias('wtest')
 
     def __init__(self, name=None):
         pyomo.opt.AbstractProblemWriter.__init__(self,name)
@@ -39,26 +34,16 @@ class TestWriter(pyomo.opt.AbstractProblemWriter):
 
 class TestReader(pyomo.opt.AbstractResultsReader):
 
-    pyomo.common.plugin.alias('rtest')
-
     def __init__(self, name=None):
         pyomo.opt.AbstractResultsReader.__init__(self,name)
 
 
 class TestSolver(pyomo.opt.OptSolver):
 
-    pyomo.common.plugin.alias('stest')
-
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
         kwds['doc'] = 'TestSolver Documentation'
         pyomo.opt.OptSolver.__init__(self,**kwds)
-
-    def enabled(self):
-        return False
-
-
-pyomo.common.plugin.pop()
 
 
 class Test(unittest.TestCase):
@@ -71,23 +56,23 @@ class Test(unittest.TestCase):
         unittest.TestCase.run(self,result)
 
     def setUp(self):
-        pyomo.opt.SolverFactory.activate('stest')
-        pyomo.opt.WriterFactory.activate('wtest')
-        pyomo.opt.ReaderFactory.activate('rtest')
+        pyomo.opt.WriterFactory.register('wtest')(TestWriter)
+        pyomo.opt.ReaderFactory.register('rtest')(TestReader)
+        pyomo.opt.SolverFactory.register('stest')(TestSolver)
         pyutilib.services.TempfileManager.tempdir = currdir
 
     def tearDown(self):
         pyutilib.services.TempfileManager.clear_tempfiles()
         pyutilib.services.TempfileManager.tempdir = old_tempdir
-        pyomo.opt.SolverFactory.deactivate('stest')
-        pyomo.opt.WriterFactory.deactivate('wtest')
-        pyomo.opt.ReaderFactory.deactivate('rtest')
+        pyomo.opt.WriterFactory.unregister('wtest')
+        pyomo.opt.ReaderFactory.unregister('rtest')
+        pyomo.opt.SolverFactory.unregister('stest')
 
     def test_solver_factory(self):
         #"""
         #Testing the pyomo.opt solver factory
         #"""
-        ans = sorted(pyomo.opt.SolverFactory.services())
+        ans = sorted(list(pyomo.opt.SolverFactory))
         #self.assertEqual(len(ans),8)
         self.assertTrue(set(['stest']) <= set(ans))
 
@@ -103,20 +88,11 @@ class Test(unittest.TestCase):
         self.assertEqual(type(ans), TestSolver)
         self.assertEqual(ans.name,  "mymock")
 
-    def test_solver_registration(self):
-        #"""
-        #Testing methods in the solverwriter factory registration process
-        #"""
-        pyomo.opt.SolverFactory.deactivate("stest")
-        self.assertTrue(not 'stest' in pyomo.opt.SolverFactory.services())
-        pyomo.opt.SolverFactory.activate("stest")
-        self.assertTrue('stest' in pyomo.opt.SolverFactory.services())
-
     def test_writer_factory(self):
         #"""
         #Testing the pyomo.opt writer factory
         #"""
-        factory = pyomo.opt.WriterFactory.services()
+        factory = pyomo.opt.WriterFactory
         self.assertTrue(set(['wtest']) <= set(factory))
 
     def test_writer_instance(self):
@@ -131,21 +107,12 @@ class Test(unittest.TestCase):
         ans = pyomo.opt.WriterFactory("wtest")
         self.assertNotEqual(ans, None)
 
-    def test_writer_registration(self):
-        #"""
-        #Testing methods in the writer factory registration process
-        #"""
-        pyomo.opt.WriterFactory.deactivate("wtest")
-        self.assertTrue(not 'wtest' in pyomo.opt.WriterFactory.services())
-        pyomo.opt.WriterFactory.activate("wtest")
-        self.assertTrue('wtest' in pyomo.opt.WriterFactory.services())
-
 
     def test_reader_factory(self):
         #"""
         #Testing the pyomo.opt reader factory
         #"""
-        ans = pyomo.opt.ReaderFactory.services()
+        ans = pyomo.opt.ReaderFactory
         self.assertTrue(set(ans) >= set(["rtest", "sol", "yaml", "json"]))
 
     def test_reader_instance(self):
@@ -159,15 +126,6 @@ class Test(unittest.TestCase):
         #ans = pyomo.opt.ReaderFactory("osrl", "myreader")
         #self.assertEqual(type(ans), pyomo.opt.reader.OS.ResultsReader_osrl)
         #self.assertEqual(ans.name, "myreader")
-
-    def test_reader_registration(self):
-        #"""
-        #Testing methods in the reader factory registration process
-        #"""
-        pyomo.opt.ReaderFactory.deactivate("rtest")
-        self.assertTrue(not 'rtest' in pyomo.opt.ReaderFactory.services())
-        pyomo.opt.ReaderFactory.activate("rtest")
-        self.assertTrue('rtest' in pyomo.opt.ReaderFactory.services())
 
 if __name__ == "__main__":
     unittest.main()

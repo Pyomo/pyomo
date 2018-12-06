@@ -1,0 +1,3 @@
+m.vd = pmo.variable_dict()
+for i in m.s:
+    m.vd[i] = pmo.variable(ub=9)

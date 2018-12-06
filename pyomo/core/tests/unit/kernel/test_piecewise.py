@@ -2,7 +2,7 @@ import pickle
 import abc
 
 import pyutilib.th as unittest
-import pyomo.kernel
+import pyomo.kernel as pmo
 from pyomo.core.tests.unit.kernel.test_dict_container import \
     _TestActiveDictContainerBase
 from pyomo.core.tests.unit.kernel.test_list_container import \
@@ -266,6 +266,50 @@ class Test_piecewise(unittest.TestCase):
 
     def test_call(self):
 
+        g = PiecewiseLinearFunction([1],
+                                    [0])
+        f = TransformedPiecewiseLinearFunction(
+            g, require_bounded_input_variable=False)
+        self.assertTrue(f.parent is None)
+        self.assertEqual(f.ctype, IBlock)
+        self.assertEqual(f(1), 0)
+        self.assertIs(type(f(1)), float)
+        with self.assertRaises(ValueError):
+            f(0.9)
+        with self.assertRaises(ValueError):
+            f(1.1)
+
+        g = PiecewiseLinearFunction([1,2],
+                                    [0,4])
+        f = TransformedPiecewiseLinearFunction(
+            g, require_bounded_input_variable=False)
+        self.assertTrue(f.parent is None)
+        self.assertEqual(f.ctype, IBlock)
+        self.assertEqual(f(1), 0)
+        self.assertIs(type(f(1)), float)
+        self.assertEqual(f(1.5), 2)
+        self.assertIs(type(f(1.5)), float)
+        self.assertEqual(f(2), 4)
+        self.assertIs(type(f(2)), float)
+        with self.assertRaises(ValueError):
+            f(0.9)
+        with self.assertRaises(ValueError):
+            f(2.1)
+
+        # step function
+        g = PiecewiseLinearFunction([1,1],
+                                    [0,1])
+        f = TransformedPiecewiseLinearFunction(
+            g, require_bounded_input_variable=False)
+        self.assertTrue(f.parent is None)
+        self.assertEqual(f.ctype, IBlock)
+        self.assertEqual(f(1), 0)
+        self.assertIs(type(f(1)), float)
+        with self.assertRaises(ValueError):
+            f(0.9)
+        with self.assertRaises(ValueError):
+            f(1.1)
+
         g = PiecewiseLinearFunction([1,2,3],
                                     [1,2,1])
         f = TransformedPiecewiseLinearFunction(
@@ -273,14 +317,19 @@ class Test_piecewise(unittest.TestCase):
         self.assertTrue(f.parent is None)
         self.assertEqual(f.ctype, IBlock)
         self.assertEqual(f(1), 1)
+        self.assertIs(type(f(1)), float)
         self.assertEqual(f(1.5), 1.5)
+        self.assertIs(type(f(1.5)), float)
         self.assertEqual(f(2), 2)
+        self.assertIs(type(f(2)), float)
         self.assertEqual(f(2.5), 1.5)
+        self.assertIs(type(f(2.5)), float)
         self.assertEqual(f(3), 1)
+        self.assertIs(type(f(3)), float)
         with self.assertRaises(ValueError):
             f(0.9)
         with self.assertRaises(ValueError):
-            f(4.1)
+            f(3.1)
 
         # step function
         g = PiecewiseLinearFunction([1,2,2,3],
@@ -290,10 +339,15 @@ class Test_piecewise(unittest.TestCase):
         self.assertTrue(f.parent is None)
         self.assertEqual(f.ctype, IBlock)
         self.assertEqual(f(1), 1)
+        self.assertIs(type(f(1)), float)
         self.assertEqual(f(1.5), 1.5)
+        self.assertIs(type(f(1.5)), float)
         self.assertEqual(f(2), 2) # lower semicontinuous
+        self.assertIs(type(f(2)), float)
         self.assertEqual(f(2.5), 3.5)
+        self.assertIs(type(f(2.5)), float)
         self.assertEqual(f(3), 4)
+        self.assertIs(type(f(3)), float)
         with self.assertRaises(ValueError):
             f(0.9)
         with self.assertRaises(ValueError):
@@ -318,6 +372,164 @@ class Test_piecewise(unittest.TestCase):
             f(0.9)
         with self.assertRaises(ValueError):
             f(3.1)
+
+        # another step function
+        g = PiecewiseLinearFunction([1,2,3,3],
+                                    [1,2,3,4],
+                                    equal_slopes_tolerance=-1)
+        f = TransformedPiecewiseLinearFunction(
+            g,
+            require_bounded_input_variable=False,
+            equal_slopes_tolerance=-1)
+        self.assertTrue(f.parent is None)
+        self.assertEqual(f.ctype, IBlock)
+        self.assertEqual(f(1), 1)
+        self.assertEqual(f(1.5), 1.5)
+        self.assertEqual(f(2), 2)
+        self.assertEqual(f(2.5), 2.5)
+        self.assertEqual(f(3), 3) # lower semicontinuous
+        with self.assertRaises(ValueError):
+            f(0.9)
+        with self.assertRaises(ValueError):
+            f(3.1)
+
+        # another step function using parameters
+        g = PiecewiseLinearFunction([pmo.parameter(1),
+                                     pmo.parameter(1),
+                                     pmo.parameter(2),
+                                     pmo.parameter(3)],
+                                    [pmo.parameter(1),
+                                     pmo.parameter(2),
+                                     pmo.parameter(3),
+                                     pmo.parameter(4)],
+                                    equal_slopes_tolerance=-1)
+        f = TransformedPiecewiseLinearFunction(
+            g,
+            require_bounded_input_variable=False,
+            equal_slopes_tolerance=-1)
+        self.assertTrue(f.parent is None)
+        self.assertEqual(f.ctype, IBlock)
+        self.assertEqual(f(1), 1)
+        self.assertEqual(f(1.5), 2.5)
+        self.assertEqual(f(2), 3) # lower semicontinuous
+        self.assertEqual(f(2.5), 3.5)
+        self.assertEqual(f(3), 4)
+        with self.assertRaises(ValueError):
+            f(0.9)
+        with self.assertRaises(ValueError):
+            f(3.1)
+
+        # another step function
+        g = PiecewiseLinearFunction([1,1,2,3,4],
+                                    [1,2,3,4,5],
+                                    equal_slopes_tolerance=-1)
+        f = TransformedPiecewiseLinearFunction(
+            g,
+            require_bounded_input_variable=False,
+            equal_slopes_tolerance=-1)
+        self.assertTrue(f.parent is None)
+        self.assertEqual(f.ctype, IBlock)
+        self.assertEqual(f(1), 1) # lower semicontinuous
+        self.assertEqual(f(1.5), 2.5)
+        self.assertEqual(f(2), 3)
+        self.assertEqual(f(2.5), 3.5)
+        self.assertEqual(f(3), 4)
+        self.assertEqual(f(3.5), 4.5)
+        self.assertEqual(f(4), 5)
+        with self.assertRaises(ValueError):
+            f(0.9)
+        with self.assertRaises(ValueError):
+            f(4.1)
+
+        # another step function
+        g = PiecewiseLinearFunction([1,2,2,3,4],
+                                    [1,2,3,4,5],
+                                    equal_slopes_tolerance=-1)
+        f = TransformedPiecewiseLinearFunction(
+            g,
+            require_bounded_input_variable=False,
+            equal_slopes_tolerance=-1)
+        self.assertTrue(f.parent is None)
+        self.assertEqual(f.ctype, IBlock)
+        self.assertEqual(f(1), 1)
+        self.assertEqual(f(1.5), 1.5)
+        self.assertEqual(f(2), 2) # lower semicontinuous
+        self.assertEqual(f(2.5), 3.5)
+        self.assertEqual(f(3), 4)
+        self.assertEqual(f(3.5), 4.5)
+        self.assertEqual(f(4), 5)
+        with self.assertRaises(ValueError):
+            f(0.9)
+        with self.assertRaises(ValueError):
+            f(4.1)
+
+        # another step function
+        g = PiecewiseLinearFunction([1,2,3,3,4],
+                                    [1,2,3,4,5],
+                                    equal_slopes_tolerance=-1)
+        f = TransformedPiecewiseLinearFunction(
+            g,
+            require_bounded_input_variable=False,
+            equal_slopes_tolerance=-1)
+        self.assertTrue(f.parent is None)
+        self.assertEqual(f.ctype, IBlock)
+        self.assertEqual(f(1), 1)
+        self.assertEqual(f(1.5), 1.5)
+        self.assertEqual(f(2), 2)
+        self.assertEqual(f(2.5), 2.5)
+        self.assertEqual(f(3), 3) # lower semicontinuous
+        self.assertEqual(f(3.5), 4.5)
+        self.assertEqual(f(4), 5)
+        with self.assertRaises(ValueError):
+            f(0.9)
+        with self.assertRaises(ValueError):
+            f(4.1)
+
+        # another step function
+        g = PiecewiseLinearFunction([1,2,3,4,4],
+                                    [1,2,3,4,5],
+                                    equal_slopes_tolerance=-1)
+        f = TransformedPiecewiseLinearFunction(
+            g,
+            require_bounded_input_variable=False,
+            equal_slopes_tolerance=-1)
+        self.assertTrue(f.parent is None)
+        self.assertEqual(f.ctype, IBlock)
+        self.assertEqual(f(1), 1)
+        self.assertEqual(f(1.5), 1.5)
+        self.assertEqual(f(2), 2)
+        self.assertEqual(f(2.5), 2.5)
+        self.assertEqual(f(3), 3)
+        self.assertEqual(f(3.5), 3.5)
+        self.assertEqual(f(4), 4) # lower semicontinuous
+        with self.assertRaises(ValueError):
+            f(0.9)
+        with self.assertRaises(ValueError):
+            f(4.1)
+
+        # another step function
+        g = PiecewiseLinearFunction([1,2,3,4,5],
+                                    [1,2,3,4,5],
+                                    equal_slopes_tolerance=-1)
+        f = TransformedPiecewiseLinearFunction(
+            g,
+            require_bounded_input_variable=False,
+            equal_slopes_tolerance=-1)
+        self.assertTrue(f.parent is None)
+        self.assertEqual(f.ctype, IBlock)
+        self.assertEqual(f(1), 1)
+        self.assertEqual(f(1.5), 1.5)
+        self.assertEqual(f(2), 2)
+        self.assertEqual(f(2.5), 2.5)
+        self.assertEqual(f(3), 3)
+        self.assertEqual(f(3.5), 3.5)
+        self.assertEqual(f(4), 4)
+        self.assertEqual(f(4.5), 4.5)
+        self.assertEqual(f(5), 5)
+        with self.assertRaises(ValueError):
+            f(0.9)
+        with self.assertRaises(ValueError):
+            f(5.1)
 
     def test_type(self):
         for key in transforms.registered_transforms:

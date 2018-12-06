@@ -26,7 +26,7 @@ from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule, \
     apply_parameterized_indexed_rule, sorted_robust
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, \
     UnindexedComponent_set
@@ -578,6 +578,7 @@ class _IndexedOrderedSetData(_OrderedSetData):
         self._discard(val)
 
 
+@ModelComponentFactory.register("Set data that is used to define a model instance.")
 class Set(IndexedComponent):
     """
     A set object that is used to index other Pyomo objects.
@@ -1295,6 +1296,7 @@ class OrderedSimpleSet(SimpleSetBase,_OrderedSetData):
 
 # REVIEW - START
 
+@ModelComponentFactory.register("Define a Pyomo Set component using an iterable data object.")
 class SetOf(SimpleSet):
     """
     A derived SimpleSet object that creates a set from external
@@ -1680,7 +1682,7 @@ class IndexedSet(Set):
         # Create a _SetData object if one doesn't already exist
         #
         if key in self._data:
-            self._data[key].value.clear()
+            self._data[key].clear()
         else:
             self._data[key] = self._SetData(self, self._bounds)
         #
@@ -1810,6 +1812,4 @@ class IndexedSet(Set):
         timer.report()
 
 
-register_component(SetOf, "Define a Pyomo Set component using an iterable data object.")
-register_component(Set, "Set data that is used to define a model instance.")
 

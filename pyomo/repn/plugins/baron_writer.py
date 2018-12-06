@@ -18,9 +18,8 @@ from six import iteritems, StringIO, iterkeys
 from six.moves import xrange
 from pyutilib.math import isclose
 
-import pyomo.common.plugin
 from pyomo.opt import ProblemFormat
-from pyomo.opt.base import AbstractProblemWriter
+from pyomo.opt.base import AbstractProblemWriter, WriterFactory
 from pyomo.core.expr.numvalue import is_fixed, value, native_numeric_types, native_types
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base import (SortComponents,
@@ -85,6 +84,8 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
                 return "{0} * {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.PowExpression:
             return "{0} ^ {1}".format(tmp[0], tmp[1])
+        elif node.__class__ is EXPR.UnaryFunctionExpression and node.name == "sqrt":
+            return "{0} ^ 0.5".format(tmp[0])
         else:
             return node._to_string(tmp, None, self.smap, True)
 
@@ -140,10 +141,8 @@ def expression_to_string(expr, variables, labeler=None, smap=None):
 #       but not for numbers appearing in the objective
 #       or constraints (which are written from to_string)
 
+@WriterFactory.register('bar', 'Generate the corresponding BARON BAR file.')
 class ProblemWriter_bar(AbstractProblemWriter):
-
-    #pyomo.common.plugin.alias('baron_writer')
-    pyomo.common.plugin.alias('bar', 'Generate the corresponding BARON BAR file.')
 
     def __init__(self):
 

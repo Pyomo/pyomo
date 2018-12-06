@@ -11,17 +11,17 @@
 import copy
 import weakref
 
-def _not_implemented_property(*args, **kwds):
+def _not_implemented(*args, **kwds):
     raise NotImplementedError("This property is abstract")     #pragma:nocover
 
 def _abstract_readwrite_property(**kwds):
-    p = property(fget=_not_implemented_property,
-                 fset=_not_implemented_property,
+    p = property(fget=_not_implemented,
+                 fset=_not_implemented,
                  **kwds)
     return p
 
 def _abstract_readonly_property(**kwds):
-    p = property(fget=_not_implemented_property,
+    p = property(fget=_not_implemented,
                  **kwds)
     return p
 
@@ -33,6 +33,17 @@ class _no_ctype(object):
 # AML classes (which are the ctypes used by all of the
 # solver interfaces) to Kernel classes
 _convert_ctype = {}
+
+def _convert_descend_into(value):
+    """Converts the descend_into keyword to a function"""
+    if hasattr(value, "__call__"):
+        return value
+    elif value:
+        return _convert_descend_into._true
+    else:
+        return _convert_descend_into._false
+_convert_descend_into._true = lambda x: True
+_convert_descend_into._false = lambda x: False
 
 class ICategorizedObject(object):
     """
@@ -99,13 +110,27 @@ class ICategorizedObject(object):
             "Assignment not allowed. Use the "
             "(de)activate method")
 
+    ### The following group of methods use object.__setattr__
+    ### to update the _parent, _storage_key, and _active flags.
+    ### This is done to allow the block implementation (block.py)
+    ### to protect them from being overwritten with user added
+    ### components in its __setattr__ method
+    def _update_parent_and_storage_key(self, parent, key):
+        object.__setattr__(self, "_parent", weakref.ref(parent))
+        object.__setattr__(self, "_storage_key", key)
+
+    def _clear_parent_and_storage_key(self):
+        object.__setattr__(self, "_parent", None)
+        object.__setattr__(self, "_storage_key", None)
+
     def activate(self):
         """Activate this object."""
-        self._active = True
+        object.__setattr__(self, "_active", True)
 
     def deactivate(self):
         """Deactivate this object."""
-        self._active = False
+        object.__setattr__(self, "_active", False)
+    ###
 
     def getname(self,
                 fully_qualified=False,
@@ -132,12 +157,6 @@ class ICategorizedObject(object):
             representing the name of the object in the
             context of its parent; otherwise (if no parent
             exists), this method returns :const:`None`.
-
-        .. warning::
-            Name generation can be slow. See the
-            generate_names method, found on most containers,
-            for a way to generate a static set of component
-            names.
         """
         assert fully_qualified or \
             (relative_to is None)
@@ -196,13 +215,14 @@ class ICategorizedObject(object):
         descendents of this object will reference the same
         object on the clone.
         """
-        save_parent, self._parent = self._parent, None
+        save_parent = self._parent
+        object.__setattr__(self, "_parent", None)
         try:
             new_block = copy.deepcopy(self,
                                       {'__categorized_object_scope__':
                                        {id(self): True, id(None): False}})
         finally:
-            self._parent = save_parent
+            object.__setattr__(self, "_parent", save_parent)
         return new_block
 
     #
@@ -267,7 +287,8 @@ class ICategorizedObject(object):
         # make sure _parent is a weakref
         # if it is not None
         if self._parent is not None:
-            self._parent = weakref.ref(self._parent)
+            self._update_parent_and_storage_key(self._parent,
+                                                self._storage_key)
 
 class ICategorizedObjectContainer(ICategorizedObject):
     """
@@ -315,8 +336,4 @@ class ICategorizedObjectContainer(ICategorizedObject):
     def components(self, *args, **kwds):
         """A generator over the set of components stored
         under this container."""
-        raise NotImplementedError     #pragma:nocover
-
-    def preorder_traversal(self, *args, **kwds):
-        """A generator over all descendents in prefix order."""
         raise NotImplementedError     #pragma:nocover

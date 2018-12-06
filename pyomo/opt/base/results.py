@@ -8,24 +8,30 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [ 'IResultsReader', 'AbstractResultsReader', 'ReaderFactory' ]
+__all__ = [ 'AbstractResultsReader', 'ReaderFactory' ]
 
-from pyomo.common.plugin import *
+from pyomo.common import Factory
 
 
-class IResultsReader(Interface):
-    """Interface for classes that can read optimization results."""
+ReaderFactory = Factory('problem reader')
 
-ReaderFactory = CreatePluginFactory(IResultsReader)
 
-class AbstractResultsReader(Plugin):
+class AbstractResultsReader(object):
     """Base class that can read optimization results."""
 
-    implements(IResultsReader)
-
     def __init__(self, results_format):
-        Plugin.__init__(self)
         self.format=results_format
 
     def __call__(self, filename, res=None, suffixes=[]): #pragma:nocover
         raise TypeError("Method __call__ undefined in reader for format "+str(self.format))
+
+    #
+    # Support "with" statements. Forgetting to call deactivate
+    # on Plugins is a common source of memory leaks
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
+

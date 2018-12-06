@@ -11,9 +11,9 @@
 import logging
 import re
 import sys
-import pyutilib.services
+import pyomo.common
 from pyutilib.misc import Bunch
-from pyomo.common.plugin import alias
+from pyutilib.services import TempfileManager
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
@@ -25,6 +25,7 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
+from pyomo.opt.base import SolverFactory
 import time
 
 
@@ -51,8 +52,9 @@ def _is_numeric(x):
         return False
     return True
 
+
+@SolverFactory.register('cplex_direct', doc='Direct python interface to CPLEX')
 class CPLEXDirect(DirectSolver):
-    alias('cplex_direct', doc='Direct python interface to CPLEX')
 
     def __init__(self, **kwds):
         kwds['type'] = 'cplexdirect'
@@ -662,7 +664,7 @@ class CPLEXDirect(DirectSolver):
 
         # finally, clean any temporary files registered with the temp file
         # manager, created populated *directly* by this plugin.
-        pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
+        TempfileManager.pop(remove=not self._keepfiles)
 
         return DirectOrPersistentSolver._postsolve(self)
 

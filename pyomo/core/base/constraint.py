@@ -25,7 +25,7 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       is_constant,
                                       native_numeric_types,
                                       _sub)
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import \
     ( ActiveIndexedComponent,
@@ -625,6 +625,7 @@ class _GeneralConstraintData(_ConstraintData):
             return self._lower <= self._body <= self._upper
 
 
+@ModelComponentFactory.register("General constraint expressions.")
 class Constraint(ActiveIndexedComponent):
     """
     This modeling component defines a constraint expression using a
@@ -1076,6 +1077,7 @@ class IndexedConstraint(Constraint):
         return self.__setitem__(index, expr)
 
 
+@ModelComponentFactory.register("A list of constraint expressions.")
 class ConstraintList(IndexedConstraint):
     """
     A constraint component that represents a list of constraints.
@@ -1163,5 +1165,3 @@ class ConstraintList(IndexedConstraint):
         self._index.add(next_idx)
         return self.__setitem__(next_idx, expr)
 
-register_component(Constraint, "General constraint expressions.")
-register_component(ConstraintList, "A list of constraint expressions.")

@@ -15,7 +15,7 @@ from math import fabs
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
                                  add_docstring_list)
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.plugin import alias
+from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
 from pyomo.contrib.preprocessing.util import SuppressConstantObjectiveWarning
 from pyomo.core import (Binary, Block, Constraint, Objective, Set,
                         TransformationFactory, Var, summation, value)
@@ -30,6 +30,8 @@ from pyomo.repn import generate_standard_repn
 logger = logging.getLogger('pyomo.contrib.preprocessing')
 
 
+@TransformationFactory.register('contrib.induced_linearity',
+          doc="Reformulate nonlinear constraints with induced linearity.")
 class InducedLinearity(IsomorphicTransformation):
     """Reformulate nonlinear constraints with induced linearity.
 
@@ -66,9 +68,6 @@ class InducedLinearity(IsomorphicTransformation):
     ))
 
     __doc__ = add_docstring_list(__doc__, CONFIG)
-
-    alias('contrib.induced_linearity',
-          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, model, **kwds):
         """Apply the transformation to the given model."""

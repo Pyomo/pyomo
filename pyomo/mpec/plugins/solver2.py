@@ -11,12 +11,13 @@
 import time
 import pyutilib.misc
 import pyomo.opt
+from pyomo.opt import SolverFactory
 from pyomo.core import TransformationFactory
 
 
+@SolverFactory.register('mpec_minlp', doc='MPEC solver transforms to a MINLP')
 class MPEC_Solver2(pyomo.opt.OptSolver):
 
-    pyomo.common.plugin.alias('mpec_minlp', doc='MPEC solver transforms to a MINLP')
 
     def __init__(self, **kwds):
         kwds['type'] = 'mpec_minlp'

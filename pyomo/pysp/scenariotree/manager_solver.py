@@ -604,7 +604,7 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
             assert self._preprocessor is None
 
         if self._solver_manager is not None:
-            self._solver_manager.deactivate()
+            #self._solver_manager.deactivate()
             self._solver_manager = None
             if self.get_option("solver_manager_pyro_shutdown"):
                 print("Shutting down Pyro components for solver manager.")
@@ -613,11 +613,11 @@ class _ScenarioTreeManagerSolverWorker(ScenarioTreeManagerSolver,
                     port=self.get_option("solver_manager_pyro_port"),
                     num_retries=0,
                     caller_name=self.__class__.__name__)
-        for solver in self._scenario_solvers.values():
-            solver.deactivate()
+        #for solver in self._scenario_solvers.values():
+        #    solver.deactivate()
         self._scenario_solvers = {}
-        for solver in self._bundle_solvers.values():
-            solver.deactivate()
+        #for solver in self._bundle_solvers.values():
+        #    solver.deactivate()
         self._bundle_solvers = {}
         self._preprocessor = None
         self._objective_sense = None

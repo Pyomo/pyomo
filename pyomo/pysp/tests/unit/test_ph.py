@@ -794,7 +794,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_ef.out",
-            baseline_dir+"farmer_ef.baseline.out",
+            baseline_dir+"farmer_ef.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -816,7 +816,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_maximize_ef.out",
-            baseline_dir+"farmer_maximize_ef.baseline.out",
+            baseline_dir+"farmer_maximize_ef.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -838,7 +838,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_piecewise_ef.out",
-            baseline_dir+"farmer_piecewise_ef.baseline.out",
+            baseline_dir+"farmer_piecewise_ef.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -1011,7 +1011,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"hydro_ef.out",
-            baseline_dir+"hydro_ef.baseline.out",
+            baseline_dir+"hydro_ef.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -1033,7 +1033,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"sizes3_ef.out",
-            baseline_dir+"sizes3_ef.baseline.out",
+            baseline_dir+"sizes3_ef.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -1134,7 +1134,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"forestry_ef.out",
-            baseline_dir+"forestry_ef.baseline.out",
+            baseline_dir+"forestry_ef.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -1157,7 +1157,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"networkflow1ef10_ef.out",
-            baseline_dir+"networkflow1ef10_ef.baseline.out",
+            baseline_dir+"networkflow1ef10_ef.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -1179,7 +1179,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_ef_cvar.out",
-            baseline_dir+"farmer_ef_cvar.baseline.out",
+            baseline_dir+"farmer_ef_cvar.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -1854,7 +1854,7 @@ class TestPHParallel(unittest.TestCase):
 
     def tearDown(self):
         try:
-            [_poll(proc,running=False) for proc in self._taskworker_processes]
+            [_poll(proc) for proc in self._taskworker_processes]
         finally:
             [_kill(proc) for proc in self._taskworker_processes]
             self._taskworker_processes = []

@@ -20,9 +20,8 @@ from six import iteritems, iterkeys, StringIO
 from six.moves import xrange
 
 from pyutilib.misc import PauseGC
-import pyomo.common.plugin
 from pyomo.opt import ProblemFormat
-from pyomo.opt.base import AbstractProblemWriter
+from pyomo.opt.base import AbstractProblemWriter, WriterFactory
 from pyomo.core.base import \
     (SymbolMap, TextLabeler,
      NumericLabeler, Constraint, SortComponents,
@@ -46,9 +45,9 @@ def _get_bound(exp):
         return value(exp)
     raise ValueError("non-fixed bound or weight: " + str(exp))
 
-class ProblemWriter_mps(AbstractProblemWriter):
 
-    pyomo.common.plugin.alias('mps', 'Generate the corresponding MPS file')
+@WriterFactory.register('mps', 'Generate the corresponding MPS file')
+class ProblemWriter_mps(AbstractProblemWriter):
 
     def __init__(self):
 

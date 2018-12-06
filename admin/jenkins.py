@@ -87,7 +87,9 @@ elif config == "core":
         _run_cmd("python/bin/pyomo install-extras", shell=True)
     elif _run_cmd is subprocess.check_output:
         output = _run_cmd("python/bin/pyomo install-extras", shell=True)
-        print(output.encode('utf-8','replace').decode('utf-8'))
+        if hasattr(output, 'encode'):
+            output = output.encode('utf-8','replace')
+        print(output.decode('utf-8'))
     else:
         assert False
     # Test
@@ -122,7 +124,9 @@ elif config == "booktests" or config == "book":
         output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py -v", shell=True)
     elif _run_cmd is subprocess.check_output:
         output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py -v", shell=True)
-        print(output.encode('utf-8','replace').decode('utf-8'))
+        if hasattr(output, 'encode'):
+            output = output.encode('utf-8','replace')
+        print(output.decode('utf-8'))
     else:
         assert False
     # Test

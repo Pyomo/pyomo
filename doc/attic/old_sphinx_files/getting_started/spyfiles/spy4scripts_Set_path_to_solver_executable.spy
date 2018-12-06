@@ -1,0 +1,1 @@
+opt = pyo.SolverFactory("ipopt", executable="../ipopt")

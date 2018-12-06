@@ -11,16 +11,15 @@
 
 import logging
 
-import pyomo.common.plugin
 from pyomo.opt import OptSolver, SolverFactory
 
 logger = logging.getLogger('pyomo.solvers')
 
+
+@SolverFactory.register('py', doc='Direct python solver interfaces')
 class pywrapper(OptSolver):
     """Direct python solver interface
     """
-
-    pyomo.common.plugin.alias('py', doc='Direct python solver interfaces')
 
     def __new__(cls, *args, **kwds):
         mode = kwds.get('solver_io', 'python')

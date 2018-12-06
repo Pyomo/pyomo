@@ -109,7 +109,7 @@ class TestAMPLExternalFunction(unittest.TestCase):
         f,g,h = model.bessel.evaluate_fgh((2.5, 2.0,), fixed=[1,0])
         self.assertAlmostEqual(f, 0.223924531469, 7)
         self.assertAlmostEqual(g, [0.0, 0.21138811435101745], 7)
-        self.assertAlmostEqual(h, [0.0, 0.0, 0.02026349177575621, 0.0], 7)
+        self.assertAlmostEqual(h, [0.0, 0.0, 0.02026349177575621], 7)
 
     @unittest.skipIf(not check_available_solvers('ipopt'),
                      "The 'ipopt' solver is not available")

@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -221,6 +221,42 @@ class TestComponentSlices(unittest.TestCase):
         # nothing outside the set values changed
         self.assertEqual(init_sum-sum(init_vals), new_sum)
 
+        # Test error on invalid attribute
+        _slice = self.m.b[...].c[...].x[:]
+        with self.assertRaisesRegexp(
+                AttributeError, ".*VarData' object has no attribute 'bogus'"):
+            _slice.duplicate().bogus = 0
+        # but disabling the exception flag will run without error
+        _slice.attribute_errors_generate_exceptions = False
+        # This doesn't do anything ... simply not raising an exception
+        # is sufficient to verify the desired behavior
+        _slice.bogus = 0
+
+    def test_delattr_slices(self):
+        self.m.b[1,:].c[:,4].x.foo = 10
+        # check that the attribute was added
+        self.assertEqual(len(list(self.m.b[1,:].c[:,4].x)), 3*3)
+        self.assertEqual(sum(list(self.m.b[1,:].c[:,4].x.foo)), 10*3*3)
+        self.assertEqual(sum(list(1 if hasattr(x,'foo') else 0
+                                  for x in self.m.b[:,:].c[:,:].x)), 3*3)
+
+        _slice = self.m.b[1,:].c[:,4].x.foo
+        _slice._call_stack[-1] = (
+            _IndexedComponent_slice.del_attribute,
+            _slice._call_stack[-1][1] )
+        # call the iterator to delete the attributes
+        list(_slice.duplicate())
+        self.assertEqual(sum(list(1 if hasattr(x,'foo') else 0
+                                  for x in self.m.b[:,:].c[:,:].x)), 0)
+        # calling the iterator again will raise an exception
+        with self.assertRaisesRegexp(AttributeError, 'foo'):
+            list(_slice.duplicate())
+        # but disabling the exception flag will run without error
+        _slice.attribute_errors_generate_exceptions = False
+        # This doesn't do anything ... simply not raising an exception
+        # is sufficient to verify the desired behavior
+        list(_slice)
+
     def test_setitem_slices(self):
         init_sum = sum(self.m.b[:,:].c[:,:].x[:].value)
         init_vals = list(self.m.b[1,:].c[:,4].x[:].value)
@@ -235,6 +271,18 @@ class TestComponentSlices(unittest.TestCase):
         self.assertEqual(sum(new_vals), 0)
         # nothing outside the set values changed
         self.assertEqual(init_sum-sum(init_vals), new_sum)
+
+        _slice = self.m.b[1,:].c[:,4].x
+        with self.assertRaisesRegexp(
+                KeyError, "Index 'bogus' is not valid for indexed "
+                "component 'b\[1,4\]\.c\[1,4\]\.x'"):
+            _slice.duplicate()['bogus'] = 0
+        # but disabling the exception flag will run without error
+        _slice.key_errors_generate_exceptions = False
+        # This doesn't do anything ... simply not raising an exception
+        # is sufficient to verify the desired behavior
+        _slice['bogus'] = 0
+
 
     def test_setitem_component(self):
         init_sum = sum(self.m.x[:].value)
@@ -276,6 +324,20 @@ class TestComponentSlices(unittest.TestCase):
         self.assertEqual(len(init_all), (3*3)*(3*3)*3)
         self.assertEqual(len(new_tgt), 0)
         self.assertEqual(len(new_all), (3*3)*(3*3)*3 - 3*3*3)
+
+        _slice = self.m.b[2,:].c[:,4].x
+        with self.assertRaisesRegexp(
+                KeyError, "Index 'bogus' is not valid for indexed "
+                "component 'b\[2,4\]\.c\[1,4\]\.x'"):
+            del _slice.duplicate()['bogus']
+        # but disabling the exception flag will run without error
+        _slice.key_errors_generate_exceptions = False
+        # This doesn't do anything ... simply not raising an exception
+        # is sufficient to verify the desired behavior
+        del _slice['bogus']
+        # Nothing additional should have been deleted
+        final_all = list(self.m.b[:,:].c[:,:].x[:])
+        self.assertEqual(len(new_all), len(final_all))
 
     def test_delitem_component(self):
         init_all = list(self.m.bb[:,:,:])
@@ -337,6 +399,68 @@ class TestComponentSlices(unittest.TestCase):
         self.assertIsInstance(_slicer, _IndexedComponent_slice)
         _slicer.call_errors_generate_exceptions = True
         self.assertRaises( TypeError, _slicer.next )
+
+    def test_iterators(self):
+        m = self.m
+
+        _slice = self.m.x[...]
+        self.assertEqual(
+            list(_slice.wildcard_keys()),
+            [7,8,9]
+        )
+        self.assertEqual(
+            list(_slice.wildcard_items()),
+            [(7, m.x[7]), (8, m.x[8]), (9, m.x[9])]
+        )
+        self.assertEqual(
+            list(_slice.expanded_keys()),
+            [7,8,9]
+        )
+        self.assertEqual(
+            list(_slice.expanded_items()),
+            [(7, m.x[7]), (8, m.x[8]), (9, m.x[9])]
+        )
+
+        _slice = self.m.b[...]
+        self.assertEqual(
+            list(_slice.wildcard_keys()),
+            [(1,4), (1,5), (1,6), (2,4), (2,5), (2,6), (3,4), (3,5), (3,6)]
+        )
+        self.assertEqual(
+            list(_slice.wildcard_items()),
+            [((1,4), m.b[1,4]), ((1,5), m.b[1,5]), ((1,6), m.b[1,6]),
+             ((2,4), m.b[2,4]), ((2,5), m.b[2,5]), ((2,6), m.b[2,6]),
+             ((3,4), m.b[3,4]), ((3,5), m.b[3,5]), ((3,6), m.b[3,6]),]
+        )
+        self.assertEqual(
+            list(_slice.expanded_keys()),
+            [(1,4), (1,5), (1,6), (2,4), (2,5), (2,6), (3,4), (3,5), (3,6)]
+        )
+        self.assertEqual(
+            list(_slice.expanded_items()),
+            [((1,4), m.b[1,4]), ((1,5), m.b[1,5]), ((1,6), m.b[1,6]),
+             ((2,4), m.b[2,4]), ((2,5), m.b[2,5]), ((2,6), m.b[2,6]),
+             ((3,4), m.b[3,4]), ((3,5), m.b[3,5]), ((3,6), m.b[3,6]),]
+        )
+
+        _slice = self.m.b[1,:]
+        self.assertEqual(
+            list(_slice.wildcard_keys()),
+            [4, 5, 6]
+        )
+        self.assertEqual(
+            list(_slice.wildcard_items()),
+            [(4, m.b[1,4]), (5, m.b[1,5]), (6, m.b[1,6]),]
+        )
+        self.assertEqual(
+            list(_slice.expanded_keys()),
+            [(1,4), (1,5), (1,6)]
+        )
+        self.assertEqual(
+            list(_slice.expanded_items()),
+            [((1,4), m.b[1,4]), ((1,5), m.b[1,5]), ((1,6), m.b[1,6])]
+        )
+
 
 
 if __name__ == "__main__":

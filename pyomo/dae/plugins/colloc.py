@@ -12,10 +12,10 @@ import logging
 from six.moves import xrange
 from six import next
 
-from pyomo.core.base.plugin import alias
-from pyomo.core.base import Transformation
+from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import Var, ConstraintList, Expression, Objective
 from pyomo.dae import ContinuousSet, DerivativeVar, Integral
+
 from pyomo.dae.misc import generate_finite_elements
 from pyomo.dae.misc import generate_colloc_points
 from pyomo.dae.misc import expand_components
@@ -235,11 +235,11 @@ def calc_afinal(cp):
     return afinal
 
 
+@TransformationFactory.register('dae.collocation', 
+            doc="Discretizes a DAE model using "
+            "orthogonal collocation over finite elements transforming "
+            "the model into an NLP.")
 class Collocation_Discretization_Transformation(Transformation):
-
-    alias('dae.collocation', doc="Discretizes a DAE model using "
-          "orthogonal collocation over finite elements transforming "
-          "the model into an NLP.")
 
     def __init__(self):
         super(Collocation_Discretization_Transformation, self).__init__()

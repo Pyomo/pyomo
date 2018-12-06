@@ -86,7 +86,7 @@ class Test_kernel(unittest.TestCase):
         self.assertEqual(
             [str(obj) for obj in model.component_data_objects(ctype=IJunk)],
             [str(obj) for obj in model.components(ctype=IJunk)])
-        for item in model.preorder_traversal():
+        for item in pmo.preorder_traversal(model):
             item.deactivate()
             self.assertEqual(
                 [str(obj) for obj in model.component_data_objects(active=True)],
@@ -109,7 +109,7 @@ class Test_kernel(unittest.TestCase):
         model = _model.clone()
         objs = {key: [] for key in
                 [None, IVariable, IConstraint, IBlock, IJunk]}
-        for item in model.heterogeneous_containers():
+        for item in pmo.heterogeneous_containers(model):
             objs[None].extend(item.component_objects(descend_into=False))
             self.assertEqual(
                 [str(obj) for obj in item.component_objects(descend_into=False)],
