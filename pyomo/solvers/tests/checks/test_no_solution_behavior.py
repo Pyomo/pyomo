@@ -86,7 +86,7 @@ def create_test_method(model,
         def failing_failed_solve_test(self):
             return failed_solve_test(self)
         # Return a test that is expected to fail
-        return failing_writer_test
+        return failing_failed_solve_test
 
     # Return a normal test
     return failed_solve_test
