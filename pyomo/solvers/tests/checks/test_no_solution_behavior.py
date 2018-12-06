@@ -67,6 +67,7 @@ def create_test_method(model,
                     test_case.testcase.options,
                     symbolic_labels,
                     load_solutions)
+        model_class.post_solve_test_validation(self, results)
         if len(results.solution) == 0:
             self.assertIn("No solution is available",
                           out.getvalue())
