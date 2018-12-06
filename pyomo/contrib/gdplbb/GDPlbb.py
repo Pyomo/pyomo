@@ -62,8 +62,18 @@ class GDPlbbSolver(opject):
         		set d false
         """
 
+        #Validate model to be used with gdplbb
+        validate_model(model)
+        #Set solver as an MINLP
         solver = SolverFactory('baron')
-        #baron through gams
+
+        indicator_list_name = unique_compoinent_name(model,"_indicator_list")
+        indicator_vars = []
+        for disjunction in model.component_data_objects(
+            ctype = Disjunction, active=True):
+            for disjunct in disjunction.disjuncts:
+                indicator_vars.append(disjunction.disjunct.indicator_var)
+        setattr(model, indicator_list_name, indicator_vars)
 
 
         heap = []
@@ -71,7 +81,7 @@ class GDPlbbSolver(opject):
         root.init_active_disjunctions = list(model.component_data_objects(
             ctype = Disjunction, active=True))
         root.curr_active_disjunctions = []
-        for djn in root.init_active_disjunctions
+        for djn in root.init_active_disjunctions:
             djn.deactivate()
         #Satisfiability check would go here
 
@@ -81,25 +91,24 @@ class GDPlbbSolver(opject):
         while len(heap)>0:
             mdl = heapq.heappop(h)[1]
             if(len(mdl.init_active_disjunctions) ==  0):
-                ASSIGN VALS FROM mdl TO model
+
                 return
             disjunction = mdl.init_active_disjunctions.pop(0)
             disjunction.activate()
             mdl.curr_active_disjunctions.append(disjunction)
-            for disj in list(disjunction.disjuncts)
+            for disj in list(disjunction.disjuncts):
                 disj.indicator_var = 0
-            for disj in list(disjunction.disjuncts)
+            for disj in list(disjunction.disjuncts):
                 disj.indicator_var = 1
                 mnew = model.clone()
                 disj.indicator_var = 0
                 obj_value = minlp_solve(mnew,solver) #fix
-                heapq.heappush(heap,(obj_value,root))
+                heapq.heappush(heap,(obj_value,mnew))
 
 
 
     def validate_model(self,model):
         #Validates that model has only exclusive disjunctions
-
         for d in model.component_data_objects(
             ctype = Disjunction, active=True):
             if(not d.xor):
@@ -109,5 +118,6 @@ class GDPlbbSolver(opject):
     def minlp_solve(self,gdp,solver):
         minlp = gdp.clone()
         TransformationFactory('gdp.fix_disjuncts').apply_to(minlp)
+        solver.solve(minlp)
+        return value(minlp.obj.expr)
         #TO FINISH
-        
