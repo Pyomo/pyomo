@@ -81,6 +81,13 @@ def create_test_method(model,
             return self.skipTest(test_case.msg)
         return skipping_this
 
+    if is_expected_failure:
+        @unittest.expectedFailure
+        def failing_failed_solve_test(self):
+            return failed_solve_test(self)
+        # Return a test that is expected to fail
+        return failing_writer_test
+
     # Return a normal test
     return failed_solve_test
 
