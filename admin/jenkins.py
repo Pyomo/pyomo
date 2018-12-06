@@ -136,6 +136,11 @@ elif config == "booktests" or config == "book":
     else:
         assert False
     # Test
+    book_examples = os.path.join(
+        os.environ['WORKSPACE'], 'src', 'pyomo', 'examples', 'doc', 'pyomobook')
+    if not os.path.isdir(book_examples):
+        raise RuntimeError("Cannot find the Book examples directory (%s)" % (book_examples,))
+    os.environ['TEST_PACKAGES'] = 'pyomo %s' % (book_examples,)
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
     driver.perform_tests('pyomo', cat='book')
 
