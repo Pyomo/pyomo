@@ -90,8 +90,8 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
             x,y = node.args
             if type(x) not in native_types and not x.is_fixed() and \
                type(y) not in native_types and not y.is_fixed():
-                # Per the BARON manual, x and y are not both allowed to
-                # be variables
+                # Per the BARON manual, x ^ y is allowed as long as x
+                # and y are not both variables
                 return "exp(({1}) * log({0}))".format(tmp[0], tmp[1])
             else:
                 return "{0} ^ {1}".format(tmp[0], tmp[1])
@@ -100,8 +100,12 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
                 return "{0} ^ 0.5".format(tmp[0])
             elif node.name == 'log10':
                 return "{0} * log({1})".format(math.log10(math.e), tmp[0])
-            else:
+            elif node.name in {'exp','log'}:
                 return node._to_string(tmp, None, self.smap, True)
+            else:
+                raise RuntimeError(
+                    'The BARON .BAR format does not support the unary '
+                    'function "%s".' % (node.name,))
         elif node.__class__ is EXPR.AbsExpression:
             return "({0} ^ 2) ^ 0.5".format(tmp[0])
         else:
