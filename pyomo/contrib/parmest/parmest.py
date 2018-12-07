@@ -8,6 +8,7 @@ except:
 import importlib as im
 import itertools
 import types
+import json
 import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as st
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
@@ -735,15 +736,30 @@ class _SecondStateCostExpr(object):
         self._data = data
     def __call__(self, model):
         return self._ssc_function(model, self._data)
-        
+
+def group_experiments(data, groupby_column, use_mean = None):
+    grouped_data = []
+    for exp_num, group in data.groupby(data[groupby_column]):
+        d = {}
+        for col in group.columns:
+            if col in use_mean:
+                d[col] = group[col].mean()
+            else:
+                d[col] = list(group[col])
+        grouped_data.append(d)
+    
+    #grouped_data = pd.DataFrame.from_dict(grouped_data)
+    
+    return grouped_data
+
 class Estimator(ParmEstimator):
     
-    def __init__(self, model_function, data, thetalist, ssc_function=None, 
+    def __init__(self, model_function, data, thetalist, lse_function=None, 
                  ssc_name="SecondStageCost", tee=False):
         self.model_function = model_function
         self.data = data
         self.thetalist = thetalist 
-        self.ssc_function = ssc_function 
+        self.lse_function = lse_function 
         
         # This just maps into the old structure
         self.gmodel_file = None
@@ -754,23 +770,32 @@ class Estimator(ParmEstimator):
         self.tee = tee
         self.diagnostic_mode = False
 
-    def parmestify_model(self, data):
+    def _create_parmest_model(self, data):
         from pyomo.core import Objective
         
         model = self.model_function(data)
         
-        if self.ssc_function:
+        for theta in self.thetalist:
+            try:
+                var_validate = eval('model.'+theta)
+                var_validate.fixed = False
+            except:
+                print(theta +'is not a variable')
+        
+        if self.lse_function:
             for obj in model.component_objects(Objective):
                 obj.deactivate()
         
             def FirstStageCost_rule(model):
                 return 0
             model.FirstStageCost = pyo.Expression(rule=FirstStageCost_rule)
-            model.SecondStageCost = pyo.Expression(rule=_SecondStateCostExpr(self.ssc_function, data))
+            model.SecondStageCost = pyo.Expression(rule=_SecondStateCostExpr(self.lse_function, data))
             
             def TotalCost_rule(model):
                 return model.FirstStageCost + model.SecondStageCost
             model.Total_Cost_Objective = pyo.Objective(rule=TotalCost_rule, sense=pyo.minimize)
+        
+        self.parmest_model = model
         
         return model
     
@@ -779,10 +804,17 @@ class Estimator(ParmEstimator):
         if isinstance(cb_data, pd.DataFrame):
             # Keep single experiments as a Dataframe (not a Series)
             exp_data = cb_data.loc[experiment_number,:].to_frame().transpose() 
-        elif isinstance(cb_data, dict):
+        elif isinstance(cb_data, list):
             exp_data = cb_data[experiment_number]
+            if isinstance(exp_data, str):
+                try:
+                    with open(exp_data,'r') as infile:
+                        exp_data = json.load(infile)
+                except:
+                    pass
         else:
             print('Unexpected data format')
-        model = self.parmestify_model(exp_data)
+            return
+        model = self._create_parmest_model(exp_data)
         
         return model
