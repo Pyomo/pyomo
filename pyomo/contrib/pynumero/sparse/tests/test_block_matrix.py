@@ -9,21 +9,15 @@
 #  ___________________________________________________________________________
 import pyutilib.th as unittest
 try:
-    from scipy.sparse import bmat
-    from scipy.sparse import coo_matrix
+    from scipy.sparse import coo_matrix, bmat
     import numpy as np
 except ImportError:
     raise unittest.SkipTest(
         "Pynumero needs scipy and numpy to run block matrix tests")
 
-
-
 from pyomo.contrib.pynumero.sparse import (BlockMatrix,
                                            BlockSymMatrix,
                                            BlockVector)
-
-from pyomo.contrib.pynumero.extensions.sparseutils import SparseLibInterface
-sparselib = SparseLibInterface()
 
 
 class TestBlockMatrix(unittest.TestCase):
@@ -329,14 +323,6 @@ class TestSymBlockMatrix(unittest.TestCase):
         bm[1, 1] = self.block11
         self.basic_m = bm
 
-    def test_is_symmetric(self):
-        self.assertTrue(self.basic_m.is_symmetric)
-
-    def test_tofullmatrix(self):
-        m = self.basic_m
-        a = m.toarray()
-        self.assertTrue(np.allclose(a, a.T, atol=1e-3))
-
     def test_tocoo(self):
         m = self.basic_m.tocoo()
         a = m.toarray()
@@ -347,7 +333,6 @@ class TestSymBlockMatrix(unittest.TestCase):
         data = self.basic_m.coo_data()
         self.assertListEqual(m.data.tolist(), data.tolist())
 
-    @unittest.skipIf(not sparselib.available(), "sparseutils not available")
     def test_multiply(self):
 
         # test scalar multiplication

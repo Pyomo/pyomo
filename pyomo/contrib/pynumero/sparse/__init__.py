@@ -23,11 +23,8 @@ except ImportError:
 if numpy_available and scipy_available:
     from .base import SparseBase
     from .coo import *
-    from .csc import *
-    from .csr import *
     from .block_vector import *
     from .block_matrix import *
-    from .extract import tril, triu
 else:
     import logging
     _logger = logging.getLogger('pyomo.contrib.pynumero.sparse')

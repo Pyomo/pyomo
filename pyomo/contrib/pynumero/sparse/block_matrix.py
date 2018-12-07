@@ -24,15 +24,10 @@ where m_{i,j} are sparse matrices
 from scipy.sparse.sputils import upcast, isscalarlike, get_index_dtype
 from pyomo.contrib.pynumero.sparse.base import SparseBase
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
-from pyomo.contrib.pynumero.sparse.coo import COOMatrix, COOSymMatrix
 from scipy.sparse import coo_matrix
 from scipy.sparse import isspmatrix
 from pyomo.contrib.pynumero.sparse.utils import is_symmetric_sparse
 import numpy as np
-
-from pyomo.contrib.pynumero.sparse.utils import (is_symmetric_dense,
-                                                 _convert_matrix_to_symmetric,
-                                                 _is_symmetric_numerically)
 
 __all__ = ['BlockMatrix', 'BlockSymMatrix']
 
@@ -249,7 +244,7 @@ class BlockMatrix(SparseBase):
 
     def tocsr(self):
         """
-        Converts this matrix to CSRMatrix format.
+        Converts this matrix to csr format.
 
         Returns
         -------
@@ -260,7 +255,7 @@ class BlockMatrix(SparseBase):
 
     def tocsc(self):
         """
-        Converts this matrix to CSCMatrix format.
+        Converts this matrix to csc format.
 
         Returns
         -------

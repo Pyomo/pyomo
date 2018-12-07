@@ -8,13 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 from pyomo.contrib.pynumero.interfaces.nlp import NLP
-from pyomo.contrib.pynumero.sparse import (COOMatrix,
-                                           COOSymMatrix,
-                                           CSCMatrix,
-                                           CSCSymMatrix,
-                                           CSRMatrix,
-                                           CSRSymMatrix,
-                                           empty_matrix)
+from pyomo.contrib.pynumero.sparse import empty_matrix
+
+from scipy.sparse import coo_matrix, csc_matrix, csr_matrix
 import pyomo.environ as aml
 import numpy as np
 
@@ -137,7 +133,7 @@ class AdmmNLP(NLP):
         col = self._zid_to_xid
         row = np.arange(self.nz, dtype=np.int)
         data = np.ones(self.nz)
-        self._compress_x_to_z = CSRMatrix((data, (row, col)), shape=(self.nz, nlp.nx))
+        self._compress_x_to_z = csr_matrix((data, (row, col)), shape=(self.nz, nlp.nx))
         self._expand_z_to_x = self._compress_x_to_z.transpose()
 
         # keeps masks and maps
@@ -317,11 +313,11 @@ class AdmmNLP(NLP):
         x : 1d-array
             array with values of primal variables. Size nx
         out : 1d-array
-            COOMatrix with the structure of the jacobian already defined. Optional
+            coo_matrix with the structure of the jacobian already defined. Optional
 
         Returns
         -------
-        The jacobian of the contraints in a COOMatrix format
+        The jacobian of the contraints in a coo_matrix format
 
         """
         return self._base_nlp.jacobian_g(x, out=out, **kwargs)
@@ -334,11 +330,11 @@ class AdmmNLP(NLP):
         x : 1d-array
             array with values of primal variables. Size nx
         out : 1d-array
-            COOMatrix with the structure of the jacobian already defined. Optional
+            coo_matrix with the structure of the jacobian already defined. Optional
 
         Returns
         -------
-        The jacobian of the equality contraints in a COOMatrix format
+        The jacobian of the equality contraints in a coo_matrix format
 
         """
         return self._base_nlp.jacobian_c(x, out=out, **kwargs)
@@ -352,11 +348,11 @@ class AdmmNLP(NLP):
         x : 1d-array
             array with values of primal variables. Size nx
         out : 1d-array
-            COOMatrix with the structure of the jacobian already defined. Optional
+            coo_matrix with the structure of the jacobian already defined. Optional
 
         Returns
         -------
-        The jacobian of the inequality contraints in a COOMatrix format
+        The jacobian of the inequality contraints in a coo_matrix format
 
         """
         return self._base_nlp.jacobian_d(x, out=out, **kwargs)
@@ -372,11 +368,11 @@ class AdmmNLP(NLP):
         y : 1d-array
             array with values of dual variables. Size ng
         out : 1d-array
-            SymCOOMatrix with the structure of the hessian already defined. Optional
+            coo_matrix with the structure of the hessian already defined. Optional
 
         Returns
         -------
-        SYMCOOMatrix
+        coo_matrix
 
         """
         hess = self._base_nlp.hessian_lag(x, y, **kwargs)
@@ -394,7 +390,7 @@ class AdmmNLP(NLP):
         hess.sum_duplicates()
 
         if out is not None:
-            assert isinstance(out, COOSymMatrix), "hessian must be a COOSymMatrix"
+            assert isinstance(out, coo_matrix), "hessian must be a coo_matrix"
             assert out.shape[0] == self.nx, "hessian has {} rows".format(self.nx)
             assert out.shape[1] == self.nx, "hessian has {} columns".format(self.nx)
             assert out.nnz == self.nnz_hessian_lag, "hessian has {} nnz".format(self.nnz_hessian_lag)
@@ -584,11 +580,11 @@ class AugmentedLagrangianNLP(NLP):
         x : 1d-array
             array with values of primal variables. Size nx
         out : 1d-array
-            COOMatrix with the structure of the jacobian already defined. Optional
+            coo_matrix with the structure of the jacobian already defined. Optional
 
         Returns
         -------
-        The jacobian of the contraints in a COOMatrix format
+        The jacobian of the contraints in a coo_matrix format
 
         """
         return self._base_nlp.jacobian_d(x, out=out)
@@ -601,11 +597,11 @@ class AugmentedLagrangianNLP(NLP):
         x : 1d-array
             array with values of primal variables. Size nx
         out : 1d-array
-            COOMatrix with the structure of the jacobian already defined. Optional
+            coo_matrix with the structure of the jacobian already defined. Optional
 
         Returns
         -------
-        The jacobian of the equality contraints in a COOMatrix format
+        The jacobian of the equality contraints in a coo_matrix format
 
         """
         return empty_matrix(0, self.nx)
@@ -619,11 +615,11 @@ class AugmentedLagrangianNLP(NLP):
         x : 1d-array
             array with values of primal variables. Size nx
         out : 1d-array
-            COOMatrix with the structure of the jacobian already defined. Optional
+            coo_matrix with the structure of the jacobian already defined. Optional
 
         Returns
         -------
-        The jacobian of the inequality contraints in a COOMatrix format
+        The jacobian of the inequality contraints in a coo_matrix format
 
         """
         return self._base_nlp.jacobian_d(x, out=out, **kwargs)
@@ -651,7 +647,7 @@ class AugmentedLagrangianNLP(NLP):
         nnz = 0
         col = np.arange(nnz, dtype=np.int)
         data = np.zeros(nnz)
-        return CSRMatrix((data, (row, col)), shape=(self.ng, nnz))
+        return csr_matrix((data, (row, col)), shape=(self.ng, nnz))
 
     def expansion_matrix_d(self):
         """
@@ -661,7 +657,7 @@ class AugmentedLagrangianNLP(NLP):
         nnz = len(self._base_nlp._d_map)
         col = np.arange(nnz, dtype=np.int)
         data = np.ones(nnz)
-        return CSRMatrix((data, (row, col)), shape=(self.ng, nnz))
+        return csr_matrix((data, (row, col)), shape=(self.ng, nnz))
 
     def expansion_matrix_du(self):
         """
@@ -671,7 +667,7 @@ class AugmentedLagrangianNLP(NLP):
         nnz = len(self._base_nlp._upper_d_map)
         col = np.arange(nnz, dtype=np.int)
         data = np.ones(nnz)
-        return CSRMatrix((data, (row, col)), shape=(self.nd, nnz))
+        return csr_matrix((data, (row, col)), shape=(self.nd, nnz))
 
     def expansion_matrix_dl(self):
         """
@@ -682,7 +678,7 @@ class AugmentedLagrangianNLP(NLP):
         nnz = len(self._base_nlp._lower_d_map)
         col = np.arange(nnz, dtype=np.int)
         data = np.ones(nnz)
-        return CSRMatrix((data, (row, col)), shape=(self.nd, nnz))
+        return csr_matrix((data, (row, col)), shape=(self.nd, nnz))
 
     def expansion_matrix_xu(self):
         """
