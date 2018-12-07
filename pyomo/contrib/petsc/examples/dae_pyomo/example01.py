@@ -88,7 +88,11 @@ if __name__ == "__main__":
     # Solve threw in a lot of example options, but the important ones are
     # the final time and the one to specify that it's a dae.  Probably also
     # would want to specify a time step, or an adaptive time stepping method
+<<<<<<< HEAD
     res = opt.solve(model, tee=True,
+=======
+    res = opt.solve(model, tee=True, keepfiles=True,
+>>>>>>> 6b135d1548dc733072f2903706f22e1b926f1c05
         options={
             "-dae_solve":"",              #tell solver to expect dae problem
             "-ts_monitor":"",             #show progess of TS solver
