@@ -15,8 +15,7 @@ try:
     from pyomo.contrib.pynumero.sparse import (COOMatrix,
                                                COOSymMatrix,
                                                SparseBase,
-                                               IdentityMatrix,
-                                               EmptyMatrix)
+                                               empty_matrix)
 
     from pyomo.contrib.pynumero.sparse.csr import CSRMatrix, CSRSymMatrix
     from pyomo.contrib.pynumero.sparse.csc import CSCMatrix, CSCSymMatrix
@@ -24,9 +23,7 @@ try:
                                                      _convert_matrix_to_symmetric,
                                                      is_symmetric_dense)
 
-    from scipy.sparse.csr import csr_matrix
-    from scipy.sparse.csc import csc_matrix
-    from scipy.sparse.coo import coo_matrix
+    from scipy.sparse import csr_matrix, csc_matrix, coo_matrix, identity
     import numpy as np
 
 except:
@@ -89,7 +86,7 @@ class TestCSRMatrix(unittest.TestCase):
         self.assertIsInstance(mm, CSRMatrix)
         self.assertTrue(np.allclose(mm.toarray(), mm2))
 
-        m2 = IdentityMatrix(4)
+        m2 = COOMatrix(identity(4))
         mm = m + m2
         test_m = np.array([[5., 0., 9., 0.],
                            [0., 8., 0., 0.],
@@ -111,7 +108,7 @@ class TestCSRMatrix(unittest.TestCase):
         self.assertIsInstance(mm, CSRMatrix)
         self.assertTrue(np.allclose(mm.toarray(), mm2))
 
-        m2 = IdentityMatrix(4)
+        m2 = COOMatrix(identity(4))
         mm = m - m2
         test_m = np.array([[3., 0., 9., 0.],
                            [0., 6., 0., 0.],

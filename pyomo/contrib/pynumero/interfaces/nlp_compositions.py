@@ -11,14 +11,12 @@ from pyomo.contrib.pynumero.interfaces.nlp import NLP
 from pyomo.contrib.pynumero.sparse import (BlockMatrix,
                                            BlockSymMatrix,
                                            BlockVector,
-                                           EmptyMatrix,
-                                           IdentityMatrix,
-                                           COOMatrix,
-                                           CSRMatrix)
+                                           empty_matrix)
 from collections import OrderedDict
 import pyomo.environ as aml
 import numpy as np
 import pyomo.contrib.pynumero as pn
+from scipy.sparse import coo_matrix, csr_matrix, identity
 
 # ToDo: Create another one on top for general composite nlps?
 
@@ -218,11 +216,11 @@ class TwoStageStochasticNLP(NLP):
             col = np.array([vid for vid in scenario_vids])
             row = np.arange(0, self.nz)
             data = np.ones(self.nz, dtype=np.double)
-            jac_g[sid + self.nblocks, sid] = COOMatrix((data, (row, col)),
+            jac_g[sid + self.nblocks, sid] = coo_matrix((data, (row, col)),
                                                        shape=(self.nz, nlp.nx))
 
             # coupling matrices Bi
-            jac_g[sid + self.nblocks, self.nblocks] = -IdentityMatrix(self.nz)
+            jac_g[sid + self.nblocks, self.nblocks] = -identity(self.nz)
 
         self._internal_jacobian_g = jac_g
         flat_jac_g = jac_g.tocoo()
@@ -241,11 +239,11 @@ class TwoStageStochasticNLP(NLP):
             col = np.array([vid for vid in scenario_vids])
             row = np.arange(0, self.nz)
             data = np.ones(self.nz, dtype=np.double)
-            jac_c[sid + self.nblocks, sid] = COOMatrix((data, (row, col)),
+            jac_c[sid + self.nblocks, sid] = coo_matrix((data, (row, col)),
                                                        shape=(self.nz, nlp.nx))
 
             # coupling matrices Bi
-            jac_c[sid + self.nblocks, self.nblocks] = -IdentityMatrix(self.nz)
+            jac_c[sid + self.nblocks, self.nblocks] = -identity(self.nz)
 
         self._internal_jacobian_c = jac_c
         flat_jac_c = jac_c.tocoo()
@@ -277,7 +275,7 @@ class TwoStageStochasticNLP(NLP):
             yi = nlp.y_init()
             hess_lag[sid, sid] = nlp.hessian_lag(xi, yi)
 
-        hess_lag[self.nblocks, self.nblocks] = EmptyMatrix(self.nz, self.nz)
+        hess_lag[self.nblocks, self.nblocks] = empty_matrix(self.nz, self.nz)
 
         flat_hess = hess_lag.tocoo()
         self._irows_hess = flat_hess.row
@@ -642,7 +640,7 @@ class TwoStageStochasticNLP(NLP):
                 # coupling matrices Ai
                 jac_g[sid + self.nblocks, sid] = self._AB_coo[sid, sid]
                 # coupling matrices Bi
-                jac_g[sid + self.nblocks, self.nblocks] = -IdentityMatrix(self.nz)
+                jac_g[sid + self.nblocks, self.nblocks] = -identity(self.nz)
             return jac_g
         else:
             assert isinstance(out, BlockMatrix), 'out must be a BlockMatrix'
@@ -698,7 +696,7 @@ class TwoStageStochasticNLP(NLP):
                 # coupling matrices Ai
                 jac_c[sid + self.nblocks, sid] = self._AB_coo[sid, sid]
                 # coupling matrices Bi
-                jac_c[sid + self.nblocks, self.nblocks] = -IdentityMatrix(self.nz)
+                jac_c[sid + self.nblocks, self.nblocks] = -identity(self.nz)
             return jac_c
         else:
             assert isinstance(out, BlockMatrix), 'out must be a BlockMatrix'
@@ -726,7 +724,7 @@ class TwoStageStochasticNLP(NLP):
         ----------
         x : array_like
             Array with values of primal variables.
-        out : COOMatrix, optional
+        out : coo_matrix, optional
             Output matrix with the structure of the jacobian already defined.
 
         Returns
@@ -770,12 +768,12 @@ class TwoStageStochasticNLP(NLP):
             Array with values of primal variables.
         y : array_like
             Array with values of dual variables.
-        out : SymCOOMatrix
+        out : BlockMatrix
             Output matrix with the structure of the hessian already defined. Optional
 
         Returns
         -------
-        BlockSymMatrix
+        BlockMatrix
 
         """
         assert x.size == self.nx, 'Dimension mismatch'
@@ -817,7 +815,7 @@ class TwoStageStochasticNLP(NLP):
                 yi = y_[sid]
                 hess_lag[sid, sid] = nlp.hessian_lag(xi, yi, eval_f_c=eval_f_c)
 
-            hess_lag[self.nblocks, self.nblocks] = EmptyMatrix(self.nz, self.nz)
+            hess_lag[self.nblocks, self.nblocks] = empty_matrix(self.nz, self.nz)
             return hess_lag
         else:
             assert isinstance(out, BlockSymMatrix), \
@@ -903,7 +901,7 @@ class TwoStageStochasticNLP(NLP):
         Pxl = BlockMatrix(self.nblocks + 1, self.nblocks + 1)
         for sid, nlp in enumerate(self._nlps):
             Pxl[sid, sid] = nlp.expansion_matrix_xl()
-        Pxl[self.nblocks, self.nblocks] = EmptyMatrix(self.nz, 0)
+        Pxl[self.nblocks, self.nblocks] = empty_matrix(self.nz, 0)
         return Pxl
 
     def expansion_matrix_xu(self):
@@ -911,7 +909,7 @@ class TwoStageStochasticNLP(NLP):
         Pxu = BlockMatrix(self.nblocks + 1, self.nblocks + 1)
         for sid, nlp in enumerate(self._nlps):
             Pxu[sid, sid] = nlp.expansion_matrix_xu()
-        Pxu[self.nblocks, self.nblocks] = EmptyMatrix(self.nz, 0)
+        Pxu[self.nblocks, self.nblocks] = empty_matrix(self.nz, 0)
         return Pxu
 
     def expansion_matrix_dl(self):
@@ -935,8 +933,8 @@ class TwoStageStochasticNLP(NLP):
             col = self._zid_to_vid[sid]
             row = np.arange(self.nz, dtype=np.int)
             data = np.ones(self.nz)
-            AB[sid, sid] = CSRMatrix((data, (row, col)), shape=(self.nz, nlp.nx))
-        AB[self.nblocks, self.nblocks] = -IdentityMatrix(self.nz)
+            AB[sid, sid] = csr_matrix((data, (row, col)), shape=(self.nz, nlp.nx))
+        AB[self.nblocks, self.nblocks] = -identity(self.nz)
         return AB
 
 

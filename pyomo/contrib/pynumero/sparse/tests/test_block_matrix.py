@@ -10,6 +10,7 @@
 import pyutilib.th as unittest
 try:
     from scipy.sparse import bmat
+    from scipy.sparse import coo_matrix
     import numpy as np
 except ImportError:
     raise unittest.SkipTest(
@@ -17,11 +18,8 @@ except ImportError:
 
 
 
-from pyomo.contrib.pynumero.sparse import (COOMatrix,
-                                           COOSymMatrix,
-                                           BlockMatrix,
+from pyomo.contrib.pynumero.sparse import (BlockMatrix,
                                            BlockSymMatrix,
-                                           SparseBase,
                                            BlockVector)
 
 from pyomo.contrib.pynumero.extensions.sparseutils import SparseLibInterface
@@ -33,7 +31,7 @@ class TestBlockMatrix(unittest.TestCase):
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
         data = np.array([2, 1, 3, 4, 5, 1])
-        m = COOMatrix((data, (row, col)), shape=(4, 4))
+        m = coo_matrix((data, (row, col)), shape=(4, 4))
 
         self.block_m = m
 
@@ -164,7 +162,6 @@ class TestBlockMatrix(unittest.TestCase):
                 self.assertIsNone(m[i, j])
 
         m[0, 1] = self.block_m
-        self.assertIsInstance(m[0, 1], SparseBase)
         self.assertEqual(m[0, 1].shape, self.block_m.shape)
 
     def test_setitem(self):
@@ -174,7 +171,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertFalse(m.is_empty_block(0, 1))
         self.assertEqual(m.row_block_sizes()[0], self.block_m.shape[0])
         self.assertEqual(m.col_block_sizes()[1], self.block_m.shape[1])
-        self.assertIsInstance(m[0, 1], SparseBase)
         self.assertEqual(m[0, 1].shape, self.block_m.shape)
 
     def test_coo_data(self):
@@ -184,7 +180,6 @@ class TestBlockMatrix(unittest.TestCase):
 
     # ToDo: add tests for block matrices with block matrices in it
     # ToDo: add tests for matrices with zeros in the diagonal
-    # ToDo: add tests for getallnnz
     # ToDo: add tests for block matrices with coo and csc matrices
 
     def test_nnz(self):
@@ -219,16 +214,12 @@ class TestBlockMatrix(unittest.TestCase):
         for j in range(self.basic_m.bshape[0]):
             self.assertIsNone(self.basic_m[j, 0])
 
-    def test_getallnnz(self):
-        self.assertEqual(self.block_m.nnz * 3, self.basic_m.getallnnz())
-        self.assertEqual(self.block_m.nnz * 4, self.composed_m.getallnnz())
-
     def test_to_scipy(self):
 
         block = self.block_m
         m = self.basic_m
         scipy_mat = bmat([[block, block], [None, block]], format='coo')
-        dinopy_mat = m.toscipy()
+        dinopy_mat = m.tocoo()
         drow = np.sort(dinopy_mat.row)
         dcol = np.sort(dinopy_mat.col)
         ddata = np.sort(dinopy_mat.data)
@@ -263,7 +254,7 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertEqual(len(self.basic_m.__repr__()), 17)
 
     def test_str(self):
-        self.assertEqual(len(self.basic_m.__str__()), 85)
+        self.assertEqual(len(self.basic_m.__str__()), 328)
 
     def test_set_item(self):
 
@@ -308,21 +299,26 @@ class TestSymBlockMatrix(unittest.TestCase):
         row = np.array([0, 1, 4, 1, 2, 7, 2, 3, 5, 3, 4, 5, 4, 7, 5, 6, 6, 7])
         col = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6, 7])
         data = np.array([27, 5, 12, 56, 66, 34, 94, 31, 41, 7, 98, 72, 24, 33, 78, 47, 98, 41])
-        m = COOSymMatrix((data, (row, col)), shape=(8, 8))
+
+        off_diagonal_mask = row != col
+        new_row = np.concatenate([row, col[off_diagonal_mask]])
+        new_col = np.concatenate([col, row[off_diagonal_mask]])
+        new_data = np.concatenate([data, data[off_diagonal_mask]])
+        m = coo_matrix((new_data, (new_row, new_col)), shape=(8, 8))
 
         self.block00 = m
 
         row = np.array([0, 3, 1, 0])
         col = np.array([0, 3, 1, 2])
         data = np.array([4, 5, 7, 9])
-        m = COOMatrix((data, (row, col)), shape=(4, 8))
+        m = coo_matrix((data, (row, col)), shape=(4, 8))
 
         self.block10 = m
 
         row = np.array([0, 1, 2, 3])
         col = np.array([0, 1, 2, 3])
         data = np.array([1, 1, 1, 1])
-        m = COOSymMatrix((data, (row, col)), shape=(4, 4))
+        m = coo_matrix((data, (row, col)), shape=(4, 4))
 
         self.block11 = m
 
@@ -336,11 +332,8 @@ class TestSymBlockMatrix(unittest.TestCase):
     def test_is_symmetric(self):
         self.assertTrue(self.basic_m.is_symmetric)
 
-    def test_getitem(self):
-        self.assertRaises(RuntimeError, self.basic_m.__getitem__, (0, 1))
-
     def test_tofullmatrix(self):
-        m = self.basic_m.tofullmatrix()
+        m = self.basic_m
         a = m.toarray()
         self.assertTrue(np.allclose(a, a.T, atol=1e-3))
 
@@ -361,8 +354,8 @@ class TestSymBlockMatrix(unittest.TestCase):
         m = self.basic_m * 5.0
         dense_m = m.todense()
 
-        b00 = self.block00.tofullcoo()
-        b11 = self.block11.tofullcoo()
+        b00 = self.block00.tocoo()
+        b11 = self.block11.tocoo()
         b10 = self.block10
         scipy_m = bmat([[b00, b10.transpose()], [b10, b11]], format='coo')
         dense_scipy_m = scipy_m.todense() * 5.0
@@ -383,7 +376,6 @@ class TestSymBlockMatrix(unittest.TestCase):
         scipy_res = scipy_m * x.flatten()
 
         self.assertListEqual(dinopy_res.tolist(), scipy_res.tolist())
-
         dinopy_res = m * x.flatten()
         scipy_res = scipy_m * x.flatten()
 

@@ -49,13 +49,7 @@ except ImportError as e:
     raise ImportError('Error importing asl while running nlp interface. '
                       'Make sure libpynumero_ASL is installed and added to path.')
 
-from pyomo.contrib.pynumero.sparse import (COOMatrix,
-                             COOSymMatrix,
-                             CSCMatrix,
-                             CSCSymMatrix,
-                             CSRMatrix,
-                             CSRSymMatrix)
-from scipy.sparse import dok_matrix
+from scipy.sparse import coo_matrix, csr_matrix
 import abc
 import numpy as np
 import tempfile
@@ -522,7 +516,7 @@ class NLP(object):
         nnz = len(self._lower_x_map)
         col = np.arange(nnz, dtype=np.int)
         data = np.ones(nnz)
-        return CSRMatrix((data, (row, col)), shape=(self.nx, nnz))
+        return csr_matrix((data, (row, col)), shape=(self.nx, nnz))
 
     def expansion_matrix_xu(self):
         """
@@ -532,7 +526,7 @@ class NLP(object):
         nnz = len(self._upper_x_map)
         col = np.arange(nnz, dtype=np.int)
         data = np.ones(nnz)
-        return CSRMatrix((data, (row, col)), shape=(self.nx, nnz))
+        return csr_matrix((data, (row, col)), shape=(self.nx, nnz))
 
     def expansion_matrix_dl(self):
         """
@@ -543,7 +537,7 @@ class NLP(object):
         nnz = len(self._lower_d_map)
         col = np.arange(nnz, dtype=np.int)
         data = np.ones(nnz)
-        return CSRMatrix((data, (row, col)), shape=(self.nd, nnz))
+        return csr_matrix((data, (row, col)), shape=(self.nd, nnz))
 
     def expansion_matrix_du(self):
         """
@@ -553,7 +547,7 @@ class NLP(object):
         nnz = len(self._upper_d_map)
         col = np.arange(nnz, dtype=np.int)
         data = np.ones(nnz)
-        return CSRMatrix((data, (row, col)), shape=(self.nd, nnz))
+        return csr_matrix((data, (row, col)), shape=(self.nd, nnz))
 
     def expansion_matrix_d(self):
         """
@@ -563,7 +557,7 @@ class NLP(object):
         nnz = len(self._d_map)
         col = np.arange(nnz, dtype=np.int)
         data = np.ones(nnz)
-        return CSRMatrix((data, (row, col)), shape=(self.ng, nnz))
+        return csr_matrix((data, (row, col)), shape=(self.ng, nnz))
 
     def expansion_matrix_c(self):
         """
@@ -573,7 +567,7 @@ class NLP(object):
         nnz = len(self._c_map)
         col = np.arange(nnz, dtype=np.int)
         data = np.ones(nnz)
-        return CSRMatrix((data, (row, col)), shape=(self.ng, nnz))
+        return csr_matrix((data, (row, col)), shape=(self.ng, nnz))
 
     def create_vector_x(self, subset=None):
         """Returns ndarray of primal variables
@@ -757,12 +751,12 @@ class NLP(object):
         ----------
         x : array_like
             Array with values of primal variables.
-        out : COOMatrix, optional
+        out : coo_matrix, optional
             Output matrix with the structure of the jacobian already defined.
 
         Returns
         -------
-        COOMatrix
+        coo_matrix
 
         """
         return
@@ -775,12 +769,12 @@ class NLP(object):
         ----------
         x : array_like
             Array with values of primal variables.
-        out : COOMatrix, optional
+        out : coo_matrix, optional
             Output matrix with the structure of the jacobian already defined.
 
         Returns
         -------
-        COOMatrix
+        coo_matrix
 
         """
         return
@@ -793,12 +787,12 @@ class NLP(object):
         ----------
         x : array_like
             Array with values of primal variables.
-        out : COOMatrix, optional
+        out : coo_matrix, optional
             Output matrix with the structure of the jacobian already defined.
 
         Returns
         -------
-        COOMatrix
+        coo_matrix
 
         """
         return
@@ -813,12 +807,12 @@ class NLP(object):
             Array with values of primal variables.
         y : array_like
             Array with values of dual variables.
-        out : SymCOOMatrix
+        out : coo_matrix
             Output matrix with the structure of the hessian already defined. Optional
 
         Returns
         -------
-        SYMCOOMatrix
+        coo_matrix
 
         """
         return
@@ -878,7 +872,7 @@ class AslNLP(NLP):
         self._nx = self._asl.get_n_vars()
         self._ng = self._asl.get_n_constraints()
         self._nnz_jac_g = self._asl.get_nnz_jac_g()
-        self._nnz_hess_lag = self._asl.get_nnz_hessian_lag()
+        self._nnz_hess_lag_lower = self._asl.get_nnz_hessian_lag()
 
         # initial point
         self._init_x = np.zeros(self.nx)
@@ -944,12 +938,20 @@ class AslNLP(NLP):
         self._nnz_jac_c = len(self._jcols_jac_c)
         self._nnz_jac_d = len(self._jcols_jac_d)
 
-        # populate hessian structure
-        self._irows_hess = np.zeros(self.nnz_hessian_lag, dtype=np.intc)
-        self._jcols_hess = np.zeros(self.nnz_hessian_lag, dtype=np.intc)
+        # populate hessian structure (lower triangular)
+        self._irows_hess = np.zeros(self._nnz_hess_lag_lower, dtype=np.intc)
+        self._jcols_hess = np.zeros(self._nnz_hess_lag_lower, dtype=np.intc)
         self._asl.struct_hes_lag(self._irows_hess, self._jcols_hess)
         self._irows_hess -= 1
         self._jcols_hess -= 1
+
+        # rework hessian to full matrix (lower and upper)
+        diff = self._irows_hess - self._jcols_hess
+        self._lower_hess_mask = np.where(diff != 0)
+        lower = self._lower_hess_mask
+        self._irows_hess = np.concatenate((self._irows_hess, self._jcols_hess[lower]))
+        self._jcols_hess = np.concatenate((self._jcols_hess, self._irows_hess[lower]))
+        self._nnz_hess_lag = self._irows_hess.size
 
     def _build_x_maps(self):
 
@@ -1154,21 +1156,21 @@ class AslNLP(NLP):
         ----------
         x : array_like
             Array with values of primal variables.
-        out : COOMatrix, optional
+        out : coo_matrix, optional
             Output matrix with the structure of the jacobian already defined.
 
         Returns
         -------
-        COOMatrix
+        coo_matrix
 
         """
         if out is None:
             data = np.zeros(self.nnz_jacobian_g, np.double)
             self._asl.eval_jac_g(x, data)
-            jac = COOMatrix((data, (self._irows_jac_g, self._jcols_jac_g)),
+            jac = coo_matrix((data, (self._irows_jac_g, self._jcols_jac_g)),
                              shape=(self.ng, self.nx))
         else:
-            assert isinstance(out, COOMatrix), "jacobian_g must be a COOMatrix"
+            assert isinstance(out, coo_matrix), "jacobian_g must be a coo_matrix"
             assert out.shape[0] == self.ng, "jacobian_g has {} rows".format(self.ng)
             assert out.shape[1] == self.nx, "jacobian_g has {} columns".format(self.nx)
             assert out.nnz == self.nnz_jacobian_g, "jacobian_g has {} nnz".format(self.nnz_jacobian_g)
@@ -1186,12 +1188,12 @@ class AslNLP(NLP):
         ----------
         x : array_like
             Array with values of primal variables.
-        out : COOMatrix, optional
+        out : coo_matrix, optional
             Output matrix with the structure of the jacobian already defined.
 
         Returns
         -------
-        COOMatrix
+        coo_matrix
 
         """
         evaluated_jac_g = kwargs.pop('evaluated_jac_g', None)
@@ -1201,33 +1203,33 @@ class AslNLP(NLP):
             self._asl.eval_jac_g(x, data)
 
             if out is not None:
-                assert isinstance(out, COOMatrix), "jacobian_c must be a COOMatrix"
+                assert isinstance(out, coo_matrix), "jacobian_c must be a coo_matrix"
                 assert out.shape[0] == self.nc, "jacobian_c has {} rows".format(self.nc)
                 assert out.shape[1] == self.nx, "jacobian_c has {} columns".format(self.nx)
                 data.compress(self._irows_c_mask, out=out.data)
                 jac = out
             else:
                 c_data = data.compress(self._irows_c_mask)
-                jac = COOMatrix((c_data, (self._irows_jac_c, self._jcols_jac_c)),
-                                shape=(self.nc, self.nx))
+                jac = coo_matrix((c_data, (self._irows_jac_c, self._jcols_jac_c)),
+                                 shape=(self.nc, self.nx))
         else:
-            assert isinstance(evaluated_jac_g, COOMatrix), "jacobian_g must be a COOMatrix"
+            assert isinstance(evaluated_jac_g, coo_matrix), "jacobian_g must be a coo_matrix"
             assert evaluated_jac_g.shape[0] == self.ng, "jacobian_g has {} rows".format(self.ng)
             assert evaluated_jac_g.shape[1] == self.nx, "jacobian_g has {} columns".format(self.nx)
             assert evaluated_jac_g.nnz == self.nnz_jacobian_g, "jacobian_g has {} nnz".format(self.nnz_jacobian_g)
             c_data = evaluated_jac_g.data.compress(self._irows_c_mask)
-            jac = COOMatrix((c_data, (self._irows_jac_c, self._jcols_jac_c)),
-                            shape=(self.nc, self.nx))
+            jac = coo_matrix((c_data, (self._irows_jac_c, self._jcols_jac_c)),
+                             shape=(self.nc, self.nx))
 
             if out is not None:
-                assert isinstance(out, COOMatrix), "jacobian_c must be a COOMatrix"
+                assert isinstance(out, coo_matrix), "jacobian_c must be a coo_matrix"
                 assert out.shape[0] == self.nc, "jacobian_c has {} rows".format(self.nc)
                 assert out.shape[1] == self.nx, "jacobian_c has {} columns".format(self.nx)
                 evaluated_jac_g.data.compress(self._irows_c_mask, out=out.data)
                 jac = out
             else:
                 c_data = evaluated_jac_g.data.compress(self._irows_c_mask)
-                jac = COOMatrix((c_data, (self._irows_jac_c, self._jcols_jac_c)),
+                jac = coo_matrix((c_data, (self._irows_jac_c, self._jcols_jac_c)),
                                 shape=(self.nc, self.nx))
         return jac
 
@@ -1238,12 +1240,12 @@ class AslNLP(NLP):
         ----------
         x : array_like
             Array with values of primal variables.
-        out : COOMatrix, optional
+        out : coo_matrix, optional
             Output matrix with the structure of the jacobian already defined.
 
         Returns
         -------
-        COOMatrix
+        coo_matrix
 
         """
 
@@ -1254,32 +1256,32 @@ class AslNLP(NLP):
             self._asl.eval_jac_g(x, data)
 
             if out is not None:
-                assert isinstance(out, COOMatrix), "jacobian_d must be a COOMatrix"
+                assert isinstance(out, coo_matrix), "jacobian_d must be a coo_matrix"
                 assert out.shape[0] == self.nd, "jacobian_d has {} rows".format(self.nd)
                 assert out.shape[1] == self.nx, "jacobian_d has {} columns".format(self.nx)
                 data.compress(self._irows_d_mask, out=out.data)
                 jac = out
             else:
                 d_data = data.compress(self._irows_d_mask)
-                jac = COOMatrix((d_data, (self._irows_jac_d, self._jcols_jac_d)),
+                jac = coo_matrix((d_data, (self._irows_jac_d, self._jcols_jac_d)),
                                 shape=(self.nd, self.nx))
         else:
 
-            assert isinstance(evaluated_jac_g, COOMatrix), "jacobian_g must be a COOMatrix"
+            assert isinstance(evaluated_jac_g, coo_matrix), "jacobian_g must be a coo_matrix"
             assert evaluated_jac_g.shape[0] == self.ng, "jacobian_g has {} rows".format(self.ng)
             assert evaluated_jac_g.shape[1] == self.nx, "jacobian_g has {} columns".format(self.nx)
             assert evaluated_jac_g.nnz == self.nnz_jacobian_g, "jacobian_g has {} nnz".format(self.nnz_jacobian_g)
 
             if out is not None:
-                assert isinstance(out, COOMatrix), "jacobian_d must be a COOMatrix"
+                assert isinstance(out, coo_matrix), "jacobian_d must be a coo_matrix"
                 assert out.shape[0] == self.nd, "jacobian_d has {} rows".format(self.nd)
                 assert out.shape[1] == self.nx, "jacobian_d has {} columns".format(self.nx)
                 evaluated_jac_g.data.compress(self._irows_d_mask, out=out.data)
                 jac = out
             else:
                 d_data = evaluated_jac_g.data.compress(self._irows_d_mask)
-                jac = COOMatrix((d_data, (self._irows_jac_d, self._jcols_jac_d)),
-                                shape=(self.nd, self.nx))
+                jac = coo_matrix((d_data, (self._irows_jac_d, self._jcols_jac_d)),
+                                 shape=(self.nd, self.nx))
         return jac
 
     def hessian_lag(self, x, y, out=None, **kwargs):
@@ -1291,12 +1293,12 @@ class AslNLP(NLP):
             Array with values of primal variables.
         y : array_like
             Array with values of dual variables.
-        out : SymCOOMatrix
+        out : coo_matrix
             Output matrix with the structure of the hessian already defined. Optional
 
         Returns
         -------
-        SYMCOOMatrix
+        coo_matrix
 
         """
 
@@ -1309,19 +1311,23 @@ class AslNLP(NLP):
             self._asl.eval_f(x)
         if out is None:
 
-            data = np.zeros(self.nnz_hessian_lag, np.double)
+            data = np.zeros(self._nnz_hess_lag_lower, np.double)
             self._asl.eval_hes_lag(x, y, data, obj_factor=obj_factor)
-
-            hess = COOSymMatrix((data, (self._irows_hess, self._jcols_hess)),
+            values = np.concatenate((data, data[self._lower_hess_mask]))
+            values += 1e-16 # this is to deal with scipy bug temporarily
+            hess = coo_matrix((values, (self._irows_hess, self._jcols_hess)),
                                 shape=(self.nx, self.nx))
         else:
-            assert isinstance(out, COOSymMatrix), "hessian must be a COOSymMatrix"
+            assert isinstance(out, coo_matrix), "hessian must be a coo_matrix"
             assert out.shape[0] == self.nx, "hessian has {} rows".format(self.nx)
             assert out.shape[1] == self.nx, "hessian has {} columns".format(self.nx)
             assert out.nnz == self.nnz_hessian_lag, "hessian has {} nnz".format(self.nnz_hessian_lag)
 
-            data = out.data
+            data = np.zeros(self._nnz_hess_lag_lower, np.double)
             self._asl.eval_hes_lag(x, y, data, obj_factor=obj_factor)
+            values = np.concatenate((data, data[self._lower_hess_mask]))
+            values += 1e-16 # this is to deal with scipy bug temporarily
+            out.data = values
             hess = out
 
         return hess
@@ -1408,205 +1414,6 @@ class AmplNLP(AslNLP):
             del all_names[-1]
             self._cid_to_name = all_names
             self._name_to_cid = {all_names[cid]: cid for cid in range(self.ng)}
-
-    # Query methods
-    def Grad_objective(self, x, var_names=None, var_indices=None):
-
-        if var_indices is not None and var_names is not None:
-            raise RuntimeError('pick indices or names but not both')
-
-        df = self.create_vector_x()
-
-        self._asl.eval_deriv_f(x, df)
-
-        if var_indices is not None:
-            return df[var_indices]
-
-        if var_names is not None:
-            if self._vid_to_name is None:
-                raise RuntimeError('specify variable names')
-            indices = [self._name_to_vid[n] for n in var_names]
-            return df[indices]
-        return df
-
-    def Evaluate_g(self, x, constraint_indices=None, constraint_names=None):
-
-        if constraint_indices is not None and constraint_names is not None:
-            raise RuntimeError('pick indices or names but not both')
-
-        res = self.evaluate_g(x)
-
-        if constraint_indices is not None:
-            return res[constraint_indices]
-
-        if constraint_names is not None:
-            if self._vid_to_name is None:
-                raise RuntimeError('specify constraint names')
-            indices = [self._name_to_cid[n] for n in constraint_names]
-            return res[indices]
-        return res
-
-    def Jacobian_g(self, x, var_names=None, var_indices=None,
-                 constraint_indices=None, constraint_names=None):
-
-        if var_indices is not None and var_names is not None:
-            raise RuntimeError('pick indices or names but not both')
-
-        if constraint_indices is not None and constraint_names is not None:
-            raise RuntimeError('pick indices or names but not both')
-
-        subset_vars = False
-        if var_indices is not None:
-            indices_vars = var_indices
-            subset_vars = True
-        if var_names is not None:
-            if self._vid_to_name is None:
-                raise RuntimeError('specify variable names')
-            indices_vars = [self._name_to_vid[n] for n in var_names]
-            subset_vars = True
-
-        subset_constraints = False
-        if constraint_indices is not None:
-            indices_constraints = constraint_indices
-            subset_constraints = True
-        if constraint_names is not None:
-            if self._vid_to_name is None:
-                raise RuntimeError('specify constraint names')
-            indices_constraints = [self._name_to_cid[n] for n in constraint_names]
-            subset_constraints = True
-
-        if subset_vars:
-            jcols_bool = np.isin(self._jcols_jac_g, indices_vars)
-            ncols = len(indices_vars)
-        else:
-            jcols_bool = np.ones(self.nnz_jacobian_g, dtype=bool)
-            ncols = self.nx
-
-        if subset_constraints:
-            irows_bool = np.isin(self._irows_jac_g, indices_constraints)
-            nrows = len(indices_constraints)
-        else:
-            irows_bool = np.ones(self.nnz_jacobian_g, dtype=bool)
-            nrows = self.ng
-
-        vals_bool = irows_bool * jcols_bool
-        vals_indices = np.where(vals_bool)
-
-        vals_jac = np.zeros(self.nnz_jacobian_g, np.double)
-        self._asl.eval_jac_g(x, vals_jac)
-        data = vals_jac[vals_indices]
-
-        # map indices to new indices
-        new_col_indices = self._jcols_jac_g[vals_indices]
-        if subset_vars:
-            old_col_indices = self._jcols_jac_g[vals_indices]
-            vid_to_nvid = {vid: idx for idx, vid in enumerate(indices_vars)}
-            new_col_indices = np.array([vid_to_nvid[vid] for vid in old_col_indices])
-
-        new_row_indices = self._irows_jac_g[vals_indices]
-        if subset_constraints:
-            old_const_indices = self._irows_jac_g[vals_indices]
-            cid_to_ncid = {cid: idx for idx, cid in enumerate(indices_constraints)}
-            new_row_indices = np.array([cid_to_ncid[cid] for cid in old_const_indices])
-
-        return COOMatrix((data, (new_row_indices, new_col_indices)), shape=(nrows, ncols))
-
-    def Hessian_lag(self,
-                    x,
-                    lam,
-                    var_names_rows=None,
-                    var_indices_rows=None,
-                    var_names_cols=None,
-                    var_indices_cols=None,
-                    eval_f_c=True):
-
-        """
-        Note: this follows the same order given in the subset of vars. It does not retain
-        the symmetric property.
-        Parameters
-        ----------
-        x
-        lam
-        matrix_format
-        var_names_rows
-        var_indices_rows
-        var_names_cols
-        var_indices_cols
-        eval_f_c
-
-        Returns
-        -------
-
-        """
-
-        if var_indices_cols is not None and var_names_cols is not None:
-            raise RuntimeError('pick indices or names but not both')
-
-        if var_indices_rows is not None and var_names_rows is not None:
-            raise RuntimeError('pick indices or names but not both')
-
-        subset_cols = False
-        if var_indices_cols is not None:
-            indices_cols = var_indices_cols
-            subset_cols = True
-        if var_names_cols is not None:
-            if self._vid_to_name is None:
-                raise RuntimeError('specify variable names')
-            indices_cols = [self._name_to_vid[n] for n in var_names_cols]
-            subset_cols = True
-
-        subset_rows = False
-        if var_indices_rows is not None:
-            indices_rows = var_indices_rows
-            subset_rows = True
-        if var_names_rows is not None:
-            if self._vid_to_name is None:
-                raise RuntimeError('specify variable names')
-            indices_rows = [self._name_to_vid[n] for n in var_names_rows]
-            subset_rows = True
-
-        if eval_f_c:
-            res = self.create_vector_y()
-            self._asl.eval_g(x, res)
-            self._asl.eval_f(x)
-
-        if subset_cols:
-            jcols_bool = np.isin(self._jcols_hess, indices_cols)
-            ncols = len(indices_cols)
-        else:
-            jcols_bool = np.ones(self.nnz_hessian_lag, dtype=bool)
-            ncols = self.nx
-
-        if subset_rows:
-            irows_bool = np.isin(self._irows_hess, indices_rows)
-            nrows = len(indices_rows)
-        else:
-            irows_bool = np.ones(self.nnz_hessian_lag, dtype=bool)
-            nrows = self.nx
-
-        vals_bool = irows_bool * jcols_bool
-        vals_indices = np.where(vals_bool)
-
-        vals_hess = np.zeros(self.nnz_hessian_lag, 'd')
-        self._asl.eval_hes_lag(x, lam, vals_hess)
-        data = vals_hess[vals_indices]
-
-        # map indices to new indices
-        new_col_indices = self._jcols_hess[vals_indices]
-        if subset_cols:
-            old_col_indices = self._jcols_hess[vals_indices]
-            vid_to_nvid = {vid: idx for idx, vid in enumerate(indices_cols)}
-            new_col_indices = np.array([vid_to_nvid[vid] for vid in old_col_indices])
-
-        new_row_indices = self._irows_hess[vals_indices]
-        if subset_rows:
-            old_row_indices = self._irows_hess[vals_indices]
-            cid_to_ncid = {cid: idx for idx, cid in enumerate(indices_rows)}
-            new_row_indices = np.array([cid_to_ncid[cid] for cid in old_row_indices])
-
-
-        return COOMatrix((data, (new_row_indices, new_col_indices)), shape=(nrows, ncols))
-
 
     def variable_order(self):
         return [name for name in self._vid_to_name]
@@ -1808,7 +1615,7 @@ class PyomoNLP(AslNLP):
             cid_to_ncid = {cid: idx for idx, cid in enumerate(indices_constraints)}
             new_row_indices = np.array([cid_to_ncid[cid] for cid in old_const_indices])
 
-        return COOMatrix((data, (new_row_indices, new_col_indices)),
+        return coo_matrix((data, (new_row_indices, new_col_indices)),
                          shape=(nrows, ncols))
 
     def hessian_lag(self, x, y, out=None, **kwargs):
@@ -1888,7 +1695,7 @@ class PyomoNLP(AslNLP):
             cid_to_ncid = {cid: idx for idx, cid in enumerate(indices_rows)}
             new_row_indices = np.array([cid_to_ncid[cid] for cid in old_row_indices])
 
-        return COOMatrix((data, (new_row_indices, new_col_indices)),
+        return coo_matrix((data, (new_row_indices, new_col_indices)),
                          shape=(nrows, ncols))
 
     def variable_order(self):
@@ -1915,6 +1722,54 @@ class PyomoNLP(AslNLP):
             raise RuntimeError("Constraint must be not indexed")
         return self._conToIndex[constraint]
 
+
+import pyomo.environ as aml
+def create_basic_dense_qp(G, A, b, c):
+
+    nx = G.shape[0]
+    nl = A.shape[0]
+
+    model = aml.ConcreteModel()
+    model.var_ids = range(nx)
+    model.con_ids = range(nl)
+
+    model.x = aml.Var(model.var_ids, initialize=0.0)
+    model.hessian_f = aml.Param(model.var_ids, model.var_ids, mutable=True, rule=lambda m, i, j: G[i, j])
+    model.jacobian_c = aml.Param(model.con_ids, model.var_ids, mutable=True, rule=lambda m, i, j: A[i, j])
+    model.rhs = aml.Param(model.con_ids, mutable=True, rule=lambda m, i: b[i])
+    model.grad_f = aml.Param(model.var_ids, mutable=True, rule=lambda m, i: c[i])
+
+    def equality_constraint_rule(m, i):
+        return sum(m.jacobian_c[i, j] * m.x[j] for j in m.var_ids) == m.rhs[i]
+    model.equalities = aml.Constraint(model.con_ids, rule=equality_constraint_rule)
+
+    def objective_rule(m):
+        accum = 0.0
+        for i in m.var_ids:
+            accum += m.x[i] * sum(m.hessian_f[i, j] * m.x[j] for j in m.var_ids)
+        accum *= 0.5
+        accum += sum(m.x[j] * m.grad_f[j] for j in m.var_ids)
+        return accum
+
+    model.obj = aml.Objective(rule=objective_rule, sense=aml.minimize)
+
+    return model
+
+
+if __name__ == "__main__":
+
+    G = np.array([[6, 2, 1], [2, 5, 2], [1, 2, 4]])
+    A = np.array([[1, 0, 1], [0, 1, 1]])
+    b = np.array([3, 0])
+    c = np.array([-8, -3, -3])
+
+    model = create_basic_dense_qp(G, A, b, c)
+    nlp = PyomoNLP(model)
+    x = nlp.create_vector_x()
+    y = nlp.create_vector_y()
+    hess = nlp.hessian_lag(x, y)
+    print(type(hess))
+    print(hess.todense())
 
 
 

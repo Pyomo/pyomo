@@ -12,9 +12,7 @@ import os
 import pyutilib.th as unittest
 
 try:
-    from scipy.sparse.csr import csr_matrix
-    from scipy.sparse.csc import csc_matrix
-    from scipy.sparse.coo import coo_matrix
+    from scipy.sparse import csr_matrix, csc_matrix, coo_matrix, identity
     import numpy as np
 except ImportError:
     raise unittest.SkipTest(
@@ -24,9 +22,8 @@ except ImportError:
 from pyomo.contrib.pynumero.sparse.base import SparseBase
 from pyomo.contrib.pynumero.sparse.coo import (COOMatrix,
                                                COOSymMatrix,
-                                               IdentityMatrix,
                                                DiagonalMatrix,
-                                               EmptyMatrix)
+                                               empty_matrix)
 
 from pyomo.contrib.pynumero.sparse.csr import CSRMatrix, CSRSymMatrix
 from pyomo.contrib.pynumero.sparse.csc import CSCMatrix, CSCSymMatrix
@@ -121,7 +118,7 @@ class TestCOOMatrix(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             mm = m + m2
 
-        m2 = IdentityMatrix(4)
+        m2 = COOMatrix(identity(4))
         mm = m + m2
         test_m = np.array([[5., 0., 9., 0.],
                            [0., 8., 0., 0.],
@@ -148,7 +145,7 @@ class TestCOOMatrix(unittest.TestCase):
         self.assertIsInstance(mm, CSRMatrix)
         self.assertListEqual(mm.toarray().flatten().tolist(), mm2.flatten().tolist())
 
-        m2 = IdentityMatrix(4)
+        m2 = COOMatrix(identity(4))
         mm = m - m2
         test_m = np.array([[3., 0., 9., 0.],
                            [0., 6., 0., 0.],
@@ -602,37 +599,10 @@ class TestEmptyMatrix(unittest.TestCase):
 
     def test_constructor(self):
 
-        m = EmptyMatrix(3, 3)
+        m = empty_matrix(3, 3)
         self.assertEqual(m.shape, (3, 3))
-        self.assertTrue(m.is_symmetric)
         self.assertEqual(m.nnz, 0)
-        self.assertEqual(m.getallnnz(), 0)
 
-        m = EmptyMatrix(3, 1)
-        self.assertFalse(m.is_symmetric)
-
-    def test_tocsr(self):
-        m = EmptyMatrix(3, 1)
-        mcsr = m.tocsr()
-        self.assertIsInstance(mcsr, CSRMatrix)
-
-    def test_tocsc(self):
-        m = EmptyMatrix(3, 1)
-        mcsc = m.tocsc()
-        self.assertIsInstance(mcsc, CSCMatrix)
-
-
-@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
-class TestIdentityMatrix(unittest.TestCase):
-
-    def test_constructor(self):
-
-        m = IdentityMatrix(3)
-        self.assertEqual(m.shape, (3, 3))
-        self.assertTrue(m.is_symmetric)
-        self.assertEqual(m.nnz, 3)
-        self.assertEqual(m.getallnnz(), 3)
-        self.assertListEqual(m.data.tolist(), [1.0]*3)
 
 
 

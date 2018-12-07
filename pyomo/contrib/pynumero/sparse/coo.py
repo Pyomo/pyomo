@@ -43,8 +43,7 @@ import numpy as np
 
 __all__ = ['COOMatrix',
            'COOSymMatrix',
-           'EmptyMatrix',
-           'IdentityMatrix',
+           'empty_matrix',
            'DiagonalMatrix']
 
 
@@ -591,7 +590,7 @@ class COOSymMatrix(COOMatrix):
 
 
 # this mimics an empty matrix
-class EmptyMatrix(COOMatrix):
+class empty_matrix(scipy_coo_matrix):
 
     def __init__(self, nrows, ncols):
 
@@ -609,72 +608,8 @@ class EmptyMatrix(COOMatrix):
         irows = np.zeros(0)
         jcols = np.zeros(0)
         arg1 = (data, (irows, jcols))
-        super(EmptyMatrix, self).__init__(arg1, shape=(nrows, ncols), dtype=np.double, copy=False)
+        super(empty_matrix, self).__init__(arg1, shape=(nrows, ncols), dtype=np.double, copy=False)
 
-        # makes sparse matrix symmetric
-        if nrows == ncols:
-            self._symmetric = True
-
-    @property
-    def is_symmetric(self):
-        return self.shape[0] == self.shape[1]
-
-    @is_symmetric.setter
-    def is_symmetric(self, value):
-        raise NotImplementedError
-
-    def getallnnz(self):
-        """
-        Return total number of nonzero values in the matrix
-        """
-        return 0
-
-    def tofullcoo(self):
-        return self
-
-    def tofullmatrix(self):
-        return self
-
-    def tocsr(self, copy=False):
-        return super(EmptyMatrix, self).tocsr(copy=copy)
-
-    def tocsc(self, copy=False):
-        return super(EmptyMatrix, self).tocsc(copy=copy)
-
-    def __repr__(self):
-        return 'EmptyMatrix{}'.format(self.shape)
-
-
-class IdentityMatrix(COOSymMatrix):
-
-    def __init__(self, nrowcols):
-        """
-
-        Parameters
-        ----------
-        nrowcols : int
-            Number of rows/columns of sparse identity matrix
-        """
-
-        data = np.ones(nrowcols, dtype=np.double)
-        irows = np.arange(0, nrowcols)
-        jcols = np.arange(0, nrowcols)
-        arg1 = (data, (irows, jcols))
-        super(IdentityMatrix, self).__init__(arg1, shape=(nrowcols, nrowcols), dtype=np.double, copy=False)
-
-    def __repr__(self):
-        return 'IdentityMatrix{}'.format(self.shape)
-
-    def inv(self):
-        """
-        Return inverse of identity matrix
-
-        Returns
-        -------
-        IdentityMatrix
-        """
-
-        return self
 
 
 class DiagonalMatrix(COOSymMatrix):

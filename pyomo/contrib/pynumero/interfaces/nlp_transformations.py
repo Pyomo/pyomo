@@ -14,7 +14,7 @@ from pyomo.contrib.pynumero.sparse import (COOMatrix,
                                            CSCSymMatrix,
                                            CSRMatrix,
                                            CSRSymMatrix,
-                                           EmptyMatrix)
+                                           empty_matrix)
 import pyomo.environ as aml
 import numpy as np
 
@@ -608,7 +608,7 @@ class AugmentedLagrangianNLP(NLP):
         The jacobian of the equality contraints in a COOMatrix format
 
         """
-        return EmptyMatrix(0, self.nx)
+        return empty_matrix(0, self.nx)
 
     def jacobian_d(self, x, out=None, **kwargs):
 

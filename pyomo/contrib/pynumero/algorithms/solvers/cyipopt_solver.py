@@ -61,6 +61,7 @@ class _CyIpoptProblem(object):
         if not self._is_composite:
             self._jac_g = nlp.jacobian_g(x)
             self._hess_lag = nlp.hessian_lag(x, y)
+            self._hess_lower_mask = self._hess_lag.row >= self._hess_lag.col
         else:
             self._jac_g = nlp.jacobian_g(x)
             expanded = self._jac_g.tocoo()
@@ -69,8 +70,9 @@ class _CyIpoptProblem(object):
 
             self._hess_lag = nlp.hessian_lag(x, y)
             expanded = self._hess_lag.tocoo()
-            self._hess_row = expanded.row
-            self._hess_col = expanded.col
+            self._hess_lower_mask = expanded.row >= expanded.col
+            self._hess_row = np.compress(self._hess_lower_mask, expanded.row)
+            self._hess_col = np.compress(self._hess_lower_mask, expanded.col)
 
     def objective(self, x):
         return self._nlp.objective(x)
@@ -95,7 +97,9 @@ class _CyIpoptProblem(object):
 
     def hessianstructure(self):
         if not self._is_composite:
-            return self._hess_lag.row, self._hess_lag.col
+            row = np.compress(self._hess_lower_mask, self._hess_lag.row)
+            col = np.compress(self._hess_lower_mask, self._hess_lag.col)
+            return row, col
         return self._hess_row, self._hess_col
 
     def jacobianstructure(self):
@@ -110,8 +114,10 @@ class _CyIpoptProblem(object):
                               eval_f_c=False,
                               obj_factor=obj_factor)
         if not self._is_composite:
-            return self._hess_lag.data
-        return self._hess_lag.coo_data()
+            data = np.compress(self._hess_lower_mask, self._hess_lag.data)
+            return data
+        data = np.compress(self._hess_lower_mask, self._hess_lag.coo_data())
+        return data
 
     def intermediate(
             self,

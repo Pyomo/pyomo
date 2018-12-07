@@ -564,7 +564,7 @@ class TestAdmmNLP(unittest.TestCase):
         self.assertTrue(np.allclose(values, new_jac.data))
 
     def test_nnz_hessian_lag(self):
-        self.assertEqual(self.nlp.nnz_hessian_lag, 6)
+        self.assertEqual(self.nlp.nnz_hessian_lag, 9)
 
         m = self.model2
         transform = AdmmModel()
