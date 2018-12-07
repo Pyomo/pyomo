@@ -7,7 +7,6 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.contrib.pynumero.sparse.base import SparseBase
 from scipy.sparse.sputils import isscalarlike
 from scipy.sparse import tril, triu
 

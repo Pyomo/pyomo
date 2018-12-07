@@ -7,37 +7,9 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-"""
-The pyomo.contrib.pynumero.sparse.coo module includes methods that extend
-linear algebra operations in scipy.sparse. In particular pynumero
-adds functionality for dealing efficiently with symmetric matrices
 
-All classes in this module subclass from the corresponding scipy.sparse
-class. Hence, scipy documentation is the same for the methods here, unless
-explicitly stated.
-
-.. rubric:: Contents
-
-"""
-
-from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from scipy.sparse import coo_matrix as scipy_coo_matrix
-from scipy.sparse._sparsetools import coo_tocsr, coo_todense
-from scipy.sparse.sputils import (upcast,
-                                  isdense,
-                                  isscalarlike,
-                                  get_index_dtype)
-from scipy.sparse import issparse
 
-from pyomo.contrib.pynumero.sparse.utils import is_symmetric_dense
-
-try:
-    from pyomo.contrib.pynumero.extensions.sparseutils import sym_coo_matvec
-except ImportError as e:
-    print('{}'.format(e))
-    raise ImportError('Error importing sparseutils while running coo interface. '
-                      'Make sure libpynumero_SPARSE is installed and added to path.')
-from pyomo.contrib.pynumero.sparse.base import SparseBase
 import numpy as np
 
 

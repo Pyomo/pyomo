@@ -40,9 +40,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.composed_m[0, 0] = self.block_m
         self.composed_m[1, 1] = self.basic_m
 
-    def test_is_symmetric(self):
-        self.assertFalse(self.basic_m.is_symmetric)
-
     def test_name(self):
         self.assertEqual(self.basic_m.name, 'basic_matrix')
         self.basic_m.name = 'hola'

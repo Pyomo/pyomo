@@ -21,7 +21,6 @@ except ImportError:
     scipy_available = False
     
 if numpy_available and scipy_available:
-    from .base import SparseBase
     from .coo import *
     from .block_vector import *
     from .block_matrix import *

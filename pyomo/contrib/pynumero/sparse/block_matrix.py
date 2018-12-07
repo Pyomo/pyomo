@@ -22,7 +22,6 @@ where m_{i,j} are sparse matrices
 """
 
 from scipy.sparse.sputils import upcast, isscalarlike, get_index_dtype
-from pyomo.contrib.pynumero.sparse.base import SparseBase
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from scipy.sparse import coo_matrix
 from scipy.sparse import isspmatrix
@@ -33,7 +32,7 @@ __all__ = ['BlockMatrix', 'BlockSymMatrix']
 
 
 # ToDo: better exception handling
-class BlockMatrix(SparseBase):
+class BlockMatrix(object):
     """
     Structured Matrix interface
 
@@ -461,7 +460,7 @@ class BlockMatrix(SparseBase):
                 self._bcol_lengths[jdx] = 0
         else:
             msg = 'blocks need to be sparse matrices'
-            assert isinstance(value, SparseBase) or isspmatrix(value), msg
+            assert isinstance(value, BlockMatrix) or isspmatrix(value), msg
             if self._brow_lengths[idx] == 0 and self._bcol_lengths[jdx] == 0:
                 self._blocks[idx, jdx] = value
                 self._brow_lengths[idx] = value.shape[0]
@@ -530,7 +529,7 @@ class BlockMatrix(SparseBase):
                     else:
                         result[i, j] = None
             return result
-        elif isinstance(other, SparseBase) and not isinstance(other, BlockMatrix):
+        elif isspmatrix(other):
             raise NotImplementedError('Sparse Matrix with BlockMatrix addition not supported')
         elif np.isscalar(other):
             raise NotImplementedError('Scalar with BlockMatrix addition not supported')
@@ -562,7 +561,7 @@ class BlockMatrix(SparseBase):
                     else:
                         result[i, j] = None
             return result
-        elif isinstance(other, SparseBase) and not isinstance(other, BlockMatrix):
+        elif isspmatrix(other):
             raise NotImplementedError('Sparse Matrix with BlockMatrix subtraction not supported')
         elif np.isscalar(other):
             raise NotImplementedError('Scalar with BlockMatrix subtraction not supported')
@@ -590,7 +589,7 @@ class BlockMatrix(SparseBase):
                     else:
                         result[i, j] = None
             return result
-        elif isinstance(other, SparseBase) and not isinstance(other, BlockMatrix):
+        elif isspmatrix(other):
             raise NotImplementedError('Sparse Matrix with BlockMatrix subtraction not supported')
         elif np.isscalar(other):
             raise NotImplementedError('Scalar with BlockMatrix subtraction not supported')
