@@ -35,6 +35,9 @@ class TestBlockVector(unittest.TestCase):
         self.assertEqual(v.shape, (4,))
         self.assertEqual(v.ndim, 1)
 
+        with self.assertRaises(Exception) as context:
+            BlockVector('hola')
+
     def setUp(self):
 
         self.ones = BlockVector(3)
@@ -50,11 +53,16 @@ class TestBlockVector(unittest.TestCase):
         self.assertEqual(v1.dot(v1), v1.size)
         v2 = v1.clone(3.3)
         self.assertAlmostEqual(v1.dot(v2), v1.size*3.3)
+        self.assertAlmostEqual(v2.dot(v1.flatten()), v1.size*3.3)
+        with self.assertRaises(Exception) as context:
+            v1.dot(1.0)
 
     def test_mean(self):
         flat_v = np.ones(self.ones.size)
         v = self.ones
         self.assertEqual(v.mean(), flat_v.mean())
+        v = BlockVector(2)
+        self.assertEqual(v.mean(), 0.0)
 
     def test_sum(self):
         self.assertEqual(self.ones.sum(), self.ones.size)
@@ -174,6 +182,9 @@ class TestBlockVector(unittest.TestCase):
         self.assertEqual(c.nblocks, v.nblocks)
         for bid, blk in enumerate(c):
             self.assertTrue(np.allclose(blk, v2[bid]))
+
+        with self.assertRaises(Exception) as context:
+            v.compress(1.0)
 
     def test_nonzero(self):
 
@@ -460,6 +471,9 @@ class TestBlockVector(unittest.TestCase):
         result = v + v1.flatten()
         self.assertTrue(np.allclose(result.flatten(), v.flatten()+v1.flatten()))
 
+        with self.assertRaises(Exception) as context:
+            result = v + 'hola'
+
     def test_radd(self):
         v = self.ones
         v1 = self.ones
@@ -480,6 +494,9 @@ class TestBlockVector(unittest.TestCase):
         result = v - v1.flatten()
         self.assertTrue(np.allclose(result.flatten(), v.flatten() - v1.flatten()))
 
+        with self.assertRaises(Exception) as context:
+            result = v - 'hola'
+
     def test_rsub(self):
         v = self.ones
         v1 = self.ones
@@ -499,6 +516,9 @@ class TestBlockVector(unittest.TestCase):
         self.assertListEqual(result.tolist(), [5] * v.size)
         result = v * v1.flatten()
         self.assertTrue(np.allclose(result.flatten(), v.flatten() * v1.flatten()))
+
+        with self.assertRaises(Exception) as context:
+            result = v * 'hola'
 
     def test_rmul(self):
         v = self.ones
@@ -584,6 +604,9 @@ class TestBlockVector(unittest.TestCase):
         self.assertTrue(np.allclose(v2[0], np.ones(5)))
         self.assertTrue(np.allclose(v2[1], np.ones(9)))
 
+        with self.assertRaises(Exception) as context:
+            v += 'hola'
+
     def test_isub(self):
         v = self.ones
         v -= 3
@@ -622,6 +645,9 @@ class TestBlockVector(unittest.TestCase):
         self.assertTrue(np.allclose(v2[0], np.ones(5)))
         self.assertTrue(np.allclose(v2[1], np.ones(9)))
 
+        with self.assertRaises(Exception) as context:
+            v -= 'hola'
+
     def test_imul(self):
         v = self.ones
         v *= 3
@@ -659,6 +685,9 @@ class TestBlockVector(unittest.TestCase):
 
         self.assertTrue(np.allclose(v2[0], np.ones(5) * 2))
         self.assertTrue(np.allclose(v2[1], np.ones(9) * 2))
+
+        with self.assertRaises(Exception) as context:
+            v *= 'hola'
 
     def test_getitem(self):
         v = self.ones
@@ -739,6 +768,18 @@ class TestBlockVector(unittest.TestCase):
         for bid, blk in enumerate(flags):
             self.assertTrue(np.allclose(blk, v[bid]))
 
+        flags = v > np.zeros(v.size)
+        self.assertEqual(v.nblocks, flags.nblocks)
+        for bid, blk in enumerate(flags):
+            self.assertTrue(np.allclose(blk, v[bid]))
+
+        vv = v.copy()
+        vv.fill(0.0)
+        flags = v > vv
+        self.assertEqual(v.nblocks, flags.nblocks)
+        for bid, blk in enumerate(flags):
+            self.assertTrue(np.allclose(blk, v[bid]))
+
     def test_ge(self):
 
         v = BlockVector(2)
@@ -749,6 +790,21 @@ class TestBlockVector(unittest.TestCase):
 
         flags = v >= 0
         v[1] = b + 1
+        self.assertEqual(v.nblocks, flags.nblocks)
+        for bid, blk in enumerate(flags):
+            self.assertTrue(np.allclose(blk, v[bid]))
+        v[1] = b - 1
+        flags = v >= np.zeros(v.size)
+        v[1] = b
+        self.assertEqual(v.nblocks, flags.nblocks)
+        for bid, blk in enumerate(flags):
+            self.assertTrue(np.allclose(blk, v[bid]))
+
+        v[1] = b - 1
+        vv = v.copy()
+        vv.fill(0.0)
+        flags = v >= vv
+        v[1] = b
         self.assertEqual(v.nblocks, flags.nblocks)
         for bid, blk in enumerate(flags):
             self.assertTrue(np.allclose(blk, v[bid]))
@@ -767,6 +823,25 @@ class TestBlockVector(unittest.TestCase):
         self.assertEqual(v.nblocks, flags.nblocks)
         for bid, blk in enumerate(flags):
             self.assertTrue(np.allclose(blk, v[bid]))
+        v[0] = a + 1
+        v[1] = b - 1
+        flags = v < np.ones(v.size)
+        v[0] = a - 1
+        v[1] = b + 1
+        self.assertEqual(v.nblocks, flags.nblocks)
+        for bid, blk in enumerate(flags):
+            self.assertTrue(np.allclose(blk, v[bid]))
+
+        v[0] = a + 1
+        v[1] = b - 1
+        vv = v.copy()
+        vv.fill(1.0)
+        flags = v < vv
+        v[0] = a - 1
+        v[1] = b + 1
+        self.assertEqual(v.nblocks, flags.nblocks)
+        for bid, blk in enumerate(flags):
+            self.assertTrue(np.allclose(blk, v[bid]))
 
     def test_le(self):
 
@@ -782,6 +857,20 @@ class TestBlockVector(unittest.TestCase):
         for bid, blk in enumerate(flags):
             self.assertTrue(np.allclose(blk, v[bid]))
 
+        flags = v <= v
+        vv = v.copy()
+        vv.fill(1.0)
+        self.assertEqual(v.nblocks, flags.nblocks)
+        for bid, blk in enumerate(flags):
+            self.assertTrue(np.allclose(blk, vv[bid]))
+
+        flags = v <= v.flatten()
+        vv = v.copy()
+        vv.fill(1.0)
+        self.assertEqual(v.nblocks, flags.nblocks)
+        for bid, blk in enumerate(flags):
+            self.assertTrue(np.allclose(blk, vv[bid]))
+
     def test_eq(self):
 
         v = BlockVector(2)
@@ -791,6 +880,18 @@ class TestBlockVector(unittest.TestCase):
         v[1] = b
 
         flags = v == 1
+        self.assertEqual(v.nblocks, flags.nblocks)
+        for bid, blk in enumerate(flags):
+            self.assertTrue(np.allclose(blk, v[bid]))
+
+        flags = v == np.ones(v.size)
+        self.assertEqual(v.nblocks, flags.nblocks)
+        for bid, blk in enumerate(flags):
+            self.assertTrue(np.allclose(blk, v[bid]))
+
+        vv = v.copy()
+        vv.fill(1.0)
+        flags = v == vv
         self.assertEqual(v.nblocks, flags.nblocks)
         for bid, blk in enumerate(flags):
             self.assertTrue(np.allclose(blk, v[bid]))
@@ -808,6 +909,28 @@ class TestBlockVector(unittest.TestCase):
         for bid, blk in enumerate(flags):
             self.assertTrue(np.allclose(blk, v[bid]))
 
+        flags = v != np.zeros(v.size)
+        self.assertEqual(v.nblocks, flags.nblocks)
+        for bid, blk in enumerate(flags):
+            self.assertTrue(np.allclose(blk, v[bid]))
+
+        vv = v.copy()
+        vv.fill(0.0)
+        flags = v != vv
+        self.assertEqual(v.nblocks, flags.nblocks)
+        for bid, blk in enumerate(flags):
+            self.assertTrue(np.allclose(blk, v[bid]))
+
+    def test_contains(self):
+
+        v = BlockVector(2)
+        a = np.ones(5)
+        b = np.zeros(9)
+        v[0] = a
+        v[1] = b
+
+        self.assertTrue(0 in v)
+        self.assertFalse(3 in v)
     # ToDo: add tests for block vectors with block vectors in them
     # ToDo: vector comparisons
     def test_copy(self):
@@ -856,6 +979,9 @@ class TestBlockVector(unittest.TestCase):
             self.assertIsInstance(res, BlockVector)
             self.assertEqual(res.nblocks, 2)
             self.assertTrue(np.allclose(fun(v.flatten()), res.flatten()))
+
+        with self.assertRaises(Exception) as context:
+            np.cbrt(v)
 
     def test_reduce_ufuncs(self):
 

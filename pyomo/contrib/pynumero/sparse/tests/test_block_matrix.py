@@ -145,6 +145,16 @@ class TestBlockMatrix(unittest.TestCase):
         self.basic_m *= 5.0
         self.assertTrue(np.allclose(dense_mat, self.basic_m.todense()))
 
+        flat_mat = self.basic_m.tocoo()
+        result = flat_mat * flat_mat
+        dense_result = result.toarray()
+        mat = self.basic_m * self.basic_m.tocoo()
+        dense_mat = mat.toarray()
+        self.assertTrue(np.allclose(dense_mat, dense_result))
+
+        # not supported block matrix times block matrix for now
+        #with self.assertRaises(Exception) as context:
+        #    mat = self.basic_m * self.basic_m.tocoo()
     def test_getitem(self):
 
         m = BlockMatrix(3, 3)

@@ -636,6 +636,8 @@ class BlockMatrix(object):
                         result[i] += A * x
                         counter += A.shape[0]
             return result
+        elif isinstance(other, BlockMatrix) or isspmatrix(other):
+            return self._mul_sparse_matrix(other)
         else:
             raise NotImplementedError('input not recognized for multiplication')
 

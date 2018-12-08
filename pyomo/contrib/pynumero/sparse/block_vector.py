@@ -134,18 +134,18 @@ class BlockVector(np.ndarray):
             return results
         else:
             raise NotImplementedError(str(ufunc) + "not supported for BlockVector")
-            results = super(BlockVector, self).__array_ufunc__(ufunc, method,
-                                                               *args, **kwargs)
-        if results is NotImplemented:
-            return NotImplemented
-
-        if method == 'at':
-            raise NotImplementedError()
-
-        if ufunc.nout == 1:
-            results = (results,)
-
-        return results
+            #results = super(BlockVector, self).__array_ufunc__(ufunc, method,
+            #                                                   *args, **kwargs)
+        # if results is NotImplemented:
+        #     return NotImplemented
+        #
+        # if method == 'at':
+        #     raise NotImplementedError()
+        #
+        # if ufunc.nout == 1:
+        #     results = (results,)
+        #
+        # return results
 
     def _unary_operation(self, ufunc, method, *args, **kwargs):
         # ToDo: deal with out
@@ -883,19 +883,19 @@ class BlockVector(np.ndarray):
             assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                                                               other.nblocks)
             for idx, blk in enumerate(self):
-                result[idx] = blk * other[idx]
+                result[idx] = blk .__mul__(other[idx])
             return result
         elif isinstance(other, np.ndarray):
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk * other[accum: accum + nelements]
+                result[idx] = blk.__mul__(other[accum: accum + nelements])
                 accum += nelements
             return result
         elif np.isscalar(other):
             for idx, blk in enumerate(self):
-                result[idx] = blk * other
+                result[idx] = blk.__mul__(other)
             return result
         else:
             raise NotImplementedError()
@@ -912,19 +912,19 @@ class BlockVector(np.ndarray):
             assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                                                               other.nblocks)
             for idx, blk in enumerate(self):
-                result[idx] = blk / other[idx]
+                result[idx] = blk.__truediv__(other[idx])
             return result
         elif isinstance(other, np.ndarray):
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk / other[accum: accum + nelements]
+                result[idx] = blk.__truediv__(other[accum: accum + nelements])
                 accum += nelements
             return result
         elif np.isscalar(other):
             for idx, blk in enumerate(self):
-                result[idx] = blk / other
+                result[idx] = blk.__truediv__(other)
             return result
         else:
             raise NotImplementedError()
@@ -938,19 +938,19 @@ class BlockVector(np.ndarray):
             assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                                                               other.nblocks)
             for idx, blk in enumerate(self):
-                result[idx] = other[idx] / blk
+                result[idx] = other[idx].__rtruediv__(blk)
             return result
         elif isinstance(other, np.ndarray):
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = other[accum: accum + nelements] / blk
+                result[idx] = other[accum: accum + nelements].__rtruediv__(blk)
                 accum += nelements
             return result
         elif np.isscalar(other):
             for idx, blk in enumerate(self):
-                result[idx] = other / blk
+                result[idx] = other.__rtruediv__(blk)
             return result
         else:
             raise NotImplementedError()
@@ -964,19 +964,19 @@ class BlockVector(np.ndarray):
             assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                                                               other.nblocks)
             for idx, blk in enumerate(self):
-                result[idx] = blk // other[idx]
+                result[idx] = blk.__floordiv__(other[idx])
             return result
         elif isinstance(other, np.ndarray):
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk // other[accum: accum + nelements]
+                result[idx] = blk.__floordiv__(other[accum: accum + nelements])
                 accum += nelements
             return result
         elif np.isscalar(other):
             for idx, blk in enumerate(self):
-                result[idx] = blk // other
+                result[idx] = blk.__floordiv__(other)
             return result
         else:
             raise NotImplementedError()
@@ -990,19 +990,19 @@ class BlockVector(np.ndarray):
             assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                                                               other.nblocks)
             for idx, blk in enumerate(self):
-                result[idx] = other[idx] // blk
+                result[idx] = other[idx].__rfloordiv__(blk)
             return result
         elif isinstance(other, np.ndarray):
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = other[accum: accum + nelements] // blk
+                result[idx] = other[accum: accum + nelements].__rfloordiv__(blk)
                 accum += nelements
             return result
         elif np.isscalar(other):
             for idx, blk in enumerate(self):
-                result[idx] = other // blk
+                result[idx] = other.__rfloordiv__(blk)
             return result
         else:
             raise NotImplementedError()
@@ -1299,23 +1299,11 @@ class BlockVector(np.ndarray):
     def __contains__(self, item):
         other = item
         assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-        if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            flags = [vv.__contains__(other[bid]) for bid, vv in enumerate(self)]
-            bv = BlockVector(flags)
-            return bv
-        elif isinstance(other, np.ndarray):
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            result = BlockVector(self.nblocks)
-            accum = 0
+        if np.isscalar(other):
+            contains = False
             for idx, blk in enumerate(self):
-                nelements = self._brow_lengths[idx]
-                result[idx] = blk.__contains__(other[accum: accum + nelements])
-                accum += nelements
-            return result
-        elif np.isscalar(other):
-            flags = [vv.__contains__(other) for bid, vv in enumerate(self)]
-            bv = BlockVector(flags)
-            return bv
+                if blk.__contains__(other):
+                    return True
+            return contains
         else:
             raise NotImplementedError()
