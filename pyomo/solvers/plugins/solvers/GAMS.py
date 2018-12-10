@@ -163,10 +163,9 @@ class GAMSDirect(_GAMSSolver):
             return _extract_version('')
         from gams import GamsWorkspace
         ws = GamsWorkspace()
-        version = tuple(int(i) for i in ws._version.split('.'))
+        version = tuple(int(i) for i in ws._version.split('.')[:4])
         while(len(version) < 4):
             version += (0,)
-        version = version[:4]
         return version
 
     def solve(self, *args, **kwds):
@@ -601,8 +600,12 @@ class GAMSShell(_GAMSSolver):
         if solver_exec is None:
             return _extract_version('')
         else:
-            results = pyutilib.subprocess.run([solver_exec])
-            return _extract_version(results[1])
+            # specify logging to stdout for windows compatibility
+            # technically this command makes gams complain because we're not
+            # providing a filename, but it will include the version name anyway
+            cmd = [solver_exec, "", "lo=3"]
+            _, txt = pyutilib.subprocess.run(cmd, tee=False)
+            return _extract_version(txt)
 
     def solve(self, *args, **kwds):
         """
