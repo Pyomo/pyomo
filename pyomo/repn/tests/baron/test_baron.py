@@ -46,6 +46,7 @@ class Test(unittest.TestCase):
             test_fname,
             baseline_fname,
             delete=True)
+        self._cleanup(test_fname)
 
     def _gen_expression(self, terms):
         terms = list(terms)
@@ -135,9 +136,25 @@ class Test(unittest.TestCase):
         model.obj = Objective(expr=model.x)
         self._check_baseline(model)
 
+    def test_trig_generates_exception(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0,2*3.1415))
+        m.obj = Objective(expr=sin(m.x))
+        with self.assertRaisesRegexp(
+            RuntimeError,
+            'The BARON .BAR format does not support the unary function "sin"'
+            ):
+            test_fname = self._get_fnames()[1]
+            self._cleanup(test_fname)
+            m.write(test_fname, format="bar")
+        self._cleanup(test_fname)
 
 #class TestBaron_writer(unittest.TestCase):
 class XTestBaron_writer(object):
+    """These tests verified that the BARON writer complained loudly for
+    variables that were not on the model, not on an active block, or not
+    on a Block ctype.  As we are relaxing that requirement throughout
+    Pyomo, these tests have been disabled."""
 
     def _cleanup(self, fname):
         try:
