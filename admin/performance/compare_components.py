@@ -27,7 +27,7 @@ from pyomo.kernel import (block,
                           constraint_list,
                           matrix_constraint,
                           objective)
-from pyomo.core.kernel.component_variable import IVariable
+from pyomo.core.kernel.variable import IVariable
 
 from pyomo.core.base import Integers, RangeSet, Objective
 from pyomo.core.base.constraint import _GeneralConstraintData, Constraint

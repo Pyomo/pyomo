@@ -12,7 +12,7 @@ use of parmest. There are two options for the function signature:
 * parmest Signature
 * PySP Signature
 
-pamest Signature
+parmest Signature
 ------------------
 
 The parmest signature is recommenced, unless you are planning to use PySP directly
@@ -29,7 +29,8 @@ The parmest signature is shown below:
 
 Any function name is allowed; the name is supplied to the parmest constructor.
 Use of data in the `cb_data` object is optional, but it must appear in the
-callback function definition. To supply data via the `cb_data` argument,
+callback function definition. To supply data from the driver
+via the `cb_data` argument,
 an object with the data should be supplied to the parmest constructor. 
 If no data is supplied, the `cb_data` argument will have the value `None`.
 

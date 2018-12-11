@@ -1,0 +1,5 @@
+# uses 0-based indexing
+m.ol = pmo.objective_list()
+for j in m.q:
+    m.ol.append(
+        pmo.objective(-m.vl[j]))

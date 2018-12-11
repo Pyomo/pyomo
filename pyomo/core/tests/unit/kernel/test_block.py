@@ -20,7 +20,8 @@ from pyomo.core.kernel.base import \
     (ICategorizedObject,
      ICategorizedObjectContainer)
 from pyomo.core.kernel.heterogeneous_container import \
-    IHeterogeneousContainer
+    (heterogeneous_containers,
+     IHeterogeneousContainer)
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.suffix import suffix
 from pyomo.core.kernel.constraint import (IConstraint,
@@ -130,7 +131,7 @@ class TestHeterogeneousContainer(unittest.TestCase):
     def test_preorder_traversal(self):
         model = self.model.clone()
 
-        order = list(str(obj) for obj in model.preorder_traversal())
+        order = list(str(obj) for obj in pmo.preorder_traversal(model))
         self.assertEqual(order,
                          ['<block>',
                           'v','V','V[0]','V[1]','V[1][0]',
@@ -177,7 +178,8 @@ class TestHeterogeneousContainer(unittest.TestCase):
                           'K[0].J[1][0].b',
                           'K[0].J[1][0].b.v'])
 
-        order = list(str(obj) for obj in model.preorder_traversal(
+        order = list(str(obj) for obj in pmo.preorder_traversal(
+            model,
             descend=lambda x: (x is not model.k) and (x is not model.K)))
         self.assertEqual(order,
                          ['<block>',
@@ -204,7 +206,8 @@ class TestHeterogeneousContainer(unittest.TestCase):
                           'k',
                           'K'])
 
-        order = list(str(obj) for obj in model.preorder_traversal(ctype=IBlock))
+        order = list(str(obj) for obj in pmo.preorder_traversal(model,
+                                                                ctype=IBlock))
         self.assertEqual(order,
                          ['<block>',
                           'b',
@@ -233,7 +236,8 @@ class TestHeterogeneousContainer(unittest.TestCase):
                           'K[0].J[1][0]',
                           'K[0].J[1][0].b'])
 
-        order = list(str(obj) for obj in model.preorder_traversal(ctype=IVariable))
+        order = list(str(obj) for obj in pmo.preorder_traversal(model,
+                                                                ctype=IVariable))
         self.assertEqual(order,
                          ['<block>',
                           'v','V','V[0]','V[1]','V[1][0]',
@@ -274,7 +278,30 @@ class TestHeterogeneousContainer(unittest.TestCase):
 
     def test_components(self):
         model = self.model.clone()
-        order = list(str(obj) for obj in model.components())
+        checked = []
+        def descend_into(x):
+            self.assertTrue(x._is_heterogeneous_container)
+            checked.append(x.name)
+            return True
+        order = list(str(obj) for obj in model.components(
+            descend_into=descend_into))
+        self.assertEqual(checked,
+                         ['b',
+                          'B[0]',
+                          'B[1][0]',
+                          'j',
+                          'J[0]',
+                          'J[1][0]',
+                          'J[1][0].b',
+                          'k',
+                          'K[0]',
+                          'K[0].b',
+                          'K[0].B[0]',
+                          'K[0].B[1][0]',
+                          'K[0].j',
+                          'K[0].J[0]',
+                          'K[0].J[1][0]',
+                          'K[0].J[1][0].b'])
         self.assertEqual(order,
                          ['v','V[0]','V[1][0]',
                           'c','C[0]','C[1][0]',
@@ -345,7 +372,12 @@ class TestHeterogeneousContainer(unittest.TestCase):
                          'J[1][0].b.v')
 
     def test_heterogeneous_containers(self):
-        order = list(str(obj) for obj in self.model.heterogeneous_containers())
+        order = list(str(obj) for obj in heterogeneous_containers(self.model.V))
+        self.assertEqual(order, [])
+        order = list(str(obj) for obj in heterogeneous_containers(self.model.v))
+        self.assertEqual(order, [])
+
+        order = list(str(obj) for obj in heterogeneous_containers(self.model))
         self.assertEqual(order,
                          ['<block>',
                           'b',
@@ -364,9 +396,24 @@ class TestHeterogeneousContainer(unittest.TestCase):
                           'J[0]',
                           'J[1][0]',
                           'J[1][0].b'])
-        order = list(str(obj) for obj in self.model.heterogeneous_containers(
-            descend_into=False))
-        self.assertEqual(order,
+        def f(x):
+            # do not descend below heterogeneous containers
+            # stored on self.model
+            self.assertTrue(x._is_heterogeneous_container)
+            parent = x.parent
+            while parent is not None:
+                if parent is self.model:
+                    return False
+                parent = parent.parent
+            return True
+        order1 = list(str(obj) for obj in heterogeneous_containers(
+            self.model,
+            descend_into=f))
+        order2 = list(str(obj) for obj in heterogeneous_containers(
+            self.model,
+            descend_into=lambda x: True if (x is self.model) else False))
+        self.assertEqual(order1, order2)
+        self.assertEqual(order1,
                          ['<block>',
                           'b',
                           'B[0]',
@@ -376,7 +423,8 @@ class TestHeterogeneousContainer(unittest.TestCase):
                           'j',
                           'J[0]',
                           'J[1][0]'])
-        order = list(str(obj) for obj in self.model.heterogeneous_containers(
+        order = list(str(obj) for obj in heterogeneous_containers(
+            self.model,
             ctype=IBlock))
         self.assertEqual(order,
                          ['<block>',
@@ -390,7 +438,8 @@ class TestHeterogeneousContainer(unittest.TestCase):
                           'K[0].B[1][0]',
                           'K[0].J[1][0].b',
                           'J[1][0].b'])
-        order = list(str(obj) for obj in self.model.heterogeneous_containers(
+        order = list(str(obj) for obj in heterogeneous_containers(
+            self.model,
             ctype=IJunk))
         self.assertEqual(order,
                          ['K[0].j',
@@ -399,11 +448,49 @@ class TestHeterogeneousContainer(unittest.TestCase):
                           'j',
                           'J[0]',
                           'J[1][0]'])
+        order = list(str(obj) for obj in heterogeneous_containers(
+            self.model.K,
+            ctype=IJunk))
+        self.assertEqual(order,
+                         ['K[0].j',
+                          'K[0].J[0]',
+                          'K[0].J[1][0]'])
+        order = list(str(obj) for obj in heterogeneous_containers(
+            self.model.K[0],
+            ctype=IJunk))
+        self.assertEqual(order,
+                         ['K[0].j',
+                          'K[0].J[0]',
+                          'K[0].J[1][0]'])
+        order = list(str(obj) for obj in heterogeneous_containers(
+            self.model.K[0].j,
+            ctype=IJunk))
+        self.assertEqual(order,
+                         ['K[0].j'])
+        order = list(str(obj) for obj in heterogeneous_containers(
+            self.model.K[0].j,
+            ctype=IBlock))
+        self.assertEqual(order,
+                         [])
 
 class TestMisc(unittest.TestCase):
 
+    def test_reserved_attributes(self):
+        b = block()
+        self.assertTrue(len(block._block_reserved_words) > 0)
+        for name in block._block_reserved_words:
+            with self.assertRaises(ValueError):
+                setattr(b, name, 1)
+        with self.assertRaises(ValueError):
+            b._active = 1
+        with self.assertRaises(ValueError):
+            b._parent = 1
+        with self.assertRaises(ValueError):
+            b._storage_key = 1
+        with self.assertRaises(AttributeError):
+            b.active = 1
+
     def test_pprint(self):
-        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
@@ -411,22 +498,22 @@ class TestMisc(unittest.TestCase):
         B.s = suffix()
         B.b = block()
         B.v = variable()
-        pyomo.kernel.pprint(B)
+        pmo.pprint(B)
         B.c = constraint()
         B.e = expression()
         B.o = objective()
         B.p = parameter()
         B.s = sos([])
-        pyomo.kernel.pprint(B)
+        pmo.pprint(B)
         b = block()
         b.B = B
-        pyomo.kernel.pprint(B)
-        pyomo.kernel.pprint(b)
+        pmo.pprint(B)
+        pmo.pprint(b)
         m = block()
         m.b = b
-        pyomo.kernel.pprint(B)
-        pyomo.kernel.pprint(b)
-        pyomo.kernel.pprint(m)
+        pmo.pprint(B)
+        pmo.pprint(b)
+        pmo.pprint(m)
 
     def test_ctype(self):
         b = block()
@@ -659,23 +746,66 @@ class TestMisc(unittest.TestCase):
             self.assertTrue(obj._is_container)
             return True
         self.assertEqual(
-            [obj.name for obj in b.preorder_traversal(descend=descend)],
+            [obj.name for obj in pmo.preorder_traversal(b,
+                                                        active=None,
+                                                        descend=descend)],
             [None,'v','c1','c2','c2[0]','B','B[0]','B[0][0]','B[0][0].c','B[0][0].b'])
         self.assertEqual(
-            [obj.name for obj in b.preorder_traversal(active=True,
-                                                      descend=descend)],
+            [obj.name for obj in pmo.preorder_traversal(b,
+                                                        descend=descend)],
             [None,'v','c2','c2[0]','B'])
         self.assertEqual(
-            [obj.name for obj in b.preorder_traversal(
+            [obj.name for obj in pmo.preorder_traversal(b,
+                                                        active=True,
+                                                        descend=descend)],
+            [None,'v','c2','c2[0]','B'])
+
+        self.assertEqual(
+            [obj.name for obj in pmo.preorder_traversal(
+                b,
+                active=None,
                 ctype=IConstraint,
                 descend=descend)],
             [None,'c1','c2','c2[0]','B','B[0]','B[0][0]','B[0][0].c','B[0][0].b'])
         self.assertEqual(
-            [obj.name for obj in b.preorder_traversal(
+            [obj.name for obj in pmo.preorder_traversal(
+                b,
+                ctype=IConstraint,
+                descend=descend)],
+            [None, 'c2', 'c2[0]', 'B'])
+        self.assertEqual(
+            [obj.name for obj in pmo.preorder_traversal(
+                b,
                 ctype=IConstraint,
                 active=True,
                 descend=descend)],
             [None, 'c2', 'c2[0]', 'B'])
+
+        m = pmo.block()
+        m.B = pmo.block_list()
+        m.B.append(pmo.block())
+        m.B[0].v = pmo.variable()
+
+        self.assertEqual(
+            [obj.name for obj in pmo.preorder_traversal(
+                m,
+                ctype=IVariable)],
+            [None, 'B', 'B[0]', 'B[0].v'])
+        self.assertEqual(
+            [obj.name for obj in pmo.preorder_traversal(
+                m.B,
+                ctype=IVariable)],
+            ['B', 'B[0]', 'B[0].v'])
+        self.assertEqual(
+            [obj.name for obj in pmo.preorder_traversal(
+                m.B[0],
+                ctype=IVariable)],
+            ['B[0]', 'B[0].v'])
+        self.assertEqual(
+            [obj.name for obj in pmo.preorder_traversal(
+                m.B[0].v,
+                ctype=IVariable)],
+            ['B[0].v'])
 
     # test how clone behaves when there are
     # references to components on a different block
@@ -1032,9 +1162,9 @@ class _Test_block_base(object):
     def test_pickle(self):
         b = pickle.loads(
             pickle.dumps(self._block))
-        self.assertEqual(len(list(b.preorder_traversal())),
+        self.assertEqual(len(list(pmo.preorder_traversal(b, active=None))),
                          len(self._names)+1)
-        names = pmo.generate_names(b)
+        names = pmo.generate_names(b, active=None)
         self.assertEqual(sorted(names.values()),
                          sorted(self._names.values()))
 
@@ -1042,21 +1172,27 @@ class _Test_block_base(object):
         # this first test makes failures a
         # little easier to debug
         self.assertEqual(
-            [str(obj) for obj in self._block.preorder_traversal()],
+            [str(obj) for obj in pmo.preorder_traversal(self._block,
+                                                        active=None)],
             [str(obj) for obj in self._preorder])
         self.assertEqual(
-            [id(obj) for obj in self._block.preorder_traversal()],
+            [id(obj) for obj in pmo.preorder_traversal(self._block,
+                                                       active=None)],
             [id(obj) for obj in self._preorder])
 
         # this first test makes failures a
         # little easier to debug
         self.assertEqual(
-            [str(obj) for obj in self._block.preorder_traversal(
+            [str(obj) for obj in pmo.preorder_traversal(
+                self._block,
+                active=None,
                 ctype=IVariable)],
             [str(obj) for obj in self._preorder
              if obj.ctype in (IBlock, IVariable)])
         self.assertEqual(
-            [id(obj) for obj in self._block.preorder_traversal(
+            [id(obj) for obj in pmo.preorder_traversal(
+                self._block,
+                active=None,
                 ctype=IVariable)],
             [id(obj) for obj in self._preorder
              if obj.ctype in (IBlock, IVariable)])
@@ -1065,7 +1201,9 @@ class _Test_block_base(object):
         def descend(x):
             self.assertTrue(x._is_container)
             return True
-        order = list(self._block.preorder_traversal(descend=descend))
+        order = list(pmo.preorder_traversal(self._block,
+                                            active=None,
+                                            descend=descend))
         # this first test makes failures a
         # little easier to debug
         self.assertEqual(
@@ -1078,8 +1216,10 @@ class _Test_block_base(object):
         def descend(x):
             self.assertTrue(x._is_container)
             return True
-        order = list(self._block.preorder_traversal(ctype=IVariable,
-                                                    descend=descend))
+        order = list(pmo.preorder_traversal(self._block,
+                                            active=None,
+                                            ctype=IVariable,
+                                            descend=descend))
         # this first test makes failures a
         # little easier to debug
         self.assertEqual(
@@ -1095,7 +1235,9 @@ class _Test_block_base(object):
             if x.parent is self._block:
                 return False
             return True
-        order = list(self._block.preorder_traversal(descend=descend))
+        order = list(pmo.preorder_traversal(self._block,
+                                            active=None,
+                                            descend=descend))
         # this first test makes failures a
         # little easier to debug
         self.assertEqual(
@@ -1714,62 +1856,89 @@ class _Test_block(_Test_block_base):
 
     def test_collect_ctypes_small_block_storage(self):
         b = block()
+        self.assertEqual(b.collect_ctypes(active=None),
+                         set())
         self.assertEqual(b.collect_ctypes(),
                          set())
         self.assertEqual(b.collect_ctypes(active=True),
                          set())
         b.x = variable()
+        self.assertEqual(b.collect_ctypes(active=None),
+                         set([IVariable]))
         self.assertEqual(b.collect_ctypes(),
                          set([IVariable]))
         self.assertEqual(b.collect_ctypes(active=True),
                          set([IVariable]))
         b.y = constraint()
+        self.assertEqual(b.collect_ctypes(active=None),
+                         set([IVariable, IConstraint]))
         self.assertEqual(b.collect_ctypes(),
                          set([IVariable, IConstraint]))
         self.assertEqual(b.collect_ctypes(active=True),
                          set([IVariable, IConstraint]))
         b.y.deactivate()
-        self.assertEqual(b.collect_ctypes(),
+        self.assertEqual(b.collect_ctypes(active=None),
                          set([IVariable, IConstraint]))
+        self.assertEqual(b.collect_ctypes(),
+                         set([IVariable]))
         self.assertEqual(b.collect_ctypes(active=True),
                          set([IVariable]))
         B = block()
         B.b = b
+        self.assertEqual(B.collect_ctypes(descend_into=False,
+                                          active=None),
+                         set([IBlock]))
         self.assertEqual(B.collect_ctypes(descend_into=False),
                          set([IBlock]))
         self.assertEqual(B.collect_ctypes(descend_into=False,
                                           active=True),
                          set([IBlock]))
-        self.assertEqual(B.collect_ctypes(),
+        self.assertEqual(B.collect_ctypes(active=None),
                          set([IBlock, IVariable, IConstraint]))
+        self.assertEqual(B.collect_ctypes(),
+                         set([IBlock, IVariable]))
         self.assertEqual(B.collect_ctypes(active=True),
                          set([IBlock, IVariable]))
         b.deactivate()
-        self.assertEqual(B.collect_ctypes(descend_into=False),
+        self.assertEqual(B.collect_ctypes(descend_into=False,
+                                          active=None),
                          set([IBlock]))
+        self.assertEqual(B.collect_ctypes(descend_into=False),
+                         set([]))
         self.assertEqual(B.collect_ctypes(descend_into=False,
                                           active=True),
                          set([]))
-        self.assertEqual(B.collect_ctypes(),
+        self.assertEqual(B.collect_ctypes(active=None),
                          set([IBlock, IVariable, IConstraint]))
+        self.assertEqual(B.collect_ctypes(),
+                         set([]))
         self.assertEqual(B.collect_ctypes(active=True),
                          set([]))
         B.x = variable()
-        self.assertEqual(B.collect_ctypes(descend_into=False),
+        self.assertEqual(B.collect_ctypes(descend_into=False,
+                                          active=None),
                          set([IBlock, IVariable]))
+        self.assertEqual(B.collect_ctypes(descend_into=False),
+                         set([IVariable]))
         self.assertEqual(B.collect_ctypes(descend_into=False,
                                           active=True),
                          set([IVariable]))
-        self.assertEqual(B.collect_ctypes(),
+        self.assertEqual(B.collect_ctypes(active=None),
                          set([IBlock, IVariable, IConstraint]))
+        self.assertEqual(B.collect_ctypes(),
+                         set([IVariable]))
         self.assertEqual(B.collect_ctypes(active=True),
                          set([IVariable]))
         del b.y
-        self.assertEqual(b.collect_ctypes(),
+        self.assertEqual(b.collect_ctypes(active=None),
                          set([IVariable]))
+        self.assertEqual(b.collect_ctypes(),
+                         set([]))
         self.assertEqual(b.collect_ctypes(active=True),
                          set([]))
         b.activate()
+        self.assertEqual(b.collect_ctypes(active=None),
+                         set([IVariable]))
         self.assertEqual(b.collect_ctypes(),
                          set([IVariable]))
         self.assertEqual(b.collect_ctypes(active=True),
@@ -1781,63 +1950,90 @@ class _Test_block(_Test_block_base):
     def test_collect_ctypes_large_block_storage(self):
         b = block()
         b._activate_large_storage_mode()
+        self.assertEqual(b.collect_ctypes(active=None),
+                         set())
         self.assertEqual(b.collect_ctypes(),
                          set())
         self.assertEqual(b.collect_ctypes(active=True),
                          set())
         b.x = variable()
+        self.assertEqual(b.collect_ctypes(active=None),
+                         set([IVariable]))
         self.assertEqual(b.collect_ctypes(),
                          set([IVariable]))
         self.assertEqual(b.collect_ctypes(active=True),
                          set([IVariable]))
         b.y = constraint()
+        self.assertEqual(b.collect_ctypes(active=None),
+                         set([IVariable, IConstraint]))
         self.assertEqual(b.collect_ctypes(),
                          set([IVariable, IConstraint]))
         self.assertEqual(b.collect_ctypes(active=True),
                          set([IVariable, IConstraint]))
         b.y.deactivate()
-        self.assertEqual(b.collect_ctypes(),
+        self.assertEqual(b.collect_ctypes(active=None),
                          set([IVariable, IConstraint]))
+        self.assertEqual(b.collect_ctypes(),
+                         set([IVariable]))
         self.assertEqual(b.collect_ctypes(active=True),
                          set([IVariable]))
         B = block()
         b._activate_large_storage_mode()
         B.b = b
+        self.assertEqual(B.collect_ctypes(descend_into=False,
+                                          active=None),
+                         set([IBlock]))
         self.assertEqual(B.collect_ctypes(descend_into=False),
                          set([IBlock]))
         self.assertEqual(B.collect_ctypes(descend_into=False,
                                           active=True),
                          set([IBlock]))
-        self.assertEqual(B.collect_ctypes(),
+        self.assertEqual(B.collect_ctypes(active=None),
                          set([IBlock, IVariable, IConstraint]))
+        self.assertEqual(B.collect_ctypes(),
+                         set([IBlock, IVariable]))
         self.assertEqual(B.collect_ctypes(active=True),
                          set([IBlock, IVariable]))
         b.deactivate()
-        self.assertEqual(B.collect_ctypes(descend_into=False),
+        self.assertEqual(B.collect_ctypes(descend_into=False,
+                                          active=None),
                          set([IBlock]))
+        self.assertEqual(B.collect_ctypes(descend_into=False),
+                         set([]))
         self.assertEqual(B.collect_ctypes(descend_into=False,
                                           active=True),
                          set([]))
-        self.assertEqual(B.collect_ctypes(),
+        self.assertEqual(B.collect_ctypes(active=None),
                          set([IBlock, IVariable, IConstraint]))
+        self.assertEqual(B.collect_ctypes(),
+                         set([]))
         self.assertEqual(B.collect_ctypes(active=True),
                          set([]))
         B.x = variable()
-        self.assertEqual(B.collect_ctypes(descend_into=False),
+        self.assertEqual(B.collect_ctypes(descend_into=False,
+                                          active=None),
                          set([IBlock, IVariable]))
+        self.assertEqual(B.collect_ctypes(descend_into=False),
+                         set([IVariable]))
         self.assertEqual(B.collect_ctypes(descend_into=False,
                                           active=True),
                          set([IVariable]))
-        self.assertEqual(B.collect_ctypes(),
+        self.assertEqual(B.collect_ctypes(active=None),
                          set([IBlock, IVariable, IConstraint]))
+        self.assertEqual(B.collect_ctypes(),
+                         set([IVariable]))
         self.assertEqual(B.collect_ctypes(active=True),
                          set([IVariable]))
         del b.y
-        self.assertEqual(b.collect_ctypes(),
+        self.assertEqual(b.collect_ctypes(active=None),
                          set([IVariable]))
+        self.assertEqual(b.collect_ctypes(),
+                         set([]))
         self.assertEqual(b.collect_ctypes(active=True),
                          set([]))
         b.activate()
+        self.assertEqual(b.collect_ctypes(active=None),
+                         set([IVariable]))
         self.assertEqual(b.collect_ctypes(),
                          set([IVariable]))
         self.assertEqual(b.collect_ctypes(active=True),
@@ -1954,6 +2150,8 @@ class _Test_small_block(_Test_block_base):
 
     # override this test method on the base class
     def test_collect_ctypes(self):
+        self.assertEqual(self._block.collect_ctypes(active=None),
+                         set([IBlock, IVariable]))
         self.assertEqual(self._block.collect_ctypes(),
                          set([IBlock, IVariable]))
         self.assertEqual(self._block.collect_ctypes(active=True),
@@ -1965,16 +2163,24 @@ class _Test_small_block(_Test_block_base):
                          set([IBlock, IVariable]))
 
         self._block.b.deactivate()
-        self.assertEqual(self._block.collect_ctypes(),
-                         set([IBlock, IVariable]))
-        self.assertEqual(self._block.collect_ctypes(active=True),
-                         set([IVariable]))
-        self.assertEqual(self._block.collect_ctypes(descend_into=False),
-                         set([IBlock, IVariable]))
-        self.assertEqual(self._block.collect_ctypes(active=True,
-                                                    descend_into=False),
-                         set([IVariable]))
-        self._block.b.activate()
+        try:
+            self.assertEqual(self._block.collect_ctypes(active=None),
+                             set([IBlock, IVariable]))
+            self.assertEqual(self._block.collect_ctypes(),
+                             set([IVariable]))
+            self.assertEqual(self._block.collect_ctypes(active=True),
+                             set([IVariable]))
+            self.assertEqual(self._block.collect_ctypes(active=None,
+                                                        descend_into=False),
+                             set([IBlock, IVariable]))
+            self.assertEqual(self._block.collect_ctypes(descend_into=False),
+                             set([IVariable]))
+            self.assertEqual(self._block.collect_ctypes(active=True,
+                                                        descend_into=False),
+                             set([IVariable]))
+        finally:
+            # use a finally block in case there is a failure above
+            self._block.b.activate()
 
     def test_customblock_delattr(self):
         b = _MyBlock()
@@ -2042,32 +2248,46 @@ class _Test_small_block(_Test_block_base):
     def test_inactive_behavior(self):
         b = _MyBlock()
         b.deactivate()
-        self.assertNotEqual(len(list(b.preorder_traversal())), 0)
-        self.assertEqual(len(list(b.preorder_traversal(active=True))), 0)
+        self.assertNotEqual(len(list(pmo.preorder_traversal(b,
+                                                            active=None))), 0)
+        self.assertEqual(len(list(pmo.preorder_traversal(b))), 0)
+        self.assertEqual(len(list(pmo.preorder_traversal(b,
+                                                         active=True))), 0)
 
         def descend(x):
             return True
         self.assertNotEqual(
-            len(list(b.preorder_traversal(descend=descend))),
+            len(list(pmo.preorder_traversal(b,
+                                            active=None,
+                                            descend=descend))),
             0)
         self.assertEqual(
-            len(list(b.preorder_traversal(active=True,
-                                          descend=descend))),
+            len(list(pmo.preorder_traversal(b,
+                                            descend=descend))),
+            0)
+        self.assertEqual(
+            len(list(pmo.preorder_traversal(b,
+                                            active=True,
+                                            descend=descend))),
             0)
         def descend(x):
             descend.seen.append(x)
             return x.active
         descend.seen = []
         self.assertEqual(
-            len(list(b.preorder_traversal(descend=descend))),
+            len(list(pmo.preorder_traversal(b,
+                                            active=None,
+                                            descend=descend))),
             1)
         self.assertEqual(len(descend.seen), 1)
         self.assertIs(descend.seen[0], b)
 
-        self.assertNotEqual(len(list(b.components())), 0)
+        self.assertNotEqual(len(list(b.components(active=None))), 0)
+        self.assertEqual(len(list(b.components())), 0)
         self.assertEqual(len(list(b.components(active=True))), 0)
 
-        self.assertNotEqual(len(list(pmo.generate_names(b))), 0)
+        self.assertNotEqual(len(list(pmo.generate_names(b, active=None))), 0)
+        self.assertEqual(len(list(pmo.generate_names(b))), 0)
         self.assertEqual(len(list(pmo.generate_names(b, active=True))), 0)
 
 class Test_small_block_noclone(_Test_small_block, unittest.TestCase):
