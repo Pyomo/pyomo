@@ -77,13 +77,13 @@ class CuttingPlane_Transformation(Transformation):
         """
     ))
     CONFIG.declare('EPS', ConfigValue(
-        default=0.01,
+        default=0.05,#TODO: this is an experiment... 0.01,
         domain=PositiveFloat,
         description="Epsilon value used to decide when to stop adding cuts",
         doc=""" 
         If the difference between the objectives in two consecutive iterations is
         less than this value, the algorithm terminates without adding the cut
-        cut generated in the last iteration.  """
+        generated in the last iteration.  """
     ))
     CONFIG.declare('stream_solver', ConfigValue(
         default=False,
