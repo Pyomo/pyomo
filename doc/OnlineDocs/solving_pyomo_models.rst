@@ -70,4 +70,4 @@ read AMPL "``.nl``" and write "``.sol``" files and the ability to
 generate GAMS-format models and retrieve the results.  You can get the
 current list of supported solvers using the ``pyomo`` command::
 
-   $ pyomo help --solvers
+   pyomo help --solvers

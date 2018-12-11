@@ -8,7 +8,8 @@ model:
 
 1. use standard Python objects,
 
-2. initialize a model with data loaded with a :class:`DataPortal <ref pyomo.environ.DataPortal>` object, and
+2. initialize a model with data loaded with a
+   :class:`~pyomo.environ.DataPortal` object, and
 
 3. load model data from a Pyomo data command file.
 
