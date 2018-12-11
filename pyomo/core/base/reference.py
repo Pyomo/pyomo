@@ -323,9 +323,9 @@ def _identify_wildcard_sets(iter_stack, index):
     return index
 
 def Reference(reference, ctype=_NotSpecified):
-    """Generate a reference component from a component slice.
+    """Creates a component that references other components
 
-    Reference generates a *reference component*; that is, an indexed
+    ``Reference`` generates a *reference component*; that is, an indexed
     component that does not contain data, but instead references data
     stored in other components as defined by a component slice.  The
     ctype parameter sets the :py:meth:`Component.type` of the resulting
@@ -351,10 +351,10 @@ def Reference(reference, ctype=_NotSpecified):
         component slice that defines the data to include in the
         Reference component
 
-    ctype : type [optional]
+    ctype : :py:class:`type` [optional]
         the type used to create the resulting indexed component.  If not
         specified, the data's ctype will be used (if all data share a
-        common ctype).  If multiple data ctypes are found or ctype is
+        common ctype).  If multiple data ctypes are found or type is
         ``None``, then :py:class:`IndexedComponent` will be used.
 
     Examples
