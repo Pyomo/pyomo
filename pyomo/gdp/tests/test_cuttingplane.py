@@ -355,7 +355,7 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
     # it doesn't matter much.
     @raises(GDP_Error)
     def test_complain_if_no_bigm(self):
-        m = models.twoDisj_nonlin_convex()
+        m = models.twoDisj_twoCircles_easy()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
