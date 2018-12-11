@@ -34,15 +34,15 @@ is "empty":
    1 Set Declarations
        I : Dim=0, Dimen=1, Size=0, Domain=None, Ordered=False, Bounds=None
            Not constructed
-
+   <BLANKLINE>
    1 Param Declarations
        p : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
            Not constructed
-
+   <BLANKLINE>
    1 Var Declarations
        x : Size=0, Index=I
            Not constructed
-
+   <BLANKLINE>
    3 Declarations: p I x
 
 Before you can manipulate modeling components or solve the model, you
@@ -68,19 +68,19 @@ abstract ``model`` is left untouched.
    1 Set Declarations
        I : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
            [1, 2, 3]
-
+   <BLANKLINE>
    1 Param Declarations
        p : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
            Key  : Value
            None :     5
-
+   <BLANKLINE>
    1 Var Declarations
        x : Size=3, Index=I
            Key : Lower : Value : Upper : Fixed : Stale : Domain
              1 :  None :  None :  None : False :  True :  Reals
              2 :  None :  None :  None : False :  True :  Reals
              3 :  None :  None :  None : False :  True :  Reals
-
+   <BLANKLINE>
    3 Declarations: p I x
 
 .. note::
@@ -104,16 +104,16 @@ several sources, including using a :ref:`dict <page-data-from-dict>`,
    1 Set Declarations
        I : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=(4, 5)
            [4, 5]
-
+   <BLANKLINE>
    1 Param Declarations
        p : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
            Key  : Value
            None :     5
-
+   <BLANKLINE>
    1 Var Declarations
        x : Size=2, Index=I
            Key : Lower : Value : Upper : Fixed : Stale : Domain
              4 :  None :  None :  None : False :  True :  Reals
              5 :  None :  None :  None : False :  True :  Reals
-
+   <BLANKLINE>
    3 Declarations: p I x
