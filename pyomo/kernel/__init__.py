@@ -25,6 +25,7 @@ from pyomo.opt import (SolverFactory,
 from pyomo.core.expr import *
 import pyomo.core.kernel
 from pyomo.kernel.util import (generate_names,
+                               preorder_traversal,
                                pprint)
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
@@ -43,6 +44,7 @@ from pyomo.core.kernel.matrix_constraint import \
     matrix_constraint
 from pyomo.core.kernel.parameter import \
     (parameter,
+     functional_value,
      parameter_tuple,
      parameter_list,
      parameter_dict)
@@ -69,6 +71,7 @@ from pyomo.core.kernel.sos import \
      sos_dict)
 from pyomo.core.kernel.suffix import \
     (suffix,
+     suffix_dict,
      export_suffix_generator,
      import_suffix_generator,
      local_suffix_generator,
@@ -168,10 +171,13 @@ del pyomo
 # Ducktyping to work with a solver interfaces. Ideally,
 # everything below here could be deleted one day.
 #
-from pyomo.core.kernel.heterogeneous_container import IHeterogeneousContainer
+from pyomo.core.kernel.heterogeneous_container import (heterogeneous_containers,
+                                                       IHeterogeneousContainer)
 def _component_data_objects(self, *args, **kwds):
     # this is not yet handled
     kwds.pop('sort', None)
+    if 'active' not in kwds:
+        kwds['active'] = None
     for component in self.components(*args, **kwds):
         yield component
 IHeterogeneousContainer.component_data_objects = \
@@ -185,17 +191,9 @@ def _component_objects(self, *args, **kwds):
     assert kwds.pop('descent_order', None) is None
     active = kwds.pop('active', None)
     descend_into = kwds.pop('descend_into', True)
-    if not descend_into:
-        assert active in (None, True)
-        # if not active, then nothing below is active
-        if (active is not None) and \
-           (not self.active):
-            return
-        items = (self,)
-    else:
-        items = self.heterogeneous_containers(active=active,
-                                              descend_into=True)
-    for item in items:
+    for item in heterogeneous_containers(self,
+                                         active=active,
+                                         descend_into=descend_into):
         for child in item.children(*args, **kwds):
             yield child
 IHeterogeneousContainer.component_objects = \
@@ -232,3 +230,7 @@ def _type(self):
     return self._ctype
 ICategorizedObject.type = _type
 del ICategorizedObject
+
+# update the reserved block attributes now that
+# new hacked methods have been placed on blocks
+block._refresh_block_reserved_words()

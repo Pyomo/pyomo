@@ -10,7 +10,6 @@
 
 import sys
 import logging
-import weakref
 import math
 import collections
 if sys.version_info[:2] >= (3,6):
@@ -72,10 +71,28 @@ class IBlock(IHeterogeneousContainer):
 
 class block(IBlock):
     """A generalized container for defining hierarchical
-    models."""
+    models by adding modeling components as attributes.
 
-    _lbs_count = 4
+    Examples:
+        >>> import pyomo.kernel as pmo
+        >>> model = pmo.block()
+        >>> model.x = pmo.variable()
+        >>> model.c = pmo.constraint(model.x >= 1)
+        >>> model.o = pmo.objective(model.x)
+    """
+
     _ctype = IBlock
+    # determines when large block storage is activated
+    _lbs_count = 4
+    _block_reserved_words = set()
+
+    @staticmethod
+    def _refresh_block_reserved_words():
+        block._block_reserved_words = set(dir(block()))
+        # this is protected because it is
+        # defined as a property with a setter
+        # that explicitly disallows this
+        block._block_reserved_words.remove('active')
 
     def __init__(self):
         # bypass __setatrr__ for this class
@@ -83,44 +100,47 @@ class block(IBlock):
         d['_parent'] = None
         d['_storage_key'] = None
         d['_active'] = True
-        d['_byctype'] = None
-        d['_order'] = _ordered_dict_()
+        d['_block__byctype'] = None
+        d['_block__order'] = _ordered_dict_()
 
     def _activate_large_storage_mode(self):
-        if self._byctype.__class__ is not _ordered_dict_:
-            self.__dict__['_byctype'] = _ordered_dict_()
-            for key, obj in self._order.items():
+        if self.__byctype.__class__ is not _ordered_dict_:
+            self_byctype = \
+                self.__dict__['_block__byctype'] = _ordered_dict_()
+            for key, obj in self.__order.items():
                 ctype = obj.ctype
-                if ctype not in self._byctype:
-                    self._byctype[ctype] = _ordered_dict_()
-                self._byctype[ctype][key] = obj
+                if ctype not in self_byctype:
+                    self_byctype[ctype] = _ordered_dict_()
+                self_byctype[ctype][key] = obj
 
     #
     # Define the IHeterogeneousContainer abstract methods
     #
 
     def child_ctypes(self):
-        """Collect all object category types stored on this block."""
-        if self._byctype is None:
+        """Returns the set of child object category types
+        stored in this container."""
+        self_byctype = self.__byctype
+        if self_byctype is None:
             # empty
             return ()
-        elif self._byctype.__class__ is int:
+        elif self_byctype.__class__ is int:
             # small block storage
-            # (_byctype is a union of hash bytes)
+            # (self_byctype is a union of hash bytes)
             ctypes_set = set()
             ctypes = []
-            for child in self._order.values():
+            for child in self.__order.values():
                 child_ctype = child.ctype
                 if child_ctype not in ctypes_set:
                     ctypes_set.add(child_ctype)
                     ctypes.append(child_ctype)
             return tuple(ctypes)
-        elif self._byctype.__class__ is _ordered_dict_:
+        elif self_byctype.__class__ is _ordered_dict_:
             # large-block storage
-            return tuple(self._byctype)
+            return tuple(self_byctype)
         else:
             # storing a single ctype
-            return (self._byctype,)
+            return (self_byctype,)
 
     #
     # Define the ICategorizedObjectContainer abstract methods
@@ -137,7 +157,8 @@ class block(IBlock):
         Returns:
             iterator of child objects
         """
-        if self._byctype is None:
+        self_byctype = self.__byctype
+        if self_byctype is None:
             # empty
             return
 
@@ -146,24 +167,24 @@ class block(IBlock):
         ctype = _convert_ctype.get(ctype, ctype)
 
         if ctype is _no_ctype:
-            for child in self._order.values():
+            for child in self.__order.values():
                 yield child
-        elif self._byctype.__class__ is _ordered_dict_:
+        elif self_byctype.__class__ is _ordered_dict_:
             # large-block storage
-            if ctype in self._byctype:
-                for child in self._byctype[ctype].values():
+            if ctype in self_byctype:
+                for child in self_byctype[ctype].values():
                     yield child
-        elif self._byctype.__class__ is int:
+        elif self_byctype.__class__ is int:
             # small-block storage
-            # (_byctype is a union of hash bytes)
+            # (self_byctype is a union of hash bytes)
             h_ = hash(ctype)
-            if (self._byctype & h_) == h_:
-                for child in self._order.values():
+            if (self_byctype & h_) == h_:
+                for child in self.__order.values():
                     if child.ctype is ctype:
                         yield child
-        elif self._byctype is ctype:
+        elif self_byctype is ctype:
             # storing a single ctype
-            for child in self._order.values():
+            for child in self.__order.values():
                 yield child
 
     #
@@ -171,14 +192,18 @@ class block(IBlock):
     #
 
     def __setattr__(self, name, obj):
+        if name in self._block_reserved_words:
+            raise ValueError("Attempting to modify a reserved "
+                             "block attribute: %s" % (name,))
         needs_del = False
         same_obj = False
-        if name in self._order:
+        self_order = self.__order
+        if name in self_order:
             # to avoid an edge case, we need to delay
             # deleting the current object until we
             # check the parent of the new object
             needs_del = True
-            if self._order[name] is not obj:
+            if self_order[name] is not obj:
                 logger.warning(
                     "Implicitly replacing attribute %s (type=%s) "
                     "on block with new object (type=%s). This "
@@ -202,36 +227,36 @@ class block(IBlock):
             if (obj.parent is None) or same_obj:
                 if needs_del:
                     delattr(self, name)
-                obj._parent = weakref.ref(self)
-                obj._storage_key = name
-                self._order[name] = obj
-                if self._byctype is None:
+                obj._update_parent_and_storage_key(self, name)
+                self_order[name] = obj
+                self_byctype = self.__byctype
+                if self_byctype is None:
                     # storing a single ctype
-                    self.__dict__['_byctype'] = ctype
-                elif self._byctype.__class__ is _ordered_dict_:
+                    self.__dict__['_block__byctype'] = ctype
+                elif self_byctype.__class__ is _ordered_dict_:
                     # large-block storage
-                    if ctype not in self._byctype:
-                        self._byctype[ctype] = _ordered_dict_()
-                    self._byctype[ctype][name] = obj
-                elif self._byctype.__class__ is int:
+                    if ctype not in self_byctype:
+                        self_byctype[ctype] = _ordered_dict_()
+                    self_byctype[ctype][name] = obj
+                elif self_byctype.__class__ is int:
                     # small-block storage
                     # (_byctype is a union of hash bytes)
-                    if len(self._order) > self._lbs_count:
+                    if len(self_order) > self._lbs_count:
                         # activate the large storage format
                         # if we have exceeded the threshold
                         self._activate_large_storage_mode()
                     else:
-                        self.__dict__['_byctype'] |= hash(ctype)
+                        self.__dict__['_block__byctype'] |= hash(ctype)
                 else:
                     # currently storing a single ctype
-                    if ctype is not self._byctype:
-                        if len(self._order) > self._lbs_count:
+                    if ctype is not self_byctype:
+                        if len(self_order) > self._lbs_count:
                             # activate the large storage format
                             # if we have exceeded the threshold
                             self._activate_large_storage_mode()
                         else:
-                            self.__dict__['_byctype'] = \
-                                hash(self._byctype) | hash(ctype)
+                            self.__dict__['_block__byctype'] = \
+                                hash(self_byctype) | hash(ctype)
             else:
                 raise ValueError(
                     "Invalid assignment to %s type with name '%s' "
@@ -244,17 +269,18 @@ class block(IBlock):
         super(block, self).__setattr__(name, obj)
 
     def __delattr__(self, name):
-        if name in self._order:
-            obj = self._order[name]
-            del self._order[name]
-            obj._parent = None
-            obj._storage_key = None
-            if self._byctype.__class__ is _ordered_dict_:
+        self_order = self.__order
+        if name in self_order:
+            obj = self_order[name]
+            del self_order[name]
+            obj._clear_parent_and_storage_key()
+            self_byctype = self.__byctype
+            if self_byctype.__class__ is _ordered_dict_:
                 # large-block storage
                 ctype = obj.ctype
-                del self._byctype[ctype][name]
-                if len(self._byctype[ctype]) == 0:
-                    del self._byctype[ctype]
+                del self_byctype[ctype][name]
+                if len(self_byctype[ctype]) == 0:
+                    del self_byctype[ctype]
         super(block, self).__delattr__(name)
 
     def write(self,
@@ -344,8 +370,7 @@ class block(IBlock):
         # this top level model
         valid_import_suffixes = \
             dict((obj.storage_key, obj)
-                 for obj in import_suffix_generator(self,
-                                                    active=True))
+                 for obj in import_suffix_generator(self))
 
         # To ensure that import suffix data gets properly
         # overwritten (e.g., the case where nonzero dual
@@ -367,8 +392,7 @@ class block(IBlock):
         # Load variable data
         #
         from pyomo.core.kernel.variable import IVariable
-        for var in self.components(ctype=IVariable,
-                                   active=True):
+        for var in self.components(ctype=IVariable):
             var.stale = True
         var_skip_attrs = ['id','canonical_label']
         seen_var_ids = set()
@@ -500,3 +524,7 @@ class block(IBlock):
 define_simple_containers(globals(),
                          "block",
                          IBlock)
+
+# populate the initial set of reserved block attributes so
+# that users can not overwrite them when building a model
+block._refresh_block_reserved_words()

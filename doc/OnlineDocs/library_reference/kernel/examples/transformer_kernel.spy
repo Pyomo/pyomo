@@ -1,0 +1,15 @@
+class Transformer(pyomo.kernel.block):
+    def __init__(self):
+        super(Transformer,self).__init__()
+        self._a = pyomo.kernel.parameter()
+        self._v_in = pyomo.kernel.expression()
+        self._v_out = pyomo.kernel.expression()
+        self._c = pyomo.kernel.constraint(
+            self._a * self._v_out == self._v_in)
+    def set_ratio(self, a):
+        assert a > 0
+        self._a.value = a
+    def connect_v_in(self, v_in):
+        self._v_in.expr = v_in
+    def connect_v_out(self, v_out):
+        self._v_out.expr = v_out

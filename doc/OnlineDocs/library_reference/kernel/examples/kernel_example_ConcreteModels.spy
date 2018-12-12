@@ -1,0 +1,2 @@
+m = pmo.block()
+m.b = pmo.block()

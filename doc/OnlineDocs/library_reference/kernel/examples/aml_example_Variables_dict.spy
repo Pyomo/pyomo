@@ -1,0 +1,3 @@
+m.vd = aml.Var(m.s,
+               bounds=(None,9))
+

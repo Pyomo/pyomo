@@ -576,8 +576,8 @@ class Test_suffix(unittest.TestCase):
         with self.assertRaises(ValueError):
             s.set_datatype('something')
 
-class Test_constraint_dict(_TestActiveDictContainerBase,
-                           unittest.TestCase):
+class Test_suffix_dict(_TestActiveDictContainerBase,
+                       unittest.TestCase):
     _container_type = suffix_dict
     _ctype_factory = lambda self: suffix()
 
