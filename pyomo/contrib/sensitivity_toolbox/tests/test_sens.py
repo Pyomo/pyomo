@@ -23,6 +23,12 @@ import pyomo.contrib.sensitivity_toolbox.examples.feedbackController as fc
 import pyomo.contrib.sensitivity_toolbox.examples.rangeInequality as ri
 import pyomo.contrib.sensitivity_toolbox.examples.HIV_Transmission as hiv
 
+try:
+    import scipy
+    scipy_available = True
+except ImportError:
+    scipy_available = False
+
 opt = SolverFactory('ipopt_sens', solver_io='nl')
 
 class TestSensitivityToolbox(unittest.TestCase):
@@ -77,6 +83,7 @@ class TestSensitivityToolbox(unittest.TestCase):
 
 
     #test feedbackController Solution when the model gets cloned
+    @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_clonedModel_soln(self):
 
@@ -171,6 +178,7 @@ class TestSensitivityToolbox(unittest.TestCase):
         self.assertAlmostEqual(value(m_sipopt.J),0.0048956783,8)
          
 
+    @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_noClone_soln(self):
 
@@ -255,6 +263,7 @@ class TestSensitivityToolbox(unittest.TestCase):
 
 
     #test indexed param mapping to var and perturbed values
+    @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_indexedParamsMapping(self):
 
