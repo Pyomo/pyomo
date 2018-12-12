@@ -9,7 +9,8 @@ Current Development
 - PySP updates
   - Python 3.7 support (#463)
   - Fix bugs in finance example (#564,#578)
-  - Added a wrapper for PySP to create a scripting interace (#689,#727)
+  - Added a wrapper for PySP to create a scripting interace (#689,#727,#737)
+  - Bug fixes (#736)
 - GDP updates
   - function in contrib for computing disjunctive variable bounds (#481)
   - fix for Big-M processing inactive disjunction data (#490)
@@ -26,11 +27,13 @@ Current Development
   - Converted old asciidoc documentation to Sphinx (#486,#574)
   - Scripting section updates (#543)
   - Document PR process (#628)
-  - Document Pyomo.Network (#651)
+  - Document Pyomo.Network (#651,#745,#780)
   - Document preprocessing transformations (#653)
   - Reorganized the Sphinx documentation to make it easier to navigate
     and merge old and new documentation sections (#699)
   - Create more prominent section for documentation on contrib packages (#729)
+  - Documentation updates (#748,#756,#777,#782)
+  - Document pyomo.kernel (#767)
 - GAMS writer updates
   - fix for power() expressions (#454)
   - fix for fixed variables (#510)
@@ -41,6 +44,7 @@ Current Development
   - Integrate options attribute (#558)
   - Change writer ctype checking (#593,#641)
   - Fix double-operator due to negative constant (#698)
+  - Fix Windows stdout compatibility issue (#779)
 - Removing testing and support for Python 2.6 (#322)
 - Resolved several build errors on Appveyor (#438,#539,#552,#577,#705)  
 - Wrap Vars in value() for assignment to numpy vectors (#436)
@@ -70,7 +74,7 @@ Current Development
 - Preprocessing transformation for variable aggregation (#533)
 - Updated README.md to include link for performance plots (#534)
 - Updates to dualization and bilevel solvers (#535)
-- Update trustregion package for Pyomo5 expressions (#536, 
+- Update trustregion package for Pyomo5 expressions (#536) 
 - Fix pyomo help -s command (#551)
 - Implicitly order Pyomo sets based on insertion order (#568)
 - Kernel updates simplifying handling of active status on containers, 
@@ -92,22 +96,32 @@ Current Development
 - Fix generation of bounds for fixed variables in LP writer (#623)
 - Jenkins driver updates to fix errors when files are moved/renamed, 
   delete coverage info from previous builds, decode unicode in 
-  booktests driver (#627,#629,#630,#631,#704)
+  booktests driver, test fixes (#627,#629,#630,#631,#704,#735,#772,#771)
 - Silence invalid error messages logged with Template Expressions (#634)
 - Bugfix in Gurobi direct interface (#635)
 - Add support for sqrt function in differentiate() (#642)
 - Fix NEOS interface when behind a proxy in Python 3.x (#644) 
-- Add Reference "component" (#655)
+- Add Reference "component" (#655,#742)
 - Replace PyUtilib factories with native Pyomo factories (#661)
 - Add method to return F,G,H from AMPL external functions (#666,#668)
 - Implemented a general-purpose expression visitor (#671)
 - Cythonized writers in pyomo.repn (#675)
 - Implemented a scaling transformation (#694)
-- Contributed package for parameter estimation (#706)
+- Contributed ParmEst package for parameter estimation (#706,#733,#769,#781)
 - Fix for overriding values in IndexedSets (#710)
 - Update symbolic differentiation to be compatible with sympy 1.3
   and performance improvements (#715,#719)
 - Add 'SubclassOf' to support finding components based on sub class (#723)
+- Contributed PyNumero package for numerical optimization (#725)
+- Fixed Baron writer sqrt error (#751)
+- Fixes to avoid deprecation warnings (#760,#765)
+- Kernel updates (#761)
+- Add a utility for calculating variable values (#763)
+- Move PseudoMap out of _BlockData class (#778)
+- Contributed package sensitivity_toolbox for interfacing with sIPOPT (#766)
+- Modify trust region code to use ConfigBlocks (#738)
+- Contributed PETSc AMPL wrapper (#774)
+- Update options for pymysql (#678)
 
 -------------------------------------------------------------------------------
 Pyomo 5.5
