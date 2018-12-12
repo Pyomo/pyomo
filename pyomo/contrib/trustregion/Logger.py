@@ -1,7 +1,6 @@
 import numpy as np
 from numpy.linalg import norm
 from pyomo.contrib.trustregion.helper import *
-from pyomo.contrib.trustregion.param import *
 
 class IterLog:
     # # Todo: Include the following in high printlevel
@@ -13,11 +12,12 @@ class IterLog:
     # print(romParam)
     # stepNorm
 
-    def __init__(self, iteration,xk,yk,zk):
+    def __init__(self, iteration,xk,yk,zk,print_vars):
         self.iteration = iteration
         self.xk = xk
         self.yk = yk
         self.zk = zk
+        self.print_vars = print_vars
         self.thetak = None
         self.objk = None
         self.chik = None
@@ -48,14 +48,14 @@ class IterLog:
         """
         print("\n**************************************")
         print("Iteration %d:" % self.iteration)
-        if PRINT_VARS:
+        if self.print_vars:
             print(packXYZ(self.xk, self.yk, self.zk))
-        print("thetak = %e" % self.thetak)
-        print("objk = %e" % self.objk)
-        print("trustRadius = %e" % self.trustRadius)
-        print("sampleRadius = %f" % self.sampleRadius)
-        print("stepNorm = %f" % self.stepNorm)
-        print("chi = %e" % self.chik)
+        print("thetak = %s" % self.thetak)
+        print("objk = %s" % self.objk)
+        print("trustRadius = %s" % self.trustRadius)
+        print("sampleRadius = %s" % self.sampleRadius)
+        print("stepNorm = %s" % self.stepNorm)
+        print("chi = %s" % self.chik)
         if self.fStep:
             print("f-type step")
         if self.thetaStep:
@@ -71,8 +71,8 @@ class IterLog:
 
 class Logger:
     iters = []
-    def newIter(self,iteration,xk,yk,zk,thetak,objk,chik):
-        self.iterlog = IterLog(iteration,xk,yk,zk)
+    def newIter(self,iteration,xk,yk,zk,thetak,objk,chik,print_vars):
+        self.iterlog = IterLog(iteration,xk,yk,zk,print_vars)
         self.iterlog.setRelatedValue(thetak=thetak,objk=objk,chik=chik)
         self.iters.append(self.iterlog)
     def setCurIter(self,trustRadius=None,sampleRadius=None,stepNorm=None):
