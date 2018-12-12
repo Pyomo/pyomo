@@ -46,11 +46,6 @@ class TrustRegionSolver(OptSolver):
         description='solver to use, defaults to ipopt',
         doc = ''))
 
-    CONFIG.declare('type', ConfigValue(
-        default = 'trustregion',
-        description = '',
-        doc = ''))
-
     # Initialize trust radius
     CONFIG.declare('trust radius', ConfigValue(
         default = 1.0,
@@ -241,23 +236,15 @@ class TrustRegionSolver(OptSolver):
 
     def __init__(self, **kwds):
         # set persistent config options
+        tmp_kwds = {'type':kwds.pop('type','trustregion')}
         self.config = self.CONFIG(kwds)
-        #print(self.config.value())
 
         #
         # Call base class constructor
         #
  
-        kwds['type'] = 'trustregion'
-        kwds['solver'] = 'ipopt'
-        #print(kwds)
-        OptSolver.__init__(self, **kwds)
-
-        #OptSolver.__init__(self, self.config.value())
-
-
-        #self.config.solver = 'ipopt'
-        #self.config.type = 'trustregion'
+        tmp_kwds['solver'] = 'ipopt'
+        OptSolver.__init__(self, **tmp_kwds)
 
 
     def available(self, exception_flag=True):
