@@ -10,6 +10,7 @@
 from pyomo.environ import *
 
 from pyomo.core.base import _ConstraintData, _ObjectiveData, _ExpressionData
+from pyomo.core.base.misc import sorted_robust
 from pyomo.core.expr.current import (clone_expression, identify_variables, 
                                      ExpressionReplacementVisitor)
 
@@ -119,8 +120,13 @@ def sipopt(instance,paramSubList,perturbList,cloneModel=True,
    
     paramDataList = [] 
     for parameter in paramSubList:
-        #Loop over each ParamData in the Param Component
-       for kk in parameter:
+        # Loop over each ParamData in the Param Component
+        #
+        # Note: Sets are unordered in Pyomo.  For this to be
+        # deterministic, we need to sort the index (otherwise, the
+        # ordering of things in the paramDataList may change).  We use
+        # sorted_robust to guard against mixed-type Sets in Python 3.x
+        for kk in sorted_robust(parameter):
             variableSubMap[id(parameter[kk])]=paramCompMap[parameter][kk]
             perturbSubMap[id(parameter[kk])]=paramPerturbMap[parameter][kk]
             paramDataList.append(parameter[kk])
