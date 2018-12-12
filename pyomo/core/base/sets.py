@@ -589,43 +589,63 @@ class Set(IndexedComponent):
     can be initialized by the load() method.
 
     Constructor Arguments:
-        name            The name of the set
-        doc             A text string describing this component
-        within          A set that defines the type of values that can
-                            be contained in this set
-        domain          A set that defines the type of values that can
-                            be contained in this set
-        initialize      A dictionary or rule for setting up this set
-                            with existing model data
-        validate        A rule for validating membership in this set. This has
-                            the functional form:
-                                f: data -> bool
-                            and returns true if the data belongs in the set
-        dimen           Specify the set's arity, or None if no arity is enforced
-        virtual         If true, then this is a virtual set that does not
-                            store data using the class dictionary
-        bounds          A 2-tuple that specifies the range of possible set values.
-        ordered         Specifies whether the set is ordered. Possible values are:
-                            False           Unordered
-                            True            Ordered by insertion order
-                            InsertionOrder  Ordered by insertion order
-                            SortedOrder     Ordered by sort order
-                            <function>      Ordered with this comparison function
-        filter          A function that is used to filter set entries.
+        name            
+            The name of the set
+        doc             
+            A text string describing this component
+        within          
+            A set that defines the type of values that can be 
+            contained in this set
+        domain          
+            A set that defines the type of values that can be 
+            contained in this set
+        initialize      
+            A dictionary or rule for setting up this set with 
+            existing model data
+        validate        
+            A rule for validating membership in this set. This 
+            has the functional form: f(data) -> bool, and 
+            returns true if the data belongs in the set
+        dimen           
+            Specify the set's arity, or None if no arity is enforced
+        virtual         
+            If true, then this is a virtual set that does not
+            store data using the class dictionary
+        bounds          
+            A 2-tuple that specifies the range of possible set values.
+        ordered         
+            Specifies whether the set is ordered. Possible values are
+                
+            * False:           Unordered
+            * True:            Ordered by insertion order
+            * InsertionOrder:  Ordered by insertion order
+            * SortedOrder:     Ordered by sort order
+            * <function>:      Ordered with this comparison function
+        filter          
+            A function that is used to filter set entries.
 
     Public class attributes:
-        concrete        If True, then this set contains elements.(TODO)
-        dimen           The dimension of the data in this set.
-        doc             A text string describing this component
-        domain          A set that defines the type of values that can
-                            be contained in this set
-        filter          A function that is used to filter set entries.
-        initialize      A dictionary or rule for setting up this set
-                            with existing model data
-        ordered         Specifies whether the set is ordered.
-        validate        A rule for validating membership in this set.
-        virtual         If True, then this set does not store data using the class
-                             dictionary
+        concrete        
+            If True, then this set contains elements.(TODO)
+        dimen           
+            The dimension of the data in this set.
+        doc             
+            A text string describing this component
+        domain          
+            A set that defines the type of values that can be 
+            contained in this set
+        filter          
+            A function that is used to filter set entries.
+        initialize      
+            A dictionary or rule for setting up this set with 
+            existing model data
+        ordered         
+            Specifies whether the set is ordered.
+        validate        
+            A rule for validating membership in this set.
+        virtual         
+            If True, then this set does not store data using 
+            the class dictionary
     """
 
     End             = (1003,)
