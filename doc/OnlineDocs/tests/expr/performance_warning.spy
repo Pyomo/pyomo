@@ -1,0 +1,4 @@
+M = ConcreteModel()
+M.x = Var(range(5))
+
+e = quicksum(M.x[i]**2 if i > 0 else M.x[i] for i in range(5))
