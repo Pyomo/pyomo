@@ -3,3 +3,4 @@ sphinx>=1.8.0
 networkx
 pandas
 numpy
+seaborn
