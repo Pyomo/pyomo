@@ -17,17 +17,12 @@ import pyutilib.th as unittest
 from pyomo.environ import * 
 from pyomo.opt import SolverFactory
 from pyomo.dae import ContinuousSet
+from pyomo.dae.simulator import scipy_available
 from pyomo.core.expr.current import identify_variables
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt
 import pyomo.contrib.sensitivity_toolbox.examples.feedbackController as fc
 import pyomo.contrib.sensitivity_toolbox.examples.rangeInequality as ri
 import pyomo.contrib.sensitivity_toolbox.examples.HIV_Transmission as hiv
-
-try:
-    import scipy
-    scipy_available = True
-except ImportError:
-    scipy_available = False
 
 opt = SolverFactory('ipopt_sens', solver_io='nl')
 
