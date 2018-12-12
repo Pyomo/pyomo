@@ -1,5 +1,5 @@
 git+https://github.com/PyUtilib/pyutilib
 sphinx>=1.8.0
-numpy
 networkx
 pandas
+numpy
