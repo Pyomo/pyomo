@@ -284,24 +284,24 @@ class TestSensitivityToolbox(unittest.TestCase):
                              [m.epsDelta,m.qqDelta,m.aaDelta])
 
         #param to var data
-        self.assertTrue(m_sipopt._sipopt_data.paramConst[1].lower.local_name \
-                                 == 'eps' and
-                        m_sipopt._sipopt_data.paramConst[1].body.local_name \
-                                  == 'eps' and
-                        m_sipopt._sipopt_data.paramConst[1].upper.local_name \
-                                  == 'eps' )
-        self.assertTrue(m_sipopt._sipopt_data.paramConst[6].lower.local_name \
-                                 == 'qq[2,0]' and
-                        m_sipopt._sipopt_data.paramConst[6].body.local_name \
-                                  == 'qq[2,0]' and
-                        m_sipopt._sipopt_data.paramConst[6].upper.local_name \
-                                  == 'qq[2,0]' )
-        self.assertTrue(m_sipopt._sipopt_data.paramConst[10].lower.local_name \
-                                 == 'aa' and
-                        m_sipopt._sipopt_data.paramConst[10].body.local_name \
-                                  == 'aa' and
-                        m_sipopt._sipopt_data.paramConst[10].upper.local_name \
-                                  == 'aa' )
+        self.assertEqual(
+            m_sipopt._sipopt_data.paramConst[1].lower.local_name, 'eps')
+        self.assertEqual(
+            m_sipopt._sipopt_data.paramConst[1].body.local_name, 'eps')
+        self.assertEqual(
+            m_sipopt._sipopt_data.paramConst[1].upper.local_name, 'eps')
+        self.assertEqual(
+            m_sipopt._sipopt_data.paramConst[6].lower.local_name, 'qq[2,0]')
+        self.assertEqual(
+            m_sipopt._sipopt_data.paramConst[6].body.local_name, 'qq[2,0]')
+        self.assertEqual(
+            m_sipopt._sipopt_data.paramConst[6].upper.local_name, 'qq[2,0]')
+        self.assertEqual(
+            m_sipopt._sipopt_data.paramConst[10].lower.local_name, 'aa')
+        self.assertEqual(
+            m_sipopt._sipopt_data.paramConst[10].body.local_name, 'aa')
+        self.assertEqual(
+            m_sipopt._sipopt_data.paramConst[10].upper.local_name, 'aa')
     
 
 
