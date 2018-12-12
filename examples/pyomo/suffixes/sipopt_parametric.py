@@ -27,7 +27,7 @@ from pyomo.opt import SolverFactory
 ### Create the ipopt_sens solver plugin using the ASL interface
 solver = 'ipopt_sens'
 solver_io = 'nl'
-stream_solver = False    # True prints solver output to screen
+stream_solver = True    # True prints solver output to screen
 keepfiles =     False    # True prints intermediate file names (.nl,.sol,...)
 opt = SolverFactory(solver,solver_io=solver_io)
 ###
