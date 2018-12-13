@@ -693,5 +693,50 @@ class AugmentedLagrangianNLP(NLP):
         return self._base_nlp.expansion_matrix_xl()
 
 
-    #jac = nlp.jacobian_c(x)
-    #print(jac.todense())
+def compose_two_stage_stochastic_model(models, complicating_vars):
+
+    if not isinstance(models, dict):
+        raise RuntimeError("Model must be a dictionary")
+    if not isinstance(complicating_vars, dict):
+        raise RuntimeError("complicating_vars must be a dictionary")
+    if len(complicating_vars) != len(models):
+        raise RuntimeError("Each scenario must have a list of complicated variables")
+
+    counter = 0
+    nz = -1
+    for k, v in complicating_vars.items():
+        if counter == 0:
+            nz = len(v)
+        else:
+            assert len(v) == nz, 'all models must have same number of complicating variables'
+        counter += 1
+
+    model = aml.ConcreteModel()
+    model.z = aml.Var(range(nz))
+    model.scenario_names = sorted([name for name in models.keys()])
+
+    obj = 0.0
+
+    for i, j in enumerate(model.scenario_names):
+        instance = models[j].clone()
+        model.add_component("{}_linking".format(j), aml.ConstraintList())
+        model.add_component("{}".format(j), instance)
+        linking = getattr(model, "{}_linking".format(j))
+        x = complicating_vars[j]
+
+        for k, var in enumerate(x):
+            if var.is_indexed():
+                raise RuntimeError('indexed complicating variables not supported')
+            vid = aml.ComponentUID(var)
+            vv = vid.find_component_on(instance)
+            linking.add(vv == model.z[k])
+
+        # gets objective
+        objectives = instance.component_map(aml.Objective, active=True)
+        if len(objectives) > 1:
+            raise RuntimeError('Multiple objectives not supported')
+        instance_obj = list(objectives.values())[0]
+        obj += instance_obj.expr
+        instance_obj.deactivate()
+    model.obj = aml.Objective(expr=obj)
+    return model

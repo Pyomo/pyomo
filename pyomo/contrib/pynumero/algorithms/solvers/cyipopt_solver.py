@@ -136,7 +136,7 @@ class _CyIpoptProblem(object):
         pass
 
 
-class IpoptSolver(object):
+class CyIpoptSolver(object):
 
     def __init__(self, nlp, options=None):
 
@@ -197,103 +197,15 @@ class IpoptSolver(object):
         for k, v in self._options.items():
             cyipopt_solver.addOption(k, v)
 
-        if not tee:
+        if tee:
+            x, info = cyipopt_solver.solve(xstart)
+        else:
             newstdout = redirect_stdout()
-
-        x, info = cyipopt_solver.solve(xstart)
-
-        if not tee:
+            x, info = cyipopt_solver.solve(xstart)
             os.dup2(newstdout, 1)
 
         return x, info
 
-
-def create_model1():
-    m = aml.ConcreteModel()
-    m.x = aml.Var([1, 2, 3], initialize=4.0)
-    m.c = aml.Constraint(expr=m.x[3] ** 2 + m.x[1] == 25)
-    m.d = aml.Constraint(expr=m.x[2] ** 2 + m.x[1] <= 18.0)
-    # m.d = aml.Constraint(expr=aml.inequality(-18, m.x[2] ** 2 + m.x[1],  28))
-    m.o = aml.Objective(expr=m.x[1] ** 4 - 3 * m.x[1] * m.x[2] ** 3 + m.x[3] ** 2 - 8.0)
-    m.x[1].setlb(0.0)
-    m.x[2].setlb(0.0)
-
-    return m
-
-
-def create_model2():
-    m = aml.ConcreteModel()
-    m.x = aml.Var([1, 2], initialize=4.0)
-    m.d = aml.Constraint(expr=m.x[1] + m.x[2] <= 5)
-    m.o = aml.Objective(expr=m.x[1] ** 2 + 4 * m.x[2] ** 2 - 8 * m.x[1] - 16 * m.x[2])
-    m.x[1].setub(3.0)
-    m.x[1].setlb(0.0)
-    m.x[2].setlb(0.0)
-
-    return m
-
-
-def create_model4():
-
-    m = aml.ConcreteModel()
-    m.x = aml.Var([1, 2], initialize=1.0)
-    m.c1 = aml.Constraint(expr=m.x[1] + m.x[2] - 1 == 0)
-    m.obj = aml.Objective(expr=2 * m.x[1] ** 2 + m.x[2] ** 2)
-    return m
-
-
-def create_model6():
-    model = aml.ConcreteModel()
-
-    model.S = [1, 2]
-    model.x = aml.Var(model.S, initialize=1.0)
-
-    def f(model):
-        return model.x[1] ** 4 + (model.x[1] + model.x[2]) ** 2 + (-1.0 + aml.exp(model.x[2])) ** 2
-
-    model.f = aml.Objective(rule=f)
-    return model
-
-
-def create_model9():
-
-    # clplatea OXR2-MN-V-0
-    model = aml.ConcreteModel()
-
-    p = 71
-    wght = -0.1
-    hp2 = 0.5 * p ** 2
-
-    model.x = aml.Var(aml.RangeSet(1, p), aml.RangeSet(1, p), initialize=0.0)
-
-    def f(model):
-        return sum(0.5 * (model.x[i, j] - model.x[i, j - 1]) ** 2 + \
-                   0.5 * (model.x[i, j] - model.x[i - 1, j]) ** 2 + \
-                   hp2 * (model.x[i, j] - model.x[i, j - 1]) ** 4 + \
-                   hp2 * (model.x[i, j] - model.x[i - 1, j]) ** 4 \
-                   for i in range(2, p + 1) for j in range(2, p + 1)) + (wght * model.x[p, p])
-
-    model.f = aml.Objective(rule=f)
-
-    for j in range(1, p + 1):
-        model.x[1, j] = 0.0
-        model.x[1, j].fixed = True
-
-    return model
-
-if __name__ == "__main__":
-
-    model = create_model1()
-    solver = aml.SolverFactory('ipopt')
-    solver.options['nlp_scaling_method'] = 'none'
-    #solver.solve(model, tee=True)
-
-    nlp = PyomoNLP(model)
-    print(nlp.x_init())
-    solver = IpoptSolver(nlp)
-    x, info = solver.solve(tee=True)
-    print(x)
-    print(info)
 
 
 

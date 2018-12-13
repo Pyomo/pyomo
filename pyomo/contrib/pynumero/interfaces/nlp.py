@@ -1723,54 +1723,6 @@ class PyomoNLP(AslNLP):
         return self._conToIndex[constraint]
 
 
-import pyomo.environ as aml
-def create_basic_dense_qp(G, A, b, c):
-
-    nx = G.shape[0]
-    nl = A.shape[0]
-
-    model = aml.ConcreteModel()
-    model.var_ids = range(nx)
-    model.con_ids = range(nl)
-
-    model.x = aml.Var(model.var_ids, initialize=0.0)
-    model.hessian_f = aml.Param(model.var_ids, model.var_ids, mutable=True, rule=lambda m, i, j: G[i, j])
-    model.jacobian_c = aml.Param(model.con_ids, model.var_ids, mutable=True, rule=lambda m, i, j: A[i, j])
-    model.rhs = aml.Param(model.con_ids, mutable=True, rule=lambda m, i: b[i])
-    model.grad_f = aml.Param(model.var_ids, mutable=True, rule=lambda m, i: c[i])
-
-    def equality_constraint_rule(m, i):
-        return sum(m.jacobian_c[i, j] * m.x[j] for j in m.var_ids) == m.rhs[i]
-    model.equalities = aml.Constraint(model.con_ids, rule=equality_constraint_rule)
-
-    def objective_rule(m):
-        accum = 0.0
-        for i in m.var_ids:
-            accum += m.x[i] * sum(m.hessian_f[i, j] * m.x[j] for j in m.var_ids)
-        accum *= 0.5
-        accum += sum(m.x[j] * m.grad_f[j] for j in m.var_ids)
-        return accum
-
-    model.obj = aml.Objective(rule=objective_rule, sense=aml.minimize)
-
-    return model
-
-
-if __name__ == "__main__":
-
-    G = np.array([[6, 2, 1], [2, 5, 2], [1, 2, 4]])
-    A = np.array([[1, 0, 1], [0, 1, 1]])
-    b = np.array([3, 0])
-    c = np.array([-8, -3, -3])
-
-    model = create_basic_dense_qp(G, A, b, c)
-    nlp = PyomoNLP(model)
-    x = nlp.create_vector_x()
-    y = nlp.create_vector_y()
-    hess = nlp.hessian_lag(x, y)
-    print(type(hess))
-    print(hess.todense())
-
 
 
 

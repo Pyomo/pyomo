@@ -471,12 +471,6 @@ class TwoStageStochasticNLP(NLP):
                 # evaluate coupling Ax-z
                 A = self._AB_csr[sid, sid]
                 res[sid + self.nblocks] = A * x[sid] - x[self.nblocks]
-                # scenario_vids = self._zid_to_vid[sid]
-                # diff = []
-                # for zid in range(self.nz):
-                #     vid = scenario_vids[zid]
-                #     diff.append(x[sid][vid] - x[self.nblocks][zid])
-                # res[sid + self.nblocks] = np.array(diff, dtype=np.double)
             return res
         elif isinstance(x, np.ndarray):
             assert x.size == self.nx
@@ -936,5 +930,8 @@ class TwoStageStochasticNLP(NLP):
             AB[sid, sid] = csr_matrix((data, (row, col)), shape=(self.nz, nlp.nx))
         AB[self.nblocks, self.nblocks] = -identity(self.nz)
         return AB
+
+    def scenarios_order(self):
+        return [self._sid_to_sname[i] for i in range(self.nblocks)]
 
 

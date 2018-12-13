@@ -155,6 +155,7 @@ class TestBlockMatrix(unittest.TestCase):
         # not supported block matrix times block matrix for now
         #with self.assertRaises(Exception) as context:
         #    mat = self.basic_m * self.basic_m.tocoo()
+
     def test_getitem(self):
 
         m = BlockMatrix(3, 3)
