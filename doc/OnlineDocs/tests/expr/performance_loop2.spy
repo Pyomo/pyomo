@@ -1,0 +1,1 @@
+s = sum(M.x[i] for i in range(5))

@@ -1,0 +1,8 @@
+# uses 1-based indexing
+m.cl = aml.ConstraintList()
+for j in m.q:
+    m.cl.add(
+        aml.inequality(
+            -5,
+            m.vl[j]-m.v,
+            5))

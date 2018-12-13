@@ -84,9 +84,15 @@ script:
   - ${DOC} bash -c 'echo GJH_ASL_JSON_VERSION="$GJH_ASL_JSON_VERSION"'
   - ${DOC} pip list
   - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
+ 
  # Run documentation tests
-  - if [[ "$IMAGE_NAME" != "test-builds:python_3.7" ]]; then ${DOC} make -C doc/OnlineDocs doctest -d; fi
-
+  - |
+    if [ -z "$SLIM" ]; then
+      # As of July 2018, Sphinx wasn't completely Python 3.7 compatible
+      if [[ "$IMAGE_NAME" != "test-builds:python_3.7" ]]; then
+         ${DOC} make -C doc/OnlineDocs doctest -d
+      fi
+    fi
 after_script:
  # Kill the docker container
   - docker kill ${DOC_ID}

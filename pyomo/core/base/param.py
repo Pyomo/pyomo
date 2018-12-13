@@ -183,20 +183,24 @@ class Param(IndexedComponent):
     A parameter value, which may be defined over an index.
 
     Constructor Arguments:
-       name        The name of this parameter
-       index       The index set that defines the distinct parameters.
-                     By default, this is None, indicating that there
-                     is a single parameter.
-       domain      A set that defines the type of values that
-                     each parameter must be.
-       within      A set that defines the type of values that
-                     each parameter must be.
-       validate    A rule for validating this parameter w.r.t. data
-                     that exists in the model
-       default     A scalar, rule, or dictionary that defines default
-                     values for this parameter
-       initialize  A dictionary or rule for setting up this parameter
-                     with existing model data
+        name        
+            The name of this parameter
+        index       
+            The index set that defines the distinct parameters. By default, 
+            this is None, indicating that there is a single parameter.
+        domain      
+            A set that defines the type of values that each parameter must be.
+        within      
+            A set that defines the type of values that each parameter must be.
+        validate    
+            A rule for validating this parameter w.r.t. data that exists in 
+            the model
+        default     
+            A scalar, rule, or dictionary that defines default values for 
+            this parameter
+        initialize  
+            A dictionary or rule for setting up this parameter with existing 
+            model data
     """
 
     DefaultMutable = False
@@ -441,11 +445,14 @@ class Param(IndexedComponent):
         Return the value of the parameter default.
 
         Possible values:
-            None            No default value is provided.
-            Numeric         A constant value that is the default value for all
-                                undefined parameters.
-            Function        f(model, i) returns the value for the default value
-                                for parameter i
+            None            
+                No default value is provided.
+            Numeric         
+                A constant value that is the default value for all undefined 
+                parameters.
+            Function        
+                f(model, i) returns the value for the default value for 
+                parameter i
         """
         return self._default_val
 

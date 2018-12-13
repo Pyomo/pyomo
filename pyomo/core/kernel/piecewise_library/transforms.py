@@ -23,12 +23,13 @@ Nemhauser 2008)
 #              well as gratuitous calls to float() in this code
 from __future__ import division
 import logging
+import bisect
 
 # TODO: Figure out of the 'log' and 'dlog' representations
 # really do require (2^n)+1 points or if there is a way to
 # handle the between sizes.
 
-from pyomo.core.expr.numvalue import value
+from pyomo.core.expr.numvalue import value as _value
 from pyomo.core.kernel.set_types import Binary
 from pyomo.core.kernel.block import block
 from pyomo.core.kernel.expression import (expression,
@@ -57,6 +58,17 @@ from six.moves import xrange, zip
 logger = logging.getLogger('pyomo.core')
 
 registered_transforms = {}
+
+# wrapper that allows a list containing parameters to be
+# used with the bisect module
+class _shadow_list(object):
+    __slots__ = ("_x",)
+    def __init__(self, x):
+        self._x = x
+    def __len__(self):
+        return self._x.__len__()
+    def __getitem__(self, i):
+        return _value(self._x.__getitem__(i))
 
 def piecewise(breakpoints,
               values,
@@ -288,8 +300,8 @@ class PiecewiseLinearFunction(object):
             PiecewiseValidationError: if validation fails
         """
 
-        breakpoints = [value(x) for x in self._breakpoints]
-        values = [value(x) for x in self._values]
+        breakpoints = [_value(x) for x in self._breakpoints]
+        values = [_value(x) for x in self._values]
         if not is_nondecreasing(breakpoints):
             raise PiecewiseValidationError(
                 "The list of breakpoints is not nondecreasing: %s"
@@ -322,28 +334,26 @@ class PiecewiseLinearFunction(object):
 
     def __call__(self, x):
         """Evaluates the piecewise linear function at the
-        given point using interpolation"""
-        # TODO: One could implement binary search here to
-        #       speed this up. I don't see this
-        #       functionality being used very often (and the
-        #       list of breakpoints probably isn't too
-        #       large), so I'm doing it the easy way for
-        #       now.
-        for i in xrange(len(self.breakpoints)-1):
-            xL = value(self.breakpoints[i])
-            xU = value(self.breakpoints[i+1])
+        given point using interpolation. Note that step functions are
+        assumed lower-semicontinuous."""
+        i = bisect.bisect_left(_shadow_list(self.breakpoints), x)
+        if i == 0:
+            xP = _value(self.breakpoints[i])
+            if xP == x:
+                return float(_value(self.values[i]))
+        elif i != len(self.breakpoints):
+            xL = _value(self.breakpoints[i-1])
+            xU = _value(self.breakpoints[i])
             assert xL <= xU
             if (xL <= x) and (x <= xU):
-                yL = value(self.values[i])
-                if xL == xU: # a step function
-                    return yL
-                yU = value(self.values[i+1])
+                yL = _value(self.values[i-1])
+                yU = _value(self.values[i])
                 return yL + (float(yU-yL)/(xU-xL))*(x-xL)
         raise ValueError("The point %s is outside of the "
                          "function domain: [%s,%s]."
                          % (x,
-                            value(self.breakpoints[0]),
-                            value(self.breakpoints[-1])))
+                            _value(self.breakpoints[0]),
+                            _value(self.breakpoints[-1])))
 
 class TransformedPiecewiseLinearFunction(block):
     """Base class for transformed piecewise linear functions
@@ -484,10 +494,10 @@ class TransformedPiecewiseLinearFunction(block):
 
         if require_variable_domain_coverage and \
            (input_var is not None):
-            domain_lb = value(self.breakpoints[0])
-            domain_ub = value(self.breakpoints[-1])
+            domain_lb = _value(self.breakpoints[0])
+            domain_ub = _value(self.breakpoints[-1])
             if input_var.has_lb() and \
-               value(input_var.lb) < domain_lb:
+               _value(input_var.lb) < domain_lb:
                 raise PiecewiseValidationError(
                     "Piecewise function domain does not include "
                     "the lower bound of the input variable: "
@@ -495,10 +505,10 @@ class TransformedPiecewiseLinearFunction(block):
                     "the 'require_variable_domain_coverage' "
                     "keyword to False or disable validation."
                     % (input_var.name,
-                       value(input_var.lb),
+                       _value(input_var.lb),
                        domain_lb))
             if input_var.has_ub() and \
-               value(input_var.ub) > domain_ub:
+               _value(input_var.ub) > domain_ub:
                 raise PiecewiseValidationError(
                     "Piecewise function domain does not include "
                     "the upper bound of the input variable: "
@@ -506,7 +516,7 @@ class TransformedPiecewiseLinearFunction(block):
                     "the 'require_variable_domain_coverage' "
                     "keyword to False or disable validation."
                     % (input_var.name,
-                       value(input_var.ub),
+                       _value(input_var.ub),
                        domain_ub))
 
         return ftype

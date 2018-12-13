@@ -1,0 +1,8 @@
+def Transformer():
+    b = pyomo.environ.Block(concrete=True)
+    b._a = pyomo.environ.Param(mutable=True)
+    b._v_in = pyomo.environ.Expression()
+    b._v_out = pyomo.environ.Expression()
+    b._c = pyomo.environ.Constraint(expr=\
+        b._a * b._v_out == b._v_in)
+    return b

@@ -8,9 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import collections
-from six import PY3, iteritems, advance_iterator
-
 from pyutilib.misc import flatten_tuple
 from pyomo.common import DeveloperError
 from pyomo.core.base.sets import SetOf, _SetProduct, _SetDataBase
@@ -21,6 +18,16 @@ from pyomo.core.base.indexed_component import (
 from pyomo.core.base.indexed_component_slice import (
     _IndexedComponent_slice, _IndexedComponent_slice_iter
 )
+
+import six
+from six import iteritems, advance_iterator
+
+if six.PY3:
+    from collections.abc import MutableMapping as collections_MutableMapping
+    from collections.abc import Set as collections_Set
+else:
+    from collections import MutableMapping as collections_MutableMapping
+    from collections import Set as collections_Set
 
 _NotSpecified = object()
 
@@ -105,7 +112,7 @@ class _fill_in_known_wildcards(object):
 class SliceEllipsisLookupError(Exception):
     pass
 
-class _ReferenceDict(collections.MutableMapping):
+class _ReferenceDict(collections_MutableMapping):
     def __init__(self, component_slice):
         self._slice = component_slice
 
@@ -230,11 +237,11 @@ class _ReferenceDict(collections.MutableMapping):
         return _IndexedComponent_slice_iter(
             _slice, _fill_in_known_wildcards(flatten_tuple(key)))
 
-if PY3:
+if six.PY3:
     _ReferenceDict.items = _ReferenceDict.iteritems
     _ReferenceDict.values = _ReferenceDict.itervalues
 
-class _ReferenceSet(collections.Set):
+class _ReferenceSet(collections_Set):
     def __init__(self, ref_dict):
         self._ref = ref_dict
 
@@ -316,9 +323,9 @@ def _identify_wildcard_sets(iter_stack, index):
     return index
 
 def Reference(reference, ctype=_NotSpecified):
-    """Generate a reference component from a component slice.
+    """Creates a component that references other components
 
-    Reference generates a *reference component*; that is, an indexed
+    ``Reference`` generates a *reference component*; that is, an indexed
     component that does not contain data, but instead references data
     stored in other components as defined by a component slice.  The
     ctype parameter sets the :py:meth:`Component.type` of the resulting
@@ -344,10 +351,10 @@ def Reference(reference, ctype=_NotSpecified):
         component slice that defines the data to include in the
         Reference component
 
-    ctype : type [optional]
+    ctype : :py:class:`type` [optional]
         the type used to create the resulting indexed component.  If not
         specified, the data's ctype will be used (if all data share a
-        common ctype).  If multiple data ctypes are found or ctype is
+        common ctype).  If multiple data ctypes are found or type is
         ``None``, then :py:class:`IndexedComponent` will be used.
 
     Examples
