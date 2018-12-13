@@ -420,4 +420,67 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
         for i in range(len(cuts)):
             self.assertGreaterEqual(0, value(cuts[i].body))
         
+class NonlinearConvex_OverlappingCircles(unittest.TestCase):        
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cuts_valid_for_optimal(self):
+        m = models.fourCircles()
+        TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
+
+        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
         
+        m.x.fix(2)
+        m.y.fix(7)
+        m.upper_circle.indicator_var.fix(1)
+        m.lower_circle.indicator_var.fix(0)
+        m.upper_circle2.indicator_var.fix(1)
+        m.lower_circle2.indicator_var.fix(0)
+        for i in range(len(cuts)):
+            self.assertGreaterEqual(0, value(cuts[i].body))
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cuts_valid_on_facet_containing_optimal(self):
+        m = models.fourCircles()
+        TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
+
+        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+
+        m.x.fix(5)
+        m.y.fix(3)
+        m.upper_circle.indicator_var.fix(0)
+        m.lower_circle.indicator_var.fix(1)
+        m.upper_circle2.indicator_var.fix(0)
+        m.lower_circle2.indicator_var.fix(1)
+        for i in range(len(cuts)):
+            self.assertGreaterEqual(0, value(cuts[i].body))
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cuts_valid_for_optimal_tightM(self):
+        m = models.fourCircles()
+        TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=83)
+
+        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        
+        m.x.fix(2)
+        m.y.fix(7)
+        m.upper_circle.indicator_var.fix(1)
+        m.lower_circle.indicator_var.fix(0)
+        m.upper_circle2.indicator_var.fix(1)
+        m.lower_circle2.indicator_var.fix(0)
+        for i in range(len(cuts)):
+            self.assertGreaterEqual(0, value(cuts[i].body))
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cuts_valid_on_facet_containing_optimal_tightM(self):
+        m = models.fourCircles()
+        TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=83)
+
+        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+
+        m.x.fix(5)
+        m.y.fix(3)
+        m.upper_circle.indicator_var.fix(0)
+        m.lower_circle.indicator_var.fix(1)
+        m.upper_circle2.indicator_var.fix(0)
+        m.lower_circle2.indicator_var.fix(1)
+        for i in range(len(cuts)):
+            self.assertGreaterEqual(0, value(cuts[i].body))
