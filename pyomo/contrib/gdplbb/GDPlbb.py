@@ -91,8 +91,14 @@ class GDPlbbSolver(opject):
         while len(heap)>0:
             mdl = heapq.heappop(h)[1]
             if(len(mdl.init_active_disjunctions) ==  0):
+                orig_var_list = getattr(model, indicator_list_name)
+                best_soln_var_list = getattr(mdl, indicator_list_name)
+                for orig_var, new_var in zip(orig_var_list,best_soln_var_list):
+                    if not orig_var.is_fixed():
+                        orig_var.value = new_var.value
+                TransformationFactory('gdp.fix_disjuncts').apply_to(model)
+                return solver.solve(model)
 
-                return
             disjunction = mdl.init_active_disjunctions.pop(0)
             disjunction.activate()
             mdl.curr_active_disjunctions.append(disjunction)
