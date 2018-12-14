@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 from scipy.sparse.sputils import isscalarlike
-from scipy.sparse import tril, triu
+from scipy.sparse import tril, triu, isspmatrix
 
 import numpy as np
 
@@ -28,18 +28,17 @@ def is_symmetric_dense(mat):
 
 
 def is_symmetric_sparse(mat):
-
+    from pyomo.contrib.pynumero.sparse.block_matrix import BlockMatrix
     # Note: this check is expensive
     flag = False
     if isinstance(mat, np.ndarray):
         flag = is_symmetric_dense(mat)
     elif isscalarlike(mat):
         flag = True
-    else:
+    elif isspmatrix(mat) or isinstance(mat, BlockMatrix):
         if mat.shape[0] != mat.shape[1]:
             flag = False
         else:
-            from pyomo.contrib.pynumero.sparse.block_matrix import BlockMatrix
             if isinstance(mat, BlockMatrix):
                 mat = mat.tocoo()
             # get upper and lower triangular
@@ -48,6 +47,8 @@ def is_symmetric_sparse(mat):
             diff = l - u.transpose()
             z = np.zeros(diff.nnz)
             flag = np.allclose(diff.data, z, atol=1e-6)
+    else:
+        raise RuntimeError("Format not recognized {}".format(type(mat)))
     return flag
 
 

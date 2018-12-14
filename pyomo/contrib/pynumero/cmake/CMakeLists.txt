@@ -44,10 +44,6 @@ else()
   endif()
 endif()
 
-#set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
-#set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
-#set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
-
 # to find our dependencies
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
@@ -87,14 +83,9 @@ endif()
 
 option(BUILD_ASL "BUILD_ASL" ON)
 #option(BUILD_HSL "BUILD_HSL" OFF)
-option(BUILD_SPARSE "BUILD_SPARSE" ON)
 
 if(${BUILD_ASL})
 add_subdirectory(asl_interface)
-endif()
-
-if(${BUILD_SPARSE})
-add_subdirectory(sparse_utils)
 endif()
 
 #if(${BUILD_HSL})
