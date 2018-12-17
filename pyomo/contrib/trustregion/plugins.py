@@ -15,9 +15,9 @@ from pyomo.contrib.trustregion.TRF import TRF
 from pyomo.contrib.trustregion.readgjh import readgjh
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
-fh = logging.FileHandler('debug_vars.log')
-logger.setLevel(logging.DEBUG)
-logger.addHandler(fh)
+#fh = logging.FileHandler('debug_vars.log')
+#logger.setLevel(logging.DEBUG)
+#logger.addHandler(fh)
 
 def load():
     pass
@@ -44,6 +44,11 @@ class TrustRegionSolver(OptSolver):
     CONFIG.declare('solver', ConfigValue(
         default='ipopt',
         description='solver to use, defaults to ipopt',
+        doc = ''))
+
+    CONFIG.declare('solver_options', ConfigBlock(
+        implicit=True,
+        description='options to pass to the subproblem solver',
         doc = ''))
 
     # Initialize trust radius
@@ -237,13 +242,13 @@ class TrustRegionSolver(OptSolver):
     def __init__(self, **kwds):
         # set persistent config options
         tmp_kwds = {'type':kwds.pop('type','trustregion')}
-        self.config = self.CONFIG(kwds)
+        self.config = self.CONFIG(kwds, preserve_implicit=True)
 
         #
         # Call base class constructor
         #
  
-        tmp_kwds['solver'] = 'ipopt'
+        tmp_kwds['solver'] = self.config.solver
         OptSolver.__init__(self, **tmp_kwds)
 
 
@@ -262,7 +267,7 @@ class TrustRegionSolver(OptSolver):
 
     def solve(self, model, eflist, **kwds):
         # set customized config parameters
-        self._local_config = self.config(kwds)
+        self._local_config = self.config(kwds, preserve_implicit=True)
 
         # first store all data we will need to change in original model as a tuple
         # [0]=Var component, [1]=external function list, [2]=config block

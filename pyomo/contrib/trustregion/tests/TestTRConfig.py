@@ -17,6 +17,7 @@ except ImportError:
     numpy_available = False
 
 
+@unittest.skipIf(not SolverFactory('gjh').available(False), "The GJH solver is not available")
 @unittest.skipIf(not numpy_available, "Cannot test the trustregion solver without numpy")
 class TestTrustRegionConfigBlock(unittest.TestCase):
     def setUp(self):
@@ -125,7 +126,7 @@ class TestTrustRegionConfigBlock(unittest.TestCase):
         self.assertEqual(self.optTRF._local_config.trust_radius, 3.0)
         
 
-    def initialize_with_kwdval_solve_with_new_kwdval(self):
+    def test_initialize_with_kwdval_solve_with_new_kwdval(self):
 
         # Initialized with 3.0
         self.optTRF = SolverFactory('trustregion', trust_radius=3.0)
