@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import pyutilib.th as unittest
+from pyutilib.misc.config import ConfigBlock
 
 from pyomo.core.expr.current import identify_variables
 from pyomo.environ import *
@@ -39,7 +40,7 @@ class TestPyomoInterfaceInitialization(unittest.TestCase):
         bb = ExternalFunction(blackbox)
         m.eflist = [bb]
         m.c1 = Constraint(expr=m.x[0] * m.z[0]**2 + bb(m.x[0],m.x[1]) == 2*sqrt(2.0))
-        pI = PyomoInterface(m, [bb])
+        pI = PyomoInterface(m, [bb], ConfigBlock())
         self.assertEqual(pI.lx,2)
         self.assertEqual(pI.ly,1)
         self.assertEqual(pI.lz,3)
@@ -57,7 +58,7 @@ class TestPyomoInterfaceInitialization(unittest.TestCase):
         bb = ExternalFunction(blackbox)
         m.eflist = [bb]
         m.c1 = Constraint(expr=m.x[0] * m.z[0]**2 + bb(m.x[0]-m.x[1]) == 2*sqrt(2.0))
-        pI = PyomoInterface(m, [bb])
+        pI = PyomoInterface(m, [bb], ConfigBlock())
         self.assertEqual(pI.lx,1)
         self.assertEqual(pI.ly,1)
         self.assertEqual(pI.lz,5)
@@ -78,7 +79,7 @@ class TestPyomoInterfaceInitialization(unittest.TestCase):
         m.eflist = [bb]
         m.c1 = Constraint(expr=m.x[0] * m.z[0]**2 + bb(m.x[0], m.x[1]) == 2*sqrt(2.0))
         m.c3 = Constraint(expr=m.x[0] * m.z[0]**2 + bb(m.x[0], m.z[1]) == 2*sqrt(2.0))
-        pI = PyomoInterface(m, [bb])
+        pI = PyomoInterface(m, [bb], ConfigBlock())
         self.assertEqual(pI.lx,3)
         self.assertEqual(pI.ly,2)
         self.assertEqual(pI.lz,2)
@@ -99,7 +100,7 @@ class TestPyomoInterfaceInitialization(unittest.TestCase):
         m.eflist = [bb]
         m.c1 = Constraint(expr=m.x[0] * m.z[0]**2 + bb(m.x[0], m.x[1]) == 2*sqrt(2.0))
         m.c3 = Constraint(expr=m.x[0] * m.z[0]**2 + bb(m.x[0], m.z[1]) == 2*sqrt(2.0))
-        pI = PyomoInterface(m, [bb])
+        pI = PyomoInterface(m, [bb], ConfigBlock())
         self.assertEqual(pI.lx,3)
         self.assertEqual(pI.ly,2)
         self.assertEqual(pI.lz,2)

@@ -32,7 +32,7 @@ def TRF(m, eflist, config):
 
     logger = Logger()
     filteR = Filter()
-    problem = PyomoInterface(m, eflist)
+    problem = PyomoInterface(m, eflist, config)
     x, y, z = problem.getInitialValue()
 
     iteration = -1
