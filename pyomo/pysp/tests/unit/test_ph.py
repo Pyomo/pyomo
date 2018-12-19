@@ -420,6 +420,7 @@ class TestPH(unittest.TestCase):
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
+    @unittest.category('fragile')
     def test_farmer_with_integers_quadratic_gurobi(self):
         if not solver['gurobi','lp']:
             self.skipTest("The 'gurobi' executable is not available")
