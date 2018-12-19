@@ -219,6 +219,7 @@ def _setUpClass(cls):
             test_solver_cases(_solver, _io).available:
             solver[_solver, _io] = True
 
+@unittest.category('nightly', 'performance')
 class TestPH(unittest.TestCase):
 
     @classmethod
@@ -1305,6 +1306,7 @@ class TestPH(unittest.TestCase):
             tolerance=_diff_tolerance)
         _remove(baseline_dir+"lagrange_pr_testPRmore.csv")
 
+@unittest.category('expensive', 'performance')
 class TestPHExpensive(unittest.TestCase):
 
     @classmethod
@@ -1844,6 +1846,7 @@ class TestPHExpensive(unittest.TestCase):
                 tolerance=_diff_tolerance)
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
+@unittest.category('parallel','performance')
 class TestPHParallel(unittest.TestCase):
 
     @classmethod
@@ -2583,10 +2586,6 @@ class TestPHParallel(unittest.TestCase):
             print(diffs_c)
             self.fail("Differences identified relative to all baseline output file alternatives")
         _remove(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out")
-
-TestPH = unittest.category('nightly','expensive','performance')(TestPH)
-TestPHExpensive = unittest.category('expensive','performance')(TestPHExpensive)
-TestPHParallel = unittest.category('parallel','performance')(TestPHParallel)
 
 if __name__ == "__main__":
     unittest.main()
