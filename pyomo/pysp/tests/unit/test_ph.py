@@ -1085,6 +1085,7 @@ class TestPH(unittest.TestCase):
         self.assertTrue(os.path.exists(ef_output_file))
         os.remove(ef_output_file)
 
+    @unittest.category('fragile')
     def test_sizes3_ef_with_solve_gurobi(self):
         if not solver['gurobi','lp']:
             self.skipTest("The 'gurobi' executable is not available")
