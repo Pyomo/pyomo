@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
 cmake_minimum_required(VERSION 3.2)
 
 PROJECT( Pynumero )
@@ -82,14 +83,9 @@ endif()
 
 option(BUILD_ASL "BUILD_ASL" ON)
 #option(BUILD_HSL "BUILD_HSL" OFF)
-option(BUILD_SPARSE "BUILD_SPARSE" ON)
 
 if(${BUILD_ASL})
 add_subdirectory(asl_interface)
-endif()
-
-if(${BUILD_SPARSE})
-add_subdirectory(sparse_utils)
 endif()
 
 #if(${BUILD_HSL})

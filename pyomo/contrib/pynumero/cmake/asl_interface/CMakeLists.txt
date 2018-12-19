@@ -20,7 +20,6 @@ if(APPLE)
     set(ASL_SOURCES
     src/AmplInterface.cpp
     src/AssertUtils.hpp
-#    src/fmemopen.c
     )
 else()
     set(ASL_SOURCES
@@ -65,11 +64,4 @@ if (${WITH_AMPL})
    INSTALL(DIRECTORY src
            DESTINATION include
 	   )
-   INSTALL(DIRECTORY ${ASL_INCLUDE_DIRS}
-           DESTINATION include
-	   )
-   INSTALL(FILES ${ASL_LIBRARIES}
-           DESTINATION lib
-	   )
-
 endif()

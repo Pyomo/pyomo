@@ -15,4 +15,5 @@ except ImportError:
     numpy_available = False
 
 if numpy_available:
-    from .nlp import *
+    from .nlp import AmplNLP, PyomoNLP
+    from .nlp_compositions import TwoStageStochasticNLP
