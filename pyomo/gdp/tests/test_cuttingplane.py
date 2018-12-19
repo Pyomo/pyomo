@@ -121,14 +121,17 @@ class TwoTermDisj(unittest.TestCase):
             m.x.fix(1)
             m.y.fix(4)
             # (1,4)
-            self.assertLessEqual(value(cut_expr), 0)
+            #self.assertLessEqual(value(cut_expr), 0)
+            self.assertTrue(value(cuts[i].expr))
             m.x.fix(2)
             # (2.4)
-            self.assertLessEqual(value(cut_expr), 0)
+            #self.assertLessEqual(value(cut_expr), 0)
+            self.assertTrue(value(cuts[i].expr))
             m.x.fix(1)
             m.y.fix(3)
             # (1,3)
-            self.assertLessEqual(value(cut_expr), 0)
+            #self.assertLessEqual(value(cut_expr), 0)
+            self.assertTrue(value(cuts[i].expr))
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_create_using(self):
@@ -384,7 +387,8 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
         m.upper_circle.indicator_var.fix(0)
         m.lower_circle.indicator_var.fix(1)
         for i in range(len(cuts)):
-            self.assertGreaterEqual(0, value(cuts[i].body))
+            self.assertTrue(value(cuts[i].expr))
+            #self.assertGreaterEqual(0, value(cuts[i].body))
             
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cuts_valid_for_optimal_tighter_m(self):
@@ -401,7 +405,8 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
         m.lower_circle.indicator_var.fix(0)
 
         for i in range(len(cuts)):
-            self.assertGreaterEqual(0, value(cuts[i].body))
+            self.assertTrue(value(cuts[i].expr))
+            #self.assertGreaterEqual(0, value(cuts[i].body))
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cuts_valid_for_optimalFacet_tighter_m(self):
