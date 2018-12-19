@@ -82,7 +82,10 @@ def filter_time_and_data_dirs(line):
            ("model_location: " in line) or \
            ("model_directory: " in line) or \
            ("scenario_tree_location: " in line) or \
-           ("instance_directory: " in line)
+           ("instance_directory: " in line) or \
+           line.startswith("Freeing MIP data") or \
+           line.startswith("Freeing QP data") or \
+           line.startswith("At least one sub-problem solve time was undefined")
 
 def filter_lagrange(line):
     return filter_time_and_data_dirs(line) or \
