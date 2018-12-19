@@ -87,7 +87,7 @@ Current Development
   - Python 3.7 support (#463)
   - Fix bugs in finance example (#564, #578)
   - Added a wrapper for PySP to create a scripting interace (#689, #727, #737)
-  - Bug fixes (#736)
+  - Bug fixes (#736, #788)
 - New packages:
   - DataPortal:
     - Move DataPortal up to a top-level pyomo.dataportal subpackage (#607)
@@ -98,13 +98,13 @@ Current Development
 - Contributed packages:
   - GDPopt updates to use config blocks, support integer variables,
     documentation, callback renaming, new initialization strategy
-    (#513, #541, #595, #599, #633, #650)
+    (#513, #541, #595, #599, #633, #650, #717)
   - Update trust region to use ConfigBlocks (#738, #785)
   - New packages:
     - Preprocessing transformation for variable aggregation (#533, #617)
     - Compute disjunctive variable bounds (#481)
     - ParmEst package for parameter estimation (#706, #733, #769, #781)
-    - PyNumero package for numerical optimization (#725)
+    - PyNumero package for numerical optimization (#725, #775)
     - sensitivity_toolbox for interfacing with sIPOPT (#766)
     - PETSc AMPL wrapper (#774)
 - Testing
