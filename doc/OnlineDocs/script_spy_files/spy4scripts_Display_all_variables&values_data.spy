@@ -1,0 +1,2 @@
+for v in instance.component_data_objects(pyo.Var, active=True):
+    print(v, pyo.value(v))

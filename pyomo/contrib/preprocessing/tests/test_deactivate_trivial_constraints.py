@@ -25,7 +25,7 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         self.assertTrue(m.c2.active)
         self.assertFalse(m.c3.active)
 
-    def test_deactivate_trivial_constraints_retur_list(self):
+    def test_deactivate_trivial_constraints_return_list(self):
         """Test for deactivation of trivial constraints."""
         m = ConcreteModel()
         m.v1 = Var(initialize=1)

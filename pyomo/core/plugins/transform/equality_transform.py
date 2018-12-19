@@ -8,8 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import alias
-
 from pyomo.core import *
 from pyomo.core.base.misc import create_name
 
@@ -17,13 +15,12 @@ from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.util import collectAbstractComponents
 
 
+@TransformationFactory.register("core.add_slack_vars", doc="Create an equivalent model by introducing slack variables to eliminate inequality constraints.")
 class EqualityTransform(IsomorphicTransformation):
     """
     Creates a new, equivalent model by introducing slack and excess variables
     to eliminate inequality constraints.
     """
-
-    alias("core.add_slack_vars", doc="Create an equivalent model by introducing slack variables to eliminate inequality constraints.")
 
     def __init__(self, **kwds):
         kwds["name"] = kwds.pop("name", "add_slack_vars")

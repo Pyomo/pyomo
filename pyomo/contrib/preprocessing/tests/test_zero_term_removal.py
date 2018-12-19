@@ -4,8 +4,6 @@ from pyomo.environ import (ConcreteModel, Constraint, TransformationFactory,
                            Var)
 from pyomo.core.expr import current as EXPR
 
-__author__ = "Qi Chen <https://github.com/qtothec>"
-
 
 class TestRemoveZeroTerms(unittest.TestCase):
     """Tests removal of zero terms."""

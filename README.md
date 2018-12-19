@@ -10,6 +10,8 @@
 [![Research software impact](http://depsy.org/api/package/pypi/Pyomo/badge.svg)](http://depsy.org/package/python/Pyomo)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
 
+[![a COIN-OR project](https://www.coin-or.org/GitHub/coin-or-badge.png)](https://www.coin-or.org)
+
 ## Pyomo Overview
 
 Pyomo is a Python-based open-source software package that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
@@ -18,13 +20,14 @@ Pyomo is a Python-based open-source software package that supports a diverse set
 * [About Pyomo](http://www.pyomo.org/about)
 * [Download](http://www.pyomo.org/installation/)
 * [Documentation](http://www.pyomo.org/documentation/)
+* [Performance Plots](https://software.sandia.gov/downloads/pub/pyomo/performance/index.html)
 * [Blog](http://www.pyomo.org/blog/)
 
 Pyomo is available under the BSD License.
 
 Pyomo is currently tested with the following Python implementations:
 
-* CPython: 2.6, 2.7, 3.4, 3.5, 3.6
+* CPython: 2.7, 3.4, 3.5, 3.6, 3.7
 * PyPy: 2, 3
 
 ### Installation

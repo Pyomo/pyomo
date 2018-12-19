@@ -1,0 +1,6 @@
+model.stoch_rhs = StochasticConstraintBoundsAnnotation()
+model.stoch_rhs.declare(model.r[3])
+model.stoch_rhs.declare(model.r[6])
+model.stoch_rhs.declare(model.r[9])
+model.stoch_rhs.declare(model.c)
+model.stoch_rhs.declare(model.b.c)

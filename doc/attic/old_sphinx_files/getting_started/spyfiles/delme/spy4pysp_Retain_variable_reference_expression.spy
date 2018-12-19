@@ -1,0 +1,17 @@
+from pyomo.environ import *
+model = ConcreteModel()
+model.x = Var()
+model.y = Var()
+model.zero = Expression(expr=0)
+
+# an expression that does NOT
+# retain model.y
+print((model.x + 0 * model.y).to_string())               # -> x
+
+# an equivalent expression that DOES
+# retain model.y
+print((model.x + model.zero * model.y).to_string())      # -> x + 0.0 * y
+
+# an equivalent expression that does NOT
+# retain model.y (so beware)
+print((model.x + 0 * model.zero * model.y).to_string())  # -> x

@@ -1,7 +1,0 @@
-# fictional sample data fro wheat yields
-3.1
-2.1
-2.4
-2.6
-2.7
-2.3

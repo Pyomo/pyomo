@@ -1,0 +1,3 @@
+def s_validate(model, v, i):
+    return v > 3.14159
+model.s = Param(model.A, validate=s_validate)

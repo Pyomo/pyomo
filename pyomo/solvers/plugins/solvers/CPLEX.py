@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -14,17 +14,16 @@ import re
 import time
 import logging
 
-import pyutilib.services
+import pyomo.common
 import pyutilib.common
 import pyutilib.misc
 
-import pyomo.common.plugin
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.solvers.mockmip import MockMIP
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -36,11 +35,42 @@ try:
 except:
     basestring = unicode = str
 
+def _validate_file_name(cplex, filename, description):
+    """Validate filenames against the set of allowable chaacters in CPLEX.
+
+    Returns the filename, possibly enclosed in double-quotes, or raises
+    a ValueError is unallowable characters are found.
+
+    """
+    if filename is None:
+        return filename
+    matches = _validate_file_name.illegal_characters.search(filename)
+    if matches:
+        raise ValueError(
+            "Unallowed character (%s) found in CPLEX %s file path/name.\n\t"
+            "For portability reasons, only [%s] are allowed."
+            % (matches.group(), description,
+               _validate_file_name.allowed_characters.replace("\\",'')))
+    # CPLEX only supports quoting spaces starting in v12.8.
+    if ' ' in filename:
+        if cplex.version()[:2] >= (12,8):
+            filename = '"'+filename+'"'
+        else:
+            raise ValueError(
+                "Space detected in CPLEX %s file path/name\n\t%s\nand "
+                "CPLEX older than version 12.8.  Please either upgrade "
+                "CPLEX or remove the space from the %s path."
+                % (description, filename, description))
+    return filename
+_validate_file_name.allowed_characters = r"a-zA-Z0-9 \.\-_\%s" % (os.path.sep,)
+_validate_file_name.illegal_characters = re.compile(
+    '[^%s]' % (_validate_file_name.allowed_characters,))
+
+
+@SolverFactory.register('cplex', doc='The CPLEX LP/MIP solver')
 class CPLEX(OptSolver):
     """The CPLEX LP/MIP solver
     """
-
-    pyomo.common.plugin.alias('cplex', doc='The CPLEX LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
         try:
@@ -81,11 +111,10 @@ class CPLEX(OptSolver):
         return opt
 
 
+@SolverFactory.register('_cplex_shell', doc='Shell interface to the CPLEX LP/MIP solver')
 class CPLEXSHELL(ILMLicensedSystemCallSolver):
     """Shell interface to the CPLEX LP/MIP solver
     """
-
-    pyomo.common.plugin.alias('_cplex_shell', doc='Shell interface to the CPLEX LP/MIP solver')
 
     def __init__(self, **kwds):
         #
@@ -142,7 +171,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # **Note**: This assumes that the symbol_map is "clean", i.e.,
         # contains only references to the variables encountered in constraints
         output_index = 0
-        if isinstance(instance, IBlockStorage):
+        if isinstance(instance, IBlock):
             smap = getattr(instance,"._symbol_maps")\
                    [self._smap_id]
         else:
@@ -182,10 +211,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # then we don't have an instance => the solver is being applied
         # to a file.
         self._warm_start_solve = kwds.pop('warmstart', False)
-        self._warm_start_file_name = kwds.pop('warmstart_file', None)
-        user_warmstart = False
-        if self._warm_start_file_name is not None:
-            user_warmstart = True
+        self._warm_start_file_name = _validate_file_name(
+            self, kwds.pop('warmstart_file', None), "warm start")
+        user_warmstart = self._warm_start_file_name is not None
 
         # the input argument can currently be one of two things: an instance or a filename.
         # if a filename is provided and a warm-start is indicated, we go ahead and
@@ -231,7 +259,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                           % (end_time-start_time))
 
     def _default_executable(self):
-        executable = pyutilib.services.registered_executable("cplex")
+        executable = pyomo.common.registered_executable("cplex")
         if executable is None:
             logger.warning("Could not locate the 'cplex' executable"
                            ", which is required for solver %s"
@@ -259,6 +287,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         if self._log_file is None:
             self._log_file = pyutilib.services.TempfileManager.\
                             create_tempfile(suffix = '.cplex.log')
+        self._log_file = _validate_file_name(self, self._log_file, "log")
 
         #
         # Define solution file
@@ -267,11 +296,12 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         if self._soln_file is None:
             self._soln_file = pyutilib.services.TempfileManager.\
                               create_tempfile(suffix = '.cplex.sol')
+        self._soln_file = _validate_file_name(self, self._soln_file, "solution")
 
         #
         # Write the CPLEX execution script
         #
-        script = 'set logfile "%s"\n' % (self._log_file,)
+        script = 'set logfile %s\n' % (self._log_file,)
         if self._timelimit is not None and self._timelimit > 0.0:
             script += 'set timelimit %s\n' % ( self._timelimit, )
 
@@ -288,19 +318,21 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             else:
                 opt = ' '.join(key.split('_'))+' '+str(self.options[key])
             script += 'set %s\n' % ( opt, )
-        script += 'read "%s"\n' % ( problem_files[0], )
+
+        _lp_file = _validate_file_name(self, problem_files[0], "LP")
+        script += 'read %s\n' % ( _lp_file, )
 
         # if we're dealing with an LP, the MST file will be empty.
         if self._warm_start_solve and \
            (self._warm_start_file_name is not None):
-            script += 'read "%s"\n' % (self._warm_start_file_name,)
+            script += 'read %s\n' % (self._warm_start_file_name,)
 
         if 'relax_integrality' in self.options:
             script += 'change problem lp\n'
 
         script += 'display problem stats\n'
         script += 'optimize\n'
-        script += 'write "%s"\n' % (self._soln_file,)
+        script += 'write %s\n' % (self._soln_file,)
         script += 'quit\n'
 
         # dump the script and warm-start file names for the
@@ -741,11 +773,11 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         return results
 
+
+@SolverFactory.register('_mock_cplex')
 class MockCPLEX(CPLEXSHELL,MockMIP):
     """A Mock CPLEX solver used for testing
     """
-
-    pyomo.common.plugin.alias('_mock_cplex')
 
     def __init__(self, **kwds):
         try:
@@ -773,6 +805,6 @@ class MockCPLEX(CPLEXSHELL,MockMIP):
         return MockMIP._execute_command(self, cmd)
 
 
-pyutilib.services.register_executable(name="cplex")
-pyutilib.services.register_executable(name="cplexamp")
+pyomo.common.register_executable(name="cplex")
+pyomo.common.register_executable(name="cplexamp")
 

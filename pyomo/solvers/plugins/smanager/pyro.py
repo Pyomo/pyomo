@@ -21,8 +21,7 @@ except:
 import pyutilib.pyro
 from pyutilib.pyro import using_pyro4, TaskProcessingError
 import pyutilib.misc
-import pyomo.common.plugin
-from pyomo.opt.base import OptSolver, SolverFactory
+from pyomo.opt.base import OptSolver
 from pyomo.opt.parallel.manager import ActionManagerError, ActionStatus
 from pyomo.opt.parallel.async_solver import (AsynchronousSolverManager,
                                              SolverManagerFactory)
@@ -30,14 +29,14 @@ from pyomo.opt.parallel.pyro import PyroAsynchronousActionManager
 from pyomo.core.base import Block
 import pyomo.core.base.suffix
 
-from pyomo.core.kernel.component_block import IBlockStorage
-import pyomo.core.kernel.component_suffix
+from pyomo.core.kernel.block import IBlock
+import pyomo.core.kernel.suffix
 
 import six
 
+@SolverManagerFactory.register('pyro', doc="Execute solvers remotely using pyro")
 class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManager):
 
-    pyomo.common.plugin.alias('pyro', doc="Execute solvers remotely using pyro")
 
     def __init__(self, *args, **kwds):
         self._opt_data = {}
@@ -71,9 +70,7 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
             raise ActionManagerError(
                 "No solver passed to %s, use keyword option 'solver'"
                 % (type(self).__name__) )
-        deactivate_opt = False
         if isinstance(opt, six.string_types):
-            deactivate_opt = True
             opt = SolverFactory(opt, solver_io=kwds.pop('solver_io', None))
 
         #
@@ -86,7 +83,7 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
         # constructed! Collect suffix names to try and import from solution.
         #
         for arg in args:
-            if isinstance(arg, (Block, IBlockStorage)):
+            if isinstance(arg, (Block, IBlock)):
                 if isinstance(arg, Block):
                     if not arg.is_constructed():
                         raise RuntimeError(
@@ -98,13 +95,12 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
                                           in pyomo.core.base.suffix.\
                                           active_import_suffix_generator(arg))
                 else:
-                    assert isinstance(arg, IBlockStorage)
-                    model_suffixes = list(name for (name,comp) \
-                                          in pyomo.core.base.component_suffix.\
+                    assert isinstance(arg, IBlock)
+                    model_suffixes = list(comp.storage_key for comp \
+                                          in pyomo.core.base.suffix.\
                                           import_suffix_generator(arg,
                                                                   active=True,
-                                                                  descend_into=False,
-                                                                  return_key=True))
+                                                                  descend_into=False))
                 if len(model_suffixes) > 0:
                     kwds_suffixes = kwds.setdefault('suffixes',[])
                     for name in model_suffixes:
@@ -175,8 +171,6 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
                                  opt._load_solutions,
                                  opt._select_index,
                                  opt._default_variable_value)
-        if deactivate_opt:
-            opt.deactivate()
 
         return data
 
@@ -264,4 +258,4 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
                                  verbose=self._verbose > 1)
 
 if pyutilib.pyro.Pyro is None:
-    SolverManagerFactory.deactivate('pyro')
+    SolverManagerFactory.unregister('pyro')

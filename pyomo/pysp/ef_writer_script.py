@@ -15,11 +15,6 @@ import time
 import itertools
 import math
 
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
-
 import pyutilib.misc
 from pyutilib.pyro import shutdown_pyro_components
 
@@ -214,15 +209,12 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
 
     def close(self):
         self.destroy_ef()
-        if self._solver is not None:
-            self._solver.deactivate()
         if self._solver_manager is not None:
             if isinstance(self._solver_manager,
                           pyomo.solvers.plugins.smanager.\
                           pyro.SolverManager_Pyro):
                 if self.get_option("pyro_shutdown_workers"):
                       self._solver_manager.shutdown_workers()
-            self._solver_manager.deactivate()
         self._solver_manager = None
 
         self._manager = None

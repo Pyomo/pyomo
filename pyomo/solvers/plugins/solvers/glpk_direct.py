@@ -40,7 +40,6 @@ def configure_glpk_direct():
 
 from pyutilib.misc import Bunch, Options
 
-from pyomo.common.plugin import alias
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -52,6 +51,7 @@ logger = logging.getLogger('pyomo.solvers')
 
 
 
+@SolverFactory.register('_glpk_direct', doc='Direct Python interface to the GLPK LP/MIP solver.')
 class GLPKDirect ( OptSolver ):
     """The GLPK LP/MIP solver (direct API plugin)
 
@@ -89,9 +89,6 @@ class GLPKDirect ( OptSolver ):
 
  For more information on available algorithms, see the GLPK documentation.
     """
-
-    alias('_glpk_direct', doc='Direct Python interface to the GLPK LP/MIP solver.')
-
 
     def __init__(self, **kwds):
         #
@@ -608,7 +605,7 @@ class GLPKDirect ( OptSolver ):
 # TODO: add MockGLPKDirect class
 
 if not glpk_python_api_exists:
-    SolverFactory().deactivate('_glpk_direct')
+    SolverFactory().unregister('_glpk_direct')
     # SolverFactory().deactivate('_mock_glpk_direct')
 
 # vim: set fileencoding=utf-8

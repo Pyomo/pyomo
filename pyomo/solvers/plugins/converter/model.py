@@ -9,28 +9,20 @@
 #  ___________________________________________________________________________
 
 
-__all__ = ['PyomoMIPConverter']
-
 import os
 from six import iteritems, PY3
-using_py3 = PY3
 
 import pyutilib.services
-
-from pyomo.common.plugin import *
 from pyomo.opt.base import *
+from pyomo.opt.base.convert import ProblemConverterFactory
 from pyomo.solvers.plugins.converter.pico import PicoMIPConverter
+from pyomo.core.kernel.block import IBlock
 
-from pyomo.core.kernel.component_block import IBlockStorage
 
-class PyomoMIPConverter(SingletonPlugin):
-
-    implements(IProblemConverter)
+@ProblemConverterFactory.register('pyomo')
+class PyomoMIPConverter(object):
 
     pico_converter = PicoMIPConverter()
-
-    def __init__(self,**kwds):
-        SingletonPlugin.__init__(self,**kwds)
 
     def can_convert(self, from_type, to_type):
         """Returns true if this object supports the specified conversion"""
@@ -66,7 +58,7 @@ class PyomoMIPConverter(SingletonPlugin):
         kwds.clear()
 
         # basestring is gone in Python 3.x, merged with str.
-        if using_py3:
+        if PY3:
             compare_type = str
         else:
             compare_type = basestring
@@ -80,7 +72,7 @@ class PyomoMIPConverter(SingletonPlugin):
             problem_filename = pyutilib.services.TempfileManager.\
                                create_tempfile(suffix = '.pyomo.lp')
             if instance is not None:
-                if isinstance(instance, IBlockStorage):
+                if isinstance(instance, IBlock):
                     symbol_map_id = instance.write(
                         problem_filename,
                         format=ProblemFormat.cpxlp,
@@ -126,7 +118,7 @@ class PyomoMIPConverter(SingletonPlugin):
             problem_filename = pyutilib.services.TempfileManager.\
                                create_tempfile(suffix = '.pyomo.bar')
             if instance is not None:
-                if isinstance(instance, IBlockStorage):
+                if isinstance(instance, IBlock):
                     symbol_map_id = instance.write(
                         problem_filename,
                         format=ProblemFormat.bar,
@@ -171,12 +163,19 @@ class PyomoMIPConverter(SingletonPlugin):
             if args[1] == ProblemFormat.nl:
                 problem_filename = pyutilib.services.TempfileManager.\
                                    create_tempfile(suffix = '.pyomo.nl')
+                if io_options.get("symbolic_solver_labels", False):
+                    pyutilib.services.TempfileManager.add_tempfile(
+                        problem_filename[:-3]+".row",
+                        exists=False)
+                    pyutilib.services.TempfileManager.add_tempfile(
+                        problem_filename[:-3]+".col",
+                        exists=False)
             else:
                 assert args[1] == ProblemFormat.mps
                 problem_filename = pyutilib.services.TempfileManager.\
                                    create_tempfile(suffix = '.pyomo.mps')
             if instance is not None:
-                if isinstance(instance, IBlockStorage):
+                if isinstance(instance, IBlock):
                     symbol_map_id = instance.write(
                         problem_filename,
                         format=args[1],
@@ -239,7 +238,7 @@ class PyomoMIPConverter(SingletonPlugin):
                 problem_filename = pyutilib.services.TempfileManager.\
                                create_tempfile(suffix='pyomo.osil')
                 if instance:
-                    if isinstance(instance, IBlockStorage):
+                    if isinstance(instance, IBlock):
                         symbol_map_id = instance.write(
                             problem_filename,
                             format=ProblemFormat.osil,

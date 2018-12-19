@@ -2,17 +2,17 @@ cc : Size=2, Index=cc_index, Active=True
     Key : Arg0   : Arg1               : Active
       0 : y + x3 : x1 + 2*x2  ==  0.0 :   True
       2 : y + x3 : x1 + 2*x2  ==  2.0 :   True
-cc[0] : Active=True
-    1 Constraint Declarations
-        c : Size=1, Index=None, Active=True
-            Key  : Lower : Body      : Upper : Active
-            None :   0.0 : x1 + 2*x2 :   0.0 :   True
+    cc[0] : Active=True
+        1 Constraint Declarations
+            c : Size=1, Index=None, Active=True
+                Key  : Lower : Body      : Upper : Active
+                None :   0.0 : x1 + 2*x2 :   0.0 :   True
 
-    1 Declarations: c
-cc[2] : Active=True
-    1 Constraint Declarations
-        c : Size=1, Index=None, Active=True
-            Key  : Lower : Body      : Upper : Active
-            None :   2.0 : x1 + 2*x2 :   2.0 :   True
+        1 Declarations: c
+    cc[2] : Active=True
+        1 Constraint Declarations
+            c : Size=1, Index=None, Active=True
+                Key  : Lower : Body      : Upper : Active
+                None :   2.0 : x1 + 2*x2 :   2.0 :   True
 
-    1 Declarations: c
+        1 Declarations: c

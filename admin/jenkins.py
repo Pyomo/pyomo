@@ -22,6 +22,12 @@ hname = hname.split('.')[0]
 print("\nStarting jenkins.py")
 print("Configuration=%s" % config)
 
+if os.environ.get('WORKSPACE', None) is None:
+    sys.stdout.write(
+        "\n(INFO) WORKSPACE environment vatiable not found."
+        "\n       Assuming WORKSPACE==%s\n\n" % (os.getcwd(),) )
+    os.environ['WORKSPACE'] = os.getcwd()
+
 os.environ['CONFIGFILE'] = os.environ['WORKSPACE']+'/src/pyomo/admin/config.ini'
 #
 # Is the following even needed?
@@ -81,7 +87,12 @@ elif config == "core":
         _run_cmd("python/bin/pyomo install-extras", shell=True)
     elif _run_cmd is subprocess.check_output:
         output = _run_cmd("python/bin/pyomo install-extras", shell=True)
-        print(output.decode('ascii'))
+        try:
+            print(output)
+        except:
+            if hasattr(output, 'encode'):
+                output = output.encode('utf-8','replace')
+            print(output.decode('utf-8'))
     else:
         assert False
     # Test
@@ -116,13 +127,25 @@ elif config == "booktests" or config == "book":
         output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py -v", shell=True)
     elif _run_cmd is subprocess.check_output:
         output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py -v", shell=True)
-        print(output.decode('ascii'))
+        try:
+            print(output)
+        except:
+            if hasattr(output, 'encode'):
+                output = output.encode('utf-8','replace')
+            print(output.decode('utf-8'))
     else:
         assert False
     # Test
+    book_examples = os.path.join(
+        os.environ['WORKSPACE'], 'src', 'pyomo', 'examples', 'doc', 'pyomobook')
+    if not os.path.isdir(book_examples):
+        raise RuntimeError("Cannot find the Book examples directory (%s)" % (book_examples,))
+    os.environ['TEST_PACKAGES'] = 'pyomo %s' % (book_examples,)
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
     driver.perform_tests('pyomo', cat='book')
 
 elif config == "perf":
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
     driver.perform_build('pyomo', cat='performance')
+else:
+    raise RuntimeError("Unknown Jenkins configuration: '%s'" % (config,))

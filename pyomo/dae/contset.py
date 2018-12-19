@@ -11,14 +11,17 @@
 import logging
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import *
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.sets import OrderedSimpleSet
 from pyomo.core.base.numvalue import native_numeric_types
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.dae')
 __all__ = ['ContinuousSet']
 
 
+@ModelComponentFactory.register(
+                   "A bounded continuous numerical range optionally containing"
+                   " discrete points of interest.")
 class ContinuousSet(OrderedSimpleSet):
     """ Represents a bounded continuous domain
 
@@ -162,9 +165,9 @@ class ContinuousSet(OrderedSimpleSet):
         if point in self._fe:
             return point
         elif point > max(self._fe):
-            print("****WARNING: The point '%s' exceeds the upper bound "
-                  "of the ContinuousSet '%s'. Returning the upper bound"
-                  % (str(point), self.name))
+            logger.warn("The point '%s' exceeds the upper bound "
+                        "of the ContinuousSet '%s'. Returning the upper bound"
+                        % (str(point), self.name))
             return max(self._fe)
         else:
             for i in self._fe:
@@ -195,9 +198,9 @@ class ContinuousSet(OrderedSimpleSet):
                         return self._fe[tmp - 1]
             return point
         elif point < min(self._fe):
-            print("****WARNING: The point '%s' is less than the lower bound "
-                  "of the ContinuousSet '%s'. Returning the lower bound"
-                  % (str(point), self.name))
+            logger.warn("The point '%s' is less than the lower bound "
+                        "of the ContinuousSet '%s'. Returning the lower bound "
+                        % (str(point), self.name))
             return min(self._fe)
         else:
             rev_fe = list(self._fe)
@@ -255,6 +258,3 @@ class ContinuousSet(OrderedSimpleSet):
         self._fe = sorted(self)
         timer.report()
 
-register_component(ContinuousSet,
-                   "A bounded continuous numerical range optionally containing"
-                   " discrete points of interest.")

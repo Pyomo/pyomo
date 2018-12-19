@@ -12,16 +12,16 @@
 # Problem Writer for BARON .bar Format Files
 #
 
-import logging
 import itertools
+import logging
+import math
 from six import iteritems, StringIO, iterkeys
 from six.moves import xrange
 from pyutilib.math import isclose
 
-import pyomo.common.plugin
 from pyomo.opt import ProblemFormat
-from pyomo.opt.base import AbstractProblemWriter
-from pyomo.core.expr.numvalue import is_fixed, value, as_numeric, native_numeric_types, native_types
+from pyomo.opt.base import AbstractProblemWriter, WriterFactory
+from pyomo.core.expr.numvalue import is_fixed, value, native_numeric_types, native_types
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base import (SortComponents,
                              SymbolMap,
@@ -34,8 +34,8 @@ from pyomo.core.base.set_types import *
 #CLH: EXPORT suffixes "constraint_types" and "branching_priorities"
 #     pass their respective information to the .bar file
 import pyomo.core.base.suffix
-import pyomo.core.kernel.component_suffix
-from pyomo.core.kernel.component_block import IBlockStorage
+import pyomo.core.kernel.suffix
+from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.core')
 
@@ -78,13 +78,36 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
             return "{0} * {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.MonomialTermExpression:
             if tmp[0] == '-1':
-                # It seems dumb to construct a temporary NegationExpression object
-                # Should we copy the logic from that function here?
-                return EXPR.NegationExpression._to_string(EXPR.NegationExpression((None,)), [tmp[1]], None, self.smap, True)
+                # It seems dumb to construct a temporary
+                # NegationExpression object Should we copy the logic
+                # from that function here?
+                return EXPR.NegationExpression._to_string(
+                    EXPR.NegationExpression((None,)),
+                    [tmp[1]], None, self.smap, True)
             else:
                 return "{0} * {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.PowExpression:
-            return "{0} ^ {1}".format(tmp[0], tmp[1])
+            x,y = node.args
+            if type(x) not in native_types and not x.is_fixed() and \
+               type(y) not in native_types and not y.is_fixed():
+                # Per the BARON manual, x ^ y is allowed as long as x
+                # and y are not both variables
+                return "exp(({1}) * log({0}))".format(tmp[0], tmp[1])
+            else:
+                return "{0} ^ {1}".format(tmp[0], tmp[1])
+        elif node.__class__ is EXPR.UnaryFunctionExpression:
+            if node.name == "sqrt":
+                return "{0} ^ 0.5".format(tmp[0])
+            elif node.name == 'log10':
+                return "{0} * log({1})".format(math.log10(math.e), tmp[0])
+            elif node.name in {'exp','log'}:
+                return node._to_string(tmp, None, self.smap, True)
+            else:
+                raise RuntimeError(
+                    'The BARON .BAR format does not support the unary '
+                    'function "%s".' % (node.name,))
+        elif node.__class__ is EXPR.AbsExpression:
+            return "({0} ^ 2) ^ 0.5".format(tmp[0])
         else:
             return node._to_string(tmp, None, self.smap, True)
 
@@ -140,10 +163,8 @@ def expression_to_string(expr, variables, labeler=None, smap=None):
 #       but not for numbers appearing in the objective
 #       or constraints (which are written from to_string)
 
+@WriterFactory.register('bar', 'Generate the corresponding BARON BAR file.')
 class ProblemWriter_bar(AbstractProblemWriter):
-
-    #pyomo.common.plugin.alias('baron_writer')
-    pyomo.common.plugin.alias('bar', 'Generate the corresponding BARON BAR file.')
 
     def __init__(self):
 
@@ -197,12 +218,12 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #
         # Check for active suffixes to export
         #
-        if isinstance(model, IBlockStorage):
-            suffix_gen = lambda b: pyomo.core.kernel.component_suffix.\
-                         export_suffix_generator(b,
-                                                 active=True,
-                                                 return_key=True,
-                                                 descend_into=False)
+        if isinstance(model, IBlock):
+            suffix_gen = lambda b: ((suf.storage_key, suf) \
+                                    for suf in pyomo.core.kernel.suffix.\
+                                    export_suffix_generator(b,
+                                                            active=True,
+                                                            descend_into=False))
         else:
             suffix_gen = lambda b: pyomo.core.base.suffix.\
                          active_export_suffix_generator(b)
@@ -335,7 +356,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # Example: ' x[1] ' -> ' x3 '
         #FIXME: 7/18/14 CLH: This may cause mistakes if spaces in
         #                    variable names are allowed
-        if isinstance(model, IBlockStorage):
+        if isinstance(model, IBlock):
             mutable_param_gen = lambda b: \
                                 b.components(ctype=Param,
                                              descend_into=False)

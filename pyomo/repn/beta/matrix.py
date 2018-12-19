@@ -24,11 +24,12 @@ from pyomo.core.base import (SortComponents,
 from pyomo.core.base.numvalue import (is_fixed,
                                       value,
                                       ZeroConstant)
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.constraint import (Constraint,
                                         IndexedConstraint,
                                         SimpleConstraint,
                                         _ConstraintData)
+from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.repn import generate_standard_repn
 
 from six import iteritems
@@ -160,7 +161,7 @@ def compile_block_linear_constraints(parent_block,
                 # before iterating:
                 for index, constraint_data in list(iteritems(constraint)):
 
-                    if constraint_data.body.polynomial_degree() <= 1:
+                    if constraint_data.body.__class__ in native_numeric_types or constraint_data.body.polynomial_degree() <= 1:
 
                         # collect for removal
                         if singleton:
@@ -460,6 +461,20 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
                 raise
             return None
 
+    def has_lb(self):
+        """Returns :const:`False` when the lower bound is
+        :const:`None` or negative infinity"""
+        lb = self.lower
+        return (lb is not None) and \
+            (lb != float('-inf'))
+
+    def has_ub(self):
+        """Returns :const:`False` when the upper bound is
+        :const:`None` or positive infinity"""
+        ub = self.upper
+        return (ub is not None) and \
+            (ub != float('inf'))
+
     def lslack(self):
         """
         Returns the value of L-f(x) for constraints of the form:
@@ -604,6 +619,8 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         raise NotImplementedError("MatrixConstraint row elements can not "
                                   "be updated")
 
+@ModelComponentFactory.register(
+                   "A set of constraint expressions in Ax=b form.")
 class MatrixConstraint(collections.Mapping,
                        IndexedConstraint):
 
@@ -685,5 +702,3 @@ class MatrixConstraint(collections.Mapping,
     def __delitem__(self):
         raise NotImplementedError
 
-register_component(MatrixConstraint,
-                   "A set of constraint expressions in Ax=b form.")

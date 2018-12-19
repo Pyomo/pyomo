@@ -1,6 +1,0 @@
-{"Yield":
- {"CORN": ["norm", {"loc" : 3, "scale" : 0.5}],
-  "WHEAT": ["norm", {"loc" : 2.9, "scale" : 0.6}],
-  "SUGAR_BEETS": ["norm", {"loc" : 24, "scale" : 4.5}]
- }
-}

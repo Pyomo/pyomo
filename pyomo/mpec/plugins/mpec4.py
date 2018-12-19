@@ -11,8 +11,8 @@
 import logging
 from six import iterkeys
 
-from pyomo.common.plugin import alias
 from pyomo.core.base import (Transformation,
+                             TransformationFactory,
                              Constraint,
                              Var,
                              Block,
@@ -28,9 +28,9 @@ logger = logging.getLogger('pyomo.core')
 # This transformation reworks each Complementarity block to 
 # create a mixed-complementarity problem that can be written to an NL file.
 #
+@TransformationFactory.register('mpec.nl', doc="Transform a MPEC into a form suitable for the NL writer")
 class MPEC4_Transformation(Transformation):
 
-    alias('mpec.nl', doc="Transform a MPEC into a form suitable for the NL writer")
 
     def __init__(self):
         super(MPEC4_Transformation, self).__init__()

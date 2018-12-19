@@ -58,15 +58,16 @@ def initialize(**kwds):
             ((not hasattr(opt,'executable')) or \
             (opt.executable() is not None))
     #
-    # Check capabilities
+    # Check capabilities, even if the solver is not available
     #
-    if obj.available:
+    if not (opt is None or isinstance(opt, UnknownSolver)):
         for _c in obj.capabilities:
             if not _c in opt._capabilities:
                 raise ValueError("Solver %s does not support capability %s!" % (obj.name, _c))
-        #
-        # Get version
-        #
+    #
+    # Get version
+    #
+    if obj.available:
         obj.version = opt.version()
     return obj
 

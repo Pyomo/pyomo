@@ -40,12 +40,10 @@ b.o = pmo.objective(
     b.x + sum(b.xlist) + sum(b.xdict.values()))
 
 #
-# Define a custom tiny_block
+# Define a custom block
 #
 
-# The tiny_block class uses more efficient storage for the
-# case when a small number of objects are placed on the block.
-class Widget(pmo.tiny_block):
+class Widget(pmo.block):
     def __init__(self, p, input=None):
         super(Widget, self).__init__()
         self.p = pmo.parameter(value=p)

@@ -19,11 +19,12 @@ from pyomo.core.expr.numvalue import value
 from pyomo.core.base.sets import OrderedSimpleSet
 from pyomo.core.base.set_types import Integers, Reals
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 
 logger = logging.getLogger('pyomo.core')
 
 
+@ModelComponentFactory.register("A sequence of numeric values.  RangeSet(start,end,step) is a sequence starting a value 'start', and increasing in values by 'step' until a value greater than or equal to 'end' is reached.")
 class RangeSet(OrderedSimpleSet):
     """
     A set that represents a list of numeric values.
@@ -215,5 +216,4 @@ class RangeSet(OrderedSimpleSet):
         return True
 
 
-register_component(RangeSet, "A sequence of numeric values.  RangeSet(start,end,step) is a sequence starting a value 'start', and increasing in values by 'step' until a value greater than or equal to 'end' is reached.")
 

@@ -8,12 +8,17 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import collections
-
 import six
 from six import itervalues
 
-class ComponentMap(collections.MutableMapping):
+if six.PY3:
+    from collections.abc import MutableMapping as collections_MutableMapping
+    from collections.abc import Mapping as collections_Mapping
+else:
+    from collections import MutableMapping as collections_MutableMapping
+    from collections import Mapping as collections_Mapping
+
+class ComponentMap(collections_MutableMapping):
     """
     This class is a replacement for dict that allows Pyomo
     modeling components to be used as entry keys. The
@@ -126,7 +131,7 @@ class ComponentMap(collections.MutableMapping):
     # plain dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, collections.Mapping):
+        if not isinstance(other, collections_Mapping):
             return False
         return dict(((type(key), id(key)), val)
                     for key, val in self.items()) == \
@@ -138,10 +143,10 @@ class ComponentMap(collections.MutableMapping):
 
     #
     # The remaining methods have slow default
-    # implementations for collections.MutableMapping. In
-    # particular, they rely KeyError catching, which is slow
-    # for this class because KeyError messages use fully
-    # qualified names.
+    # implementations for MutableMapping. In particular,
+    # they rely KeyError catching, which is slow for this
+    # class because KeyError messages use fully qualified
+    # names.
     #
 
     def __contains__(self, obj):

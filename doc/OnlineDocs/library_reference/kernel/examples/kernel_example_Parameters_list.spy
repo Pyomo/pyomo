@@ -1,0 +1,6 @@
+# uses 0-based indexing
+# pl[0] = 0, pl[0] = 1, ...
+m.pl = pmo.parameter_list()
+for j in m.q:
+    m.pl.append(
+        pmo.parameter(j))

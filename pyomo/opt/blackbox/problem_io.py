@@ -9,21 +9,10 @@
 #  ___________________________________________________________________________
 
 """
-Define plugins used for defining OptProblem IO formats.
+Define factory used for using OptProblem IO formats.
 """
 
-from pyomo.common.plugin import *
+from pyomo.common import Factory
 
-class IBlackBoxOptProblemIO(Interface):
-    """An interface that defines reader/writer for a particular IO format"""
 
-    def read(self, filename, point):
-        """
-        Read a point and request information.
-        This method returns a tuple: point, requests
-        """
-
-    def write(self, filename, response):
-        """
-        Write response information to a file.
-        """
+BlackBoxOptProblemIOFactory = Factory('black box problem IO format')

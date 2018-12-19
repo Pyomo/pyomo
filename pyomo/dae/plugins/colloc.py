@@ -10,11 +10,12 @@
 
 import logging
 from six.moves import xrange
+from six import next
 
-from pyomo.core.base.plugin import alias
-from pyomo.core.base import Transformation
-from pyomo.core import *
-from pyomo.dae import *
+from pyomo.core.base import Transformation, TransformationFactory
+from pyomo.core import Var, ConstraintList, Expression, Objective
+from pyomo.dae import ContinuousSet, DerivativeVar, Integral
+
 from pyomo.dae.misc import generate_finite_elements
 from pyomo.dae.misc import generate_colloc_points
 from pyomo.dae.misc import expand_components
@@ -23,6 +24,7 @@ from pyomo.dae.misc import add_discretization_equations
 from pyomo.dae.misc import add_continuity_equations
 from pyomo.dae.misc import block_fully_discretized
 from pyomo.dae.misc import get_index_information
+from pyomo.dae.diffvar import DAE_Error
 
 # If the user has numpy then the collocation points and the a matrix for
 # the Runge-Kutta basis formulation will be calculated as needed.
@@ -31,11 +33,10 @@ from pyomo.dae.misc import get_index_information
 try:
     import numpy
     numpy_available = True
-except ImportError:
+except ImportError:  # pragma:nocover
     numpy_available = False
-    from pyomo.dae.utilities import *
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.dae')
 
 
 def _lagrange_radau_transform(v, s):
@@ -114,20 +115,6 @@ def _lagrange_legendre_transform_order2(v, s):
     return _fun
 
 
-def _hermite_cubic_transform(v, s):
-    pass
-
-
-def factorial(n):
-    if n < 0 or not isinstance(n, int):
-        raise ValueError(
-            "Can only take the factorial of a non-negative integer")
-    elif n > 0:
-        return n * factorial(n - 1)
-    else:
-        return 1
-
-
 def conv(a, b):
     if len(a) == 0 or len(b) == 0:
         raise ValueError("Cannot convolve an empty list")
@@ -151,6 +138,8 @@ def conv(a, b):
 
 def calc_cp(alpha, beta, k):
     gamma = []
+    factorial = numpy.math.factorial
+    
     for i in range(k + 1):
         num = factorial(alpha + k) * factorial(alpha + beta + k + i)
         denom = factorial(alpha + i) * factorial(k - i) * factorial(i)
@@ -174,29 +163,34 @@ def calc_cp(alpha, beta, k):
     cp = numpy.roots(poly)
     return cp
 
-
-def calc_omega(cp):
-
-    a = []
-    for i in range(len(cp)):
-        ptmp = []
-        tmp = 0
-        for j in range(len(cp)):
-            if j != i:
-                row = []
-                row.insert(0, 1 / (cp[i] - cp[j]))
-                row.insert(1, -cp[j] / (cp[i] - cp[j]))
-                ptmp.insert(tmp, row)
-                tmp += 1
-        p = [1]
-        for j in range(len(cp) - 1):
-            p = conv(p, ptmp[j])
-        pint = numpy.polyint(p)
-        arow = []
-        for j in range(len(cp)):
-            arow.append(numpy.polyval(pint, cp[j]))
-        a.append(arow)
-    return a
+# BLN: This is a legacy function that was used to calculate the collocation
+# constants for an alternative form of the collocation equations described
+# in Biegler's nonlinear programming book. The difference being whether the 
+# state or the derivative is approximated using lagrange polynomials. With 
+# the addition of PDE support and chained discretizations in Pyomo.DAE 2.0
+# this function is no longer used but kept here for future reference.
+#
+# def calc_omega(cp):
+#     a = []
+#     for i in range(len(cp)):
+#         ptmp = []
+#         tmp = 0
+#         for j in range(len(cp)):
+#             if j != i:
+#                 row = []
+#                 row.insert(0, 1 / (cp[i] - cp[j]))
+#                 row.insert(1, -cp[j] / (cp[i] - cp[j]))
+#                 ptmp.insert(tmp, row)
+#                 tmp += 1
+#         p = [1]
+#         for j in range(len(cp) - 1):
+#             p = conv(p, ptmp[j])
+#         pint = numpy.polyint(p)
+#         arow = []
+#         for j in range(len(cp)):
+#             arow.append(numpy.polyval(pint, cp[j]))
+#         a.append(arow)
+#     return a
 
 
 def calc_adot(cp, order=1):
@@ -241,11 +235,11 @@ def calc_afinal(cp):
     return afinal
 
 
+@TransformationFactory.register('dae.collocation', 
+            doc="Discretizes a DAE model using "
+            "orthogonal collocation over finite elements transforming "
+            "the model into an NLP.")
 class Collocation_Discretization_Transformation(Transformation):
-
-    alias('dae.collocation', doc="Discretizes a DAE model using "
-          "orthogonal collocation over finite elements transforming "
-          "the model into an NLP.")
 
     def __init__(self):
         super(Collocation_Discretization_Transformation, self).__init__()
@@ -260,13 +254,7 @@ class Collocation_Discretization_Transformation(Transformation):
             'LAGRANGE-RADAU': (_lagrange_radau_transform,
                                _lagrange_radau_transform_order2),
             'LAGRANGE-LEGENDRE': (_lagrange_legendre_transform,
-                                  _lagrange_legendre_transform_order2),
-            'HERMITE-CUBIC': _hermite_cubic_transform}
-
-    def _setup(self, instance):
-        instance = instance.clone()
-        instance.construct()
-        return instance
+                                  _lagrange_legendre_transform_order2)}
 
     def _get_radau_constants(self, currentds):
         """
@@ -278,6 +266,8 @@ class Collocation_Discretization_Transformation(Transformation):
             if self._ncp[currentds] > 10:
                 raise ValueError("Numpy was not found so the maximum number "
                                  "of collocation points is 10")
+            from pyomo.dae.utilities import (radau_tau_dict, radau_adot_dict,
+                                             radau_adotdot_dict)
             self._tau[currentds] = radau_tau_dict[self._ncp[currentds]]
             self._adot[currentds] = radau_adot_dict[self._ncp[currentds]]
             self._adotdot[currentds] = radau_adotdot_dict[self._ncp[currentds]]
@@ -307,6 +297,10 @@ class Collocation_Discretization_Transformation(Transformation):
             if self._ncp[currentds] > 10:
                 raise ValueError("Numpy was not found so the maximum number "
                                  "of collocation points is 10")
+            from pyomo.dae.utilities import (legendre_tau_dict,
+                                             legendre_adot_dict,
+                                             legendre_adotdot_dict,
+                                             legendre_afinal_dict)
             self._tau[currentds] = legendre_tau_dict[self._ncp[currentds]]
             self._adot[currentds] = legendre_adot_dict[self._ncp[currentds]]
             self._adotdot[currentds] = \
@@ -328,10 +322,6 @@ class Collocation_Discretization_Transformation(Transformation):
             self._adotdot[currentds] = adotdot
             self._afinal[currentds] = afinal
 
-    def _get_hermite_constants(self, currentds):
-        # TODO: finish this
-        raise DAE_Error("Not Implemented")
-
     def _apply_to(self, instance, **kwds):
         """
         Applies specified collocation transformation to a modeling instance
@@ -346,9 +336,9 @@ class Collocation_Discretization_Transformation(Transformation):
                       specified then the same scheme will be applied to all
                       ContinuousSets.
         scheme        Indicates which finite difference method to apply.
-                      Options are LAGRANGE-RADAU, LAGRANGE-LEGENDRE, or
-                      HERMITE-CUBIC. The default scheme is Lagrange polynomials
-                      with Radau roots.
+                      Options are 'LAGRANGE-RADAU' and 'LAGRANGE-LEGENDRE'. 
+                      The default scheme is Lagrange polynomials with Radau
+                      roots.
         """
 
         tmpnfe = kwds.pop('nfe', 10)
@@ -377,15 +367,13 @@ class Collocation_Discretization_Transformation(Transformation):
         if None in self._nfe:
             raise ValueError(
                 "A general discretization scheme has already been applied to "
-                "to every differential set in the model. If you would like to "
+                "to every ContinuousSet in the model. If you would like to "
                 "specify a specific discretization scheme for one of the "
-                "differential sets you must discretize each differential set "
-                "individually. If you would like to apply a different "
-                "discretization scheme to all differential sets you must "
-                "declare a new transformation object")
+                "ContinuousSets you must discretize each ContinuousSet "
+                "separately.")
 
         if len(self._nfe) == 0 and tmpds is None:
-            # Same discretization on all differentialsets
+            # Same discretization on all ContinuousSets
             self._nfe[None] = tmpnfe
             self._ncp[None] = tmpncp
             currentds = None
@@ -398,8 +386,8 @@ class Collocation_Discretization_Transformation(Transformation):
         if self._scheme is None:
             raise ValueError("Unknown collocation scheme '%s' specified using "
                              "the 'scheme' keyword. Valid schemes are "
-                             "'LAGRANGE-RADAU', 'LAGRANGE-LEGENDRE', and "
-                             "'HERMITE-CUBIC'" % tmpscheme)
+                             "'LAGRANGE-RADAU' and 'LAGRANGE-LEGENDRE'"
+                              % tmpscheme)
 
         if self._scheme_name == 'LAGRANGE-RADAU':
             self._get_radau_constants(currentds)
@@ -418,10 +406,11 @@ class Collocation_Discretization_Transformation(Transformation):
                 generate_finite_elements(ds, self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds) - 1 > self._nfe[currentds]:
-                        print("***WARNING: More finite elements were found in "
-                              "ContinuousSet '%s' than the number of finite "
-                              "elements specified in apply. The larger number "
-                              "of finite elements will be used." % ds.name)
+                        logger.warn("More finite elements were found in "
+                                    "ContinuousSet '%s' than the number of "
+                                    "finite elements specified in apply. The "
+                                    "larger number of finite elements will be "
+                                    "used." % ds.name)
 
                 self._nfe[ds.name] = len(ds) - 1
                 self._fe[ds.name] = sorted(ds)
@@ -454,7 +443,7 @@ class Collocation_Discretization_Transformation(Transformation):
                             " first or second derivative with respect to a "
                             "particular ContinuousSet" % (d.name, i.name))
                     scheme = self._scheme[count - 1]
-                    # print("%s %s" % (i.name, scheme.__name__))
+
                     newexpr = create_partial_expression(scheme, oldexpr, i,
                                                         loc)
                     d.set_derivative_expression(newexpr)
@@ -469,6 +458,23 @@ class Collocation_Discretization_Transformation(Transformation):
             if d.is_fully_discretized():
                 add_discretization_equations(d.parent_block(), d)
                 d.parent_block().reclassify_component_type(d, Var)
+
+                # Keep track of any reclassified DerivativeVar components so
+                # that the Simulator can easily identify them if the model
+                # is simulated after discretization
+                # TODO: Update the discretization transformations to use
+                # a Block to add things to the model and store discretization
+                # information. Using a list for now because the simulator
+                # does not yet support models containing active Blocks
+                reclassified_list = getattr(block,
+                                            '_pyomo_dae_reclassified_derivativevars',
+                                            None)
+                if reclassified_list is None:
+                    block._pyomo_dae_reclassified_derivativevars = list()
+                    reclassified_list = \
+                        block._pyomo_dae_reclassified_derivativevars
+
+                reclassified_list.append(d)
 
         # Reclassify Integrals if all ContinuousSets have been discretized
         if block_fully_discretized(block):
@@ -486,10 +492,10 @@ class Collocation_Discretization_Transformation(Transformation):
 
     def _get_idx(self, l, t, n, i, k):
         """
-        This function returns the appropriate index for the differential
+        This function returns the appropriate index for the ContinuousSet
         and the derivative variables. It's needed because the collocation
         constraints are indexed by finite element and collocation point
-        however a differentialset contains a list of all the discretization
+        however a ContinuousSet contains a list of all the discretization
         points and is not separated into finite elements and collocation
         points.
         """
@@ -536,10 +542,7 @@ class Collocation_Discretization_Transformation(Transformation):
         if contset.type() is not ContinuousSet:
             raise TypeError("The component specified using the 'contset' "
                             "keyword must be a ContinuousSet")
-        ds = instance.find_component(contset.name)
-        if ds is None:
-            raise ValueError("ContinuousSet '%s' is not a valid component of "
-                             "the discretized model instance" % contset.name)
+        ds = contset
 
         if len(self._ncp) == 0:
             raise RuntimeError("This method should only be called after using "
@@ -559,12 +562,6 @@ class Collocation_Discretization_Transformation(Transformation):
         if var.type() is not Var:
             raise TypeError("The component specified using the 'var' keyword "
                             "must be a variable")
-        tmpvar = instance.find_component(var.name)
-        if tmpvar is None:
-            raise ValueError("Variable '%s' is not a valid component of the "
-                             "discretized model instance" % var.name)
-
-        var = tmpvar
 
         if ncp is None:
             raise TypeError(
@@ -582,11 +579,14 @@ class Collocation_Discretization_Transformation(Transformation):
             return instance
 
         # Check to see if the continuousset is an indexing set of the variable
-        if var.dim() == 1:
+        if var.dim() == 0:
+            raise IndexError("ContinuousSet '%s' is not an indexing set of"
+                             " the variable '%s'" % (ds.name, var.name))
+        elif var.dim() == 1:
             if ds not in var._index:
                 raise IndexError("ContinuousSet '%s' is not an indexing set of"
                                  " the variable '%s'" % (ds.name, var.name))
-        elif ds not in var._index_set:
+        elif ds not in var._implicit_subsets:
             raise IndexError("ContinuousSet '%s' is not an indexing set of the"
                              " variable '%s'" % (ds.name, var.name))
 
@@ -601,6 +601,7 @@ class Collocation_Discretization_Transformation(Transformation):
         else:
             self._reduced_cp[var.name] = {ds.name: ncp}
 
+        # TODO: Use unique_component_name for this
         list_name = var.local_name + "_interpolation_constraints"
 
         instance.add_component(list_name, ConstraintList())
@@ -629,7 +630,7 @@ class Collocation_Discretization_Transformation(Transformation):
                         tfit = t[tmp2 - ncp + 1:tmp2 + 1]
                         coeff = self._interpolation_coeffs(ti, tfit)
                         conlist.add(var[idx(n, i, k)] ==
-                                    sum(var[idx(n, i, j)] * coeff.next()
+                                    sum(var[idx(n, i, j)] * next(coeff)
                                         for j in xrange(tot_ncp - ncp + 1,
                                                         tot_ncp + 1)))
 

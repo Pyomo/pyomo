@@ -22,7 +22,7 @@ import pyutilib.th as unittest
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.block import IBlock
 
 # The test directory
 thisDir = dirname(abspath( __file__ ))
@@ -35,6 +35,7 @@ _cleanup_expected_failures = True
 # A function that returns a function that gets
 # added to a test class.
 #
+@unittest.nottest
 def create_test_method(model,
                        solver,
                        io,
@@ -78,7 +79,7 @@ def create_test_method(model,
             return
 
         # validate the solution returned by the solver
-        if isinstance(model_class.model, IBlockStorage):
+        if isinstance(model_class.model, IBlock):
             model_class.model.load_solution(results.Solution)
         else:
             model_class.model.solutions.load_from(results, default_variable_value=opt.default_variable_value())
@@ -86,7 +87,7 @@ def create_test_method(model,
         rc = model_class.validate_current_solution(suffixes=model_class.test_suffixes)
 
         if is_expected_failure:
-            if rc[0] is True:
+            if rc[0]:
                 warnings.warn("\nTest model '%s' was marked as an expected "
                               "failure but no failure occured. The "
                               "reason given for the expected failure "
@@ -94,12 +95,12 @@ def create_test_method(model,
                               "Please remove this case as an expected "
                               "failure if the above issue has been "
                               "corrected in the latest version of the "
-                              "solver." % (model_class.description, failure_msg))
+                              "solver." % (model_class.description, test_case.msg))
             if _cleanup_expected_failures:
                 os.remove(save_filename)
 
         if not rc[0]:
-            if not isinstance(model_class.model, IBlockStorage):
+            if not isinstance(model_class.model, IBlock):
                 try:
                     model_class.model.solutions.store_to(results)
                 except ValueError:
@@ -118,9 +119,9 @@ def create_test_method(model,
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
-        def skipping_test(self):
+        def skipping_this(self):
             return self.skipTest(test_case.msg)
-        return skipping_test
+        return skipping_this
 
     if is_expected_failure:
         @unittest.expectedFailure

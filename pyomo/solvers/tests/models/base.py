@@ -12,8 +12,10 @@ from os.path import join, dirname, abspath
 import json
 import six
 
+import pyutilib.th as unittest
+
 import pyomo.kernel as pmo
-from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.block import IBlock
 from pyomo.core import Suffix, Var, Constraint, Objective
 from pyomo.opt import ProblemFormat, SolverFactory, TerminationCondition
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
@@ -24,6 +26,7 @@ thisDir = dirname(abspath( __file__ ))
 _test_models = {}
 
 
+@unittest.nottest
 def test_models(arg=None):
     if arg is None:
         return _test_models
@@ -67,7 +70,7 @@ class _BaseTestModel(object):
         # Add suffixes
         self.test_suffixes = [] if self.disable_suffix_tests else \
                         import_suffixes
-        if isinstance(self.model, IBlockStorage):
+        if isinstance(self.model, IBlock):
             for suffix in self.test_suffixes:
                 setattr(self.model, suffix, pmo.suffix(direction=pmo.suffix.IMPORT))
         else:
@@ -124,7 +127,8 @@ class _BaseTestModel(object):
 
             return opt, results
         finally:
-            opt.deactivate()
+            pass
+            #opt.deactivate()
         del opt
         return None, None
 
@@ -135,7 +139,7 @@ class _BaseTestModel(object):
         suffixes = dict((suffix, getattr(model,suffix))
                         for suffix in kwds.pop('suffixes',[]))
         for suf in suffixes.values():
-            if isinstance(self.model, IBlockStorage):
+            if isinstance(self.model, IBlock):
                 assert isinstance(suf,pmo.suffix)
                 assert suf.import_enabled
             else:
@@ -188,7 +192,7 @@ class _BaseTestModel(object):
         suffixes = dict((suffix, getattr(model,suffix))
                         for suffix in kwds.pop('suffixes',[]))
         for suf in suffixes.values():
-            if isinstance(self.model, IBlockStorage):
+            if isinstance(self.model, IBlock):
                 assert isinstance(suf,pmo.suffix)
                 assert suf.import_enabled
             else:

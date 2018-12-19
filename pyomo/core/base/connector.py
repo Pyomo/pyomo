@@ -23,7 +23,7 @@ from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.numvalue import NumericValue, value
-from pyomo.core.base.plugin import register_component, \
+from pyomo.core.base.plugin import ModelComponentFactory, \
     IPyomoScriptModifyInstance, TransformationFactory
 
 logger = logging.getLogger('pyomo.core')
@@ -118,6 +118,7 @@ class _ConnectorData(ComponentData, NumericValue):
 
 
 
+@ModelComponentFactory.register("A bundle of variables that can be manipilated together.")
 class Connector(IndexedComponent):
     """A collection of variables, which may be defined over a index
 
@@ -142,6 +143,8 @@ class Connector(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Connector:
             return super(Connector, cls).__new__(cls)
+        logger.warning("DEPRECATED: The Connector component is deprecated. "
+            "It has been replaced by Port in the pyomo.network package.")
         if args == ():
             return SimpleConnector.__new__(SimpleConnector)
         else:
@@ -274,9 +277,6 @@ class IndexedConnector(Connector):
     """An array of connectors"""
     pass
 
-
-register_component(
-    Connector, "A bundle of variables that can be manipilated together.")
 
 
 class ConnectorExpander(Plugin):

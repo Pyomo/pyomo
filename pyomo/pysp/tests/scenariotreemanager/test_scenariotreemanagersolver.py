@@ -12,10 +12,6 @@
 import os
 import time
 import subprocess
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
 
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyomo.pysp.util.misc import (_get_test_nameserver,

@@ -514,6 +514,36 @@ def grossmann_twoDisj():
     
     return m
 
+def twoDisj_twoCircles_easy():
+    m = ConcreteModel()
+    m.x = Var(bounds=(0,8))
+    m.y = Var(bounds=(0,10))
+
+    m.upper_circle = Disjunct()
+    m.upper_circle.cons = Constraint(expr=(m.x - 1)**2 + (m.y - 6)**2 <= 2)
+    m.lower_circle = Disjunct()
+    m.lower_circle.cons = Constraint(expr=(m.x - 4)**2 + (m.y - 2)**2 <= 2)
+
+    m.disjunction = Disjunction(expr=[m.upper_circle, m.lower_circle])
+    
+    m.obj = Objective(expr=m.x + m.y, sense=maximize)
+    return m
+
+def fourCircles():
+    m = twoDisj_twoCircles_easy()
+
+    # and add two more overlapping circles, a la the Grossmann test case with
+    # the rectangles. (but not change my nice integral optimal solution...)
+    m.upper_circle2 = Disjunct()
+    m.upper_circle2.cons = Constraint(expr=(m.x - 2)**2 + (m.y - 7)**2 <= 1)
+
+    m.lower_circle2 = Disjunct()
+    m.lower_circle2.cons = Constraint(expr=(m.x - 5)**2 + (m.y - 3)**2 <= 2)
+
+    m.disjunction2 = Disjunction(expr=[m.upper_circle2, m.lower_circle2])
+
+    return m
+
 # TODO: these are things to use to test targets. Because I think you should be
 # able to solve m.b below and get what you expect, not have all the constraints
 # from your disjunctions get moved onto the model.

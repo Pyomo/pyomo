@@ -11,10 +11,8 @@
 import six
 import logging
 
-from pyomo.core.base import Block, VarList, ConstraintList, Objective, Var, Constraint, maximize, ComponentUID, Set
+from pyomo.core.base import Block, VarList, ConstraintList, Objective, Var, Constraint, maximize, ComponentUID, Set, TransformationFactory
 from pyomo.repn import generate_standard_repn
-from pyomo.repn.collect import collect_linear_terms
-from pyomo.common.plugin import alias
 from pyomo.mpec import ComplementarityList, complements
 from pyomo.bilevel.plugins.transform import Base_BilevelTransformation
 from pyomo.bilevel.components import SubModel
@@ -23,9 +21,9 @@ from pyomo.bilevel.components import SubModel
 logger = logging.getLogger('pyomo.core')
 
 
-class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
 
-    alias('bilevel.linear_mpec', doc="Generate a linear MPEC from the optimality conditions of the submodel")
+@TransformationFactory.register('bilevel.linear_mpec', doc="Generate a linear MPEC from the optimality conditions of the submodel")
+class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
 
     def __init__(self):
         super(LinearComplementarity_BilevelTransformation, self).__init__()
@@ -64,9 +62,9 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
             min c1*x + d1*y
                 A3*x <= b3
                 A1*x + B1*y <= b1
-                min c2*x + d2*y
+                min c2*x + d2*y + x'*Q*y
+                    A2*x + B2*y + x'*E2*y <= b2
                     y >= 0
-                    A2*x + B2*y <= b2
 
         NOTE THE VARIABLE BOUNDS!
         """
@@ -92,6 +90,8 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
         #
         # Collect submodel objective terms
         #
+        # TODO: detect fixed variables
+        #
         for odata in submodel.component_data_objects(Objective, active=True):
             if odata.sense == maximize:
                 d_sense = -1
@@ -101,6 +101,9 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
             # Iterate through the variables in the representation
             #
             o_terms = generate_standard_repn(odata.expr, compute_values=False)
+            #
+            # Linear terms
+            #
             for i, var in enumerate(o_terms.linear_vars):
                 if var.parent_component().local_name in self._fixed_upper_vars:
                     #
@@ -116,7 +119,38 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
                 if not id_ in sids_set:
                     sids_set.add(id_)
                     sids_list.append(id_)
+            #
+            # Quadratic terms
+            #
+            for i, var in enumerate(o_terms.quadratic_vars):
+                if var[0].parent_component().local_name in self._fixed_upper_vars:
+                    if var[1].parent_component().local_name in self._fixed_upper_vars:
+                        #
+                        # Skip fixed upper variables
+                        #
+                        continue
+                    #
+                    # Add the linear term
+                    #
+                    id_ = id(var[1])
+                    d2[id_] = d2.get(id_,0) + d_sense * o_terms.quadratic_coefs[i] * var[0]
+                    if not id_ in sids_set:
+                        sids_set.add(id_)
+                        sids_list.append(id_)
+                elif var[1].parent_component().local_name in self._fixed_upper_vars:
+                    #
+                    # Add the linear term
+                    #
+                    id_ = id(var[0])
+                    d2[id_] = d2.get(id_,0) + d_sense * o_terms.quadratic_coefs[i] * var[1]
+                    if not id_ in sids_set:
+                        sids_set.add(id_)
+                        sids_list.append(id_)
+                else:
+                    raise RuntimeError("Cannot apply this transformation to a problem with quadratic terms where both variables are in the lower level.")
+            #
             # Stop after the first objective
+            #
             break
         #
         # Iterate through all lower level variables, adding dual variables
@@ -189,9 +223,12 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
                 if not (u is None and w is None):
                     utmp[id(cdata)] = (u,w)
             #
-            # Store the coefficients for the contraint variables that are not fixed
+            # Store the coefficients for the constraint variables that are not fixed
             #
             c_terms = generate_standard_repn(cdata.body, compute_values=False)
+            #
+            # Linear terms
+            #
             for i, var in enumerate(c_terms.linear_vars):
                 if var.parent_component().local_name in self._fixed_upper_vars:
                     continue
@@ -200,6 +237,32 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
                 if not id_ in sids_set:
                     sids_set.add(id_)
                     sids_list.append(id_)
+            #
+            # Quadratic terms
+            #
+            for i, var in enumerate(c_terms.quadratic_vars):
+                if var[0].parent_component().local_name in self._fixed_upper_vars:
+                    if var[1].parent_component().local_name in self._fixed_upper_vars:
+                        continue
+                    id_ = id(var[1])
+                    if id_ in B2:
+                        B2[id_][id(cdata)] = c_terms.quadratic_coefs[i] * var[0]
+                    else:
+                        B2.setdefault(id_,{}).setdefault(id(cdata),c_terms.quadratic_coefs[i] * var[0])
+                    if not id_ in sids_set:
+                        sids_set.add(id_)
+                        sids_list.append(id_)
+                elif var[1].parent_component().local_name in self._fixed_upper_vars:
+                    id_ = id(var[0])
+                    if id_ in B2:
+                        B2[id_][id(cdata)] = c_terms.quadratic_coefs[i] * var[1]
+                    else:
+                        B2.setdefault(id_,{}).setdefault(id(cdata),c_terms.quadratic_coefs[i] * var[1])
+                    if not id_ in sids_set:
+                        sids_set.add(id_)
+                        sids_list.append(id_)
+                else:
+                    raise RuntimeError("Cannot apply this transformation to a problem with quadratic terms where both variables are in the lower level.")
         #
         # Generate stationarity equations
         #

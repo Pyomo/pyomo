@@ -16,7 +16,7 @@ import logging
 from weakref import ref as weakref_ref
 
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.plugin import register_component
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, \
     UnindexedComponent_set
@@ -109,12 +109,15 @@ class _ParamData(ComponentData, NumericValue):
         Return the value of this object.
         """
         if self._value is _NotValid:
-            raise ValueError(
-                "Error evaluating Param value (%s):\n\tThe Param value is "
-                "currently set to an invalid value.  This is\n\ttypically "
-                "from a scalar Param or mutable Indexed Param without\n"
-                "\tan initial or default value."
-                % ( self.name, ))
+            if exception:
+                raise ValueError(
+                    "Error evaluating Param value (%s):\n\tThe Param value is "
+                    "currently set to an invalid value.  This is\n\ttypically "
+                    "from a scalar Param or mutable Indexed Param without\n"
+                    "\tan initial or default value."
+                    % ( self.name, ))
+            else:
+                return None
         return self._value
 
     @property
@@ -173,6 +176,8 @@ class _ParamData(ComponentData, NumericValue):
 
     __bool__ = __nonzero__
 
+
+@ModelComponentFactory.register("Parameter data that is used to define a model instance.")
 class Param(IndexedComponent):
     """
     A parameter value, which may be defined over an index.
@@ -995,4 +1000,3 @@ class IndexedParam(Param):
             raise TypeError('Cannot compute the value of an indexed Param (%s)'
                             % (self.name,) )
 
-register_component(Param, "Parameter data that is used to define a model instance.")

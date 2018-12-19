@@ -4,22 +4,21 @@ from __future__ import division
 import textwrap
 
 from pyomo.core.base.var import Var
+from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.common.plugin import alias
 
 
+@TransformationFactory.register(
+        'contrib.init_vars_midpoint',
+        doc="Initialize non-fixed variables to the midpoint of their bounds.")
 class InitMidpoint(IsomorphicTransformation):
-    """Initializes non-fixed variables to the midpoint of their bounds.
+    """Initialize non-fixed variables to the midpoint of their bounds.
 
     - If the variable does not have bounds, set the value to zero.
     - If the variable is missing one bound, set the value to that of the
-        existing bound.
+      existing bound.
     """
-
-    alias(
-        'contrib.init_vars_midpoint',
-        doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance, overwrite=False):
         """Apply the transformation.
@@ -47,17 +46,16 @@ class InitMidpoint(IsomorphicTransformation):
                 var.set_value((value(var.lb) + value(var.ub)) / 2.)
 
 
+@TransformationFactory.register(
+        'contrib.init_vars_zero',
+        doc="Initialize non-fixed variables to zero.")
 class InitZero(IsomorphicTransformation):
-    """Initializes non-fixed variables to zeros.
+    """Initialize non-fixed variables to zero.
 
     - If setting the variable value to zero will violate a bound, set the
-        variable value to the relevant bound value.
+      variable value to the relevant bound value.
 
     """
-
-    alias(
-        'contrib.init_vars_zero',
-        doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def _apply_to(self, instance, overwrite=False):
         """Apply the transformation.

@@ -11,21 +11,23 @@
 import logging
 import re
 import sys
-import pyutilib.services
+import pyomo.common
 from pyutilib.misc import Bunch
-from pyomo.common.plugin import alias
+from pyutilib.services import TempfileManager
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
-import pyomo.core.kernel
+from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
+from pyomo.opt.base import SolverFactory
 from pyomo.core.base.suffix import Suffix
+import pyomo.core.base.var
 
 
 logger = logging.getLogger('pyomo.solvers')
@@ -41,8 +43,8 @@ def _is_numeric(x):
         return False
     return True
 
+@SolverFactory.register('gurobi_direct', doc='Direct python interface to Gurobi')
 class GurobiDirect(DirectSolver):
-    alias('gurobi_direct', doc='Direct python interface to Gurobi')
 
     def __init__(self, **kwds):
         kwds['type'] = 'gurobi_direct'
@@ -385,9 +387,9 @@ class GurobiDirect(DirectSolver):
         if obj.active is False:
             raise ValueError('Cannot add inactive objective to solver.')
 
-        if obj.sense == pyomo.core.kernel.minimize:
+        if obj.sense == minimize:
             sense = self._gurobipy.GRB.MINIMIZE
-        elif obj.sense == pyomo.core.kernel.maximize:
+        elif obj.sense == maximize:
             sense = self._gurobipy.GRB.MAXIMIZE
         else:
             raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
@@ -539,9 +541,9 @@ class GurobiDirect(DirectSolver):
         self.results.problem.name = gprob.ModelName
 
         if gprob.ModelSense == 1:
-            self.results.problem.sense = pyomo.core.kernel.minimize
+            self.results.problem.sense = minimize
         elif gprob.ModelSense == -1:
-            self.results.problem.sense = pyomo.core.kernel.maximize
+            self.results.problem.sense = maximize
         else:
             raise RuntimeError('Unrecognized gurobi objective sense: {0}'.format(gprob.ModelSense))
 
@@ -678,7 +680,7 @@ class GurobiDirect(DirectSolver):
 
         # finally, clean any temporary files registered with the temp file
         # manager, created populated *directly* by this plugin.
-        pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
+        TempfileManager.pop(remove=not self._keepfiles)
 
         return DirectOrPersistentSolver._postsolve(self)
 

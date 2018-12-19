@@ -1,1 +1,0 @@
-getattr(instance, ParamName).set_value(NewVal)

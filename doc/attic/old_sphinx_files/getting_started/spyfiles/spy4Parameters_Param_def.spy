@@ -1,0 +1,6 @@
+def s_init(model, i, j):
+    if i == j:
+        return i*i
+    else:
+        return 0.0
+model.S1 = Param(model.A, model.A, initialize=s_init)

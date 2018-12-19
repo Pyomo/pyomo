@@ -50,13 +50,13 @@ from pyomo.core.base.objective import Objective
 from pyomo.core.base.set_types import *
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.base.indexed_component import IndexedComponent
-from pyomo.core.base.DataPortal import *
+from pyomo.dataportal import DataPortal
 from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
 from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.sets import Set
 from pyomo.core.base.component import Component, ComponentUID
-from pyomo.core.base.plugin import register_component, TransformationFactory
+from pyomo.core.base.plugin import ModelComponentFactory, TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
 
 import pyomo.opt
@@ -231,18 +231,20 @@ class ModelSolutions(object):
         # If there is a warning, then print a warning message.
         #
         if (results.solver.status == pyomo.opt.SolverStatus.warning):
-            logger.warn('Loading a SolverResults object with a '
-                        'warning status into model=%s;\n'
-                        '    message from solver=%s'
-                        % (instance.name, results.solver.Message))
+            logger.warning(
+                'Loading a SolverResults object with a '
+                'warning status into model=%s;\n'
+                '    message from solver=%s'
+                % (instance.name, results.solver.Message))
         #
         # If the solver status not one of either OK or Warning, then generate an error.
         #
         elif results.solver.status != pyomo.opt.SolverStatus.ok:
             if (results.solver.status == pyomo.opt.SolverStatus.aborted) and \
                (len(results.solution) > 0):
-                logger.warn("Loading a SolverResults object with "
-                            "an 'aborted' status, but containing a solution")
+                logger.warning(
+                    "Loading a SolverResults object with "
+                    "an 'aborted' status, but containing a solution")
             else:
                 raise ValueError("Cannot load a SolverResults object "
                                  "with bad status: %s"
@@ -563,6 +565,7 @@ class ModelSolutions(object):
                     valid_import_suffixes[attr_key][cdata] = attr_value
 
 
+@ModelComponentFactory.register('Model objects can be used as a component of other models.')
 class Model(SimpleBlock):
     """
     An optimization model.  By default, this defers construction of components
@@ -961,9 +964,9 @@ model.  You do not need to call Model.create() for a concrete model.""")
         if name is None:
             logger.warning(
 """DEPRECATION WARNING: Model.transform() is deprecated.  Use
-TransformationFactory().services() method to get the list of known
+the TransformationFactory iterator to get the list of known
 transformations.""")
-            return TransformationFactory.services()
+            return list(TransformationFactory)
 
         logger.warning(
 """DEPRECATION WARNING: Model.transform() is deprecated.  Use
@@ -977,6 +980,7 @@ transformation to the model instance.""" % (name,name,) )
         return xfrm.apply_to(self, **kwds)
 
 
+@ModelComponentFactory.register('A concrete optimization model that does not defer construction of components.')
 class ConcreteModel(Model):
     """
     A concrete optimization model that does not defer construction of
@@ -988,6 +992,7 @@ class ConcreteModel(Model):
         Model.__init__(self, *args, **kwds)
 
 
+@ModelComponentFactory.register('An abstract optimization model that defers construction of components.')
 class AbstractModel(Model):
     """
     An abstract optimization model that defers construction of
@@ -1008,7 +1013,3 @@ class AbstractModel(Model):
 #
 Model._Block_reserved_words = set(dir(ConcreteModel()))
 
-
-register_component(Model, 'Model objects can be used as a component of other models.')
-register_component(ConcreteModel, 'A concrete optimization model that does not defer construction of components.')
-register_component(AbstractModel, 'An abstract optimization model that defers construction of components.')

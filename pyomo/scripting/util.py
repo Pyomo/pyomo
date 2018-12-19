@@ -65,6 +65,7 @@ from pyutilib.services import TempfileManager
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
+from pyomo.dataportal import DataPortal
 from pyomo.core import *
 from pyomo.core.base import TextLabeler
 import pyomo.core.base
@@ -236,9 +237,6 @@ def apply_preprocessing(data, parser=None):
                     return self.fn(**kwds)
             tmp = TMP()
             data.local._usermodel_plugins.append( tmp )
-            #print "HERE", modelapi[key], pyomo.common.plugin.interface_services[modelapi[key]]
-
-    #print "HERE", data.options._usermodel_plugins
 
     if 'pyomo_preprocess' in usermodel_dir:
         if data.options.model.object_name in usermodel_dir:
@@ -565,7 +563,7 @@ def apply_optimizer(data, instance=None):
     solver_mngr_name = None
     if data.options.solvers[0].manager is None:
         solver_mngr_name = 'serial'
-    elif not data.options.solvers[0].manager in SolverManagerFactory.services():
+    elif not data.options.solvers[0].manager in SolverManagerFactory:
         raise ValueError("Unknown solver manager %s"
                          % data.options.solvers[0].manager)
     else:
