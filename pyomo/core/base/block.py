@@ -118,7 +118,35 @@ class _component_decorator(object):
             self._component, self._block, *args, **kwds)
 
 
+class SubclassOf(object):
+    """This mocks up a tuple-like interface based on subclass relationship.
+
+    Instances of this class present a somewhat tuple-like interface for
+    use in PseudoMap ctype / descend_into.  The constructor takes a
+    single ctype argument.  When used with PseudoMap (through Block APIs
+    like component_objects()), it will match any ctype that is a
+    subclass of the reference ctype.
+
+    This allows, for example:
+
+        model.component_data_objects(Var, descend_into=SubclassOf(Block))
+    """
+    def __init__(self, *ctype):
+        self.ctype = ctype
+        self.__name__ = 'SubclassOf(%s)' % (
+            ','.join(x.__name__ for x in ctype),)
+
+    def __contains__(self, item):
+        return issubclass(item, self.ctype)
+
+    def __len__(self):
+        return 1
+
+    def __getitem__(self, item):
+        return self
+
 class SortComponents(object):
+
     """
     This class is a convenient wrapper for specifying various sort
     ordering.  We pass these objects to the "sort" argument to various
@@ -224,226 +252,228 @@ class _BlockConstruction(object):
     data = {}
 
 
+class PseudoMap(object):
+    """
+    This class presents a "mock" dict interface to the internal
+    _BlockData data structures.  We return this object to the
+    user to preserve the historical "{ctype : {name : obj}}"
+    interface without actually regenerating that dict-of-dicts data
+    structure.
+
+    We now support {ctype : PseudoMap()}
+    """
+
+    __slots__ = ('_block', '_ctypes', '_active', '_sorted')
+
+    def __init__(self, block, ctype, active=None, sort=False):
+        """
+        TODO
+        """
+        self._block = block
+        if isclass(ctype):
+            self._ctypes = (ctype,)
+        else:
+            self._ctypes = ctype
+        self._active = active
+        self._sorted = SortComponents.sort_names(sort)
+
+    def __iter__(self):
+        """
+        TODO
+        """
+        return self.iterkeys()
+
+    def __getitem__(self, key):
+        """
+        TODO
+        """
+        if key in self._block._decl:
+            x = self._block._decl_order[self._block._decl[key]]
+            if self._ctypes is None or x[0].type() in self._ctypes:
+                if self._active is None or x[0].active == self._active:
+                    return x[0]
+        msg = ""
+        if self._active is not None:
+            msg += self._active and "active " or "inactive "
+        if self._ctypes is not None:
+            if len(self._ctypes) == 1:
+                msg += self._ctypes[0].__name__ + " "
+            else:
+                types = sorted(x.__name__ for x in self._ctypes)
+                msg += '%s or %s ' % (', '.join(types[:-1]), types[-1])
+        raise KeyError("%scomponent '%s' not found in block %s"
+                       % (msg, key, self._block.name))
+
+    def __nonzero__(self):
+        """
+        TODO
+        """
+        # Shortcut: this will bail after finding the first
+        # (non-None) item.  Note that we temporarily disable sorting
+        # -- otherwise, if this is a sorted PseudoMap the entire
+        # list will be walked and sorted before returning the first
+        # element.
+        sort_order = self._sorted
+        self._sorted = False
+        for x in itervalues(self):
+            self._sorted = sort_order
+            return True
+        self._sorted = sort_order
+        return False
+
+    __bool__ = __nonzero__
+
+    def __len__(self):
+        """
+        TODO
+        """
+        #
+        # If _active is None, then the number of components is
+        # simply the total of the counts of the ctypes that have
+        # been added.
+        #
+        if self._active is None:
+            if self._ctypes is None:
+                return sum(x[2] for x in itervalues(self._block._ctypes))
+            else:
+                return sum(self._block._ctypes.get(x, (0, 0, 0))[2]
+                           for x in self._block._ctypes
+                           if x in self._ctypes)
+        #
+        # If _active is True or False, then we have to count by brute force.
+        #
+        ans = 0
+        for x in itervalues(self):
+            ans += 1
+        return ans
+
+    def __contains__(self, key):
+        """
+        TODO
+        """
+        # Return True is the underlying Block contains the component
+        # name.  Note, if this Pseudomap soecifies a ctype or the
+        # active flag, we need to check that the underlying
+        # component matches those flags
+        if key in self._block._decl:
+            x = self._block._decl_order[self._block._decl[key]]
+            if self._ctypes is None or x[0].type() in self._ctypes:
+                return self._active is None or x[0].active == self._active
+        return False
+
+    def _ctypewalker(self):
+        """
+        TODO
+        """
+        # Note: since push/pop from the end of lists is slightly more
+        # efficient, we will reverse-sort so the next ctype index is
+        # at the end of the list.
+        _decl_order = self._block._decl_order
+        _idx_list = sorted((self._block._ctypes[x][0]
+                            for x in self._block._ctypes
+                            if x in self._ctypes),
+                           reverse=True)
+        while _idx_list:
+            _idx = _idx_list.pop()
+            while _idx is not None:
+                _obj, _next = _decl_order[_idx]
+                if _obj is not None:
+                    yield _obj
+                _idx = _next
+                if _idx is not None and _idx_list and _idx > _idx_list[-1]:
+                    _idx_list.append(_idx)
+                    _idx_list.sort(reverse=True)
+                    break
+
+    def iterkeys(self):
+        """
+        TODO
+        """
+        # Iterate over the PseudoMap keys (the component names) in
+        # declaration order
+        #
+        # Ironically, the values are the fundamental thing that we
+        # can (efficiently) iterate over in decl_order.  iterkeys
+        # just wraps itervalues.
+        for obj in self.itervalues():
+            yield obj._name
+
+    def itervalues(self):
+        """
+        TODO
+        """
+        # Iterate over the PseudoMap values (the component objects) in
+        # declaration order
+        _active = self._active
+        if self._ctypes is None:
+            # If there is no ctype, then we will just iterate over
+            # all components and return them all
+            if _active is None:
+                walker = (obj for obj, idx in self._block._decl_order
+                          if obj is not None)
+            else:
+                walker = (obj for obj, idx in self._block._decl_order
+                          if obj is not None and obj.active == _active)
+        else:
+            # The user specified a desired ctype; we will leverage
+            # the _ctypewalker generator to walk the underlying linked
+            # list and just return the desired objects (again, in
+            # decl order)
+            if _active is None:
+                walker = (obj for obj in self._ctypewalker())
+            else:
+                walker = (obj for obj in self._ctypewalker()
+                          if obj.active == _active)
+        # If the user wants this sorted by name, then there is
+        # nothing we can do to save memory: we must create the whole
+        # list (so we can sort it) and then iterate over the sorted
+        # temporary list
+        if self._sorted:
+            return (obj for obj in sorted(walker, key=lambda _x: _x.local_name))
+        else:
+            return walker
+
+    def iteritems(self):
+        """
+        TODO
+        """
+        # Ironically, the values are the fundamental thing that we
+        # can (efficiently) iterate over in decl_order.  iteritems
+        # just wraps itervalues.
+        for obj in self.itervalues():
+            yield (obj._name, obj)
+
+    def keys(self):
+        """
+        Return a list of dictionary keys
+        """
+        return list(self.iterkeys())
+
+    def values(self):
+        """
+        Return a list of dictionary values
+        """
+        return list(self.itervalues())
+
+    def items(self):
+        """
+        Return a list of (key, value) tuples
+        """
+        return list(self.iteritems())
+
+# In Python3, the items(), etc methods of dict-like things return
+# generator-like objects.
+if PY3:
+    PseudoMap.keys = PseudoMap.iterkeys
+    PseudoMap.values = PseudoMap.itervalues
+    PseudoMap.items = PseudoMap.iteritems
+
+
 class _BlockData(ActiveComponentData):
     """
     This class holds the fundamental block data.
     """
     _Block_reserved_words = set()
-
-    class PseudoMap(object):
-        """
-        This class presents a "mock" dict interface to the internal
-        _BlockData data structures.  We return this object to the
-        user to preserve the historical "{ctype : {name : obj}}"
-        interface without actually regenerating that dict-of-dicts data
-        structure.
-
-        We now support {ctype : PseudoMap()}
-        """
-
-        __slots__ = ('_block', '_ctypes', '_active', '_sorted')
-
-        def __init__(self, block, ctype, active=None, sort=False):
-            """
-            TODO
-            """
-            self._block = block
-            if isclass(ctype):
-                self._ctypes = (ctype,)
-            else:
-                self._ctypes = ctype
-            self._active = active
-            self._sorted = SortComponents.sort_names(sort)
-
-        def __iter__(self):
-            """
-            TODO
-            """
-            return self.iterkeys()
-
-        def __getitem__(self, key):
-            """
-            TODO
-            """
-            if key in self._block._decl:
-                x = self._block._decl_order[self._block._decl[key]]
-                if self._ctypes is None or x[0].type() in self._ctypes:
-                    if self._active is None or x[0].active == self._active:
-                        return x[0]
-            msg = ""
-            if self._active is not None:
-                msg += self._active and "active " or "inactive "
-            if self._ctypes is not None:
-                if len(self._ctypes) == 1:
-                    msg += self._ctypes[0].__name__ + " "
-                else:
-                    types = sorted(x.__name__ for x in self._ctypes)
-                    msg += '%s or %s ' % (', '.join(types[:-1]), types[-1])
-            raise KeyError("%scomponent '%s' not found in block %s"
-                           % (msg, key, self._block.name))
-
-        def __nonzero__(self):
-            """
-            TODO
-            """
-            # Shortcut: this will bail after finding the first
-            # (non-None) item.  Note that we temporarily disable sorting
-            # -- otherwise, if this is a sorted PseudoMap the entire
-            # list will be walked and sorted before returning the first
-            # element.
-            sort_order = self._sorted
-            self._sorted = False
-            for x in itervalues(self):
-                self._sorted = sort_order
-                return True
-            self._sorted = sort_order
-            return False
-
-        __bool__ = __nonzero__
-
-        def __len__(self):
-            """
-            TODO
-            """
-            #
-            # If _active is None, then the number of components is
-            # simply the total of the counts of the ctypes that have
-            # been added.
-            #
-            if self._active is None:
-                if self._ctypes is None:
-                    return sum(x[2] for x in itervalues(self._block._ctypes))
-                else:
-                    return sum(self._block._ctypes.get(x, (0, 0, 0))[2]
-                               for x in self._ctypes)
-            #
-            # If _active is True or False, then we have to count by brute force.
-            #
-            ans = 0
-            for x in itervalues(self):
-                ans += 1
-            return ans
-
-        def __contains__(self, key):
-            """
-            TODO
-            """
-            # Return True is the underlying Block contains the component
-            # name.  Note, if this Pseudomap soecifies a ctype or the
-            # active flag, we need to check that the underlying
-            # component matches those flags
-            if key in self._block._decl:
-                x = self._block._decl_order[self._block._decl[key]]
-                if self._ctypes is None or x[0].type() in self._ctypes:
-                    return self._active is None or x[0].active == self._active
-            return False
-
-        def _ctypewalker(self):
-            """
-            TODO
-            """
-            # Note: since push/pop from the end of lists is slightly more
-            # efficient, we will reverse-sort so the next ctype index is
-            # at the end of the list.
-            _decl_order = self._block._decl_order
-            _idx_list = sorted((self._block._ctypes[x][0]
-                                for x in self._ctypes
-                                if x in self._block._ctypes),
-                               reverse=True)
-            while _idx_list:
-                _idx = _idx_list.pop()
-                while _idx is not None:
-                    _obj, _next = _decl_order[_idx]
-                    if _obj is not None:
-                        yield _obj
-                    _idx = _next
-                    if _idx is not None and _idx_list and _idx > _idx_list[-1]:
-                        _idx_list.append(_idx)
-                        _idx_list.sort(reverse=True)
-                        break
-
-        def iterkeys(self):
-            """
-            TODO
-            """
-            # Iterate over the PseudoMap keys (the component names) in
-            # declaration order
-            #
-            # Ironically, the values are the fundamental thing that we
-            # can (efficiently) iterate over in decl_order.  iterkeys
-            # just wraps itervalues.
-            for obj in self.itervalues():
-                yield obj._name
-
-        def itervalues(self):
-            """
-            TODO
-            """
-            # Iterate over the PseudoMap values (the component objects) in
-            # declaration order
-            _active = self._active
-            if self._ctypes is None:
-                # If there is no ctype, then we will just iterate over
-                # all components and return them all
-                if _active is None:
-                    walker = (obj for obj, idx in self._block._decl_order
-                              if obj is not None)
-                else:
-                    walker = (obj for obj, idx in self._block._decl_order
-                              if obj is not None and obj.active == _active)
-            else:
-                # The user specified a desired ctype; we will leverage
-                # the _ctypewalker generator to walk the underlying linked
-                # list and just return the desired objects (again, in
-                # decl order)
-                if _active is None:
-                    walker = (obj for obj in self._ctypewalker())
-                else:
-                    walker = (obj for obj in self._ctypewalker()
-                              if obj.active == _active)
-            # If the user wants this sorted by name, then there is
-            # nothing we can do to save memory: we must create the whole
-            # list (so we can sort it) and then iterate over the sorted
-            # temporary list
-            if self._sorted:
-                return (obj for obj in sorted(walker, key=lambda _x: _x.local_name))
-            else:
-                return walker
-
-        def iteritems(self):
-            """
-            TODO
-            """
-            # Ironically, the values are the fundamental thing that we
-            # can (efficiently) iterate over in decl_order.  iteritems
-            # just wraps itervalues.
-            for obj in self.itervalues():
-                yield (obj._name, obj)
-
-        def keys(self):
-            """
-            Return a list of dictionary keys
-            """
-            return list(self.iterkeys())
-
-        def values(self):
-            """
-            Return a list of dictionary values
-            """
-            return list(self.itervalues())
-
-        def items(self):
-            """
-            Return a list of (key, value) tuples
-            """
-            return list(self.iteritems())
-
-    # In Python3, the items(), etc methods of dict-like things return
-    # generator-like objects.
-    if PY3:
-        PseudoMap.keys = PseudoMap.iterkeys
-        PseudoMap.values = PseudoMap.itervalues
-        PseudoMap.items = PseudoMap.iteritems
 
     def __init__(self, component):
         #
@@ -1184,7 +1214,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 True - Maps to Block.alphabetizeComponentAndIndex
                 False - Maps to Block.declarationOrder
         """
-        return _BlockData.PseudoMap(self, ctype, active, sort)
+        return PseudoMap(self, ctype, active, sort)
 
     def _component_typemap(self, ctype=None, active=None, sort=False):
         """
@@ -1203,10 +1233,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         if ctype is None:
             ans = {}
             for x in self._ctypes:
-                ans[x] = _BlockData.PseudoMap(self, x, active, sort)
+                ans[x] = PseudoMap(self, x, active, sort)
             return ans
         else:
-            return _BlockData.PseudoMap(self, ctype, active, sort)
+            return PseudoMap(self, ctype, active, sort)
 
     def _component_data_iter(self, ctype=None, active=None, sort=False):
         """
@@ -1214,7 +1244,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         and _ComponentData) for every component data in the block.
         """
         _sort_indices = SortComponents.sort_indices(sort)
-        _subcomp = _BlockData.PseudoMap(self, ctype, active, sort)
+        _subcomp = PseudoMap(self, ctype, active, sort)
         for name, comp in _subcomp.iteritems():
             # _NOTE_: Suffix has a dict interface (something other
             #         derived non-indexed Components may do as well),
@@ -1323,7 +1353,9 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         component data object in a block.  By default, this
         generator recursively descends into sub-blocks.  The
         tuple is
+
             ((component name, index value), _ComponentData)
+
         """
         if descend_into:
             block_generator = self.block_data_objects(
@@ -1361,7 +1393,9 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         This method returns a generator that iterates
         through the current block and recursively all
         sub-blocks.  This is semantically equivalent to
+
             component_data_objects(Block, ...)
+
         """
         if descend_into is False:
             if active is not None and self.active != active:
@@ -1428,7 +1462,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         method, which centralizes certain error checking and
         preliminaries.
         """
-        PM = _BlockData.PseudoMap(self, ctype, active, sort)
+        PM = PseudoMap(self, ctype, active, sort)
         _stack = [(self,).__iter__(), ]
         while _stack:
             try:
@@ -1551,18 +1585,20 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # that expected by a user.
         #
         import pyomo.core.base.component_order
-        items = pyomo.core.base.component_order.items + [Block]
+        items = list(pyomo.core.base.component_order.items)
+        items_set = set(items)
+        items_set.add(Block)
         #
         # Collect other model components that are registered
         # with the IModelComponent extension point.  These are appended
         # to the end of the list of the list.
         #
         dynamic_items = set()
-        #for item in [ModelComponentFactory.get_class(name).component for name in ModelComponentFactory]:
-        for item in [ModelComponentFactory.get_class(name) for name in ModelComponentFactory]:
-            if not item in items:
+        for item in self._ctypes:
+            if not item in items_set:
                 dynamic_items.add(item)
         # extra items get added alphabetically (so output is consistent)
+        items.append(Block)
         items.extend(sorted(dynamic_items, key=lambda x: x.__name__))
 
         for item in items:

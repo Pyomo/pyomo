@@ -1,0 +1,4 @@
+M = ConcreteModel()
+M.v = Var()
+
+e = M.v*2

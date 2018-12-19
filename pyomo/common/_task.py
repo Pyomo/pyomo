@@ -16,6 +16,7 @@ __all__ = ['pyomo_api', 'IPyomoTask', 'PyomoAPIFactory', 'PyomoAPIData']
 
 import inspect
 import logging
+import six
 from six import iteritems, with_metaclass
 
 import pyutilib.workflow
@@ -128,7 +129,7 @@ class PyomoTask(PyomoTaskPlugin):
         # Process data
         #
         data = self._kwds.get('data', None)
-        if not data is None and type(data) is dict:
+        if (data is not None) and (type(data) is dict):
             _data = PyomoAPIData()
             _data.update(data)
             self._kwds['data'] = _data
@@ -139,7 +140,7 @@ class PyomoTask(PyomoTaskPlugin):
         def nested_lookup(kwds, lookup):
             lookups = lookup.split('.')
             obj = kwds[lookups[0]]
-            if not data is None and lookups[0] == 'data':
+            if (data is not None) and (lookups[0] == 'data'):
                 data.declare(lookups[1])
             for key in lookups[1:]:
                 #print key, obj
@@ -165,7 +166,7 @@ class PyomoTask(PyomoTaskPlugin):
         #
         # Process retval
         #
-        if retval is None or id(data) == id(retval):
+        if (retval is None) or (id(data) == id(retval)):
             self._retval = PyomoAPIData(data=data)
         elif isinstance(retval, PyomoAPIData):
             if not id(data) == id(retval):
@@ -233,16 +234,30 @@ def pyomo_api(fn=None, implements=None, outputs=None, namespace=None):
             _alias =  namespace+'.'+fn.__name__
         _name = _alias.replace('_', '.')
 
-        argspec = inspect.getargspec(fn)
-        if not argspec.varargs is None:
+        if six.PY2:
+            argspec = inspect.getargspec(fn)
+            if argspec.keywords is not None:
+                logger.error("Attempting to declare Pyomo task with function "
+                             "'%s' that contains variable keyword arguments" % _alias)
+                return                                      #pragma:nocover
+        else:
+            argspec = inspect.getfullargspec(fn)
+            if argspec.varkw is not None:
+                logger.error("Attempting to declare Pyomo task with function "
+                             "'%s' that contains variable keyword arguments" % _alias)
+                return                                     #pragma:nocover
+            # Not supporting new keyword-only definitions until someone
+            # who maintains this code decides the code that uses argspec below here
+            # is worth updating. Note that this attribute is an empty list when
+            # there are not keyword-only arguments.
+            if argspec.kwonlyargs:
+                logger.error("Attempting to declare Pyomo task with function "
+                             "'%s' that contains keyword-only arguments" % _alias)
+                return                                      #pragma:nocover
+        if argspec.varargs is not None:
             logger.error("Attempting to declare Pyomo task with function "
                          "'%s' that contains variable arguments" % _alias)
             return                                      #pragma:nocover
-        if not argspec.keywords is None:
-            logger.error("Attempting to declare Pyomo task with function "
-                         "'%s' that contains variable keyword arguments" % _alias)
-            return                                      #pragma:nocover
-
         if _alias in PyomoAPIFactory.services():
             logger.error("Cannot define API %s, since this API name is already defined" % _alias)
             return                                      #pragma:nocover
@@ -260,7 +275,7 @@ def pyomo_api(fn=None, implements=None, outputs=None, namespace=None):
             def __init__(self, *args, **kwargs):
                 kwargs['fn'] = fn
                 PyomoTask.__init__(self, *args, **kwargs)
-                if not fn is None:
+                if fn is not None:
                     if len(argspec.args) is 0:
                         nargs = 0
                     elif argspec.defaults is None:

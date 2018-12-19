@@ -1,0 +1,25 @@
+OPTIONS {
+Summary: 0;
+}
+
+POSITIVE_VARIABLES ONE_VAR_CONST__;
+
+VARIABLES x1, x2;
+
+EQUATIONS c_e_FIX_ONE_VAR_CONST__, c1, c2, c3, c4, c5;
+
+c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
+c1: log(x1) == 0;
+c2: 0.434294481903 * log(x1) == 0;
+c3: exp(x2) == 1;
+c4: x1 ^ 0.5 == 1;
+c5: (x1 ^ 2) ^ 0.5 == 1;
+
+OBJ: minimize x1 + x2;
+
+STARTING_POINT{
+ONE_VAR_CONST__: 1;
+x1: 1;
+x2: 0;
+}
+

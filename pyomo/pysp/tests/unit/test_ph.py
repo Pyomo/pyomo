@@ -82,7 +82,10 @@ def filter_time_and_data_dirs(line):
            ("model_location: " in line) or \
            ("model_directory: " in line) or \
            ("scenario_tree_location: " in line) or \
-           ("instance_directory: " in line)
+           ("instance_directory: " in line) or \
+           line.startswith("Freeing MIP data") or \
+           line.startswith("Freeing QP data") or \
+           line.startswith("At least one sub-problem solve time was undefined")
 
 def filter_lagrange(line):
     return filter_time_and_data_dirs(line) or \
@@ -216,6 +219,7 @@ def _setUpClass(cls):
             test_solver_cases(_solver, _io).available:
             solver[_solver, _io] = True
 
+@unittest.category('nightly', 'performance')
 class TestPH(unittest.TestCase):
 
     @classmethod
@@ -373,7 +377,7 @@ class TestPH(unittest.TestCase):
             this_test_file_directory+"farmer_quadratic_ipopt.out",
             baseline_dir+"farmer_quadratic_ipopt.baseline",
             filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     def test_farmer_maximize_quadratic_gurobi(self):
         if not solver['gurobi','lp']:
@@ -416,6 +420,7 @@ class TestPH(unittest.TestCase):
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
+    @unittest.category('fragile')
     def test_farmer_with_integers_quadratic_gurobi(self):
         if not solver['gurobi','lp']:
             self.skipTest("The 'gurobi' executable is not available")
@@ -550,7 +555,7 @@ class TestPH(unittest.TestCase):
             this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.out",
             baseline_dir+"farmer_quadratic_trivial_bundling_ipopt.baseline",
             filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     def test_farmer_quadratic_basic_bundling_cplex(self):
         if not solver['cplex','lp']:
@@ -794,7 +799,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_ef.out",
-            baseline_dir+"farmer_ef.baseline.out",
+            baseline_dir+"farmer_ef.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -816,7 +821,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_maximize_ef.out",
-            baseline_dir+"farmer_maximize_ef.baseline.out",
+            baseline_dir+"farmer_maximize_ef.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -838,7 +843,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_piecewise_ef.out",
-            baseline_dir+"farmer_piecewise_ef.baseline.out",
+            baseline_dir+"farmer_piecewise_ef.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -986,13 +991,13 @@ class TestPH(unittest.TestCase):
                this_test_file_directory+"farmer_ef_with_solve_ipopt.out",
                baseline_dir+"farmer_ef_with_solve_ipopt_darwin.baseline",
                filter=filter_time_and_data_dirs,
-               tolerance=_diff_tolerance_relaxed)
+               tolerance=_diff_tolerance)
         else:
            self.assertFileEqualsBaseline(
                this_test_file_directory+"farmer_ef_with_solve_ipopt.out",
                baseline_dir+"farmer_ef_with_solve_ipopt.baseline",
                filter=filter_time_and_data_dirs,
-               tolerance=_diff_tolerance_relaxed)
+               tolerance=_diff_tolerance)
         self.assertTrue(os.path.exists(ef_output_file))
         os.remove(ef_output_file)
 
@@ -1011,7 +1016,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"hydro_ef.out",
-            baseline_dir+"hydro_ef.baseline.out",
+            baseline_dir+"hydro_ef.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -1033,7 +1038,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"sizes3_ef.out",
-            baseline_dir+"sizes3_ef.baseline.out",
+            baseline_dir+"sizes3_ef.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -1080,6 +1085,7 @@ class TestPH(unittest.TestCase):
         self.assertTrue(os.path.exists(ef_output_file))
         os.remove(ef_output_file)
 
+    @unittest.category('fragile')
     def test_sizes3_ef_with_solve_gurobi(self):
         if not solver['gurobi','lp']:
             self.skipTest("The 'gurobi' executable is not available")
@@ -1134,7 +1140,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"forestry_ef.out",
-            baseline_dir+"forestry_ef.baseline.out",
+            baseline_dir+"forestry_ef.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -1157,7 +1163,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"networkflow1ef10_ef.out",
-            baseline_dir+"networkflow1ef10_ef.baseline.out",
+            baseline_dir+"networkflow1ef10_ef.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -1179,7 +1185,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_ef_cvar.out",
-            baseline_dir+"farmer_ef_cvar.baseline.out",
+            baseline_dir+"farmer_ef_cvar.baseline.txt",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
@@ -1302,6 +1308,7 @@ class TestPH(unittest.TestCase):
             tolerance=_diff_tolerance)
         _remove(baseline_dir+"lagrange_pr_testPRmore.csv")
 
+@unittest.category('expensive', 'performance')
 class TestPHExpensive(unittest.TestCase):
 
     @classmethod
@@ -1841,6 +1848,7 @@ class TestPHExpensive(unittest.TestCase):
                 tolerance=_diff_tolerance)
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
+@unittest.category('parallel','performance')
 class TestPHParallel(unittest.TestCase):
 
     @classmethod
@@ -1854,7 +1862,7 @@ class TestPHParallel(unittest.TestCase):
 
     def tearDown(self):
         try:
-            [_poll(proc,running=False) for proc in self._taskworker_processes]
+            [_poll(proc) for proc in self._taskworker_processes]
         finally:
             [_kill(proc) for proc in self._taskworker_processes]
             self._taskworker_processes = []
@@ -1983,7 +1991,7 @@ class TestPHParallel(unittest.TestCase):
             this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out",
             baseline_dir+"farmer_quadratic_ipopt_with_pyro.baseline",
             filter=filter_pyro,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     @unittest.category('fragile')
     def test_farmer_quadratic_ipopt_with_phpyro(self):
@@ -2002,7 +2010,7 @@ class TestPHParallel(unittest.TestCase):
             this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out",
             baseline_dir+"farmer_quadratic_ipopt_with_phpyro.baseline",
             filter=filter_pyro,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     @unittest.category('fragile')
     def test_farmer_linearized_ipopt_with_phpyro(self):
@@ -2021,7 +2029,7 @@ class TestPHParallel(unittest.TestCase):
             this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out",
             baseline_dir+"farmer_linearized_ipopt_with_phpyro.baseline",
             filter=filter_pyro,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     @unittest.category('fragile')
     def test_farmer_quadratic_trivial_bundling_ipopt_with_phpyro(self):
@@ -2058,7 +2066,7 @@ class TestPHParallel(unittest.TestCase):
             this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out",
             baseline_dir+"farmer_quadratic_bundling_ipopt_with_phpyro.baseline",
             filter=filter_pyro,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     @unittest.category('fragile')
     def test_quadratic_sizes3_cplex_with_phpyro(self):
@@ -2247,7 +2255,7 @@ class TestPHParallel(unittest.TestCase):
             this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out",
             baseline_dir+"farmer_quadratic_async_ipopt_with_pyro.baseline",
             filter=filter_pyro,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
     def test_farmer_quadratic_async_gurobi_with_pyro(self):
@@ -2302,7 +2310,7 @@ class TestPHParallel(unittest.TestCase):
             this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out",
             baseline_dir+"farmer_linearized_async_ipopt_with_pyro.baseline",
             filter=filter_pyro,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     @unittest.category('fragile')
     def test_farmer_with_integers_linearized_cplex_with_phpyro(self):
@@ -2321,7 +2329,7 @@ class TestPHParallel(unittest.TestCase):
             this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out",
             baseline_dir+"farmer_with_integers_linearized_cplex_with_phpyro.baseline",
             filter=filter_pyro,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     # the primary objective of this test is to validate the bare minimum level of functionality on the PH solver server
     # end (solves and rho setting) - obviously should yield the same results as serial PH.
@@ -2580,10 +2588,6 @@ class TestPHParallel(unittest.TestCase):
             print(diffs_c)
             self.fail("Differences identified relative to all baseline output file alternatives")
         _remove(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out")
-
-TestPH = unittest.category('nightly','expensive','performance')(TestPH)
-TestPHExpensive = unittest.category('expensive','performance')(TestPHExpensive)
-TestPHParallel = unittest.category('parallel','performance')(TestPHParallel)
 
 if __name__ == "__main__":
     unittest.main()

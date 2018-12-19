@@ -17,18 +17,127 @@ from pyomo.core.expr.numvalue import \
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
-     _no_ctype)
+     _no_ctype,
+     _convert_ctype,
+     _convert_descend_into)
 from pyomo.core.kernel.block import block
 
 import six
 
-def generate_names(container,
-                   ctype=_no_ctype,
-                   active=None,
-                   convert=str,
-                   prefix=""):
+def preorder_traversal(node,
+                       ctype=_no_ctype,
+                       active=True,
+                       descend=True):
     """
-    Generate names relative to this container for all
+    A generator that yields each object in the storage tree
+    (including the root object) using a preorder traversal.
+
+    Args:
+        node: The root object.
+        ctype: Indicates the category of components to
+            include. The default value indicates that all
+            categories should be included.
+        active (:const:`True`/:const:`None`): Controls
+            whether or not to filter the iteration to
+            include only the active part of the storage
+            tree. The default is :const:`True`. Setting this
+            keyword to :const:`None` causes the active
+            status of objects to be ignored.
+        descend (bool, function): Controls if a container
+            object should be descended into during the
+            traversal. When a function is supplied, each
+            container object will be passed into it and the
+            return value will indicate if the traversal
+            continues into children of the
+            container. Default is True, which is equivalent
+            to `lambda x: True`.
+
+    Returns:
+        iterator of objects in the storage tree, including
+        the root object
+    """
+    assert active in (None, True)
+
+    # if not active, then nothing below is active
+    if (active is not None) and \
+       (not node.active):
+        return
+
+    # convert AML types into Kernel types (hack for the
+    # solver interfaces)
+    ctype = _convert_ctype.get(ctype, ctype)
+
+    # convert descend to a function
+    descend = _convert_descend_into(descend)
+
+    if (ctype is _no_ctype) or \
+       (node.ctype is ctype) or \
+       (node.ctype._is_heterogeneous_container):
+        yield node
+
+    if (not node._is_container) or \
+        (not descend(node)):
+        return
+
+    for child in node.children():
+        child_ctype = child.ctype
+        if not child._is_container:
+            # not a container
+            if (active is None) or \
+               child.active:
+                if (ctype is _no_ctype) or \
+                   (child_ctype is ctype):
+                    yield child
+        elif child._is_heterogeneous_container:
+            # a heterogeneous container, so use
+            # its traversal method
+            for obj in preorder_traversal(
+                    child,
+                    ctype=ctype,
+                    active=active,
+                    descend=descend):
+                yield obj
+        else:
+            # a homogeneous container
+            if child_ctype._is_heterogeneous_container:
+                # this function ensures that the user provided
+                # descend function is not called twice
+                # on heterogeneous containers
+                def descend_(obj_):
+                    if obj_._is_heterogeneous_container:
+                        return False
+                    else:
+                        return descend(obj_)
+                for obj in preorder_traversal(
+                        child,
+                        active=active,
+                        descend=descend_):
+                    if not obj._is_heterogeneous_container:
+                        yield obj
+                    else:
+                        # a heterogeneous container, so use
+                        # its traversal method and reapply the
+                        # ctype filter
+                        for item in preorder_traversal(
+                                obj,
+                                ctype=ctype,
+                                active=active,
+                                descend=descend):
+                            yield item
+            elif (ctype is _no_ctype) or \
+                 (child_ctype is ctype):
+                for obj in preorder_traversal(
+                        child,
+                        active=active,
+                        descend=descend):
+                    yield obj
+
+def generate_names(node,
+                   convert=str,
+                   prefix="",
+                   **kwds):
+    """
+    Generate names relative to this object for all
     objects stored under it.
 
     This function is useful in situations where names
@@ -36,63 +145,34 @@ def generate_names(container,
     dynamically regenerated each time.
 
     Args:
-        container: The container to generate names for.
-        ctype: Indicate the category of objects to
-            include. The default value indicates that all
-            types should be included.
-        active (:const:`True`/:const:`None`): Set to
-            :const:`True` to indicate that only active
-            components should be included. The default
-            value of :const:`None` indicates that all
-            components (including those that have been
-            deactivated) should be included. *Note*:
-            This flag is ignored for any objects that do
-            not have an active flag.
+        node: The root object below which names are
+            generated.
         convert (function): A function that converts a
             storage key into a string
             representation. Default is str.
         prefix (str): A string to prefix names with.
+        **kwds: Additional keywords passed to the
+            preorder_traversal function.
 
     Returns:
         A component map that behaves as a dictionary
         mapping objects to names.
     """
-    assert container._is_container
-    assert active in (None, True)
+    traversal = preorder_traversal(node, **kwds)
     names = ComponentMap()
 
-    # if not active, then nothing below is active
-    if (active is not None) and \
-       (not container.active):
-        return names
-
-    if not container._is_heterogeneous_container:
-        orig_parent = container._parent
-        orig_storage_key = container._storage_key
-        container._parent = None
-        container._storage_key = None
-        tmp = block()
-        tmp.container = container
-        traversal = tmp.preorder_traversal(
-            ctype=ctype,
-            active=active)
-        # skip the tmp root
+    # skip the root object
+    try:
         six.next(traversal)
-        container._parent = orig_parent
-        container._storage_key = orig_storage_key
-    else:
-        traversal = container.preorder_traversal(
-            ctype=ctype,
-            active=active)
-
-    # skip this container
-    six.next(traversal)
+    except StopIteration:
+        # might be an empty traversal
+        return names
 
     for obj in traversal:
         parent = obj.parent
         name = (parent._child_storage_entry_string
                 % convert(obj.storage_key))
-        if parent is not container:
+        if parent is not node:
             names[obj] = (names[parent] +
                           parent._child_storage_delimiter_string +
                           name)
@@ -144,7 +224,7 @@ def pprint(obj, indent=0, stream=sys.stdout):
                   % (str(obj), clsname, obj.active, str(obj.expr)))
         elif obj.ctype is pyomo.core.kernel.parameter.IParameter:
             stream.write(prefix+"%s: %s(active=%s, value=%s)\n"
-                  % (str(obj), clsname, obj.active, str(obj.value)))
+                  % (str(obj), clsname, obj.active, str(obj())))
         elif obj.ctype is pyomo.core.kernel.sos.ISOS:
             stream.write(prefix+"%s: %s(active=%s, level=%s, entries=%s)\n"
                   % (str(obj),
