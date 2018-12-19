@@ -376,7 +376,7 @@ class TestPH(unittest.TestCase):
             this_test_file_directory+"farmer_quadratic_ipopt.out",
             baseline_dir+"farmer_quadratic_ipopt.baseline",
             filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     def test_farmer_maximize_quadratic_gurobi(self):
         if not solver['gurobi','lp']:
@@ -553,7 +553,7 @@ class TestPH(unittest.TestCase):
             this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.out",
             baseline_dir+"farmer_quadratic_trivial_bundling_ipopt.baseline",
             filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     def test_farmer_quadratic_basic_bundling_cplex(self):
         if not solver['cplex','lp']:
@@ -989,13 +989,13 @@ class TestPH(unittest.TestCase):
                this_test_file_directory+"farmer_ef_with_solve_ipopt.out",
                baseline_dir+"farmer_ef_with_solve_ipopt_darwin.baseline",
                filter=filter_time_and_data_dirs,
-               tolerance=_diff_tolerance_relaxed)
+               tolerance=_diff_tolerance)
         else:
            self.assertFileEqualsBaseline(
                this_test_file_directory+"farmer_ef_with_solve_ipopt.out",
                baseline_dir+"farmer_ef_with_solve_ipopt.baseline",
                filter=filter_time_and_data_dirs,
-               tolerance=_diff_tolerance_relaxed)
+               tolerance=_diff_tolerance)
         self.assertTrue(os.path.exists(ef_output_file))
         os.remove(ef_output_file)
 
@@ -1986,7 +1986,7 @@ class TestPHParallel(unittest.TestCase):
             this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out",
             baseline_dir+"farmer_quadratic_ipopt_with_pyro.baseline",
             filter=filter_pyro,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     @unittest.category('fragile')
     def test_farmer_quadratic_ipopt_with_phpyro(self):
@@ -2005,7 +2005,7 @@ class TestPHParallel(unittest.TestCase):
             this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out",
             baseline_dir+"farmer_quadratic_ipopt_with_phpyro.baseline",
             filter=filter_pyro,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     @unittest.category('fragile')
     def test_farmer_linearized_ipopt_with_phpyro(self):
@@ -2024,7 +2024,7 @@ class TestPHParallel(unittest.TestCase):
             this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out",
             baseline_dir+"farmer_linearized_ipopt_with_phpyro.baseline",
             filter=filter_pyro,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     @unittest.category('fragile')
     def test_farmer_quadratic_trivial_bundling_ipopt_with_phpyro(self):
@@ -2061,7 +2061,7 @@ class TestPHParallel(unittest.TestCase):
             this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out",
             baseline_dir+"farmer_quadratic_bundling_ipopt_with_phpyro.baseline",
             filter=filter_pyro,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     @unittest.category('fragile')
     def test_quadratic_sizes3_cplex_with_phpyro(self):
@@ -2250,7 +2250,7 @@ class TestPHParallel(unittest.TestCase):
             this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out",
             baseline_dir+"farmer_quadratic_async_ipopt_with_pyro.baseline",
             filter=filter_pyro,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
     def test_farmer_quadratic_async_gurobi_with_pyro(self):
@@ -2305,7 +2305,7 @@ class TestPHParallel(unittest.TestCase):
             this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out",
             baseline_dir+"farmer_linearized_async_ipopt_with_pyro.baseline",
             filter=filter_pyro,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     @unittest.category('fragile')
     def test_farmer_with_integers_linearized_cplex_with_phpyro(self):
@@ -2324,7 +2324,7 @@ class TestPHParallel(unittest.TestCase):
             this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out",
             baseline_dir+"farmer_with_integers_linearized_cplex_with_phpyro.baseline",
             filter=filter_pyro,
-            tolerance=_diff_tolerance_relaxed)
+            tolerance=_diff_tolerance)
 
     # the primary objective of this test is to validate the bare minimum level of functionality on the PH solver server
     # end (solves and rho setting) - obviously should yield the same results as serial PH.
