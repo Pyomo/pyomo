@@ -6,9 +6,54 @@ Pyomo CHANGELOG
 Current Development
 -------------------------------------------------------------------------------
 
+- General
+  - Removing testing and support for Python 2.6 (#322)
+  - Adding TerminationCondition and SolverStatus to pyomo.environ (#429)
+  - Refactoring pyomo.util into pyomo.common for the general utilities that do
+    not depend on the rest of Pyomo, and the user-focused modeling utilities in
+    pyomo.util. (#502)
+    - New utilities: Model size report (#579), calculating variable
+      values (#763)
+  - Fix pyomo help -s command (#551)
+  - Fixes to avoid deprecation warnings (#760,#765)
+- Testing
+  - Resolved several build errors on Appveyor (#438,#539,#552,#577,#705)
+  - Reconfigured Travis CI to run tests using DockerHub images, work on PRs
+    from forks, run Python 3.7 (#479,#517,#600)
+  - Jenkins driver updates to fix errors when files are moved/renamed,
+    delete coverage info from previous builds, decode unicode in
+    booktests driver, test fixes, new drivers
+    (#627,#629,#630,#631,#704,#735,#772,#771,#786)
+- Core
+  - Adding the Pyomo5 expression system, which supports PyPy (#272,
+    #471, #475, #520, #524, #615)
+  - Optimizations to minimize use of NumericConstant objects (#469)
+  - Implemented a general-purpose expression visitor (#671)
+  - Resolved problems with ExternalFunctions with fixed arguments (#442)
+  - Add method to return F,G,H from AMPL external functions (#666,#668)
+  - Implicitly order Pyomo sets based on insertion order (#568)
+  - Efficiency improvements when processing unhashable indexes (#467)
+  - Fix for overriding values in IndexedSets (#710)
+  - unique_component_name now checks all attributes (not just components) (#497)
+  - Add support for sqrt function in differentiate() (#642)
+  - Move kernel util (#522)
+  - Adding relative_to argument for getname() (#495)
+  - Move PseudoMap out of _BlockData class (#778)
+  - Kernel updates (#761)
+  - Update symbolic differentiation to be compatible with sympy 1.3
+    and performance improvements (#715,#719)
+  - Silence invalid error messages logged with Template Expressions (#634)
+  - Add 'SubclassOf' to support finding components based on sub class (#723)
+  - Kernel updates simplifying handling of active status on containers,
+    save storage key on child, warn overwriting container index, fix
+    linear_canonical_form flag on linear_constraint (#569,#570,#571,#589,#598)
+  - Add Reference "component" (#655,#742)
+  - Replace PyUtilib factories with native Pyomo factories (#661)
+  - Transformations map create_using arguments through the model clone (#497)
+  - Implemented a scaling transformation (#694)
 - PySP updates
   - Python 3.7 support (#463)
-  - Fix bugs in finance example (#564,#578)
+  - Fix bugs in finance example (#564, #578)
   - Added a wrapper for PySP to create a scripting interace (#689,#727,#737)
   - Bug fixes (#736)
 - GDP updates
@@ -23,7 +68,7 @@ Current Development
   - Added support for external functions (#526)
   - Bugfix in Casadi interface (#544)
   - Code overhaul and improved test coverage (#660)
-- Documenation updates
+- Documentation and Examples
   - Converted old asciidoc documentation to Sphinx (#486,#574)
   - Scripting section updates (#543)
   - Document PR process (#628)
@@ -34,6 +79,8 @@ Current Development
   - Create more prominent section for documentation on contrib packages (#729)
   - Documentation updates (#748,#756,#777,#782)
   - Document pyomo.kernel (#767)
+  - Wrap Vars in value() for assignment to numpy vectors (#436)
+  - Updated README.md to include link for performance plots (#534)
 - GAMS writer updates
   - fix for power() expressions (#454)
   - fix for fixed variables (#510)
@@ -45,83 +92,41 @@ Current Development
   - Change writer ctype checking (#593,#641)
   - Fix double-operator due to negative constant (#698)
   - Fix Windows stdout compatibility issue (#779)
-- Removing testing and support for Python 2.6 (#322)
-- Resolved several build errors on Appveyor (#438,#539,#552,#577,#705)  
-- Wrap Vars in value() for assignment to numpy vectors (#436)
-- Adding TerminationCondition and SolverStatus to pyomo.environ (#429)
-- Resolved problems with ExternalFunctions with fixed arguments (#442)
-- Adding the Pyomo5 expression system, which supports PyPy (#272)
-- Efficiency improvements when processing unhashable indexes (#467)
-- Bug fix processing exp() expressions in Pyomo5 (#471)
-- Optimizations to minimize use of NumericConstant objects (#469)
-- Resolving scaling issue with Pyomo expressions (#475)
-- Resolving issue when path names with spaces appear in CPLEX run file (#485)
-- Adding relative_to argument for getname() (#495)
-- Refactoring pyomo.util into pyomo.common for the general utilities that do
-  not depend on the rest of Pyomo, and the user-focused modeling utilities in
-  pyomo.util. (#502)
-- Transformations map create_using arguments through the model clone (#497)
-- unique_component_name now checks all attributes (not just components) (#497)
-- Reconfigured Travis CI to run tests using DockerHub images, work on PRs 
-  from forks, run Python 3.7 (#479,#517,#600)
-- GDPopt updates to use config blocks, support integer variables,
-  documentation, callback renaming, new initialization strategy 
-  (#513,#541,#595,#599,#633,#650)
-- Remove imports from pyomo.core.expr to make expression system 
-  self-contained (#520)
-- Move kernel util (#522)
-- Removed coopr3 and pyomo4 expression logic (#524)
-- Preprocessing transformation for variable aggregation (#533)
-- Updated README.md to include link for performance plots (#534)
-- Updates to dualization and bilevel solvers (#535)
-- Update trustregion package for Pyomo5 expressions (#536) 
-- Fix pyomo help -s command (#551)
-- Implicitly order Pyomo sets based on insertion order (#568)
-- Kernel updates simplifying handling of active status on containers, 
-  save storage key on child, warn overwriting container index, fix
-  linear_canonical_form flag on linear_constraint (#569,#570,#571,#589,#598)
-- Corrected Ipopt capabilities (#573)
-- Model size report utility (#579)
-- Replaced Pyomo connector infrastructure with Pyomo.Network and 
-  added sequential modular simulation capability (#583,#648)
-- Fix for spaces in cplex file names (#586)
-- Fix to solver tempfiles (#590)
-- Prevent crash when solver returns suffixes but not values for 
-  variables (#596)
-- Create pyomo.dualize (#606)
-- Add pyomo.dataportal subpackage (#607)
-- More efficient string manipulation in LP writer (#610)
-- Make is_fixed describe 0*temp as a fixed expression (#615)
-- Preprocessiong transformation for induced linearity (#617)
-- Fix generation of bounds for fixed variables in LP writer (#623)
-- Jenkins driver updates to fix errors when files are moved/renamed, 
-  delete coverage info from previous builds, decode unicode in 
-  booktests driver, test fixes (#627,#629,#630,#631,#704,#735,#772,#771)
-- Silence invalid error messages logged with Template Expressions (#634)
-- Bugfix in Gurobi direct interface (#635)
-- Add support for sqrt function in differentiate() (#642)
-- Fix NEOS interface when behind a proxy in Python 3.x (#644) 
-- Add Reference "component" (#655,#742)
-- Replace PyUtilib factories with native Pyomo factories (#661)
-- Add method to return F,G,H from AMPL external functions (#666,#668)
-- Implemented a general-purpose expression visitor (#671)
-- Cythonized writers in pyomo.repn (#675)
-- Implemented a scaling transformation (#694)
-- Contributed ParmEst package for parameter estimation (#706,#733,#769,#781)
-- Fix for overriding values in IndexedSets (#710)
-- Update symbolic differentiation to be compatible with sympy 1.3
-  and performance improvements (#715,#719)
-- Add 'SubclassOf' to support finding components based on sub class (#723)
-- Contributed PyNumero package for numerical optimization (#725)
-- Fixed Baron writer sqrt error (#751)
-- Fixes to avoid deprecation warnings (#760,#765)
-- Kernel updates (#761)
-- Add a utility for calculating variable values (#763)
-- Move PseudoMap out of _BlockData class (#778)
-- Contributed package sensitivity_toolbox for interfacing with sIPOPT (#766)
-- Modify trust region code to use ConfigBlocks (#738)
-- Contributed PETSc AMPL wrapper (#774)
-- Update options for pymysql (#678)
+- Solver interfaces
+  - Resolving issue when path names with spaces appear in CPLEX run file (#485)
+  - Corrected Ipopt capabilities (#573)
+  - Fix for spaces in cplex file names (#586)
+  - Fix to solver tempfiles (#590)
+  - Prevent crash when solver returns suffixes but not values for
+    variables (#596)
+  - More efficient string manipulation in LP writer (#610)
+  - Fix generation of bounds for fixed variables in LP writer (#623)
+  - Bugfix in Gurobi direct interface (#635)
+  - Fix NEOS interface when behind a proxy in Python 3.x (#644)
+  - Cythonized writers in pyomo.repn (#675)
+  - Fixed Baron writer sqrt error (#751)
+- Contributed packages:
+  - Preprocessing transformation for variable aggregation (#533, #617)
+  - GDPopt updates to use config blocks, support integer variables,
+    documentation, callback renaming, new initialization strategy
+    (#513,#541,#595,#599,#633,#650)
+  - `contrib.trustregion`
+    - Update trust region package for Pyomo5 expressions (#536)
+    - Modify trust region code to use ConfigBlocks (#738, #785)
+  - Contributed ParmEst package for parameter estimation (#706,#733,#769,#781)
+  - Contributed PyNumero package for numerical optimization (#725)
+  - Contributed package sensitivity_toolbox for interfacing with sIPOPT (#766)
+  - Contributed PETSc AMPL wrapper (#774)
+- Network
+  - Replaced Pyomo connector infrastructure with Pyomo.Network and
+    added sequential modular simulation capability (#583,#648)
+- Bilevel:
+  - Create pyomo.dualize (#606)
+  - Updates to dualization and bilevel solvers (#535)
+- DataPortal:
+  - Add pyomo.dataportal subpackage (#607)
+  - Update options for pymysql (#678)
+
 
 -------------------------------------------------------------------------------
 Pyomo 5.5
