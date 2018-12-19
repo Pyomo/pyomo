@@ -1,0 +1,9 @@
+from pyomo.environ import *
+
+#---------------------------------------------
+M = ConcreteModel()
+M.v = Var()
+
+e = M.v*2
+print(e)
+

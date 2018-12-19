@@ -1,0 +1,22 @@
+from pyomo.core.expr import current as EXPR
+
+class CloneVisitor(EXPR.ExpressionValueVisitor):
+
+    def __init__(self):
+        self.memo = {'__block_scope__': { id(None): False }}
+
+    def visit(self, node, values):
+        #
+        # Clone the interior node
+        #
+        return node.construct_clone(tuple(values), self.memo)
+
+    def visiting_potential_leaf(self, node):
+        #
+        # Clone leaf nodes in the expression tree
+        #
+        if node.__class__ in native_numeric_types or\
+           node.__class__ not in pyomo5_expression_types:\
+            return True, copy.deepcopy(node, self.memo)
+
+        return False, None

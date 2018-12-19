@@ -16,6 +16,7 @@ __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
 __version__ = 1.5
 
 solvername = "ipopt" # could use almost any solver
+solver_available = pyo.SolverFactory(solvername).available(False)
 
 class Test_abstract_rapper(unittest.TestCase):
     """ Test the rapper code."""
@@ -54,7 +55,9 @@ class Test_abstract_rapper(unittest.TestCase):
                                       fsfct = None,
                                       tree_model = self.farmer_scenarioPath,
                                       phopts = None)
-        
+
+    @unittest.skipIf(not solver_available,
+                     "%s solver is not available" % (solvername,))
     def test_Abstract_ef(self):
         """ see if we can create the solver object for an AbstractModel"""
              

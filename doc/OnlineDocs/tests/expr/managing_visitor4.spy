@@ -1,0 +1,10 @@
+def clone_expression(expr):
+    #
+    # Create the visitor object
+    #
+    visitor = CloneVisitor()
+    #
+    # Clone the expression using the :func:`dfs_postorder_stack` 
+    # search method.
+    #
+    return visitor.dfs_postorder_stack(expr)

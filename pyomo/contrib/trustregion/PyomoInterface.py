@@ -1,3 +1,5 @@
+import logging
+
 import os
 import numpy as np
 from pyutilib.math import infinity
@@ -13,6 +15,8 @@ from pyomo.contrib.trustregion.GeometryGenerator import (
     generate_quadratic_rom_geometry
 )
 from pyomo.contrib.trustregion.helper import *
+
+logger = logging.getLogger('pyomo.contrib.trustregion')
 
 class ROMType:
     linear = 0
@@ -78,7 +82,7 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
         self.trf.exfn_xvars.append(new_args)
         return _y
 
-class PyomoInterface:
+class PyomoInterface(object):
     '''
     Initialize with a pyomo model m.
     This is used in TRF.py, same requirements for m apply
@@ -94,15 +98,14 @@ class PyomoInterface:
 
     '''
 
-    solver = 'ipopt'
-    solver_io = 'nl'
     stream_solver = False # True prints solver output to screen
     keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
     countDx = -1
     romtype = ROMType.linear
 
-    def __init__(self, m, eflist):
+    def __init__(self, m, eflist, config):
 
+        self.config = config
         self.model = m;
         self.TRF = self.transformForTrustRegion(self.model,eflist)
 
@@ -409,9 +412,8 @@ class PyomoInterface:
 
     def solveModel(self, x, y, z):
         model = self.model
-        opt = SolverFactory(self.solver, solver_io=self.solver_io)
-        opt.options['halt_on_ampl_error'] = 'yes'
-        opt.options['max_iter'] = 5000
+        opt = SolverFactory(self.config.solver)
+        opt.options.update(self.config.solver_options)
 
         results = opt.solve(
             model, keepfiles=self.keepfiles, tee=self.stream_solver)
@@ -538,9 +540,10 @@ class PyomoInterface:
         gfnorm = sqrt(sum(x[1]**2 for x in g))
 
 
-        opt = SolverFactory(self.solver, solver_io=self.solver_io)
-        opt.options['halt_on_ampl_error'] = 'yes'
-        opt.options['max_iter'] = 5000
+        opt = SolverFactory(self.config.solver)
+        opt.options.update(self.config.solver_options)
+        #opt.options['halt_on_ampl_error'] = 'yes'
+        #opt.options['max_iter'] = 5000
         results = opt.solve(
             l, keepfiles=self.keepfiles, tee=self.stream_solver)
 

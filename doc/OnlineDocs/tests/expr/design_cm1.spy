@@ -1,0 +1,10 @@
+M = ConcreteModel()
+M.x = Var(range(5))
+
+s = 0
+for i in range(5):
+    s += M.x[i]
+
+with linear_expression() as e:
+    for i in range(5):
+        e += M.x[i]

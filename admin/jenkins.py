@@ -72,7 +72,8 @@ if config == "notests":
     driver.perform_install('pyomo', config='pyomo_all.ini')
 
 elif config == "default":
-    driver.perform_build('pyomo', coverage=True, omit=coverage_omit, config='pyomo_all.ini')
+    driver.perform_build('pyomo', coverage=True, omit=coverage_omit,
+                         config='pyomo_all.ini')
 
 elif config == "core":
     # Install
@@ -108,16 +109,25 @@ elif config == "core":
 elif config == "nonpysp":
     os.environ['TEST_PACKAGES'] = ' '.join(
         x for x in pyomo_packages if x != 'pyomo.pysp' )
-    driver.perform_build('pyomo', coverage=True, omit=coverage_omit, config='pyomo_all.ini')
+    driver.perform_build('pyomo', coverage=True, omit=coverage_omit,
+                         config='pyomo_all.ini')
+
+elif config == "fragile":
+    driver.perform_build('pyomo', coverage=True, omit=coverage_omit,
+                         config='pyomo_all.ini', cat='fragile')
+
+elif config == "nonfragile":
+    driver.perform_build('pyomo', coverage=True, omit=coverage_omit,
+                         config='pyomo_all.ini', cat='!fragile')
 
 elif config == "parallel":
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800' # 30 minutes
-    driver.perform_build('pyomo', cat='parallel', coverage=True, omit=coverage_omit, config='pyomo_all.ini')
+    driver.perform_build('pyomo', coverage=True, omit=coverage_omit,
+                         config='pyomo_all.ini', cat='parallel')
 
 elif config == "expensive":
-    driver.perform_build('pyomo',
-        cat='expensive', coverage=True, omit=coverage_omit,
-        virtualenv_args=sys.argv[1:])
+    driver.perform_build('pyomo',coverage=True, omit=coverage_omit,
+                         cat='expensive', virtualenv_args=sys.argv[1:])
 
 elif config == "booktests" or config == "book":
     # Install

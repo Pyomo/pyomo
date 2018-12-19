@@ -1,0 +1,9 @@
+M = ConcreteModel()
+M.p = Param(initialize=3)
+M.q = 1/M.p
+M.x = Var(range(100))
+
+# The value M.q is cloned every time it is used.
+e = 0
+for i in range(100):
+    e = e + M.x[i]*M.q

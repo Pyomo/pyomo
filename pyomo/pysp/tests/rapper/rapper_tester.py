@@ -17,6 +17,7 @@ __date__ = 'August 14, 2017'
 __version__ = 1.4
 
 solvername = "ipopt" # could use almost any solver
+solver_available = pyo.SolverFactory(solvername).available(False)
 
 class Testrapper(unittest.TestCase):
     """ Test the rapper code."""
@@ -84,6 +85,8 @@ class Testrapper(unittest.TestCase):
                                           fsfct = "pysp_instance_creation_callback",
                                           tree_model = None)
 
+    @unittest.skipIf(not solver_available,
+                     "%s solver is not available" % (solvername,))
     def test_ef_solve(self):
         """ solve the ef and check some post solution code"""
         stsolver = rapper.StochSolver("ReferenceModel.py",
@@ -98,6 +101,8 @@ class Testrapper(unittest.TestCase):
         self.assertAlmostEqual(varval, 170.0, 1)
         obj = stsolver.root_E_obj()
             
+    @unittest.skipIf(not solver_available,
+                     "%s solver is not available" % (solvername,))
     def test_ef_solve_with_gap(self):
         """ solve the ef and report gap"""
         stsolver = rapper.StochSolver("ReferenceModel.py",
@@ -105,6 +110,8 @@ class Testrapper(unittest.TestCase):
                                 tree_model = self.farmer_concrete_tree)
         res, gap = stsolver.solve_ef(solvername, tee=True, need_gap=True)
 
+    @unittest.skipIf(not solver_available,
+                     "%s solver is not available" % (solvername,))
     def test_ph_solve(self):
         """ use ph"""
         phopts = {'--max-iterations': '2'}

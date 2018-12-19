@@ -638,16 +638,25 @@ use the AbstractModel or ConcreteModel class instead.""")
         Create a concrete instance of an abstract model, possibly using data
         read in from a file.
 
-        Optional:
-            filename:           The name of a Pyomo Data File that will be used
-                                    to load data into the model.
-            data:               A dictionary containing initialization data for
-                                    the model to be used if there is no filename
-            name:               The name given to the model.
-            namespace:          A namespace used to select data.
-            namespaces:         A list of namespaces used to select data.
-            profile_memory:     A number that indicates the profiling level.
-            report_timing:      Report timing statistics during construction.
+        Parameters
+        ----------
+        filename: `str`, optional           
+            The name of a Pyomo Data File that will be used to load data into 
+            the model.
+        data: `dict`, optional
+            A dictionary containing initialization data for the model to be 
+            used if there is no filename
+        name: `str`, optional
+            The name given to the model.
+        namespace: `str`, optional          
+            A namespace used to select data.
+        namespaces: `list`, optional   
+            A list of namespaces used to select data.
+        profile_memory: `int`, optional    
+            A number that indicates the profiling level.
+        report_timing: `bool`, optional     
+            Report timing statistics during construction.
+
         """
         #
         # Generate a warning if this is a concrete model but the

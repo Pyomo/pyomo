@@ -1,0 +1,12 @@
+M = ConcreteModel()
+M.x = Var(range(100))
+
+# This loop is fast.
+e = 0
+for i in range(100):
+    e = e + M.x[i]
+
+# This loop is slow.
+e = 0
+for i in range(100):
+    e = M.x[i] + e
