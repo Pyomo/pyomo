@@ -3,13 +3,14 @@ from __future__ import division
 
 from math import copysign, fabs
 
+from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
+from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc
 from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,
                         minimize, value)
 from pyomo.core.base.symbolic import differentiate
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.contrib.gdpopt.util import time_code
 
 
 def add_outer_approximation_cuts(nlp_result, solve_data, config):
@@ -27,7 +28,8 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
         # TODO some kind of special handling if the dual is phenomenally small?
         config.logger.debug('Adding OA cuts.')
 
-        nonlinear_constraints = ComponentSet(GDPopt.working_nonlinear_constraints)
+        nonlinear_constraints = ComponentSet(
+            GDPopt.working_nonlinear_constraints)
         counter = 0
         if not hasattr(GDPopt, 'jacobians'):
             GDPopt.jacobians = ComponentMap()
@@ -82,6 +84,57 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
             counter += 1
 
         config.logger.info('Added %s OA cuts' % counter)
+
+
+def add_affine_cuts(nlp_result, solve_data, config):
+    m = solve_data.linear_GDP
+    config.logger.info("Adding affine cuts.")
+    GDPopt = m.GDPopt_utils
+    for var, val in zip(GDPopt.working_var_list, nlp_result.var_values):
+        if val is not None and not var.fixed:
+            var.value = val
+
+    for constr in constraints_in_True_disjuncts(m, config):
+        # for constr in GDPopt.working_nonlinear_constraints:
+
+        if constr not in GDPopt.working_nonlinear_constraints:
+            continue
+
+        # if constr.body.polynomial_degree() in (1, 0):
+        #     continue
+
+        # TODO check that constraint is on active Disjunct
+
+        vars_in_constr = list(
+            EXPR.identify_variables(constr.body))
+        if any(var.value is None for var in vars_in_constr):
+            continue  # a variable has no values
+
+        # mcpp stuff
+        mc_eqn = mc(constr.body)
+        ccSlope = mc_eqn.subcc()
+        cvSlope = mc_eqn.subcv()
+        ccStart = mc_eqn.concave()
+        cvStart = mc_eqn.convex()
+        ub_int = min(constr.upper, mc_eqn.upper()) if constr.has_ub() else mc_eqn.upper()
+        lb_int = max(constr.lower, mc_eqn.lower()) if constr.has_lb() else mc_eqn.lower()
+
+        parent_block = constr.parent_block()
+        # Create a block on which to put outer approximation cuts.
+        aff_utils = parent_block.component('GDPopt_aff')
+        if aff_utils is None:
+            aff_utils = parent_block.GDPopt_aff = Block(
+                doc="Block holding affine constraints")
+            aff_utils.GDPopt_aff_cons = ConstraintList()
+        aff_cuts = aff_utils.GDPopt_aff_cons
+        concave_cut = sum(ccSlope[var] * (var - var.value)
+                          for var in vars_in_constr
+                          ) + ccStart >= lb_int
+        convex_cut = sum(cvSlope[var] * (var - var.value)
+                         for var in vars_in_constr
+                         ) + cvStart <= ub_int
+        aff_cuts.add(expr=concave_cut)
+        aff_cuts.add(expr=convex_cut)
 
 
 def add_integer_cut(var_values, solve_data, config, feasible=False):
