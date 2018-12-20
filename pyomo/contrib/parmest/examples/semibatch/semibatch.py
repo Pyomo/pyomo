@@ -1,7 +1,9 @@
-# This file contains the semibatch model and callback. Data is loaded from 
-# files in the callback.
-
-import re
+"""
+Semibatch model, based on Nicholson et al. (2018). pyomo.dae: A modeling and 
+automatic discretization framework for optimization with di
+erential and 
+algebraic equations. Mathematical Programming Computation, 10(2), 187-223.
+"""
 import json
 from pyomo.environ import *
 from pyomo.dae import *
@@ -195,82 +197,17 @@ def generate_model(data):
     disc.apply_to(m, nfe=20, ncp=4)
     return m
 
-# Number of scenarios
-scenarios = 10
-
-def pysp_scenario_tree_model_callback():
-    from pyomo.pysp.scenariotree.tree_structure_model \
-        import CreateConcreteTwoStageScenarioTreeModel
-
-    st_model = CreateConcreteTwoStageScenarioTreeModel(scenarios)
-
-    first_stage = st_model.Stages.first()
-    second_stage = st_model.Stages.last()
-
-    # First Stage
-    st_model.StageCost[first_stage] = 'FirstStageCost'
-    st_model.StageVariables[first_stage].add('k1')
-    st_model.StageVariables[first_stage].add('k2')
-    st_model.StageVariables[first_stage].add('E1')
-    st_model.StageVariables[first_stage].add('E2')
-
-    # Second Stage
-    st_model.StageCost[second_stage] = 'SecondStageCost'
-    # st_model.StageVariables[second_stage].add('Ca[*]')
-    # st_model.StageVariables[second_stage].add('Cb[*]')
-    # st_model.StageVariables[second_stage].add('Cc[*]')
-    # st_model.StageVariables[second_stage].add('Tr[*]')
-    #st_model.StageVariables[second_stage].add('QuantitySuperQuotaSold[*]')
-    #st_model.StageVariables[second_stage].add('QuantityPurchased[*]')
-
-    return st_model
-
-
-def pysp_instance_creation_callback(scenario_tree_model,
-                                    scenario_name,
-                                    node_names):
-
-    exp_num = int(re.compile(r'(\d+)$').search(scenario_name).group(1))
-    """
-    # Experiments with measurement noise
-    # exp_num = [1,2,3] # Different step changes in control inputs
-    # exp_num = [4,5,6] # Different concentration initial conditions
-
-    # Experiments with errors in model parameters
-    # exp_num = [7, 9, 11, 13]  # No noise
-    # exp_num = [8, 10, 12, 14]  # With noise
-    """
-    fname = 'exp'+str(exp_num)+'.out'
-    with open(fname,'r') as infile:
-        data = json.load(infile)
-    data['experiment'] = exp_num
-        
-    model = generate_model(data)
-
-    # see about fixing theta
-    """ now done in parmest
-    if hasattr(scenario_tree_model, "ThetaVals"):
-        thetavals = scenario_tree_model.ThetaVals
-
-        # TBD Dec 2017, dlw: indexed theta
-        for vstr in thetavals:
-            if thetavals[vstr] is not None:
-                #print ("Fixing",vstr,"at",str(thetavals[vstr]))
-                getattr(model, vstr).fix(thetavals[vstr])
-            else:
-                #print ("Freeing",vstr)
-                getattr(model, vstr).fixed = False
-    """
-    
-    return model
 
 if __name__ == '__main__':
-
-    model = pysp_instance_creation_callback(None, 'foo2', None)
+    
+    # Data loaded from files
+    fname = 'exp2.out'
+    with open(fname,'r') as infile:
+        data = json.load(infile)
+    data['experiment'] = 2
+        
+    model = generate_model(data)
     solver = SolverFactory('ipopt')
     solver.solve(model)
-    model.display()
-    model.pprint()
     print('k1 = ', model.k1())
     print('E1 = ', model.E1())
-    

@@ -96,16 +96,33 @@ def _add_gaussian_kde_CI(x,y,color,label,columns,ncells,alpha,kde_dist,theta_sta
     Z = Z.reshape((ncells, ncells))
     ax.contour(X,Y,Z, levels=[alpha], colors='r') 
 
-def _add_SSE_contour(x,y,color,label,columns,SSE,compare):
+def _add_LR_contour(x,y,color,label,columns,LR,compare):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
     
-    x = SSE[xvar]
-    y = SSE[yvar]
-    z = SSE['SSE']
+    x = LR[xvar]
+    y = LR[yvar]
+    z = LR['obj']
     triang = tri.Triangulation(x, y)
     plt.tricontour(triang,z,[compare], colors='r') 
       
+def _set_axis_limits(g, axis_limits, theta_est):
+    
+    if axis_limits is None:
+        axis_limits = {}
+        for col in theta_est.columns:
+            theta_range = np.abs(theta_est[col].max() - theta_est[col].min())
+            axis_limits[col] = [theta_est[col].min() - theta_range/4, 
+                                theta_est[col].max() + theta_range/4]
+    for ax in g.fig.get_axes():
+        xvar, yvar, (xloc, yloc) = _get_variables(ax,theta_est.columns)
+        if xloc != yloc: # not on diagonal
+            ax.set_ylim(axis_limits[yvar])
+            ax.set_xlim(axis_limits[xvar])
+        else:
+            ax.set_xlim(axis_limits[xvar])
+            
+            
 def pairwise_plot(theta_est, theta_star=None, axis_limits=None, filename=None):
     """
     Plot pairwise relationship for theta estimates.
@@ -114,7 +131,7 @@ def pairwise_plot(theta_est, theta_star=None, axis_limits=None, filename=None):
     ----------
     theta_est: `pandas DataFrame` (columns = variable names)
         Theta estimates.  If the DataFrame contains column names 
-        'samples' or 'SSE', these columns will not be included in the plot.
+        'samples' or 'obj', these columns will not be included in the plot.
     theta_star: `dict` or `pandas Series` (index = variable names)
         Theta*
     axis_limits: `dict` or `pandas Series` (optional)
@@ -124,8 +141,8 @@ def pairwise_plot(theta_est, theta_star=None, axis_limits=None, filename=None):
     """
     if 'samples' in theta_est.columns:
         theta_est = theta_est.drop('samples', axis=1)
-    if 'SSE' in theta_est.columns:
-        theta_est = theta_est.drop('SSE', axis=1)
+    if 'obj' in theta_est.columns:
+        theta_est = theta_est.drop('obj', axis=1)
     if isinstance(theta_star, dict):
         theta_star = pd.Series(theta_star)
 
@@ -137,26 +154,23 @@ def pairwise_plot(theta_est, theta_star=None, axis_limits=None, filename=None):
     g.map_upper(_add_scatter, columns=columns, theta_star=theta_star)
     g.map_lower(_add_scatter, columns=columns, theta_star=theta_star)
 
-    if axis_limits is not None:
-        for ax in g.fig.get_axes():
-            xvar, yvar, (xloc, yloc) = _get_variables(ax,columns)
-            if xloc != yloc: # not on diagonal
-                ax.set_ylim(axis_limits[yvar])
-                ax.set_xlim(axis_limits[xvar])
-
-    if filename is not None:
+    _set_axis_limits(g, axis_limits, theta_est)
+    
+    if filename is None:
+        plt.show()
+    else:
         plt.savefig(filename)
 
-def pairwise_likelihood_ratio_plot(theta_SSE, objval, alpha, S, 
+def pairwise_likelihood_ratio_plot(theta_LR, objval, alpha, S, 
                                    axis_limits=None, filename=None):
     """
     Plot pairwise relationship for each variable, filtered by chi-squared
-    alpha test using the sum of the squared error for each entry.
+    alpha test using the objective for each entry.
     
     Parameters
     ----------
-    theta_SSE: `pandas DataFrame` (columns = variable names plus SSE) 
-        Sum of squared errors for each estimate of theta (returned by 
+    theta_LR: `pandas DataFrame` (columns = variable names plus obj) 
+        Objective for each estimate of theta (returned by 
         parmest.likelihood_ratio).
     objval: `float`
         Objective value for theta star
@@ -168,11 +182,15 @@ def pairwise_likelihood_ratio_plot(theta_SSE, objval, alpha, S,
         Axis limits in the format {variable: [min, max]}        
     filename: `string` (optional)
         Filename used to save the figure
+        
+    Returns
+    -----------
+    Theta values filtered by chi-squared alpha test 
     """  
     chi2_val = stats.chi2.ppf(alpha, 2)
     compare = objval * ((chi2_val / (S - 2)) + 1)
-    alpha_region = theta_SSE[theta_SSE['SSE'] < compare]
-    theta_est = alpha_region.drop("SSE", axis=1)
+    alpha_region = theta_LR[theta_LR['obj'] < compare]
+    theta_est = alpha_region.drop('obj', axis=1)
     
     if axis_limits is None:
         axis_limits = {}
@@ -185,19 +203,17 @@ def pairwise_likelihood_ratio_plot(theta_SSE, objval, alpha, S,
     g = sns.PairGrid(theta_est)
     g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False)
 
+    g.map_upper(_add_LR_contour, columns=columns, LR=theta_LR, compare=compare)
     g.map_upper(_add_scatter, columns=columns)
 
-    g.map_lower(_add_SSE_contour, columns=columns, SSE=theta_SSE, compare=compare)
+    g.map_lower(_add_LR_contour, columns=columns, LR=theta_LR, compare=compare)
     g.map_lower(_add_scatter, columns=columns)
 
-    if axis_limits is not None:
-        for ax in g.fig.get_axes():
-            xvar, yvar, (xloc, yloc) = _get_variables(ax,columns)
-            if xloc != yloc: # not on diagonal
-                ax.set_ylim(axis_limits[yvar])
-                ax.set_xlim(axis_limits[xvar])
+    _set_axis_limits(g, axis_limits, theta_est)
 
-    if filename is not None:
+    if filename is None:
+        plt.show()
+    else:
         plt.savefig(filename)
     
     return alpha_region
@@ -250,22 +266,25 @@ def pairwise_bootstrap_plot(theta_est, theta_star, alpha, axis_limits=None,
     #g.map_diag(sns.distplot, fit=stats.norm, hist=False,  fit_kws={'color': 'b'}) #, kde=False, norm_hist=False) # histogram and kde estimate
     #g.map_diag(sns.kdeplot) #, color='r')
 
-    g.map_upper(_add_scatter, columns=columns, theta_star=theta_star)
     g.map_lower(_add_scatter, columns=columns, theta_star=theta_star)
-
     g.map_lower(_add_rectangle_CI, columns=columns, alpha=alpha)
     g.map_lower(_add_multivariate_normal_CI, columns=columns, ncells=ncells, 
                 alpha=mvn_score, mvn_dist=mvn_dist, theta_star=theta_star)
     g.map_lower(_add_gaussian_kde_CI, columns=columns, ncells=ncells, 
                 alpha=kde_score, kde_dist=kde_dist, theta_star=theta_star)
+    
+    g.map_upper(_add_scatter, columns=columns, theta_star=theta_star)
+    g.map_upper(_add_rectangle_CI, columns=columns, alpha=alpha)
+    g.map_upper(_add_multivariate_normal_CI, columns=columns, ncells=ncells, 
+                alpha=mvn_score, mvn_dist=mvn_dist, theta_star=theta_star)
+    g.map_upper(_add_gaussian_kde_CI, columns=columns, ncells=ncells, 
+                alpha=kde_score, kde_dist=kde_dist, theta_star=theta_star)
 
-    if axis_limits is not None:
-        for ax in g.fig.get_axes():
-            xvar, yvar, (xloc, yloc) = _get_variables(ax,columns)
-            if xloc != yloc: # not on diagonal
-                ax.set_ylim(axis_limits[yvar])
-                ax.set_xlim(axis_limits[xvar])
-    if filename is not None:
+    _set_axis_limits(g, axis_limits, theta_est)
+
+    if filename is None:
+        plt.show()
+    else:
         plt.savefig(filename)
-        
+    
     return mvn_dist, kde_dist

@@ -1,6 +1,6 @@
 """
-Continuously stirred tank reactor example
-Modified from pyomo\examples\doc\pyomobook\nonlinear-ch\react_design\ReactorDesign.py
+Continuously stirred tank reactor model, based on
+pyomo\examples\doc\pyomobook\nonlinear-ch\react_design\ReactorDesign.py
 """
 from pyomo.environ import *
 from pyomo.core import *
