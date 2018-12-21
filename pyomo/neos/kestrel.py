@@ -176,7 +176,7 @@ class kestrelAMPL:
         sys.stdout.write("Job %d submitted to NEOS, password='%s'\n" %
                          (jobNumber,password))
         sys.stdout.write("Check the following URL for progress report :\n")
-        sys.stdout.write(urlscheme+"://www.neos-server.org/neos/cgi-bin/nph-neos-solver.cgi?admin=results&jobnumber=%d&pass=%s\n" % (jobNumber,password))
+        sys.stdout.write(NEOS.scheme+"://www.neos-server.org/neos/cgi-bin/nph-neos-solver.cgi?admin=results&jobnumber=%d&pass=%s\n" % (jobNumber,password))
         return (jobNumber,password)
 
     def getJobAndPassword(self):

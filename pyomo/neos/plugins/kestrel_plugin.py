@@ -14,8 +14,10 @@ import six
 
 from six.moves.xmlrpc_client import ProtocolError
 
-from pyomo.opt.parallel.manager import *
-from pyomo.opt.parallel.async_solver import *
+from pyomo.opt import SolverFactory, SolverManagerFactory, OptSolver
+from pyomo.opt.parallel.async_solver import (
+    AsynchronousSolverManager, ActionStatus
+)
 from pyomo.opt.base import OptSolver
 from pyomo.core.base import Block
 import pyomo.neos.kestrel
@@ -218,7 +220,6 @@ class SolverManager_NEOS(AsynchronousSolverManager):
 
                 solver_results._smap_id = smap_id
                 self.results[ah.id] = solver_results
-                opt.deactivate()
 
                 if isinstance(args[0], Block):
                     _model = args[0]
