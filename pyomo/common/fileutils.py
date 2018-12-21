@@ -30,6 +30,16 @@ def thisFile():
         return callerFrame[1]
     return os.path.abspath(inspect.getfile(callerFrame[0]))
 
+
+def thisFileDir():
+    """Returns the directory containing the module that calls this function.
+    """
+    return os.path.dirname(thisFile())
+
+
+PYOMO_ROOT_DIR = os.path.dirname(os.path.dirname(thisFileDir()))
+
+
 def find_file(fname, cwd=True, mode=os.R_OK, ext=None, pathlist=[]):
     """Locate a file, given a set of search parameters
 
@@ -59,7 +69,7 @@ def find_file(fname, cwd=True, mode=os.R_OK, ext=None, pathlist=[]):
 
     extlist = ['']
     if ext:
-        if isinstence(ext, six.string_types):
+        if isinstance(ext, six.string_types):
             extlist.append(ext)
         else:
             extlist.extend(ext)
