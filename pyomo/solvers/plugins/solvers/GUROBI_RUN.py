@@ -60,15 +60,18 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     # Handle Gurobi environment options
 
     env_class = {
-        None: Env,
+        None: None,
         'Env': Env,
         'CloudEnv': Env.CloudEnv,
         'ClientEnv': Env.ClientEnv,
         'OtherEnv': Env.OtherEnv,
     }[options.get('env_type', None)]
 
-    if 'env_options' in options:
-        env = env_class(*options['env_options'])
+    if env_class is not None:
+        if 'env_options' in options:
+            env = env_class(*options['env_options'])
+        else:
+            env = env_class()
     else:
         env = None
 
