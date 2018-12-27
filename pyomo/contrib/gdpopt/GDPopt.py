@@ -25,7 +25,7 @@ from pyomo.opt.base import SolverFactory
 from pyomo.opt.results import SolverResults
 from pyutilib.misc import Container
 
-__version__ = (0, 5, 0)
+__version__ = (18, 12, 25)  # Move to date-based versioning.
 
 
 @SolverFactory.register(
