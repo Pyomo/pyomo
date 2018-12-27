@@ -229,7 +229,12 @@ class GDPoptSolver(object):
             if config.tee and old_logger_level > logging.INFO:
                 # If the logger does not already include INFO, include it.
                 config.logger.setLevel(logging.INFO)
-            config.logger.info("---Starting GDPopt---")
+            config.logger.info(
+                "---Starting GDPopt version %s using %s---"
+                % (self.version(), config.strategy)
+            )
+            solve_data.results.solver.name = 'GDPopt %s - %s' % (
+                str(self.version()), config.strategy)
 
             solve_data.original_model = model
 
@@ -248,8 +253,6 @@ class GDPoptSolver(object):
             build_ordered_component_lists(
                 solve_data.working_model, solve_data, prefix='working')
             record_working_model_statistics(solve_data, config)
-            solve_data.results.solver.name = 'GDPopt %s - %s' % (
-                str(self.version()), config.strategy)
 
             # Save model initial values. These are used later to initialize NLP
             # subproblems.

@@ -50,10 +50,7 @@ class SuppressInfeasibleWarning(LoggingIntercept):
 
 
 def model_is_valid(solve_data, config):
-    """Validate that the model is solveable by GDPopt.
-
-    Also preforms some preprocessing such as moving the objective to the
-    constraints.
+    """Validate that the model is solvable by GDPopt.
 
     """
     m = solve_data.working_model
