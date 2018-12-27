@@ -17,7 +17,7 @@ from pyomo.contrib.gdpopt.util import (
     _DoNothing, a_logger, build_ordered_component_lists, copy_var_list_values,
     create_utility_block, model_is_valid, process_objective,
     record_original_model_statistics, record_working_model_statistics,
-    reformulate_integer_variables, restore_logger_level, time_code
+    restore_logger_level, time_code
 )
 from pyomo.core.base import ConstraintList, value
 from pyomo.core.kernel.component_map import ComponentMap
@@ -230,8 +230,8 @@ class GDPoptSolver(object):
                 # If the logger does not already include INFO, include it.
                 config.logger.setLevel(logging.INFO)
             config.logger.info(
-                "---Starting GDPopt version %s using %s---"
-                % (self.version(), config.strategy)
+                "---Starting GDPopt version %s using %s algorithm---"
+                % (".".join(map(str, self.version())), config.strategy)
             )
             solve_data.results.solver.name = 'GDPopt %s - %s' % (
                 str(self.version()), config.strategy)
