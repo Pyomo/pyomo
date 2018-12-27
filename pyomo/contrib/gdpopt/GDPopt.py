@@ -240,8 +240,7 @@ class GDPoptSolver(object):
 
             solve_data.current_strategy = config.strategy
 
-            # Reformulate integer variables to binary
-            reformulate_integer_variables(solve_data.working_model, config)
+            # Move objective function into the constraints
             process_objective(solve_data, config)
 
             # Save ordered lists of main modeling components, so that data can
