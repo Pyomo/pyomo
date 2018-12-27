@@ -344,67 +344,6 @@ def record_working_model_statistics(solve_data, config, util_block_name='GDPopt_
          now_continuous))
 
 
-def reformulate_integer_variables(model, config):
-    integer_vars = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v.is_integer() and not v.fixed)
-    if len(integer_vars) == 0:
-        return  # if no free integer variables, no reformulation needed.
-
-    if config.reformulate_integer_vars_using is None:
-        config.logger.warning(
-            "Model contains unfixed integer variables. "
-            "GDPopt will reformulate using base 2 binary variables "
-            "by default. To specify a different method, see the "
-            "reformulate_integer_vars_using configuration option.")
-        config.reformulate_integer_vars_using = 'base2_binary'
-
-    config.logger.info(
-        "Reformulating integer variables using the %s strategy."
-        % config.reformulate_integer_vars_using)
-
-    # Set up reformulation block
-    reform_block = model.GDPopt_utils.integer_reform = Block(
-        doc="Holds variables and constraints for reformulating "
-        "integer variables to binary variables.")
-    reform_block.new_binary_var = Var(
-        Any, domain=Binary, dense=False,
-        doc="Binary variable with index (int_var.name, indx)")
-    reform_block.integer_to_binary_constraint = Constraint(
-        Any, doc="Equality constraints mapping the binary variable values "
-        "to the integer variable value.")
-
-    # check that variables are bounded and non-negative
-    for int_var in integer_vars:
-        if not (int_var.has_lb() and int_var.has_ub()):
-            raise ValueError(
-                "Integer variable %s is missing an "
-                "upper or lower bound. LB: %s; UB: %s. "
-                "GDPopt does not support unbounded integer variables."
-                % (int_var.name, int_var.lb, int_var.ub))
-        if int_var.lb < 0:
-            raise ValueError(
-                "Integer variable %s can be negative. "
-                "GDPopt currently only supports positive integer "
-                "variables." % (int_var.name)
-            )
-        # do the reformulation
-        highest_power = floor(log(value(int_var.ub), 2))
-        var_name = int_var.name
-        reform_block.integer_to_binary_constraint.add(
-            var_name, expr=int_var == sum(
-                reform_block.new_binary_var[var_name, pwr] * (2 ** pwr)
-                for pwr in range(0, int(highest_power) + 1)))
-        int_var.domain = NonNegativeReals
-
-    config.logger.info(
-        "Reformulated %s integer variables using "
-        "%s binary variables and %s constraints."
-        % (len(integer_vars), len(reform_block.new_binary_var),
-           len(reform_block.integer_to_binary_constraint)))
-
-
 def validate_disjunctions(model, config):
     """Validate that the active disjunctions on the model are satisfied
     by the current disjunct indicator_var values."""
