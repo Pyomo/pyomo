@@ -104,8 +104,6 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     # key is specified, so you have to stare at the
     # output to see if it was accepted.
     for key, value in options.items():
-        if key in ['ISV_Key']:  # ISV_Key not supported by Gurobi
-            continue
 
         # When options come from the pyomo command, all
         # values are string types, so we try to cast
