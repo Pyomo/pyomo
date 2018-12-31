@@ -7,8 +7,8 @@ from __future__ import division
 from math import fabs
 
 from pyomo.contrib.gdpopt.cut_generation import (
-    add_affine_cuts, add_integer_cut, add_outer_approximation_cuts
-)
+    add_affine_cuts, add_integer_cut, add_outer_approximation_cuts,
+    add_subproblem_cuts)
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.nlp_solve import solve_global_NLP, solve_local_NLP, solve_disjunctive_subproblem
 from pyomo.contrib.gdpopt.util import _DoNothing
@@ -31,17 +31,6 @@ def GDPopt_initialize_master(solve_data, config):
     if not hasattr(m, 'dual'):  # Set up dual value reporting
         m.dual = Suffix(direction=Suffix.IMPORT)
     m.dual.activate()
-
-    # Set up solve functions
-    solve_data.mip_solve_function = solve_linear_GDP
-    if config.strategy == 'LOA':
-        solve_data.nlp_solve_function = solve_local_NLP
-        solve_data.cut_generation_function = add_outer_approximation_cuts
-        solve_data.integer_cut_function = add_integer_cut
-    elif config.strategy == 'GLOA':
-        solve_data.nlp_solve_function = solve_global_NLP
-        solve_data.cut_generation_function = add_affine_cuts
-        solve_data.integer_cut_function = add_integer_cut
 
     # Set up the linear GDP model
     solve_data.linear_GDP = m.clone()
@@ -83,15 +72,12 @@ def init_custom_disjuncts(solve_data, config):
         ):
             if orig_disj in active_disjunct_set:
                 clone_disj.indicator_var.fix(1)
-        mip_result = solve_data.mip_solve_function(
-            linear_GDP, solve_data, config)
+        mip_result = solve_linear_GDP(linear_GDP, solve_data, config)
         if mip_result.feasible:
-            nlp_result = solve_data.nlp_solve_function(
-                mip_result.var_values, solve_data, config)
+            nlp_result = solve_disjunctive_subproblem(mip_result, solve_data, config)
             if nlp_result.feasible:
-                solve_data.cut_generation_function(
-                    nlp_result, solve_data, config)
-            solve_data.integer_cut_function(
+                add_subproblem_cuts(nlp_result, solve_data, config)
+            add_integer_cut(
                 mip_result.var_values, solve_data,
                 config, feasible=nlp_result.feasible)
         else:
@@ -113,13 +99,12 @@ def init_fixed_disjuncts(solve_data, config):
         "solving subproblem with original user-specified disjunct values.")
     linear_GDP = solve_data.linear_GDP.clone()
     TransformationFactory('gdp.fix_disjuncts').apply_to(linear_GDP)
-    mip_result = solve_data.mip_solve_function(linear_GDP, solve_data, config)
+    mip_result = solve_linear_GDP(linear_GDP, solve_data, config)
     if mip_result.feasible:
-        nlp_result = solve_data.nlp_solve_function(
-            mip_result.var_values, solve_data, config)
+        nlp_result = solve_disjunctive_subproblem(mip_result, solve_data, config)
         if nlp_result.feasible:
-            solve_data.cut_generation_function(nlp_result, solve_data, config)
-        solve_data.integer_cut_function(
+            add_subproblem_cuts(nlp_result, solve_data, config)
+        add_integer_cut(
             mip_result.var_values, solve_data, config,
             feasible=nlp_result.feasible)
     else:
@@ -152,16 +137,13 @@ def init_max_binaries(solve_data, config):
         expr=sum(binary_vars), sense=maximize)
 
     # Solve
-    mip_results = solve_data.mip_solve_function(linear_GDP, solve_data, config)
+    mip_results = solve_linear_GDP(linear_GDP, solve_data, config)
     if mip_results.feasible:
-        nlp_result = solve_data.nlp_solve_function(
-            mip_results.var_values, solve_data, config)
+        nlp_result = solve_disjunctive_subproblem(mip_results, solve_data, config)
         if nlp_result.feasible:
-            solve_data.cut_generation_function(
-                nlp_result, solve_data, config)
-        solve_data.integer_cut_function(
-            mip_results.var_values, solve_data, config,
-            feasible=nlp_result.feasible)
+            add_subproblem_cuts(nlp_result, solve_data, config)
+        add_integer_cut(mip_results.var_values, solve_data, config,
+                        feasible=nlp_result.feasible)
     else:
         config.logger.info(
             "Linear relaxation for initialization was infeasible. "
@@ -217,7 +199,7 @@ def init_set_covering(solve_data, config):
                 (needed_cover and not was_active)
                 for (needed_cover, was_active) in zip(disjunct_needs_cover,
                                                       active_disjuncts))
-            solve_data.cut_generation_function(subprob_result, solve_data, config)
+            add_subproblem_cuts(subprob_result, solve_data, config)
         add_integer_cut(
             mip_result.var_values, solve_data, config,
             feasible=subprob_result.feasible)

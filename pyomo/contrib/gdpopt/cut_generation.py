@@ -13,6 +13,13 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 
 
+def add_subproblem_cuts(subprob_result, solve_data, config):
+    if config.strategy == "LOA":
+        return add_outer_approximation_cuts(subprob_result, solve_data, config)
+    elif config.strategy == "GLOA":
+        return add_affine_cuts(subprob_result, solve_data, config)
+
+
 def add_outer_approximation_cuts(nlp_result, solve_data, config):
     """Add outer approximation cuts to the linear GDP model."""
     with time_code(solve_data.timing, 'OA cut generation'):
