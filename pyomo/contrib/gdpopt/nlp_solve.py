@@ -23,6 +23,8 @@ def solve_disjunctive_subproblem(mip_result, solve_data, config):
     else:
         if config.strategy == "LOA":
             return solve_local_subproblem(mip_result, solve_data, config)
+        elif config.strategy == 'GLOA':
+            return solve_global_subproblem(mip_result, solve_data, config)
 
 
 def solve_NLP(nlp_model, solve_data, config):
@@ -349,6 +351,61 @@ def solve_local_subproblem(mip_result, solve_data, config):
     else:
         subprob_result = solve_MINLP(subprob, solve_data, config)
     if subprob_result.feasible:  # subproblem is feasible
+        update_subproblem_progress_indicators(subprob, solve_data, config)
+    return subprob_result
+
+
+def solve_global_subproblem(mip_result, solve_data, config):
+    subprob = solve_data.working_model.clone()
+    solve_data.nlp_iteration += 1
+
+    # copy in the discrete variable values
+    for disj, val in zip(subprob.GDPopt_utils.disjunct_list,
+                         mip_result.disjunct_values):
+        rounded_val = int(round(val))
+        if (fabs(val - rounded_val) > config.integer_tolerance or
+                rounded_val not in (0, 1)):
+            raise ValueError(
+                "Disjunct %s indicator value %s is not "
+                "within tolerance %s of 0 or 1." %
+                (disj.name, val.value, config.integer_tolerance)
+            )
+        else:
+            if config.round_discrete_vars:
+                disj.indicator_var.fix(rounded_val)
+            else:
+                disj.indicator_var.fix(val)
+
+    if config.force_subproblem_nlp:
+        # We also need to copy over the discrete variable values
+        for var, val in zip(subprob.GDPopt_utils.variable_list,
+                            mip_result.mip_var_values):
+            if var.is_continuous():
+                continue
+            rounded_val = int(round(val))
+            if fabs(val - rounded_val) > config.integer_tolerance:
+                raise ValueError(
+                    "Discrete variable %s value %s is not "
+                    "within tolerance %s of %s." %
+                    (var.name, var.value, config.integer_tolerance, rounded_val))
+            else:
+                # variable is binary and within tolerances
+                if config.round_discrete_vars:
+                    var.fix(rounded_val)
+                else:
+                    var.fix(val)
+
+    TransformationFactory('gdp.fix_disjuncts').apply_to(subprob)
+    subprob.dual.deactivate()  # global solvers may not give dual info
+
+    unfixed_discrete_vars = detect_unfixed_discrete_vars(subprob)
+    if config.force_subproblem_nlp and len(unfixed_discrete_vars) > 0:
+        raise RuntimeError("Unfixed discrete variables found on the NLP subproblem.")
+    elif len(unfixed_discrete_vars) == 0:
+        subprob_result = solve_NLP(subprob, solve_data, config)
+    else:
+        subprob_result = solve_MINLP(subprob, solve_data, config)
+    if subprob_result.feasible:  # NLP is feasible
         update_subproblem_progress_indicators(subprob, solve_data, config)
     return subprob_result
 

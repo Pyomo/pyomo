@@ -96,7 +96,7 @@ def add_affine_cuts(nlp_result, solve_data, config):
     for constr in constraints_in_True_disjuncts(m, config):
         # for constr in GDPopt.working_nonlinear_constraints:
 
-        if constr not in GDPopt.working_nonlinear_constraints:
+        if constr.body.polynomial_degree() in (1, 0):
             continue
 
         # if constr.body.polynomial_degree() in (1, 0):
