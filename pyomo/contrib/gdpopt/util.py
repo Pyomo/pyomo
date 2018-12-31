@@ -6,7 +6,7 @@ from math import fabs, floor, log
 
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
                         Objective, Reals, Var, minimize, value)
-from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.current import identify_variables
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory
@@ -15,6 +15,7 @@ from six import StringIO
 from pyomo.common.log import LoggingIntercept
 import timeit
 from contextlib import contextmanager
+from pyomo.util.model_size import build_model_size_report
 
 
 class _DoNothing(object):
@@ -99,24 +100,25 @@ def process_objective(solve_data, config):
         raise ValueError('Model has multiple active objectives.')
     else:
         main_obj = objs[0]
-    solve_data.working_objective_expr = main_obj.expr
+    solve_data.results.problem.sense = main_obj.sense
+    solve_data.objective_sense = main_obj.sense
 
     # Move the objective to the constraints
 
     # TODO only move the objective if nonlinear?
-    GDPopt.objective_value = Var(domain=Reals, initialize=0)
-    solve_data.objective_sense = main_obj.sense
-    if main_obj.sense == minimize:
-        GDPopt.objective_expr = Constraint(
-            expr=GDPopt.objective_value >= main_obj.expr)
-        solve_data.results.problem.sense = ProblemSense.minimize
-    else:
-        GDPopt.objective_expr = Constraint(
-            expr=GDPopt.objective_value <= main_obj.expr)
-        solve_data.results.problem.sense = ProblemSense.maximize
-    main_obj.deactivate()
-    GDPopt.objective = Objective(
-        expr=GDPopt.objective_value, sense=main_obj.sense)
+    # GDPopt.objective_value = Var(domain=Reals, initialize=0)
+    # solve_data.objective_sense = main_obj.sense
+    # if main_obj.sense == minimize:
+    #     GDPopt.objective_expr = Constraint(
+    #         expr=GDPopt.objective_value >= main_obj.expr)
+    #     solve_data.results.problem.sense = ProblemSense.minimize
+    # else:
+    #     GDPopt.objective_expr = Constraint(
+    #         expr=GDPopt.objective_value <= main_obj.expr)
+    #     solve_data.results.problem.sense = ProblemSense.maximize
+    # main_obj.deactivate()
+    # GDPopt.objective = Objective(
+    #     expr=GDPopt.objective_value, sense=main_obj.sense)
 
 
 def a_logger(str_or_logger):
@@ -195,32 +197,20 @@ def is_feasible(model, config):
         # Check variable lower bound
         if (var.has_lb() and
                 value(var.lb) - value(var) >= config.variable_tolerance):
-            config.logger.info('%s: %s < LB %s' % (
+            config.logger.info('%s: value %s < LB %s' % (
                 var.name, value(var), value(var.lb)))
             return False
         # Check variable upper bound
         if (var.has_ub() and
                 value(var) - value(var.ub) >= config.variable_tolerance):
-            config.logger.info('%s: %s > UB %s' % (
+            config.logger.info('%s: value %s > UB %s' % (
                 var.name, value(var), value(var.ub)))
             return False
     config.logger.info('Model is feasible.')
     return True
 
 
-# def clone_orig_model_with_lists(original_model, solve_data):
-#     """Clones the original model to create a working model.
-#
-#     Also attaches ordered lists of the variables, constraints, disjuncts, and
-#     disjunctions to the model so that they can be used for mapping back and
-#     forth.
-#
-#     """
-#     build_ordered_component_lists(original_model, solve_data, prefix='orig')
-#     return original_model.clone()
-
-
-def build_ordered_component_lists(model, solve_data, prefix='working'):
+def build_ordered_component_lists(model, solve_data):
     """Define lists used for future data transfer.
 
     Also attaches ordered lists of the variables, constraints, disjuncts, and
@@ -231,33 +221,33 @@ def build_ordered_component_lists(model, solve_data, prefix='working'):
     util_blk = getattr(model, solve_data.util_block_name)
     var_set = ComponentSet()
     setattr(
-        util_blk, '%s_constraints_list' % prefix, list(
+        util_blk, 'constraint_list', list(
             model.component_data_objects(
                 ctype=Constraint, active=True,
                 descend_into=(Block, Disjunct))))
     setattr(
-        util_blk, '%s_disjuncts_list' % prefix, list(
+        util_blk, 'disjunct_list', list(
             model.component_data_objects(
                 ctype=Disjunct, descend_into=(Block, Disjunct))))
     setattr(
-        util_blk, '%s_disjunctions_list' % prefix, list(
+        util_blk, 'disjunction_list', list(
             model.component_data_objects(
                 ctype=Disjunction, active=True,
                 descend_into=(Disjunct, Block))))
 
     # Identify the non-fixed variables in (potentially) active constraints and
     # objective functions
-    for constr in getattr(util_blk, '%s_constraints_list' % prefix):
-        for v in EXPR.identify_variables(constr.body, include_fixed=False):
+    for constr in getattr(util_blk, 'constraint_list'):
+        for v in identify_variables(constr.body, include_fixed=False):
             var_set.add(v)
     for obj in model.component_data_objects(ctype=Objective, active=True):
-        for v in EXPR.identify_variables(obj.expr, include_fixed=False):
+        for v in identify_variables(obj.expr, include_fixed=False):
             var_set.add(v)
     # Disjunct indicator variables might not appear in active constraints. In
     # fact, if we consider them Logical variables, they should not appear in
     # active algebraic constraints. For now, they need to be added to the
     # variable set.
-    for disj in getattr(util_blk, '%s_disjuncts_list' % prefix):
+    for disj in getattr(util_blk, 'disjunct_list'):
         var_set.add(disj.indicator_var)
 
     # We use component_data_objects rather than list(var_set) in order to
@@ -266,16 +256,10 @@ def build_ordered_component_lists(model, solve_data, prefix='working'):
         v for v in model.component_data_objects(
             ctype=Var, descend_into=(Block, Disjunct))
         if v in var_set)
-    setattr(util_blk, '%s_var_list' % prefix, var_list)
-    setattr(util_blk, '%s_binary_vars' % prefix, list(
-        v for v in var_list if v.domain == Binary))
-    setattr(
-        util_blk, '%s_nonlinear_constraints' % prefix, [
-            v for v in getattr(util_blk, '%s_constraints_list' % prefix)
-            if v.body.polynomial_degree() not in (0, 1)])
+    setattr(util_blk, 'variable_list', var_list)
 
 
-def record_original_model_statistics(solve_data, config, util_block_name='GDPopt_utils'):
+def setup_results_object(solve_data, config, util_block_name='GDPopt_utils'):
     """Record problem statistics for original model."""
     # Create the solver results object
     res = solve_data.results
@@ -292,53 +276,28 @@ def record_original_model_statistics(solve_data, config, util_block_name='GDPopt
     res.solver.wallclock_time = None
     res.solver.termination_message = None
 
-    # Classify the variables
-    orig_binary = sum(1 for v in origUtilBlock.orig_var_list if v.is_binary())
-    orig_continuous = sum(
-        1 for v in origUtilBlock.orig_var_list if v.is_continuous())
-    orig_integer = sum(1 for v in origUtilBlock.orig_var_list if v.is_integer())
+    num_of = build_model_size_report(solve_data.original_model)
 
     # Get count of constraints and variables
-    prob.number_of_constraints = len(origUtilBlock.orig_constraints_list)
-    prob.number_of_disjunctions = len(origUtilBlock.orig_disjunctions_list)
-    prob.number_of_variables = len(origUtilBlock.orig_var_list)
-    prob.number_of_binary_variables = orig_binary
-    prob.number_of_continuous_variables = orig_continuous
-    prob.number_of_integer_variables = orig_integer
+    prob.number_of_constraints = num_of.activated.constraints
+    prob.number_of_disjunctions = num_of.activated.disjunctions
+    prob.number_of_variables = num_of.activated.variables
+    prob.number_of_binary_variables = num_of.activated.binary_variables
+    prob.number_of_continuous_variables = num_of.activated.continuous_variables
+    prob.number_of_integer_variables = num_of.activated.integer_variables
 
     config.logger.info(
         "Original model has %s constraints (%s nonlinear) "
         "and %s disjunctions, "
         "with %s variables, of which %s are binary, %s are integer, "
         "and %s are continuous." %
-        (prob.number_of_constraints,
-         len(origUtilBlock.orig_nonlinear_constraints),
-         prob.number_of_disjunctions,
-         prob.number_of_variables,
-         orig_binary,
-         orig_integer,
-         orig_continuous))
-
-
-def record_working_model_statistics(solve_data, config, util_block_name='GDPopt_utils'):
-    """Record problem statistics for preprocessed model."""
-    util_blk = solve_data.working_model.component(util_block_name)
-    now_binary = sum(1 for v in util_blk.working_var_list if v.is_binary())
-    now_continuous = sum(
-        1 for v in util_blk.working_var_list if v.is_continuous())
-    now_integer = sum(1 for v in util_blk.working_var_list if v.is_integer())
-    assert now_integer == 0, "Unreformulated, unfixed integer variables found."
-
-    config.logger.info(
-        "After preprocessing, model has %s constraints (%s nonlinear) "
-        "and %s disjunctions, "
-        "with %s variables, of which %s are binary and %s are continuous." %
-        (len(util_blk.working_constraints_list),
-         len(util_blk.working_nonlinear_constraints),
-         len(util_blk.working_disjunctions_list),
-         len(util_blk.working_var_list),
-         now_binary,
-         now_continuous))
+        (num_of.activated.constraints,
+         num_of.activated.nonlinear_constraints,
+         num_of.activated.disjunctions,
+         num_of.activated.variables,
+         num_of.activated.binary_variables,
+         num_of.activated.integer_variables,
+         num_of.activated.continuous_variables))
 
 
 def validate_disjunctions(model, config):
@@ -359,31 +318,6 @@ def validate_disjunctions(model, config):
                 "Expected disjunct values to add up to at least 1 for "
                 "OR disjunction %s. "
                 "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
-
-
-def copy_and_fix_mip_values_to_nlp(var_list, val_list, config):
-    """Copy MIP solution values to the corresponding NLP variable list.
-
-    Fix binary variables and optionally round their values.
-
-    """
-    for var, val in zip(var_list, val_list):
-        if val is None:
-            continue
-        if not var.is_binary():
-            var.value = val
-        elif ((fabs(val) > config.integer_tolerance and
-               fabs(val - 1) > config.integer_tolerance)):
-            raise ValueError(
-                "Binary variable %s value %s is not "
-                "within tolerance %s of 0 or 1." %
-                (var.name, var.value, config.integer_tolerance))
-        else:
-            # variable is binary and within tolerances
-            if config.round_NLP_binaries:
-                var.fix(int(round(val)))
-            else:
-                var.fix(val)
 
 
 def constraints_in_True_disjuncts(model, config):
@@ -433,6 +367,10 @@ def create_utility_block(model, name, solve_data):
         setattr(model, name, Block(
             doc="Container for GDPopt solver utility modeling objects"))
         solve_data.util_block_name = name
+
+        # Save ordered lists of main modeling components, so that data can
+        # be easily transferred between future model clones.
+        build_ordered_component_lists(model, solve_data)
     yield
     if created_util_block:
         model.del_component(name)

@@ -18,24 +18,22 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
     with time_code(solve_data.timing, 'OA cut generation'):
         m = solve_data.linear_GDP
         GDPopt = m.GDPopt_utils
-        sign_adjust = -1 if GDPopt.objective.sense == minimize else 1
+        sign_adjust = -1 if solve_data.objective_sense == minimize else 1
 
         # copy values over
-        for var, val in zip(GDPopt.working_var_list, nlp_result.var_values):
+        for var, val in zip(GDPopt.variable_list, nlp_result.var_values):
             if val is not None and not var.fixed:
                 var.value = val
 
         # TODO some kind of special handling if the dual is phenomenally small?
         config.logger.debug('Adding OA cuts.')
 
-        nonlinear_constraints = ComponentSet(
-            GDPopt.working_nonlinear_constraints)
         counter = 0
         if not hasattr(GDPopt, 'jacobians'):
             GDPopt.jacobians = ComponentMap()
-        for constr, dual_value in zip(GDPopt.working_constraints_list,
+        for constr, dual_value in zip(GDPopt.constraint_list,
                                       nlp_result.dual_values):
-            if dual_value is None or constr not in nonlinear_constraints:
+            if dual_value is None or constr.body.polynomial_degree() in (1, 0):
                 continue
 
             # Determine if the user pre-specified that OA cuts should not be
@@ -54,8 +52,7 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
                 "Adding OA cut for %s with dual value %s"
                 % (constr.name, dual_value))
 
-            # TODO make this more efficient by not having to use
-            # differentiate() at each iteration.
+            # Cache jacobians
             jacobians = GDPopt.jacobians.get(constr, None)
             if jacobians is None:
                 constr_vars = list(EXPR.identify_variables(constr.body))
@@ -74,6 +71,8 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
                     bounds=(0, config.max_slack),
                     domain=NonNegativeReals, initialize=0)
 
+            # TODO add OA cut corresponding to objective
+
             oa_cuts = oa_utils.GDPopt_OA_cuts
             slack_var = oa_utils.GDPopt_OA_slacks.add()
             oa_cuts.add(
@@ -90,7 +89,7 @@ def add_affine_cuts(nlp_result, solve_data, config):
     m = solve_data.linear_GDP
     config.logger.info("Adding affine cuts.")
     GDPopt = m.GDPopt_utils
-    for var, val in zip(GDPopt.working_var_list, nlp_result.var_values):
+    for var, val in zip(GDPopt.variable_list, nlp_result.var_values):
         if val is not None and not var.fixed:
             var.value = val
 
@@ -143,7 +142,7 @@ def add_integer_cut(var_values, solve_data, config, feasible=False):
     GDPopt = m.GDPopt_utils
     var_value_is_one = ComponentSet()
     var_value_is_zero = ComponentSet()
-    for var, val in zip(GDPopt.working_var_list, var_values):
+    for var, val in zip(GDPopt.variable_list, var_values):
         if not var.is_binary():
             continue
         if var.fixed:

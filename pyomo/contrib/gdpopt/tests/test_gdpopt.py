@@ -164,8 +164,8 @@ class TestGDPopt(unittest.TestCase):
             iter_num = solve_data.nlp_iteration
             disjs_should_be_active = initialize[iter_num - 1]
             for orig_disj, soln_disj in zip(
-                solve_data.original_model.GDPopt_utils.orig_disjuncts_list,
-                nlp_model.GDPopt_utils.orig_disjuncts_list
+                solve_data.original_model.GDPopt_utils.disjunct_list,
+                nlp_model.GDPopt_utils.disjunct_list
             ):
                 if orig_disj in disjs_should_be_active:
                     self.assertTrue(soln_disj.indicator_var.value == 1)
