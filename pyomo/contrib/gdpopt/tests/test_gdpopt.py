@@ -51,6 +51,21 @@ class TestGDPopt(unittest.TestCase):
             self.assertIn("Set covering problem was infeasible.",
                           output.getvalue().strip())
 
+    def test_GDP_nonlinear_objective(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-1, 10))
+        m.y = Var(bounds=(2, 3))
+        m.d = Disjunction(expr=[
+            [m.x + m.y >= 5], [m.x - m.y <= 3]
+        ])
+        m.o = Objective(expr=m.x ** 2)
+        SolverFactory('gdpopt').solve(
+            m, strategy='LOA',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver
+        )
+        self.assertAlmostEqual(value(m.o), 0)
+
     def test_LOA_8PP_default_init(self):
         """Test logic-based outer approximation with 8PP."""
         exfile = import_file(

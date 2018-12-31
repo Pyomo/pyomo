@@ -4,6 +4,7 @@ from __future__ import division
 import logging
 from math import fabs, floor, log
 
+from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
                         Objective, Reals, Var, minimize, value)
 from pyomo.core.expr.current import identify_variables
@@ -103,22 +104,31 @@ def process_objective(solve_data, config):
     solve_data.results.problem.sense = main_obj.sense
     solve_data.objective_sense = main_obj.sense
 
-    # Move the objective to the constraints
+    # Move the objective to the constraints if it is nonlinear
+    if main_obj.expr.polynomial_degree() not in (1, 0):
+        config.logger.info("Objective is nonlinear. Moving it to constraint set.")
 
-    # TODO only move the objective if nonlinear?
-    # GDPopt.objective_value = Var(domain=Reals, initialize=0)
-    # solve_data.objective_sense = main_obj.sense
-    # if main_obj.sense == minimize:
-    #     GDPopt.objective_expr = Constraint(
-    #         expr=GDPopt.objective_value >= main_obj.expr)
-    #     solve_data.results.problem.sense = ProblemSense.minimize
-    # else:
-    #     GDPopt.objective_expr = Constraint(
-    #         expr=GDPopt.objective_value <= main_obj.expr)
-    #     solve_data.results.problem.sense = ProblemSense.maximize
-    # main_obj.deactivate()
-    # GDPopt.objective = Objective(
-    #     expr=GDPopt.objective_value, sense=main_obj.sense)
+        GDPopt.objective_value = Var(domain=Reals, initialize=0)
+        if mcpp_available():
+            mc_obj = McCormick(main_obj.expr)
+            GDPopt.objective_value.setub(mc_obj.upper())
+            GDPopt.objective_value.setlb(mc_obj.lower())
+
+        if main_obj.sense == minimize:
+            GDPopt.objective_constr = Constraint(
+                expr=GDPopt.objective_value >= main_obj.expr)
+            solve_data.results.problem.sense = ProblemSense.minimize
+        else:
+            GDPopt.objective_constr = Constraint(
+                expr=GDPopt.objective_value <= main_obj.expr)
+            solve_data.results.problem.sense = ProblemSense.maximize
+        # Deactivate the original objective and add this new one.
+        main_obj.deactivate()
+        GDPopt.objective = Objective(
+            expr=GDPopt.objective_value, sense=main_obj.sense)
+        # Add the new variable and constraint to the working lists
+        GDPopt.variable_list.append(GDPopt.objective_value)
+        GDPopt.constraint_list.append(GDPopt.objective_constr)
 
 
 def a_logger(str_or_logger):
