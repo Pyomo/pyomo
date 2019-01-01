@@ -106,9 +106,6 @@ def add_affine_cuts(nlp_result, solve_data, config):
         if constr.body.polynomial_degree() in (1, 0):
             continue
 
-        # if constr.body.polynomial_degree() in (1, 0):
-        #     continue
-
         # TODO check that constraint is on active Disjunct
 
         vars_in_constr = list(
