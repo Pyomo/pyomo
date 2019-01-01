@@ -72,7 +72,7 @@ def solve_NLP(nlp_model, solve_data, config):
             subprob_terminate_cond is tc.feasible):
         pass
     elif subprob_terminate_cond is tc.infeasible:
-        config.logger.info('NLP subproblem was locally infeasible.')
+        config.logger.info('NLP subproblem was infeasible.')
         nlp_result.feasible = False
     elif subprob_terminate_cond is tc.maxIterations:
         # TODO try something else? Reinitialize with different initial
@@ -143,7 +143,7 @@ def solve_MINLP(model, solve_data, config):
             subprob_terminate_cond is tc.feasible):
         pass
     elif subprob_terminate_cond is tc.infeasible:
-        config.logger.info('MINLP subproblem was locally infeasible.')
+        config.logger.info('MINLP subproblem was infeasible.')
         subprob_result.feasible = False
     elif subprob_terminate_cond is tc.maxIterations:
         # TODO try something else? Reinitialize with different initial

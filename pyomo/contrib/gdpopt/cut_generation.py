@@ -8,7 +8,7 @@ from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc
 from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,
                         minimize, value)
 from pyomo.core.base.symbolic import differentiate
-from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.expr_pyomo5 import identify_variables
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 
@@ -62,7 +62,7 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
             # Cache jacobians
             jacobians = GDPopt.jacobians.get(constr, None)
             if jacobians is None:
-                constr_vars = list(EXPR.identify_variables(constr.body))
+                constr_vars = list(identify_variables(constr.body))
                 jac_list = differentiate(constr.body, wrt_list=constr_vars)
                 jacobians = ComponentMap(zip(constr_vars, jac_list))
                 GDPopt.jacobians[constr] = jacobians
@@ -77,8 +77,6 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
                 oa_utils.GDPopt_OA_slacks = VarList(
                     bounds=(0, config.max_slack),
                     domain=NonNegativeReals, initialize=0)
-
-            # TODO add OA cut corresponding to objective
 
             oa_cuts = oa_utils.GDPopt_OA_cuts
             slack_var = oa_utils.GDPopt_OA_slacks.add()
@@ -96,20 +94,19 @@ def add_affine_cuts(nlp_result, solve_data, config):
     m = solve_data.linear_GDP
     config.logger.info("Adding affine cuts.")
     GDPopt = m.GDPopt_utils
+    counter = 0
     for var, val in zip(GDPopt.variable_list, nlp_result.var_values):
         if val is not None and not var.fixed:
             var.value = val
 
     for constr in constraints_in_True_disjuncts(m, config):
-        # for constr in GDPopt.working_nonlinear_constraints:
+        # Note: this includes constraints that are deactivated in the current model (linear_GDP)
 
         if constr.body.polynomial_degree() in (1, 0):
             continue
 
-        # TODO check that constraint is on active Disjunct
-
         vars_in_constr = list(
-            EXPR.identify_variables(constr.body))
+            identify_variables(constr.body))
         if any(var.value is None for var in vars_in_constr):
             continue  # a variable has no values
 
@@ -138,6 +135,9 @@ def add_affine_cuts(nlp_result, solve_data, config):
                          ) + cvStart <= ub_int
         aff_cuts.add(expr=concave_cut)
         aff_cuts.add(expr=convex_cut)
+        counter += 2
+
+    config.logger.info("Added %s affine cuts" % counter)
 
 
 def add_integer_cut(var_values, solve_data, config, feasible=False):
@@ -170,7 +170,7 @@ def add_integer_cut(var_values, solve_data, config, feasible=False):
     if not (var_value_is_one or var_value_is_zero):
         # if no remaining binary variables, then terminate algorithm.
         config.logger.info(
-            'Adding integer cut to a model without binary variables. '
+            'Adding integer cut to a model without discrete variables. '
             'Model is now infeasible.')
         if solve_data.objective_sense == minimize:
             solve_data.LB = float('inf')
