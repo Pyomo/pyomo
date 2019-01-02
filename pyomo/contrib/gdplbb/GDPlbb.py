@@ -1,6 +1,4 @@
 import logging
-from copy import deepcopy
-from math import copysign, fabs
 
 from six import iteritems
 
@@ -11,21 +9,30 @@ from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
                              Var, maximize, minimize, value)
 from pyomo.core.base.block import generate_cuid_names
 from pyomo.core.base.symbolic import differentiate
-from pyomo.core.kernel import (ComponentMap, ComponentSet, NonNegativeReals,
-                               Reals)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory, SolverStatus
-from pyomo.opt.base import IOptSolver
 from pyomo.opt.results import ProblemSense, SolverResults
+from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue, In,
+                                 NonNegativeFloat, NonNegativeInt,
+                                 add_docstring_list)
+from pyomo.common.modeling import unique_component_name
 
 import heapq
 
-@SolverFactory.register('gdplbb',doc='Branch and Bound based GDP Solver')
-
-
-class GDPlbbSolver(opject):
+@SolverFactory.register('gdplbb',
+        doc='Branch and Bound based GDP Solver')
+class GDPlbbSolver(object):
     """A branch and bound-based GDP solver."""
+    CONFIG = ConfigBlock("gdplbb")
+    def available(self, exception_flag=True):
+        """Check if solver is available.
+
+        TODO: For now, it is always available. However, sub-solvers may not
+        always be available, and so this should reflect that possibility.
+
+        """
+        return True
 
     def solve(self, model, **kwds):
         """
@@ -63,34 +70,55 @@ class GDPlbbSolver(opject):
         """
 
         #Validate model to be used with gdplbb
-        validate_model(model)
+        self.validate_model(model)
         #Set solver as an MINLP
         solver = SolverFactory('baron')
 
-        indicator_list_name = unique_compoinent_name(model,"_indicator_list")
+        #Initialize ist containing indicator vars for reupdating model after solving
+        indicator_list_name = unique_component_name(model,"_indicator_list")
         indicator_vars = []
         for disjunction in model.component_data_objects(
             ctype = Disjunction, active=True):
             for disjunct in disjunction.disjuncts:
-                indicator_vars.append(disjunction.disjunct.indicator_var)
+                indicator_vars.append(disjunct.indicator_var)
         setattr(model, indicator_list_name, indicator_vars)
 
-
-        heap = []
+        #clone original model for root node of branch and bound
         root = model.clone()
-        root.init_active_disjunctions = list(model.component_data_objects(
+        print('root')
+        #set up lists to keep track of which disjunctions have been covered.
+
+        #this list keeps track of the original disjunctions that were active and are soon to be inactive
+        init_active_disjunctions_name = unique_component_name(root,"_init_active_disjunctions")
+        init_active_disjunctions = list(root.component_data_objects(
             ctype = Disjunction, active=True))
-        root.curr_active_disjunctions = []
-        for djn in root.init_active_disjunctions:
+        setattr(root,init_active_disjunctions_name, init_active_disjunctions)
+
+        #this list keeps track of the disjunctions that have been activated by the branch and bound
+        curr_active_disjunctions_name = unique_component_name(root,"_curr_active_disjunctions")
+        curr_active_disjunctions = []
+        setattr(root,curr_active_disjunctions_name, curr_active_disjunctions)
+
+        #deactivate all disjunctions in the model
+        for djn in getattr(root,init_active_disjunctions_name):
             djn.deactivate()
+
         #Satisfiability check would go here
 
-        obj_value = minlp_solve(root,solver)#fix
+        #solve the root node
+        obj_value = self.minlp_solve(root,solver)
 
+        print(obj_value)
+
+        #initialize minheap for Branch and Bound algorithm
+        heap = []
         heapq.heappush(heap,(obj_value,root))
+
         while len(heap)>0:
-            mdl = heapq.heappop(h)[1]
-            if(len(mdl.init_active_disjunctions) ==  0):
+            print('NEXT MODEL')
+            mdl = heapq.heappop(heap)[1]
+            print [value(i) for i in getattr(mdl,indicator_list_name)]
+            if(len(getattr(mdl,init_active_disjunctions_name)) ==  0):
                 orig_var_list = getattr(model, indicator_list_name)
                 best_soln_var_list = getattr(mdl, indicator_list_name)
                 for orig_var, new_var in zip(orig_var_list,best_soln_var_list):
@@ -99,16 +127,19 @@ class GDPlbbSolver(opject):
                 TransformationFactory('gdp.fix_disjuncts').apply_to(model)
                 return solver.solve(model)
 
-            disjunction = mdl.init_active_disjunctions.pop(0)
+            disjunction = getattr(mdl,init_active_disjunctions_name).pop(0)
             disjunction.activate()
-            mdl.curr_active_disjunctions.append(disjunction)
+            getattr(mdl,curr_active_disjunctions_name).append(disjunction)
             for disj in list(disjunction.disjuncts):
                 disj.indicator_var = 0
             for disj in list(disjunction.disjuncts):
                 disj.indicator_var = 1
-                mnew = model.clone()
+                mnew = mdl.clone()
                 disj.indicator_var = 0
-                obj_value = minlp_solve(mnew,solver) #fix
+                obj_value = self.minlp_solve(mnew,solver)
+                self.indicate(mnew)
+                print(obj_value)
+
                 heapq.heappush(heap,(obj_value,mnew))
 
 
@@ -124,6 +155,22 @@ class GDPlbbSolver(opject):
     def minlp_solve(self,gdp,solver):
         minlp = gdp.clone()
         TransformationFactory('gdp.fix_disjuncts').apply_to(minlp)
-        solver.solve(minlp)
-        return value(minlp.obj.expr)
+        result = solver.solve(minlp)
+        if (result.solver.status is SolverStatus.ok and
+                result.solver.termination_condition is tc.optimal):
+                return value(minlp.obj.expr)#TODO: reference objective function correctly
+        else:
+                return float('inf')
+        delete(minlp)
         #TO FINISH
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
+
+    def indicate(self,model):
+        for disjunction in model.component_data_objects(
+            ctype = Disjunction, active=True):
+            for disjunct in disjunction.disjuncts:
+                print (disjunction.name,disjunct.name,value(disjunct.indicator_var))
