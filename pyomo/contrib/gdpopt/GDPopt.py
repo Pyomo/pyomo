@@ -98,7 +98,7 @@ class GDPoptSolver(object):
         description="Mixed integer linear solver to use."
     ))
     CONFIG.declare("mip_presolve", ConfigValue(
-        default="true",
+        default=True,
         description="Flag to enable or diable Pyomo MIP presolve. Default=True.",
         domain=bool
     ))

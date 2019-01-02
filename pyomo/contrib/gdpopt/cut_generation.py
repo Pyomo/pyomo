@@ -159,6 +159,11 @@ def add_integer_cut(var_values, solve_data, config, feasible=False):
             val = var.value
         # TODO we can also add a check to skip binary variables that are not an
         # indicator_var on disjuncts.
+
+        if not config.force_subproblem_nlp:
+            if not var.local_name == 'indicator_var':
+                continue
+
         if fabs(val - 1) <= config.integer_tolerance:
             var_value_is_one.add(var)
         elif fabs(val) <= config.integer_tolerance:

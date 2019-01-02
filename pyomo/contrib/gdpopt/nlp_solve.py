@@ -6,9 +6,10 @@ from math import fabs
 from pyomo.contrib.gdpopt.data_class import SubproblemResult
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
                                        is_feasible)
-from pyomo.core import Constraint, TransformationFactory, minimize, value, Objective
+from pyomo.core import Constraint, TransformationFactory, minimize, value, Objective, Block
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.gdp import Disjunct
 from pyomo.opt import SolverFactory
 from pyomo.opt import TerminationCondition as tc
 
@@ -109,7 +110,7 @@ def solve_NLP(nlp_model, solve_data, config):
 def solve_MINLP(model, solve_data, config):
     """Solve the MINLP subproblem."""
     config.logger.info(
-        "Solving nonlinear subproblem for fixed logical realizations."
+        "Solving MINLP subproblem for fixed logical realizations."
     )
 
     GDPopt = model.GDPopt_utils
@@ -127,7 +128,7 @@ def solve_MINLP(model, solve_data, config):
         raise RuntimeError("MINLP solver %s is not available." %
                            config.minlp_solver)
     with SuppressInfeasibleWarning():
-        results = minlp_solver.solve(model, **config.nlp_solver_args)
+        results = minlp_solver.solve(model, **config.minlp_solver_args)
 
     subprob_result = SubproblemResult()
     subprob_result.feasible = True
@@ -156,10 +157,9 @@ def solve_MINLP(model, solve_data, config):
                 'Using potentially suboptimal feasible solution.')
         else:
             subprob_result.feasible = False
-    elif subprob_terminate_cond is tc.internalSolverError:
-        # Possible that IPOPT had a restoration failure
+    elif subprob_terminate_cond is tc.intermediateNonInteger:
         config.logger.info(
-            "NLP solver had an internal failure: %s" % results.solver.message)
+            "MINLP solver could not find feasible integer solution: %s" % results.solver.message)
         subprob_result.feasible = False
     else:
         raise ValueError(
@@ -342,6 +342,9 @@ def solve_local_subproblem(mip_result, solve_data, config):
                     var.fix(val)
 
     TransformationFactory('gdp.fix_disjuncts').apply_to(subprob)
+
+    for disj in subprob.component_data_objects(Disjunct, active=True):
+        disj.deactivate()  # TODO this is a HACK for something that isn't happening correctly in fix_disjuncts
 
     unfixed_discrete_vars = detect_unfixed_discrete_vars(subprob)
     if config.force_subproblem_nlp and len(unfixed_discrete_vars) > 0:
