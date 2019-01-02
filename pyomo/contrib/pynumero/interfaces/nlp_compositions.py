@@ -9,14 +9,14 @@
 #  ___________________________________________________________________________
 from pyomo.contrib.pynumero.interfaces.nlp import NLP
 from pyomo.contrib.pynumero.sparse import (BlockMatrix,
-                             BlockSymMatrix,
-                             BlockVector,
-                             EmptyMatrix,
-                             IdentityMatrix,
-                             COOMatrix)
+                                           BlockSymMatrix,
+                                           BlockVector,
+                                           empty_matrix)
 from collections import OrderedDict
 import pyomo.environ as aml
 import numpy as np
+import pyomo.contrib.pynumero as pn
+from scipy.sparse import coo_matrix, csr_matrix, identity
 
 # ToDo: Create another one on top for general composite nlps?
 
@@ -123,6 +123,14 @@ class TwoStageStochasticNLP(NLP):
         # define structure Hessian
         self._create_hessian_structure()
 
+        # cache coupling matrices
+        self._AB_csr = self.coupling_matrix()
+        self._AB_coo = BlockMatrix(self.nblocks+1, self.nblocks+1)
+        nb = self.nblocks
+        for i in range(nb):
+            self._AB_coo[i, i] = self._AB_csr[i, i].tocoo()
+        self._AB_coo[nb, nb] = self._AB_csr[nb, nb]
+
     def _make_unmutable_caches(self):
         # no need for caches here
         pass
@@ -136,42 +144,61 @@ class TwoStageStochasticNLP(NLP):
                                    [np.zeros(self.nz, dtype=np.double)])
 
         self._init_y = BlockVector([nlp.y_init() for nlp in self._nlps] +
-                                   [np.zeros(self.nz, dtype=np.double) for i in range(self.nblocks)])
+                       [np.zeros(self.nz, dtype=np.double) for i in range(self.nblocks)])
 
         # lower and upper bounds
+
         self._lower_x = BlockVector([nlp.xl() for nlp in self._nlps] +
                                     [np.full(self.nz, -np.inf, dtype=np.double)])
         self._upper_x = BlockVector([nlp.xu() for nlp in self._nlps] +
                                     [np.full(self.nz, np.inf, dtype=np.double)])
 
         self._lower_g = BlockVector([nlp.gl() for nlp in self._nlps] +
-                                    [np.zeros(self.nz, dtype=np.double) for i in range(self.nblocks)])
+                        [np.zeros(self.nz, dtype=np.double) for i in range(self.nblocks)])
         self._upper_g = BlockVector([nlp.gu() for nlp in self._nlps] +
-                                    [np.zeros(self.nz, dtype=np.double) for i in range(self.nblocks)])
+                        [np.zeros(self.nz, dtype=np.double) for i in range(self.nblocks)])
 
-        # ToDo: workout masks and maps as block vectors
-        """
-            _lower_x_mask
-            _upper_x_mask
-            _lower_x_map
-            _upper_x_map
-            _lower_g_mask
-            _upper_g_mask
-            _lower_g_map
-            _upper_g_map
+        # define x maps and masks
+        self._lower_x_mask = np.isfinite(self._lower_x)
+        self._lower_x_map = self._lower_x_mask.nonzero()[0]
+        self._upper_x_mask = np.isfinite(self._upper_x)
+        self._upper_x_map = self._upper_x_mask.nonzero()[0]
 
-            _d_mask
-            _d_map
-            _lower_d
-            _upper_d
-            _lower_d_mask
-            _upper_d_mask
-            _lower_d_map
-            _upper_d_map
+        # define gcd maps and masks
+        bounds_difference = self._upper_g - self._lower_g
+        abs_bounds_difference = np.absolute(bounds_difference)
+        tolerance_equalities = 1e-8
+        self._c_mask = abs_bounds_difference < tolerance_equalities
+        self._c_map = self._c_mask.nonzero()[0]
+        self._d_mask = abs_bounds_difference >= tolerance_equalities
+        self._d_map = self._d_mask.nonzero()[0]
 
-            _c_mask
-            _c_map
-        """
+        self._lower_g_mask = np.isfinite(self._lower_g) * self._d_mask + self._c_mask
+        self._lower_g_map = self._lower_g_mask.nonzero()[0]
+        self._upper_g_mask = np.isfinite(self._upper_g) * self._d_mask + self._c_mask
+        self._upper_g_map = self._upper_g_mask.nonzero()[0]
+
+        self._lower_d_mask = pn.isin(self._d_map, self._lower_g_map)
+        self._upper_d_mask = pn.isin(self._d_map, self._upper_g_map)
+
+        # remove empty vectors at the end of lower and upper d
+        self._lower_d_mask = \
+            BlockVector([self._lower_d_mask[i] for i in range(self.nblocks)])
+
+        self._upper_d_mask = \
+            BlockVector([self._upper_d_mask[i] for i in range(self.nblocks)])
+
+        # define lower and upper d maps
+        self._lower_d_map = pn.where(self._lower_d_mask)[0]
+        self._upper_d_map = pn.where(self._upper_d_mask)[0]
+
+        # get lower and upper d values
+        self._lower_d = np.compress(self._d_mask, self._lower_g)
+        self._upper_d = np.compress(self._d_mask, self._upper_g)
+
+        # remove empty vectors at the end of lower and upper d
+        self._lower_d = BlockVector([self._lower_d[i] for i in range(self.nblocks)])
+        self._upper_d = BlockVector([self._upper_d[i] for i in range(self.nblocks)])
 
     def _create_jacobian_structures(self):
 
@@ -189,11 +216,11 @@ class TwoStageStochasticNLP(NLP):
             col = np.array([vid for vid in scenario_vids])
             row = np.arange(0, self.nz)
             data = np.ones(self.nz, dtype=np.double)
-            jac_g[sid + self.nblocks, sid] = COOMatrix((data, (row, col)),
+            jac_g[sid + self.nblocks, sid] = coo_matrix((data, (row, col)),
                                                        shape=(self.nz, nlp.nx))
 
             # coupling matrices Bi
-            jac_g[sid + self.nblocks, self.nblocks] = -IdentityMatrix(self.nz)
+            jac_g[sid + self.nblocks, self.nblocks] = -identity(self.nz)
 
         self._internal_jacobian_g = jac_g
         flat_jac_g = jac_g.tocoo()
@@ -212,11 +239,11 @@ class TwoStageStochasticNLP(NLP):
             col = np.array([vid for vid in scenario_vids])
             row = np.arange(0, self.nz)
             data = np.ones(self.nz, dtype=np.double)
-            jac_c[sid + self.nblocks, sid] = COOMatrix((data, (row, col)),
+            jac_c[sid + self.nblocks, sid] = coo_matrix((data, (row, col)),
                                                        shape=(self.nz, nlp.nx))
 
             # coupling matrices Bi
-            jac_c[sid + self.nblocks, self.nblocks] = -IdentityMatrix(self.nz)
+            jac_c[sid + self.nblocks, self.nblocks] = -identity(self.nz)
 
         self._internal_jacobian_c = jac_c
         flat_jac_c = jac_c.tocoo()
@@ -248,7 +275,7 @@ class TwoStageStochasticNLP(NLP):
             yi = nlp.y_init()
             hess_lag[sid, sid] = nlp.hessian_lag(xi, yi)
 
-        hess_lag[self.nblocks, self.nblocks] = EmptyMatrix(self.nz, self.nz)
+        hess_lag[self.nblocks, self.nblocks] = empty_matrix(self.nz, self.nz)
 
         flat_hess = hess_lag.tocoo()
         self._irows_hess = flat_hess.row
@@ -270,110 +297,6 @@ class TwoStageStochasticNLP(NLP):
         Return number of complicated variables
         """
         return self._nz
-
-    def xl(self, condensed=False):
-        """
-        Returns array of primal variable lower bounds
-
-        Parameters
-        ----------
-        condensed :  bool, optional
-            Boolean flag to indicate if array excludes -numpy.inf values (default False)
-
-        Returns
-        -------
-        BlockVector
-
-        """
-        if condensed:
-            raise NotImplementedError()
-        return self._lower_x
-
-    def xu(self, condensed=False):
-        """
-        Returns array of primal variable upper bounds
-
-        Parameters
-        ----------
-        condensed :  bool, optional
-            Boolean flag to indicate if array excludes -numpy.inf values (default False)
-
-        Returns
-        -------
-        BlockVector
-
-        """
-        if condensed:
-            raise NotImplementedError()
-        return self._upper_x
-
-    def gl(self, condensed=False):
-        """
-        Returns array of general inequalities lower bounds
-
-        Parameters
-        ----------
-        condensed :  bool, optional
-            Boolean flag to indicate if array excludes -numpy.inf values (default False)
-
-        Returns
-        -------
-        BlockVector
-
-        """
-        if condensed:
-            raise NotImplementedError()
-        return self._lower_g
-
-    def gu(self, condensed=False):
-        """
-        Returns array of general inequalities upper bounds
-
-        Parameters
-        ----------
-        condensed :  bool, optional
-            Boolean flag to indicate if array excludes numpy.inf values (default False)
-
-        Returns
-        -------
-        BlockVector
-
-        """
-        if condensed:
-            raise NotImplementedError()
-        return self._upper_g
-
-    def dl(self, condensed=False):
-        """
-        Returns array of inequalities lower bounds
-
-        Parameters
-        ----------
-        condensed :  bool, optional
-            Boolean flag to indicate if array excludes -numpy.inf values (default False)
-
-        Returns
-        -------
-        BlockVector
-
-        """
-        raise NotImplementedError()
-
-    def du(self, condensed=False):
-        """
-        Returns array of inequalities upper bounds
-
-        Parameters
-        ----------
-        condensed :  bool, optional
-            Boolean flag to indicate if array excludes numpy.inf values (default False)
-
-        Returns
-        -------
-        BlockVector
-
-        """
-        raise NotImplementedError()
 
     def nlps(self):
         """Creates generator scenario name to nlp """
@@ -445,6 +368,8 @@ class TwoStageStochasticNLP(NLP):
                                [np.zeros(self.nz, dtype=np.double) for i in range(self.nblocks)])
         elif subset == 'd':
             return BlockVector([np.zeros(nlp.nd, dtype=np.double) for nlp in self._nlps])
+        elif subset == 'dl' or subset == 'du':
+            return BlockVector([nlp.create_vector_y(subset=subset) for nlp in self._nlps])
         else:
             raise RuntimeError('Subset not recognized')
 
@@ -490,7 +415,10 @@ class TwoStageStochasticNLP(NLP):
         if out is None:
             df = self.create_vector_x()
         else:
-            raise NotImplementedError("ToDo")
+            assert isinstance(out, BlockVector), 'Composite NLP takes block vector to evaluate g'
+            assert out.nblocks == self.nblocks + 1
+            assert out.size == self.nx
+            df = out
 
         if isinstance(x, BlockVector):
             assert x.size == self.nx
@@ -528,34 +456,32 @@ class TwoStageStochasticNLP(NLP):
         if out is None:
             res = self.create_vector_y()
         else:
-            raise NotImplementedError("ToDo")
+            assert isinstance(out, BlockVector), 'Composite NLP takes block vector to evaluate g'
+            assert out.nblocks == 2 * self.nblocks
+            assert out.size == self.ng
+            res = out
 
         if isinstance(x, BlockVector):
             assert x.size == self.nx
             assert x.nblocks == self.nblocks + 1
             for sid in range(self.nblocks):
+                # evaluate gi
                 self._nlps[sid].evaluate_g(x[sid], out=res[sid])
-                scenario_vids = self._zid_to_vid[sid]
-                diff = []
-                for zid in range(self.nz):
-                    vid = scenario_vids[zid]
-                    diff.append(x[sid][vid] - x[self.nblocks][zid])
-                res[sid + self.nblocks] = np.array(diff, dtype=np.double)
+
+                # evaluate coupling Ax-z
+                A = self._AB_csr[sid, sid]
+                res[sid + self.nblocks] = A * x[sid] - x[self.nblocks]
             return res
         elif isinstance(x, np.ndarray):
             assert x.size == self.nx
             block_x = self.create_vector_x()
-            block_x.copyfrom(x)
+            block_x.copyfrom(x)  # this is expensive
             x_ = block_x
             for sid in range(self.nblocks):
                 self._nlps[sid].evaluate_g(x_[sid], out=res[sid])
-                scenario_vids = self._zid_to_vid[sid]
-                diff = []
-                # this could be done more efficient with a mask of z
-                for zid in range(self.nz):
-                    vid = scenario_vids[zid]
-                    diff.append(x_[sid][vid] - x_[self.nblocks][zid])
-                res[sid + self.nblocks] = np.array(diff, dtype=np.double)
+                # evaluate coupling Ax-z
+                A = self._AB_csr[sid, sid]
+                res[sid + self.nblocks] = A * x_[sid] - x_[self.nblocks]
             return res
         else:
             raise NotImplementedError("x must be a numpy array or a BlockVector")
@@ -576,22 +502,35 @@ class TwoStageStochasticNLP(NLP):
         array_like
 
         """
+
+        evaluated_g = kwargs.pop('evaluated_g', None)
+
         if out is None:
             res = self.create_vector_y(subset='c')
         else:
-            raise NotImplementedError("ToDo")
+            assert isinstance(out, BlockVector), 'Composite NLP takes block vector to evaluate g'
+            assert out.nblocks == 2 * self.nblocks
+            assert out.size == self.nc
+            res = out
+
+        if evaluated_g is not None:
+            assert isinstance(evaluated_g, BlockVector), 'evaluated_g must be a BlockVector'
+            assert evaluated_g.nblocks == 2 * self.nblocks
+            assert evaluated_g.size == self.ng
+            g = evaluated_g.compress(self._c_mask)
+            if out is None:
+                return g
+            for bid, blk in enumerate(g):
+                out[bid] = blk
+            return out
 
         if isinstance(x, BlockVector):
             assert x.size == self.nx
             assert x.nblocks == self.nblocks + 1
             for sid in range(self.nblocks):
                 self._nlps[sid].evaluate_c(x[sid], out=res[sid])
-                scenario_vids = self._zid_to_vid[sid]
-                diff = []
-                for zid in range(self.nz):
-                    vid = scenario_vids[zid]
-                    diff.append(x[sid][vid] - x[self.nblocks][zid])
-                res[sid + self.nblocks] = np.array(diff, dtype=np.double)
+                A = self._AB_csr[sid, sid]
+                res[sid + self.nblocks] = A * x[sid] - x[self.nblocks]
             return res
         elif isinstance(x, np.ndarray):
             assert x.size == self.nx
@@ -600,15 +539,11 @@ class TwoStageStochasticNLP(NLP):
             x_ = block_x
             for sid in range(self.nblocks):
                 self._nlps[sid].evaluate_c(x_[sid], out=res[sid])
-                scenario_vids = self._zid_to_vid[sid]
-                diff = []
-                for zid in range(self.nz):
-                    vid = scenario_vids[zid]
-                    diff.append(x_[sid][vid] - x_[self.nblocks][zid])
-                res[sid + self.nblocks] = np.array(diff, dtype=np.double)
+                A = self._AB_csr[sid, sid]
+                res[sid + self.nblocks] = A * x_[sid] - x_[self.nblocks]
             return res
         else:
-            raise NotImplementedError("x must be a numpy array or a BlockVector")
+            raise NotImplementedError('x must be a numpy array or a BlockVector')
 
     def evaluate_d(self, x, out=None, **kwargs):
         """Returns the inequality constraints evaluated at x
@@ -626,11 +561,26 @@ class TwoStageStochasticNLP(NLP):
         array_like
 
         """
+        evaluated_g = kwargs.pop('evaluated_g', None)
 
         if out is None:
             res = self.create_vector_y(subset='d')
         else:
-            raise NotImplementedError("ToDo")
+            assert isinstance(out, BlockVector), 'Composite NLP takes block vector to evaluate g'
+            assert out.nblocks == self.nblocks
+            assert out.size == self.nd
+            res = out
+
+        if evaluated_g is not None:
+            assert isinstance(evaluated_g, BlockVector), 'evaluated_g must be a BlockVector'
+            assert evaluated_g.nblocks == 2 * self.nblocks
+            assert evaluated_g.size == self.ng
+            d = evaluated_g.compress(self._d_mask)
+            if out is None:
+                return BlockVector([d[j] for j in range(self.nblocks)])
+            for bid in range(self.nblocks):
+                out[bid] = d[bid]
+            return out
 
         if isinstance(x, BlockVector):
             assert x.size == self.nx
@@ -639,7 +589,13 @@ class TwoStageStochasticNLP(NLP):
                 self._nlps[sid].evaluate_d(x[sid], out=res[sid])
             return res
         elif isinstance(x, np.ndarray):
-            raise NotImplementedError("ToDo")
+            assert x.size == self.nx
+            block_x = self.create_vector_x()
+            block_x.copyfrom(x)
+            x_ = block_x
+            for sid in range(self.nblocks):
+                self._nlps[sid].evaluate_d(x_[sid], out=res[sid])
+            return res
         else:
             raise NotImplementedError("x must be a numpy array or a BlockVector")
 
@@ -650,7 +606,7 @@ class TwoStageStochasticNLP(NLP):
         ----------
         x : array_like
             Array with values of primal variables.
-        out : COOMatrix, optional
+        out : BlockMatrix, optional
             Output matrix with the structure of the jacobian already defined.
 
         Returns
@@ -658,52 +614,46 @@ class TwoStageStochasticNLP(NLP):
         BlockMatrix
 
         """
-        assert x.size == self.nx, "Dimension missmatch"
+        assert x.size == self.nx, "Dimension mismatch"
+
+        if isinstance(x, BlockVector):
+            assert x.nblocks == self.nblocks + 1
+            x_ = x
+        elif isinstance(x, np.ndarray):
+            block_x = self.create_vector_x()
+            block_x.copyfrom(x)
+            x_ = block_x
+        else:
+            raise RuntimeError("Input vector format not recognized")
 
         if out is None:
-            if isinstance(x, BlockVector):
-                assert x.nblocks == self.nblocks + 1
-                jac_g = BlockMatrix(2 * self.nblocks, self.nblocks + 1)
-                for sid, nlp in enumerate(self._nlps):
-                    xi = x[sid]
-                    jac_g[sid, sid] = nlp.jacobian_g(xi)
-
-                    # coupling matrices Ai
-                    scenario_vids = self._zid_to_vid[sid]
-                    col = np.array([vid for vid in scenario_vids])
-                    row = np.arange(0, self.nz)
-                    data = np.ones(self.nz, dtype=np.double)
-                    jac_g[sid + self.nblocks, sid] = COOMatrix((data, (row, col)),
-                                                               shape=(self.nz, nlp.nx))
-
-                    # coupling matrices Bi
-                    jac_g[sid + self.nblocks, self.nblocks] = -IdentityMatrix(self.nz)
-                return jac_g
-            elif isinstance(x, np.ndarray):
-                assert x.size == self.nx
-                block_x = self.create_vector_x()
-                block_x.copyfrom(x)
-                x_ = block_x
-                jac_g = BlockMatrix(2 * self.nblocks, self.nblocks + 1)
-                for sid, nlp in enumerate(self._nlps):
-                    xi = x_[sid]
-                    jac_g[sid, sid] = nlp.jacobian_g(xi)
-
-                    # coupling matrices Ai
-                    scenario_vids = self._zid_to_vid[sid]
-                    col = np.array([vid for vid in scenario_vids])
-                    row = np.arange(0, self.nz)
-                    data = np.ones(self.nz, dtype=np.double)
-                    jac_g[sid + self.nblocks, sid] = COOMatrix((data, (row, col)),
-                                                               shape=(self.nz, nlp.nx))
-
-                    # coupling matrices Bi
-                    jac_g[sid + self.nblocks, self.nblocks] = -IdentityMatrix(self.nz)
-                return jac_g
-            else:
-                raise RuntimeError("Input vector format not recognized")
+            jac_g = BlockMatrix(2 * self.nblocks, self.nblocks + 1)
+            for sid, nlp in enumerate(self._nlps):
+                xi = x_[sid]
+                jac_g[sid, sid] = nlp.jacobian_g(xi)
+                # coupling matrices Ai
+                jac_g[sid + self.nblocks, sid] = self._AB_coo[sid, sid]
+                # coupling matrices Bi
+                jac_g[sid + self.nblocks, self.nblocks] = -identity(self.nz)
+            return jac_g
         else:
-            raise NotImplementedError("ToDo")
+            assert isinstance(out, BlockMatrix), 'out must be a BlockMatrix'
+            assert out.bshape == (2 * self.nblocks, self.nblocks + 1), "Block shape mismatch"
+            jac_g = out
+            for sid, nlp in enumerate(self._nlps):
+                xi = x_[sid]
+                nlp.jacobian_g(xi, out=jac_g[sid, sid])
+                Ai = jac_g[sid + self.nblocks, sid]
+                assert Ai.shape == self._AB_coo[sid, sid].shape, \
+                    'Block {} mismatch shape'.format((sid + self.nblocks, sid))
+                assert Ai.nnz == self._AB_coo[sid, sid].nnz, \
+                    'Block {} mismatch nnz'.format((sid + self.nblocks, sid))
+                Bi = jac_g[sid + self.nblocks, self.nblocks]
+                assert Bi.shape == (self.nz, self.nz), \
+                    'Block {} mismatch shape'.format((sid + self.nblocks, self.nblocks))
+                assert Bi.nnz == self.nz, \
+                    'Block {} mismatch nnz'.format((sid + self.nblocks, self.nblocks))
+            return jac_g
 
     def jacobian_c(self, x, out=None, **kwargs):
         """Returns the Jacobian of the equalities evaluated at x
@@ -712,7 +662,7 @@ class TwoStageStochasticNLP(NLP):
         ----------
         x : array_like
             Array with values of primal variables.
-        out : COOMatrix, optional
+        out : BlockMatrix, optional
             Output matrix with the structure of the jacobian already defined.
 
         Returns
@@ -720,52 +670,46 @@ class TwoStageStochasticNLP(NLP):
         BlockMatrix
 
         """
-        assert x.size == self.nx, "Dimension missmatch"
+        assert x.size == self.nx, 'Dimension mismatch'
+
+        if isinstance(x, BlockVector):
+            assert x.nblocks == self.nblocks + 1
+            x_ = x
+        elif isinstance(x, np.ndarray):
+            block_x = self.create_vector_x()
+            block_x.copyfrom(x)
+            x_ = block_x
+        else:
+            raise RuntimeError('Input vector format not recognized')
 
         if out is None:
-            if isinstance(x, BlockVector):
-                assert x.nblocks == self.nblocks + 1
-                jac_c = BlockMatrix(2 * self.nblocks, self.nblocks + 1)
-                for sid, nlp in enumerate(self._nlps):
-                    xi = x[sid]
-                    jac_c[sid, sid] = nlp.jacobian_c(xi)
-
-                    # coupling matrices Ai
-                    scenario_vids = self._zid_to_vid[sid]
-                    col = np.array([vid for vid in scenario_vids])
-                    row = np.arange(0, self.nz)
-                    data = np.ones(self.nz, dtype=np.double)
-                    jac_c[sid + self.nblocks, sid] = COOMatrix((data, (row, col)),
-                                                               shape=(self.nz, nlp.nx))
-
-                    # coupling matrices Bi
-                    jac_c[sid + self.nblocks, self.nblocks] = -IdentityMatrix(self.nz)
-                return jac_c
-            elif isinstance(x, np.ndarray):
-                assert x.size == self.nx
-                block_x = self.create_vector_x()
-                block_x.copyfrom(x)
-                x_ = block_x
-                jac_c = BlockMatrix(2 * self.nblocks, self.nblocks + 1)
-                for sid, nlp in enumerate(self._nlps):
-                    xi = x_[sid]
-                    jac_c[sid, sid] = nlp.jacobian_c(xi)
-
-                    # coupling matrices Ai
-                    scenario_vids = self._zid_to_vid[sid]
-                    col = np.array([vid for vid in scenario_vids])
-                    row = np.arange(0, self.nz)
-                    data = np.ones(self.nz, dtype=np.double)
-                    jac_c[sid + self.nblocks, sid] = COOMatrix((data, (row, col)),
-                                                               shape=(self.nz, nlp.nx))
-
-                    # coupling matrices Bi
-                    jac_c[sid + self.nblocks, self.nblocks] = -IdentityMatrix(self.nz)
-                return jac_c
-            else:
-                raise RuntimeError("Input vector format not recognized")
+            jac_c = BlockMatrix(2 * self.nblocks, self.nblocks + 1)
+            for sid, nlp in enumerate(self._nlps):
+                xi = x_[sid]
+                jac_c[sid, sid] = nlp.jacobian_c(xi)
+                # coupling matrices Ai
+                jac_c[sid + self.nblocks, sid] = self._AB_coo[sid, sid]
+                # coupling matrices Bi
+                jac_c[sid + self.nblocks, self.nblocks] = -identity(self.nz)
+            return jac_c
         else:
-            raise NotImplementedError("ToDo")
+            assert isinstance(out, BlockMatrix), 'out must be a BlockMatrix'
+            assert out.bshape == (2 * self.nblocks, self.nblocks + 1), "Block shape mismatch"
+            jac_c = out
+            for sid, nlp in enumerate(self._nlps):
+                xi = x_[sid]
+                nlp.jacobian_c(xi, out=jac_c[sid, sid])
+                Ai = jac_c[sid + self.nblocks, sid]
+                assert Ai.shape == self._AB_coo[sid, sid].shape, \
+                    'Block {} mismatch shape'.format((sid + self.nblocks, sid))
+                assert Ai.nnz == self._AB_coo[sid, sid].nnz, \
+                    'Block {} mismatch nnz'.format((sid + self.nblocks, sid))
+                Bi = jac_c[sid + self.nblocks, self.nblocks]
+                assert Bi.shape == (self.nz, self.nz), \
+                    'Block {} mismatch shape'.format((sid + self.nblocks, self.nblocks))
+                assert Bi.nnz == self.nz, \
+                    'Block {} mismatch nnz'.format((sid + self.nblocks, self.nblocks))
+            return jac_c
 
     def jacobian_d(self, x, out=None, **kwargs):
         """Returns the Jacobian of the inequalities evaluated at x
@@ -774,7 +718,7 @@ class TwoStageStochasticNLP(NLP):
         ----------
         x : array_like
             Array with values of primal variables.
-        out : COOMatrix, optional
+        out : coo_matrix, optional
             Output matrix with the structure of the jacobian already defined.
 
         Returns
@@ -782,20 +726,32 @@ class TwoStageStochasticNLP(NLP):
         BlockMatrix
 
         """
-        assert x.size == self.nx, "Dimension missmatch"
+        assert x.size == self.nx, "Dimension mismatch"
+
+        if isinstance(x, BlockVector):
+            assert x.nblocks == self.nblocks + 1
+            x_ = x
+        elif isinstance(x, np.ndarray):
+            block_x = self.create_vector_x()
+            block_x.copyfrom(x)
+            x_ = block_x
+        else:
+            raise RuntimeError('Input vector format not recognized')
 
         if out is None:
-            if isinstance(x, BlockVector):
-                assert x.nblocks == self.nblocks + 1
-                jac_d = BlockMatrix(self.nblocks, self.nblocks)
-                for sid, nlp in enumerate(self._nlps):
-                    xi = x[sid]
-                    jac_d[sid, sid] = nlp.jacobian_d(xi)
-                return jac_d
-            elif isinstance(x, np.ndarray):
-                raise NotImplementedError("ToDo")
+            jac_d = BlockMatrix(self.nblocks, self.nblocks)
+            for sid, nlp in enumerate(self._nlps):
+                xi = x_[sid]
+                jac_d[sid, sid] = nlp.jacobian_d(xi)
+            return jac_d
         else:
-            raise NotImplementedError("ToDo")
+            assert isinstance(out, BlockMatrix), 'out must be a BlockMatrix'
+            assert out.bshape == (self.nblocks, self.nblocks), 'Block shape mismatch'
+            jac_d = out
+            for sid, nlp in enumerate(self._nlps):
+                xi = x_[sid]
+                nlp.jacobian_d(xi, out=jac_d[sid, sid])
+            return jac_d
 
     def hessian_lag(self, x, y, out=None, **kwargs):
         """Return the Hessian of the Lagrangian function evaluated at x and y
@@ -806,34 +762,78 @@ class TwoStageStochasticNLP(NLP):
             Array with values of primal variables.
         y : array_like
             Array with values of dual variables.
-        out : SymCOOMatrix
+        out : BlockMatrix
             Output matrix with the structure of the hessian already defined. Optional
 
         Returns
         -------
-        BlockSymMatrix
+        BlockMatrix
 
         """
-        assert x.size == self.nx, "Dimension missmatch"
-        assert y.size == self.ng, "Dimension missmatch"
+        assert x.size == self.nx, 'Dimension mismatch'
+        assert y.size == self.ng, 'Dimension mismatch'
+
+        eval_f_c = kwargs.pop('eval_f_c', True)
+
+        if isinstance(x, BlockVector) and isinstance(y, BlockVector):
+            assert x.nblocks == self.nblocks + 1
+            assert y.nblocks == 2 * self.nblocks
+            x_ = x
+            y_ = y
+        elif isinstance(x, np.ndarray) and isinstance(y, BlockVector):
+            assert y.nblocks == 2 * self.nblocks
+            block_x = self.create_vector_x()
+            block_x.copyfrom(x)
+            x_ = block_x
+            y_ = y
+        elif isinstance(x, BlockVector) and isinstance(y, np.ndarray):
+            assert x.nblocks == self.nblocks + 1
+            x_ = x
+            block_y = self.create_vector_y()
+            block_y.copyfrom(y)
+            y_ = block_y
+        elif isinstance(x, np.ndarray) and isinstance(y, np.ndarray):
+            block_x = self.create_vector_x()
+            block_x.copyfrom(x)
+            x_ = block_x
+            block_y = self.create_vector_y()
+            block_y.copyfrom(y)
+            y_ = block_y
+        else:
+            raise NotImplementedError('Input vector format not recognized')
 
         if out is None:
-            if isinstance(x, BlockVector) and isinstance(y, BlockVector):
-                assert x.nblocks == self.nblocks + 1
-                assert y.nblocks == 2 * self.nblocks
+            hess_lag = BlockSymMatrix(self.nblocks + 1)
+            for sid, nlp in enumerate(self._nlps):
+                xi = x_[sid]
+                yi = y_[sid]
+                hess_lag[sid, sid] = nlp.hessian_lag(xi, yi, eval_f_c=eval_f_c)
 
-                hess_lag = BlockSymMatrix(self.nblocks + 1)
-                for sid, nlp in enumerate(self._nlps):
-                    xi = x[sid]
-                    yi = y[sid]
-                    hess_lag[sid, sid] = nlp.hessian_lag(xi, yi)
-
-                hess_lag[self.nblocks, self.nblocks] = EmptyMatrix(self.nz, self.nz)
-                return hess_lag
-            else:
-                raise NotImplementedError("ToDo")
+            hess_lag[self.nblocks, self.nblocks] = empty_matrix(self.nz, self.nz)
+            return hess_lag
         else:
-            raise NotImplementedError("ToDo")
+            assert isinstance(out, BlockSymMatrix), \
+                'out must be a BlockSymMatrix'
+            assert out.bshape == (self.nblocks + 1, self.nblocks + 1), \
+                'Block shape mismatch'
+            hess_lag = out
+            for sid, nlp in enumerate(self._nlps):
+                xi = x_[sid]
+                yi = y_[sid]
+                nlp.hessian_lag(xi,
+                                yi,
+                                out=hess_lag[sid, sid],
+                                eval_f_c=eval_f_c)
+
+            Hz = hess_lag[self.nblocks, self.nblocks]
+            nb = self.nblocks
+            assert Hz.shape == (self.nz, self.nz), \
+                'out must have an {}x{} empty matrix in block {}'.format(nb,
+                                                                         nb,
+                                                                         (nb, nb))
+            assert Hz.nnz == 0, \
+                'out must have an empty matrix in block {}'.format((nb, nb))
+            return hess_lag
 
     def block_id(self, scneario_name):
         """
@@ -849,7 +849,7 @@ class TwoStageStochasticNLP(NLP):
         int
 
         """
-        return self._sname_to_sidp[scneario_name]
+        return self._sname_to_sid[scneario_name]
 
     def block_name(self, bid):
         """
@@ -891,13 +891,47 @@ class TwoStageStochasticNLP(NLP):
     # ToDo: order of constraints?
 
     def expansion_matrix_xl(self):
-        raise NotImplementedError()
+
+        Pxl = BlockMatrix(self.nblocks + 1, self.nblocks + 1)
+        for sid, nlp in enumerate(self._nlps):
+            Pxl[sid, sid] = nlp.expansion_matrix_xl()
+        Pxl[self.nblocks, self.nblocks] = empty_matrix(self.nz, 0)
+        return Pxl
 
     def expansion_matrix_xu(self):
-        raise NotImplementedError()
+
+        Pxu = BlockMatrix(self.nblocks + 1, self.nblocks + 1)
+        for sid, nlp in enumerate(self._nlps):
+            Pxu[sid, sid] = nlp.expansion_matrix_xu()
+        Pxu[self.nblocks, self.nblocks] = empty_matrix(self.nz, 0)
+        return Pxu
 
     def expansion_matrix_dl(self):
-        raise NotImplementedError()
+
+        Pdl = BlockMatrix(self.nblocks, self.nblocks)
+        for sid, nlp in enumerate(self._nlps):
+            Pdl[sid, sid] = nlp.expansion_matrix_dl()
+        return Pdl
 
     def expansion_matrix_du(self):
-        raise NotImplementedError()
+
+        Pdu = BlockMatrix(self.nblocks, self.nblocks)
+        for sid, nlp in enumerate(self._nlps):
+            Pdu[sid, sid] = nlp.expansion_matrix_du()
+        return Pdu
+
+    def coupling_matrix(self):
+
+        AB = BlockMatrix(self.nblocks + 1, self.nblocks + 1)
+        for sid, nlp in enumerate(self._nlps):
+            col = self._zid_to_vid[sid]
+            row = np.arange(self.nz, dtype=np.int)
+            data = np.ones(self.nz)
+            AB[sid, sid] = csr_matrix((data, (row, col)), shape=(self.nz, nlp.nx))
+        AB[self.nblocks, self.nblocks] = -identity(self.nz)
+        return AB
+
+    def scenarios_order(self):
+        return [self._sid_to_sname[i] for i in range(self.nblocks)]
+
+

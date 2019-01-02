@@ -204,15 +204,10 @@ Tree Nodes:
 		NumUnitsCutFirstStage[10,9]=12500.0
 		NumUnitsCutFirstStage[10,10]=5000.0
 	Derived Variables: 
-		ProduceSizeFirstStage[1]=0.0
-		ProduceSizeFirstStage[2]=0.0
 		ProduceSizeFirstStage[3]=1.0
-		ProduceSizeFirstStage[4]=0.0
 		ProduceSizeFirstStage[5]=1.0
 		ProduceSizeFirstStage[6]=1.0
-		ProduceSizeFirstStage[7]=0.0
 		ProduceSizeFirstStage[8]=1.0
-		ProduceSizeFirstStage[9]=0.0
 		ProduceSizeFirstStage[10]=1.0
 
 	Name=Scenario1Node
@@ -234,16 +229,8 @@ Tree Nodes:
 		NumUnitsCutSecondStage[10,7]=3000.00000005
 		NumUnitsCutSecondStage[10,10]=3500.0
 	Derived Variables: 
-		ProduceSizeSecondStage[1]=0.0
-		ProduceSizeSecondStage[2]=0.0
-		ProduceSizeSecondStage[3]=0.0
-		ProduceSizeSecondStage[4]=0.0
 		ProduceSizeSecondStage[5]=1.0
-		ProduceSizeSecondStage[6]=0.0
-		ProduceSizeSecondStage[7]=0.0
-		ProduceSizeSecondStage[8]=0.0
 		ProduceSizeSecondStage[9]=1.0
-		ProduceSizeSecondStage[10]=0.0
 
 	Name=Scenario2Node
 	Stage=SecondStage
@@ -266,16 +253,8 @@ Tree Nodes:
 		NumUnitsCutSecondStage[10,7]=1500.0
 		NumUnitsCutSecondStage[10,10]=5000.0
 	Derived Variables: 
-		ProduceSizeSecondStage[1]=0.0
-		ProduceSizeSecondStage[2]=0.0
-		ProduceSizeSecondStage[3]=0.0
-		ProduceSizeSecondStage[4]=0.0
 		ProduceSizeSecondStage[5]=1.0
-		ProduceSizeSecondStage[6]=0.0
-		ProduceSizeSecondStage[7]=0.0
-		ProduceSizeSecondStage[8]=0.0
 		ProduceSizeSecondStage[9]=1.0
-		ProduceSizeSecondStage[10]=0.0
 
 	Name=Scenario3Node
 	Stage=SecondStage
@@ -299,16 +278,10 @@ Tree Nodes:
 		NumUnitsCutSecondStage[9,9]=16250.0
 		NumUnitsCutSecondStage[10,10]=6500.0
 	Derived Variables: 
-		ProduceSizeSecondStage[1]=0.0
 		ProduceSizeSecondStage[2]=1.0
-		ProduceSizeSecondStage[3]=0.0
-		ProduceSizeSecondStage[4]=0.0
 		ProduceSizeSecondStage[5]=1.0
-		ProduceSizeSecondStage[6]=0.0
 		ProduceSizeSecondStage[7]=1.0
-		ProduceSizeSecondStage[8]=0.0
 		ProduceSizeSecondStage[9]=0.999999999994
-		ProduceSizeSecondStage[10]=0.0
 
 
 Extensive form costs:

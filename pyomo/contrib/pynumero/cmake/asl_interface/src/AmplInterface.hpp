@@ -15,6 +15,7 @@
 
 // Forward declaration for ASL structure
 struct ASL_pfgh;
+struct Option_Info;
 
 // This class provides the C++ side of the 
 // PyNumero interface to AMPL
@@ -78,7 +79,13 @@ public:
    // evaluate the Hessian of the Lagrangian
    // Because of a requirement in AMPL, any time "x" changes
    // you must make a call to eval_f and eval_g BEFORE calling this method
-   bool eval_hes_lag(double *const_x, int nx, double *const_lam, int nc, double *hes_lag, int nnz_hes_lag);
+   bool eval_hes_lag(double *const_x,
+                     int nx,
+                     double *const_lam,
+                     int nc,
+                     double *hes_lag,
+                     int nnz_hes_lag,
+                     double objective_factor);
 
    // write the solution to the .sol file
    // pass in the ampl_solve_status_num (this is the "solve_status_num" from
@@ -104,6 +111,8 @@ private:
 protected:
    // ASL pointer
    ASL_pfgh *_p_asl;
+   // ASL option info pointer
+   Option_Info *oi;
 
    // maximize (-1) or minimize (1)
    double _obj_direction;

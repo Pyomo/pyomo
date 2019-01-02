@@ -8,9 +8,6 @@
  * This software is distributed under the 3-clause BSD License.
  * ___________________________________________________________________________
 **/
-//#if defined(__APPLE__) && defined(__MACH__)
-//#include "fmemopen.h"
-//#endif
 
 #include "AmplInterface.hpp"
 #include "AssertUtils.hpp"
@@ -72,7 +69,7 @@ void AmplInterface::initialize(const char *nlfilename)
    // Create the Option_Info structure - see getstub.h (more entries than in hooking.pdf)
    // ToDo: should allow many of these to be passed in to initialize (so different solvers
    // can set them appropriately).
-   Option_Info *oi = new Option_Info;
+   oi = new Option_Info;
    oi->sname = new_char_p_from_std_str("solver_exe_name_not_set");
    oi->bsname = new_char_p_from_std_str("Solver_name_not_set");
    oi->opname = new_char_p_from_std_str("solver_options_env_var_not_set");
@@ -106,7 +103,7 @@ void AmplInterface::initialize(const char *nlfilename)
    delete[] oi->opname;
    oi->opname = NULL;   
    // this pointer may need to be stored for the call to write_sol
-   delete oi;
+   //delete oi;
 
    FILE *nl = this->open_nl(asl, stub);
    _ASSERT_(nl != NULL);
@@ -163,6 +160,7 @@ AmplInterface::~AmplInterface() {
     pi0 = NULL;
     delete[] havepi0;
     havepi0 = NULL;
+    delete oi;
 
     if (asl) {
         ASL *p_asl_to_free = (ASL *) _p_asl;
@@ -366,7 +364,13 @@ void AmplInterface::struct_hes_lag(int *irow, int *jcol, int nnz_hes_lag) {
     }
 }
 
-bool AmplInterface::eval_hes_lag(double *const_x, int nx, double *const_lam, int nc, double *hes_lag, int nnz_hes_lag) {
+bool AmplInterface::eval_hes_lag(double *const_x,
+                                 int nx,
+                                 double *const_lam,
+                                 int nc,
+                                 double *hes_lag,
+                                 int nnz_hes_lag,
+                                 double obj_factor) {
     ASL_pfgh *asl = _p_asl;
     _ASSERT_(_p_asl);
     _ASSERT_(nx == n_var);
@@ -374,7 +378,7 @@ bool AmplInterface::eval_hes_lag(double *const_x, int nx, double *const_lam, int
     _ASSERT_(n_obj == 1);
     _ASSERT_(nnz_hes_lag_ == nnz_hes_lag);
 
-    double OW = _obj_direction;
+    double OW = _obj_direction * obj_factor;
     sphes(hes_lag, -1, &OW, (double *) const_lam);
     return true;
 }
@@ -511,8 +515,9 @@ extern "C"
    }
 
    bool EXTERNAL_AmplInterface_eval_hes_lag(AmplInterface *p_ai, double *const_x, int nx,
-                                            double *const_lam, int nc, double *hes_lag, int nnz_hes_lag) {
-      return p_ai->eval_hes_lag(const_x, nx, const_lam, nc, hes_lag, nnz_hes_lag);
+                                            double *const_lam, int nc, double *hes_lag,
+                                            int nnz_hes_lag, double obj_factor) {
+      return p_ai->eval_hes_lag(const_x, nx, const_lam, nc, hes_lag, nnz_hes_lag, obj_factor);
    }
 
    void EXTERNAL_AmplInterface_finalize_solution(AmplInterface *p_ai,
@@ -524,8 +529,13 @@ extern "C"
                               const_x, nx, const_lam, nc);
    }
 
-   void EXTERNAL_AmplInterface_free_memory(AmplInterface *p_ai) { 
+   void EXTERNAL_AmplInterface_free_memory(AmplInterface *p_ai) {
       p_ai->~AmplInterface();
    }
+
+   void EXTERNAL_AmplInterface_dummy(AmplInterface *p_ai) {
+       std::cout<<"hola\n";
+   }
+
 }
 

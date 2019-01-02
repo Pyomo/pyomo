@@ -7,10 +7,9 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.contrib.pynumero.sparse import (BlockVector,
-                             BlockSymMatrix,
-                             COOSymMatrix)
+from pyomo.contrib.pynumero.sparse import (BlockVector, BlockSymMatrix)
 from scipy.sparse.linalg import spsolve
+from scipy.sparse import identity
 import numpy as np
 
 
@@ -32,21 +31,16 @@ def compute_init_lam(nlp, x=None, lam_max=1e3):
     # create gradient of objective
     df = nlp.grad_objective(x)
 
-    diag_ones = np.ones(nx)
-    irows = np.arange(nx)
-    jcols = np.arange(nx)
-    eye = COOSymMatrix((diag_ones, (irows, jcols)), shape=(nx, nx))
-
     # create KKT system
     kkt = BlockSymMatrix(2)
-    kkt[0, 0] = eye
+    kkt[0, 0] = identity(nx)
     kkt[1, 0] = jac_c
 
     zeros = np.zeros(nc)
     rhs = BlockVector([-df, zeros])
 
 
-    flat_kkt = kkt.tofullmatrix().tocsc()
+    flat_kkt = kkt.tocoo().tocsc()
     flat_rhs = rhs.flatten()
 
     sol = spsolve(flat_kkt, flat_rhs)
