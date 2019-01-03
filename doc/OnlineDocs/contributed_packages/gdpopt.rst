@@ -48,7 +48,7 @@ An example which includes the modeling approach may be found below.
   >>> model.objective = Objective(expr=model.x, sense=minimize)
 
   Solve the model using GDPopt
-  >>> SolverFactory('gdpopt').solve(model, mip_solver='glpk') # doctest: +SKIP
+  >>> SolverFactory('gdpopt').solve(model, mip='glpk') # doctest: +SKIP
 
 The solution may then be displayed by using the commands
 
