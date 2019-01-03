@@ -8,6 +8,7 @@ except:
 import importlib as im
 import itertools
 import types
+import json
 import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as st
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
@@ -637,8 +638,7 @@ class ParmEstimator(object):
 
         Returns
         -------
-        bootstrap_theta_list: `DataFrame`
-            Samples and theta values from the bootstrap
+        `DataFrame` which contains theta values and samples
         """
 		
         bootstrap_theta = list()
@@ -686,9 +686,8 @@ class ParmEstimator(object):
 
         Returns
         -------
-        SSE: `DataFrame`
-            Sum of squared errors values for the entire mesh unless
-            some mesh points are infeasible, which are omitted.
+        `DataFrame` with objective values for the entire mesh unless
+        some mesh points are infeasible, which are omitted.
         """
 
         ####
@@ -707,7 +706,7 @@ class ParmEstimator(object):
                 yield dict(zip(keys, prod))
 
         # for parallel code we need to use lists and dicts in the loop
-        all_SSE = list()
+        all_obj = list()
         global_mesh = list()
         MeshLen = 0
         for Theta in mesh_generator(search_ranges):
@@ -716,16 +715,134 @@ class ParmEstimator(object):
         task_mgr = mpiu.ParallelTaskManager(MeshLen)
         local_mesh = task_mgr.global_to_local_data(global_mesh)
         
-        # walk over the mesh, using the objective function to get squared error
+        # walk over the mesh, return objective function
         for Theta in local_mesh:
-            SSE, thetvals, worststatus = self.Q_at_theta(Theta)
+            obj, thetvals, worststatus = self.Q_at_theta(Theta)
             if worststatus != pyo.TerminationCondition.infeasible:
-                 all_SSE.append(list(Theta.values()) + [SSE])
+                 all_obj.append(list(Theta.values()) + [obj])
             # DLW, Aug2018: should we also store the worst solver status?
             
-        global_all_SSE = task_mgr.allgather_global_data(all_SSE)
-        dfcols = list(search_ranges.keys())+["SSE"]
-        store_all_SSE = pd.DataFrame(data=global_all_SSE, columns=dfcols)
+        global_all_obj = task_mgr.allgather_global_data(all_obj)
+        dfcols = list(search_ranges.keys())+["obj"]
+        store_all_obj = pd.DataFrame(data=global_all_obj, columns=dfcols)
 
-        return store_all_SSE
+        return store_all_obj
+    
+class _SecondStateCostExpr(object):
+    def __init__(self, ssc_function, data):
+        self._ssc_function = ssc_function
+        self._data = data
+    def __call__(self, model):
+        return self._ssc_function(model, self._data)
+
+def group_experiments(data, groupby_column, use_mean = None):
+    grouped_data = []
+    for exp_num, group in data.groupby(data[groupby_column]):
+        d = {}
+        for col in group.columns:
+            if col in use_mean:
+                d[col] = group[col].mean()
+            else:
+                d[col] = list(group[col])
+        grouped_data.append(d)
+    
+    #grouped_data = pd.DataFrame.from_dict(grouped_data)
+    
+    return grouped_data
+
+class Estimator(ParmEstimator):
+    """
+    Stores inputs to the parameter estimations process.
+    Provides API for getting the parameter estimates, distributions
+    and confidence intervals.
+
+    Parameters
+    ----------
+    model_function: function
+        Function that generates an instance of the Pyomo model using 'data' 
+        as the input argument
+    data: pandas DataFrame, list of dictionaries, or list of json file names
+        Data that is used to build an instance of the Pyomo model and build 
+        the objective function
+    thetavars: list
+        List of Vars to estimate
+    obj_function: function (optional)
+        Function used to formulate parameter estimation objective, generally
+        sum of squared error.  If no function is specified, the model is used 
+        "as is" and should be defined with a "FirstStateCost" and 
+        "SecondStageCost" expression that are used to build an objective 
+        for pysp.
+    tee: bool (optional)
+        Indicates that ef solver output should be teed
+    """
+    def __init__(self, model_function, data, thetavars, lse_function=None, 
+                 tee=False):
         
+        self.model_function = model_function
+        self.data = data
+        self.thetavars = thetavars 
+        self.lse_function = lse_function 
+        
+        # This just maps into the old structure
+        self.gmodel_file = None
+        self.gmodel_maker = self._instance_creation_callback
+        self.qName = "SecondStageCost"
+        self.thetalist = thetavars
+        self.numbers_list = list(range(len(data)))
+        self.cb_data = data
+        self.tee = tee
+        self.diagnostic_mode = False
+
+    def _create_parmest_model(self, data):
+        from pyomo.core import Objective
+        
+        model = self.model_function(data)
+
+        for theta in self.thetavars:
+            try:
+                var_validate = eval('model.'+theta)
+                var_validate.fixed = False
+            except:
+                print(theta +'is not a variable')
+        
+        if self.lse_function:
+            for obj in model.component_objects(Objective):
+                obj.deactivate()
+        
+            def FirstStageCost_rule(model):
+                return 0
+            model.FirstStageCost = pyo.Expression(rule=FirstStageCost_rule)
+            model.SecondStageCost = pyo.Expression(rule=_SecondStateCostExpr(self.lse_function, data))
+            
+            def TotalCost_rule(model):
+                return model.FirstStageCost + model.SecondStageCost
+            model.Total_Cost_Objective = pyo.Objective(rule=TotalCost_rule, sense=pyo.minimize)
+        
+        self.parmest_model = model
+        
+        return model
+    
+    def _instance_creation_callback(self, experiment_number=None, cb_data=None):
+        
+        # DataFrame
+        if isinstance(cb_data, pd.DataFrame):
+            # Keep single experiments as a Dataframe (not a Series)
+            exp_data = cb_data.loc[experiment_number,:].to_frame().transpose() 
+        
+        # List of dictionaries OR list of json file names
+        elif isinstance(cb_data, list):
+            exp_data = cb_data[experiment_number]
+            if isinstance(exp_data, dict):
+                pass
+            if isinstance(exp_data, str):
+                try:
+                    with open(exp_data,'r') as infile:
+                        exp_data = json.load(infile)
+                except:
+                    pass
+        else:
+            print('Unexpected data format')
+            return
+        model = self._create_parmest_model(exp_data)
+        
+        return model
