@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.graphics as grph
@@ -29,9 +30,18 @@ print(theta)
 
 ### Parameter estimation with bootstrap resampling
 
+np.random.seed(38256)
 bootstrap_theta = pest.bootstrap(50)
 print(bootstrap_theta.head())
-
 grph.pairwise_plot(bootstrap_theta, theta)
+grph.pairwise_bootstrap_plot(bootstrap_theta, 0.8, theta)
 
-grph.pairwise_bootstrap_plot(bootstrap_theta, theta, 0.8)
+### Parameter estimation with likelihood ratio
+
+search_ranges = {}
+search_ranges['k1'] = np.arange(0.78, 0.92, 0.02) 
+search_ranges['k2'] = np.arange(1.48, 1.79, 0.05) 
+search_ranges['k3'] = np.arange(0.000155, 0.000185, 0.000005) 
+LR = pest.likelihood_ratio(search_ranges=search_ranges)
+print(LR.head())
+grph.pairwise_likelihood_ratio_plot(LR, obj, 0.8, data.shape[0], theta)

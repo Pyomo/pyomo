@@ -37,9 +37,9 @@ def _add_scatter(x,y,color,label,columns,theta_star=None):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax, columns)
     
-    ax.scatter(x, y, s=15)
+    ax.scatter(x, y, s=10)
     if theta_star is not None:
-        ax.scatter(theta_star[xvar], theta_star[yvar], c='k', s=30)
+        ax.scatter(theta_star[xvar], theta_star[yvar], c='k', s=35)
     
 def _add_rectangle_CI(x,y,color,label,columns,alpha):
     ax = plt.gca()
@@ -62,18 +62,19 @@ def _add_multivariate_normal_CI(x,y,color,label,columns,ncells,alpha,mvn_dist,th
     
     X,Y = _get_XYgrid(x,y,ncells)
     
-    data = []
+    data_slice = []
     for var in theta_star.index:
         if var == xvar:
-            data.append(X)
+            data_slice.append(X)
         elif var == yvar:
-            data.append(Y)
+            data_slice.append(Y)
         elif var not in [xvar,yvar]:
-            data.append(np.array([[theta_star[var]]*ncells]*ncells))
-    pos = np.dstack(tuple(data))
+            data_slice.append(np.array([[theta_star[var]]*ncells]*ncells))
+    data_slice = np.dstack(tuple(data_slice))
         
-    Z = mvn_dist.pdf(pos)
+    Z = mvn_dist.pdf(data_slice)
     Z = Z.reshape((ncells, ncells))
+    
     ax.contour(X,Y,Z, levels=[alpha], colors='b') 
 
 def _add_gaussian_kde_CI(x,y,color,label,columns,ncells,alpha,kde_dist,theta_star):
@@ -82,44 +83,67 @@ def _add_gaussian_kde_CI(x,y,color,label,columns,ncells,alpha,kde_dist,theta_sta
     
     X,Y = _get_XYgrid(x,y,ncells)
     
-    data = []
+    data_slice = []
     for var in theta_star.index:
         if var == xvar:
-            data.append(X.ravel())
+            data_slice.append(X.ravel())
         elif var == yvar:
-            data.append(Y.ravel())
+            data_slice.append(Y.ravel())
         elif var not in [xvar,yvar]:
-            data.append(np.array([theta_star[var]]*ncells*ncells))
-    pos = np.array(data)
+            data_slice.append(np.array([theta_star[var]]*ncells*ncells))
+    data_slice = np.array(data_slice)
         
-    Z = kde_dist.pdf(pos)
+    Z = kde_dist.pdf(data_slice)
     Z = Z.reshape((ncells, ncells))
+    
     ax.contour(X,Y,Z, levels=[alpha], colors='r') 
 
-def _add_LR_contour(x,y,color,label,columns,LR,compare):
+def _add_LR_contour(x,y,color,label,columns,LR,compare,theta_star):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
     
-    x = LR[xvar]
-    y = LR[yvar]
-    z = LR['obj']
-    triang = tri.Triangulation(x, y)
-    plt.tricontour(triang,z,[compare], colors='r') 
+    import itertools
+    from scipy.interpolate import griddata
+    
+    search_ranges = {} 
+    for var in columns:
+        if var in [xvar,yvar]:
+            search_ranges[var] = LR[var].unique()
+        else:
+            search_ranges[var] = [theta_star[var]]
+
+    data_slice = pd.DataFrame(list(itertools.product(*search_ranges.values())),
+                            columns=search_ranges.keys())
+    data_slice['obj'] = griddata(np.array(LR[columns]),
+                         np.array(LR[['obj']]),
+                         np.array(data_slice[columns]),
+                         method='linear',
+                         rescale=True)
+    
+    X = data_slice[xvar]
+    Y = data_slice[yvar]
+    Z = data_slice['obj']
+    
+    triang = tri.Triangulation(X, Y)
+    cmap = plt.cm.get_cmap('Greys')
+    
+    plt.tricontour(triang,Z,[compare], colors='r')
+    plt.tricontourf(triang,Z,cmap=cmap)
       
-def _set_axis_limits(g, axis_limits, theta_est):
+def _set_axis_limits(g, axis_limits, theta_vals):
     
     if axis_limits is None:
         axis_limits = {}
-        for col in theta_est.columns:
-            theta_range = np.abs(theta_est[col].max() - theta_est[col].min())
-            axis_limits[col] = [theta_est[col].min() - theta_range/4, 
-                                theta_est[col].max() + theta_range/4]
+        for col in theta_vals.columns:
+            theta_range = np.abs(theta_vals[col].max() - theta_vals[col].min())
+            axis_limits[col] = [theta_vals[col].min() - theta_range/4, 
+                                theta_vals[col].max() + theta_range/4]
     for ax in g.fig.get_axes():
-        xvar, yvar, (xloc, yloc) = _get_variables(ax,theta_est.columns)
+        xvar, yvar, (xloc, yloc) = _get_variables(ax,theta_vals.columns)
         if xloc != yloc: # not on diagonal
             ax.set_ylim(axis_limits[yvar])
             ax.set_xlim(axis_limits[xvar])
-        else:
+        else: # on diagonal
             ax.set_xlim(axis_limits[xvar])
             
             
@@ -161,7 +185,7 @@ def pairwise_plot(theta_est, theta_star=None, axis_limits=None, filename=None):
     else:
         plt.savefig(filename)
 
-def pairwise_likelihood_ratio_plot(theta_LR, objval, alpha, S, 
+def pairwise_likelihood_ratio_plot(theta_LR, objval, alpha, S, theta_star,
                                    axis_limits=None, filename=None):
     """
     Plot pairwise relationship for each variable, filtered by chi-squared
@@ -169,7 +193,7 @@ def pairwise_likelihood_ratio_plot(theta_LR, objval, alpha, S,
     
     Parameters
     ----------
-    theta_LR: `pandas DataFrame` (columns = variable names plus obj) 
+    theta_LR: `pandas DataFrame` (columns = variable names plus 'obj') 
         Objective for each estimate of theta (returned by 
         parmest.likelihood_ratio).
     objval: `float`
@@ -178,6 +202,8 @@ def pairwise_likelihood_ratio_plot(theta_LR, objval, alpha, S,
         Alpha value for the chi-squared test
     S: `float`
         Number of samples
+    theta_star: `dict` or `pandas Series` (index = variable names)
+        Theta values used in 2D distribution slice, generally set to theta*
     axis_limits: `dict` or `pandas Series` (optional)
         Axis limits in the format {variable: [min, max]}        
     filename: `string` (optional)
@@ -187,27 +213,26 @@ def pairwise_likelihood_ratio_plot(theta_LR, objval, alpha, S,
     -----------
     Theta values filtered by chi-squared alpha test 
     """  
+    if isinstance(theta_star, dict):
+        theta_star = pd.Series(theta_star)
+    
     chi2_val = stats.chi2.ppf(alpha, 2)
     compare = objval * ((chi2_val / (S - 2)) + 1)
     alpha_region = theta_LR[theta_LR['obj'] < compare]
     theta_est = alpha_region.drop('obj', axis=1)
     
-    if axis_limits is None:
-        axis_limits = {}
-        for col in theta_est:
-            temp = np.abs(theta_est[col].max()-theta_est[col].min())
-            axis_limits[col] = [theta_est[col].min()-temp/10, 
-                                theta_est[col].max()+temp/10]
     columns = theta_est.columns
     
     g = sns.PairGrid(theta_est)
     g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False)
-
-    g.map_upper(_add_LR_contour, columns=columns, LR=theta_LR, compare=compare)
-    g.map_upper(_add_scatter, columns=columns)
-
-    g.map_lower(_add_LR_contour, columns=columns, LR=theta_LR, compare=compare)
-    g.map_lower(_add_scatter, columns=columns)
+    
+    g.map_upper(_add_LR_contour, columns=columns, LR=theta_LR, compare=compare, 
+                theta_star=theta_star)
+    g.map_upper(_add_scatter, columns=columns, theta_star=theta_star)
+    
+    g.map_lower(_add_LR_contour, columns=columns, LR=theta_LR, compare=compare, 
+                theta_star=theta_star)
+    g.map_lower(_add_scatter, columns=columns, theta_star=theta_star)
 
     _set_axis_limits(g, axis_limits, theta_est)
 
@@ -218,7 +243,7 @@ def pairwise_likelihood_ratio_plot(theta_LR, objval, alpha, S,
     
     return alpha_region
 
-def pairwise_bootstrap_plot(theta_est, theta_star, alpha, axis_limits=None, 
+def pairwise_bootstrap_plot(theta_est, alpha, theta_star, axis_limits=None, 
                             filename=None):
     """
     Plot pairwise relationship for theta estimates along with confidence 
@@ -229,10 +254,10 @@ def pairwise_bootstrap_plot(theta_est, theta_star, alpha, axis_limits=None,
     theta_est: `pandas DataFrame` (columns = variable names)
         Theta estimate (returned by parmest.bootstrap). If the DataFrame 
         contains column names 'samples', these will not be included in the plot.
-    theta_star: `dict` or `pandas Series` (index = variable names)
-        Theta*
     alpha: `float`
         Confidence interval
+    theta_star: `dict` or `pandas Series` (index = variable names)
+        Theta values used in 2D distribution slice, generally set to theta*
     axis_limits: `dict` or `pandas Series` (optional)
         Axis limits in the format {variable: [min, max]}
     filename: `string` (optional)

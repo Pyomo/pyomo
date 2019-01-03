@@ -28,10 +28,10 @@ print(theta)
 
 ### Parameter estimation with bootstrap resampling
 
-np.random.seed(38256)
+np.random.seed(95264)
 bootstrap_theta = pest.bootstrap(50)
 print(bootstrap_theta.head())
-grph.pairwise_bootstrap_plot(bootstrap_theta, theta, 0.8)
+grph.pairwise_bootstrap_plot(bootstrap_theta, 0.8, theta)
 
 
 ### Parameter estimation with likelihood ratio
@@ -43,4 +43,4 @@ search_ranges["k1"] = np.arange(4, 24, 6)
 search_ranges["k2"] = np.arange(40, 160, 80)
 LR = pest.likelihood_ratio(search_ranges=search_ranges)
 print(LR.head())
-grph.pairwise_likelihood_ratio_plot(LR, obj, 0.8, len(data))
+grph.pairwise_likelihood_ratio_plot(LR, obj, 0.8, len(data), theta)
