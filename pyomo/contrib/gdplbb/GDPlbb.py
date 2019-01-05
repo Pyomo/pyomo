@@ -151,6 +151,14 @@ class GDPlbbSolver(object):
             if(not d.xor):
                 raise ValueError('GDPlbb unable to handle '
                                 'non-exclusive disjunctions')
+        objectives = model.component_data_objects(Objective, active=True)
+        obj = next(objectives, None)
+        if next(objectives, None) is not None:
+            raise RuntimeError(
+                "GDP LBB solver is unable to handle model with multiple active objectives.")
+        if obj is None:
+            raise RuntimeError(
+                "GDP LBB solver is unable to handle model with no active objective.")
 
     def minlp_solve(self,gdp,solver):
         minlp = gdp.clone()
@@ -158,7 +166,9 @@ class GDPlbbSolver(object):
         result = solver.solve(minlp)
         if (result.solver.status is SolverStatus.ok and
                 result.solver.termination_condition is tc.optimal):
-                return value(minlp.obj.expr)#TODO: reference objective function correctly
+                objectives = minlp.component_data_objects(Objective, active=True)
+                obj = next(objectives, None)
+                return value(obj.expr)
         else:
                 return float('inf')
         delete(minlp)
