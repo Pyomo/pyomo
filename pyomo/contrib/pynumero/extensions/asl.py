@@ -148,15 +148,32 @@ class AmplInterface(object):
                                                                  ctypes.c_int]
         self.ASLib.EXTERNAL_AmplInterface_eval_jac_g.restype = ctypes.c_bool
 
-        # evaluate hessian Lagrangian
-        self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag.argtypes = [ctypes.c_void_p,
-                                                                   array_1d_double,
-                                                                   ctypes.c_int,
-                                                                   array_1d_double,
-                                                                   ctypes.c_int,
-                                                                   array_1d_double,
-                                                                   ctypes.c_int]
-        self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag.restype = ctypes.c_bool
+        # temporary try/except block while changes get merged in pynumero_libraries
+        try:
+            self.ASLib.EXTERNAL_AmplInterface_dummy.argtypes = [ctypes.c_void_p]
+            self.ASLib.EXTERNAL_AmplInterface_dummy.restype = None
+            # evaluate hessian Lagrangian
+            self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag.argtypes = [ctypes.c_void_p,
+                                                                       array_1d_double,
+                                                                       ctypes.c_int,
+                                                                       array_1d_double,
+                                                                       ctypes.c_int,
+                                                                       array_1d_double,
+                                                                       ctypes.c_int,
+                                                                       ctypes.c_double]
+            self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag.restype = ctypes.c_bool
+            self.future_libraries = True
+        except Exception:
+            # evaluate hessian Lagrangian
+            self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag.argtypes = [ctypes.c_void_p,
+                                                                       array_1d_double,
+                                                                       ctypes.c_int,
+                                                                       array_1d_double,
+                                                                       ctypes.c_int,
+                                                                       array_1d_double,
+                                                                       ctypes.c_int]
+            self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag.restype = ctypes.c_bool
+            self.future_libraries = False
 
         # finalize solution
         self.ASLib.EXTERNAL_AmplInterface_finalize_solution.argtypes = [ctypes.c_void_p,
@@ -177,12 +194,10 @@ class AmplInterface(object):
                 raise ValueError("Cannot specify both filename= and nl_buffer=")
 
             b_data = filename.encode('utf-8')
-            # ToDo: add check pointer is not null in the c-code
             self._obj = self.ASLib.EXTERNAL_AmplInterface_new_file(b_data)
         elif nl_buffer is not None:
             b_data = nl_buffer.encode('utf-8')
             if os.name in ['nt', 'dos']:
-                # ToDo: add check pointer is not null in the c-code
                 self._obj = self.ASLib.EXTERNAL_AmplInterface_new_file(b_data)
             else:
                 self._obj = self.ASLib.EXTERNAL_AmplInterface_new_str(b_data)
@@ -303,20 +318,30 @@ class AmplInterface(object):
                                                        self._ny)
         assert res, "Error in AMPL evaluation"
 
-    def eval_hes_lag(self, x, lam, hes_lag):
+    def eval_hes_lag(self, x, lam, hes_lag, obj_factor=1.0):
         assert x.size == self._nx, "Error: Dimension missmatch."
         assert lam.size == self._ny, "Error: Dimension missmatch."
         assert hes_lag.size == self._nnz_hess, "Error: Dimension missmatch."
         assert x.dtype == np.double, "Error: array type. Function eval_hes_lag expects an array of type double"
         assert lam.dtype == np.double, "Error: array type. Function eval_hes_lag expects an array of type double"
         assert hes_lag.dtype == np.double, "Error: array type. Function eval_hes_lag expects an array of type double"
-        res = self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag(self._obj,
-                                                             x,
-                                                             self._nx,
-                                                             lam,
-                                                             self._ny,
-                                                             hes_lag,
-                                                             self._nnz_hess)
+        if self.future_libraries:
+            res = self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag(self._obj,
+                                                                 x,
+                                                                 self._nx,
+                                                                 lam,
+                                                                 self._ny,
+                                                                 hes_lag,
+                                                                 self._nnz_hess,
+                                                                 obj_factor)
+        else:
+            res = self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag(self._obj,
+                                                                 x,
+                                                                 self._nx,
+                                                                 lam,
+                                                                 self._ny,
+                                                                 hes_lag,
+                                                                 self._nnz_hess)
         assert res, "Error in AMPL evaluation"
 
     def finalize_solution(self, ampl_solve_status_num, msg, x, lam):

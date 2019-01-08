@@ -76,7 +76,7 @@ plt.title('Jacobian of the constraints\n')
 plt.show()
 
 hess_lag = nlp.hessian_lag(x, y)
-plt.spy(hess_lag.tofullmatrix())
+plt.spy(hess_lag.tocoo())
 plt.title('Hessian of the Lagrangian function\n')
 plt.show()
 
@@ -84,6 +84,6 @@ kkt = BlockSymMatrix(2)
 kkt[0, 0] = hess_lag
 kkt[1, 0] = jac_c
 
-plt.spy(kkt.tofullmatrix())
+plt.spy(kkt.tocoo())
 plt.title('KKT system\n')
 plt.show()

@@ -11,6 +11,7 @@ import pyomo.environ as aml
 from pyomo.contrib.pynumero.interfaces import PyomoNLP
 from pyomo.contrib.pynumero.sparse import BlockSymMatrix, BlockMatrix
 from pyomo.contrib.pynumero.interfaces.utils import compute_init_lam
+from scipy.sparse.linalg import spsolve
 import numpy as np
 
 
@@ -54,14 +55,10 @@ M[0, 0] = H
 M[1, 0] = J
 
 Np = BlockMatrix(2, 1)
-Np[0, 0] = nlp.Hessian_lag(x, y, variables_cols=[m.eta1, m.eta2])
-Np[1, 0] = nlp.Jacobian_g(x, variables=[m.eta1, m.eta2])
+Np[0, 0] = nlp.hessian_lag(x, y, subset_variables_col=[m.eta1, m.eta2])
+Np[1, 0] = nlp.jacobian_g(x, subset_variables=[m.eta1, m.eta2])
 
-M_array = M.toarray()
-Np_array = Np.toarray()
-
-ds = np.linalg.solve(M_array, Np_array)
-
+ds = spsolve(M.tocsc(), Np.tocsc())
 print(nlp.variable_order())
 
 #################################################################

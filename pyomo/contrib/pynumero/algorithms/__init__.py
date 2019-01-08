@@ -7,10 +7,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-ADD_LIBRARY( pynumero_SPARSE SHARED src/SparseUtils.cpp)
-INSTALL(TARGETS pynumero_SPARSE
-        DESTINATION lib
-       )
-INSTALL(DIRECTORY src
-        DESTINATION include
-       )
+
+try:
+    import numpy as np
+    numpy_available = True
+except ImportError:
+    numpy_available = False
+
