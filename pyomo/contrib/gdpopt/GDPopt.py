@@ -236,8 +236,28 @@ class GDPoptSolver(object):
                 # If the logger does not already include INFO, include it.
                 config.logger.setLevel(logging.INFO)
             config.logger.info(
-                "---Starting GDPopt version %s using %s algorithm---"
+                "Starting GDPopt version %s using %s algorithm"
                 % (".".join(map(str, self.version())), config.strategy)
+            )
+            config.logger.info(
+                """
+If you use this software, you may cite the following:
+- Implementation:
+    Chen, Q; Johnson, ES; Siirola, JD; Grossmann, IE.
+    Pyomo.GDP: Disjunctive Models in Python. 
+    Proc. of the 13th Intl. Symposium on Process Systems Eng.
+    San Diego, 2018.
+- LOA algorithm:
+    Türkay, M; Grossmann, IE.
+    Logic-based MINLP algorithms for the optimal synthesis of process networks.
+    Comp. and Chem. Eng. 1996, 20(8), 959–978.
+    DOI: 10.1016/0098-1354(95)00219-7.
+- GLOA algorithm:
+    Lee, S; Grossmann, IE.
+    A Global Optimization Algorithm for Nonconvex Generalized Disjunctive Programming and Applications to Process Systems
+    Comp. and Chem. Eng. 2001, 25, 1675-1697.
+    DOI: 10.1016/S0098-1354(01)00732-3
+                """.strip()
             )
             solve_data.results.solver.name = 'GDPopt %s - %s' % (
                 str(self.version()), config.strategy)
