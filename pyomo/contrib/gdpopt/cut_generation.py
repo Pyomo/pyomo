@@ -91,108 +91,110 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
 
 
 def add_affine_cuts(nlp_result, solve_data, config):
-    m = solve_data.linear_GDP
-    config.logger.info("Adding affine cuts.")
-    GDPopt = m.GDPopt_utils
-    counter = 0
-    for var, val in zip(GDPopt.variable_list, nlp_result.var_values):
-        if val is not None and not var.fixed:
-            var.value = val
+    with time_code(solve_data.timing, "affine cut generation"):
+        m = solve_data.linear_GDP
+        config.logger.info("Adding affine cuts.")
+        GDPopt = m.GDPopt_utils
+        counter = 0
+        for var, val in zip(GDPopt.variable_list, nlp_result.var_values):
+            if val is not None and not var.fixed:
+                var.value = val
 
-    for constr in constraints_in_True_disjuncts(m, config):
-        # Note: this includes constraints that are deactivated in the current model (linear_GDP)
+        for constr in constraints_in_True_disjuncts(m, config):
+            # Note: this includes constraints that are deactivated in the current model (linear_GDP)
 
-        if constr.body.polynomial_degree() in (1, 0):
-            continue
+            if constr.body.polynomial_degree() in (1, 0):
+                continue
 
-        vars_in_constr = list(
-            identify_variables(constr.body))
-        if any(var.value is None for var in vars_in_constr):
-            continue  # a variable has no values
+            vars_in_constr = list(
+                identify_variables(constr.body))
+            if any(var.value is None for var in vars_in_constr):
+                continue  # a variable has no values
 
-        # mcpp stuff
-        mc_eqn = mc(constr.body)
-        ccSlope = mc_eqn.subcc()
-        cvSlope = mc_eqn.subcv()
-        ccStart = mc_eqn.concave()
-        cvStart = mc_eqn.convex()
-        ub_int = min(constr.upper, mc_eqn.upper()) if constr.has_ub() else mc_eqn.upper()
-        lb_int = max(constr.lower, mc_eqn.lower()) if constr.has_lb() else mc_eqn.lower()
+            # mcpp stuff
+            mc_eqn = mc(constr.body)
+            ccSlope = mc_eqn.subcc()
+            cvSlope = mc_eqn.subcv()
+            ccStart = mc_eqn.concave()
+            cvStart = mc_eqn.convex()
+            ub_int = min(constr.upper, mc_eqn.upper()) if constr.has_ub() else mc_eqn.upper()
+            lb_int = max(constr.lower, mc_eqn.lower()) if constr.has_lb() else mc_eqn.lower()
 
-        parent_block = constr.parent_block()
-        # Create a block on which to put outer approximation cuts.
-        aff_utils = parent_block.component('GDPopt_aff')
-        if aff_utils is None:
-            aff_utils = parent_block.GDPopt_aff = Block(
-                doc="Block holding affine constraints")
-            aff_utils.GDPopt_aff_cons = ConstraintList()
-        aff_cuts = aff_utils.GDPopt_aff_cons
-        concave_cut = sum(ccSlope[var] * (var - var.value)
-                          for var in vars_in_constr
-                          ) + ccStart >= lb_int
-        convex_cut = sum(cvSlope[var] * (var - var.value)
-                         for var in vars_in_constr
-                         ) + cvStart <= ub_int
-        aff_cuts.add(expr=concave_cut)
-        aff_cuts.add(expr=convex_cut)
-        counter += 2
+            parent_block = constr.parent_block()
+            # Create a block on which to put outer approximation cuts.
+            aff_utils = parent_block.component('GDPopt_aff')
+            if aff_utils is None:
+                aff_utils = parent_block.GDPopt_aff = Block(
+                    doc="Block holding affine constraints")
+                aff_utils.GDPopt_aff_cons = ConstraintList()
+            aff_cuts = aff_utils.GDPopt_aff_cons
+            concave_cut = sum(ccSlope[var] * (var - var.value)
+                              for var in vars_in_constr
+                              ) + ccStart >= lb_int
+            convex_cut = sum(cvSlope[var] * (var - var.value)
+                             for var in vars_in_constr
+                             ) + cvStart <= ub_int
+            aff_cuts.add(expr=concave_cut)
+            aff_cuts.add(expr=convex_cut)
+            counter += 2
 
-    config.logger.info("Added %s affine cuts" % counter)
+        config.logger.info("Added %s affine cuts" % counter)
 
 
 def add_integer_cut(var_values, solve_data, config, feasible=False):
     """Add an integer cut to the linear GDP model."""
-    m = solve_data.linear_GDP
-    GDPopt = m.GDPopt_utils
-    var_value_is_one = ComponentSet()
-    var_value_is_zero = ComponentSet()
-    for var, val in zip(GDPopt.variable_list, var_values):
-        if not var.is_binary():
-            continue
-        if var.fixed:
-            if val is not None and var.value != val:
-                # val needs to be None or match var.value. Otherwise, we have a
-                # contradiction.
-                raise ValueError(
-                    "Fixed variable %s has value %s != "
-                    "provided value of %s." % (var.name, var.value, val))
-            val = var.value
-        # TODO we can also add a check to skip binary variables that are not an
-        # indicator_var on disjuncts.
-
-        if not config.force_subproblem_nlp:
-            if not var.local_name == 'indicator_var':
+    with time_code(solve_data.timing, 'integer cut generation'):
+        m = solve_data.linear_GDP
+        GDPopt = m.GDPopt_utils
+        var_value_is_one = ComponentSet()
+        var_value_is_zero = ComponentSet()
+        for var, val in zip(GDPopt.variable_list, var_values):
+            if not var.is_binary():
                 continue
+            if var.fixed:
+                if val is not None and var.value != val:
+                    # val needs to be None or match var.value. Otherwise, we have a
+                    # contradiction.
+                    raise ValueError(
+                        "Fixed variable %s has value %s != "
+                        "provided value of %s." % (var.name, var.value, val))
+                val = var.value
+            # TODO we can also add a check to skip binary variables that are not an
+            # indicator_var on disjuncts.
 
-        if fabs(val - 1) <= config.integer_tolerance:
-            var_value_is_one.add(var)
-        elif fabs(val) <= config.integer_tolerance:
-            var_value_is_zero.add(var)
+            if not config.force_subproblem_nlp:
+                if not var.local_name == 'indicator_var':
+                    continue
+
+            if fabs(val - 1) <= config.integer_tolerance:
+                var_value_is_one.add(var)
+            elif fabs(val) <= config.integer_tolerance:
+                var_value_is_zero.add(var)
+            else:
+                raise ValueError(
+                    'Binary %s = %s is not 0 or 1' % (var.name, val))
+
+        if not (var_value_is_one or var_value_is_zero):
+            # if no remaining binary variables, then terminate algorithm.
+            config.logger.info(
+                'Adding integer cut to a model without discrete variables. '
+                'Model is now infeasible.')
+            if solve_data.objective_sense == minimize:
+                solve_data.LB = float('inf')
+            else:
+                solve_data.UB = float('-inf')
+            return False
+
+        int_cut = (sum(1 - v for v in var_value_is_one) +
+                   sum(v for v in var_value_is_zero)) >= 1
+
+        if not feasible:
+            config.logger.info('Adding integer cut')
+            GDPopt.integer_cuts.add(expr=int_cut)
         else:
-            raise ValueError(
-                'Binary %s = %s is not 0 or 1' % (var.name, val))
-
-    if not (var_value_is_one or var_value_is_zero):
-        # if no remaining binary variables, then terminate algorithm.
-        config.logger.info(
-            'Adding integer cut to a model without discrete variables. '
-            'Model is now infeasible.')
-        if solve_data.objective_sense == minimize:
-            solve_data.LB = float('inf')
-        else:
-            solve_data.UB = float('-inf')
-        return False
-
-    int_cut = (sum(1 - v for v in var_value_is_one) +
-               sum(v for v in var_value_is_zero)) >= 1
-
-    if not feasible:
-        config.logger.info('Adding integer cut')
-        GDPopt.integer_cuts.add(expr=int_cut)
-    else:
-        backtracking_enabled = (
-            "disabled" if GDPopt.no_backtracking.active else "allowed")
-        config.logger.info(
-            'Registering explored configuration. '
-            'Backtracking is currently %s.' % backtracking_enabled)
-        GDPopt.no_backtracking.add(expr=int_cut)
+            backtracking_enabled = (
+                "disabled" if GDPopt.no_backtracking.active else "allowed")
+            config.logger.info(
+                'Registering explored configuration. '
+                'Backtracking is currently %s.' % backtracking_enabled)
+            GDPopt.no_backtracking.add(expr=int_cut)
