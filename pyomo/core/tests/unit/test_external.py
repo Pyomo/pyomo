@@ -107,9 +107,13 @@ class TestAMPLExternalFunction(unittest.TestCase):
         self.assertAlmostEqual(h, [0.8236806608528794], 7)
 
         f,g,h = model.bessel.evaluate_fgh((2.5, 2.0,), fixed=[1,0])
+
+        def assert_sequence_almost_equal(seq, orig_seq, places):
+            for a, b in zip(seq, orig_seq):
+                self.assertAlmostEqual(a, b, places)
         self.assertAlmostEqual(f, 0.223924531469, 7)
-        self.assertAlmostEqual(g, [0.0, 0.21138811435101745], 7)
-        self.assertAlmostEqual(h, [0.0, 0.0, 0.02026349177575621], 7)
+        assert_sequence_almost_equal(g, [0.0, 0.21138811435101745], 7)
+        assert_sequence_almost_equal(h, [0.0, 0.0, 0.02026349177575621], 7)
 
     @unittest.skipIf(not check_available_solvers('ipopt'),
                      "The 'ipopt' solver is not available")
