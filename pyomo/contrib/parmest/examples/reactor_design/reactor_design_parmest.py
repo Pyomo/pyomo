@@ -1,13 +1,12 @@
 import numpy as np
 import pandas as pd
 import pyomo.contrib.parmest.parmest as parmest
-import pyomo.contrib.parmest.graphics as grph
 from reactor_design import reactor_design_model
 
 ### Parameter estimation
 
 # Vars to estimate
-thetavars = ['k1', 'k2', 'k3']
+theta_names = ['k1', 'k2', 'k3']
 
 # Data, includes multiple sensors for ca and cc
 data = pd.read_excel('reactor_data.xlsx')  
@@ -23,7 +22,7 @@ def SSE(model, data):
             (float(data['cd'])  - model.cd)**2
     return expr
 
-pest = parmest.Estimator(reactor_design_model, data, thetavars, SSE)
+pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE)
 obj, theta = pest.theta_est()
 print(obj)
 print(theta)
@@ -31,17 +30,23 @@ print(theta)
 ### Parameter estimation with bootstrap resampling
 
 np.random.seed(38256)
-bootstrap_theta = pest.bootstrap(50)
+bootstrap_theta = pest.theta_est_bootstrap(20)
 print(bootstrap_theta.head())
-grph.pairwise_plot(bootstrap_theta, theta)
-grph.pairwise_bootstrap_plot(bootstrap_theta, 0.8, theta)
 
-### Parameter estimation with likelihood ratio
+parmest.pairwise_plot(bootstrap_theta)
+parmest.pairwise_plot(bootstrap_theta, theta, 'rectangular', 0.8)
+mvn_dist = parmest.pairwise_plot(bootstrap_theta, theta, 'multivariate_normal', 0.8)
+kde_dist = parmest.pairwise_plot(bootstrap_theta, theta, 'gaussian_kde', 0.8)
 
-search_ranges = {}
-search_ranges['k1'] = np.arange(0.78, 0.92, 0.02) 
-search_ranges['k2'] = np.arange(1.48, 1.79, 0.05) 
-search_ranges['k3'] = np.arange(0.000155, 0.000185, 0.000005) 
-LR = pest.likelihood_ratio(search_ranges=search_ranges)
+### Likelihood ratio test
+
+theta_vals = pd.DataFrame(columns=theta_names)
+for i, k2 in enumerate(np.arange(1.3, 2, 0.1)):
+    theta_vals.loc[i,:] = [0.83, k2, 0.00016]
+obj_at_theta = pest.objective_at_theta(theta_vals=theta_vals)
+print(obj_at_theta)
+LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.75, 0.8, 0.85, 0.9, 0.95])
 print(LR.head())
-grph.pairwise_likelihood_ratio_plot(LR, obj, 0.8, data.shape[0], theta)
+
+LR80 = LR.loc[LR[0.8] == True, theta_names]
+parmest.pairwise_plot(LR80)

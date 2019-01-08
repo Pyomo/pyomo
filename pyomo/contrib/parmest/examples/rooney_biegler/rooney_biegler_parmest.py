@@ -1,13 +1,12 @@
 import numpy as np
 import pandas as pd
 import pyomo.contrib.parmest.parmest as parmest
-import pyomo.contrib.parmest.graphics as grph
 from rooney_biegler import rooney_biegler_model
 
 ### Parameter estimation
 
 # Vars to estimate
-thetavars = ['asymptote', 'rate_constant']
+theta_names = ['asymptote', 'rate_constant']
 
 # Data
 data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
@@ -19,24 +18,30 @@ def SSE(model, data):
     expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
     return expr
 
-pest = parmest.Estimator(rooney_biegler_model, data, thetavars, SSE)
+pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE)
 obj, theta = pest.theta_est()
 print(obj)
 print(theta)
 
-
 ### Parameter estimation with bootstrap resampling
 
 np.random.seed(4581)
-bootstrap_theta = pest.bootstrap(100)
+bootstrap_theta = pest.theta_est_bootstrap(50)
 print(bootstrap_theta.head())
-grph.pairwise_bootstrap_plot(bootstrap_theta, 0.8, theta)
+
+parmest.pairwise_plot(bootstrap_theta, theta, 'rectangular', 0.8)
+mvn_dist = parmest.pairwise_plot(bootstrap_theta, theta, 'multivariate_normal', 0.8)
+kde_dist = parmest.pairwise_plot(bootstrap_theta, theta, 'gaussian_kde', 0.8)
 
 ### Parameter estimation with likelihood ratio
 
 search_ranges = {}
 search_ranges["asymptote"] = np.arange(10, 30, 2) 
 search_ranges["rate_constant"] = np.arange(0, 1.5, 0.1) 
-LR = pest.likelihood_ratio(search_ranges=search_ranges)
+obj_at_theta = pest.objective_at_theta(search_ranges=search_ranges)
+print(obj_at_theta.head())
+LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.75, 0.8, 0.85, 0.9, 0.95])
 print(LR.head())
-grph.pairwise_likelihood_ratio_plot(LR, obj, 0.8, data.shape[0], theta)
+
+LR80 = LR.loc[LR[0.8] == True, theta_names]
+parmest.pairwise_plot(LR80)

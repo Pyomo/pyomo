@@ -2,6 +2,7 @@ import re
 try:
     import numpy as np
     import pandas as pd
+    from scipy import stats
 except:
     # some travis tests want to import, but not run much (dlw Oct 2018)
     print ("WARNING: numpy and/or pandas could not be imported.")
@@ -13,8 +14,10 @@ import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as st
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
 from pyomo.opt import SolverFactory
+
 import pyomo.contrib.parmest.mpi_utils as mpiu
-import pyomo.contrib.parmest.ipopt_solver_wrapper as Carl
+import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
+from pyomo.contrib.parmest.graphics import pairwise_plot
 
 __version__ = 0.1
 
@@ -249,7 +252,7 @@ def _treemaker(scenlist):
     return m
 
 #=============================================
-class ParmEstimator(object):
+class _ParmEstimator(object):
     """
     Stores inputs to the parameter estimations process.
     Provides API for getting the parameter estimates, distributions
@@ -303,7 +306,7 @@ class ParmEstimator(object):
     diagnostic_mode = property(_get_diagnostic_mode, _set_diagnostic_mode)
         
     #==========
-    def Q_opt(self, ThetaVals=None, solver="ef_ipopt", bootlist=None):
+    def _Q_opt(self, ThetaVals=None, solver="ef_ipopt", bootlist=None):
         """
         Mainly for internal use.
 
@@ -466,35 +469,35 @@ class ParmEstimator(object):
             raise RuntimeError("Unknown solver in Q_Opt="+solver)
         
     #==========
-    def theta_est(self, solver="ef_ipopt", bootlist=None):
-        """return a theta estimate
-        NOTE: To avoid risk, one should probably set all thetvals to None 
-        and pass in the dict to Q_opt rather than call this function.
-
-        Parameters
-        ----------
-        solver: `string`
-            As of April 2018: "ef_ipopt" or "k_aug". 
-            Default is "ef_ipopt".
-        bootlist: `list` of `int`
-            The list is of scenario numbers for indirection used by bootstrap.
-            The default is None and that is what you driver users should use.
-
-        Returns
-        -------
-        objectiveval: `float`
-            The objective function value
-        thetavals: `dict`
-            A dictionary of all values for theta
-        Hessian: `dict`
-            A dictionary of dictionaries for the Hessian.
-            The Hessian is not returned if the solver is ef.
-        """
-
-        return self.Q_opt(solver=solver, bootlist=bootlist)
+#    def theta_est(self, solver="ef_ipopt", bootlist=None):
+#        """return a theta estimate
+#        NOTE: To avoid risk, one should probably set all thetvals to None 
+#        and pass in the dict to Q_opt rather than call this function.
+#
+#        Parameters
+#        ----------
+#        solver: `string`
+#            As of April 2018: "ef_ipopt" or "k_aug". 
+#            Default is "ef_ipopt".
+#        bootlist: `list` of `int`
+#            The list is of scenario numbers for indirection used by bootstrap.
+#            The default is None and that is what you driver users should use.
+#
+#        Returns
+#        -------
+#        objectiveval: `float`
+#            The objective function value
+#        thetavals: `dict`
+#            A dictionary of all values for theta
+#        Hessian: `dict`
+#            A dictionary of dictionaries for the Hessian.
+#            The Hessian is not returned if the solver is ef.
+#        """
+#
+#        return self.Q_opt(solver=solver, bootlist=bootlist)
             
     #==========
-    def Q_at_theta(self, thetavals):
+    def _Q_at_theta(self, thetavals):
         """
         Return the objective function value with fixed theta values.
         
@@ -547,7 +550,7 @@ class ParmEstimator(object):
                     print('      Experiment=',snum)
                     print ('     first solve with with special diagnostics wrapper')
                     status_obj, solved, iters, time, regu \
-                        = Carl.ipopt_solve_with_stats(instance, optimizer, max_iter=500, max_cpu_time=120)
+                        = ipopt_solver_wrapper.ipopt_solve_with_stats(instance, optimizer, max_iter=500, max_cpu_time=120)
                     print ("   status_obj, solved, iters, time, regularization_stat=",
                            str(status_obj), str(solved), str(iters), str(time), str(regu))
 
@@ -627,106 +630,106 @@ class ParmEstimator(object):
         return FirstDeriv, Hessian
         """
     
-    def bootstrap(self, N):
-        """
-        Run parameter estimation using N bootstap samples
-
-        Parameters
-        ----------
-        N: `int`
-            Number of bootstrap samples to draw
-
-        Returns
-        -------
-        `DataFrame` which contains theta values and samples
-        """
-		
-        bootstrap_theta = list()
-        samplesize = len(self.numbers_list)  
-
-        task_mgr = mpiu.ParallelTaskManager(N)
-        global_bootlist = list()
-        for i in range(N):
-            j = unique_samples = 0
-            while unique_samples <= len(self.thetalist):
-                bootlist = np.random.choice(self.numbers_list,
-                                            samplesize,
-                                            replace=True)
-                unique_samples = len(np.unique(bootlist))
-                j += 1
-                if j > N: # arbitrary timeout limit
-                    raise RuntimeError("Internal error: timeout in bootstrap"+\
-                                    " constructing a sample; possible hint:"+\
-                                    " the dim of theta may be too close to N")
-            global_bootlist.append((i, bootlist))
-
-        local_bootlist = task_mgr.global_to_local_data(global_bootlist)
-
-        for idx, bootlist in local_bootlist:
-            #print('Bootstrap Run Number: ', idx + 1, ' out of ', N)
-            objval, thetavals = self.theta_est(bootlist=bootlist)
-            thetavals['samples'] = bootlist
-            bootstrap_theta.append(thetavals)#, ignore_index=True)
+#    def bootstrap(self, N):
+#        """
+#        Run parameter estimation using N bootstap samples
+#
+#        Parameters
+#        ----------
+#        N: `int`
+#            Number of bootstrap samples to draw
+#
+#        Returns
+#        -------
+#        `DataFrame` which contains theta values and samples
+#        """
+#		
+#        bootstrap_theta = list()
+#        samplesize = len(self.numbers_list)  
+#
+#        task_mgr = mpiu.ParallelTaskManager(N)
+#        global_bootlist = list()
+#        for i in range(N):
+#            j = unique_samples = 0
+#            while unique_samples <= len(self.thetalist):
+#                bootlist = np.random.choice(self.numbers_list,
+#                                            samplesize,
+#                                            replace=True)
+#                unique_samples = len(np.unique(bootlist))
+#                j += 1
+#                if j > N: # arbitrary timeout limit
+#                    raise RuntimeError("Internal error: timeout in bootstrap"+\
+#                                    " constructing a sample; possible hint:"+\
+#                                    " the dim of theta may be too close to N")
+#            global_bootlist.append((i, bootlist))
+#
+#        local_bootlist = task_mgr.global_to_local_data(global_bootlist)
+#
+#        for idx, bootlist in local_bootlist:
+#            #print('Bootstrap Run Number: ', idx + 1, ' out of ', N)
+#            objval, thetavals = self.theta_est(bootlist=bootlist)
+#            thetavals['samples'] = bootlist
+#            bootstrap_theta.append(thetavals)#, ignore_index=True)
+#        
+#        global_bootstrap_theta = task_mgr.allgather_global_data(bootstrap_theta)
+#        bootstrap_theta = pd.DataFrame(global_bootstrap_theta)
+#        #bootstrap_theta.set_index('samples', inplace=True)        
+#
+#        return bootstrap_theta
         
-        global_bootstrap_theta = task_mgr.allgather_global_data(bootstrap_theta)
-        bootstrap_theta = pd.DataFrame(global_bootstrap_theta)
-        #bootstrap_theta.set_index('samples', inplace=True)        
-
-        return bootstrap_theta
-        
-    
-    def likelihood_ratio(self, search_ranges=None):
-        """
-        Compute the likelihood ratio and return the entire mesh
-
-        Parameters
-        ----------
-        search_ranges: `dictionary` of lists indexed by theta.
-            Mesh points (might be optional in the future)
-
-        Returns
-        -------
-        `DataFrame` with objective values for the entire mesh unless
-        some mesh points are infeasible, which are omitted.
-        """
-
-        ####
-        def mesh_generator(search_ranges):
-            # return the next theta point given by search_ranges
-            """ from the web:
-            def product_dict(**kwargs):
-                keys = kwargs.keys()
-                vals = kwargs.values()
-                for instance in itertools.product(*vals):
-                    yield dict(zip(keys, instance))
-            """
-            keys = search_ranges.keys()
-            vals = search_ranges.values()
-            for prod in itertools.product(*vals):
-                yield dict(zip(keys, prod))
-
-        # for parallel code we need to use lists and dicts in the loop
-        all_obj = list()
-        global_mesh = list()
-        MeshLen = 0
-        for Theta in mesh_generator(search_ranges):
-            MeshLen += 1
-            global_mesh.append(Theta)
-        task_mgr = mpiu.ParallelTaskManager(MeshLen)
-        local_mesh = task_mgr.global_to_local_data(global_mesh)
-        
-        # walk over the mesh, return objective function
-        for Theta in local_mesh:
-            obj, thetvals, worststatus = self.Q_at_theta(Theta)
-            if worststatus != pyo.TerminationCondition.infeasible:
-                 all_obj.append(list(Theta.values()) + [obj])
-            # DLW, Aug2018: should we also store the worst solver status?
-            
-        global_all_obj = task_mgr.allgather_global_data(all_obj)
-        dfcols = list(search_ranges.keys())+["obj"]
-        store_all_obj = pd.DataFrame(data=global_all_obj, columns=dfcols)
-
-        return store_all_obj
+#    
+#    def likelihood_ratio(self, search_ranges=None):
+#        """
+#        Compute the likelihood ratio and return the entire mesh
+#
+#        Parameters
+#        ----------
+#        search_ranges: `dictionary` of lists indexed by theta.
+#            Mesh points (might be optional in the future)
+#
+#        Returns
+#        -------
+#        `DataFrame` with objective values for the entire mesh unless
+#        some mesh points are infeasible, which are omitted.
+#        """
+#
+#        ####
+#        def mesh_generator(search_ranges):
+#            # return the next theta point given by search_ranges
+#            """ from the web:
+#            def product_dict(**kwargs):
+#                keys = kwargs.keys()
+#                vals = kwargs.values()
+#                for instance in itertools.product(*vals):
+#                    yield dict(zip(keys, instance))
+#            """
+#            keys = search_ranges.keys()
+#            vals = search_ranges.values()
+#            for prod in itertools.product(*vals):
+#                yield dict(zip(keys, prod))
+#
+#        # for parallel code we need to use lists and dicts in the loop
+#        all_obj = list()
+#        global_mesh = list()
+#        MeshLen = 0
+#        for Theta in mesh_generator(search_ranges):
+#            MeshLen += 1
+#            global_mesh.append(Theta)
+#        task_mgr = mpiu.ParallelTaskManager(MeshLen)
+#        local_mesh = task_mgr.global_to_local_data(global_mesh)
+#        
+#        # walk over the mesh, return objective function
+#        for Theta in local_mesh:
+#            obj, thetvals, worststatus = self.Q_at_theta(Theta)
+#            if worststatus != pyo.TerminationCondition.infeasible:
+#                 all_obj.append(list(Theta.values()) + [obj])
+#            # DLW, Aug2018: should we also store the worst solver status?
+#            
+#        global_all_obj = task_mgr.allgather_global_data(all_obj)
+#        dfcols = list(search_ranges.keys())+["obj"]
+#        store_all_obj = pd.DataFrame(data=global_all_obj, columns=dfcols)
+#
+#        return store_all_obj
     
 class _SecondStateCostExpr(object):
     def __init__(self, ssc_function, data):
@@ -750,7 +753,7 @@ def group_experiments(data, groupby_column, use_mean = None):
     
     return grouped_data
 
-class Estimator(ParmEstimator):
+class Estimator(_ParmEstimator):
     """
     Stores inputs to the parameter estimations process.
     Provides API for getting the parameter estimates, distributions
@@ -846,3 +849,144 @@ class Estimator(ParmEstimator):
         model = self._create_parmest_model(exp_data)
         
         return model
+    
+    def theta_est(self, solver="ef_ipopt", bootlist = None):
+        """
+        Return the estimate of theta
+        NOTE: To avoid risk, one should probably set all thetvals to None 
+        and pass in the dict to Q_opt rather than call this function.
+
+        Parameters
+        ----------
+        solver: `string`
+            "ef_ipopt" or "k_aug". Default is "ef_ipopt".
+
+        Returns
+        -------
+        objectiveval: `float`
+            The objective function value
+        thetavals: `dict`
+            A dictionary of all values for theta
+        Hessian: `dict`
+            A dictionary of dictionaries for the Hessian.
+            The Hessian is not returned if the solver is ef.
+        """
+        
+        return self._Q_opt(solver=solver, bootlist=bootlist)
+    
+    def theta_est_bootstrap(self, N, return_samples=False):
+        """
+        Run parameter estimation using N bootstap samples
+
+        Parameters
+        ----------
+        N: `int`
+            Number of bootstrap samples to draw
+
+        Returns
+        -------
+        `DataFrame` which contains theta values and samples
+        """
+        bootstrap_theta = list()
+        samplesize = len(self.numbers_list)  
+
+        task_mgr = mpiu.ParallelTaskManager(N)
+        global_bootlist = list()
+        for i in range(N):
+            j = unique_samples = 0
+            while unique_samples <= len(self.thetalist):
+                bootlist = np.random.choice(self.numbers_list,
+                                            samplesize,
+                                            replace=True)
+                unique_samples = len(np.unique(bootlist))
+                j += 1
+                if j > N: # arbitrary timeout limit
+                    raise RuntimeError("Internal error: timeout in bootstrap"+\
+                                    " constructing a sample; possible hint:"+\
+                                    " the dim of theta may be too close to N")
+            global_bootlist.append((i, bootlist))
+
+        local_bootlist = task_mgr.global_to_local_data(global_bootlist)
+
+        for idx, bootlist in local_bootlist:
+            #print('Bootstrap Run Number: ', idx + 1, ' out of ', N)
+            objval, thetavals = self.theta_est(bootlist=bootlist)
+            thetavals['samples'] = bootlist
+            bootstrap_theta.append(thetavals)#, ignore_index=True)
+        
+        global_bootstrap_theta = task_mgr.allgather_global_data(bootstrap_theta)
+        bootstrap_theta = pd.DataFrame(global_bootstrap_theta)
+        #bootstrap_theta.set_index('samples', inplace=True)        
+
+        if not return_samples:
+            del bootstrap_theta['samples']
+                    
+        return bootstrap_theta
+    
+    def objective_at_theta(self, theta_vals=None, search_ranges=None):
+        """
+        Compute the objective over a range of theta values
+
+        Parameters
+        ----------
+        theta_vals: 
+            
+        search_ranges: `dictionary` of lists indexed by theta.
+            Mesh points (might be optional in the future)
+
+        Returns
+        -------
+        `DataFrame` with objective values for each theta value (infeasible 
+        solutions are omitted).
+        """
+
+        ####
+        def mesh_generator(search_ranges):
+            # return the next theta point given by search_ranges
+            keys = search_ranges.keys()
+            vals = search_ranges.values()
+            for prod in itertools.product(*vals):
+                yield dict(zip(keys, prod))
+
+        # for parallel code we need to use lists and dicts in the loop
+        all_obj = list()
+        all_thetas = list() # list of dictionaries
+        if theta_vals is None:
+            theta_names = search_ranges.keys()
+            for Theta in mesh_generator(search_ranges):
+                all_thetas.append(Theta)
+        else:
+            theta_names = theta_vals.columns
+            all_thetas = theta_vals.to_dict('records')
+            
+        task_mgr = mpiu.ParallelTaskManager(len(all_thetas))
+        local_thetas = task_mgr.global_to_local_data(all_thetas)
+        
+        # walk over the mesh, return objective function
+        for Theta in local_thetas:
+            obj, thetvals, worststatus = self._Q_at_theta(Theta)
+            if worststatus != pyo.TerminationCondition.infeasible:
+                 all_obj.append(list(Theta.values()) + [obj])
+            # DLW, Aug2018: should we also store the worst solver status?
+            
+        global_all_obj = task_mgr.allgather_global_data(all_obj)
+        dfcols = list(theta_names) + ['obj']
+        store_all_obj = pd.DataFrame(data=global_all_obj, columns=dfcols)
+
+        return store_all_obj
+    
+    def likelihood_ratio_test(self, obj_at_theta, objval, alpha):
+        """
+        Likelihood ratio test
+        """
+        LR = obj_at_theta.copy()
+        S = len(self.data)
+        
+        for a in alpha:
+            chi2_val = stats.chi2.ppf(a, 2)
+            compare = objval * ((chi2_val / (S - 2)) + 1)
+            LR[a] = LR['obj'] < compare
+            
+            #alpha_region = obj_at_theta[obj_at_theta['obj'] < compare]
+        
+        return LR
