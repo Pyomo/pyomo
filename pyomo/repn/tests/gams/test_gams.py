@@ -227,9 +227,15 @@ class Test(unittest.TestCase):
         pat = "var1 + log(var2 / 9) - "
         line = (pat * 10000) + "x"
         self.assertEqual(split_long_line(line),
-                         pat * 3478 + "var1 +\nlog(var2 / 9) - " +
-                         pat * 3477 + "var1 +\nlog(var2 / 9) - " +
+                         pat * 3478 + "var1 +\n log(var2 / 9) - " +
+                         pat * 3477 + "var1 +\n log(var2 / 9) - " +
                          pat * 3043 + "x")
+
+    def test_split_long_line_no_comment(self):
+        pat = "1000 * 2000 * "
+        line = pat * 5715 + "x"
+        self.assertEqual(split_long_line(line),
+            pat * 5714 + "1000\n * 2000 * x")
 
     def test_solver_arg(self):
         m = ConcreteModel()
