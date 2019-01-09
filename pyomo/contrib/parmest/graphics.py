@@ -182,48 +182,59 @@ def _set_axis_limits(g, axis_limits, theta_vals):
             ax.set_xlim(axis_limits[xvar])
             
             
-def pairwise_plot(theta_vals, theta_star=None, stats_dist=None, alpha=None, 
+def pairwise_plot(theta_values, theta_star=None, CI_dist=None, alpha=0.8, 
                   axis_limits=None, filename=None):
     """
     Plot pairwise relationship for theta values.
     
     Parameters
     ----------
-    theta_est: `pandas DataFrame` (columns = variable names)
+    theta_values: `pandas DataFrame` (columns = variable names)
         Theta estimates.  
-    theta_star: `dict` or `pandas Series` (index = variable names)
+    theta_star: `dict` or `pandas Series` (index or key = variable names) (optional)
         Theta*
+    CI_dist: `string` (optional)
+        Statistical distribution used for confidence intervals,  
+        options = 'rectangular', 'multivariate_normal', and 'gaussian_kde'
+    alpha: `float` (optional)
+        Confidence interval value, default = 0.8
     axis_limits: `dict` or `pandas Series` (optional)
         Axis limits in the format {variable: [min, max]}
     filename: `string` (optional)
         Filename used to save the figure
+        
+    Returns
+    ----------
+    if CI_dist = 'multivariate_normal' or 'gaussian_kde', the scipy 
+    distribution is returned
     """
 
-    if len(theta_vals) == 0:
+    if len(theta_values) == 0:
         return('Empty data')    
     if isinstance(theta_star, dict):
         theta_star = pd.Series(theta_star)
     
-    columns = theta_vals.columns
+    columns = theta_values.columns
 
-    g = sns.PairGrid(theta_vals)
+    g = sns.PairGrid(theta_values)
     g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False)
 
     g.map_upper(_add_scatter, columns=columns, theta_star=theta_star)
     g.map_lower(_add_scatter, columns=columns, theta_star=theta_star)
     
-    if stats_dist is not None:
-        if stats_dist == 'rectangular':
+    if CI_dist is not None:
+        if CI_dist == 'rectangular':
             scipy_dist = None
             g.map_lower(_add_rectangle_CI, columns=columns, alpha=alpha)
             g.map_upper(_add_rectangle_CI, columns=columns, alpha=alpha)
-        elif stats_dist in ['multivariate_normal', 'gaussian_kde']:
-            if stats_dist == 'multivariate_normal':
-                scipy_dist = stats.multivariate_normal(theta_vals.mean(), theta_vals.cov(), allow_singular=True)
-                Z = scipy_dist.pdf(theta_vals)
-            elif stats_dist == 'gaussian_kde':
-                scipy_dist = stats.gaussian_kde(theta_vals.transpose().values)
-                Z = scipy_dist.pdf(theta_vals.transpose())
+        elif CI_dist in ['multivariate_normal', 'gaussian_kde']:
+            if CI_dist == 'multivariate_normal':
+                scipy_dist = stats.multivariate_normal(theta_values.mean(), 
+                                    theta_values.cov(), allow_singular=True)
+                Z = scipy_dist.pdf(theta_values)
+            elif CI_dist == 'gaussian_kde':
+                scipy_dist = stats.gaussian_kde(theta_values.transpose().values)
+                Z = scipy_dist.pdf(theta_values.transpose())
                 
             score = stats.scoreatpercentile(Z.transpose(), (1-alpha)*100) 
             g.map_lower(_add_scipy_dist_CI, columns=columns, ncells=100, 
@@ -231,7 +242,7 @@ def pairwise_plot(theta_vals, theta_star=None, stats_dist=None, alpha=None,
             g.map_upper(_add_scipy_dist_CI, columns=columns, ncells=100, 
                             alpha=score, dist=scipy_dist, theta_star=theta_star)
 
-    _set_axis_limits(g, axis_limits, theta_vals)
+    _set_axis_limits(g, axis_limits, theta_values)
     
     if filename is None:
         plt.show()
@@ -239,7 +250,7 @@ def pairwise_plot(theta_vals, theta_star=None, stats_dist=None, alpha=None,
         plt.savefig(filename)
         plt.close()
     
-    if stats_dist is not None:
+    if CI_dist is not None:
         return scipy_dist
 #
 #def pairwise_likelihood_ratio_plot(theta_LR, objval, alpha, S, theta_star,

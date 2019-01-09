@@ -35,12 +35,15 @@ kde_dist = parmest.pairwise_plot(bootstrap_theta, theta, 'gaussian_kde', 0.8)
 
 ### Parameter estimation with likelihood ratio
 
-search_ranges = {}
-search_ranges["asymptote"] = np.arange(10, 30, 2) 
-search_ranges["rate_constant"] = np.arange(0, 1.5, 0.1) 
-obj_at_theta = pest.objective_at_theta(search_ranges=search_ranges)
+theta_vals = pd.DataFrame(columns=theta_names)
+i = 0
+for asym in np.arange(10, 30, 2):
+    for rate in np.arange(0, 1.5, 0.1):
+        theta_vals.loc[i,:] = [asym, rate]
+        i = i+1
+obj_at_theta = pest.objective_at_theta(theta_vals)
 print(obj_at_theta.head())
-LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.75, 0.8, 0.85, 0.9, 0.95])
+LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.8, 0.85, 0.9, 0.95])
 print(LR.head())
 
 LR80 = LR.loc[LR[0.8] == True, theta_names]

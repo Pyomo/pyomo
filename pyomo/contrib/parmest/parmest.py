@@ -755,9 +755,8 @@ def group_experiments(data, groupby_column, use_mean = None):
 
 class Estimator(_ParmEstimator):
     """
-    Stores inputs to the parameter estimations process.
-    Provides API for getting the parameter estimates, distributions
-    and confidence intervals.
+    Parameter estimation class. Provides methods for parameter estimation, 
+    bootstrap resampling, and likelihood ratio test.
 
     Parameters
     ----------
@@ -767,55 +766,59 @@ class Estimator(_ParmEstimator):
     data: pandas DataFrame, list of dictionaries, or list of json file names
         Data that is used to build an instance of the Pyomo model and build 
         the objective function
-    thetavars: list
+    theta_names: list of strings
         List of Vars to estimate
     obj_function: function (optional)
         Function used to formulate parameter estimation objective, generally
-        sum of squared error.  If no function is specified, the model is used 
+        sum of squared error between measurments and model variables.  
+        If no function is specified, the model is used 
         "as is" and should be defined with a "FirstStateCost" and 
         "SecondStageCost" expression that are used to build an objective 
         for pysp.
     tee: bool (optional)
         Indicates that ef solver output should be teed
     """
-    def __init__(self, model_function, data, thetavars, lse_function=None, 
+    def __init__(self, model_function, data, theta_names, obj_function=None, 
                  tee=False):
         
         self.model_function = model_function
         self.data = data
-        self.thetavars = thetavars 
-        self.lse_function = lse_function 
+        self.theta_names = theta_names 
+        self.obj_function = obj_function 
+        self.tee = tee
         
         # This just maps into the old structure
         self.gmodel_file = None
         self.gmodel_maker = self._instance_creation_callback
         self.qName = "SecondStageCost"
-        self.thetalist = thetavars
+        self.thetalist = theta_names
         self.numbers_list = list(range(len(data)))
         self.cb_data = data
-        self.tee = tee
         self.diagnostic_mode = False
 
     def _create_parmest_model(self, data):
+        """
+        Modified the Pyomo model for parameter estimation
+        """
         from pyomo.core import Objective
         
         model = self.model_function(data)
 
-        for theta in self.thetavars:
+        for theta in self.theta_names:
             try:
                 var_validate = eval('model.'+theta)
                 var_validate.fixed = False
             except:
                 print(theta +'is not a variable')
         
-        if self.lse_function:
+        if self.obj_function:
             for obj in model.component_objects(Objective):
                 obj.deactivate()
         
             def FirstStageCost_rule(model):
                 return 0
             model.FirstStageCost = pyo.Expression(rule=FirstStageCost_rule)
-            model.SecondStageCost = pyo.Expression(rule=_SecondStateCostExpr(self.lse_function, data))
+            model.SecondStageCost = pyo.Expression(rule=_SecondStateCostExpr(self.obj_function, data))
             
             def TotalCost_rule(model):
                 return model.FirstStageCost + model.SecondStageCost
@@ -829,7 +832,7 @@ class Estimator(_ParmEstimator):
         
         # DataFrame
         if isinstance(cb_data, pd.DataFrame):
-            # Keep single experiments as a Dataframe (not a Series)
+            # Keep single experiments in a Dataframe (not a Series)
             exp_data = cb_data.loc[experiment_number,:].to_frame().transpose() 
         
         # List of dictionaries OR list of json file names
@@ -842,7 +845,8 @@ class Estimator(_ParmEstimator):
                     with open(exp_data,'r') as infile:
                         exp_data = json.load(infile)
                 except:
-                    pass
+                    print('Unexpected data format')
+                    return
         else:
             print('Unexpected data format')
             return
@@ -850,15 +854,13 @@ class Estimator(_ParmEstimator):
         
         return model
     
-    def theta_est(self, solver="ef_ipopt", bootlist = None):
+    def theta_est(self, solver="ef_ipopt", bootlist=None): 
         """
-        Return the estimate of theta
-        NOTE: To avoid risk, one should probably set all thetvals to None 
-        and pass in the dict to Q_opt rather than call this function.
+        Run parameter estimation using all data
 
         Parameters
         ----------
-        solver: `string`
+        solver: `string` (optional)
             "ef_ipopt" or "k_aug". Default is "ef_ipopt".
 
         Returns
@@ -881,11 +883,14 @@ class Estimator(_ParmEstimator):
         Parameters
         ----------
         N: `int`
-            Number of bootstrap samples to draw
-
+            Number of bootstrap samples to draw from the data
+        return_samples: `bool` (optional)
+            Return a list of sample numbers used in each bootstrap estimation
+        
         Returns
         -------
-        `DataFrame` which contains theta values and samples
+        `DataFrame` which contains theta values and (if return_samples = True) 
+        the sample numbers used in each estimation
         """
         bootstrap_theta = list()
         samplesize = len(self.numbers_list)  
@@ -923,46 +928,28 @@ class Estimator(_ParmEstimator):
                     
         return bootstrap_theta
     
-    def objective_at_theta(self, theta_vals=None, search_ranges=None):
+    def objective_at_theta(self, theta_values):
         """
         Compute the objective over a range of theta values
 
         Parameters
         ----------
-        theta_vals: 
+        theta_values: `DataFrame` (columns=theta_names)
+            Values of theta used to compute the objective
             
-        search_ranges: `dictionary` of lists indexed by theta.
-            Mesh points (might be optional in the future)
-
         Returns
         -------
         `DataFrame` with objective values for each theta value (infeasible 
         solutions are omitted).
         """
-
-        ####
-        def mesh_generator(search_ranges):
-            # return the next theta point given by search_ranges
-            keys = search_ranges.keys()
-            vals = search_ranges.values()
-            for prod in itertools.product(*vals):
-                yield dict(zip(keys, prod))
-
         # for parallel code we need to use lists and dicts in the loop
-        all_obj = list()
-        all_thetas = list() # list of dictionaries
-        if theta_vals is None:
-            theta_names = search_ranges.keys()
-            for Theta in mesh_generator(search_ranges):
-                all_thetas.append(Theta)
-        else:
-            theta_names = theta_vals.columns
-            all_thetas = theta_vals.to_dict('records')
-            
+        theta_names = theta_values.columns
+        all_thetas = theta_values.to_dict('records')
         task_mgr = mpiu.ParallelTaskManager(len(all_thetas))
         local_thetas = task_mgr.global_to_local_data(all_thetas)
         
         # walk over the mesh, return objective function
+        all_obj = list()
         for Theta in local_thetas:
             obj, thetvals, worststatus = self._Q_at_theta(Theta)
             if worststatus != pyo.TerminationCondition.infeasible:
@@ -975,18 +962,33 @@ class Estimator(_ParmEstimator):
 
         return store_all_obj
     
-    def likelihood_ratio_test(self, obj_at_theta, objval, alpha):
+    def likelihood_ratio_test(self, obj_at_theta, obj_value, alpha):
         """
-        Likelihood ratio test
+        Compute the likelihood ratio for each value of alpha
+        
+        Parameters
+        ----------
+        obj_at_theta: `DataFrame` (columns = theta_names + 'obj')
+            Objective values for each theta value (returned by 
+            objective_at_theta)
+            
+        obj_value: `float`
+            Objective value from parameter estimation using all data
+        
+        alpha: `list`
+            List of alpha values to use in the chi2 test
+
+        Returns
+        -------
+        `DataFrame` with objective values for each theta value along with 
+        True or False for each value of alpha
         """
         LR = obj_at_theta.copy()
         S = len(self.data)
         
         for a in alpha:
             chi2_val = stats.chi2.ppf(a, 2)
-            compare = objval * ((chi2_val / (S - 2)) + 1)
+            compare = obj_value * ((chi2_val / (S - 2)) + 1)
             LR[a] = LR['obj'] < compare
-            
-            #alpha_region = obj_at_theta[obj_at_theta['obj'] < compare]
         
         return LR

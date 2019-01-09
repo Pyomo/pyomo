@@ -43,9 +43,9 @@ for E2 in np.arange(38000, 42000, 500):
     for k2 in np.arange(40, 160, 40):
         theta_vals.loc[i,:] = [19, k2, 30524, E2]
         i = i+1
-obj_at_theta = pest.objective_at_theta(theta_vals=theta_vals)
+obj_at_theta = pest.objective_at_theta(theta_vals)
 print(obj_at_theta)
-LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.75, 0.8, 0.85, 0.9, 0.95])
+LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.8, 0.85, 0.9, 0.95])
 print(LR.head())
 
 LR80 = LR.loc[LR[0.8] == True, theta_names]
