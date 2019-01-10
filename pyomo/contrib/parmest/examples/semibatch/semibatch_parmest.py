@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from itertools import product
 import json
 import pyomo.contrib.parmest.parmest as parmest
 from semibatch import generate_model
@@ -37,12 +38,12 @@ kde_dist = parmest.pairwise_plot(bootstrap_theta, theta, 'gaussian_kde', 0.8)
 
 ### Parameter estimation with likelihood ratio
 
-theta_vals = pd.DataFrame(columns=theta_names)
-i = 0
-for E2 in np.arange(38000, 42000, 500):
-    for k2 in np.arange(40, 160, 40):
-        theta_vals.loc[i,:] = [19, k2, 30524, E2]
-        i = i+1
+k1 = [19]
+k2 = np.arange(40, 160, 40)
+E1 = [30524]
+E2 = np.arange(38000, 42000, 500)
+theta_vals = pd.DataFrame(list(product(k1, k2, E1, E2)), columns=theta_names)
+
 obj_at_theta = pest.objective_at_theta(theta_vals)
 print(obj_at_theta)
 LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.8, 0.85, 0.9, 0.95])

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from itertools import product
 import pyomo.contrib.parmest.parmest as parmest
 from reactor_design import reactor_design_model
 
@@ -37,13 +38,11 @@ kde_dist = parmest.pairwise_plot(bootstrap_theta, theta, 'gaussian_kde', 0.8)
 
 ### Likelihood ratio test
 
-theta_vals = pd.DataFrame(columns=theta_names)
-i = 0
-for k1 in np.arange(0.78, 0.92, 0.02):
-    for k2 in np.arange(1.48, 1.79, 0.05):
-        for k3 in np.arange(0.000155, 0.000185, 0.000005):
-            theta_vals.loc[i,:] = [k1, k2, k3]
-            i = i+1
+k1 = np.arange(0.78, 0.92, 0.02)
+k2 = np.arange(1.48, 1.79, 0.05)
+k3 = np.arange(0.000155, 0.000185, 0.000005)
+theta_vals = pd.DataFrame(list(product(k1, k2, k3)), columns=theta_names)
+
 obj_at_theta = pest.objective_at_theta(theta_vals)
 print(obj_at_theta)
 LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.8, 0.85, 0.9, 0.95])

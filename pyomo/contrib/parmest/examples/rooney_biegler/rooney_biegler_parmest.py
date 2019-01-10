@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from itertools import product
 import pyomo.contrib.parmest.parmest as parmest
 from rooney_biegler import rooney_biegler_model
 
@@ -35,12 +36,10 @@ kde_dist = parmest.pairwise_plot(bootstrap_theta, theta, 'gaussian_kde', 0.8)
 
 ### Parameter estimation with likelihood ratio
 
-theta_vals = pd.DataFrame(columns=theta_names)
-i = 0
-for asym in np.arange(10, 30, 2):
-    for rate in np.arange(0, 1.5, 0.1):
-        theta_vals.loc[i,:] = [asym, rate]
-        i = i+1
+asym = np.arange(10, 30, 2)
+rate = np.arange(0, 1.5, 0.1)
+theta_vals = pd.DataFrame(list(product(asym, rate)), columns=theta_names)
+
 obj_at_theta = pest.objective_at_theta(theta_vals)
 print(obj_at_theta.head())
 LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.8, 0.85, 0.9, 0.95])
