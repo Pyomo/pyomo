@@ -26,8 +26,9 @@ logger = logging.getLogger('pyomo.common.download')
 DownloadFactory = pyomo.common.Factory('library downloaders')
 
 class FileDownloader(object):
-    def __init__(self, insecure=False):
+    def __init__(self, insecure=False, cacert=None):
         self.insecure = insecure
+        self.cacert = cacert
         self.fname = None
 
     def get_sysinfo(self):
@@ -61,6 +62,10 @@ class FileDownloader(object):
         if argv and '--insecure' in argv:
             self.insecure = True
             argv.remove('--insecure')
+        if argv and '--cacert' in argv:
+            i = argv.index('--cacert')
+            argv.pop(i)
+            self.cacert = argv.pop(i)
         if argv:
             self.fname = argv.pop(0)
         else:
@@ -83,7 +88,7 @@ class FileDownloader(object):
     def retrieve_url(self, url):
         """Return the contents of a URL as an io.BytesIO object"""
         try:
-            ctx = ssl.create_default_context()
+            ctx = ssl.create_default_context(cafile=self.cacert)
             if self.insecure:
                 ctx.check_hostname = False
                 ctx.verify_mode = ssl.CERT_NONE
