@@ -74,7 +74,7 @@ class FileDownloader(object):
             raise RuntimeError("Unrecognized arguments: %s" % (argv,))
 
 
-    def resolve_filename(self, default):
+    def set_destination_filename(self, default):
         if self.fname is None:
             self.fname = PYOMO_CONFIG_DIR
             if not os.path.isdir(self.fname):

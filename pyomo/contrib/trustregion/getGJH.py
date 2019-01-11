@@ -38,7 +38,8 @@ def get_gjh(downloader=None):
     system, bits = downloader.get_sysinfo()
     url = downloader.get_url(urlmap)
 
-    downloader.resolve_filename('gjh'+exemap[system])
+    downloader.set_destination_filename(
+        os.path.join('bin', 'gjh'+exemap[system]))
 
     logger.info("Fetching GJH from %s and installing it to %s"
                 % (url, downloader.fname))

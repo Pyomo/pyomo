@@ -35,7 +35,7 @@ def get_gsl(downloader=None):
     system, bits = downloader.get_sysinfo()
     url = downloader.get_url(urlmap) % (bits,)
 
-    downloader.resolve_filename('amplgsl.dll')
+    downloader.set_destination_filename(os.path.join('lib', 'amplgsl.dll'))
 
     logger.info("Fetching GSL from %s and installing it to %s"
                 % (url, downloader.fname))
