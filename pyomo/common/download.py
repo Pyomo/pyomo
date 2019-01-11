@@ -19,6 +19,7 @@ import zipfile
 
 from six.moves.urllib.request import urlopen
 import pyomo.common
+from pyomo.common.config import PYOMO_CONFIG_DIR
 
 logger = logging.getLogger('pyomo.common.download')
 
@@ -70,20 +71,14 @@ class FileDownloader(object):
 
     def resolve_filename(self, default):
         if self.fname is None:
-            if self.get_sysinfo() in ('windows','cygwin'):
-                home = os.environ.get('LOCALAPPDATA', None)
-                if home is not None:
-                    home = os.path.join(home, 'Pyomo')
-            else:
-                home = os.environ.get('HOME', None)
-                if home is not None:
-                    home = os.path.join(home, '.pyomo')
-            self.fname = home or '.'
+            self.fname = PYOMO_CONFIG_DIR
             if not os.path.isdir(self.fname):
                 os.makedirs(self.fname)
         if os.path.isdir(self.fname):
             self.fname = os.path.join(self.fname, default)
-
+        targetDir = os.path.dirname(self.fname)
+        if not os.path.isdir(targetDir):
+            os.makedirs(targetDir)
 
     def retrieve_url(self, url):
         """Return the contents of a URL as an io.BytesIO object"""
