@@ -143,7 +143,7 @@ class MultiStart(object):
             best_result = result = solver.solve(model, **config.solver_args)
             if (result.solver.status is SolverStatus.ok and
                     result.solver.termination_condition is tc.optimal):
-                obj_val = value(model.obj.expr)
+                obj_val = value(obj.expr)
                 best_objective = obj_val
                 objectives.append(obj_val)
             num_iter = 0
@@ -170,7 +170,9 @@ class MultiStart(object):
                 result = solver.solve(m, **config.solver_args)
                 if (result.solver.status is SolverStatus.ok and
                         result.solver.termination_condition is tc.optimal):
-                    obj_val = value(m.obj.expr)
+                    model_objectives = m.component_data_objects(Objective, active=True)
+                    mobj = next(model_objectives, None)
+                    obj_val = value(mobj.expr)
                     objectives.append(obj_val)
                     if obj_val * obj_sign < obj_sign * best_objective:
                         # objective has improved

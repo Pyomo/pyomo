@@ -31,7 +31,11 @@ class MultistartTests(unittest.TestCase):
         for i in range(10):
             m2 = build_model()
             SolverFactory('multistart').solve(m2, iterations=10)
-            self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
+            m_objectives = m.component_data_objects(Objective, active=True)
+            m_obj = next(m_objectives, None)
+            m2_objectives = m2.component_data_objects(Objective, active=True)
+            m2_obj = next(m2_objectives,None)
+            self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
             del m2
 
     def test_as_good_with_iteration_other_strategies(self):
@@ -45,19 +49,31 @@ class MultistartTests(unittest.TestCase):
             m2 = build_model()
             SolverFactory('multistart').solve(
                 m2, iterations=10, strategy='rand_distributed')
-            self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
+            m_objectives = m.component_data_objects(Objective, active=True)
+            m_obj = next(m_objectives, None)
+            m2_objectives = m2.component_data_objects(Objective, active=True)
+            m2_obj = next(m2_objectives,None)
+            self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
             del m2
         for i in range(10):
             m2 = build_model()
             SolverFactory('multistart').solve(
                 m2, iterations=10, strategy='midpoint_guess_and_bound')
-            self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
+            m_objectives = m.component_data_objects(Objective, active=True)
+            m_obj = next(m_objectives, None)
+            m2_objectives = m2.component_data_objects(Objective, active=True)
+            m2_obj = next(m2_objectives,None)
+            self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
             del m2
         for i in range(10):
             m2 = build_model()
             SolverFactory('multistart').solve(
                 m2, iterations=10, strategy='rand_guess_and_bound')
-            self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
+            m_objectives = m.component_data_objects(Objective, active=True)
+            m_obj = next(m_objectives, None)
+            m2_objectives = m2.component_data_objects(Objective, active=True)
+            m2_obj = next(m2_objectives,None)
+            self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
             del m2
 
     def test_as_good_with_HCS_rule(self):
@@ -73,7 +89,11 @@ class MultistartTests(unittest.TestCase):
             m2 = build_model()
             SolverFactory('multistart').solve(
                 m2, iterations=-1, stopping_mass=0.99, stopping_delta=0.99)
-            self.assertTrue((value(m2.obj.expr)) >= (value(m.obj.expr) - .001))
+            m_objectives = m.component_data_objects(Objective, active=True)
+            m_obj = next(m_objectives, None)
+            m2_objectives = m2.component_data_objects(Objective, active=True)
+            m2_obj = next(m2_objectives,None)
+            self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
             del m2
 
     def test_missing_bounds(self):
@@ -138,7 +158,7 @@ def build_model():
     model.x1 = Var(initialize=1, bounds=(0, 100))
     model.x2 = Var(initialize=5, bounds=(5, 6))
     model.x2.fix(5)
-    model.obj = Objective(expr=model.x1 * sin(model.x1), sense=maximize)
+    model.objtv = Objective(expr=model.x1 * sin(model.x1), sense=maximize)
     return model
 
 
