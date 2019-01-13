@@ -159,10 +159,10 @@ def add_integer_cut(var_values, solve_data, config, feasible=False):
                         "Fixed variable %s has value %s != "
                         "provided value of %s." % (var.name, var.value, val))
                 val = var.value
-            # TODO we can also add a check to skip binary variables that are not an
-            # indicator_var on disjuncts.
 
             if not config.force_subproblem_nlp:
+                # Skip indicator variables
+                # TODO we should implement this as a check among Disjuncts instead
                 if not var.local_name == 'indicator_var':
                     continue
 

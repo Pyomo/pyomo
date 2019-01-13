@@ -341,6 +341,8 @@ If you use this software, you may cite the following:
             solve_data.results.problem.upper_bound = solve_data.UB
 
         solve_data.results.solver.timing = solve_data.timing
+        solve_data.results.solver.user_time = solve_data.timing.total
+        solve_data.results.solver.wallclock_time = solve_data.timing.total
 
         return solve_data.results
 

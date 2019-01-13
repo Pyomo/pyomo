@@ -280,7 +280,6 @@ def setup_results_object(solve_data, config, util_block_name='GDPopt_utils'):
     # TODO work on termination condition and message
     res.solver.termination_condition = None
     res.solver.message = None
-    # TODO add some kind of timing
     res.solver.user_time = None
     res.solver.system_time = None
     res.solver.wallclock_time = None
