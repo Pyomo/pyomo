@@ -1,6 +1,6 @@
 """
 The following script can be run semibatch parameter estimation in parallel 
-and save results to files for later analysis.
+and save results to files for later analysis/graphics.
 Example command: mpiexec -n 4 python semibatch_parmest_parallel.py
 """
 import numpy as np
@@ -26,7 +26,6 @@ pest = parmest.Estimator(generate_model, data, theta_names)
 
 ### Parameter estimation with bootstrap resampling
 
-np.random.seed(38256)
 bootstrap_theta = pest.theta_est_bootstrap(100)
 bootstrap_theta.to_csv('bootstrap_theta.csv')
 

@@ -28,13 +28,10 @@ print(theta)
 
 ### Parameter estimation with bootstrap resampling
 
-np.random.seed(95264)
 bootstrap_theta = pest.theta_est_bootstrap(50)
 print(bootstrap_theta.head())
 
-parmest.pairwise_plot(bootstrap_theta, theta, 'rectangular', 0.8)
-mvn_dist = parmest.pairwise_plot(bootstrap_theta, theta, 'multivariate_normal', 0.8)
-kde_dist = parmest.pairwise_plot(bootstrap_theta, theta, 'gaussian_kde', 0.8)
+parmest.pairwise_plot(bootstrap_theta, theta, 0.8, ['MVN', 'KDE', 'Rect'])
 
 ### Parameter estimation with likelihood ratio
 
@@ -49,5 +46,4 @@ print(obj_at_theta)
 LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.8, 0.85, 0.9, 0.95])
 print(LR.head())
 
-LR80 = LR.loc[LR[0.8] == True, theta_names]
-parmest.pairwise_plot(LR80)
+parmest.pairwise_plot(LR, theta, 0.8)

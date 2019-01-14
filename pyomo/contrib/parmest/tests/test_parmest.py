@@ -20,10 +20,10 @@ import os
 import shutil
 import glob
 import subprocess
+from itertools import product
+
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest as parmestbase
-if not imports_not_present:
-    import pyomo.contrib.parmest.graphics as graphics
 import pyomo.environ as pyo
 
 __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
@@ -51,24 +51,20 @@ class Object_from_string_Tester(unittest.TestCase):
 
 @unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
 class parmest_object_Tester_RB(unittest.TestCase):
+    
     def setUp(self):
-        self.thetalist = ['asymptote', 'rate_constant']
-        self.num_samples = 6
-        self.sample_list = range(self.num_samples)
-        self.fsfilename = \
-            "pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler"
-        self.callback_funcname = "instance_creation_callback"
-        experiment_data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
-                                      [4,16.0],[5,15.6],[6,19.8]],
-                                      columns=['hour', 'y'])
+        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model
+           
+        data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
+                                  [4,16.0],[5,15.6],[6,19.8]], columns=['hour', 'y'])
         
-
-        self.pest = parmest.ParmEstimator(self.fsfilename,
-                                          self.callback_funcname,
-                                          "SecondStageCost",
-                                          self.sample_list,
-                                          self.thetalist,
-                                          cb_data = experiment_data)
+        theta_names = ['asymptote', 'rate_constant']
+        
+        def SSE(model, data):  
+            expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
+            return expr
+        
+        self.pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE)
 
     def test_theta_est(self):
         objval, thetavals = self.pest.theta_est()
@@ -76,43 +72,54 @@ class parmest_object_Tester_RB(unittest.TestCase):
         self.assertAlmostEqual(objval, 4.4675, places=2)
         self.assertAlmostEqual(thetavals['asymptote'], 19.2189, places=2) # 19.1426 from the paper
         self.assertAlmostEqual(thetavals['rate_constant'], 0.5312, places=2) # 0.5311 from the paper
-
+        
     def test_bootstrap(self):
         objval, thetavals = self.pest.theta_est()
         
         num_bootstraps=10
-        theta_est = self.pest.bootstrap(num_bootstraps)
+        theta_est = self.pest.theta_est_bootstrap(num_bootstraps, return_samples=True)
         
         num_samples = theta_est['samples'].apply(len)
         self.assertTrue(len(theta_est.index), 10)
         self.assertTrue(num_samples.equals(pd.Series([6]*10)))
 
-        filename = os.path.abspath(os.path.join(testdir, 'pairwise.png'))
-        if os.path.isfile(filename):
-            os.remove(filename)
-        graphics.pairwise_plot(theta_est, filename=filename)
-        #self.assertTrue(os.path.isfile(filename))
+        del theta_est['samples']
         
         filename = os.path.abspath(os.path.join(testdir, 'pairwise_bootstrap.png'))
         if os.path.isfile(filename):
             os.remove(filename)
-        graphics.pairwise_bootstrap_plot(theta_est, thetavals, 0.8, 
+        parmest.pairwise_plot(theta_est, filename=filename)
+        #self.assertTrue(os.path.isfile(filename))
+        
+        filename = os.path.abspath(os.path.join(testdir, 'pairwise_bootstrap_theta.png'))
+        if os.path.isfile(filename):
+            os.remove(filename)
+        parmest.pairwise_plot(theta_est, thetavals, filename=filename)
+        #self.assertTrue(os.path.isfile(filename))
+        
+        filename = os.path.abspath(os.path.join(testdir, 'pairwise_bootstrap_theta_CI.png'))
+        if os.path.isfile(filename):
+            os.remove(filename)
+        parmest.pairwise_plot(theta_est, thetavals, 0.8, ['MVN', 'KDE', 'Rect'],
                                          filename=filename)
         #self.assertTrue(os.path.isfile(filename))
         
     def test_likelihood_ratio(self):
         # tbd: write the plot file(s) to a temp dir and delete in cleanup
         objval, thetavals = self.pest.theta_est()
-        search_ranges = {}
-        search_ranges["asymptote"] = np.arange(10, 30, 5)
-        search_ranges["rate_constant"] = np.arange(0, 1.5, 0.25)
-        SSE = self.pest.likelihood_ratio(search_ranges=search_ranges)
-            
+        
+        asym = np.arange(10, 30, 2)
+        rate = np.arange(0, 1.5, 0.25)
+        theta_vals = pd.DataFrame(list(product(asym, rate)), columns=self.pest.theta_names)
+        
+        obj_at_theta = self.pest.objective_at_theta(theta_vals)
+        
+        LR = self.pest.likelihood_ratio_test(obj_at_theta, objval, [0.8, 0.85, 0.9, 0.95])
+
         filename = os.path.abspath(os.path.join(testdir, 'pairwise_LR_plot.png'))
         if os.path.isfile(filename):
             os.remove(filename)
-        graphics.pairwise_likelihood_ratio_plot(SSE, objval, 0.9, self.num_samples, 
-                                                filename=filename)
+        parmest.pairwise_plot(LR, thetavals, 0.,  filename=filename)
         #self.assertTrue(os.path.isfile(filename))
 
     def test_diagnostic_mode(self):
@@ -120,10 +127,11 @@ class parmest_object_Tester_RB(unittest.TestCase):
 
         objval, thetavals = self.pest.theta_est()
 
-        search_ranges = {}
-        search_ranges["asymptote"] = np.arange(10, 30, 10)
-        search_ranges["rate_constant"] = np.arange(0, 1.5, 0.5)
-        self.pest.likelihood_ratio(search_ranges=search_ranges)
+        asym = np.arange(10, 30, 2)
+        rate = np.arange(0, 1.5, 0.25)
+        theta_vals = pd.DataFrame(list(product(asym, rate)), columns=self.pest.theta_names)
+        
+        obj_at_theta = self.pest.objective_at_theta(theta_vals)
 
         self.pest.diagnostic_mode = False
 
@@ -151,7 +159,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
         r = p.find("'", l+1)
         parmestpath = p[l+1:r]
         rbpath = parmestpath + os.sep + "examples" + os.sep + \
-                   "rooney_biegler" + os.sep + "rb_drive_parmest.py"
+                   "rooney_biegler" + os.sep + "rooney_biegler_parmest.py"
         rbpath = os.path.abspath(rbpath) # paranoia strikes deep...
         rlist = ["mpiexec", "--allow-run-as-root", "-n", "2", "python", rbpath]
         if sys.version_info >= (3,0):
@@ -170,7 +178,10 @@ class parmest_object_Tester_RB(unittest.TestCase):
 #=====================================================================
 @unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
 class parmest_object_Tester_SB(unittest.TestCase):
+    
     def setUp(self):
+        from pyomo.contrib.parmest.examples.semibatch.semibatch import generate_model
+        
         self.tempdirpath = tempfile.mkdtemp()
         # assuming we are in the test subdir
         import pyomo.contrib.parmest.examples.semibatch as sbroot
@@ -178,21 +189,18 @@ class parmest_object_Tester_SB(unittest.TestCase):
         l = p.find("'")
         r = p.find("'", l+1)
         sbrootpath = p[l+1:r]
+        data_files = glob.glob(sbrootpath + os.sep + 'exp*.out')
+#        for file in glob.glob(sbrootpath + os.sep + 'exp*.out'):
+#            shutil.copy(file, self.tempdirpath)
+#        self.save_cwd = os.getcwd()
+#        os.chdir(self.tempdirpath)
+#        num_experiments = 10
 
-        for file in glob.glob(sbrootpath + os.sep + 'exp*.out'):
-            shutil.copy(file, self.tempdirpath)
-        self.save_cwd = os.getcwd()
-        os.chdir(self.tempdirpath)
-        num_experiments = 10
-        exp_list = range(1,num_experiments+1) # callback uses one-based file names
-        thetalist = ['k1', 'k2', 'E1', 'E2']
-
+        theta_names = ['k1', 'k2', 'E1', 'E2']
+        
         np.random.seed(1134)
 
-        from pyomo.contrib.parmest.examples.semibatch.semibatch import pysp_instance_creation_callback
-        # non-string callback specification
-        self.pest = parmest.ParmEstimator(None, pysp_instance_creation_callback,
-                                     "SecondStageCost", exp_list, thetalist) 
+        self.pest = parmest.Estimator(generate_model, data_files, theta_names)
 
     def tearDown(self):
         os.chdir(self.save_cwd)
