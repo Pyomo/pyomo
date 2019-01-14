@@ -1,6 +1,6 @@
 """
-The following script can be run semibatch parameter estimation in parallel 
-and save results to files for later analysis/graphics.
+The following script can be used to run semibatch parameter estimation in 
+parallel and save results to files for later analysis and graphics.
 Example command: mpiexec -n 4 python semibatch_parmest_parallel.py
 """
 import numpy as np

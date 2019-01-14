@@ -25,7 +25,7 @@ IPOPT can be downloaded from https://projects.coin-or.org/Ipopt.
 Testing
 -------
 
-Use these (Unix) terminal commands to test parmest::
+The following commands can be used to test parmest::
   
    cd pyomo/contrib/parmest/tests
    python test_parmest.py

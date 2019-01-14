@@ -39,6 +39,7 @@ theta_vals = pd.DataFrame(list(product(asym, rate)), columns=theta_names)
 
 obj_at_theta = pest.objective_at_theta(theta_vals)
 print(obj_at_theta.head())
+
 LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.8, 0.85, 0.9, 0.95])
 print(LR.head())
 

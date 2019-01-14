@@ -10,7 +10,7 @@ def reactor_design_model(data):
     # Create the concrete model
     model = ConcreteModel()
     
-	# Rate constants
+    # Rate constants
     model.k1 = Var(initialize = 5.0/6.0, within=PositiveReals) # min^-1
     model.k2 = Var(initialize = 5.0/3.0, within=PositiveReals) # min^-1
     model.k3 = Var(initialize = 1.0/6000.0, within=PositiveReals) # m^3/(gmol min)
@@ -18,13 +18,13 @@ def reactor_design_model(data):
     model.k2.fixed = True
     model.k3.fixed = True
     
-	# Inlet concentration of A, gmol/m^3
+    # Inlet concentration of A, gmol/m^3
     model.caf = float(data['caf']) 
 	
 	# Space velocity (flowrate/volume)
     model.sv = float(data['sv']) 
     
-	# Outlet concentration of each component
+    # Outlet concentration of each component
     model.ca = Var(initialize = 5000.0, within=PositiveReals) 
     model.cb = Var(initialize = 2000.0, within=PositiveReals) 
     model.cc = Var(initialize = 2000.0, within=PositiveReals) 
@@ -51,7 +51,7 @@ def reactor_design_model(data):
 
 if __name__ == "__main__":
     
-	# For a range of sv values, return ca, cb, cc, and cd
+    # For a range of sv values, return ca, cb, cc, and cd
     sv_values = [1.0 + v * 0.05 for v in range(1, 20)]
     for sv_value in sv_values:
         model = reactor_design_model({'caf':10000, 'sv': sv_value})

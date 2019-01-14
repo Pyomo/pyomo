@@ -42,7 +42,8 @@ E2 = np.arange(38000, 42000, 500)
 theta_vals = pd.DataFrame(list(product(k1, k2, E1, E2)), columns=theta_names)
 
 obj_at_theta = pest.objective_at_theta(theta_vals)
-print(obj_at_theta)
+print(obj_at_theta.head())
+
 LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.8, 0.85, 0.9, 0.95])
 print(LR.head())
 
