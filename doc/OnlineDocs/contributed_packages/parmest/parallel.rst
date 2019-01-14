@@ -23,7 +23,7 @@ Installation
 The mpi4py Python package should be installed using conda. 
 The following installation instructions were tested on a Mac with Python 3.5.
 
-Create a conda environment and install mpi4py::
+Create a conda environment and install mpi4py using the following commands::
 
     conda create -n parmest-parallel python=3.5
     source activate parmest-parallel
@@ -31,7 +31,7 @@ Create a conda environment and install mpi4py::
 	
 This should install libgfortran, mpi, mpi4py, and openmpi.
 
-To verify proper installation, create the following simple Python file::
+To verify proper installation, create a Python file with the following::
 
 	from mpi4py import MPI
 	import time 
@@ -40,9 +40,9 @@ To verify proper installation, create the following simple Python file::
 	print('Rank = ',rank)
 	time.sleep(10) 
 
-Save the file as test_mpi.py and run::
+Save the file as test_mpi.py and run the following command::
 
 	time mpiexec -n 4 python test_mpi.py 
 	time python test_mpi.py 
 	
-The first one should be faster. 
+The first one should be faster and should start 4 processes with Python.

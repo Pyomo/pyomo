@@ -43,7 +43,7 @@ the following code. A description of each argument is listed below.  Examples ar
 		expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
 		return expr
 
-..doctest::
+.. doctest::
 
     >>> import pyomo.contrib.parmest.parmest as parmest
     >>> pest = parmest.Estimator(model_function, data, theta_names, objective_function)
@@ -52,7 +52,7 @@ the following code. A description of each argument is listed below.  Examples ar
 Model function
 ----------------
 The first argument is a function which returns a populated and initialized Pyomo model for a single scenario.
-Parameters that you’d like to estimate must be defined as variables (Pyomo Var)
+Parameters that you’d like to estimate must be defined as variables (Pyomo `Var`)
 The variable can be fixed (parmest unfixes variables that will be estimated). 
 The model does not have to be specifically written for parmest. parmest can modify the objective for pySP, see :ref:`ObjFunction` below.
 
@@ -71,7 +71,7 @@ Supported data formats include:
   This format is recommended when using large datasets in parallel computing.
 
 The data must be compatible with the model function that returns a populated and initialized Pyomo model for a single scenario.
-Data can include multiple entries per variable (timeseries and/or duplicate sensors).  This information can be included in 
+Data can include multiple entries per variable (time series and/or duplicate sensors).  This information can be included in 
 custom objective functions, see :ref:`ObjFunction` below.
 
 Theta names
