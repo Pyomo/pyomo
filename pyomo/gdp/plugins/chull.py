@@ -28,7 +28,7 @@ from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy,
-    Any, Reals, value
+    Any, RangeSet, Reals, value
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import clone_without_expression_components, target_list
@@ -170,6 +170,7 @@ class ConvexHull_Transformation(Transformation):
             Expression : False,
             Param :      False,
             Set :        False,
+            RangeSet:    False,
             Suffix :     False,
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
