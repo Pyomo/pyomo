@@ -2,31 +2,35 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
 import os
 import re
 import six
 
 from six.moves.xmlrpc_client import ProtocolError
 
-from pyomo.opt.parallel.manager import *
-from pyomo.opt.parallel.async_solver import *
+from pyomo.opt import SolverFactory, SolverManagerFactory, OptSolver
+from pyomo.opt.parallel.async_solver import (
+    AsynchronousSolverManager, ActionStatus
+)
 from pyomo.opt.base import OptSolver
 from pyomo.core.base import Block
 import pyomo.neos.kestrel
 
-import logging
+
 logger = logging.getLogger('pyomo.neos')
 
-error_re = re.compile('error', flags=re.I)
-warn_re = re.compile('warn', flags=re.I)
 
 def _neos_error(msg, results, current_message):
+    error_re = re.compile('error', flags=re.I)
+    warn_re = re.compile('warn', flags=re.I)
+
     logger.error("%s  NEOS log:\n%s" % ( msg, current_message, ))
     soln_data = results.data
     if six.PY3:
@@ -38,7 +42,8 @@ def _neos_error(msg, results, current_message):
             logger.warn(line)
 
 
-@SolverManagerFactory.register('neos', doc="Asynchronously execute solvers on the NEOS server")
+@SolverManagerFactory.register(
+    'neos', doc="Asynchronously execute solvers on the NEOS server")
 class SolverManager_NEOS(AsynchronousSolverManager):
 
     def clear(self):
@@ -47,7 +52,8 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         """
         AsynchronousSolverManager.clear(self)
         self.kestrel = pyomo.neos.kestrel.kestrelAMPL()
-        self._ah = {} # maps NEOS job numbers to their corresponding action handle.
+        self._ah = {} # maps NEOS job numbers to their corresponding
+                      # action handle.
         self._args = {}
         self._opt_data = {}
 
@@ -131,7 +137,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         os.environ['kestrel_options'] = 'solver=%s' % self._solvers[solver_name]
         #
         # Set the <solver>_options environment
-        # 
+        #
         solver_options = {}
         for key in opt.options:
             solver_options[key]=opt.options[key]
@@ -201,12 +207,12 @@ class SolverManager_NEOS(AsynchronousSolverManager):
 
                 (current_offset, current_message) = self._neos_log[jobNumber]
                 with open(opt._log_file, 'w') as OUTPUT:
-                    six.print_(current_message, file=OUTPUT)
+                    OUTPUT.write(current_message)
                 with open(opt._soln_file, 'w') as OUTPUT:
                     if six.PY2:
-                        six.print_(results.data, file=OUTPUT)
+                        OUTPUT.write(results.data)
                     else:
-                        six.print_((results.data).decode('utf-8'), file=OUTPUT)
+                        OUTPUT.write(results.data.decode('utf-8'))
 
                 rc = None
                 try:
@@ -218,7 +224,6 @@ class SolverManager_NEOS(AsynchronousSolverManager):
 
                 solver_results._smap_id = smap_id
                 self.results[ah.id] = solver_results
-                opt.deactivate()
 
                 if isinstance(args[0], Block):
                     _model = args[0]
@@ -258,7 +263,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                             jobNumber,
                             self._ah[jobNumber].password,
                             current_offset )
-                    six.print_(message_fragment, end="")
+                    logger.info(message_fragment)
                     self._neos_log[jobNumber] = (
                         new_offset,
                         current_message + (
