@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -132,8 +132,8 @@ def _preprocess_data(cmd):
                 state = 0
             else:
                 tpl.append(_process_token(token))
-   
-        elif state == 2: 
+
+        elif state == 2:
             # After a '{'
             if type(token) in numlist:
                 tpl.append(token)
@@ -148,7 +148,7 @@ def _preprocess_data(cmd):
             else:
                 tpl.append(_process_token(token))
 
-        elif state == 3: 
+        elif state == 3:
             # After a '['
             if type(token) in numlist:
                 tpl.append(token)
@@ -814,7 +814,7 @@ def _process_load(cmd, _model, _data, _default, options=None):
 
     options = Options(**_options)
     for key in options:
-        if not key in ['range','filename','format','using','driver','query','table','user','password']:
+        if not key in ['range','filename','format','using','driver','query','table','user','password','database']:
             raise ValueError("Unknown load option '%s'" % key)
 
     global Filename
@@ -891,7 +891,7 @@ def _process_load(cmd, _model, _data, _default, options=None):
 
     #print "SELECT", _param, _select
     #
-    data.initialize(model=options.model, filename=options.filename, index=_index, index_name=index_name, param_name=symb_map, set=_set, param=_param, format=options.format, range=options.range, query=options.query, using=options.using, table=options.table, select=_select)
+    data.initialize(model=options.model, filename=options.filename, index=_index, index_name=index_name, param_name=symb_map, set=_set, param=_param, format=options.format, range=options.range, query=options.query, using=options.using, table=options.table, select=_select,user=options.user,password=options.password,database=options.database)
     #
     data.open()
     try:

@@ -12,8 +12,9 @@
 # Problem Writer for BARON .bar Format Files
 #
 
-import logging
 import itertools
+import logging
+import math
 from six import iteritems, StringIO, iterkeys
 from six.moves import xrange
 from pyutilib.math import isclose
@@ -77,13 +78,36 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
             return "{0} * {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.MonomialTermExpression:
             if tmp[0] == '-1':
-                # It seems dumb to construct a temporary NegationExpression object
-                # Should we copy the logic from that function here?
-                return EXPR.NegationExpression._to_string(EXPR.NegationExpression((None,)), [tmp[1]], None, self.smap, True)
+                # It seems dumb to construct a temporary
+                # NegationExpression object Should we copy the logic
+                # from that function here?
+                return EXPR.NegationExpression._to_string(
+                    EXPR.NegationExpression((None,)),
+                    [tmp[1]], None, self.smap, True)
             else:
                 return "{0} * {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.PowExpression:
-            return "{0} ^ {1}".format(tmp[0], tmp[1])
+            x,y = node.args
+            if type(x) not in native_types and not x.is_fixed() and \
+               type(y) not in native_types and not y.is_fixed():
+                # Per the BARON manual, x ^ y is allowed as long as x
+                # and y are not both variables
+                return "exp(({1}) * log({0}))".format(tmp[0], tmp[1])
+            else:
+                return "{0} ^ {1}".format(tmp[0], tmp[1])
+        elif node.__class__ is EXPR.UnaryFunctionExpression:
+            if node.name == "sqrt":
+                return "{0} ^ 0.5".format(tmp[0])
+            elif node.name == 'log10':
+                return "{0} * log({1})".format(math.log10(math.e), tmp[0])
+            elif node.name in {'exp','log'}:
+                return node._to_string(tmp, None, self.smap, True)
+            else:
+                raise RuntimeError(
+                    'The BARON .BAR format does not support the unary '
+                    'function "%s".' % (node.name,))
+        elif node.__class__ is EXPR.AbsExpression:
+            return "({0} ^ 2) ^ 0.5".format(tmp[0])
         else:
             return node._to_string(tmp, None, self.smap, True)
 

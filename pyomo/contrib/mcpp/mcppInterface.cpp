@@ -52,6 +52,13 @@ MC *power(MC *var1, MC *var2)
     return ans;
 }
 
+MC *sqrt(MC *var)
+{
+    MC F = sqrt(*var);
+    MC *ans = new MC(F);
+    return ans;
+}
+
 
 MC *monomial(MC *var1, MC *var2)
 {
@@ -156,6 +163,14 @@ MC *exponential(MC *var1)
     return ans;
 }
 
+MC *logarithm(MC *var1)
+{
+    MC F = log(*var1);
+
+    MC *ans = new MC(F);
+    return ans;
+}
+
 //Get usable information from MC++
 double lower(MC *expr)
 {
@@ -202,7 +217,7 @@ double subcv(MC *expr, int index)
 
 extern "C"
 {
-    void *new_createVar(double lb, double pt, double ub, int count, int index) 
+    void *new_createVar(double lb, double pt, double ub, int count, int index)
     {
         void *ans = createVar(lb, pt, ub, count, index);
         return ans;
@@ -230,6 +245,12 @@ extern "C"
     MC *new_power(MC *var1, MC *var2)
     {
         MC *ans = power(var1, var2);
+        return ans;
+    }
+
+    MC *new_sqrt(MC *var)
+    {
+        MC *ans = sqrt(var);
         return ans;
     }
 
@@ -310,6 +331,12 @@ extern "C"
         return ans;
     }
 
+    MC *new_logarithm(MC *ptr1)
+    {
+        MC *ans = logarithm(ptr1);
+        return ans;
+    }
+
     double new_lower(MC *expr)
     {
         double ans = lower(expr);
@@ -348,5 +375,6 @@ extern "C"
 }
 
 //g++ -I ~/MC++/mcpp/src/mc -I /usr/include/python2.7/ -fPIC -O2 -c mcppInterface.cpp
+// g++ -I ~/.solvers/MC++/mcpp/src/3rdparty/fadbad++ -I ~/.solvers/MC++/mcpp/src/mc -I /usr/include/python3.6/ -fPIC -O2 -c mcppInterface.cpp
 
 //g++ -shared mcppInterface.o -o mcppInterface.so

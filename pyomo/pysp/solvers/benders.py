@@ -595,8 +595,6 @@ class BendersAlgorithm(PySPConfiguredObject):
             self.cleanup_subproblems()
         if self._manager_solver is not None:
             self._manager_solver.close()
-        if self._master_solver is not None:
-            self._master_solver.deactivate()
         self._manager = None
         self._manager_solver = None
         self._master_solver = None

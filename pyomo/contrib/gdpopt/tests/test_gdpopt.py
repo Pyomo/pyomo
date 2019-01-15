@@ -51,6 +51,21 @@ class TestGDPopt(unittest.TestCase):
             self.assertIn("Set covering problem was infeasible.",
                           output.getvalue().strip())
 
+    def test_GDP_nonlinear_objective(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-1, 10))
+        m.y = Var(bounds=(2, 3))
+        m.d = Disjunction(expr=[
+            [m.x + m.y >= 5], [m.x - m.y <= 3]
+        ])
+        m.o = Objective(expr=m.x ** 2)
+        SolverFactory('gdpopt').solve(
+            m, strategy='LOA',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver
+        )
+        self.assertAlmostEqual(value(m.o), 0)
+
     def test_LOA_8PP_default_init(self):
         """Test logic-based outer approximation with 8PP."""
         exfile = import_file(
@@ -164,8 +179,8 @@ class TestGDPopt(unittest.TestCase):
             iter_num = solve_data.nlp_iteration
             disjs_should_be_active = initialize[iter_num - 1]
             for orig_disj, soln_disj in zip(
-                solve_data.original_model.GDPopt_utils.orig_disjuncts_list,
-                nlp_model.GDPopt_utils.orig_disjuncts_list
+                solve_data.original_model.GDPopt_utils.disjunct_list,
+                nlp_model.GDPopt_utils.disjunct_list
             ):
                 if orig_disj in disjs_should_be_active:
                     self.assertTrue(soln_disj.indicator_var.value == 1)

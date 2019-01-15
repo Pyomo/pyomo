@@ -1,0 +1,6 @@
+# pd[1] = 0, pd[2] = 1
+m.pd = pmo.parameter_dict()
+for k,i in enumerate(m.s):
+    m.pd[i] = pmo.parameter(k)
+
+

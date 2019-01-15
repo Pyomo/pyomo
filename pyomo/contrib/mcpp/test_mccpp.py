@@ -23,10 +23,10 @@ class TestMcCormick(unittest.TestCase):
         m.x = Var(bounds=(pi / 6, pi / 3), initialize=pi / 4)
         m.e = Expression(expr=cos(pow(m.x, 2)) * sin(pow(m.x, -3)))
         mc_ccVals, mc_cvVals, aff_cc, aff_cv = make2dPlot(m.e.expr, 50)
-        self.assertEqual(mc_ccVals[1], 0.6443888590411435)
-        self.assertEqual(mc_cvVals[1], 0.2328315489072924)
-        self.assertEqual(aff_cc[1], 0.9674274332870583)
-        self.assertEqual(aff_cv[1], -1.578938503009686)
+        self.assertAlmostEqual(mc_ccVals[1], 0.6443888590411435)
+        self.assertAlmostEqual(mc_cvVals[1], 0.2328315489072924)
+        self.assertAlmostEqual(aff_cc[1], 0.9674274332870583)
+        self.assertAlmostEqual(aff_cv[1], -1.578938503009686)
 
     def test_mc_3d(self):
         m = ConcreteModel()
@@ -34,10 +34,10 @@ class TestMcCormick(unittest.TestCase):
         m.y = Var(bounds=(-1, 2), initialize=0)
         m.e = Expression(expr=m.x * pow(exp(m.x) - m.y, 2))
         ccSurf, cvSurf, ccAffine, cvAffine = make3dPlot(m.e.expr, 30)
-        self.assertEqual(ccSurf[48], 11.5655473482574)
-        self.assertEqual(cvSurf[48], -15.28102124928224)
-        self.assertEqual(ccAffine[48], 11.565547348257398)
-        self.assertEqual(cvAffine[48], -23.131094696514797)
+        self.assertAlmostEqual(ccSurf[48], 11.5655473482574)
+        self.assertAlmostEqual(cvSurf[48], -15.28102124928224)
+        self.assertAlmostEqual(ccAffine[48], 11.565547348257398)
+        self.assertAlmostEqual(cvAffine[48], -23.131094696514797)
 
     def test_var(self):
         m = ConcreteModel()
@@ -121,6 +121,15 @@ class TestMcCormick(unittest.TestCase):
         mc_expr = mc(abs((m.x)))
         self.assertEqual(mc_expr.lower(), 0)
         self.assertEqual(mc_expr.upper(), 1)
+
+    def test_lmtd(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0.1, 500), initialize=33.327)
+        m.y = Var(bounds=(0.1, 500), initialize=14.436)
+        m.z = Var(bounds=(0, 90), initialize=22.5653)
+        mc_expr = mc(m.z - (m.x * m.y * (m.x + m.y) / 2) ** (1/3))
+        self.assertAlmostEqual(mc_expr.convex(), -407.95444629965016)
+        self.assertAlmostEqual(mc_expr.lower(), -499.99999999999983)
 
 
 def make2dPlot(expr, numticks=10, show_plot=False):

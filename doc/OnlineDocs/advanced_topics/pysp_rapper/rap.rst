@@ -29,7 +29,7 @@ By Woody and https://www.song-lyrics-generator.org.uk
    You complain about unscriptability.
    I gotta love it though - somebody still speaks for the mat.
    
-   I'm rappin' to the ape,
+   I'm rappin' with a cape,
    And I'm gonna move your escape.
    
    Easy, big, indented, like a solution
@@ -37,9 +37,6 @@ By Woody and https://www.song-lyrics-generator.org.uk
    
    I can't take the unscriptability, can't take the script.
    I woulda tried to code I guess I got no transcript.
-   
-   I'm rappin' to the escape,
-   And I'm gonna move your ape.
    
    Yea, yaz, in a PySP state of mind.
    

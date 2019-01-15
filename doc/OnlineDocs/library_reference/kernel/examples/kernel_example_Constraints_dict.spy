@@ -1,0 +1,7 @@
+m.cd = pmo.constraint_dict()
+for i in m.s:
+    for j in m.q:
+        m.cd[i,j] = \
+            pmo.constraint(
+                body=m.vd[i],
+                rhs=j)

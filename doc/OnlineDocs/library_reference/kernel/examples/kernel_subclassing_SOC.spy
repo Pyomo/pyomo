@@ -1,0 +1,8 @@
+class SOC(pyomo.kernel.constraint):
+    """A convex second-order cone constraint"""
+    __slots__ = ()
+
+    def __init__(self, point):
+        assert isinstance(point.z, NonNegativeVariable)
+        super(SOC, self).__init__(
+            point.x**2 + point.y**2 <= point.z**2)

@@ -7,7 +7,8 @@ import ctypes
 import logging
 import os
 
-from pyomo.core import value
+from pyomo.core import value, Expression
+from pyomo.core.base.block import SubclassOf
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.expr.expr_pyomo5 import (
     AbsExpression, LinearExpression, NegationExpression, NPV_AbsExpression,
@@ -88,6 +89,10 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                                         ctypes.c_void_p]
         self.mcpp.new_power.restype = ctypes.c_void_p
 
+        # sqrt function
+        self.mcpp.new_sqrt.argtypes = [ctypes.c_void_p]
+        self.mcpp.new_sqrt.restype = ctypes.c_void_p
+
         # MC constant * MC Variable
         self.mcpp.new_monomial.argtypes = [ctypes.c_void_p,
                                            ctypes.c_void_p]
@@ -134,6 +139,10 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         self.mcpp.new_exponential.argtypes = [ctypes.c_void_p]
         self.mcpp.new_exponential.restype = ctypes.c_void_p
 
+        # log(MC Variable)
+        self.mcpp.new_logarithm.argtypes = [ctypes.c_void_p]
+        self.mcpp.new_logarithm.restype = ctypes.c_void_p
+
         self.mcpp.new_NPV.argtypes = [ctypes.c_void_p]
         self.mcpp.new_NPV.restype = ctypes.c_void_p
 
@@ -145,9 +154,13 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             for arg in data[1:]:
                 ans = self.mcpp.new_add(ans, arg)
         elif isinstance(node, PowExpression):
-            assert (type(data[0]) == int),\
-                "Argument to pow() must be an integer. Received %s" % (data[0],)
-            ans = self.mcpp.new_power(data[0], data[1])
+            if type(node.arg(1)) == int:
+                ans = self.mcpp.new_power(data[0], data[1])
+            else:
+                # Non-integer exponent. Must reformulate.
+                # We use x^n = exp(n*log(x))
+                ans = self.mcpp.new_exponential(
+                    self.mcpp.new_mult(data[1], self.mcpp.new_logarithm(data[0])))
         elif isinstance(node, ReciprocalExpression):
             ans = self.mcpp.new_reciprocal(
                 self.mcpp.new_createConstant(1), data[0])
@@ -168,24 +181,32 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         elif isinstance(node, UnaryFunctionExpression):
             if (node.name == "exp"):
                 ans = self.mcpp.new_exponential(data[0])
-            if (node.name == "sin"):
+            elif (node.name == "log"):
+                ans = self.mcpp.new_logarithm(data[0])
+            elif (node.name == "sin"):
                 ans = self.mcpp.new_trigSin(data[0])
-            if (node.name == "cos"):
+            elif (node.name == "cos"):
                 ans = self.mcpp.new_trigCos(data[0])
-            if (node.name == "tan"):
+            elif (node.name == "tan"):
                 ans = self.mcpp.new_trigTan(data[0])
-            if (node.name == "asin"):
+            elif (node.name == "asin"):
                 ans = self.mcpp.new_atrigSin(data[0])
-            if (node.name == "acos"):
+            elif (node.name == "acos"):
                 ans = self.mcpp.new_atrigCos(data[0])
-            if (node.name == "atan"):
+            elif (node.name == "atan"):
                 ans = self.mcpp.new_atrigTan(data[0])
+            elif (node.name == "sqrt"):
+                ans = self.mcpp.new_sqrt(data[0])
+            else:
+                raise NotImplementedError("Unknown unary function: %s" % (node.name,))
         elif any(isinstance(node, npv) for npv in NPV_expressions):
             ans = self.mcpp.new_NPV(value(data[0]))
         elif type(node) in nonpyomo_leaf_types:
             ans = self.mcpp.new_createConstant(node)
         elif not node.is_expression_type():
             ans = self.register_num(node)
+        elif type(node) in SubclassOf(Expression):
+            ans = data[0]
         else:
             raise RuntimeError("Unhandled expression type: %s" % (type(node)))
 

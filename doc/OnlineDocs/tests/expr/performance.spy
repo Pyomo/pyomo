@@ -1,0 +1,82 @@
+from pyomo.environ import *
+
+#---------------------------------------------
+M = ConcreteModel()
+M.x = Var(range(5))
+
+s = 0
+for i in range(5):
+    s = s + M.x[i]
+print(s)
+
+#---------------------------------------------
+s = sum(M.x[i] for i in range(5))
+print(s)
+
+#---------------------------------------------
+s = sum(M.x[i] for i in range(5))**2
+print(s)
+
+#---------------------------------------------
+M = ConcreteModel()
+M.x = Var(range(5))
+M.z = Var()
+
+# The product M.x[0] * M.x[1] * ... * M.x[4]
+e1 = prod(M.x[i] for i in M.x)
+
+# The product M.x[0]*M.z
+e2 = prod([M.x[0], M.z])
+
+# The product M.z*(M.x[0] + ... + M.x[4])
+e3 = prod([sum(M.x[i] for i in M.x), M.z])
+print(e1)
+print(e2)
+print(e3)
+
+#---------------------------------------------
+M = ConcreteModel()
+M.x = Var(range(5))
+
+# Summation using the Python sum() function
+e1 = sum(M.x[i]**2 for i in M.x)
+
+# Summation using the Pyomo quicksum function
+e2 = quicksum(M.x[i]**2 for i in M.x)
+print(e1)
+print(e2)
+
+#---------------------------------------------
+M = ConcreteModel()
+M.x = Var(range(5))
+
+e = quicksum(M.x[i]**2 if i > 0 else M.x[i] for i in range(5))
+print(e)
+
+#---------------------------------------------
+M = ConcreteModel()
+M.z = RangeSet(5)
+M.x = Var(range(10))
+M.y = Var(range(10))
+
+# Sum the elements of x
+e1 = sum_product(M.x)
+
+# Sum the product of elements in x and y
+e2 = sum_product(M.x, M.y)
+
+# Sum the product of elements in x and y, over the index set z
+e3 = sum_product(M.x, M.y, index=M.z)
+print(e1)
+print(e2)
+print(e3)
+
+#---------------------------------------------
+# Sum the product of x_i/y_i
+e1 = sum_product(M.x, denom=M.y)
+
+# Sum the product of 1/(x_i*y_i)
+e2 = sum_product(denom=(M.x, M.y))
+print(e1)
+print(e2)
+

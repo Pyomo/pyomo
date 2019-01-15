@@ -1,0 +1,10 @@
+from pyomo.core.expr import current as EXPR
+
+M = ConcreteModel()
+M.x = Var()
+M.y = Var()
+
+e = sin(M.x) + 2*M.y + M.x*M.y - 3
+
+# -3 + 2*y + sin(x) + x*y
+print(EXPR.expression_to_string(e, standardize=True))

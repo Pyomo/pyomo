@@ -10,10 +10,10 @@ Python scripts using Pyomo.
 .. toctree::
    :maxdepth: 1
 
-   expressions/index.rst
    aml/index.rst
-   data/index.rst
+   expressions/index.rst
    solvers/index.rst
+   data/index.rst
 
 Pyomo is under active ongoing development.  The following API
 documentation describes *Beta* functionality.
@@ -23,9 +23,3 @@ documentation describes *Beta* functionality.
 
    kernel/index.rst
 
-Finally, Pyomo includes a number of third-party extensions:
-
-.. toctree::
-   :maxdepth: 1
-
-   contrib.rst

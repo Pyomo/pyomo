@@ -2,11 +2,13 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
+import logging
 
 import pyutilib.misc
 import pyutilib.services
@@ -14,6 +16,8 @@ import pyutilib.services
 from pyomo.opt.base import *
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
+
+logger = logging.getLogger('pyomo.neos')
 
 @SolverFactory.register('_neos', 'Interface for solvers hosted on NEOS')
 class NEOSRemoteSolver(SystemCallSolver):
@@ -45,11 +49,11 @@ class NEOSRemoteSolver(SystemCallSolver):
         # in case something crashes unexpectedly, which is not without precedent.
         if self._keepfiles:
             if self._log_file is not None:
-                print("Solver log file: '%s'" % self._log_file)
+                logger.info("Solver log file: '%s'" % (self._log_file,))
             if self._soln_file is not None:
-                print("Solver solution file: '%s'" % self._soln_file)
+                logger.info("Solver solution file: '%s'" % (self._soln_file,))
             if self._problem_files is not []:
-                print("Solver problem files: %s" % str(self._problem_files))
+                logger.info("Solver problem files: %s" % (self._problem_files,))
 
         return pyutilib.misc.Bunch(cmd="", log_file=self._log_file, env="")
 

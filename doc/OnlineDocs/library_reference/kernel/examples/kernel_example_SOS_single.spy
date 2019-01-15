@@ -1,0 +1,6 @@
+m.sos1 = pmo.sos1(m.vd.values())
+
+
+m.sos2 = pmo.sos2(m.vl)
+
+

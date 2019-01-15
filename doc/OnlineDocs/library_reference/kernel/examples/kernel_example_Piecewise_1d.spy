@@ -1,0 +1,9 @@
+breakpoints = [1,2,3,4]
+values = [1,2,1,2]
+m.f = pmo.variable()
+m.pw = pmo.piecewise(
+    breakpoints,
+    values,
+    input=m.v,
+    output=m.f,
+    bound='eq')

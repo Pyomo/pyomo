@@ -6,7 +6,7 @@ from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_affine_cuts)
 from pyomo.contrib.gdpopt.mip_solve import solve_LOA_master
 from pyomo.contrib.gdpopt.nlp_solve import (solve_global_NLP,
-                                            solve_local_NLP)
+                                            solve_local_NLP, solve_global_subproblem, solve_local_subproblem)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import time_code
 
@@ -39,14 +39,12 @@ def GDPopt_iteration_loop(solve_data, config):
         # Solve NLP subproblem
         if solve_data.current_strategy == 'LOA':
             with time_code(solve_data.timing, 'nlp'):
-                nlp_result = solve_local_NLP(
-                    mip_result.var_values, solve_data, config)
+                nlp_result = solve_local_subproblem(mip_result, solve_data, config)
             if nlp_result.feasible:
                 add_outer_approximation_cuts(nlp_result, solve_data, config)
         elif solve_data.current_strategy == 'GLOA':
             with time_code(solve_data.timing, 'nlp'):
-                nlp_result = solve_global_NLP(
-                    mip_result.var_values, solve_data, config)
+                nlp_result = solve_global_subproblem(mip_result, solve_data, config)
             if nlp_result.feasible:
                 add_affine_cuts(nlp_result, solve_data, config)
 
@@ -73,7 +71,12 @@ def algorithm_should_terminate(solve_data, config):
             'LB: %s + (tol %s) >= UB: %s' %
             (solve_data.LB, config.bound_tolerance,
              solve_data.UB))
-        solve_data.results.solver.termination_condition = tc.optimal
+        if solve_data.LB == float('inf') and solve_data.UB == float('inf'):
+            solve_data.results.solver.termination_condition = tc.infeasible
+        elif solve_data.LB == float('-inf') and solve_data.UB == float('-inf'):
+            solve_data.results.solver.termination_condition = tc.infeasible
+        else:
+            solve_data.results.solver.termination_condition = tc.optimal
         return True
 
     # Check iteration limit
