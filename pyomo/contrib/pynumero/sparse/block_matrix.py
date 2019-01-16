@@ -23,7 +23,7 @@ where m_{i,j} are sparse matrices
 
 from scipy.sparse.sputils import upcast, isscalarlike, get_index_dtype
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, csr_matrix
 from scipy.sparse import isspmatrix
 from pyomo.contrib.pynumero.sparse.utils import is_symmetric_sparse
 import numpy as np
@@ -31,7 +31,15 @@ import numpy as np
 __all__ = ['BlockMatrix', 'BlockSymMatrix']
 
 
-# ToDo: better exception handling
+def assert_block_structure(mat):
+    msgr = 'Operation not allowed with None rows. ' \
+           'Specify at least one block in every row'
+    assert not mat.has_empty_rows(), msgr
+    msgc = 'Operation not allowed with None columns. ' \
+           'Specify at least one block every column'
+    assert not mat.has_empty_cols(), msgc
+
+
 class BlockMatrix(object):
     """
     Structured Matrix interface
@@ -186,7 +194,7 @@ class BlockMatrix(object):
         ndarray with values of all entries in the matrix
 
         """
-        self._check_mask()
+        assert_block_structure(self)
 
         nonzeros = self.nnz
         data = np.empty(nonzeros, dtype=self.dtype)
@@ -211,7 +219,7 @@ class BlockMatrix(object):
 
         """
         # ToDo: copy argument to match scipy?
-        self._check_mask()
+        assert_block_structure(self)
 
         dtype = self.dtype
 
@@ -409,6 +417,93 @@ class BlockMatrix(object):
 
         return len(empty_cols) > 0
 
+    def copyfrom(self, other):
+        """
+        Copies entries of other matrix into this matrix
+
+        Parameters
+        ----------
+        other: BlockMatrix or sparse_matrix
+
+        Returns
+        -------
+        None
+        """
+        assert_block_structure(self)
+        m, n = self.bshape
+        assert other.shape == self.shape, \
+            'dimensions mismatch {} != {}'.format(self.shape, other.shape)
+        if isinstance(other, BlockMatrix):
+            assert other.bshape == self.bshape, \
+                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
+            assert_block_structure(other)
+            for i in range(m):
+                for j in range(n):
+                    self._blocks[i, j] = other[i, j]
+        elif isspmatrix(other):
+
+            m = other.tocoo()
+            row_offsets = np.append(0, np.cumsum(self._brow_lengths))
+            col_offsets = np.append(0, np.cumsum(self._bcol_lengths))
+
+            for i in range(self.bshape[0]):
+                for j in range(self.bshape[1]):
+                    if i < self.bshape[0] - 1 and j < self.bshape[1] - 1:
+                        row_indices1 = row_offsets[i] <= m.row
+                        row_indices2 = m.row < row_offsets[i + 1]
+                        row_indices = np.multiply(row_indices1, row_indices2)
+                        col_indices1 = col_offsets[j] <= m.col
+                        col_indices2 = m.col < col_offsets[j + 1]
+                        col_indices = np.multiply(col_indices1, col_indices2)
+                        bool_entries = np.multiply(row_indices, col_indices)
+
+                    elif i < self.bshape[0] - 1 and j == self.bshape[1] - 1:
+
+                        row_indices1 = row_offsets[i] <= m.row
+                        row_indices2 = m.row < row_offsets[i + 1]
+                        row_indices = np.multiply(row_indices1, row_indices2)
+                        col_indices1 = col_offsets[j] <= m.col
+                        col_indices2 = m.col < self.shape[1]
+                        col_indices = np.multiply(col_indices1, col_indices2)
+                        bool_entries = np.multiply(row_indices, col_indices)
+                    elif i == self.bshape[0] - 1 and j < self.bshape[1] - 1:
+
+                        row_indices1 = row_offsets[i] <= m.row
+                        row_indices2 = m.row < self.shape[0]
+                        row_indices = np.multiply(row_indices1, row_indices2)
+                        col_indices1 = col_offsets[j] <= m.col
+                        col_indices2 = m.col < col_offsets[j + 1]
+                        col_indices = np.multiply(col_indices1, col_indices2)
+                        bool_entries = np.multiply(row_indices, col_indices)
+                    else:
+
+                        row_indices1 = row_offsets[i] <= m.row
+                        row_indices2 = m.row < self.shape[0]
+                        row_indices = np.multiply(row_indices1, row_indices2)
+                        col_indices1 = col_offsets[j] <= m.col
+                        col_indices2 = m.col < self.shape[1]
+                        col_indices = np.multiply(col_indices1, col_indices2)
+                        bool_entries = np.multiply(row_indices, col_indices)
+
+                    sub_row = np.compress(bool_entries, m.row)
+                    sub_col = np.compress(bool_entries, m.col)
+                    sub_data = np.compress(bool_entries, m.data)
+                    sub_row -= row_offsets[i]
+                    sub_col -= col_offsets[j]
+
+                    shape = (self._brow_lengths[i], self._bcol_lengths[j])
+                    mm = csr_matrix((sub_data, (sub_row, sub_col)), shape=shape)
+                    self._blocks[i, j] = mm
+        else:
+            raise NotImplementedError()
+
+    def copy(self):
+        result = BlockMatrix(self.bshape[0], self.bshape[1])
+        ii, jj = np.nonzero(self._block_mask)
+        for i, j in zip(ii, jj):
+            result[i, j] = self._blocks[i, j].copy()
+        return result
+
     def __repr__(self):
         return '{}{}'.format(self.__class__.__name__, self.shape)
 
@@ -416,8 +511,9 @@ class BlockMatrix(object):
         msg = ''
         for idx in range(self.bshape[0]):
             for jdx in range(self.bshape[1]):
-                repn = self._blocks[idx, jdx].__repr__() if self._block_mask[idx, jdx] else None
-                msg += '({}, {}): {}\n'.format(idx, jdx, repn)
+                if self._blocks[idx, jdx] is not None:
+                    repn = self._blocks[idx, jdx].__repr__() if self._block_mask[idx, jdx] else None
+                    msg += '({}, {}): {}\n'.format(idx, jdx, repn)
         return msg
 
     def __getitem__(self, item):
@@ -508,7 +604,7 @@ class BlockMatrix(object):
 
     def __add__(self, other):
 
-        self._check_mask()
+        assert_block_structure(self)
 
         result = BlockMatrix(self.bshape[0], self.bshape[1])
         m, n = self.bshape
@@ -517,7 +613,9 @@ class BlockMatrix(object):
         if isinstance(other, BlockMatrix):
             assert other.bshape == self.bshape, \
                 'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
-            other._check_mask()
+
+            assert_block_structure(other)
+
             for i in range(m):
                 for j in range(n):
                     if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
@@ -530,7 +628,11 @@ class BlockMatrix(object):
                         result[i, j] = None
             return result
         elif isspmatrix(other):
-            raise NotImplementedError('Sparse Matrix with BlockMatrix addition not supported')
+
+            # this is not efficient but is just for flexibility. Not used in the interior-point code
+            mat = self.copy()
+            mat.copyfrom(other)
+            return self.__add__(mat)
         elif np.isscalar(other):
             raise NotImplementedError('Scalar with BlockMatrix addition not supported')
         else:
@@ -541,7 +643,7 @@ class BlockMatrix(object):
 
     def __sub__(self, other):
 
-        self._check_mask()
+        assert_block_structure(self)
         result = BlockMatrix(self.bshape[0], self.bshape[1])
         m, n = self.bshape
         assert other.shape == self.shape, \
@@ -549,7 +651,7 @@ class BlockMatrix(object):
         if isinstance(other, BlockMatrix):
             assert other.bshape == self.bshape, \
                 'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
-            other._check_mask()
+            assert_block_structure(other)
             for i in range(m):
                 for j in range(n):
                     if self._block_mask[i, j] and other._block_mask[i, j]:
@@ -562,14 +664,17 @@ class BlockMatrix(object):
                         result[i, j] = None
             return result
         elif isspmatrix(other):
-            raise NotImplementedError('Sparse Matrix with BlockMatrix subtraction not supported')
+            # this is not efficient but is just for flexibility. Not used in the interior-point code
+            mat = self.copy()
+            mat.copyfrom(other)
+            return self.__sub__(mat)
         elif np.isscalar(other):
             raise NotImplementedError('Scalar with BlockMatrix subtraction not supported')
         else:
             raise NotImplementedError('input not recognized for subtraction')
 
     def __rsub__(self, other):
-        self._check_mask()
+        assert_block_structure(self)
         result = BlockMatrix(self.bshape[0], self.bshape[1])
         m, n = self.bshape
         assert other.shape == self.shape, \
@@ -577,7 +682,7 @@ class BlockMatrix(object):
         if isinstance(other, BlockMatrix):
             assert other.bshape == self.bshape, \
                 'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
-            other._check_mask()
+            assert_block_structure(other)
             for i in range(m):
                 for j in range(n):
                     if self._block_mask[i, j] and other._block_mask[i, j]:
@@ -590,14 +695,17 @@ class BlockMatrix(object):
                         result[i, j] = None
             return result
         elif isspmatrix(other):
-            raise NotImplementedError('Sparse Matrix with BlockMatrix subtraction not supported')
+            # this is not efficient but is just for flexibility. Not used in the interior-point code
+            mat = self.copy()
+            mat.copyfrom(other)
+            return self.__rsub__(mat)
         elif np.isscalar(other):
             raise NotImplementedError('Scalar with BlockMatrix subtraction not supported')
         else:
             raise NotImplementedError('input not recognized for subtraction')
 
     def __mul__(self, other):
-        self._check_mask()
+        assert_block_structure(self)
         bm, bn = self.bshape
         if np.isscalar(other):
             result = BlockMatrix(bm, bn)
@@ -642,7 +750,7 @@ class BlockMatrix(object):
             raise NotImplementedError('input not recognized for multiplication')
 
     def __rmul__(self, other):
-        self._check_mask()
+        assert_block_structure(self)
         bm, bn = self.bshape
         if np.isscalar(other):
             result = BlockMatrix(bm, bn)
@@ -661,7 +769,7 @@ class BlockMatrix(object):
         raise NotImplementedError('implicit sub not supported for BlockMatrix')
 
     def __imul__(self, other):
-        self._check_mask()
+        assert_block_structure(self)
         if np.isscalar(other):
             ii, jj = np.nonzero(self._block_mask)
             for i, j in zip(ii, jj):
@@ -671,6 +779,13 @@ class BlockMatrix(object):
 
     def __itruediv__(self, other):
         raise NotImplementedError('implicit divide not supported yet')
+
+    def __neg__(self):
+
+        ii, jj = np.nonzero(self._block_mask)
+        for i, j in zip(ii, jj):
+            self._blocks[i, j] = -self._blocks[i, j]
+        return self
 
 
 class BlockSymMatrix(BlockMatrix):
@@ -688,8 +803,9 @@ class BlockSymMatrix(BlockMatrix):
         for idx in range(self.bshape[0]):
             for jdx in range(self.bshape[1]):
                 if idx >= jdx:
-                    repn = self._blocks[idx, jdx].__repr__() if self._block_mask[idx, jdx] else None
-                    msg += '({}, {}): {}\n'.format(idx, jdx, repn)
+                    if self._blocks[idx, jdx] is not None:
+                        repn = self._blocks[idx, jdx].__repr__() if self._block_mask[idx, jdx] else None
+                        msg += '({}, {}): {}\n'.format(idx, jdx, repn)
         return msg
 
     def __getitem__(self, item):

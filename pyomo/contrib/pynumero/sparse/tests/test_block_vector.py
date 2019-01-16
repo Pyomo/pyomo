@@ -7,8 +7,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+from __future__ import division
 import sys
 import pyutilib.th as unittest
+
 try:
     import numpy as np
 except ImportError:
@@ -412,6 +414,10 @@ class TestBlockVector(unittest.TestCase):
         size = sum(self.list_sizes_ones)
         self.assertEqual(self.ones.size, size)
 
+    def test_length(self):
+        size = sum(self.list_sizes_ones)
+        self.assertEqual(len(self.ones), size)
+
     def test_argmax(self):
         v = BlockVector(2)
         v[0] = np.arange(5)
@@ -530,41 +536,51 @@ class TestBlockVector(unittest.TestCase):
         result = v.flatten() * v1
         self.assertTrue(np.allclose(result.flatten(), v.flatten() * v1.flatten()))
 
-    # @unittest.skipIf(sys.version_info < (3, 0), 'not supported in this veresion')
-    # def test_truediv(self):
-    #     v = self.ones
-    #     v1 = v.clone(5, copy=True)
-    #     result = v / v1
-    #     self.assertListEqual(result.tolist(), [1/5] * v.size)
-    #     result = v / v1.flatten()
-    #     self.assertTrue(np.allclose(result.flatten(), v.flatten() / v1.flatten()))
-    #
-    # @unittest.skipIf(sys.version_info < (3, 0), 'not supported in this veresion')
-    # def test_rtruediv(self):
-    #     v = self.ones
-    #     v1 = v.clone(5, copy=True)
-    #     result = v1.__rtruediv__(v)
-    #     self.assertListEqual(result.tolist(), [1 / 5] * v.size)
-    #     result = v.flatten() / v1
-    #     self.assertTrue(np.allclose(result.flatten(), v.flatten() / v1.flatten()))
-    #
-    # def test_floordiv(self):
-    #     v = self.ones
-    #     v.fill(2)
-    #     v1 = v.clone(5, copy=True)
-    #     result = v1 // v
-    #     self.assertListEqual(result.tolist(), [5 // 2] * v.size)
-    #     result = v // v1.flatten()
-    #     self.assertTrue(np.allclose(result.flatten(), v.flatten() // v1.flatten()))
-    #
-    # def test_rfloordiv(self):
-    #     v = self.ones
-    #     v.fill(2)
-    #     v1 = v.clone(5, copy=True)
-    #     result = v.__rfloordiv__(v1)
-    #     self.assertListEqual(result.tolist(), [5 // 2] * v.size)
-    #     result = v.flatten() // v1
-    #     self.assertTrue(np.allclose(result.flatten(), v.flatten() // v1.flatten()))
+    def test_truediv(self):
+        v = self.ones
+        v1 = v.clone(5.0, copy=True)
+        result = v / v1
+        self.assertListEqual(result.tolist(), [1.0/5.0] * v.size)
+        result = v / v1.flatten()
+        self.assertTrue(np.allclose(result.flatten(), v.flatten() / v1.flatten()))
+        result = 5.0 / v1
+        self.assertTrue(np.allclose(result.flatten(), v.flatten()))
+        result = v1 / 5.0
+        self.assertTrue(np.allclose(result.flatten(), v.flatten()))
+
+    def test_rtruediv(self):
+        v = self.ones
+        v1 = v.clone(5.0, copy=True)
+        result = v1.__rtruediv__(v)
+        self.assertListEqual(result.tolist(), [1.0 / 5.0] * v.size)
+        result = v.flatten() / v1
+        self.assertTrue(np.allclose(result.flatten(), v.flatten() / v1.flatten()))
+        result = 5.0 / v1
+        self.assertTrue(np.allclose(result.flatten(), v.flatten()))
+        result = v1 / 5.0
+        self.assertTrue(np.allclose(result.flatten(), v.flatten()))
+
+    def test_floordiv(self):
+        v = self.ones
+        v.fill(2.0)
+        v1 = v.clone(5.0, copy=True)
+        result = v1 // v
+        self.assertListEqual(result.tolist(), [5.0 // 2.0] * v.size)
+        result = v // v1.flatten()
+        self.assertTrue(np.allclose(result.flatten(), v.flatten() // v1.flatten()))
+
+    def test_rfloordiv(self):
+        v = self.ones
+        v.fill(2.0)
+        v1 = v.clone(5.0, copy=True)
+        result = v.__rfloordiv__(v1)
+        self.assertListEqual(result.tolist(), [5.0 // 2.0] * v.size)
+        result = v.flatten() // v1
+        self.assertTrue(np.allclose(result.flatten(), v.flatten() // v1.flatten()))
+        result = 2.0 // v1
+        self.assertTrue(np.allclose(result.flatten(), np.zeros(v1.size)))
+        result = v1 // 2.0
+        self.assertTrue(np.allclose(result.flatten(), np.ones(v1.size)*2.0))
 
     def test_iadd(self):
         v = self.ones

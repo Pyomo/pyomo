@@ -11,7 +11,7 @@
 try:
     import ipopt
 except ImportError:
-    raise ImportError('ipopt solver relies on cyipopt. Install cyipopt'+
+    raise ImportError('CyIpoptSolver solver relies on cyipopt. Install cyipopt'+
                       ' https://github.com/matthias-k/cyipopt.git')
 import numpy as np
 from pyomo.contrib.pynumero.interfaces import PyomoNLP

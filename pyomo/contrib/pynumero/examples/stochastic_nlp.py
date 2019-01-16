@@ -7,13 +7,15 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.contrib.pynumero.interfaces import PyomoNLP
 from pyomo.contrib.pynumero.interfaces.nlp_compositions import TwoStageStochasticNLP
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
 from pyomo.contrib.pynumero.sparse import BlockSymMatrix, BlockVector
+from pyomo.contrib.pynumero.interfaces import PyomoNLP
 import matplotlib.pylab as plt
 import pyomo.environ as aml
 import numpy as np
 import os
+
 
 def create_basic_dense_qp(G, A, b, c):
 
@@ -70,8 +72,8 @@ nlp = TwoStageStochasticNLP(scenarios, coupling_vars)
 x = nlp.x_init()
 y = nlp.y_init()
 
-jac_c = nlp.jacobian_c(x)
-plt.spy(jac_c)
+jac_g = nlp.jacobian_g(x)
+plt.spy(jac_g)
 plt.title('Jacobian of the constraints\n')
 plt.show()
 
@@ -82,8 +84,13 @@ plt.show()
 
 kkt = BlockSymMatrix(2)
 kkt[0, 0] = hess_lag
-kkt[1, 0] = jac_c
+kkt[1, 0] = jac_g
 
 plt.spy(kkt.tocoo())
 plt.title('KKT system\n')
 plt.show()
+
+opt = CyIpoptSolver(nlp)
+x, info = opt.solve(tee=True)
+
+

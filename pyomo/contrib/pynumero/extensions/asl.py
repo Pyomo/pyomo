@@ -283,7 +283,6 @@ class AmplInterface(object):
                                                        jcol_p,
                                                        len(irow))
 
-
     def struct_hes_lag(self, irow, jcol):
         irow_p = irow.astype(np.intc, casting='safe', copy=False)
         jcol_p = jcol.astype(np.intc, casting='safe', copy=False)

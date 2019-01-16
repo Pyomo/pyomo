@@ -141,9 +141,9 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertListEqual(res_dinopy.tolist(), res_scipy.tolist())
         self.assertListEqual(res_dinopy_flat.tolist(), res_scipy.tolist())
 
-        dense_mat = dinopy_mat.todense()
+        dense_mat = dinopy_mat.toarray()
         self.basic_m *= 5.0
-        self.assertTrue(np.allclose(dense_mat, self.basic_m.todense()))
+        self.assertTrue(np.allclose(dense_mat, self.basic_m.toarray()))
 
         flat_mat = self.basic_m.tocoo()
         result = flat_mat * flat_mat
@@ -194,7 +194,7 @@ class TestBlockMatrix(unittest.TestCase):
                 self.assertEqual(shapes[i][j], self.block_m.shape)
 
     def test_dot(self):
-        A_dense = self.basic_m.todense()
+        A_dense = self.basic_m.toarray()
         A_block = self.basic_m
         x = np.ones(A_dense.shape[1])
         block_x = BlockVector(2)
@@ -240,17 +240,17 @@ class TestBlockMatrix(unittest.TestCase):
 
     def test_transpose(self):
 
-        A_dense = self.basic_m.todense()
+        A_dense = self.basic_m.toarray()
         A_block = self.basic_m
         A_dense_t = A_dense.transpose()
         A_block_t = A_block.transpose()
-        self.assertTrue(np.allclose(A_dense_t, A_block_t.todense()))
+        self.assertTrue(np.allclose(A_dense_t, A_block_t.toarray()))
 
-        A_dense = self.composed_m.todense()
+        A_dense = self.composed_m.toarray()
         A_block = self.composed_m
         A_dense_t = A_dense.transpose()
         A_block_t = A_block.transpose()
-        self.assertTrue(np.allclose(A_dense_t, A_block_t.todense()))
+        self.assertTrue(np.allclose(A_dense_t, A_block_t.toarray()))
 
     def test_repr(self):
         self.assertEqual(len(self.basic_m.__repr__()), 17)
@@ -270,29 +270,97 @@ class TestBlockMatrix(unittest.TestCase):
 
     def test_add(self):
 
-        A_dense = self.basic_m.todense()
+        A_dense = self.basic_m.toarray()
         A_block = self.basic_m
 
         aa = A_dense + A_dense
         mm = A_block + A_block
 
-        self.assertTrue(np.allclose(aa, mm.todense()))
+        self.assertTrue(np.allclose(aa, mm.toarray()))
 
         mm = A_block.__radd__(A_block)
-        self.assertTrue(np.allclose(aa, mm.todense()))
+        self.assertTrue(np.allclose(aa, mm.toarray()))
+
+        r = A_block + A_block.tocoo()
+        dense_res = A_block.toarray() + A_block.toarray()
+        self.assertIsInstance(r, BlockMatrix)
+
+        self.assertTrue(np.allclose(r.toarray(), dense_res))
+
+        with self.assertRaises(Exception) as context:
+            mm = A_block.__radd__(A_block.toarray())
+
+        with self.assertRaises(Exception) as context:
+            mm = A_block + A_block.toarray()
+
+        with self.assertRaises(Exception) as context:
+            mm = A_block + 1.0
 
     def test_sub(self):
 
-        A_dense = self.basic_m.todense()
+        A_dense = self.basic_m.toarray()
         A_block = self.basic_m
+        A_block2 = 2 * self.basic_m
 
         aa = A_dense - A_dense
         mm = A_block - A_block
 
-        self.assertTrue(np.allclose(aa, mm.todense()))
+        self.assertTrue(np.allclose(aa, mm.toarray()))
         mm = A_block.__rsub__(A_block)
-        self.assertTrue(np.allclose(aa, mm.todense()))
+        self.assertTrue(np.allclose(aa, mm.toarray()))
 
+        mm = A_block2 - A_block.tocoo()
+        self.assertTrue(np.allclose(A_block.toarray(), mm.toarray()))
+
+        mm = A_block2.tocoo() - A_block
+        self.assertTrue(np.allclose(A_block.toarray(), mm.toarray()))
+
+        with self.assertRaises(Exception) as context:
+            mm = A_block.__rsub__(A_block.toarray())
+
+        with self.assertRaises(Exception) as context:
+            mm = A_block - A_block.toarray()
+
+        with self.assertRaises(Exception) as context:
+            mm = A_block - 1.0
+
+        with self.assertRaises(Exception) as context:
+            mm = 1.0 - A_block
+
+    def test_neg(self):
+
+        A_dense = self.basic_m.toarray()
+        A_block = self.basic_m
+
+        aa = -A_dense
+        mm = -A_block
+
+        self.assertTrue(np.allclose(aa, mm.toarray()))
+
+    def test_copyfrom(self):
+
+        A_dense = self.basic_m.toarray()
+        A_block = 2 * self.basic_m
+        A_block2 = 2 * self.basic_m
+
+        A_block.copyfrom(self.basic_m.tocoo())
+
+        dd = A_block.toarray()
+        self.assertTrue(np.allclose(dd, A_dense))
+
+        A_block.copyfrom(2 * self.basic_m)
+        dd = A_block.toarray()
+        self.assertTrue(np.allclose(dd, A_block2.toarray()))
+
+        with self.assertRaises(Exception) as context:
+            A_block.copyfrom(A_dense)
+
+    def test_copy(self):
+
+        A_dense = self.basic_m.toarray()
+        A_block = self.basic_m
+        clone = A_block.copy()
+        self.assertTrue(np.allclose(clone.toarray(), A_dense))
 
 class TestSymBlockMatrix(unittest.TestCase):
 
@@ -345,18 +413,18 @@ class TestSymBlockMatrix(unittest.TestCase):
 
         # test scalar multiplication
         m = self.basic_m * 5.0
-        dense_m = m.todense()
+        dense_m = m.toarray()
 
         b00 = self.block00.tocoo()
         b11 = self.block11.tocoo()
         b10 = self.block10
         scipy_m = bmat([[b00, b10.transpose()], [b10, b11]], format='coo')
-        dense_scipy_m = scipy_m.todense() * 5.0
+        dense_scipy_m = scipy_m.toarray() * 5.0
 
         self.assertTrue(np.allclose(dense_scipy_m, dense_m, atol=1e-3))
 
         m = 5.0 * self.basic_m
-        dense_m = m.todense()
+        dense_m = m.toarray()
 
         self.assertTrue(np.allclose(dense_scipy_m, dense_m, atol=1e-3))
 
@@ -375,7 +443,7 @@ class TestSymBlockMatrix(unittest.TestCase):
         self.assertListEqual(dinopy_res.tolist(), scipy_res.tolist())
 
         self.basic_m *= 5.0
-        self.assertTrue(np.allclose(self.basic_m.todense(), dense_m, atol=1e-3))
+        self.assertTrue(np.allclose(self.basic_m.toarray(), dense_m, atol=1e-3))
     # ToDo: Add test for transpose
 
 

@@ -472,7 +472,7 @@ class TestAdmmNLP(unittest.TestCase):
         nlp = self.nlp
         jac_g = self.model.jacobian_c
         x = nlp.create_vector_x()
-        self.assertTrue(np.allclose(nlp.jacobian_g(x).todense(), jac_g))
+        self.assertTrue(np.allclose(nlp.jacobian_g(x).toarray(), jac_g))
 
         x = self.nlp3.create_vector_x()
         x.fill(1.0)
@@ -511,7 +511,7 @@ class TestAdmmNLP(unittest.TestCase):
         nlp = self.nlp
         jac_c = self.model.jacobian_c
         x = nlp.create_vector_x()
-        self.assertTrue(np.allclose(nlp.jacobian_c(x).todense(), jac_c))
+        self.assertTrue(np.allclose(nlp.jacobian_c(x).toarray(), jac_c))
 
         x = self.nlp3.create_vector_x()
         x.fill(1.0)
@@ -617,7 +617,7 @@ class TestAdmmNLP(unittest.TestCase):
         x = self.nlp.create_vector_x()
         y = self.nlp.create_vector_y()
         hess_lag = self.nlp.hessian_lag(x, y)
-        dense_hess_lag = hess_lag.todense()
+        dense_hess_lag = hess_lag.toarray()
         self.assertTrue(np.allclose(dense_hess_lag, admm_hessian))
 
         # second nlp
@@ -641,9 +641,9 @@ class TestAdmmNLP(unittest.TestCase):
         x = nlp.create_vector_x()
         y = nlp.create_vector_y()
         hess_lag = nlp.hessian_lag(x, y)
-        dense_hess_lag = hess_lag.todense()
+        dense_hess_lag = hess_lag.toarray()
         hess_lagp = nl.hessian_lag(x, y)
-        dense_hess_lagp = hess_lagp.todense()
+        dense_hess_lagp = hess_lagp.toarray()
         self.assertTrue(np.allclose(dense_hess_lag, dense_hess_lagp))
 
         # third nlp
@@ -666,9 +666,9 @@ class TestAdmmNLP(unittest.TestCase):
         x = nlp.create_vector_x()
         y = nlp.create_vector_y()
         hess_lag = nlp.hessian_lag(x, y)
-        dense_hess_lag = hess_lag.todense()
+        dense_hess_lag = hess_lag.toarray()
         hess_lagp = nl.hessian_lag(x, y)
-        dense_hess_lagp = hess_lagp.todense()
+        dense_hess_lagp = hess_lagp.toarray()
 
         self.assertTrue(np.allclose(dense_hess_lag, dense_hess_lagp))
 

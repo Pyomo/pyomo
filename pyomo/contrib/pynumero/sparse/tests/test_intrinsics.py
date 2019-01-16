@@ -108,3 +108,36 @@ class TestSparseIntrinsics(unittest.TestCase):
 
     # ToDo: try np.copy on a blockvector
 
+    def test_intersect1d(self):
+
+        vv1 = np.array([1.1, 3.3])
+        vv2 = np.array([4.4, 7.7])
+        bvv = BlockVector([vv1, vv2])
+        res = pn.intersect1d(self.bv, bvv)
+        self.assertIsInstance(res, BlockVector)
+        self.assertTrue(np.allclose(res[0], vv1))
+        self.assertTrue(np.allclose(res[1], vv2))
+        vv3 = np.array([1.1, 7.7])
+        res = pn.intersect1d(self.bv, vv3)
+        self.assertIsInstance(res, BlockVector)
+        self.assertTrue(np.allclose(res[0], np.array([1.1])))
+        self.assertTrue(np.allclose(res[1], np.array([7.7])))
+        res = pn.intersect1d(vv3, self.bv)
+        self.assertIsInstance(res, BlockVector)
+        self.assertTrue(np.allclose(res[0], np.array([1.1])))
+        self.assertTrue(np.allclose(res[1], np.array([7.7])))
+
+    def test_setdiff1d(self):
+
+        vv1 = np.array([1.1, 3.3])
+        vv2 = np.array([4.4, 7.7])
+        bvv = BlockVector([vv1, vv2])
+        res = pn.setdiff1d(self.bv, bvv)
+        self.assertIsInstance(res, BlockVector)
+        self.assertTrue(np.allclose(res[0], np.array([2.2])))
+        self.assertTrue(np.allclose(res[1], np.array([5.5, 6.6])))
+        vv3 = np.array([1.1, 7.7])
+        res = pn.setdiff1d(self.bv, vv3)
+        self.assertIsInstance(res, BlockVector)
+        self.assertTrue(np.allclose(res[0], np.array([2.2, 3.3])))
+        self.assertTrue(np.allclose(res[1], np.array([4.4, 5.5, 6.6])))

@@ -169,6 +169,7 @@ class TestCyIpoptSolver(unittest.TestCase):
         nlp = PyomoNLP(model)
         solver = CyIpoptSolver(nlp)
         x, info = solver.solve(tee=False)
+
         x_sol = np.array([2.0, -1.0, 1.0])
         y_sol = np.array([-3.,  2.])
         self.assertTrue(np.allclose(x, x_sol, rtol=1e-4))
