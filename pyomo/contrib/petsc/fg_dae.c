@@ -47,7 +47,7 @@ PetscErrorCode FormDAEJacobian(
   ierr = VecGetArrayRead(xdot, &xxdot); CHKERRQ(ierr);
   for(i=0;i<sol_ctx->n_var_state;++i){
     x_asl[sol_ctx->dae_map_x[i]] = xx[i];
-    if(sol_ctx->dae_map_xdot[i] >= 0) x_asl[sol_ctx->dae_map_xdot[i]] = xx[i];
+    if(sol_ctx->dae_map_xdot[i] >= 0) x_asl[sol_ctx->dae_map_xdot[i]] = xxdot[i];
   }
   ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(xdot,&xxdot);CHKERRQ(ierr);
@@ -84,6 +84,7 @@ void dae_var_map(Solver_ctx *sol_ctx){
   for(i=0;i<n_var;++i){
     if(sol_ctx->dae_suffix_var->u.i[i]==2){ //a derivative var
       for(j=0;j<n_var;++j){
+        if(i == j) continue;
         if(sol_ctx->dae_link_var->u.i[i] == sol_ctx->dae_link_var->u.i[j]){
           sol_ctx->dae_link[i] = j;
           sol_ctx->dae_link[j] = i;
