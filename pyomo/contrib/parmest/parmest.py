@@ -2,9 +2,9 @@ import re
 import importlib as im
 import types
 import json
-import numpy as np
-import pandas as pd
 try:
+    import numpy as np
+    import pandas as pd
     from scipy import stats
 except:
     pass
@@ -23,7 +23,7 @@ __version__ = 0.1
 #=============================================
 def _object_from_string(instance, vstr):
     """
-    create a Pyomo object from a string; it is attached to instance
+    Create a Pyomo object from a string; it is attached to instance
     args:
         instance: a concrete pyomo model
         vstr: a particular Var or Param (e.g. "pp.Keq_a[2]")

@@ -34,14 +34,14 @@ the following code. A description of each argument is listed below.  Examples ar
 
 .. testsetup:: *
     
-	from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model as model_function
+    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model as model_function
     data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
                                    [4,16.0],[5,15.6],[6,19.8]],
                                    columns=['hour', 'y'])
-	theta_names = ['asymptote', 'rate_constant']
-	def objective_function(model, data):  
-		expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
-		return expr
+    theta_names = ['asymptote', 'rate_constant']
+    def objective_function(model, data):  
+        expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
+        return expr
 
 .. doctest::
 
