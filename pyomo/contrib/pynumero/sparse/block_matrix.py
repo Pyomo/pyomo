@@ -354,31 +354,6 @@ class BlockMatrix(object):
         """
         return not self._block_mask[idx, jdx]
 
-    def _check_mask(self):
-
-        bm, bn = self.bshape
-
-        empty_rows = []
-        for idx in range(bm):
-            row_bool = np.logical_not(self._block_mask[idx, :])
-            if np.all(row_bool):
-                empty_rows.append(idx)
-        empty_cols = []
-        for jdx in range(bn):
-            col_bool = np.logical_not(self._block_mask[:, jdx])
-            if np.all(col_bool):
-                empty_cols.append(jdx)
-
-        if len(empty_rows) > 0:
-            msg = 'Operation not allowed with None rows. Specify at least one block in rows:\n'
-            msg += '{} of BlockMatrix'.format(empty_rows)
-            raise RuntimeError(msg)
-
-        if len(empty_cols)>0:
-            msg = 'Operation not allowed with None columns. Specify at least one block in columns:\n'
-            msg += '{} of BlockMatrix'.format(empty_cols)
-            raise RuntimeError(msg)
-
     def has_empty_rows(self):
         """
         Indicates if the matrix has block-rows that are empty
