@@ -1,6 +1,9 @@
-import numpy as np
-import pandas as pd
 import seaborn as sns
+try:
+    import numpy as np
+    import pandas as pd
+except:
+    pass
 try:
     import matplotlib.pyplot as plt
     import matplotlib.tri as tri
