@@ -5,11 +5,11 @@ try:
 except ImportError:
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
-try:
-    from pyomo.contrib.pynumero.linalg.solvers import ma27_solver
-    found_hsl = True
-except ImportError as e:
+from pyomo.contrib.pynumero.extensions.hsl import MA27_LinearSolver
+if not MA27_LinearSolver.available():
     found_hsl = False
+else:
+    found_hsl = True
 
 try:
     from pyomo.contrib.pynumero.linalg.solvers.mumps_solver import MUMPSSymLinearSolver
