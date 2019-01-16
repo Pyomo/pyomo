@@ -34,6 +34,7 @@ the following code. A description of each argument is listed below.  Examples ar
 
 .. testsetup:: *
     
+    import pandas as pd
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model as model_function
     data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
                                    [4,16.0],[5,15.6],[6,19.8]],
