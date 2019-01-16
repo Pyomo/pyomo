@@ -1,17 +1,11 @@
-import seaborn as sns
 try:
     import numpy as np
     import pandas as pd
-except:
-    pass
-try:
+    from scipy import stats
+    import seaborn as sns
     import matplotlib.pyplot as plt
     import matplotlib.tri as tri
     from matplotlib.lines import Line2D
-except:
-    pass
-try:
-    from scipy import stats
 except:
     pass
 
