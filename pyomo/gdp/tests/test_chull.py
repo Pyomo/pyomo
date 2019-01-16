@@ -765,6 +765,13 @@ class TestSpecialCases(unittest.TestCase):
         self.assertEqual(rd.z_bounds['ub'].body(), 9)
 
 
+class RangeSetOnDisjunct(unittest.TestCase):
+    def test_RangeSet(self):
+        m = models.makeDisjunctWithRangeSet()
+        TransformationFactory('gdp.chull').apply_to(m)
+        self.assertIsInstance(m.d1.s, RangeSet)
+
+
 # TODO (based on coverage):
 
 # test targets of all flavors
