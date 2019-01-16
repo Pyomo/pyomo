@@ -60,8 +60,9 @@ def MindtPy_iteration_loop(solve_data, config):
         if not making_progress and (
                 config.strategy == 'hPSC' and
                 config.strategy == 'PSC'):
-            print('Not making enough progress for {} iterations. '
-                  'Switching to OA.'.format(max_nonimprove_iter))
+            config.logger.info(
+                'Not making enough progress for {} iterations. '
+                'Switching to OA.'.format(max_nonimprove_iter))
             config.strategy = 'OA'
 
 

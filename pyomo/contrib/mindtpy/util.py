@@ -20,7 +20,6 @@ class MindtPySolveData(object):
     Key attributes:
         - original_model: the original model that the user gave us to solve
         - working_model: the original model after preprocessing
-        - linear_GDP: the linear-discrete master problem
     """
     pass
 
@@ -71,14 +70,6 @@ def model_is_valid(solve_data, config):
     # TODO if any continuous variables are multipled with binary ones, need
     # to do some kind of transformation (Glover?) or throw an error message
     return True
-
-
-def a_logger(str_or_logger):
-    """Returns a logger when passed either a logger name or logger object."""
-    if isinstance(str_or_logger, logging.Logger):
-        return str_or_logger
-    else:
-        return logging.getLogger(str_or_logger)
 
 
 def detect_nonlinear_vars(solve_data, config):

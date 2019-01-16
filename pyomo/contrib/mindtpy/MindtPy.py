@@ -29,11 +29,11 @@ from pyomo.contrib.gdpopt.util import (
     _DoNothing, copy_var_list_values,
     create_utility_block,
     restore_logger_level, time_code,
-    setup_results_object, process_objective)
+    setup_results_object, process_objective, a_logger)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_master
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
 from pyomo.contrib.mindtpy.util import (
-    MindtPySolveData, a_logger, model_is_valid
+    MindtPySolveData, model_is_valid
 )
 from pyomo.core import (
     Block, ConstraintList, NonNegativeReals, RangeSet, Set, Suffix, Var, value,

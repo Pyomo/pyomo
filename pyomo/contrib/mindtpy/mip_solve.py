@@ -72,11 +72,13 @@ def solve_OA_master(solve_data, config):
             % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr),
                solve_data.LB, solve_data.UB))
     elif master_terminate_cond is tc.infeasible:
-        print('MILP master problem is infeasible. '
-              'Problem may have no more feasible binary combinations.')
+        config.logger.info(
+            'MILP master problem is infeasible. '
+            'Problem may have no more feasible binary combinations.')
         if solve_data.mip_iter == 1:
-            print('MindtPy initialization may have generated poor '
-                  'quality cuts.')
+            config.logger.info(
+                'MindtPy initialization may have generated poor '
+                'quality cuts.')
     elif master_terminate_cond is tc.maxTimeLimit:
         # TODO check that status is actually ok and everything is feasible
         config.logger.info(

@@ -68,9 +68,9 @@ def solve_NLP_subproblem(solve_data, config):
             solve_data.LB = max(value(main_objective.expr), solve_data.LB)
             solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
             solve_data.LB_progress.append(solve_data.LB)
-        print('NLP {}: OBJ: {}  LB: {}  UB: {}'
-              .format(solve_data.nlp_iter, value(main_objective.expr), solve_data.LB,
-                      solve_data.UB))
+        config.logger.info(
+            'NLP {}: OBJ: {}  LB: {}  UB: {}'
+            .format(solve_data.nlp_iter, value(main_objective.expr), solve_data.LB, solve_data.UB))
         if solve_data.solution_improved:
             solve_data.best_solution_found = m.clone()
         # Add the linear cut
@@ -91,7 +91,7 @@ def solve_NLP_subproblem(solve_data, config):
     elif subprob_terminate_cond is tc.infeasible:
         # TODO try something else? Reinitialize with different initial
         # value?
-        print('NLP subproblem was locally infeasible.')
+        config.logger.info('NLP subproblem was locally infeasible.')
         for c in m.component_data_objects(ctype=Constraint, active=True,
                                           descend_into=True):
             rhs = ((0 if c.upper is None else c.upper) +
@@ -111,13 +111,13 @@ def solve_NLP_subproblem(solve_data, config):
                     m.ipopt_zU_out[var] = -1
         # m.pprint() #print infeasible nlp problem for debugging
         if config.strategy == 'PSC':
-            print('Adding PSC feasibility cut.')
+            config.logger.info('Adding PSC feasibility cut.')
             add_psc_cut(m, solve_data, config, nlp_feasible=False)
         elif config.strategy == 'GBD':
-            print('Adding GBD feasibility cut.')
+            config.logger.info('Adding GBD feasibility cut.')
             add_gbd_cut(m, solve_data, config, nlp_feasible=False)
         elif config.strategy == 'OA':
-            print('Solving feasibility problem')
+            config.logger.info('Solving feasibility problem')
             if config.initial_feas:
                 # add_feas_slacks(m, solve_data)
                 # config.initial_feas = False
@@ -128,7 +128,7 @@ def solve_NLP_subproblem(solve_data, config):
     elif subprob_terminate_cond is tc.maxIterations:
         # TODO try something else? Reinitialize with different initial
         # value?
-        print('NLP subproblem failed to converge within iteration limit.')
+        config.logger.info('NLP subproblem failed to converge within iteration limit.')
         # Add an integer cut to exclude this discrete option
         add_int_cut(solve_data, config)
     else:
