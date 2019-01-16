@@ -7,10 +7,9 @@ from __future__ import division
 from math import fabs
 
 from pyomo.contrib.gdpopt.cut_generation import (
-    add_affine_cuts, add_integer_cut, add_outer_approximation_cuts,
-    add_subproblem_cuts)
+    add_integer_cut, add_subproblem_cuts)
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
-from pyomo.contrib.gdpopt.nlp_solve import solve_global_NLP, solve_local_NLP, solve_disjunctive_subproblem
+from pyomo.contrib.gdpopt.nlp_solve import solve_disjunctive_subproblem
 from pyomo.contrib.gdpopt.util import _DoNothing
 from pyomo.core import (
     Block, Constraint, Objective, Suffix, TransformationFactory, Var, maximize,
@@ -67,8 +66,8 @@ def init_custom_disjuncts(solve_data, config):
             "Generating initial linear GDP approximation by "
             "solving subproblems with user-specified active disjuncts.")
         for orig_disj, clone_disj in zip(
-            solve_data.original_model.GDPopt_utils.disjunct_list,
-            linear_GDP.GDPopt_utils.disjunct_list
+                solve_data.original_model.GDPopt_utils.disjunct_list,
+                linear_GDP.GDPopt_utils.disjunct_list
         ):
             if orig_disj in active_disjunct_set:
                 clone_disj.indicator_var.fix(1)
@@ -131,7 +130,7 @@ def init_max_binaries(solve_data, config):
     next(linear_GDP.component_data_objects(Objective, active=True)).deactivate()
     binary_vars = (
         v for v in linear_GDP.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
+        ctype=Var, descend_into=(Block, Disjunct))
         if v.is_binary() and not v.fixed)
     linear_GDP.GDPopt_utils.max_binary_obj = Objective(
         expr=sum(binary_vars), sense=maximize)
@@ -167,7 +166,7 @@ def init_set_covering(solve_data, config):
     disjunct_needs_cover = list(
         any(constr.body.polynomial_degree() not in (0, 1)
             for constr in disj.component_data_objects(
-                ctype=Constraint, active=True, descend_into=True))
+            ctype=Constraint, active=True, descend_into=True))
         for disj in solve_data.working_model.GDPopt_utils.disjunct_list)
     # Set up set covering mip
     set_cover_mip = solve_data.linear_GDP.clone()

@@ -5,7 +5,7 @@ import logging
 from math import fabs, floor, log
 
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
-from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
+from pyomo.core import (Block, Constraint,
                         Objective, Reals, Var, minimize, value)
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.kernel.component_set import ComponentSet
@@ -34,6 +34,7 @@ class _DoNothing(object):
     def __getattr__(self, attr):
         def _do_nothing(*args, **kwargs):
             pass
+
         return _do_nothing
 
 
@@ -61,7 +62,7 @@ def model_is_valid(solve_data, config):
     # Handle LP/NLP being passed to the solver
     prob = solve_data.results.problem
     if (prob.number_of_binary_variables == 0 and
-        prob.number_of_integer_variables == 0 and
+            prob.number_of_integer_variables == 0 and
             prob.number_of_disjunctions == 0):
         config.logger.info('Problem has no discrete decisions.')
         if len(GDPopt.working_nonlinear_constraints) > 0:
@@ -189,16 +190,16 @@ def is_feasible(model, config):
             ctype=Constraint, active=True, descend_into=True):
         # Check constraint lower bound
         if (constr.lower is not None and (
-            value(constr.lower) - value(constr.body)
-            >= config.constraint_tolerance
+                value(constr.lower) - value(constr.body)
+                >= config.constraint_tolerance
         )):
             config.logger.info('%s: body %s < LB %s' % (
                 constr.name, value(constr.body), value(constr.lower)))
             return False
         # check constraint upper bound
         if (constr.upper is not None and (
-            value(constr.body) - value(constr.upper)
-            >= config.constraint_tolerance
+                value(constr.body) - value(constr.upper)
+                >= config.constraint_tolerance
         )):
             config.logger.info('%s: body %s > UB %s' % (
                 constr.name, value(constr.body), value(constr.upper)))

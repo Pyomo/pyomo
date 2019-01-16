@@ -5,8 +5,7 @@ from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_outer_approximation_cuts,
                                                  add_affine_cuts)
 from pyomo.contrib.gdpopt.mip_solve import solve_LOA_master
-from pyomo.contrib.gdpopt.nlp_solve import (solve_global_NLP,
-                                            solve_local_NLP, solve_global_subproblem, solve_local_subproblem)
+from pyomo.contrib.gdpopt.nlp_solve import (solve_global_subproblem, solve_local_subproblem)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import time_code
 
@@ -68,9 +67,8 @@ def algorithm_should_terminate(solve_data, config):
     if solve_data.LB + config.bound_tolerance >= solve_data.UB:
         config.logger.info(
             'GDPopt exiting on bound convergence. '
-            'LB: %s + (tol %s) >= UB: %s' %
-            (solve_data.LB, config.bound_tolerance,
-             solve_data.UB))
+            'LB: {:.10g} + (tol {:.10g}) >= UB: {:.10g}'.format(
+                solve_data.LB, config.bound_tolerance, solve_data.UB))
         if solve_data.LB == float('inf') and solve_data.UB == float('inf'):
             solve_data.results.solver.termination_condition = tc.infeasible
         elif solve_data.LB == float('-inf') and solve_data.UB == float('-inf'):
@@ -86,8 +84,8 @@ def algorithm_should_terminate(solve_data, config):
             'after %s master iterations.'
             % (solve_data.master_iteration,))
         config.logger.info(
-            'Final bound values: LB: %s  UB: %s'
-            % (solve_data.LB, solve_data.UB))
+            'Final bound values: LB: {:.10g}  UB: {:.10g}'.format(
+                solve_data.LB, solve_data.UB))
         solve_data.results.solver.termination_condition = tc.maxIterations
         return True
 
