@@ -15,8 +15,8 @@ import textwrap
 
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
-    Expression, SortComponents, TraversalStrategy, Any, value
-)
+    Expression, SortComponents, TraversalStrategy, Any, value,
+    RangeSet)
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core.base.component import ComponentUID, ActiveComponent
 from pyomo.core.kernel.component_map import ComponentMap
@@ -129,6 +129,7 @@ class BigM_Transformation(Transformation):
             Suffix:      False,
             Param:       False,
             Set:         False,
+            RangeSet:    False,
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
