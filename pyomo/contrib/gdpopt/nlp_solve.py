@@ -250,8 +250,7 @@ def update_subproblem_progress_indicators(solved_model, solve_data, config):
     )
 
     if solve_data.feasible_solution_improved:
-        solve_data.best_solution_found = [
-            v.value for v in GDPopt.variable_list]
+        solve_data.best_solution_found = solved_model.clone()
 
     improvement_tag = (
         "(IMPROVED) " if solve_data.feasible_solution_improved else "")

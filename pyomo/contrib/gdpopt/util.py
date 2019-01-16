@@ -86,7 +86,7 @@ def model_is_valid(solve_data, config):
 
 def process_objective(solve_data, config):
     m = solve_data.working_model
-    GDPopt = m.GDPopt_utils
+    util_blk = getattr(m, solve_data.util_block_name)
     # Handle missing or multiple objectives
     objs = list(m.component_data_objects(
         ctype=Objective, active=True, descend_into=True))
@@ -95,8 +95,8 @@ def process_objective(solve_data, config):
     if num_objs == 0:
         config.logger.warning(
             'Model has no active objectives. Adding dummy objective.')
-        GDPopt.dummy_objective = Objective(expr=1)
-        main_obj = GDPopt.dummy_objective
+        util_blk.dummy_objective = Objective(expr=1)
+        main_obj = util_blk.dummy_objective
     elif num_objs > 1:
         raise ValueError('Model has multiple active objectives.')
     else:
@@ -108,27 +108,27 @@ def process_objective(solve_data, config):
     if main_obj.expr.polynomial_degree() not in (1, 0):
         config.logger.info("Objective is nonlinear. Moving it to constraint set.")
 
-        GDPopt.objective_value = Var(domain=Reals, initialize=0)
+        util_blk.objective_value = Var(domain=Reals, initialize=0)
         if mcpp_available():
             mc_obj = McCormick(main_obj.expr)
-            GDPopt.objective_value.setub(mc_obj.upper())
-            GDPopt.objective_value.setlb(mc_obj.lower())
+            util_blk.objective_value.setub(mc_obj.upper())
+            util_blk.objective_value.setlb(mc_obj.lower())
 
         if main_obj.sense == minimize:
-            GDPopt.objective_constr = Constraint(
-                expr=GDPopt.objective_value >= main_obj.expr)
+            util_blk.objective_constr = Constraint(
+                expr=util_blk.objective_value >= main_obj.expr)
             solve_data.results.problem.sense = ProblemSense.minimize
         else:
-            GDPopt.objective_constr = Constraint(
-                expr=GDPopt.objective_value <= main_obj.expr)
+            util_blk.objective_constr = Constraint(
+                expr=util_blk.objective_value <= main_obj.expr)
             solve_data.results.problem.sense = ProblemSense.maximize
         # Deactivate the original objective and add this new one.
         main_obj.deactivate()
-        GDPopt.objective = Objective(
-            expr=GDPopt.objective_value, sense=main_obj.sense)
+        util_blk.objective = Objective(
+            expr=util_blk.objective_value, sense=main_obj.sense)
         # Add the new variable and constraint to the working lists
-        GDPopt.variable_list.append(GDPopt.objective_value)
-        GDPopt.constraint_list.append(GDPopt.objective_constr)
+        util_blk.variable_list.append(util_blk.objective_value)
+        util_blk.constraint_list.append(util_blk.objective_constr)
 
 
 def a_logger(str_or_logger):
@@ -269,12 +269,11 @@ def build_ordered_component_lists(model, solve_data):
     setattr(util_blk, 'variable_list', var_list)
 
 
-def setup_results_object(solve_data, config, util_block_name='GDPopt_utils'):
+def setup_results_object(solve_data, config):
     """Record problem statistics for original model."""
     # Create the solver results object
     res = solve_data.results
     prob = res.problem
-    origUtilBlock = getattr(solve_data.original_model, util_block_name)
     res.problem.name = solve_data.working_model.name
     res.problem.number_of_nonzeros = None  # TODO
     # TODO work on termination condition and message

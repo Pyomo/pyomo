@@ -276,17 +276,11 @@ If you use this software, you may cite the following:
             # subproblems.
             solve_data.initial_var_values = list(
                 v.value for v in GDPopt.variable_list)
-
-            # Store the initial model state as the best solution found. If we
-            # find no better solution, then we will restore from this copy.
-            solve_data.best_solution_found = solve_data.initial_var_values
+            solve_data.best_solution_found = None
 
             # Validate the model to ensure that GDPopt is able to solve it.
             if not model_is_valid(solve_data, config):
                 return
-
-            # Maps in order to keep track of certain generated constraints
-            GDPopt.oa_cut_map = ComponentMap()
 
             # Integer cuts exclude particular discrete decisions
             GDPopt.integer_cuts = ConstraintList(doc='integer cuts')
@@ -325,17 +319,17 @@ If you use this software, you may cite the following:
             with time_code(solve_data.timing, 'main loop'):
                 GDPopt_iteration_loop(solve_data, config)
 
-            # Update values in working model
-            copy_var_list_values(
-                from_list=solve_data.best_solution_found,
-                to_list=GDPopt.variable_list,
-                config=config)
-
-            # Update values in original model
-            copy_var_list_values(
-                GDPopt.variable_list,
-                solve_data.original_model.GDPopt_utils.variable_list,
-                config)
+            if solve_data.best_solution_found is not None:
+                # Update values in working model
+                copy_var_list_values(
+                    from_list=solve_data.best_solution_found.GDPopt_utils.variable_list,
+                    to_list=GDPopt.variable_list,
+                    config=config)
+                # Update values in original model
+                copy_var_list_values(
+                    GDPopt.variable_list,
+                    solve_data.original_model.GDPopt_utils.variable_list,
+                    config)
 
             solve_data.results.problem.lower_bound = solve_data.LB
             solve_data.results.problem.upper_bound = solve_data.UB
