@@ -25,7 +25,6 @@ import abc
 
 @six.add_metaclass(abc.ABCMeta)
 class KKTSolver(object):
-    """ Base class for Karush–Kuhn–Tucker """
 
     def __init__(self, linear_solver, **kwargs):
         self._lsolver = linear_solver
