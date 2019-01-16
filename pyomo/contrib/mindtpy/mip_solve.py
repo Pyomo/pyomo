@@ -18,20 +18,22 @@ def solve_OA_master(solve_data, config):
         'MIP %s: Solve master problem.' %
         (solve_data.mip_iter,))
     # Set up MILP
-    for c in MindtPy.working_nonlinear_constraints:
-        c.deactivate()
+    for c in MindtPy.constraint_list:
+        if c.body.polynomial_degree() not in (1, 0):
+            c.deactivate()
 
     MindtPy.MindtPy_linear_cuts.activate()
-    MindtPy.objective.deactivate()
+    main_objective = next(m.component_data_objects(Objective, active=True))
+    main_objective.deactivate()
 
-    sign_adjust = 1 if MindtPy.objective.sense == minimize else -1
+    sign_adjust = 1 if main_objective.sense == minimize else -1
     MindtPy.MindtPy_penalty_expr = Expression(
         expr=sign_adjust * config.OA_penalty_factor * sum(
             v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
 
     MindtPy.MindtPy_oa_obj = Objective(
-        expr=MindtPy.objective.expr + MindtPy.MindtPy_penalty_expr,
-        sense=MindtPy.objective.sense)
+        expr=main_objective.expr + MindtPy.MindtPy_penalty_expr,
+        sense=main_objective.sense)
 
     # Deactivate extraneous IMPORT/EXPORT suffixes
     getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
@@ -53,11 +55,11 @@ def solve_OA_master(solve_data, config):
     if master_terminate_cond is tc.optimal:
         # proceed. Just need integer values
         copy_var_list_values(
-            m.MindtPy_utils.working_var_list,
-            solve_data.working_model.MindtPy_utils.working_var_list,
+            m.MindtPy_utils.variable_list,
+            solve_data.working_model.MindtPy_utils.variable_list,
             config)
 
-        if MindtPy.objective.sense == minimize:
+        if main_objective.sense == minimize:
             solve_data.LB = max(
                 value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
@@ -82,8 +84,8 @@ def solve_OA_master(solve_data, config):
             'within time limit. '
             'Using current solver feasible solution.')
         copy_var_list_values(
-            m.MindtPy_utils.working_var_list,
-            solve_data.working_model.MindtPy_utils.working_var_list,
+            m.MindtPy_utils.variable_list,
+            solve_data.working_model.MindtPy_utils.variable_list,
             config)
         if MindtPy.obj.sense == minimize:
             solve_data.LB = max(
@@ -105,8 +107,8 @@ def solve_OA_master(solve_data, config):
             'MILP solver reported feasible solution, '
             'but not guaranteed to be optimal.')
         copy_var_list_values(
-            m.MindtPy_utils.working_var_list,
-            solve_data.working_model.MindtPy_utils.working_var_list,
+            m.MindtPy_utils.variable_list,
+            solve_data.working_model.MindtPy_utils.variable_list,
             config)
         if MindtPy.obj.sense == minimize:
             solve_data.LB = max(
@@ -130,7 +132,7 @@ def solve_OA_master(solve_data, config):
                 'MindtPy initialization may have generated poor '
                 'quality cuts.')
         # set optimistic bound to infinity
-        if MindtPy.obj.sense == minimize:
+        if main_objective.sense == minimize:
             solve_data.LB = float('inf')
             solve_data.LB_progress.append(solve_data.UB)
         else:

@@ -10,7 +10,7 @@ from pyomo.environ import SolverFactory, value
 # model = EightProcessFlowsheet()
 
 
-required_solvers = ('ipopt', 'cplex')
+required_solvers = ('ipopt', 'gams')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:
@@ -24,11 +24,10 @@ class TestMindtPy(unittest.TestCase):
         """Test the MindtPy implementation."""
         with SolverFactory('mindtpy') as opt:
             print('\n Solving problem with selected decomposition strategy')
-            mip_options = {'threads': 4}
+            # mip_options = {'threads': 4}
             opt.solve(build_model(),
                       strategy='OA', init_strategy='initial_binary',
                       mip_solver=required_solvers[1], iteration_limit=13,
-                      mip_solver_args={'options': mip_options},
                       nlp_solver=required_solvers[0])
             # model.pprint()
 

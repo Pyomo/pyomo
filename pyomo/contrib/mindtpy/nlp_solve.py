@@ -16,19 +16,21 @@ from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 def solve_NLP_subproblem(solve_data, config):
     m = solve_data.working_model.clone()
     MindtPy = m.MindtPy_utils
+    main_objective = next(m.component_data_objects(Objective, active=True))
     solve_data.nlp_iter += 1
     config.logger.info('NLP %s: Solve subproblem for fixed binaries.'
                        % (solve_data.nlp_iter,))
     # Set up NLP
-    for v in MindtPy.working_binary_vars:
-        v.fix(int(value(v) + 0.5))
+    for v in MindtPy.variable_list:
+        if v.is_binary():
+            v.fix(int(round(value(v))))
 
     # restore original variable values
-    for nlp_var, orig_var in zip(
-            MindtPy.orig_var_list,
-            solve_data.original_model.MindtPy_utils.orig_var_list):
+    for nlp_var, orig_val in zip(
+            MindtPy.variable_list,
+            solve_data.initial_var_values):
         if not nlp_var.fixed and not nlp_var.is_binary():
-            nlp_var.value = orig_var.value
+            nlp_var.value = orig_val
 
     MindtPy.MindtPy_linear_cuts.deactivate()
     m.tmp_duals = ComponentMap()
@@ -47,27 +49,27 @@ def solve_NLP_subproblem(solve_data, config):
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.nlp_solver).solve(
             m, **config.nlp_solver_args)
+    var_values = list(v.value for v in MindtPy.variable_list)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
         copy_var_list_values(
-            m.MindtPy_utils.working_var_list,
-            solve_data.working_model.MindtPy_utils.working_var_list,
+            m.MindtPy_utils.variable_list,
+            solve_data.working_model.MindtPy_utils.variable_list,
             config)
-        var_values = list(v.value for v in MindtPy.working_var_list)
         for c in m.tmp_duals:
             if m.dual.get(c, None) is None:
                 m.dual[c] = m.tmp_duals[c]
-        duals = list(m.dual[c] for c in MindtPy.working_constraints_list)
-        if MindtPy.objective.sense == minimize:
-            solve_data.UB = min(value(MindtPy.objective.expr), solve_data.UB)
+        duals = list(m.dual[c] for c in MindtPy.constraint_list)
+        if main_objective.sense == minimize:
+            solve_data.UB = min(value(main_objective.expr), solve_data.UB)
             solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
             solve_data.UB_progress.append(solve_data.UB)
         else:
-            solve_data.LB = max(value(MindtPy.objective.expr), solve_data.LB)
+            solve_data.LB = max(value(main_objective.expr), solve_data.LB)
             solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
             solve_data.LB_progress.append(solve_data.LB)
         print('NLP {}: OBJ: {}  LB: {}  UB: {}'
-              .format(solve_data.nlp_iter, value(MindtPy.objective.expr), solve_data.LB,
+              .format(solve_data.nlp_iter, value(main_objective.expr), solve_data.LB,
                       solve_data.UB))
         if solve_data.solution_improved:
             solve_data.best_solution_found = m.clone()
@@ -117,12 +119,12 @@ def solve_NLP_subproblem(solve_data, config):
         elif config.strategy == 'OA':
             print('Solving feasibility problem')
             if config.initial_feas:
-                add_feas_slacks(m, solve_data, config)
-                config.initial_feas = False
-            solve_NLP_feas(solve_data, config)
-            add_oa_cut(solve_data, config)
+                # add_feas_slacks(m, solve_data)
+                # config.initial_feas = False
+                var_values, duals = solve_NLP_feas(solve_data, config)
+                add_oa_cut(var_values, duals, solve_data, config)
         # Add an integer cut to exclude this discrete option
-        add_int_cut(solve_data, config)
+        add_int_cut(var_values, solve_data, config)
     elif subprob_terminate_cond is tc.maxIterations:
         # TODO try something else? Reinitialize with different initial
         # value?
@@ -140,8 +142,9 @@ def solve_NLP_subproblem(solve_data, config):
 
 def solve_NLP_feas(solve_data, config):
     m = solve_data.working_model.clone()
+    add_feas_slacks(m)
     MindtPy = m.MindtPy_utils
-    MindtPy.MindtPy_objective.deactivate()
+    next(m.component_data_objects(Objective, active=True)).deactivate()
     for constr in m.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
         constr.deactivate()
@@ -149,21 +152,20 @@ def solve_NLP_feas(solve_data, config):
     MindtPy.MindtPy_feas_obj = Objective(
         expr=sum(s for s in MindtPy.MindtPy_feas.slack_var[...]),
         sense=minimize)
-    for v in MindtPy.binary_vars:
-        if value(v) > 0.5:
-            v.fix(1)
-        else:
-            v.fix(0)
+    for v in MindtPy.variable_list:
+        if v.is_binary():
+            v.fix(int(round(v.value)))
     # m.pprint()  #print nlp feasibility problem for debugging
     with SuppressInfeasibleWarning():
-        feas_soln = config.nlp_solver.solve(
+        feas_soln = SolverFactory(config.nlp_solver).solve(
             m, **config.nlp_solver_args)
     subprob_terminate_cond = feas_soln.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
         copy_var_list_values(
-            m.MindtPy_utils.working_var_list,
-            solve_data.working_model.MindtPy_utils.working_var_list,
+            MindtPy.variable_list,
+            solve_data.working_model.MindtPy_utils.variable_list,
             config)
+        pass
     elif subprob_terminate_cond is tc.infeasible:
         raise ValueError('Feasibility NLP infeasible. '
                          'This should never happen.')
@@ -172,23 +174,20 @@ def solve_NLP_feas(solve_data, config):
             'MindtPy unable to handle feasibility NLP termination condition '
             'of {}'.format(subprob_terminate_cond))
 
-    for v in MindtPy.binary_vars:
-        v.unfix()
+    var_values = [v.value for v in MindtPy.variable_list]
+    duals = [0 for _ in MindtPy.constraint_list]
 
-    MindtPy.MindtPy_feas.deactivate()
-    MindtPy.MindtPy_feas_obj.deactivate()
-    # MindtPy.MindtPy_objective_expr.activate()
-    MindtPy.MindtPy_objective.activate()
-
-    for constr in m.component_data_objects(
-            ctype=Constraint, descend_into=True):
-        constr.activate()
+    for i, constr in enumerate(MindtPy.constraint_list):
+        # TODO rhs only works if constr.upper and constr.lower do not both have values.
+        # Sometimes you might have 1 <= expr <= 1. This would give an incorrect rhs of 2.
         rhs = ((0 if constr.upper is None else constr.upper) +
                (0 if constr.lower is None else constr.lower))
         sign_adjust = 1 if value(constr.upper) is None else -1
-        m.dual[constr] = sign_adjust * max(0,
-                                           sign_adjust * (rhs - value(constr.body)))
+        duals[i] = sign_adjust * max(
+            0, sign_adjust * (rhs - value(constr.body)))
 
     if value(MindtPy.MindtPy_feas_obj.expr) == 0:
         raise ValueError(
             'Problem is not infeasible, check NLP solver')
+
+    return var_values, duals

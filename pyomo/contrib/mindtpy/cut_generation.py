@@ -38,31 +38,28 @@ def add_oa_cut(var_values, duals, solve_data, config):
     m = solve_data.mip
     MindtPy = m.MindtPy_utils
     MindtPy.MindtPy_linear_cuts.nlp_iters.add(solve_data.nlp_iter)
-    sign_adjust = -1 if MindtPy.objective.sense == minimize else 1
+    sign_adjust = -1 if solve_data.objective_sense == minimize else 1
 
     # Copy values over
-    for var, val in zip(MindtPy.working_var_list, var_values):
+    for var, val in zip(MindtPy.variable_list, var_values):
         if val is not None and not var.fixed:
             var.value = val
-
-    # Copy duals over
-    for constr, dual_value in zip(MindtPy.working_constraints_list, duals):
-        m.dual[constr] = dual_value
 
     # generate new constraints
     # TODO some kind of special handling if the dual is phenomenally small?
     jacs = solve_data.jacobians
-    for constr in MindtPy.working_nonlinear_constraints:
+    for constr, dual_value in zip(MindtPy.constraint_list, duals):
+        if constr.body.polynomial_degree() in (1, 0):
+            continue
         rhs = ((0 if constr.upper is None else constr.upper) +
                (0 if constr.lower is None else constr.lower))
+        slack_var = MindtPy.MindtPy_linear_cuts.slack_vars.add()
         MindtPy.MindtPy_linear_cuts.oa_cuts.add(
-            expr=copysign(1, sign_adjust * m.dual[constr]) * (sum(
+            expr=copysign(1, sign_adjust * dual_value) * (sum(
                 value(jacs[constr][var]) * (var - value(var))
                 for var in list(EXPR.identify_variables(constr.body))) +
-                value(constr.body) - rhs) +
-            MindtPy.MindtPy_linear_cuts.slack_vars[
-                solve_data.nlp_iter,
-                MindtPy.nl_map[constr]] <= 0)
+                value(constr.body) - rhs) -
+            slack_var <= 0)
 
 
 def add_ecp_cut(solve_data, config):
@@ -246,24 +243,26 @@ def add_int_cut(var_values, solve_data, config, feasible=False):
     MindtPy = m.MindtPy_utils
     int_tol = config.integer_tolerance
 
+    binary_vars = [v for v in MindtPy.variable_list if v.is_binary()]
+
     # copy variable values over
-    for var, val in zip(MindtPy.var_list, var_values):
+    for var, val in zip(MindtPy.variable_list, var_values):
         if not var.is_binary():
             continue
         var.value = val
 
     # check to make sure that binary variables are all 0 or 1
-    for v in MindtPy.binary_vars:
+    for v in binary_vars:
         if value(abs(v - 1)) > int_tol and value(abs(v)) > int_tol:
             raise ValueError('Binary {} = {} is not 0 or 1'.format(
                 v.name, value(v)))
 
-    if not MindtPy.binary_vars:  # if no binary variables, skip.
+    if not binary_vars:  # if no binary variables, skip.
         return
 
-    int_cut = (sum(1 - v for v in MindtPy.binary_vars
+    int_cut = (sum(1 - v for v in binary_vars
                    if value(abs(v - 1)) <= int_tol) +
-               sum(v for v in MindtPy.binary_vars
+               sum(v for v in binary_vars
                    if value(abs(v)) <= int_tol) >= 1)
 
     if not feasible:

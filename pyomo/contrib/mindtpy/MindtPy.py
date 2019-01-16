@@ -26,18 +26,18 @@ from pyomo.common.config import (
     ConfigBlock, ConfigValue, In, PositiveFloat, PositiveInt
 )
 from pyomo.contrib.gdpopt.util import (
-    _DoNothing, build_ordered_component_lists, copy_var_list_values,
-    create_utility_block, record_original_model_statistics,
-    restore_logger_level, time_code
-)
+    _DoNothing, copy_var_list_values,
+    create_utility_block,
+    restore_logger_level, time_code,
+    setup_results_object, process_objective)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_master
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
 from pyomo.contrib.mindtpy.util import (
-    MindtPySolveData, a_logger, model_is_valid, process_objective
+    MindtPySolveData, a_logger, model_is_valid
 )
 from pyomo.core import (
-    Block, ConstraintList, NonNegativeReals, RangeSet, Set, Suffix, Var, value
-)
+    Block, ConstraintList, NonNegativeReals, RangeSet, Set, Suffix, Var, value,
+    VarList)
 from pyomo.opt import SolverFactory, SolverResults
 from pyutilib.misc import Container
 
@@ -128,7 +128,7 @@ class MindtPySolver(object):
     ))
     CONFIG.declare("mip_solver", ConfigValue(
         default="gurobi",
-        domain=In(["gurobi", "cplex", "cbc", "glpk"]),
+        domain=In(["gurobi", "cplex", "cbc", "glpk", "gams"]),
         description="MIP subsolver name",
         doc="Which MIP subsolver is going to be used for solving the mixed-"
             "integer master problems"
@@ -234,24 +234,18 @@ class MindtPySolver(object):
             config.logger.info("---Starting MindtPy---")
 
             solve_data.original_model = model
-
-            build_ordered_component_lists(model, solve_data, prefix='orig')
             solve_data.working_model = model.clone()
             MindtPy = solve_data.working_model.MindtPy_utils
-            record_original_model_statistics(
-                solve_data, config, util_block_name='MindtPy_utils')
+            setup_results_object(solve_data, config)
             process_objective(solve_data, config)
-
-            build_ordered_component_lists(
-                solve_data.working_model, solve_data, prefix='working')
 
             # Save model initial values.
             solve_data.initial_var_values = list(
-                v.value for v in MindtPy.working_var_list)
+                v.value for v in MindtPy.variable_list)
 
             # Store the initial model state as the best solution found. If we
             # find no better solution, then we will restore from this copy.
-            solve_data.best_solution_found = solve_data.initial_var_values
+            solve_data.best_solution_found = None
 
             # Record solver name
             solve_data.results.solver.name = 'MindtPy' + str(config.strategy)
@@ -303,37 +297,27 @@ class MindtPySolver(object):
             # Set of MIP iterations for which cuts were generated in ECP
             lin.mip_iters = Set(dimen=1)
 
+            nonlinear_constraints = [c for c in MindtPy.constraint_list if
+                                     c.body.polynomial_degree() not in (1, 0)]
             lin.nl_constraint_set = RangeSet(
-                len(MindtPy.working_nonlinear_constraints),
+                len(nonlinear_constraints),
                 doc="Integer index set over the nonlinear constraints")
             feas.constraint_set = RangeSet(
-                len(MindtPy.working_constraints_list),
+                len(MindtPy.constraint_list),
                 doc="integer index set over the constraints")
-            # Mapping Constraint -> integer index
-            MindtPy.nl_map = {}
-            # Mapping integer index -> Constraint
-            MindtPy.nl_inverse_map = {}
-            # Generate the two maps. These maps may be helpful for later
-            # interpreting indices on the slack variables or generated cuts.
-            for c, n in zip(MindtPy.working_nonlinear_constraints,
-                            lin.nl_constraint_set):
-                MindtPy.nl_map[c] = n
-                MindtPy.nl_inverse_map[n] = c
 
-            # Mapping Constraint -> integer index
-            MindtPy.feas_map = {}
-            # Mapping integer index -> Constraint
-            MindtPy.feas_inverse_map = {}
-            # Generate the two maps. These maps may be helpful for later
-            # interpreting indices on the slack variables or generated cuts.
-            for c, n in zip(MindtPy.working_constraints_list, feas.constraint_set):
-                MindtPy.feas_map[c] = n
-                MindtPy.feas_inverse_map[n] = c
+            # # Mapping Constraint -> integer index
+            # MindtPy.feas_map = {}
+            # # Mapping integer index -> Constraint
+            # MindtPy.feas_inverse_map = {}
+            # # Generate the two maps. These maps may be helpful for later
+            # # interpreting indices on the slack variables or generated cuts.
+            # for c, n in zip(MindtPy.constraint_list, feas.constraint_set):
+            #     MindtPy.feas_map[c] = n
+            #     MindtPy.feas_inverse_map[n] = c
 
             # Create slack variables for OA cuts
-            lin.slack_vars = Var(lin.nlp_iters, lin.nl_constraint_set,
-                                 domain=NonNegativeReals,
-                                 bounds=(0, config.max_slack), initialize=0)
+            lin.slack_vars = VarList(bounds=(0, config.max_slack), initialize=0, domain=NonNegativeReals)
             # Create slack variables for feasibility problem
             feas.slack_var = Var(feas.constraint_set,
                                  domain=NonNegativeReals, initialize=1)
@@ -357,17 +341,18 @@ class MindtPySolver(object):
             with time_code(solve_data.timing, 'main loop'):
                 MindtPy_iteration_loop(solve_data, config)
 
-            # Update values in original model
-            copy_var_list_values(
-                from_list=solve_data.best_solution_found,
-                to_list=MindtPy.working_var_list,
-                config=config)
-            MindtPy.objective_value.set_value(
-                value(solve_data.working_objective_expr, exception=False))
-            copy_var_list_values(
-                MindtPy.orig_var_list,
-                solve_data.original_model.MindtPy_utils.orig_var_list,
-                config)
+            if solve_data.best_solution_found is not None:
+                # Update values in original model
+                copy_var_list_values(
+                    from_list=solve_data.best_solution_found.MindtPy_utils.variable_list,
+                    to_list=MindtPy.variable_list,
+                    config=config)
+                # MindtPy.objective_value.set_value(
+                #     value(solve_data.working_objective_expr, exception=False))
+                copy_var_list_values(
+                    MindtPy.variable_list,
+                    solve_data.original_model.MindtPy_utils.variable_list,
+                    config)
 
             solve_data.results.problem.lower_bound = solve_data.LB
             solve_data.results.problem.upper_bound = solve_data.UB

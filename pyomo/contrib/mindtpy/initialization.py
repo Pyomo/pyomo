@@ -71,16 +71,17 @@ def init_rNLP(solve_data, config):
             m, **config.nlp_solver_args)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
-        nlp_solution_values = list(v.value for v in MindtPy.working_var_list)
-        dual_values = list(m.dual[c] for c in MindtPy.working_constraints_list)
+        main_objective = next(m.component_data_objects(Objective, active=True))
+        nlp_solution_values = list(v.value for v in MindtPy.variable_list)
+        dual_values = list(m.dual[c] for c in MindtPy.constraint_list)
         # Add OA cut
-        if MindtPy.objective.sense == minimize:
-            solve_data.LB = value(MindtPy.objective.expr)
+        if main_objective.sense == minimize:
+            solve_data.LB = value(main_objective.expr)
         else:
-            solve_data.UB = value(MindtPy.objective.expr)
+            solve_data.UB = value(main_objective.expr)
         config.logger.info(
             'NLP %s: OBJ: %s  LB: %s  UB: %s'
-            % (solve_data.nlp_iter, value(MindtPy.objective.expr),
+            % (solve_data.nlp_iter, value(main_objective.expr),
                solve_data.LB, solve_data.UB))
         if config.strategy == 'OA':
             add_oa_cut(nlp_solution_values, dual_values, solve_data, config)
