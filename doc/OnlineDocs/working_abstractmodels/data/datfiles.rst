@@ -1,3 +1,5 @@
+.. _page-datfiles:
+
 Data Command Files
 ==================
 
@@ -5,7 +7,7 @@ Data Command Files
 
     The discussion and presentation below are adapted from Chapter 6 of
     the "Pyomo Book" [PyomoBookII]_.  The discussion of the
-    :class:`DataPortal <ref pyomo.core.base.DataPortal.DataPortal>`
+    :class:`~pyomo.environ.DataPortal`
     class uses these same examples to illustrate how data can be loaded
     into Pyomo models within Python scripts (see the
     :ref:`page-dataportals` section).
@@ -476,8 +478,7 @@ some important differences between these data commands:
 
 This last point provides a key motivation for the ``table`` command.
 Specifically, the ``table`` command can be used to reliably initialize
-concrete models using Pyomo's :class:`DataPortal <ref
-pyomo.core.base.DataPortal.DataPortal>` class.  By contrast, the
+concrete models using Pyomo's :class:`~pyomo.environ.DataPortal` class.  By contrast, the
 ``param`` command can only be used to initialize concrete models with
 parameters that are indexed by a single column (i.e., a simple set).
 

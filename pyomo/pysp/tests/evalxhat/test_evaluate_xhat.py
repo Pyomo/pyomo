@@ -339,12 +339,17 @@ for solver_name, solver_io in [('cplex','lp'),
     finance_examples_dir = join(pysp_examples_dir, "finance")
     finance_model_dir = join(finance_examples_dir, "models")
     finance_data_dir = join(finance_examples_dir, "scenariodata")
+    finance_cat = ('nightly','expensive')
+    if solver_name == 'cplex' and solver_io == 'nl':
+        # On some versions of cplex (including 12.6.0), the NL test
+        # fails with seg fault.
+        finance_cat = finance_cat + ('fragile',)
     create_test_classes('finance',
                         finance_model_dir,
                         finance_data_dir,
                         solver_name,
                         solver_io,
-                        ('nightly','expensive'))
+                        finance_cat)
 
     hydro_examples_dir = join(pysp_examples_dir, "hydro")
     hydro_model_dir = join(hydro_examples_dir, "models")

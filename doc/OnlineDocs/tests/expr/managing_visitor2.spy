@@ -1,0 +1,9 @@
+def sizeof_expression(expr):
+    #
+    # Create the visitor object
+    #
+    visitor = SizeofVisitor()
+    #
+    # Compute the value using the :func:`xbfs` search method.
+    #
+    return visitor.xbfs(expr)

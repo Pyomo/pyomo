@@ -8,18 +8,17 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-try:
-    # python 3.7+
-    from collections.abc import MutableSet as _MutableSet
-    from collections.abc import Set as _Set
-except:                                           #pragma:nocover
-    from collections import MutableSet as _MutableSet
-    from collections import Set as _Set
-
 import six
 from six import itervalues, iteritems
 
-class ComponentSet(_MutableSet):
+if six.PY3:
+    from collections.abc import MutableSet as collections_MutableSet
+    from collections.abc import Set as collections_Set
+else:
+    from collections import MutableSet as collections_MutableSet
+    from collections import Set as collections_Set
+
+class ComponentSet(collections_MutableSet):
     """
     This class is a replacement for set that allows Pyomo
     modeling components to be used as entries. The
@@ -110,7 +109,7 @@ class ComponentSet(_MutableSet):
     # plain dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, _Set):
+        if not isinstance(other, collections_Set):
             return False
         return set((type(val), id(val))
                    for val in self) == \

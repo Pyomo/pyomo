@@ -1,3 +1,5 @@
+.. _demosect:
+
 Demonstration of rapper Capabilities
 ====================================
 
@@ -11,7 +13,7 @@ Demonstration of rapper Capabilities
    I have tried +ELLIPSIS in various ways, but can't make it work, so
    I am testing as far as I can, then disabling.
 
-We provide a series of examples intended to show different things that
+In this section we provide a series of examples intended to show different things that
 can be done with rapper.
 
 .. testsetup:: *
@@ -131,16 +133,20 @@ PH
    We will now do the same problem, but with PH and we will re-use the scenario
    tree in `tree_model` from the code above. We put sub-solver options in
    `sopts` and PH options (i.e., those that would provided to `runph`) 
-   
+   Note that if options are passed to the constructor (and the solver);
+   they are passed as a dictionary where options that do not have
+   an argument have the data value `None`. The constructor really only
+   needs to some options, such as those related to bundling.
+
    >>> sopts = {}
    >>> sopts['threads'] = 2
    >>> phopts = {}
    >>> phopts['--output-solver-log'] = None
    >>> phopts['--max-iterations'] = '3'
 
-   >>> stsolver = rapper.StochSolver("ReferenceModel.py", # doctest: +SKIP
-   ...                               tree_model = concrete_tree, # doctest: +SKIP
-   ...                               phopts = phopts) # doctest: +SKIP
+   >>> stsolver = rapper.StochSolver("ReferenceModel.py", 
+   ...                               tree_model = concrete_tree, 
+   ...                               phopts = phopts) 
 
    The `solve_ph` method is similar to `solve_ef`, but requires
    a `default_rho` and accepts PH options:

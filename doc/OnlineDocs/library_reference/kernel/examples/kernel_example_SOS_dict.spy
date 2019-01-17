@@ -1,0 +1,10 @@
+m.sd = pmo.sos_dict()
+m.sd[1] = pmo.sos1(m.vd.values())
+m.sd[2] = pmo.sos1(m.vl)
+
+
+
+
+
+
+

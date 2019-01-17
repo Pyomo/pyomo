@@ -1,0 +1,5 @@
+# uses 1-based indexing
+m.ol = aml.ObjectiveList()
+for j in m.q:
+    m.ol.add(-m.vl[j])
+

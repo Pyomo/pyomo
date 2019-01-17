@@ -1,0 +1,4 @@
+model = pyomo.kernel.block()
+model.p = Point()
+model.p.z.lb = 0
+model.soc = SOC(model.p)

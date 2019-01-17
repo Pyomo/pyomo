@@ -168,6 +168,8 @@ or that there is a bug in the ODBC connector.
                 args.append(options.user)
             if not options.password is None:
                 args.append(options.password)
+            if not options.database is None:
+                args.append(options.database)
             return mod.connect(*args, **kwds)
         except ImportError:
             return None

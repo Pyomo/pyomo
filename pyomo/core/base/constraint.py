@@ -632,29 +632,41 @@ class Constraint(ActiveIndexedComponent):
     rule function.
 
     Constructor arguments:
-        expr            A Pyomo expression for this constraint
-        rule            A function that is used to construct constraint
-                            expressions
-        doc             A text string describing this component
-        name            A name for this component
+        expr 
+            A Pyomo expression for this constraint
+        rule 
+            A function that is used to construct constraint expressions
+        doc 
+            A text string describing this component
+        name 
+            A name for this component
 
     Public class attributes:
-        doc             A text string describing this component
-        name            A name for this component
-        active          A boolean that is true if this component will be
-                            used to construct a model instance
-        rule            The rule used to initialize the constraint(s)
+        doc 
+            A text string describing this component
+        name 
+            A name for this component
+        active  
+            A boolean that is true if this component will be used to 
+            construct a model instance
+        rule 
+           The rule used to initialize the constraint(s)
 
     Private class attributes:
-        _constructed        A boolean that is true if this component has been
-                                constructed
-        _data               A dictionary from the index set to component data
-                                objects
-        _index              The set of valid indices
-        _implicit_subsets   A tuple of set objects that represents the index set
-        _model              A weakref to the model that owns this component
-        _parent             A weakref to the parent block that owns this component
-        _type               The class type for the derived subclass
+        _constructed        
+            A boolean that is true if this component has been constructed
+        _data               
+            A dictionary from the index set to component data objects
+        _index              
+            The set of valid indices
+        _implicit_subsets   
+            A tuple of set objects that represents the index set
+        _model              
+            A weakref to the model that owns this component
+        _parent             
+            A weakref to the parent block that owns this component
+        _type               
+            The class type for the derived subclass
     """
 
     _ComponentDataClass = _GeneralConstraintData

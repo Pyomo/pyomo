@@ -23,24 +23,50 @@ through the `pyomo.environ` namespace.
 
 AML Component Documentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: ConcreteModel
+   :show-inheritance:
+   :members:
+   :inherited-members:
+
+.. autoclass:: AbstractModel
+   :show-inheritance:
+   :members:
+   :inherited-members:
+
 .. autoclass:: Block
    :show-inheritance:
    :members:
    :inherited-members:
 
-#.. autoclass:: Constraint
-#   :show-inheritance:
-#   :members:
-#   :inherited-members:
+.. autoclass:: Constraint
+   :show-inheritance:
+   :members:
+   :inherited-members:
 
-#.. autoclass:: Objective
-#   :show-inheritance:
-#   :members:
-#   :inherited-members:
+.. autoclass:: Objective
+   :show-inheritance:
+   :members:
+   :inherited-members:
+
+.. autoclass:: Param
+   :show-inheritance:
+   :members:
+   :inherited-members:
+
+.. autoclass:: RangeSet
+   :show-inheritance:
+   :members:
+   :inherited-members:
+
+.. autofunction:: Reference
+
+.. autoclass:: Set
+   :show-inheritance:
+   :members:
+   :inherited-members:
 
 .. autoclass:: Var
    :show-inheritance:
    :members:
    :inherited-members:
 
-.. autofunction:: Reference

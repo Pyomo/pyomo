@@ -336,7 +336,8 @@ class DDSIP_Input(object):
                            self._lpfilename,
                            capabilities,
                            {'labeler' : labeler})
-        lp_file_writer.deactivate()
+        # Plugins no longer need/support calls to deactivate()
+        #lp_file_writer.deactivate()
         assert output_filename == self._lpfilename
         #print("\nModel written\n")
 

@@ -1,0 +1,2 @@
+m.s = aml.Set(initialize=[1,2],
+              ordered=True)

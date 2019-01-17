@@ -1,0 +1,2 @@
+m = aml.ConcreteModel()
+m.b = aml.Block()

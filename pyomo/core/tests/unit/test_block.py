@@ -27,7 +27,7 @@ import pyutilib.services
 
 from pyomo.environ import *
 from pyomo.common.log import LoggingIntercept
-from pyomo.core.base.block import SimpleBlock
+from pyomo.core.base.block import SimpleBlock, SubclassOf
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import *
 
@@ -463,6 +463,7 @@ class MixedHierarchicalModel(object):
         m.b.d = DerivedBlock()
         m.b.e = Block()
         m.b.e.f = DerivedBlock()
+        m.b.e.f.g = Block()
 
         self.PrefixDFS_block = [
             'unknown',
@@ -480,17 +481,37 @@ class MixedHierarchicalModel(object):
         self.PrefixDFS_both = [
             'unknown',
             'a', 'a.c',
-            'b', 'b.d', 'b.e', 'b.e.f',
+            'b', 'b.d', 'b.e', 'b.e.f', 'b.e.f.g',
         ]
         self.PostfixDFS_both = [
             'a.c', 'a',
-            'b.d', 'b.e.f', 'b.e', 'b',
+            'b.d', 'b.e.f.g', 'b.e.f', 'b.e', 'b',
             'unknown',
         ]
         self.BFS_both = [
             'unknown',
             'a', 'b',
-            'a.c', 'b.d', 'b.e', 'b.e.f',
+            'a.c', 'b.d', 'b.e', 'b.e.f', 'b.e.f.g',
+        ]
+
+        #
+        # References for component_objects tests (note: the model
+        # doesn't appear)
+        #
+        self.PrefixDFS_block_subclass = [
+            'a',
+            'b.e',
+            'b.e.f.g',
+        ]
+        self.PostfixDFS_block_subclass = [
+            'b.e.f.g',
+            'b.e',
+            'a',
+        ]
+        self.BFS_block_subclass = [
+            'a',
+            'b.e',
+            'b.e.f.g',
         ]
 
 class TestBlock(unittest.TestCase):
@@ -758,6 +779,26 @@ class TestBlock(unittest.TestCase):
             ctype=(Block,DerivedBlock),
         )]
         self.assertEqual(HM.PrefixDFS_both, result)
+    def test_iterate_mixed_hierarchy_PrefixDFS_SubclassOf(self):
+        HM = MixedHierarchicalModel()
+        m = HM.model
+        result = [x.name for x in m._tree_iterator(
+            traversal=TraversalStrategy.PrefixDepthFirstSearch,
+            ctype=SubclassOf(Block),
+        )]
+        self.assertEqual(HM.PrefixDFS_both, result)
+        result = [x.name for x in m.component_objects(
+            ctype=Block,
+            descent_order=TraversalStrategy.PrefixDepthFirstSearch,
+            descend_into=SubclassOf(Block),
+        )]
+        self.assertEqual(HM.PrefixDFS_block_subclass, result)
+        result = [x.name for x in m.component_objects(
+            ctype=Block,
+            descent_order=TraversalStrategy.PrefixDepthFirstSearch,
+            descend_into=SubclassOf(Var,Block),
+        )]
+        self.assertEqual(HM.PrefixDFS_block_subclass, result)
 
     def test_iterate_mixed_hierarchy_PostfixDFS_block(self):
         HM = MixedHierarchicalModel()
@@ -775,6 +816,26 @@ class TestBlock(unittest.TestCase):
             ctype=(Block,DerivedBlock),
         )]
         self.assertEqual(HM.PostfixDFS_both, result)
+    def test_iterate_mixed_hierarchy_PostfixDFS_SubclassOf(self):
+        HM = MixedHierarchicalModel()
+        m = HM.model
+        result = [x.name for x in m._tree_iterator(
+            traversal=TraversalStrategy.PostfixDepthFirstSearch,
+            ctype=SubclassOf(Block),
+        )]
+        self.assertEqual(HM.PostfixDFS_both, result)
+        result = [x.name for x in m.component_objects(
+            ctype=Block,
+            descent_order=TraversalStrategy.PostfixDepthFirstSearch,
+            descend_into=SubclassOf(Block),
+        )]
+        self.assertEqual(HM.PostfixDFS_block_subclass, result)
+        result = [x.name for x in m.component_objects(
+            ctype=Block,
+            descent_order=TraversalStrategy.PostfixDepthFirstSearch,
+            descend_into=SubclassOf(Var,Block),
+        )]
+        self.assertEqual(HM.PostfixDFS_block_subclass, result)
 
     def test_iterate_mixed_hierarchy_BFS_block(self):
         HM = MixedHierarchicalModel()
@@ -792,6 +853,26 @@ class TestBlock(unittest.TestCase):
             ctype=(Block,DerivedBlock),
         )]
         self.assertEqual(HM.BFS_both, result)
+    def test_iterate_mixed_hierarchy_BFS_SubclassOf(self):
+        HM = MixedHierarchicalModel()
+        m = HM.model
+        result = [x.name for x in m._tree_iterator(
+            traversal=TraversalStrategy.BFS,
+            ctype=SubclassOf(Block),
+        )]
+        self.assertEqual(HM.BFS_both, result)
+        result = [x.name for x in m.component_objects(
+            ctype=Block,
+            descent_order=TraversalStrategy.BFS,
+            descend_into=SubclassOf(Block),
+        )]
+        self.assertEqual(HM.BFS_block_subclass, result)
+        result = [x.name for x in m.component_objects(
+            ctype=Block,
+            descent_order=TraversalStrategy.BFS,
+            descend_into=SubclassOf(Var,Block),
+        )]
+        self.assertEqual(HM.BFS_block_subclass, result)
 
 
     def test_add_remove_component_byname(self):
@@ -1270,6 +1351,23 @@ class TestBlock(unittest.TestCase):
                 "active Var component 'a' not found in block foo" )
         tester( m.component_map(Var, active=False),
                 "inactive Var component 'a' not found in block foo" )
+
+        tester( m.component_map(SubclassOf(Var)),
+                "SubclassOf(Var) component 'a' not found in block foo" )
+        tester( m.component_map(SubclassOf(Var), active=True),
+                "active SubclassOf(Var) component 'a' not found in block foo" )
+        tester( m.component_map(SubclassOf(Var), active=False),
+                "inactive SubclassOf(Var) component "
+                "'a' not found in block foo" )
+
+        tester( m.component_map(SubclassOf(Var,Block)),
+                "SubclassOf(Var,Block) component 'a' not found in block foo" )
+        tester( m.component_map(SubclassOf(Var,Block), active=True),
+                "active SubclassOf(Var,Block) component "
+                "'a' not found in block foo" )
+        tester( m.component_map(SubclassOf(Var,Block), active=False),
+                "inactive SubclassOf(Var,Block) component "
+                "'a' not found in block foo" )
 
         tester( m.component_map([Var,Param]),
                 "Param or Var component 'a' not found in block foo" )

@@ -5,18 +5,6 @@ This section gives an overview of commonly used scripting commands when
 working with Pyomo models. These commands must be applied to a concrete
 model instance or in other words an instantiated model.
 
-Instantiating Models
--------------------- 
-
-If you have a `ConcreteModel` it will be constructed as components are
-declared. If you have an `AbstractModel` you must instantiate it to
-create a concrete instance. 
-
-.. note:: 
-
-   `AbstractModel` users should note that your concrete model instance
-   is sometimes called "instance" and **not** "model". This is the case
-   when you use `instance = model.create_instance()`.
 
 Repeated Solves
 ---------------
@@ -26,23 +14,23 @@ Repeated Solves
    >>> import pyomo.environ as pyo
    >>> from pyomo.opt import SolverFactory
    >>> model = pyo.ConcreteModel()
-   >>> model.n = pyo.Param(default=4)
-   >>> model.x = pyo.Var(pyo.RangeSet(model.n), within=pyo.Binary)
-   >>> def o_rule(model):
-   ...    return pyo.summation(model.x)
-   >>> model.o = pyo.Objective(rule=o_rule)
-   >>> model.c = pyo.ConstraintList()
-   >>> SolverFactory('glpk').solve(model) # doctest: +SKIP
+   >>> model.nVars = pyo.Param(initialize=4)
+   >>> model.N = pyo.RangeSet(model.nVars)
+   >>> model.x = pyo.Var(model.N, within=pyo.Binary)
+   >>> model.obj = pyo.Objective(expr=pyo.summation(model.x))
+   >>> model.cuts = pyo.ConstraintList()
+   >>> opt = SolverFactory('glpk')
+   >>> opt.solve(model) # doctest: +SKIP
 
-   Iterate to eliminate the previously found solution
+   >>> # Iterate, adding a cut to exclude the previously found solution
    >>> for i in range(5):
    ...    expr = 0
    ...    for j in model.x:
-   ...        if pyo.value(model.x[j]) == 0:
+   ...        if pyo.value(model.x[j]) < 0.5:
    ...            expr += model.x[j]
    ...        else:
    ...            expr += (1 - model.x[j])
-   ...    model.c.add( expr >= 1 )
+   ...    model.cuts.add( expr >= 1 )
    ...    results = opt.solve(model)
    ...    print ("\n===== iteration",i)
    ...    model.display() # doctest: +SKIP
@@ -69,14 +57,6 @@ creates is just the sum of four binary variables. One does not need a
 computer to solve the problem or even to iterate over solutions. This
 example is provided just to illustrate some elementary aspects of
 scripting.
-
-.. note::
-
-   The built-in code for printing solutions prints only non-zero
-   variable values. So if you run this code, no variable values will be
-   output for the first solution found because all of the variables are
-   zero. However, other information about the solution, such as the
-   objective value, will be displayed.
 
 .. literalinclude:: script_spy_files/iterative1.spy
    :language: python
@@ -190,26 +170,49 @@ The final lines in the outer for loop find a solution and display it:
 .. literalinclude:: script_spy_files/iterative1_Find_and_display_solution.spy
    :language: python
 
+.. note::
+   
+   The assignment of the solve output to a results object is somewhat
+   anachronistic. Many scripts just use
+
+   >>> opt.solve(instance) # doctest: +SKIP
+
+   since the results are moved to the instance by default, leaving
+   the results object with little of interest. If, for some reason,
+   you want the results to stay in the results object and *not* be
+   moved to the instance, you would use
+
+   >>> results = opt.solve(instance, load_solutions=False) # doctest: +SKIP
+   
+   This approach can be usefull if there is a concern that the solver
+   did not terminate with an optimal solution. For example,
+   
+   >>> results = opt.solve(instance, load_solutions=False) # doctest: +SKIP
+   >>> if results.solver.termination_condition == TerminationCondition.optimal: # doctest: +SKIP
+   >>>     instance.solutions.load_from(results) # doctest: +SKIP
+
 Changing the Model or Data and Re-solving
 -----------------------------------------
 
-The ``iterative1.py`` example illustrates how a model can be changed and
+The ``iterative1.py`` example above illustrates how a model can be changed and
 then re-solved. In that example, the model is changed by adding a
 constraint, but the model could also be changed by altering the values
 of parameters. Note, however, that in these examples, we make the
-changes to the ``instance`` object rather than the ``model`` object so
-that we do not have to create a new ``model`` object. Here is the basic
+changes to the concrete model instances.  This is particularly important
+for ``AbstractModel`` users, as this implies working with the
+``instance`` object rather than the ``model`` object, which allows us to
+avoid creating a new ``model`` object for each solve. Here is the basic
 idea:
 
-1. Create an ``AbstractModel`` (suppose it is called ``model``)
-2. Call ``model.create_instance()`` to create an instance (suppose it is called ``instance``)
-3. Solve ``instance``
-4. Change someting in ``instance``
-5. Call presolve
-6. Solve ``instance`` again
+#. Create an ``AbstractModel`` (suppose it is called ``model``)
+#. Call ``model.create_instance()`` to create an instance (suppose it is called ``instance``)
+#. Solve ``instance``
+#. Change someting in ``instance``
+#. Solve ``instance`` again
+
 
 If ``instance`` has a parameter whose name is in ``ParamName`` with an
-index that is in ``idx``, the the value in ``NewVal`` can be assigned to
+index that contains ``idx``, the the value in ``NewVal`` can be assigned to
 it using
 
 .. literalinclude:: script_spy_files/spy4scripts_Assign_value_to_indexed_parametername.spy
@@ -353,9 +356,6 @@ blocks) is as follows:
 
 .. literalinclude:: script_spy_files/block_iter_example_compprintloop.spy
    :language: python
-
-The use of ``True`` as an argument to ``cname`` indicates that the full
-name is desired.
 
 .. _ParmAccess:
 

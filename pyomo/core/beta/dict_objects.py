@@ -8,11 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = () #('VarDict', 'ConstraintDict', 'ObjectiveDict', 'ExpressionDict')
+__all__ = ()
 
 import logging
 from weakref import ref as weakref_ref
-import collections
 
 from pyomo.core.base.set_types import Any
 from pyomo.core.base.var import (IndexedVar,
@@ -24,6 +23,15 @@ from pyomo.core.base.objective import (IndexedObjective,
 from pyomo.core.base.expression import (IndexedExpression,
                                         _ExpressionData)
 
+import six
+
+if six.PY3:
+    from collections.abc import MutableMapping as collections_MutableMapping
+    from collections.abc import Mapping as collections_Mapping
+else:
+    from collections import MutableMapping as collections_MutableMapping
+    from collections import Mapping as collections_Mapping
+
 logger = logging.getLogger('pyomo.core')
 
 #
@@ -33,7 +41,7 @@ logger = logging.getLogger('pyomo.core')
 # be implemented on top of these classes.
 #
 
-class ComponentDict(collections.MutableMapping):
+class ComponentDict(collections_MutableMapping):
 
     def __init__(self, interface_datatype, *args):
         self._interface_datatype = interface_datatype
@@ -158,7 +166,7 @@ class ComponentDict(collections.MutableMapping):
     # dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, collections.Mapping):
+        if not isinstance(other, collections_Mapping):
             return False
         return dict((key, (type(val), id(val)))
                     for key,val in self.items()) == \
