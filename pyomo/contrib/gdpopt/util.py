@@ -6,7 +6,7 @@ from math import fabs, floor, log
 
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.core import (Block, Constraint,
-                        Objective, Reals, Var, minimize, value)
+                        Objective, Reals, Var, minimize, value, Expression)
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
@@ -65,7 +65,9 @@ def model_is_valid(solve_data, config):
             prob.number_of_integer_variables == 0 and
             prob.number_of_disjunctions == 0):
         config.logger.info('Problem has no discrete decisions.')
-        if len(GDPopt.working_nonlinear_constraints) > 0:
+        obj = next(m.component_data_objects(Objective, active=True))
+        if (any(c.body.polynomial_degree() not in (1, 0) for c in GDPopt.constraint_list) or
+                obj.expr.polynomial_degree() not in (1, 0)):
             config.logger.info(
                 "Your model is an NLP (nonlinear program). "
                 "Using NLP solver %s to solve." % config.nlp_solver)
@@ -309,24 +311,24 @@ def setup_results_object(solve_data, config):
          num_of.activated.continuous_variables))
 
 
-def validate_disjunctions(model, config):
-    """Validate that the active disjunctions on the model are satisfied
-    by the current disjunct indicator_var values."""
-    active_disjunctions = model.component_data_objects(
-        ctype=Disjunction, active=True, descend_into=(Block, Disjunct))
-    for disjtn in active_disjunctions:
-        sum_disj_vals = sum(disj.indicator_var.value
-                            for disj in disjtn.disjuncts)
-        if disjtn.xor and fabs(sum_disj_vals - 1) > config.integer_tolerance:
-            raise ValueError(
-                "Expected disjunct values to add up to 1 "
-                "for XOR disjunction %s. "
-                "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
-        elif sum_disj_vals + config.integer_tolerance < 1:
-            raise ValueError(
-                "Expected disjunct values to add up to at least 1 for "
-                "OR disjunction %s. "
-                "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
+# def validate_disjunctions(model, config):
+#     """Validate that the active disjunctions on the model are satisfied
+#     by the current disjunct indicator_var values."""
+#     active_disjunctions = model.component_data_objects(
+#         ctype=Disjunction, active=True, descend_into=(Block, Disjunct))
+#     for disjtn in active_disjunctions:
+#         sum_disj_vals = sum(disj.indicator_var.value
+#                             for disj in disjtn.disjuncts)
+#         if disjtn.xor and fabs(sum_disj_vals - 1) > config.integer_tolerance:
+#             raise ValueError(
+#                 "Expected disjunct values to add up to 1 "
+#                 "for XOR disjunction %s. "
+#                 "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
+#         elif sum_disj_vals + config.integer_tolerance < 1:
+#             raise ValueError(
+#                 "Expected disjunct values to add up to at least 1 for "
+#                 "OR disjunction %s. "
+#                 "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
 
 
 def constraints_in_True_disjuncts(model, config):

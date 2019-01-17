@@ -18,7 +18,7 @@ def solve_disjunctive_subproblem(mip_result, solve_data, config):
     """Set up and solve the disjunctive subproblem."""
     if config.force_subproblem_nlp:
         if config.strategy == "LOA":
-            return solve_local_NLP(mip_result.mip_var_values, solve_data, config)
+            return solve_local_NLP(mip_result.var_values, solve_data, config)
         elif config.strategy == 'GLOA':
             return solve_global_subproblem(mip_result, solve_data, config)
     else:
@@ -36,11 +36,9 @@ def solve_NLP(nlp_model, solve_data, config):
 
     # Error checking for unfixed discrete variables
     unfixed_discrete_vars = detect_unfixed_discrete_vars(nlp_model)
-    if unfixed_discrete_vars:
-        discrete_var_names = list(v.name for v in unfixed_discrete_vars)
-        config.logger.warning(
-            "Unfixed discrete variables exist on the NLP subproblem: %s"
-            % (discrete_var_names,))
+    assert len(unfixed_discrete_vars) == 0, \
+        "Unfixed discrete variables exist on the NLP subproblem: {0}".format(
+        list(v.name for v in unfixed_discrete_vars))
 
     GDPopt = nlp_model.GDPopt_utils
 
@@ -324,7 +322,7 @@ def solve_local_subproblem(mip_result, solve_data, config):
     if config.force_subproblem_nlp:
         # We also need to copy over the discrete variable values
         for var, val in zip(subprob.GDPopt_utils.variable_list,
-                            mip_result.mip_var_values):
+                            mip_result.var_values):
             if var.is_continuous():
                 continue
             rounded_val = int(round(val))
@@ -381,7 +379,7 @@ def solve_global_subproblem(mip_result, solve_data, config):
     if config.force_subproblem_nlp:
         # We also need to copy over the discrete variable values
         for var, val in zip(subprob.GDPopt_utils.variable_list,
-                            mip_result.mip_var_values):
+                            mip_result.var_values):
             if var.is_continuous():
                 continue
             rounded_val = int(round(val))
