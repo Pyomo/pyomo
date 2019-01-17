@@ -109,7 +109,7 @@ class TestGDPoptUnit(unittest.TestCase):
         m.x = Var()
         m.o = Objective(expr=m.x)
         m.o2 = Objective(expr=m.x + 1)
-        with self.assertRaisesRegex(ValueError, "Model has multiple active objectives"):
+        with self.assertRaisesRegexp(ValueError, "Model has multiple active objectives"):
             SolverFactory('gdpopt').solve(m)
 
     def test_is_feasible_function(self):
@@ -137,7 +137,7 @@ class TestGDPoptUnit(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1), initialize=2)
         m.d = Disjunct()
-        with self.assertRaisesRegex(NotImplementedError, "Found active disjunct"):
+        with self.assertRaisesRegexp(NotImplementedError, "Found active disjunct"):
             is_feasible(m, GDPoptSolver.CONFIG())
 
 
