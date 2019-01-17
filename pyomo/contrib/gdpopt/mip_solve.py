@@ -7,7 +7,7 @@ from copy import deepcopy
 from pyomo.contrib.gdpopt.data_class import MasterProblemResult
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
 from pyomo.core import (Block, Expression, Objective, TransformationFactory,
-                        Var, minimize, value)
+                        Var, minimize, value, Constraint)
 from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
@@ -66,6 +66,19 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
         # resolve with a solver option flag on.
         results, terminate_cond = distinguish_mip_infeasible_or_unbounded(
             m, config)
+    if terminate_cond is tc.unbounded:
+        # Solution is unbounded. Add an arbitrary bound to the objective and resolve.
+        obj_bound = 1E15
+        config.logger.warning(
+            'Linear GDP was unbounded. '
+            'Resolving with arbitrary bound values of (-{0:.10g}, {0:.10g}) on the objective. '
+            'Check your initialization routine.'.format(obj_bound))
+        main_objective = next(m.component_data_objects(Objective, active=True))
+        GDPopt.objective_bound = Constraint(expr=(-obj_bound, main_objective.expr, obj_bound))
+        with SuppressInfeasibleWarning():
+            results = SolverFactory(config.mip_solver).solve(
+                m, **config.mip_solver_args)
+        terminate_cond = results.solver.termination_condition
 
     # Build and return results object
     mip_result = MasterProblemResult()
@@ -163,12 +176,12 @@ def solve_LOA_master(solve_data, config):
             mip_result.var_values
         )
         config.logger.info(
-            'ITER %s.%s.%s-MIP: OBJ: %s  LB: %s  UB: %s'
-            % (solve_data.master_iteration,
-               solve_data.mip_iteration,
-               solve_data.nlp_iteration,
-               value(obj_expr),
-               solve_data.LB, solve_data.UB))
+            'ITER {:d}.{:d}.{:d}-MIP: OBJ: {:.10g}  LB: {:.10g}  UB: {:.10g}'.format(
+                solve_data.master_iteration,
+                solve_data.mip_iteration,
+                solve_data.nlp_iteration,
+                value(obj_expr),
+                solve_data.LB, solve_data.UB))
     else:
         # Master problem was infeasible.
         if solve_data.master_iteration == 1:

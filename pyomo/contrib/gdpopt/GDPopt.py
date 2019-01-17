@@ -14,18 +14,17 @@ from pyomo.contrib.gdpopt.master_initialize import (
     GDPopt_initialize_master, valid_init_strategies
 )
 from pyomo.contrib.gdpopt.util import (
-    _DoNothing, a_logger, build_ordered_component_lists, copy_var_list_values,
+    _DoNothing, a_logger, copy_var_list_values,
     create_utility_block, model_is_valid, process_objective,
     setup_results_object,
     restore_logger_level, time_code
 )
-from pyomo.core.base import ConstraintList, value
-from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.base import ConstraintList
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.results import SolverResults
 from pyutilib.misc import Container
 
-__version__ = (18, 12, 25)  # Move to date-based versioning.
+__version__ = (19, 1, 16)  # Move to date-based versioning.
 
 
 @SolverFactory.register(

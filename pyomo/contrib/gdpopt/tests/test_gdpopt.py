@@ -259,6 +259,5 @@ class TestGLOA(unittest.TestCase):
         self.assertAlmostEqual(objective_value, 4.46, 2)
 
 
-
 if __name__ == '__main__':
     unittest.main()

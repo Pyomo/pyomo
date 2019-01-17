@@ -6,7 +6,7 @@ from math import fabs
 from pyomo.contrib.gdpopt.data_class import SubproblemResult
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
                                        is_feasible)
-from pyomo.core import Constraint, TransformationFactory, minimize, value, Objective, Block
+from pyomo.core import Constraint, TransformationFactory, minimize, value, Objective
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct
@@ -20,7 +20,7 @@ def solve_disjunctive_subproblem(mip_result, solve_data, config):
         if config.strategy == "LOA":
             return solve_local_NLP(mip_result.mip_var_values, solve_data, config)
         elif config.strategy == 'GLOA':
-            return solve_global_NLP(mip_result.mip_var_values, solve_data, config)
+            return solve_global_subproblem(mip_result, solve_data, config)
     else:
         if config.strategy == "LOA":
             return solve_local_subproblem(mip_result, solve_data, config)
@@ -259,13 +259,13 @@ def update_subproblem_progress_indicators(solved_model, solve_data, config):
         if objective.sense == minimize
         else (improvement_tag, ""))
     config.logger.info(
-        'ITER %s.%s.%s-NLP: OBJ: %s  LB: %s %s UB: %s %s'
-        % (solve_data.master_iteration,
-           solve_data.mip_iteration,
-           solve_data.nlp_iteration,
-           value(objective.expr),
-           solve_data.LB, lb_improved,
-           solve_data.UB, ub_improved))
+        'ITER {:d}.{:d}.{:d}-NLP: OBJ: {:.10g}  LB: {:.10g} {:s} UB: {:.10g} {:s}'.format(
+            solve_data.master_iteration,
+            solve_data.mip_iteration,
+            solve_data.nlp_iteration,
+            value(objective.expr),
+            solve_data.LB, lb_improved,
+            solve_data.UB, ub_improved))
 
 
 def solve_local_NLP(mip_var_values, solve_data, config):
@@ -410,20 +410,3 @@ def solve_global_subproblem(mip_result, solve_data, config):
     if subprob_result.feasible:  # NLP is feasible
         update_subproblem_progress_indicators(subprob, solve_data, config)
     return subprob_result
-
-
-
-def solve_global_NLP(mip_var_values, solve_data, config):
-    """Set up and solve the global LOA subproblem."""
-    nlp_model = solve_data.working_model.clone()
-    solve_data.nlp_iteration += 1
-    # copy in the discrete variable values
-    copy_and_fix_mip_values_to_nlp(nlp_model.GDPopt_utils.variable_list,
-                                   mip_var_values, config)
-    TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
-    nlp_model.dual.deactivate()  # global solvers may not give dual info
-
-    nlp_result = solve_NLP(nlp_model, solve_data, config)
-    if nlp_result.feasible:  # NLP is feasible
-        update_subproblem_progress_indicators(nlp_model, solve_data, config)
-    return nlp_result
