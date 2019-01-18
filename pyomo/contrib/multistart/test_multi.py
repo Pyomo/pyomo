@@ -151,6 +151,12 @@ class MultistartTests(unittest.TestCase):
         with self.assertRaisesRegexp(RuntimeError, "no active objective"):
             SolverFactory('multistart').solve(m)
 
+    def test_const_obj(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.o = Objective(expr = 5)
+        with self.assertRaisesRegexp(RuntimeError, "constant objective"):
+            SolverFactory('multistart').solve(m)
 
 def build_model():
     """Simple non-convex model with many local minima"""

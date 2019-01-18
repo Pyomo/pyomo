@@ -118,12 +118,16 @@ class MultiStart(object):
         # Model sense
         objectives = model.component_data_objects(Objective, active=True)
         obj = next(objectives, None)
+        #Check model validity
         if next(objectives, None) is not None:
             raise RuntimeError(
                 "Multistart solver is unable to handle model with multiple active objectives.")
         if obj is None:
             raise RuntimeError(
                 "Multistart solver is unable to handle model with no active objective.")
+        if obj.polynomial_degree()==0:
+            raise RuntimeError(
+                "Multistart solver received model with constant objective")
 
         # store objective values and objective/result information for best
         # solution obtained
