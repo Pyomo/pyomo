@@ -70,7 +70,7 @@ if using_cython:
         import platform
         if platform.python_implementation() != "CPython":
             # break out of this try-except (disable Cython)
-            raise RuntimeError("Cython is only supported uncer CPython")
+            raise RuntimeError("Cython is only supported under CPython")
         from Cython.Build import cythonize
         #
         # Note: The Cython developers recommend that you destribute C source
