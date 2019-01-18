@@ -106,7 +106,7 @@ class GDPlbbSolver(object):
 
         #solve the root node
         obj_value = self.minlp_solve(root,solver)
-
+        print obj_value
 
 
         #initialize minheap for Branch and Bound algorithm
@@ -115,6 +115,7 @@ class GDPlbbSolver(object):
 
         while len(heap)>0:
             mdl = heapq.heappop(heap)[1]
+            self.indicate(mdl)
             if(len(getattr(mdl,init_active_disjunctions_name)) ==  0):
                 orig_var_list = getattr(model, indicator_list_name)
                 best_soln_var_list = getattr(mdl, indicator_list_name)
@@ -138,6 +139,7 @@ class GDPlbbSolver(object):
                 mnew = mdl.clone()
                 disj.indicator_var = 0
                 obj_value = self.minlp_solve(mnew,solver)
+                print obj_value
                 #self.indicate(mnew)
 
                 heapq.heappush(heap,(obj_value,mnew))
@@ -163,6 +165,9 @@ class GDPlbbSolver(object):
     def minlp_solve(self,gdp,solver):
         minlp = gdp.clone()
         TransformationFactory('gdp.fix_disjuncts').apply_to(minlp)
+        for disjunct in minlp.component_data_objects(
+            ctype = Disjunct, active=True):
+            disjunct.deactivate() #TODO this is HACK
         result = solver.solve(minlp)
         if (result.solver.status is SolverStatus.ok and
                 result.solver.termination_condition is tc.optimal):
@@ -172,7 +177,6 @@ class GDPlbbSolver(object):
         else:
                 return float('inf')
         delete(minlp)
-        #TO FINISH
     def __enter__(self):
         return self
 
