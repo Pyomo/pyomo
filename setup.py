@@ -52,12 +52,13 @@ if sys.version_info < (2, 7):
 from setuptools import setup
 import sys
 
+CYTHON_REQUIRED = "required"
 if 'develop' in sys.argv:
     using_cython = False
 else:
-    using_cython = True
+    using_cython = "automatic"
 if '--with-cython' in sys.argv:
-    using_cython = True
+    using_cython = CYTHON_REQUIRED
     sys.argv.remove('--with-cython')
 if '--without-cython' in sys.argv:
     using_cython = False
@@ -69,7 +70,7 @@ if using_cython:
         import platform
         if platform.python_implementation() != "CPython":
             # break out of this try-except (disable Cython)
-            raise RuntimeError()
+            raise RuntimeError("Cython is only supported uncer CPython")
         from Cython.Build import cythonize
         #
         # Note: The Cython developers recommend that you destribute C source
@@ -90,6 +91,12 @@ if using_cython:
             shutil.copyfile(f[:-1], f)
         ext_modules = cythonize(files)
     except:
+        if using_cython == CYTHON_REQUIRED:
+            print("""
+ERROR: Cython was explicitly requested with --with-cython, but cythonization
+       of core Pyomo modules failed.
+""")
+            raise
         using_cython = False
 
 packages = _find_packages('pyomo')
@@ -187,6 +194,12 @@ except SystemExit as e_info:
     # Since Cython is not strictly required, we will disable Cython and
     # try re-running setup(), but only for this very specific situation.
     if 'Microsoft Visual C++' not in e_info.message:
+        raise
+    elif using_cython == CYTHON_REQUIRED:
+        print("""
+ERROR: Cython was explicitly requested with --with-cython, but cythonization
+       of core Pyomo modules failed.
+""")
         raise
     else:
         print("""
