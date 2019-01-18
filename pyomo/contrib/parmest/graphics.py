@@ -240,21 +240,17 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     
     # Plot filled contours using all theta values based on obj
     if 'obj' in theta_values.columns and add_obj_contour:
-        g.map_lower(_add_obj_contour, columns=theta_names, data=theta_values, 
-            theta_star=theta_star)
-        g.map_upper(_add_obj_contour, columns=theta_names, data=theta_values, 
+        g.map_offdiag(_add_obj_contour, columns=theta_names, data=theta_values, 
             theta_star=theta_star)
         
     # Plot thetas
-    g.map_lower(plt.scatter, s=10)
-    g.map_upper(plt.scatter, s=10)
+    g.map_offdiag(plt.scatter, s=10)
     legend_elements.append(Line2D([0], [0], marker='o', color='w', label='thetas',
                           markerfacecolor='cadetblue', markersize=5))
     
     # Plot theta*
     if theta_star is not None:
-        g.map_lower(_add_scatter, color='k', columns=theta_names, theta_star=theta_star)
-        g.map_upper(_add_scatter, color='k', columns=theta_names, theta_star=theta_star)
+        g.map_offdiag(_add_scatter, color='k', columns=theta_names, theta_star=theta_star)
         legend_elements.append(Line2D([0], [0], marker='o', color='w', label='theta*',
                                       markerfacecolor='k', markersize=6))
     
@@ -273,9 +269,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         kde_dist = None
         for i, dist in enumerate(distributions):
             if dist == 'Rect':
-                g.map_lower(_add_rectangle_CI, color=colors[i], columns=theta_names, 
-                            alpha=alpha)
-                g.map_upper(_add_rectangle_CI, color=colors[i], columns=theta_names, 
+                g.map_offdiag(_add_rectangle_CI, color=colors[i], columns=theta_names, 
                             alpha=alpha)
                 legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
                 
@@ -284,10 +278,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
                                         thetas.cov(), allow_singular=True)
                 Z = mvn_dist.pdf(thetas)
                 score = stats.scoreatpercentile(Z.transpose(), (1-alpha)*100) 
-                g.map_lower(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
-                            ncells=100, alpha=score, dist=mvn_dist, 
-                            theta_star=theta_star)
-                g.map_upper(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
+                g.map_offdiag(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
                             ncells=100, alpha=score, dist=mvn_dist, 
                             theta_star=theta_star)
                 legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
@@ -296,10 +287,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
                 kde_dist = stats.gaussian_kde(thetas.transpose().values)
                 Z = kde_dist.pdf(thetas.transpose())
                 score = stats.scoreatpercentile(Z.transpose(), (1-alpha)*100) 
-                g.map_lower(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
-                            ncells=100, alpha=score, dist=kde_dist, 
-                            theta_star=theta_star)
-                g.map_upper(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
+                g.map_offdiag(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
                             ncells=100, alpha=score, dist=kde_dist, 
                             theta_star=theta_star)
                 legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
