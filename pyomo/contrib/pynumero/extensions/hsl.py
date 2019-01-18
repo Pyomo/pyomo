@@ -47,12 +47,6 @@ class MA27_LinearSolver(object):
         self.HSLib.EXTERNAL_MA27Interface_get_num_neg_evals.argtypes = [ctypes.c_void_p]
         self.HSLib.EXTERNAL_MA27Interface_get_num_neg_evals.restype = ctypes.c_int
 
-        # get values
-        self.HSLib.EXTERNAL_MA27Interface_get_values.argtypes = [ctypes.c_void_p,
-                                                                 ctypes.c_int,
-                                                                 array_1d_double]
-        self.HSLib.EXTERNAL_MA27Interface_get_values.restype = None
-
         # symbolic factorization
         self.HSLib.EXTERNAL_MA27Interface_do_symbolic_factorization.argtypes = [ctypes.c_void_p,
                                                                                 ctypes.c_int,
