@@ -3,6 +3,17 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 5.6.1
+-------------------------------------------------------------------------------
+
+- Bugfix in GAMS writer related to splitting long lines (#797)
+- Fixed typo in GDP example (#801)
+- Add assertion method for comparing lists of floats (#800)
+- Fixes to NEOS interface (#793)
+- Add support for RangeSet in GDP transformations (#803)
+- Allow ":" in cplex file names (#810) 
+
+-------------------------------------------------------------------------------
 Pyomo 5.6
 -------------------------------------------------------------------------------
 
