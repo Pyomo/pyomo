@@ -59,6 +59,9 @@ else:
 if '--with-cython' in sys.argv:
     using_cython = True
     sys.argv.remove('--with-cython')
+if '--without-cython' in sys.argv:
+    using_cython = False
+    sys.argv.remove('--without-cython')
 
 ext_modules = []
 if using_cython:
