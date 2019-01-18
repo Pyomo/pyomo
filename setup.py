@@ -67,7 +67,8 @@ ext_modules = []
 if using_cython:
     try:
         import platform
-        if not platform.python_implementation() == "CPython":
+        if platform.python_implementation() != "CPython":
+            # break out of this try-except (disable Cython)
             raise RuntimeError()
         from Cython.Build import cythonize
         #
@@ -75,7 +76,16 @@ if using_cython:
         # files to users.  But this is fine for evaluating the utility of Cython
         #
         import shutil
-        files = ["pyomo/core/expr/expr_pyomo5.pyx", "pyomo/core/expr/numvalue.pyx", "pyomo/core/util.pyx", "pyomo/repn/standard_repn.pyx", "pyomo/repn/plugins/cpxlp.pyx", "pyomo/repn/plugins/gams_writer.pyx", "pyomo/repn/plugins/baron_writer.pyx", "pyomo/repn/plugins/ampl/ampl_.pyx"]
+        files = [
+            "pyomo/core/expr/expr_pyomo5.pyx",
+            "pyomo/core/expr/numvalue.pyx",
+            "pyomo/core/util.pyx",
+            "pyomo/repn/standard_repn.pyx",
+            "pyomo/repn/plugins/cpxlp.pyx",
+            "pyomo/repn/plugins/gams_writer.pyx",
+            "pyomo/repn/plugins/baron_writer.pyx",
+            "pyomo/repn/plugins/ampl/ampl_.pyx",
+        ]
         for f in files:
             shutil.copyfile(f[:-1], f)
         ext_modules = cythonize(files)
@@ -84,7 +94,8 @@ if using_cython:
 
 packages = _find_packages('pyomo')
 
-setup(name='Pyomo',
+def run_setup():
+   setup(name='Pyomo',
       #
       # Note: trunk should have *next* major.minor
       #     VOTD and Final releases will have major.minor.revnum
@@ -167,3 +178,28 @@ setup(name='Pyomo',
         pyomo.results_schema=pyomo.scripting.commands
       """
       )
+
+try:
+    run_setup()
+except SystemExit as e_info:
+    # Cython can generate a SystemExit exception on Windows if the
+    # environment is missing / has an incorrect Microsoft compiler.
+    # Since Cython is not strictly required, we will disable Cython and
+    # try re-running setup(), but only for this very specific situation.
+    if 'Microsoft Visual C++' not in e_info.message:
+        raise
+    else:
+        print("""
+ERROR: setup() failed:
+    %s
+Re-running setup() without the Cython modules
+""" % (e_info.message,))
+        ext_modules = []
+        run_setup()
+        print("""
+WARNING: Installation completed successfully, but the attempt to cythonize
+         core Pyomo modules failed.  Cython provides performance
+         optimizations and is not required for any Pyomo functionality.
+         Cython returned the following error:
+   "%s"
+""" % (e_info.message,))
