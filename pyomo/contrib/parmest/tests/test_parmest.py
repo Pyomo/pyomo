@@ -176,48 +176,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
         objval, thetavals, Hessian = self.pest.theta_est(solver="k_aug")
         self.assertAlmostEqual(objval, 4.4675, places=2)
         
-#=====================================================================
-@unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
-@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-class parmest_object_Tester_SB(unittest.TestCase):
-    
-    def setUp(self):
-        from pyomo.contrib.parmest.examples.semibatch.semibatch import generate_model
-        
-        self.tempdirpath = tempfile.mkdtemp()
-        # assuming we are in the test subdir
-        import pyomo.contrib.parmest.examples.semibatch as sbroot
-        p = str(sbroot.__path__)
-        l = p.find("'")
-        r = p.find("'", l+1)
-        sbrootpath = p[l+1:r]
-        data_files = glob.glob(sbrootpath + os.sep + 'exp*.out')
-#        for file in glob.glob(sbrootpath + os.sep + 'exp*.out'):
-#            shutil.copy(file, self.tempdirpath)
-#        self.save_cwd = os.getcwd()
-#        os.chdir(self.tempdirpath)
-#        num_experiments = 10
 
-        theta_names = ['k1', 'k2', 'E1', 'E2']
-        
-        np.random.seed(1134)
-
-        self.pest = parmest.Estimator(generate_model, data_files, theta_names)
-
-    def tearDown(self):
-        #os.chdir(self.save_cwd)
-        #shutil.rmtree(self.tempdirpath)
-        pass
-
-    def test_theta_est(self):
-        objval, thetavals = self.pest.theta_est()
-        
-        self.assertAlmostEqual(objval, 23.11105, places=2)
-        self.assertAlmostEqual(thetavals['k1'], 15.241498, places=2) 
-        self.assertAlmostEqual(thetavals['k2'], 111.029131, places=2) 
-        self.assertAlmostEqual(thetavals['E1'], 29891.25918, places=2) 
-        self.assertAlmostEqual(thetavals['E2'], 40670.25050, places=2) 
-        
 @unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class parmest_object_Tester_reactor_design(unittest.TestCase):
@@ -265,5 +224,6 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
         self.assertAlmostEqual(thetavals['k2'], 5.0/3.0, places=4) 
         self.assertAlmostEqual(thetavals['k3'], 1.0/6000.0, places=7) 
         
+
 if __name__ == '__main__':
     unittest.main()
