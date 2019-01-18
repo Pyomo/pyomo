@@ -13,7 +13,7 @@ theta_names = ['k1', 'k2', 'k3']
 data = pd.read_excel('reactor_data_multisensor.xlsx')  
 
 # Sum of squared error function
-def SSE(model, data): 
+def SSE_multisensor(model, data): 
     expr = ((float(data['ca1']) - model.ca)**2)*(1/3) + \
            ((float(data['ca2']) - model.ca)**2)*(1/3) + \
            ((float(data['ca3']) - model.ca)**2)*(1/3) + \
@@ -23,7 +23,7 @@ def SSE(model, data):
             (float(data['cd'])  - model.cd)**2
     return expr
 
-pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE)
+pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE_multisensor)
 obj, theta = pest.theta_est()
 print(obj)
 print(theta)
@@ -49,4 +49,5 @@ print(obj_at_theta.head())
 LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.8, 0.85, 0.9, 0.95])
 print(LR.head())
 
-parmest.pairwise_plot(LR, theta, 0.8)
+theta_slice = {'k1': 0.83, 'k2': theta['k2'], 'k3': theta['k3']}
+parmest.pairwise_plot(LR, theta_slice, 0.8)

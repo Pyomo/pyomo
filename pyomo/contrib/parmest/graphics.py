@@ -2,6 +2,8 @@ try:
     import numpy as np
     import pandas as pd
     from scipy import stats
+    import itertools
+    from scipy.interpolate import griddata
     import seaborn as sns
     import matplotlib.pyplot as plt
     import matplotlib.tri as tri
@@ -34,10 +36,7 @@ def _get_XYgrid(x,y,ncells):
 
 
 def _get_data_slice(xvar,yvar,columns,data,theta_star):
-    
-    import itertools
-    from scipy.interpolate import griddata
-    
+
     search_ranges = {} 
     for var in columns:
         if var in [xvar,yvar]:
@@ -47,12 +46,26 @@ def _get_data_slice(xvar,yvar,columns,data,theta_star):
 
     data_slice = pd.DataFrame(list(itertools.product(*search_ranges.values())),
                             columns=search_ranges.keys())
-    data_slice['obj'] = griddata(np.array(data[columns]),
-                         np.array(data[['obj']]),
-                         np.array(data_slice[columns]),
-                         method='linear',
-                         rescale=True)
     
+    # griddata will not work with linear interpolation if the data 
+    # values are constant in any dimension
+    for col in data[columns].columns:
+        cv = data[col].std()/data[col].mean() # Coefficient of variation
+        if cv < 1e-8: 
+            temp = data.copy()
+            # Add variation (the interpolation is later scaled)
+            if cv == 0:
+                temp[col] = temp[col] + data[col].mean()/10
+            else:
+                temp[col] = temp[col] + data[col].std()
+            data = data.append(temp, ignore_index=True)
+    
+    data_slice['obj'] = griddata(np.array(data[columns]),
+                             np.array(data[['obj']]),
+                             np.array(data_slice[columns]),
+                             method='linear',
+                             rescale=True)
+        
     X = data_slice[xvar]
     Y = data_slice[yvar]
     Z = data_slice['obj']
@@ -81,7 +94,6 @@ def _add_rectangle_CI(x,y,color,label,columns,alpha):
     ax.plot([xm+tval*xs, xm+tval*xs], [ym-tval*ys, ym+tval*ys], color=color)
     ax.plot([xm+tval*xs, xm-tval*xs], [ym+tval*ys, ym+tval*ys], color=color)
     ax.plot([xm-tval*xs, xm-tval*xs], [ym+tval*ys, ym-tval*ys], color=color)
-    ax.legend()
 
 
 def _add_scipy_dist_CI(x,y,color,label,columns,ncells,alpha,dist,theta_star):
@@ -123,13 +135,15 @@ def _add_scipy_dist_CI(x,y,color,label,columns,ncells,alpha,dist,theta_star):
 def _add_obj_contour(x,y,color,label,columns,data,theta_star):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
-    
-    X, Y, Z = _get_data_slice(xvar,yvar,columns,data,theta_star)
-    
-    triang = tri.Triangulation(X, Y)
-    cmap = plt.cm.get_cmap('Greys')
-    
-    plt.tricontourf(triang,Z,cmap=cmap)
+    try:
+        X, Y, Z = _get_data_slice(xvar,yvar,columns,data,theta_star)
+        
+        triang = tri.Triangulation(X, Y)
+        cmap = plt.cm.get_cmap('Greys')
+        
+        plt.tricontourf(triang,Z,cmap=cmap)
+    except:
+        print('Objective contour plot for', xvar, yvar,'slice failed')
     
     
 def _add_LR_contour(x,y,color,label,columns,data,theta_star,threshold):
@@ -171,31 +185,36 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     
     Parameters
     ----------
-    theta_values: `pandas DataFrame` (columns = variable names and (optionally) 'obj' and alpha values)
+    theta_values: DataFrame, columns = variable names and (optionally) 'obj' and alpha values
         Theta values and (optionally) an objective value and results from the 
         likelihood ratio test
-    theta_star: `dict` or `pandas Series` (index or key = variable names) (optional)
-        Theta* (also used to slice higher dimensional data in 2D plots)
-    alpha: `float` (optional)
+    theta_star: dict, keys = variable names, optional
+        Theta* (or other individual values of theta, also used to 
+        slice higher dimensional contour intervals in 2D)
+    alpha: float, optional
         Confidence interval value
-    distributions: list of strings (optional)
+    distributions: list of strings, optional
         Statistical distribution used for confidence intervals,  
         options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, and 
         'Rect' for rectangular.
-    axis_limits: `dict` or `pandas Series` (optional)
+		Confidence interval is a 2D slice, using linear interpolation at theta*.
+    axis_limits: dict, optional
         Axis limits in the format {variable: [min, max]}
-    add_obj_contour: bool (optional)
-        Add a contour plot using the column 'obj' in theta_values
-    add_legend: bool (optional)
+    add_obj_contour: bool, optional
+        Add a contour plot using the column 'obj' in theta_values.
+        Contour plot is a 2D slice, using linear interpolation at theta*.
+    add_legend: bool, optional
         Add a legend to the plot
-    filename: `string` (optional)
+    filename: string, optional
         Filename used to save the figure
-    return_scipy_distributions: bool (optional)
+    return_scipy_distributions: bool, optional
         Return the scipy distributions for MVN and KDE
         
     Returns
     ----------
-    If return_scipy_distributions = True, return the MVN and KDE distributions
+    (mvn_dist, kde_dist): tuple
+        If return_scipy_distributions = True, return the MVN and KDE scipy 
+        distributions
     """
 
     if len(theta_values) == 0:
@@ -205,9 +224,9 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         
     theta_names = [col for col in theta_values.columns if (col not in ['obj']) and (not isinstance(col, float))]
     
-    LR_data = False
-    if alpha in theta_values.columns:
-        LR_data = True
+    filter_data_by_alpha = False
+    if (alpha is not None) and (alpha in theta_values.columns):
+        filter_data_by_alpha = True
         thetas = theta_values.loc[theta_values[alpha] == True, theta_names]
     else:
         thetas = theta_values[theta_names]
@@ -216,32 +235,38 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     
     g = sns.PairGrid(thetas)
     
+    # Plot histogram on the diagonal
     g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False) 
     
+    # Plot filled contours using all theta values based on obj
     if 'obj' in theta_values.columns and add_obj_contour:
-        try: # contour plots can fail
-            g.map_lower(_add_obj_contour, columns=theta_names, data=theta_values, 
-                theta_star=theta_star)
-            g.map_upper(_add_obj_contour, columns=theta_names, data=theta_values, 
-                theta_star=theta_star)
-        except:
-            print("Contour plot for 'obj' failed")
+        g.map_lower(_add_obj_contour, columns=theta_names, data=theta_values, 
+            theta_star=theta_star)
+        g.map_upper(_add_obj_contour, columns=theta_names, data=theta_values, 
+            theta_star=theta_star)
         
+    # Plot thetas
     g.map_lower(plt.scatter, s=10)
     g.map_upper(plt.scatter, s=10)
     legend_elements.append(Line2D([0], [0], marker='o', color='w', label='thetas',
                           markerfacecolor='cadetblue', markersize=5))
     
+    # Plot theta*
     if theta_star is not None:
         g.map_lower(_add_scatter, color='k', columns=theta_names, theta_star=theta_star)
         g.map_upper(_add_scatter, color='k', columns=theta_names, theta_star=theta_star)
         legend_elements.append(Line2D([0], [0], marker='o', color='w', label='theta*',
                                       markerfacecolor='k', markersize=6))
     
+    # Plot confidence regions
     colors = ['r', 'mediumblue', 'darkgray']
     if (alpha is not None) and (len(distributions) > 0):
         
-        if LR_data:
+        if theta_star is None:
+            print('theta* not defined, condifence interval slice is at mean value of theta')
+            theta_star = thetas.mean()
+            
+        if filter_data_by_alpha:
             alpha = 1 # Data is already filtered by alpha
         
         mvn_dist = None

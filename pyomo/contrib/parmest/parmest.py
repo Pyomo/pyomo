@@ -159,18 +159,18 @@ def _pysp_instance_creation_callback(scenario_tree_model,
         elif isinstance(modname, types.ModuleType):
             cb_module = modname
         else:
-            print ("Internal Error: bad CallbackModule")
+            print("Internal Error: bad CallbackModule")
             raise
 
         try:
             callback = getattr(cb_module, cb_name)
         except:
-            print ("Error getting function="+cb_name+" from module="+str(modname))
+            print("Error getting function="+cb_name+" from module="+str(modname))
             raise
     
     if hasattr(scenario_tree_model, "BootList"):
         bootlist = scenario_tree_model.BootList
-        #print ("debug in callback: using bootlist=",str(bootlist))
+        #print("debug in callback: using bootlist=",str(bootlist))
         # assuming bootlist itself is zero based
         exp_num = bootlist[scen_num]
     else:
@@ -190,7 +190,7 @@ def _pysp_instance_creation_callback(scenario_tree_model,
             try:
                 instance = callback(scen_name, node_names)
             except:
-                print ("Failed to create instance using callback; TypeError+")
+                print("Failed to create instance using callback; TypeError+")
                 raise
         except:
             print("Failed to create instance using callback.")
@@ -203,10 +203,10 @@ def _pysp_instance_creation_callback(scenario_tree_model,
         for vstr in thetavals:
             object = _object_from_string(instance, vstr)
             if thetavals[vstr] is not None:
-                #print ("Fixing",vstr,"at",str(thetavals[vstr]))
+                #print("Fixing",vstr,"at",str(thetavals[vstr]))
                 object.fix(thetavals[vstr])
             else:
-                #print ("Freeing",vstr)
+                #print("Freeing",vstr)
                 object.fixed = False
 
     return instance
@@ -247,12 +247,27 @@ def _treemaker(scenlist):
     return m
 
     
-def group_experiments(data, groupby_column, use_mean = None):
+def group_data(data, groupby_column_name, use_mean=None):
     """
-    Group data by experiment
+    Group data by experiment/scenario
+    
+    Parameters
+    ----------
+    data: DataFrame
+        Data
+    groupby_column_name: strings
+        Name of data column which contains experiment/scenario numbers
+    use_mean: list of column names or None, optional
+        Name of data columns which should be reduced to a single value per 
+        experiment/scenario by taking the mean
+        
+    Returns
+    ----------
+    grouped_data: list of dictionaries
+        Grouped data
     """
     grouped_data = []
-    for exp_num, group in data.groupby(data[groupby_column]):
+    for exp_num, group in data.groupby(data[groupby_column_name]):
         d = {}
         for col in group.columns:
             if col in use_mean:
@@ -290,16 +305,16 @@ class Estimator(object):
         the objective function
     theta_names: list of strings
         List of Vars to estimate
-    obj_function: function (optional)
+    obj_function: function, optional
         Function used to formulate parameter estimation objective, generally
         sum of squared error between measurments and model variables.  
         If no function is specified, the model is used 
         "as is" and should be defined with a "FirstStateCost" and 
         "SecondStageCost" expression that are used to build an objective 
         for pysp.
-    tee: bool (optional)
+    tee: bool, optional
         Indicates that ef solver output should be teed
-    diagnostic_mode: bool (optional)
+    diagnostic_mode: bool, optional
         if True, print diagnostics from the solver
     """
     def __init__(self, model_function, data, theta_names, obj_function=None, 
@@ -375,18 +390,6 @@ class Estimator(object):
         
         return model
     
-    
-    def _set_diagnostic_mode(self, value):
-        if type(value) != bool:
-            raise ValueError("diagnostic_mode must be True or False")
-        self._diagnostic_mode = value
-
-
-    def _get_diagnostic_mode(self):
-        return self._diagnostic_mode
-    
-    diagnostic_mode = property(_get_diagnostic_mode, _set_diagnostic_mode)
-        
 
     def _Q_opt(self, ThetaVals=None, solver="ef_ipopt", bootlist=None):
         """
@@ -398,29 +401,6 @@ class Estimator(object):
         callback.  Side note (feb 2018, dlw): if you later decide to
         construct the tree just once and reuse it, then remember to
         remove thetavals from it when none is desired.
-
-        Parameters
-        ----------
-        ThetaVals: `dict` 
-            A dictionary of theta values to fix in the pysp callback 
-            (which has to grab them from the tree object and do the fixing)
-        solver: `string`
-            "ef_ipopt" or "k_aug". 
-            Only ef is supported if ThetaVals is not None.
-        bootlist: `list` of `int`
-            The list is of scenario numbers for indirection used internally
-            by bootstrap.
-            The default is None and that is what driver authors should use.
-
-        Returns
-        -------
-        objectiveval: `float`
-            The objective function value
-        thetavals: `dict`
-            A dictionary of all values for theta
-        Hessian: `dict`
-            A dictionary of dictionaries for the Hessian.
-            The Hessian is not returned if the solver is ef.
         """
         assert(solver != "k_aug" or ThetaVals == None)
         # Create a tree with dummy scenarios (callback will supply when needed).
@@ -551,16 +531,16 @@ class Estimator(object):
         
         Parameters
         ----------
-        thetavals: `dict`
+        thetavals: dict
             A dictionary of theta values.
 
         Returns
         -------
-        objectiveval: `float`
+        objectiveval: float
             The objective function value.
-        thetavals: `dict`
+        thetavals: dict
             A dictionary of all values for theta that were input.
-        solvertermination: `Pyomo TerminationCondition`
+        solvertermination: Pyomo TerminationCondition
             Tries to return the "worst" solver status across the scenarios.
             pyo.TerminationCondition.optimal is the best and 
             pyo.TerminationCondition.infeasible is the worst.
@@ -596,15 +576,15 @@ class Estimator(object):
             if not sillylittle:
                 if self.diagnostic_mode:
                     print('      Experiment = ',snum)
-                    print ('     First solve with with special diagnostics wrapper')
+                    print('     First solve with with special diagnostics wrapper')
                     status_obj, solved, iters, time, regu \
                         = ipopt_solver_wrapper.ipopt_solve_with_stats(instance, optimizer, max_iter=500, max_cpu_time=120)
-                    print ("   status_obj, solved, iters, time, regularization_stat = ",
+                    print("   status_obj, solved, iters, time, regularization_stat = ",
                            str(status_obj), str(solved), str(iters), str(time), str(regu))
 
                 results = optimizer.solve(instance)
                 if self.diagnostic_mode:
-                    print ('standard solve solver termination condition=',
+                    print('standard solve solver termination condition=',
                             str(results.solver.termination_condition))
 
                 if results.solver.termination_condition \
@@ -626,14 +606,14 @@ class Estimator(object):
 
         Parameters
         ----------
-        thetavals: `dict`
+        thetavals: dict
             A dictionary of values for theta
 
         Return
         ------
-        FirstDeriv: `dict`
+        FirstDeriv: dict
             Dictionary of scaled first differences
-        HessianDict: `dict`
+        HessianDict: dict
             Matrix (in dicionary form) of Hessian values
         """
         
@@ -656,14 +636,14 @@ class Estimator(object):
         firstdiffs = {}
         for tstr in tvals:
             # TBD, dlw jan 2018: check for bounds on theta
-            print ("Debug firstdiffs for ",tstr)
+            print("Debug firstdiffs for ",tstr)
             firstdiffs[tstr] = firstdiffer(tvals, tstr)
 
         # now get the second differences
         # as of Jan 2018, do not assume symmetry so it can be "checked."
         for firstdim in tvals:
             for seconddim in tvals:
-                print ("Debug H for ",firstdim,seconddim)
+                print("Debug H for ",firstdim,seconddim)
                 tvals[seconddim] = thetavals[seconddim] + epsilon
                 d2 = firstdiffer(tvals, firstdim)
                 Hessian[firstdim][seconddim] = \
@@ -683,16 +663,16 @@ class Estimator(object):
 
         Parameters
         ----------
-        solver: `string` (optional)
+        solver: string, optional
             "ef_ipopt" or "k_aug". Default is "ef_ipopt".
 
         Returns
         -------
-        objectiveval: `float`
+        objectiveval: float
             The objective function value
-        thetavals: `dict`
+        thetavals: dict
             A dictionary of all values for theta
-        Hessian: `dict`
+        Hessian: dict
             A dictionary of dictionaries for the Hessian.
             The Hessian is not returned if the solver is ef.
         """
@@ -705,21 +685,22 @@ class Estimator(object):
 
         Parameters
         ----------
-        N: `int`
+        N: int
             Number of bootstrap samples to draw from the data
-        samplesize: `int` or None (optional)
+        samplesize: int or None, optional
             Sample size, if None samplesize will be set to the number of experiments
-        replacement: `bool` (optional)
+        replacement: bool, optional
             Sample with or without replacement
-        seed: int or None (optional)
+        seed: int or None, optional
             Set the random seed
-        return_samples: `bool` (optional)
+        return_samples: bool, optional
             Return a list of experiment numbers used in each bootstrap estimation
         
         Returns
         -------
-        `DataFrame` which contains theta values and (if return_samples = True) 
-        the sample numbers used in each estimation
+        bootstrap_theta: DataFrame 
+            Theta values for each bootstrap sample and (if return_samples = True) 
+            the sample numbers used in each estimation
         """
         bootstrap_theta = list()
         
@@ -768,13 +749,14 @@ class Estimator(object):
 
         Parameters
         ----------
-        theta_values: `DataFrame` (columns=theta_names)
+        theta_values: DataFrame, columns=theta_names
             Values of theta used to compute the objective
             
         Returns
         -------
-        `DataFrame` with objective values for each theta value (infeasible 
-        solutions are omitted).
+        obj_at_theta: DataFrame
+            Objective values for each theta value (infeasible solutions are 
+            omitted).
         """
         # for parallel code we need to use lists and dicts in the loop
         theta_names = theta_values.columns
@@ -792,9 +774,9 @@ class Estimator(object):
             
         global_all_obj = task_mgr.allgather_global_data(all_obj)
         dfcols = list(theta_names) + ['obj']
-        store_all_obj = pd.DataFrame(data=global_all_obj, columns=dfcols)
+        obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
 
-        return store_all_obj
+        return obj_at_theta
     
     
     def likelihood_ratio_test(self, obj_at_theta, obj_value, alpha, 
@@ -804,24 +786,25 @@ class Estimator(object):
         
         Parameters
         ----------
-        obj_at_theta: `DataFrame` (columns = theta_names + 'obj')
+        obj_at_theta: DataFrame, columns = theta_names + 'obj'
             Objective values for each theta value (returned by 
             objective_at_theta)
             
-        obj_value: `float`
+        obj_value: float
             Objective value from parameter estimation using all data
         
-        alpha: `list`
+        alpha: list
             List of alpha values to use in the chi2 test
         
-        return_thresholds: `bool` (optional)
+        return_thresholds: bool, optional
             Return the threshold value for each alpha
             
         Returns
         -------
-        `DataFrame` with objective values for each theta value along with 
-        True or False for each value of alpha.  If return_threshold = True, the
-        thresholds are also returned.
+        LR: DataFrame 
+            Objective values for each theta value along wit True or False for 
+        thresholds: dictionary
+            If return_threshold = True, the thresholds are also returned.
         """
         LR = obj_at_theta.copy()
         S = len(self.callback_data)

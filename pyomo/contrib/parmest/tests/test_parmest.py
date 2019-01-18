@@ -1,6 +1,3 @@
-# Provide some test for parmest
-# Author: Started by David L. Woodruff (summer 2018)
-
 # the matpolotlib stuff is to avoid $DISPLAY errors on Travis (DLW Oct 2018)
 try:
     import matplotlib
@@ -26,9 +23,8 @@ import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest as parmestbase
 import pyomo.environ as pyo
 
-__author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
-__date__ = 'July 2018'
-__version__ = 0.21
+from pyomo.opt import SolverFactory
+ipopt_available = SolverFactory('ipopt').available()
 
 testdir = os.path.dirname(os.path.abspath(__file__))
 
@@ -48,8 +44,11 @@ class Object_from_string_Tester(unittest.TestCase):
         # just making sure it executes
         pyo_Var_obj = parmest._object_from_string(self.instance, "x[b]")
         fixstatus = pyo_Var_obj.fixed
+        self.assertEqual(fixstatus, False)
 
+        
 @unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class parmest_object_Tester_RB(unittest.TestCase):
     
     def setUp(self):
@@ -115,11 +114,13 @@ class parmest_object_Tester_RB(unittest.TestCase):
         obj_at_theta = self.pest.objective_at_theta(theta_vals)
         
         LR = self.pest.likelihood_ratio_test(obj_at_theta, objval, [0.8, 0.85, 0.9, 0.95])
-
+        
+        self.assertTrue(set(LR.columns) >= set([0.8, 0.85, 0.9, 0.95]))
+        
         filename = os.path.abspath(os.path.join(testdir, 'pairwise_LR_plot.png'))
         if os.path.isfile(filename):
             os.remove(filename)
-        parmest.pairwise_plot(LR, thetavals, 0.,  filename=filename)
+        parmest.pairwise_plot(LR, thetavals, 0.8,  filename=filename)
         #self.assertTrue(os.path.isfile(filename))
 
     def test_diagnostic_mode(self):
@@ -177,6 +178,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
         
 #=====================================================================
 @unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class parmest_object_Tester_SB(unittest.TestCase):
     
     def setUp(self):
@@ -203,11 +205,65 @@ class parmest_object_Tester_SB(unittest.TestCase):
         self.pest = parmest.Estimator(generate_model, data_files, theta_names)
 
     def tearDown(self):
-        os.chdir(self.save_cwd)
-        shutil.rmtree(self.tempdirpath)
+        #os.chdir(self.save_cwd)
+        #shutil.rmtree(self.tempdirpath)
+        pass
 
-    def quicky(self):
+    def test_theta_est(self):
         objval, thetavals = self.pest.theta_est()
+        
+        self.assertAlmostEqual(objval, 23.11105, places=2)
+        self.assertAlmostEqual(thetavals['k1'], 15.241498, places=2) 
+        self.assertAlmostEqual(thetavals['k2'], 111.029131, places=2) 
+        self.assertAlmostEqual(thetavals['E1'], 29891.25918, places=2) 
+        self.assertAlmostEqual(thetavals['E2'], 40670.25050, places=2) 
+        
+@unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+class parmest_object_Tester_reactor_design(unittest.TestCase):
+    
+    def setUp(self):
+        from pyomo.contrib.parmest.examples.reactor_design.reactor_design import reactor_design_model
+          
+        # Data from the design 
+        data = pd.DataFrame(data=[[1.05, 10000, 3458.4, 1060.8, 1683.9, 1898.5],
+                                  [1.10, 10000, 3535.1, 1064.8, 1613.3, 1893.4],
+                                  [1.15, 10000, 3609.1, 1067.8, 1547.5, 1887.8],
+                                  [1.20, 10000, 3680.7, 1070.0, 1486.1, 1881.6],
+                                  [1.25, 10000, 3750.0, 1071.4, 1428.6, 1875.0],
+                                  [1.30, 10000, 3817.1, 1072.2, 1374.6, 1868.0],
+                                  [1.35, 10000, 3882.2, 1072.4, 1324.0, 1860.7],
+                                  [1.40, 10000, 3945.4, 1072.1, 1276.3, 1853.1],
+                                  [1.45, 10000, 4006.7, 1071.3, 1231.4, 1845.3],
+                                  [1.50, 10000, 4066.4, 1070.1, 1189.0, 1837.3],
+                                  [1.55, 10000, 4124.4, 1068.5, 1148.9, 1829.1],
+                                  [1.60, 10000, 4180.9, 1066.5, 1111.0, 1820.8],
+                                  [1.65, 10000, 4235.9, 1064.3, 1075.0, 1812.4],
+                                  [1.70, 10000, 4289.5, 1061.8, 1040.9, 1803.9],
+                                  [1.75, 10000, 4341.8, 1059.0, 1008.5, 1795.3],
+                                  [1.80, 10000, 4392.8, 1056.0,  977.7, 1786.7],
+                                  [1.85, 10000, 4442.6, 1052.8,  948.4, 1778.1],
+                                  [1.90, 10000, 4491.3, 1049.4,  920.5, 1769.4],
+                                  [1.95, 10000, 4538.8, 1045.8,  893.9, 1760.8]], 
+                          columns=['sv', 'caf', 'ca', 'cb', 'cc', 'cd'])
+
+        theta_names = ['k1', 'k2', 'k3']
+        
+        def SSE(model, data): 
+            expr = (float(data['ca']) - model.ca)**2 + \
+                   (float(data['cb']) - model.cb)**2 + \
+                   (float(data['cc']) - model.cc)**2 + \
+                   (float(data['cd']) - model.cd)**2
+            return expr
+        
+        self.pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE)
+
+    def test_theta_est(self):
+        objval, thetavals = self.pest.theta_est()
+        
+        self.assertAlmostEqual(thetavals['k1'], 5.0/6.0, places=4) 
+        self.assertAlmostEqual(thetavals['k2'], 5.0/3.0, places=4) 
+        self.assertAlmostEqual(thetavals['k3'], 1.0/6000.0, places=7) 
         
 if __name__ == '__main__':
     unittest.main()

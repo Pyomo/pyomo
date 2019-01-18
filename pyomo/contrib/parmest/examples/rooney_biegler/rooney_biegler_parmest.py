@@ -31,7 +31,7 @@ print(bootstrap_theta.head())
 
 parmest.pairwise_plot(bootstrap_theta, theta, 0.8, ['MVN', 'KDE', 'Rect'])
 
-### Parameter estimation with likelihood ratio
+### Likelihood ratio test
 
 asym = np.arange(10, 30, 2)
 rate = np.arange(0, 1.5, 0.1)
@@ -44,4 +44,3 @@ LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.8, 0.85, 0.9, 0.95])
 print(LR.head())
 
 parmest.pairwise_plot(LR, theta, 0.8)
-

@@ -45,4 +45,4 @@ Save the file as test_mpi.py and run the following command::
 	time mpiexec -n 4 python test_mpi.py 
 	time python test_mpi.py 
 	
-The first one should be faster and should start 4 processes with Python.
+The first one should be faster and should start 4 instances of Python.

@@ -27,6 +27,9 @@ theta values.
 .. literalinclude:: ../../../../pyomo/contrib/parmest/examples/reactor_design/reactor_design_parmest.py
    :language: python
 
-Additional examples are defined in a similar manner.  
-The reactor design example includes an additional data file with duplicate sensor data and 
-the semibatch example includes an example which can be used to run parmest in parallel.
+The semibatch and Rooney Biegler examples are defined in a similar manner.  
+
+Additional use cases include:
+
+* Parameter estimation using data with duplicate sensors and time-series data (reactor design example)
+* Parameter estimation using mpi4py, the example saves results to a file for later analysis/graphics (semibatch example)

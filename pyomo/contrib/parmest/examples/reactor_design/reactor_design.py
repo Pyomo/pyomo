@@ -2,6 +2,7 @@
 Continuously stirred tank reactor model, based on
 pyomo\examples\doc\pyomobook\nonlinear-ch\react_design\ReactorDesign.py
 """
+import pandas as pd
 from pyomo.environ import *
 from pyomo.core import *
 
@@ -52,9 +53,15 @@ def reactor_design_model(data):
 if __name__ == "__main__":
     
     # For a range of sv values, return ca, cb, cc, and cd
+    results = []
     sv_values = [1.0 + v * 0.05 for v in range(1, 20)]
-    for sv_value in sv_values:
-        model = reactor_design_model({'caf':10000, 'sv': sv_value})
+    caf = 10000
+    for sv in sv_values:
+        model = reactor_design_model({'caf': caf, 'sv': sv})
         solver = SolverFactory('ipopt')
         solver.solve(model)
-        print(model.ca(), model.cb(), model.cc(), model.cd())
+        results.append([sv, caf, model.ca(), model.cb(), model.cc(), model.cd()])
+    
+    results = pd.DataFrame(results, columns=['sv', 'caf', 'ca', 'cb', 'cc', 'cd'])
+    print(results)
+    

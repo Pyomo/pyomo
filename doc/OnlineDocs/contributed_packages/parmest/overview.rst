@@ -1,7 +1,7 @@
 Overview
 ================
 
-The software called parmest facilitates model-based
+The Python package called parmest facilitates model-based
 parameter estimation along with characterization of 
 uncertainty associated with the estimates. For example, parmest
 can provide confidence regions around the parameter estimates.
