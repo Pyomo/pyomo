@@ -59,7 +59,7 @@ experience, refactors the existing code). Then:
 * Offer alternative implementations, but assume the author already considered
   them. ("What do you think about using a custom validator here?")
 * Seek to understand the author's perspective.
-* Plan to review the entire pull request.  Do perform a partial review, and then add more comments later.
+* Plan to review the entire pull request.  Do not perform a partial review, and then add more comments later.
 * Sign off on the pull request with a :thumbsup: or "Ready to merge" comment.
 
 Style Comments
