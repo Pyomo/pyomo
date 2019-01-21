@@ -31,6 +31,17 @@ Examples of unacceptable behavior by participants include:
 * Other conduct which could reasonably be considered inappropriate in a
  professional setting
 
+## Managing Conflicts
+
+Contributors and maintainers are expected to manage conflicts in an empathetic and constructive 
+manner, including:
+
+* Identify project conflicts and communicate them in a timely manner
+* Contribute to open, constructive converations about project conflicts and how they reflect project goals and priorities
+* Acknowleding that project management decisions impact maintainers, contributors and users in different ways, both positively and negatively
+* Recognize that different maintainers and contributors have different passions and abilities, and that these passions are reflected in their project contributions
+* Promote timely management of conflicts, acknowledging that such management may not resolve all concerns
+
 ## Our Responsibilities
 
 Project maintainers are responsible for clarifying the standards of acceptable
@@ -42,6 +53,12 @@ reject comments, commits, code, wiki edits, issues, and other contributions
 that are not aligned to this Code of Conduct, or to ban temporarily or
 permanently any contributor for other behaviors that they deem inappropriate,
 threatening, offensive, or harmful.
+
+Project maintainers are responsible for managing project decisions and executing project processes in a manner that fosters a healthy community, including:
+
+* Employing an inclusive governance model that integrates community feedback from maintainers, contributors, users and other stakeholders
+* Active and open community engagement on project management, such as planning releases and managing project scope.
+* Use a Code Review Code of Conduct to promote constructive code reviews that improve code quality without discouraging contributions
 
 ## Scope
 
