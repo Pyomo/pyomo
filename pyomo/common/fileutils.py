@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import glob
 import inspect
 import os
 import platform
@@ -56,16 +57,25 @@ def find_file(fname, cwd=True, mode=os.R_OK, ext=None, pathlist=[]):
 
     ext (str): if not None, also look for fname+ext (default: None)
 
-    pathlist (list): a list of strings containing paths to search.  Each
-        string contains one or more paths separated by
-        os.pathsep. (default: [])
+    pathlist (list or str): a list of strings containing paths to
+        search, each string contains a single path.  If a string is
+        provided, then it is first split using os.pathsep to generate
+        the pathlist (default: []).
+
+    Note
+    ----
+    find_file uses glob, so the path and/or file name may contain
+    wildcards.  The first matching file is returned.
+
     """
 
     locations = []
     if cwd:
         locations.append(os.getcwd())
-    for pathspec in pathlist:
-        locations.extend(pathspec.split(os.pathsep))
+    if isinstance(pathlist, six.string_types):
+        locations.extend( pathlist.split(os.pathsep) )
+    else:
+        locations.extend(pathlist)
 
     extlist = ['']
     if ext:
@@ -78,12 +88,12 @@ def find_file(fname, cwd=True, mode=os.R_OK, ext=None, pathlist=[]):
         if not path:
             continue
         for ext in extlist:
-            test = os.path.join(path, fname+ext)
-            if not os.path.isfile(test):
-                continue
-            if mode is not None and not os.access(test, mode):
-                continue
-            return test
+            for test in glob.glob(os.path.join(path, fname+ext)):
+                if not os.path.isfile(test):
+                    continue
+                if mode is not None and not os.access(test, mode):
+                    continue
+                return os.path.abspath(test)
     return None
 
 _exeExt = {
@@ -94,9 +104,9 @@ _exeExt = {
 }
 
 _libExt = {
-    'linux':   '.so',
+    'linux':   ('.so', '.so.*'),
     'windows': '.dll',
-    'cygwin':  ['.dll','.so'],
+    'cygwin':  ('.dll', '.so', '.so.*'),
     'darwin':  '.dynlib',
 }
 
@@ -106,27 +116,92 @@ def _system():
         system = system.split(c)[0]
     return system
 
+
+def _path():
+    return (os.environ.get('PATH','') or os.defpath).split(os.pathsep)
+
+
 def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
+    """Find a dynamic library using find_file to search typical locations.
+
+    Finds a specified library (file) by searching a specified set of
+    paths.  This routine will look for the specified file name, as well
+    as looking for the filename followed by architecture-specific
+    extensions (e.g., `.dll`, `.so`, or `.dynlib`).  Note that as this
+    uses :py:func:find_file(), the filename and search paths may contain
+    wildcards.
+
+    Arguments
+    ---------
+    libname (str): the library name to search for
+
+    cwd (bool): Start by looking in the current working directory
+        [default: True]
+
+    include_PATH (bool): Include the executable search PATH at the end
+        of the list of directories to search. [default: True]
+
+    pathlist (list or str): List of paths to search for the file.  If
+        None, then pathlist will default to the local Pyomo
+        configuration library directory (and the local Pyomo binary
+        directory if include_PATH is set) and the contents of
+        LD_LIBRARY_PATH.  If a string, then the string is split using
+        os.pathsep.  [Default: None]
+
+    """
     if pathlist is None:
-        pathlist = [ os.environ.get('LD_LIBRARY_PATH','') ]
+        pathlist = []
+        config_lib = os.path.join(PYOMO_CONFIG_DIR, 'lib')
+        if config_lib not in pathlist:
+            pathlist.append(config_lib)
+        config_bin = os.path.join(PYOMO_CONFIG_DIR, 'bin')
+        if include_PATH and config_bin not in pathlist:
+            pathlist.append(config_bin)
+        pathlist.extend(os.environ.get('LD_LIBRARY_PATH','').split(os.pathsep))
     elif isinstance(pathlist, six.string_types):
-        pathlist = [pathlist]
+        pathlist = pathlist.split(os.pathsep)
     else:
         pathlist = list(pathlist)
     if include_PATH:
-        pathlist.append( os.environ.get('PATH','') or os.defpath )
+        pathlist.extend(_path())
     ext = _libExt.get(_system(), None)
     return find_file(libname, cwd=cwd, ext=ext, pathlist=pathlist)
 
+
 def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
+    """Find an executable using find_file to search typical locations.
+
+    Finds a specified executable by searching a specified set of paths.
+    This routine will look for the specified file name, as well as
+    looking for the filename followed by architecture-specific
+    extensions (e.g., `.exe`).  Note that as this uses
+    :py:func:find_file(), the filename and search paths may contain
+    wildcards.
+
+    Arguments
+    ---------
+    libname (str): the library name to search for
+
+    cwd (bool): Start by looking in the current working directory
+        [default: True]
+
+    include_PATH (bool): Include the executable search PATH at the end
+        of the list of directories to search. [default: True]
+
+    pathlist (list or str): List of paths to search for the file.  If
+        None, then pathlist will default to the local Pyomo
+        configuration binary directory.  If a string, then the string is
+        split using os.pathsep.  [Default: None]
+
+    """
     if pathlist is None:
-        pathlist = []
+        pathlist = [ os.path.join(PYOMO_CONFIG_DIR, 'bin') ]
     elif isinstance(pathlist, six.string_types):
         pathlist = [pathlist]
     else:
         pathlist = list(pathlist)
     if include_PATH:
-        pathlist.append( os.environ.get('PATH','') or os.defpath )
+        pathlist.extend(_path())
     ext = _exeExt.get(_system(), None)
     return find_file(exename, cwd=cwd, ext=ext, mode=os.R_OK|os.X_OK,
                      pathlist=pathlist)
