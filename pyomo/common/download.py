@@ -27,9 +27,15 @@ DownloadFactory = pyomo.common.Factory('library downloaders')
 
 class FileDownloader(object):
     def __init__(self, insecure=False, cacert=None):
+        self.fname = None
         self.insecure = insecure
         self.cacert = cacert
-        self.fname = None
+        if cacert is not None:
+            if not self.cacert or not os.path.isfile(self.cacert):
+                raise RuntimeError(
+                    "cacert='%s' does not refer to a valid file."
+                    % (self.cacert,))
+
 
     def get_sysinfo(self):
         """Return a tuple (platform_name, bits) for the current system
@@ -53,7 +59,7 @@ class FileDownloader(object):
         url = urlmap.get(system, None)
         if url is None:
             raise RuntimeError(
-                "ERROR: cannot infer the correct url for platform '%s'"
+                "cannot infer the correct url for platform '%s'"
                 % (platform,))
         return url
 
@@ -65,8 +71,15 @@ class FileDownloader(object):
         if argv and '--cacert' in argv:
             i = argv.index('--cacert')
             argv.pop(i)
-            self.cacert = argv.pop(i)
-        if argv:
+            try:
+                self.cacert = argv.pop(i)
+            except:
+                pass
+            if not self.cacert or not os.path.isfile(self.cacert):
+                raise RuntimeError(
+                    "--cacert argument must be followed by the path "
+                    "to the PEM certificate.")
+        if argv and argv[0][0] != '-':
             self.fname = argv.pop(0)
         else:
             self.fname = None
@@ -84,6 +97,7 @@ class FileDownloader(object):
         targetDir = os.path.dirname(self.fname)
         if not os.path.isdir(targetDir):
             os.makedirs(targetDir)
+
 
     def retrieve_url(self, url):
         """Return the contents of a URL as an io.BytesIO object"""
