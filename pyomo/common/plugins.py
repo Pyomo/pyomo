@@ -7,11 +7,8 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-import pyomo.common.download
-import pyomo.common.getGSL
+from . import download
+from . import getGSL
 
 def load():
-    pass
-
-pyomo.common.download.DownloadFactory.register(
-    'gsl')(pyomo.common.getGSL.main)
+    download.DownloadFactory.register('gsl')(getGSL.main)

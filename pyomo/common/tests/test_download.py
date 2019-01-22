@@ -140,4 +140,4 @@ class Test_FileDownloader(unittest.TestCase):
 
         urlmap[f.get_sysinfo()[0]] = 'correct'
         self.assertEqual(f.get_url(urlmap), 'correct')
-        
+
