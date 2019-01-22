@@ -163,86 +163,90 @@ class TestFileUtils(unittest.TestCase):
         os.chdir(self.tmpdir)
 
         config.PYOMO_CONFIG_DIR = self.tmpdir
-        os.mkdir(os.path.join(self.tmpdir, 'lib'))
-        os.mkdir(os.path.join(self.tmpdir, 'bin'))
+        config_libdir = os.path.join(self.tmpdir, 'lib')
+        os.mkdir(config_libdir)
+        config_bindir = os.path.join(self.tmpdir, 'bin')
+        os.mkdir(config_bindir)
 
-        subdir_name = 'a_lib'
-        subdir = os.path.join(self.tmpdir, subdir_name)
-        os.mkdir(subdir)
-        bindir_name = 'a_bin'
-        bindir = os.path.join(self.tmpdir, bindir_name)
-        os.mkdir(bindir)
+        ldlibdir_name = 'in_ld_lib'
+        ldlibdir = os.path.join(self.tmpdir, ldlibdir_name)
+        os.mkdir(ldlibdir)
+        os.environ['LD_LIBRARY_PATH'] = os.pathsep + ldlibdir + os.pathsep
+
+        pathdir_name = 'in_path'
+        pathdir = os.path.join(self.tmpdir, pathdir_name)
+        os.mkdir(pathdir)
+        os.environ['PATH'] = os.pathsep + pathdir + os.pathsep
 
         libExt = _libExt[_system()][0]
 
-        fname1 = 'foo'
-        open(os.path.join(self.tmpdir,fname1),'w').close()
-        open(os.path.join(subdir,fname1),'w').close()
-        open(os.path.join(bindir,fname1),'w').close()
-        fname2 = 'bar'
-        open(os.path.join(subdir,fname2 + libExt),'w').close()
-        fname3 = 'baz'
-        open(os.path.join(bindir,fname3),'w').close()
+        f_in_cwd_ldlib_path = 'f_in_cwd_ldlib_path'
+        open(os.path.join(self.tmpdir,f_in_cwd_ldlib_path),'w').close()
+        open(os.path.join(ldlibdir,f_in_cwd_ldlib_path),'w').close()
+        open(os.path.join(pathdir,f_in_cwd_ldlib_path),'w').close()
+        f_in_ldlib_extension = 'f_in_ldlib_extension'
+        open(os.path.join(ldlibdir,f_in_ldlib_extension + libExt),'w').close()
+        f_in_path = 'f_in_path'
+        open(os.path.join(pathdir,f_in_path),'w').close()
 
-        fname4 = 'in_lib'
-        open(os.path.join(self.tmpdir, 'lib', fname4),'w').close()
-        fname5 = 'in_bin'
-        open(os.path.join(self.tmpdir, 'bin', fname2),'w').close()
-        open(os.path.join(self.tmpdir, 'bin', fname5),'w').close()
+        f_in_configlib = 'f_in_configlib'
+        open(os.path.join(config_libdir, f_in_configlib),'w').close()
+        f_in_configbin = 'f_in_configbin'
+        open(os.path.join(config_bindir, f_in_ldlib_extension),'w').close()
+        open(os.path.join(config_bindir, f_in_configbin),'w').close()
 
-        os.environ['LD_LIBRARY_PATH'] = os.pathsep + subdir + os.pathsep
-        os.environ['PATH'] = os.pathsep + bindir + os.pathsep
 
         self.assertEqual(
-            os.path.join(self.tmpdir, fname1),
-            find_library(fname1)
+            os.path.join(self.tmpdir, f_in_cwd_ldlib_path),
+            find_library(f_in_cwd_ldlib_path)
         )
         self.assertEqual(
-            os.path.join(subdir, fname1),
-            find_library(fname1, cwd=False)
+            os.path.join(ldlibdir, f_in_cwd_ldlib_path),
+            find_library(f_in_cwd_ldlib_path, cwd=False)
         )
         self.assertEqual(
-            os.path.join(subdir, fname2) + libExt,
-            find_library(fname2)
+            os.path.join(ldlibdir, f_in_ldlib_extension) + libExt,
+            find_library(f_in_ldlib_extension)
         )
         self.assertEqual(
-            os.path.join(bindir, fname3),
-            find_library(fname3)
+            os.path.join(pathdir, f_in_path),
+            find_library(f_in_path)
         )
         self.assertEqual(
             None,
-            find_library(fname3, include_PATH=False)
+            find_library(f_in_path, include_PATH=False)
         )
         self.assertEqual(
-            os.path.join(bindir, fname3),
-            find_library(fname3, pathlist=os.pathsep+bindir+os.pathsep)
+            os.path.join(pathdir, f_in_path),
+            find_library(f_in_path, pathlist=os.pathsep+pathdir+os.pathsep)
         )
         # test an explicit pathlist overrides LD_LIBRARY_PATH
         self.assertEqual(
-            os.path.join(bindir, fname1),
-            find_library(fname1, cwd=False, pathlist=[bindir])
+            os.path.join(pathdir, f_in_cwd_ldlib_path),
+            find_library(f_in_cwd_ldlib_path, cwd=False, pathlist=[pathdir])
         )
         # test that the PYOMO_CONFIG_DIR is included
         self.assertEqual(
-            os.path.join(self.tmpdir, 'lib', fname4),
-            find_library(fname4)
+            os.path.join(config_libdir, f_in_configlib),
+            find_library(f_in_configlib)
         )
         # and the Bin dir
         self.assertEqual(
-            os.path.join(self.tmpdir, 'bin', fname5),
-            find_library(fname5)
+            os.path.join(config_bindir, f_in_configbin),
+            find_library(f_in_configbin)
         )
         # ... but only if include_PATH is true
         self.assertEqual(
             None,
-            find_library(fname5, include_PATH=False)
+            find_library(f_in_configbin, include_PATH=False)
         )
         # And none of them if the pathlist is specified
         self.assertEqual(
             None,
-            find_library(fname4, pathlist=bindir)
+            find_library(f_in_configlib, pathlist=pathdir)
         )
         self.assertEqual(
             None,
-            find_library(fname5, pathlist=bindir)
+            find_library(f_in_configbin, pathlist=pathdir)
         )
+
