@@ -145,6 +145,21 @@ int main(int argc, char **argv){
     PetscPrintf(PETSC_COMM_SELF, "Number of differential vars: %d\n", sol_ctx.n_var_diff);
     PetscPrintf(PETSC_COMM_SELF, "Number of algebraic vars: %d\n", sol_ctx.n_var_alg);
     PetscPrintf(PETSC_COMM_SELF, "Number of state vars: %d\n", sol_ctx.n_var_state);
+    if(sol_ctx.explicit_time>1){
+      PetscPrintf(PETSC_COMM_SELF, "ERROR: DAE: Multiple time variable (allowed 1 at most)");
+      ASL_free(&(sol_ctx.asl));
+      exit(P_EXIT_MULTIPLE_TIME);
+    }
+    if(sol_ctx.dof != sol_ctx.n_var_deriv + sol_ctx.explicit_time){
+      PetscPrintf(PETSC_COMM_SELF, "ERROR: DAE: DOF != number of derivative vars");
+      ASL_free(&(sol_ctx.asl));
+      exit(P_EXIT_DOF_DAE);
+    }
+    if(sol_ctx.n_var_diff != sol_ctx.n_var_deriv){
+      PetscPrintf(PETSC_COMM_SELF, "ERROR: DAE: number of differential vars != number of derivatives");
+      ASL_free(&(sol_ctx.asl));
+      exit(P_EXIT_VAR_DAE_MIS);
+    }
   }
   PetscPrintf(PETSC_COMM_SELF, "---------------------------------------------------\n");
 

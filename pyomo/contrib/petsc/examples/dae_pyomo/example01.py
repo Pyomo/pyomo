@@ -84,7 +84,8 @@ if __name__ == "__main__":
         options={
             "-snes_monitor":"",
             "-on_error_attach_debugger":"",
-            "-scale_vars":0})
+            "-scale_vars":0,
+            "-scale_eqs":1})
 
     for i in [1,2,3,4,5]: model.y[i].unfix()
     model.display() # show the initial state
@@ -120,7 +121,7 @@ if __name__ == "__main__":
             "-pc_type":"lu",             #direct solve MUMPS default LU fact
             "-ksp_type":"preonly",       #no ksp used direct solve preconditioner
             "-scale_vars":0,             #variable scaling method
-            "-scale_eqs":0,              #equation scaling method
+            "-scale_eqs":1,              #equation scaling method
             #"-scale_eq_jac_max":100,    #set max J element to 1 for eq scaling
             #"-show_scale_factors":"",
             #"-show_jac":"",
