@@ -11,13 +11,13 @@
 _init_url="$URL$"
 
 # The micro number should be set when tagging a release or generating a
-# VOTD build. releaselever should be left at 'invalid' for trunk
+# VOTD build. releaselevel should be left at 'invalid' for trunk
 # development and set to 'final' for releases.
 major=5
 minor=6
-micro=0
-#releaselevel='invalid'
-releaselevel='final'
+micro=2
+releaselevel='invalid'
+#releaselevel='final'
 serial=0
 
 if releaselevel == 'final':
