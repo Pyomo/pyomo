@@ -18,7 +18,11 @@ import tempfile
 import pyutilib.th as unittest
 from pyutilib.subprocess import run
 
-from pyomo.common.fileutils import thisFile, find_file, _system, _path
+import pyomo.common.config as config
+from pyomo.common.fileutils import (
+    thisFile, find_file, find_library, find_executable,
+    _system, _path, _libExt,
+)
 
 _thisFile = thisFile()
 
@@ -26,6 +30,7 @@ class TestFileUtils(unittest.TestCase):
     def setUp(self):
         self.tmpdir = None
         self.basedir = os.path.abspath(os.path.curdir)
+        self.config = config.PYOMO_CONFIG_DIR
         self.ld_library_path = os.environ.get('LD_LIBRARY_PATH', None)
         self.path = os.environ.get('PATH', None)
 
@@ -41,6 +46,7 @@ class TestFileUtils(unittest.TestCase):
             os.environ.pop('PATH', None)
         else:
             os.environ['PATH'] = self.path
+        config.PYOMO_CONFIG_DIR = self.config
 
     def test_thisFile(self):
         self.assertEquals(_thisFile, __file__.replace('.pyc','.py'))
@@ -64,12 +70,9 @@ class TestFileUtils(unittest.TestCase):
         orig_path = os.environ.get('PATH', None)
         if orig_path:
             self.assertEqual(os.pathsep.join(_path()), os.environ['PATH'])
-            del os.environ['PATH']
-        try:
-            self.assertEqual(os.pathsep.join(_path()), os.defpath)
-        finally:
-            if orig_path is not None:
-                os.environ['PATH'] = orig_path
+        os.environ.pop('PATH', None)
+        self.assertEqual(os.pathsep.join(_path()), os.defpath)
+        # PATH restored by teadDown()
 
     def test_findfile(self):
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
@@ -153,4 +156,93 @@ class TestFileUtils(unittest.TestCase):
             os.path.join(subdir,subdir_name),
             find_file( subdir_name,
                        pathlist=['', self.tmpdir, subdir], cwd=False )
+        )
+
+    def test_find_library(self):
+        self.tmpdir = os.path.abspath(tempfile.mkdtemp())
+        os.chdir(self.tmpdir)
+
+        config.PYOMO_CONFIG_DIR = self.tmpdir
+        os.mkdir(os.path.join(self.tmpdir, 'lib'))
+        os.mkdir(os.path.join(self.tmpdir, 'bin'))
+
+        subdir_name = 'a_lib'
+        subdir = os.path.join(self.tmpdir, subdir_name)
+        os.mkdir(subdir)
+        bindir_name = 'a_bin'
+        bindir = os.path.join(self.tmpdir, bindir_name)
+        os.mkdir(bindir)
+
+        libExt = _libExt[_system()][0]
+
+        fname1 = 'foo'
+        open(os.path.join(self.tmpdir,fname1),'w').close()
+        open(os.path.join(subdir,fname1),'w').close()
+        open(os.path.join(bindir,fname1),'w').close()
+        fname2 = 'bar'
+        open(os.path.join(subdir,fname2 + libExt),'w').close()
+        fname3 = 'baz'
+        open(os.path.join(bindir,fname3),'w').close()
+
+        fname4 = 'in_lib'
+        open(os.path.join(self.tmpdir, 'lib', fname4),'w').close()
+        fname5 = 'in_bin'
+        open(os.path.join(self.tmpdir, 'bin', fname2),'w').close()
+        open(os.path.join(self.tmpdir, 'bin', fname5),'w').close()
+
+        os.environ['LD_LIBRARY_PATH'] = os.pathsep + subdir + os.pathsep
+        os.environ['PATH'] = os.pathsep + bindir + os.pathsep
+
+        self.assertEqual(
+            os.path.join(self.tmpdir, fname1),
+            find_library(fname1)
+        )
+        self.assertEqual(
+            os.path.join(subdir, fname1),
+            find_library(fname1, cwd=False)
+        )
+        self.assertEqual(
+            os.path.join(subdir, fname2) + libExt,
+            find_library(fname2)
+        )
+        self.assertEqual(
+            os.path.join(bindir, fname3),
+            find_library(fname3)
+        )
+        self.assertEqual(
+            None,
+            find_library(fname3, include_PATH=False)
+        )
+        self.assertEqual(
+            os.path.join(bindir, fname3),
+            find_library(fname3, pathlist=os.pathsep+bindir+os.pathsep)
+        )
+        # test an explicit pathlist overrides LD_LIBRARY_PATH
+        self.assertEqual(
+            os.path.join(bindir, fname1),
+            find_library(fname1, cwd=False, pathlist=[bindir])
+        )
+        # test that the PYOMO_CONFIG_DIR is included
+        self.assertEqual(
+            os.path.join(self.tmpdir, 'lib', fname4),
+            find_library(fname4)
+        )
+        # and the Bin dir
+        self.assertEqual(
+            os.path.join(self.tmpdir, 'bin', fname5),
+            find_library(fname5)
+        )
+        # ... but only if include_PATH is true
+        self.assertEqual(
+            None,
+            find_library(fname5, include_PATH=False)
+        )
+        # And none of them if the pathlist is specified
+        self.assertEqual(
+            None,
+            find_library(fname4, pathlist=bindir)
+        )
+        self.assertEqual(
+            None,
+            find_library(fname5, pathlist=bindir)
         )

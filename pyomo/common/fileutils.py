@@ -14,6 +14,7 @@ import os
 import platform
 import six
 
+from . import config
 
 def thisFile():
     """Returns the file name for the module that calls this function.
@@ -150,14 +151,12 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
 
     """
     if pathlist is None:
-        pathlist = []
-        config_lib = os.path.join(PYOMO_CONFIG_DIR, 'lib')
-        if config_lib not in pathlist:
-            pathlist.append(config_lib)
-        config_bin = os.path.join(PYOMO_CONFIG_DIR, 'bin')
-        if include_PATH and config_bin not in pathlist:
-            pathlist.append(config_bin)
+        # Note: PYOMO_CONFIG_DIR/lib comes before LD_LIBRARY_PATH, and
+        # PYOMO_CONFIG_DIR/bin comes immediately before PATH
+        pathlist = [ os.path.join(config.PYOMO_CONFIG_DIR, 'lib') ]
         pathlist.extend(os.environ.get('LD_LIBRARY_PATH','').split(os.pathsep))
+        if include_PATH:
+            pathlist.append( os.path.join(config.PYOMO_CONFIG_DIR, 'bin') )
     elif isinstance(pathlist, six.string_types):
         pathlist = pathlist.split(os.pathsep)
     else:
@@ -195,9 +194,9 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
 
     """
     if pathlist is None:
-        pathlist = [ os.path.join(PYOMO_CONFIG_DIR, 'bin') ]
+        pathlist = [ os.path.join(config.PYOMO_CONFIG_DIR, 'bin') ]
     elif isinstance(pathlist, six.string_types):
-        pathlist = [pathlist]
+        pathlist = pathlist.split(os.pathsep)
     else:
         pathlist = list(pathlist)
     if include_PATH:
