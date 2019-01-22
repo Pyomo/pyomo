@@ -31,10 +31,7 @@ exemap = {
     'darwin':  '',
 }
 
-def get_gjh(downloader=None):
-    if downloader is None:
-        downloader = FileDownloader()
-
+def get_gjh(downloader):
     system, bits = downloader.get_sysinfo()
     url = downloader.get_url(urlmap)
 
@@ -42,7 +39,7 @@ def get_gjh(downloader=None):
         os.path.join('bin', 'gjh'+exemap[system]))
 
     logger.info("Fetching GJH from %s and installing it to %s"
-                % (url, downloader.fname))
+                % (url, downloader.destination()))
 
     downloader.get_gzipped_binary_file(url)
 

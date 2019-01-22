@@ -11,4 +11,4 @@ from . import download
 from . import getGSL
 
 def load():
-    download.DownloadFactory.register('gsl')(getGSL.main)
+    download.DownloadFactory.register('gsl')(getGSL.get_gsl)

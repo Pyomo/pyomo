@@ -28,17 +28,14 @@ urlmap = {
 def find_GSL():
     return find_library('amplgsl.dll')
 
-def get_gsl(downloader=None):
-    if downloader is None:
-        downloader = FileDownloader()
-
+def get_gsl(downloader):
     system, bits = downloader.get_sysinfo()
     url = downloader.get_url(urlmap) % (bits,)
 
     downloader.set_destination_filename(os.path.join('lib', 'amplgsl.dll'))
 
     logger.info("Fetching GSL from %s and installing it to %s"
-                % (url, downloader.fname))
+                % (url, downloader.destination()))
 
     downloader.get_binary_file_from_zip_archive(url, 'amplgsl.dll')
 

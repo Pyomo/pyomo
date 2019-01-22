@@ -25,7 +25,7 @@ logger = logging.getLogger('pyomo.contrib.trustregion')
 def load():
     pass
 
-DownloadFactory.register('gjh')(pyomo.contrib.trustregion.getGJH.main)
+DownloadFactory.register('gjh')(pyomo.contrib.trustregion.getGJH.get_gjh)
 
 @SolverFactory.register(
         'trustregion',

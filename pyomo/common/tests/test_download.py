@@ -14,7 +14,9 @@ import shutil
 import tempfile
 
 import pyutilib.th as unittest
+from pyutilib.misc import capture_output
 
+from pyomo.common import DeveloperError
 from pyomo.common.config import PYOMO_CONFIG_DIR
 from pyomo.common.fileutils import thisFile
 from pyomo.common.download import FileDownloader
@@ -32,17 +34,17 @@ class Test_FileDownloader(unittest.TestCase):
         f = FileDownloader()
         self.assertFalse(f.insecure)
         self.assertIsNone(f.cacert)
-        self.assertIsNone(f.fname)
+        self.assertIsNone(f._fname)
 
         f = FileDownloader(True)
         self.assertTrue(f.insecure)
         self.assertIsNone(f.cacert)
-        self.assertIsNone(f.fname)
+        self.assertIsNone(f._fname)
 
         f = FileDownloader(True, thisFile())
         self.assertTrue(f.insecure)
         self.assertEqual(f.cacert, thisFile())
-        self.assertIsNone(f.fname)
+        self.assertIsNone(f._fname)
 
         with self.assertRaisesRegexp(
                 RuntimeError, "cacert='nonexistant_file_name' does not "
@@ -54,69 +56,73 @@ class Test_FileDownloader(unittest.TestCase):
         f.parse_args([])
         self.assertFalse(f.insecure)
         self.assertIsNone(f.cacert)
-        self.assertIsNone(f.fname)
+        self.assertIsNone(f.target)
 
         f = FileDownloader()
         f.parse_args(['--insecure'])
         self.assertTrue(f.insecure)
         self.assertIsNone(f.cacert)
-        self.assertIsNone(f.fname)
+        self.assertIsNone(f.target)
 
         f = FileDownloader()
         f.parse_args(['--insecure', '--cacert', thisFile()])
         self.assertTrue(f.insecure)
         self.assertEqual(f.cacert, thisFile())
-        self.assertIsNone(f.fname)
+        self.assertIsNone(f.target)
 
         f = FileDownloader()
         f.parse_args(['--insecure', 'bar', '--cacert', thisFile()])
         self.assertTrue(f.insecure)
         self.assertEqual(f.cacert, thisFile())
-        self.assertEqual(f.fname, 'bar')
+        self.assertEqual(f.target, 'bar')
+
+        f = FileDownloader()
+        with capture_output() as io:
+            with self.assertRaises(SystemExit):
+                f.parse_args(['--cacert'])
+            self.assertIn('argument --cacert: expected one argument',
+                          io.getvalue())
+
+        f = FileDownloader()
+        with capture_output() as io:
+            with self.assertRaises(SystemExit):
+                f.parse_args(['--cacert', '--insecure'])
+            self.assertIn('argument --cacert: expected one argument',
+                          io.getvalue())
 
         f = FileDownloader()
         with self.assertRaisesRegexp(
-                RuntimeError, '--cacert argument must be followed by the path '
-                'to the PEM certificate'):
-            f.parse_args(['--cacert'])
-
-        f = FileDownloader()
-        with self.assertRaisesRegexp(
-                RuntimeError, '--cacert argument must be followed by the path '
-                'to the PEM certificate'):
-            f.parse_args(['--cacert', '--insecure'])
-
-        f = FileDownloader()
-        with self.assertRaisesRegexp(
-                RuntimeError, '--cacert argument must be followed by the path '
-                'to the PEM certificate'):
+                RuntimeError, "--cacert='nonexistant_file_name' does "
+                "not refer to a valid file"):
             f.parse_args(['--cacert', 'nonexistant_file_name'])
 
         f = FileDownloader()
-        with self.assertRaisesRegexp(
-                RuntimeError, "Unrecognized arguments: \['--foo'\]"):
-            f.parse_args(['--foo'])
+        with capture_output() as io:
+            with self.assertRaises(SystemExit):
+                f.parse_args(['--foo'])
+            self.assertIn('error: unrecognized arguments: --foo',
+                          io.getvalue())
 
     def test_set_destination_filename(self):
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
 
         f = FileDownloader()
-        self.assertIsNone(f.fname)
+        self.assertIsNone(f._fname)
         f.set_destination_filename('foo')
-        self.assertEqual(f.fname, os.path.join(PYOMO_CONFIG_DIR, 'foo'))
+        self.assertEqual(f._fname, os.path.join(PYOMO_CONFIG_DIR, 'foo'))
         # By this point, the CONFIG_DIR is guaranteed to have been created
         self.assertTrue(os.path.isdir(PYOMO_CONFIG_DIR))
 
-        f.fname = self.tmpdir
+        f.target = self.tmpdir
         f.set_destination_filename('foo')
         target = os.path.join(self.tmpdir, 'foo')
-        self.assertEqual(f.fname, target)
+        self.assertEqual(f._fname, target)
         self.assertFalse(os.path.exists(target))
 
-        f.fname = self.tmpdir
+        f.target = self.tmpdir
         f.set_destination_filename(os.path.join('foo','bar'))
         target = os.path.join(self.tmpdir, 'foo', 'bar')
-        self.assertEqual(f.fname, target)
+        self.assertEqual(f._fname, target)
         self.assertFalse(os.path.exists(target))
         target_dir = os.path.join(self.tmpdir, 'foo',)
         self.assertTrue(os.path.isdir(target_dir))
@@ -141,3 +147,17 @@ class Test_FileDownloader(unittest.TestCase):
         urlmap[f.get_sysinfo()[0]] = 'correct'
         self.assertEqual(f.get_url(urlmap), 'correct')
 
+
+    def test_get_files_requires_set_destination(self):
+        f = FileDownloader()
+        with self.assertRaisesRegexp(
+                DeveloperError, 'target file name has not been initialized'):
+            f.get_binary_file('bogus')
+
+        with self.assertRaisesRegexp(
+                DeveloperError, 'target file name has not been initialized'):
+            f.get_binary_file_from_zip_archive('bogus', 'bogus')
+
+        with self.assertRaisesRegexp(
+                DeveloperError, 'target file name has not been initialized'):
+            f.get_gzipped_binary_file('bogus')

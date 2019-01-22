@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import argparse
 import gzip
 import io
 import logging
@@ -18,8 +19,10 @@ import sys
 import zipfile
 
 from six.moves.urllib.request import urlopen
+
+from .config import PYOMO_CONFIG_DIR
+from .errors import DeveloperError
 import pyomo.common
-from pyomo.common.config import PYOMO_CONFIG_DIR
 
 logger = logging.getLogger('pyomo.common.download')
 
@@ -27,7 +30,8 @@ DownloadFactory = pyomo.common.Factory('library downloaders')
 
 class FileDownloader(object):
     def __init__(self, insecure=False, cacert=None):
-        self.fname = None
+        self._fname = None
+        self.target = None
         self.insecure = insecure
         self.cacert = cacert
         if cacert is not None:
@@ -64,40 +68,56 @@ class FileDownloader(object):
         return url
 
 
+    def create_parser(self, parser=None):
+        if parser is None:
+            parser = argparse.ArgumentParser()
+        parser.add_argument(
+            '--insecure',
+            action='store_true',
+            dest='insecure',
+            default=False,
+            help="Disable all SSL verification",
+        )
+        parser.add_argument(
+            '--cacert',
+            action='store',
+            dest='cacert',
+            default=None,
+            help="Use CACERT as the file of certificate authorities "
+            "to verify peers.",
+        )
+        return parser
+
     def parse_args(self, argv):
-        if argv and '--insecure' in argv:
-            self.insecure = True
-            argv.remove('--insecure')
-        if argv and '--cacert' in argv:
-            i = argv.index('--cacert')
-            argv.pop(i)
-            try:
-                self.cacert = argv.pop(i)
-            except:
-                pass
+        parser = self.create_parser()
+        parser.add_argument(
+            'target',
+            nargs="?",
+            default=None,
+            help="Target distination directory or filename"
+        )
+        parser.parse_args(argv, self)
+        if self.cacert is not None:
             if not self.cacert or not os.path.isfile(self.cacert):
                 raise RuntimeError(
-                    "--cacert argument must be followed by the path "
-                    "to the PEM certificate.")
-        if argv and argv[0][0] != '-':
-            self.fname = argv.pop(0)
-        else:
-            self.fname = None
-        if argv:
-            raise RuntimeError("Unrecognized arguments: %s" % (argv,))
-
+                    "--cacert='%s' does not refer to a valid file."
+                    % (self.cacert,))
 
     def set_destination_filename(self, default):
-        if self.fname is None:
-            self.fname = PYOMO_CONFIG_DIR
-            if not os.path.isdir(self.fname):
-                os.makedirs(self.fname)
-        if os.path.isdir(self.fname):
-            self.fname = os.path.join(self.fname, default)
-        targetDir = os.path.dirname(self.fname)
+        if self.target is not None:
+            self._fname = self.target
+        else:
+            self._fname = PYOMO_CONFIG_DIR
+            if not os.path.isdir(self._fname):
+                os.makedirs(self._fname)
+        if os.path.isdir(self._fname):
+            self._fname = os.path.join(self._fname, default)
+        targetDir = os.path.dirname(self._fname)
         if not os.path.isdir(targetDir):
             os.makedirs(targetDir)
 
+    def destination(self):
+        return self._fname
 
     def retrieve_url(self, url):
         """Return the contents of a URL as an io.BytesIO object"""
@@ -116,14 +136,20 @@ class FileDownloader(object):
 
 
     def get_binary_file(self, url):
-        with open(self.fname, 'wb') as FILE:
+        if self._fname is None:
+            raise DeveloperError("target file name has not been initialized "
+                                 "with set_destination_filename")
+        with open(self._fname, 'wb') as FILE:
             raw_file = self.retrieve_url(url)
             FILE.write(raw_file)
             logger.info("  ...wrote %s bytes" % (len(raw_file),))
 
 
     def get_binary_file_from_zip_archive(self, url, srcname):
-        with open(self.fname, 'wb') as FILE:
+        if self._fname is None:
+            raise DeveloperError("target file name has not been initialized "
+                                 "with set_destination_filename")
+        with open(self._fname, 'wb') as FILE:
             zipped_file = io.BytesIO(self.retrieve_url(url))
             raw_file = zipfile.ZipFile(zipped_file).open(srcname).read()
             FILE.write(raw_file)
@@ -131,7 +157,10 @@ class FileDownloader(object):
 
 
     def get_gzipped_binary_file(self, url):
-        with open(self.fname, 'wb') as FILE:
+        if self._fname is None:
+            raise DeveloperError("target file name has not been initialized "
+                                 "with set_destination_filename")
+        with open(self._fname, 'wb') as FILE:
             gzipped_file = io.BytesIO(self.retrieve_url(url))
             raw_file = gzip.GzipFile(fileobj=gzipped_file).read()
             FILE.write(raw_file)
