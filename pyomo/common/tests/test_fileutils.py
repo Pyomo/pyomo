@@ -21,7 +21,7 @@ from pyutilib.subprocess import run
 import pyomo.common.config as config
 from pyomo.common.fileutils import (
     thisFile, find_file, find_library, find_executable,
-    _system, _path, _libExt,
+    _system, _path, _exeExt, _libExt,
 )
 
 _thisFile = thisFile()
@@ -47,6 +47,11 @@ class TestFileUtils(unittest.TestCase):
         else:
             os.environ['PATH'] = self.path
         config.PYOMO_CONFIG_DIR = self.config
+
+    def _make_exec(self, fname):
+        open(fname,'w').close()
+        mode = os.stat(fname).st_mode
+        os.chmod( fname, mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH )
 
     def test_thisFile(self):
         self.assertEquals(_thisFile, __file__.replace('.pyc','.py'))
@@ -112,16 +117,19 @@ class TestFileUtils(unittest.TestCase):
         # ...unless the CWD match fails the MODE check
         self.assertEqual(
             ( os.path.join(self.tmpdir,fname)
-              if _system() in ('windiws','cygwin')
+              if _system() in ('windows','cygwin')
               else None ),
             find_file(fname, pathlist=[subdir], mode=os.X_OK)
         )
-        mode = os.stat(os.path.join(subdir,fname)).st_mode
-        os.chmod( os.path.join(subdir,fname),
-                  mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH )
+        self._make_exec(os.path.join(subdir,fname))
         self.assertEqual(
             os.path.join(subdir,fname),
             find_file(fname, pathlist=[subdir], mode=os.X_OK)
+        )
+        # pathlist may also be a string
+        self.assertEqual(
+            os.path.join(subdir,fname),
+            find_file(fname, pathlist=os.pathsep+subdir+os.pathsep, cwd=False)
         )
 
         # implicit extensions work (even if they are not necessary)
@@ -225,7 +233,7 @@ class TestFileUtils(unittest.TestCase):
             os.path.join(pathdir, f_in_cwd_ldlib_path),
             find_library(f_in_cwd_ldlib_path, cwd=False, pathlist=[pathdir])
         )
-        # test that the PYOMO_CONFIG_DIR is included
+        # test that the PYOMO_CONFIG_DIR 'lib' dir is included
         self.assertEqual(
             os.path.join(config_libdir, f_in_configlib),
             find_library(f_in_configlib)
@@ -250,3 +258,89 @@ class TestFileUtils(unittest.TestCase):
             find_library(f_in_configbin, pathlist=pathdir)
         )
 
+
+    def test_find_executable(self):
+        self.tmpdir = os.path.abspath(tempfile.mkdtemp())
+        os.chdir(self.tmpdir)
+
+        config.PYOMO_CONFIG_DIR = self.tmpdir
+        config_libdir = os.path.join(self.tmpdir, 'lib')
+        os.mkdir(config_libdir)
+        config_bindir = os.path.join(self.tmpdir, 'bin')
+        os.mkdir(config_bindir)
+
+        ldlibdir_name = 'in_ld_lib'
+        ldlibdir = os.path.join(self.tmpdir, ldlibdir_name)
+        os.mkdir(ldlibdir)
+        os.environ['LD_LIBRARY_PATH'] = os.pathsep + ldlibdir + os.pathsep
+
+        pathdir_name = 'in_path'
+        pathdir = os.path.join(self.tmpdir, pathdir_name)
+        os.mkdir(pathdir)
+        os.environ['PATH'] = os.pathsep + pathdir + os.pathsep
+
+        exeExt = _exeExt[_system()] or ''
+
+        f_in_cwd_notexe = 'f_in_cwd_notexe'
+        open(os.path.join(self.tmpdir,f_in_cwd_notexe), 'w').close()
+        f_in_cwd_ldlib_path = 'f_in_cwd_ldlib_path'
+        self._make_exec(os.path.join(self.tmpdir,f_in_cwd_ldlib_path))
+        self._make_exec(os.path.join(ldlibdir,f_in_cwd_ldlib_path))
+        self._make_exec(os.path.join(pathdir,f_in_cwd_ldlib_path))
+        f_in_path_extension = 'f_in_path_extension'
+        self._make_exec(os.path.join(pathdir,f_in_path_extension + exeExt))
+        f_in_path = 'f_in_path'
+        self._make_exec(os.path.join(pathdir,f_in_path))
+
+        f_in_configlib = 'f_in_configlib'
+        self._make_exec(os.path.join(config_libdir, f_in_configlib))
+        f_in_configbin = 'f_in_configbin'
+        self._make_exec(os.path.join(config_libdir, f_in_path_extension))
+        self._make_exec(os.path.join(config_bindir, f_in_configbin))
+
+
+        self.assertEqual(
+            ( os.path.join(self.tmpdir,f_in_cwd_notexe)
+              if _system() in ('windows','cygwin')
+              else None ),
+            find_executable(f_in_cwd_notexe)
+        )
+        self.assertEqual(
+            os.path.join(self.tmpdir, f_in_cwd_ldlib_path),
+            find_executable(f_in_cwd_ldlib_path)
+        )
+        self.assertEqual(
+            os.path.join(pathdir, f_in_cwd_ldlib_path),
+            find_executable(f_in_cwd_ldlib_path, cwd=False)
+        )
+        self.assertEqual(
+            os.path.join(pathdir, f_in_path_extension) + exeExt,
+            find_executable(f_in_path_extension)
+        )
+        self.assertEqual(
+            os.path.join(pathdir, f_in_path),
+            find_executable(f_in_path)
+        )
+        self.assertEqual(
+            None,
+            find_executable(f_in_path, include_PATH=False)
+        )
+        self.assertEqual(
+            os.path.join(pathdir, f_in_path),
+            find_executable(f_in_path, pathlist=os.pathsep+pathdir+os.pathsep)
+        )
+        # test an explicit pathlist overrides PATH
+        self.assertEqual(
+            os.path.join(ldlibdir, f_in_cwd_ldlib_path),
+            find_executable(f_in_cwd_ldlib_path, cwd=False, pathlist=[ldlibdir])
+        )
+        # test that the PYOMO_CONFIG_DIR 'bin' dir is included
+        self.assertEqual(
+            os.path.join(config_bindir, f_in_configbin),
+            find_executable(f_in_configbin)
+        )
+        # ... but only if the pathlist is not specified
+        self.assertEqual(
+            None,
+            find_executable(f_in_configbin, pathlist=pathdir)
+        )
