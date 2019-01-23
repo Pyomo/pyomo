@@ -11,6 +11,7 @@ from pyomo.core.base.symbolic import differentiate
 from pyomo.core.expr.expr_pyomo5 import identify_variables
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.gdp import Disjunct
 
 
 def add_subproblem_cuts(subprob_result, solve_data, config):
@@ -163,7 +164,7 @@ def add_integer_cut(var_values, solve_data, config, feasible=False):
             if not config.force_subproblem_nlp:
                 # Skip indicator variables
                 # TODO we should implement this as a check among Disjuncts instead
-                if not var.local_name == 'indicator_var':
+                if not (var.local_name == 'indicator_var' and var.parent_block().type() == Disjunct):
                     continue
 
             if fabs(val - 1) <= config.integer_tolerance:
