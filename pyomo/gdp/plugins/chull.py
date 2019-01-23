@@ -8,19 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import weakref
 import logging
-import textwrap
 
 import pyomo.common.config as cfg
 from pyomo.common.modeling import unique_component_name
-from pyomo.core.expr.numvalue import native_numeric_types, ZeroConstant
-from pyomo.core.expr import current as EXPR
-from pyomo.core import *
-from pyomo.core.base.block import SortComponents
-from pyomo.core.base.component import ComponentUID, ActiveComponent
-from pyomo.core.base import _ExpressionData
-from pyomo.core.base.var import _VarData
+from pyomo.core.expr.numvalue import ZeroConstant
+from pyomo.core.base.component import ActiveComponent
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 import pyomo.core.expr.current as EXPR
@@ -28,7 +21,7 @@ from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy,
-    Any, Reals, value
+    Any, RangeSet, Reals, value
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import clone_without_expression_components, target_list
@@ -36,8 +29,6 @@ from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 
 from six import iteritems, iterkeys
 
-# DEBUG
-from nose.tools import set_trace
 
 logger = logging.getLogger('pyomo.gdp.chull')
 
@@ -170,6 +161,7 @@ class ConvexHull_Transformation(Transformation):
             Expression : False,
             Param :      False,
             Set :        False,
+            RangeSet:    False,
             Suffix :     False,
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,

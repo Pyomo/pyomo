@@ -1,7 +1,7 @@
 Installation Instructions
 =========================
 
-The parmest software is included in Pyomo.
+parmest is included in Pyomo (pyomo/contrib/parmest).
 To run parmest, you will need Python version 3.x along with 
 various Python package dependencies and the IPOPT software 
 library for non-linear optimization.
@@ -25,7 +25,7 @@ IPOPT can be downloaded from https://projects.coin-or.org/Ipopt.
 Testing
 -------
 
-Use these (Unix) terminal commands to test parmest::
+The following commands can be used to test parmest::
   
    cd pyomo/contrib/parmest/tests
    python test_parmest.py

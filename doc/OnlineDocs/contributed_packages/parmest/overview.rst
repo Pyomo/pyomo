@@ -1,38 +1,33 @@
 Overview
 ================
 
-The software called parmest is intended to allow for model-based
-parameter estimation along with some characterization of the
+The Python package called parmest facilitates model-based
+parameter estimation along with characterization of 
 uncertainty associated with the estimates. For example, parmest
 can provide confidence regions around the parameter estimates.
+Additionally, parameter vectors, each with an attached probability estimate,
+can be used to build scenarios for design optimization.
 
-Most of the parmest software deals with the fact that parameter values
-estimates are typically based on data from experiments. 
-The ultimate goal of parmest is to provide scenarios, which are
-parameter vectors, :math:`{\theta}`, each with an attached probability estimate.
-These scenarios are intended to be used in design optimization, either
-directly, or as a way to check designs.
+Functionality in parmest includes:
 
-To use parmest, the user defines a PySP [PyomoBookII]_ callback function.  The 
-callback function takes a scenario name and returns a populated 
-and initialized model for that scenario. The objective
-function needs to be given in PySP form with an ``Expression`` for
-first and second stage costs: the first stage cost is set to zero 
-while the second stage cost is the sum of squared deviation of the 
-model :math:`y` values from the observed :math:`y` values.
+* Model based parameter estimation using experimental data
+* Bootstrap resampling for parameter estimation
+* Confidence regions based on single or multi-variate distributions
+* Likelihood ratio
+* Parallel processing
 
 Background
 ----------
 
-Using parsimonious notation, the goal is to estimate values for 
-a vector, :math:`{\theta}`, to use in a functional form
+The goal of parameter estimation is to estimate values for 
+a vector, :math:`{\theta}`, to use in the functional form
 
 .. math::
       
    y = g(x; \theta)
 
-where :math:`x` is a vector, typically in high dimension, :math:`{\theta}` is 
-a vector in much lower dimension, :math:`p`, and the response vectors are 
+where :math:`x` is a vector containing measured data, typically in high dimension, :math:`{\theta}` is 
+a vector of values to estimate, in much lower dimension, and the response vectors are 
 given as :math:`y_{i}, i=1,\ldots,m` with :math:`m` also much
 smaller than the dimension of :math:`x`.  This is done by collecting :math:`S` data points, which
 are :math:`{\tilde{x}},{\tilde{y}}` pairs and then finding :math:`{\theta}` values that 
@@ -42,12 +37,11 @@ which is a subvector of the vector :math:`x`. Note
 that for most experiments, only small parts of :math:`x` will change from
 one experiment to the next.
 
-To be concrete, we start by assuming that the data points are indexed by :math:`s=1,\ldots,S`
-and the parameters are fit using
+The following least squares objective can be used to estimate parameter values, where data points are indexed by :math:`s=1,\ldots,S`
 
 .. math::
 
-   \min_{{\theta}} Q({\theta};{\tilde{x}}, {\tilde{y}}) \equiv \sum_{s=1}^{S}q_{s}({\theta};{\tilde{x}}_{s}, {\tilde{y}}_{s}) \;\; (LSQ)
+   \min_{{\theta}} Q({\theta};{\tilde{x}}, {\tilde{y}}) \equiv \sum_{s=1}^{S}q_{s}({\theta};{\tilde{x}}_{s}, {\tilde{y}}_{s}) \;\;
 
 where
 
@@ -58,10 +52,7 @@ where
 i.e., the contribution of sample :math:`s` to :math:`Q`, where :math:`w \in \Re^{m}` is a vector
 of weights for the responses. For multi-dimensional :math:`y`, this
 is the squared weighted :math:`L_{2}` norm and for univariate :math:`y` the weighted squared deviation.
-
-Other M-estimators of :math:`{\theta}` might be implemented in the future.
-Aside: for various reasons one
-might be happiest if the function given is divided by :math:`S` but that does not affect the minimization.
+Custom objectives can also be defined for parameter estimation.
 
 In the applications of interest to us, the function :math:`g(\cdot)` is
 usually defined as an optimization problem with a large number of
