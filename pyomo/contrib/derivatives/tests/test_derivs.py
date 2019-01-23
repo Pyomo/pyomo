@@ -1,6 +1,6 @@
 import unittest
 import pyomo.environ as pe
-from pyomo.contrib.derivatives.differentiate import reverse_ad
+from pyomo.contrib.derivatives.differentiate import reverse_ad, reverse_sd
 
 
 tol = 4
@@ -22,6 +22,9 @@ class TestDerivs(unittest.TestCase):
         m.y = pe.Var(initialize=3.0)
         e = m.x * m.y
         derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.y], pe.value(symbolic[m.y]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
 
@@ -31,6 +34,9 @@ class TestDerivs(unittest.TestCase):
         m.y = pe.Var(initialize=3.0)
         e = 2.0*m.x + 3.0*m.y - m.x*m.y
         derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.y], pe.value(symbolic[m.y]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
 
@@ -40,6 +46,9 @@ class TestDerivs(unittest.TestCase):
         m.y = pe.Var(initialize=3.0)
         e = m.x / m.y
         derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.y], pe.value(symbolic[m.y]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
 
@@ -49,6 +58,9 @@ class TestDerivs(unittest.TestCase):
         m.y = pe.Var(initialize=3.0)
         e = m.x ** m.y
         derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.y], pe.value(symbolic[m.y]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
 
@@ -57,6 +69,8 @@ class TestDerivs(unittest.TestCase):
         m.x = pe.Var(initialize=2.0)
         e = pe.exp(m.x)
         derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_log(self):
@@ -64,6 +78,8 @@ class TestDerivs(unittest.TestCase):
         m.x = pe.Var(initialize=2.0)
         e = pe.log(m.x)
         derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_sin(self):
@@ -71,6 +87,8 @@ class TestDerivs(unittest.TestCase):
         m.x = pe.Var(initialize=2.0)
         e = pe.sin(m.x)
         derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_cos(self):
@@ -78,6 +96,8 @@ class TestDerivs(unittest.TestCase):
         m.x = pe.Var(initialize=2.0)
         e = pe.cos(m.x)
         derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_tan(self):
@@ -85,6 +105,8 @@ class TestDerivs(unittest.TestCase):
         m.x = pe.Var(initialize=2.0)
         e = pe.tan(m.x)
         derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_asin(self):
@@ -92,6 +114,8 @@ class TestDerivs(unittest.TestCase):
         m.x = pe.Var(initialize=0.5)
         e = pe.asin(m.x)
         derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_acos(self):
@@ -99,6 +123,8 @@ class TestDerivs(unittest.TestCase):
         m.x = pe.Var(initialize=0.5)
         e = pe.acos(m.x)
         derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_atan(self):
@@ -106,6 +132,8 @@ class TestDerivs(unittest.TestCase):
         m.x = pe.Var(initialize=2.0)
         e = pe.atan(m.x)
         derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_nested(self):
@@ -115,6 +143,10 @@ class TestDerivs(unittest.TestCase):
         m.p = pe.Param(initialize=0.5, mutable=True)
         e = pe.exp(m.x**m.p + 3.2*m.y - 12)
         derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.y], pe.value(symbolic[m.y]), tol+3)
+        self.assertAlmostEqual(derivs[m.p], pe.value(symbolic[m.p]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
         self.assertAlmostEqual(derivs[m.p], approx_deriv(e, m.p), tol)
