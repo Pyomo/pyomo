@@ -9,9 +9,10 @@
 
 
 from pyomo.environ import (ConcreteModel, Constraint, NonNegativeReals,
-                           Objective, Var, RangeSet, minimize, TransformationFactory)
+                           Objective, Var, RangeSet, TransformationFactory)
 from pyomo.gdp import Disjunction
 from pyomo.opt import SolverFactory
+
 
 def build_gdp_model():
 
@@ -34,7 +35,6 @@ def build_gdp_model():
     m.A  = Var(m.exchangers, domain=NonNegativeReals, bounds=(1e-4,50))
     m.CP = Var(m.exchangers, domain=NonNegativeReals, bounds=(0,600*pow(50,0.6)+2*46500))
 
-
     # OBJECTIVE
     m.objective = Objective(
         expr=(sum(m.CP[i] for i in m.exchangers)
@@ -44,16 +44,16 @@ def build_gdp_model():
 
     # GLOBAL CONSTRAINTS
     m.constr1 = Constraint(
-        expr=FCP['hot']*(T_in['hot']-m.T1)==m.A[1]*U['1']*((T_in['hot']-m.T2)+(m.T1-T_in['cold']))/2.
+        expr=FCP['hot']*(T_in['hot']-m.T1) == m.A[1]*U['1']*((T_in['hot']-m.T2)+(m.T1-T_in['cold']))/2.
     )
     m.constr2 = Constraint( # Note the error in the paper in constraint 2
-        expr=FCP['hot']*(m.T1-T_out['hot'])==m.A[2]*U['2']*((T_out['hot']-T_in['cooling'])+(m.T1-T_out['cooling']))/2.
+        expr=FCP['hot']*(m.T1-T_out['hot']) == m.A[2]*U['2']*((T_out['hot']-T_in['cooling'])+(m.T1-T_out['cooling']))/2.
     )
     m.constr3 = Constraint(
-        expr=FCP['cold']*(T_out['cold']-m.T2)==m.A[3]*U['3']*((T_out['steam']-m.T2)+(T_in['steam']-T_out['cold']))/2.
+        expr=FCP['cold']*(T_out['cold']-m.T2) == m.A[3]*U['3']*((T_out['steam']-m.T2)+(T_in['steam']-T_out['cold']))/2.
     )
     m.constr4 = Constraint(
-        expr=FCP['hot']*(T_in['hot']-m.T1)==FCP['cold']*(m.T2-T_in['cold'])
+        expr=FCP['hot']*(T_in['hot']-m.T1) == FCP['cold']*(m.T2-T_in['cold'])
     )
 
     # DISJUNCTIONS
@@ -70,7 +70,9 @@ def build_gdp_model():
 
     return m
 
+
 if __name__ == "__main__":
+
     # Decide whether to reformulate as MINLP and what method to use
     reformulation = True
     reformulation_method = 'chull'
