@@ -17,7 +17,8 @@ class MultistartTests(unittest.TestCase):
     """
     Due to stochastic nature of the random restarts, these tests just
     demonstrate, that for a small sample, the test will not do worse than the
-    standard solver. this is non-exhaustive due to the randomness.
+    standard solver. this is non-exhaustive due to the randomness. Hence all
+    asserts are inequalities.
     """
 
     # test standard random restarts
@@ -53,6 +54,7 @@ class MultistartTests(unittest.TestCase):
             m_obj = next(m_objectives, None)
             m2_objectives = m2.component_data_objects(Objective, active=True)
             m2_obj = next(m2_objectives,None)
+            #Assert that multistart solver does no worse than standard solver
             self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
             del m2
         for i in range(10):
@@ -63,6 +65,7 @@ class MultistartTests(unittest.TestCase):
             m_obj = next(m_objectives, None)
             m2_objectives = m2.component_data_objects(Objective, active=True)
             m2_obj = next(m2_objectives,None)
+            #Assert that multistart solver does no worse than standard solver
             self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
             del m2
         for i in range(10):
@@ -71,8 +74,10 @@ class MultistartTests(unittest.TestCase):
                 m2, iterations=10, strategy='rand_guess_and_bound')
             m_objectives = m.component_data_objects(Objective, active=True)
             m_obj = next(m_objectives, None)
-            m2_objectives = m2.component_data_objects(Objective, active=True)
+            m2_objectives = m2.component_data
+            _objects(Objective, active=True)
             m2_obj = next(m2_objectives,None)
+            #Assert that multistart solver does no worse than standard solver
             self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
             del m2
 
@@ -93,6 +98,7 @@ class MultistartTests(unittest.TestCase):
             m_obj = next(m_objectives, None)
             m2_objectives = m2.component_data_objects(Objective, active=True)
             m2_obj = next(m2_objectives,None)
+            #Assert that multistart solver does no worse than standard solver
             self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
             del m2
 
