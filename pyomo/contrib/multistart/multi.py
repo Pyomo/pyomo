@@ -175,7 +175,7 @@ class MultiStart(object):
                 if (result.solver.status is SolverStatus.ok and
                         result.solver.termination_condition is tc.optimal):
                     model_objectives = m.component_data_objects(Objective, active=True)
-                    mobj = next(model_objectives, None)
+                    mobj = next(model_objectives)
                     obj_val = value(mobj.expr)
                     objectives.append(obj_val)
                     if obj_val * obj_sign < obj_sign * best_objective:

@@ -74,8 +74,7 @@ class MultistartTests(unittest.TestCase):
                 m2, iterations=10, strategy='rand_guess_and_bound')
             m_objectives = m.component_data_objects(Objective, active=True)
             m_obj = next(m_objectives, None)
-            m2_objectives = m2.component_data
-            _objects(Objective, active=True)
+            m2_objectives = m2.component_data_objects(Objective, active=True)
             m2_obj = next(m2_objectives,None)
             #Assert that multistart solver does no worse than standard solver
             self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
