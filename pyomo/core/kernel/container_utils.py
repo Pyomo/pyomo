@@ -34,21 +34,23 @@ def define_homogeneous_container_type(namespace,
             _ctype = <ctype>
 
             ### if ### <use_slots>
-            __slots__ = ("_parent",
+            __slots__ = ["_parent",
                          "_storage_key",
-                         "_data")
+                         "_active",
+                         "_data"]
             if six.PY3:
                 # Prior to Python 3, the abc module does not
                 # use empty __slots__ declarations on the
                 # base classes. Therefore, we do not need a
                 # __weakref__ slot because there is already
                 # a __dict__ in the class hierarchy.
-                __slots__ = list(__slots__) + ["__weakref__"]
+                __slots__.append("__weakref__")
             ### fi ###
 
             def __init__(self, *args, **kwds):
                 self._parent = None
                 self._storage_key = None
+                self._active = True
                 super(<name>, self).__init__(*args, **kwds)
     """
     assert name not in namespace

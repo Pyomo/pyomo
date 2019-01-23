@@ -1,7 +1,7 @@
 import pickle
 
 import pyutilib.th as unittest
-import pyomo.kernel
+import pyomo.kernel as pmo
 from pyomo.core.tests.unit.kernel.test_dict_container import \
     _TestActiveDictContainerBase
 from pyomo.core.tests.unit.kernel.test_tuple_container import \
@@ -68,16 +68,16 @@ class Test_matrix_constraint(unittest.TestCase):
                                    lb=1,
                                    ub=2,
                                    x=vlist)
-        pyomo.kernel.pprint(ctuple)
+        pmo.pprint(ctuple)
         b = block()
         b.c = ctuple
-        pyomo.kernel.pprint(ctuple)
-        pyomo.kernel.pprint(b)
+        pmo.pprint(ctuple)
+        pmo.pprint(b)
         m = block()
         m.b = b
-        pyomo.kernel.pprint(ctuple)
-        pyomo.kernel.pprint(b)
-        pyomo.kernel.pprint(m)
+        pmo.pprint(ctuple)
+        pmo.pprint(b)
+        pmo.pprint(m)
 
     def test_ctype(self):
         ctuple = matrix_constraint(numpy.random.rand(3,3))
@@ -1136,11 +1136,7 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(repn.linear_coefs, ())
         self.assertEqual(repn.constant(), 4)
 
-    def test_preorder_visit(self):
-        # test that we can use the advanced preorder_visit
-        # function on a block to efficiently check for these
-        # constraint containers (without iterating over
-        # their children)
+    def test_preorder_traversal(self):
         A = numpy.ones((3,3))
 
         m = block()
@@ -1168,8 +1164,9 @@ class Test_matrix_constraint(unittest.TestCase):
                 return False
             return True
         cnt = 0
-        for obj in m.preorder_traversal(ctype=IConstraint,
-                                        descend=no_mc_descend):
+        for obj in pmo.preorder_traversal(m,
+                                          ctype=IConstraint,
+                                          descend=no_mc_descend):
             self.assertTrue(type(obj.parent) is not matrix_constraint)
             self.assertTrue((obj.ctype is block._ctype) or \
                             (obj.ctype is constraint._ctype))
@@ -1178,7 +1175,7 @@ class Test_matrix_constraint(unittest.TestCase):
 
         cnt = 0
         mc_child_cnt = 0
-        for obj in m.preorder_traversal(ctype=IConstraint):
+        for obj in pmo.preorder_traversal(m, ctype=IConstraint):
             self.assertTrue((obj.ctype is block._ctype) or \
                             (obj.ctype is constraint._ctype))
             if type(obj.parent) is matrix_constraint:

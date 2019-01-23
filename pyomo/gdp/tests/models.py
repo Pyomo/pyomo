@@ -1,5 +1,5 @@
 from pyomo.core import (Block, ConcreteModel, Constraint, Objective, Param,
-                        Set, Var, inequality)
+                        Set, Var, inequality, RangeSet)
 from pyomo.gdp import Disjunct, Disjunction
 
 
@@ -425,4 +425,15 @@ def makeDuplicatedNestedDisjunction():
     m.outerdisjunct = Disjunct([0, 1], rule=outerdisj_rule)
     m.disjunction = Disjunction(expr=[m.outerdisjunct[0],
                                       m.outerdisjunct[1]])
+    return m
+
+
+def makeDisjunctWithRangeSet():
+    m = ConcreteModel()
+    m.x = Var(bounds=(0, 1))
+    m.d1 = Disjunct()
+    m.d1.s = RangeSet(1)
+    m.d1.c = Constraint(rule=lambda _: m.x == 1)
+    m.d2 = Disjunct()
+    m.disj = Disjunction(expr=[m.d1, m.d2])
     return m

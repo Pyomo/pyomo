@@ -87,7 +87,7 @@ def create_test_method(model,
         rc = model_class.validate_current_solution(suffixes=model_class.test_suffixes)
 
         if is_expected_failure:
-            if rc[0] is True:
+            if rc[0]:
                 warnings.warn("\nTest model '%s' was marked as an expected "
                               "failure but no failure occured. The "
                               "reason given for the expected failure "
@@ -95,7 +95,7 @@ def create_test_method(model,
                               "Please remove this case as an expected "
                               "failure if the above issue has been "
                               "corrected in the latest version of the "
-                              "solver." % (model_class.description, failure_msg))
+                              "solver." % (model_class.description, test_case.msg))
             if _cleanup_expected_failures:
                 os.remove(save_filename)
 
@@ -119,9 +119,9 @@ def create_test_method(model,
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
-        def skipping_test(self):
+        def skipping_this(self):
             return self.skipTest(test_case.msg)
-        return skipping_test
+        return skipping_this
 
     if is_expected_failure:
         @unittest.expectedFailure

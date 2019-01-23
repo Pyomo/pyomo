@@ -1,0 +1,79 @@
+from pyomo.environ import *
+
+#---------------------------------------------
+M = ConcreteModel()
+M.x = Var(range(100))
+
+# This loop is fast.
+e = 0
+for i in range(100):
+    e = e + M.x[i]
+
+# This loop is slow.
+e = 0
+for i in range(100):
+    e = M.x[i] + e
+print(e)
+
+#---------------------------------------------
+M = ConcreteModel()
+M.p = Param(initialize=3)
+M.q = 1/M.p
+M.x = Var(range(100))
+
+# The value M.q is cloned every time it is used.
+e = 0
+for i in range(100):
+    e = e + M.x[i]*M.q
+print(e)
+
+#---------------------------------------------
+M = ConcreteModel()
+M.v = Var()
+
+e = f = 2*M.v
+print(e)
+
+#---------------------------------------------
+M = ConcreteModel()
+M.v = Var()
+
+e = 2*M.v
+f = e + 3
+print(e)
+print(f)
+
+#---------------------------------------------
+M = ConcreteModel()
+M.v = Var()
+
+e = 2*M.v
+f = e + 3
+g = e + 4
+print(e)
+print(f)
+print(g)
+
+#---------------------------------------------
+M = ConcreteModel()
+M.v = Var()
+M.w = Var()
+
+e = 2*M.v
+f = e + 3
+
+e += M.w
+print(e)
+print(f)
+
+#---------------------------------------------
+M = ConcreteModel()
+M.v = Var()
+M.w = Var()
+
+M.e = Expression(expr=2*M.v)
+f = M.e + 3
+
+M.e += M.w
+print(M.e)
+

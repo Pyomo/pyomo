@@ -1,0 +1,13 @@
+M = ConcreteModel()
+M.z = RangeSet(5)
+M.x = Var(range(10))
+M.y = Var(range(10))
+
+# Sum the elements of x
+e1 = sum_product(M.x)
+
+# Sum the product of elements in x and y
+e2 = sum_product(M.x, M.y)
+
+# Sum the product of elements in x and y, over the index set z
+e3 = sum_product(M.x, M.y, index=M.z)

@@ -1,33 +1,25 @@
-We are pleased to announce the release of Pyomo 5.5. Pyomo is a collection of
-Python software packages that supports a diverse set of optimization
+We are pleased to announce the release of Pyomo 5.6.1. Pyomo is a collection
+of Python software packages that supports a diverse set of optimization
 capabilities for formulating and analyzing optimization models.
 
 
-The following are a summary of changes in this release:
+The following are highlights of the 5.6 release series:
 
-- Removed testing for Python 3.4
-- Various solver interface fixes: CBC, SCIP, IPOPT, GLPK
-- New scripts for performance testing
-- Added documentation tests.
-- Updates to testing configuration on Travis and Appveyor
-- Added exp() to symbolic module (#151)
-- Resolved representation error with 1/var (#153)
-- Added pyomo.core.kernel (#130)
-- Added a TerminationCondition enum value for "Infeasible or Unbounded" (#171)
-- Updates to DAPS (#200)
-- Fix KeyError message in NL writer (#189)
-- New ODE/DAE simulator interface for pyomo.DAE (#180)
-- Added deprecation decorator (#203)
-- New transformation to fix nonnegative variables in equality constraints (#198)
-- Deprecated BigM piecewise representations (#216)
-- Added GAMS solver interface (#164, #215, #221, #240)
+ - New expression system enables robust support for pypy
+ - Dropped support for Python 2.6
+ - New contributed packages: preprocessing, parmest, pynumero,
+   sensitivity_toolbox, and petsc interface
+ - New modeling components: Reference, Port, Arc
+ - Overhaul of the documentation and move to pyomo.readthedocs.org
+ - Numerous bug fixes
 
+A full list of updates and changes is available in the CHANGELOG.txt
 
 Enjoy!
 
  - Pyomo Developer Team
- - pyomo-developers@googlecode.com
- - http://pyomo.org
+ - pyomo-developers@googlegroups.com
+ - https://www.pyomo.org
 
 
 -----------
@@ -36,7 +28,7 @@ About Pyomo
 
 The Pyomo home page provides resources for Pyomo users:
 
- * http://pyomo.org
+ * https://www.pyomo.org
 
 Pyomo development is hosted at GitHub:
 
@@ -44,5 +36,5 @@ Pyomo development is hosted at GitHub:
 
 Get help at
 
- * StackOverflow: http://stackoverflow.com/questions/tagged/pyomo
- * Pyomo Forum:   http://groups.google.com/group/pyomo-forum/
+ * StackOverflow: https://stackoverflow.com/questions/tagged/pyomo
+ * Pyomo Forum:   https://groups.google.com/group/pyomo-forum/

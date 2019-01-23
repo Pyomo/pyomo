@@ -8,15 +8,26 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import collections
-from six import iteritems, advance_iterator
-
 from pyutilib.misc import flatten_tuple
-from pyomo.core.base.sets import SetOf, _SetProduct
-from pyomo.core.base.indexed_component import IndexedComponent
+from pyomo.common import DeveloperError
+from pyomo.core.base.sets import SetOf, _SetProduct, _SetDataBase
+from pyomo.core.base.component import Component, ComponentData
+from pyomo.core.base.indexed_component import (
+    IndexedComponent, UnindexedComponent_set
+)
 from pyomo.core.base.indexed_component_slice import (
     _IndexedComponent_slice, _IndexedComponent_slice_iter
 )
+
+import six
+from six import iteritems, advance_iterator
+
+if six.PY3:
+    from collections.abc import MutableMapping as collections_MutableMapping
+    from collections.abc import Set as collections_Set
+else:
+    from collections import MutableMapping as collections_MutableMapping
+    from collections import Set as collections_Set
 
 _NotSpecified = object()
 
@@ -59,17 +70,24 @@ class _fill_in_known_wildcards(object):
             raise StopIteration()
         self.known_slices.add(_slice)
 
-        if _slice.ellipsis is not None:
-            raise RuntimeError(
-                "Cannot lookup elements in a _ReferenceDict when the "
-                "underlying slice object contains ellipsis")
+        if _slice.ellipsis is None:
+            idx_count = _slice.explicit_index_count
+        elif not _slice.component.is_indexed():
+            idx_count = 1
+        else:
+            idx_count = _slice.component.index_set().dimen
+            if idx_count is None:
+                raise SliceEllipsisLookupError(
+                    "Cannot lookup elements in a _ReferenceDict when the "
+                    "underlying slice object contains ellipsis over a jagged "
+                    "(dimen=None) Set")
         try:
             idx = tuple(
                 _slice.fixed[i] if i in _slice.fixed else self.key.pop(0)
-                for i in range(_slice.explicit_index_count))
+                for i in range(idx_count))
         except IndexError:
             raise KeyError(
-                "Insufficient values for slice of indexed component '%s'"
+                "Insufficient values for slice of indexed component '%s' "
                 "(found evaluating slice index %s)"
                 % (_slice.component.name, self.base_key))
 
@@ -91,7 +109,10 @@ class _fill_in_known_wildcards(object):
                            % ( self.base_key, ))
 
 
-class _ReferenceDict(collections.MutableMapping):
+class SliceEllipsisLookupError(Exception):
+    pass
+
+class _ReferenceDict(collections_MutableMapping):
     def __init__(self, component_slice):
         self._slice = component_slice
 
@@ -99,6 +120,15 @@ class _ReferenceDict(collections.MutableMapping):
         try:
             return advance_iterator(self._get_iter(self._slice, key))
         except StopIteration:
+            raise KeyError("KeyError: %s" % (key,))
+        except SliceEllipsisLookupError:
+            if type(key) is tuple and len(key) == 1:
+                key = key[0]
+            # Brute force (linear time) lookup
+            _iter = iter(self._slice)
+            for item in _iter:
+                if _iter.get_last_index_wildcards() == key:
+                    return item
             raise KeyError("KeyError: %s" % (key,))
 
     def __setitem__(self, key, val):
@@ -112,7 +142,7 @@ class _ReferenceDict(collections.MutableMapping):
         elif op == _IndexedComponent_slice.slice_info:
             tmp._call_stack[-1] = (
                 _IndexedComponent_slice.set_item,
-                tmp,
+                tmp._call_stack[-1][1],
                 val )
         elif op == _IndexedComponent_slice.get_attribute:
             tmp._call_stack[-1] = (
@@ -171,14 +201,47 @@ class _ReferenceDict(collections.MutableMapping):
         except (AttributeError, KeyError):
             return False
 
+    def iteritems(self):
+        """Return the wildcard, value tuples for this ReferenceDict
+
+        This method is necessary because the default implementation
+        iterates over the keys and looks the values up in the
+        dictionary.  Unfortunately some slices have structures that make
+        looking up components by the wildcard keys very expensive
+        (linear time; e.g., the use of elipses with jagged sets).  By
+        implementing this method without using lookups, general methods
+        that iterate over everything (like component.pprint()) will
+        still be linear and not quadratic time.
+
+        """
+        return self._slice.wildcard_items()
+
+    def itervalues(self):
+        """Return the values for this ReferenceDict
+
+        This method is necessary because the default implementation
+        iterates over the keys and looks the values up in the
+        dictionary.  Unfortunately some slices have structures that make
+        looking up components by the wildcard keys very expensive
+        (linear time; e.g., the use of elipses with jagged sets).  By
+        implementing this method without using lookups, general methods
+        that iterate over everything (like component.pprint()) will
+        still be linear and not quadratic time.
+
+        """
+        return iter(self._slice)
+
     def _get_iter(self, _slice, key):
         if key.__class__ not in (tuple, list):
             key = (key,)
         return _IndexedComponent_slice_iter(
             _slice, _fill_in_known_wildcards(flatten_tuple(key)))
 
+if six.PY3:
+    _ReferenceDict.items = _ReferenceDict.iteritems
+    _ReferenceDict.values = _ReferenceDict.itervalues
 
-class _ReferenceSet(collections.Set):
+class _ReferenceSet(collections_Set):
     def __init__(self, ref_dict):
         self._ref = ref_dict
 
@@ -201,15 +264,23 @@ def _get_base_sets(_set):
         yield _set
 
 def _identify_wildcard_sets(iter_stack, index):
+    # if we have already decided that there isn't a comon index for the
+    # slices, there is nothing more we can do.  Bail.
     if index is None:
         return index
 
+    # Walk the iter_stack that led to the current item and try to
+    # identify the component wildcard sets
     tmp = [None]*len(iter_stack)
     for i, level in enumerate(iter_stack):
         if level is not None:
             offset = 0
             wildcard_sets = {}
             for j,s in enumerate(_get_base_sets(level.component.index_set())):
+                if s is UnindexedComponent_set:
+                    wildcard_sets[j] = s
+                    offset += 1
+                    continue
                 if s.dimen is None:
                     return None
                 wild = sum( 1 for k in range(s.dimen)
@@ -217,13 +288,18 @@ def _identify_wildcard_sets(iter_stack, index):
                 if wild == s.dimen:
                     wildcard_sets[j] = s
                 elif wild != 0:
-                    # This is a multidimensional set, and we are slicing
-                    # through part of it.  We can't extract that subset,
-                    # so we quit.
+                    # This subset is "touched" by an explicit slice, but
+                    # the whole set is not (i.e. there is a fixed
+                    # component to this subset).  Therefore, as we
+                    # cannot extract that subset, we quit.
                     return None
                 offset += s.dimen
-            if offset != level.explicit_index_count:
-                return None
+            # I believe that this check is not necessary: weirdnesses
+            # with elipsis should get caught by the check for s.dimen
+            # above.
+            #
+            #if offset != level.explicit_index_count:
+            #    return None
             tmp[i] = wildcard_sets
     if not index:
         return tmp
@@ -235,18 +311,21 @@ def _identify_wildcard_sets(iter_stack, index):
     assert len(index) == len(tmp)
     for i, level in enumerate(tmp):
         assert (index[i] is None) == (level is None)
+        # No slices at this level in the slice
         if level is None:
             continue
+        # if there are a differing number of subsets
         if len(index[i]) != len(level):
             return None
+        # if any subset differs
         if any(index[i].get(j,None) is not _set for j,_set in iteritems(level)):
             return None
     return index
 
 def Reference(reference, ctype=_NotSpecified):
-    """Generate a reference component from a component slice.
+    """Creates a component that references other components
 
-    Reference generates a *reference component*; that is, an indexed
+    ``Reference`` generates a *reference component*; that is, an indexed
     component that does not contain data, but instead references data
     stored in other components as defined by a component slice.  The
     ctype parameter sets the :py:meth:`Component.type` of the resulting
@@ -272,10 +351,10 @@ def Reference(reference, ctype=_NotSpecified):
         component slice that defines the data to include in the
         Reference component
 
-    ctype : type [optional]
+    ctype : :py:class:`type` [optional]
         the type used to create the resulting indexed component.  If not
         specified, the data's ctype will be used (if all data share a
-        common ctype).  If multiple data ctypes are found or ctype is
+        common ctype).  If multiple data ctypes are found or type is
         ``None``, then :py:class:`IndexedComponent` will be used.
 
     Examples
@@ -305,9 +384,9 @@ def Reference(reference, ctype=_NotSpecified):
         >>> m.r2 = Reference(m.b[:,3].x)
         >>> m.r2.pprint()
         r2 : Size=2, Index=b_index_0
-            Key  : Lower : Value : Upper : Fixed : Stale : Domain
-            (1,) :     1 :  None :     3 : False :  True :  Reals
-            (2,) :     2 :  None :     3 : False :  True :  Reals
+            Key : Lower : Value : Upper : Fixed : Stale : Domain
+              1 :     1 :  None :     3 : False :  True :  Reals
+              2 :     2 :  None :     3 : False :  True :  Reals
 
     Reference components may have wildcards at multiple levels of the
     model hierarchy:
@@ -343,25 +422,56 @@ def Reference(reference, ctype=_NotSpecified):
               4 :     1 :    10 :  None : False : False :  Reals
 
     """
-    if not isinstance(reference, _IndexedComponent_slice):
+    if isinstance(reference, _IndexedComponent_slice):
+        pass
+    elif isinstance(reference, Component):
+        reference = reference[...]
+    else:
         raise TypeError(
             "First argument to Reference constructors must be a "
-            "component slice (received %s)" % (type(reference).__name__,))
+            "component or component slice (received %s)"
+            % (type(reference).__name__,))
+
     _data = _ReferenceDict(reference)
     _iter = iter(reference)
-    ctypes = set()
+    if ctype is _NotSpecified:
+        ctypes = set()
+    else:
+        # If the caller specified a ctype, then we will prepopulate the
+        # list to improve our chances of avoiding a scan of the entire
+        # Reference
+        ctypes = set((1,2))
     index = []
     for obj in _iter:
         ctypes.add(obj.type())
-        index = _identify_wildcard_sets(_iter._iter_stack, index)
+        if not isinstance(obj, ComponentData):
+            # This object is not a ComponentData (likely it is a pure
+            # IndexedComponent container).  As the Reference will treat
+            # it as if it *were* a ComponentData, we will skip ctype
+            # identification and return a base IndexedComponent, thereby
+            # preventing strange exceptions in the writers and with
+            # things like pprint().  Of course, all of this logic is
+            # skipped if the User knows better and forced a ctype on us.
+            ctypes.add(0)
+        if index is not None:
+            index = _identify_wildcard_sets(_iter._iter_stack, index)
+        # Note that we want to walk the entire slice, unless we can
+        # prove that BOTH there aren't common indexing sets AND there is
+        # more than one ctype.
+        elif len(ctypes) > 1:
+            break
     if index is None:
         index = SetOf(_ReferenceSet(_data))
     else:
         wildcards = sum((sorted(iteritems(lvl)) for lvl in index
                          if lvl is not None), [])
         index = wildcards[0][1]
-        for idx in wildcards[1:]:
-            index = index * idx[1]
+        if not isinstance(index, _SetDataBase):
+            index = SetOf(index)
+        for lvl, idx in wildcards[1:]:
+            if not isinstance(idx, _SetDataBase):
+                idx = SetOf(idx)
+            index = index * idx
     if ctype is _NotSpecified:
         if len(ctypes) == 1:
             ctype = ctypes.pop()

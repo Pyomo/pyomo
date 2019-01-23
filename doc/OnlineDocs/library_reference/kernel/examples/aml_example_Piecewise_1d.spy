@@ -1,0 +1,9 @@
+breakpoints = [1,2,3,4]
+values = [1,2,1,2]
+m.f = aml.Var()
+m.pw = aml.Piecewise(
+    m.f,
+    m.v,
+    pw_pts=breakpoints,
+    f_rule=values,
+    pw_constr_type='EQ')

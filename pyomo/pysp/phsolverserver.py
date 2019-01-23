@@ -62,20 +62,13 @@ class PHPyroWorker(TaskWorker):
         self._bulk_task_collection = True
         self._modules_imported = {}
 
-    def del_server(self, name):
-        phsolver = self._phsolverserver_map[name]
-        # Avoid memory leaks
-        for object_name, object_solver in iteritems(phsolver._solver_map):
-            object_solver.deactivate()
-        del self._phsolverserver_map[name]
-
     def process(self, data):
 
         data = pyutilib.misc.Bunch(**data)
         result = None
         if data.action == "release":
 
-            self.del_server(data.object_name)
+            del self._phsolverserver_map[name]
             result = True
 
         elif data.action == "initialize":

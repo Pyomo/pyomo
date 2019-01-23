@@ -1,0 +1,19 @@
+class Point(pyomo.kernel.variable_tuple):
+    """A 3-dimensional point in Cartesian space with the
+    z coordinate restricted to non-negative values."""
+    __slots__ = ()
+
+    def __init__(self):
+        super(Point, self).__init__(
+            (pyomo.kernel.variable(),
+             pyomo.kernel.variable(),
+             NonNegativeVariable()))
+    @property
+    def x(self):
+        return self[0]
+    @property
+    def y(self):
+        return self[1]
+    @property
+    def z(self):
+        return self[2]

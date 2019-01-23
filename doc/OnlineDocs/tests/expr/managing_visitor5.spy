@@ -1,0 +1,28 @@
+from pyomo.core.expr import current as EXPR
+
+class ScalingVisitor(EXPR.ExpressionReplacementVisitor):
+
+    def __init__(self, scale):
+        super(ScalingVisitor, self).__init__()
+        self.scale = scale
+
+    def visiting_potential_leaf(self, node):
+        #
+        # Clone leaf nodes in the expression tree
+        #
+        if node.__class__ in native_numeric_types:
+            return True, node
+
+        if node.is_variable_type():
+            return True, self.scale[id(node)]*node
+
+        if isinstance(node, EXPR.LinearExpression):
+            node_ = copy.deepcopy(node)
+            node_.constant = node.constant
+            node_.linear_vars = copy.copy(node.linear_vars)
+            node_.linear_coefs = []
+            for i,v in enumerate(node.linear_vars):
+                node_.linear_coefs.append( node.linear_coefs[i]*self.scale[id(v)] )
+            return True, node_
+
+        return False, None

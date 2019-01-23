@@ -1,0 +1,8 @@
+# uses 0-based indexing
+m.cl = pmo.constraint_list()
+for j in m.q:
+    m.cl.append(
+        pmo.constraint(
+            lb=-5,
+            body=m.vl[j]-m.v,
+            ub=5))
