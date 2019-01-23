@@ -43,8 +43,8 @@ def get_gjh(downloader):
 
     downloader.get_gzipped_binary_file(url)
 
-    mode = os.stat(downloader.fname).st_mode
-    os.chmod( downloader.fname,
+    mode = os.stat(downloader.destination()).st_mode
+    os.chmod( downloader.destination(),
               mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH )
 
 def main(argv):
