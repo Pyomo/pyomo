@@ -14,7 +14,6 @@ from pyomo.core import Var, value
 
 from pyomo.contrib.trustregion.TRF import TRF
 from pyomo.contrib.trustregion.readgjh import readgjh
-import pyomo.contrib.trustregion.param as param
 import pyomo.contrib.trustregion.getGJH
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
