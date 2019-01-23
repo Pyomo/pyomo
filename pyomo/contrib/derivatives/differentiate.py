@@ -53,7 +53,8 @@ def _diff_PowExpression(node, val_dict, der_dict):
     val1 = val_dict[arg1]
     val2 = val_dict[arg2]
     der_dict[arg1] += der * val2 * val1**(val2 - 1)
-    der_dict[arg2] += der * val1**val2 * log(val1)
+    if arg2.__class__ not in nonpyomo_leaf_types:
+        der_dict[arg2] += der * val1**val2 * log(val1)
 
 
 def _diff_ReciprocalExpression(node, val_dict, der_dict):
