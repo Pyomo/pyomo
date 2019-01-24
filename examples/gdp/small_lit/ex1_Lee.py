@@ -7,9 +7,8 @@ http://egon.cheme.cmu.edu/Papers/LeeNewAlgo.pdf
 """
 
 from pyomo.environ import (ConcreteModel, Constraint, NonNegativeReals,
-                           Objective, Var, minimize)
+                           Objective, SolverFactory, Var, minimize)
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.opt import SolverFactory
 
 
 def build_model():
