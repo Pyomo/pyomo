@@ -9,9 +9,8 @@
 
 
 from pyomo.environ import (ConcreteModel, Constraint, NonNegativeReals,
-                           Objective, Var, RangeSet, TransformationFactory)
-from pyomo.gdp import Disjunction
-from pyomo.opt import SolverFactory
+                           Objective, RangeSet, SolverFactory, 
+                           TransformationFactory, Var)
 
 
 def build_gdp_model():
@@ -32,8 +31,10 @@ def build_gdp_model():
     m.T2 = Var(domain=NonNegativeReals, bounds=(T2_lo, T2_up))
 
     m.exchangers = RangeSet(1,3)
-    m.A  = Var(m.exchangers, domain=NonNegativeReals, bounds=(1e-4,50))
-    m.CP = Var(m.exchangers, domain=NonNegativeReals, bounds=(0,600*pow(50,0.6)+2*46500))
+    m.A  = Var(m.exchangers, domain=NonNegativeReals, bounds=(1e-4,50)) 
+    m.CP = Var(m.exchangers, domain=NonNegativeReals, bounds=(0,600*(50**0.6)+2*46500))
+    # Note that A_lo=0 leads to an exception in MC++ if using gdpopt with strategy 'GLOA'
+    # The exception occurs when constructing McCormick relaxations
 
     # OBJECTIVE
     m.objective = Objective(
@@ -60,11 +61,11 @@ def build_gdp_model():
     @m.Disjunction(m.exchangers)
     def exchanger_disjunction(m, disjctn):
         return [
-            [m.CP[disjctn] == 2750*pow(m.A[disjctn],0.6)+3000,
+            [m.CP[disjctn] == 2750*(m.A[disjctn]**0.6)+3000,
              0. <= m.A[disjctn], m.A[disjctn] <= 10.],
-            [m.CP[disjctn] == 1500*pow(m.A[disjctn],0.6)+15000,
+            [m.CP[disjctn] == 1500*(m.A[disjctn]**0.6)+15000,
              10. <= m.A[disjctn], m.A[disjctn] <= 25.],
-            [m.CP[disjctn] == 600*pow(m.A[disjctn],0.6)+46500,
+            [m.CP[disjctn] == 600*(m.A[disjctn]**0.6)+46500,
              25. <= m.A[disjctn], m.A[disjctn] <= 50.]
         ]
 
@@ -82,7 +83,7 @@ if __name__ == "__main__":
 
     if reformulation:
         if reformulation_method == 'bigm':
-            TransformationFactory('gdp.bigm').apply_to(model,bigM=600*pow(50,0.6)+2*46500)
+            TransformationFactory('gdp.bigm').apply_to(model,bigM=600*(50**0.6)+2*46500)
         elif reformulation_method == 'chull':
             TransformationFactory('gdp.chull').apply_to(model)
         res = SolverFactory('gams').solve(model, tee=True, solver='baron', add_options=['option optcr = 0;'], keepfiles=True)
