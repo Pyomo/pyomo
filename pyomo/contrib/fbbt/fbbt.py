@@ -536,8 +536,8 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
             return True, None
 
         if node.is_variable_type():
-            lb = node.lb
-            ub = node.ub
+            lb = value(node.lb)
+            ub = value(node.ub)
             if lb is None:
                 lb = -math.inf
             if ub is None:
@@ -573,9 +573,9 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         if node.is_variable_type():
             lb, ub = self.bnds_dict[node]
             if lb != -math.inf:
-                node.lb = lb
+                node.setlb(lb)
             if ub != math.inf:
-                node.ub = ub
+                node.setub(ub)
             return True, None
 
         if not node.is_expression_type():
@@ -602,11 +602,11 @@ def fbbt(con):
 
     visitorA = _FBBTVisitorLeafToRoot(bnds_dict)
     visitorA.dfs_postorder_stack(con.body)
-    _lb = con.lower
-    _ub = con.upper
+    _lb = value(con.lower)
+    _ub = value(con.upper)
     if _lb is None:
         _lb = -math.inf
-    if _ub is None
+    if _ub is None:
         _ub = math.inf
     lb, ub = bnds_dict[con.body]
     if _lb > lb:
