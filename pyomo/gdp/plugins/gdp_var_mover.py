@@ -102,7 +102,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                 if self._disjunct_not_relaxed(disjunct):
                     disjunct.deactivate()
                 else:
-                    disjunct_component._activate_without_unfixing_indicator()
+                    disjunct._activate_without_unfixing_indicator()
 
                 cons_in_disjunct = disjunct.component_objects(
                     Constraint, descend_into=Block, active=True)
