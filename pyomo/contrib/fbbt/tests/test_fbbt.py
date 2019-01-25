@@ -1,11 +1,17 @@
 import unittest
 import pyomo.environ as pe
 from pyomo.contrib.fbbt.fbbt import fbbt
-import numpy as np
+try:
+    import numpy as np
+    numpy_available = True
+except ImportError:
+    numpy_available = False
 
 
 class TestFBBT(unittest.TestCase):
     def test_add(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -31,6 +37,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yu >= _y))
 
     def test_sub1(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -56,6 +64,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yu >= _y))
 
     def test_sub2(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -81,6 +91,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yu >= _y))
 
     def test_mul(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -106,6 +118,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yu >= _y))
 
     def test_div1(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -131,6 +145,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yu >= _y))
 
     def test_div2(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -156,6 +172,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yu >= _y))
 
     def test_pow1(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -181,6 +199,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yu >= _y))
 
     def test_pow2(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -209,6 +229,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yu >= _y))
 
     def test_exp(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         c_bounds = [(-2.5, 2.8), (0.5, 2.8), (0, 2.8), (1, 2.8), (0.5, 1)]
         for cl, cu in c_bounds:
             m = pe.Block(concrete=True)
@@ -233,6 +255,8 @@ class TestFBBT(unittest.TestCase):
             self.assertTrue(np.all(xu >= x))
 
     def test_log(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for cl, cu in c_bounds:
             m = pe.Block(concrete=True)
