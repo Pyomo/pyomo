@@ -1,12 +1,17 @@
 import unittest
-import numpy as np
 import pyomo.contrib.fbbt.interval as interval
-
-np.random.seed(0)
+try:
+    import numpy as np
+    numpy_available = True
+    np.random.seed(0)
+except ImportError:
+    numpy_available = False
 
 
 class TestInterval(unittest.TestCase):
     def test_add(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         xl = -2.5
         xu = 2.8
         yl = -3.2
@@ -20,6 +25,8 @@ class TestInterval(unittest.TestCase):
             self.assertTrue(np.all(zu >= _z))
 
     def test_sub(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         xl = -2.5
         xu = 2.8
         yl = -3.2
@@ -33,6 +40,8 @@ class TestInterval(unittest.TestCase):
             self.assertTrue(np.all(zu >= _z))
 
     def test_mul(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         xl = -2.5
         xu = 2.8
         yl = -3.2
@@ -46,6 +55,8 @@ class TestInterval(unittest.TestCase):
             self.assertTrue(np.all(zu >= _z))
 
     def test_div(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         x_bounds = [(np.random.uniform(-5, -2), np.random.uniform(2, 5))]
         y_bounds = [(np.random.uniform(-5, -2), np.random.uniform(2, 5)),
                     (0, np.random.uniform(2, 5)),
@@ -63,6 +74,8 @@ class TestInterval(unittest.TestCase):
                     self.assertTrue(np.all(zu >= _z))
 
     def test_pow(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         x_bounds = [(np.random.uniform(0, 2), np.random.uniform(2, 5)),
                     (0, np.random.uniform(2, 5)),
                     (0, 0)]
@@ -96,6 +109,8 @@ class TestInterval(unittest.TestCase):
                 self.assertTrue(np.all(zu >= _z))
 
     def test_exp(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         xl = -2.5
         xu = 2.8
         zl, zu = interval.exp(xl, xu)
@@ -105,6 +120,8 @@ class TestInterval(unittest.TestCase):
         self.assertTrue(np.all(zu >= _z))
 
     def test_log(self):
+        if not numpy_available:
+            raise unittest.SkipTest
         x_bounds = [(np.random.uniform(0, 2), np.random.uniform(2, 5)),
                     (0, np.random.uniform(2, 5)),
                     (0, 0)]
