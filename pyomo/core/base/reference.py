@@ -48,10 +48,11 @@ class _fill_in_known_wildcards(object):
     wildcard_values : tuple of index values
         a tuple containing index values to substitute into the slice wildcards
     """
-    def __init__(self, wildcard_values):
+    def __init__(self, wildcard_values, look_in_index=False):
         self.base_key = wildcard_values
         self.key = list(wildcard_values)
         self.known_slices = set()
+        self.look_in_index = look_in_index
 
     def __call__(self, _slice):
         """Advance the specified slice generator, substituting wildcard values
@@ -97,11 +98,18 @@ class _fill_in_known_wildcards(object):
         elif len(idx) == 1 and idx[0] in _slice.component:
             _slice.last_index = idx
             return _slice.component[idx[0]]
-        else:
-            raise KeyError(
-                "Index %s is not valid for indexed component '%s' "
-                "(found evaluating slice index %s)"
-                % (idx, _slice.component.name, self.base_key))
+        elif self.look_in_index:
+            if idx in _slice.component.index_set():
+                _slice.last_index = idx
+                return None
+            elif len(idx) == 1 and idx[0] in _slice.component.index_set():
+                _slice.last_index = idx
+                return None
+
+        raise KeyError(
+            "Index %s is not valid for indexed component '%s' "
+            "(found evaluating slice index %s)"
+            % (idx, _slice.component.name, self.base_key))
 
     def check_complete(self):
         if self.key:
@@ -246,13 +254,34 @@ class _ReferenceSet(collections_Set):
         self._ref = ref_dict
 
     def __contains__(self, key):
-        return key in self._ref
+        try:
+            advance_iterator(self._get_iter(self._ref._slice, key))
+            return True
+        except (StopIteration, KeyError):
+            return False
+        except SliceEllipsisLookupError:
+            if type(key) is tuple and len(key) == 1:
+                key = key[0]
+            # Brute force (linear time) lookup
+            _iter = iter(self._ref._slice)
+            for item in _iter:
+                if _iter.get_last_index_wildcards() == key:
+                    return True
+            return False
 
     def __iter__(self):
-        return iter(self._ref)
+        return self._ref._slice.index_wildcard_keys()
 
     def __len__(self):
-        return len(self._ref)
+        return sum(1 for _ in self)
+
+    def _get_iter(self, _slice, key):
+        if key.__class__ not in (tuple, list):
+            key = (key,)
+        return _IndexedComponent_slice_iter(
+            _slice, _fill_in_known_wildcards(
+                flatten_tuple(key), look_in_index=True),
+            iter_over_index=True)
 
 
 def _get_base_sets(_set):

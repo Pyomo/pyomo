@@ -270,12 +270,89 @@ class TestReferenceDict(unittest.TestCase):
         self.assertFalse( hasattr(m.b[2,5], 'z') )
         self.assertEqual(len(list(x.value for x in itervalues(rd))), 2-1)
 
-    def test_reference_set_wrapper(self):
-        m = self.m
+class TestReferenceSet(unittest.TestCase):
+    def test_lookup_and_iter_dense_data(self):
+        m = ConcreteModel()
+        @m.Block([1,2], [4,5])
+        def b(b,i,j):
+            b.x = Var([7,8],[10,11], initialize=0)
+            b.y = Var([7,8], initialize=0)
+            b.z = Var()
+
         rs = _ReferenceSet(_ReferenceDict(m.b[:,5].z))
+        self.assertNotIn((0,), rs)
+        self.assertIn(1, rs)
         self.assertIn((1,), rs)
         self.assertEqual(len(rs), 2)
         self.assertEqual(list(rs), [1,2])
+
+        rs = _ReferenceSet(_ReferenceDict(m.b[:,5].bad))
+        self.assertNotIn((0,), rs)
+        self.assertNotIn((1,), rs)
+        self.assertEqual(len(rs), 0)
+        self.assertEqual(list(rs), [])
+
+        @m.Block([1,2,3])
+        def d(b, i):
+            if i % 2:
+                b.x = Var(range(i))
+
+        rs = _ReferenceSet(_ReferenceDict(m.d[:].x[:]))
+        self.assertIn((1,0), rs)
+        self.assertIn((3,0), rs)
+        self.assertNotIn((2,0), rs)
+        self.assertEqual(len(rs), 4)
+        self.assertEqual(list(rs), [(1,0), (3,0), (3,1), (3,2)])
+
+        rs = _ReferenceSet(_ReferenceDict(m.d[...].x[...]))
+        self.assertIn((1,0), rs)
+        self.assertIn((3,0), rs)
+        self.assertNotIn((2,0), rs)
+        self.assertEqual(len(rs), 4)
+        self.assertEqual(list(rs), [(1,0), (3,0), (3,1), (3,2)])
+
+        # Test the SliceEllipsisError case (lookup into a jagged set
+        # with an ellipsis)
+
+        m.e_index = Set(initialize=[2,(2,3)], dimen=None)
+        @m.Block(m.e_index)
+        def e(b, *args):
+            b.x_index = Set(initialize=[1,(3,4)], dimen=None)
+            b.x = Var(b.x_index)
+        rs = _ReferenceSet(_ReferenceDict(m.e[...].x[...]))
+        self.assertIn((2,1), rs)
+        self.assertIn((2,3,1), rs)
+        self.assertIn((2,3,4), rs)
+        self.assertNotIn((2,3,5), rs)
+        self.assertEqual(len(rs), 4)
+        self.assertEqual(list(rs), [(2,1), (2,3,4), (2,3,1), (2,3,3,4)])
+
+        # Make sure scalars and tuples work for jagged sets
+        rs = _ReferenceSet(_ReferenceDict(m.e[...]))
+        self.assertIn(2, rs)
+        self.assertIn((2,), rs)
+        self.assertNotIn(0, rs)
+        self.assertNotIn((0,), rs)
+
+    def test_lookup_and_iter_sparse_data(self):
+        m = ConcreteModel()
+        m.I = RangeSet(3)
+        m.x = Var(m.I, m.I, dense=False)
+
+        rd = _ReferenceDict(m.x[...])
+        rs = _ReferenceSet(rd)
+        self.assertEqual(len(rd), 0)
+        # Note: we will periodically re-check the dict to ensure
+        # iteration doesn't accidentally declare data
+        self.assertEqual(len(rd), 0)
+
+        self.assertEqual(len(rs), 9)
+        self.assertEqual(len(rd), 0)
+
+        self.assertIn((1,1), rs)
+        self.assertEqual(len(rd), 0)
+        self.assertEqual(len(rs), 9)
+
 
 
 class TestReference(unittest.TestCase):
