@@ -1,10 +1,12 @@
 from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
 import pyomo.core.expr.expr_pyomo5 as _expr
-from pyomo.core.expr.expr_pyomo5 import ExpressionValueVisitor, nonpyomo_leaf_types, value
-from pyomo.core.expr.current import exp, log, sin, cos, tan, asin, acos, atan
+from pyomo.core.expr.expr_pyomo5 import ExpressionValueVisitor, nonpyomo_leaf_types, value, identify_variables
 from pyomo.core.expr.numvalue import is_fixed
 import pyomo.contrib.fbbt.interval as interval
 import math
+from pyomo.core.base.block import Block
+from pyomo.core.base.constraint import Constraint
 
 
 class FBBTException(Exception):
@@ -589,7 +591,7 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         return False, None
 
 
-def fbbt(con):
+def fbbt_con(con):
     """
     Feasibility based bounds tightening
 
@@ -616,3 +618,71 @@ def fbbt(con):
     bnds_dict[con.body] = (lb, ub)
     visitorB = _FBBTVisitorRootToLeaf(bnds_dict)
     visitorB.dfs_postorder_stack(con.body)
+
+
+def fbbt_block(m, tol=1e-4):
+    """
+
+    Parameters
+    ----------
+    m: pe.block
+    tol: float
+    """
+    var_to_con_map = ComponentMap()
+    var_lbs = ComponentMap()
+    var_ubs = ComponentMap()
+    for c in m.component_data_objects(ctype=Constraint, active=True, descend_into=True, sort=True):
+        for v in identify_variables(c.body):
+            if v not in var_to_con_map:
+                var_to_con_map[v] = list()
+            if v.lb is None:
+                var_lbs[v] = -math.inf
+            else:
+                var_lbs[v] = value(v.lb)
+            if v.ub is None:
+                var_ubs[v] = math.inf
+            else:
+                var_ubs[v] = value(v.ub)
+            var_to_con_map[v].append(c)
+
+    improved_vars = ComponentSet()
+    for c in m.component_data_objects(ctype=Constraint, active=True, descend_into=True, sort=True):
+        fbbt_con(c)
+        for v in identify_variables(c.body):
+            if v.lb is not None:
+                if value(v.lb) > var_lbs[v] + tol:
+                    improved_vars.add(v)
+                    var_lbs[v] = value(v.lb)
+            if v.ub is not None:
+                if value(v.ub) < var_ubs[v] - tol:
+                    improved_vars.add(v)
+                    var_ubs[v] = value(v.ub)
+
+    while len(improved_vars) > 0:
+        v = improved_vars.pop()
+        for c in var_to_con_map[v]:
+            fbbt_con(c)
+            for _v in identify_variables(c.body):
+                if _v.lb is not None:
+                    if value(_v.lb) > var_lbs[_v] + tol:
+                        improved_vars.add(_v)
+                        var_lbs[_v] = value(_v.lb)
+                if _v.ub is not None:
+                    if value(_v.ub) < var_ubs[_v] - tol:
+                        improved_vars.add(_v)
+                        var_ubs[_v] = value(_v.ub)
+
+
+def fbbt(comp):
+    """
+
+    Parameters
+    ----------
+    comp: pyomo.core.base.constraint.Constraint or pyomo.core.base.block.Block
+    """
+    if comp.type() == Constraint:
+        fbbt_con(comp)
+    elif comp.type() == Block:
+        fbbt_block(comp)
+    else:
+        raise FBBTException('Cannot perform FBBT on objects of type {0}'.format(type(comp)))
