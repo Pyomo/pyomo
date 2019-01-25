@@ -65,13 +65,13 @@ class OneVarDisj(unittest.TestCase):
                 self.assertAlmostEqual(val, 0)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cuts_sawayaGrossmann(self):
-        m = models.oneVarDisj_SawayaGrossmann()
-
+    def test_two_segment_cuts(self):
+        m = models.twoSegments_sawayaGrossmann()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
-        # TODO: test something
-        
+        # TODO: I need it to fail so I can see all my print statements...
+        self.assertFalse(True)
+        #set_trace()
 
 class TwoTermDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
@@ -112,6 +112,8 @@ class TwoTermDisj(unittest.TestCase):
 
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
         for i in cuts:
+            # DEBUG
+            print i
             cut_expr = cuts[i].body
             m.d[0].indicator_var.fix(1)
             m.d[1].indicator_var.fix(0)

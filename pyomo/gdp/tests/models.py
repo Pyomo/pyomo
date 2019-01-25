@@ -14,7 +14,7 @@ def oneVarDisj_2pts():
     m.obj = Objective(expr=m.x)
     return m
 
-def oneVarDisj_SawayaGrossmann():
+def twoSegements_SawayaGrossmann():
     m = ConcreteModel()
     m.x = Var(bounds=(0, 3))
     m.disj1 = Disjunct()
@@ -22,6 +22,7 @@ def oneVarDisj_SawayaGrossmann():
     m.disj2 = Disjunct()
     m.disj2.c = Constraint(expr=inequality(2, m.x, 3))
     m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
+
     m.obj = Objective(expr=m.x)
 
     return m

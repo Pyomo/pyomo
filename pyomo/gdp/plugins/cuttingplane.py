@@ -28,6 +28,7 @@ from pyomo.core import (
     Transformation, TransformationFactory, value, TransformationFactory,
 )
 from pyomo.core.base.symbolic import differentiate
+from pyomo.core.base.component import ComponentUID
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt import SolverFactory
@@ -46,9 +47,6 @@ logger = logging.getLogger('pyomo.gdp.cuttingplane')
 
 # DEBUG
 from nose.tools import set_trace
-# ESJ: so far this is a bad idea. Still need to try it in the direction of the
-# optimal solution to rBigM though.
-tiny_step = 1e-6
 
 # TODO: this should be an option probably, right?
 # do I have other options that won't be mad about the quadratic objective in the
@@ -107,12 +105,12 @@ class CuttingPlane_Transformation(Transformation):
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
 
-        instance_rBigM, instance_rCHull, var_info, transBlockName \
-            = self._setup_subproblems(instance, bigM)
+        (instance_rBigM, instance_rCHull, var_info, disaggregated_var_info,
+         transBlockName) = self._setup_subproblems(instance, bigM)
 
-        self._generate_cuttingplanes(
-            instance, instance_rBigM, instance_rCHull, var_info, transBlockName)
-
+        self._generate_cuttingplanes( instance, instance_rBigM, instance_rCHull,
+                                      var_info, disaggregated_var_info,
+                                      transBlockName)
 
     def _setup_subproblems(self, instance, bigM):
         # create transformation block
@@ -176,9 +174,16 @@ class CuttingPlane_Transformation(Transformation):
 
         transBlock_rBigM = instance_rBigM.component(transBlockName)
 
+        # create a map which links all disaggregated variables to their
+        # originals on both bigm and rBigm. We will use this to project the cut
+        # from the extended space to the space of the bigM problem.
+        disaggregatedVarMap = self._get_disaggregated_var_map(instance_rCHull,
+                                                              instance,
+                                                              instance_rBigM)
+
         #
         # Generate the mapping between the variables on all the
-        # instances and the xstar parameter
+        # instances and the xstar parameter.
         #
         var_info = tuple(
             (v,
@@ -187,17 +192,44 @@ class CuttingPlane_Transformation(Transformation):
              transBlock_rCHull.xstar[i])
             for i,v in enumerate(transBlock.all_vars))
 
+        # TODO: I don't know a better way to do this
+        disaggregated_var_info = tuple(
+            (v,
+             disaggregatedVarMap[v]['bigm'],
+             disaggregatedVarMap[v]['rBigm'])
+            for v in disaggregatedVarMap.keys())
+
         #
         # Add the separation objective to the chull subproblem
         #
         self._add_separation_objective(var_info, transBlock_rCHull)
 
-        return instance_rBigM, instance_rCHull, var_info, transBlockName
+        return (instance_rBigM, instance_rCHull, var_info,
+                disaggregated_var_info, transBlockName)
 
+    def _get_disaggregated_var_map(self, chull, bigm, rBigm):
+        disaggregatedVarMap = ComponentMap()
+        # TODO: I guess technically I don't know that the transformation block
+        # is named this... It could have a unique name, so I need to hunt that
+        # down. (And then test that I do that correctly)
+        for disjunct in chull._pyomo_gdp_chull_relaxation.relaxedDisjuncts.\
+            values():
+            for disaggregated_var, original in \
+            disjunct._gdp_transformation_info['srcVars'].iteritems():
+                orig_vars = disaggregatedVarMap.get(disaggregated_var)
+                if orig_vars is None:
+                    # TODO: this is probably expensive, but I don't have another
+                    # idea...
+                    orig_cuid = ComponentUID(original)
+                    disaggregatedVarMap[disaggregated_var] = \
+                                    {'bigm': orig_cuid.find_component(bigm),
+                                     'rBigm': orig_cuid.find_component(rBigm)}
+
+        return disaggregatedVarMap
 
     def _generate_cuttingplanes(
             self, instance, instance_rBigM, instance_rCHull,
-            var_info, transBlockName):
+            var_info, disaggregated_var_info, transBlockName):
 
         opt = SolverFactory(self._config.solver)
         stream_solver = self._config.stream_solver
@@ -246,7 +278,6 @@ class CuttingPlane_Transformation(Transformation):
             for x_bigm, x_rbigm, x_chull, x_star in var_info:
                 x_star.value = x_rbigm.value
                 # initialize the X values
-                # ESJ: Isn't this initializing with an infeasible point?
                 x_chull.value = x_rbigm.value
                 # DEBUG
                 #print("%s: %s" % (x_rbigm.name, x_star.value))
@@ -257,17 +288,6 @@ class CuttingPlane_Transformation(Transformation):
             improving = math.isinf(obj_diff) or \
                         ( abs(obj_diff) > epsilon if abs(rBigM_objVal) < 1 else
                           abs(obj_diff/prev_obj) > epsilon )
-
-            # ESJ: This makes more sense to me. You should add the cut if you
-            # improved this iteration. The case where you don't add it is when
-            # you just discovered that you have done enough. But they way we had
-            # it, if you have a problem where you can get one good cut, we got
-            # 0.
-            # if improving and cuts is not None:
-            #     cut_number = len(transBlock.cuts)
-            #     logger.warning("GDP.cuttingplane: Adding cut %s to BM model."
-            #                    % (cut_number,))
-            #     transBlock.cuts.add(cut_number, cuts['bigm'] <= 0)
 
             # solve separation problem to get xhat.
             opt.solve(instance_rCHull, tee=stream_solver)
@@ -286,8 +306,10 @@ class CuttingPlane_Transformation(Transformation):
             #for x_hat in rCHull_vars:
             #    print("%s: %s" % (x_hat.name, x_hat.value))
 
-            cuts = self._create_cuts(var_info, rCHull_vars, instance_rCHull,
-                                     transBlock, transBlock_rBigM)
+            cuts = self._create_cuts(var_info, disaggregated_var_info,
+                                     rCHull_vars, instance_rCHull, transBlock,
+                                     transBlock_rBigM)
+           
             # We are done if the cut generator couldn't return a valid cut
             if not cuts:
                 break
@@ -331,8 +353,8 @@ class CuttingPlane_Transformation(Transformation):
         transBlock_rCHull.separation_objective = Objective(expr=obj_expr)
 
 
-    def _create_cuts(self, var_info, rCHull_vars, instance_rCHull, transBlock,
-                     transBlock_rBigm):
+    def _create_cuts(self, var_info, disaggregated_var_info, rCHull_vars,
+                     instance_rCHull, transBlock, transBlock_rBigm):
         cut_number = len(transBlock.cuts)
         logger.warning("gdp.cuttingplane: Creating (but not yet adding) cut %s."
                        % (cut_number,))
@@ -357,20 +379,19 @@ class CuttingPlane_Transformation(Transformation):
                 active=True,
                 descend_into=Block,
                 sort=SortComponents.deterministic):
-            #print "   CON: ", constraint.expr
+            print "   CON: ", constraint.expr
             multiplier = self.constraint_tight(instance_rCHull, constraint)
             if multiplier:
                 # DEBUG
                 # print(constraint.name)
                 # print constraint.expr
                 # get normal vector to tangent plane to this constraint at xhat
-                #print "      TIGHT", multiplier
+                print "      TIGHT", multiplier
                 f = constraint.body
                 firstDerivs = differentiate(f, wrt_list=rCHull_vars)
                 #print "     ", firstDerivs
                 normal_vectors.append(
                     [multiplier*value(_) for _ in firstDerivs])
-                #set_trace()
 
         # It is possible that the separation problem returned a point in
         # the interior of the convex hull.  It is also possible that the
@@ -386,9 +407,9 @@ class CuttingPlane_Transformation(Transformation):
             (v,n) for v,n in zip(rCHull_vars, composite_normal))
 
         # DEBUG
-        # print "COMPOSITE NORMAL, cut number %s" % cut_number
-        # for x,v in composite_normal.iteritems():
-        #     print(x.name + '\t' + str(v))
+        print "COMPOSITE NORMAL, cut number %s" % cut_number
+        for x,v in composite_normal_map.iteritems():
+            print(x.name + '\t' + str(v))
 
         # add a cut which is tangent to the composite normal at xhat:
         # (we are projecting out the disaggregated variables)
@@ -419,37 +440,66 @@ class CuttingPlane_Transformation(Transformation):
             # print("%s\t%s" %
             #       (composite_normal[x_chull], x_star.value - x_chull.value))
 
-            # DEBUG: Let's try moving out along composite_normal
-            # cutexpr_bigm += composite_normal[x_chull]*\
-            #                 (x_bigm - (x_chull.value + \
-            #                            tiny_step*composite_normal[x_chull]))
-            # cutexpr_rBigM += composite_normal[x_chull]*\
-            #                  (x_rbigm - (x_chull.value + \
-            #                            tiny_step*composite_normal[x_chull]))
-
-            # DEBUG some more: Let's try moving out along vector towards opt
-            # solution to rBigM
-            # backOff = x_star.value - x_chull.value
-            # cutexpr_bigm += composite_normal[x_chull]*\
-            #                 (x_bigm - (x_chull.value + tiny_step*backOff))
-            # cutexpr_rBigM += composite_normal[x_chull]*\
-            #                  (x_rbigm - (x_chull.value + tiny_step*backOff))
-
         #print "Composite normal cut"
         #print "   %s" % (composite_cutexpr_rBigM,)
-        #print "Projection cut"
-        #print "   %s" % (projection_cutexpr_rBigM,)
+        print "optimal sol'n for rBigm"
+        instance_rCHull._pyomo_gdp_cuttingplane_relaxation.xstar.pprint()
+
+        print "Calculating the cut the old way we have:"
+        print "   %s" % (projection_cutexpr_rBigM,)
         # DEBUG
         # print("++++++++++++++++++++++++++++++++++++++++++")
         # print("So this is the cut expression:")
         # print(cutexpr_bigm)
 
+        cuts = self._project_cuts_to_bigM_space(
+            {'bigm': composite_cutexpr_bigm, 'rBigM': composite_cutexpr_rBigM},
+            composite_normal_map, disaggregated_var_info)
+
         #return({'bigm': projection_cutexpr_bigm,
         #        'rBigM': projection_cutexpr_rBigM})
-        return({'bigm': composite_cutexpr_bigm,
-                'rBigM': composite_cutexpr_rBigM})
+        return(cuts)
 
+    def _project_cuts_to_bigM_space(self, cuts, normal_map,
+                                    disaggregated_var_info):
+        # Cut generator didn't return a valid cut, so there is nothing to
+        # project and we are done.
+        if not cuts:
+            return None
 
+        bigm_cut = cuts['bigm']
+        # DEBUG:
+        print "Cut we will project:"
+        print bigm_cut
+        rBigm_cut = cuts['rBigM']
+        expr_data = ComponentMap()
+        for x_disaggregated, x_orig_bigm, x_orig_rBigm in disaggregated_var_info:
+            data = expr_data.get(x_orig_bigm)
+            print("%s\t%s\t%s" % (x_disaggregated.name,
+                                  normal_map[x_disaggregated],
+                                  x_disaggregated.value))
+            if data is None:
+                data = expr_data[x_orig_bigm] = \
+                       {'coef': normal_map[x_disaggregated], 'const': 0}
+            # TODO: I have a feeling this isn't true...
+            assert data['coef'] == normal_map[x_disaggregated]
+            data['const'] += x_disaggregated.value
+
+        # TODO: The fact that I had to do this this way makes me think that
+        # disaggregated_var_info maybe should have been a map
+        for x_disaggregated, x_orig_bigm, x_orig_rBigm in disaggregated_var_info:
+            # we add a term for each variable which was disaggregated
+            data = expr_data.pop(x_orig_bigm, None)
+            if data is not None:
+                bigm_cut += data['coef']*(x_orig_bigm - data['const'])
+                rBigm_cut += data['coef']*(x_orig_rBigm - data['const'])
+
+        print "Composite cut"
+        print "      %s" % bigm_cut
+
+        return({'bigm': bigm_cut, 'rBigM': rBigm_cut})
+                
+    # returns     
     def constraint_tight(self, model, constraint):
         val = value(constraint.body)
         ans = 0
@@ -458,24 +508,8 @@ class CuttingPlane_Transformation(Transformation):
             if value(constraint.lower) >= val:
                 ans += 1
 
-            # if isclose(val, constraint.lower.value):
-            #     if val > constraint.lower.value:
-            #         difference = val - constraint.lower.value
-            #         # print("DEBUG: We're in interior of constraint %s LB by %s"
-            #         #       % (constraint.name, difference))
-            #         # DEBUG: an experiment...
-            #         #return False
-            #     return -1
         if constraint.upper is not None:
             if value(constraint.upper) <= val:
                 ans -= 1
-
-            # if isclose(val, constraint.upper.value):
-            #     if val < constraint.upper.value:
-            #         difference = constraint.upper.value - val
-            #         # print("DEBUG: We're in interior of constraint %s UB by %s"
-            #         #       % (constraint.name, difference))
-            #         #return False
-            #     return 1
 
         return -1*ans
