@@ -9,6 +9,32 @@ from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 
 
+"""
+The purpose of this file is to perform feasibility based bounds tightening. This is a very basic implementation, 
+but it is done directly with pyomo expressions. The only functions that are meant to be used by users are fbbt, fbbt_con, 
+and fbbt_block. The first set of functions in this file (those with names starting with _prop_bnds_leaf_to_root) are used for
+propagating bounds from the variables to each node in the expression tree (all the way to the root node). The second 
+set of functions (those with names starting with _prop_bnds_root_to_leaf) are used to propagate bounds from the 
+constraint back to the variables. For example, consider the constraint x*y + z == 1 with -1 <= x <= 1 and -2 <= y <= 2. 
+When propagating bounds from the variables to the root (the root is x*y + z), we find that -2 <= x*y <= 2, and that 
+-inf <= x*y + z <= inf. However, from the constraint, we know that 1 <= x*y + z <= 1, so we may propagate bounds back 
+to the variables. Since we know that 1 <= x*y + z <= 1 and -2 <= x*y <= 2, then we must have -1 <= z <= 3. However, 
+bounds cannot be improved on x*y, so bounds cannot be improved on either x or y.
+
+>>> import pyomo.environ as pe
+>>> m = pe.ConcreteModel()
+>>> m.x = pe.Var(bounds=(-1,1))
+>>> m.y = pe.Var(bounds=(-2,2))
+>>> m.z = pe.Var()
+>>> from pyomo.contrib.fbbt.fbbt import fbbt
+>>> m.c = pe.Constraint(expr=m.x*m.y + m.z == 1)
+>>> fbbt(m)
+>>> print(m.z.lb, m.z.ub)
+-1.0 3.0
+
+"""
+
+
 class FBBTException(Exception):
     pass
 
@@ -517,6 +543,9 @@ _prop_bnds_root_to_leaf_map[_expr.UnaryFunctionExpression] = _prop_bnds_root_to_
 
 
 class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
+    """
+    This walker propagates bounds from the variables to each node in the expression tree (all the way to the root node).
+    """
     def __init__(self, bnds_dict):
         """
         Parameters
@@ -557,6 +586,10 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
 
 
 class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
+    """
+    This walker propagates bounds from the constraint back to the variables. Note that the bounds on every node
+    in the tree must first be computed with _FBBTVisitorLeafToRoot.
+    """
     def __init__(self, bnds_dict):
         """
         Parameters
@@ -593,17 +626,20 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
 
 def fbbt_con(con):
     """
-    Feasibility based bounds tightening
+    Feasibility based bounds tightening for a constraint.
 
     Parameters
     ----------
     con: pyomo.core.base.constraint.Constraint
         constraint on which to perform fbbt
     """
-    bnds_dict = ComponentMap()
+    bnds_dict = ComponentMap()  # a dictionary to store the bounds of every node in the tree
 
-    visitorA = _FBBTVisitorLeafToRoot(bnds_dict)
+    visitorA = _FBBTVisitorLeafToRoot(bnds_dict)  # a walker to propagate bounds from the variables to the root
     visitorA.dfs_postorder_stack(con.body)
+
+    # Now we need to replace the bounds in bnds_dict for the root node with the bounds on the constraint (if
+    # those bounds are better).
     _lb = value(con.lower)
     _ub = value(con.upper)
     if _lb is None:
@@ -616,12 +652,18 @@ def fbbt_con(con):
     if _ub < ub:
         ub = _ub
     bnds_dict[con.body] = (lb, ub)
+
+    # Now, propagate bounds back from the root to the variables
     visitorB = _FBBTVisitorRootToLeaf(bnds_dict)
     visitorB.dfs_postorder_stack(con.body)
 
 
 def fbbt_block(m, tol=1e-4):
     """
+    Feasibility based bounds tightening (FBBT) for a block. This loops through all of the constraints in the block and
+    performs FBBT on each constraint. Through this processes, any variables whose bounds improve by more than tol are
+    collected, and FBBT is performed again on all constraints involving those variables. This process is continues
+    until no variable bounds are improved by more than tol.
 
     Parameters
     ----------
@@ -675,6 +717,7 @@ def fbbt_block(m, tol=1e-4):
 
 def fbbt(comp):
     """
+    Perform FBBT on a constraint or a block. For more control, use fbbt_con and fbbt_block.
 
     Parameters
     ----------
