@@ -412,6 +412,9 @@ class CuttingPlane_Transformation(Transformation):
                                        (x_bigm - x_chull.value)
             projection_cutexpr_rBigM += 2*(x_star.value - x_chull.value)*\
                                         (x_rbigm - x_chull.value)
+
+        # I am going to expand the composite_cutexprs to be in the extended space
+        set_trace()
             # DEBUG:
             # print("%s\t%s" %
             #       (composite_normal[x_chull], x_star.value - x_chull.value))

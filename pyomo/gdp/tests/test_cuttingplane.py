@@ -39,7 +39,7 @@ def check_linear_coef(self, repn, var, coef):
 class OneVarDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cut_validity(self):
-        m = models.oneVarDisj()
+        m = models.oneVarDisj_2pts()
 
         TransformationFactory('gdp.cuttingplane').apply_to(m)
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
@@ -63,6 +63,15 @@ class OneVarDisj(unittest.TestCase):
             # if this isn't less than 0 it better BE 0
             if val > 0:
                 self.assertAlmostEqual(val, 0)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cuts_sawayaGrossmann(self):
+        m = models.oneVarDisj_SawayaGrossmann()
+
+        TransformationFactory('gdp.cuttingplane').apply_to(m)
+
+        # TODO: test something
+        
 
 class TwoTermDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")

@@ -3,7 +3,7 @@ from pyomo.core import (Block, ConcreteModel, Constraint, Objective, Param,
 from pyomo.gdp import Disjunct, Disjunction
 
 
-def oneVarDisj():
+def oneVarDisj_2pts():
     m = ConcreteModel()
     m.x = Var(bounds=(0, 10))
     m.disj1 = Disjunct()
@@ -12,6 +12,18 @@ def oneVarDisj():
     m.disj2.xFalse = Constraint(expr=m.x==0)
     m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
     m.obj = Objective(expr=m.x)
+    return m
+
+def oneVarDisj_SawayaGrossmann():
+    m = ConcreteModel()
+    m.x = Var(bounds=(0, 3))
+    m.disj1 = Disjunct()
+    m.disj1.c = Constraint(expr=inequality(0, m.x, 1))
+    m.disj2 = Disjunct()
+    m.disj2.c = Constraint(expr=inequality(2, m.x, 3))
+    m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
+    m.obj = Objective(expr=m.x)
+
     return m
 
 def makeTwoTermDisj():
