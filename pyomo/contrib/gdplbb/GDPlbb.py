@@ -83,6 +83,11 @@ class GDPlbbSolver(object):
                 indicator_vars.append(disjunct.indicator_var)
         setattr(model, indicator_list_name, indicator_vars)
 
+        #get objective sense
+        objectives = model.component_data_objects(Objective, active=True)
+        obj = next(objectives, None)
+        obj_sign = 1 if obj.sense == minimize else -1
+
         #clone original model for root node of branch and bound
         root = model.clone()
         #set up lists to keep track of which disjunctions have been covered.
@@ -112,7 +117,7 @@ class GDPlbbSolver(object):
 
         #initialize minheap for Branch and Bound algorithm
         heap = []
-        heapq.heappush(heap,(obj_value,root))
+        heapq.heappush(heap,(obj_sign * obj_value,root))
 
         while len(heap)>0:
             mdl = heapq.heappop(heap)[1]
@@ -141,7 +146,7 @@ class GDPlbbSolver(object):
                 obj_value = self.minlp_solve(mnew,solver)
                 #self.indicate(mnew)
                 print obj_value
-                heapq.heappush(heap,(obj_value,mnew))
+                heapq.heappush(heap,(obj_sign * obj_value,mnew))
 
 
 
@@ -175,7 +180,10 @@ class GDPlbbSolver(object):
                 obj = next(objectives, None)
                 return value(obj.expr)
         else:
-                return float('inf')
+                objectives = minlp.component_data_objects(Objective, active=True)
+                obj = next(objectives, None)
+                obj_sign = 1 if obj.sense == minimize else -1
+                return obj_sign*float('inf')
         delete(minlp)
     def __enter__(self):
         return self
