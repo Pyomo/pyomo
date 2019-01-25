@@ -142,10 +142,10 @@ def add_affine_cuts(nlp_result, solve_data, config):
         config.logger.info("Added %s affine cuts" % counter)
 
 
-def add_integer_cut(var_values, solve_data, config, feasible=False):
+def add_integer_cut(var_values, target_model, solve_data, config, feasible=False):
     """Add an integer cut to the linear GDP model."""
     with time_code(solve_data.timing, 'integer cut generation'):
-        m = solve_data.linear_GDP
+        m = target_model
         GDPopt = m.GDPopt_utils
         var_value_is_one = ComponentSet()
         var_value_is_zero = ComponentSet()
