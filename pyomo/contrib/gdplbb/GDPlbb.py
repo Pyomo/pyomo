@@ -100,13 +100,14 @@ class GDPlbbSolver(object):
 
         #deactivate all disjunctions in the model
         for djn in getattr(root,init_active_disjunctions_name):
+            for disj in djn.disjuncts:
+                disj.deactivate()
             djn.deactivate()
 
         #Satisfiability check would go here
 
         #solve the root node
         obj_value = self.minlp_solve(root,solver)
-        print obj_value
 
 
         #initialize minheap for Branch and Bound algorithm
@@ -115,20 +116,19 @@ class GDPlbbSolver(object):
 
         while len(heap)>0:
             mdl = heapq.heappop(heap)[1]
-            self.indicate(mdl)
             if(len(getattr(mdl,init_active_disjunctions_name)) ==  0):
                 orig_var_list = getattr(model, indicator_list_name)
                 best_soln_var_list = getattr(mdl, indicator_list_name)
                 for orig_var, new_var in zip(orig_var_list,best_soln_var_list):
                     if not orig_var.is_fixed():
                         orig_var.value = new_var.value
-                self.indicate(model)
                 TransformationFactory('gdp.fix_disjuncts').apply_to(model)
 
                 return solver.solve(model)
 
             disjunction = getattr(mdl,init_active_disjunctions_name).pop(0)
             for disj in list(disjunction.disjuncts):
+                disj.activate()
                 disj.indicator_var = 0
             disjunction.activate()
             getattr(mdl,curr_active_disjunctions_name).append(disjunction)
@@ -139,9 +139,8 @@ class GDPlbbSolver(object):
                 mnew = mdl.clone()
                 disj.indicator_var = 0
                 obj_value = self.minlp_solve(mnew,solver)
-                print obj_value
                 #self.indicate(mnew)
-
+                print obj_value
                 heapq.heappush(heap,(obj_value,mnew))
 
 
@@ -168,6 +167,7 @@ class GDPlbbSolver(object):
         for disjunct in minlp.component_data_objects(
             ctype = Disjunct, active=True):
             disjunct.deactivate() #TODO this is HACK
+
         result = solver.solve(minlp)
         if (result.solver.status is SolverStatus.ok and
                 result.solver.termination_condition is tc.optimal):
