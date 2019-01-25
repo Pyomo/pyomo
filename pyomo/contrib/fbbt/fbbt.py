@@ -2,6 +2,7 @@ from pyomo.core.kernel.component_map import ComponentMap
 import pyomo.core.expr.expr_pyomo5 as _expr
 from pyomo.core.expr.expr_pyomo5 import ExpressionValueVisitor, nonpyomo_leaf_types, value
 from pyomo.core.expr.current import exp, log, sin, cos, tan, asin, acos, atan
+from pyomo.core.expr.numvalue import is_fixed
 import pyomo.contrib.fbbt.interval as interval
 import math
 
@@ -135,90 +136,73 @@ def _prop_bnds_leaf_to_root_cos(node, bnds_dict):
     bnds_dict[node] = (-1, 1)
 
 
-def _prop_bnds_leaf_to_root_tan(node, lb_dict, ub_dict):
+def _prop_bnds_leaf_to_root_tan(node, bnds_dict):
     """
 
     Parameters
     ----------
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
-    lb_dict: ComponentMap
-    ub_dict: ComponentMap
+    bnds_dict: ComponentMap
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
-    der = ub_dict[node]
-    ub_dict[arg] += der / (cos(lb_dict[arg])**2)
+    bnds_dict[node] = (-math.inf, math.inf)
 
 
-def _prop_bnds_leaf_to_root_asin(node, lb_dict, ub_dict):
+def _prop_bnds_leaf_to_root_asin(node, bnds_dict):
     """
 
     Parameters
     ----------
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
-    lb_dict: ComponentMap
-    ub_dict: ComponentMap
+    bnds_dict: ComponentMap
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
-    der = ub_dict[node]
-    ub_dict[arg] += der / (1 - lb_dict[arg]**2)**0.5
+    bnds_dict[node] = (-math.inf, math.inf)
 
 
-def _prop_bnds_leaf_to_root_acos(node, lb_dict, ub_dict):
+def _prop_bnds_leaf_to_root_acos(node, bnds_dict):
     """
 
     Parameters
     ----------
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
-    lb_dict: ComponentMap
-    ub_dict: ComponentMap
+    bnds_dict: ComponentMap
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
-    der = ub_dict[node]
-    ub_dict[arg] -= der / (1 - lb_dict[arg]**2)**0.5
+    bnds_dict[node] = (-math.inf, math.inf)
 
 
-def _prop_bnds_leaf_to_root_atan(node, lb_dict, ub_dict):
+def _prop_bnds_leaf_to_root_atan(node, bnds_dict):
     """
 
     Parameters
     ----------
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
-    lb_dict: ComponentMap
-    ub_dict: ComponentMap
+    bnds_dict: ComponentMap
     """
-    assert len(node.args) == 1
-    arg = node.args[0]
-    der = ub_dict[node]
-    ub_dict[arg] += der / (1 + lb_dict[arg]**2)
+    bnds_dict[node] = (-math.inf, math.inf)
 
 
-_unary_map = dict()
-_unary_map['exp'] = _prop_bnds_leaf_to_root_exp
-_unary_map['log'] = _prop_bnds_leaf_to_root_log
-_unary_map['sin'] = _prop_bnds_leaf_to_root_sin
-_unary_map['cos'] = _prop_bnds_leaf_to_root_cos
-_unary_map['tan'] = _prop_bnds_leaf_to_root_tan
-_unary_map['asin'] = _prop_bnds_leaf_to_root_asin
-_unary_map['acos'] = _prop_bnds_leaf_to_root_acos
-_unary_map['atan'] = _prop_bnds_leaf_to_root_atan
+_unary_leaf_to_root_map = dict()
+_unary_leaf_to_root_map['exp'] = _prop_bnds_leaf_to_root_exp
+_unary_leaf_to_root_map['log'] = _prop_bnds_leaf_to_root_log
+_unary_leaf_to_root_map['sin'] = _prop_bnds_leaf_to_root_sin
+_unary_leaf_to_root_map['cos'] = _prop_bnds_leaf_to_root_cos
+_unary_leaf_to_root_map['tan'] = _prop_bnds_leaf_to_root_tan
+_unary_leaf_to_root_map['asin'] = _prop_bnds_leaf_to_root_asin
+_unary_leaf_to_root_map['acos'] = _prop_bnds_leaf_to_root_acos
+_unary_leaf_to_root_map['atan'] = _prop_bnds_leaf_to_root_atan
 
 
-def _prop_bnds_leaf_to_root_UnaryFunctionExpression(node, lb_dict, ub_dict):
+def _prop_bnds_leaf_to_root_UnaryFunctionExpression(node, bnds_dict):
     """
 
     Parameters
     ----------
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
-    lb_dict: ComponentMap
-    ub_dict: ComponentMap
+    bnds_dict: ComponentMap
     """
-    if node.getname() in _unary_map:
-        _unary_map[node.getname()](node, lb_dict, ub_dict)
+    if node.getname() in _unary_leaf_to_root_map:
+        _unary_leaf_to_root_map[node.getname()](node, bnds_dict)
     else:
-        raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(node)))
+        raise FBBTException('Unsupported expression type for FBBT: {0}'.format(type(node)))
 
 
 _prop_bnds_leaf_to_root_map = dict()
@@ -231,137 +215,353 @@ _prop_bnds_leaf_to_root_map[_expr.NegationExpression] = _prop_bnds_leaf_to_root_
 _prop_bnds_leaf_to_root_map[_expr.UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
 
 
-class _ReverseADVisitorA(ExpressionValueVisitor):
-    def __init__(self, lb_dict, ub_dict):
-        """
-        Parameters
-        ----------
-        lb_dict: ComponentMap
-        ub_dict: ComponentMap
-        """
-        self.lb_dict = lb_dict
-        self.ub_dict = ub_dict
-
-    def visit(self, node, values):
-        self.lb_dict[node] = node._apply_operation(values)
-        self.ub_dict[node] = 0
-        return self.lb_dict[node]
-
-    def visiting_potential_leaf(self, node):
-        if node.__class__ in nonpyomo_leaf_types:
-            self.lb_dict[node] = node
-            if node not in self.ub_dict:
-                self.ub_dict[node] = 0
-            return True, node
-
-        if not node.is_expression_type():
-            val = value(node)
-            self.lb_dict[node] = val
-            if node not in self.ub_dict:
-                self.ub_dict[node] = 0
-            return True, val
-
-        return False, None
-
-
-class _ReverseADVisitorB(ExpressionValueVisitor):
-    def __init__(self, lb_dict, ub_dict):
-        """
-        Parameters
-        ----------
-        lb_dict: ComponentMap
-        ub_dict: ComponentMap
-        """
-        self.lb_dict = lb_dict
-        self.ub_dict = ub_dict
-
-    def visit(self, node, values):
-        pass
-
-    def visiting_potential_leaf(self, node):
-        if node.__class__ in nonpyomo_leaf_types:
-            return True, None
-
-        if not node.is_expression_type():
-            return True, None
-
-        if node.__class__ in _prop_bnds_leaf_to_root_map:
-            _prop_bnds_leaf_to_root_map[node.__class__](node, self.lb_dict, self.ub_dict)
-        else:
-            raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(node)))
-
-        return False, None
-
-
-def reverse_ad(expr):
+def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict):
     """
-    First order reverse ad
 
     Parameters
     ----------
-    expr: pyomo.core.expr.expr_pyomo5.ExpressionBase
-        expression to differentiate
-
-    Returns
-    -------
-    pyomo.core.kernel.component_map.ComponentMap
-        component_map mapping variables to derivatives with respect to the corresponding variable
+    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    bnds_dict: ComponentMap
     """
-    lb_dict = ComponentMap()
-    ub_dict = ComponentMap()
+    assert len(node.args) == 2
+    arg1, arg2 = node.args
+    lb0, ub0 = bnds_dict[node]
+    lb1, ub1 = bnds_dict[arg1]
+    lb2, ub2 = bnds_dict[arg2]
+    _lb1, _ub1 = interval.div(lb0, ub0, lb2, ub2)
+    _lb2, _ub2 = interval.div(lb0, ub0, lb1, ub1)
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    if _lb2 > lb2:
+        lb2 = _lb2
+    if _ub2 < ub2:
+        ub2 = _ub2
+    bnds_dict[arg1] = (lb1, ub1)
+    bnds_dict[arg2] = (lb2, ub2)
 
-    visitorA = _ReverseADVisitorA(lb_dict, ub_dict)
-    visitorA.dfs_postorder_stack(expr)
-    ub_dict[expr] = 1
-    visitorB = _ReverseADVisitorB(lb_dict, ub_dict)
-    visitorB.dfs_postorder_stack(expr)
 
-    return ub_dict
+def _prop_bnds_root_to_leaf_SumExpression(node, bnds_dict):
+    """
+    This implementation is not efficient!!!
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    bnds_dict: ComponentMap
+    """
+    # first accumulate bounds
+    accumulated_bounds = list()
+    accumulated_bounds.append(bnds_dict[node.arg(0)])
+    lb0, ub0 = bnds_dict[node]
+    for i in range(1, node.nargs()):
+        accumulated_bounds.append(interval.add(*(accumulated_bounds[i-1]), *(bnds_dict[node.arg(i)])))
+    if lb0 > accumulated_bounds[node.nargs() - 1][0]:
+        accumulated_bounds[node.nargs() - 1] = (lb0, accumulated_bounds[node.nargs()-1][1])
+    if ub0 < accumulated_bounds[node.nargs() - 1][1]:
+        accumulated_bounds[node.nargs() - 1] = (accumulated_bounds[node.nargs()-1][0], ub0)
+
+    for i in reversed(range(1, node.nargs())):
+        lb0, ub0 = accumulated_bounds[i]
+        lb1, ub1 = accumulated_bounds[i-1]
+        lb2, ub2 = bnds_dict[node.arg(i)]
+        _lb1, _ub1 = interval.sub(lb0, ub0, lb2, ub2)
+        _lb2, _ub2 = interval.sub(lb0, ub0, lb1, ub1)
+        if _lb1 > lb1:
+            lb1 = _lb1
+        if _ub1 < ub1:
+            ub1 = _ub1
+        if _lb2 > lb2:
+            lb2 = _lb2
+        if _ub2 < ub2:
+            ub2 = _ub2
+        accumulated_bounds[i-1] = (lb1, ub1)
+        bnds_dict[node.arg(i)] = (lb2, ub2)
+    lb, ub = bnds_dict[node.arg(0)]
+    _lb, _ub = accumulated_bounds[0]
+    if _lb > lb:
+        lb = _lb
+    if _ub < ub:
+        ub = _ub
+    bnds_dict[node.arg(0)] = (lb, ub)
 
 
-class _ReverseSDVisitorA(ExpressionValueVisitor):
-    def __init__(self, lb_dict, ub_dict):
+def _prop_bnds_root_to_leaf_PowExpression(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    bnds_dict: ComponentMap
+    """
+    assert len(node.args) == 2
+    arg1, arg2 = node.args
+    lb0, ub0 = bnds_dict[node]
+    lb1, ub1 = bnds_dict[arg1]
+    lb2, ub2 = bnds_dict[arg2]
+    _lb1a, _ub1a = interval.exp(*interval.div(*interval.log(lb0, ub0), lb2, ub2))
+    _lb1b, _ub1b = interval.sub(0, 0, _lb1a, _ub1a)
+    _lb1 = min(_lb1a, _lb1b)
+    _ub1 = max(_ub1a, _ub1b)
+    _lb2, _ub2 = interval.div(*interval.log(lb0, ub0), *interval.log(lb1, ub1))
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    if _lb2 > lb2:
+        lb2 = _lb2
+    if _ub2 < ub2:
+        ub2 = _ub2
+    bnds_dict[arg1] = (lb1, ub1)
+    bnds_dict[arg2] = (lb2, ub2)
+
+
+def _prop_bnds_root_to_leaf_ReciprocalExpression(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    bnds_dict: ComponentMap
+    """
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb0, ub0 = bnds_dict[node]
+    lb1, ub1 = bnds_dict[arg]
+    _lb1, _ub1 = interval.inv(lb0, ub0)
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    bnds_dict[arg] = (lb1, ub1)
+
+
+def _prop_bnds_root_to_leaf_NegationExpression(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    bnds_dict: ComponentMap
+    """
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb0, ub0 = bnds_dict[node]
+    lb1, ub1 = bnds_dict[arg]
+    _lb1, _ub1 = interval.sub(0, 0, lb0, ub0)
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    bnds_dict[arg] = (lb1, ub1)
+
+
+def _prop_bnds_root_to_leaf_exp(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    bnds_dict: ComponentMap
+    """
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb0, ub0 = bnds_dict[node]
+    lb1, ub1 = bnds_dict[arg]
+    _lb1, _ub1 = interval.log(lb0, ub0)
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    bnds_dict[arg] = (lb1, ub1)
+
+
+def _prop_bnds_root_to_leaf_log(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    bnds_dict: ComponentMap
+    """
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb0, ub0 = bnds_dict[node]
+    lb1, ub1 = bnds_dict[arg]
+    _lb1, _ub1 = interval.exp(lb0, ub0)
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    bnds_dict[arg] = (lb1, ub1)
+
+
+def _prop_bnds_root_to_leaf_sin(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    bnds_dict: ComponentMap
+    """
+    pass
+
+
+def _prop_bnds_root_to_leaf_cos(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    bnds_dict: ComponentMap
+    """
+    pass
+
+
+def _prop_bnds_root_to_leaf_tan(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    bnds_dict: ComponentMap
+    """
+    pass
+
+
+def _prop_bnds_root_to_leaf_asin(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    bnds_dict: ComponentMap
+    """
+    assert len(node.args) == 1
+    arg = node.arg(0)
+    lb1, ub1 = bnds_dict[arg]
+    _lb1, _ub1 = (-1, 1)
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    bnds_dict[arg] = (lb1, ub1)
+
+
+def _prop_bnds_root_to_leaf_acos(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    bnds_dict: ComponentMap
+    """
+    assert len(node.args) == 1
+    arg = node.arg(0)
+    lb1, ub1 = bnds_dict[arg]
+    _lb1, _ub1 = (-1, 1)
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    bnds_dict[arg] = (lb1, ub1)
+
+
+def _prop_bnds_root_to_leaf_atan(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    bnds_dict: ComponentMap
+    """
+    pass
+
+
+_unary_root_to_leaf_map = dict()
+_unary_root_to_leaf_map['exp'] = _prop_bnds_root_to_leaf_exp
+_unary_root_to_leaf_map['log'] = _prop_bnds_root_to_leaf_log
+_unary_root_to_leaf_map['sin'] = _prop_bnds_root_to_leaf_sin
+_unary_root_to_leaf_map['cos'] = _prop_bnds_root_to_leaf_cos
+_unary_root_to_leaf_map['tan'] = _prop_bnds_root_to_leaf_tan
+_unary_root_to_leaf_map['asin'] = _prop_bnds_root_to_leaf_asin
+_unary_root_to_leaf_map['acos'] = _prop_bnds_root_to_leaf_acos
+_unary_root_to_leaf_map['atan'] = _prop_bnds_root_to_leaf_atan
+
+
+def _prop_bnds_root_to_leaf_UnaryFunctionExpression(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    bnds_dict: ComponentMap
+    """
+    if node.getname() in _unary_root_to_leaf_map:
+        _unary_root_to_leaf_map[node.getname()](node, bnds_dict)
+    else:
+        raise FBBTException('Unsupported expression type for FBBT: {0}'.format(type(node)))
+
+
+_prop_bnds_root_to_leaf_map = dict()
+_prop_bnds_root_to_leaf_map[_expr.ProductExpression] = _prop_bnds_root_to_leaf_ProductExpression
+_prop_bnds_root_to_leaf_map[_expr.ReciprocalExpression] = _prop_bnds_root_to_leaf_ReciprocalExpression
+_prop_bnds_root_to_leaf_map[_expr.PowExpression] = _prop_bnds_root_to_leaf_PowExpression
+_prop_bnds_root_to_leaf_map[_expr.SumExpression] = _prop_bnds_root_to_leaf_SumExpression
+_prop_bnds_root_to_leaf_map[_expr.MonomialTermExpression] = _prop_bnds_root_to_leaf_ProductExpression
+_prop_bnds_root_to_leaf_map[_expr.NegationExpression] = _prop_bnds_root_to_leaf_NegationExpression
+_prop_bnds_root_to_leaf_map[_expr.UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
+
+
+class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
+    def __init__(self, bnds_dict):
         """
         Parameters
         ----------
-        lb_dict: ComponentMap
-        ub_dict: ComponentMap
+        bnds_dict: ComponentMap
         """
-        self.lb_dict = lb_dict
-        self.ub_dict = ub_dict
+        self.bnds_dict = bnds_dict
 
     def visit(self, node, values):
-        self.lb_dict[node] = node.create_node_with_local_data(values)
-        self.ub_dict[node] = 0
-        return self.lb_dict[node]
+        if node.__class__ in _prop_bnds_leaf_to_root_map:
+            _prop_bnds_leaf_to_root_map[node.__class__](node, self.bnds_dict)
+        else:
+            FBBTException('Unsupported expression type for FBBT: {0}'.format(type(node)))
+        return None
 
     def visiting_potential_leaf(self, node):
         if node.__class__ in nonpyomo_leaf_types:
-            self.lb_dict[node] = node
-            if node not in self.ub_dict:
-                self.ub_dict[node] = 0
-            return True, node
+            self.bnds_dict[node] = (node, node)
+            return True, None
+
+        if node.is_variable_type():
+            lb = node.lb
+            ub = node.ub
+            if lb is None:
+                lb = -math.inf
+            if ub is None:
+                ub = math.inf
+            self.bnds_dict[node] = (lb, ub)
+            return True, None
 
         if not node.is_expression_type():
-            val = node
-            self.lb_dict[node] = val
-            if node not in self.ub_dict:
-                self.ub_dict[node] = 0
-            return True, val
+            assert is_fixed(node)
+            val = value(node)
+            self.bnds_dict[node] = (val, val)
+            return True, None
 
         return False, None
 
 
-class _ReverseSDVisitorB(ExpressionValueVisitor):
-    def __init__(self, lb_dict, ub_dict):
+class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
+    def __init__(self, bnds_dict):
         """
         Parameters
         ----------
-        lb_dict: ComponentMap
-        ub_dict: ComponentMap
+        bnds_dict: ComponentMap
         """
-        self.lb_dict = lb_dict
-        self.ub_dict = ub_dict
+        self.bnds_dict = bnds_dict
 
     def visit(self, node, values):
         pass
@@ -370,40 +570,49 @@ class _ReverseSDVisitorB(ExpressionValueVisitor):
         if node.__class__ in nonpyomo_leaf_types:
             return True, None
 
+        if node.is_variable_type():
+            lb, ub = self.bnds_dict[node]
+            if lb != -math.inf:
+                node.lb = lb
+            if ub != math.inf:
+                node.ub = ub
+            return True, None
+
         if not node.is_expression_type():
             return True, None
 
-        if node.__class__ in _prop_bnds_leaf_to_root_map:
-            _prop_bnds_leaf_to_root_map[node.__class__](node, self.lb_dict, self.ub_dict)
+        if node.__class__ in _prop_bnds_root_to_leaf_map:
+            _prop_bnds_root_to_leaf_map[node.__class__](node, self.bnds_dict)
         else:
             raise FBBTException('Unsupported expression type for FBBT: {0}'.format(type(node)))
 
         return False, None
 
 
-def reverse_sd(expr):
+def fbbt(con):
     """
-    First order reverse ad
+    Feasibility based bounds tightening
 
     Parameters
     ----------
-    expr: pyomo.core.expr.expr_pyomo5.ExpressionBase
-        expression to differentiate
-
-    Returns
-    -------
-    pyomo.core.kernel.component_map.ComponentMap
-        component_map mapping variables to derivatives with respect to the corresponding variable
+    con: pyomo.core.base.constraint.Constraint
+        constraint on which to perform fbbt
     """
-    lb_dict = ComponentMap()
-    ub_dict = ComponentMap()
+    bnds_dict = ComponentMap()
 
-    visitorA = _ReverseSDVisitorA(lb_dict, ub_dict)
-    visitorA.dfs_postorder_stack(expr)
-    ub_dict[expr] = 1
-    visitorB = _ReverseSDVisitorB(lb_dict, ub_dict)
-    visitorB.dfs_postorder_stack(expr)
-
-    return ub_dict
-
-
+    visitorA = _FBBTVisitorLeafToRoot(bnds_dict)
+    visitorA.dfs_postorder_stack(con.body)
+    _lb = con.lower
+    _ub = con.upper
+    if _lb is None:
+        _lb = -math.inf
+    if _ub is None
+        _ub = math.inf
+    lb, ub = bnds_dict[con.body]
+    if _lb > lb:
+        lb = _lb
+    if _ub < ub:
+        ub = _ub
+    bnds_dict[con.body] = (lb, ub)
+    visitorB = _FBBTVisitorRootToLeaf(bnds_dict)
+    visitorB.dfs_postorder_stack(con.body)
