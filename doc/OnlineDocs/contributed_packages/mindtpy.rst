@@ -7,16 +7,18 @@ These decomposition algorithms usually rely on the solution of Mixed-Intger Line
 (MILP) and Nonlinear Programs (NLP).
 
 MindtPy currently implements the Outer Approximation (OA) algorithm originally described in
-Duran & Grossmann (`ref <https://dx.doi.org/10.1007/BF02592064>`_). Usage and implementation
+`Duran & Grossmann`_. Usage and implementation
 details for MindtPy can be found in the PSE 2018 paper Bernal et al.,
 (`ref <https://doi.org/10.1016/B978-0-444-64241-7.50144-0>`_,
 `preprint <http://egon.cheme.cmu.edu/Papers/Bernal_Chen_MindtPy_PSE2018Paper.pdf>`_).
+
+.. _Duran & Grossmann: https://dx.doi.org/10.1007/BF02592064
 
 Usage of MindtPy to solve a Pyomo concrete model involves:
 
 .. code::
 
-  >>> SolverFactory('gdpopt').solve(model)
+  >>> SolverFactory('mindtpy').solve(model)
 
 An example which includes the modeling approach may be found below.
 
@@ -57,7 +59,7 @@ The solution may then be displayed by using the commands
   >>> SolverFactory('mindtpy').solve(model, mip_solver='glpk', nlp_solver='ipopt', tee=True)
 
 MindtPy implementation and optional arguments
---------------------------------------------
+---------------------------------------------
 
 .. warning::
 
