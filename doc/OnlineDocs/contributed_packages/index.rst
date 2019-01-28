@@ -19,6 +19,7 @@ Contributed packages distributed with Pyomo:
    gdpopt.rst
    multistart.rst
    parmest/index.rst
+   mindtpy.rst
 
 Contributed packages distributed independently of Pyomo, but accessible
 through ``pyomo.contrib``:
