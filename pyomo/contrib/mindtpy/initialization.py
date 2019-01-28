@@ -1,16 +1,14 @@
 """Initialization functions."""
 from __future__ import division
 
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
-from pyomo.contrib.mindtpy.cut_generation import (add_ecp_cut, add_gbd_cut,
-                                                  add_oa_cut,
-                                                  add_objective_linearization,
-                                                  add_psc_cut)
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values
+from pyomo.contrib.mindtpy.cut_generation import (
+    add_oa_cut, add_objective_linearization,
+)
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
-from pyomo.contrib.mindtpy.util import (calc_jacobians,
-                                        detect_nonlinear_vars)
-from pyomo.core import (ConstraintList, Objective, Suffix,
-                        TransformationFactory, maximize, minimize, value)
+from pyomo.contrib.mindtpy.util import (calc_jacobians)
+from pyomo.core import (ConstraintList, Objective,
+                        TransformationFactory, maximize, minimize, value, Var)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 
@@ -52,10 +50,10 @@ def MindtPy_initialize_master(solve_data, config):
         init_rNLP(solve_data, config)
     elif config.init_strategy == 'max_binary':
         init_max_binaries(solve_data, config)
-        if config.strategy == 'ECP':
-            add_ecp_cut(solve_data, config)
-        else:
-            solve_NLP_subproblem(solve_data, config)
+        # if config.strategy == 'ECP':
+        #     add_ecp_cut(solve_data, config)
+        # else:
+        solve_NLP_subproblem(solve_data, config)
 
 
 def init_rNLP(solve_data, config):
@@ -85,13 +83,6 @@ def init_rNLP(solve_data, config):
                solve_data.LB, solve_data.UB))
         if config.strategy == 'OA':
             add_oa_cut(nlp_solution_values, dual_values, solve_data, config)
-        elif config.strategy == 'PSC':
-            add_psc_cut(solve_data, config)
-        elif config.strategy == 'GBD':
-            add_gbd_cut(solve_data, config)
-        elif config.strategy == 'ECP':
-            add_ecp_cut(solve_data, config)
-            add_objective_linearization(m, solve_data, config)
     elif subprob_terminate_cond is tc.infeasible:
         # TODO fail? try something else?
         config.logger.info(
@@ -111,33 +102,34 @@ def init_max_binaries(solve_data, config):
     invocation of this function.
 
     """
-    m = solve_data.working_model
+    m = solve_data.working_model.clone()
     MindtPy = m.MindtPy_utils
     solve_data.mip_subiter += 1
     config.logger.info(
         "MILP %s: maximize value of binaries" %
         (solve_data.mip_iter))
-    for c in MindtPy.working_nonlinear_constraints:
-        c.deactivate()
-    MindtPy.obj.deactivate()
+    for c in MindtPy.constraint_list:
+        if c.body.polynomial_degree() not in (1, 0):
+            c.deactivate()
+    objective = next(m.component_data_objects(Objective, active=True))
+    objective.deactivate()
+    binary_vars = (
+        v for v in m.component_data_objects(ctype=Var)
+        if v.is_binary() and not v.fixed)
     MindtPy.MindtPy_max_binary_obj = Objective(
-        expr=sum(v for v in MindtPy.binary_vars), sense=maximize)
+        expr=sum(v for v in binary_vars), sense=maximize)
 
     getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
-    results = solve_data.mip_solver.solve(m, options=config.mip_solver_args)
+    results = SolverFactory(config.mip_solver).solve(m, options=config.mip_solver_args)
 
-    getattr(m, 'ipopt_zL_out', _DoNothing()).activate()
-    getattr(m, 'ipopt_zU_out', _DoNothing()).activate()
-
-    MindtPy.MindtPy_max_binary_obj.deactivate()
-
-    MindtPy.obj.activate()
-    for c in MindtPy.working_nonlinear_constraints:
-        c.activate()
     solve_terminate_cond = results.solver.termination_condition
     if solve_terminate_cond is tc.optimal:
+        copy_var_list_values(
+            MindtPy.variable_list,
+            solve_data.working_model.MindtPy_utils.variable_list,
+            config)
         pass  # good
     elif solve_terminate_cond is tc.infeasible:
         raise ValueError(

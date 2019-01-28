@@ -1,8 +1,8 @@
 """Solution of NLP subproblems."""
 from __future__ import division
 
-from pyomo.contrib.mindtpy.cut_generation import (add_gbd_cut, add_oa_cut,
-                                                  add_psc_cut, add_int_cut)
+from pyomo.contrib.mindtpy.cut_generation import (add_oa_cut,
+                                                  add_int_cut)
 from pyomo.contrib.mindtpy.util import add_feas_slacks
 from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
@@ -110,13 +110,7 @@ def solve_NLP_subproblem(solve_data, config):
                 elif var.lb is not None and abs(value(var) - var.lb) < config.bound_tolerance:
                     m.ipopt_zU_out[var] = -1
         # m.pprint() #print infeasible nlp problem for debugging
-        if config.strategy == 'PSC':
-            config.logger.info('Adding PSC feasibility cut.')
-            add_psc_cut(m, solve_data, config, nlp_feasible=False)
-        elif config.strategy == 'GBD':
-            config.logger.info('Adding GBD feasibility cut.')
-            add_gbd_cut(m, solve_data, config, nlp_feasible=False)
-        elif config.strategy == 'OA':
+        if config.strategy == 'OA':
             config.logger.info('Solving feasibility problem')
             if config.initial_feas:
                 # add_feas_slacks(m, solve_data)

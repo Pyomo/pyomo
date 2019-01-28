@@ -72,35 +72,6 @@ def model_is_valid(solve_data, config):
     return True
 
 
-def detect_nonlinear_vars(solve_data, config):
-    """Identify the variables that participate in nonlinear terms."""
-    m = solve_data.working_model
-    MindtPy = m.MindtPy_utils
-    nonlinear_var_set = ComponentSet()
-
-    for constr in MindtPy.nonlinear_constraints:
-        if isinstance(constr.body, EXPR.SumExpression):
-            # go through each term and check to see if the term is
-            # nonlinear
-            for expr in constr.body.args:
-                if expr.__class__ in native_numeric_types:
-                    continue
-                # Check to see if the expression is nonlinear
-                if expr.polynomial_degree() not in (0, 1):
-                    # collect variables
-                    nonlinear_var_set.update(
-                        EXPR.identify_variables(expr, include_fixed=False))
-        # if the root expression object is not a summation, then something
-        # else is the cause of the nonlinearity. Collect all participating
-        # variables.
-        else:
-            # collect variables
-            nonlinear_var_set.update(
-                EXPR.identify_variables(constr.body, include_fixed=False))
-
-    MindtPy.nonlinear_variables = list(nonlinear_var_set)
-
-
 def calc_jacobians(solve_data, config):
     """Generate a map of jacobians."""
     # Map nonlinear_constraint --> Map(
