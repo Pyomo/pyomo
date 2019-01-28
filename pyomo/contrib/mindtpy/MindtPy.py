@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Implementation of the MindtPy solver.
 
-The MindtPy (MINLP Decomposition Tookit) solver applies a variety of
+The MindtPy (MINLP Decomposition Toolkit) solver applies a variety of
 decomposition-based approaches to solve nonlinear continuous-discrete problems.
 These approaches include:
 
@@ -102,7 +102,7 @@ class MindtPySolver(object):
         domain=PositiveFloat,
         description="Outer Approximation slack penalty factor",
         doc="In the objective function of the Outer Approximation method, the "
-            "slack variables correcponding to all the constraints get "
+            "slack variables corresponding to all the constraints get "
             "multiplied by this number and added to the objective"
     ))
     CONFIG.declare("ECP_tolerance", ConfigValue(
@@ -111,7 +111,7 @@ class MindtPySolver(object):
         description="ECP tolerance",
         doc="Feasibility tolerance used to determine the stopping criterion in"
             "the ECP method. As long as nonlinear constraint are violated for "
-            "more than this tolerance, the mothod will keep iterating"
+            "more than this tolerance, the method will keep iterating"
     ))
     CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
@@ -172,7 +172,7 @@ class MindtPySolver(object):
         default=1E-8,
         description="When generating cuts, small duals multiplied "
         "by expressions can cause problems. Exclude all duals "
-        "smaller in absolue value than the following."
+        "smaller in absolute value than the following."
     ))
     CONFIG.declare("integer_tolerance", ConfigValue(
         default=1E-5,

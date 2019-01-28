@@ -2,7 +2,6 @@
 from __future__ import division
 
 from pyomo.contrib.gdpopt.util import copy_var_list_values
-from pyomo.contrib.mindtpy.initialization import init_max_binaries
 from pyomo.core import Constraint, Expression, Objective, minimize, value
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory

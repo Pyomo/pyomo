@@ -1,29 +1,18 @@
 MindtPy solver
 ==============
 
+The Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo (MindtPy) solver
+allows users to solve Mixed-Integer Nonlinear Programs (MINLP) using decomposition algorithms.
+These decomposition algorithms usually rely on the solution of Mixed-Intger Linear Programs
+(MILP) and Nonlinear Programs (NLP).
 
-Write stuff here and it will appear!
+MindtPy currently implements the Outer Approximation (OA) algorithm originally described in
+Duran & Grossmann (`ref <https://dx.doi.org/10.1007/BF02592064>`_). Usage and implementation
+details for MindtPy can be found in the PSE 2018 paper Bernal et al.,
+(`ref <https://doi.org/10.1016/B978-0-444-64241-7.50144-0>`_,
+`preprint <http://egon.cheme.cmu.edu/Papers/Bernal_Chen_MindtPy_PSE2018Paper.pdf>`_).
 
---- placeholders below ---
-
-The GDPopt solver in Pyomo allows users to solve nonlinear Generalized
-Disjunctive Programming (GDP) models using logic-based decomposition
-approaches, as opposed to the conventional approach via reformulation to a
-Mixed Integer Nonlinear Programming (MINLP) model.
-
-GDPopt currently implements an updated version of the logic-based outer
-approximation (LOA) algorithm originally described in Turkay & Grossmann, 1996
-(`ref <https://dx.doi.org/10.1016/0098-1354(95)00219-7>`_). Usage and
-implementation details for GDPopt can be found in the PSE 2018 paper Chen et
-al., 2018 (`ref <https://doi.org/10.1016/B978-0-444-64241-7.50143-9>`_,
-`preprint <http://egon.cheme.cmu.edu/Papers/Chen_Pyomo_GDP_PSE2018.pdf>`_)
-
-The paper contains the following flowchart, taken from the preprint version:
-
-.. image:: gdpopt_flowchart.png
-    :scale: 70%
-
-Usage of GDPopt to solve a Pyomo.GDP concrete model involves:
+Usage of MindtPy to solve a Pyomo concrete model involves:
 
 .. code::
 
@@ -35,25 +24,20 @@ An example which includes the modeling approach may be found below.
 
   Required imports
   >>> from pyomo.environ import *
-  >>> from pyomo.gdp import *
 
   Create a simple model
   >>> model = ConcreteModel()
 
-  >>> model.x = Var(bounds=(-1.2, 2))
-  >>> model.y = Var(bounds=(-10,10))
+  >>> model.x = Var(bounds=(1.0,10.0),initialize=5.0)
+  >>> model.y = Var(within=Binary)
 
-  >>> model.fix_x = Disjunct()
-  >>> model.fix_x.c = Constraint(expr=model.x == 0)
+  >>> model.c1 = Constraint(expr=(model.x-3.0)**2 <= 50.0*(1-model.y))
+  >>> model.c2 = Constraint(expr=model.x*log(model.x)+5.0 <= 50.0*(model.y))
 
-  >>> model.fix_y = Disjunct()
-  >>> model.fix_y.c = Constraint(expr=model.y == 0)
-
-  >>> model.c = Disjunction(expr=[model.fix_x, model.fix_y])
   >>> model.objective = Objective(expr=model.x, sense=minimize)
 
-  Solve the model using GDPopt
-  >>> SolverFactory('gdpopt').solve(model, mip_solver='glpk') # doctest: +SKIP
+  Solve the model using MindtPy
+  >>> SolverFactory('mindtpy').solve(model, mip_solver='glpk', nlp_solver='ipopt') # doctest: +SKIP
 
 The solution may then be displayed by using the commands
 
@@ -70,15 +54,15 @@ The solution may then be displayed by using the commands
 
 .. code::
 
-  >>> SolverFactory('gdpopt').solve(model, tee=True)
+  >>> SolverFactory('mindtpy').solve(model, mip_solver='glpk', nlp_solver='ipopt', tee=True)
 
-GDPopt implementation and optional arguments
+MindtPy implementation and optional arguments
 --------------------------------------------
 
 .. warning::
 
-   GDPopt optional arguments should be considered beta code and are
+   MindtPy optional arguments should be considered beta code and are
    subject to change.
 
-.. autoclass:: pyomo.contrib.gdpopt.GDPopt.GDPoptSolver
+.. autoclass:: pyomo.contrib.mindtpy.MindtPy.MindtPySolver
     :members:
