@@ -144,7 +144,7 @@ def add_affine_cuts(nlp_result, solve_data, config):
 
 
 def add_integer_cut(var_values, target_model, solve_data, config, feasible=False):
-    """Add an integer cut to the linear GDP model."""
+    """Add an integer cut to the target GDP model."""
     with time_code(solve_data.timing, 'integer cut generation'):
         m = target_model
         GDPopt = m.GDPopt_utils
