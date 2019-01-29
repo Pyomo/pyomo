@@ -265,6 +265,39 @@ Note that ``instance.x.fix(2)`` is equivalent to
 
 and ``instance.x.fix()`` is equivalent to ``instance.x.fixed = True``
 
+Extending the Objective Function
+--------------------------------
+
+One can add terms to an objective function of a ``ConcreteModel`` (or
+and instantiated ``AbstractModel``) using the ``expr`` attribute
+of the objective function object. Here is a simple example:
+
+.. doctest::
+
+   >>> import pyomo.environ as pyo
+   >>> from pyomo.opt import SolverFactory
+
+   >>> model = pyo.ConcreteModel()
+
+   >>> model.x = pyo.Var(within=pyo.PositiveReals)
+   >>> model.y = pyo.Var(within=pyo.PositiveReals)
+
+   >>> model.sillybound = pyo.Constraint(expr = model.x + model.y <= 2)
+
+   >>> model.obj = pyo.Objective(expr = 20 * model.x)
+
+   >>> opt = SolverFactory('glpk') # doctest: +SKIP
+   >>> opt.solve(model) # doctest: +SKIP
+
+   >>> model.pprint() # doctest: +SKIP
+
+   >>> print ("------------- extend obj --------------") # doctest: +SKIP
+   >>> model.obj.expr += 10 * model.y
+
+   >>> opt = SolverFactory('cplex') # doctest: +SKIP
+   >>> opt.solve(model) # doctest: +SKIP
+   >>> model.pprint() # doctest: +SKIP
+
 Activating and Deactivating Objectives
 --------------------------------------
 

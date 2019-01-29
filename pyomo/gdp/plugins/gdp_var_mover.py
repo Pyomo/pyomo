@@ -16,9 +16,11 @@ detect variables inside of Disjuncts or deactivated Blocks.
 
 import logging
 import textwrap
+from pyomo.common.plugin import alias
 from pyomo.core.base import Transformation, Block, Constraint
-from pyomo.gdp import Disjunct, GDP_Error
+from pyomo.gdp import Disjunct, GDP_Error, Disjunction
 from pyomo.core import TraversalStrategy, TransformationFactory
+from pyomo.core.base.indexed_component import ActiveIndexedComponent
 from pyomo.common.deprecation import deprecated
 
 from six import itervalues
@@ -70,7 +72,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
         for disjunct_component in disjunct_generator:
             # Check that the disjuncts being reclassified are all relaxed or
             # are not on an active block.
-            for disjunct in itervalues(disjunct_component._data):
+            for disjunct in itervalues(disjunct_component):
                 if (disjunct.active and
                         self._disjunct_not_relaxed(disjunct) and
                         self._disjunct_on_active_block(disjunct) and
@@ -84,7 +86,9 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
             # Reclassify this disjunct as a block
             disjunct_component.parent_block().reclassify_component_type(
                 disjunct_component, Block)
-            disjunct_component._activate_without_unfixing_indicator()
+            # HACK: activate teh block, but do not activate the
+            # _BlockData objects
+            super(ActiveIndexedComponent, disjunct_component).activate()
 
             # Deactivate all constraints.  Note that we only need to
             # descend into blocks: we will catch disjuncts in the outer
@@ -95,6 +99,11 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
             # return anything when active=True and the block is
             # deactivated.
             for disjunct in itervalues(disjunct_component._data):
+                if self._disjunct_not_relaxed(disjunct):
+                    disjunct.deactivate()
+                else:
+                    disjunct._activate_without_unfixing_indicator()
+
                 cons_in_disjunct = disjunct.component_objects(
                     Constraint, descend_into=Block, active=True)
                 for con in cons_in_disjunct:
