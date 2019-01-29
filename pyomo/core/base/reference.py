@@ -47,6 +47,20 @@ class _fill_in_known_wildcards(object):
     ----------
     wildcard_values : tuple of index values
         a tuple containing index values to substitute into the slice wildcards
+
+    look_in_index : :py:class:`bool` [optional]
+        If True, the iterator will also look for matches using the
+        components' underlying index_set() in addition to the (sparse)
+        indices matched by the components' __cnotains__()
+        method. [default: False]
+
+    get_if_not_present : :py:class:`bool` [optional]
+        If True, the iterator will attempt to retrieve data objects
+        (through getitem) for indixes that match the underlying
+        component index_set() but do not appear in the (sparse) incices
+        matched by __contains__.  get_if_not_present implies
+        look_in_index.  [default: False]
+
     """
     def __init__(self, wildcard_values,
                  look_in_index=False,
@@ -126,6 +140,19 @@ class SliceEllipsisLookupError(Exception):
     pass
 
 class _ReferenceDict(collections_MutableMapping):
+    """A dict-like object whose values are defined by a slice.
+
+    This implements a dict-like object whose keys and values are defined
+    by a component slice (:py:class:`_IndexedComponent_slice`).  The
+    intent behind this object is to replace the normal ``_data``
+    :py:class:`dict` in :py:class:`IndexedComponent` containers to
+    create "reference" components.
+
+    Parameters
+    ----------
+    component_slice : :py:class:`_IndexedComponent_slice`
+        The slice object that defines the "members" of this mutable mapping.
+    """
     def __init__(self, component_slice):
         self._slice = component_slice
 
@@ -270,6 +297,21 @@ if six.PY3:
     _ReferenceDict.values = _ReferenceDict.itervalues
 
 class _ReferenceSet(collections_Set):
+    """A set-like object whose values are defined by a slice.
+
+    This implements a dict-like object whose members are defined by a
+    component slice (:py:class:`_IndexedComponent_slice`).
+    :py:class:`_ReferenceSet` differs from the
+    :py:class:`_ReferenceDict` above in that it looks in the underlying
+    component ``index_set()`` for values that match the slice, and not
+    just the (sparse) indices defined by the slice.
+
+    Parameters
+    ----------
+    component_slice : :py:class:`_IndexedComponent_slice`
+        The slice object that defines the "members" of this set
+
+    """
     def __init__(self, component_slice):
         self._slice = component_slice
 
