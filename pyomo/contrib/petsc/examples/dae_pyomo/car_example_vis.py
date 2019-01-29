@@ -26,7 +26,12 @@ if __name__ == '__main__':
     if pbt is None:
         exit()
     (t,v,names) = pbt.ReadTrajectory("Visualization-data")
-    names = ["v", "time", "x"]
-    pbt.PlotTrajectories(t,v,names,["time"])
-    pbt.PlotTrajectories(t,v,names,["x"])
-    pbt.PlotTrajectories(t,v,names,["v"])
+    with open('vars.col') as f:
+        names = list(map(str.strip, f.readlines()))
+    with open('vars.typ') as f:
+        typ = list(map(int,f.readlines()))
+    names = [name for i, name in enumerate(names) if typ[i] in [0,1]]
+    skip = ["xdummy", "timedummy"]
+    for name in names:
+        if name in skip: continue
+        pbt.PlotTrajectories(t,v,names,[name])

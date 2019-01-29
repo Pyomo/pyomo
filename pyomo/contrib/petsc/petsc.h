@@ -58,6 +58,7 @@ typedef struct{
   PetscMPIInt    mpi_size; // Number of processors (should be 1 for now)
   PetscBool      show_cl; //show the command line, and transformed CL
   char           stub[PETSC_MAX_PATH_LEN]; // File name (with or without ext)
+  char           typ_file[PETSC_MAX_PATH_LEN]; // output file with DAE types
   fint           stublen; // Stub string length
   PetscBool      got_stub;  // file stub was specified with -s
   PetscBool      show_con;  // Option to show initial constraint values

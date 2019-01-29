@@ -112,6 +112,7 @@ if __name__ == "__main__":
     # would want to specify a time step, or an adaptive time stepping method
     res = opt.solve(model, tee=True,
         options={
+            "-on_error_attach_debugger":"",
             "-dae_solve":"",             #tell solver to expect dae problem
             "-ts_monitor":"",            #show progess of TS solver
             "-ts_max_snes_failures":40,  #max nonlin solve fails before give up

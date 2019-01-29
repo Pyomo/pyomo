@@ -99,7 +99,7 @@ m.dae_link[m.dv] = 3
 #solver = SolverFactory('ipopt')
 #solver.solve(m,tee=True)
 solver = SolverFactory('petsc')
-res = solver.solve(m, tee=True, symbolic_solver_labels=True, keepfiles=True,
+res = solver.solve(m, tee=True,
     options={
         "-dae_solve":"",             #tell solver to expect dae problem
         "-ts_monitor":"",            #show progess of TS solver

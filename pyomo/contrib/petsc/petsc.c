@@ -43,6 +43,7 @@ int main(int argc, char **argv){
   real t; //time for DAE solution
   TSConvergedReason tscr;
   real *x_asl;
+  PetscViewer pv;
 
   // Set some initial values in sol_ctx
   sol_ctx_init(&sol_ctx);
@@ -185,6 +186,29 @@ int main(int argc, char **argv){
     // Equation/variable scaling
     ScaleVars(&sol_ctx);
     ScaleEqs(&sol_ctx);
+    // Print the variable types for reading trajectories
+    strcpy(sol_ctx.opt.typ_file, sol_ctx.opt.stub);
+    if(sol_ctx.opt.stublen > 3){
+      if((sol_ctx.opt.stub[sol_ctx.opt.stublen - 1] == 'l') &&
+         (sol_ctx.opt.stub[sol_ctx.opt.stublen - 2] == 'n') &&
+         (sol_ctx.opt.stub[sol_ctx.opt.stublen - 3] == '.')){
+        strcpy(sol_ctx.opt.typ_file + sol_ctx.opt.stublen - 3, ".typ");
+      }
+      else{ //just stub no ".nl" extension
+        strcpy(sol_ctx.opt.typ_file + sol_ctx.opt.stublen, ".typ");
+      }
+    }
+    else{// not long enough for there to be an extension
+      strcpy(sol_ctx.opt.typ_file + sol_ctx.opt.stublen, ".typ");
+    }
+
+    err = PetscViewerASCIIOpen(PETSC_COMM_WORLD, sol_ctx.opt.typ_file, &pv);
+    for(i=0;i<n_var;++i){
+      PetscViewerASCIIPrintf(pv, "%d\n", sol_ctx.dae_suffix_var->u.i[i]);
+    }
+    err = PetscViewerDestroy(&pv);
+
+
     print_init_diagnostic(&sol_ctx); //print initial diagnostic information
     ierr = VecRestoreArray(x, &xx);CHKERRQ(ierr);
     // Make Jacobian matrix (by default sparse AIJ)
