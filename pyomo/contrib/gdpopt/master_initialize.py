@@ -77,7 +77,7 @@ def init_custom_disjuncts(solve_data, config):
             if nlp_result.feasible:
                 add_subproblem_cuts(nlp_result, solve_data, config)
             add_integer_cut(
-                mip_result.var_values, solve_data,
+                mip_result.var_values, solve_data.linear_GDP, solve_data,
                 config, feasible=nlp_result.feasible)
         else:
             config.logger.error(
@@ -104,7 +104,7 @@ def init_fixed_disjuncts(solve_data, config):
         if nlp_result.feasible:
             add_subproblem_cuts(nlp_result, solve_data, config)
         add_integer_cut(
-            mip_result.var_values, solve_data, config,
+            mip_result.var_values, solve_data.linear_GDP, solve_data, config,
             feasible=nlp_result.feasible)
     else:
         config.logger.error(
@@ -141,7 +141,7 @@ def init_max_binaries(solve_data, config):
         nlp_result = solve_disjunctive_subproblem(mip_results, solve_data, config)
         if nlp_result.feasible:
             add_subproblem_cuts(nlp_result, solve_data, config)
-        add_integer_cut(mip_results.var_values, solve_data, config,
+        add_integer_cut(mip_results.var_values, solve_data.linear_GDP, solve_data, config,
                         feasible=nlp_result.feasible)
     else:
         config.logger.info(
@@ -200,7 +200,10 @@ def init_set_covering(solve_data, config):
                                                       active_disjuncts))
             add_subproblem_cuts(subprob_result, solve_data, config)
         add_integer_cut(
-            mip_result.var_values, solve_data, config,
+            mip_result.var_values, solve_data.linear_GDP, solve_data, config,
+            feasible=subprob_result.feasible)
+        add_integer_cut(
+            mip_result.var_values, set_cover_mip, solve_data, config,
             feasible=subprob_result.feasible)
 
         iter_count += 1
@@ -237,7 +240,7 @@ def solve_set_cover_mip(model, disj_needs_cover, solve_data, config):
             weights, GDPopt.disjunct_list)),
         sense=maximize)
 
-    mip_results = solve_linear_GDP(m, solve_data, config)
+    mip_results = solve_linear_GDP(m.clone(), solve_data, config)
     if mip_results.feasible:
         config.logger.info('Solved set covering MIP')
     else:

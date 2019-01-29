@@ -81,11 +81,12 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
 
             oa_cuts = oa_utils.GDPopt_OA_cuts
             slack_var = oa_utils.GDPopt_OA_slacks.add()
+            rhs = value(constr.lower) if constr.has_lb() else value(constr.upper)
             oa_cuts.add(
                 expr=copysign(1, sign_adjust * dual_value) * (
-                    value(constr.body) + sum(
+                    value(constr.body) - rhs + sum(
                         value(jacobians[var]) * (var - value(var))
-                        for var in jacobians)) + slack_var <= 0)
+                        for var in jacobians)) - slack_var <= 0)
             counter += 1
 
         config.logger.info('Added %s OA cuts' % counter)
@@ -142,10 +143,10 @@ def add_affine_cuts(nlp_result, solve_data, config):
         config.logger.info("Added %s affine cuts" % counter)
 
 
-def add_integer_cut(var_values, solve_data, config, feasible=False):
-    """Add an integer cut to the linear GDP model."""
+def add_integer_cut(var_values, target_model, solve_data, config, feasible=False):
+    """Add an integer cut to the target GDP model."""
     with time_code(solve_data.timing, 'integer cut generation'):
-        m = solve_data.linear_GDP
+        m = target_model
         GDPopt = m.GDPopt_utils
         var_value_is_one = ComponentSet()
         var_value_is_zero = ComponentSet()
