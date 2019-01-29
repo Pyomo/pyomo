@@ -4,6 +4,15 @@ from pyomo.core.expr.expr_pyomo5 import ExpressionValueVisitor, nonpyomo_leaf_ty
 from pyomo.core.expr.current import exp, log, sin, cos, tan, asin, acos, atan
 
 
+"""
+The purpose of this file is to perform symbolic differentiation and first order automatic differentiation directly with
+pyomo expressions. This is certainly not as efficient as doing AD in C or C++, but it avoids the translation from
+pyomo expressions to a form where AD can be performed efficiently. The only functions that are meant to be used by 
+users are reverse_ad and reverse_sd. First, values are propagated from the leaves to each node in the tree with the 
+LeafToRoot visitors. Then derivative values are propagated from the root to the leaves with the RootToLeaf visitors.
+"""
+
+
 class DifferentiationException(Exception):
     pass
 
@@ -243,7 +252,7 @@ _diff_map[_expr.NegationExpression] = _diff_NegationExpression
 _diff_map[_expr.UnaryFunctionExpression] = _diff_UnaryFunctionExpression
 
 
-class _ReverseADVisitorA(ExpressionValueVisitor):
+class _ReverseADVisitorLeafToRoot(ExpressionValueVisitor):
     def __init__(self, val_dict, der_dict):
         """
         Parameters
@@ -276,7 +285,7 @@ class _ReverseADVisitorA(ExpressionValueVisitor):
         return False, None
 
 
-class _ReverseADVisitorB(ExpressionValueVisitor):
+class _ReverseADVisitorRootToLeaf(ExpressionValueVisitor):
     def __init__(self, val_dict, der_dict):
         """
         Parameters
@@ -322,16 +331,16 @@ def reverse_ad(expr):
     val_dict = ComponentMap()
     der_dict = ComponentMap()
 
-    visitorA = _ReverseADVisitorA(val_dict, der_dict)
+    visitorA = _ReverseADVisitorLeafToRoot(val_dict, der_dict)
     visitorA.dfs_postorder_stack(expr)
     der_dict[expr] = 1
-    visitorB = _ReverseADVisitorB(val_dict, der_dict)
+    visitorB = _ReverseADVisitorRootToLeaf(val_dict, der_dict)
     visitorB.dfs_postorder_stack(expr)
 
     return der_dict
 
 
-class _ReverseSDVisitorA(ExpressionValueVisitor):
+class _ReverseSDVisitorLeafToRoot(ExpressionValueVisitor):
     def __init__(self, val_dict, der_dict):
         """
         Parameters
@@ -364,7 +373,7 @@ class _ReverseSDVisitorA(ExpressionValueVisitor):
         return False, None
 
 
-class _ReverseSDVisitorB(ExpressionValueVisitor):
+class _ReverseSDVisitorRootToLeaf(ExpressionValueVisitor):
     def __init__(self, val_dict, der_dict):
         """
         Parameters
@@ -410,10 +419,10 @@ def reverse_sd(expr):
     val_dict = ComponentMap()
     der_dict = ComponentMap()
 
-    visitorA = _ReverseSDVisitorA(val_dict, der_dict)
+    visitorA = _ReverseSDVisitorLeafToRoot(val_dict, der_dict)
     visitorA.dfs_postorder_stack(expr)
     der_dict[expr] = 1
-    visitorB = _ReverseSDVisitorB(val_dict, der_dict)
+    visitorB = _ReverseSDVisitorRootToLeaf(val_dict, der_dict)
     visitorB.dfs_postorder_stack(expr)
 
     return der_dict
