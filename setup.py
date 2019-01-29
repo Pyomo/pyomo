@@ -194,7 +194,7 @@ except SystemExit as e_info:
     # environment is missing / has an incorrect Microsoft compiler.
     # Since Cython is not strictly required, we will disable Cython and
     # try re-running setup(), but only for this very specific situation.
-    if 'Microsoft Visual C++' not in e_info.message:
+    if 'Microsoft Visual C++' not in str(e_info):
         raise
     elif using_cython == CYTHON_REQUIRED:
         print("""
