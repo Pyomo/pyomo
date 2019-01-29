@@ -139,6 +139,20 @@ def solve_OA_master(solve_data, config):
         else:
             solve_data.UB = float('-inf')
             solve_data.UB_progress.append(solve_data.UB)
+    elif master_terminate_cond is tc.unbounded:
+        # Solution is unbounded. Add an arbitrary bound to the objective and resolve.
+        # This occurs when the objective is nonlinear. The nonlinear objective is moved
+        # to the constraints, and deactivated for the linear master problem.
+        config.logger.warning(
+            'Master MILP was unbounded. '
+            'Resolving with arbitrary bound values of (-{0:.10g}, {0:.10g}) on the objective. '
+            'You can change this bound with the option obj_bound.'.format(config.obj_bound))
+        main_objective = next(m.component_data_objects(Objective, active=True))
+        MindtPy.objective_bound = Constraint(expr=(-config.obj_bound, main_objective.expr, config.obj_bound))
+        with SuppressInfeasibleWarning():
+            results = SolverFactory(config.mip_solver).solve(
+                m, **config.mip_solver_args)
+
     else:
         raise ValueError(
             'MindtPy unable to handle MILP master termination condition '

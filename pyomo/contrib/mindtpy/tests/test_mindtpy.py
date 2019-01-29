@@ -97,7 +97,8 @@ class TestMindtPy(unittest.TestCase):
             print('\n Solving problem with Outer Approximation')
             opt.solve(model, strategy='OA', init_strategy='initial_binary',
                       mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0])
+                      nlp_solver=required_solvers[0],
+                      obj_bound=10)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)

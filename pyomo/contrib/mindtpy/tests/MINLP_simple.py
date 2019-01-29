@@ -55,7 +55,7 @@ class SimpleMINLP(ConcreteModel):
 
         """Constraint definitions"""
         # CONSTRAINTS
-        m.const1 = Constraint(expr=(m.X[1] - 2)**2 - m.X[2] <= 0)
+        m.const1 = Constraint(expr=(m.X[1] - 2) ** 2 - m.X[2] <= 0)
         m.const2 = Constraint(expr=m.X[1] - 2 * m.Y[1] >= 0)
         m.const3 = Constraint(expr=m.X[1] - m.X[2] - 4 * (1 - m.Y[2]) <= 0)
         m.const4 = Constraint(expr=m.X[1] - (1 - m.Y[1]) >= 0)
@@ -64,8 +64,8 @@ class SimpleMINLP(ConcreteModel):
         m.const7 = Constraint(expr=m.Y[1] + m.Y[2] + m.Y[3] >= 1)
 
         """Cost (objective) function definition"""
-        m.cost = Objective(expr=Y[1] + 1.5*Y[2] + 0.5*Y[3] + X[1]**2 + X[2]**2,
-                             sense=minimize)
+        m.cost = Objective(expr=Y[1] + 1.5 * Y[2] + 0.5 * Y[3] + X[1] ** 2 + X[2] ** 2,
+                           sense=minimize)
 
         """Bound definitions"""
         # x (continuous) upper bounds
