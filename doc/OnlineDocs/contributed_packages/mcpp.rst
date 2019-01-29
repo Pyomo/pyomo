@@ -16,8 +16,7 @@ Until a more simple installation scheme is developed, you may install MC++ and t
 
 We assume that you have installed MC++ into a directory of your choice.
 We will denote this directory by ``$MCPP_PATH``.
-On my machine, the file ``/home/qichen/.solvers/MC++/mcpp/INSTALL`` exists.
-We would dnote this file as ``$MCPP_PATH/INSTALL``.
+For example, you should see that the file ``$MCPP_PATH/INSTALL`` exists.
 
 Navigate to the ``pyomo/contrib/mcpp`` directory in your pyomo installation.
 This directory should contain a file named ``mcppInterface.cpp``.
@@ -29,7 +28,7 @@ You will need to compile this file using the following command:
 
 This links the MC++ required library FADBAD++, MC++ itself, and Python to compile the Pyomo-MC++ interface.
 If successful, you will now have a file named ``mcppInterface.o`` in your working directory.
-If you are not using Python 3.6, you will need to link to the appropriate Python.
+If you are not using Python 3.6, you will need to link to the appropriate Python version.
 You now need to create a shared object file with the following command:
 
 .. code::
