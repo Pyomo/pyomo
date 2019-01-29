@@ -54,7 +54,7 @@ class _fill_in_known_wildcards(object):
         self.base_key = wildcard_values
         self.key = list(wildcard_values)
         self.known_slices = set()
-        self.look_in_index = look_in_index
+        self.look_in_index = look_in_index or get_if_not_present
         self.get_if_not_present = get_if_not_present
 
     def __call__(self, _slice):
@@ -101,7 +101,7 @@ class _fill_in_known_wildcards(object):
         elif len(idx) == 1 and idx[0] in _slice.component:
             _slice.last_index = idx
             return _slice.component[idx[0]]
-        elif self.look_in_index or self.get_if_not_present:
+        elif self.look_in_index:
             if idx in _slice.component.index_set():
                 _slice.last_index = idx
                 return _slice.component[idx] if self.get_if_not_present \
