@@ -100,3 +100,5 @@ from pyomo.opt import (
     SolverFactory, SolverManagerFactory, UnknownSolver,
     TerminationCondition, SolverStatus,
     )
+from pyomo.core.base.units_container import units
+
