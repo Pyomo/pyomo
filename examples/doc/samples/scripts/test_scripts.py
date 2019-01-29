@@ -20,7 +20,7 @@ def filter2(line):
 
 
 @unittest.skipIf(not yaml_available, "PyYaml is not installed")
-@unittest.skipIf(pyutilib.services.registered_executable("glpsol") is None, "The 'glpsol' executable is not available")
+@unittest.skipIf(pyomo.common.registered_executable("glpsol") is None, "The 'glpsol' executable is not available")
 class Test(unittest.TestCase):
 
     def setUp(self):

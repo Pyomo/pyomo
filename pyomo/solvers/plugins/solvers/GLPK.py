@@ -15,9 +15,9 @@ import csv
 
 import pyutilib.subprocess
 from pyutilib.misc import Bunch, Options
-from pyutilib.services import register_executable, registered_executable
 from pyutilib.services import TempfileManager
 
+from pyomo.common import register_executable, registered_executable
 from pyomo.opt import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver

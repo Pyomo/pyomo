@@ -1,7 +1,6 @@
 import logging
 
 from pyutilib.services import TempfileManager
-from pyutilib.services import register_executable
 
 from pyomo.common.download import DownloadFactory
 from pyomo.opt.base import SolverFactory, OptSolver

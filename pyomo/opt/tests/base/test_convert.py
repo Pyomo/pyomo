@@ -174,7 +174,7 @@ class OptConvertDebug(unittest.TestCase):
             ans = pyomo.opt.convert_problem( (currdir+"test3.mod",currdir+"test5.dat"), None, [pyomo.opt.ProblemFormat.cpxlp])
             self.fail("Expected pyomo.opt.ConverterError exception because we provided a MOD file with a 'data;' declaration")
         except pyutilib.common.ApplicationError:
-            if pyutilib.registered_executable("glpsol").enabled():
+            if pyomo.common.registered_executable("glpsol"):
                 self.fail("Expected ApplicationError because glpsol is not available")
             return
         except pyomo.opt.ConverterError:

@@ -15,10 +15,10 @@ import sys
 
 from pyutilib.common import ApplicationError
 from pyutilib.misc import Bunch, Options
-from pyutilib.services import register_executable, registered_executable
 from pyutilib.services import TempfileManager
 import pyutilib.subprocess
 
+from pyomo.common import register_executable, registered_executable
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -1011,4 +1011,4 @@ class MockGLPK(GLPKSHELL_old,MockMIP):
             return (args,ProblemFormat.cpxlp,None)
 
 
-register_executable( name='glpsol')
+register_executable(name='glpsol')

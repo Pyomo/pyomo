@@ -18,9 +18,10 @@ import logging
 import pyutilib.misc
 from pyutilib.common import ApplicationError, WindowsError
 from pyutilib.misc import Bunch
-from pyutilib.services import registered_executable, TempfileManager
+from pyutilib.services import TempfileManager
 from pyutilib.subprocess import run
 
+from pyomo.common import registered_executable
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import *
 from pyomo.opt.results import SolverStatus, SolverResults
