@@ -279,14 +279,14 @@ class TestReferenceSet(unittest.TestCase):
             b.y = Var([7,8], initialize=0)
             b.z = Var()
 
-        rs = _ReferenceSet(_ReferenceDict(m.b[:,5].z))
+        rs = _ReferenceSet(m.b[:,5].z)
         self.assertNotIn((0,), rs)
         self.assertIn(1, rs)
         self.assertIn((1,), rs)
         self.assertEqual(len(rs), 2)
         self.assertEqual(list(rs), [1,2])
 
-        rs = _ReferenceSet(_ReferenceDict(m.b[:,5].bad))
+        rs = _ReferenceSet(m.b[:,5].bad)
         self.assertNotIn((0,), rs)
         self.assertNotIn((1,), rs)
         self.assertEqual(len(rs), 0)
@@ -297,14 +297,14 @@ class TestReferenceSet(unittest.TestCase):
             if i % 2:
                 b.x = Var(range(i))
 
-        rs = _ReferenceSet(_ReferenceDict(m.d[:].x[:]))
+        rs = _ReferenceSet(m.d[:].x[:])
         self.assertIn((1,0), rs)
         self.assertIn((3,0), rs)
         self.assertNotIn((2,0), rs)
         self.assertEqual(len(rs), 4)
         self.assertEqual(list(rs), [(1,0), (3,0), (3,1), (3,2)])
 
-        rs = _ReferenceSet(_ReferenceDict(m.d[...].x[...]))
+        rs = _ReferenceSet(m.d[...].x[...])
         self.assertIn((1,0), rs)
         self.assertIn((3,0), rs)
         self.assertNotIn((2,0), rs)
@@ -319,7 +319,7 @@ class TestReferenceSet(unittest.TestCase):
         def e(b, *args):
             b.x_index = Set(initialize=[1,(3,4)], dimen=None)
             b.x = Var(b.x_index)
-        rs = _ReferenceSet(_ReferenceDict(m.e[...].x[...]))
+        rs = _ReferenceSet(m.e[...].x[...])
         self.assertIn((2,1), rs)
         self.assertIn((2,3,1), rs)
         self.assertIn((2,3,4), rs)
@@ -328,7 +328,7 @@ class TestReferenceSet(unittest.TestCase):
         self.assertEqual(list(rs), [(2,1), (2,3,4), (2,3,1), (2,3,3,4)])
 
         # Make sure scalars and tuples work for jagged sets
-        rs = _ReferenceSet(_ReferenceDict(m.e[...]))
+        rs = _ReferenceSet(m.e[...])
         self.assertIn(2, rs)
         self.assertIn((2,), rs)
         self.assertNotIn(0, rs)
@@ -340,7 +340,7 @@ class TestReferenceSet(unittest.TestCase):
         m.x = Var(m.I, m.I, dense=False)
 
         rd = _ReferenceDict(m.x[...])
-        rs = _ReferenceSet(rd)
+        rs = _ReferenceSet(m.x[...])
         self.assertEqual(len(rd), 0)
         # Note: we will periodically re-check the dict to ensure
         # iteration doesn't accidentally declare data

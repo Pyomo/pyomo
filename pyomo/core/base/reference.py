@@ -270,12 +270,12 @@ if six.PY3:
     _ReferenceDict.values = _ReferenceDict.itervalues
 
 class _ReferenceSet(collections_Set):
-    def __init__(self, ref_dict):
-        self._ref = ref_dict
+    def __init__(self, component_slice):
+        self._slice = component_slice
 
     def __contains__(self, key):
         try:
-            advance_iterator(self._get_iter(self._ref._slice, key))
+            advance_iterator(self._get_iter(self._slice, key))
             return True
         except (StopIteration, KeyError):
             return False
@@ -283,14 +283,14 @@ class _ReferenceSet(collections_Set):
             if type(key) is tuple and len(key) == 1:
                 key = key[0]
             # Brute force (linear time) lookup
-            _iter = iter(self._ref._slice)
+            _iter = iter(self._slice)
             for item in _iter:
                 if _iter.get_last_index_wildcards() == key:
                     return True
             return False
 
     def __iter__(self):
-        return self._ref._slice.index_wildcard_keys()
+        return self._slice.index_wildcard_keys()
 
     def __len__(self):
         return sum(1 for _ in self)
@@ -511,7 +511,7 @@ def Reference(reference, ctype=_NotSpecified):
         elif len(ctypes) > 1:
             break
     if not index:
-        index = SetOf(_ReferenceSet(_data))
+        index = SetOf(_ReferenceSet(reference))
     else:
         wildcards = sum((sorted(iteritems(lvl)) for lvl in index
                          if lvl is not None), [])
