@@ -190,7 +190,7 @@ class _slice_generator(object):
         self.fixed = fixed
         self.sliced = sliced
         self.ellipsis = ellipsis
-        self.iter_over_component = not iter_over_index
+        self.iter_over_index = iter_over_index
 
         self.explicit_index_count = len(fixed) + len(sliced)
         if iter_over_index:
@@ -235,7 +235,7 @@ class _slice_generator(object):
                 # Note: it is important to use __getitem__, as the
                 # derived class may implement a non-standard storage
                 # mechanism (e.g., Param)
-                if self.iter_over_component or index in self.component:
+                if (not self.iter_over_index) or index in self.component:
                     return self.component[index]
                 else:
                     return None
