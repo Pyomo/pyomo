@@ -11,6 +11,7 @@ from pyomo.core.base.symbolic import differentiate
 from pyomo.core.expr.expr_pyomo5 import identify_variables
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.gdp import Disjunct
 
 
 def add_subproblem_cuts(subprob_result, solve_data, config):
@@ -80,11 +81,12 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
 
             oa_cuts = oa_utils.GDPopt_OA_cuts
             slack_var = oa_utils.GDPopt_OA_slacks.add()
+            rhs = value(constr.lower) if constr.has_lb() else value(constr.upper)
             oa_cuts.add(
                 expr=copysign(1, sign_adjust * dual_value) * (
-                    value(constr.body) + sum(
+                    value(constr.body) - rhs + sum(
                         value(jacobians[var]) * (var - value(var))
-                        for var in jacobians)) + slack_var <= 0)
+                        for var in jacobians)) - slack_var <= 0)
             counter += 1
 
         config.logger.info('Added %s OA cuts' % counter)
@@ -141,10 +143,10 @@ def add_affine_cuts(nlp_result, solve_data, config):
         config.logger.info("Added %s affine cuts" % counter)
 
 
-def add_integer_cut(var_values, solve_data, config, feasible=False):
-    """Add an integer cut to the linear GDP model."""
+def add_integer_cut(var_values, target_model, solve_data, config, feasible=False):
+    """Add an integer cut to the target GDP model."""
     with time_code(solve_data.timing, 'integer cut generation'):
-        m = solve_data.linear_GDP
+        m = target_model
         GDPopt = m.GDPopt_utils
         var_value_is_one = ComponentSet()
         var_value_is_zero = ComponentSet()
@@ -163,7 +165,7 @@ def add_integer_cut(var_values, solve_data, config, feasible=False):
             if not config.force_subproblem_nlp:
                 # Skip indicator variables
                 # TODO we should implement this as a check among Disjuncts instead
-                if not var.local_name == 'indicator_var':
+                if not (var.local_name == 'indicator_var' and var.parent_block().type() == Disjunct):
                     continue
 
             if fabs(val - 1) <= config.integer_tolerance:

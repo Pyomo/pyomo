@@ -239,7 +239,10 @@ class TestGDPopt(unittest.TestCase):
         SolverFactory('gdpopt').solve(
             cons_layout, strategy='LOA',
             mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
+            nlp_solver=nlp_solver,
+            iterlim=120,
+            max_slack=5,  # problem is convex, so can decrease slack
+        )
         objective_value = value(cons_layout.min_dist_cost.expr)
         self.assertTrue(
             fabs(objective_value - 41573) <= 200,

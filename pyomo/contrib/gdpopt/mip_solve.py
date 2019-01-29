@@ -68,6 +68,8 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
             m, config)
     if terminate_cond is tc.unbounded:
         # Solution is unbounded. Add an arbitrary bound to the objective and resolve.
+        # This occurs when the objective is nonlinear. The nonlinear objective is moved
+        # to the constraints, and deactivated for the linear master problem.
         obj_bound = 1E15
         config.logger.warning(
             'Linear GDP was unbounded. '

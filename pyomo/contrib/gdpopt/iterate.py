@@ -49,7 +49,7 @@ def GDPopt_iteration_loop(solve_data, config):
 
         # Add integer cut
         add_integer_cut(
-            mip_result.var_values, solve_data, config,
+            mip_result.var_values, solve_data.linear_GDP, solve_data, config,
             feasible=nlp_result.feasible)
 
         # Check termination conditions

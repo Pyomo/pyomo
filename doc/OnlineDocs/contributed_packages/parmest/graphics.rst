@@ -1,48 +1,44 @@
 .. _graphicssection:
 
 Graphics
-========
+========================
 
-parmest includes several functions to visualize results, including:
+parmest includes a function, :class:`~pyomo.contrib.parmest.parmest.pairwise_plot`, 
+to visualize results from bootstrap and likelihood ratio analysis.
+Confidence intervals using rectangular, multivariate normal, and kernel density 
+estimate distributions can be included in the plot and used for scenario creation. 
+Examples are provided in the :ref:`examplesection` Section.
 
-#. :class:`~pyomo.contrib.parmest.graphics.pairwise_plot`: 
-   A pairwise plot which includes a histogram of each parameter along the diagonal and 
-   a scatter plot for each pair of parameters in the upper and lower sections.  Optionally, 
-   parameter estimates for theta can be supplied and are displayed as a black point in each scatter plot.
-#. :class:`~pyomo.contrib.parmest.graphics.pairwise_bootstrap_plot`: 
-   A pairwise plot which includes a histogram of each parameter along the diagonal,   
-   a scatter plot for each pair of parameters in the upper section, and
-   rectangular (gray), multivariate normal (blue), and Gaussian kernel density estimation (red) 
-   confidence regions in the lower section. 
-   This function returns the multivariate normal and Gaussian kernel density estimation distributions 
-   which can be used to generate scenarios.
-#. :class:`~pyomo.contrib.parmest.graphics.pairwise_likelihood_ratio_plot`: 
-   A pairwise plot which includes a histogram of each parameter along the diagonal,   
-   a scatter plot for each pair of parameters in the upper section, and
-   confidence region (red) using a chi-squared test in the lower section.
-   This function returns a DataFrame with points inside the region.
+The pairwise plot includes a histogram of each parameter along the diagonal and 
+a scatter plot for each pair of parameters in the upper and lower sections.  
+The pairwise plot can also include the following optional information:
 
-For each function, axis limits can be supplied along with a file name used to save the figure.
-The following examples were generated using the Rooney Biegler example.
+* A single value for each theta (generally theta* from parameter estimation).
+* Confidence intervals for rectangular, multivariate normal, and/or kernel density 
+  estimate distributions at a specified level (i.e. 0.8).
+  For plots with more than 2 parameters, theta* is used to extract a slice of the confidence 
+  region for each pairwise plot.
+* Filled contour lines for objective values at a specified level (i.e. 0.8).
+  For plots with more than 2 parameters, theta* is used to extract a slice of the contour lines for each pairwise plot.
+* In addition to creating a figure, the user can optionally return the confidence region distributions 
+  which can be used to generate scenarios.
+
+The following examples were generated using the reactor design example.
+:ref:fig-pairwise1 uses output from the bootstrap analysis, and 
+:ref:fig-pairwise2 uses output from the likelihood ratio test.
 
 .. _fig-pairwise1:
-.. figure:: RB.png
+.. figure:: pairwise_plot_CI.png
    :scale: 90 %
-   :alt: RB
+   :alt: CI
 
-   Pairwise plot. 
+   Pairwise bootstrap plot with rectangular, multivariate normal
+   and kernel density estimation confidence region.
    
 .. _fig-pairwise2:
-.. figure:: RB_boot.png
+.. figure:: pairwise_plot_LR.png
    :scale: 90 %
-   :alt: RB bootstrap
+   :alt: LR
 
-   Pairwise bootstrap plot.  Rectangular (gray), multivariate normal (blue) 
-   and Gaussian kernel density estimation (red) confidence regions are shown on the lower section.
+   Pairwise likelihood ratio plot with contours of the objective and points that lie within an alpha confidence region.
    
-.. _fig-pairwise3:
-.. figure:: RB_LR.png
-   :scale: 90 %
-   :alt: RB LR
-
-   Pairwise likelihood ratio plot. Confidence region (red) using a chi-squared test shown in the lower section.
