@@ -8,6 +8,9 @@ import math
 from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 
+if not hasattr(math, 'inf'):
+    math.inf = float('inf')
+
 
 """
 The purpose of this file is to perform feasibility based bounds tightening. This is a very basic implementation, 
@@ -272,7 +275,26 @@ def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict):
 
 def _prop_bnds_root_to_leaf_SumExpression(node, bnds_dict):
     """
-    This implementation is not efficient!!!
+    This function is a bit complicated. A simpler implementation would loop through each argument in the sum and do
+    the following:
+
+    bounds_on_arg_i = bounds_on_entire_sum - bounds_on_sum_of_args_excluding_arg_i
+
+    and the bounds_on_sum_of_args_excluding_arg_i could be computed for each argument. However, the computational
+    expense would grow approximately quadratically with the length of the sum. Thus, we do the following. Consider
+    the expression
+
+    y = x1 + x2 + x3 + x4
+
+    and suppose we have bounds on y. We first accumulate bounds to obtain a list like the following
+
+    [(x1)_bounds, (x1+x2)_bounds, (x1+x2+x3)_bounds, (x1+x2+x3+x4)_bounds]
+
+    Then we can propagate bounds back to x1, x2, x3, and x4 with the following
+
+    (x4)_bounds = (x1+x2+x3+x4)_bounds - (x1+x2+x3)_bounds
+    (x3)_bounds = (x1+x2+x3)_bounds - (x1+x2)_bounds
+    (x2)_bounds = (x1+x2)_bounds - (x1)_bounds
 
     Parameters
     ----------
@@ -284,7 +306,9 @@ def _prop_bnds_root_to_leaf_SumExpression(node, bnds_dict):
     accumulated_bounds.append(bnds_dict[node.arg(0)])
     lb0, ub0 = bnds_dict[node]
     for i in range(1, node.nargs()):
-        accumulated_bounds.append(interval.add(*(accumulated_bounds[i-1]), *(bnds_dict[node.arg(i)])))
+        _lb0, _ub0 = accumulated_bounds[i-1]
+        _lb1, _ub1 = bnds_dict[node.arg(i)]
+        accumulated_bounds.append(interval.add(_lb0, _ub0, _lb1, _ub1))
     if lb0 > accumulated_bounds[node.nargs() - 1][0]:
         accumulated_bounds[node.nargs() - 1] = (lb0, accumulated_bounds[node.nargs()-1][1])
     if ub0 < accumulated_bounds[node.nargs() - 1][1]:
@@ -328,11 +352,15 @@ def _prop_bnds_root_to_leaf_PowExpression(node, bnds_dict):
     lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
-    _lb1a, _ub1a = interval.exp(*interval.div(*interval.log(lb0, ub0), lb2, ub2))
+    _lb1a, _ub1a = interval.log(lb0, ub0)
+    _lb1a, _ub1a = interval.div(_lb1a, _ub1a, lb2, ub2)
+    _lb1a, _ub1a = interval.exp(_lb1a, _ub1a)
     _lb1b, _ub1b = interval.sub(0, 0, _lb1a, _ub1a)
     _lb1 = min(_lb1a, _lb1b)
     _ub1 = max(_ub1a, _ub1b)
-    _lb2, _ub2 = interval.div(*interval.log(lb0, ub0), *interval.log(lb1, ub1))
+    _lb2a, _ub2a = interval.log(lb0, ub0)
+    _lb2b, _ub2b = interval.log(lb1, ub1)
+    _lb2, _ub2 = interval.div(_lb2a, _ub2a, _lb2b, _ub2b)
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
