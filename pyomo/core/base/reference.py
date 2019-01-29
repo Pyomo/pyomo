@@ -48,11 +48,14 @@ class _fill_in_known_wildcards(object):
     wildcard_values : tuple of index values
         a tuple containing index values to substitute into the slice wildcards
     """
-    def __init__(self, wildcard_values, look_in_index=False):
+    def __init__(self, wildcard_values,
+                 look_in_index=False,
+                 get_if_not_present=False):
         self.base_key = wildcard_values
         self.key = list(wildcard_values)
         self.known_slices = set()
         self.look_in_index = look_in_index
+        self.get_if_not_present = get_if_not_present
 
     def __call__(self, _slice):
         """Advance the specified slice generator, substituting wildcard values
@@ -98,13 +101,15 @@ class _fill_in_known_wildcards(object):
         elif len(idx) == 1 and idx[0] in _slice.component:
             _slice.last_index = idx
             return _slice.component[idx[0]]
-        elif self.look_in_index:
+        elif self.look_in_index or self.get_if_not_present:
             if idx in _slice.component.index_set():
                 _slice.last_index = idx
-                return None
+                return _slice.component[idx] if self.get_if_not_present \
+                    else None
             elif len(idx) == 1 and idx[0] in _slice.component.index_set():
                 _slice.last_index = idx
-                return None
+                return _slice.component[idx[0]] if self.get_if_not_present \
+                    else None
 
         raise KeyError(
             "Index %s is not valid for indexed component '%s' "
@@ -124,9 +129,27 @@ class _ReferenceDict(collections_MutableMapping):
     def __init__(self, component_slice):
         self._slice = component_slice
 
+    def __contains__(self, key):
+        try:
+            advance_iterator(self._get_iter(self._slice, key))
+            return True
+        except (StopIteration, KeyError):
+            return False
+        except SliceEllipsisLookupError:
+            if type(key) is tuple and len(key) == 1:
+                key = key[0]
+            # Brute force (linear time) lookup
+            _iter = iter(self._slice)
+            for item in _iter:
+                if _iter.get_last_index_wildcards() == key:
+                    return True
+            return False
+
     def __getitem__(self, key):
         try:
-            return advance_iterator(self._get_iter(self._slice, key))
+            return advance_iterator(
+                self._get_iter(self._slice, key, get_if_not_present=True)
+            )
         except StopIteration:
             raise KeyError("KeyError: %s" % (key,))
         except SliceEllipsisLookupError:
@@ -161,7 +184,7 @@ class _ReferenceDict(collections_MutableMapping):
             raise DeveloperError(
                 "Unexpected slice _call_stack operation: %s" % op)
         try:
-            advance_iterator(self._get_iter(tmp, key))
+            advance_iterator(self._get_iter(tmp, key, get_if_not_present=True))
         except StopIteration:
             pass
 
@@ -203,12 +226,6 @@ class _ReferenceDict(collections_MutableMapping):
     def __len__(self):
         return sum(1 for i in self._slice)
 
-    def __contains__(self, key):
-        try:
-            return super(_ReferenceDict, self).__contains__(key)
-        except (AttributeError, KeyError):
-            return False
-
     def iteritems(self):
         """Return the wildcard, value tuples for this ReferenceDict
 
@@ -239,11 +256,14 @@ class _ReferenceDict(collections_MutableMapping):
         """
         return iter(self._slice)
 
-    def _get_iter(self, _slice, key):
+    def _get_iter(self, _slice, key, get_if_not_present=False):
         if key.__class__ not in (tuple, list):
             key = (key,)
         return _IndexedComponent_slice_iter(
-            _slice, _fill_in_known_wildcards(flatten_tuple(key)))
+            _slice,
+            _fill_in_known_wildcards(flatten_tuple(key),
+                                     get_if_not_present=get_if_not_present)
+        )
 
 if six.PY3:
     _ReferenceDict.items = _ReferenceDict.iteritems
@@ -279,9 +299,10 @@ class _ReferenceSet(collections_Set):
         if key.__class__ not in (tuple, list):
             key = (key,)
         return _IndexedComponent_slice_iter(
-            _slice, _fill_in_known_wildcards(
-                flatten_tuple(key), look_in_index=True),
-            iter_over_index=True)
+            _slice,
+            _fill_in_known_wildcards(flatten_tuple(key), look_in_index=True),
+            iter_over_index=True
+        )
 
 
 def _get_base_sets(_set):
@@ -489,7 +510,7 @@ def Reference(reference, ctype=_NotSpecified):
         # more than one ctype.
         elif len(ctypes) > 1:
             break
-    if index is None:
+    if not index:
         index = SetOf(_ReferenceSet(_data))
     else:
         wildcards = sum((sorted(iteritems(lvl)) for lvl in index
