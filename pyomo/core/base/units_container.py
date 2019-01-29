@@ -48,7 +48,24 @@ Notes:
       e.g. explicit float (3.0) since these are removed by the expression system
       before getting to the code that checks the units.
 
+.. note:: In this implementation of units, "offset" units for temperature are not supported within
+          expressions (i.e. the non-absolute temperature units including degrees C and degrees F).
+          This is because there are many non-obvious combinations that are not allowable. This
+          concern becomes clear if you first convert the non-absolute temperature units to absolute
+          and then perform the operation. For example, if you write 30 degC + 30 degC == 60 degC,
+          but convert each entry to Kelvin, the expression is not true (i.e., 303.15 K + 303.15 K
+          is not equal to 333.15 K). Therefore, there are several operations that are not allowable
+          with non-absolute units, including addition, multiplication, and division.
+
+          Please see the pint documentation `here <https://pint.readthedocs.io/en/0.9/nonmult.html>`_
+          for more discussion. While pint implements "delta" units (e.g., delta_degC) to support correct
+          unit conversions, it can be difficult to identify and guarantee valid operations in a general
+          algebraic modeling environment. While future work may support units with relative scale, the current
+          implementation requires use of absolute temperature units (i.e. K and R) within expressions and
+          a direct conversion of numeric values using specific functions for converting input data and reporting.
+
 ToDos:
+    * implement specific functions for converting numeric values of absolute temperatures
     * implement convert functionality
     * create a new pint unit definition file (and load from that file)
       since the precision in pint seems insufficient for 1e-8 constraint tolerances
