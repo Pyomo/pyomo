@@ -1266,8 +1266,8 @@ like:
 
    If, for some reason, you want to use the concrete interface for PySP for an ``AbstractModel``, the body of the function might be something like:
 
-   >>> instance = model.create_instance(scenario_name+".dat")
-   >>> return instance
+   >>> instance = model.create_instance(scenario_name+".dat")  # doctest: +SKIP
+   >>> return instance  # doctest: +SKIP
 
    assuming that ``model`` is defined as an ``AbstractModel`` in the namespace
    of the file.
