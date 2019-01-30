@@ -18,9 +18,9 @@ ui = get_mainwindow_nb(model=model)
 # Do model things, the viewer will stay in sync with the Pyomo model
 ```
 
-**Note:** in a Jupyter Notebook the ```%gui qt``` cell must be executed on it's own and execution must complete before running any other cells.  This may be a bug in Jupyter Notebook.
+**Note:** in a Jupyter Notebook the ```%gui qt``` cell must be executed on its own and execution must complete before running any other cells.  This may be a bug in Jupyter Notebook.
 
-The model viewer add an IPython callback after each cell executes to update the viewer in case components have been added or removed from the model. The model viewer should always display the current state of the model except for calculated items.  You must explicitly request that calculations be updated, since for very large models the time required may be significant.
+The model viewer adds an IPython callback after each cell executes to update the viewer in case components have been added or removed from the model. The model viewer should always display the current state of the model except for calculated items.  You must explicitly request that calculations be updated, since for very large models the time required may be significant.
 
 ## To Do
 
