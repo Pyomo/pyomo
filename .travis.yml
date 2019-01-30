@@ -1,7 +1,6 @@
 branches:
   only:
   - master
-  - appveyor_failures
 cache: false
 language: generic
 services:
