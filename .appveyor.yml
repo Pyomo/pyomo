@@ -26,25 +26,25 @@ environment:
     #  PYTHON: "C:\\Miniconda36-x64"
     #  CATEGORY: "nightly"
 
-    - PYTHON_VERSION: 2.7
-      PYTHON: "C:\\Miniconda"
-      CATEGORY: "nightly"
-      EXTRAS: YES
+    #- PYTHON_VERSION: 2.7
+    #  PYTHON: "C:\\Miniconda"
+    #  CATEGORY: "nightly"
+    #  EXTRAS: YES
 
     #- PYTHON_VERSION: 3.4
     #  PYTHON: "C:\\Miniconda34-x64"
     #  CATEGORY: "nightly"
     #  EXTRAS: YES
 
-    - PYTHON_VERSION: 3.5
-      PYTHON: "C:\\Miniconda35"
-      CATEGORY: "nightly"
-      EXTRAS: YES
+    #- PYTHON_VERSION: 3.5
+    #  PYTHON: "C:\\Miniconda35"
+    #  CATEGORY: "nightly"
+    #  EXTRAS: YES
 
-    - PYTHON_VERSION: 3.6
-      PYTHON: "C:\\Miniconda36"
-      CATEGORY: "nightly"
-      EXTRAS: YES
+    #- PYTHON_VERSION: 3.6
+    #  PYTHON: "C:\\Miniconda36"
+    #  CATEGORY: "nightly"
+    #  EXTRAS: YES
 
     - PYTHON_VERSION: 3.7
       PYTHON: "C:\\Miniconda37"
@@ -65,7 +65,7 @@ install:
   #
   - SET CONDA_INSTALL=conda install -q -y
   - "SET ANACONDA=%CONDA_INSTALL% -c anaconda"
-  - "SET CONDAFORGE=%CONDA_INSTALL% -c conda-forge --no-update-dependencies"
+  - "SET CONDAFORGE=%CONDA_INSTALL% -c conda-forge"
   #
   # Determine if we will use Appveyor's Miniconda or install Anaconda
   # (intermittently one or the other suffers from NumPy failing to load the
