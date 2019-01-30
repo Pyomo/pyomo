@@ -11,16 +11,16 @@ env:
   - DOCKERHUB_USERNAME=qkjqvazeqfjqftchxlgw
   matrix:
   - IMAGE_NAME=test-builds:python_3.7    CATEGORY="nightly"
-  #- IMAGE_NAME=test-builds:python_3.6    CATEGORY="nightly"
-  #- IMAGE_NAME=test-builds:python_3.6    CATEGORY="nightly" SLIM=1
-  #- IMAGE_NAME=test-builds:python_3.5    CATEGORY="nightly"
-  #- IMAGE_NAME=test-builds:python_2.7    CATEGORY="nightly" KEY_JOB=1
-  #- IMAGE_NAME=test-builds:pypy_3        CATEGORY="nightly" DISABLE_COVERAGE=1
-  #- IMAGE_NAME=test-builds:pypy_2        CATEGORY="nightly" DISABLE_COVERAGE=1
-  #- IMAGE_NAME=test-builds:anaconda_3    CATEGORY="nightly" DISABLE_COVERAGE=1
-  #- IMAGE_NAME=test-builds:anaconda_2    CATEGORY="nightly" DISABLE_COVERAGE=1
-  #- IMAGE_NAME=test-builds:python_3.6    CATEGORY="parallel"
-  #- IMAGE_NAME=test-builds:python_2.7    CATEGORY="parallel"
+  - IMAGE_NAME=test-builds:python_3.6    CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:python_3.6    CATEGORY="nightly" SLIM=1
+  - IMAGE_NAME=test-builds:python_3.5    CATEGORY="nightly"
+  - IMAGE_NAME=test-builds:python_2.7    CATEGORY="nightly" KEY_JOB=1
+  - IMAGE_NAME=test-builds:pypy_3        CATEGORY="nightly" DISABLE_COVERAGE=1
+  - IMAGE_NAME=test-builds:pypy_2        CATEGORY="nightly" DISABLE_COVERAGE=1
+  - IMAGE_NAME=test-builds:anaconda_3    CATEGORY="nightly" DISABLE_COVERAGE=1
+  - IMAGE_NAME=test-builds:anaconda_2    CATEGORY="nightly" DISABLE_COVERAGE=1
+  - IMAGE_NAME=test-builds:python_3.6    CATEGORY="parallel"
+  - IMAGE_NAME=test-builds:python_2.7    CATEGORY="parallel"
 
 before_install:
   - docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}
