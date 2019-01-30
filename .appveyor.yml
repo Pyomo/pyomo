@@ -66,7 +66,7 @@ install:
   #
   - SET CONDA_INSTALL=conda install -q -y
   - "SET ANACONDA=%CONDA_INSTALL% -c anaconda"
-  - "SET CONDAFORGE=%CONDA_INSTALL% -c conda-forge"
+  - "SET CONDAFORGE=%CONDA_INSTALL% -c conda-forge --no-deps"
   #
   # Determine if we will use Appveyor's Miniconda or install Anaconda
   # (intermittently one or the other suffers from NumPy failing to load the
