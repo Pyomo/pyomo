@@ -51,13 +51,13 @@ class _fill_in_known_wildcards(object):
     look_in_index : :py:class:`bool` [optional]
         If True, the iterator will also look for matches using the
         components' underlying index_set() in addition to the (sparse)
-        indices matched by the components' __cnotains__()
+        indices matched by the components' __contains__()
         method. [default: False]
 
     get_if_not_present : :py:class:`bool` [optional]
         If True, the iterator will attempt to retrieve data objects
-        (through getitem) for indixes that match the underlying
-        component index_set() but do not appear in the (sparse) incices
+        (through getitem) for indexes that match the underlying
+        component index_set() but do not appear in the (sparse) indices
         matched by __contains__.  get_if_not_present implies
         look_in_index.  [default: False]
 
