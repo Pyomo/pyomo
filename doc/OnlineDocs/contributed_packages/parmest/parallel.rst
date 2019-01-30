@@ -4,47 +4,45 @@ Parallel Implementation
 ===================================
 
 Parallel implementation in parmest is **preliminary**.
-If you would like to run parmest in parallel, you need mpi and the mpi4py Python package.
-If you do NOT have mpi installed, everything is still supposed to work (you should not get MPI import errors).
-Examples are included for Rooney Biegler and Semibatch.
+To run parmest in parallel, you need the mpi4py Python package and a *compatible* MPI installation.
+If you do NOT have mpi4py or a MPI installation, parmest still works (you should not get MPI import errors).
 
-Note that it seems to be easiest to install the mpi4py package with conda. 
-The package requires a *compatible* mpi installation.
+For example, the following command can be used to run the semibatch model in parallel::
 
-Verify Installation
-----------------------
+	mpiexec -n 4 python semibatch_parmest_parallel.py
 
-In a Unix terminal window, use these commands to verify parallel installation::
+The file **semibatch_parmest_parallel.py** is shown below. 
+Results are saved to file for later analysis.
 
-    cd pyomo/contrib/parmest/examples/semibatch
-    time mpiexec -np 2 python sb_drive_parmest.py
-    time python sb_drive_parmest.py
+.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/semibatch/semibatch_parmest_parallel.py
+   :language: python
+   
+Installation
+-------------
 
-The first one should be faster. Both take many minutes.
-	
-Notes for Mac Users
--------------------
+The mpi4py Python package should be installed using conda. 
+The following installation instructions were tested on a Mac with Python 3.5.
 
-In preliminary testing, this only worked with Python 3.5 using the following for installation::
+Create a conda environment and install mpi4py using the following commands::
 
     conda create -n parmest-parallel python=3.5
     source activate parmest-parallel
     conda install -c conda-forge mpi4py
 	
-Create a conda environment with Python 3.5 and install the following::
-
-    conda install -c conda-forge mpi4py
-
 This should install libgfortran, mpi, mpi4py, and openmpi.
 
-.. The following is not shown in the UM
-   I have NOT had luck with mpich instead of openmpi
+To verify proper installation, create a Python file with the following::
 
-To compare parmest with and without parallel computing, we ran the following:
+	from mpi4py import MPI
+	import time 
+	comm = MPI.COMM_WORLD 
+	rank = comm.Get_rank() 
+	print('Rank = ',rank)
+	time.sleep(10) 
 
-    i.      In parmest/examples/semibatch run “time python sb_drive_parmest_serial.py” – it should generate sb_boot_serial.png
-    ii.      In parmest/examples/semibatch run “time mpirun -np 2 python sb_drive_parmest_parallel.py” – it should generate sb_boot_parallel.png
-    iii.      The two figures should be the same.
-    iv.      The execution time should be faster using mpirun.
+Save the file as test_mpi.py and run the following command::
 
-
+	time mpiexec -n 4 python test_mpi.py 
+	time python test_mpi.py 
+	
+The first one should be faster and should start 4 instances of Python.

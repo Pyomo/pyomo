@@ -15,7 +15,7 @@ _init_url="$URL$"
 # development and set to 'final' for releases.
 major=5
 minor=6
-micro=1
+micro=2
 releaselevel='invalid'
 #releaselevel='final'
 serial=0
