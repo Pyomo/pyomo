@@ -24,7 +24,7 @@ from pyutilib.subprocess import run
 import pyomo.common.config as config
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.fileutils import (
-    thisFile, find_file, find_library, find_executable, Executables,
+    thisFile, find_file, find_library, find_executable, Executable,
     _system, _path, _exeExt, _libExt,
 )
 
@@ -40,8 +40,8 @@ class TestFileUtils(unittest.TestCase):
 
     def tearDown(self):
         if config.PYOMO_CONFIG_DIR != self.config \
-           and config.PYOMO_CONFIG_DIR in Executables.pathlist:
-            Executables.pathlist.remove(config.PYOMO_CONFIG_DIR)
+           and config.PYOMO_CONFIG_DIR in Executable.pathlist:
+            Executable.pathlist.remove(config.PYOMO_CONFIG_DIR)
         config.PYOMO_CONFIG_DIR = self.config
         os.chdir(self.basedir)
         if self.tmpdir:
@@ -373,60 +373,60 @@ class TestFileUtils(unittest.TestCase):
         self._make_exec(os.path.join(config_bindir, f_in_cfg))
 
         # Test availability
-        self.assertTrue( Executables(f_in_path).available() )
-        if not Executables(f_in_path):
-            self.fail("Expected casting Executables(f_in_path) to bool=True")
+        self.assertTrue( Executable(f_in_path).available() )
+        if not Executable(f_in_path):
+            self.fail("Expected casting Executable(f_in_path) to bool=True")
 
         # Test getting the path to the executable
-        self.assertEqual( Executables(f_in_path).path(),
+        self.assertEqual( Executable(f_in_path).path(),
                           os.path.join(pathdir, f_in_path) )
-        self.assertEqual( "%s" % Executables(f_in_path),
+        self.assertEqual( "%s" % Executable(f_in_path),
                           os.path.join(pathdir, f_in_path) )
-        self.assertEqual( Executables(f_in_path).executable,
+        self.assertEqual( Executable(f_in_path).executable,
                           os.path.join(pathdir, f_in_path) )
 
         # Test the above for a nonexistant file
-        self.assertFalse( Executables(f_in_tmp).available() )
-        if Executables(f_in_tmp):
-            self.fail("Expected casting Executables(f_in_tmp) to bool=False")
-        self.assertIsNone( Executables(f_in_tmp).path() )
-        self.assertEqual( "%s" % Executables(f_in_tmp), "" )
-        self.assertIsNone( Executables(f_in_tmp).executable )
+        self.assertFalse( Executable(f_in_tmp).available() )
+        if Executable(f_in_tmp):
+            self.fail("Expected casting Executable(f_in_tmp) to bool=False")
+        self.assertIsNone( Executable(f_in_tmp).path() )
+        self.assertEqual( "%s" % Executable(f_in_tmp), "" )
+        self.assertIsNone( Executable(f_in_tmp).executable )
 
         # While the local CONFIG is set up with Pyomo, it will not be
-        # reflected in the Executables pathlist, as that was set up when
+        # reflected in the Executable pathlist, as that was set up when
         # Pyomo was first imported
-        self.assertFalse( Executables(f_in_cfg).available() )
-        Executables.pathlist.append(config_bindir)
+        self.assertFalse( Executable(f_in_cfg).available() )
+        Executable.pathlist.append(config_bindir)
         # and adding it won't change things (status is cached)
-        self.assertFalse( Executables(f_in_cfg).available() )
+        self.assertFalse( Executable(f_in_cfg).available() )
         # until we tell the manager to rehash the executables
-        Executables.rehash()
-        self.assertTrue( Executables(f_in_cfg).available() )
-        self.assertEqual( Executables(f_in_cfg).path(),
+        Executable.rehash()
+        self.assertTrue( Executable(f_in_cfg).available() )
+        self.assertEqual( Executable(f_in_cfg).path(),
                           os.path.join(config_bindir, f_in_cfg) )
 
         # Another file that doesn't exist
         f_in_path2 = 'f_in_path2'
         f_loc = os.path.join(pathdir, f_in_path2)
-        self.assertFalse( Executables(f_in_path2).available() )
+        self.assertFalse( Executable(f_in_path2).available() )
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.common', logging.WARNING):
-            Executables(f_in_path2).executable = f_loc
+            Executable(f_in_path2).executable = f_loc
             self.assertIn(
                 "explicitly setting the path for executable '%s' to a "
                 "non-executable file or nonexistent location ('%s')"
                 % (f_in_path2, f_loc), output.getvalue())
-        self.assertFalse( Executables(f_in_path2).available() )
+        self.assertFalse( Executable(f_in_path2).available() )
         self._make_exec(os.path.join(pathdir,f_in_path2))
-        self.assertFalse( Executables(f_in_path2).available() )
-        Executables(f_in_path2).rehash()
-        self.assertTrue( Executables(f_in_path2).available() )
+        self.assertFalse( Executable(f_in_path2).available() )
+        Executable(f_in_path2).rehash()
+        self.assertTrue( Executable(f_in_path2).available() )
 
         # And disabling it will "remove" it
-        Executables(f_in_path2).disable()
-        self.assertFalse( Executables(f_in_path2).available() )
-        self.assertIsNone( Executables(f_in_path2).path() )
-        Executables(f_in_path2).rehash()
-        self.assertTrue( Executables(f_in_path2).available() )
-        self.assertEqual( Executables(f_in_path2).path(), f_loc )
+        Executable(f_in_path2).disable()
+        self.assertFalse( Executable(f_in_path2).available() )
+        self.assertIsNone( Executable(f_in_path2).path() )
+        Executable(f_in_path2).rehash()
+        self.assertTrue( Executable(f_in_path2).available() )
+        self.assertEqual( Executable(f_in_path2).path(), f_loc )

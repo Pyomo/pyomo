@@ -233,7 +233,7 @@ class _ExecutableData(object):
         return self._path
 
     #@deprecated("registered_executable(name).get_path() is deprecated; "
-    #            "use pyomo.common.Executables(name).path()")
+    #            "use pyomo.common.Executable(name).path()")
     def get_path(self):
         return self.path()
 
@@ -308,7 +308,7 @@ class ExecutableManager(object):
     ``PYOMO_CONFIG_DIR``).
 
     Pyomo declares a single global instance of this class as
-    ``pyomo.common.Executables``.
+    ``pyomo.common.Executable``.
 
     Users are not required or expected to register file names with the
     :py:class:`ExecutableManager`; they will be automatically registered
@@ -331,9 +331,9 @@ class ExecutableManager(object):
 
     .. doctest::
 
-        >>> from pyomo.common import Executables
-        >>> if Executables('demo_exec_file').available():
-        ...     loc = Executables('demo_exec_file').path()
+        >>> from pyomo.common import Executable
+        >>> if Executable('demo_exec_file').available():
+        ...     loc = Executable('demo_exec_file').path()
         ...     print(os.path.isfile(loc))
         True
         >>> print(os.access(loc, os.X_OK))
@@ -341,12 +341,12 @@ class ExecutableManager(object):
 
     For convenience, ``available()`` and ``path()`` are available by
     casting the :py:class:`_ExecutableData` object requrned from
-    ``Executables`` to either a ``bool`` or ``str``:
+    ``Executable`` to either a ``bool`` or ``str``:
 
     .. doctest::
 
-        >>> if Executables('demo_exec_file'):
-        ...     cmd = "%s --help" % Executables('demo_exec_file')
+        >>> if Executable('demo_exec_file'):
+        ...     cmd = "%s --help" % Executable('demo_exec_file')
 
     The :py:class:`ExecutableManager` caches the location / existence of
     the target executable.  If something in the environment changes
@@ -361,13 +361,13 @@ class ExecutableManager(object):
     .. doctest::
 
         >>> # refresh the cache for a single file
-        >>> Executables('demo_exec_file').rehash()
+        >>> Executable('demo_exec_file').rehash()
         >>> # or all registered files
-        >>> Executables.rehash()
+        >>> Executable.rehash()
 
     :py:class:`ExecutionManager` looks for executables in the system
     `PATH` and in the list of directories specified by the `pathlist`
-    attribute.  `Executables.pathlist` defaults to a list containing the
+    attribute.  `Executable.pathlist` defaults to a list containing the
     initial value of `pyomo.common.config.PYOMO_CONFIG_DIR`.
 
     Users may also override the normal file resolution by explicitly
@@ -375,7 +375,7 @@ class ExecutableManager(object):
 
     .. doctest::
 
-        >>> Executables('demo_exec_file').executable = os.path.join(
+        >>> Executable('demo_exec_file').executable = os.path.join(
         ...     pyomo.common.config.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file')
 
     Explicitly setting the executable is an absolute operation and will
@@ -386,7 +386,7 @@ class ExecutableManager(object):
 
     .. doctest::
 
-        >>> Executables('demo_exec_file').executable = None
+        >>> Executable('demo_exec_file').executable = None
 
 
     .. doctest::
@@ -416,28 +416,28 @@ class ExecutableManager(object):
         for _exe in six.itervalues(self._exec):
             _exe.rehash()
 
-Executables = ExecutableManager()
+Executable = ExecutableManager()
 
 #@deprecated("pyomo.common.register_executable(fname) has been deprecated; "
 #            "explicit registration is no longer necessary")
 def register_executable(name, validate=None):
-    # Setting to None will cause Executables to re-search the pathlist
-    return Executables(name).rehash()
+    # Setting to None will cause Executable to re-search the pathlist
+    return Executable(name).rehash()
 
 #@deprecated(
 #    """pyomo.common.registered_executable(fname) has been deprecated; use
-#    pyomo.common.Executables(fname).path() to get the path or
-#    pyomo.common.Executables(fname).available() to get a bool indicating
+#    pyomo.common.Executable(fname).path() to get the path or
+#    pyomo.common.Executable(fname).available() to get a bool indicating
 #    file availability.  Equivalent results can be obtained by casting
-#    Executables(fname) to string or bool.""")
+#    Executable(fname) to string or bool.""")
 def registered_executable(name):
-    ans = Executables(name)
+    ans = Executable(name)
     if ans.path() is None:
         return None
     else:
         return ans
 
 #@deprecated("pyomo.common.unregister_executable(fname) has been deprecated; "
-#            "use Executables(fname).disable()")
+#            "use Executable(fname).disable()")
 def unregister_executable(name):
-    Executables(name).disable()
+    Executable(name).disable()
