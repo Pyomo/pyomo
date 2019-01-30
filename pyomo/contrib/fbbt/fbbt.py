@@ -595,12 +595,16 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
             return True, None
 
         if node.is_variable_type():
-            lb = value(node.lb)
-            ub = value(node.ub)
-            if lb is None:
-                lb = -math.inf
-            if ub is None:
-                ub = math.inf
+            if node.is_fixed():
+                lb = value(node.value)
+                ub = lb
+            else:
+                lb = value(node.lb)
+                ub = value(node.ub)
+                if lb is None:
+                    lb = -math.inf
+                if ub is None:
+                    ub = math.inf
             self.bnds_dict[node] = (lb, ub)
             return True, None
 
