@@ -1,6 +1,7 @@
 branches:
   only:
     - master
+    - appveyor_failures
 
 environment:
 
