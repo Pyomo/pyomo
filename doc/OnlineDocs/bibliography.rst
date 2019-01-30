@@ -40,7 +40,15 @@ Bibliography
                  Python," Mathematical Programming Computation, Volume
                  4, Number 2, June 2012, Pages 109-142
 
+.. [RooneyBiegler] W.C. Rooney, L.T. Biegler, "Design for model parameter 
+                   uncertainty using nonlinear confidence regions", AIChE 
+                   Journal, 47(8), 2001
+		  
+.. [SemiBatch] O. Abel, W. Marquardt, "Scenario-integrated modeling and 
+               optimization of dynamic systems", AIChE Journal, 46(4), 2000
+
 .. [Vielma_et_al] J. P. Vielma, S. Ahmed, G. Nemhauser. "Mixed-Integer
                   Models for Non-separable Piecewise Linear
                   Optimization: Unifying framework and Extensions",
                   Operations Research 58, 2010. pp. 303-315.
+
