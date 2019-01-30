@@ -1221,3 +1221,69 @@ PySP in scripts
 
 See :ref:`rappersection` for information about putting Python scripts
 around PySP functionality.
+
+Introduction to Using Concrete Models with PySP
+-----------------------------------------------
+
+The concrete interface to PySP requires a function that can return a
+concrete model for a given scenario. Optionally, a function that
+returns a scenario tree can be provided; however, a
+``ScenarioStructure.dat`` file is also an option. This very
+terse introduction might help you get started using
+concrete models with PySP.
+
+Scenario Creation Function
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There is a lot of flexibility in how this function is
+implemented, but the path of least resistance is
+
+.. doctest::
+
+   >>> def pysp_instance_creation_callback(scenario_tree_model,
+   ...                                     scenario_name,
+   ...                                     node_names):
+   ...    pass
+
+In many applications, only the ``scenario_name`` argument is
+used. Its purpose is almost always to determine what data
+to use when populating the scenario instance. Note that in
+older examples, the ``scenario_tree_model`` argument is not
+present.
+
+An older example of this function can be seen in
+``examples/pysp/farmer/concrete/ReferenceModel.py``
+
+Note that this example does not have a function to return
+a scenario tree, so it can be solved from the
+``examples/pysp/farmer`` directory with a command
+like:
+
+::
+   runef -m concrete/ReferenceModel.py -s scenariodata/ScenarioStructure.dat --solve
+ 
+.. note::
+
+   If, for some reason, you want to use the concrete interface for PySP for an ``AbstractModel``, the body of the function might be something like:
+
+   >>> instance = model.create_instance(scenario_name+".dat")  # doctest: +SKIP
+   >>> return instance  # doctest: +SKIP
+
+   assuming that ``model`` is defined as an ``AbstractModel`` in the namespace
+   of the file.
+
+Scenario Tree Creation Function
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There are many options for a function to return a scenario tree. The path
+of least resistance is to name the function ``pysp_scenario_tree_model_callback``
+with no arguments.
+One example is shown in
+``examples/pysp/farmer/concreteNetX/ReferenceModel.py``
+
+It can be solved from the
+``examples/pysp/farmer`` directory with a command
+like:
+
+::
+   runef -m concreteNetX/ReferenceModel.py --solve

@@ -7,7 +7,7 @@ from copy import deepcopy
 from pyomo.contrib.gdpopt.data_class import MasterProblemResult
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
 from pyomo.core import (Block, Expression, Objective, TransformationFactory,
-                        Var, minimize, value)
+                        Var, minimize, value, Constraint)
 from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
@@ -53,11 +53,9 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
         raise RuntimeError(
             "MIP solver %s is not available." % config.mip_solver)
 
-    # Callback immediately before solving NLP subproblem
+    # Callback immediately before solving MIP master problem
     config.call_before_master_solve(m, solve_data)
 
-    # We use LoggingIntercept in order to suppress the stupid "Loading a
-    # SolverResults object with a warning status" warning message.
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.mip_solver).solve(
             m, **config.mip_solver_args)
@@ -68,14 +66,29 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
         # resolve with a solver option flag on.
         results, terminate_cond = distinguish_mip_infeasible_or_unbounded(
             m, config)
+    if terminate_cond is tc.unbounded:
+        # Solution is unbounded. Add an arbitrary bound to the objective and resolve.
+        # This occurs when the objective is nonlinear. The nonlinear objective is moved
+        # to the constraints, and deactivated for the linear master problem.
+        obj_bound = 1E15
+        config.logger.warning(
+            'Linear GDP was unbounded. '
+            'Resolving with arbitrary bound values of (-{0:.10g}, {0:.10g}) on the objective. '
+            'Check your initialization routine.'.format(obj_bound))
+        main_objective = next(m.component_data_objects(Objective, active=True))
+        GDPopt.objective_bound = Constraint(expr=(-obj_bound, main_objective.expr, obj_bound))
+        with SuppressInfeasibleWarning():
+            results = SolverFactory(config.mip_solver).solve(
+                m, **config.mip_solver_args)
+        terminate_cond = results.solver.termination_condition
 
     # Build and return results object
     mip_result = MasterProblemResult()
     mip_result.feasible = True
-    mip_result.var_values = list(v.value for v in GDPopt.working_var_list)
+    mip_result.var_values = list(v.value for v in GDPopt.variable_list)
     mip_result.pyomo_results = results
     mip_result.disjunct_values = list(
-        disj.indicator_var.value for disj in GDPopt.working_disjuncts_list)
+        disj.indicator_var.value for disj in GDPopt.disjunct_list)
 
     if terminate_cond is tc.optimal or terminate_cond is tc.locallyOptimal:
         pass
@@ -129,29 +142,29 @@ def solve_LOA_master(solve_data, config):
     m = solve_data.linear_GDP.clone()
     GDPopt = m.GDPopt_utils
     solve_data.mip_iteration += 1
+    main_objective = next(m.component_data_objects(Objective, active=True))
 
     if solve_data.current_strategy == 'LOA':
         # Set up augmented Lagrangean penalty objective
-        GDPopt.objective.deactivate()
-        sign_adjust = 1 if GDPopt.objective.sense == minimize else -1
+        main_objective.deactivate()
+        sign_adjust = 1 if main_objective.sense == minimize else -1
         GDPopt.OA_penalty_expr = Expression(
             expr=sign_adjust * config.OA_penalty_factor *
             sum(v for v in m.component_data_objects(
                 ctype=Var, descend_into=(Block, Disjunct))
                 if v.parent_component().local_name == 'GDPopt_OA_slacks'))
         GDPopt.oa_obj = Objective(
-            expr=GDPopt.objective.expr + GDPopt.OA_penalty_expr,
-            sense=GDPopt.objective.sense)
+            expr=main_objective.expr + GDPopt.OA_penalty_expr,
+            sense=main_objective.sense)
 
         obj_expr = GDPopt.oa_obj.expr
-        base_obj_expr = GDPopt.objective.expr
+        base_obj_expr = main_objective.expr
     elif solve_data.current_strategy == 'GLOA':
-        obj_expr = GDPopt.objective.expr
-        base_obj_expr = GDPopt.objective.expr
+        obj_expr = base_obj_expr = main_objective.expr
 
     mip_result = solve_linear_GDP(m, solve_data, config)
     if mip_result.feasible:
-        if GDPopt.objective.sense == minimize:
+        if main_objective.sense == minimize:
             solve_data.LB = max(value(obj_expr), solve_data.LB)
         else:
             solve_data.UB = min(value(obj_expr), solve_data.UB)
@@ -165,12 +178,12 @@ def solve_LOA_master(solve_data, config):
             mip_result.var_values
         )
         config.logger.info(
-            'ITER %s.%s.%s-MIP: OBJ: %s  LB: %s  UB: %s'
-            % (solve_data.master_iteration,
-               solve_data.mip_iteration,
-               solve_data.nlp_iteration,
-               value(obj_expr),
-               solve_data.LB, solve_data.UB))
+            'ITER {:d}.{:d}.{:d}-MIP: OBJ: {:.10g}  LB: {:.10g}  UB: {:.10g}'.format(
+                solve_data.master_iteration,
+                solve_data.mip_iteration,
+                solve_data.nlp_iteration,
+                value(obj_expr),
+                solve_data.LB, solve_data.UB))
     else:
         # Master problem was infeasible.
         if solve_data.master_iteration == 1:
@@ -178,7 +191,7 @@ def solve_LOA_master(solve_data, config):
                 'GDPopt initialization may have generated poor '
                 'quality cuts.')
         # set optimistic bound to infinity
-        if GDPopt.objective.sense == minimize:
+        if main_objective.sense == minimize:
             solve_data.LB = float('inf')
         else:
             solve_data.UB = float('-inf')
@@ -186,48 +199,3 @@ def solve_LOA_master(solve_data, config):
     config.call_after_master_solve(m, solve_data)
 
     return mip_result
-
-
-# def solve_GLOA_master(solve_data, config):
-#     """Solve the rigorous outer approximation master problem."""
-#     m = solve_data.linear_GDP.clone()
-#     GDPopt = m.GDPopt_utils
-#     solve_data.mip_iteration += 1
-#
-#     mip_result = solve_linear_GDP(m, solve_data, config)
-#     if mip_result.feasible:
-#         if GDPopt.objective.sense == minimize:
-#             solve_data.LB = max(value(GDPopt.objective.expr), solve_data.LB)
-#         else:
-#             solve_data.UB = min(value(GDPopt.objective.expr), solve_data.UB)
-#         solve_data.iteration_log[
-#             (solve_data.master_iteration,
-#              solve_data.mip_iteration,
-#              solve_data.nlp_iteration)
-#         ] = (
-#             value(GDPopt.objective.expr),
-#             value(GDPopt.objective.expr),
-#             mip_result.var_values
-#         )
-#         config.logger.info(
-#             'ITER %s.%s.%s-MIP: OBJ: %s  LB: %s  UB: %s'
-#             % (solve_data.master_iteration,
-#                solve_data.mip_iteration,
-#                solve_data.nlp_iteration,
-#                value(GDPopt.objective.expr),
-#                solve_data.LB, solve_data.UB))
-#     else:
-#         # Master problem was infeasible.
-#         if solve_data.master_iteration == 1:
-#             config.logger.warning(
-#                 'GDPopt initialization may have generated poor '
-#                 'quality cuts.')
-#         # set optimistic bound to infinity
-#         if GDPopt.objective.sense == minimize:
-#             solve_data.LB = float('inf')
-#         else:
-#             solve_data.UB = float('-inf')
-#     # Call the MILP post-solve callback
-#     config.call_after_master_solve(m, solve_data)
-#
-#     return mip_result

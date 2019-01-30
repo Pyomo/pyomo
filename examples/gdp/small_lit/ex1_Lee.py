@@ -7,7 +7,7 @@ http://egon.cheme.cmu.edu/Papers/LeeNewAlgo.pdf
 """
 
 from pyomo.environ import (ConcreteModel, Constraint, NonNegativeReals,
-                           Objective, Var, minimize)
+                           Objective, SolverFactory, Var, minimize)
 from pyomo.gdp import Disjunct, Disjunction
 
 
@@ -34,6 +34,6 @@ def build_model():
 
 if __name__ == "__main__":
     model = build_model()
-    results = SolverFactory('gdpopt').solve(m, tee=True)
+    results = SolverFactory('gdpopt').solve(model, tee=True)
     print(results)
 

@@ -3,6 +3,26 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Current Development
+-------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------
+Pyomo 5.6.1
+-------------------------------------------------------------------------------
+
+- General
+  - Fix setup.py installation failure on Windows (#813) 
+- Testing
+  - Add assertion method for comparing lists of floats (#800)
+- Solver interfaces
+  - Bugfix in GAMS writer related to splitting long lines (#797)
+  - Allow ":" in cplex file names (#810) 
+  - Fixes to NEOS interface (#793)
+- GDP updates
+  - Fixed typo in GDP example (#801)
+  - Add support for RangeSet in GDP transformations (#803)
+
+-------------------------------------------------------------------------------
 Pyomo 5.6
 -------------------------------------------------------------------------------
 
