@@ -10,6 +10,7 @@
 
 import glob
 import inspect
+import logging
 import os
 import platform
 import six
@@ -88,8 +89,8 @@ def find_file(fname, cwd=True, mode=os.R_OK, ext=None, pathlist=[]):
     for path in locations:
         if not path:
             continue
-        for ext in extlist:
-            for test in glob.glob(os.path.join(path, fname+ext)):
+        for _ext in extlist:
+            for test in glob.glob(os.path.join(path, fname+_ext)):
                 if not os.path.isfile(test):
                     continue
                 if mode is not None and not os.access(test, mode):
@@ -204,3 +205,239 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
     ext = _exeExt.get(_system(), None)
     return find_file(exename, cwd=cwd, ext=ext, mode=os.R_OK|os.X_OK,
                      pathlist=pathlist)
+
+
+class _ExecutableData(object):
+    def __init__(self, manager, executable):
+        self._mngr = manager
+        self._registered_name = executable
+        self._path = None
+        self._path_override = None
+        self._status = None
+
+    def path(self):
+        """Return the full, normalized path to the registered executable.
+
+        If the executable is not found (or was marked "disabled"),
+        ``path()`` returns None.
+
+        """
+        if self._status is None:
+            if self._path_override:
+                target = self._path_override
+            else:
+                target = self._registered_name
+            tmp = find_executable(target, pathlist=self._mngr.pathlist)
+            self._path = tmp if tmp else self._path_override
+            self._status = bool(tmp)
+        return self._path
+
+    #@deprecated("registered_executable(name).get_path() is deprecated; "
+    #            "use pyomo.common.Executables(name).path()")
+    def get_path(self):
+        return self.path()
+
+    def disable(self):
+        """Disable this executable
+
+        This method "disables" this executable by marking it as "not
+        found".  Disabled executables return False for `available()` and
+        None for `path()`.  The disabled status will persist until the
+        next call to `rehash()`.
+
+        """
+        self._status = False
+        self._path = None
+
+    def available(self):
+        """Return True if the executable was found in the search locations"""
+        if self._status is None:
+            self.path()
+        return self._status
+
+    def rehash(self):
+        """Requery the location of this executables
+
+        This method derives its name from the csh command of the same
+        name, which rebuilds the hash table of executables reachable
+        through the PATH.
+
+        """
+        self._status = None
+        self.path()
+
+    def __nonzero__(self):
+        """Alias for ``available()``."""
+        return self.available()
+
+    # "if <obj>" triggers __nonzero__ in Py2 and __bool__ in Py3
+    __bool__ = __nonzero__
+
+    def __str__(self):
+        ans = self.path()
+        if not ans:
+            return ""
+        return ans
+
+    @property
+    def executable(self):
+        return self.path()
+
+    @executable.setter
+    def executable(self, value):
+        self._path_override = value
+        self.rehash()
+        if not self._status:
+            logging.getLogger('pyomo.common').warning(
+                "explicitly setting the path for executable '%s' to a "
+                "non-executable file or nonexistent location ('%s')"
+                % (self._registered_name, value))
+
+
+class ExecutableManager(object):
+    """The ExecutableManager defines a registry class for executable files
+
+    The :py:class:`ExecutableManager` defines a class very similar to the
+    :py:class:`CachedFactory` class; however it does not register type
+    constructors.  Instead, it registers instances of
+    :py:class:`_ExecutableData`.  These contain the resolved path to the
+    executable under which the :py:class:`_ExecutableData` object was
+    registered.  We do not use the PyUtilib ``register_executable`` and
+    ``registered_executable`` functions so that we can automatically
+    include Pyomo-specific locations in the search path (namely the
+    ``PYOMO_CONFIG_DIR``).
+
+    Pyomo declares a single global instance of this class as
+    ``pyomo.common.Executables``.
+
+    Users are not required or expected to register file names with the
+    :py:class:`ExecutableManager`; they will be automatically registered
+    upon first use.  Generally, users interact through the ``path()``
+    and ``available()`` methods:
+
+    .. doctest::
+        :hide:
+
+        >>> import pyomo.common
+        >>> import os
+        >>> from stat import S_IXUSR, S_IXGRP, S_IXOTH
+        >>> _testfile = os.path.join(
+        ...    pyomo.common.config.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file')
+        >>> _del_testfile = not os.path.exists(_testfile)
+        >>> if _del_testfile:
+        ...     open(_testfile,'w').close()
+        ...     _mode = os.stat(_testfile).st_mode
+        ...     os.chmod(_testfile, _mode | S_IXUSR | S_IXGRP | S_IXOTH)
+
+    .. doctest::
+
+        >>> from pyomo.common import Executables
+        >>> if Executables('demo_exec_file').available():
+        ...     loc = Executables('demo_exec_file').path()
+        ...     print(os.path.isfile(loc))
+        True
+        >>> print(os.access(loc, os.X_OK))
+        True
+
+    For convenience, ``available()`` and ``path()`` are available by
+    casting the :py:class:`_ExecutableData` object requrned from
+    ``Executables`` to either a ``bool`` or ``str``:
+
+    .. doctest::
+
+        >>> if Executables('demo_exec_file'):
+        ...     cmd = "%s --help" % Executables('demo_exec_file')
+
+    The :py:class:`ExecutableManager` caches the location / existence of
+    the target executable.  If something in the environment changes
+    (e.g., the PATH) or the file is created or removed after the first
+    time something querried the location or availability, the
+    ExecutionManager will return incorrect information.  You can cause
+    the :py:class:`ExecutionManager` to refresh it's cache by calling
+    ``rehash()`` on either the :py:class:`_ExecutableData` (for the
+    single file) or the :py:class:`ExecutionManager` to refresh the
+    cache for all files:
+
+    .. doctest::
+
+        >>> # refresh the cache for a single file
+        >>> Executables('demo_exec_file').rehash()
+        >>> # or all registered files
+        >>> Executables.rehash()
+
+    :py:class:`ExecutionManager` looks for executables in the system
+    `PATH` and in the list of directories specified by the `pathlist`
+    attribute.  `Executables.pathlist` defaults to a list containing the
+    initial value of `pyomo.common.config.PYOMO_CONFIG_DIR`.
+
+    Users may also override the normal file resolution by explicitly
+    setting the files ``executable`` attribute:
+
+    .. doctest::
+
+        >>> Executables('demo_exec_file').executable = os.path.join(
+        ...     pyomo.common.config.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file')
+
+    Explicitly setting the executable is an absolute operation and will
+    set the location wether or not that location points to an actual
+    executable file.  Additionally, the explicit location will persist
+    through calls to ``rehash()``.  If you wish to remove the explicit
+    executable location, set the ``executable`` to ``None``:
+
+    .. doctest::
+
+        >>> Executables('demo_exec_file').executable = None
+
+
+    .. doctest::
+        :hide:
+
+        >>> if _del_testfile:
+        ...     os.remove(_testfile)
+
+    """
+    def __init__(self):
+        self._exec = {}
+        self.pathlist = [ os.path.join(config.PYOMO_CONFIG_DIR, 'bin') ]
+
+    def __call__(self, executable):
+        if executable not in self._exec:
+            self._exec[executable] = _ExecutableData(self, executable)
+        return self._exec[executable]
+
+    def rehash(self):
+        """Requery the location of all registered executables
+
+        This method derives its name from the csh command of the same
+        name, which rebuilds the hash table of executables reachable
+        through the PATH.
+
+        """
+        for _exe in six.itervalues(self._exec):
+            _exe.rehash()
+
+Executables = ExecutableManager()
+
+#@deprecated("pyomo.common.register_executable(fname) has been deprecated; "
+#            "explicit registration is no longer necessary")
+def register_executable(name, validate=None):
+    # Setting to None will cause Executables to re-search the pathlist
+    return Executables(name).rehash()
+
+#@deprecated(
+#    """pyomo.common.registered_executable(fname) has been deprecated; use
+#    pyomo.common.Executables(fname).path() to get the path or
+#    pyomo.common.Executables(fname).available() to get a bool indicating
+#    file availability.  Equivalent results can be obtained by casting
+#    Executables(fname) to string or bool.""")
+def registered_executable(name):
+    ans = Executables(name)
+    if ans.path() is None:
+        return None
+    else:
+        return ans
+
+#@deprecated("pyomo.common.unregister_executable(fname) has been deprecated; "
+#            "use Executables(fname).disable()")
+def unregister_executable(name):
+    Executables(name).disable()

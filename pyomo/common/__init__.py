@@ -12,14 +12,15 @@
 # set up as soon as possible
 from . import log
 
-from pyutilib.factory.executable import (
-    register_executable, registered_executable, unregister_executable
-)
 from pyutilib.factory.factory import (
     Factory, CachedFactory
 )
 
-from . import fileutils
+from .fileutils import (
+    Executables,
+    # The following will be deprecated soon
+    register_executable, registered_executable, unregister_executable
+)
 from . import config
 from .errors import DeveloperError
 from ._task import pyomo_api, PyomoAPIData, PyomoAPIFactory
