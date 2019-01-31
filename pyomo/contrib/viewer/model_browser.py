@@ -6,16 +6,12 @@
 # Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
 # University Research Corporation, et al. All rights reserved.
 #
-# Please see the files COPYRIGHT.txt and LICENSE.txt for full copyright and
-# license information, respectively. Both files are also available online
-# at the URL "https://github.com/IDAES/idaes".
+# This software is distributed under the 3-clause BSD License.
 ##############################################################################
 """
-A simple GUI viewer for Pyomo models.
+A simple GUI viewer/editor for Pyomo models.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import  # disable implicit relative imports
+from __future__ import division, print_function, absolute_import
 
 __author__ = "John Eslick"
 
@@ -24,28 +20,30 @@ import warnings
 import logging
 import re
 
+_log = logging.getLogger(__name__)
+
 try:
     from PyQt5 import QtCore
 except:
-    logging.exception("Cannot import PyQt5.QtCore")
+    _log.exception("Cannot import PyQt5.QtCore")
     try:
         from PyQt4 import QtCore
     except:
-        logging.exception("Cannot import PyQt4.QtCore")
+        _log.exception("Cannot import PyQt4.QtCore")
     else:
         try:
             from PyQt4.QtGui import QAbstractItemView
             from PyQt4.QtCore import QAbstractItemModel
             from PyQt4 import uic
         except:
-            logging.exception("Cannot import PyQt4")
+            _log.exception("Cannot import PyQt4")
 else:
     try:
         from PyQt5.QtWidgets import QAbstractItemView
         from PyQt5.QtCore import QAbstractItemModel
         from PyQt5 import uic
     except:
-        logging.exception("Cannot import PyQt5")
+        _log.exception("Cannot import PyQt5")
 
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import _VarData
@@ -228,12 +226,12 @@ class ComponentDataItem(object):
             return None
 
     def _get_value_callback(self):
-        if isinstance(self.data, _VarData):   # prevent Pyomo warinig about
-            if self.data.value is None:       # value of non-numeric value
-                return None
+        #if isinstance(self.data, _VarData):   # prevent Pyomo warinig about
+        #    if self.data.value is None:       # value of non-numeric value
+        #        return None
         if isinstance(self.data, (_VarData, _ParamData, float, int)):
             try:
-                return value(self.data)
+                return value(self.data, exception=False)
             except:
                 return None
         else:
@@ -330,7 +328,7 @@ class ComponentDataModel(QAbstractItemModel):
         function. Entering into this don't specify any args.
         """
         # Blocks are special they define the hiarchy of the model, so first
-        # check for blocks. Other comonent can be handeled togeter
+        # check for blocks. Other comonent can be handled togeter
         if o is None and len(self.rootItems) > 0: #top level object (no parent)
             parent = self.rootItems[0] # should be single root node for now
             o = parent.data # start with root node
@@ -382,7 +380,7 @@ class ComponentDataModel(QAbstractItemModel):
             o: A Pyomo component to add to the tree
         """
         # Blocks are special they define the hiarchy of the model, so first
-        # check for blocks. Other comonent can be handeled togeter
+        # check for blocks. Other comonent can be handled togeter
         if isinstance(o, _BlockData): #single block or element of indexed block
             item = self._add_item(parent=parent, o=o)
             for no in o.component_objects(descend_into=False):

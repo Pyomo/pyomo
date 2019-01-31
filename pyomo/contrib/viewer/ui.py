@@ -6,19 +6,14 @@
 # Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
 # University Research Corporation, et al. All rights reserved.
 #
-# Please see the files COPYRIGHT.txt and LICENSE.txt for full copyright and
-# license information, respectively. Both files are also available online
-# at the URL "https://github.com/IDAES/idaes".
+# This software is distributed under the 3-clause BSD License.
 ##############################################################################
 """
-A simple GUI viewer for Pyomo models.
+A simple GUI viewer/editor for Pyomo models.
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import #disable implicit relative imports
+from __future__ import division, print_function, absolute_import
 
 __author__ = "John Eslick"
-__version__ = "1.0.0"
 
 import time
 import os
@@ -31,26 +26,28 @@ from IPython import get_ipython
 import idaes.ui.report as rpt
 import pyomo.environ as pe
 
+_log = logging.getLogger(__name__)
+
 try: # this is for importing PyQt 4 or 5, looks a bit nasty, settle on pyqt5?
     from PyQt5 import QtCore
 except:
-    logging.exception("Cannot import PyQt5.QtCore")
+    _log.exception("Cannot import PyQt5.QtCore")
     try:
         from PyQt4 import QtCore
     except:
-        logging.exception("Cannot import PyQt4.QtCore")
+        _log.exception("Cannot import PyQt4.QtCore")
     else:
         try:
             from PyQt4.QtGui import QFileDialog, QMessageBox
             from PyQt4 import uic
         except:
-            logging.exception("Cannot import PyQt4")
+            _log.exception("Cannot import PyQt4")
 else:
     try:
         from PyQt5.QtWidgets import QFileDialog, QMessageBox
         from PyQt5 import uic
     except:
-        logging.exception("Cannot import PyQt5")
+        _log.exception("Cannot import PyQt5")
 
 from pyomo.contrib.viewer.model_browser import ModelBrowser
 
@@ -59,7 +56,7 @@ try:
     _MainWindowUI, _MainWindow = \
         uic.loadUiType(os.path.join(_mypath, "main.ui"))
 except:
-    logging.exception("Failed to load UI files.")
+    _log.exception("Failed to load UI files.")
     # This lets the file still be imported, but you won't be able to use it
     # Allowing this to be imported will let some basic tests pass without PyQt
     class _MainWindowUI(object):
@@ -195,7 +192,7 @@ class MainWindow(_MainWindow, _MainWindowUI):
 
         Other things that could be added
         * number of deactivated equalities
-        * number of active inequlaity constraints
+        * number of active inequality constraints
         * number of deactivated inequality constratins
         * number of free variables not appearing in active constraints
         * number of fixed variables not appearing in active constraints
