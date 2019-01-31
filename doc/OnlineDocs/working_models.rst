@@ -189,7 +189,7 @@ The final lines in the outer for loop find a solution and display it:
    
    >>> results = opt.solve(instance, load_solutions=False) # doctest: +SKIP
    >>> if results.solver.termination_condition == TerminationCondition.optimal: # doctest: +SKIP
-   >>>     instance.solutions.load_from(results) # doctest: +SKIP
+   ...     instance.solutions.load_from(results) # doctest: +SKIP
 
 Changing the Model or Data and Re-solving
 -----------------------------------------
@@ -233,7 +233,7 @@ idea for users of an ``AbstractModel``:
     instance.sigma = pyo.Param(mutable=True, initialize=2.3)
     instance.Theta = pyo.Param(instance.I, mutable=True)
     for i in instance.I:
-        instance.Theta[i] =
+        instance.Theta[i] = i
     idx = 1
     NewVal = 1134
     
@@ -282,11 +282,11 @@ This could also have been accomplished by setting the upper and lower
 bounds:
 
    >>> if instance.x[2] == 0:
-   >>>     instance.x[2].setlb(1)
-   >>>     instance.x[2].setub(1)
-   >>> else:
-   >>>     instance.x[2].setlb(0)
-   >>>     instance.x[2].setub(0)
+   ...     instance.x[2].setlb(1)
+   ...     instance.x[2].setub(1)
+   ... else:
+   ...     instance.x[2].setlb(0)
+   ...     instance.x[2].setub(0)
    
 Notice that when using the bounds, we do not set ``fixed`` to ``True``
 because that would fix the variable at whatever value it presently has
@@ -353,7 +353,7 @@ more than one objective). If both ``model.obj1`` and ``model.obj2`` have
 been declared using ``Objective``, then one can ensure that
 ``model.obj2`` is passed to the solver as shown in this simple example:
 
-   >>> model=ConcreteModel()
+   >>> model = pyo.ConcreteModel()
    >>> model.obj1 = pyo.Objective(expr = 0)
    >>> model.obj2 = pyo.Objective(expr = 0)
 
@@ -440,7 +440,8 @@ snippet for fixing all integers at their current value:
 
 
 Another way to access all of the variables (particularly if there are
-blocks) is as follows:
+blocks) is as follows (this particular snippet assumes that instead of
+`import pyomo.environ as pyo` `from pyo.environ import *` was used):
 
 .. literalinclude:: script_spy_files/block_iter_example_compprintloop.spy
    :language: python
