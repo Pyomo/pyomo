@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -21,17 +21,18 @@ import pyomo.scripting.pyomo_command as main
 from pyomo.scripting.util import cleanup
 from pyomo.neos.kestrel import kestrelAMPL
 
+import pyomo.environ as pyo
+
 from six import iteritems
 
+neos_available = False
 try:
-    kestrel = kestrelAMPL()
+    # Attempt a connection to NEOS.  Any failure will result in skipping
+    # these tests
+    if kestrelAMPL().neos is not None:
+        neos_available = True
 except:
-    kestrel = None
-if kestrel is None or kestrel.neos is None:
-    using_neos = False
-else:
-    using_neos = True
-kestrel = None
+    pass
 
 try:
     import yaml
@@ -40,97 +41,56 @@ except ImportError:
     yaml_available=False
 
 
-class CommonTests(object):
+#
+# Because the Kestrel tests require connections to the NEOS server, and
+# that can take quite a while (5-20+ seconds), we will only run these
+# tests as part of the nightly suite (i.e., by the CI system as part of
+# PR / master tests)
+#
+@unittest.category('nightly')
+@unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
+class TestKestrel(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        import pyomo.environ
-
-    def setUp(self):
-        try:
-            os.remove(join(currdir,'result.yml'))
-        except OSError:
-            pass
-
-    def pyomo(self, *args, **kwds):
-        args=list(args)
-        args.append('--solver-manager=neos')
-        args.append('-c')
-        if 'solver' in kwds:
-            args.append('--solver='+kwds['solver'])
-        args.append('--symbolic-solver-labels')
-        args.append('--save-results=result.yml')
-        #args.append('--tempdir='+currdir)
-        #args.append('--keepfiles')
-        #args.append('--debug')
-        #args.append('--verbose')
-        os.chdir(currdir)
-
-        print('***')
-        print(' '.join(args))
+    @unittest.skipIf(not yaml_available, "YAML is not available")
+    def test_pyomo_command(self):
+        results = os.path.join(currdir, 'result.yml')
+        args = [
+            os.path.join(currdir,'t1.py'),
+            '--solver-manager=neos',
+            '--solver=cbc',
+            '--symbolic-solver-labels',
+            '--save-results=%s' % results,
+            '-c',
+            ]
         try:
             output = main.run(args)
-        except:
-            output = None
-        cleanup()
-        print('***')
-        return output
+            self.assertEqual(output.errorcode, 0)
 
-    def check(self, problem, solver):
-        pass
+            with open(results) as FILE:
+                data = yaml.load(FILE)
+            self.assertEqual(
+                data['Solver'][0]['Status'], 'ok')
+            self.assertAlmostEqual(
+                data['Solution'][1]['Status'], 'optimal')
+            self.assertAlmostEqual(
+                data['Solution'][1]['Objective']['o']['Value'], 1)
+            self.assertAlmostEqual(
+                data['Solution'][1]['Variable']['x']['Value'], 0.5)
+        finally:
+            cleanup()
+            os.remove(results)
 
+    def test_kestrel_plugin(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(0,1), initialize=0)
+        m.c = pyo.Constraint(expr=m.x <= 0.5)
+        m.obj = pyo.Objective(expr=2*m.x, sense=pyo.maximize)
 
-class Solver(unittest.TestCase):
+        solver_manager = pyo.SolverManagerFactory('neos')
+        results = solver_manager.solve(m, opt='cbc')
 
-    def referenceFile(self, problem, solver):
-        return join(currdir, problem+'.txt')
-
-    def getObjective(self, fname):
-        FILE = open(fname)
-        data = yaml.load(FILE)
-        FILE.close()
-        solutions = data.get('Solution', [])
-        ans = []
-        for x in solutions:
-            ans.append(x.get('Objective', {}))
-        return ans
-
-    def check(self, problem, solver):
-        refObj = self.getObjective(self.referenceFile(problem,solver))
-        ansObj = self.getObjective(join(currdir,'result.yml'))
-        self.assertEqual(len(refObj), len(ansObj))
-        for i in range(len(refObj)):
-            self.assertEqual(len(refObj[i]), len(ansObj[i]))
-            for key,val in iteritems(refObj[i]):
-                self.assertEqual(val, ansObj[i].get(key,None))
-
-
-@unittest.category('expensive')
-@unittest.skipIf(not yaml_available, "YAML is not available")
-@unittest.skipIf(not using_neos, "NEOS is not available")
-class Solve_CBC(Solver, CommonTests):
-
-    def pyomo(self,  *args, **kwds):
-        kwds['solver'] = 'cbc'
-        return CommonTests.pyomo(self, *args, **kwds)
-
-    def test_t1(self):
-        self.problem='test_t1'
-        self.pyomo( join(currdir,'t1.py') )
-        self.check( 't1', 'linear_dual' )
-
-
-@unittest.category('expensive')
-@unittest.skipIf(not using_neos, "NEOS is not available")
-class Misc(unittest.TestCase, CommonTests):
-
-    def test_bad_solver(self):
-        self.problem='test_t1'
-        ans = self.pyomo( join(currdir,'t1.py'), solver='foo')
-        if not ans is None:
-            self.fail("Expected failure because solver is not defined.")
-
-
+        self.assertEqual(results.solver[0].status, pyo.SolverStatus.ok)
+        self.assertAlmostEqual(pyo.value(m.x), 0.5)
 
 
 if __name__ == "__main__":

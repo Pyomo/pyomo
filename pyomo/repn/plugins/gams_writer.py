@@ -244,7 +244,9 @@ def split_long_line(line):
                     "Found an 80,000+ character string with no spaces")
             i -= 1
         new_lines += line[:i] + '\n'
-        line = line[i + 1:]
+        # the space will be the first character in the next line,
+        # so that the line doesn't start with the comment character '*'
+        line = line[i:]
     new_lines += line
     return new_lines
 

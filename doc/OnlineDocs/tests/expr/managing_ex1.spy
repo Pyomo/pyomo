@@ -1,0 +1,12 @@
+from pyomo.core.expr import current as EXPR
+
+M = ConcreteModel()
+M.x = Var()
+
+e = sin(M.x) + 2*M.x
+
+# sin(x) + 2*x
+print(EXPR.expression_to_string(e))
+
+# sum(sin(x), prod(2, x))
+print(EXPR.expression_to_string(e, verbose=True))

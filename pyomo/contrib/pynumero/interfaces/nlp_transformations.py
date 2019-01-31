@@ -8,8 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 from pyomo.contrib.pynumero.interfaces.nlp import NLP
-from pyomo.contrib.pynumero.sparse import COOSymMatrix
+from pyomo.contrib.pynumero.sparse import empty_matrix
 
+from scipy.sparse import coo_matrix, csc_matrix, csr_matrix
+import pyomo.environ as aml
 import numpy as np
 
 __all__ = ['AdmmNLP']
@@ -73,18 +75,10 @@ class AdmmNLP(NLP):
         self._lower_x = self._base_nlp.xl()
         self._upper_g = self._base_nlp.gu()
         self._lower_g = self._base_nlp.gl()
+        self._upper_d = self._base_nlp.du()
+        self._lower_d = self._base_nlp.dl()
 
-        # jacobian structure # ToDo: think of removing this?
         x = self.x_init()
-        jac = self._base_nlp.jacobian_g(x)
-        self._irows_jac_g = jac.row
-        self._jcols_jac_g = jac.col
-        jac = self._base_nlp.jacobian_c(x)
-        self._irows_jac_c = jac.row
-        self._jcols_jac_c = jac.col
-        jac = self._base_nlp.jacobian_d(x)
-        self._irows_jac_d = jac.row
-        self._jcols_jac_d = jac.col
 
         var_indices = list()
         for val in complicating_vars:
@@ -119,7 +113,7 @@ class AdmmNLP(NLP):
             self._w_values = np.zeros(self.nw)
 
         # indices of complicated variables
-        self._zid_to_xid = var_indices
+        self._zid_to_xid = np.array(var_indices)
 
         # complicated variable indices to zid
         self._xid_to_zid = dict()
@@ -134,8 +128,13 @@ class AdmmNLP(NLP):
         y = self.y_init()
         _tmp_hess = self.hessian_lag(x, y)
         self._nnz_hess_lag = _tmp_hess.nnz
-        self._irows_hess = _tmp_hess.row
-        self._jcols_hess = _tmp_hess.col
+
+        # expansion matrix z to x
+        col = self._zid_to_xid
+        row = np.arange(self.nz, dtype=np.int)
+        data = np.ones(self.nz)
+        self._compress_x_to_z = csr_matrix((data, (row, col)), shape=(self.nz, nlp.nx))
+        self._expand_z_to_x = self._compress_x_to_z.transpose()
 
         # keeps masks and maps
         self._lower_x_mask = self._base_nlp._lower_x_mask
@@ -170,16 +169,13 @@ class AdmmNLP(NLP):
     def create_vector_w(self):
         return np.zeros(self.nz, dtype=np.double)
 
-    # ToDo: change these properties to methods later
-    @property
     def w_estimates(self):
         """
         Return multiplier estimates in a 1d-array.
         """
         return np.copy(self._w_values)
 
-    @w_estimates.setter
-    def w_estimates(self, other):
+    def set_w_estimates(self, other):
         """
         Change multiplier estimates
         """
@@ -187,15 +183,13 @@ class AdmmNLP(NLP):
             raise RuntimeError('Dimension of vector does not match')
         self._w_values = np.copy(other)
 
-    @property
     def z_estimates(self):
         """
         Return complicated variable estimates in a 1d-array.
         """
         return np.copy(self._z_values)
 
-    @z_estimates.setter
-    def z_estimates(self, other):
+    def set_z_estimates(self, other):
         """
         Change value for complicated variable estimates
         """
@@ -233,11 +227,9 @@ class AdmmNLP(NLP):
         df = self._base_nlp.grad_objective(x, out=out)
 
         # add augmentation
-        # ToDo: can this be done using only numpy?
-        for zid, xid in enumerate(self._zid_to_xid):
-            multiplier = w[zid]
-            penalty = self.rho * (x[xid] - z[zid])
-            df[xid] += multiplier + penalty
+        xs = x[self._zid_to_xid]
+        penalty = self.rho * (xs-z)
+        df += self._expand_z_to_x.dot(penalty+w)
         return df
 
     def rhs_addition_terms(self):
@@ -275,7 +267,7 @@ class AdmmNLP(NLP):
         The evaluation of the constraints in a 1d-array
 
         """
-        return self._base_nlp.evaluate_g(x, out=out)
+        return self._base_nlp.evaluate_g(x, out=out, **kwargs)
 
     def evaluate_c(self, x, out=None, **kwargs):
 
@@ -321,14 +313,14 @@ class AdmmNLP(NLP):
         x : 1d-array
             array with values of primal variables. Size nx
         out : 1d-array
-            COOMatrix with the structure of the jacobian already defined. Optional
+            coo_matrix with the structure of the jacobian already defined. Optional
 
         Returns
         -------
-        The jacobian of the contraints in a COOMatrix format
+        The jacobian of the contraints in a coo_matrix format
 
         """
-        return self._base_nlp.jacobian_g(x, out=out)
+        return self._base_nlp.jacobian_g(x, out=out, **kwargs)
 
     def jacobian_c(self, x, out=None, **kwargs):
         """Return the jacobian of equality constraints evaluated at x
@@ -338,11 +330,11 @@ class AdmmNLP(NLP):
         x : 1d-array
             array with values of primal variables. Size nx
         out : 1d-array
-            COOMatrix with the structure of the jacobian already defined. Optional
+            coo_matrix with the structure of the jacobian already defined. Optional
 
         Returns
         -------
-        The jacobian of the equality contraints in a COOMatrix format
+        The jacobian of the equality contraints in a coo_matrix format
 
         """
         return self._base_nlp.jacobian_c(x, out=out, **kwargs)
@@ -356,11 +348,11 @@ class AdmmNLP(NLP):
         x : 1d-array
             array with values of primal variables. Size nx
         out : 1d-array
-            COOMatrix with the structure of the jacobian already defined. Optional
+            coo_matrix with the structure of the jacobian already defined. Optional
 
         Returns
         -------
-        The jacobian of the inequality contraints in a COOMatrix format
+        The jacobian of the inequality contraints in a coo_matrix format
 
         """
         return self._base_nlp.jacobian_d(x, out=out, **kwargs)
@@ -376,19 +368,19 @@ class AdmmNLP(NLP):
         y : 1d-array
             array with values of dual variables. Size ng
         out : 1d-array
-            SymCOOMatrix with the structure of the hessian already defined. Optional
+            coo_matrix with the structure of the hessian already defined. Optional
 
         Returns
         -------
-        SYMCOOMatrix
+        coo_matrix
 
         """
-        # ToDo: find a way to include the out because of nnz not matching
         hess = self._base_nlp.hessian_lag(x, y, **kwargs)
 
-        append_row = np.array([xid for xid in self._zid_to_xid], dtype=hess.row.dtype)
-        append_col = np.array([xid for xid in self._zid_to_xid], dtype=hess.col.dtype)
-        append_data = np.ones(self.nz, dtype=np.double) * self.rho
+        append_row = self._zid_to_xid
+        append_col = self._zid_to_xid
+        append_data = np.ones(self.nz, dtype=np.double)
+        append_data.fill(self.rho)
 
         # this will add rho to the diagonal
         hess.row = np.concatenate([hess.row, append_row])
@@ -396,25 +388,355 @@ class AdmmNLP(NLP):
         hess.data = np.concatenate([hess.data, append_data])
 
         hess.sum_duplicates()
+
         if out is not None:
-            assert isinstance(out, COOSymMatrix), "hessian must be a COOSymMatrix"
+            assert isinstance(out, coo_matrix), "hessian must be a coo_matrix"
             assert out.shape[0] == self.nx, "hessian has {} rows".format(self.nx)
             assert out.shape[1] == self.nx, "hessian has {} columns".format(self.nx)
             assert out.nnz == self.nnz_hessian_lag, "hessian has {} nnz".format(self.nnz_hessian_lag)
             out.data = hess.data
         return hess
 
-    # ToDo: variable order?
+    def variable_order(self):
+        return self._base_nlp.variable_order()
+
+    def constraint_order(self):
+        return self._base_nlp.constraint_order()
 
 
+class AugmentedLagrangianNLP(NLP):
+
+    def __init__(self,
+                 nlp,
+                 rho=1.0,
+                 w_estimates=None):
+        """
+
+        Parameters
+        ----------
+        nlp: PyomoNLP
+        subset_constraints: list of pyomo constraints
+        """
+
+        super(AugmentedLagrangianNLP, self).__init__(nlp.model)
+        self._initialize_nlp_components(nlp, rho=rho, w_estimates=w_estimates)
+
+    def _initialize_nlp_components(self, *args, **kwargs):
+
+        nlp = args[0]
+        rho = kwargs.pop('rho', 1.0)
+        w_estimates = kwargs.pop('w_estimates', None)
+
+        self._base_nlp = nlp
+        self._rho = rho
+
+        self._nx = self._base_nlp.nx
+        self._ng = self._base_nlp.nd
+        self._nc = 0
+        self._nd = self._base_nlp.nd
+        self._nw = self._base_nlp.nc
+
+        self._nnz_jac_g = self._base_nlp.nnz_jacobian_d
+        self._nnz_jac_c = 0
+        self._nnz_jac_d = self._base_nlp.nnz_jacobian_d
+
+        # container for multiplier estimates
+        if w_estimates is not None:
+            if len(w_estimates) != self._nw:
+                err_msg = "Dimension of vector does not match. \nInitial guess w "
+                err_msg += "is of dimension {} but must "
+                err_msg += "be of dimension {}".format(len(w_estimates), self.nw)
+                raise RuntimeError(err_msg)
+            self._w_values = np.asarray(w_estimates, dtype=np.double)
+        else:
+            self._w_values = np.zeros(self.nw)
+
+        self._lower_x_mask = self._base_nlp._lower_x_mask
+        self._upper_x_mask = self._base_nlp._upper_x_mask
+
+        self.Pc = self._base_nlp.expansion_matrix_c()
+        self.Pd = self._base_nlp.expansion_matrix_d()
+
+        x = self._base_nlp.x_init()
+        y = self._base_nlp.y_init()
+        self._init_x = x
+        self._init_y = self.Pd.transpose().dot(y)
+
+        # update hessian structure (this includes regularization term)
+        y = self._init_y
+        _tmp_hess = self.hessian_lag(x, y)
+        self._nnz_hess_lag = _tmp_hess.nnz
+
+    @property
+    def rho(self):
+        return self._rho
+
+    @rho.setter
+    def rho(self, value):
+        assert value >= 0, "Penalty parameter must be a positive number"
+        self._rho = value
+
+    @property
+    def nw(self):
+        return self._nw
+
+    def w_estimates(self):
+        """
+        Return multiplier estimates in a 1d-array.
+        """
+        return np.copy(self._w_values)
+
+    def set_w_estimates(self, other):
+        """
+        Change multiplier estimates
+        """
+        if len(other) != self.nw:
+            raise RuntimeError('Dimension of vector does not match')
+        self._w_values = np.copy(other)
+
+    def create_vector_w(self):
+        return np.zeros(self.nz, dtype=np.double)
+
+    def objective(self, x, **kwargs):
+
+        y = self._w_values
+        obj = self._base_nlp.objective(x)
+        h = self._base_nlp.evaluate_c(x)
+        return obj + y.dot(h) + 0.5 * self.rho * h.dot(h)
+
+    def grad_objective(self, x, out=None, **kwargs):
+
+        y = self._w_values
+        y_tilde = y + self.rho * self._base_nlp.evaluate_c(x)
+        jac = self._base_nlp.jacobian_c(x)
+
+        if out is None:
+            df = self._base_nlp.grad_objective(x, out=out)
+            return df + jac.transpose().dot(y_tilde)
+        else:
+            self._base_nlp.grad_objective(x, out=out)
+            out += + jac.transpose().dot(y_tilde)
+            return out
+
+    def evaluate_c(self, x, out=None, **kwargs):
+
+        """Return the equality constraints evaluated at x
+
+        Parameters
+        ----------
+        x : 1d-array
+            array with values of primal variables. Size nx
+        out : 1d-array
+            array to store the constraint evaluations. Size nc (optional)
+
+        Returns
+        -------
+        The evaluation of the equality constraints in a 1d-array
+
+        """
+        return np.zeros(0)
+
+    def evaluate_d(self, x, out=None, **kwargs):
+
+        """Return the inequality constraints evaluated at x
+
+        Parameters
+        ----------
+        x : 1d-array
+            array with values of primal variables. Size nx
+        out : 1d-array
+            array to store the constraint evaluations. Size nd (optional)
+
+        Returns
+        -------
+        The evaluation of the inequality constraints in a 1d-array
+
+        """
+        return self._base_nlp.evaluate_d(x, out=out, **kwargs)
+
+    def evaluate_g(self, x, out=None, **kwargs):
+
+        """Return the inequality constraints evaluated at x
+
+        Parameters
+        ----------
+        x : 1d-array
+            array with values of primal variables. Size nx
+        out : 1d-array
+            array to store the constraint evaluations. Size nd (optional)
+
+        Returns
+        -------
+        The evaluation of the inequality constraints in a 1d-array
+
+        """
+        return self._base_nlp.evaluate_d(x, out=out, **kwargs)
+
+    def jacobian_g(self, x, out=None, **kwargs):
+        """Return the jacobian of constraints evaluated at x
+
+        Parameters
+        ----------
+        x : 1d-array
+            array with values of primal variables. Size nx
+        out : 1d-array
+            coo_matrix with the structure of the jacobian already defined. Optional
+
+        Returns
+        -------
+        The jacobian of the contraints in a coo_matrix format
+
+        """
+        return self._base_nlp.jacobian_d(x, out=out)
+
+    def jacobian_c(self, x, out=None, **kwargs):
+        """Return the jacobian of equality constraints evaluated at x
+
+        Parameters
+        ----------
+        x : 1d-array
+            array with values of primal variables. Size nx
+        out : 1d-array
+            coo_matrix with the structure of the jacobian already defined. Optional
+
+        Returns
+        -------
+        The jacobian of the equality contraints in a coo_matrix format
+
+        """
+        return empty_matrix(0, self.nx)
+
+    def jacobian_d(self, x, out=None, **kwargs):
+
+        """Return the jacobian of inequality constraints evaluated at x
+
+        Parameters
+        ----------
+        x : 1d-array
+            array with values of primal variables. Size nx
+        out : 1d-array
+            coo_matrix with the structure of the jacobian already defined. Optional
+
+        Returns
+        -------
+        The jacobian of the inequality contraints in a coo_matrix format
+
+        """
+        return self._base_nlp.jacobian_d(x, out=out, **kwargs)
+
+    def hessian_lag(self, x, y, out=None, **kwargs):
+        # y should only include yd
+        assert y.size == self.nd
+        Pc = self.Pc
+        Pd = self.Pd
+        yd = Pd.dot(y)
+        y_tilde = self._w_values + self.rho * self._base_nlp.evaluate_c(x)
+        yc = Pc.dot(y_tilde)
+        yall = yd + yc
+        hess = self._base_nlp.hessian_lag(x, yall, **kwargs)
+        jac = self._base_nlp.jacobian_c(x)
+        rjac = self.rho * jac.transpose().dot(jac)
+        res = hess + rjac
+        return res.tocoo()
+
+    def expansion_matrix_c(self):
+        """
+        Returns expansion matrix inequality constraints
+        """
+        row = np.zeros(0)
+        nnz = 0
+        col = np.arange(nnz, dtype=np.int)
+        data = np.zeros(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.ng, nnz))
+
+    def expansion_matrix_d(self):
+        """
+        Returns expansion matrix inequality constraints
+        """
+        row = self._base_nlp._d_map
+        nnz = len(self._base_nlp._d_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.ng, nnz))
+
+    def expansion_matrix_du(self):
+        """
+        Returns expansion matrix upper bounds on inequality constraints
+        """
+        row = self._base_nlp._upper_d_map
+        nnz = len(self._base_nlp._upper_d_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.nd, nnz))
+
+    def expansion_matrix_dl(self):
+        """
+        Returns expansion matrix lower bounds on inequality constraints
+        """
+
+        row = self._base_nlp._lower_d_map
+        nnz = len(self._base_nlp._lower_d_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.nd, nnz))
+
+    def expansion_matrix_xu(self):
+        """
+        Returns expansion matrix for upper bounds on primal variables
+        """
+        return self._base_nlp.expansion_matrix_xu()
+
+    def expansion_matrix_xl(self):
+        """
+        Returns expansion matrix for lower bounds on primal variables
+        """
+        return self._base_nlp.expansion_matrix_xl()
 
 
+def compose_two_stage_stochastic_model(models, complicating_vars):
 
+    if not isinstance(models, dict):
+        raise RuntimeError("Model must be a dictionary")
+    if not isinstance(complicating_vars, dict):
+        raise RuntimeError("complicating_vars must be a dictionary")
+    if len(complicating_vars) != len(models):
+        raise RuntimeError("Each scenario must have a list of complicated variables")
 
+    counter = 0
+    nz = -1
+    for k, v in complicating_vars.items():
+        if counter == 0:
+            nz = len(v)
+        else:
+            assert len(v) == nz, 'all models must have same number of complicating variables'
+        counter += 1
 
+    model = aml.ConcreteModel()
+    model.z = aml.Var(range(nz))
+    model.scenario_names = sorted([name for name in models.keys()])
 
+    obj = 0.0
 
+    for i, j in enumerate(model.scenario_names):
+        instance = models[j].clone()
+        model.add_component("{}_linking".format(j), aml.ConstraintList())
+        model.add_component("{}".format(j), instance)
+        linking = getattr(model, "{}_linking".format(j))
+        x = complicating_vars[j]
 
+        for k, var in enumerate(x):
+            if var.is_indexed():
+                raise RuntimeError('indexed complicating variables not supported')
+            vid = aml.ComponentUID(var)
+            vv = vid.find_component_on(instance)
+            linking.add(vv == model.z[k])
 
-
-
+        # gets objective
+        objectives = instance.component_map(aml.Objective, active=True)
+        if len(objectives) > 1:
+            raise RuntimeError('Multiple objectives not supported')
+        instance_obj = list(objectives.values())[0]
+        obj += instance_obj.expr
+        instance_obj.deactivate()
+    model.obj = aml.Objective(expr=obj)
+    return model

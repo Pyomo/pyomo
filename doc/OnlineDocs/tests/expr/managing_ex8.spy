@@ -1,0 +1,9 @@
+from pyomo.core.expr import current as EXPR
+
+M = ConcreteModel()
+M.x = Var()
+M.p = Param(mutable=True)
+
+e = M.p+M.x
+s = set([type(M.p)])
+assert(list(EXPR.identify_components(e, s)) == [M.p])
