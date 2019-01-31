@@ -1,4 +1,4 @@
-import unittest
+import pyutilib.th as unittest
 import pyomo.environ as pe
 from pyomo.contrib.fbbt.fbbt import fbbt
 try:

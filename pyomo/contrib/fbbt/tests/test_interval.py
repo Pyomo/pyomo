@@ -1,4 +1,4 @@
-import unittest
+import pyutilib.th as unittest
 import pyomo.contrib.fbbt.interval as interval
 try:
     import numpy as np
