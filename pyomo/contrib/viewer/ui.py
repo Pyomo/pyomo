@@ -217,7 +217,7 @@ class MainWindow(_MainWindow, _MainWindowUI):
 
     def toggle_always_on_top(self):
         """
-        This toggles the always on top hint.  Weather this has any effect after
+        This toggles the always on top hint.  Whether this has any effect after
         the main window is created probably depends on the system.
         """
         self.setWindowFlags(window.windowFlags() ^ QtCore.Qt.WindowStaysOnTopHint)
@@ -241,7 +241,7 @@ class MainWindow(_MainWindow, _MainWindowUI):
 
     def closeEvent(self, event):
         """
-        Handel the colse event by asking for confirmation
+        Handle the close event by asking for confirmation
         """
         result = QMessageBox.question(self,
             "Exit?",
