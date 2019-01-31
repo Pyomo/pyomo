@@ -5,11 +5,15 @@ from pyomo.core.expr.current import exp, log, sin, cos, tan, asin, acos, atan
 
 
 """
-The purpose of this file is to perform symbolic differentiation and first order automatic differentiation directly with
-pyomo expressions. This is certainly not as efficient as doing AD in C or C++, but it avoids the translation from
-pyomo expressions to a form where AD can be performed efficiently. The only functions that are meant to be used by 
-users are reverse_ad and reverse_sd. First, values are propagated from the leaves to each node in the tree with the 
-LeafToRoot visitors. Then derivative values are propagated from the root to the leaves with the RootToLeaf visitors.
+The purpose of this file is to perform symbolic differentiation and 
+first order automatic differentiation directly with pyomo 
+expressions. This is certainly not as efficient as doing AD in C or 
+C++, but it avoids the translation from pyomo expressions to a form 
+where AD can be performed efficiently. The only functions that are 
+meant to be used by users are reverse_ad and reverse_sd. First, 
+values are propagated from the leaves to each node in the tree with 
+the LeafToRoot visitors. Then derivative values are propagated from 
+the root to the leaves with the RootToLeaf visitors.
 """
 
 
@@ -326,7 +330,8 @@ def reverse_ad(expr):
     Returns
     -------
     pyomo.core.kernel.component_map.ComponentMap
-        component_map mapping variables to derivatives with respect to the corresponding variable
+        component_map mapping variables to derivatives with respect
+        to the corresponding variable
     """
     val_dict = ComponentMap()
     der_dict = ComponentMap()
@@ -414,7 +419,8 @@ def reverse_sd(expr):
     Returns
     -------
     pyomo.core.kernel.component_map.ComponentMap
-        component_map mapping variables to derivatives with respect to the corresponding variable
+        component_map mapping variables to derivatives with respect
+        to the corresponding variable
     """
     val_dict = ComponentMap()
     der_dict = ComponentMap()

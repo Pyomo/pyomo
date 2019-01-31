@@ -1,18 +1,23 @@
-import unittest
+import pyutilib.th as unittest
 import pyomo.environ as pe
 from pyomo.contrib.derivatives.differentiate import reverse_ad, reverse_sd
 
 
-tol = 4
+tol = 6
 
 
 def approx_deriv(expr, wrt, delta=0.001):
-    wrt.value += delta
-    val1 = pe.value(expr)
+    numerator = 0
+    wrt.value += 2*delta
+    numerator -= pe.value(expr)
+    wrt.value -= delta
+    numerator += 8*pe.value(expr)
     wrt.value -= 2*delta
-    val2 = pe.value(expr)
-    wrt.value += delta
-    return (val1 - val2) / (2*delta)
+    numerator -= 8*pe.value(expr)
+    wrt.value -= delta
+    numerator += pe.value(expr)
+    wrt.value += 2*delta
+    return numerator / (12*delta)
 
 
 class TestDerivs(unittest.TestCase):
