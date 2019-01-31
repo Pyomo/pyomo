@@ -193,9 +193,9 @@ class ComponentDataItem(object):
             self._cache_value = value(self.data)
         if isinstance(self.data, _ConstraintData) and self.data.active:
             try:
-                self._cache_value = value(self.data.body)
-                self._cache_lb = value(self.data.lower)
-                self._cache_ub = value(self.data.upper)
+                self._cache_value = value(self.data.body, exception=False)
+                self._cache_lb = value(self.data.lower, exception=False)
+                self._cache_ub = value(self.data.upper, exception=False)
             except:
                 pass
 
@@ -226,14 +226,8 @@ class ComponentDataItem(object):
             return None
 
     def _get_value_callback(self):
-        #if isinstance(self.data, _VarData):   # prevent Pyomo warinig about
-        #    if self.data.value is None:       # value of non-numeric value
-        #        return None
         if isinstance(self.data, (_VarData, _ParamData, float, int)):
-            try:
-                return value(self.data, exception=False)
-            except:
-                return None
+            return value(self.data, exception=False)
         else:
             return self._cache_value
 
