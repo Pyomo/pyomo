@@ -9,9 +9,8 @@ except ImportError:
 
 
 class TestInterval(unittest.TestCase):
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_add(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         xl = -2.5
         xu = 2.8
         yl = -3.2
@@ -24,9 +23,8 @@ class TestInterval(unittest.TestCase):
             self.assertTrue(np.all(zl <= _z))
             self.assertTrue(np.all(zu >= _z))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_sub(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         xl = -2.5
         xu = 2.8
         yl = -3.2
@@ -39,9 +37,8 @@ class TestInterval(unittest.TestCase):
             self.assertTrue(np.all(zl <= _z))
             self.assertTrue(np.all(zu >= _z))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_mul(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         xl = -2.5
         xu = 2.8
         yl = -3.2
@@ -54,9 +51,8 @@ class TestInterval(unittest.TestCase):
             self.assertTrue(np.all(zl <= _z))
             self.assertTrue(np.all(zu >= _z))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_div(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         x_bounds = [(np.random.uniform(-5, -2), np.random.uniform(2, 5))]
         y_bounds = [(np.random.uniform(-5, -2), np.random.uniform(2, 5)),
                     (0, np.random.uniform(2, 5)),
@@ -73,9 +69,8 @@ class TestInterval(unittest.TestCase):
                     self.assertTrue(np.all(zl <= _z))
                     self.assertTrue(np.all(zu >= _z))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_pow(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         x_bounds = [(np.random.uniform(0, 2), np.random.uniform(2, 5)),
                     (0, np.random.uniform(2, 5)),
                     (0, 0)]
@@ -108,9 +103,8 @@ class TestInterval(unittest.TestCase):
                 self.assertTrue(np.all(zl <= _z))
                 self.assertTrue(np.all(zu >= _z))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_exp(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         xl = -2.5
         xu = 2.8
         zl, zu = interval.exp(xl, xu)
@@ -119,9 +113,8 @@ class TestInterval(unittest.TestCase):
         self.assertTrue(np.all(zl <= _z))
         self.assertTrue(np.all(zu >= _z))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_log(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         x_bounds = [(np.random.uniform(0, 2), np.random.uniform(2, 5)),
                     (0, np.random.uniform(2, 5)),
                     (0, 0)]

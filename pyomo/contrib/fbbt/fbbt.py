@@ -1,7 +1,9 @@
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 import pyomo.core.expr.expr_pyomo5 as _expr
-from pyomo.core.expr.expr_pyomo5 import ExpressionValueVisitor, nonpyomo_leaf_types, value, identify_variables
+from pyomo.core.expr.expr_pyomo5 import (ExpressionValueVisitor,
+                                         nonpyomo_leaf_types, value,
+                                         identify_variables)
 from pyomo.core.expr.numvalue import is_fixed
 import pyomo.contrib.fbbt.interval as interval
 import math
@@ -13,16 +15,24 @@ if not hasattr(math, 'inf'):
 
 
 """
-The purpose of this file is to perform feasibility based bounds tightening. This is a very basic implementation, 
-but it is done directly with pyomo expressions. The only functions that are meant to be used by users are fbbt, fbbt_con, 
-and fbbt_block. The first set of functions in this file (those with names starting with _prop_bnds_leaf_to_root) are used for
-propagating bounds from the variables to each node in the expression tree (all the way to the root node). The second 
-set of functions (those with names starting with _prop_bnds_root_to_leaf) are used to propagate bounds from the 
-constraint back to the variables. For example, consider the constraint x*y + z == 1 with -1 <= x <= 1 and -2 <= y <= 2. 
-When propagating bounds from the variables to the root (the root is x*y + z), we find that -2 <= x*y <= 2, and that 
--inf <= x*y + z <= inf. However, from the constraint, we know that 1 <= x*y + z <= 1, so we may propagate bounds back 
-to the variables. Since we know that 1 <= x*y + z <= 1 and -2 <= x*y <= 2, then we must have -1 <= z <= 3. However, 
-bounds cannot be improved on x*y, so bounds cannot be improved on either x or y.
+The purpose of this file is to perform feasibility based bounds 
+tightening. This is a very basic implementation, but it is done 
+directly with pyomo expressions. The only functions that are meant to 
+be used by users are fbbt, fbbt_con, and fbbt_block. The first set of 
+functions in this file (those with names starting with 
+_prop_bnds_leaf_to_root) are used for propagating bounds from the  
+variables to each node in the expression tree (all the way to the  
+root node). The second set of functions (those with names starting 
+with _prop_bnds_root_to_leaf) are used to propagate bounds from the 
+constraint back to the variables. For example, consider the constraint 
+x*y + z == 1 with -1 <= x <= 1 and -2 <= y <= 2. When propagating 
+bounds from the variables to the root (the root is x*y + z), we find 
+that -2 <= x*y <= 2, and that -inf <= x*y + z <= inf. However, 
+from the constraint, we know that 1 <= x*y + z <= 1, so we may 
+propagate bounds back to the variables. Since we know that 
+1 <= x*y + z <= 1 and -2 <= x*y <= 2, then we must have -1 <= z <= 3. 
+However, bounds cannot be improved on x*y, so bounds cannot be 
+improved on either x or y.
 
 >>> import pyomo.environ as pe
 >>> m = pe.ConcreteModel()
@@ -233,7 +243,9 @@ def _prop_bnds_leaf_to_root_UnaryFunctionExpression(node, bnds_dict):
     if node.getname() in _unary_leaf_to_root_map:
         _unary_leaf_to_root_map[node.getname()](node, bnds_dict)
     else:
-        raise FBBTException('Unsupported expression type for FBBT: {0}'.format(type(node)))
+        msg = ('Unsupported expression type for FBBT: ' +
+               '{0}'.format(type(node)))
+        raise FBBTException(msg)
 
 
 _prop_bnds_leaf_to_root_map = dict()
@@ -275,22 +287,25 @@ def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict):
 
 def _prop_bnds_root_to_leaf_SumExpression(node, bnds_dict):
     """
-    This function is a bit complicated. A simpler implementation would loop through each argument in the sum and do
-    the following:
+    This function is a bit complicated. A simpler implementation
+    would loop through each argument in the sum and do the following:
 
     bounds_on_arg_i = bounds_on_entire_sum - bounds_on_sum_of_args_excluding_arg_i
 
-    and the bounds_on_sum_of_args_excluding_arg_i could be computed for each argument. However, the computational
-    expense would grow approximately quadratically with the length of the sum. Thus, we do the following. Consider
-    the expression
+    and the bounds_on_sum_of_args_excluding_arg_i could be computed
+    for each argument. However, the computational expense would grow
+    approximately quadratically with the length of the sum. Thus,
+    we do the following. Consider the expression
 
     y = x1 + x2 + x3 + x4
 
-    and suppose we have bounds on y. We first accumulate bounds to obtain a list like the following
+    and suppose we have bounds on y. We first accumulate bounds to
+    obtain a list like the following
 
     [(x1)_bounds, (x1+x2)_bounds, (x1+x2+x3)_bounds, (x1+x2+x3+x4)_bounds]
 
-    Then we can propagate bounds back to x1, x2, x3, and x4 with the following
+    Then we can propagate bounds back to x1, x2, x3, and x4 with the
+    following
 
     (x4)_bounds = (x1+x2+x3+x4)_bounds - (x1+x2+x3)_bounds
     (x3)_bounds = (x1+x2+x3)_bounds - (x1+x2)_bounds
@@ -572,7 +587,8 @@ _prop_bnds_root_to_leaf_map[_expr.UnaryFunctionExpression] = _prop_bnds_root_to_
 
 class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
     """
-    This walker propagates bounds from the variables to each node in the expression tree (all the way to the root node).
+    This walker propagates bounds from the variables to each node in
+    the expression tree (all the way to the root node).
     """
     def __init__(self, bnds_dict):
         """
@@ -619,8 +635,9 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
 
 class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
     """
-    This walker propagates bounds from the constraint back to the variables. Note that the bounds on every node
-    in the tree must first be computed with _FBBTVisitorLeafToRoot.
+    This walker propagates bounds from the constraint back to the
+    variables. Note that the bounds on every node in the tree must
+    first be computed with _FBBTVisitorLeafToRoot.
     """
     def __init__(self, bnds_dict):
         """
@@ -665,13 +682,16 @@ def fbbt_con(con):
     con: pyomo.core.base.constraint.Constraint
         constraint on which to perform fbbt
     """
-    bnds_dict = ComponentMap()  # a dictionary to store the bounds of every node in the tree
+    bnds_dict = ComponentMap()  # a dictionary to store the bounds of
+    #  every node in the tree
 
-    visitorA = _FBBTVisitorLeafToRoot(bnds_dict)  # a walker to propagate bounds from the variables to the root
+    # a walker to propagate bounds from the variables to the root
+    visitorA = _FBBTVisitorLeafToRoot(bnds_dict)
     visitorA.dfs_postorder_stack(con.body)
 
-    # Now we need to replace the bounds in bnds_dict for the root node with the bounds on the constraint (if
-    # those bounds are better).
+    # Now we need to replace the bounds in bnds_dict for the root
+    # node with the bounds on the constraint (if those bounds are
+    # better).
     _lb = value(con.lower)
     _ub = value(con.upper)
     if _lb is None:
@@ -692,10 +712,13 @@ def fbbt_con(con):
 
 def fbbt_block(m, tol=1e-4):
     """
-    Feasibility based bounds tightening (FBBT) for a block. This loops through all of the constraints in the block and
-    performs FBBT on each constraint. Through this processes, any variables whose bounds improve by more than tol are
-    collected, and FBBT is performed again on all constraints involving those variables. This process is continues
-    until no variable bounds are improved by more than tol.
+    Feasibility based bounds tightening (FBBT) for a block. This
+    loops through all of the constraints in the block and performs
+    FBBT on each constraint. Through this processes, any variables
+    whose bounds improve by more than tol are collected, and FBBT is
+    performed again on all constraints involving those variables.
+    This process is continues until no variable bounds are improved
+    by more than tol.
 
     Parameters
     ----------
@@ -705,7 +728,8 @@ def fbbt_block(m, tol=1e-4):
     var_to_con_map = ComponentMap()
     var_lbs = ComponentMap()
     var_ubs = ComponentMap()
-    for c in m.component_data_objects(ctype=Constraint, active=True, descend_into=True, sort=True):
+    for c in m.component_data_objects(ctype=Constraint, active=True,
+                                      descend_into=True, sort=True):
         for v in identify_variables(c.body):
             if v not in var_to_con_map:
                 var_to_con_map[v] = list()
@@ -720,7 +744,8 @@ def fbbt_block(m, tol=1e-4):
             var_to_con_map[v].append(c)
 
     improved_vars = ComponentSet()
-    for c in m.component_data_objects(ctype=Constraint, active=True, descend_into=True, sort=True):
+    for c in m.component_data_objects(ctype=Constraint, active=True,
+                                      descend_into=True, sort=True):
         fbbt_con(c)
         for v in identify_variables(c.body):
             if v.lb is not None:
@@ -749,7 +774,8 @@ def fbbt_block(m, tol=1e-4):
 
 def fbbt(comp):
     """
-    Perform FBBT on a constraint or a block. For more control, use fbbt_con and fbbt_block.
+    Perform FBBT on a constraint or a block. For more control,
+    use fbbt_con and fbbt_block.
 
     Parameters
     ----------

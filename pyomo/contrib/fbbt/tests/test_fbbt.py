@@ -9,9 +9,8 @@ except ImportError:
 
 
 class TestFBBT(unittest.TestCase):
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_add(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -36,9 +35,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yl <= _y))
                     self.assertTrue(np.all(yu >= _y))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_sub1(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -63,9 +61,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yl <= _y))
                     self.assertTrue(np.all(yu >= _y))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_sub2(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -90,9 +87,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yl <= _y))
                     self.assertTrue(np.all(yu >= _y))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_mul(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -117,9 +113,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yl <= _y))
                     self.assertTrue(np.all(yu >= _y))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_div1(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -144,9 +139,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yl <= _y))
                     self.assertTrue(np.all(yu >= _y))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_div2(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -171,9 +165,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yl <= _y))
                     self.assertTrue(np.all(yu >= _y))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_pow1(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -198,9 +191,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yl <= _y))
                     self.assertTrue(np.all(yu >= _y))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_pow2(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
@@ -228,9 +220,8 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yl <= _y))
                     self.assertTrue(np.all(yu >= _y))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_exp(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         c_bounds = [(-2.5, 2.8), (0.5, 2.8), (0, 2.8), (1, 2.8), (0.5, 1)]
         for cl, cu in c_bounds:
             m = pe.Block(concrete=True)
@@ -254,9 +245,8 @@ class TestFBBT(unittest.TestCase):
             self.assertTrue(np.all(xl <= x))
             self.assertTrue(np.all(xu >= x))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_log(self):
-        if not numpy_available:
-            raise unittest.SkipTest
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for cl, cu in c_bounds:
             m = pe.Block(concrete=True)
