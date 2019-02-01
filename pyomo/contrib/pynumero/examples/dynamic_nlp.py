@@ -135,7 +135,6 @@ kkt[1, 0] = jac_g
 plt.spy(kkt.tocoo())
 plt.title('KKT system\n')
 plt.show()
-
 opt = CyIpoptSolver(nlp)
 x, info = opt.solve(tee=True)
 

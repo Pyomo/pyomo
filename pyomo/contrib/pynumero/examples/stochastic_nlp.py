@@ -86,7 +86,7 @@ kkt = BlockSymMatrix(2)
 kkt[0, 0] = hess_lag
 kkt[1, 0] = jac_g
 
-plt.spy(kkt.tocoo())
+plt.spy(kkt.tocoo(), markersize=5)
 plt.title('KKT system\n')
 plt.show()
 

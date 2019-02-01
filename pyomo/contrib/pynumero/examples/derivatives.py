@@ -84,6 +84,5 @@ kkt = BlockSymMatrix(2)
 kkt[0, 0] = hess_lag
 kkt[1, 0] = jac_c
 plt.spy(kkt.tocoo())
-plt.title('KKT system\n')
+plt.title('KKT System of Dynamic Optimization Problem\n')
 plt.show()
-

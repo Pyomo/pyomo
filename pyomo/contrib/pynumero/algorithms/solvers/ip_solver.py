@@ -42,7 +42,7 @@ import sys
 if not found_mumps and not found_hsl:
     raise ImportError('Need MA27 or MUMPS to run pynumero interior-point')
 
-from pyomo.contrib.pynumero.linalg.solvers.kkt_solver import SchurComplementKKTSolver
+from pyomo.contrib.pynumero.linalg.solvers.kkt_solver import KKTSolver
 
 def dict_matrix(matrix, with_offset=True):
     # Note: this is just for printing in the logger
@@ -548,7 +548,7 @@ class _InteriorPointCalculator(object):
                 alpha_u_z = min(1.0 / alpha_u_z, 1.0)
             else:
                 alpha_u_z = 1.0
-        """
+
         if data.vl.size > 0:
             alphas = np.divide(delta_vl, -tau * data.vl)
             alpha_l_v = alphas.max()
@@ -563,17 +563,26 @@ class _InteriorPointCalculator(object):
                 alpha_u_v = min(1.0 / alpha_u_v, 1.0)
             else:
                 alpha_u_v = 1.0
-        """
 
         return min([alpha_l_z, alpha_u_z, alpha_l_v, alpha_u_v])
 
     def primal_infeasibility(self):
         norm_c = 0.0
         norm_d = 0.0
-        if self._data.yc.size > 0:
+        data = self._data
+        if data.yc.size > 0:
             norm_c = pn.linalg.norm(self.evaluate_c(), ord=np.inf)
-        if self._data.yd.size > 0:
-            norm_d = pn.linalg.norm(self.residual_d(), ord=np.inf)
+        if data.yd.size > 0:
+            d_val = self.evaluate_d()
+            res_dl = data.condensed_dl - data.Pdl.T.dot(d_val)
+            res_du = data.Pdu.T.dot(d_val) - data.condensed_du
+            if res_dl.size > 0:
+                res_dl = res_dl.clip(min=0.0)
+                norm_d += pn.linalg.norm(res_dl, ord=np.inf)
+            if res_du.size > 0:
+                res_du = res_du.clip(min=0.0)
+                norm_d += pn.linalg.norm(res_du, ord=np.inf)
+            #norm_d = pn.linalg.norm(self.residual_d(), ord=np.inf)
         return max(norm_c, norm_d)
 
     def dual_infeasibility(self):
@@ -776,8 +785,8 @@ class LineSearch(object):
                     return alpha
             self._n_backtrack += 1
             alpha *= rho
-        print("WARNING: Reach limit backtrack")
-        return alpha
+
+        raise RuntimeError('Need restoration')
 
     def unconstrained_search(self, x, dx, max_alpha=1.0, **kwargs):
 
@@ -857,10 +866,10 @@ class _InteriorPointWalker(object):
         self._rhs = None
         if linear_solver == 'ma27' or linear_solver == 'mumps':
             self._lsolver = FullKKTSolver(linear_solver)
-        elif linear_solver == 'serial_sc':
-            self._lsolver = SchurComplementKKTSolver('ma27')
         else:
-            raise RuntimeError('Linear Solver not recognized')
+            assert isinstance(linear_solver, KKTSolver), 'Linear Solver must be subclass from KKTSolver'
+            self._lsolver = linear_solver
+            self._lsolver.reset_inertia_parameters()
 
         nlp = self._calculator._data.nlp
         self._line_search = LineSearch(nlp)
@@ -888,7 +897,8 @@ class _InteriorPointWalker(object):
                                  calc.evaluate_c(),
                                  calc.residual_d()])
 
-        self._lsolver.do_symbolic_factorization(self._kkt, nlp=nlp)
+        # solve kkt system to get symbolic factorization
+        dvars, info = self._lsolver.solve(self._kkt, self._rhs, nlp, do_symbolic=True)
 
     def cache(self):
 
@@ -914,13 +924,13 @@ class _InteriorPointWalker(object):
         # solve kkt system
         dvars, info = self._lsolver.solve(self._kkt,
                                           self._rhs,
-                                          nlp=nlp,
+                                          nlp,
                                           do_symbolic=False,  # done already in setup
                                           max_iter_reg=max_iter_reg)
 
         val_reg = info['delta_reg']
         if info['status'] != 0:
-            print("WARNING: could not regularize kkt")
+            raise RuntimeError('Could not solve linear system')
 
         # update step vectors
         dx = -dvars[0]
@@ -1211,8 +1221,12 @@ class InteriorPointSolver(object):
         outer_max_iter = kwargs.pop('max_iter_outer', 1000)
         inner_max_iter = kwargs.pop('max_iter_inner', 1000)
         reg_max_iter = kwargs.pop('reg_max_iter', 40)
+        iter_limit = kwargs.pop('iter_limit', 100000)
         wls = kwargs.pop('wls', True)
         log_level = kwargs.pop('log_level', 0)
+
+        store_walker = kwargs.pop('store_walker', None)
+
         if found_hsl:
             linear_solver = kwargs.pop('linear_solver', 'ma27')
         else:
@@ -1250,9 +1264,8 @@ class InteriorPointSolver(object):
                                alpha_dual,
                                alpha_primal,
                                n_ls)
-
+        reached_limit = False
         E_0 = calc.optimality_error(0.0)
-
         while E_0 > data.epsilon_tol and counter_outer_iter < outer_max_iter:
 
             # compute optimality error
@@ -1314,6 +1327,12 @@ class InteriorPointSolver(object):
                                        alpha_primal,
                                        n_ls)
 
+                if counter_iter >= iter_limit:
+                    print('REACHED ITERATION LIMIT')
+                    reached_limit = True
+                    break
+
+
             # clear filter
             walker.clear_filter()
 
@@ -1330,6 +1349,9 @@ class InteriorPointSolver(object):
             E_0 = calc.optimality_error(0.0)
             counter_outer_iter += 1
 
+            if reached_limit:
+                break
+
         if tee:
             print_summary(counter_iter,
                           calc.objective(),
@@ -1343,16 +1365,26 @@ class InteriorPointSolver(object):
 
         info = {}
         info['objective'] = calc.objective()
+        info['iterations'] = counter_iter
         info['x'] = data.x
+        info['s'] = data.s
         info['g'] = calc.evaluate_g()
         info['c'] = calc.evaluate_c()
         info['d'] = calc.evaluate_d()
+        info['inf_pr'] = calc.primal_infeasibility()
+        info['inf_du'] = calc.dual_infeasibility()
+        info['opt_error'] = calc.optimality_error(0.0)
         info['mult_c'] = data.yc
         info['mult_d'] = data.yd
         info['mult_zl'] = data.zl
         info['mult_vl'] = data.vl
         info['mult_zu'] = data.zu
         info['mult_vu'] = data.vu
+
+        if store_walker is not None:
+            assert isinstance(store_walker, list)
+            store_walker.append(walker)
+
         return data.x.copy(), info
 
 
