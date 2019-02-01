@@ -55,12 +55,13 @@ print("\nPython version: %s" % sys.version)
 print("\nSystem PATH:\n\t%s" % os.environ['PATH'])
 print("\nPython path:\n\t%s" % sys.path)
 
-coverage_omit=','.join([
-    os.sep.join([os.environ['WORKSPACE'], 'src', 'pyomo', 'pyomo', '*', 'tests']),
-    'pyomo.*.tests',
-    os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*']),
-    'pyutilib.*',
-])
+#coverage_omit=','.join([
+#    os.sep.join([os.environ['WORKSPACE'], 'src', 'pyomo', 'pyomo', '*', 'tests']),
+#    'pyomo.*.tests',
+#    os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*']),
+#    'pyutilib.*',
+#])
+coverage_omit = None
 
 pyomo_packages = [
     'pyomo.%s' % os.path.basename(x) for x in
