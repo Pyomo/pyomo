@@ -20,11 +20,11 @@ from pyomo.common.modeling import unique_component_name
 
 import heapq
 
-@SolverFactory.register('gdplbb',
+@SolverFactory.register('gdpbb',
         doc='Branch and Bound based GDP Solver')
-class GDPlbbSolver(object):
+class GDPbbSolver(object):
     """A branch and bound-based GDP solver."""
-    CONFIG = ConfigBlock("gdplbb")
+    CONFIG = ConfigBlock("gdpbb")
     CONFIG.declare("solver", ConfigValue(
         default = "baron",
         description="Solver to use, defaults to baron"
@@ -47,7 +47,7 @@ class GDPlbbSolver(object):
         config = self.CONFIG(kwds.pop('options',{}))
         config.set_value(kwds)
 
-        #Validate model to be used with gdplbb
+        #Validate model to be used with gdpbb
         self.validate_model(model)
         #Set solver as an MINLP
         solver = SolverFactory(config.solver)
@@ -65,7 +65,7 @@ class GDPlbbSolver(object):
         objectives = model.component_data_objects(Objective, active=True)
         obj = next(objectives, None)
         obj_sign = 1 if obj.sense == minimize else -1
-        print obj_sign
+        print(obj_sign)
 
         #clone original model for root node of branch and bound
         root = model.clone()
@@ -105,7 +105,7 @@ class GDPlbbSolver(object):
         #initialize minheap for Branch and Bound algorithm
         heap = []
         heapq.heappush(heap,(obj_sign * obj_value,root))
-        print [i[0] for i in heap]
+        print( [i[0] for i in heap])
         #loop to branch through the tree
         n = 0
         while len(heap)>0:
@@ -115,7 +115,7 @@ class GDPlbbSolver(object):
             #print [i[0] for i in heap]
             mdl = mdlpack[1]
 
-            print mdlpack[0]
+            print( mdlpack[0])
             #if all the originally active disjunctions are active, solve and
             #return solution
             if(len(getattr(mdl,init_active_disjunctions_name)) ==  0):
@@ -182,7 +182,7 @@ class GDPlbbSolver(object):
                 obj = next(objectives, None)
                 obj_sign = 1 if obj.sense == minimize else -1
                 return obj_sign*float('inf')
-        delete(minlp)
+
     def __enter__(self):
         return self
 
