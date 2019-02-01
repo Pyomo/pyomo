@@ -25,6 +25,15 @@ import heapq
 class GDPlbbSolver(object):
     """A branch and bound-based GDP solver."""
     CONFIG = ConfigBlock("gdplbb")
+    CONFIG.declare("solver", ConfigValue(
+        default = "baron",
+        description="Solver to use, defaults to baron"
+    ))
+    CONFIG.declare("solver_args", ConfigValue(
+        default={},
+        description="Dictionary of keyword arguments to pass to the solver."
+    ))
+
     def available(self, exception_flag=True):
         """Check if solver is available.
 
@@ -35,44 +44,13 @@ class GDPlbbSolver(object):
         return True
 
     def solve(self, model, **kwds):
-        """
-        PSEUDOCODE
-        Initialize minheap h ordered by objective value
-        root = model.clone
-        root.init_active_disj = list of currently active disjunctions
-        root.curr_active_disj = []
-        for each disj in root.init_active_disj
-        	Deactivate disj
-        Apply Sat Solver to root
-        if infeasible
-        	Return no-solution EXIT
-        solve root
-        push (root,root.obj.value()) onto minheap h
-
-        while not heap.empty()
-        	pop (m,v) from heap
-        	if len(m.init_active_disj == 0):
-        		copy m to model
-        		return good-solution EXIT
-        	find disj D in m.init_active_disj
-
-        	for each disjunct d in D
-        		set d false
-        	for each disjunct d in D
-        		set d true
-        		mnew = m.clone
-        		Apply Sat Solver to mnew
-        		if mnew infeasible
-        			Return no-solution EXIT
-        		solve(mnew)
-        		push (mnew,menw.obj.value()) onto minheap h
-        		set d false
-        """
+        config = self.CONFIG(kwds.pop('options',{}))
+        config.set_value(kwds)
 
         #Validate model to be used with gdplbb
         self.validate_model(model)
         #Set solver as an MINLP
-        solver = SolverFactory('baron')
+        solver = SolverFactory(config.solver)
 
         #Initialize ist containing indicator vars for reupdating model after solving
         indicator_list_name = unique_component_name(model,"_indicator_list")
@@ -87,9 +65,11 @@ class GDPlbbSolver(object):
         objectives = model.component_data_objects(Objective, active=True)
         obj = next(objectives, None)
         obj_sign = 1 if obj.sense == minimize else -1
+        print obj_sign
 
         #clone original model for root node of branch and bound
         root = model.clone()
+
         #set up lists to keep track of which disjunctions have been covered.
 
         #this list keeps track of the original disjunctions that were active and are soon to be inactive
@@ -104,23 +84,40 @@ class GDPlbbSolver(object):
         setattr(root,curr_active_disjunctions_name, curr_active_disjunctions)
 
         #deactivate all disjunctions in the model
+        #self.indicate(root)
         for djn in getattr(root,init_active_disjunctions_name):
-            for disj in djn.disjuncts:
-                disj.deactivate()
             djn.deactivate()
+        #Deactivate all disjuncts in model. To be reactivated with disjunction
+        #is reactivated.
+        for disj in root.component_data_objects(Disjunct, active=True):
+            disj.deactivate()
+            disj.indicator_var
+        for djn in getattr(root,init_active_disjunctions_name):
+            djn.disjuncts[0].indicator_var = 1
 
+        self.indicate(root)
         #Satisfiability check would go here
 
         #solve the root node
-        obj_value = self.minlp_solve(root,solver)
+        obj_value = self.minlp_solve(root,solver,config)
 
 
         #initialize minheap for Branch and Bound algorithm
         heap = []
         heapq.heappush(heap,(obj_sign * obj_value,root))
-
+        print [i[0] for i in heap]
+        #loop to branch through the tree
+        n = 0
         while len(heap)>0:
-            mdl = heapq.heappop(heap)[1]
+            n=n+1
+            #pop best model off of heap
+            mdlpack = heapq.heappop(heap)
+            #print [i[0] for i in heap]
+            mdl = mdlpack[1]
+
+            print mdlpack[0]
+            #if all the originally active disjunctions are active, solve and
+            #return solution
             if(len(getattr(mdl,init_active_disjunctions_name)) ==  0):
                 orig_var_list = getattr(model, indicator_list_name)
                 best_soln_var_list = getattr(mdl, indicator_list_name)
@@ -129,12 +126,11 @@ class GDPlbbSolver(object):
                         orig_var.value = new_var.value
                 TransformationFactory('gdp.fix_disjuncts').apply_to(model)
 
-                return solver.solve(model)
+                return solver.solve(model,**config.solver_args)
 
             disjunction = getattr(mdl,init_active_disjunctions_name).pop(0)
             for disj in list(disjunction.disjuncts):
                 disj.activate()
-                disj.indicator_var = 0
             disjunction.activate()
             getattr(mdl,curr_active_disjunctions_name).append(disjunction)
             for disj in list(disjunction.disjuncts):
@@ -143,10 +139,12 @@ class GDPlbbSolver(object):
                 disj.indicator_var = 1
                 mnew = mdl.clone()
                 disj.indicator_var = 0
-                obj_value = self.minlp_solve(mnew,solver)
+                obj_value = self.minlp_solve(mnew,solver,config)
+                print[value(d.indicator_var) for d in mnew.component_data_objects(Disjunct, active=True)]
                 #self.indicate(mnew)
-                print obj_value
-                heapq.heappush(heap,(obj_sign * obj_value,mnew))
+                djn_left = len(getattr(mdl,init_active_disjunctions_name))
+                ordering_tuple = (obj_sign * obj_value,djn_left,-n)
+                heapq.heappush(heap,(ordering_tuple,mnew))
 
 
 
@@ -166,14 +164,14 @@ class GDPlbbSolver(object):
             raise RuntimeError(
                 "GDP LBB solver is unable to handle model with no active objective.")
 
-    def minlp_solve(self,gdp,solver):
+    def minlp_solve(self,gdp,solver,config):
         minlp = gdp.clone()
         TransformationFactory('gdp.fix_disjuncts').apply_to(minlp)
         for disjunct in minlp.component_data_objects(
             ctype = Disjunct, active=True):
             disjunct.deactivate() #TODO this is HACK
 
-        result = solver.solve(minlp)
+        result = solver.solve(minlp,**config.solver_args)
         if (result.solver.status is SolverStatus.ok and
                 result.solver.termination_condition is tc.optimal):
                 objectives = minlp.component_data_objects(Objective, active=True)
@@ -193,6 +191,6 @@ class GDPlbbSolver(object):
 
     def indicate(self,model):
         for disjunction in model.component_data_objects(
-            ctype = Disjunction, active=True):
+            ctype = Disjunction):
             for disjunct in disjunction.disjuncts:
                 print (disjunction.name,disjunct.name,value(disjunct.indicator_var))
