@@ -244,7 +244,7 @@ idea for users of an ``AbstractModel``:
 
 If ``instance`` has a parameter whose name is ``Theta`` that was
 declared to be ``mutable`` (i.e., ``mutable=True``) with an
-index that contains ``idx``, the the value in ``NewVal`` can be assigned to
+index that contains ``idx``, then the value in ``NewVal`` can be assigned to
 it using
 
    >>> instance.Theta[idx] = NewVal	       
@@ -434,7 +434,7 @@ results have been loded back into the instance object. Here is a code
 snippet for fixing all integers at their current value:
 
     >>> for var in instance.component_data_objects(pyo.Var, active=True):
-    ...     if var.domain is pyo.IntegerSet or var.domain is pyo.BooleanSet:
+    ...     if not var.is_continuous():
     ...         print ("fixing "+str(v))  # doctest: +SKIP
     ...         var.fixed = True # fix the current value
 
@@ -451,9 +451,9 @@ blocks) is as follows (this particular snippet assumes that instead of
 Accessing Parameter Values
 --------------------------
 
-Access to paramaters is completely analgous to access to variables. For
-example, here is a code snippet to print the name and value of every
-Parameter:
+Accessing parameter values is completely analogous to accessing variable
+values. For example, here is a code snippet to print the name and value
+of every Parameter in a model:
 
    >>> for parmobject in instance.component_objects(pyo.Param, active=True):
    ...     nametoprint = str(str(parmobject.name))
@@ -461,15 +461,6 @@ Parameter:
    ...     for index in parmobject:
    ...         vtoprint = pyo.value(parmobject[index])
    ...         print ("   ",index, vtoprint)  # doctest: +SKIP
-
-.. note::
-
-   The value of a ``Param`` can be returned as ``None`` if no data was
-   specified for it. This will be true even if a default value was
-   given. To inspect the default value of a ``Param``, use
-   ``.default()`` on the ``Param`` but note that the default might be a
-   function. Also note that ``.default()`` is an attribute of the
-   ``Param`` but not its individual indexed elements.
 
 
 Accessing Duals
