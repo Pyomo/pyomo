@@ -102,16 +102,16 @@ install:
   - SET MINICONDA_EXTRAS=""
   - IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn)
   #
-  - "IF DEFINED EXTRAS (SET ADDITIONAL_CF_PKGS=%ADDTIONAL_CF_PKGS% pymysql pyro4 %MINICONDA_EXTRAS%)"
+  - "IF DEFINED EXTRAS (SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% pymysql pyro4 %MINICONDA_EXTRAS%)"
   #- "IF DEFINED EXTRAS (%CONDAFORGE% mkl)"
   #
   # Finally, add any solvers we want to the list
   #
-  - "SET ADDITIONAL_CF_PKGS=%ADDTIONAL_CF_PKGS% glpk ipopt"
+  - "SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% glpk ipopt"
   #
   # ...and install everything from conda-force in one go
   #
-  - "%CONDAFORGE% %ADDTIONAL_CF_PKGS%"
+  - "%CONDAFORGE% %ADDITIONAL_CF_PKGS%"
   #
   # While we would like to install codecov using conda (for
   # consistency), there are cases (most recently, in Python 3.5) where
