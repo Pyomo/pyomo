@@ -6,9 +6,7 @@
 # Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
 # University Research Corporation, et al. All rights reserved.
 #
-# Please see the files COPYRIGHT.txt and LICENSE.txt for full copyright and
-# license information, respectively. Both files are also available online
-# at the URL "https://github.com/IDAES/idaes".
+# This software is distributed under the 3-clause BSD License.
 ##############################################################################
 from pyomo.environ import *
 from pyomo.core.expr.current import identify_variables
