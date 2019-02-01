@@ -193,7 +193,7 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
     cmd.append('-v')
     if coverage:
         sitedir = os.path.join(
-            os.path.abspath(dest),'lib',
+            os.path.join( os.environ['WORKSPACE'],'python','lib',
             'python'+'.'.join(map(str,sys.version_info[:2])),'site-packages')
         pthfile = os.path.join(sitedir, 'run_coverage_at_startup.pth')
         with open(pthfile, 'w') as FILE:
