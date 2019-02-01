@@ -55,6 +55,11 @@ print("\nPython version: %s" % sys.version)
 print("\nSystem PATH:\n\t%s" % os.environ['PATH'])
 print("\nPython path:\n\t%s" % sys.path)
 
+# We used to hard-code the ommission of tests and pyutilib here.  That
+# directive is now managed by the coveragerc file using slightly
+# different patterns.  The commented code below is maintained strictly
+# for historical reference.
+#
 #coverage_omit=','.join([
 #    os.sep.join([os.environ['WORKSPACE'], 'src', 'pyomo', 'pyomo', '*', 'tests']),
 #    'pyomo.*.tests',

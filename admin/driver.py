@@ -237,8 +237,10 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
     else:
         sys.stdout.write( str(subprocess.call(cmd)) + '\n' )
 
-    # site-packages and the python libraries are omitted by the
-    # coveragerc file.
+    # We used to hard-code the ommission of the site-packages and the
+    # python libraries here.  That directive is now managed by the
+    # coveragerc file.  The commented code below is maintained strictly
+    # for historical reference.
     #
     #libdir = os.path.join( os.environ['WORKSPACE'],'python','lib','*' )
     #libdir = libdir + "," + os.path.join( libdir,'site-packages','*' )
