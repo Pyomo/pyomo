@@ -206,7 +206,8 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
         with open(coveragerc_file, 'w') as FILE:
             FILE.write(''.join(coveragerc))
         os.environ['COVERAGE_PROCESS_START'] = coveragerc_file
-        cmd.extend(['--coverage','--cover-erase'])
+        # The above supersedes the need for --coverage
+        #cmd.extend(['--coverage','--cover-erase'])
     if 'TEST_PACKAGES' in os.environ:
         cmd = cmd + re.split('[ \t]+', os.environ['TEST_PACKAGES'].strip())
     sys.stdout.write( "Running Command: %s\n" % " ".join(cmd) )
