@@ -13,8 +13,8 @@ from pyomo.opt import TerminationCondition
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))
 
-minlp_solver = 'baron'
-
+minlp_solver = 'gams'
+minlp_args=dict(solver='baron')
 
 @unittest.skipIf(not SolverFactory(minlp_solver).available(),
                  "Required subsolver %s is not available"
@@ -30,6 +30,7 @@ class TestGLOA(unittest.TestCase):
         SolverFactory('gdpbb').solve(
             eight_process, tee=False,
             solver=minlp_solver,
+            solver_args=minlp_args,
         )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
@@ -41,6 +42,7 @@ class TestGLOA(unittest.TestCase):
         SolverFactory('gdpbb').solve(
             strip_pack, tee=False,
             solver=minlp_solver,
+            solver_args=minlp_args,
         )
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
@@ -53,6 +55,7 @@ class TestGLOA(unittest.TestCase):
         SolverFactory('gdpbb').solve(
             cons_layout, tee=False,
             solver=minlp_solver,
+            solver_args=minlp_args,
         )
         objective_value = value(cons_layout.min_dist_cost.expr)
         self.assertTrue(
@@ -66,6 +69,7 @@ class TestGLOA(unittest.TestCase):
         SolverFactory('gdpbb').solve(
             model, tee=False,
             solver=minlp_solver,
+            solver_args=minlp_args,
         )
         objective_value = value(model.obj.expr)
         self.assertAlmostEqual(objective_value, 4.46, 2)
