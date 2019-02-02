@@ -67,7 +67,6 @@ class GDPbbSolver(object):
             objectives = model.component_data_objects(Objective, active=True)
             obj = next(objectives, None)
             obj_sign = 1 if obj.sense == minimize else -1
-            print(obj_sign)
 
             # clone original model for root node of branch and bound
             root = model.clone()
@@ -75,34 +74,31 @@ class GDPbbSolver(object):
             # set up lists to keep track of which disjunctions have been covered.
 
             # this list keeps track of the original disjunctions that were active and are soon to be inactive
-            init_active_disjunctions_name = unique_component_name(root, "_init_active_disjunctions")
-            init_active_disjunctions = list(root.component_data_objects(
-                ctype=Disjunction, active=True))
-            setattr(root, init_active_disjunctions_name, init_active_disjunctions)
+            root.GDPbb_utils.unenforced_disjunctions = list(
+                disjunction for disjunction in root.GDPbb_utils.disjunction_list if disjunction.active
+            )
 
             # this list keeps track of the disjunctions that have been activated by the branch and bound
-            curr_active_disjunctions_name = unique_component_name(root, "_curr_active_disjunctions")
-            curr_active_disjunctions = []
-            setattr(root, curr_active_disjunctions_name, curr_active_disjunctions)
+            root.GDPbb_utils.curr_active_disjunctions = []
 
             # deactivate all disjunctions in the model
             # self.indicate(root)
-            for djn in getattr(root, init_active_disjunctions_name):
+            for djn in root.GDPbb_utils.unenforced_disjunctions:
                 djn.deactivate()
-            # Deactivate all disjuncts in model. To be reactivated with disjunction
+            # Deactivate all disjuncts in model. To be reactivated when disjunction
             # is reactivated.
             for disj in root.component_data_objects(Disjunct, active=True):
                 disj._deactivate_without_fixing_indicator()
 
-            # TODO [Qi]: what is this for?
-            for djn in getattr(root, init_active_disjunctions_name):
-                djn.disjuncts[0].indicator_var = 1
+            # # TODO [Qi]: what is this for?
+            # for djn in getattr(root, init_active_disjunctions_name):
+            #     djn.disjuncts[0].indicator_var = 1
 
-            self.indicate(root)
+            # self.indicate(root)
             # Satisfiability check would go here
 
             # solve the root node
-            obj_value = self.minlp_solve(root, solver, config)
+            obj_value, result = self.minlp_solve(root, solver, config)
 
             # initialize minheap for Branch and Bound algorithm
             # Heap structure: (ordering tuple, model)
@@ -112,47 +108,45 @@ class GDPbbSolver(object):
             #    then more recently encountered (tiebreaker)
             heap = []
             counter = 0
-            disjunctions_left = len(getattr(root, init_active_disjunctions_name))
-            heapq.heappush(heap, ((obj_sign * obj_value, disjunctions_left, counter), root))
+            disjunctions_left = len(root.GDPbb_utils.unenforced_disjunctions)
+            heapq.heappush(heap, ((obj_sign * obj_value, disjunctions_left, -counter), root, result))
             print([i[0] for i in heap])
             # loop to branch through the tree
             while len(heap) > 0:
-                counter += 1
                 # pop best model off of heap
-                mdlpack = heapq.heappop(heap)
+                sort_tup, mdl, mdl_result = heapq.heappop(heap)
+                _, disjunctions_left, _ = sort_tup
                 # print [i[0] for i in heap]
-                mdl = mdlpack[1]
 
-                print(mdlpack[0])
+                print(sort_tup)
                 # if all the originally active disjunctions are active, solve and
                 # return solution
-                if (len(getattr(mdl, init_active_disjunctions_name)) == 0):
-                    orig_disjuncts = model.GDPbb_utils.disjunct_list
-                    best_soln_disjuncts = mdl.GDPbb_utils.disjunct_list
-                    for orig_disjunct, soln_disjunct in zip(orig_disjuncts, best_soln_disjuncts):
-                        if not orig_disjunct.indicator_var.is_fixed():
-                            orig_disjunct.indicator_var.value = soln_disjunct.indicator_var.value
-                    TransformationFactory('gdp.fix_disjuncts').apply_to(model)
+                if disjunctions_left == 0:
+                    # Model is solved. Copy over solution values.
+                    for orig_var, soln_var in zip(model.GDPbb_utils.variable_list, mdl.GDPbb_utils.variable_list):
+                        orig_var.value = soln_var.value
+                    return mdl_result
 
-                    return solver.solve(model, **config.solver_args)
-
-                disjunction = getattr(mdl, init_active_disjunctions_name).pop(0)
-                for disj in list(disjunction.disjuncts):
-                    disj.activate()
-                disjunction.activate()
-                getattr(mdl, curr_active_disjunctions_name).append(disjunction)
-                for disj in list(disjunction.disjuncts):
-                    disj.indicator_var = 0
-                for disj in list(disjunction.disjuncts):
-                    disj.indicator_var = 1
+                next_disjunction = mdl.GDPbb_utils.unenforced_disjunctions.pop(0)
+                next_disjunction.activate()
+                mdl.GDPbb_utils.curr_active_disjunctions.append(next_disjunction)
+                for disj in next_disjunction.disjuncts:
+                    disj._activate_without_unfixing_indicator()
+                    if not disj.indicator_var.fixed:
+                        disj.indicator_var = 0  # initially set all indicator vars to zero
+                for disj in next_disjunction.disjuncts:
+                    if not disj.indicator_var.fixed:
+                        disj.indicator_var = 1
                     mnew = mdl.clone()
-                    disj.indicator_var = 0
-                    obj_value = self.minlp_solve(mnew, solver, config)
-                    print([value(d.indicator_var) for d in mnew.component_data_objects(Disjunct, active=True)])
+                    if not disj.indicator_var.fixed:
+                        disj.indicator_var = 0
+                    obj_value, result = self.minlp_solve(mnew, solver, config)
+                    # print([value(d.indicator_var) for d in mnew.component_data_objects(Disjunct, active=True)])
                     # self.indicate(mnew)
-                    djn_left = len(getattr(mdl, init_active_disjunctions_name))
+                    counter += 1
+                    djn_left = len(mdl.GDPbb_utils.unenforced_disjunctions)
                     ordering_tuple = (obj_sign * obj_value, djn_left, -counter)
-                    heapq.heappush(heap, (ordering_tuple, mnew))
+                    heapq.heappush(heap, (ordering_tuple, root, result))
 
     def validate_model(self, model):
         # Validates that model has only exclusive disjunctions
@@ -178,16 +172,15 @@ class GDPbbSolver(object):
             disjunct.deactivate()  # TODO this is HACK
 
         result = solver.solve(minlp, **config.solver_args)
+        main_obj = next(minlp.component_data_objects(Objective, active=True))
+        obj_sign = 1 if main_obj.sense == minimize else -1
         if (result.solver.status is SolverStatus.ok and
                 result.solver.termination_condition is tc.optimal):
-            objectives = minlp.component_data_objects(Objective, active=True)
-            obj = next(objectives, None)
-            return value(obj.expr)
+            return value(main_obj.expr), result
+        elif result.solver.termination_condition is tc.unbounded:
+            return obj_sign * float('-inf'), result
         else:
-            objectives = minlp.component_data_objects(Objective, active=True)
-            obj = next(objectives, None)
-            obj_sign = 1 if obj.sense == minimize else -1
-            return obj_sign * float('inf')
+            return obj_sign * float('inf'), result
 
     def __enter__(self):
         return self
