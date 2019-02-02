@@ -23,7 +23,7 @@ import threading
 import datetime
 import json
 from IPython import get_ipython
-import idaes.ui.report as rpt
+import pyomo.contrib.viewer.report as rpt
 import pyomo.environ as pe
 
 _log = logging.getLogger(__name__)
