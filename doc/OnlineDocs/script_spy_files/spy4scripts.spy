@@ -1,7 +1,8 @@
-###NOTE: as of May 16, this will not even come close to running. DLW
+###NOTE: as of May 2016, this will not even come close to running. DLW
 ### and it is "wrong" in a lot of places.
-### Someone should edit this file, then delete these comment lines. DLW may 16
-
+### Someone should edit this file, then delete these comment lines. DLW may 2016
+# Ouch! DLW Jan 2019; now starting to reduce use of this file
+# in favor of inline code with the goal of eliminating use of this file.
 """
 David L. Woodruff and Mingye Yang, Spring 2018
 Code snippets for scripts.rst in testable form
