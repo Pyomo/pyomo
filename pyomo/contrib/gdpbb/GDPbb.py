@@ -52,7 +52,7 @@ class GDPbbSolver(object):
         # Set solver as an MINLP
         solver = SolverFactory(config.solver)
         solve_data = GDPbbSolveData()
-        
+
         with create_utility_block(model, 'GDPbb_utils', solve_data):
             # Initialize ist containing indicator vars for reupdating model after solving
             indicator_list_name = unique_component_name(model, "_indicator_list")
@@ -110,21 +110,27 @@ class GDPbbSolver(object):
             counter = 0
             disjunctions_left = len(root.GDPbb_utils.unenforced_disjunctions)
             heapq.heappush(heap, ((obj_sign * obj_value, disjunctions_left, -counter), root, result))
-            print([i[0] for i in heap])
+            # print([i[0] for i in heap])
             # loop to branch through the tree
             while len(heap) > 0:
                 # pop best model off of heap
                 sort_tup, mdl, mdl_result = heapq.heappop(heap)
                 _, disjunctions_left, _ = sort_tup
-                # print [i[0] for i in heap]
 
-                print(sort_tup)
+                #print(sort_tup)
+                #self.indicate(mdl)
                 # if all the originally active disjunctions are active, solve and
                 # return solution
                 if disjunctions_left == 0:
                     # Model is solved. Copy over solution values.
                     for orig_var, soln_var in zip(model.GDPbb_utils.variable_list, mdl.GDPbb_utils.variable_list):
                         orig_var.value = soln_var.value
+                    TransformationFactory('gdp.fix_disjuncts').apply_to(model)
+                    for disjunct in model.component_data_objects(
+                            ctype=Disjunct, active=True):
+                        disjunct.deactivate()  # TODO this is HACK
+
+                    result = solver.solve(model, **config.solver_args)
                     return mdl_result
 
                 next_disjunction = mdl.GDPbb_utils.unenforced_disjunctions.pop(0)
@@ -146,7 +152,7 @@ class GDPbbSolver(object):
                     counter += 1
                     djn_left = len(mdl.GDPbb_utils.unenforced_disjunctions)
                     ordering_tuple = (obj_sign * obj_value, djn_left, -counter)
-                    heapq.heappush(heap, (ordering_tuple, root, result))
+                    heapq.heappush(heap, (ordering_tuple, mnew, result))
 
     def validate_model(self, model):
         # Validates that model has only exclusive disjunctions
@@ -190,6 +196,6 @@ class GDPbbSolver(object):
 
     def indicate(self, model):
         for disjunction in model.component_data_objects(
-                ctype=Disjunction):
+                ctype=Disjunction,active = True):
             for disjunct in disjunction.disjuncts:
                 print(disjunction.name, disjunct.name, disjunct.indicator_var.value)

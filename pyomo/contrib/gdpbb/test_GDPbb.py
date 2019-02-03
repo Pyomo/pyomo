@@ -13,8 +13,11 @@ from pyomo.opt import TerminationCondition
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))
 
-minlp_solver = 'gams'
-minlp_args=dict(solver='baron')
+# minlp_solver = 'gams'
+# minlp_args=dict(solver='baron')
+
+minlp_solver = 'baron'
+minlp_args=dict()
 
 @unittest.skipIf(not SolverFactory(minlp_solver).available(),
                  "Required subsolver %s is not available"
