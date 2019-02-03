@@ -36,18 +36,21 @@ except:
         from PyQt4 import QtCore
     except:
         _log.exception("Cannot import PyQt4.QtCore")
+        QtCore = None
     else:
         try:
             from PyQt4.QtGui import QFileDialog, QMessageBox
             from PyQt4 import uic
         except:
             _log.exception("Cannot import PyQt4")
+            QtCore = None
 else:
     try:
         from PyQt5.QtWidgets import QFileDialog, QMessageBox
         from PyQt5 import uic
     except:
         _log.exception("Cannot import PyQt5")
+        QtCore = None
 
 from pyomo.contrib.viewer.model_browser import ModelBrowser
 

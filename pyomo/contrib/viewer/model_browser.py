@@ -22,6 +22,18 @@ import re
 
 _log = logging.getLogger(__name__)
 
+class DummyQtCore(object):
+    """
+    A dummy QtCore class to allow some testing without PyQt
+    """
+    class QModelIndex(object):
+        pass
+    class Qt(object):
+        class DisplayRole(object):
+            pass
+        class EditRole(object):
+            pass
+
 try:
     from PyQt5 import QtCore
 except:
@@ -30,6 +42,10 @@ except:
         from PyQt4 import QtCore
     except:
         _log.exception("Cannot import PyQt4.QtCore")
+        class QAbstractItemModel(object):
+            def __init__(*args, **kwargs):
+                pass
+        QtCore = DummyQtCore
     else:
         try:
             from PyQt4.QtGui import QAbstractItemView
@@ -37,6 +53,10 @@ except:
             from PyQt4 import uic
         except:
             _log.exception("Cannot import PyQt4")
+            class QAbstractItemModel(object):
+                def __init__(*args, **kwargs):
+                    pass
+            QtCore = DummyQtCore
 else:
     try:
         from PyQt5.QtWidgets import QAbstractItemView
@@ -44,6 +64,10 @@ else:
         from PyQt5 import uic
     except:
         _log.exception("Cannot import PyQt5")
+        class QAbstractItemModel(object):
+            def __init__(*args, **kwargs):
+                pass
+        QtCore = DummyQtCore
 
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import _VarData
