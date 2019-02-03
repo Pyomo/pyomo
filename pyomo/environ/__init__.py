@@ -48,7 +48,7 @@ _optional_packages = set([
     'pyomo.contrib.example',
     'pyomo.contrib.preprocessing',
     'pyomo.contrib.gdpopt',
-    'pyomo.contrib.gdplbb',
+    'pyomo.contrib.gdpbb',
     'pyomo.contrib.gdp_bounds',
     'pyomo.contrib.trustregion',
     'pyomo.contrib.multistart',
