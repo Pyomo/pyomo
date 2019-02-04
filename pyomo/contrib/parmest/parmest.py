@@ -2,6 +2,7 @@ import re
 import importlib as im
 import types
 import json
+from itertools import combinations
 try:
     import numpy as np
     import pandas as pd
@@ -599,63 +600,6 @@ class Estimator(object):
         retval = totobj / len(self._numbers_list) # -1??
         return retval, thetavals, WorstStatus
 
-
-    def _Estimate_Hessian(self, thetavals, epsilon=1e-1):
-        """
-        Unused, Crude estimate of the Hessian of Q at thetavals
-
-        Parameters
-        ----------
-        thetavals: dict
-            A dictionary of values for theta
-
-        Return
-        ------
-        FirstDeriv: dict
-            Dictionary of scaled first differences
-        HessianDict: dict
-            Matrix (in dicionary form) of Hessian values
-        """
-        
-        def firstdiffer(tvals, tstr):
-            tvals[tstr] = tvals[tstr] - epsilon / 2
-            lval, foo, w = self.Q_at_theta(tvals)
-            tvals[tstr] = tvals[tstr] + epsilon / 2
-            rval, foo, w = self.Q_at_theta(tvals)
-            tvals[tstr] = thetavals[tstr]
-            return rval - lval
-
-        # make a working copy of thetavals and get the Hessian dict started
-        tvals = {}
-        Hessian = {}
-        for tstr in thetavals:
-            tvals[tstr] = thetavals[tstr]
-            Hessian[tstr] = {}
-        
-        # get "basline" first differences
-        firstdiffs = {}
-        for tstr in tvals:
-            # TBD, dlw jan 2018: check for bounds on theta
-            print("Debug firstdiffs for ",tstr)
-            firstdiffs[tstr] = firstdiffer(tvals, tstr)
-
-        # now get the second differences
-        # as of Jan 2018, do not assume symmetry so it can be "checked."
-        for firstdim in tvals:
-            for seconddim in tvals:
-                print("Debug H for ",firstdim,seconddim)
-                tvals[seconddim] = thetavals[seconddim] + epsilon
-                d2 = firstdiffer(tvals, firstdim)
-                Hessian[firstdim][seconddim] = \
-                        (d2 - firstdiffs[firstdim]) / (epsilon * epsilon) 
-                tvals[seconddim] = thetavals[seconddim]
-
-        FirstDeriv = {}
-        for tstr in thetavals:
-            FirstDeriv[tstr] = firstdiffs[tstr] / epsilon
-
-        return FirstDeriv, Hessian
-    
     
     def theta_est(self, solver="ef_ipopt", bootlist=None): 
         """
@@ -694,7 +638,7 @@ class Estimator(object):
         seed: int or None, optional
             Set the random seed
         return_samples: bool, optional
-            Return a list of experiment numbers used in each bootstrap estimation
+            Return a list of sample numbers used in each bootstrap estimation
         
         Returns
         -------
@@ -702,14 +646,12 @@ class Estimator(object):
             Theta values for each bootstrap sample and (if return_samples = True) 
             the sample numbers used in each estimation
         """
-        bootstrap_theta = list()
-        
         if samplesize is None:
             samplesize = len(self._numbers_list)  
+        
         if seed is not None:
             np.random.seed(seed)
             
-        task_mgr = mpiu.ParallelTaskManager(N)
         global_bootlist = list()
         for i in range(N):
             j = unique_samples = 0
@@ -724,23 +666,82 @@ class Estimator(object):
                                     " constructing a sample; possible hint:"+\
                                     " the dim of theta may be too close to N")
             global_bootlist.append((i, bootlist))
-
+        
+        task_mgr = mpiu.ParallelTaskManager(N)
         local_bootlist = task_mgr.global_to_local_data(global_bootlist)
 
+        # Reset numbers_list
+        self._numbers_list =  list(range(samplesize))
+        
+        bootstrap_theta = list()
         for idx, bootlist in local_bootlist:
-            #print('Bootstrap Run Number: ', idx + 1, ' out of ', N)
             objval, thetavals = self.theta_est(bootlist=bootlist)
             thetavals['samples'] = bootlist
-            bootstrap_theta.append(thetavals)#, ignore_index=True)
+            bootstrap_theta.append(thetavals)
+        
+        # Reset numbers_list (back to original)
+        self._numbers_list =  list(range(len(self.callback_data)))
         
         global_bootstrap_theta = task_mgr.allgather_global_data(bootstrap_theta)
-        bootstrap_theta = pd.DataFrame(global_bootstrap_theta)
-        #bootstrap_theta.set_index('samples', inplace=True)        
+        bootstrap_theta = pd.DataFrame(global_bootstrap_theta)       
 
         if not return_samples:
             del bootstrap_theta['samples']
                     
         return bootstrap_theta
+    
+    
+    def theta_est_leaveNout(self, N, seed=None, return_samples=False):
+        """
+        Run parameter estimation using all sample combinations where N data 
+        points are left out
+
+        Parameters
+        ----------
+        N: int
+            Number of data points to leave out during esimation
+        seed: int or None, optional
+            Set the random seed
+        return_samples: bool, optional
+            Return a list of sample numbers used in each estimation
+        
+        Returns
+        -------
+        lNo_theta: DataFrame 
+            Theta values for each sample and (if return_samples = True) 
+            the sample numbers used in each estimation
+        """
+        samplesize = len(self._numbers_list) - N
+        
+        if seed is not None:
+            np.random.seed(seed)
+        
+        global_bootlist = list()
+        for i, bootlist in enumerate(combinations(self._numbers_list, samplesize)):
+            global_bootlist.append((i, list(bootlist)))
+        
+        task_mgr = mpiu.ParallelTaskManager(len(global_bootlist))
+        local_bootlist = task_mgr.global_to_local_data(global_bootlist)
+        
+        # Reset numbers_list
+        self._numbers_list =  list(range(len(self.callback_data) - N))
+        
+        lNo_theta = list()
+        for idx, bootlist in local_bootlist:
+            objval, thetavals = self.theta_est(bootlist=bootlist)
+            thetavals['samples'] = bootlist
+            lNo_theta.append(thetavals)
+        
+        # Reset numbers_list (back to original)
+        self._numbers_list =  list(range(len(self.callback_data)))
+        
+        global_bootstrap_theta = task_mgr.allgather_global_data(lNo_theta)
+        lNo_theta = pd.DataFrame(global_bootstrap_theta)   
+        
+        if not return_samples:
+            del lNo_theta['samples']
+                    
+        return lNo_theta
     
     
     def objective_at_theta(self, theta_values):
@@ -802,7 +803,8 @@ class Estimator(object):
         Returns
         -------
         LR: DataFrame 
-            Objective values for each theta value along wit True or False for 
+            Objective values for each theta value along with True or False for 
+            each alpha
         thresholds: dictionary
             If return_threshold = True, the thresholds are also returned.
         """
@@ -818,3 +820,52 @@ class Estimator(object):
             return LR, thresholds
         else:
             return LR
+
+    def alpha_test(self, theta_values, distribution, alpha):
+        """
+        Compute the likelihood ratio for each value of alpha
+        
+        Parameters
+        ----------
+        theta_values: DataFrame, columns = theta_names
+            Theta values (returned by theta_est_bootstrap or theta_est_leaveNout))
+            
+        distribution: string
+            Statistical distribution used for confidence intervals,  
+            options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, and 
+            'Rect' for rectangular.
+        
+        alpha: list
+            List of alpha values to use in the chi2 test
+        
+        Returns
+        -------
+        test_results: DataFrame 
+            Theta value along with True (inside) or False (outside) for each alpha
+        """
+        test_results = theta_values.copy()
+        for a in alpha:
+            
+            if distribution == 'Rect':
+                tval = stats.t.ppf(1-(1-a)/2, len(theta_values)-1) # Two-tail
+                m = theta_values.mean()
+                s = theta_values.std()
+                lower_bound = m-tval*s
+                upper_bound = m+tval*s
+                test_results[a] = ((theta_values > lower_bound).all(axis=1) & \
+                                  (theta_values < upper_bound).all(axis=1))
+                 
+            elif distribution == 'MVN':
+                mvn_dist = stats.multivariate_normal(theta_values.mean(), 
+                                            theta_values.cov(), allow_singular=True)
+                Z = mvn_dist.pdf(theta_values)
+                score = stats.scoreatpercentile(Z.transpose(), (1-a)*100) 
+                test_results[a] = (Z >= score)
+                
+            elif distribution == 'KDE':
+                kde_dist = stats.gaussian_kde(theta_values.transpose().values)
+                Z = kde_dist.pdf(theta_values.transpose())
+                score = stats.scoreatpercentile(Z.transpose(), (1-a)*100) 
+                test_results[a] = (Z >= score)
+
+        return test_results

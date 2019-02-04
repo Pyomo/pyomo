@@ -177,7 +177,7 @@ def _set_axis_limits(g, axis_limits, theta_vals):
             
             
 def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[], 
-                  axis_limits=None, add_obj_contour=True, 
+                  axis_limits=None, title=None, add_obj_contour=True, 
                   add_legend=True, filename=None, return_scipy_distributions=False):
     """
     Plot pairwise relationship for theta values, and optionally confidence 
@@ -200,6 +200,8 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
 		Confidence interval is a 2D slice, using linear interpolation at theta*.
     axis_limits: dict, optional
         Axis limits in the format {variable: [min, max]}
+    title: string, optional
+        Plot title
     add_obj_contour: bool, optional
         Add a contour plot using the column 'obj' in theta_values.
         Contour plot is a 2D slice, using linear interpolation at theta*.
@@ -304,7 +306,10 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
             xvar, yvar, loc = _get_variables(ax, theta_names)
             if loc == (len(theta_names)-1,0):
                 ax.legend(handles=legend_elements, loc='best', prop={'size': 8})
-
+    if title:
+        g.fig.subplots_adjust(top=0.9)
+        g.fig.suptitle(title) 
+        
     if filename is None:
         plt.show()
     else:
