@@ -1,13 +1,15 @@
 import heapq
 
+from pyutilib.misc import Container
+
 from pyomo.common.config import (ConfigBlock, ConfigValue)
 from pyomo.common.modeling import unique_component_name
-from pyomo.contrib.gdpopt.util import create_utility_block
+from pyomo.contrib.gdpopt.util import create_utility_block, time_code
 from pyomo.core.base import (
     Objective, TransformationFactory,
     minimize, value)
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.opt import SolverFactory, SolverStatus
+from pyomo.opt import SolverFactory, SolverStatus, SolverResults
 from pyomo.opt import TerminationCondition as tc
 
 
@@ -52,8 +54,12 @@ class GDPbbSolver(object):
         # Set solver as an MINLP
         solver = SolverFactory(config.solver)
         solve_data = GDPbbSolveData()
+        solve_data.timing = Container()
+        solve_data.original_model = model
+        solve_data.results = SolverResults()
 
-        with create_utility_block(model, 'GDPbb_utils', solve_data):
+        with create_utility_block(model, 'GDPbb_utils', solve_data),\
+                time_code(solve_data.timing, 'total'):
             # Initialize ist containing indicator vars for reupdating model after solving
             indicator_list_name = unique_component_name(model, "_indicator_list")
             indicator_vars = []
@@ -131,7 +137,7 @@ class GDPbbSolver(object):
                         disjunct.deactivate()  # TODO this is HACK
 
                     result = solver.solve(model, **config.solver_args)
-                    return mdl_result
+                    return solve_data.result
 
                 next_disjunction = mdl.GDPbb_utils.unenforced_disjunctions.pop(0)
                 next_disjunction.activate()
