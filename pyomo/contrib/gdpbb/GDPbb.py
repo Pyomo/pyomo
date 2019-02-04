@@ -24,7 +24,7 @@ class GDPbbSolver(object):
     CONFIG = ConfigBlock("gdpbb")
     CONFIG.declare("solver", ConfigValue(
         default="baron",
-        description="Solver to use, defaults to baron"
+        description="Subproblem solver to use, defaults to baron"
     ))
     CONFIG.declare("solver_args", ConfigValue(
         default={},
@@ -96,15 +96,10 @@ class GDPbbSolver(object):
             for disj in root.component_data_objects(Disjunct, active=True):
                 disj._deactivate_without_fixing_indicator()
 
-            # # TODO [Qi]: what is this for?
-            # for djn in getattr(root, init_active_disjunctions_name):
-            #     djn.disjuncts[0].indicator_var = 1
-
-            # self.indicate(root)
             # Satisfiability check would go here
 
             # solve the root node
-            obj_value, result = self.minlp_solve(root, solver, config)
+            obj_value, result,_ = self.subproblem_solve(root, solver, config)
 
             # initialize minheap for Branch and Bound algorithm
             # Heap structure: (ordering tuple, model)
@@ -115,29 +110,22 @@ class GDPbbSolver(object):
             heap = []
             counter = 0
             disjunctions_left = len(root.GDPbb_utils.unenforced_disjunctions)
-            heapq.heappush(heap, ((obj_sign * obj_value, disjunctions_left, -counter), root, result))
-            # print([i[0] for i in heap])
+            heapq.heappush(heap,
+            ((obj_sign * obj_value, disjunctions_left, -counter), root,
+            result , root.GDPbb_utils.variable_list))
             # loop to branch through the tree
             while len(heap) > 0:
                 # pop best model off of heap
-                sort_tup, mdl, mdl_result = heapq.heappop(heap)
+                sort_tup, mdl, _, vars = heapq.heappop(heap)
                 _, disjunctions_left, _ = sort_tup
 
-                #print(sort_tup)
-                #self.indicate(mdl)
                 # if all the originally active disjunctions are active, solve and
                 # return solution
                 if disjunctions_left == 0:
                     # Model is solved. Copy over solution values.
-                    for orig_var, soln_var in zip(model.GDPbb_utils.variable_list, mdl.GDPbb_utils.variable_list):
+                    for orig_var, soln_var in zip(model.GDPbb_utils.variable_list, vars):
                         orig_var.value = soln_var.value
-                    TransformationFactory('gdp.fix_disjuncts').apply_to(model)
-                    for disjunct in model.component_data_objects(
-                            ctype=Disjunct, active=True):
-                        disjunct.deactivate()  # TODO this is HACK
-
-                    result = solver.solve(model, **config.solver_args)
-                    return solve_data.result
+                    return solve_data.results
 
                 next_disjunction = mdl.GDPbb_utils.unenforced_disjunctions.pop(0)
                 next_disjunction.activate()
@@ -152,13 +140,11 @@ class GDPbbSolver(object):
                     mnew = mdl.clone()
                     if not disj.indicator_var.fixed:
                         disj.indicator_var = 0
-                    obj_value, result = self.minlp_solve(mnew, solver, config)
-                    # print([value(d.indicator_var) for d in mnew.component_data_objects(Disjunct, active=True)])
-                    # self.indicate(mnew)
+                    obj_value, result, vars = self.subproblem_solve(mnew, solver, config)
                     counter += 1
                     djn_left = len(mdl.GDPbb_utils.unenforced_disjunctions)
                     ordering_tuple = (obj_sign * obj_value, djn_left, -counter)
-                    heapq.heappush(heap, (ordering_tuple, mnew, result))
+                    heapq.heappush(heap, (ordering_tuple, mnew, result, vars))
 
     def validate_model(self, model):
         # Validates that model has only exclusive disjunctions
@@ -176,23 +162,23 @@ class GDPbbSolver(object):
             raise RuntimeError(
                 "GDP LBB solver is unable to handle model with no active objective.")
 
-    def minlp_solve(self, gdp, solver, config):
-        minlp = gdp.clone()
-        TransformationFactory('gdp.fix_disjuncts').apply_to(minlp)
-        for disjunct in minlp.component_data_objects(
+    def subproblem_solve(self, gdp, solver, config):
+        subproblem = gdp.clone()
+        TransformationFactory('gdp.fix_disjuncts').apply_to(subproblem)
+        for disjunct in subproblem.component_data_objects(
                 ctype=Disjunct, active=True):
             disjunct.deactivate()  # TODO this is HACK
 
-        result = solver.solve(minlp, **config.solver_args)
-        main_obj = next(minlp.component_data_objects(Objective, active=True))
+        result = solver.solve(subproblem, **config.solver_args)
+        main_obj = next(subproblem.component_data_objects(Objective, active=True))
         obj_sign = 1 if main_obj.sense == minimize else -1
         if (result.solver.status is SolverStatus.ok and
                 result.solver.termination_condition is tc.optimal):
-            return value(main_obj.expr), result
+            return value(main_obj.expr), result, subproblem.GDPbb_utils.variable_list
         elif result.solver.termination_condition is tc.unbounded:
-            return obj_sign * float('-inf'), result
+            return obj_sign * float('-inf'), result, subproblem.GDPbb_utils.variable_list
         else:
-            return obj_sign * float('inf'), result
+            return obj_sign * float('inf'), result, subproblem.GDPbb_utils.variable_list
 
     def __enter__(self):
         return self
