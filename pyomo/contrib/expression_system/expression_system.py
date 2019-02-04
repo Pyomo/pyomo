@@ -1,5 +1,6 @@
 # coding: utf-8
 from pyomo.environ import (ConcreteModel, Var, Constraint)
+from pyomo.core.base.component import _ComponentBase
 class Node:
     def __init__(self):
         self.commutative = None
@@ -9,12 +10,39 @@ class Node:
 
     def print(self):
         raise NotImplementedError()
+
+    def ifToOr(self, recursive=False):
+        if recursive:
+            self.child_l.ifToOr(recursive=True)
+            self.child_r.ifToOr(recursive=True)
         
 class BinaryNode(Node):
     def __init__(self):
         self.commutative = False
-        self.childL = None
-        self.childR = None
+        self.child_l = None
+        self.child_r = None
+
+class IfNode(BinaryNode):
+    def __init__(self, child_l, child_r):
+        self.child_l = child_l
+        self.child_r = child_r
+    def print(self):
+        lhs = self.child_l.print()
+        rhs = self.child_r.print()
+        return lhs + ' => ' + rhs
+    def evaluate(self, value_dict):
+        lhs = self.child_l.evaluate(value_dict)
+        rhs = self.child_r.evaluate(value_dict)
+        return not lhs or rhs
+    def ifToOr(self, recursive=False):
+        if recursive:
+            self.child_l.ifToOr(recursive=True)
+            self.child_r.ifToOr(recursive=True)
+
+        child_l = self.child_l
+        child_r = self.child_r
+        self.__class__ = OrNode
+        self.__init__([NotNode(child_l), child_r])
         
 class UnaryNode(Node):
     def __init__(self):
@@ -27,10 +55,14 @@ class LeafNode(UnaryNode):
     def print(self):
         if isinstance(self.child, str):
             return self.child
-        elif isinstance(self.child, Var):
+        elif isinstance(self.child, _ComponentBase):
             return self.child.name
     def evaluate(self,value_dict):
         return value_dict[self.child]
+    def ifToOr(self, recursive=False):
+        pass
+    def var(self):
+        return self.child
 
 class NotNode(UnaryNode):
     def __init__(self, single_node):
@@ -123,8 +155,9 @@ class OrNode(MultiNode):
         self.tryPurgingSameTypeChildren()
 
 isOrNode = lambda n: isinstance(n, OrNode)
-isNotOrNode = lambda n: not isinstance(n, OrNode)
+#isNotOrNode = lambda n: not isinstance(n, OrNode)
 isAndNode = lambda n: isinstance(n, AndNode)
-isNotAndNode = lambda n: not isinstance(n, AndNode)
+isNotNode = lambda n: isinstance(n, NotNode)
+#isNotAndNode = lambda n: not isinstance(n, AndNode)
 isNode = lambda n: isinstance(n, Node)
-isLeafNode = lambda n: not isinstance(n, LeafNode)
+isLeafNode = lambda n: isinstance(n, LeafNode)
