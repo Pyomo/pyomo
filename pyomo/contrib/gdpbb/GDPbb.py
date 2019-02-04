@@ -20,7 +20,16 @@ class GDPbbSolveData(object):
 @SolverFactory.register('gdpbb',
                         doc='Branch and Bound based GDP Solver')
 class GDPbbSolver(object):
-    """A branch and bound-based GDP solver."""
+    """
+    A branch and bound-based solver for Generalized Disjunctive Programming (GDP) problems
+
+    The GDPbb solver solves subproblems relaxing certain disjunctions, and
+    builds up a tree of potential active disjunctions. By exploring promising
+    branches, it eventually results in an optimal configuration of disjunctions.
+
+    Keyword arguments below are specified for the ``solve`` function.
+
+    """
     CONFIG = ConfigBlock("gdpbb")
     CONFIG.declare("solver", ConfigValue(
         default="baron",
