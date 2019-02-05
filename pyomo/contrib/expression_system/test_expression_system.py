@@ -41,6 +41,16 @@ def double_not_node_test():
     assert(isinstance(n2,LeafNode))
     assert(n2.child == l1.child)
 
+def simple_not_and_test():
+    l1 = LeafNode('y1')
+    l2 = LeafNode('y2')
+    n1 = AndNode([l1,l2])
+    n2 = NotNode(n1)
+    n2.notNodeIntoOtherNode()
+    assert(isinstance(n2,OrNode))
+    assert(all([isinstance(c,NotNode) for c in n2.children]))
+    assert(all([n.child.var() in ['y1','y2'] for n in n2.children]))
+
 def distributivity_equality_test():
     y = dict((i,LeafNode('y'+str(i))) for i in range(1,7))
     names = [n.child for n in y.values()]
