@@ -83,13 +83,15 @@ class LeafNode(UnaryNode):
         pass
     def var(self):
         return self.child
+    def notNodeIntoOtherNode(self, recursive=False):
+        pass
 
 class NotNode(UnaryNode):
     def __init__(self, single_node):
         self.child = single_node
     def print(self):
         output = self.child.print()
-        return '!['+output+']'
+        return '!'+output
     def evaluate(self,value_dict):
         return not self.child.evaluate(value_dict)
     def notNodeIntoOtherNode(self, recursive=False):
@@ -104,21 +106,36 @@ class NotNode(UnaryNode):
             self.becomeOtherNode(self.child.child)
 
         if recursive:
-            self.children.notNodeIntoOtherNode(self, recursive=True)
+            if isMultiNode(self):
+                for n in self.children:
+                    n.notNodeIntoOtherNode(recursive=True)
+                self.tryPurgingSameTypeChildren()
+            elif isBinaryNode(self):
+                for n in [self.child_l, self.child_r]:
+                    n.notNodeIntoOtherNode(recursive=True)
+            elif isUnaryNode(self):
+                self.child.notNodeIntoOtherNode(recursive=True)
 
-
-        
 class MultiNode(Node):
     def __init__(self):
         self.commutative = True
         self.children = []
-    def tryPurgingWithSingleChild(self):
+    def tryPurgingWithSingleChild(self, recursive=False):
+        if recursive:
+            for n in filter(isMultiNode, self.children):
+                n.tryPurgingWithSingleChild(recursive=True)
+
         if len(self.children) == 1:
             child = self.children.pop()
             self.__class__ = type(child)
             self.__init__(child.children)
             print('purged, now Im ' + str(type(child)))
-    def tryPurgingSameTypeChildren(self):
+
+    def tryPurgingSameTypeChildren(self, recursive=False):
+        if recursive:
+            for n in filter(isMultiNode, self.children):
+                n.tryPurgingSameTypeChildren(recursive=True)
+
         isSameType = lambda n: isinstance(n, type(self))
         for n in filter(isSameType, self.children.copy()):
             self.children.update(n.children)
@@ -129,6 +146,7 @@ class MultiNode(Node):
     def notNodeIntoOtherNode(self, recursive=False):
         for n in self.children:
             n.notNodeIntoOtherNode(recursive=recursive)
+        self.tryPurgingSameTypeChildren()
 
         
 class AndNode(MultiNode):
