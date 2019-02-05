@@ -168,37 +168,31 @@ difference, and symmetric difference:
     >>> model.K = model.A - model.D # difference
     >>> model.L = model.A ^ model.D # exclusive-or
 
-.. doctest::
-   :hide:
-
-   >>> model.del_component('K')
-   >>> model.del_component('L')
-
 For example, the cross-product operator is the asterisk (*).  To define
-a new set ``K`` that is the cross product of sets ``B`` and ``C``, one
+a new set ``M`` that is the cross product of sets ``B`` and ``C``, one
 could use
 
 .. doctest::
 
-    >>> model.K = model.B * model.C
+    >>> model.M = model.B * model.C
 
 This creates a *virtual* set that holds references to the original sets,
 so any updates to the original sets (``B`` and ``C``) will be reflected
-in the new set (``K``).  In contrast, you can also create a *concrete*
+in the new set (``M``).  In contrast, you can also create a *concrete*
 set, which directly stores the values of the cross product at the time
 of creation and will *not* reflect subsequent changes in the original
 sets with:
 
 .. doctest::
 
-    >>> model.K_concrete = Set(initialize=model.B * model.C)
+    >>> model.M_concrete = Set(initialize=model.B * model.C)
 
 Finally, you can indicate that the members of a set are restricted to be in the
 cross product of two other sets, one can use the ``within`` keyword:
 
 .. doctest::
 
-    >>> model.L = Set(within=model.B * model.C)
+    >>> model.N = Set(within=model.B * model.C)
 
 Predefined Virtual Sets
 -----------------------
