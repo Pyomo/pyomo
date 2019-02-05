@@ -101,7 +101,7 @@ class AndNode(MultiNode):
     def distributivity_or_in_and(self):
         self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
-        for n in [c for c in self.children if isinstance(c, OrNode)]:
+        for n in filter(isOrNode, self.children):
             n.distributivity_or_in_and()
         self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
@@ -141,7 +141,7 @@ class OrNode(MultiNode):
 
         self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
-        for n in filter(isAndNode, self.children):
+        for n in filter(isOrNode, self.children):
             n.distributivity_or_in_and()
         self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
@@ -149,7 +149,7 @@ class OrNode(MultiNode):
     def distributivity_and_in_or(self):
         self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
-        for n in filter(isOrNode, self.children):
+        for n in filter(isAndNode, self.children):
             n.distributivity_and_in_or()
         self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
