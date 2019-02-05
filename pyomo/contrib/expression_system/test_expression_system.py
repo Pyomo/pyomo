@@ -35,3 +35,20 @@ def distributivity_test():
     N3.distributivity_or_in_and()
 
     assert_model_equality(N3, N3_compare, names)
+
+def or_in_and_test():
+    y = dict([(i,'y'+str(i)) for i in range(1,6)])
+    n = dict([(i,LeafNode(y[i])) for i in y.keys()])
+    p1 = AndNode([n[4],n[5]])
+    p2 = OrNode([n[3],p1])
+    p3 = AndNode([n[2],p2])
+    p4 = OrNode([n[1],p3])
+    p4_ref = deepcopy(p4)
+    p4.distributivity_or_in_and()
+    assert(isinstance(p4, AndNode))
+    for n in p4.children:
+        assert(isinstance(n, OrNode) or isinstance(n, NotNode) or isinstance(n, LeafNode))
+        for leaf_or_not_node in filter(isOrNode, n.children):
+            assert(isinstance(leaf_or_not_node, NotNode) or isinstance(leaf_or_not_node, LeafNode))
+            for l in filter(isNotNode, leaf_or_not_node):
+                assert(isinstance(l, LeafNode))

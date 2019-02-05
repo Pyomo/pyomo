@@ -82,9 +82,15 @@ class MultiNode(Node):
             child = self.children.pop()
             self.__class__ = type(child)
             self.__init__(child.children)
+            print('purged, now Im ' + str(type(child)))
     def tryPurgingSameTypeChildren(self):
-        if all([isinstance(n, type(self)) for n in self.children]):
-            self.children = set.union(*[c.children for c in self.children])
+        isSameType = lambda n: isinstance(n, type(self))
+        for n in filter(isSameType, self.children.copy()):
+            self.children.update(n.children)
+            self.children.remove(n)
+            print('combined children in class' + str(type(self)))
+        #if all([isinstance(n, type(self)) for n in self.children]):
+        #    self.children = set.union(*[c.children for c in self.children])
 
         
 class AndNode(MultiNode):
@@ -99,12 +105,13 @@ class AndNode(MultiNode):
         return all(n.evaluate(value_dict) for n in self.children)
 
     def distributivity_or_in_and(self):
-        self.tryPurgingWithSingleChild()
-        self.tryPurgingSameTypeChildren()
-        for n in filter(isOrNode, self.children):
+        #self.tryPurgingWithSingleChild()
+        #self.tryPurgingSameTypeChildren()
+        for n in filter(isMultiNode, self.children):
             n.distributivity_or_in_and()
         self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
+        self.tryPurgingWithSingleChild()
 
     def distributivity_and_in_or(self):
         while any([isinstance(n, OrNode) for n in self.children]) and len(self.children) > 1:
@@ -113,11 +120,11 @@ class AndNode(MultiNode):
             new_or_node = OrNode([AndNode(set([or_el]) | other_nodes) for or_el in or_node.children])
             self.children -= set([or_node]) | other_nodes
             self.children |= set([new_or_node])
-        self.tryPurgingWithSingleChild()
+        #self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
         for n in filter(isAndNode, self.children):
             n.distributivity_and_in_or()
-        self.tryPurgingWithSingleChild()
+        #self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
         
 class OrNode(MultiNode):
@@ -132,31 +139,35 @@ class OrNode(MultiNode):
         return any([n.evaluate(value_dict) for n in self.children])
 
     def distributivity_or_in_and(self):
+        for n in filter(isMultiNode, self.children):
+            n.distributivity_or_in_and()
+        #self.tryPurgingWithSingleChild()
+        self.tryPurgingSameTypeChildren()
         while any([isinstance(n, AndNode) for n in self.children]) and len(self.children) > 1:
             and_node = next(n for n in self.children if isinstance(n, AndNode))
             other_nodes = set([n for n in self.children if not n is and_node])
             new_and_node = AndNode([OrNode(set([and_el]) | other_nodes) for and_el in and_node.children])
             self.children -= set([and_node]) | other_nodes
             self.children |= set([new_and_node])
+        self.tryPurgingWithSingleChild()
+        for n in filter(isMultiNode, self.children):
+            n.tryPurgingSameTypeChildren()
+        #self.tryPurgingSameTypeChildren()
 
-        self.tryPurgingWithSingleChild()
-        self.tryPurgingSameTypeChildren()
-        for n in filter(isOrNode, self.children):
-            n.distributivity_or_in_and()
-        self.tryPurgingWithSingleChild()
-        self.tryPurgingSameTypeChildren()
+        #self.tryPurgingWithSingleChild()
 
     def distributivity_and_in_or(self):
-        self.tryPurgingWithSingleChild()
+        #self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
         for n in filter(isAndNode, self.children):
             n.distributivity_and_in_or()
-        self.tryPurgingWithSingleChild()
+        #self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
 
 isOrNode = lambda n: isinstance(n, OrNode)
 #isNotOrNode = lambda n: not isinstance(n, OrNode)
 isAndNode = lambda n: isinstance(n, AndNode)
+isMultiNode = lambda n: isinstance(n, MultiNode)
 isNotNode = lambda n: isinstance(n, NotNode)
 #isNotAndNode = lambda n: not isinstance(n, AndNode)
 isNode = lambda n: isinstance(n, Node)
