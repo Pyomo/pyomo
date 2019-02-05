@@ -1,9 +1,10 @@
 # coding: utf-8
 from pyomo.environ import (ConcreteModel, Var, Constraint)
 from pyomo.core.base.component import _ComponentBase
+
 class Node:
     def __init__(self):
-        self.commutative = None
+        raise RuntimeError("Tried to initialize abstract class 'Node'")
 
     def evaluate(self, value_dict):
         raise NotImplementedError()
@@ -15,12 +16,29 @@ class Node:
         if recursive:
             self.child_l.ifToOr(recursive=True)
             self.child_r.ifToOr(recursive=True)
+
+    def becomeOtherNode(self, target_node):
+        if isMultiNode(target_node):
+            children = target_node.children
+            self.__class__ = type(target_node)
+            self.__init__(children)
+        elif isUnaryNode(target_node):
+            child = target_node.child
+            self.__class__ = type(target_node)
+            self.__init__(child)
+        elif isBinaryNode(target_node):
+            child_l, child_r = target_node.child_l, target_node.child_r
+            self.__class__ = type(target_node)
+            self.__init__(child_l, child_r)
         
 class BinaryNode(Node):
     def __init__(self):
         self.commutative = False
         self.child_l = None
         self.child_r = None
+    def notNodeIntoOtherNode(self, recursive=False):
+        for n in [self.child_l, self.child_r]:
+            n.notNodeIntoOtherNode(recursive=recursive)
 
 class IfNode(BinaryNode):
     def __init__(self, child_l, child_r):
@@ -48,6 +66,8 @@ class UnaryNode(Node):
     def __init__(self):
         self.commutative=False
         self.child = None
+    def notNodeIntoOtherNode(self, recursive=False):
+        self.child.notNodeIntoOtherNode(recursive=recursive)
 
 class LeafNode(UnaryNode):
     def __init__(self, single_node):
@@ -72,6 +92,21 @@ class NotNode(UnaryNode):
         return '!['+output+']'
     def evaluate(self,value_dict):
         return not self.child.evaluate(value_dict)
+    def notNodeIntoOtherNode(self, recursive=False):
+        if isMultiNode(self.child):
+            if isAndNode(self.child):
+                new_child = OrNode([])
+            elif isOrNode(self.child):
+                new_child = AndNode([])
+            new_child.children = set([NotNode(n) for n in self.child.children])
+            self.becomeOtherNode(new_child)
+        elif isNotNode(self.child):
+            self.becomeOtherNode(self.child.child)
+
+        if recursive:
+            self.children.notNodeIntoOtherNode(self, recursive=True)
+
+
         
 class MultiNode(Node):
     def __init__(self):
@@ -91,6 +126,9 @@ class MultiNode(Node):
             print('combined children in class' + str(type(self)))
         #if all([isinstance(n, type(self)) for n in self.children]):
         #    self.children = set.union(*[c.children for c in self.children])
+    def notNodeIntoOtherNode(self, recursive=False):
+        for n in self.children:
+            n.notNodeIntoOtherNode(recursive=recursive)
 
         
 class AndNode(MultiNode):
@@ -168,6 +206,8 @@ isOrNode = lambda n: isinstance(n, OrNode)
 #isNotOrNode = lambda n: not isinstance(n, OrNode)
 isAndNode = lambda n: isinstance(n, AndNode)
 isMultiNode = lambda n: isinstance(n, MultiNode)
+isUnaryNode = lambda n: isinstance(n, UnaryNode)
+isBinaryNode = lambda n: isinstance(n, BinaryNode)
 isNotNode = lambda n: isinstance(n, NotNode)
 #isNotAndNode = lambda n: not isinstance(n, AndNode)
 isNode = lambda n: isinstance(n, Node)

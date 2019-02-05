@@ -23,8 +23,25 @@ def simple_equality_test():
     
     assert_model_equality(N3, N3_compare, names)
 
+def become_other_node_test():
+    l1 = LeafNode('y1')
+    l2 = LeafNode('y2')
+    l3 = LeafNode('y3')
 
-def distributivity_test():
+    n1 = NotNode(l1)
+    n1.becomeOtherNode(AndNode([l2,l3]))
+    assert(len(n1.children)==2)
+    assert(sum([1 for l in n1.children if l.var() in ['y2','y3']]) == 2)
+
+def double_not_node_test():
+    l1 = LeafNode('y1')
+    n1 = NotNode(l1)
+    n2 = NotNode(n1)
+    n2.notNodeIntoOtherNode()
+    assert(isinstance(n2,LeafNode))
+    assert(n2.child == l1.child)
+
+def distributivity_equality_test():
     y = dict((i,LeafNode('y'+str(i))) for i in range(1,7))
     names = [n.child for n in y.values()]
     N1 = OrNode((y[1], y[2], y[3]))
@@ -35,6 +52,25 @@ def distributivity_test():
     N3.distributivity_or_in_and()
 
     assert_model_equality(N3, N3_compare, names)
+
+def purge_single_child_test():
+    l1 = LeafNode('y1')
+    l2 = LeafNode('y2')
+    n1 = AndNode([l1,l2])
+    n2 = OrNode([n1])
+    n2.tryPurgingWithSingleChild()
+    assert(isinstance(n2,AndNode))
+    assert(len(n2.children)==2)
+    assert(all(isinstance(n,LeafNode) for n in n2.children))
+
+def purge_same_type_children_test():
+    l1 = LeafNode('y1')
+    l2 = LeafNode('y2')
+    l3 = LeafNode('y3')
+    n1 = AndNode([l1,l2])
+    n2 = AndNode([n1,l3])
+    n2.tryPurgingSameTypeChildren()
+    assert(all(isinstance(n, LeafNode) for n in n2.children))
 
 def or_in_and_test():
     y = dict([(i,'y'+str(i)) for i in range(1,6)])
