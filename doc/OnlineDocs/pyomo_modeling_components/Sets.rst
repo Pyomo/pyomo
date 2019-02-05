@@ -33,11 +33,11 @@ The ``Set`` function takes optional arguments such as:
   typically used as domains for sets, parameters and variables
 - within = Set used for validation; it is a super-set of the set being declared.
 
-In general, Pyomo attempts to infer the "dimentionality" of Set
+In general, Pyomo attempts to infer the "dimensionality" of Set
 components (that is, the number of apparent indices) when they are
 constructed.  However, there are situations where Pyomo either cannot
-detect a dimentionality (e.g., a Set that was not initialized with any
-members), or you the user may want to assert the dimentionality of the
+detect a dimensionality (e.g., a Set that was not initialized with any
+members), or you the user may want to assert the dimensionality of the
 set.  This can be accomplished through the ``dimen`` keyword.  For
 example, to create a set whose members will be two dimensional, one
 could write:
