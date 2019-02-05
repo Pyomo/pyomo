@@ -10,10 +10,12 @@ and postpones creation of its members:
 
 .. doctest::
     :hide:
+
     >>> from pyomo.environ import *
     >>> model = ConcreteModel()
 
 .. doctest::
+
     >>> model.A = Set()
 
 The ``Set`` function takes optional arguments such as:
@@ -41,13 +43,15 @@ example, to create a set whose members will be two dimensional, one
 could write:
 
 .. doctest::
+
     >>> model.B = Set(dimen=2)
 
 To create a set of all the numbers in set ``model.A`` doubled, one could
 use
 
 .. doctest::
-    >>> def doubleA_init(model):
+
+    >>> def DoubleA_init(model):
     ...     return (i*2 for i in model.A)
     >>> model.C = Set(initialize=DoubleA_init)
 
@@ -61,6 +65,7 @@ The ``initialize`` option can accept any Python iterable, including a
 function or specified directly as in
 
 .. doctest::
+
     >>> model.D = Set(initialize=['red', 'green', 'blue'])
 
 The ``initialize`` option can also specify either a generator or a
@@ -68,6 +73,7 @@ function to specify the Set members.  In the case of a generator, all
 data yielded by the generator will become the initial set members:
 
 .. doctest::
+
     >>> def X_init(m):
     ...     for i in range(10):
     ...         yield 2*i+1
@@ -78,6 +84,7 @@ first, the function returns an iterable (``set``, ``list``, or
 ``tuple``) containing the data with which to initialize the Set:
 
 .. doctest::
+
     >>> def Y_init(m):
     ...     return [2*i+1 for i in range(10)]
     >>> model.Y = Set(initialize=Y_init)
@@ -87,6 +94,7 @@ passing the element number in as an extra argument.  This is repeated
 until the function returns the special value ``Set.End``:
 
 .. doctest::
+
     >>> def Z_init(model, i):
     ...     if i > 10:
     ...         return Set.End
@@ -96,13 +104,14 @@ until the function returns the special value ``Set.End``:
 Note that the element number starts with 1 and not 0:
 
 .. doctest::
+
     >>> model.X.pprint()
     X : Dim=0, Dimen=1, Size=10, Domain=None, Ordered=False, Bounds=(1, 19)
         [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
     >>> model.Y.pprint()
     Y : Dim=0, Dimen=1, Size=10, Domain=None, Ordered=False, Bounds=(1, 19)
         [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
-    >>> model.Y.pprint()
+    >>> model.Z.pprint()
     Z : Dim=0, Dimen=1, Size=10, Domain=None, Ordered=False, Bounds=(3, 21)
         [3, 5, 7, 9, 11, 13, 15, 17, 19, 21]
 
@@ -120,6 +129,7 @@ interpreted as indexes for an array of sets. For example, to create an
 array of sets that is indexed by the members of the set ``model.A``, use:
 
 .. doctest::
+
    >>> model.E = Set(model.A)
 
 Arguments can be combined. For example, to create an array of sets,
@@ -127,6 +137,7 @@ indexed by set ``model.A`` where each set contains three dimensional
 members, use:
 
 .. doctest::
+
    >>> model.F = Set(model.A, dimen=3)
 
 The ``initialize`` option can be used to create a set that contains a
@@ -140,6 +151,7 @@ size defaults to one. For example, the following declaration creates a
 set with the numbers 1.5, 5 and 8.5:
 
 .. doctest::
+
    >>> model.G = RangeSet(1.5, 10, 3.5)
 
 Operations
@@ -150,17 +162,25 @@ other Pyomo sets.  Pyomo supports set operations including union, intersection,
 difference, and symmetric difference:
 
 .. doctest::
-    model.I = model.A | model.D # union
-    model.J = model.A & model.D # intersection
-    model.K = model.A - model.D # difference
-    model.L = model.A ^ model.D # exclusive-or
+
+    >>> model.I = model.A | model.D # union
+    >>> model.J = model.A & model.D # intersection
+    >>> model.K = model.A - model.D # difference
+    >>> model.L = model.A ^ model.D # exclusive-or
+
+.. doctest::
+   :hide:
+
+   >>> model.del_component('K')
+   >>> model.del_component('L')
 
 For example, the cross-product operator is the asterisk (*).  To define
 a new set ``K`` that is the cross product of sets ``B`` and ``C``, one
 could use
 
 .. doctest::
-    model.K = model.B * model.C
+
+    >>> model.K = model.B * model.C
 
 This creates a *virtual* set that holds references to the original sets,
 so any updates to the original sets (``B`` and ``C``) will be reflected
@@ -170,13 +190,15 @@ of creation and will *not* reflect subsequent changes in the original
 sets with:
 
 .. doctest::
-    model.K_concrete = Set(initialize=model.B * model.C)
+
+    >>> model.K_concrete = Set(initialize=model.B * model.C)
 
 Finally, you can indicate that the members of a set are restricted to be in the
 cross product of two other sets, one can use the ``within`` keyword:
 
 .. doctest::
-    model.L = Set(within=model.B * model.C)
+
+    >>> model.L = Set(within=model.B * model.C)
 
 Predefined Virtual Sets
 -----------------------
@@ -332,7 +354,9 @@ Sparse Index Sets Example
 
 One may want to have a constraint that holds
 
->>> for i in model.I, k in model.K, v in model.V[k] # doctest: +SKIP
+.. doctest::
+
+   >>> for i in model.I, k in model.K, v in model.V[k] # doctest: +SKIP
 
 There are many ways to accomplish this, but one good way is to create a
 set of tuples composed of all of ``model.k, model.V[k]`` pairs.  This
@@ -343,8 +367,10 @@ can be done as follows:
 
 So then if there was a constraint defining rule such as
 
->>> def MyC_rule(model, i, k, v): # doctest: +SKIP
->>>    return ...                 # doctest: +SKIP
+.. doctest::
+
+   >>> def MyC_rule(model, i, k, v): # doctest: +SKIP
+   >>>    return ...                 # doctest: +SKIP
 
 Then a constraint could be declared using
 
