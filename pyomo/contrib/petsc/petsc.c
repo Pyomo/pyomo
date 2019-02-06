@@ -12,21 +12,24 @@ John Eslick
 #include<math.h>
 
 int main(int argc, char **argv){
-  PetscErrorCode ierr;         // Error code from PETSc functions
-  PetscInt       its;          // Number of solver iterations
-  ASL            *asl;         // ASL context
-  Solver_ctx     sol_ctx;      // solver context
-  int            err;          // Error code  from ASL fulctions
+  PetscErrorCode ierr;        // Error code from PETSc functions
+  PetscInt       its;         // Number of solver iterations
+  ASL            *asl;        // ASL context
+  Solver_ctx     sol_ctx;     // solver context
+  int            err;         // Error code  from ASL fulctions
   int            i=0;         // Loop counters
-  real           *R;           // ASL constraint body test
   PetscInt       temp_int;    // a temporary variable to store a option
-  int            argc_new;   // new number of arguments reformated for PETSc
-  char           **argv_new; // argv transformed to PETSc's format
+  PetscScalar    temp_scalar; // a temporary scalar for reading options
+  PetscBool      temp_bool;   // a temporart bool for reading options
+  int            argc_new;    // new number of arguments reformated for PETSc
+  char           **argv_new;  // argv transformed to PETSc's format
   static SufDecl suftab[] = { // suffixes to read in
     //doc for this at https://ampl.com/netlib/ampl/solvers/README.suf
-    {"dae_suffix", NULL, ASL_Sufkind_var, 1}, //var kinds for DAE solver
-    {"dae_suffix", NULL, ASL_Sufkind_con, 1},
-    {"dae_link",   NULL, ASL_Sufkind_var, 1}}; //link derivatives to vars
+    {"dae_suffix", NULL, ASL_Sufkind_var}, //var kinds for DAE solver
+    {"dae_link",   NULL, ASL_Sufkind_var}, //link derivatives to vars
+    {"scaling_factor", NULL, ASL_Sufkind_var|ASL_Sufkind_real}, //var scale factors
+    {"scaling_factor", NULL, ASL_Sufkind_con|ASL_Sufkind_real} //constraint scale factors
+  };
   Vec            x,r,xl,xu; // solution, residual, bound vectors
   Mat            J;            // Jacobian matrix
   TS             ts;           // DAE solver
@@ -40,6 +43,7 @@ int main(int argc, char **argv){
   real t; //time for DAE solution
   TSConvergedReason tscr;
   real *x_asl;
+  PetscViewer pv;
 
   // Set some initial values in sol_ctx
   sol_ctx_init(&sol_ctx);
@@ -50,13 +54,13 @@ int main(int argc, char **argv){
   ierr = MPI_Comm_size(PETSC_COMM_WORLD, &sol_ctx.opt.mpi_size);CHKERRQ(ierr);
   // Get added options
   PetscOptionsGetString(NULL, NULL, "-s", sol_ctx.opt.stub, PETSC_MAX_PATH_LEN-1, &sol_ctx.opt.got_stub);
-  PetscOptionsHasName(NULL, NULL, "-show_constraints", &sol_ctx.opt.show_con);
   PetscOptionsHasName(NULL, NULL, "-show_jac", &sol_ctx.opt.show_jac);
   PetscOptionsHasName(NULL, NULL, "-show_initial", &sol_ctx.opt.show_init);
+  PetscOptionsHasName(NULL, NULL, "-show_scale_factors", &sol_ctx.opt.show_scale_factors);
   PetscOptionsHasName(NULL, NULL, "-use_bounds", &sol_ctx.opt.use_bounds);
   PetscOptionsGetScalar(NULL, NULL, "-perturb_test",&sol_ctx.opt.ptest, &sol_ctx.opt.per_test);
   if(!sol_ctx.opt.per_test) sol_ctx.opt.ptest = 1.0;
-  PetscOptionsGetInt(NULL, NULL, "-scale_eqs",&temp_int, &sol_ctx.opt.scale_eq);
+  PetscOptionsGetInt(NULL, NULL, "-scale_eqs", &temp_int, &sol_ctx.opt.scale_eq);
   sol_ctx.opt.eq_scale_method = (EQSCALE_TYPE)temp_int;
   PetscOptionsGetInt(NULL, NULL, "-scale_vars", &temp_int, &sol_ctx.opt.scale_var);
   sol_ctx.opt.var_scale_method = (VARSCALE_TYPE)temp_int;
@@ -64,6 +68,13 @@ int main(int argc, char **argv){
   PetscOptionsHasName(NULL, NULL, "-jac_explicit_diag", &sol_ctx.opt.jac_explicit_diag);
   PetscOptionsHasName(NULL, NULL, "-dae_solve", &sol_ctx.opt.dae_solve);
   PetscOptionsHasName(NULL, NULL, "-show_cl", &sol_ctx.opt.show_cl);
+  PetscOptionsGetScalar(NULL, NULL, "-scale_eq_jac_max",&temp_scalar, &temp_bool);
+  if(temp_bool) sol_ctx.opt.scale_eq_jac_max = temp_scalar;
+  else sol_ctx.opt.scale_eq_jac_max = 100;
+  PetscOptionsGetScalar(NULL, NULL, "-scale_eq_fac_min",&temp_scalar, &temp_bool);
+  if(temp_bool) sol_ctx.opt.scale_eq_fac_min = temp_scalar;
+  else sol_ctx.opt.scale_eq_fac_min = 1e-6;
+
   // If show_cl otion, show the original and transformed command line
   if(sol_ctx.opt.show_cl){
     PetscPrintf(PETSC_COMM_SELF, "-----------------------------------------------------------------\n");
@@ -88,7 +99,6 @@ int main(int argc, char **argv){
   }
   // Allocated space for some ASL items and test calculations
   X0 = (real*)Malloc(n_var*sizeof(real));  /* Initial X values */
-  R = (real*)Malloc(n_con*sizeof(real));   /* Constraint body values */
   LUv = (real*)Malloc(n_var*sizeof(real)); /* Variable lower bounds */
   Uvx = (real*)Malloc(n_var*sizeof(real)); /* Variable upper bounds */
   LUrhs = (real*)Malloc(n_con*sizeof(real)); /* Lower constraint right side */
@@ -136,19 +146,29 @@ int main(int argc, char **argv){
     PetscPrintf(PETSC_COMM_SELF, "Number of differential vars: %d\n", sol_ctx.n_var_diff);
     PetscPrintf(PETSC_COMM_SELF, "Number of algebraic vars: %d\n", sol_ctx.n_var_alg);
     PetscPrintf(PETSC_COMM_SELF, "Number of state vars: %d\n", sol_ctx.n_var_state);
+    if(sol_ctx.explicit_time>1){
+      PetscPrintf(PETSC_COMM_SELF, "ERROR: DAE: Multiple time variable (allowed 1 at most)");
+      ASL_free(&(sol_ctx.asl));
+      exit(P_EXIT_MULTIPLE_TIME);
+    }
+    if(sol_ctx.dof != sol_ctx.n_var_deriv + sol_ctx.explicit_time){
+      PetscPrintf(PETSC_COMM_SELF, "ERROR: DAE: DOF != number of derivative vars");
+      ASL_free(&(sol_ctx.asl));
+      exit(P_EXIT_DOF_DAE);
+    }
+    if(sol_ctx.n_var_diff != sol_ctx.n_var_deriv){
+      PetscPrintf(PETSC_COMM_SELF, "ERROR: DAE: number of differential vars != number of derivatives");
+      ASL_free(&(sol_ctx.asl));
+      exit(P_EXIT_VAR_DAE_MIS);
+    }
   }
   PetscPrintf(PETSC_COMM_SELF, "---------------------------------------------------\n");
 
   // Equation/variable scaling
-  ScaleEqs(sol_ctx.opt.eq_scale_method, sol_ctx.asl);
-  if(!sol_ctx.opt.dae_solve) ScaleVars(sol_ctx.opt.var_scale_method, sol_ctx.asl); //for now not compatable with dae
-  if(sol_ctx.opt.var_scale_method && !sol_ctx.opt.eq_scale_method){
-    PetscPrintf(PETSC_COMM_SELF, "Warning: scale equations if scaling vars\n");}
-  // Optionally print some stuff
-  if(sol_ctx.opt.show_init) print_x_asl(sol_ctx.asl);
-  if(sol_ctx.opt.show_jac) print_jac_asl(sol_ctx.asl, 101, 1e-3);
-  if(sol_ctx.opt.show_con) for(i=0; i<n_con; ++i){
-    PetscPrintf(PETSC_COMM_SELF, "c%d: %e <= %e <= %e\n", i, LUrhs[i], R[i], Urhsx[i]);}
+  sol_ctx.dae_suffix_var = suf_get("dae_suffix", ASL_Sufkind_var);
+  sol_ctx.dae_link_var = suf_get("dae_link", ASL_Sufkind_var);
+  sol_ctx.scaling_factor_var = suf_get("scaling_factor", ASL_Sufkind_var);
+  sol_ctx.scaling_factor_con = suf_get("scaling_factor", ASL_Sufkind_con);
 
   if(sol_ctx.opt.dae_solve){  //This block sets up DAE solve and solves
     ierr = TSCreate(PETSC_COMM_WORLD, &ts); CHKERRQ(ierr);
@@ -163,6 +183,33 @@ int main(int argc, char **argv){
         xx[sol_ctx.dae_map_back[i]] = X0[i];
       }
     }
+    // Equation/variable scaling
+    ScaleVars(&sol_ctx);
+    ScaleEqs(&sol_ctx);
+    // Print the variable types for reading trajectories
+    strcpy(sol_ctx.opt.typ_file, sol_ctx.opt.stub);
+    if(sol_ctx.opt.stublen > 3){
+      if((sol_ctx.opt.stub[sol_ctx.opt.stublen - 1] == 'l') &&
+         (sol_ctx.opt.stub[sol_ctx.opt.stublen - 2] == 'n') &&
+         (sol_ctx.opt.stub[sol_ctx.opt.stublen - 3] == '.')){
+        strcpy(sol_ctx.opt.typ_file + sol_ctx.opt.stublen - 3, ".typ");
+      }
+      else{ //just stub no ".nl" extension
+        strcpy(sol_ctx.opt.typ_file + sol_ctx.opt.stublen, ".typ");
+      }
+    }
+    else{// not long enough for there to be an extension
+      strcpy(sol_ctx.opt.typ_file + sol_ctx.opt.stublen, ".typ");
+    }
+
+    err = PetscViewerASCIIOpen(PETSC_COMM_WORLD, sol_ctx.opt.typ_file, &pv);
+    for(i=0;i<n_var;++i){
+      PetscViewerASCIIPrintf(pv, "%d\n", sol_ctx.dae_suffix_var->u.i[i]);
+    }
+    err = PetscViewerDestroy(&pv);
+
+
+    print_init_diagnostic(&sol_ctx); //print initial diagnostic information
     ierr = VecRestoreArray(x, &xx);CHKERRQ(ierr);
     // Make Jacobian matrix (by default sparse AIJ)
     ierr = MatCreate(PETSC_COMM_WORLD,&J); CHKERRQ(ierr);
@@ -213,6 +260,11 @@ int main(int argc, char **argv){
     ierr = TSDestroy(&ts);
   } //end ts solve
   else{ // nonlinear solver setup and solve
+    // Equation/variable scaling
+    ScaleVars(&sol_ctx);
+    ScaleEqs(&sol_ctx);
+    // Print requested diagnostic info
+    print_init_diagnostic(&sol_ctx);
     /*Create nonlinear solver context*/
     ierr = SNESCreate(PETSC_COMM_WORLD, &snes); CHKERRQ(ierr);
     /*Create vectors for solution and nonlinear function*/
@@ -345,5 +397,5 @@ void sol_ctx_init(Solver_ctx *ctx){
   ctx->dof=0; //degrees of freedom
   ctx->opt.ptest=1.0; // method to scale equations
   ctx->opt.eq_scale_method=EQ_SCALE_MAX_GRAD; // method to scale equations
-  ctx->opt.var_scale_method=VAR_SCALE_GRAD; // method to scale variables
+  ctx->opt.var_scale_method=VAR_SCALE_NONE; // method to scale variables
 }
