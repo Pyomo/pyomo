@@ -30,7 +30,7 @@ def add_objective_linearization(solve_data, config):
             expr=sign_adjust * sum(
                 value(MindtPy.jacs[obj][id(var)]) * (var - value(var))
                 for var in list(EXPR.identify_variables(obj.body))) +
-            value(obj.body) <= 0)
+                 value(obj.body) <= 0)
         MindtPy.ECP_constr_map[obj, solve_data.mip_iter] = c
 
 
@@ -52,14 +52,14 @@ def add_oa_cut(var_values, duals, solve_data, config):
         if constr.body.polynomial_degree() in (1, 0):
             continue
         rhs = ((0 if constr.upper is None else constr.upper) +
-               (0 if constr.lower is None else constr.lower))
+               (0 if constr.lower is None else constr.lower)) - (
+                  0 if (constr.lower is None and constr.upper is None) else constr.lower)
         slack_var = MindtPy.MindtPy_linear_cuts.slack_vars.add()
         MindtPy.MindtPy_linear_cuts.oa_cuts.add(
             expr=copysign(1, sign_adjust * dual_value) * (sum(
                 value(jacs[constr][var]) * (var - value(var))
                 for var in list(EXPR.identify_variables(constr.body))) +
-                value(constr.body) - rhs) -
-            slack_var <= 0)
+                                                          value(constr.body) - rhs) - slack_var <= 0)
 
 
 def add_int_cut(var_values, solve_data, config, feasible=False):
