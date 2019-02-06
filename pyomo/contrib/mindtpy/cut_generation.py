@@ -52,8 +52,10 @@ def add_oa_cut(var_values, duals, solve_data, config):
         if constr.body.polynomial_degree() in (1, 0):
             continue
         rhs = ((0 if constr.upper is None else constr.upper) +
-               (0 if constr.lower is None else constr.lower)) - (
-                  0 if (constr.lower is None and constr.upper is None) else constr.lower)
+               (0 if constr.lower is None else constr.lower))
+        # Properly handle equality constraints and ranged inequalities
+        # TODO special handling for ranged inequalities? a <= x <= b
+        rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
         slack_var = MindtPy.MindtPy_linear_cuts.slack_vars.add()
         MindtPy.MindtPy_linear_cuts.oa_cuts.add(
             expr=copysign(1, sign_adjust * dual_value) * (sum(
