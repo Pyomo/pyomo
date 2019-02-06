@@ -14,8 +14,6 @@ from six.moves import xrange
 
 from pyomo.core import Block, ConstraintList, Set, Constraint
 from pyomo.gdp.disjunct import Disjunct, Disjunction
-from pyomo.environ import TransformationFactory, Objective
-from pyomo.opt import SolverFactory
 
 import logging
 logger = logging.getLogger('pyomo.gdp')
@@ -113,7 +111,6 @@ def apply_basic_step(disjunctions_or_constraints):
     for i in ans.DISJUNCTIONS:
         disjunctions[i].deactivate()
         for d in disjunctions[i].disjuncts:
-            #d.deactivate()
             d._deactivate_without_fixing_indicator()
 
     return ans
@@ -129,13 +126,9 @@ if __name__ == '__main__':
     def _e(e, i):
         e.y = Var(xrange(2,i))
     m.e = Disjunct([3,4,5], rule=_e)
-    m.obj = Objective(expr=m.d.x[1]+m.e.y[2])
 
     m.dd = Disjunction(expr=[m.d[1], m.d[2]])
     m.ee = Disjunction(expr=[m.e[3], m.e[4], m.e[5]])
     m.Z = apply_basic_step([m.dd, m.ee])
 
     m.pprint()
-
-    res = SolverFactory('gdpopt').solve(m, strategy='GLOA')
-    print(res)

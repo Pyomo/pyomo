@@ -53,7 +53,6 @@ environment:
 
 
 install:
-  # We need wheel installed to build wheels
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PYTHON%\\Library\\bin;%PATH%"
   - python --version
   #
@@ -65,7 +64,7 @@ install:
   #
   - SET CONDA_INSTALL=conda install -q -y
   - "SET ANACONDA=%CONDA_INSTALL% -c anaconda"
-  - "SET CONDAFORGE=%CONDA_INSTALL% -c conda-forge --no-update-dependencies"
+  - "SET CONDAFORGE=%CONDA_INSTALL% -c conda-forge --no-update-deps"
   #
   # Determine if we will use Appveyor's Miniconda or install Anaconda
   # (intermittently one or the other suffers from NumPy failing to load the
@@ -93,7 +92,26 @@ install:
   #- "SET CONDAENV=%PYTHON%\\envs\\pyomo_test_env"
   - "echo %PATH%"
   #
-  - "%CONDAFORGE% setuptools pip coverage sphinx_rtd_theme"
+  - "SET ADDITIONAL_CF_PKGS=setuptools pip coverage sphinx_rtd_theme"
+  #
+  # Install extra packages (formerly pyomo.extras)
+  #
+  #   If we are using Miniconda, we need to install additional packages
+  #   that usually come with the full Anaconda distribution
+  #
+  - SET MINICONDA_EXTRAS=""
+  - IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn)
+  #
+  - "IF DEFINED EXTRAS (SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% pymysql pyro4 %MINICONDA_EXTRAS%)"
+  #- "IF DEFINED EXTRAS (%CONDAFORGE% mkl)"
+  #
+  # Finally, add any solvers we want to the list
+  #
+  - "SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% glpk ipopt"
+  #
+  # ...and install everything from conda-force in one go
+  #
+  - "%CONDAFORGE% %ADDITIONAL_CF_PKGS%"
   #
   # While we would like to install codecov using conda (for
   # consistency), there are cases (most recently, in Python 3.5) where
@@ -108,39 +126,33 @@ install:
   - windows_x64_64.exe /SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS
   - "SET PATH=%cd%\\gams;%PATH%"
   #
-  # Install pyomo.extras
-  #
-  # If we are using Miniconda, we need to install additional packages
-  # that usually come with the full Anaconda distribution
-  #
-  - SET MINICONDA_EXTRAS=""
-  - IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn)
-  #
-  - "IF DEFINED EXTRAS (%CONDAFORGE% pymysql pyro4 %MINICONDA_EXTRAS%)"
-  #- "IF DEFINED EXTRAS (%CONDAFORGE% numpy scipy ipython openpyxl sympy pymysql pyodbc pyro4 pyyaml networkx xlrd pandas matplotlib dill)"
-  #- "IF DEFINED EXTRAS (%CONDAFORGE% mkl)"
-  #
-  - "%CONDAFORGE% glpk"
-  - "glpsol -v"
-  # NOTE: conda-forge doesn't build ipopt for Windows....
-  - "%CONDAFORGE% ipopt"
-  - "ipopt -v"
-  #
   # Clone but don't install pyomo-model-libraries
   #
   - "git clone https://github.com/Pyomo/pyomo-model-libraries.git"
   - "python -m pip install git+https://github.com/PyUtilib/pyutilib"
   - "python setup.py develop"
+
+  # Set up python's coverage for covering subprocesses (important to do
+  # here because we want coverage of the download scripts below)
   #
+  - "SET BUILD_DIR=%cd%"
+  - "SET COVERAGE_PROCESS_START=%BUILD_DIR%\\coveragerc"
+  - "copy %BUILD_DIR%\\.coveragerc %COVERAGE_PROCESS_START%"
+  - "echo data_file=%BUILD_DIR%\\.coverage >> %COVERAGE_PROCESS_START%"
+  - python -c "from distutils.sysconfig import get_python_lib; import os; FILE=open(os.path.join(get_python_lib(),'run_coverage_at_startup.pth'), 'w'); FILE.write('import coverage; coverage.process_startup()'); FILE.close()"
+
   # Fetch additional solvers
   #
   - "mkdir %cd%\\bin"
   - "SET PATH=%cd%\\bin;%PATH%"
-  - "python pyomo\\contrib\\trustregion\\getGJH.py %cd%\\bin"
-  - "gjh -v"
   - "python pyomo\\common\\getGSL.py %cd%\\bin"
+  - "python pyomo\\contrib\\trustregion\\getGJH.py %cd%\\bin"
+
+  # Report relevant package versions
   #
-  # Verify the python version
+  - "gjh -v"
+  - "glpsol -v"
+  - "ipopt -v"
   - python --version
 
 build: off
@@ -159,9 +171,6 @@ test_script:
   # subprocesses launched by tests
   - "SET BUILD_DIR=%cd%"
   - "SET COVERAGE_PROCESS_START=%BUILD_DIR%\\coveragerc"
-  - "copy %BUILD_DIR%\\.coveragerc %COVERAGE_PROCESS_START%"
-  - "echo data_file=%BUILD_DIR%\\.coverage >> %COVERAGE_PROCESS_START%"
-  - python -c "from distutils.sysconfig import get_python_lib; import os; FILE=open(os.path.join(get_python_lib(),'run_coverage_at_startup.pth'), 'w'); FILE.write('import coverage; coverage.process_startup()'); FILE.close()"
 
   # Run Pyomo tests
   - "test.pyomo -v --cat=%CATEGORY% pyomo %BUILD_DIR%\\pyomo-model-libraries"
