@@ -98,3 +98,42 @@ def or_in_and_test():
             assert(isinstance(leaf_or_not_node, NotNode) or isinstance(leaf_or_not_node, LeafNode))
             for l in filter(isNotNode, leaf_or_not_node):
                 assert(isinstance(l, LeafNode))
+
+def simple_if_test():
+    y = dict([(i,'y'+str(i)) for i in range(1,3)])
+    l = dict([(i,LeafNode(y[i])) for i in y.keys()])
+    n1 = IfNode(l[1],l[2])
+    n1_ref = deepcopy(n1)
+    n1.ifToOr()
+    assert(isinstance(n1,OrNode))
+    assert(all(isinstance(n, NotNode) or isinstance(n, LeafNode) for n in n1.children))
+    assert_model_equality(n1, n1_ref, y.values())
+
+def is_leaf_not_node_test():
+    y = dict([(i,'y'+str(i)) for i in range(1,5)])
+    l = dict([(i,LeafNode(y[i])) for i in y.keys()])
+    n1 = NotNode(l[1])
+    n2 = AndNode([n1,l[2],l[3]])
+    assert(is_leaf_not_node(n2.children))
+    n3 = OrNode([n2,l[4]])
+    assert(not is_leaf_not_node(n3.children))
+
+def is_conjunctive_normal_form_test():
+    y = dict([(i,'y'+str(i)) for i in range(1,6)])
+    l = dict([(i,LeafNode(y[i])) for i in y.keys()])
+    n1 = OrNode([l[1],NotNode(l[2])])
+    n2 = NotNode(l[3])
+    n3 = AndNode([n1,n2,l[4],l[5]])
+    assert(is_conjunctive_normal_form(n3))
+
+def bring_to_conjunctive_normal_form_test():
+    y = dict([(i,'y'+str(i)) for i in range(1,6)])
+    l = dict([(i,LeafNode(y[i])) for i in y.keys()])
+    n1 = AndNode([NotNode(l[1]),l[2]])
+    n2 = NotNode(OrNode([l[3],l[4]]))
+    n3 = IfNode(n1,n2)
+    n3_ref = deepcopy(n3)
+    bring_to_conjunctive_normal_form(n3)
+    assert(is_conjunctive_normal_form(n3))
+    assert_model_equality(n3,n3_ref,y.values())
+
