@@ -1,6 +1,11 @@
-from expression_system import *
-from pyomo.environ import *
-from pyomo.gdp import *
+from expression_system import \
+    (NotNode, LeafNode, OrNode, AndNode, IfNode,
+     bring_to_conjunctive_normal_form, CNF_to_linear_constraints)
+from pyomo.environ import \
+    (ConcreteModel, Var, Objective, Constraint, Set, RangeSet,
+     NonNegativeReals, Binary, SolverFactory, TransformationFactory)
+from pyomo.gdp import (Disjunct)
+
 
 def CNF_constraints_test():
     m = ConcreteModel()
@@ -16,40 +21,46 @@ def CNF_constraints_test():
     n6 = LeafNode(m.y[6])
 
     N1 = NotNode(n1)
-    N2 = OrNode([N1,n2])
-    N3 = OrNode([n4,n5,n6])
-    N4 = AndNode([N2,n3,N3])
+    N2 = OrNode([N1, n2])
+    N3 = OrNode([n4, n5, n6])
+    N4 = AndNode([N2, n3, N3])
 
     bring_to_conjunctive_normal_form(N4)
-    CNF_to_linear_constraints(m,N4)
-    m.obj = Objective(expr = 10*m.y[3] + 10*m.y[2] + 100*m.y[1] + 1*m.y[5] + 100*(m.y[4]+m.y[6]))
+    CNF_to_linear_constraints(m, N4)
+    m.obj = Objective(
+                expr=(10*m.y[3] + 10*m.y[2] + 100*m.y[1]
+                      + 1*m.y[5] + 100*(m.y[4]+m.y[6])))
 
     m_trafo = TransformationFactory('gdp.chull').create_using(m)
-    res = SolverFactory('baron').solve(m_trafo,tee=True)
-    assert(m_trafo.y[1].value == 0.0 and m_trafo.y[2].value == 0.0 and m_trafo.y[3].value == 1.0 and m_trafo.y[4].value == 0.0 and m_trafo.y[5].value == 1.0 and m_trafo.y[6].value == 0.0)
+    SolverFactory('baron').solve(m_trafo, tee=True)
+    assert(m_trafo.y[1].value == 0.0 and m_trafo.y[2].value == 0.0
+           and m_trafo.y[3].value == 1.0 and m_trafo.y[4].value == 0.0
+           and m_trafo.y[5].value == 1.0 and m_trafo.y[6].value == 0.0)
+
 
 def simple_CNF_disjuncts_test():
     m = ConcreteModel()
-    m.y_idx = Set(initialize=[1,2])
-    m.d_idx = Set(initialize=[1,2])
-    m.y = Var(m.y_idx, domain=NonNegativeReals, bounds=(0,1))
-    m.disjuncts = Disjunct(m.y_idx,m.d_idx)
-    m.disjuncts[1,1].c = Constraint(expr = m.y[1] == 0)
-    m.disjuncts[1,2].c = Constraint(expr = m.y[1] == 1)
-    m.disjuncts[2,1].c = Constraint(expr = m.y[2] == 0)
-    m.disjuncts[2,2].c = Constraint(expr = m.y[2] == 1)
+    m.y_idx = Set(initialize=[1, 2])
+    m.d_idx = Set(initialize=[1, 2])
+    m.y = Var(m.y_idx, domain=NonNegativeReals, bounds=(0, 1))
+    m.disjuncts = Disjunct(m.y_idx, m.d_idx)
+    m.disjuncts[1, 1].c = Constraint(expr=m.y[1] == 0)
+    m.disjuncts[1, 2].c = Constraint(expr=m.y[1] == 1)
+    m.disjuncts[2, 1].c = Constraint(expr=m.y[2] == 0)
+    m.disjuncts[2, 2].c = Constraint(expr=m.y[2] == 1)
+
     @m.Disjunction(m.y_idx)
     def disjunction(m, i):
-        return [m.disjuncts[i,1], m.disjuncts[i,2]]
-    m.obj = Objective(expr = 100*m.y[1] + 1*m.y[2])
+        return [m.disjuncts[i, 1], m.disjuncts[i, 2]]
+    m.obj = Objective(expr=100*m.y[1] + 1*m.y[2])
 
-    l1 = LeafNode(m.disjuncts[1,1].indicator_var)
-    l2 = LeafNode(m.disjuncts[2,2].indicator_var)
-    n1 = IfNode(l1,l2)
+    l1 = LeafNode(m.disjuncts[1, 1].indicator_var)
+    l2 = LeafNode(m.disjuncts[2, 2].indicator_var)
+    n1 = IfNode(l1, l2)
     bring_to_conjunctive_normal_form(n1)
-    CNF_to_linear_constraints(m,n1)
+    CNF_to_linear_constraints(m, n1)
 
     m_trafo = TransformationFactory('gdp.bigm').create_using(m, bigM=10)
-    res = SolverFactory('baron').solve(m_trafo)
+    SolverFactory('baron').solve(m_trafo)
     assert(abs(m_trafo.y[1].value - 0 < 1e-8))
     assert(abs(m_trafo.y[2].value - 1 < 1e-8))
