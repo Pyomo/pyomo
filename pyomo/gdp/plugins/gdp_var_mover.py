@@ -100,7 +100,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
             # deactivated.
             for disjunct in itervalues(disjunct_component._data):
                 if self._disjunct_not_relaxed(disjunct):
-                    disjunct.deactivate()
+                    disjunct._deactivate_without_fixing_indicator()
                 else:
                     disjunct._activate_without_unfixing_indicator()
 
