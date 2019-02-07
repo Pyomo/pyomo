@@ -38,6 +38,15 @@ def _find_packages(path):
 def read(*rnames):
     return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
 
+def get_version():
+    # Source pyomo/version/info.py to get the version number
+    _verInfo = dict(globals())
+    _verFile = os.path.join(os.path.dirname(__file__),
+                            'pyomo','version','info.py')
+    with open(_verFile) as _FILE:
+        exec(_FILE.read(), _verInfo)
+    return _verInfo['__version__']
+
 requires = [
     'PyUtilib>=5.6.6.dev0',
     'appdirs',
@@ -104,15 +113,9 @@ packages = _find_packages('pyomo')
 def run_setup():
    setup(name='Pyomo',
       #
-      # Note: trunk should have *next* major.minor
-      #     VOTD and Final releases will have major.minor.revnum
+      # Note: the release number is set in pyomo/version/info.py
       #
-      # When cutting a release, ALSO update _major/_minor/_revnum in
-      #
-      #     pyomo/pyomo/version/__init__.py
-      #     pyomo/RELEASE.txt
-      #
-      version='5.6.2.dev0',
+      version=get_version(),
       maintainer='William E. Hart',
       maintainer_email='wehart@sandia.gov',
       url='http://pyomo.org',
