@@ -673,11 +673,15 @@ value() function.""" % ( self.name, i ))
     def set_value(self, value):
         """Set the value of a scalar component."""
         if self.is_indexed():
-            raise ValueError(
+            if type(value) is dict:
+                for key, val in value.items():
+                    self[key] = val
+            else:
+                raise ValueError(
                 "Cannot set the value for the indexed component '%s' "
                 "without specifying an index value.\n"
-                "\tFor example, model.%s[i] = value"
-                % (self.name, self.name))
+                "\tFor example, model.%s[i] = value or model.%s = {i: value}"
+                % (self.name, self.name, self.name))
         else:
             raise DeveloperError(
                 "Derived component %s failed to define set_value() "

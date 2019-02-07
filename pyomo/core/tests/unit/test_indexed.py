@@ -135,7 +135,40 @@ class TestIndexedComponent(unittest.TestCase):
         self.assertRaisesRegexp(
             TypeError, '.*',
             m.x.__getitem__, {})
-
+    
+    def test_set_value_single_index(self):
+        m = ConcreteModel()
+        m.x = Var([1,2])
+        m.p = Param([1,2], mutable=True)
+        
+        vals = {1:2, 2:4}
+        m.x = vals
+        self.assertEqual(m.x.extract_values(), vals)
+        m.p = vals
+        self.assertEqual(m.p.extract_values(), vals)
+        
+        vals = {1:4, 2:8}
+        m.x.set_value(vals)
+        self.assertEqual(m.x.extract_values(), vals)
+        m.p.set_value(vals)
+        self.assertEqual(m.p.extract_values(), vals)
+        
+    def test_set_value_multiple_index(self):
+        m = ConcreteModel()
+        m.x = Var([1,2],[3,4])
+        m.p = Param([1,2],[3,4],mutable=True)
+        
+        vals = {(1,3):2, (1,4):4, (2,3):6, (2,4):8}
+        m.x = vals
+        self.assertEqual(m.x.extract_values(), vals)
+        m.p = vals
+        self.assertEqual(m.p.extract_values(), vals)
+        
+        vals = {(1,3):4, (1,4):8, (2,3):12, (2,4):16}
+        m.x.set_value(vals)
+        self.assertEqual(m.x.extract_values(), vals)
+        m.p.set_value(vals)
+        self.assertEqual(m.p.extract_values(), vals)
 
 if __name__ == "__main__":
     unittest.main()
