@@ -15,6 +15,9 @@ class Node:
     def ifToOr(self, recursive=False):
         raise NotImplementedError()
 
+    def equivalentToAnd(self, recursive=False):
+        raise NotImplementedError()
+
     def becomeOtherNode(self, target_node):
         if isMultiNode(target_node):
             children = target_node.children
@@ -31,9 +34,9 @@ class Node:
 
 
 class BinaryNode(Node):
-    def __init__(self):
-        self.child_l = None
-        self.child_r = None
+    def __init__(self, child_l, child_r):
+        self.child_l = child_l
+        self.child_r = child_r
 
     def notNodeIntoOtherNode(self, recursive=False):
         for n in [self.child_l, self.child_r]:
@@ -54,12 +57,21 @@ class BinaryNode(Node):
             self.child_l.ifToOr(recursive=True)
             self.child_r.ifToOr(recursive=True)
 
+    def equivalentToAnd(self, recursive=False):
+        if recursive:
+            self.child_l.equivalentToAnd(recursive=True)
+            self.child_r.equivalentToAnd(recursive=True)
+
+    def distributivity_and_in_or(self):
+        self.child_l.distributivity_and_in_or()
+        self.child_r.distributivity_and_in_or()
+
+    def distributivity_or_in_and(self):
+        self.child_l.distributivity_or_in_and()
+        self.child_r.distributivity_or_in_and()
+
 
 class IfNode(BinaryNode):
-    def __init__(self, child_l, child_r):
-        self.child_l = child_l
-        self.child_r = child_r
-
     def print(self):
         lhs = self.child_l.print()
         rhs = self.child_r.print()
@@ -78,6 +90,27 @@ class IfNode(BinaryNode):
         child_l = self.child_l
         child_r = self.child_r
         self.becomeOtherNode(OrNode([NotNode(child_l), child_r]))
+
+
+class EquivalenceNode(BinaryNode):
+    def print(self):
+        lhs = self.child_l.print()
+        rhs = self.child_r.print()
+        return lhs + ' <=> ' + rhs
+
+    def evaluate(self, value_dict):
+        lhs = self.child_l.evaluate(value_dict)
+        rhs = self.child_r.evaluate(value_dict)
+        return lhs == rhs
+
+    def equivalentToAnd(self, recursive=False):
+        if recursive:
+            self.child_l.equivalentToAnd(recursive=True)
+            self.child_r.equivalentToAnd(recursive=True)
+        child_l = self.child_l
+        child_r = self.child_r
+        self.becomeOtherNode(
+                AndNode([IfNode(child_l, child_r), IfNode(child_r, child_l)]))
 
 
 class UnaryNode(Node):
@@ -99,6 +132,16 @@ class UnaryNode(Node):
         if recursive:
             self.child.ifToOr(recursive=True)
 
+    def equivalentToAnd(self, recursive=False):
+        if recursive:
+            self.child.equivalentToAnd(recursive=True)
+
+    def distributivity_and_in_or(self):
+        self.child.distributivity_and_in_or()
+
+    def distributivity_or_in_and(self):
+        self.child.distributivity_or_in_and()
+
 
 class LeafNode(UnaryNode):
     def __init__(self, single_node):
@@ -114,6 +157,15 @@ class LeafNode(UnaryNode):
         return value_dict[self.child]
 
     def ifToOr(self, recursive=False):
+        pass
+
+    def equivalentToAnd(self, recursive=False):
+        pass
+
+    def distributivity_and_in_or(self):
+        pass
+
+    def distributivity_or_in_and(self):
         pass
 
     def var(self):
@@ -178,7 +230,6 @@ class MultiNode(Node):
             child = self.children.pop()
             self.__class__ = type(child)
             self.__init__(child.children)
-            print('purged, now Im ' + str(type(child)))
 
     def tryPurgingSameTypeChildren(self, recursive=False):
         if recursive:
@@ -189,9 +240,6 @@ class MultiNode(Node):
         for n in filter(isSameType, self.children.copy()):
             self.children.update(n.children)
             self.children.remove(n)
-            print('combined children in class' + str(type(self)))
-        # if all([isinstance(n, type(self)) for n in self.children]):
-        #     self.children = set.union(*[c.children for c in self.children])
 
     def notNodeIntoOtherNode(self, recursive=False):
         for n in self.children:
@@ -202,6 +250,11 @@ class MultiNode(Node):
         if recursive:
             for n in self.children:
                 n.ifToOr(recursive=True)
+
+    def equivalentToAnd(self, recursive=False):
+        if recursive:
+            for n in self.children:
+                n.equivalentToAnd(recursive=True)
 
 
 class AndNode(MultiNode):
@@ -216,8 +269,6 @@ class AndNode(MultiNode):
         return all(n.evaluate(value_dict) for n in self.children)
 
     def distributivity_or_in_and(self):
-        # self.tryPurgingWithSingleChild()
-        # self.tryPurgingSameTypeChildren()
         for n in filter(isMultiNode, self.children):
             n.distributivity_or_in_and()
         self.tryPurgingWithSingleChild()
@@ -234,11 +285,9 @@ class AndNode(MultiNode):
                     for or_el in or_node.children)
             self.children -= set([or_node]) | other_nodes
             self.children |= set([new_or_node])
-        # self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
         for n in filter(isAndNode, self.children):
             n.distributivity_and_in_or()
-        # self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
 
 
@@ -256,7 +305,6 @@ class OrNode(MultiNode):
     def distributivity_or_in_and(self):
         for n in filter(isMultiNode, self.children):
             n.distributivity_or_in_and()
-        # self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
         while any(isinstance(n, AndNode) for n in self.children) \
                 and len(self.children) > 1:
@@ -269,30 +317,40 @@ class OrNode(MultiNode):
         self.tryPurgingWithSingleChild()
         for n in filter(isMultiNode, self.children):
             n.tryPurgingSameTypeChildren()
-        # self.tryPurgingSameTypeChildren()
-
-        # self.tryPurgingWithSingleChild()
 
     def distributivity_and_in_or(self):
-        # self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
         for n in filter(isAndNode, self.children):
             n.distributivity_and_in_or()
-        # self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
 
 
 def bring_to_conjunctive_normal_form(root_node):
     if is_conjunctive_normal_form(root_node):
         return
-    root_node.tryPurgingWithSingleChild(recursive=True)
-    root_node.tryPurgingSameTypeChildren(recursive=True)
-    root_node.ifToOr(recursive=True)
-    root_node.notNodeIntoOtherNode(recursive=True)
-    root_node.distributivity_or_in_and()
-    if isinstance(root_node, OrNode):
-        target_node = root_node
-        root_node.becomeOtherNode(AndNode([OrNode(target_node.children)]))
+    else:
+        root_node.tryPurgingWithSingleChild(recursive=True)
+        root_node.tryPurgingSameTypeChildren(recursive=True)
+        root_node.equivalentToAnd(recursive=True)
+        root_node.ifToOr(recursive=True)
+        root_node.notNodeIntoOtherNode(recursive=True)
+        root_node.distributivity_or_in_and()
+        if isinstance(root_node, OrNode):
+            target_node = root_node
+            root_node.becomeOtherNode(AndNode([OrNode(target_node.children)]))
+        elif isLeafNode(root_node):
+            leaf_node = root_node
+            root_node.becomeOtherNode(
+                    AndNode([OrNode([LeafNode(leaf_node.child)])]))
+        elif isNotNode(root_node):
+            not_node = root_node
+            root_node.becomeOtherNode(
+                    AndNode([OrNode([NotNode(not_node.child)])]))
+        elif any(not isOrNode(n) for n in root_node.children):
+            children = set(n for n in root_node.children if not isOrNode(n))
+            for n in children:
+                root_node.children.remove(n)
+                root_node.children.add(OrNode([n]))
 
 
 def is_leaf_not_node(nodes):
@@ -313,17 +371,16 @@ def is_conjunctive_normal_form(root_node):
     if not root_is_and_node:
         return False
 
-    children_are_or_not_leaf_nodes = all(
-            isOrNode(n) or is_leaf_not_node(n) for n in root_node.children)
-    if not children_are_or_not_leaf_nodes:
+    and_children_are_or_nodes = all(isOrNode(n) for n in root_node.children)
+    if not and_children_are_or_nodes:
         return False
 
-    or_children_are_or_not_nodes = all(
+    or_children_are_leaf_not_nodes = all(
             is_leaf_not_node(n.children)
             for n in filter(isOrNode, root_node.children))
 
-    return root_is_and_node and children_are_or_not_leaf_nodes \
-        and or_children_are_or_not_nodes
+    return root_is_and_node and and_children_are_or_nodes \
+        and or_children_are_leaf_not_nodes
 
 
 def CNF_to_linear_constraints(model, node_in_CNF):
@@ -332,14 +389,9 @@ def CNF_to_linear_constraints(model, node_in_CNF):
     model.logical_constr_idx = RangeSet(len(node_in_CNF.children))
     model.logical_constr = Constraint(model.logical_constr_idx)
     for (i, n_or) in zip(model.logical_constr_idx, node_in_CNF.children):
-        if isinstance(n_or, OrNode):
-            model.logical_constr[i] = sum(
-                    n.var() if isinstance(n, LeafNode) else (1-n.child.var())
-                    for n in n_or.children) >= 1
-        elif isinstance(n_or, NotNode):
-            model.logical_constr[i] = n_or.child.var() == 0
-        elif isinstance(n_or, LeafNode):
-            model.logical_constr[i] = n_or.var() == 1
+        model.logical_constr[i] = sum(
+                n.var() if isinstance(n, LeafNode) else (1-n.child.var())
+                for n in n_or.children) >= 1
 
 
 def isNode(n): return isinstance(n, Node)

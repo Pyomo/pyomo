@@ -1,7 +1,7 @@
 from itertools import product
 from copy import deepcopy
 from expression_system import \
-    (NotNode, LeafNode, OrNode, AndNode, IfNode,
+    (NotNode, LeafNode, OrNode, AndNode, IfNode, EquivalenceNode,
      bring_to_conjunctive_normal_form, is_conjunctive_normal_form,
      is_leaf_not_node, isNotNode, isOrNode)
 
@@ -140,12 +140,13 @@ def is_conjunctive_normal_form_test():
     y = dict([(i, 'y'+str(i)) for i in range(1, 6)])
     l = dict([(i, LeafNode(y[i])) for i in y.keys()])
     n1 = OrNode([l[1], NotNode(l[2])])
-    n2 = NotNode(l[3])
-    n3 = AndNode([n1, n2, l[4], l[5]])
-    assert(is_conjunctive_normal_form(n3))
+    n2 = OrNode([NotNode(l[3])])
+    n3 = OrNode([l[4], l[5]])
+    n4 = AndNode([n1, n2, n3])
+    assert(is_conjunctive_normal_form(n4))
 
 
-def bring_to_conjunctive_normal_form_test():
+def bring_if_to_conjunctive_normal_form_test():
     y = dict([(i, 'y'+str(i)) for i in range(1, 6)])
     l = dict([(i, LeafNode(y[i])) for i in y.keys()])
     n1 = AndNode([NotNode(l[1]), l[2]])
@@ -155,3 +156,40 @@ def bring_to_conjunctive_normal_form_test():
     bring_to_conjunctive_normal_form(n3)
     assert(is_conjunctive_normal_form(n3))
     assert_model_equality(n3, n3_ref, y.values())
+
+
+def bring_equivalence_to_conjunctive_normal_form_test():
+    y = dict([(i, 'y'+str(i)) for i in range(1, 6)])
+    l = dict([(i, LeafNode(y[i])) for i in y.keys()])
+    n1 = AndNode([NotNode(l[1]), l[2]])
+    n2 = NotNode(OrNode([l[3], l[4]]))
+    n3 = EquivalenceNode(n1, n2)
+    n3_ref = deepcopy(n3)
+    bring_to_conjunctive_normal_form(n3)
+    assert(is_conjunctive_normal_form(n3))
+    assert_model_equality(n3, n3_ref, y.values())
+
+
+def bring_leaf_to_conjunctive_normal_form_test():
+    y1 = 'y1'
+    l = LeafNode(y1)
+    l_ref = deepcopy(l)
+    bring_to_conjunctive_normal_form(l)
+    assert(is_conjunctive_normal_form(l))
+    assert_model_equality(l, l_ref, [y1])
+
+
+def bring_and_to_conjunctive_normal_form_test():
+    n = AndNode([LeafNode('y1'), LeafNode('y2')])
+    n_ref = deepcopy(n)
+    bring_to_conjunctive_normal_form(n)
+    assert(is_conjunctive_normal_form(n))
+    assert_model_equality(n, n_ref, ['y1', 'y2'])
+
+
+def bring_not_to_conjunctive_normal_form_test():
+    n = NotNode(LeafNode('y1'))
+    n_ref = deepcopy(n)
+    bring_to_conjunctive_normal_form(n)
+    assert(is_conjunctive_normal_form(n))
+    assert_model_equality(n, n_ref, ['y1'])
