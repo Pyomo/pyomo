@@ -454,6 +454,18 @@ class TestGLOA(unittest.TestCase):
         objective_value = value(model.obj.expr)
         self.assertAlmostEqual(objective_value, 4.46, 2)
 
+    def test_GLOA_nonconvex_HENS(self):
+        exfile = import_file(join(exdir, 'small_lit', 'nonconvex_HEN.py'))
+        model = exfile.build_gdp_model()
+        SolverFactory('gdpopt').solve(
+            model, strategy='GLOA',
+            mip_solver=mip_solver,
+            nlp_solver=global_nlp_solver,
+            nlp_solver_args=global_nlp_solver_args,
+            tee=False)
+        objective_value = value(model.objective.expr)
+        self.assertAlmostEqual(objective_value * 1E-5, 1.14385, 2)
+
 
 if __name__ == '__main__':
     unittest.main()
