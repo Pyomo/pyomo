@@ -52,6 +52,7 @@ _optional_packages = set([
     'pyomo.contrib.trustregion',
     'pyomo.contrib.multistart',
     'pyomo.contrib.petsc',
+    'pyomo.contrib.logical_expression_system',
 ])
 
 

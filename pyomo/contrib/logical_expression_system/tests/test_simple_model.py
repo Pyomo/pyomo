@@ -1,4 +1,4 @@
-from expression_system import \
+from pyomo.contrib.logical_expression_system import \
     (NotNode, LeafNode, OrNode, AndNode, IfNode,
      bring_to_conjunctive_normal_form, CNF_to_linear_constraints)
 from pyomo.environ import \
