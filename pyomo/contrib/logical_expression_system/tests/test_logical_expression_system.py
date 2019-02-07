@@ -1,9 +1,12 @@
 from itertools import product
 from copy import deepcopy
-from pyomo.contrib.logical_expression_system import \
-    (NotNode, LeafNode, OrNode, AndNode, IfNode, EquivalenceNode,
-     bring_to_conjunctive_normal_form, is_conjunctive_normal_form,
-     is_leaf_not_node, isNotNode, isOrNode)
+from pyomo.contrib.logical_expression_system.nodes import \
+    (NotNode, LeafNode, OrNode, AndNode, IfNode,
+     EquivalenceNode, isNotNode, isOrNode)
+from pyomo.contrib.logical_expression_system.util import \
+     (bring_to_conjunctive_normal_form,
+      is_conjunctive_normal_form,
+      is_leaf_not_node)
 
 
 def generate_value_dicts(var_names):

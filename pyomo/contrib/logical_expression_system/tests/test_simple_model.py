@@ -1,6 +1,7 @@
-from pyomo.contrib.logical_expression_system import \
-    (NotNode, LeafNode, OrNode, AndNode, IfNode,
-     bring_to_conjunctive_normal_form, CNF_to_linear_constraints)
+from pyomo.contrib.logical_expression_system.nodes import \
+    (NotNode, LeafNode, OrNode, AndNode, IfNode)
+from pyomo.contrib.logical_expression_system.util import \
+    (bring_to_conjunctive_normal_form, CNF_to_linear_constraints)
 from pyomo.environ import \
     (ConcreteModel, Var, Objective, Constraint, Set, RangeSet,
      NonNegativeReals, Binary, SolverFactory, TransformationFactory)

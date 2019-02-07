@@ -109,7 +109,7 @@ class EquivalenceNode(BinaryNode):
         child_l = self.child_l
         child_r = self.child_r
         self.becomeOtherNode(
-                AndNode([IfNode(child_l, child_r), IfNode(child_r, child_l)]))
+            AndNode([IfNode(child_l, child_r), IfNode(child_r, child_l)]))
 
 
 class UnaryNode(Node):
@@ -280,8 +280,8 @@ class AndNode(MultiNode):
             or_node = next(n for n in self.children if isinstance(n, OrNode))
             other_nodes = set([n for n in self.children if n is not or_node])
             new_or_node = OrNode(
-                    AndNode(set([or_el]) | other_nodes)
-                    for or_el in or_node.children)
+                AndNode(set([or_el]) | other_nodes)
+                for or_el in or_node.children)
             self.children -= set([or_node]) | other_nodes
             self.children |= set([new_or_node])
         self.tryPurgingSameTypeChildren()
