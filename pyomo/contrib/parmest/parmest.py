@@ -6,8 +6,9 @@ try:
     import numpy as np
     import pandas as pd
     from scipy import stats
-except:
-    pass
+    parmest_available = True
+except ImportError:
+    parmest_available = False
 
 import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as st

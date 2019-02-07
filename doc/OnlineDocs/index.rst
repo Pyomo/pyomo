@@ -1,5 +1,5 @@
-Pyomo Documentation
-===================
+Pyomo Documentation |release|
+=============================
 
 .. image:: /../logos/pyomo/PyomoNewBlue3.png
    :scale: 10%
