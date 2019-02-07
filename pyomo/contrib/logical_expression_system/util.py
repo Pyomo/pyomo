@@ -12,8 +12,9 @@ def bring_to_conjunctive_normal_form(root_node):
         root_node.tryPurgingSameTypeChildren(recursive=True)
         root_node.equivalentToAnd(recursive=True)
         root_node.ifToOr(recursive=True)
+        root_node.xorToOr(recursive=True)
         root_node.notNodeIntoOtherNode(recursive=True)
-        root_node.distributivity_or_in_and()
+        root_node.distributivity_or_in_and(recursive=True)
         if isinstance(root_node, OrNode):
             target_node = root_node
             root_node.becomeOtherNode(AndNode([OrNode(target_node.children)]))

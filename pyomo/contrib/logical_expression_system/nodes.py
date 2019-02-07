@@ -11,12 +11,6 @@ class Node:
     def print(self):
         raise NotImplementedError()
 
-    def ifToOr(self, recursive=False):
-        raise NotImplementedError()
-
-    def equivalentToAnd(self, recursive=False):
-        raise NotImplementedError()
-
     def becomeOtherNode(self, target_node):
         if isMultiNode(target_node):
             children = target_node.children
@@ -31,43 +25,54 @@ class Node:
             self.__class__ = type(target_node)
             self.__init__(child_l, child_r)
 
+    def ifToOr(self, recursive=False):
+        if recursive:
+            for n in self._children_as_list():
+                n.ifToOr(recursive=True)
+
+    def equivalentToAnd(self, recursive=False):
+        if recursive:
+            for n in self._children_as_list():
+                n.equivalentToAnd(recursive=True)
+
+    def xorToOr(self, recursive=False):
+        if recursive:
+            for n in self._children_as_list():
+                n.xorToOr(recursive=True)
+
+    def notNodeIntoOtherNode(self, recursive=False):
+        if recursive:
+            for n in self._children_as_list():
+                n.notNodeIntoOtherNode(recursive=recursive)
+
+    def tryPurgingWithSingleChild(self, recursive=False):
+        if recursive:
+            for n in self._children_as_list():
+                n.tryPurgingWithSingleChild(recursive=True)
+
+    def tryPurgingSameTypeChildren(self, recursive=False):
+        if recursive:
+            for n in self._children_as_list():
+                n.tryPurgingSameTypeChildren(recursive=True)
+
+    def distributivity_and_in_or(self, recursive=False):
+        if recursive:
+            for n in self._children_as_list():
+                n.distributivity_and_in_or(recursive=True)
+
+    def distributivity_or_in_and(self, recursive=False):
+        if recursive:
+            for n in self._children_as_list():
+                n.distributivity_or_in_and(recursive=True)
+
 
 class BinaryNode(Node):
     def __init__(self, child_l, child_r):
         self.child_l = child_l
         self.child_r = child_r
 
-    def notNodeIntoOtherNode(self, recursive=False):
-        for n in [self.child_l, self.child_r]:
-            n.notNodeIntoOtherNode(recursive=recursive)
-
-    def tryPurgingWithSingleChild(self, recursive=False):
-        if recursive:
-            self.child_l.tryPurgingWithSingleChild(recursive=True)
-            self.child_r.tryPurgingWithSingleChild(recursive=True)
-
-    def tryPurgingSameTypeChildren(self, recursive=False):
-        if recursive:
-            self.child_l.tryPurgingSameTypeChildren(recursive=True)
-            self.child_r.tryPurgingSameTypeChildren(recursive=True)
-
-    def ifToOr(self, recursive=False):
-        if recursive:
-            self.child_l.ifToOr(recursive=True)
-            self.child_r.ifToOr(recursive=True)
-
-    def equivalentToAnd(self, recursive=False):
-        if recursive:
-            self.child_l.equivalentToAnd(recursive=True)
-            self.child_r.equivalentToAnd(recursive=True)
-
-    def distributivity_and_in_or(self):
-        self.child_l.distributivity_and_in_or()
-        self.child_r.distributivity_and_in_or()
-
-    def distributivity_or_in_and(self):
-        self.child_l.distributivity_or_in_and()
-        self.child_r.distributivity_or_in_and()
+    def _children_as_list(self):
+        return [self.child_l, self.child_r]
 
 
 class IfNode(BinaryNode):
@@ -116,30 +121,8 @@ class UnaryNode(Node):
     def __init__(self):
         self.child = None
 
-    def notNodeIntoOtherNode(self, recursive=False):
-        self.child.notNodeIntoOtherNode(recursive=recursive)
-
-    def tryPurgingWithSingleChild(self, recursive=False):
-        if recursive:
-            self.child.tryPurgingWithSingleChild(recursive=True)
-
-    def tryPurgingSameTypeChildren(self, recursive=False):
-        if recursive:
-            self.child.tryPurgingSameTypeChildren(recursive=True)
-
-    def ifToOr(self, recursive=False):
-        if recursive:
-            self.child.ifToOr(recursive=True)
-
-    def equivalentToAnd(self, recursive=False):
-        if recursive:
-            self.child.equivalentToAnd(recursive=True)
-
-    def distributivity_and_in_or(self):
-        self.child.distributivity_and_in_or()
-
-    def distributivity_or_in_and(self):
-        self.child.distributivity_or_in_and()
+    def _children_as_list(self):
+        return [self.child]
 
 
 class LeafNode(UnaryNode):
@@ -161,10 +144,10 @@ class LeafNode(UnaryNode):
     def equivalentToAnd(self, recursive=False):
         pass
 
-    def distributivity_and_in_or(self):
+    def distributivity_and_in_or(self, recursive=False):
         pass
 
-    def distributivity_or_in_and(self):
+    def distributivity_or_in_and(self, recursive=False):
         pass
 
     def var(self):
@@ -217,8 +200,11 @@ class NotNode(UnaryNode):
 
 
 class MultiNode(Node):
-    def __init__(self):
-        self.children = []
+    def __init__(self, var_list):
+        self.children = set([v for v in var_list])
+
+    def _children_as_list(self):
+        return self.children
 
     def tryPurgingWithSingleChild(self, recursive=False):
         if recursive:
@@ -245,21 +231,8 @@ class MultiNode(Node):
             n.notNodeIntoOtherNode(recursive=recursive)
         self.tryPurgingSameTypeChildren()
 
-    def ifToOr(self, recursive=False):
-        if recursive:
-            for n in self.children:
-                n.ifToOr(recursive=True)
-
-    def equivalentToAnd(self, recursive=False):
-        if recursive:
-            for n in self.children:
-                n.equivalentToAnd(recursive=True)
-
 
 class AndNode(MultiNode):
-    def __init__(self, var_list):
-        self.children = set([v for v in var_list])
-
     def print(self):
         output = " ^ ".join([c.print() for c in self.children])
         return '{'+output+'}'
@@ -267,14 +240,14 @@ class AndNode(MultiNode):
     def evaluate(self, value_dict):
         return all(n.evaluate(value_dict) for n in self.children)
 
-    def distributivity_or_in_and(self):
+    def distributivity_or_in_and(self, recursive=True):
         for n in filter(isMultiNode, self.children):
-            n.distributivity_or_in_and()
+            n.distributivity_or_in_and(recursive=recursive)
         self.tryPurgingWithSingleChild()
         self.tryPurgingSameTypeChildren()
         self.tryPurgingWithSingleChild()
 
-    def distributivity_and_in_or(self):
+    def distributivity_and_in_or(self, recursive=True):
         while any(isinstance(n, OrNode) for n in self.children) \
                 and len(self.children) > 1:
             or_node = next(n for n in self.children if isinstance(n, OrNode))
@@ -286,14 +259,31 @@ class AndNode(MultiNode):
             self.children |= set([new_or_node])
         self.tryPurgingSameTypeChildren()
         for n in filter(isAndNode, self.children):
-            n.distributivity_and_in_or()
+            n.distributivity_and_in_or(recursive=recursive)
         self.tryPurgingSameTypeChildren()
 
 
-class OrNode(MultiNode):
-    def __init__(self, var_list):
-        self.children = set([v for v in var_list])
+class XOrNode(MultiNode):
+    def print(self):
+        output = " x ".join([c.print() for c in self.children])
+        return '['+output+']'
 
+    def evaluate(self, value_dict):
+        return sum(n.evaluate(value_dict) for n in self.children) == 1
+
+    def xorToOr(self, recursive=False):
+        if recursive:
+            for n in self.children:
+                n.xorToOr(recursive=True)
+
+        new_or_node = OrNode(
+            [AndNode([selected_node, *[NotNode(other_nodes)
+                      for other_nodes in self.children.difference(n)]])
+             for selected_node in self.children])
+        self.becomeOtherNode(OrNode(new_or_node.children))
+
+
+class OrNode(MultiNode):
     def print(self):
         output = " v ".join([c.print() for c in self.children])
         return '('+output+')'
@@ -301,9 +291,9 @@ class OrNode(MultiNode):
     def evaluate(self, value_dict):
         return any([n.evaluate(value_dict) for n in self.children])
 
-    def distributivity_or_in_and(self):
+    def distributivity_or_in_and(self, recursive=True):
         for n in filter(isMultiNode, self.children):
-            n.distributivity_or_in_and()
+            n.distributivity_or_in_and(recursive=recursive)
         self.tryPurgingSameTypeChildren()
         while any(isinstance(n, AndNode) for n in self.children) \
                 and len(self.children) > 1:
@@ -317,10 +307,10 @@ class OrNode(MultiNode):
         for n in filter(isMultiNode, self.children):
             n.tryPurgingSameTypeChildren()
 
-    def distributivity_and_in_or(self):
+    def distributivity_and_in_or(self, recursive=True):
         self.tryPurgingSameTypeChildren()
         for n in filter(isAndNode, self.children):
-            n.distributivity_and_in_or()
+            n.distributivity_and_in_or(recursive=recursive)
         self.tryPurgingSameTypeChildren()
 
 

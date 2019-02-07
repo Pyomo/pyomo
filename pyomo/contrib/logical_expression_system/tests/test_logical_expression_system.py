@@ -1,12 +1,12 @@
 from itertools import product
 from copy import deepcopy
 from pyomo.contrib.logical_expression_system.nodes import \
-    (NotNode, LeafNode, OrNode, AndNode, IfNode,
+    (NotNode, LeafNode, OrNode, AndNode, IfNode, XOrNode,
      EquivalenceNode, isNotNode, isOrNode)
 from pyomo.contrib.logical_expression_system.util import \
-     (bring_to_conjunctive_normal_form,
-      is_conjunctive_normal_form,
-      is_leaf_not_node)
+    (bring_to_conjunctive_normal_form,
+     is_conjunctive_normal_form,
+     is_leaf_not_node)
 
 
 def generate_value_dicts(var_names):
@@ -31,6 +31,54 @@ def simple_equality_test():
     N3_compare = deepcopy(N3)
 
     assert_model_equality(N3, N3_compare, names)
+
+
+def atomic_node_tests():
+    l1 = LeafNode('y1')
+    l2 = LeafNode('y2')
+    assert(all(l1.evaluate(lhs) is rhs for (lhs, rhs)
+               in [({'y1': True}, True),
+                   ({'y1': False}, False)]))
+
+    not_node = NotNode(l1)
+    assert(all(not_node.evaluate(lhs) is rhs for (lhs, rhs)
+               in [({'y1': True}, False),
+                   ({'y1': False}, True)]))
+
+    and_node = AndNode([l1, l2])
+    assert(all(and_node.evaluate(lhs) is rhs for (lhs, rhs)
+               in [({'y1': False, 'y2': False}, False),
+                   ({'y1': False, 'y2': True}, False),
+                   ({'y1': True, 'y2': False}, False),
+                   ({'y1': True, 'y2': True}, True)]))
+
+    or_node = OrNode([l1, l2])
+    assert(all(or_node.evaluate(lhs) is rhs for (lhs, rhs)
+               in [({'y1': False, 'y2': False}, False),
+                   ({'y1': False, 'y2': True}, True),
+                   ({'y1': True, 'y2': False}, True),
+                   ({'y1': True, 'y2': True}, True)]))
+
+    xor_node = XOrNode([l1, l2])
+    assert(all(xor_node.evaluate(lhs) is rhs for (lhs, rhs)
+               in [({'y1': False, 'y2': False}, False),
+                   ({'y1': False, 'y2': True}, True),
+                   ({'y1': True, 'y2': False}, True),
+                   ({'y1': True, 'y2': True}, False)]))
+
+    equivalence_node = EquivalenceNode(l1, l2)
+    assert(all(equivalence_node.evaluate(lhs) is rhs for (lhs, rhs)
+               in [({'y1': False, 'y2': False}, True),
+                   ({'y1': False, 'y2': True}, False),
+                   ({'y1': True, 'y2': False}, False),
+                   ({'y1': True, 'y2': True}, True)]))
+
+    if_node = IfNode(l1, l2)
+    assert(all(if_node.evaluate(lhs) is rhs for (lhs, rhs)
+               in [({'y1': False, 'y2': False}, True),
+                   ({'y1': False, 'y2': True}, True),
+                   ({'y1': True, 'y2': False}, False),
+                   ({'y1': True, 'y2': True}, True)]))
 
 
 def become_other_node_test():
