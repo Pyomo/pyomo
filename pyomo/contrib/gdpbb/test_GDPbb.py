@@ -19,14 +19,15 @@ exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))
 minlp_solver = 'baron'
 minlp_args=dict()
 
+
 @unittest.skipIf(not SolverFactory(minlp_solver).available(),
                  "Required subsolver %s is not available"
                  % (minlp_solver,))
-class TestGLOA(unittest.TestCase):
+class TestGDPBB(unittest.TestCase):
     """Tests for global logic-based outer approximation."""
 
-    def test_GLOA_8PP(self):
-        """Test the global logic-based outer approximation algorithm."""
+    def test_LBB_8PP(self):
+        """Test the logic-based branch and bound algorithm."""
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
@@ -37,8 +38,8 @@ class TestGLOA(unittest.TestCase):
         )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
-    def test_GLOA_strip_pack_default_init(self):
-        """Test logic-based outer approximation with strip packing."""
+    def test_LBB_strip_pack(self):
+        """Test logic-based branch and bound with strip packing."""
         exfile = import_file(
             join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         strip_pack = exfile.build_rect_strip_packing_model()
@@ -50,8 +51,8 @@ class TestGLOA(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
-    def test_GLOA_constrained_layout_default_init(self):
-        """Test LOA with constrained layout."""
+    def test_LBB_constrained_layout(self):
+        """Test LBB with constrained layout."""
         exfile = import_file(
             join(exdir, 'constrained_layout', 'cons_layout_model.py'))
         cons_layout = exfile.build_constrained_layout_model()
@@ -65,8 +66,8 @@ class TestGLOA(unittest.TestCase):
             fabs(objective_value - 41573) <= 200,
             "Objective value of %s instead of 41573" % objective_value)
 
-    def test_GLOA_ex_633_trespalacios(self):
-        """Test LOA with Francisco thesis example."""
+    def test_LBB_ex_633_trespalacios(self):
+        """Test LBB with Francisco thesis example."""
         exfile = import_file(join(exdir, 'small_lit', 'ex_633_trespalacios.py'))
         model = exfile.build_simple_nonconvex_gdp()
         SolverFactory('gdpbb').solve(
