@@ -1,6 +1,4 @@
-from pyomo.core import (Constraint, RangeSet)
 from pyomo.core.base.component import _ComponentBase
-from pyomo.contrib.logical_expression_system.util import *
 
 
 class Node:
@@ -324,3 +322,14 @@ class OrNode(MultiNode):
         for n in filter(isAndNode, self.children):
             n.distributivity_and_in_or()
         self.tryPurgingSameTypeChildren()
+
+
+def isNode(n): return isinstance(n, Node)
+def isUnaryNode(n): return isinstance(n, UnaryNode)
+def isNotNode(n): return isinstance(n, NotNode)
+def isLeafNode(n): return isinstance(n, LeafNode)
+def isBinaryNode(n): return isinstance(n, BinaryNode)
+def isIfNode(n): return isinstance(n, IfNode)
+def isMultiNode(n): return isinstance(n, MultiNode)
+def isAndNode(n): return isinstance(n, AndNode)
+def isOrNode(n): return isinstance(n, OrNode)
