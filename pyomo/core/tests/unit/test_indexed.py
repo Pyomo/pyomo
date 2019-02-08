@@ -186,15 +186,15 @@ class TestIndexedComponent(unittest.TestCase):
         m.x = Var([1,2])
         m.p = Param([1,2], mutable=False)
         
-        with self.assertRaisesRegex(
+        with self.assertRaisesRegexp(
                 ValueError, "Cannot set the value"):
             m.x = [2,4]
             
-        with self.assertRaisesRegex(
+        with self.assertRaisesRegexp(
                 KeyError, "not valid for indexed component"):
             m.x = {1:2, 3:4}
         
-        with self.assertRaisesRegex(
+        with self.assertRaisesRegexp(
                 TypeError, "Attempting to set the value of the immutable parameter"):
             m.p = {1:2, 2:4}
          
