@@ -111,7 +111,7 @@ def apply_basic_step(disjunctions_or_constraints):
     for i in ans.DISJUNCTIONS:
         disjunctions[i].deactivate()
         for d in disjunctions[i].disjuncts:
-            d.deactivate()
+            d._deactivate_without_fixing_indicator()
 
     return ans
 
