@@ -152,7 +152,7 @@ class TestIndexedComponent(unittest.TestCase):
         self.assertEqual(m.x.extract_values(), vals)
         m.p.set_value(vals)
         self.assertEqual(m.p.extract_values(), vals)
-        
+    
     def test_set_value_multiple_index(self):
         m = ConcreteModel()
         m.x = Var([1,2],[3,4])
@@ -169,6 +169,47 @@ class TestIndexedComponent(unittest.TestCase):
         self.assertEqual(m.x.extract_values(), vals)
         m.p.set_value(vals)
         self.assertEqual(m.p.extract_values(), vals)
+
+    def test_set_value_subset(self):
+        m = ConcreteModel()
+        m.x = Var([1,2,3], initialize=lambda m, i: i)
+        m.p = Param([1,2,3], initialize=lambda m, i: i, mutable=True)
+        
+        vals = {1:10, 3:30}
+        m.x = vals
+        self.assertEqual(m.x.extract_values(), {1:10, 2:2, 3:30})
+        m.p = vals
+        self.assertEqual(m.p.extract_values(), {1:10, 2:2, 3:30})
+        
+    def test_set_value_expected_errors(self):
+        m = ConcreteModel()
+        m.x = Var([1,2])
+        m.p = Param([1,2], mutable=False)
+        
+        with self.assertRaisesRegex(
+                ValueError, "Cannot set the value"):
+            m.x = [2,4]
+            
+        with self.assertRaisesRegex(
+                KeyError, "not valid for indexed component"):
+            m.x = {1:2, 3:4}
+        
+        with self.assertRaisesRegex(
+                TypeError, "Attempting to set the value of the immutable parameter"):
+            m.p = {1:2, 2:4}
+         
+    def test_set_value_scalar(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.p = Param(mutable=True)
+         
+        self.assertEqual(m.x.extract_values(), {None:None})
+        m.x.set_value(5)
+        self.assertEqual(m.x.extract_values(), {None:5})
+       
+        self.assertEqual(m.p.extract_values(), {})
+        m.p.set_value(6)
+        self.assertEqual(m.p.extract_values(), {None:6})
 
 if __name__ == "__main__":
     unittest.main()
