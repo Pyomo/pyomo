@@ -26,6 +26,7 @@ minlp_args=dict()
 class TestGDPBB(unittest.TestCase):
     """Tests for global logic-based outer approximation."""
 
+    @unittest.skipIf(not SolverFactory(minlp_solver).license_is_valid(), "Problem is too big for unlicensed BARON.")
     def test_LBB_8PP(self):
         """Test the logic-based branch and bound algorithm."""
         exfile = import_file(
@@ -38,6 +39,7 @@ class TestGDPBB(unittest.TestCase):
         )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
+    @unittest.skipIf(not SolverFactory(minlp_solver).license_is_valid(), "Problem is too big for unlicensed BARON.")
     def test_LBB_strip_pack(self):
         """Test logic-based branch and bound with strip packing."""
         exfile = import_file(
@@ -51,6 +53,7 @@ class TestGDPBB(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
+    @unittest.skipIf(not SolverFactory(minlp_solver).license_is_valid(), "Problem is too big for unlicensed BARON.")
     def test_LBB_constrained_layout(self):
         """Test LBB with constrained layout."""
         exfile = import_file(

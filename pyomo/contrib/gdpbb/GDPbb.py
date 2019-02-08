@@ -1,10 +1,11 @@
 import heapq
+import logging
 
 from pyutilib.misc import Container
 
 from pyomo.common.config import (ConfigBlock, ConfigValue)
 from pyomo.common.modeling import unique_component_name
-from pyomo.contrib.gdpopt.util import create_utility_block, time_code,a_logger
+from pyomo.contrib.gdpopt.util import create_utility_block, time_code, a_logger, restore_logger_level
 from pyomo.core.base import (
     Objective, TransformationFactory,
     minimize, value)
@@ -71,8 +72,13 @@ class GDPbbSolver(object):
         solve_data.original_model = model
         solve_data.results = SolverResults()
 
-        with create_utility_block(model, 'GDPbb_utils', solve_data),\
-                time_code(solve_data.timing, 'total'):
+        old_logger_level = config.logger.getEffectiveLevel()
+        with time_code(solve_data.timing, 'total'),\
+                restore_logger_level(config.logger),\
+                create_utility_block(model, 'GDPbb_utils', solve_data):
+            if config.tee and old_logger_level > logging.INFO:
+                # If the logger does not already include INFO, include it.
+                config.logger.setLevel(logging.INFO)
 
             #Setup results
             self.setup_results_object(solve_data,model,config)
@@ -115,6 +121,7 @@ class GDPbbSolver(object):
             # Satisfiability check would go here
 
             # solve the root node
+            config.logger.info("Solving the root node.")
             obj_value, result,_ = self.subproblem_solve(root, solver, config)
 
             # initialize minheap for Branch and Bound algorithm
@@ -133,11 +140,15 @@ class GDPbbSolver(object):
             while len(heap) > 0:
                 # pop best model off of heap
                 sort_tup, mdl, mdl_results, vars = heapq.heappop(heap)
-                _, disjunctions_left, _ = sort_tup
+                old_obj_val, disjunctions_left, _ = sort_tup
+                config.logger.info("Exploring node with LB %.10g and %s inactive disjunctions." % (
+                    old_obj_val, disjunctions_left
+                ))
 
                 # if all the originally active disjunctions are active, solve and
                 # return solution
                 if disjunctions_left == 0:
+                    config.logger.info("Model solved.")
                     # Model is solved. Copy over solution values.
                     for orig_var, soln_var in zip(model.GDPbb_utils.variable_list, vars):
                         orig_var.value = soln_var.value
@@ -149,8 +160,10 @@ class GDPbbSolver(object):
                     return solve_data.results
 
                 next_disjunction = mdl.GDPbb_utils.unenforced_disjunctions.pop(0)
+                config.logger.info("Activating disjunction %s" % next_disjunction.name)
                 next_disjunction.activate()
                 mdl.GDPbb_utils.curr_active_disjunctions.append(next_disjunction)
+                djn_left = len(mdl.GDPbb_utils.unenforced_disjunctions)
                 for disj in next_disjunction.disjuncts:
                     disj._activate_without_unfixing_indicator()
                     if not disj.indicator_var.fixed:
@@ -163,9 +176,10 @@ class GDPbbSolver(object):
                         disj.indicator_var = 0
                     obj_value, result, vars = self.subproblem_solve(mnew, solver, config)
                     counter += 1
-                    djn_left = len(mdl.GDPbb_utils.unenforced_disjunctions)
                     ordering_tuple = (obj_sign * obj_value, djn_left, -counter)
                     heapq.heappush(heap, (ordering_tuple, mnew, result, vars))
+                config.logger.info("Added %s new nodes with %s relaxed disjunctions to the heap. Size now %s." % (
+                    len(next_disjunction.disjuncts), djn_left, len(heap)))
 
     def validate_model(self, model):
         # Validates that model has only exclusive disjunctions
@@ -186,9 +200,9 @@ class GDPbbSolver(object):
     def subproblem_solve(self, gdp, solver, config):
         subproblem = gdp.clone()
         TransformationFactory('gdp.fix_disjuncts').apply_to(subproblem)
-        for disjunct in subproblem.component_data_objects(
-                ctype=Disjunct, active=True):
-            disjunct.deactivate()  # TODO this is HACK
+        # for disjunct in subproblem.component_data_objects(
+        #         ctype=Disjunct, active=True):
+        #     disjunct.deactivate()  # TODO this is HACK
 
         result = solver.solve(subproblem, **config.solver_args)
         main_obj = next(subproblem.component_data_objects(Objective, active=True))
