@@ -23,8 +23,8 @@ class TestFBBT(unittest.TestCase):
                 m.p.value = 1
                 m.c = pe.Constraint(expr=pe.inequality(body=m.x+m.y+(m.p+1), lower=cl, upper=cu))
                 fbbt(m)
-                x = np.linspace(m.x.lb, m.x.ub, 100)
-                z = np.linspace(m.c.lower, m.c.upper, 100)
+                x = np.linspace(pe.value(m.x.lb), pe.value(m.x.ub), 100)
+                z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -49,8 +49,8 @@ class TestFBBT(unittest.TestCase):
                 m.y = pe.Var()
                 m.c = pe.Constraint(expr=pe.inequality(body=m.x-m.y, lower=cl, upper=cu))
                 fbbt(m)
-                x = np.linspace(m.x.lb, m.x.ub, 100)
-                z = np.linspace(m.c.lower, m.c.upper, 100)
+                x = np.linspace(pe.value(m.x.lb), pe.value(m.x.ub), 100)
+                z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -75,8 +75,8 @@ class TestFBBT(unittest.TestCase):
                 m.y = pe.Var()
                 m.c = pe.Constraint(expr=pe.inequality(body=m.y-m.x, lower=cl, upper=cu))
                 fbbt(m)
-                x = np.linspace(m.x.lb, m.x.ub, 100)
-                z = np.linspace(m.c.lower, m.c.upper, 100)
+                x = np.linspace(pe.value(m.x.lb), pe.value(m.x.ub), 100)
+                z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -101,8 +101,8 @@ class TestFBBT(unittest.TestCase):
                 m.y = pe.Var()
                 m.c = pe.Constraint(expr=pe.inequality(body=m.x*m.y, lower=cl, upper=cu))
                 fbbt(m)
-                x = np.linspace(m.x.lb + 1e-6, m.x.ub, 100, endpoint=False)
-                z = np.linspace(m.c.lower, m.c.upper, 100)
+                x = np.linspace(pe.value(m.x.lb) + 1e-6, pe.value(m.x.ub), 100, endpoint=False)
+                z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -127,8 +127,8 @@ class TestFBBT(unittest.TestCase):
                 m.y = pe.Var()
                 m.c = pe.Constraint(expr=pe.inequality(body=m.x/m.y, lower=cl, upper=cu))
                 fbbt(m)
-                x = np.linspace(m.x.lb, m.x.ub, 100)
-                z = np.linspace(m.c.lower + 1e-6, m.c.upper, 100, endpoint=False)
+                x = np.linspace(pe.value(m.x.lb), pe.value(m.x.ub), 100)
+                z = np.linspace(pe.value(m.c.lower) + 1e-6, pe.value(m.c.upper), 100, endpoint=False)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -153,8 +153,8 @@ class TestFBBT(unittest.TestCase):
                 m.y = pe.Var()
                 m.c = pe.Constraint(expr=pe.inequality(body=m.y/m.x, lower=cl, upper=cu))
                 fbbt(m)
-                x = np.linspace(m.x.lb, m.x.ub, 100)
-                z = np.linspace(m.c.lower, m.c.upper, 100)
+                x = np.linspace(pe.value(m.x.lb), pe.value(m.x.ub), 100)
+                z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -179,8 +179,8 @@ class TestFBBT(unittest.TestCase):
                 m.y = pe.Var()
                 m.c = pe.Constraint(expr=pe.inequality(body=m.x**m.y, lower=cl, upper=cu))
                 fbbt(m)
-                x = np.linspace(m.x.lb + 1e-6, m.x.ub, 100, endpoint=False)
-                z = np.linspace(m.c.lower + 1e-6, m.c.upper, 100, endpoint=False)
+                x = np.linspace(pe.value(m.x.lb) + 1e-6, pe.value(m.x.ub), 100, endpoint=False)
+                z = np.linspace(pe.value(m.c.lower) + 1e-6, pe.value(m.c.upper), 100, endpoint=False)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -205,8 +205,8 @@ class TestFBBT(unittest.TestCase):
                 m.y = pe.Var()
                 m.c = pe.Constraint(expr=pe.inequality(body=m.y**m.x, lower=cl, upper=cu))
                 fbbt(m)
-                x = np.linspace(m.x.lb + 1e-6, m.x.ub, 100, endpoint=False)
-                z = np.linspace(m.c.lower + 1e-6, m.c.upper, 100, endpoint=False)
+                x = np.linspace(pe.value(m.x.lb) + 1e-6, pe.value(m.x.ub), 100, endpoint=False)
+                z = np.linspace(pe.value(m.c.lower) + 1e-6, pe.value(m.c.upper), 100, endpoint=False)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -231,19 +231,19 @@ class TestFBBT(unittest.TestCase):
             m.x = pe.Var()
             m.c = pe.Constraint(expr=pe.inequality(body=pe.exp(m.x), lower=cl, upper=cu))
             fbbt(m)
-            if m.c.lower <= 0:
+            if pe.value(m.c.lower) <= 0:
                 _cl = 1e-6
             else:
-                _cl = m.c.lower
-            z = np.linspace(_cl, m.c.upper, 100)
+                _cl = pe.value(m.c.lower)
+            z = np.linspace(_cl, pe.value(m.c.upper), 100)
             if m.x.lb is None:
                 xl = -np.inf
             else:
-                xl = m.x.lb
+                xl = pe.value(m.x.lb)
             if m.x.ub is None:
                 xu = np.inf
             else:
-                xu = m.x.ub
+                xu = pe.value(m.x.ub)
             x = np.log(z)
             self.assertTrue(np.all(xl <= x))
             self.assertTrue(np.all(xu >= x))
@@ -256,15 +256,15 @@ class TestFBBT(unittest.TestCase):
             m.x = pe.Var()
             m.c = pe.Constraint(expr=pe.inequality(body=pe.log(m.x), lower=cl, upper=cu))
             fbbt(m)
-            z = np.linspace(m.c.lower, m.c.upper, 100)
+            z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
             if m.x.lb is None:
                 xl = -np.inf
             else:
-                xl = m.x.lb
+                xl = pe.value(m.x.lb)
             if m.x.ub is None:
                 xu = np.inf
             else:
-                xu = m.x.ub
+                xu = pe.value(m.x.ub)
             x = np.exp(z)
             self.assertTrue(np.all(xl <= x))
             self.assertTrue(np.all(xu >= x))
@@ -274,8 +274,8 @@ class TestFBBT(unittest.TestCase):
         m.x = pe.Var(bounds=(-math.pi/2, math.pi/2))
         m.c = pe.Constraint(expr=pe.inequality(body=pe.sin(m.x), lower=-0.5, upper=0.5))
         fbbt(m)
-        self.assertAlmostEqual(m.x.lb, math.asin(-0.5))
-        self.assertAlmostEqual(m.x.ub, math.asin(0.5))
+        self.assertAlmostEqual(pe.value(m.x.lb), math.asin(-0.5))
+        self.assertAlmostEqual(pe.value(m.x.ub), math.asin(0.5))
 
         m = pe.Block(concrete=True)
         m.x = pe.Var()
@@ -289,8 +289,8 @@ class TestFBBT(unittest.TestCase):
         m.x = pe.Var(bounds=(0, math.pi))
         m.c = pe.Constraint(expr=pe.inequality(body=pe.cos(m.x), lower=-0.5, upper=0.5))
         fbbt(m)
-        self.assertAlmostEqual(m.x.lb, math.acos(0.5))
-        self.assertAlmostEqual(m.x.ub, math.acos(-0.5))
+        self.assertAlmostEqual(pe.value(m.x.lb), math.acos(0.5))
+        self.assertAlmostEqual(pe.value(m.x.ub), math.acos(-0.5))
 
         m = pe.Block(concrete=True)
         m.x = pe.Var()
@@ -304,8 +304,8 @@ class TestFBBT(unittest.TestCase):
         m.x = pe.Var(bounds=(-math.pi/2, math.pi/2))
         m.c = pe.Constraint(expr=pe.inequality(body=pe.tan(m.x), lower=-0.5, upper=0.5))
         fbbt(m)
-        self.assertAlmostEqual(m.x.lb, math.atan(-0.5))
-        self.assertAlmostEqual(m.x.ub, math.atan(0.5))
+        self.assertAlmostEqual(pe.value(m.x.lb), math.atan(-0.5))
+        self.assertAlmostEqual(pe.value(m.x.ub), math.atan(0.5))
 
         m = pe.Block(concrete=True)
         m.x = pe.Var()
@@ -319,24 +319,24 @@ class TestFBBT(unittest.TestCase):
         m.x = pe.Var()
         m.c = pe.Constraint(expr=pe.inequality(body=pe.asin(m.x), lower=-0.5, upper=0.5))
         fbbt(m)
-        self.assertAlmostEqual(m.x.lb, math.sin(-0.5))
-        self.assertAlmostEqual(m.x.ub, math.sin(0.5))
+        self.assertAlmostEqual(pe.value(m.x.lb), math.sin(-0.5))
+        self.assertAlmostEqual(pe.value(m.x.ub), math.sin(0.5))
 
     def test_acos(self):
         m = pe.Block(concrete=True)
         m.x = pe.Var()
         m.c = pe.Constraint(expr=pe.inequality(body=pe.acos(m.x), lower=1, upper=2))
         fbbt(m)
-        self.assertAlmostEqual(m.x.lb, math.cos(2))
-        self.assertAlmostEqual(m.x.ub, math.cos(1))
+        self.assertAlmostEqual(pe.value(m.x.lb), math.cos(2))
+        self.assertAlmostEqual(pe.value(m.x.ub), math.cos(1))
 
     def test_atan(self):
         m = pe.Block(concrete=True)
         m.x = pe.Var()
         m.c = pe.Constraint(expr=pe.inequality(body=pe.atan(m.x), lower=-0.5, upper=0.5))
         fbbt(m)
-        self.assertAlmostEqual(m.x.lb, math.tan(-0.5))
-        self.assertAlmostEqual(m.x.ub, math.tan(0.5))
+        self.assertAlmostEqual(pe.value(m.x.lb), math.tan(-0.5))
+        self.assertAlmostEqual(pe.value(m.x.ub), math.tan(0.5))
 
     def test_multiple_constraints(self):
         m = pe.ConcreteModel()
