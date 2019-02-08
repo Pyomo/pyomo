@@ -549,6 +549,7 @@ class _InteriorPointCalculator(object):
             else:
                 alpha_u_z = 1.0
 
+
         if data.vl.size > 0:
             alphas = np.divide(delta_vl, -tau * data.vl)
             alpha_l_v = alphas.max()
@@ -875,6 +876,7 @@ class _InteriorPointWalker(object):
         self._line_search = LineSearch(nlp)
         self.setup()
 
+
     def setup(self):
 
         calc = self._calculator
@@ -977,6 +979,7 @@ class _InteriorPointWalker(object):
                                                         ds,
                                                         data.miu,
                                                         max_alpha=alpha_primal)
+
             alpha_dual = calc.max_alpha_dual(dzl, dzu, dvl, dvu)
 
         return alpha_primal, alpha_dual

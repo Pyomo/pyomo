@@ -276,14 +276,14 @@ class EqualityQP(NLP):
         model = self._model
         A = model.jacobian
         if out is None:
-            jac = A
+            jac = A.copy()
         else:
             assert isinstance(out, coo_matrix), "jacobian_g must be a COOMatrix"
             assert out.shape[0] == self.ng, "jacobian_g has {} rows".format(self.ng)
             assert out.shape[1] == self.nx, "jacobian_g has {} columns".format(self.nx)
             assert out.nnz == self.nnz_jacobian_g, "jacobian_g has {} nnz".format(self.nnz_jacobian_g)
 
-            out.data = A.data
+            out.data = A.data.copy()
             jac = out
 
         return jac
@@ -370,14 +370,14 @@ class EqualityQP(NLP):
         Q = model.hessian
 
         if out is None:
-            hess = Q
+            hess = Q.copy()
         else:
             assert isinstance(out, coo_matrix), "hessian must be a COOSymMatrix"
             assert out.shape[0] == self.nx, "hessian has {} rows".format(self.nx)
             assert out.shape[1] == self.nx, "hessian has {} columns".format(self.nx)
             assert out.nnz == self.nnz_hessian_lag, "hessian has {} nnz".format(self.nnz_hessian_lag)
 
-            out.data = Q.data
+            out.data = Q.data.copy()
             hess = out
 
         return hess

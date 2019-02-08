@@ -393,7 +393,7 @@ class AdmmNLP(NLP):
             assert isinstance(out, coo_matrix), "hessian must be a coo_matrix"
             assert out.shape[0] == self.nx, "hessian has {} rows".format(self.nx)
             assert out.shape[1] == self.nx, "hessian has {} columns".format(self.nx)
-            assert out.nnz == self.nnz_hessian_lag, "hessian has {} nnz".format(self.nnz_hessian_lag)
+            assert out.nnz == self.nnz_hessian_lag, "hessian has {} nnz not {}".format(self.nnz_hessian_lag, out.nnz)
             out.data = hess.data
         return hess
 

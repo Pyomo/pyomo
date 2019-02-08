@@ -168,9 +168,10 @@ def build_permuted_kkt(kkt, nlp):
         block_kkt[1, 1] = Ds
         block_kkt[2, 0] = Jc
         block_kkt[3, 0] = Jd
-        block_kkt[3, 1] = -identity(nlp.nd)
+        nd = Ds.shape[0]
+        if nd > 0:  # if is zero just keep that as none which is equivalent
+            block_kkt[3, 1] = -identity(nd)
         block_kkt[4, 0] = A
-
         nzeros = hess.shape[0] + Ds.shape[0] + Jc.shape[0] + Jd.shape[0]
         nz = B.shape[0]
         block_B = BlockMatrix(1, 2)
@@ -257,7 +258,6 @@ class TwoStageStochasticSchurKKTSolver(KKTSolver):
         permuted_kkt = build_permuted_kkt(kkt, nlp)
         nlps = [nlp_block for name, nlp_block in nlp.nlps()]
         status = [None for i in range(nblocks)]
-
         # run symbolic factorization if enabled
         if do_symbolic:
             # allocate linear solvers
@@ -706,7 +706,7 @@ def build_permuted_admm_kkt(kkt, nlp, rho):
     nblocks = nlp.nblocks
 
     permuted_kkt = BlockSymMatrix(nblocks)
-    extraction_matrices =  BlockSymMatrix(nblocks)
+    extraction_matrices = BlockMatrix(nblocks, nblocks)
     for bid in range(nblocks):
 
         hess = kkt[0, 0][bid, bid]
@@ -720,7 +720,9 @@ def build_permuted_admm_kkt(kkt, nlp, rho):
         block_kkt[1, 1] = Ds
         block_kkt[2, 0] = Jc
         block_kkt[3, 0] = Jd
-        block_kkt[3, 1] = -identity(nlp.nd)
+        nd = Ds.shape[0]
+        if nd > 0:
+            block_kkt[3, 1] = -identity(nd)
 
         permuted_kkt[bid, bid] = block_kkt
         extraction_matrices[bid, bid] = A
@@ -751,13 +753,13 @@ def build_permuted_admm_rhs(rhs, nlp):
     return permuted_rhs
 
 
-class ADMMKKTSolver(KKTSolver):
-    def __init__(self, linear_solver):
+class DecoupledKKT(KKTSolver):
+    def __init__(self, linear_solver, **kwargs):
         if linear_solver != 'ma27':
             raise RuntimeError('Only support ma27')
 
         # call parent class to set model
-        super(ADMMKKTSolver, self).__init__(linear_solver)
+        super(DecoupledKKT, self).__init__(linear_solver)
         self._lsolver = linear_solver
         self._inertia_params = None
         self._diagonal = None
@@ -767,14 +769,185 @@ class ADMMKKTSolver(KKTSolver):
         do_symbolic = kwargs.pop('do_symbolic', True)
         max_iter_reg = kwargs.pop('max_iter_reg', 40)
         wr = kwargs.pop('regularize', True)
+
+        # create auxiliary variables
+        nblocks = nlp.nblocks
+        val_reg_w = 0.0
+        val_reg_a = 0.0
+        max_count_iter = 0
+        overall_status = 0
+        permuted_kkt, extract_matrices = build_permuted_admm_kkt(kkt, nlp, 0.0)
+        nlps = [nlp_block for name, nlp_block in nlp.nlps()]
+        status = [None for i in range(nblocks)]
+
+        # run symbolic factorization if enabled
+        if do_symbolic:
+            # allocate linear solvers
+            self._lsolver = [ma27_solver.MA27LinearSolver() for i in range(nblocks)]
+            # allocate diagonals and regularization helpers
+            self._inertia_params = []
+            diagonals = []
+            for scenario in nlps:
+                self._inertia_params.append(InertiaCorrectionParams())
+                nx = scenario.nx
+                nd = scenario.nd
+                nc = scenario.nc
+                diagonals.append(np.zeros(nx + 2 * nd + nc))
+            self._diagonal = diagonals
+
+            # perform symbolic factorization in each block kkt
+            for bid in range(nblocks):
+                block_kkt = permuted_kkt[bid, bid]
+                self._lsolver[bid].do_symbolic_factorization(block_kkt, include_diagonal=True)
+
+        else:
+            assert self._diagonal is not None, "No symbolic factorization has been done yet"
+
+        # numeric factorization
+        for bid, nlp_block in enumerate(nlps):
+            block_kkt = permuted_kkt[bid, bid]
+            num_eigvals = nlp_block.nc + nlp_block.nd if wr else -1
+            status[bid] = self._lsolver[bid].do_numeric_factorization(block_kkt,
+                                                                      diagonal=self._diagonal[bid],
+                                                                      desired_num_neg_eval=num_eigvals)
+        # regularize if needed
+        if wr:
+
+            # first pass to see which block needs the largest regularization
+            for bid, block_nlp in enumerate(nlps):
+                block_kkt = permuted_kkt[bid, bid]
+                done = self._inertia_params[bid].ibr1(status[bid])
+                count_iter = 0
+                nneval = block_nlp.nc + block_nlp.nd
+                nxd = block_nlp.nx + block_nlp.nd
+                nvars = block_nlp.nx + 2 * block_nlp.nd + block_nlp.nc
+
+                while not done and count_iter < max_iter_reg:
+
+                    self._diagonal[bid][0: nxd] = self._inertia_params[bid].delta_w
+                    self._diagonal[bid][nxd: nvars] = self._inertia_params[bid].delta_a
+                    status = self._lsolver[bid].do_numeric_factorization(block_kkt,
+                                                                         diagonal=self._diagonal[bid],
+                                                                         desired_num_neg_eval=nneval)
+
+                    if val_reg_w > self._inertia_params[bid].delta_w:
+                        val_reg_w = self._inertia_params[bid].delta_w
+
+                    if val_reg_a > self._inertia_params[bid].delta_a:
+                        val_reg_a = self._inertia_params[bid].delta_a
+
+                    if count_iter > max_count_iter:
+                        max_count_iter = count_iter
+
+                    done = self._inertia_params[bid].ibr4(status)
+                    count_iter += 1
+
+            # regularize all blocks with same value
+            if val_reg_a > 0.0 or val_reg_w > 0.0:
+
+                for bid, block_nlp in enumerate(nlps):
+                    block_kkt = permuted_kkt[bid, bid]
+                    nneval = block_nlp.nc + block_nlp.nd
+                    nxd = block_nlp.nx + block_nlp.nd
+                    nvars = block_nlp.nx + 2 * block_nlp.nd + block_nlp.nc
+
+                    self._diagonal[bid][0: nxd] = val_reg_w
+                    self._diagonal[bid][nxd: nvars] = val_reg_a
+                    status = self._lsolver[bid].do_numeric_factorization(block_kkt,
+                                                                         diagonal=self._diagonal[bid],
+                                                                         desired_num_neg_eval=nneval)
+
+                    if status > overall_status:
+                        overall_status = status
+
+                    # reset diagonals to zero
+                    self._diagonal[bid].fill(0.0)
+
+        # permute rhs
+        permuted_rhs = build_permuted_admm_rhs(rhs, nlp)
+
+        # solve subproblems
+        block_solutions = BlockVector(nlp.nblocks)
+        zs = []
+        for bid, block_nlp in enumerate(nlps):
+            block_rhs = BlockVector(4)
+            A = extract_matrices[bid, bid]
+            block_rhs[0] = permuted_rhs[bid][0]
+            block_rhs[1] = permuted_rhs[bid][1]
+            block_rhs[2] = permuted_rhs[bid][2]
+            block_rhs[3] = permuted_rhs[bid][3]
+            # solve subproblem variables
+            block_solutions[bid] = self._lsolver[bid].do_back_solve(block_rhs)
+            zs.append(A.dot(block_solutions[bid][0]))
+
+        # averages complicating variables
+        vals = [z for z in zs]
+        z_vals = np.mean(vals, axis=0)
+
+        # permute solution back
+        sol = BlockVector(4)
+        x_vals = []
+        s_vals = []
+        s_linking_vals = []
+        yc_vals = []
+        yc_linking_vals = []
+        yd_vals = []
+        yd_linking_vals = []
+
+        for bid in range(nblocks):
+            x_vals.append(block_solutions[bid][0])
+            s_vals.append(block_solutions[bid][1])
+            yc_vals.append(block_solutions[bid][2])
+            yd_vals.append(block_solutions[bid][3])
+            yc_linking_vals.append(np.zeros(nlp.nz))
+            yd_linking_vals.append(np.zeros(0))
+            s_linking_vals.append(np.zeros(0))
+
+        x_vals.append(z_vals)
+        sol[0] = BlockVector(x_vals)
+        sol[1] = BlockVector(s_vals + s_linking_vals)
+        sol[2] = BlockVector(yc_vals + yc_linking_vals)
+        sol[3] = BlockVector(yd_vals + yd_linking_vals)
+
+        info = {'status': overall_status, 'delta_reg': val_reg_w, 'reg_iter': max_count_iter}
+        return sol, info
+
+    def reset_inertia_parameters(self):
+
+        if self._inertia_params is not None:
+            for l in self._inertia_params:
+                l.reset()
+
+
+class ADMMKKTSolver(KKTSolver):
+    def __init__(self, linear_solver, **kwargs):
+        if linear_solver != 'ma27':
+            raise RuntimeError('Only support ma27')
+
+        # call parent class to set model
+        super(ADMMKKTSolver, self).__init__(linear_solver)
+        self._lsolver = linear_solver
+        self._inertia_params = None
+        self._diagonal = None
+        self._rho = kwargs.pop('rho', 1.0)
+        self._tolr = kwargs.pop('tolr', 1e-8)
+        self._tols = kwargs.pop('tols', 1e-8)
+        self._max_iter = kwargs.pop('max_iter', 1000)
+
+    def solve(self, kkt, rhs, nlp, **kwargs):
+
+        do_symbolic = kwargs.pop('do_symbolic', True)
+        max_iter_reg = kwargs.pop('max_iter_reg', 40)
+        wr = kwargs.pop('regularize', True)
         init_z = kwargs.pop('init_z', None)
         init_y = kwargs.pop('init_y', None)
-        rho = kwargs.pop('rho', 1.0)
-        tolr = kwargs.pop('primal_tol',1e-6)
-        tols = kwargs.pop('dual_tol', 1e-6)
+        rho = kwargs.pop('rho', self._rho)
+        tolr = kwargs.pop('primal_tol', self._tolr)
+        tols = kwargs.pop('dual_tol', self._tols)
+        max_iter = kwargs.pop('max_iter', self._max_iter)
 
         if init_y is None:
-            init_y = BlockVector([np.zeros(nlp.nz) for i in nlp.nblocks])
+            init_y = BlockVector([np.zeros(nlp.nz) for i in range(nlp.nblocks)])
         else:
             assert isinstance(init_y, BlockVector), "Must be ndarray"
             assert init_y.nblocks == nlp.nblocks, "Mismatch number of block multipliers"
@@ -815,6 +988,7 @@ class ADMMKKTSolver(KKTSolver):
             for bid in range(nblocks):
                 block_kkt = permuted_kkt[bid, bid]
                 self._lsolver[bid].do_symbolic_factorization(block_kkt, include_diagonal=True)
+
         else:
             assert self._diagonal is not None, "No symbolic factorization has been done yet"
 
@@ -883,7 +1057,6 @@ class ADMMKKTSolver(KKTSolver):
         permuted_rhs = build_permuted_admm_rhs(rhs, nlp)
 
         # run admm
-        max_iter = 1000 # TODO: change this to an option
         z_vals = init_z.copy()
         y_vals = init_y.copy()
         block_vars = BlockVector(nlp.nblocks)
@@ -896,7 +1069,9 @@ class ADMMKKTSolver(KKTSolver):
                 block_rhs = BlockVector(4)
                 A = extract_matrices[bid, bid]
                 block_rhs[0] = permuted_rhs[bid][0] + A.T.dot(rho * z_vals - y_vals[bid])
-
+                block_rhs[1] = permuted_rhs[bid][1]
+                block_rhs[2] = permuted_rhs[bid][2]
+                block_rhs[3] = permuted_rhs[bid][3]
                 # solve subproblem variables
                 block_solutions[bid] = self._lsolver[bid].do_back_solve(block_rhs)
                 block_vars[bid] = A.dot(block_solutions[bid][0])
@@ -916,6 +1091,7 @@ class ADMMKKTSolver(KKTSolver):
             r_norm = np.linalg.norm(block_residuals.flatten(), ord=np.inf)
             s_norm = np.linalg.norm(z_vals-old_z_vals, ord=np.inf)
 
+            #print(r_norm, s_norm)
             if r_norm < tolr and s_norm < tols:
                 break
 
