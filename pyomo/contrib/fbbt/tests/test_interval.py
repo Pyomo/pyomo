@@ -1,4 +1,5 @@
 import pyutilib.th as unittest
+import math
 import pyomo.contrib.fbbt.interval as interval
 try:
     import numpy as np
@@ -124,3 +125,111 @@ class TestInterval(unittest.TestCase):
             _z = np.log(x)
             self.assertTrue(np.all(zl <= _z))
             self.assertTrue(np.all(zu >= _z))
+
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
+    def test_cos(self):
+        lbs = np.linspace(-2*math.pi, 2*math.pi, 10)
+        ubs = np.linspace(-2*math.pi, 2*math.pi, 10)
+        for xl in lbs:
+            for xu in ubs:
+                if xu >= xl:
+                    zl, zu = interval.cos(xl, xu)
+                    x = np.linspace(xl, xu, 100)
+                    _z = np.cos(x)
+                    self.assertTrue(np.all(zl <= _z))
+                    self.assertTrue(np.all(zu >= _z))
+
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
+    def test_sin(self):
+        lbs = np.linspace(-2*math.pi, 2*math.pi, 10)
+        ubs = np.linspace(-2*math.pi, 2*math.pi, 10)
+        for xl in lbs:
+            for xu in ubs:
+                if xu >= xl:
+                    zl, zu = interval.sin(xl, xu)
+                    x = np.linspace(xl, xu, 100)
+                    _z = np.sin(x)
+                    self.assertTrue(np.all(zl <= _z))
+                    self.assertTrue(np.all(zu >= _z))
+
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
+    def test_tan(self):
+        lbs = np.linspace(-2*math.pi, 2*math.pi, 10)
+        ubs = np.linspace(-2*math.pi, 2*math.pi, 10)
+        for xl in lbs:
+            for xu in ubs:
+                if xu >= xl:
+                    zl, zu = interval.tan(xl, xu)
+                    x = np.linspace(xl, xu, 100)
+                    _z = np.tan(x)
+                    self.assertTrue(np.all(zl <= _z))
+                    self.assertTrue(np.all(zu >= _z))
+
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
+    def test_asin(self):
+        yl, yu = interval.asin(-0.5, 0.5, -math.inf, math.inf)
+        self.assertEqual(yl, -math.inf)
+        self.assertEqual(yu, math.inf)
+        yl, yu = interval.asin(-0.5, 0.5, -math.pi, math.pi)
+        self.assertAlmostEqual(yl, -math.pi, 12)
+        self.assertAlmostEqual(yu, math.pi, 12)
+        yl, yu = interval.asin(-0.5, 0.5, -math.pi/2, math.pi/2)
+        self.assertAlmostEqual(yl, math.asin(-0.5))
+        self.assertAlmostEqual(yu, math.asin(0.5))
+        yl, yu = interval.asin(-0.5, 0.5, -math.pi/2-0.1, math.pi/2+0.1)
+        self.assertAlmostEqual(yl, math.asin(-0.5))
+        self.assertAlmostEqual(yu, math.asin(0.5))
+        yl, yu = interval.asin(-0.5, 0.5, -math.pi/2+0.1, math.pi/2-0.1)
+        self.assertAlmostEqual(yl, math.asin(-0.5))
+        self.assertAlmostEqual(yu, math.asin(0.5))
+        yl, yu = interval.asin(-0.5, 0.5, -1.5*math.pi, 1.5*math.pi)
+        self.assertAlmostEqual(yl, -3.6651914291880920, 12)
+        self.assertAlmostEqual(yu, 3.6651914291880920, 12)
+        yl, yu = interval.asin(-0.5, 0.5, -1.5*math.pi-0.1, 1.5*math.pi+0.1)
+        self.assertAlmostEqual(yl, -3.6651914291880920, 12)
+        self.assertAlmostEqual(yu, 3.6651914291880920, 12)
+        yl, yu = interval.asin(-0.5, 0.5, -1.5*math.pi+0.1, 1.5*math.pi-0.1)
+        self.assertAlmostEqual(yl, -3.6651914291880920, 12)
+        self.assertAlmostEqual(yu, 3.6651914291880920, 12)
+
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
+    def test_acos(self):
+        yl, yu = interval.acos(-0.5, 0.5, -math.inf, math.inf)
+        self.assertEqual(yl, -math.inf)
+        self.assertEqual(yu, math.inf)
+        yl, yu = interval.acos(-0.5, 0.5, -0.5*math.pi, 0.5*math.pi)
+        self.assertAlmostEqual(yl, -0.5*math.pi, 12)
+        self.assertAlmostEqual(yu, 0.5*math.pi, 12)
+        yl, yu = interval.acos(-0.5, 0.5, 0, math.pi)
+        self.assertAlmostEqual(yl, math.acos(0.5))
+        self.assertAlmostEqual(yu, math.acos(-0.5))
+        yl, yu = interval.acos(-0.5, 0.5, 0-0.1, math.pi+0.1)
+        self.assertAlmostEqual(yl, math.acos(0.5))
+        self.assertAlmostEqual(yu, math.acos(-0.5))
+        yl, yu = interval.acos(-0.5, 0.5, 0+0.1, math.pi-0.1)
+        self.assertAlmostEqual(yl, math.acos(0.5))
+        self.assertAlmostEqual(yu, math.acos(-0.5))
+        yl, yu = interval.acos(-0.5, 0.5, -math.pi, 0)
+        self.assertAlmostEqual(yl, -math.acos(-0.5), 12)
+        self.assertAlmostEqual(yu, -math.acos(0.5), 12)
+        yl, yu = interval.acos(-0.5, 0.5, -math.pi-0.1, 0+0.1)
+        self.assertAlmostEqual(yl, -math.acos(-0.5), 12)
+        self.assertAlmostEqual(yu, -math.acos(0.5), 12)
+        yl, yu = interval.acos(-0.5, 0.5, -math.pi+0.1, 0-0.1)
+        self.assertAlmostEqual(yl, -math.acos(-0.5), 12)
+        self.assertAlmostEqual(yu, -math.acos(0.5), 12)
+
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
+    def test_atan(self):
+        yl, yu = interval.atan(-0.5, 0.5, -math.inf, math.inf)
+        self.assertEqual(yl, -math.inf)
+        self.assertEqual(yu, math.inf)
+        yl, yu = interval.atan(-0.5, 0.5, -0.1, 0.1)
+        self.assertAlmostEqual(yl, -0.1, 12)
+        self.assertAlmostEqual(yu, 0.1, 12)
+        yl, yu = interval.atan(-0.5, 0.5, -0.5*math.pi+0.1, math.pi/2-0.1)
+        self.assertAlmostEqual(yl, math.atan(-0.5), 12)
+        self.assertAlmostEqual(yu, math.atan(0.5), 12)
+        yl, yu = interval.atan(-0.5, 0.5, -1.5*math.pi+0.1, 1.5*math.pi-0.1)
+        self.assertAlmostEqual(yl, math.atan(-0.5)-math.pi, 12)
+        self.assertAlmostEqual(yu, math.atan(0.5)+math.pi, 12)

@@ -163,7 +163,10 @@ def _prop_bnds_leaf_to_root_sin(node, bnds_dict):
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
-    bnds_dict[node] = (-1, 1)
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb1, ub1 = bnds_dict[arg]
+    bnds_dict[node] = interval.sin(lb1, ub1)
 
 
 def _prop_bnds_leaf_to_root_cos(node, bnds_dict):
@@ -174,7 +177,10 @@ def _prop_bnds_leaf_to_root_cos(node, bnds_dict):
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
-    bnds_dict[node] = (-1, 1)
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb1, ub1 = bnds_dict[arg]
+    bnds_dict[node] = interval.cos(lb1, ub1)
 
 
 def _prop_bnds_leaf_to_root_tan(node, bnds_dict):
@@ -185,7 +191,10 @@ def _prop_bnds_leaf_to_root_tan(node, bnds_dict):
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
-    bnds_dict[node] = (-math.inf, math.inf)
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb1, ub1 = bnds_dict[arg]
+    bnds_dict[node] = interval.tan(lb1, ub1)
 
 
 def _prop_bnds_leaf_to_root_asin(node, bnds_dict):
@@ -196,7 +205,10 @@ def _prop_bnds_leaf_to_root_asin(node, bnds_dict):
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
-    bnds_dict[node] = (-math.inf, math.inf)
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb1, ub1 = bnds_dict[arg]
+    bnds_dict[node] = interval.asin(lb1, ub1, -math.inf, math.inf)
 
 
 def _prop_bnds_leaf_to_root_acos(node, bnds_dict):
@@ -207,7 +219,10 @@ def _prop_bnds_leaf_to_root_acos(node, bnds_dict):
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
-    bnds_dict[node] = (-math.inf, math.inf)
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb1, ub1 = bnds_dict[arg]
+    bnds_dict[node] = interval.acos(lb1, ub1, -math.inf, math.inf)
 
 
 def _prop_bnds_leaf_to_root_atan(node, bnds_dict):
@@ -218,7 +233,10 @@ def _prop_bnds_leaf_to_root_atan(node, bnds_dict):
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
-    bnds_dict[node] = (-math.inf, math.inf)
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb1, ub1 = bnds_dict[arg]
+    bnds_dict[node] = interval.atan(lb1, ub1, -math.inf, math.inf)
 
 
 _unary_leaf_to_root_map = dict()
@@ -256,6 +274,13 @@ _prop_bnds_leaf_to_root_map[_expr.SumExpression] = _prop_bnds_leaf_to_root_SumEx
 _prop_bnds_leaf_to_root_map[_expr.MonomialTermExpression] = _prop_bnds_leaf_to_root_ProductExpression
 _prop_bnds_leaf_to_root_map[_expr.NegationExpression] = _prop_bnds_leaf_to_root_NegationExpression
 _prop_bnds_leaf_to_root_map[_expr.UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
+
+_prop_bnds_leaf_to_root_map[_expr.NPV_ProductExpression] = _prop_bnds_leaf_to_root_ProductExpression
+_prop_bnds_leaf_to_root_map[_expr.NPV_ReciprocalExpression] = _prop_bnds_leaf_to_root_ReciprocalExpression
+_prop_bnds_leaf_to_root_map[_expr.NPV_PowExpression] = _prop_bnds_leaf_to_root_PowExpression
+_prop_bnds_leaf_to_root_map[_expr.NPV_SumExpression] = _prop_bnds_leaf_to_root_SumExpression
+_prop_bnds_leaf_to_root_map[_expr.NPV_NegationExpression] = _prop_bnds_leaf_to_root_NegationExpression
+_prop_bnds_leaf_to_root_map[_expr.NPV_UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
 
 
 def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict):
@@ -476,7 +501,16 @@ def _prop_bnds_root_to_leaf_sin(node, bnds_dict):
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
-    pass
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb0, ub0 = bnds_dict[node]
+    lb1, ub1 = bnds_dict[arg]
+    _lb1, _ub1 = interval.asin(lb0, ub0, lb1, ub1)
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    bnds_dict[arg] = (lb1, ub1)
 
 
 def _prop_bnds_root_to_leaf_cos(node, bnds_dict):
@@ -487,7 +521,16 @@ def _prop_bnds_root_to_leaf_cos(node, bnds_dict):
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
-    pass
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb0, ub0 = bnds_dict[node]
+    lb1, ub1 = bnds_dict[arg]
+    _lb1, _ub1 = interval.acos(lb0, ub0, lb1, ub1)
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    bnds_dict[arg] = (lb1, ub1)
 
 
 def _prop_bnds_root_to_leaf_tan(node, bnds_dict):
@@ -498,7 +541,16 @@ def _prop_bnds_root_to_leaf_tan(node, bnds_dict):
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
-    pass
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb0, ub0 = bnds_dict[node]
+    lb1, ub1 = bnds_dict[arg]
+    _lb1, _ub1 = interval.atan(lb0, ub0, lb1, ub1)
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    bnds_dict[arg] = (lb1, ub1)
 
 
 def _prop_bnds_root_to_leaf_asin(node, bnds_dict):
@@ -510,9 +562,10 @@ def _prop_bnds_root_to_leaf_asin(node, bnds_dict):
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
-    arg = node.arg(0)
+    arg = node.args[0]
+    lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg]
-    _lb1, _ub1 = (-1, 1)
+    _lb1, _ub1 = interval.sin(lb0, ub0)
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
@@ -529,9 +582,10 @@ def _prop_bnds_root_to_leaf_acos(node, bnds_dict):
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
-    arg = node.arg(0)
+    arg = node.args[0]
+    lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg]
-    _lb1, _ub1 = (-1, 1)
+    _lb1, _ub1 = interval.cos(lb0, ub0)
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
@@ -547,7 +601,16 @@ def _prop_bnds_root_to_leaf_atan(node, bnds_dict):
     node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
-    pass
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb0, ub0 = bnds_dict[node]
+    lb1, ub1 = bnds_dict[arg]
+    _lb1, _ub1 = interval.tan(lb0, ub0)
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    bnds_dict[arg] = (lb1, ub1)
 
 
 _unary_root_to_leaf_map = dict()
@@ -584,6 +647,13 @@ _prop_bnds_root_to_leaf_map[_expr.MonomialTermExpression] = _prop_bnds_root_to_l
 _prop_bnds_root_to_leaf_map[_expr.NegationExpression] = _prop_bnds_root_to_leaf_NegationExpression
 _prop_bnds_root_to_leaf_map[_expr.UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
 
+_prop_bnds_root_to_leaf_map[_expr.NPV_ProductExpression] = _prop_bnds_root_to_leaf_ProductExpression
+_prop_bnds_root_to_leaf_map[_expr.NPV_ReciprocalExpression] = _prop_bnds_root_to_leaf_ReciprocalExpression
+_prop_bnds_root_to_leaf_map[_expr.NPV_PowExpression] = _prop_bnds_root_to_leaf_PowExpression
+_prop_bnds_root_to_leaf_map[_expr.NPV_SumExpression] = _prop_bnds_root_to_leaf_SumExpression
+_prop_bnds_root_to_leaf_map[_expr.NPV_NegationExpression] = _prop_bnds_root_to_leaf_NegationExpression
+_prop_bnds_root_to_leaf_map[_expr.NPV_UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
+
 
 class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
     """
@@ -599,10 +669,11 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
         self.bnds_dict = bnds_dict
 
     def visit(self, node, values):
+        print(node.__class__)
         if node.__class__ in _prop_bnds_leaf_to_root_map:
             _prop_bnds_leaf_to_root_map[node.__class__](node, self.bnds_dict)
         else:
-            FBBTException('Unsupported expression type for FBBT: {0}'.format(type(node)))
+            raise FBBTException('Unsupported expression type for FBBT: {0}'.format(type(node)))
         return None
 
     def visiting_potential_leaf(self, node):
@@ -675,7 +746,20 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
 
 def fbbt_con(con):
     """
-    Feasibility based bounds tightening for a constraint.
+    Feasibility based bounds tightening for a constraint. This function attempts to improve the bounds of each variable
+    in the constraint based on the bounds of the constraint and the bounds of the other variables in the constraint.
+    For example:
+
+    >>> import pyomo.environ as pe
+    >>> from pyomo.contrib.fbbt.fbbt import fbbt
+    >>> m = pe.ConcreteModel()
+    >>> m.x = pe.Var(bounds=(-1,1))
+    >>> m.y = pe.Var(bounds=(-2,2))
+    >>> m.z = pe.Var()
+    >>> m.c = pe.Constraint(expr=m.x*m.y + m.z == 1)
+    >>> fbbt(m.c)
+    >>> print(m.z.lb, m.z.ub)
+    -1.0 3.0
 
     Parameters
     ----------
@@ -712,17 +796,18 @@ def fbbt_con(con):
 
 def fbbt_block(m, tol=1e-4):
     """
-    Feasibility based bounds tightening (FBBT) for a block. This
+    Feasibility based bounds tightening (FBBT) for a block or model. This
     loops through all of the constraints in the block and performs
-    FBBT on each constraint. Through this processes, any variables
-    whose bounds improve by more than tol are collected, and FBBT is
+    FBBT on each constraint (see the docstring for fbbt_con()).
+    Through this processes, any variables whose bounds improve
+    by more than tol are collected, and FBBT is
     performed again on all constraints involving those variables.
-    This process is continues until no variable bounds are improved
+    This process is continued until no variable bounds are improved
     by more than tol.
 
     Parameters
     ----------
-    m: pe.block
+    m: pyomo.core.base.block.Block or pyomo.core.base.PyomoModel.ConcreteModel
     tol: float
     """
     var_to_con_map = ComponentMap()
@@ -774,15 +859,20 @@ def fbbt_block(m, tol=1e-4):
 
 def fbbt(comp):
     """
-    Perform FBBT on a constraint or a block. For more control,
-    use fbbt_con and fbbt_block.
+    Perform FBBT on a constraint, block, or model. For more control,
+    use fbbt_con and fbbt_block. For detailed documentation, see
+    the docstrings for fbbt_con and fbbt_block.
 
     Parameters
     ----------
-    comp: pyomo.core.base.constraint.Constraint or pyomo.core.base.block.Block
+    comp: pyomo.core.base.constraint.Constraint or pyomo.core.base.block.Block or pyomo.core.base.PyomoModel.ConcreteModel
     """
     if comp.type() == Constraint:
-        fbbt_con(comp)
+        if comp.is_indexed():
+            for _c in comp.values():
+                fbbt_con(comp)
+        else:
+            fbbt_con(comp)
     elif comp.type() == Block:
         fbbt_block(comp)
     else:

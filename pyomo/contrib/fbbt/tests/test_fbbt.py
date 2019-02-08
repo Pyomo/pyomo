@@ -1,6 +1,7 @@
 import pyutilib.th as unittest
 import pyomo.environ as pe
 from pyomo.contrib.fbbt.fbbt import fbbt
+import math
 try:
     import numpy as np
     numpy_available = True
@@ -18,7 +19,9 @@ class TestFBBT(unittest.TestCase):
                 m = pe.Block(concrete=True)
                 m.x = pe.Var(bounds=(xl, xu))
                 m.y = pe.Var()
-                m.c = pe.Constraint(expr=pe.inequality(body=m.x+m.y, lower=cl, upper=cu))
+                m.p = pe.Param(mutable=True)
+                m.p.value = 1
+                m.c = pe.Constraint(expr=pe.inequality(body=m.x+m.y+(m.p+1), lower=cl, upper=cu))
                 fbbt(m)
                 x = np.linspace(m.x.lb, m.x.ub, 100)
                 z = np.linspace(m.c.lower, m.c.upper, 100)
@@ -31,7 +34,7 @@ class TestFBBT(unittest.TestCase):
                 else:
                     yu = m.y.ub
                 for _x in x:
-                    _y = z - _x
+                    _y = z - _x - m.p.value - 1
                     self.assertTrue(np.all(yl <= _y))
                     self.assertTrue(np.all(yu >= _y))
 
@@ -265,6 +268,75 @@ class TestFBBT(unittest.TestCase):
             x = np.exp(z)
             self.assertTrue(np.all(xl <= x))
             self.assertTrue(np.all(xu >= x))
+
+    def test_sin(self):
+        m = pe.Block(concrete=True)
+        m.x = pe.Var(bounds=(-math.pi/2, math.pi/2))
+        m.c = pe.Constraint(expr=pe.inequality(body=pe.sin(m.x), lower=-0.5, upper=0.5))
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, math.asin(-0.5))
+        self.assertAlmostEqual(m.x.ub, math.asin(0.5))
+
+        m = pe.Block(concrete=True)
+        m.x = pe.Var()
+        m.c = pe.Constraint(expr=pe.inequality(body=pe.sin(m.x), lower=-0.5, upper=0.5))
+        fbbt(m)
+        self.assertEqual(m.x.lb, None)
+        self.assertEqual(m.x.ub, None)
+
+    def test_cos(self):
+        m = pe.Block(concrete=True)
+        m.x = pe.Var(bounds=(0, math.pi))
+        m.c = pe.Constraint(expr=pe.inequality(body=pe.cos(m.x), lower=-0.5, upper=0.5))
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, math.acos(0.5))
+        self.assertAlmostEqual(m.x.ub, math.acos(-0.5))
+
+        m = pe.Block(concrete=True)
+        m.x = pe.Var()
+        m.c = pe.Constraint(expr=pe.inequality(body=pe.cos(m.x), lower=-0.5, upper=0.5))
+        fbbt(m)
+        self.assertEqual(m.x.lb, None)
+        self.assertEqual(m.x.ub, None)
+
+    def test_tan(self):
+        m = pe.Block(concrete=True)
+        m.x = pe.Var(bounds=(-math.pi/2, math.pi/2))
+        m.c = pe.Constraint(expr=pe.inequality(body=pe.tan(m.x), lower=-0.5, upper=0.5))
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, math.atan(-0.5))
+        self.assertAlmostEqual(m.x.ub, math.atan(0.5))
+
+        m = pe.Block(concrete=True)
+        m.x = pe.Var()
+        m.c = pe.Constraint(expr=pe.inequality(body=pe.tan(m.x), lower=-0.5, upper=0.5))
+        fbbt(m)
+        self.assertEqual(m.x.lb, None)
+        self.assertEqual(m.x.ub, None)
+
+    def test_asin(self):
+        m = pe.Block(concrete=True)
+        m.x = pe.Var()
+        m.c = pe.Constraint(expr=pe.inequality(body=pe.asin(m.x), lower=-0.5, upper=0.5))
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, math.sin(-0.5))
+        self.assertAlmostEqual(m.x.ub, math.sin(0.5))
+
+    def test_acos(self):
+        m = pe.Block(concrete=True)
+        m.x = pe.Var()
+        m.c = pe.Constraint(expr=pe.inequality(body=pe.acos(m.x), lower=1, upper=2))
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, math.cos(2))
+        self.assertAlmostEqual(m.x.ub, math.cos(1))
+
+    def test_atan(self):
+        m = pe.Block(concrete=True)
+        m.x = pe.Var()
+        m.c = pe.Constraint(expr=pe.inequality(body=pe.atan(m.x), lower=-0.5, upper=0.5))
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, math.tan(-0.5))
+        self.assertAlmostEqual(m.x.ub, math.tan(0.5))
 
     def test_multiple_constraints(self):
         m = pe.ConcreteModel()
