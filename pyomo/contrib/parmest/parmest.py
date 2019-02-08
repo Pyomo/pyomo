@@ -744,6 +744,72 @@ class Estimator(object):
         return lNo_theta
     
     
+    def leaveNout_bootstrap_analysis(self, lNo_N, bootstrap_N, distribution, 
+                                     alphas, num_trails=None, **kwargs):
+        """
+        Run a leaveNout-bootstrap analysis.  This analysis compares a theta_est 
+        using lNo_N data points to a boostrap analysis using the remainder of the 
+        data.  Results indicate if the lNo_N data point is inside or 
+        outside a confidence region for each value of alpha
+
+        Parameters
+        ----------
+        lNo_N: int
+            Number of data points to leave out during esimation
+            
+        bootstrap_N: int
+            Number of bootstrap samples to draw from the data
+            
+        distribution: string
+            Statistical distribution used for the confidence region,  
+            options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, 
+            and 'Rect' for rectangular.
+        
+        alphas: list
+            List of alpha values used to determine if theta values are inside 
+            or outside the region.
+        
+        num_trails: int or None, optional
+            
+        """
+        from random import sample
+        
+        combos = list(combinations(self._numbers_list, lNo_N))
+        
+        if num_trails is None:
+            num_trails = len(combos)
+            
+        data = self.callback_data.copy()
+        
+        samplesize = kwargs.pop('samplesize', None)
+        replacement = kwargs.pop('replacement', True)
+        seed = kwargs.pop('seed', None)
+        return_samples = kwargs.pop('return_samples', False)
+            
+        results = {}
+        for leaveout in sample(combos, num_trails):
+            leaveout = list(leaveout)
+            self.callback_data = data.loc[leaveout,:]
+            self._numbers_list = self.callback_data.index
+            obj, theta = self.theta_est()
+            
+            self.callback_data = data.drop(index=leaveout)
+            self._numbers_list = self.callback_data.index
+            
+            bootstrap_theta = self.theta_est_bootstrap(bootstrap_N, samplesize, 
+                                        replacement, seed, return_samples)
+            
+            training, test = self.confidence_region_test(bootstrap_theta, 
+                                    distribution=distribution, alphas=alphas, 
+                                    test_theta_values=theta)
+        
+            results[str(leaveout)] = {
+                    'bootstrap_theta_lNo': training,
+                    'theta_N': test}
+
+        return results
+    
+    
     def objective_at_theta(self, theta_values):
         """
         Compute the objective over a range of theta values
@@ -821,30 +887,48 @@ class Estimator(object):
         else:
             return LR
 
-    def alpha_test(self, theta_values, distribution, alpha):
+    def confidence_region_test(self, theta_values, distribution, alphas, 
+                               test_theta_values=None):
         """
-        Compute the likelihood ratio for each value of alpha
+        Generate a confidence region and determine if points are inside or 
+        outside that region for each value of alpha
         
         Parameters
         ----------
         theta_values: DataFrame, columns = theta_names
-            Theta values (returned by theta_est_bootstrap or theta_est_leaveNout))
+            Theta values used to generate a confidence region 
+            (generally returned by theta_est_bootstrap)
             
         distribution: string
-            Statistical distribution used for confidence intervals,  
-            options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, and 
-            'Rect' for rectangular.
+            Statistical distribution used for the confidence region,  
+            options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, 
+            and 'Rect' for rectangular.
         
-        alpha: list
-            List of alpha values to use in the chi2 test
+        alphas: list
+            List of alpha values used to determine if theta values are inside 
+            or outside the region.
+        
+        test_theta_values: dictionary or DataFrame, keys/columns = theta_names, optional
+            Additional theta values that are compared to the confidence region
+            to determine if they are inside or outside.
         
         Returns
         -------
+        training_results: DataFrame 
+            Theta value used to generate the confidence region along with True 
+            (inside) or False (outside) for each alpha
+        
         test_results: DataFrame 
-            Theta value along with True (inside) or False (outside) for each alpha
+            If test_theta_values is not None, returns test theta value along 
+            with True (inside) or False (outside) for each alpha
         """
-        test_results = theta_values.copy()
-        for a in alpha:
+        if isinstance(test_theta_values, dict):
+            test_theta_values = pd.Series(test_theta_values).to_frame().transpose()
+            
+        training_results = theta_values.copy()
+        test_result = test_theta_values.copy()
+        
+        for a in alphas:
             
             if distribution == 'Rect':
                 tval = stats.t.ppf(1-(1-a)/2, len(theta_values)-1) # Two-tail
@@ -852,20 +936,38 @@ class Estimator(object):
                 s = theta_values.std()
                 lower_bound = m-tval*s
                 upper_bound = m+tval*s
-                test_results[a] = ((theta_values > lower_bound).all(axis=1) & \
+                training_results[a] = ((theta_values > lower_bound).all(axis=1) & \
                                   (theta_values < upper_bound).all(axis=1))
-                 
+                
+                if test_theta_values is not None:
+                    # use upper and lower bound from the training set
+                    test_result[a] = ((test_theta_values > lower_bound).all(axis=1) & \
+                                  (test_theta_values < upper_bound).all(axis=1))
+                    
             elif distribution == 'MVN':
-                mvn_dist = stats.multivariate_normal(theta_values.mean(), 
+                dist = stats.multivariate_normal(theta_values.mean(), 
                                             theta_values.cov(), allow_singular=True)
-                Z = mvn_dist.pdf(theta_values)
+                Z = dist.pdf(theta_values)
                 score = stats.scoreatpercentile(Z.transpose(), (1-a)*100) 
-                test_results[a] = (Z >= score)
+                training_results[a] = (Z >= score)
+                
+                if test_theta_values is not None:
+                    # use score from the training set
+                    Z = dist.pdf(test_theta_values)
+                    test_result[a] = (Z >= score) 
                 
             elif distribution == 'KDE':
-                kde_dist = stats.gaussian_kde(theta_values.transpose().values)
-                Z = kde_dist.pdf(theta_values.transpose())
+                dist = stats.gaussian_kde(theta_values.transpose().values)
+                Z = dist.pdf(theta_values.transpose())
                 score = stats.scoreatpercentile(Z.transpose(), (1-a)*100) 
-                test_results[a] = (Z >= score)
-
-        return test_results
+                training_results[a] = (Z >= score)
+                
+                if test_theta_values is not None:
+                    # use score from the training set
+                    Z = dist.pdf(test_theta_values.transpose())
+                    test_result[a] = (Z >= score) 
+                    
+        if test_theta_values is not None:
+            return training_results, test_result
+        else:
+            return training_results

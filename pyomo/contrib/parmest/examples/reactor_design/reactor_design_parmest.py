@@ -34,20 +34,6 @@ parmest.pairwise_plot(bootstrap_theta, title='Bootstrap theta estimates')
 parmest.pairwise_plot(bootstrap_theta, theta, 0.8, ['MVN', 'KDE', 'Rect'], 
                       title='Bootstrap theta with confidence regions')
 
-### Parameter estimation with leave one out (LOO)
-
-LOO_theta = pest.theta_est_leaveNout(1)
-print(LOO_theta.head())
-
-parmest.pairwise_plot(LOO_theta, theta, 0.8, ['MVN', 'KDE', 'Rect'], 
-                      title='LOO results with confidence regions')
-
-LOO_test_results = pest.alpha_test(LOO_theta, 'MVN', [0.8, 0.85, 0.9, 0.95])
-print(LOO_test_results.head())
-
-parmest.pairwise_plot(LOO_test_results, theta, 0.8, 
-                      title='LOO results within 80% confidence region')
-
 ### Likelihood ratio test
 
 k1 = np.arange(0.78, 0.92, 0.02)
