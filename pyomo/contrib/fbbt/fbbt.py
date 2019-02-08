@@ -669,7 +669,6 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
         self.bnds_dict = bnds_dict
 
     def visit(self, node, values):
-        print(node.__class__)
         if node.__class__ in _prop_bnds_leaf_to_root_map:
             _prop_bnds_leaf_to_root_map[node.__class__](node, self.bnds_dict)
         else:
