@@ -1389,21 +1389,3 @@ class InteriorPointSolver(object):
             store_walker.append(walker)
 
         return data.x.copy(), info
-
-
-from pyomo.contrib.pynumero.algorithms.solvers.tests.cute_models import *
-if __name__ == "__main__":
-
-    model = create_model1()
-
-    solver = aml.SolverFactory('ipopt')
-    solver.options['nlp_scaling_method'] = 'none'
-    solver.options['linear_system_scaling'] = 'none'
-    #solver.solve(model, tee=True)
-    #model.x.pprint()
-
-    nlp = PyomoNLP(model)
-    #print(nlp.x_init())
-    #print(nlp.variable_order())
-    opt = InteriorPointSolver(nlp)
-    opt.solve(max_iter_outer=1000, max_iter_inner=1000, wls=True, tee=True)
