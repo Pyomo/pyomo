@@ -17,7 +17,7 @@ m.x = Var(m.T, domain=NonNegativeReals, bounds=(0, 10000), doc='purchased')
 m.c = Var(m.T, domain=NonNegativeReals, bounds=(0, 10000), doc='cost')
 m.f = Var(m.T, domain=NonNegativeReals, bounds=(0, 10000), doc='feed')
 
-m.max_q_idx = RangeSet(1, m.T_max)
+m.max_q_idx = RangeSet(m.T_max)
 
 m.D = Param(m.T, doc='demand',
             initialize=dict((t, randint(50, 100)) for t in m.T))
@@ -31,8 +31,6 @@ m.beta_B = Param(m.T, doc='bulk discount',
 m.F_B_lo = Param(m.T, doc='bulk minimum purchase amount',
                  initialize=dict((t, randint(50, 100)) for t in m.T))
 
-# Have to review beta_l
-# Currently he never picks any of it
 m.beta_L = Param(m.T, m.max_q_idx,
                  initialize=dict(((t, q), randint(10, 999)/1000)
                                  for t in m.T for q in m.max_q_idx),
@@ -115,31 +113,34 @@ for t in m.T:
         m.disjunct_choices)
     choices.append(next(iter(choice)))
 
-from pandas import DataFrame
-df = DataFrame(
-    columns=['choice', m.s.doc, m.x.doc, 'price', m.c.doc, m.f.doc, m.D.doc])
-df.choice = choices
-df.stock = [m_trafo.s[t].value for t in m.T]
-df.purchased = [m_trafo.x[t].value for t in m.T]
-df.cost = [m_trafo.c[t].value for t in m.T]
-df.feed = [m_trafo.f[t].value for t in m.T]
-df.demand = [m_trafo.D[t] for t in m.T]
-df.index = [t for t in m.T]
+try:
+    from pandas import DataFrame
+    df = DataFrame(
+        columns=['choice', m.s.doc, m.x.doc, 'price', m.c.doc, m.f.doc, m.D.doc])
+    df.choice = choices
+    df.stock = [m_trafo.s[t].value for t in m.T]
+    df.purchased = [m_trafo.x[t].value for t in m.T]
+    df.cost = [m_trafo.c[t].value for t in m.T]
+    df.feed = [m_trafo.f[t].value for t in m.T]
+    df.demand = [m_trafo.D[t] for t in m.T]
+    df.index = [t for t in m.T]
 
-t = 1
-while t <= m.T_max:
-    if df.loc[t, 'choice'] == 'S':
-        df.loc[t, 'price'] = m.gamma[t]
-        t = t+1
-    elif df.loc[t, 'choice'] == 'B':
-        df.loc[t, 'price'] = (1-m.beta_B[t])*m.gamma[t]
-        t = t+1
-    elif int(df.loc[t, 'choice']) == 0:
-        t = t+1
-    else:
-        q = int(df.loc[t, 'choice'])
-        t_contract = t
-        for t_ in range(t, t+q+1):
-            df.loc[t_, 'price'] = (1-m.beta_L[t_contract, q])*m.gamma[t_contract]
-        t = t_
-print(df)
+    t = 1
+    while t <= m.T_max:
+        if df.loc[t, 'choice'] == 'S':
+            df.loc[t, 'price'] = m.gamma[t]
+            t = t+1
+        elif df.loc[t, 'choice'] == 'B':
+            df.loc[t, 'price'] = (1-m.beta_B[t])*m.gamma[t]
+            t = t+1
+        elif int(df.loc[t, 'choice']) == 0:
+            t = t+1
+        else:
+            q = int(df.loc[t, 'choice'])
+            t_contract = t
+            for t_ in range(t, t+q+1):
+                df.loc[t_, 'price'] = (1-m.beta_L[t_contract, q])*m.gamma[t_contract]
+            t = t_
+    print(df)
+except:
+    print("Failed to load module 'pandas' to display solution")
