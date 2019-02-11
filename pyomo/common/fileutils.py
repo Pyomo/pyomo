@@ -15,6 +15,7 @@ import os
 import platform
 import six
 
+from .deprecation import deprecated
 from . import config
 
 def thisFile():
