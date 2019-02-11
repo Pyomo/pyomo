@@ -21,7 +21,7 @@ from pyutilib.misc import Bunch
 from pyutilib.services import TempfileManager
 from pyutilib.subprocess import run
 
-from pyomo.common import registered_executable
+import pyomo.common
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import *
 from pyomo.opt.results import SolverStatus, SolverResults
@@ -165,7 +165,7 @@ class SystemCallSolver(OptSolver):
     #       adding an optional search_path keyword to the
     #       _default_executable method implemented by
     #       derived classes. How to propagate that through
-    #       the pyomo.common.registered_executable
+    #       the pyomo.common.Executable
     #       framework once it gets there is another question
     #       (that I won't be dealing with today).
     #
@@ -175,6 +175,11 @@ class SystemCallSolver(OptSolver):
     #
     #      where executable would call
     #      self._default_executable(self._search_path)
+    #
+    # UPDATE [30 Jan 19]: The Pyomo executable search system has moved
+    #     away from the use of pyutilib's 'registered_executable'
+    #     mechanisms.  The new system allows clients to augment the
+    #     search path through a "pathlist" attribute.
     #
 
     def executable(self):
@@ -225,8 +230,8 @@ class SystemCallSolver(OptSolver):
             os.remove(self._soln_file)
 
     def _apply_solver(self):
-        if registered_executable('timer'):
-            self._timer = registered_executable('timer').get_path()
+        if pyomo.common.Executable('timer'):
+            self._timer = pyomo.common.Executable('timer').path()
         #
         # Execute the command
         #

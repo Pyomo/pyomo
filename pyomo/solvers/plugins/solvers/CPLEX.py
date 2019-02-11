@@ -259,14 +259,14 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                           % (end_time-start_time))
 
     def _default_executable(self):
-        executable = pyomo.common.registered_executable("cplex")
-        if executable is None:
+        executable = pyomo.common.Executable("cplex")
+        if not executable:
             logger.warning("Could not locate the 'cplex' executable"
                            ", which is required for solver %s"
                            % self.name)
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     def _get_version(self):
         """
@@ -804,7 +804,4 @@ class MockCPLEX(CPLEXSHELL,MockMIP):
     def _execute_command(self, cmd):
         return MockMIP._execute_command(self, cmd)
 
-
-pyomo.common.register_executable(name="cplex")
-pyomo.common.register_executable(name="cplexamp")
 
