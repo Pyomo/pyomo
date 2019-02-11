@@ -232,8 +232,8 @@ class _ExecutableData(object):
             self._status = bool(tmp)
         return self._path
 
-    #@deprecated("registered_executable(name).get_path() is deprecated; "
-    #            "use pyomo.common.Executable(name).path()")
+    @deprecated("registered_executable(name).get_path() is deprecated; "
+                "use pyomo.common.Executable(name).path()")
     def get_path(self):
         return self.path()
 
@@ -418,18 +418,18 @@ class ExecutableManager(object):
 
 Executable = ExecutableManager()
 
-#@deprecated("pyomo.common.register_executable(fname) has been deprecated; "
-#            "explicit registration is no longer necessary")
+@deprecated("pyomo.common.register_executable(fname) has been deprecated; "
+            "explicit registration is no longer necessary")
 def register_executable(name, validate=None):
     # Setting to None will cause Executable to re-search the pathlist
     return Executable(name).rehash()
 
-#@deprecated(
-#    """pyomo.common.registered_executable(fname) has been deprecated; use
-#    pyomo.common.Executable(fname).path() to get the path or
-#    pyomo.common.Executable(fname).available() to get a bool indicating
-#    file availability.  Equivalent results can be obtained by casting
-#    Executable(fname) to string or bool.""")
+@deprecated(
+    """pyomo.common.registered_executable(fname) has been deprecated; use
+    pyomo.common.Executable(fname).path() to get the path or
+    pyomo.common.Executable(fname).available() to get a bool indicating
+    file availability.  Equivalent results can be obtained by casting
+    Executable(fname) to string or bool.""")
 def registered_executable(name):
     ans = Executable(name)
     if ans.path() is None:
@@ -437,7 +437,7 @@ def registered_executable(name):
     else:
         return ans
 
-#@deprecated("pyomo.common.unregister_executable(fname) has been deprecated; "
-#            "use Executable(fname).disable()")
+@deprecated("pyomo.common.unregister_executable(fname) has been deprecated; "
+            "use Executable(fname).disable()")
 def unregister_executable(name):
     Executable(name).disable()
