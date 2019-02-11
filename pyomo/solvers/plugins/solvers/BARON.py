@@ -125,13 +125,11 @@ class BARONSHELL(SystemCallSolver):
 
     @staticmethod
     def license_is_valid(executable='baron'):
-        """
-        Runs a check for a valid Baron license using the
+        """Runs a check for a valid Baron license using the
         given executable (default is 'baron'). All output is
         hidden. If the test fails for any reason (including
         the executable being invalid), then this function
-        will return False.
-        """
+        will return False."""
         fnames= BARONSHELL._get_dummy_input_files(check_license=True)
         try:
             process = subprocess.Popen([executable, fnames[0]],
@@ -144,10 +142,8 @@ class BARONSHELL(SystemCallSolver):
                 rc = 1
             else:
                 stdout = stdout.decode()
-                for line in stdout.splitlines():
-                    if ("License file" in line) and ("not valid" in line):
-                        rc = 1
-                        break
+                if "Continuing in demo mode" in stdout:
+                    rc = 1
         except OSError:
             rc = 1
         finally:

@@ -7,11 +7,12 @@ approaches, as opposed to the conventional approach via reformulation to a
 Mixed Integer Nonlinear Programming (MINLP) model.
 
 GDPopt currently implements an updated version of the logic-based outer
-approximation (LOA) algorithm originally described in Turkay & Grossmann, 1996
-(`ref <https://dx.doi.org/10.1016/0098-1354(95)00219-7>`_). Usage and
-implementation details for GDPopt can be found in the PSE 2018 paper Chen et
-al., 2018 (`ref <https://doi.org/10.1016/B978-0-444-64241-7.50143-9>`_,
-`preprint <http://egon.cheme.cmu.edu/Papers/Chen_Pyomo_GDP_PSE2018.pdf>`_)
+approximation (LOA) algorithm originally described in `Turkay & Grossmann, 1996`_. Usage and
+implementation details for GDPopt can be found in the PSE 2018 paper `Chen et
+al., 2018`_, or via its  `preprint <http://egon.cheme.cmu.edu/Papers/Chen_Pyomo_GDP_PSE2018.pdf>`_.
+
+.. _Turkay & Grossmann, 1996: https://dx.doi.org/10.1016/0098-1354(95)00219-7
+.. _Chen et al., 2018: https://doi.org/10.1016/B978-0-444-64241-7.50143-9
 
 The paper contains the following flowchart, taken from the preprint version:
 
