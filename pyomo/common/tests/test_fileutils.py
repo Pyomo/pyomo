@@ -24,7 +24,7 @@ from pyutilib.subprocess import run
 import pyomo.common.config as config
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.fileutils import (
-    thisFile, find_file, find_library, find_executable, Executable,
+    thisFile, find_file, find_library, find_executable, ExecutableManager,
     _system, _path, _exeExt, _libExt,
 )
 
@@ -39,9 +39,6 @@ class TestFileUtils(unittest.TestCase):
         self.path = os.environ.get('PATH', None)
 
     def tearDown(self):
-        if config.PYOMO_CONFIG_DIR != self.config \
-           and config.PYOMO_CONFIG_DIR in Executable.pathlist:
-            Executable.pathlist.remove(config.PYOMO_CONFIG_DIR)
         config.PYOMO_CONFIG_DIR = self.config
         os.chdir(self.basedir)
         if self.tmpdir:
@@ -354,6 +351,7 @@ class TestFileUtils(unittest.TestCase):
 
 
     def test_ExecutableManager(self):
+        Executable = ExecutableManager()
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
 
         config.PYOMO_CONFIG_DIR = self.tmpdir
