@@ -147,13 +147,10 @@ install:
 
   # Fetch additional solvers
   #
-  - "mkdir %cd%\\bin"
-  - "SET PATH=%cd%\\bin;%PATH%"
   - "pyomo download-extensions"
 
   # Report relevant package versions
   #
-  - "gjh -v"
   - "glpsol -v"
   - "ipopt -v"
   - python --version
