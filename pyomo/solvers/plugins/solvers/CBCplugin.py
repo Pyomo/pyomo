@@ -48,7 +48,7 @@ def configure_cbc():
     executable = pyomo.common.Executable("cbc")
     if not executable:
         return
-    cbc_exec = executable("cbc").path()
+    cbc_exec = executable.path()
     results = pyutilib.subprocess.run( [cbc_exec,"-stop"], timelimit=1 )
     _cbc_version = _extract_version(results[1])
     results = pyutilib.subprocess.run(
