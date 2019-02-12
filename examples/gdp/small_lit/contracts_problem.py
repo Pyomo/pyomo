@@ -10,7 +10,7 @@ from pyomo.contrib.logical_expression_system.util import \
     (bring_to_conjunctive_normal_form, CNF_to_linear_constraints)
 
 m = ConcreteModel()
-m.T_max = randint(9, 11)
+m.T_max = randint(10, 10)
 m.T = RangeSet(m.T_max)
 m.s = Var(m.T, domain=NonNegativeReals, bounds=(0, 10000), doc='stock')
 m.x = Var(m.T, domain=NonNegativeReals, bounds=(0, 10000), doc='purchased')
@@ -97,10 +97,11 @@ for t in m.T:
     m.material_balance[t]=m.s[t] == (m.s[t-1] if t>1 else 0) + m.x[t] - m.f[t]
 
 
-m.pprint('model.log')
-m_trafo = TransformationFactory('gdp.chull').create_using(m)
-res = SolverFactory('gams').solve(m_trafo, solver='baron', tee=True)
-m_trafo.pprint()
+# m.pprint('model.log')
+# m_trafo = TransformationFactory('gdp.chull').create_using(m)
+m_trafo = TransformationFactory('gdp.bigm').create_using(m, bigM=5000)
+res = SolverFactory('gams').solve(m_trafo, solver='cplex', tee=True)
+# m_trafo.pprint('model_trafo.log')
 
 print()
 print('#################')
@@ -116,11 +117,13 @@ for t in m.T:
 try:
     from pandas import DataFrame
     df = DataFrame(
-        columns=['choice', m.s.doc, m.x.doc, 'price', m.c.doc, m.f.doc, m.D.doc])
+        columns=['choice', 'base_cost', 'reduction', 'reduced_cost', 'spending', 'stock', 'storage_cost', 'min_purchase', 'purchased', 'feed', 'demand'])
     df.choice = choices
     df.stock = [m_trafo.s[t].value for t in m.T]
+    df.storage_cost = [m_trafo.alpha[t] for t in m.T]
     df.purchased = [m_trafo.x[t].value for t in m.T]
-    df.cost = [m_trafo.c[t].value for t in m.T]
+    df.base_cost = [m_trafo.gamma[t] for t in m.T]
+    df.spending = [m_trafo.c[t].value for t in m.T]
     df.feed = [m_trafo.f[t].value for t in m.T]
     df.demand = [m_trafo.D[t] for t in m.T]
     df.index = [t for t in m.T]
@@ -128,10 +131,16 @@ try:
     t = 1
     while t <= m.T_max:
         if df.loc[t, 'choice'] == 'S':
-            df.loc[t, 'price'] = m.gamma[t]
+            df.loc[t, 'reduction'] = 0
+            df.loc[t, 'min_purchase'] = 0
+            df.loc[t, 'reduced_cost'] = m.gamma[t]
+            df.loc[t, 'base_cost'] = m.gamma[t]
             t = t+1
         elif df.loc[t, 'choice'] == 'B':
-            df.loc[t, 'price'] = (1-m.beta_B[t])*m.gamma[t]
+            df.loc[t, 'reduction'] = m.beta_B[t]
+            df.loc[t, 'min_purchase'] = m.F_B_lo[t]
+            df.loc[t, 'reduced_cost'] = (1-m.beta_B[t])*m.gamma[t]
+            df.loc[t, 'base_cost'] = m.gamma[t]
             t = t+1
         elif int(df.loc[t, 'choice']) == 0:
             t = t+1
@@ -139,8 +148,12 @@ try:
             q = int(df.loc[t, 'choice'])
             t_contract = t
             for t_ in range(t, t+q+1):
-                df.loc[t_, 'price'] = (1-m.beta_L[t_contract, q])*m.gamma[t_contract]
+                df.loc[t_, 'reduction'] = m.beta_L[t_contract, q]
+                df.loc[t_, 'min_purchase'] = m.F_L_lo[t_contract, q]
+                df.loc[t_, 'reduced_cost'] = (1-m.beta_L[t_contract, q])*m.gamma[t_contract]
+                df.loc[t_, 'base_cost'] = m.gamma[t_contract]
             t = t_
     print(df)
-except:
+    print(f'Solution: {m_trafo.objective()}')
+except ImportError:
     print("Failed to load module 'pandas' to display solution")
