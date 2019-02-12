@@ -71,7 +71,7 @@ plt.show()
 
 # Evaluate hessian of the lagrangian
 hess_lag = nlp.hessian_lag(x, y)
-plt.spy(hess_lag.tofullmatrix())
+plt.spy(hess_lag.tocoo())
 plt.title('Hessian of the Lagrangian function\n')
 plt.show()
 
@@ -79,7 +79,7 @@ plt.show()
 kkt = BlockSymMatrix(2)
 kkt[0, 0] = hess_lag
 kkt[1, 0] = jac_g
-full_kkt = kkt.tofullmatrix()
+full_kkt = kkt.tocoo()
 plt.spy(full_kkt)
 plt.title('Karush-Kuhn-Tucker Matrix\n')
 plt.show()

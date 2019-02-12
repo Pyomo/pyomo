@@ -247,13 +247,14 @@ ExpectedFailures['baron', 'bar', 'QP_simple'] = \
     "Baron will not return dual solution when a solution is "
     "found during preprocessing.")
 
+# Known to fail through 17.4.1, but was resolved by 18.5.9
 ExpectedFailures['baron', 'bar', 'QCP_simple'] = \
-    (lambda v: v <= _trunk_version,
+    (lambda v: v <= (17,4,1),
     "Baron will not return dual solution when a solution is "
     "found during preprocessing.")
 
 ExpectedFailures['baron', 'bar', 'MILP_unbounded'] = \
-    (lambda v: v < (17,4,1,0),
+    (lambda v: v < _trunk_version,
      "Baron fails to report a MILP model as unbounded")
 
 #

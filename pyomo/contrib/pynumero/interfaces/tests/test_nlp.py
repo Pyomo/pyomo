@@ -22,9 +22,10 @@ if not AmplInterface.available():
         "Pynumero needs the ASL extension to run NLP tests")
 
 import pyomo.environ as pe
-from pyomo.contrib.pynumero.sparse.coo import COOMatrix, COOSymMatrix
 from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP, AmplNLP
 import tempfile
+
+from scipy.sparse import coo_matrix
 
 
 def create_basic_model():
@@ -101,6 +102,38 @@ class TestPyomoNLP(unittest.TestCase):
         upper_map = [1]
         self.assertListEqual(self.nlp1._upper_x_map.tolist(), upper_map)
 
+    def test_g_maps(self):
+        lower_mask = np.array([True, True, False, True, True], dtype=bool)
+        self.assertTrue(np.allclose(self.nlp1._lower_g_mask, lower_mask))
+        lower_map = [0, 1, 3, 4]
+        self.assertTrue(np.allclose(self.nlp1._lower_g_map, lower_map))
+        upper_mask = np.array([True, True, True, False, False], dtype=bool)
+        self.assertTrue(np.allclose(self.nlp1._upper_g_mask, upper_mask))
+        upper_map = [0, 1, 2]
+        self.assertTrue(np.allclose(self.nlp1._upper_g_map, upper_map))
+
+    def test_c_maps(self):
+        c_mask = np.array([True, True, False, False, False], dtype=bool)
+        self.assertTrue(np.allclose(self.nlp1._c_mask, c_mask))
+        c_map = np.array([0, 1])
+        self.assertTrue(np.allclose(self.nlp1._c_map, c_map))
+
+    def test_d_maps(self):
+
+        d_mask = np.array([False, False, True, True, True], dtype=bool)
+        self.assertTrue(np.allclose(self.nlp1._d_mask, d_mask))
+        d_map = np.array([2, 3, 4])
+        self.assertTrue(np.allclose(self.nlp1._d_map, d_map))
+
+        lower_mask = np.array([False, True, True], dtype=bool)
+        self.assertTrue(np.allclose(self.nlp1._lower_d_mask, lower_mask))
+        lower_map = [1, 2]
+        self.assertTrue(np.allclose(self.nlp1._lower_d_map, lower_map))
+        upper_mask = np.array([True, False, False], dtype=bool)
+        self.assertTrue(np.allclose(self.nlp1._upper_d_mask, upper_mask))
+        upper_map = [0]
+        self.assertTrue(np.allclose(self.nlp1._upper_d_map, upper_map))
+
     def test_xl(self):
         xl = np.array([-np.inf, 0, 0])
         self.assertTrue(np.allclose(xl, self.nlp1.xl()))
@@ -120,14 +153,28 @@ class TestPyomoNLP(unittest.TestCase):
         self.assertTrue(np.allclose(xu, self.nlp2.xu(condensed=True)))
 
     def test_gl(self):
-        gl = [1., 0.5, -np.inf, -100., -500.]
-        gu = [1., 0.5, 100., np.inf, np.inf]
+        gl = [0.0, 0.0, -np.inf, -100., -500.]
         self.assertTrue(np.allclose(gl, self.nlp1.gl()))
-        self.assertTrue(np.allclose(gu, self.nlp1.gu()))
-        gl = [1., 0.5, -100., -500.]
-        gu = [1., 0.5, 100.]
+        gl = [0.0, 0.0, -100., -500.]
         self.assertTrue(np.allclose(gl, self.nlp1.gl(condensed=True)))
+
+    def test_gu(self):
+        gu = [0.0, 0.0, 100., np.inf, np.inf]
+        self.assertTrue(np.allclose(gu, self.nlp1.gu()))
+        gu = [0.0, 0.0, 100.]
         self.assertTrue(np.allclose(gu, self.nlp1.gu(condensed=True)))
+
+    def test_dl(self):
+        dl = [-np.inf, -100., -500.]
+        self.assertTrue(np.allclose(dl, self.nlp1.dl()))
+        dl = [-100., -500.]
+        self.assertTrue(np.allclose(dl, self.nlp1.dl(condensed=True)))
+
+    def test_du(self):
+        du = [100., np.inf, np.inf]
+        self.assertTrue(np.allclose(du, self.nlp1.du()))
+        du = [100.]
+        self.assertTrue(np.allclose(du, self.nlp1.du(condensed=True)))
 
     def test_x_init(self):
         x_init = np.array(range(1, 4))
@@ -249,6 +296,16 @@ class TestPyomoNLP(unittest.TestCase):
         self.nlp2.grad_objective(x, out=df_)
         self.assertTrue(np.allclose(df_, df))
 
+        x = self.nlp1.create_vector_x()
+        x.fill(1.0)
+        sdf = np.array([0, 2], np.double)
+        self.assertTrue(np.allclose(sdf, self.nlp1.grad_objective(x, subset_variables=[self.p1.x[1],
+                                                                                       self.p1.x[2]])))
+
+        sdf = np.array([2, 0], np.double)
+        self.assertTrue(np.allclose(sdf, self.nlp1.grad_objective(x, subset_variables=[self.p1.x[2],
+                                                                                       self.p1.x[3]])))
+
     def test_eval_g(self):
         x = np.ones(self.nlp1.nx)
         res = np.array([-1.0, -0.5, 2, 2, 3])
@@ -263,6 +320,11 @@ class TestPyomoNLP(unittest.TestCase):
         res_ = self.nlp2.create_vector_y()
         self.nlp2.evaluate_g(x, out=res_)
         self.assertTrue(np.allclose(res_, res))
+
+        x = self.nlp1.create_vector_x()
+        res = np.array([-1.0, 0.0, 0.0])
+        subset_g = [self.p1.c1, self.p1.d1, self.p1.d3]
+        self.assertTrue(np.allclose(self.nlp1.evaluate_g(x, subset_constraints=subset_g), res))
 
     def test_eval_c(self):
         x = np.ones(self.nlp1.nx)
@@ -319,7 +381,7 @@ class TestPyomoNLP(unittest.TestCase):
         jac = self.nlp1.jacobian_g(x)
         self.assertEqual(3, jac.shape[1])
         self.assertEqual(5, jac.shape[0])
-        self.assertIsInstance(jac, COOMatrix)
+        self.assertIsInstance(jac, coo_matrix)
         values = np.array([2.0, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1])
         self.assertTrue(np.allclose(values, jac.data))
 
@@ -327,12 +389,36 @@ class TestPyomoNLP(unittest.TestCase):
         new_jac = self.nlp1.jacobian_g(x, out=jac)
         self.assertTrue(np.allclose(values, new_jac.data))
 
+        jac = self.nlp1.jacobian_g(x, subset_constraints=[self.p1.c1])
+        self.assertEqual(3, jac.shape[1])
+        self.assertEqual(1, jac.shape[0])
+        self.assertIsInstance(jac, coo_matrix)
+        values = np.array([2.0, -1])
+        self.assertTrue(np.allclose(values, jac.data))
+
+        jac = self.nlp1.jacobian_g(x, subset_variables=[self.p1.x[1], self.p1.x[2]])
+        self.assertEqual(2, jac.shape[1])
+        self.assertEqual(5, jac.shape[0])
+        self.assertIsInstance(jac, coo_matrix)
+        values = np.array([2.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0])
+        self.assertTrue(np.allclose(values, jac.data))
+
+        jac = self.nlp1.jacobian_g(x,
+                                   subset_variables=[self.p1.x[1], self.p1.x[2]],
+                                   subset_constraints=[self.p1.c1])
+        self.assertEqual(2, jac.shape[1])
+        self.assertEqual(1, jac.shape[0])
+        self.assertIsInstance(jac, coo_matrix)
+        values = np.array([2.0, -1.0])
+        self.assertTrue(np.allclose(values, jac.data))
+
+
         # tests rosenbrock jacobian
         x = self.nlp2.create_vector_x() + 1.0
         jac = self.nlp2.jacobian_g(x)
         self.assertEqual(self.p2.nx, jac.shape[1])
         self.assertEqual(self.p2.nx, jac.shape[0])
-        self.assertIsInstance(jac, COOMatrix)
+        self.assertIsInstance(jac, coo_matrix)
         values = 3.0 * np.ones(self.p2.nx)
         self.assertTrue(np.allclose(values, jac.data))
 
@@ -342,7 +428,7 @@ class TestPyomoNLP(unittest.TestCase):
         jac = self.nlp1.jacobian_c(x)
         self.assertEqual(3, jac.shape[1])
         self.assertEqual(2, jac.shape[0])
-        self.assertIsInstance(jac, COOMatrix)
+        self.assertIsInstance(jac, coo_matrix)
         values = np.array([2.0, 1.0, -1.0, -1.0])
         self.assertTrue(np.allclose(values, jac.data))
 
@@ -365,7 +451,7 @@ class TestPyomoNLP(unittest.TestCase):
         jac = self.nlp2.jacobian_c(x)
         self.assertEqual(self.p2.nx, jac.shape[1])
         self.assertEqual(self.p2.nx, jac.shape[0])
-        self.assertIsInstance(jac, COOMatrix)
+        self.assertIsInstance(jac, coo_matrix)
         values = 3.0 * np.ones(self.p2.nx)
         self.assertTrue(np.allclose(values, jac.data))
 
@@ -389,7 +475,7 @@ class TestPyomoNLP(unittest.TestCase):
         jac = self.nlp1.jacobian_d(x)
         self.assertEqual(3, jac.shape[1])
         self.assertEqual(3, jac.shape[0])
-        self.assertIsInstance(jac, COOMatrix)
+        self.assertIsInstance(jac, coo_matrix)
         values = np.ones(7)
         self.assertTrue(np.allclose(values, jac.data))
 
@@ -411,7 +497,7 @@ class TestPyomoNLP(unittest.TestCase):
         jac = self.nlp2.jacobian_d(x)
         self.assertEqual(self.p2.nx, jac.shape[1])
         self.assertEqual(0, jac.shape[0])
-        self.assertIsInstance(jac, COOMatrix)
+        self.assertIsInstance(jac, coo_matrix)
         values = np.zeros(0)
         self.assertTrue(np.allclose(values, jac.data))
 
@@ -432,7 +518,6 @@ class TestPyomoNLP(unittest.TestCase):
         hes = self.nlp1.hessian_lag(x, l)
         self.assertEqual(hes.shape[0], 3)
         self.assertEqual(hes.shape[1], 3)
-        self.assertIsInstance(hes, COOSymMatrix)
         self.assertTrue(np.allclose(values, hes.data))
 
         # these are QPs so it does not make a difference eval_f_c
@@ -443,13 +528,41 @@ class TestPyomoNLP(unittest.TestCase):
         self.nlp1.hessian_lag(x, l, out=hes)
         self.assertTrue(np.allclose(values, hes.data))
 
+        x = self.nlp1.create_vector_x()
+        l = self.nlp1.create_vector_y()
+        l[0] = 1
+        values = np.array([2.0, 2.0])
+
+        hes = self.nlp1.hessian_lag(x, l)
+        self.assertEqual(hes.shape[0], 3)
+        self.assertEqual(hes.shape[1], 3)
+        self.assertTrue(np.allclose(values, hes.data))
+
+        hes = self.nlp1.hessian_lag(x, l,
+                                    subset_variables_row=[self.p1.x[1], self.p1.x[2]],
+                                    subset_variables_col=[self.p1.x[1], self.p1.x[2]])
+        self.assertEqual(hes.shape[0], 2)
+        self.assertEqual(hes.shape[1], 2)
+        self.assertTrue(np.allclose(values, hes.data))
+
+        hes = self.nlp1.hessian_lag(x, l,
+                                    subset_variables_row=[self.p1.x[1], self.p1.x[2]])
+        self.assertEqual(hes.shape[0], 2)
+        self.assertEqual(hes.shape[1], self.nlp1.nx)
+        self.assertTrue(np.allclose(values, hes.data))
+
+        hes = self.nlp1.hessian_lag(x, l,
+                                    subset_variables_col=[self.p1.x[2], self.p1.x[3]])
+        self.assertEqual(hes.shape[0], self.nlp1.nx)
+        self.assertEqual(hes.shape[1], 2)
+        self.assertTrue(np.allclose(np.ones(1) * 2.0, hes.data))
+
         x = self.nlp2.create_vector_x()
         l = self.nlp2.create_vector_y()
         hes = self.nlp2.hessian_lag(x, l)
         values = 2.0 * np.ones(self.p2.nx)
         self.assertEqual(hes.shape[0], self.p2.nx)
         self.assertEqual(hes.shape[1], self.p2.nx)
-        self.assertIsInstance(hes, COOSymMatrix)
         self.assertTrue(np.allclose(values, hes.data))
 
         # these are QPs so it does not make a difference eval_f_c
@@ -459,88 +572,6 @@ class TestPyomoNLP(unittest.TestCase):
         hes.data.fill(0.0)
         self.nlp2.hessian_lag(x, l, out=hes)
         self.assertTrue(np.allclose(values, hes.data))
-
-    def test_Jacobian_g(self):
-        x = self.nlp1.create_vector_x()
-        x.fill(1.0)
-        jac = self.nlp1.Jacobian_g(x)
-        self.assertEqual(3, jac.shape[1])
-        self.assertEqual(5, jac.shape[0])
-        self.assertIsInstance(jac, COOMatrix)
-        values = np.array([2.0, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1])
-        self.assertTrue(np.allclose(values, jac.data))
-
-        jac = self.nlp1.Jacobian_g(x, constraints=[self.p1.c1])
-        self.assertEqual(3, jac.shape[1])
-        self.assertEqual(1, jac.shape[0])
-        self.assertIsInstance(jac, COOMatrix)
-        values = np.array([2.0, -1])
-        self.assertTrue(np.allclose(values, jac.data))
-
-        jac = self.nlp1.Jacobian_g(x, variables=[self.p1.x[1], self.p1.x[2]])
-        self.assertEqual(2, jac.shape[1])
-        self.assertEqual(5, jac.shape[0])
-        self.assertIsInstance(jac, COOMatrix)
-        values = np.array([2.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0])
-        self.assertTrue(np.allclose(values, jac.data))
-
-        jac = self.nlp1.Jacobian_g(x,
-                                   variables=[self.p1.x[1], self.p1.x[2]],
-                                   constraints=[self.p1.c1])
-        self.assertEqual(2, jac.shape[1])
-        self.assertEqual(1, jac.shape[0])
-        self.assertIsInstance(jac, COOMatrix)
-        values = np.array([2.0, -1.0])
-        self.assertTrue(np.allclose(values, jac.data))
-
-    def test_Hessian_lag(self):
-        x = self.nlp1.create_vector_x()
-        l = self.nlp1.create_vector_y()
-        l[0] = 1
-        values = np.array([2.0, 2.0])
-
-        hes = self.nlp1.Hessian_lag(x, l)
-        self.assertEqual(hes.shape[0], 3)
-        self.assertEqual(hes.shape[1], 3)
-        self.assertTrue(np.allclose(values, hes.data))
-
-        hes = self.nlp1.Hessian_lag(x, l,
-                                    variables_rows=[self.p1.x[1], self.p1.x[2]],
-                                    variables_cols=[self.p1.x[1], self.p1.x[2]])
-        self.assertEqual(hes.shape[0], 2)
-        self.assertEqual(hes.shape[1], 2)
-        self.assertTrue(np.allclose(values, hes.data))
-
-        hes = self.nlp1.Hessian_lag(x, l, variables_rows=[self.p1.x[1], self.p1.x[2]])
-        self.assertEqual(hes.shape[0], 2)
-        self.assertEqual(hes.shape[1], self.nlp1.nx)
-        self.assertTrue(np.allclose(values, hes.data))
-
-        hes = self.nlp1.Hessian_lag(x, l, variables_cols=[self.p1.x[2], self.p1.x[3]])
-        self.assertEqual(hes.shape[0], self.nlp1.nx)
-        self.assertEqual(hes.shape[1], 2)
-        self.assertTrue(np.allclose(np.ones(1)*2.0, hes.data))
-
-    def test_Grad_objective(self):
-        x = self.nlp1.create_vector_x()
-        x.fill(1.0)
-        sdf = np.array([0, 2], np.double)
-        self.assertTrue(np.allclose(sdf, self.nlp1.Grad_objective(x, variables=[self.p1.x[1], self.p1.x[2]])))
-
-        sdf = np.array([2, 0], np.double)
-        self.assertTrue(np.allclose(sdf, self.nlp1.Grad_objective(x, variables=[self.p1.x[2], self.p1.x[3]])))
-
-    def test_Evaluate_g(self):
-        # ToDo: improve this test
-        x = self.nlp1.create_vector_x()
-        res = [-1.0, -0.5, 0.0, 0.0, 0.0]
-        self.assertListEqual(list(self.nlp1.Evaluate_g(x)), res)
-        x = self.nlp2.create_vector_x()
-        res = [-1.0] * self.p2.nx
-        self.assertListEqual(list(self.nlp2.Evaluate_g(x)), res)
-
-    # ToDo: add test of expansion matrices
-    # ToDo: add test of dl and du
 
     def test_expansion_matrix_xl(self):
 
@@ -635,63 +666,3 @@ class TestAmplNLP(unittest.TestCase):
     def test_variable_order(self):
 
         self.assertEqual(len(self.nlp.variable_order()), 3)
-
-    def test_Grad_objective(self):
-
-        x = self.nlp.create_vector_x()
-        x.fill(1.0)
-        sdf = np.array([0, 2], np.double)
-        self.assertTrue(np.allclose(sdf, self.nlp.Grad_objective(x, var_names=['x[1]', 'x[2]'])))
-        var_indices = [self.nlp.variable_idx('x[1]'), self.nlp.variable_idx('x[2]')]
-        self.assertTrue(np.allclose(sdf, self.nlp.Grad_objective(x, var_indices=var_indices)))
-
-    def test_Jacobian_g(self):
-        x = self.nlp.create_vector_x()
-        x.fill(1.0)
-        jac = self.nlp.Jacobian_g(x)
-        self.assertEqual(3, jac.shape[1])
-        self.assertEqual(5, jac.shape[0])
-        self.assertIsInstance(jac, COOMatrix)
-        values = np.array([2.0, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1])
-        self.assertTrue(np.allclose(values, jac.data))
-
-        jac = self.nlp.Jacobian_g(x, constraint_names=['c1'])
-        self.assertEqual(3, jac.shape[1])
-        self.assertEqual(1, jac.shape[0])
-        self.assertIsInstance(jac, COOMatrix)
-        values = np.array([2.0, -1])
-        self.assertTrue(np.allclose(values, jac.data))
-
-        jac = self.nlp.Jacobian_g(x, constraint_indices=[self.nlp.constraint_idx('c1')])
-        self.assertEqual(3, jac.shape[1])
-        self.assertEqual(1, jac.shape[0])
-        self.assertIsInstance(jac, COOMatrix)
-        values = np.array([2.0, -1])
-        self.assertTrue(np.allclose(values, jac.data))
-
-    def test_Hessian_lag(self):
-        x = self.nlp.create_vector_x()
-        l = self.nlp.create_vector_y()
-        l[0] = 1
-        values = np.array([2.0, 2.0])
-
-        hes = self.nlp.Hessian_lag(x, l)
-        self.assertEqual(hes.shape[0], 3)
-        self.assertEqual(hes.shape[1], 3)
-        self.assertTrue(np.allclose(values, hes.data))
-
-        hes = self.nlp.Hessian_lag(x, l,
-                                   var_names_rows=['x[1]', 'x[2]'],
-                                   var_names_cols=['x[1]', 'x[2]'])
-        self.assertEqual(hes.shape[0], 2)
-        self.assertEqual(hes.shape[1], 2)
-        self.assertTrue(np.allclose(values, hes.data))
-
-        var_indices_rows = [self.nlp.variable_idx('x[1]'), self.nlp.variable_idx('x[2]')]
-        var_indices_cols = [self.nlp.variable_idx('x[1]'), self.nlp.variable_idx('x[2]')]
-        hes = self.nlp.Hessian_lag(x, l,
-                                   var_indices_rows=var_indices_rows,
-                                   var_indices_cols=var_indices_cols)
-        self.assertEqual(hes.shape[0], 2)
-        self.assertEqual(hes.shape[1], 2)
-        self.assertTrue(np.allclose(values, hes.data))

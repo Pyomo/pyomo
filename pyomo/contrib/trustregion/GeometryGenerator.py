@@ -1,12 +1,11 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+import logging
 
 # This is an auto geometry generator for quadratic ROM
 import numpy as np
 from six import StringIO
 import pyomo.common
 from pyomo.contrib.trustregion.cache import GeometryCache
-import logging
+
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
 def _pset_to_mat(pset, lx):
@@ -46,6 +45,9 @@ def generate_quadratic_rom_geometry(lx, NUM_SEEDS=None):
     dim = int((lx*lx+lx*3)/2 + 1)
     x1 = np.zeros(lx)
     for i in range(0,NUM_SEEDS):
+        #TODO: the following line returns error
+        # ValueError: cannot reshape array of size 0 into shape (0)
+        # for np.random.multivariate_normal(np.zeros(0),np.eye(0),0)
         pset = np.random.multivariate_normal(x1,np.eye(lx),dim-1)
         for j in range(dim-1):
             pset[j] = pset[j]/np.linalg.norm(pset[j])

@@ -21,13 +21,9 @@ except ImportError:
     scipy_available = False
     
 if numpy_available and scipy_available:
-    from .base import SparseBase
-    from .coo import *
-    from .csc import *
-    from .csr import *
-    from .block_vector import *
-    from .block_matrix import *
-    from .extract import tril, triu
+    from .coo import empty_matrix, diagonal_matrix
+    from .block_vector import BlockVector
+    from .block_matrix import BlockMatrix, BlockSymMatrix
 else:
     import logging
     _logger = logging.getLogger('pyomo.contrib.pynumero.sparse')

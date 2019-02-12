@@ -9,7 +9,8 @@
 #  ___________________________________________________________________________
 
 import pyomo.core.expr
-from pyomo.core.expr.numvalue import NumericValue
+from pyomo.core.expr.numvalue import (is_numeric_data,
+                                      NumericValue)
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
      _abstract_readwrite_property,
@@ -20,27 +21,16 @@ from pyomo.core.kernel.container_utils import \
 import six
 
 class IParameter(ICategorizedObject, NumericValue):
-    """
-    The interface for mutable parameters.
-    """
+    """The interface for mutable numeric data."""
     __slots__ = ()
 
-    #
-    # Implementations can choose to define these
-    # properties as using __slots__, __dict__, or
-    # by overriding the @property method
-    #
-
-    value = _abstract_readwrite_property(
-        doc="The value of the parameter")
+    def __call__(self, exception=True):
+        """Computes the numeric value of this object."""
+        raise NotImplementedError     #pragma:nocover
 
     #
     # Implement the NumericValue abstract methods
     #
-
-    def __call__(self, exception=True):
-        """Compute the value of this parameter."""
-        return self.value
 
     def is_constant(self):
         """A boolean indicating that this parameter is constant."""
@@ -75,7 +65,8 @@ class IParameter(ICategorizedObject, NumericValue):
         return 0
 
 class parameter(IParameter):
-    """A placeholder for a mutable, numeric value."""
+    """A object for storing a mutable, numeric value that
+    can be used to build a symbolic expression."""
     _ctype = IParameter
     __slots__ = ("_parent",
                  "_storage_key",
@@ -89,7 +80,15 @@ class parameter(IParameter):
         self._value = value
 
     #
-    # Define the IParameter abstract methods
+    # Implement the IParameter abstract methods
+    #
+
+    def __call__(self, exception=True):
+        """Computes the numeric value of this object."""
+        return self.value
+
+    #
+    # Interface
     #
 
     @property
@@ -99,6 +98,57 @@ class parameter(IParameter):
     @value.setter
     def value(self, value):
         self._value = value
+
+class functional_value(IParameter):
+    """An object for storing a numeric function that can be
+    used in a symbolic expression.
+
+    Note that models making use of this object may require
+    the dill module for serialization.
+    """
+    _ctype = IParameter
+    __slots__ = ("_parent",
+                 "_storage_key",
+                 "_active",
+                 "_fn",
+                 "__weakref__")
+    def __init__(self, fn=None):
+        self._parent = None
+        self._storage_key = None
+        self._active = True
+        self._fn = fn
+
+    #
+    # Implement the IParameter abstract methods
+    #
+
+    def __call__(self, exception=True):
+        if self._fn is None:
+            return None
+        try:
+            val = self._fn()
+        except Exception as e:
+            if exception:
+                raise e
+            else:
+                return None
+        # this exception should never be masked
+        if not is_numeric_data(val):
+            raise TypeError(
+                "Functional value is not numeric data")
+        return val
+
+    #
+    # Interface
+    #
+
+    @property
+    def fn(self):
+        """The function stored with this object"""
+        return self._fn
+    @fn.setter
+    def fn(self, fn):
+        self._fn = fn
 
 # inserts class definitions for simple _tuple, _list, and
 # _dict containers into this module

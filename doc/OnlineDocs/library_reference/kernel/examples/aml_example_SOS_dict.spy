@@ -1,0 +1,10 @@
+def sd_(m, i):
+    if i == 1:
+        t = list(m.vd.values())
+    elif i == 2:
+        t = list(m.vl.values())
+    return t
+m.sd = aml.SOSConstraint(
+    [1,2],
+    rule=sd_,
+    level=1)

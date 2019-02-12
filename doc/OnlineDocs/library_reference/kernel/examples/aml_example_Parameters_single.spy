@@ -1,0 +1,2 @@
+m.p = aml.Param(mutable=True,
+                initialize=0)

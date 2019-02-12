@@ -2205,5 +2205,12 @@ class InnerDisjunctionSharedDisjuncts(unittest.TestCase):
                      ComponentUID(m.disjunction)])
 
 
+class RangeSetOnDisjunct(unittest.TestCase):
+    def test_RangeSet(self):
+        m = models.makeDisjunctWithRangeSet()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        self.assertIsInstance(m.d1.s, RangeSet)
+
+
 if __name__ == '__main__':
     unittest.main()

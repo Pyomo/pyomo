@@ -5,18 +5,6 @@ This section gives an overview of commonly used scripting commands when
 working with Pyomo models. These commands must be applied to a concrete
 model instance or in other words an instantiated model.
 
-Instantiating Models
--------------------- 
-
-If you have a `ConcreteModel` it will be constructed as components are
-declared. If you have an `AbstractModel` you must instantiate it to
-create a concrete instance. 
-
-.. note:: 
-
-   `AbstractModel` users should note that your concrete model instance
-   is sometimes called "instance" and **not** "model". This is the case
-   when you use `instance = model.create_instance()`.
 
 Repeated Solves
 ---------------
@@ -26,24 +14,23 @@ Repeated Solves
    >>> import pyomo.environ as pyo
    >>> from pyomo.opt import SolverFactory
    >>> model = pyo.ConcreteModel()
-   >>> model.n = pyo.Param(default=4)
-   >>> model.x = pyo.Var(pyo.RangeSet(model.n), within=pyo.Binary)
-   >>> def o_rule(model):
-   ...    return pyo.summation(model.x)
-   >>> model.o = pyo.Objective(rule=o_rule)
-   >>> model.c = pyo.ConstraintList()
+   >>> model.nVars = pyo.Param(initialize=4)
+   >>> model.N = pyo.RangeSet(model.nVars)
+   >>> model.x = pyo.Var(model.N, within=pyo.Binary)
+   >>> model.obj = pyo.Objective(expr=pyo.summation(model.x))
+   >>> model.cuts = pyo.ConstraintList()
    >>> opt = SolverFactory('glpk')
    >>> opt.solve(model) # doctest: +SKIP
 
-   Iterate to eliminate the previously found solution
+   >>> # Iterate, adding a cut to exclude the previously found solution
    >>> for i in range(5):
    ...    expr = 0
    ...    for j in model.x:
-   ...        if pyo.value(model.x[j]) == 0:
+   ...        if pyo.value(model.x[j]) < 0.5:
    ...            expr += model.x[j]
    ...        else:
    ...            expr += (1 - model.x[j])
-   ...    model.c.add( expr >= 1 )
+   ...    model.cuts.add( expr >= 1 )
    ...    results = opt.solve(model)
    ...    print ("\n===== iteration",i)
    ...    model.display() # doctest: +SKIP
@@ -70,14 +57,6 @@ creates is just the sum of four binary variables. One does not need a
 computer to solve the problem or even to iterate over solutions. This
 example is provided just to illustrate some elementary aspects of
 scripting.
-
-.. note::
-
-   The built-in code for printing solutions prints only non-zero
-   variable values. So if you run this code, no variable values will be
-   output for the first solution found because all of the variables are
-   zero. However, other information about the solution, such as the
-   objective value, will be displayed.
 
 .. literalinclude:: script_spy_files/iterative1.spy
    :language: python
@@ -191,37 +170,94 @@ The final lines in the outer for loop find a solution and display it:
 .. literalinclude:: script_spy_files/iterative1_Find_and_display_solution.spy
    :language: python
 
+.. note::
+   
+   The assignment of the solve output to a results object is somewhat
+   anachronistic. Many scripts just use
+
+   >>> opt.solve(instance) # doctest: +SKIP
+
+   since the results are moved to the instance by default, leaving
+   the results object with little of interest. If, for some reason,
+   you want the results to stay in the results object and *not* be
+   moved to the instance, you would use
+
+   >>> results = opt.solve(instance, load_solutions=False) # doctest: +SKIP
+   
+   This approach can be usefull if there is a concern that the solver
+   did not terminate with an optimal solution. For example,
+   
+   >>> results = opt.solve(instance, load_solutions=False) # doctest: +SKIP
+   >>> if results.solver.termination_condition == TerminationCondition.optimal: # doctest: +SKIP
+   ...     instance.solutions.load_from(results) # doctest: +SKIP
+
 Changing the Model or Data and Re-solving
 -----------------------------------------
 
-The ``iterative1.py`` example illustrates how a model can be changed and
+The ``iterative1.py`` example above illustrates how a model can be changed and
 then re-solved. In that example, the model is changed by adding a
 constraint, but the model could also be changed by altering the values
 of parameters. Note, however, that in these examples, we make the
-changes to the ``instance`` object rather than the ``model`` object so
-that we do not have to create a new ``model`` object. Here is the basic
-idea:
+changes to the concrete model instances.  This is particularly important
+for ``AbstractModel`` users, as this implies working with the
+``instance`` object rather than the ``model`` object, which allows us to
+avoid creating a new ``model`` object for each solve. Here is the basic
+idea for users of an ``AbstractModel``:
 
-1. Create an ``AbstractModel`` (suppose it is called ``model``)
-2. Call ``model.create_instance()`` to create an instance (suppose it is called ``instance``)
-3. Solve ``instance``
-4. Change someting in ``instance``
-5. Call presolve
-6. Solve ``instance`` again
+#. Create an ``AbstractModel`` (suppose it is called ``model``)
+#. Call ``model.create_instance()`` to create an instance (suppose it is called ``instance``)
+#. Solve ``instance``
+#. Change someting in ``instance``
+#. Solve ``instance`` again
 
-If ``instance`` has a parameter whose name is in ``ParamName`` with an
-index that is in ``idx``, the the value in ``NewVal`` can be assigned to
+.. note::
+
+   Users of ``ConcreteModel`` typically name their models ``model``, which
+   can cause confusion to novice readers of documentation. Examples based on
+   an ``AbstractModel`` will refer to ``instance`` where users of a
+   ``ConcreteModel`` would typically use the name ``model``.
+
+..
+   NOTE: the tests in this file are fragile right now because some
+   code has been brought inline (particularly from spy4cripts.spy)
+   DO NOT redefine instance until you are ready to delete this entire comment.
+   (and note that model is redefined all over the place).
+   
+.. testsetup:: *
+
+    # code from spy4scripts
+    import pyomo.environ as pyo
+
+    instance = pyo.ConcreteModel()
+    instance.I = pyo.Set(initialize=[1,2,3])
+    instance.sigma = pyo.Param(mutable=True, initialize=2.3)
+    instance.Theta = pyo.Param(instance.I, mutable=True)
+    for i in instance.I:
+        instance.Theta[i] = i
+    idx = 1
+    NewVal = 1134
+    
+    instance.x = pyo.Var([1,2,3], initialize=0)
+    instance.y = pyo.Var()
+    instance.iVar = pyo.Var([1,2,3], initialize=1, domain=pyo.Boolean)
+    instance.sVar = pyo.Var(initialize=1, domain=pyo.Boolean)
+
+If ``instance`` has a parameter whose name is ``Theta`` that was
+declared to be ``mutable`` (i.e., ``mutable=True``) with an
+index that contains ``idx``, then the value in ``NewVal`` can be assigned to
 it using
 
-.. literalinclude:: script_spy_files/spy4scripts_Assign_value_to_indexed_parametername.spy
-   :language: python
+   >>> instance.Theta[idx] = NewVal	       
 
-For a singleton parameter named ``ParamName`` (i.e., if it is not
+For a singleton parameter named ``sigma`` (i.e., if it is not
 indexed), the assignment can be made using
 
-.. literalinclude:: script_spy_files/spy4scripts_Assign_value_to_unindexed_parametername_2.spy
-   :language: python
+   >>> instance.sigma = NewVal
 
+.. note::
+
+   If the ``Param`` is not declared to be mutable, an error will occur if an assignment to it is attempted.
+    
 For more information about access to Pyomo parameters, see the section
 in this document on ``Param`` access :ref:`ParmAccess`. Note that for
 concrete models, the model is the instance.
@@ -245,10 +281,13 @@ solving the model again. The main lines of interest are:
 This could also have been accomplished by setting the upper and lower
 bounds:
 
-.. literalinclude:: script_spy_files/spy4scripts_Set_upper&lower_bound.spy
-   :language: python
-
-
+   >>> if instance.x[2] == 0:
+   ...     instance.x[2].setlb(1)
+   ...     instance.x[2].setub(1)
+   ... else:
+   ...     instance.x[2].setlb(0)
+   ...     instance.x[2].setub(0)
+   
 Notice that when using the bounds, we do not set ``fixed`` to ``True``
 because that would fix the variable at whatever value it presently has
 and then the bounds would be ignored by the solver.
@@ -256,12 +295,54 @@ and then the bounds would be ignored by the solver.
 For more information about access to Pyomo variables, see the section in
 this document on ``Var`` access :ref:`VarAccess`.
 
-Note that ``instance.x.fix(2)`` is equivalent to
+Note that
 
-.. literalinclude:: script_spy_files/spy4scripts_Equivalent_form_of_instance.x.fix(2).spy
-   :language: python
+   >>> instance.x.fix(2)
 
-and ``instance.x.fix()`` is equivalent to ``instance.x.fixed = True``
+is equivalent to
+
+   >>> instance.y.value = 2
+   >>> instance.y.fixed = True
+
+and
+   >>> instance.x.fix()
+
+is equivalent to
+
+   >>> instance.x.fixed = True
+
+Extending the Objective Function
+--------------------------------
+
+One can add terms to an objective function of a ``ConcreteModel`` (or
+and instantiated ``AbstractModel``) using the ``expr`` attribute
+of the objective function object. Here is a simple example:
+
+.. doctest::
+
+   >>> import pyomo.environ as pyo
+   >>> from pyomo.opt import SolverFactory
+
+   >>> model = pyo.ConcreteModel()
+
+   >>> model.x = pyo.Var(within=pyo.PositiveReals)
+   >>> model.y = pyo.Var(within=pyo.PositiveReals)
+
+   >>> model.sillybound = pyo.Constraint(expr = model.x + model.y <= 2)
+
+   >>> model.obj = pyo.Objective(expr = 20 * model.x)
+
+   >>> opt = SolverFactory('glpk') # doctest: +SKIP
+   >>> opt.solve(model) # doctest: +SKIP
+
+   >>> model.pprint() # doctest: +SKIP
+
+   >>> print ("------------- extend obj --------------") # doctest: +SKIP
+   >>> model.obj.expr += 10 * model.y
+
+   >>> opt = SolverFactory('cplex') # doctest: +SKIP
+   >>> opt.solve(model) # doctest: +SKIP
+   >>> model.pprint() # doctest: +SKIP
 
 Activating and Deactivating Objectives
 --------------------------------------
@@ -270,11 +351,14 @@ Multiple objectives can be declared, but only one can be active at a
 time (at present, Pyomo does not support any solvers that can be given
 more than one objective). If both ``model.obj1`` and ``model.obj2`` have
 been declared using ``Objective``, then one can ensure that
-``model.obj2`` is passed to the solver using
+``model.obj2`` is passed to the solver as shown in this simple example:
 
-.. literalinclude:: script_spy_files/spy4scripts_Pass_multiple_objectives_to_solver.spy
-   :language: python
+   >>> model = pyo.ConcreteModel()
+   >>> model.obj1 = pyo.Objective(expr = 0)
+   >>> model.obj2 = pyo.Objective(expr = 0)
 
+   >>> model.obj1.deactivate()
+   >>> model.obj2.activate()
 
 For abstract models this would be done prior to instantiation or else
 the ``activate`` and ``deactivate`` calls would be on the instance
@@ -330,13 +414,16 @@ As with one variable, we assume that the model has been instantiated
 and solved. Assuming the instance object has the name ``instance``,
 the following code snippet displays all variables and their values:
 
-.. literalinclude:: script_spy_files/spy4scripts_Display_all_variables&values.spy
-   :language: python
+   >>> for v in instance.component_objects(pyo.Var, active=True):
+   ...     print("Variable",v)  # doctest: +SKIP
+   ...     for index in v:
+   ...         print ("   ",index, pyo.value(v[index]))  # doctest: +SKIP
+
 
 Alternatively,
 
-.. literalinclude:: script_spy_files/spy4scripts_Display_all_variables&values_data.spy
-   :language: python
+   >>> for v in instance.component_data_objects(pyo.Var, active=True):
+   ...     print(v, pyo.value(v))  # doctest: +SKIP
 
 This code could be improved by checking to see if the variable is not
 indexed (i.e., the only index value is ``None``), then the code could
@@ -346,37 +433,34 @@ Assuming again that the model has been instantiated and solved and the
 results have been loded back into the instance object. Here is a code
 snippet for fixing all integers at their current value:
 
-.. literalinclude:: script_spy_files/spy4scripts_Fix_all_integers&values.spy
-   :language: python
+    >>> for var in instance.component_data_objects(pyo.Var, active=True):
+    ...     if not var.is_continuous():
+    ...         print ("fixing "+str(v))  # doctest: +SKIP
+    ...         var.fixed = True # fix the current value
+
 
 Another way to access all of the variables (particularly if there are
-blocks) is as follows:
+blocks) is as follows (this particular snippet assumes that instead of
+`import pyomo.environ as pyo` `from pyo.environ import *` was used):
 
 .. literalinclude:: script_spy_files/block_iter_example_compprintloop.spy
    :language: python
-
-The use of ``True`` as an argument to ``cname`` indicates that the full
-name is desired.
 
 .. _ParmAccess:
 
 Accessing Parameter Values
 --------------------------
 
-Access to paramaters is completely analgous to access to variables. For
-example, here is a code snippet to print the name and value of every
-Parameter:
+Accessing parameter values is completely analogous to accessing variable
+values. For example, here is a code snippet to print the name and value
+of every Parameter in a model:
 
-.. literalinclude:: script_spy_files/spy4scripts_Print_parameter_name&value.spy
-   :language: python
-
-.. note::
-
-   The value of a ``Param`` can be returned as None+ if no data was
-   specified for it. This will be true even if a default value was
-   given. To inspect the default value of a ``Param``, replace
-   ``.value`` with ``.default()`` but note that the default might be a
-   function.
+   >>> for parmobject in instance.component_objects(pyo.Param, active=True):
+   ...     nametoprint = str(str(parmobject.name))
+   ...     print ("Parameter ", nametoprint)  # doctest: +SKIP
+   ...     for index in parmobject:
+   ...         vtoprint = pyo.value(parmobject[index])
+   ...         print ("   ",index, vtoprint)  # doctest: +SKIP
 
 
 Accessing Duals

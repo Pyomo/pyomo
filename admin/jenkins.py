@@ -55,12 +55,18 @@ print("\nPython version: %s" % sys.version)
 print("\nSystem PATH:\n\t%s" % os.environ['PATH'])
 print("\nPython path:\n\t%s" % sys.path)
 
-coverage_omit=','.join([
-    os.sep.join([os.environ['WORKSPACE'], 'src', 'pyomo', 'pyomo', '*', 'tests']),
-    'pyomo.*.tests',
-    os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*']),
-    'pyutilib.*',
-])
+# We used to hard-code the ommission of tests and pyutilib here.  That
+# directive is now managed by the coveragerc file using slightly
+# different patterns.  The commented code below is maintained strictly
+# for historical reference.
+#
+#coverage_omit=','.join([
+#    os.sep.join([os.environ['WORKSPACE'], 'src', 'pyomo', 'pyomo', '*', 'tests']),
+#    'pyomo.*.tests',
+#    os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*']),
+#    'pyutilib.*',
+#])
+coverage_omit = None
 
 pyomo_packages = [
     'pyomo.%s' % os.path.basename(x) for x in
@@ -72,7 +78,8 @@ if config == "notests":
     driver.perform_install('pyomo', config='pyomo_all.ini')
 
 elif config == "default":
-    driver.perform_build('pyomo', coverage=True, omit=coverage_omit, config='pyomo_all.ini')
+    driver.perform_build('pyomo', coverage=True, omit=coverage_omit,
+                         config='pyomo_all.ini')
 
 elif config == "core":
     # Install
@@ -87,9 +94,12 @@ elif config == "core":
         _run_cmd("python/bin/pyomo install-extras", shell=True)
     elif _run_cmd is subprocess.check_output:
         output = _run_cmd("python/bin/pyomo install-extras", shell=True)
-        if hasattr(output, 'encode'):
-            output = output.encode('utf-8','replace')
-        print(output.decode('utf-8'))
+        try:
+            print(output)
+        except:
+            if hasattr(output, 'encode'):
+                output = output.encode('utf-8','replace')
+            print(output.decode('utf-8'))
     else:
         assert False
     # Test
@@ -105,16 +115,25 @@ elif config == "core":
 elif config == "nonpysp":
     os.environ['TEST_PACKAGES'] = ' '.join(
         x for x in pyomo_packages if x != 'pyomo.pysp' )
-    driver.perform_build('pyomo', coverage=True, omit=coverage_omit, config='pyomo_all.ini')
+    driver.perform_build('pyomo', coverage=True, omit=coverage_omit,
+                         config='pyomo_all.ini')
+
+elif config == "fragile":
+    driver.perform_build('pyomo', coverage=True, omit=coverage_omit,
+                         config='pyomo_all.ini', cat='fragile')
+
+elif config == "nonfragile":
+    driver.perform_build('pyomo', coverage=True, omit=coverage_omit,
+                         config='pyomo_all.ini', cat='!fragile')
 
 elif config == "parallel":
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800' # 30 minutes
-    driver.perform_build('pyomo', cat='parallel', coverage=True, omit=coverage_omit, config='pyomo_all.ini')
+    driver.perform_build('pyomo', coverage=True, omit=coverage_omit,
+                         config='pyomo_all.ini', cat='parallel')
 
 elif config == "expensive":
-    driver.perform_build('pyomo',
-        cat='expensive', coverage=True, omit=coverage_omit,
-        virtualenv_args=sys.argv[1:])
+    driver.perform_build('pyomo',coverage=True, omit=coverage_omit,
+                         cat='expensive', virtualenv_args=sys.argv[1:])
 
 elif config == "booktests" or config == "book":
     # Install
@@ -124,12 +143,20 @@ elif config == "booktests" or config == "book":
         output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py -v", shell=True)
     elif _run_cmd is subprocess.check_output:
         output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py -v", shell=True)
-        if hasattr(output, 'encode'):
-            output = output.encode('utf-8','replace')
-        print(output.decode('utf-8'))
+        try:
+            print(output)
+        except:
+            if hasattr(output, 'encode'):
+                output = output.encode('utf-8','replace')
+            print(output.decode('utf-8'))
     else:
         assert False
     # Test
+    book_examples = os.path.join(
+        os.environ['WORKSPACE'], 'src', 'pyomo', 'examples', 'doc', 'pyomobook')
+    if not os.path.isdir(book_examples):
+        raise RuntimeError("Cannot find the Book examples directory (%s)" % (book_examples,))
+    os.environ['TEST_PACKAGES'] = 'pyomo %s' % (book_examples,)
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
     driver.perform_tests('pyomo', cat='book')
 

@@ -295,6 +295,18 @@ class GAMSTests(unittest.TestCase):
             opt.solve(m, load_solutions=True) # overwrite option
             self.assertEqual(m.x.value, 10)
 
+    @unittest.skipIf(not gamspy_available,
+                     "The 'gams' python bindings are not available")
+    def test_version_py(self):
+        with SolverFactory("gams", solver_io="python") as opt:
+            self.assertIsNotNone(opt.version())
+
+    @unittest.skipIf(not gamsgms_available,
+                     "The 'gams' executable is not available")
+    def test_version_gms(self):
+        with SolverFactory("gams", solver_io="gms") as opt:
+            self.assertIsNotNone(opt.version())
+
 class GAMSLogfileTestBase(unittest.TestCase):
     def setUp(self):
         """Set up model and temporary directory."""
