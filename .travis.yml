@@ -69,7 +69,7 @@ install:
     fi
  # Configure Pyomo to put the configuration directory here (so that it
  # is both writable, and will be cleared between test runs
-  - ${DOC} export PYOMO_CONFIG_DIR=${TRAVIS_BUILD_DIR}/config
+  - export PYOMO_CONFIG_DIR=${TRAVIS_BUILD_DIR}/config
   - ${DOC} pyomo download-extensions
 
 script:
