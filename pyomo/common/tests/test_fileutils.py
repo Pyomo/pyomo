@@ -119,6 +119,7 @@ class TestFileUtils(unittest.TestCase):
             find_file(fname, pathlist=[subdir], cwd=False)
         )
         # ...unless the CWD match fails the MODE check
+        #  (except on Windows, where all files have X_OK)
         self.assertEqual(
             ( os.path.join(self.tmpdir,fname)
               if _system() in ('windows','cygwin')
@@ -127,7 +128,9 @@ class TestFileUtils(unittest.TestCase):
         )
         self._make_exec(os.path.join(subdir,fname))
         self.assertEqual(
-            os.path.join(subdir,fname),
+            ( os.path.join(self.tmpdir,fname)
+              if _system() in ('windows','cygwin')
+              else os.path.join(subdir,fname) ),
             find_file(fname, pathlist=[subdir], mode=os.X_OK)
         )
         # pathlist may also be a string

@@ -108,9 +108,9 @@ _exeExt = {
 
 _libExt = {
     'linux':   ('.so', '.so.*'),
-    'windows': '.dll',
+    'windows': ('.dll',),
     'cygwin':  ('.dll', '.so', '.so.*'),
-    'darwin':  '.dynlib',
+    'darwin':  ('.dynlib',),
 }
 
 def _system():
