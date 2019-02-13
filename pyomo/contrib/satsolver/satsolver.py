@@ -1,13 +1,86 @@
 
-from pyomo.environ import *
+
 from pyomo.core.expr import current as EXPR
 import z3
+from pyomo.core import value, Expression
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet,
                                          BooleanSet)
-from pyomo.core.expr.expr_pyomo5 import *
+from pyomo.core.expr.expr_pyomo5 import (EqualityExpression,
+                                        InequalityExpression,
+                                        ProductExpression,
+                                        SumExpression,
+                                        PowExpression,
+                                        NegationExpression,
+                                        MonomialTermExpression,
+                                        ReciprocalExpression,
+                                        AbsExpression,
+                                        UnaryFunctionExpression,
+                                        nonpyomo_leaf_types
+                                        )
+from pyomo.environ import SymbolMap,NumericLabeler
 
-from pyomo.core.expr.expr_pyomo5 import nonpyomo_leaf_types
+class SMTSatSolver(object):
+    def __str__(self):
+        string = ""
+        string = string + "Variables:\n"
+        for v in self.variable_list:
+            string = string + v + "\n"
+        string = string + "Bounds:\n"
+        for e in self.bounds_list:
+            string = string + v + "\n"
+        string = string + "Expressions:\n"
+        for e in self.expression_list:
+            string = string + v + "\n"
+    def __init__(self,model = None):
+        self.variable_label_map = SymbolMap(NumericLabeler('x'))
+        self.prefix_expr_list = []
+        self.variable_list = []
+        self.bounds_list = []
+        self.expression_list= []
+        self.walker = SMT_visitor(self.variable_label_map)
+        if model is not None:
+            self._process_model(model)
+    def _get_default_functions(self):
+        self.prefix_expr_list.append("(define-fun exp ((x Real)) Real (^ 2.718281828459045 x))")
+    def _process_model(self,model):
+        for v in model.component_data_objects(ctype = Var, descend_into=True):
+            smtstring = self.add_var(v)
+        for c in model.component_data_objects(ctype = Constraint):
+            smtstring = self.add_expr(c.expr)
+    def _add_bound(self,var):
+        nm = self.variable_label_map.getSymbol(var)
+        lb = var.lb
+        ub = var.ub
+        if lb is not None:
+            self.bounds_list.append ("(assert (>= " + nm + " " + str(lb)+"))")
+        if ub is not None:
+            self.bounds_list.append ("(assert (<= " + nm + " " + str(ub)+"))")
+    def add_var(self,var):
+        label = self.variable_label_map.getSymbol(var)
+        domain = type(var.domain)
+        if domain is RealSet:
+            self.variable_list.append("(declare-fun "+ label + "() Real)")
+            self._add_bound(var)
+        elif domain is IntegerSet:
+            self.variable_list.append("(declare-fun "+ label + "() Int)")
+            self._add_bound(var)
+        elif domain is BooleanSet:
+            self.variable_list.append("(declare-fun "+ label + "() Bool)")
+        else:
+            raise NotImplementedError("SMT cannot handle" + str(domain) + "variables")
+    def add_expr(self,expression):
+        smtexpr = self.walker.walk_expression(expression)
+        self.expression_list.append ("(assert " +smtexpr+")")
+    def check(self):
+        prefix_string = ''.join(self.prefix_expr_list)
+        variable_string = ''.join(self.variable_list)
+        bounds_string = ''.join(self.bounds_list)
+        expression_string = ''.join(self.expression_list)
+        smtstring = prefix_string + variable_string +bounds_string + expression_string
+        ss = z3.Solver()
+        ss.append(z3.parse_smt2_string(smtstring))
+        return ss.check()
 
 
 class SMT_visitor(EXPR.StreamBasedExpressionVisitor):
@@ -18,9 +91,9 @@ class SMT_visitor(EXPR.StreamBasedExpressionVisitor):
 
     """
 
-    def __init__(self):
+    def __init__(self,varmap):
         super(SMT_visitor, self).__init__()
-
+        self.variable_label_map = varmap
     def exitNode(self,node,data):
         if isinstance(node, EqualityExpression):
             ans = "(= "+data[0] + " " + data[1] + ")"
@@ -73,67 +146,24 @@ class SMT_visitor(EXPR.StreamBasedExpressionVisitor):
             # This means the child is POD
             # i.e., int, float, string
             return False,str(child)
+        elif child.is_variable_type():
+            return False,str(self.variable_label_map.getSymbol(child))
+        elif child.is_parameter_type():
+            return False,str(value(child))
         elif not child.is_expression_type():
-            # node is either a Param, Var, or NumericConstant
             return False,str(child)
         else:
             # this is an expression node
             return True,""
-
     def finalizeResult(self, node_result):
         return node_result
-def get_default_functions():
-    smtstring = ""
-    smtstring = smtstring + "(define-fun exp ((x Real)) Real (^ 2.718281828459045 x))"
-    return smtstring
 
-#TODO: Get rid of reference to variable names
-def isFeasible(model):
-    ss = z3.Solver()
-    #dict to map between pyomo and z3 vars
-    vardict = {}
-    smtstring = get_default_functions()
-    #add variables to z3 model
-    varcount = 0
-    for v in model.component_data_objects(ctype = Var, descend_into=True):
-        varcount = varcount + 1
-        smtstring = addVar(smtstring,v,varcount)
-    for c in model.component_data_objects(ctype = Constraint):
-        smtstring = addConstraint(smtstring,c.expr)
-
-    ss.append(z3.parse_smt2_string(smtstring))
-    return ss.check()
-
-def bound(smtstring,pyomovar):
-    nm = pyomovar.name
-    lb = pyomovar.lb
-    ub = pyomovar.ub
-    if lb is not None:
-        smtstring = smtstring + "(assert (>= " + nm + " " + str(lb)+"))"
-    if ub is not None:
-        smtstring = smtstring + "(assert (<= " + nm + " " + str(ub)+"))"
-    return smtstring
-def addVar(smtstring,pyomovar,i):
-    domain = type(pyomovar.domain)
-    if domain is RealSet:
-        smtstring = smtstring + "(declare-fun "+ pyomovar.name + "() Real)"
-        smtstring = bound(smtstring,pyomovar)
-    elif domain is IntegerSet:
-        smtstring = smtstring + "(declare-fun "+ pyomovar.name + "() Int)"
-        smtstring = bound(smtstring,pyomovar)
-    elif domain is BooleanSet:
-        smtstring = smtstring + "(declare-fun "+ pyomovar.name + "() Bool)"
-    return smtstring
-def addConstraint(smtstring,expression):
-    walker = SMT_visitor()
-    return smtstring + "(assert "+walker.walk_expression(expression)+")"
-
-
-if __name__ == "__main__":
-    m = ConcreteModel()
-    m.x = Var()
-    m.z = Var()
-    m.c1 = Constraint(expr= 1 == (m.x))
-    m.c2 = Constraint(expr= 2 == (m.x))
-    m.o = Objective(expr=m.x*m.z)
-    print isFeasible(m)
+    if __name__ == "__main__":
+        m = ConcreteModel()
+        m.x = Var()
+        m.z = Var()
+        m.c1 = Constraint(expr= 1 == (m.x))
+        m.c2 = Constraint(expr= 1 <= 1 + (m.x))
+        m.o = Objective(expr=m.x*m.z)
+        smt_model = SMTSatSolver(model = m)
+        print smt_model.check()
