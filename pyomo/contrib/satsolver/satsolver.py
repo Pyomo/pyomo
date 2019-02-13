@@ -157,13 +157,3 @@ class SMT_visitor(EXPR.StreamBasedExpressionVisitor):
             return True,""
     def finalizeResult(self, node_result):
         return node_result
-
-    if __name__ == "__main__":
-        m = ConcreteModel()
-        m.x = Var()
-        m.z = Var()
-        m.c1 = Constraint(expr= 1 == (m.x))
-        m.c2 = Constraint(expr= 1 <= 1 + (m.x))
-        m.o = Objective(expr=m.x*m.z)
-        smt_model = SMTSatSolver(model = m)
-        print smt_model.check()
