@@ -128,7 +128,7 @@ install:
   #
   # Install z3 Satisfiability solver
   #
-  -python -m pip install z3-solver
+  - python -m pip install z3-solver
   #
   # Clone but don't install pyomo-model-libraries
   #
