@@ -18,9 +18,12 @@ from pyomo.core.expr.expr_pyomo5 import (EqualityExpression,
                                         UnaryFunctionExpression,
                                         nonpyomo_leaf_types
                                         )
-from pyomo.environ import SymbolMap,NumericLabeler
+from pyomo.environ import SymbolMap,NumericLabeler,Var, Constraint
 
 class SMTSatSolver(object):
+    """
+    Satisfiability solver that checks constraint feasibility
+    """
     def __str__(self):
         string = ""
         string = string + "Variables:\n"
@@ -28,10 +31,11 @@ class SMTSatSolver(object):
             string = string + v + "\n"
         string = string + "Bounds:\n"
         for e in self.bounds_list:
-            string = string + v + "\n"
+            string = string + e + "\n"
         string = string + "Expressions:\n"
         for e in self.expression_list:
-            string = string + v + "\n"
+            string = string + e + "\n"
+        return string
     def __init__(self,model = None):
         self.variable_label_map = SymbolMap(NumericLabeler('x'))
         self.prefix_expr_list = []
@@ -39,6 +43,7 @@ class SMTSatSolver(object):
         self.bounds_list = []
         self.expression_list= []
         self.walker = SMT_visitor(self.variable_label_map)
+        self.solver = z3.Solver()
         if model is not None:
             self._process_model(model)
     def _get_default_functions(self):
@@ -47,7 +52,7 @@ class SMTSatSolver(object):
         for v in model.component_data_objects(ctype = Var, descend_into=True):
             smtstring = self.add_var(v)
         for c in model.component_data_objects(ctype = Constraint):
-            smtstring = self.add_expr(c.expr)
+            self.add_expr(c.expr)
     def _add_bound(self,var):
         nm = self.variable_label_map.getSymbol(var)
         lb = var.lb
@@ -78,9 +83,8 @@ class SMTSatSolver(object):
         bounds_string = ''.join(self.bounds_list)
         expression_string = ''.join(self.expression_list)
         smtstring = prefix_string + variable_string +bounds_string + expression_string
-        ss = z3.Solver()
-        ss.append(z3.parse_smt2_string(smtstring))
-        return ss.check()
+        self.solver.append(z3.parse_smt2_string(smtstring))
+        return self.solver.check()
 
 
 class SMT_visitor(EXPR.StreamBasedExpressionVisitor):

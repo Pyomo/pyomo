@@ -2,19 +2,98 @@ import logging
 
 from six import StringIO
 from six.moves import range
-
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
-from pyomo.contrib.satsolver import SMTSatSolver
+from pyomo.contrib.satsolver.satsolver import SMTSatSolver
 from pyomo.environ import *
 
+class SatSolverTests(unittest.TestCase):
 
-if __name__ == "__main__":
-    m = ConcreteModel()
-    m.x = Var()
-    m.z = Var()
-    m.c1 = Constraint(expr= 1 == (m.x))
-    m.c2 = Constraint(expr= 1 <= 1 + (m.x))
-    m.o = Objective(expr=m.x*m.z)
-    smt_model = SMTSatSolver(model = m)
-    print smt_model.check()
+    def test_simple_sat_model(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint(expr= 1 == (m.x))
+        m.o = Objective(expr=m.x)
+        smt_model = SMTSatSolver(model = m)
+        self.assertTrue(str(smt_model.check()) =="sat")
+
+
+    def test_simple_unsat_model(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c1 = Constraint(expr= 1 == (m.x))
+        m.c2 = Constraint(expr= 2 == (m.x))
+        m.o = Objective(expr=m.x)
+        smt_model = SMTSatSolver(model = m)
+        self.assertTrue(str(smt_model.check()) =="unsat")
+
+
+    def test_bounds_sat(self):
+        m = ConcreteModel()
+        m.x = Var(bounds = (0,5))
+        m.c1 = Constraint(expr= 4.99 == (m.x))
+        m.o = Objective(expr=m.x)
+        smt_model = SMTSatSolver(model = m)
+        self.assertTrue(str(smt_model.check()) =="sat")
+
+
+    def test_upper_bound_unsat(self):
+        m = ConcreteModel()
+        m.x = Var(bounds = (0,5))
+        m.c = Constraint(expr= 5.01 == (m.x))
+        m.o = Objective(expr=m.x)
+        smt_model = SMTSatSolver(model = m)
+        self.assertTrue(str(smt_model.check()) =="unsat")
+
+
+    def test_lower_bound_unsat(self):
+        m = ConcreteModel()
+        m.x = Var(bounds = (0,5))
+        m.c = Constraint(expr= -0.01 == (m.x))
+        m.o = Objective(expr=m.x)
+        smt_model = SMTSatSolver(model = m)
+        self.assertTrue(str(smt_model.check()) =="unsat")
+
+
+    def test_binary_expressions(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        m.c = Constraint(expr=0 <= m.x + m.y - m.z * m.y / m.x + 7  )
+        m.o = Objective(expr=m.x)
+        smt_model = SMTSatSolver(model = m)
+        self.assertTrue(str(smt_model.check()) =="sat")
+
+
+    def test_unary_expressions(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        m.a = Var()
+        m.b = Var()
+        m.c = Var()
+        m.d = Var()
+        m.c1 = Constraint(expr=0 <= sin(m.x) )
+        m.c2 = Constraint(expr=0 <= cos(m.y) )
+        m.c3 = Constraint(expr=0 <= tan(m.z) )
+        m.c4 = Constraint(expr=0 <= asin(m.a) )
+        m.c5 = Constraint(expr=0 <= acos(m.b) )
+        m.c6 = Constraint(expr=0 <= atan(m.c) )
+        m.c7 = Constraint(expr=0 <= sqrt(m.d) )
+        m.o = Objective(expr=m.x)
+        smt_model = SMTSatSolver(model = m)
+        self.assertFalse(str(smt_model.check()) =="unsat")
+
+
+    def test_abs_expressions(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c1 = Constraint(expr=-0.001 >= abs(m.x) )
+        m.o = Objective(expr=m.x)
+        smt_model = SMTSatSolver(model = m)
+        self.assertTrue(str(smt_model.check()) =="unsat")
+
+if __name__ == '__main__':
+    unittest.main()
