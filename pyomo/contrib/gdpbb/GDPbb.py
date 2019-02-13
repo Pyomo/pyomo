@@ -82,7 +82,7 @@ class GDPbbSolver(object):
 
             #Setup results
             self.setup_results_object(solve_data,model,config)
-            # Initialize ist containing indicator vars for reupdating model after solving
+            # Initialize list containing indicator vars for reupdating model after solving
             indicator_list_name = unique_component_name(model, "_indicator_list")
             indicator_vars = []
             for disjunction in model.component_data_objects(
@@ -186,16 +186,16 @@ class GDPbbSolver(object):
         for d in model.component_data_objects(
                 ctype=Disjunction, active=True):
             if (not d.xor):
-                raise ValueError('GDPlbb unable to handle '
+                raise ValueError('GDPbb solver unable to handle '
                                  'non-exclusive disjunctions')
         objectives = model.component_data_objects(Objective, active=True)
         obj = next(objectives, None)
         if next(objectives, None) is not None:
             raise RuntimeError(
-                "GDP LBB solver is unable to handle model with multiple active objectives.")
+                "GDPbb solver is unable to handle model with multiple active objectives.")
         if obj is None:
             raise RuntimeError(
-                "GDP LBB solver is unable to handle model with no active objective.")
+                "GDPbb solver is unable to handle model with no active objective.")
 
     def subproblem_solve(self, gdp, solver, config):
         subproblem = gdp.clone()

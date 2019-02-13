@@ -7,7 +7,7 @@ inactive disjunctions. It explores the possibilities based on best lower bound,
 eventually activating all disjunctions and presenting the global optimal.
 
 
-Using GDB Branch and Bound Solver
+Using GDP Branch and Bound Solver
 ---------------------------------
 To use the GDPbb solver, define your Pyomo GDP model as usual:
 
@@ -30,7 +30,7 @@ To use the GDPbb solver, define your Pyomo GDP model as usual:
   >>> m.y2.c2 = Constraint(expr = m.x2 >= 3)
   >>> m.djn = Disjunction(expr=[m.y1,m.y2])
 
-  Invoke the GDBbb solver
+  Invoke the GDPbb solver
   >>> SolverFactory('gdpbb').solve(m)  # doctest: +SKIP
 
 
