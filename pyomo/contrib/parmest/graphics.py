@@ -14,8 +14,8 @@ except:
 
 def _get_variables(ax,columns):
     sps = ax.get_subplotspec()
-    nx = sps.get_geometry()[0]
-    ny = sps.get_geometry()[1]
+    nx = sps.get_geometry()[1]
+    ny = sps.get_geometry()[0]
     cell = sps.get_geometry()[2]
     xloc = int(np.mod(cell,nx))
     yloc = int(np.mod((cell-xloc)/nx, ny))
@@ -135,6 +135,7 @@ def _add_scipy_dist_CI(x,y,color,label,columns,ncells,alpha,dist,theta_star):
 def _add_obj_contour(x,y,color,label,columns,data,theta_star):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
+
     try:
         X, Y, Z = _get_data_slice(xvar,yvar,columns,data,theta_star)
         
@@ -157,8 +158,11 @@ def _add_LR_contour(x,y,color,label,columns,data,theta_star,threshold):
     plt.tricontour(triang,Z,[threshold], colors='r')
 
 
-def _set_axis_limits(g, axis_limits, theta_vals):
+def _set_axis_limits(g, axis_limits, theta_vals, theta_star):
     
+    if theta_star is not None:
+        theta_vals = theta_vals.append(theta_star, ignore_index=True)
+        
     if axis_limits is None:
         axis_limits = {}
         for col in theta_vals.columns:
@@ -174,7 +178,7 @@ def _set_axis_limits(g, axis_limits, theta_vals):
             ax.set_xlim(axis_limits[xvar])
         else: # on diagonal
             ax.set_xlim(axis_limits[xvar])
-            
+
             
 def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[], 
                   axis_limits=None, title=None, add_obj_contour=True, 
@@ -223,8 +227,11 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         return('Empty data')    
     if isinstance(theta_star, dict):
         theta_star = pd.Series(theta_star)
-        
-    theta_names = [col for col in theta_values.columns if (col not in ['obj']) and (not isinstance(col, float))]
+    if isinstance(theta_star, pd.DataFrame):
+        theta_star = theta_star.loc[0,:]
+    
+    theta_names = [col for col in theta_values.columns if (col not in ['obj']) 
+                        and (not isinstance(col, float)) and (not isinstance(col, int))]
     
     filter_data_by_alpha = False
     if (alpha is not None) and (alpha in theta_values.columns):
@@ -243,7 +250,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     # Plot filled contours using all theta values based on obj
     if 'obj' in theta_values.columns and add_obj_contour:
         g.map_offdiag(_add_obj_contour, columns=theta_names, data=theta_values, 
-            theta_star=theta_star)
+                      theta_star=theta_star)
         
     # Plot thetas
     g.map_offdiag(plt.scatter, s=10)
@@ -253,6 +260,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     # Plot theta*
     if theta_star is not None:
         g.map_offdiag(_add_scatter, color='k', columns=theta_names, theta_star=theta_star)
+        
         legend_elements.append(Line2D([0], [0], marker='o', color='w', label='theta*',
                                       markerfacecolor='k', markersize=6))
     
@@ -297,7 +305,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
             else:
                 print('Invalid distribution')
             
-    _set_axis_limits(g, axis_limits, thetas)
+    _set_axis_limits(g, axis_limits, thetas, theta_star)
     
     for ax in g.axes.flatten():
         ax.ticklabel_format(style='sci', scilimits=(-2,2), axis='both')

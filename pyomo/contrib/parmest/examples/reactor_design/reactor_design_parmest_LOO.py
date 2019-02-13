@@ -1,0 +1,69 @@
+import numpy as np
+import pandas as pd
+import pyomo.contrib.parmest.parmest as parmest
+from reactor_design import reactor_design_model
+
+### Parameter estimation
+
+# Vars to estimate
+theta_names = ['k1', 'k2', 'k3']
+
+# Data
+data = pd.read_excel('reactor_data.xlsx') 
+
+# Create more data
+df_std = data.std().to_frame().transpose()
+df_rand = pd.DataFrame(np.random.normal(size=100))
+df_sample = data.sample(100, replace=True).reset_index(drop=True)
+data = df_sample + df_rand.dot(df_std)/10
+data.sort_values('sv').reset_index().plot()
+
+
+# Sum of squared error function
+def SSE(model, data): 
+    expr = (float(data['ca']) - model.ca)**2 + \
+           (float(data['cb']) - model.cb)**2 + \
+           (float(data['cc']) - model.cc)**2 + \
+           (float(data['cd']) - model.cd)**2
+    return expr
+
+pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE)
+obj, theta = pest.theta_est()
+print(obj)
+print(theta)
+
+### Parameter estimation with 'leave one out'
+# For each combination of data where one data point is left out, estimate theta
+LOO_theta = pest.theta_est_leaveNout(1)
+print(LOO_theta.head())
+
+parmest.pairwise_plot(LOO_theta, theta)
+
+### Leave one out/boostrap analysis
+# Example: leave 50 data points out, run 40 bootstrap samples with the 
+# remining points, determine if the theta estimate using the points left out 
+# is inside or outside an alpha region based on the bootstap samples, repeat 
+# 5 times. Results are stored as a list of tuples, see API docs.
+lNo = 50
+lNo_samples = 5
+bootstrap_samples = 40
+dist = 'KDE'
+alphas = [0.7, 0.8, 0.9, 1]
+
+results = pest.leaveNout_bootstrap_analysis(lNo, lNo_samples, bootstrap_samples, 
+                                            dist, alphas)
+
+# Plot results for a single value of alpha
+alpha = 0.8
+for i in range(lNo_samples):
+    N = results[i][0]
+    theta_est_N = results[i][1]
+    bootstrap_results = results[i][2]
+    parmest.pairwise_plot(bootstrap_results, theta_est_N, alpha, 
+                          title= str(N) + ', alpha: '+ str(alpha) + ', '+ \
+                          str(theta_est_N.loc[0,alpha]))
+    
+# Extract the percent of points that are within the alpha region
+r = [results[i][1].loc[0,alpha] for i in range(lNo_samples)]
+percent_true = sum(r)/len(r)
+print(percent_true)

@@ -308,7 +308,7 @@ class Estimator(object):
         List of Vars to estimate
     obj_function: function, optional
         Function used to formulate parameter estimation objective, generally
-        sum of squared error between measurments and model variables.  
+        sum of squared error between measurements and model variables.  
         If no function is specified, the model is used 
         "as is" and should be defined with a "FirstStateCost" and 
         "SecondStageCost" expression that are used to build an objective 
@@ -600,6 +600,24 @@ class Estimator(object):
         retval = totobj / len(self._numbers_list) # -1??
         return retval, thetavals, WorstStatus
 
+    def _get_sample_list(self, N, samplesize, replacement=True):
+        
+        samplelist = list()
+        for i in range(N):
+            j = unique_samples = 0
+            while unique_samples <= len(self.theta_names):
+                sample = np.random.choice(self._numbers_list,
+                                            samplesize,
+                                            replace=replacement)
+                unique_samples = len(np.unique(sample))
+                j += 1
+                if j > N: # arbitrary timeout limit
+                    raise RuntimeError("""Internal error: timeout constructing 
+                                       a sample, the dim of theta may be too 
+                                       close to the samplesize""")
+            samplelist.append((i, sample))
+        
+        return samplelist
     
     def theta_est(self, solver="ef_ipopt", bootlist=None): 
         """
@@ -623,27 +641,29 @@ class Estimator(object):
         return self._Q_opt(solver=solver, bootlist=bootlist)
     
     
-    def theta_est_bootstrap(self, N, samplesize=None, replacement=True, seed=None, return_samples=False):
+    def theta_est_bootstrap(self, bootstrap_samples, samplesize=None, 
+                            replacement=True, seed=None, return_samples=False):
         """
-        Run parameter estimation using N bootstap samples
+        Run parameter estimation using N bootstrap samples
 
         Parameters
         ----------
-        N: int
+        bootstrap_samples: int
             Number of bootstrap samples to draw from the data
         samplesize: int or None, optional
-            Sample size, if None samplesize will be set to the number of experiments
+            Size of each bootstrap sample. If None, samplesize will be 
+			set to the number of samples in the data
         replacement: bool, optional
             Sample with or without replacement
         seed: int or None, optional
-            Set the random seed
+            Random seed
         return_samples: bool, optional
             Return a list of sample numbers used in each bootstrap estimation
         
         Returns
         -------
         bootstrap_theta: DataFrame 
-            Theta values for each bootstrap sample and (if return_samples = True) 
+            Theta values for each sample and (if return_samples = True) 
             the sample numbers used in each estimation
         """
         if samplesize is None:
@@ -651,32 +671,20 @@ class Estimator(object):
         
         if seed is not None:
             np.random.seed(seed)
-            
-        global_bootlist = list()
-        for i in range(N):
-            j = unique_samples = 0
-            while unique_samples <= len(self.theta_names):
-                bootlist = np.random.choice(self._numbers_list,
-                                            samplesize,
-                                            replace=replacement)
-                unique_samples = len(np.unique(bootlist))
-                j += 1
-                if j > N: # arbitrary timeout limit
-                    raise RuntimeError("Internal error: timeout in bootstrap"+\
-                                    " constructing a sample; possible hint:"+\
-                                    " the dim of theta may be too close to N")
-            global_bootlist.append((i, bootlist))
         
-        task_mgr = mpiu.ParallelTaskManager(N)
-        local_bootlist = task_mgr.global_to_local_data(global_bootlist)
+        global_list = self._get_sample_list(bootstrap_samples, samplesize, 
+                                            replacement)
+
+        task_mgr = mpiu.ParallelTaskManager(bootstrap_samples)
+        local_list = task_mgr.global_to_local_data(global_list)
 
         # Reset numbers_list
         self._numbers_list =  list(range(samplesize))
         
         bootstrap_theta = list()
-        for idx, bootlist in local_bootlist:
-            objval, thetavals = self.theta_est(bootlist=bootlist)
-            thetavals['samples'] = bootlist
+        for idx, sample in local_list:
+            objval, thetavals = self.theta_est(bootlist=sample)
+            thetavals['samples'] = sample
             bootstrap_theta.append(thetavals)
         
         # Reset numbers_list (back to original)
@@ -691,17 +699,19 @@ class Estimator(object):
         return bootstrap_theta
     
     
-    def theta_est_leaveNout(self, N, seed=None, return_samples=False):
+    def theta_est_leaveNout(self, lNo, lNo_samples=None, seed=None, return_samples=False):
         """
-        Run parameter estimation using all sample combinations where N data 
-        points are left out
+        Run parameter estimation where N data points are left out
 
         Parameters
         ----------
-        N: int
-            Number of data points to leave out during esimation
+        lNo: int
+            Number of data points to leave out during estimation
+        lNo_samples: int
+            Size of each sample. If None, samplesize will be 
+			set to the maximum number of combinations
         seed: int or None, optional
-            Set the random seed
+            Random seed
         return_samples: bool, optional
             Return a list of sample numbers used in each estimation
         
@@ -711,25 +721,29 @@ class Estimator(object):
             Theta values for each sample and (if return_samples = True) 
             the sample numbers used in each estimation
         """
-        samplesize = len(self._numbers_list) - N
-        
+        samplesize = len(self._numbers_list)-lNo
+
+        if lNo_samples is None:
+            n = len(self._numbers_list)
+            lNo_samples = int(np.math.factorial(n)/
+                              (np.math.factorial(lNo)*np.math.factorial(n-lNo)))
+
         if seed is not None:
             np.random.seed(seed)
         
-        global_bootlist = list()
-        for i, bootlist in enumerate(combinations(self._numbers_list, samplesize)):
-            global_bootlist.append((i, list(bootlist)))
-        
-        task_mgr = mpiu.ParallelTaskManager(len(global_bootlist))
-        local_bootlist = task_mgr.global_to_local_data(global_bootlist)
+        global_list = self._get_sample_list(lNo_samples, samplesize, 
+                                            replacement=False)
+            
+        task_mgr = mpiu.ParallelTaskManager(len(global_list))
+        local_bootlist = task_mgr.global_to_local_data(global_list)
         
         # Reset numbers_list
-        self._numbers_list =  list(range(len(self.callback_data) - N))
+        self._numbers_list =  list(range(samplesize))
         
         lNo_theta = list()
-        for idx, bootlist in local_bootlist:
-            objval, thetavals = self.theta_est(bootlist=bootlist)
-            thetavals['samples'] = bootlist
+        for idx, sample in local_bootlist:
+            objval, thetavals = self.theta_est(bootlist=sample)
+            thetavals['samples'] = sample
             lNo_theta.append(thetavals)
         
         # Reset numbers_list (back to original)
@@ -744,69 +758,73 @@ class Estimator(object):
         return lNo_theta
     
     
-    def leaveNout_bootstrap_analysis(self, lNo_N, bootstrap_N, distribution, 
-                                     alphas, num_trails=None, **kwargs):
+    def leaveNout_bootstrap_analysis(self, lNo, lNo_samples, bootstrap_samples, 
+                                     distribution, alphas):
         """
         Run a leaveNout-bootstrap analysis.  This analysis compares a theta_est 
-        using lNo_N data points to a boostrap analysis using the remainder of the 
-        data.  Results indicate if the lNo_N data point is inside or 
-        outside a confidence region for each value of alpha
+        using lNo data points to a bootstrap analysis using the remainder of the 
+        data.  Results indicate if the estimate using lNo data points is inside or 
+        outside a confidence region for each value of alpha.
 
         Parameters
         ----------
-        lNo_N: int
-            Number of data points to leave out during esimation
-            
-        bootstrap_N: int
-            Number of bootstrap samples to draw from the data
-            
+        lNo: int
+            Number of data points to leave out during estimation
+        lNo_samples: int
+            Leave N out sample size
+        bootstrap_samples: int:
+            Bootstrap sample size
         distribution: string
-            Statistical distribution used for the confidence region,  
+            Statistical distribution used to define a confidence region,  
             options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, 
             and 'Rect' for rectangular.
-        
         alphas: list
             List of alpha values used to determine if theta values are inside 
             or outside the region.
-        
-        num_trails: int or None, optional
             
+        Returns
+        ----------
+        List of tuples with one entry per lNo_sample:
+            
+        * The first item in each tuple is the list of N samples that are left out.
+        * The second item in each tuple is a DataFrame of theta estimated using 
+          the N samples.
+        * The third item in each tuple is a DataFrame containing results from the 
+          bootstrap analysis using the remaining samples.
+        
+        For each DataFrame a column is added for each value of alpha which 
+        indicates if the theta estimate is in (True) or out (False) of the 
+        alpha region for a given distribution (based on the bootstrap results)
         """
-        from random import sample
         
-        combos = list(combinations(self._numbers_list, lNo_N))
-        
-        if num_trails is None:
-            num_trails = len(combos)
-            
         data = self.callback_data.copy()
-        
-        samplesize = kwargs.pop('samplesize', None)
-        replacement = kwargs.pop('replacement', True)
-        seed = kwargs.pop('seed', None)
-        return_samples = kwargs.pop('return_samples', False)
+
+        results = []
+        for i in range(lNo_samples):
             
-        results = {}
-        for leaveout in sample(combos, num_trails):
-            leaveout = list(leaveout)
-            self.callback_data = data.loc[leaveout,:]
+            lNo_sample = np.random.choice(data.index, lNo, replace=False)
+            lNo_sample = np.sort(lNo_sample)
+            
+            # Reset callback_data and numbers_list
+            self.callback_data = data.loc[lNo_sample,:] 
             self._numbers_list = self.callback_data.index
             obj, theta = self.theta_est()
             
-            self.callback_data = data.drop(index=leaveout)
+            # Reset callback_data and numbers_list
+            self.callback_data = data.drop(index=lNo_sample)
             self._numbers_list = self.callback_data.index
+            bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples)
             
-            bootstrap_theta = self.theta_est_bootstrap(bootstrap_N, samplesize, 
-                                        replacement, seed, return_samples)
-            
-            training, test = self.confidence_region_test(bootstrap_theta, 
+            training, test = self.confidence_region_test(bootstrap_theta[self.theta_names], 
                                     distribution=distribution, alphas=alphas, 
                                     test_theta_values=theta)
+                
+            results.append((lNo_sample, test, training))
         
-            results[str(leaveout)] = {
-                    'bootstrap_theta_lNo': training,
-                    'theta_N': test}
-
+        # Reset callback_data and numbers_list (back to original)
+        self.callback_data = data
+        self._numbers_list = self.callback_data.index
+        
         return results
     
     
@@ -898,16 +916,13 @@ class Estimator(object):
         theta_values: DataFrame, columns = theta_names
             Theta values used to generate a confidence region 
             (generally returned by theta_est_bootstrap)
-            
         distribution: string
-            Statistical distribution used for the confidence region,  
+            Statistical distribution used to define a confidence region,  
             options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, 
             and 'Rect' for rectangular.
-        
         alphas: list
             List of alpha values used to determine if theta values are inside 
             or outside the region.
-        
         test_theta_values: dictionary or DataFrame, keys/columns = theta_names, optional
             Additional theta values that are compared to the confidence region
             to determine if they are inside or outside.
@@ -917,7 +932,6 @@ class Estimator(object):
         training_results: DataFrame 
             Theta value used to generate the confidence region along with True 
             (inside) or False (outside) for each alpha
-        
         test_results: DataFrame 
             If test_theta_values is not None, returns test theta value along 
             with True (inside) or False (outside) for each alpha
@@ -948,7 +962,7 @@ class Estimator(object):
                 dist = stats.multivariate_normal(theta_values.mean(), 
                                             theta_values.cov(), allow_singular=True)
                 Z = dist.pdf(theta_values)
-                score = stats.scoreatpercentile(Z.transpose(), (1-a)*100) 
+                score = stats.scoreatpercentile(Z, (1-a)*100) 
                 training_results[a] = (Z >= score)
                 
                 if test_theta_values is not None:
