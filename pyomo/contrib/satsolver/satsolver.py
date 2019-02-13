@@ -22,9 +22,16 @@ from pyomo.environ import SymbolMap,NumericLabeler,Var, Constraint
 
 class SMTSatSolver(object):
     """
-    Satisfiability solver that checks constraint feasibility
+    Satisfiability solver that checks constraint feasibility through use of
+    z3 Sat Solver. Object stores expressions and variables in form consistent
+    with SMT-LIB standard.
+    For documentation on SMT-LIB standard see
+    http://smtlib.cs.uiowa.edu/
     """
     def __str__(self):
+        """
+        Defined string representation of object
+        """
         string = ""
         string = string + "Variables:\n"
         for v in self.variable_list:
@@ -46,13 +53,19 @@ class SMTSatSolver(object):
         self.solver = z3.Solver()
         if model is not None:
             self._process_model(model)
+
+    #Set up functions to be added to beginning of string
     def _get_default_functions(self):
         self.prefix_expr_list.append("(define-fun exp ((x Real)) Real (^ 2.718281828459045 x))")
+
+    #processes pyomo model into SMT model
     def _process_model(self,model):
         for v in model.component_data_objects(ctype = Var, descend_into=True):
             smtstring = self.add_var(v)
         for c in model.component_data_objects(ctype = Constraint):
             self.add_expr(c.expr)
+
+    #define bound constraints
     def _add_bound(self,var):
         nm = self.variable_label_map.getSymbol(var)
         lb = var.lb
@@ -61,6 +74,7 @@ class SMTSatSolver(object):
             self.bounds_list.append ("(assert (>= " + nm + " " + str(lb)+"))")
         if ub is not None:
             self.bounds_list.append ("(assert (<= " + nm + " " + str(ub)+"))")
+    #define variables
     def add_var(self,var):
         label = self.variable_label_map.getSymbol(var)
         domain = type(var.domain)
@@ -74,9 +88,13 @@ class SMTSatSolver(object):
             self.variable_list.append("(declare-fun "+ label + "() Bool)")
         else:
             raise NotImplementedError("SMT cannot handle" + str(domain) + "variables")
+
+    #Defines SMT expression from pyomo expression
     def add_expr(self,expression):
         smtexpr = self.walker.walk_expression(expression)
         self.expression_list.append ("(assert " +smtexpr+")")
+
+    #Checks Satisfiability of model
     def check(self):
         prefix_string = ''.join(self.prefix_expr_list)
         variable_string = ''.join(self.variable_list)
@@ -91,7 +109,7 @@ class SMT_visitor(EXPR.StreamBasedExpressionVisitor):
     """Creates an SMT expression from the corresponding Pyomo expression.
 
     This class walks a pyomo expression tree and builds up the corresponding
-    SMT string
+    SMT string representation of an equivalent expression
 
     """
 
