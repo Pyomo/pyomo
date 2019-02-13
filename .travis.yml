@@ -58,6 +58,8 @@ install:
   - ${DOC} git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
  # Install PyUtilib (master branch)
   - ${DOC} pip install --quiet git+https://github.com/PyUtilib/pyutilib
+ # Install z3 Satisfiability solver
+  - ${DOC} pip install --quiet z3-solver
  # Install this package
   - ${DOC} python setup.py develop
  # Finish setting up coverage tracking for subprocesses
@@ -84,7 +86,7 @@ script:
   - ${DOC} bash -c 'echo GJH_ASL_JSON_VERSION="$GJH_ASL_JSON_VERSION"'
   - ${DOC} pip list
   - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
- 
+
  # Run documentation tests
   - |
     if [ -z "$SLIM" ]; then
