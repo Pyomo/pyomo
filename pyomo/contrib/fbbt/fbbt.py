@@ -9,6 +9,9 @@ import pyomo.contrib.fbbt.interval as interval
 import math
 from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
+import logging
+
+logger = logging.getLogger(__name__)
 
 if not hasattr(math, 'inf'):
     math.inf = float('inf')
@@ -672,7 +675,7 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
         if node.__class__ in _prop_bnds_leaf_to_root_map:
             _prop_bnds_leaf_to_root_map[node.__class__](node, self.bnds_dict)
         else:
-            raise FBBTException('Unsupported expression type for FBBT: {0}'.format(type(node)))
+            self.bnds_dict[node] = (-math.inf, math.inf)
         return None
 
     def visiting_potential_leaf(self, node):
@@ -738,7 +741,9 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         if node.__class__ in _prop_bnds_root_to_leaf_map:
             _prop_bnds_root_to_leaf_map[node.__class__](node, self.bnds_dict)
         else:
-            raise FBBTException('Unsupported expression type for FBBT: {0}'.format(type(node)))
+            logger.warning('Unsupported expression type for FBBT: {0}. Bounds will not be improved in this part of '
+                           'the tree.'
+                           ''.format(type(node)))
 
         return False, None
 
