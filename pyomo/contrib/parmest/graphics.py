@@ -190,15 +190,20 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     Parameters
     ----------
     theta_values: DataFrame, columns = variable names and (optionally) 'obj' and alpha values
-        Theta values and (optionally) an objective value and results from the 
-        likelihood ratio test
+        Theta values and (optionally) an objective value and results from 
+        leaveNout_bootstrap_analysis, likelihood_ratio_test, or 
+        confidence_region_test
     theta_star: dict, keys = variable names, optional
         Theta* (or other individual values of theta, also used to 
         slice higher dimensional contour intervals in 2D)
     alpha: float, optional
-        Confidence interval value
+        Confidence interval value, if an alpha value is given and the 
+        distributions list is empty, the data will be filtered by True/False 
+        values using the column name whos value equals alpha (see results from
+        leaveNout_bootstrap_analysis, likelihood_ratio_test, or 
+        confidence_region_test)
     distributions: list of strings, optional
-        Statistical distribution used for confidence intervals,  
+        Statistical distribution used used to define a confidence region, 
         options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, and 
         'Rect' for rectangular.
 		Confidence interval is a 2D slice, using linear interpolation at theta*.
@@ -233,12 +238,14 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     theta_names = [col for col in theta_values.columns if (col not in ['obj']) 
                         and (not isinstance(col, float)) and (not isinstance(col, int))]
     
-    filter_data_by_alpha = False
-    if (alpha is not None) and (alpha in theta_values.columns):
-        filter_data_by_alpha = True
+    # Filter data by alpha
+    if (alpha in theta_values.columns) and (len(distributions) == 0):
         thetas = theta_values.loc[theta_values[alpha] == True, theta_names]
     else:
         thetas = theta_values[theta_names]
+    
+    if theta_star is not None:
+        theta_star = theta_star[theta_names]
     
     legend_elements = []
     
@@ -269,11 +276,9 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     if (alpha is not None) and (len(distributions) > 0):
         
         if theta_star is None:
-            print('theta* not defined, condifence interval slice is at mean value of theta')
+            print("""theta_star is not defined, confidence region slice will be 
+                  plotted at the mean value of theta""")
             theta_star = thetas.mean()
-            
-        if filter_data_by_alpha:
-            alpha = 1 # Data is already filtered by alpha
         
         mvn_dist = None
         kde_dist = None
@@ -324,5 +329,37 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         plt.savefig(filename)
         plt.close()
     
+    # Work in progress
+    # Plot lower triangle graphics in separate figures, useful for presentations
+    lower_triangle_only = False
+    if lower_triangle_only:
+        for ax in g.axes.flatten():
+            xvar, yvar, (xloc, yloc) = _get_variables(ax, theta_names)
+            if xloc < yloc: # lower triangle
+                ax.remove()
+                
+                ax.set_xlabel(xvar)
+                ax.set_ylabel(yvar)
+                
+                fig = plt.figure()
+                ax.figure=fig
+                fig.axes.append(ax)
+                fig.add_axes(ax)
+                
+                f, dummy = plt.subplots()
+                bbox = dummy.get_position()
+                ax.set_position(bbox) 
+                dummy.remove()
+                plt.close(f)
+
+                ax.tick_params(reset=True)
+                
+                if add_legend:
+                    ax.legend(handles=legend_elements, loc='best', prop={'size': 8})
+                
+        plt.close(g.fig)
+    
+    plt.show()
+
     if return_scipy_distributions:
         return mvn_dist, kde_dist
