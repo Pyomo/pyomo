@@ -62,7 +62,7 @@ class SMTSatSolver(object):
     def _process_model(self,model):
         for v in model.component_data_objects(ctype = Var, descend_into=True):
             smtstring = self.add_var(v)
-        for c in model.component_data_objects(ctype = Constraint):
+        for c in model.component_data_objects(ctype = Constraint, active = True):
             self.add_expr(c.expr)
 
     #define bound constraints

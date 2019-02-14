@@ -95,5 +95,19 @@ class SatSolverTests(unittest.TestCase):
         smt_model = SMTSatSolver(model = m)
         self.assertTrue(str(smt_model.check()) =="unsat")
 
+    def test_inactive_constraints(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c1 = Constraint(expr= m.x==1 )
+        m.c2 = Constraint(expr= m.x==2 )
+        m.o = Objective(expr=m.x)
+        smt_model = SMTSatSolver(model = m)
+        self.assertTrue(str(smt_model.check()) =="unsat")
+        m.c2.deactivate()
+        smt_model = SMTSatSolver(model = m)
+        self.assertTrue(str(smt_model.check()) =="sat")
+
+
+
 if __name__ == '__main__':
     unittest.main()
