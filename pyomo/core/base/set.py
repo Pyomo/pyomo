@@ -153,6 +153,7 @@ class _ClosedNumericRange(object):
     """
     __slots__ = ('start','end','step')
     _EPS = 1e-15
+    _types_comparable_to_int = {int,}
 
     def __init__(self, start, end, step):
         if int(step) != step:
@@ -239,11 +240,14 @@ class _ClosedNumericRange(object):
 
     def __contains__(self, value):
         # NumericRanges must hold items that are comparable to ints
-        try:
-            if value.__class__(0) != 0:
+        if value.__class__ not in self._types_comparable_to_int:
+            try:
+                if value.__class__(0) != 0:
+                    return False
+                else:
+                    self._types_comparable_to_int.add(value.__class__)
+            except:
                 return False
-        except:
-            return False
 
         if self.step:
             _dir = copysign(1, self.step)
