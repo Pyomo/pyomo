@@ -230,7 +230,8 @@ class _ClosedNumericRange(object):
     __repr__ = __str__
 
     def __eq__(self, other):
-        assert type(other) is _ClosedNumericRange
+        if type(other) is not _ClosedNumericRange:
+            return False
         return self.start == other.start \
             and self.end == other.end \
             and self.step == other.step
@@ -307,6 +308,11 @@ class _ClosedNumericRange(object):
             and (self.step != 0 or self.start == self.end)
 
     def isdisjoint(self, other):
+        if not isinstance(other, _ClosedNumericRange):
+            # It is easier to just use _NonNumericRange/_AnyRange's
+            # implementation
+            return other.isdisjoint(self)
+
         # First, do a simple sanity check on the endpoints
         s1, e1 = self.start, self.end
         if self.step < 0:
@@ -319,6 +325,12 @@ class _ClosedNumericRange(object):
             return True
         # Now, check continuous sets
         if not self.step or not other.step:
+            # Check the case of scalar values
+            if self.start == self.end:
+                return self.start not in other
+            elif other.start == other.end:
+                return other.start not in self
+
             # We now need to check a continuous set is a subset of a discrete
             # set and the continuous set sits between discrete points
             if self.step:
@@ -362,6 +374,14 @@ class _ClosedNumericRange(object):
         return True
 
     def issubset(self, other):
+        if not isinstance(other, _ClosedNumericRange):
+            if type(other) is _AnyRange:
+                return True
+            elif type(other) is _NonNumericRange:
+                return False
+            else:
+                raise ValueError("Unknown range type, %s" % (type(other),))
+
         # First, do a simple sanity check on the endpoints
         s1, e1 = self.start, self.end
         if self.step < 0:
@@ -386,9 +406,12 @@ class _ClosedNumericRange(object):
         if other.step == 0:
             return True
         # If other is discrete and self is continuous, then self can't be a
-        # subset
+        # subset unless self is a scalar and is in other
         elif self.step == 0:
-            return False
+            if self.start == self.end:
+                return self.start in other
+            else:
+                return False
         # At this point, both sets are discrete.  Self's period must be a
         # positive integer multiple of other's ...
         EPS = _ClosedNumericRange._EPS
@@ -528,7 +551,18 @@ class _ClosedNumericRange(object):
                 An iterable of other range objects to subtract from this range
 
         """
-        other_ranges = list(other_ranges)
+        _cnr_other_ranges = []
+        for r in other_ranges:
+            if isinstance(r, _ClosedNumericRange):
+                _cnr_other_ranges.append(r)
+            elif type(r) is _AnyRange:
+                return []
+            elif type(r) is _NonNumericRange:
+                continue
+            else:
+                raise ValueError("Unknown range type, %s" % (type(r),))
+        other_ranges = _cnr_other_ranges
+
         # Find the Least Common Multiple of all the range steps.  We
         # will split discrete ranges into separate ranges with this step
         # so that we can more easily compare them.
@@ -604,7 +638,18 @@ class _ClosedNumericRange(object):
                 An iterable of other range objects to intersect with this range
 
         """
-        other_ranges = list(other_ranges)
+        _cnr_other_ranges = []
+        for r in other_ranges:
+            if isinstance(r, _ClosedNumericRange):
+                _cnr_other_ranges.append(r)
+            elif type(r) is _AnyRange:
+                return [self]
+            elif type(r) is _NonNumericRange:
+                continue
+            else:
+                raise ValueError("Unknown range type, %s" % (type(r),))
+        other_ranges = _cnr_other_ranges
+
         # Find the Least Common Multiple of all the range steps.  We
         # will split discrete ranges into separate ranges with this step
         # so that we can more easily compare them.
@@ -655,6 +700,52 @@ class _ClosedNumericRange(object):
         return ans
 
 
+class _NonNumericRange(object):
+    """A range-like object for representing a single non-numeric value
+
+    The class name is a bit of a misnomer, as this object does not
+    represent a range but rather a single value.  However, as it
+    duplicates the Range API (as used by
+    :py:class:`_ClosedNumericRange`), it is called a "Range".
+
+    """
+
+    def __init__(self, val):
+        self.value = val
+
+    def __str__(self):
+        return "{%s}" % self.value
+
+    __repr__ = __str__
+
+    def __eq__(self, other):
+        return isinstance(other, _NonNumericRange) and other.value == self.value
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __contains__(self, value):
+        return value == self.value
+
+    def isdisjoint(self, other):
+        return self.value not in other
+
+    def issubset(self, other):
+        return self.value in other
+
+    def range_difference(self, other):
+        if self.value in other:
+            return []
+        else:
+            return [self]
+
+    def range_intersection(self, other):
+        if self.value in other:
+            return [self]
+        else:
+            return []
+
+
 class _AnyRange(object):
     """A range object for representing Any sets"""
 
@@ -665,6 +756,8 @@ class _AnyRange(object):
 
     def __str__(self):
         return "[*]"
+
+    __repr__ = __str__
 
     def __eq__(self, other):
         return isinstance(other, _AnyRange)
@@ -1753,7 +1846,7 @@ class _FiniteRangeSetData( _SortedSetMixin,
             % (item, self.name))
 
     def ranges(self):
-        return self._ranges
+        return iter(self._ranges)
 
     def bounds(self):
         return _InfiniteRangeSetData.bounds(self)

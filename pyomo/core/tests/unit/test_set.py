@@ -14,7 +14,7 @@ from six import StringIO
 import pyutilib.th as unittest
 
 from pyomo.core.base.set import (
-    _ClosedNumericRange as CNR, _AnyRange, _AnySet,
+    _ClosedNumericRange as CNR, _NonNumericRange as NNR, _AnyRange, _AnySet,
     Any, Reals, NonNegativeReals, Integers, PositiveIntegers,
     RangeSet, Set, SetOf
 )
@@ -27,7 +27,7 @@ except ImportError:
     numpy_available = False
 
 
-class TestNumericRange(unittest.TestCase):
+class TestClosedNumericRange(unittest.TestCase):
     def test_init(self):
         a = CNR(None, None, 0)
         self.assertIsNone(a.start)
@@ -992,6 +992,13 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(SetOf([(1,2),(2,3),(4,5)]).dimen, 2)
         self.assertEqual(SetOf([1,(2,3)]).dimen, None)
 
+        a = [1,2,3]
+        SetOf_a = SetOf(a)
+        self.assertEqual(SetOf_a.dimen, 1)
+        a.append((1,2))
+        self.assertEqual(SetOf_a.dimen, None)
+
+
     def test_range_iter(self):
         i = RangeSet(0,10,2)
         self.assertEqual(tuple(i), (0,2,4,6,8,10))
@@ -1005,6 +1012,9 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         i = RangeSet(ranges=(CNR(0,10,2),CNR(10,0,-2)))
         self.assertEqual(tuple(i), (0,2,4,6,8,10))
 
+        i = RangeSet(ranges=(CNR(0,10,2),CNR(9,0,-2)))
+        self.assertEqual(tuple(i), (0,1,2,3,4,5,6,7,8,9,10))
+
         i = RangeSet(ranges=(CNR(0,10,2),CNR(1,10,2)))
         self.assertEqual(tuple(i), tuple(range(11)))
 
@@ -1013,3 +1023,79 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         i = RangeSet(ranges=(CNR(0,0,0),CNR(3,3,0),CNR(2,2,0)))
         self.assertEqual(tuple(i), (0,2,3))
+
+    def test_mixed_ranges(self):
+        i = RangeSet(0,10,2)
+        j = SetOf([0,1,2,'a'])
+        k = Any
+
+        ir = list(i.ranges())
+        self.assertEqual(ir, [CNR(0,10,2)])
+        self.assertEqual(str(ir), "[[0:10:2]]")
+        jr = list(j.ranges())
+        self.assertEqual(jr, [CNR(0,0,0), CNR(1,1,0), CNR(2,2,0), NNR('a')])
+        self.assertEqual(str(jr), "[[0], [1], [2], {a}]")
+        kr = list(k.ranges())
+        self.assertEqual(kr, [_AnyRange()])
+        self.assertEqual(str(kr), "[[*]]")
+
+        self.assertFalse(ir[0].isdisjoint(ir[0]))
+        self.assertFalse(ir[0].isdisjoint(jr[0]))
+        self.assertTrue(ir[0].isdisjoint(jr[1]))
+        self.assertTrue(ir[0].isdisjoint(jr[3]))
+        self.assertFalse(ir[0].isdisjoint(kr[0]))
+
+        self.assertFalse(jr[0].isdisjoint(ir[0]))
+        self.assertFalse(jr[0].isdisjoint(jr[0]))
+        self.assertTrue(jr[0].isdisjoint(jr[1]))
+        self.assertTrue(jr[0].isdisjoint(jr[3]))
+        self.assertFalse(jr[0].isdisjoint(kr[0]))
+
+        self.assertTrue(jr[1].isdisjoint(ir[0]))
+        self.assertTrue(jr[1].isdisjoint(jr[0]))
+        self.assertFalse(jr[1].isdisjoint(jr[1]))
+        self.assertTrue(jr[1].isdisjoint(jr[3]))
+        self.assertFalse(jr[1].isdisjoint(kr[0]))
+
+        self.assertTrue(jr[3].isdisjoint(ir[0]))
+        self.assertTrue(jr[3].isdisjoint(jr[0]))
+        self.assertTrue(jr[3].isdisjoint(jr[1]))
+        self.assertFalse(jr[3].isdisjoint(jr[3]))
+        self.assertFalse(jr[3].isdisjoint(kr[0]))
+
+        self.assertFalse(kr[0].isdisjoint(ir[0]))
+        self.assertFalse(kr[0].isdisjoint(jr[0]))
+        self.assertFalse(kr[0].isdisjoint(jr[1]))
+        self.assertFalse(kr[0].isdisjoint(jr[3]))
+        self.assertFalse(kr[0].isdisjoint(kr[0]))
+        #
+        #
+        self.assertTrue(ir[0].issubset(ir[0]))
+        self.assertFalse(ir[0].issubset(jr[0]))
+        self.assertFalse(ir[0].issubset(jr[1]))
+        self.assertFalse(ir[0].issubset(jr[3]))
+        self.assertTrue(ir[0].issubset(kr[0]))
+
+        self.assertTrue(jr[0].issubset(ir[0]))
+        self.assertTrue(jr[0].issubset(jr[0]))
+        self.assertFalse(jr[0].issubset(jr[1]))
+        self.assertFalse(jr[0].issubset(jr[3]))
+        self.assertTrue(jr[0].issubset(kr[0]))
+
+        self.assertFalse(jr[1].issubset(ir[0]))
+        self.assertFalse(jr[1].issubset(jr[0]))
+        self.assertTrue(jr[1].issubset(jr[1]))
+        self.assertFalse(jr[1].issubset(jr[3]))
+        self.assertTrue(jr[1].issubset(kr[0]))
+
+        self.assertFalse(jr[3].issubset(ir[0]))
+        self.assertFalse(jr[3].issubset(jr[0]))
+        self.assertFalse(jr[3].issubset(jr[1]))
+        self.assertTrue(jr[3].issubset(jr[3]))
+        self.assertTrue(jr[3].issubset(kr[0]))
+
+        self.assertFalse(kr[0].issubset(ir[0]))
+        self.assertFalse(kr[0].issubset(jr[0]))
+        self.assertFalse(kr[0].issubset(jr[1]))
+        self.assertFalse(kr[0].issubset(jr[3]))
+        self.assertTrue(kr[0].issubset(kr[0]))
