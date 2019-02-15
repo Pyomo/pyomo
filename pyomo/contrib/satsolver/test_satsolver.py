@@ -3,11 +3,14 @@ import logging
 from six import StringIO
 from six.moves import range
 import pyutilib.th as unittest
+from os.path import abspath, dirname, join, normpath
 from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.satsolver.satsolver import SMTSatSolver
 from pyomo.environ import *
+from pyutilib.misc import import_file
 from pyomo.gdp import Disjunct, Disjunction
-
+currdir = dirname(abspath(__file__))
+exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))
 class SatSolverTests(unittest.TestCase):
 
     def test_simple_sat_model(self):
@@ -195,6 +198,37 @@ class SatSolverTests(unittest.TestCase):
         m.djn2 = Disjunction(expr=[m.z1,m.z2])
         smt_model = SMTSatSolver(model = m)
         self.assertTrue(str(smt_model.check()) =="sat")
+
+    def test_LBB_8PP(self):
+        """Test the logic-based branch and bound algorithm."""
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        smt_model = SMTSatSolver(model = eight_process)
+        self.assertTrue(str(smt_model.check()) =="sat")
+
+    def test_LBB_strip_pack(self):
+        """Test logic-based branch and bound with strip packing."""
+        exfile = import_file(
+            join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
+        strip_pack = exfile.build_rect_strip_packing_model()
+        smt_model = SMTSatSolver(model = strip_pack)
+        self.assertTrue(str(smt_model.check()) =="sat")
+
+    def test_LBB_constrained_layout(self):
+        """Test LBB with constrained layout."""
+        exfile = import_file(
+            join(exdir, 'constrained_layout', 'cons_layout_model.py'))
+        cons_layout = exfile.build_constrained_layout_model()
+        smt_model = SMTSatSolver(model = cons_layout)
+        self.assertTrue(str(smt_model.check()) =="sat")
+
+    def test_LBB_ex_633_trespalacios(self):
+        """Test LBB with Francisco thesis example."""
+        exfile = import_file(join(exdir, 'small_lit', 'ex_633_trespalacios.py'))
+        model = exfile.build_simple_nonconvex_gdp()
+        smt_model = SMTSatSolver(model = model)
+        self.assertFalse(str(smt_model.check()) =="unsat")
 
 
 
