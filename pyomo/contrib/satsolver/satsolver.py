@@ -98,7 +98,8 @@ class SMTSatSolver(object):
             self.variable_list.append("(declare-fun "+ label + "() Int)\n")
             self._add_bound(var)
         elif domain is BooleanSet:
-            self.variable_list.append("(declare-fun "+ label + "() Bool)\n")
+            self.variable_list.append("(declare-fun "+ label + "() Int)\n")
+            self._add_bound(var)
         else:
             raise NotImplementedError("SMT cannot handle" + str(domain) + "variables")
 
@@ -114,23 +115,23 @@ class SMTSatSolver(object):
             cons_string = "true"
             for c in disj[1]:
                 cons_string = "(and " + cons_string +" "+ c + ")"
-            djn_string = djn_string + "(assert (=> " + disj[0] + " " + cons_string +"))\n"
+            djn_string = djn_string + "(assert (=> ( = 1 " + disj[0] + ") " + cons_string +"))\n"
         return djn_string
 
     #converts disjunction to internal class storage
     def _process_disjunction(self,djn):
-        xor_expr = "false"
+        xor_expr = "0"
         disjuncts = []
         for disj in djn.disjuncts:
             constraints = []
             iv = disj.indicator_var
             self.add_var(iv)
             label = self.variable_label_map.getSymbol(iv)
-            xor_expr = "(xor "+xor_expr+" "+ label +")"
+            xor_expr = "(+ "+xor_expr+" "+ label +")"
             for c in disj.component_data_objects(ctype = Constraint, active = True):
                 constraints.append(self.walker.walk_expression(c.expr))
             disjuncts.append((label,constraints))
-        xor_expr = "(assert " + xor_expr + ")\n"
+        xor_expr = "(assert (= 1 " + xor_expr + "))\n"
         self.disjunctions_list.append((xor_expr,disjuncts))
 
     def get_SMT_string(self):

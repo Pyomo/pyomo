@@ -205,7 +205,7 @@ class SatSolverTests(unittest.TestCase):
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
         smt_model = SMTSatSolver(model = eight_process)
-        self.assertTrue(str(smt_model.check()) =="sat")
+        self.assertFalse(str(smt_model.check()) =="unsat")
 
     def test_LBB_strip_pack(self):
         """Test logic-based branch and bound with strip packing."""
@@ -221,7 +221,7 @@ class SatSolverTests(unittest.TestCase):
             join(exdir, 'constrained_layout', 'cons_layout_model.py'))
         cons_layout = exfile.build_constrained_layout_model()
         smt_model = SMTSatSolver(model = cons_layout)
-        self.assertTrue(str(smt_model.check()) =="sat")
+        self.assertFalse(str(smt_model.check()) =="unsat")
 
     def test_LBB_ex_633_trespalacios(self):
         """Test LBB with Francisco thesis example."""
