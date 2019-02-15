@@ -66,12 +66,14 @@ class OneVarDisj(unittest.TestCase):
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_two_segment_cuts(self):
-        m = models.twoSegments_sawayaGrossmann()
+        m = models.twoSegments_SawayaGrossmann()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
-        # TODO: I need it to fail so I can see all my print statements...
-        self.assertFalse(True)
-        #set_trace()
+        # TODO: This adds no cuts... I don't know what I was thinking of testing
+        # really... I mean it exercises the sep problem obj = 0 termination
+        # criterion. I wish it found (0,0) first... It could. Which is why this
+        # is a bad test.
+        self.assertEqual(len(m._pyomo_gdp_cuttingplane_relaxation.cuts), 0)
 
 class TwoTermDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
