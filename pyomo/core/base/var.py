@@ -471,7 +471,7 @@ class Var(IndexedComponent):
             Defaults to (None, None).
         initialize (float or function, optional): The initial value for
             the variable, or a rule that returns initial values.
-        rule (function, optional): An alias for `rule`
+        rule (function, optional): An alias for `domain`
         dense (bool, optional): Instantiate all elements from
             `index_set()` when constructing the Var (True) or just the
             variables returned by `initialize`/`rule` (False).  Defaults
