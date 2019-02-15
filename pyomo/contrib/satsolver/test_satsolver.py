@@ -87,7 +87,6 @@ class SatSolverTests(unittest.TestCase):
         smt_model = SMTSatSolver(model = m)
         self.assertFalse(str(smt_model.check()) =="unsat")
 
-
     def test_abs_expressions(self):
         m = ConcreteModel()
         m.x = Var()
@@ -108,7 +107,22 @@ class SatSolverTests(unittest.TestCase):
         smt_model = SMTSatSolver(model = m)
         self.assertTrue(str(smt_model.check()) =="sat")
 
-    def test_disjunction_sat(self):
+    def test_disjunction_sat1(self):
+        m = ConcreteModel()
+        m.x1 = Var(bounds = (0,8))
+        m.x2 = Var(bounds = (0,8))
+        m.obj = Objective(expr=m.x1 + m.x2,sense = minimize)
+        m.y1 = Disjunct()
+        m.y2 = Disjunct()
+        m.y1.c1 = Constraint(expr = m.x1 >= 2)
+        m.y1.c2 = Constraint(expr = m.x2 >= 2)
+        m.y2.c1 = Constraint(expr = m.x1 >= 9)
+        m.y2.c2 = Constraint(expr = m.x2 >= 3)
+        m.djn = Disjunction(expr=[m.y1,m.y2])
+        smt_model = SMTSatSolver(model = m)
+        self.assertTrue(str(smt_model.check()) =="sat")
+
+    def test_disjunction_sat1(self):
         m = ConcreteModel()
         m.x1 = Var(bounds = (0,8))
         m.x2 = Var(bounds = (0,8))
@@ -138,6 +152,49 @@ class SatSolverTests(unittest.TestCase):
         smt_model = SMTSatSolver(model = m)
         self.assertTrue(str(smt_model.check()) =="unsat")
 
+    def test_multiple_disjunctions_unsat(self):
+        m = ConcreteModel()
+        m.x1 = Var(bounds = (0,8))
+        m.x2 = Var(bounds = (0,8))
+        m.obj = Objective(expr=m.x1 + m.x2,sense = minimize)
+        m.y1 = Disjunct()
+        m.y2 = Disjunct()
+        m.y1.c1 = Constraint(expr = m.x1 >= 2)
+        m.y1.c2 = Constraint(expr = m.x2 >= 2)
+        m.y2.c1 = Constraint(expr = m.x1 >= 2)
+        m.y2.c2 = Constraint(expr = m.x2 >= 2)
+        m.djn1 = Disjunction(expr=[m.y1,m.y2])
+        m.z1 = Disjunct()
+        m.z2 = Disjunct()
+        m.z1.c1 = Constraint(expr = m.x1 <= 1)
+        m.z1.c2 = Constraint(expr = m.x2 <= 1)
+        m.z2.c1 = Constraint(expr = m.x1 <= 1)
+        m.z2.c2 = Constraint(expr = m.x2 <= 1)
+        m.djn2 = Disjunction(expr=[m.z1,m.z2])
+        smt_model = SMTSatSolver(model = m)
+        self.assertTrue(str(smt_model.check()) =="unsat")
+
+    def test_multiple_disjunctions_sat(self):
+        m = ConcreteModel()
+        m.x1 = Var(bounds = (0,8))
+        m.x2 = Var(bounds = (0,8))
+        m.obj = Objective(expr=m.x1 + m.x2,sense = minimize)
+        m.y1 = Disjunct()
+        m.y2 = Disjunct()
+        m.y1.c1 = Constraint(expr = m.x1 >= 2)
+        m.y1.c2 = Constraint(expr = m.x2 >= 2)
+        m.y2.c1 = Constraint(expr = m.x1 >= 1)
+        m.y2.c2 = Constraint(expr = m.x2 >= 1)
+        m.djn1 = Disjunction(expr=[m.y1,m.y2])
+        m.z1 = Disjunct()
+        m.z2 = Disjunct()
+        m.z1.c1 = Constraint(expr = m.x1 <= 1)
+        m.z1.c2 = Constraint(expr = m.x2 <= 1)
+        m.z2.c1 = Constraint(expr = m.x1 <= 0)
+        m.z2.c2 = Constraint(expr = m.x2 <= 0)
+        m.djn2 = Disjunction(expr=[m.z1,m.z2])
+        smt_model = SMTSatSolver(model = m)
+        self.assertTrue(str(smt_model.check()) =="sat")
 
 
 
