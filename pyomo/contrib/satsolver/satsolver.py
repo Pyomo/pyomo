@@ -107,21 +107,7 @@ class SMTSatSolver(object):
         smtexpr = self.walker.walk_expression(expression)
         self.expression_list.append ("(assert " +smtexpr+")\n")
 
-    def get_SMT_string(self):
-        pass
-    #Checks Satisfiability of model
-    def check(self):
-        prefix_string = ''.join(self.prefix_expr_list)
-        variable_string = ''.join(self.variable_list)
-        bounds_string = ''.join(self.bounds_list)
-        expression_string = ''.join(self.expression_list)
-        disjunctions_string = ''.join([self._compute_disjunction_string(d) for d in self.disjunctions_list])
-        smtstring = prefix_string + variable_string +bounds_string + expression_string + disjunctions_string
-        self.solver.append(z3.parse_smt2_string(smtstring))
-        print smtstring
-        return self.solver.check()
-
-
+    #Computes the SMT Model for the disjunction from the internal class storage
     def _compute_disjunction_string(self,smt_djn):
         djn_string = smt_djn[0]
         for disj in smt_djn[1]:
@@ -130,6 +116,8 @@ class SMTSatSolver(object):
                 cons_string = "(and " + cons_string +" "+ c + ")"
             djn_string = djn_string + "(assert (=> " + disj[0] + " " + cons_string +"))\n"
         return djn_string
+
+    #converts disjunction to internal class storage
     def _process_disjunction(self,djn):
         xor_expr = "false"
         disjuncts = []
@@ -144,6 +132,21 @@ class SMTSatSolver(object):
             disjuncts.append((label,constraints))
         xor_expr = "(assert " + xor_expr + ")\n"
         self.disjunctions_list.append((xor_expr,disjuncts))
+
+    def get_SMT_string(self):
+        prefix_string = ''.join(self.prefix_expr_list)
+        variable_string = ''.join(self.variable_list)
+        bounds_string = ''.join(self.bounds_list)
+        expression_string = ''.join(self.expression_list)
+        disjunctions_string = ''.join([self._compute_disjunction_string(d) for d in self.disjunctions_list])
+        smtstring = prefix_string + variable_string +bounds_string + expression_string + disjunctions_string
+        return smtstring
+    #Checks Satisfiability of model
+    def check(self):
+        self.solver.append(z3.parse_smt2_string(self.get_SMT_string()))
+        return self.solver.check()
+
+
 
 
 
