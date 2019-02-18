@@ -12,7 +12,7 @@ env:
     # is both writable, and will be cleared between test runs
   - PYOMO_CONFIG_DIR=${TRAVIS_BUILD_DIR}/config
   - COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/coveragerc
-  - DOCKERENV=-e IMAGE_NAME -e COVERAGE_PROCESS_START -e PYOMO_CONFIG_DIR
+  - DOCKERENV="-e IMAGE_NAME -e COVERAGE_PROCESS_START -e PYOMO_CONFIG_DIR"
   matrix:
   - IMAGE_NAME=test-builds:python_3.7    CATEGORY="nightly"
   - IMAGE_NAME=test-builds:python_3.6    CATEGORY="nightly"
