@@ -142,11 +142,15 @@ else
     pwd
     REV=`git log -1 --format="%h"`
     popd
+    NOW=`date +"%%g%m%d%H%M"`
 
-    printf "${PACKAGE} installer for: VOTD.%s\n" $REV > $VER
-    # Update the VOTD micro version number
-    VER_FILE=src/${PACKAGE}/${PACKAGE}/version/__init__.py
-    cat $VER_FILE | sed $SED_RE "s/_micro=[0-9]*/_micro=$REV/" > tmp
+    printf "${PACKAGE} installer for: VOTD {%s}\n" $REV > $VER
+    # Update the VOTD serial version number
+    VER_FILE=src/${PACKAGE}/${PACKAGE}/version/info.py
+    cat $VER_FILE | \
+        sed $SED_RE "s/releaselevel=[0-9]*/releaselevel=VOTD {$REV}/" > tmp
+    mv tmp $VER_FILE
+    cat $VER_FILE | sed $SED_RE "s/serial=[0-9]*/serial=$NOW/" > tmp
     mv tmp $VER_FILE
 
     echo "This installer includes the following package revisions:" >> $VER
