@@ -14,6 +14,7 @@ from pyomo.opt import SolverFactory, SolverStatus, SolverResults
 from pyomo.opt import TerminationCondition as tc
 from pyomo.util.model_size import build_model_size_report
 
+
 class GDPbbSolveData(object):
     pass
 
@@ -36,9 +37,9 @@ class GDPbbSolver(object):
         default="baron",
         description="Subproblem solver to use, defaults to baron"
     ))
-    CONFIG.declare("solver_args", ConfigValue(
-        default={},
-        description="Dictionary of keyword arguments to pass to the solver."
+    CONFIG.declare("solver_args", ConfigBlock(
+        implicit=True,
+        description="Block of keyword arguments to pass to the solver."
     ))
     CONFIG.declare("tee", ConfigValue(
         default=False,
@@ -50,6 +51,7 @@ class GDPbbSolver(object):
         description="The logger object or name to use for reporting.",
         domain=a_logger
     ))
+
     def available(self, exception_flag=True):
         """Check if solver is available.
 
@@ -73,15 +75,15 @@ class GDPbbSolver(object):
         solve_data.results = SolverResults()
 
         old_logger_level = config.logger.getEffectiveLevel()
-        with time_code(solve_data.timing, 'total'),\
-                restore_logger_level(config.logger),\
+        with time_code(solve_data.timing, 'total'), \
+                restore_logger_level(config.logger), \
                 create_utility_block(model, 'GDPbb_utils', solve_data):
             if config.tee and old_logger_level > logging.INFO:
                 # If the logger does not already include INFO, include it.
                 config.logger.setLevel(logging.INFO)
 
-            #Setup results
-            self.setup_results_object(solve_data,model,config)
+            # Setup results
+            self.setup_results_object(solve_data, model, config)
             # Initialize list containing indicator vars for reupdating model after solving
             indicator_list_name = unique_component_name(model, "_indicator_list")
             indicator_vars = []
@@ -122,7 +124,7 @@ class GDPbbSolver(object):
 
             # solve the root node
             config.logger.info("Solving the root node.")
-            obj_value, result,_ = self.subproblem_solve(root, solver, config)
+            obj_value, result, _ = self.subproblem_solve(root, solver, config)
 
             # initialize minheap for Branch and Bound algorithm
             # Heap structure: (ordering tuple, model)
@@ -134,8 +136,8 @@ class GDPbbSolver(object):
             counter = 0
             disjunctions_left = len(root.GDPbb_utils.unenforced_disjunctions)
             heapq.heappush(heap,
-            ((obj_sign * obj_value, disjunctions_left, -counter), root,
-            result , root.GDPbb_utils.variable_list))
+                           ((obj_sign * obj_value, disjunctions_left, -counter), root,
+                            result, root.GDPbb_utils.variable_list))
             # loop to branch through the tree
             while len(heap) > 0:
                 # pop best model off of heap
@@ -181,11 +183,12 @@ class GDPbbSolver(object):
                 config.logger.info("Added %s new nodes with %s relaxed disjunctions to the heap. Size now %s." % (
                     len(next_disjunction.disjuncts), djn_left, len(heap)))
 
-    def validate_model(self, model):
+    @staticmethod
+    def validate_model(model):
         # Validates that model has only exclusive disjunctions
         for d in model.component_data_objects(
                 ctype=Disjunction, active=True):
-            if (not d.xor):
+            if not d.xor:
                 raise ValueError('GDPbb solver unable to handle '
                                  'non-exclusive disjunctions')
         objectives = model.component_data_objects(Objective, active=True)
@@ -197,12 +200,10 @@ class GDPbbSolver(object):
             raise RuntimeError(
                 "GDPbb solver is unable to handle model with no active objective.")
 
-    def subproblem_solve(self, gdp, solver, config):
+    @staticmethod
+    def subproblem_solve(gdp, solver, config):
         subproblem = gdp.clone()
         TransformationFactory('gdp.fix_disjuncts').apply_to(subproblem)
-        # for disjunct in subproblem.component_data_objects(
-        #         ctype=Disjunct, active=True):
-        #     disjunct.deactivate()  # TODO this is HACK
 
         result = solver.solve(subproblem, **config.solver_args)
         main_obj = next(subproblem.component_data_objects(Objective, active=True))
@@ -220,7 +221,9 @@ class GDPbbSolver(object):
 
     def __exit__(self, t, v, traceback):
         pass
-    def setup_results_object(self,solve_data,model,config):
+
+    @staticmethod
+    def setup_results_object(solve_data, model, config):
         solve_data.results.solver.name = 'GDPbb - %s' % (
             str(config.solver))
         num_of = build_model_size_report(model)
@@ -244,9 +247,3 @@ class GDPbbSolver(object):
              num_of.activated.binary_variables,
              num_of.activated.integer_variables,
              num_of.activated.continuous_variables))
-
-    def indicate(self, model):
-        for disjunction in model.component_data_objects(
-                ctype=Disjunction,active = True):
-            for disjunct in disjunction.disjuncts:
-                print(disjunction.name, disjunct.name, disjunct.indicator_var.value)
