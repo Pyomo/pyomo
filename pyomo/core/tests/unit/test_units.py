@@ -18,9 +18,16 @@ import pyomo.core.expr.current as expr
 from pyomo.core.base.units_container import InconsistentUnitsError, UnitsError
 from six import StringIO
 
+try:
+    import pint
+    pint_available = True
+except ImportError:
+    pint_available = False
+
 def python_callback_function(arg1, arg2):
     return 42.0
 
+@unittest.skipIf(pint_available is False, 'Testing units requires pint')
 class TestPyomoUnit(unittest.TestCase):
 
     def test_PyomoUnit_NumericValueMethods(self):
@@ -391,6 +398,9 @@ class TestPyomoUnit(unittest.TestCase):
         kg = uc.kg
         dless = uc.dimensionless
         self._get_check_units_ok(2.0 == 2.0*dless, uc, None, expr.EqualityExpression)
+        self.assertEqual(uc.get_units(2.0*dless), uc.get_units(2.0))
+        self.assertEqual(None, uc.get_units(2.0*dless))
+        self.assertEqual(None, uc.get_units(kg/kg))
 
     def test_temperatures(self):
         uc = units
