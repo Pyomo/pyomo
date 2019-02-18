@@ -15,11 +15,13 @@ import six
 from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
 
 if 'PYOMO_CONFIG_DIR' in os.environ:
-    PYOMO_CONFIG_DIR = os.environ['PYOMO_CONFIG_DIR']
+    PYOMO_CONFIG_DIR = os.path.abspath(os.environ['PYOMO_CONFIG_DIR'])
 elif platform.system().lower().startswith(('windows','cygwin')):
-    PYOMO_CONFIG_DIR = os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Pyomo')
+    PYOMO_CONFIG_DIR = os.path.abspath(
+        os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Pyomo'))
 else:
-    PYOMO_CONFIG_DIR = os.path.join(os.environ.get('HOME', ''), '.pyomo')
+    PYOMO_CONFIG_DIR = os.path.abspath(
+        os.path.join(os.environ.get('HOME', ''), '.pyomo'))
 
 USER_OPTION = 0
 ADVANCED_OPTION = 1
