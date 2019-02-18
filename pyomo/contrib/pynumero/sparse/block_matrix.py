@@ -102,6 +102,13 @@ class BlockMatrix(object):
         dtype = upcast(*all_dtypes) if all_dtypes else None
         return dtype
 
+    @property
+    def T(self):
+        """
+        Transpose matrix
+        """
+        return self.transpose()
+
     def row_block_sizes(self):
         """
         Returns row-block sizes

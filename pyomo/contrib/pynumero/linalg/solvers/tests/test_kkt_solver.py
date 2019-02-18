@@ -29,7 +29,7 @@ except ImportError as e:
 if not found_mumps and not found_hsl:
     raise unittest.SkipTest("Pynumero needs pymumps or ma27 to run kkt solver tests")
 
-from pyomo.contrib.pynumero.linalg.solvers.kkt_solver import FullKKTSolver, SchurComplementKKTSolver
+from pyomo.contrib.pynumero.linalg.solvers.kkt_solver import FullKKTSolver, TwoStageStochasticSchurKKTSolver
 
 from pyomo.contrib.pynumero.sparse import (BlockSymMatrix,
                                            BlockVector,
@@ -77,7 +77,7 @@ class TestFullKKTSolver(unittest.TestCase):
             x = sol[0]
             yc = sol[2]
             self.assertTrue(np.allclose(x, np.array([2.0, -1.0, 1.0])))
-            self.assertTrue(np.allclose(yc, np.array([-4.0, 1.0])))
+            self.assertTrue(np.allclose(yc, np.array([-3.0, 2.0])))
 
         if found_hsl:
             solver = FullKKTSolver('ma27')
@@ -85,10 +85,11 @@ class TestFullKKTSolver(unittest.TestCase):
             x = sol[0]
             yc = sol[2]
             self.assertTrue(np.allclose(x, np.array([2.0, -1.0, 1.0])))
-            self.assertTrue(np.allclose(yc, np.array([-4.0, 1.0])))
+            self.assertTrue(np.allclose(yc, np.array([-3.0, 2.0])))
+
 
 @unittest.skipIf(not found_hsl, "Need ma27")
-class TestSchurComplementKKTSolver(unittest.TestCase):
+class TestTwoStageStochasticSchurKKTSolver(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -141,13 +142,12 @@ class TestSchurComplementKKTSolver(unittest.TestCase):
                             BlockVector([np.zeros(0), np.zeros(0)])
                             ])
 
-        solver = SchurComplementKKTSolver('ma27')
+        solver = TwoStageStochasticSchurKKTSolver('ma27')
         sol, info = solver.solve(kkt, rhs, nlp=nlp)
         x = sol[0]
         yc = sol[2]
 
         x_sol = np.array([8.44301052, -19.90217852, 6.98749613, 8.44301052, -0.73386561, -7.96556946, 8.44301052])
-        y_sol = np.array([-66.23851729, 70.6498793, 21.17255261, 4.71444595, 55.39731506, -55.39731506])
-
+        y_sol = np.array([-65.23851729, 71.6498793, 22.17255261, 5.71444595,  55.39731506, -55.39731506])
         self.assertTrue(np.allclose(x.flatten(), x_sol))
         self.assertTrue(np.allclose(yc.flatten(), y_sol))

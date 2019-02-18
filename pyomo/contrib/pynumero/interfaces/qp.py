@@ -69,7 +69,7 @@ class EqualityQP(NLP):
 
         # initial point
         self._init_x = np.zeros(self.nx)
-        self._init_y = np.ones(self.ng)
+        self._init_y = np.zeros(self.ng)
 
         # bounds on x
         self._upper_x = np.full((self.nx, 1), np.inf)

@@ -16,6 +16,9 @@ from pyomo.contrib.pynumero.sparse import (BlockVector,
 try:
     from pyomo.contrib.pynumero.linalg.solvers import ma27_solver
     found_hsl = True
+    import pyomo.contrib.pynumero.extensions.hsl as _hsl
+    if not _hsl.MA27_LinearSolver.available():
+        found_hsl = False
 except ImportError as e:
     found_hsl = False
 
@@ -876,7 +879,6 @@ class _InteriorPointWalker(object):
         self._line_search = LineSearch(nlp)
         self.setup()
 
-
     def setup(self):
 
         calc = self._calculator
@@ -1242,6 +1244,8 @@ class InteriorPointSolver(object):
 
         walker = _InteriorPointWalker(self._calculator,
                                       linear_solver=linear_solver)
+
+
 
         if tee:
             print_nlp_info(nlp, linearsolver=linear_solver)
