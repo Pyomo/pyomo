@@ -22,12 +22,14 @@ Examples:
     To use a unit within an expression, simply reference the desired unit as an attribute on the
     module singleton `units`.
 
-        >>> from pyomo.environ import ConcreteModel, Var, Objective, units # import components and 'units' instance
-        >>> model = ConcreteModel()
-        >>> model.acc = Var()
-        >>> model.obj = Objective(expr=(model.acc*units.m/units.s**2 - 9.81*units.m/units.s**2)**2)
-        >>> print(units.get_units(model.obj.expr))
-        m ** 2 / s ** 4
+    .. doctest::
+
+       >>> from pyomo.environ import ConcreteModel, Var, Objective, units # import components and 'units' instance
+       >>> model = ConcreteModel()
+       >>> model.acc = Var()
+       >>> model.obj = Objective(expr=(model.acc*units.m/units.s**2 - 9.81*units.m/units.s**2)**2)
+       >>> print(units.get_units(model.obj.expr))
+       m ** 2 / s ** 4
 
 .. note:: This module has a module level instance of a PyomoUnitsContainer called `units` that you
          should use for creating, retreiving, and checking units
@@ -35,11 +37,12 @@ Examples:
 .. note:: This is a work in progress. Once the components units implementations are complete, the units will eventually
           work similar to the following.
 
-          >>> from pyomo.environ import ConcreteModel, Var, Objective, units
-          >>> model = ConcreteModel()
-          >>> model.x = Var(units=units.kg/units.m)
-          >>> model.obj = Objective(expr=(model.x - 97.2*units.kg/units.m)**2)
-          >>>
+          .. code-block:: python
+
+             from pyomo.environ import ConcreteModel, Var, Objective, units
+             model = ConcreteModel()
+             model.x = Var(units=units.kg/units.m)
+             model.obj = Objective(expr=(model.x - 97.2*units.kg/units.m)**2)
 
 Notes:
     * The implementation is currently based on the `pint <http://pint.readthedocs.io>`_
@@ -90,7 +93,6 @@ try:
     import pint as pint_module
 except ImportError:
     pint_module = None
-
 
 class UnitsError(Exception):
     """

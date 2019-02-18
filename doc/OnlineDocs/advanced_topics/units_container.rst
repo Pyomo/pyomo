@@ -11,12 +11,3 @@ Units Handling in Pyomo
 
 .. autoclass:: InconsistentUnitsError
 
-.. comment
-   .. autoclass:: _PyomoUnit
-      :show-inheritance:
-      :members:
-   .. autoclass:: _UnitExtractionVisitor
-      :show-inheritance:
-      :members:
-   
-      .. automethod:: __init__
