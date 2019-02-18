@@ -26,6 +26,7 @@ env:
   - IMAGE_NAME=test-builds:python_2.7    CATEGORY="parallel"
 
 before_install:
+  - env | sort
   - docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}
  # (1) We are mounting the current directory onto the
  #     docker container and giving it a mount location with
