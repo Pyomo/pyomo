@@ -5,14 +5,16 @@ from pyutilib.misc import Container
 
 from pyomo.common.config import (ConfigBlock, ConfigValue)
 from pyomo.common.modeling import unique_component_name
-from pyomo.contrib.gdpopt.util import create_utility_block, time_code, a_logger, restore_logger_level
+from pyomo.contrib.gdpopt.util import create_utility_block, time_code, a_logger, restore_logger_level, \
+    setup_results_object
 from pyomo.core.base import (
     Objective, TransformationFactory,
     minimize, value)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory, SolverStatus, SolverResults
 from pyomo.opt import TerminationCondition as tc
-from pyomo.util.model_size import build_model_size_report
+
+__version__ = (19, 2, 19)  # Date-based versioning
 
 
 class GDPbbSolveData(object):
@@ -61,6 +63,9 @@ class GDPbbSolver(object):
         """
         return True
 
+    def version(self):
+        return __version__
+
     def solve(self, model, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
@@ -81,9 +86,14 @@ class GDPbbSolver(object):
             if config.tee and old_logger_level > logging.INFO:
                 # If the logger does not already include INFO, include it.
                 config.logger.setLevel(logging.INFO)
+            config.logger.info(
+                "Starting GDPbb version %s using %s as subsolver"
+                % (".".join(map(str, self.version())), config.solver)
+            )
 
             # Setup results
-            self.setup_results_object(solve_data, model, config)
+            solve_data.results.solver.name = 'GDPbb - %s' % (str(config.solver))
+            setup_results_object(solve_data, config)
             # Initialize list containing indicator vars for reupdating model after solving
             indicator_list_name = unique_component_name(model, "_indicator_list")
             indicator_vars = []
@@ -221,29 +231,3 @@ class GDPbbSolver(object):
 
     def __exit__(self, t, v, traceback):
         pass
-
-    @staticmethod
-    def setup_results_object(solve_data, model, config):
-        solve_data.results.solver.name = 'GDPbb - %s' % (
-            str(config.solver))
-        num_of = build_model_size_report(model)
-        prob = solve_data.results.problem
-        prob.name = model.name
-        prob.number_of_constraints = num_of.activated.constraints
-        prob.number_of_disjunctions = num_of.activated.disjunctions
-        prob.number_of_variables = num_of.activated.variables
-        prob.number_of_binary_variables = num_of.activated.binary_variables
-        prob.number_of_continuous_variables = num_of.activated.continuous_variables
-        prob.number_of_integer_variables = num_of.activated.integer_variables
-        config.logger.info(
-            "Original model has %s constraints (%s nonlinear) "
-            "and %s disjunctions, "
-            "with %s variables, of which %s are binary, %s are integer, "
-            "and %s are continuous." %
-            (num_of.activated.constraints,
-             num_of.activated.nonlinear_constraints,
-             num_of.activated.disjunctions,
-             num_of.activated.variables,
-             num_of.activated.binary_variables,
-             num_of.activated.integer_variables,
-             num_of.activated.continuous_variables))
