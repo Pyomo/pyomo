@@ -28,15 +28,14 @@ To use the GDPbb solver, define your Pyomo GDP model as usual:
 
   Invoke the GDPbb solver
   >>> results = SolverFactory('gdpbb').solve(m)
-  >>> print(results.solver)  # doctest: +ELLIPSIS
-  <BLANKLINE>
-  - Name: GDPbb - baron
-  Status: ok
-  Termination condition: optimal
-  Timing: ...
-  <BLANKLINE>
 
-  >>> print([(i.name, value(i)) for i in m.y[:].indicator_var])
+  >>> print(results)  # doctest: +SKIP
+  >>> print(results.solver.status)
+  ok
+  >>> print(results.solver.termination_condition)
+  optimal
+
+  >>> print([value(i) for i in m.y[:].indicator_var])
   [0, 1]
 
 
