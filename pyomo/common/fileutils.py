@@ -30,8 +30,9 @@ def thisFile():
     # __file__ fails if someone does os.chdir() before
     # sys.argv[0] also fails because it doesn't not always contains the path
     callerFrame = inspect.stack()[1]
-    if callerFrame[1] in ('<stdin>','<string>'):
-        return callerFrame[1]
+    frameName = callerFrame[1]
+    if frameName and frameName[0] == '<' and frameName[-1] == '>':
+        return frameName
     return os.path.abspath(inspect.getfile(callerFrame[0]))
 
 

@@ -59,10 +59,12 @@ class TestFileUtils(unittest.TestCase):
 
     def test_thisFile(self):
         self.assertEquals(_thisFile, __file__.replace('.pyc','.py'))
-        self.assertEquals(run([
+        # Note that in some versions of PyPy, this can return <module>
+        # instead if the normal <string>
+        self.assertIn(run([
             sys.executable,'-c',
             'from pyomo.common.fileutils import thisFile;print(thisFile())'
-        ])[1].strip(), '<string>')
+        ])[1].strip(), ['<string>','<module>'])
         self.assertEquals(run(
             [sys.executable],
             stdin='from pyomo.common.fileutils import thisFile;'
