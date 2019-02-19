@@ -474,7 +474,7 @@ class PyomoInterface(object):
         self.activateRomCons(x, rom_params)
 
         optGJH = SolverFactory('contrib.gjh')
-        optGJH.solve(model, tee=True, symbolic_solver_labels=True)
+        optGJH.solve(model, tee=False, symbolic_solver_labels=True)
         g, J, varlist, conlist = model._gjh_info
 
         l = ConcreteModel()
