@@ -27,9 +27,6 @@ env:
   - IMAGE_NAME=test-builds:python_2.7    CATEGORY="parallel"
 
 before_install:
-    # It is critical that these libraries be present; otherwise 32-bit
-    # applications will not run
-  - sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
   - docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}
  # (1) We are mounting the current directory onto the
  #     docker container and giving it a mount location with
@@ -49,6 +46,9 @@ before_install:
  # commands prefixed by ${DOC} will execute inside the
  # running docker container
   - export DOC="docker exec ${CI_ENV} ${DOCKERENV} ${DOC_ID}"
+    # It is critical that these libraries be present; otherwise 32-bit
+    # applications will not run
+  - ${DOC} sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
 
 install:
   - ${DOC} pip install -U pip setuptools wheel
