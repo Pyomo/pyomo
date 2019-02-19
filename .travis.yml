@@ -28,23 +28,23 @@ env:
 
 before_install:
   - docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}
- # (1) We are mounting the current directory onto the
- #     docker container and giving it a mount location with
- #     an identical name, which avoids issues with file
- #     paths in coverage reports.
- # (2) We are starting a container in detached mode that
- #     runs a semi-infinite sleep call. This allows us to
- #     run separate docker exec commands that keep the state
- #     of the container between calls.
+    # (1) We are mounting the current directory onto the
+    #     docker container and giving it a mount location with
+    #     an identical name, which avoids issues with file
+    #     paths in coverage reports.
+    # (2) We are starting a container in detached mode that
+    #     runs a semi-infinite sleep call. This allows us to
+    #     run separate docker exec commands that keep the state
+    #     of the container between calls.
   - export DOC_ID=`docker run -d -v $(pwd):$(pwd) -w $(pwd) ${DOCKERHUB_USERNAME}/${IMAGE_NAME} sleep 10000000000`
- # used by codecov when uploading the coverage report
+    # used by codecov when uploading the coverage report
   - export CI_ENV=`bash <(curl -s https://codecov.io/env)`
- # enable tracking of coverage for subprocesses launched
- # during tests
+    # enable tracking of coverage for subprocesses launched
+    # during tests
   - cp ${TRAVIS_BUILD_DIR}/.coveragerc ${COVERAGE_PROCESS_START}
   - echo "data_file=${TRAVIS_BUILD_DIR}/.coverage" >> ${COVERAGE_PROCESS_START}
- # commands prefixed by ${DOC} will execute inside the
- # running docker container
+    # commands prefixed by ${DOC} will execute inside the
+    # running docker container
   - export DOC="docker exec ${CI_ENV} ${DOCKERENV} ${DOC_ID}"
 
 install:
@@ -58,13 +58,13 @@ install:
                                 networkx xlrd pandas matplotlib dill
     fi
   - ${DOC} pip install nose coverage codecov
- # Clone but don't install pyomo-model-libraries
+    # Clone but don't install pyomo-model-libraries
   - ${DOC} git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
- # Install PyUtilib (master branch)
+    # Install PyUtilib (master branch)
   - ${DOC} pip install --quiet git+https://github.com/PyUtilib/pyutilib
- # Install this package
+    # Install this package
   - ${DOC} python setup.py develop
- # Finish setting up coverage tracking for subprocesses
+    # Finish setting up coverage tracking for subprocesses
   - DOCKER_SITE_PACKAGES=`${DOC} python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
   - |
     if [ -z "$DISABLE_COVERAGE" ]
@@ -104,11 +104,11 @@ after_script:
   - docker kill ${DOC_ID}
 
 after_success:
- # Combine coverage reports over all subprocesses and upload
+    # Combine coverage reports over all subprocesses and upload
   - ${DOC} find . -maxdepth 10 -name ".cov*"
   - ${DOC} coverage combine
   - ${DOC} codecov --env IMAGE_NAME -X gcov
- # Trigger PyomoGallery build
+    # Trigger PyomoGallery build
   - "if [ -n \"${KEY_JOB}\" ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token 4DadIB521uUPyBXMtvQVOw' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
 
 deploy:
