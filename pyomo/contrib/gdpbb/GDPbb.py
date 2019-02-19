@@ -176,12 +176,14 @@ class GDPbbSolver(object):
                     if not disj.indicator_var.fixed:
                         disj.indicator_var = 0
                     ss = SMTSatSolver(mnew)
-                    obj_value, result, vars = self.subproblem_solve(mnew, solver, config)
-                    counter += 1
-                    ordering_tuple = (obj_sign * obj_value, djn_left, -counter)
-                    heapq.heappush(heap, (ordering_tuple, mnew, result, vars))
-                    config.logger.info("Added %s new nodes with %s relaxed disjunctions to the heap. Size now %s." % (
-                    len(next_disjunction.disjuncts), djn_left, len(heap)))
+                    print ss.get_SMT_string()
+                    if ss.check() != "unsat":
+                        obj_value, result, vars = self.subproblem_solve(mnew, solver, config)
+                        counter += 1
+                        ordering_tuple = (obj_sign * obj_value, djn_left, -counter)
+                        heapq.heappush(heap, (ordering_tuple, mnew, result, vars))
+                        config.logger.info("Added %s new nodes with %s relaxed disjunctions to the heap. Size now %s." % (
+                        len(next_disjunction.disjuncts), djn_left, len(heap)))
 
     def validate_model(self, model):
         # Validates that model has only exclusive disjunctions

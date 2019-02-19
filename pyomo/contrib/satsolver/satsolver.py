@@ -124,10 +124,12 @@ class SMTSatSolver(object):
         xor_expr = "0"
         disjuncts = []
         for disj in djn.disjuncts:
+            # print disj
             constraints = []
             iv = disj.indicator_var
             self.add_var(iv)
             label = self.variable_label_map.getSymbol(iv)
+            # print(label,iv.name)
             xor_expr = "(+ "+xor_expr+" "+ label +")"
             for c in disj.component_data_objects(ctype = Constraint, active = True):
                 constraints.append(self.walker.walk_expression(c.expr))
@@ -142,8 +144,15 @@ class SMTSatSolver(object):
         expression_string = ''.join(self.expression_list)
         disjunctions_string = ''.join([self._compute_disjunction_string(d) for d in self.disjunctions_list])
         smtstring = prefix_string + variable_string +bounds_string + expression_string + disjunctions_string
-        # print smtstring
+        #print smtstring
+        for (x,y) in(self.get_var_dict()):
+            print(x,y.name)
         return smtstring
+    def get_var_dict(self):
+        labels = [x for x in self.variable_label_map.bySymbol]
+        labels.sort()
+        vars = [self.variable_label_map.getObject(l) for l in labels]
+        return zip(labels,vars)
     #Checks Satisfiability of model
     def check(self):
         self.solver.append(z3.parse_smt2_string(self.get_SMT_string()))
