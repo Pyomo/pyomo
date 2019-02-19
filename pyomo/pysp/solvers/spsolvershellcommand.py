@@ -80,7 +80,16 @@ class SPSolverShellCommand(SPSolver):
         if not validate:
             self._executable = name
         else:
-            exe = pyomo.common.Executable(name).path()
+            exe = pyomo.common.Executable(name)
+            # This is a bit awkward, but we want Executable to re-check
+            # the PATH, so we will explicitly call rehash().  In the
+            # future, we should move to have the solver directly use the
+            # Executable() singleton to manage getting / setting /
+            # overriding paths to various executables.  Setting the
+            # executable through the Executable() singleton will
+            # automatically re-check the PATH.
+            exe.rehash()
+            exe = exe.path()
             if exe is None:
                 raise ValueError(
                     "Failed to set executable for solver %s. File "
