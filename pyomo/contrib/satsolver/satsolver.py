@@ -90,6 +90,7 @@ class SMTSatSolver(object):
     #define variables
     def add_var(self,var):
         label = self.variable_label_map.getSymbol(var)
+        # print(label,var.name)
         domain = type(var.domain)
         if domain is RealSet:
             self.variable_list.append("(declare-fun "+ label + "() Real)\n")
@@ -141,6 +142,7 @@ class SMTSatSolver(object):
         expression_string = ''.join(self.expression_list)
         disjunctions_string = ''.join([self._compute_disjunction_string(d) for d in self.disjunctions_list])
         smtstring = prefix_string + variable_string +bounds_string + expression_string + disjunctions_string
+        # print smtstring
         return smtstring
     #Checks Satisfiability of model
     def check(self):

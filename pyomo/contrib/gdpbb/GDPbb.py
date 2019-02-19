@@ -13,6 +13,7 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory, SolverStatus, SolverResults
 from pyomo.opt import TerminationCondition as tc
 from pyomo.util.model_size import build_model_size_report
+from pyomo.contrib.satsolver.satsolver import SMTSatSolver
 
 class GDPbbSolveData(object):
     pass
@@ -174,11 +175,12 @@ class GDPbbSolver(object):
                     mnew = mdl.clone()
                     if not disj.indicator_var.fixed:
                         disj.indicator_var = 0
+                    ss = SMTSatSolver(mnew)
                     obj_value, result, vars = self.subproblem_solve(mnew, solver, config)
                     counter += 1
                     ordering_tuple = (obj_sign * obj_value, djn_left, -counter)
                     heapq.heappush(heap, (ordering_tuple, mnew, result, vars))
-                config.logger.info("Added %s new nodes with %s relaxed disjunctions to the heap. Size now %s." % (
+                    config.logger.info("Added %s new nodes with %s relaxed disjunctions to the heap. Size now %s." % (
                     len(next_disjunction.disjuncts), djn_left, len(heap)))
 
     def validate_model(self, model):
