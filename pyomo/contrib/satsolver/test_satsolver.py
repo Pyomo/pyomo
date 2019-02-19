@@ -207,6 +207,16 @@ class SatSolverTests(unittest.TestCase):
         smt_model = SMTSatSolver(model = eight_process)
         self.assertFalse(str(smt_model.check()) =="unsat")
 
+    def test_LBB_8PP_deactive(self):
+        """Test the logic-based branch and bound algorithm."""
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        for djn in eight_process.component_data_objects(ctype = Disjunction):
+            djn.deactivate()
+        smt_model = SMTSatSolver(model = eight_process)
+        self.assertFalse(str(smt_model.check()) =="unsat")
+
     def test_LBB_strip_pack(self):
         """Test logic-based branch and bound with strip packing."""
         exfile = import_file(
