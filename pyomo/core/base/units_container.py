@@ -293,13 +293,22 @@ class _PyomoUnit(NumericValue):
     def __str__(self):
         """ Returns a string representing the unit """
 
-        # The ~ returns the short form of the pint unit
-        # if the unit is an instance of the unit 'dimensionless', then pint returns ''
-        # which causes problems with some string processing in Pyomo that expects a name
-        retstr = '{:!~s}'.format(self._pint_unit)
+        # The ~ returns the short form of the pint unit if the unit is
+        # an instance of the unit 'dimensionless', then pint returns ''
+        # which causes problems with some string processing in Pyomo
+        # that expects a name
+        #
+        # Note: Some pint units contain unicode characters (notably
+        # delta temperatures).  So that things work cleanly in Python 2
+        # and 3, we will generate the string as unicode, then explicitly
+        # encode it to UTF-8 in Python 2
+        retstr = u'{:!~s}'.format(self._pint_unit)
         if retstr == '':
             retstr = 'dimensionless'
-        return retstr
+        if six.PY2:
+            return str(retstr.encode('utf8'))
+        else:
+            return retstr
 
     def to_string(self, verbose=None, labeler=None, smap=None,
                   compute_values=False):
