@@ -48,30 +48,51 @@ def find_file(filename, cwd=True, mode=os.R_OK, ext=None, pathlist=[],
               allow_pathlist_deep_references=True):
     """Locate a file, given a set of search parameters
 
-    Arguments
-    ---------
-    fname (str): the file name to locate
+    Parameters
+    ----------
+    filename : str
+        The file name to locate.  The file name may contain references
+        to a user's home directory (``~user``), environment variables
+        (``${HOME}/bin``), and shell wildcards (``?`` and ``*``); all of
+        which will be expanded.
 
-    cwd (bool): start by looking in the current working directory
-        (default: True)
+    cwd : bool
+        Start by looking in the current working directory
+        [default: True]
 
-    mode (mask): if not None, only return files that can be accessed for
+    mode : mask
+        If not None, only return files that can be accessed for
         reading/writing/executing.  Valid values are the inclusive OR of
-        {os.R_OK, os.W_OK, os.X_OK} (default: os.R_OK)
+        {os.R_OK, os.W_OK, os.X_OK} [default: ``os.R_OK``]
 
-    ext (str): if not None, also look for fname+ext (default: None)
+    ext : str or iterable of str
+        If not None, also look for filename+ext [default: None]
 
-    pathlist (list or str): a list of strings containing paths to
-        search, each string contains a single path.  If a string is
-        provided, then it is first split using os.pathsep to generate
-        the pathlist (default: []).
+    pathlist : str or iterable of str
+        A list of strings containing paths to search, each string
+        contains a single path.  If pathlist is a string, then it is
+        first split using os.pathsep to generate the pathlist
+        [default: ``[]``].
 
-    Note
-    ----
-    find_file uses glob, so the path and/or file name may contain
-    wildcards.  The first matching file is returned.
+    allow_pathlist_deep_references : bool
+       If allow_pathlist_deep_references is True and the filename
+       appears to be a relative path, allow deep reference matches
+       relative to directories in the pathlist (e.g., if filename is
+       ``foo/my.exe`` and ``/usr/bin`` is in the pathlist, then
+       :py:func:`find_file` could return ``/usr/bin/foo/my.exe``).  If
+       allow_pathlist_deep_references is False and the filename appears
+       to be a relative path, then only matches relative to the current
+       directory are allowed (assuming cwd==True).  [default: True]
+
+    Notes
+    -----
+        find_file uses glob, so the path and/or file name may contain
+        wildcards.  The first matching file is returned.
 
     """
+
+    # Support shell-style paths like ~user and $HOME/bin
+    filename = os.path.expanduser(os.path.expandvars(filename))
 
     locations = []
     if cwd:
@@ -137,23 +158,32 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
     uses :py:func:find_file(), the filename and search paths may contain
     wildcards.
 
-    Arguments
-    ---------
-    libname (str): the library name to search for
+    Parameters
+    ----------
+    libname : str
+        The library name to search for
 
-    cwd (bool): Start by looking in the current working directory
+    cwd : bool
+        Start by looking in the current working directory
         [default: True]
 
-    include_PATH (bool): Include the executable search PATH at the end
-        of the list of directories to search. [default: True]
+    include_PATH : bool
+        Include the executable search PATH at the end of the list of
+        directories to search. [default: True]
 
-    pathlist (list or str): List of paths to search for the file.  If
-        None, then pathlist will default to the local Pyomo
-        configuration library directory (and the local Pyomo binary
-        directory if include_PATH is set) and the contents of
-        LD_LIBRARY_PATH.  If a string, then the string is split using
-        os.pathsep.  [Default: None]
+    pathlist : str or list of str
+        List of paths to search for the file.  If None, then pathlist
+        will default to the local Pyomo configuration library directory
+        (and the local Pyomo binary directory if include_PATH is set)
+        and the contents of LD_LIBRARY_PATH.  If a string, then the
+        string is split using os.pathsep.  [default: None]
 
+    Notes
+    -----
+        find_library() uses :py:func:`find_file` with
+        ``allow_pathlist_deep_references=True``, so libnames containing
+        relative paths will be matched relative to all paths in
+        pathlist.
     """
     if pathlist is None:
         # Note: PYOMO_CONFIG_DIR/lib comes before LD_LIBRARY_PATH, and
@@ -178,24 +208,38 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
     Finds a specified executable by searching a specified set of paths.
     This routine will look for the specified file name, as well as
     looking for the filename followed by architecture-specific
-    extensions (e.g., `.exe`).  Note that as this uses
-    :py:func:find_file(), the filename and search paths may contain
+    extensions (e.g., ``.exe``).  Note that as this uses
+    :py:func:`find_file()`, the filename and search paths may contain
     wildcards.
 
-    Arguments
-    ---------
-    libname (str): the library name to search for
+    Parameters
+    ----------
+    exename : str
+        The executable file name to search for
 
-    cwd (bool): Start by looking in the current working directory
+    cwd : bool
+        Start by looking in the current working directory
         [default: True]
 
-    include_PATH (bool): Include the executable search PATH at the end
-        of the list of directories to search. [default: True]
+    include_PATH : bool
+        Include the executable search PATH at the end of the list of
+        directories to search. [default: True]
 
-    pathlist (list or str): List of paths to search for the file.  If
-        None, then pathlist will default to the local Pyomo
-        configuration binary directory.  If a string, then the string is
-        split using os.pathsep.  [Default: None]
+    pathlist : str or list of str
+        List of paths to search for the file.  If None, then pathlist
+        will default to the local Pyomo configuration binary directory.
+        If a string, then the string is split using os.pathsep.
+        [Default: None]
+
+    Notes
+    -----
+        find_executable() uses :py:func:`find_file` with
+        ``allow_pathlist_deep_references=False``, so search strings
+        containing relative paths will only be matched relative to the
+        current working directory.  This prevents confusion in the case
+        where a user called ``find_executable("./foo")`` and forgot to copy
+        ``foo`` into the local directory, but this function picked up
+        another ``foo`` in the user's PATH that they did not want to use.
 
     """
     if pathlist is None:
@@ -343,9 +387,9 @@ class ExecutableManager(object):
         >>> print(os.access(loc, os.X_OK))
         True
 
-    For convenience, ``available()`` and ``path()`` are available by
-    casting the :py:class:`_ExecutableData` object requrned from
-    ``Executable`` to either a ``bool`` or ``str``:
+    For convenience, :py:meth:`available()` and :py:meth:`path()` are
+    available by casting the :py:class:`_ExecutableData` object requrned
+    from ``Executable`` to either a ``bool`` or ``str``:
 
     .. doctest::
 
@@ -370,8 +414,8 @@ class ExecutableManager(object):
         >>> Executable.rehash()
 
     :py:class:`ExecutionManager` looks for executables in the system
-    `PATH` and in the list of directories specified by the `pathlist`
-    attribute.  `Executable.pathlist` defaults to a list containing the
+    `PATH` and in the list of directories specified by the ``pathlist``
+    attribute.  ``Executable.pathlist`` defaults to a list containing the
     initial value of `pyomo.common.config.PYOMO_CONFIG_DIR`.
 
     Users may also override the normal file resolution by explicitly
@@ -422,18 +466,18 @@ class ExecutableManager(object):
 
 Executable = ExecutableManager()
 
-@deprecated("pyomo.common.register_executable(fname) has been deprecated; "
+@deprecated("pyomo.common.register_executable(name) has been deprecated; "
             "explicit registration is no longer necessary")
 def register_executable(name, validate=None):
     # Setting to None will cause Executable to re-search the pathlist
     return Executable(name).rehash()
 
 @deprecated(
-    """pyomo.common.registered_executable(fname) has been deprecated; use
-    pyomo.common.Executable(fname).path() to get the path or
-    pyomo.common.Executable(fname).available() to get a bool indicating
+    """pyomo.common.registered_executable(name) has been deprecated; use
+    pyomo.common.Executable(name).path() to get the path or
+    pyomo.common.Executable(name).available() to get a bool indicating
     file availability.  Equivalent results can be obtained by casting
-    Executable(fname) to string or bool.""")
+    Executable(name) to string or bool.""")
 def registered_executable(name):
     ans = Executable(name)
     if ans.path() is None:
@@ -441,7 +485,7 @@ def registered_executable(name):
     else:
         return ans
 
-@deprecated("pyomo.common.unregister_executable(fname) has been deprecated; "
-            "use Executable(fname).disable()")
+@deprecated("pyomo.common.unregister_executable(name) has been deprecated; "
+            "use Executable(name).disable()")
 def unregister_executable(name):
     Executable(name).disable()
