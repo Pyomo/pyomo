@@ -140,7 +140,7 @@ class GDP_Disjunct_Fixer(Transformation):
             # disjunction is in feasible realization. Deactivate it.
             disjunction.deactivate()
 
-        # Process the disjuncts associatd with the disjunction that have not
+        # Process the disjuncts associated with the disjunction that have not
         # already been transformed.
         for disj in (ComponentSet(disjunction.disjuncts)
                      - self._transformedDisjuncts):
