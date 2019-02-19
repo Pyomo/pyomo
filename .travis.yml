@@ -46,9 +46,6 @@ before_install:
  # commands prefixed by ${DOC} will execute inside the
  # running docker container
   - export DOC="docker exec ${CI_ENV} ${DOCKERENV} ${DOC_ID}"
-    # It is critical that these libraries be present; otherwise 32-bit
-    # applications will not run
-  - ${DOC} sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
 
 install:
   - ${DOC} pip install -U pip setuptools wheel
