@@ -44,7 +44,8 @@ def thisFileDir():
 PYOMO_ROOT_DIR = os.path.dirname(os.path.dirname(thisFileDir()))
 
 
-def find_file(fname, cwd=True, mode=os.R_OK, ext=None, pathlist=[]):
+def find_file(filename, cwd=True, mode=os.R_OK, ext=None, pathlist=[],
+              allow_pathlist_deep_references=True):
     """Locate a file, given a set of search parameters
 
     Arguments
@@ -75,10 +76,12 @@ def find_file(fname, cwd=True, mode=os.R_OK, ext=None, pathlist=[]):
     locations = []
     if cwd:
         locations.append(os.getcwd())
-    if isinstance(pathlist, six.string_types):
-        locations.extend( pathlist.split(os.pathsep) )
-    else:
-        locations.extend(pathlist)
+
+    if allow_pathlist_deep_references or os.path.basename(filename) == filename:
+        if isinstance(pathlist, six.string_types):
+            locations.extend( pathlist.split(os.pathsep) )
+        else:
+            locations.extend(pathlist)
 
     extlist = ['']
     if ext:
@@ -91,7 +94,7 @@ def find_file(fname, cwd=True, mode=os.R_OK, ext=None, pathlist=[]):
         if not path:
             continue
         for _ext in extlist:
-            for test in glob.glob(os.path.join(path, fname+_ext)):
+            for test in glob.glob(os.path.join(path, filename+_ext)):
                 if not os.path.isfile(test):
                     continue
                 if mode is not None and not os.access(test, mode):
@@ -205,7 +208,7 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
         pathlist.extend(_path())
     ext = _exeExt.get(_system(), None)
     return find_file(exename, cwd=cwd, ext=ext, mode=os.R_OK|os.X_OK,
-                     pathlist=pathlist)
+                     pathlist=pathlist, allow_pathlist_deep_references=False)
 
 
 class _ExecutableData(object):

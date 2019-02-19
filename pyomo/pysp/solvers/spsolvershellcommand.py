@@ -80,26 +80,7 @@ class SPSolverShellCommand(SPSolver):
         if not validate:
             self._executable = name
         else:
-            name = os.path.expanduser(name)
-            if os.path.isabs(name):
-                exe = pyutilib.misc.search_file(name,
-                                                executable=True,
-                                                search_path=[''])
-            elif os.path.basename(name) != name:
-                exe = pyutilib.misc.search_file(os.path.relpath(name),
-                                                executable=True,
-                                                search_path=[os.path.curdir])
-            else:
-                # Only search directories in the PATH if
-                # name is not in the form of an absolute or
-                # relative path.  E.g., it would be
-                # confusing if someone called
-                # set_executable('./foo') and forgot to copy
-                # 'foo' into the local directory, but this
-                # function picked up another 'foo' in the
-                # users PATH that they did not want to use.
-                exe = pyutilib.misc.search_file(name,
-                                                executable=True)
+            exe = pyomo.common.Executable(name).path()
             if exe is None:
                 raise ValueError(
                     "Failed to set executable for solver %s. File "
