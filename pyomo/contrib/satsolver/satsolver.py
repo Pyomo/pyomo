@@ -71,12 +71,15 @@ class SMTSatSolver(object):
         return default
     #processes pyomo model into SMT model
     def _process_model(self,model):
-        for v in model.component_data_objects(ctype = Var, descend_into=True):
+        for v in model.component_data_objects(ctype = Var, descend_into=False):
             smtstring = self.add_var(v)
         for c in model.component_data_objects(ctype = Constraint, active = True):
             self.add_expr(c.expr)
-        for djn in model.component_data_objects(ctype = Disjunction, active = True):
-            self._process_disjunction(djn)
+        for djn in model.component_data_objects(ctype = Disjunction):
+            if djn.active:
+                self._process_active_disjunction(djn)
+            else:
+                self._process_inactive_disjunction(djn)
 
     #define bound constraints
     def _add_bound(self,var):
@@ -90,7 +93,6 @@ class SMTSatSolver(object):
     #define variables
     def add_var(self,var):
         label = self.variable_label_map.getSymbol(var)
-        # print(label,var.name)
         domain = type(var.domain)
         if domain is RealSet:
             self.variable_list.append("(declare-fun "+ label + "() Real)\n")
@@ -103,7 +105,7 @@ class SMTSatSolver(object):
             self._add_bound(var)
         else:
             raise NotImplementedError("SMT cannot handle" + str(domain) + "variables")
-
+        return label
     #Defines SMT expression from pyomo expression
     def add_expr(self,expression):
         smtexpr = self.walker.walk_expression(expression)
@@ -120,23 +122,28 @@ class SMTSatSolver(object):
         return djn_string
 
     #converts disjunction to internal class storage
-    def _process_disjunction(self,djn):
+    def _process_active_disjunction(self,djn):
         xor_expr = "0"
         disjuncts = []
         for disj in djn.disjuncts:
-            # print disj
             constraints = []
             iv = disj.indicator_var
-            self.add_var(iv)
-            label = self.variable_label_map.getSymbol(iv)
-            # print(label,iv.name)
+            label = self.add_var(iv)
             xor_expr = "(+ "+xor_expr+" "+ label +")"
             for c in disj.component_data_objects(ctype = Constraint, active = True):
                 constraints.append(self.walker.walk_expression(c.expr))
             disjuncts.append((label,constraints))
         xor_expr = "(assert (= 1 " + xor_expr + "))\n"
         self.disjunctions_list.append((xor_expr,disjuncts))
-
+    #processes inactive disjunction indicator vars without constraints
+    def _process_inactive_disjunction(self,djn):
+        xor_expr = "0"
+        for disj in djn.disjuncts:
+            iv = disj.indicator_var
+            label = self.add_var(iv)
+            xor_expr = "(+ "+xor_expr+" "+ label +")"
+        xor_expr = "(assert (= 1 " + xor_expr + "))\n"
+        self.expression_list.append(xor_expr)
     def get_SMT_string(self):
         prefix_string = ''.join(self.prefix_expr_list)
         variable_string = ''.join(self.variable_list)
@@ -144,9 +151,6 @@ class SMTSatSolver(object):
         expression_string = ''.join(self.expression_list)
         disjunctions_string = ''.join([self._compute_disjunction_string(d) for d in self.disjunctions_list])
         smtstring = prefix_string + variable_string +bounds_string + expression_string + disjunctions_string
-        #print smtstring
-        for (x,y) in(self.get_var_dict()):
-            print(x,y.name)
         return smtstring
     def get_var_dict(self):
         labels = [x for x in self.variable_label_map.bySymbol]

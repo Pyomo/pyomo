@@ -176,7 +176,7 @@ class GDPbbSolver(object):
                     if not disj.indicator_var.fixed:
                         disj.indicator_var = 0
                     ss = SMTSatSolver(mnew)
-                    print ss.get_SMT_string()
+                    # print ss.get_SMT_string()
                     if ss.check() != "unsat":
                         obj_value, result, vars = self.subproblem_solve(mnew, solver, config)
                         counter += 1
