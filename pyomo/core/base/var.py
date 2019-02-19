@@ -466,12 +466,13 @@ class Var(IndexedComponent):
         domain (Set or function, optional): A Set that defines valid
             values for the variable (e.g., `Reals`, `NonNegativeReals`,
             `Binary`), or a rule that returns Sets.  Defaults to `Reals`.
+        within (Set or function, optional): An alias for `domain`.
         bounds (tuple or function, optional): A tuple of (lower, upper)
             bounds for the variable, or a rule that returns tuples.
             Defaults to (None, None).
         initialize (float or function, optional): The initial value for
             the variable, or a rule that returns initial values.
-        rule (function, optional): An alias for `rule`
+        rule (float or function, optional): An alias for `initialize`.
         dense (bool, optional): Instantiate all elements from
             `index_set()` when constructing the Var (True) or just the
             variables returned by `initialize`/`rule` (False).  Defaults
