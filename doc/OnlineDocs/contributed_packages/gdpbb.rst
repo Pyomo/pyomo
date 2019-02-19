@@ -36,7 +36,6 @@ To use the GDPbb solver, define your Pyomo GDP model as usual:
   Timing: ...
   <BLANKLINE>
 
-  >>> m.pprint()
   >>> print([(i.name, value(i)) for i in m.y[:].indicator_var])
   [0, 1]
 
