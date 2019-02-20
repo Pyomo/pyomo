@@ -11,6 +11,9 @@
 from pyomo.core.expr.numvalue import native_numeric_types, value
 from pyomo.core.base.symbolic import differentiate
 
+import logging
+logger = logging.getLogger(__name__)
+
 def calculate_variable_from_constraint(variable, constraint,
                                        eps=1e-8, iterlim=1000, linesearch=True):
     """Calculate the variable value given a specified equality constraint
@@ -79,24 +82,37 @@ def calculate_variable_from_constraint(variable, constraint,
 
     # solve the common case where variable is linear with coefficient of 1.0
     x1 = value(variable)
+    # Note: both the direct (linear) calculation and Newton's method
+    # below rely on a numerically feasible initial starting point.
+    # While we have strategies for dealing with hitting numerically
+    # invalid (e.g., sqrt(-1)) conditions below, if the initial point is
+    # not valid, we will allow that exception to propagate up
     residual_1 = value(constraint.body)
 
     variable.set_value(x1 - (residual_1-upper))
-    residual_2 = value(constraint.body)
+    residual_2 = value(constraint.body, exception=False)
 
-    # if the variable appears linearly with a coefficient of 1, then we
-    # are done
-    if abs(residual_2-upper) < eps:
-        return
+    # If we encounter an error while evaluating the expression at the
+    # linear intercept calculated assuming the derivative was 1.  This
+    # is most commonly due to nonlinear expressions (like sqrt())
+    # becoming invalid/complex.  We will skip the rest of the
+    # "shortcuts" that assume the expression is linear and move directly
+    # to using Newton's method.
 
-    # Assume the variable appears linearly and calculate the coefficient
-    x2 = value(variable)
-    slope = float(residual_1 - residual_2) / (x1 - x2)
-    intercept = (residual_1-upper) - slope*x1
-    if slope:
-        variable.set_value(-intercept/slope)
-        if abs(value(constraint.body)-upper) < eps:
+    if residual_2 is not None:
+        # if the variable appears linearly with a coefficient of 1, then we
+        # are done
+        if abs(residual_2-upper) < eps:
             return
+
+        # Assume the variable appears linearly and calculate the coefficient
+        x2 = value(variable)
+        slope = float(residual_1 - residual_2) / (x1 - x2)
+        intercept = (residual_1-upper) - slope*x1
+        if slope:
+            variable.set_value(-intercept/slope)
+            if abs(value(constraint.body)-upper) < eps:
+                return
 
     # Variable appears nonlinearly; solve using Newton's method
     variable.set_value(orig_initial_value) # restore initial value
@@ -121,7 +137,16 @@ def calculate_variable_from_constraint(variable, constraint,
 
         # compute step
         xk = value(variable)
-        fk = value(expr)
+        try:
+            fk = value(expr)
+        except:
+            # We hit numerical problems with the last step (possible if
+            # the line search is turned off)
+            logger.error(
+                "Newton's method encountered an error evaluating the "
+                "expression.\n\tPlease provide a different initial guess "
+                "or enable the linesearch if you have not.")
+            raise
         fpk = value(expr_deriv)
         if abs(fpk) < 1e-12:
             raise RuntimeError(
@@ -139,8 +164,8 @@ def calculate_variable_from_constraint(variable, constraint,
             while alpha > 1e-8:
                 # check if the value at xkp1 has sufficient reduction in
                 # the residual
-                fkp1 = value(expr)
-                if fkp1**2 < c1*fk**2:
+                fkp1 = value(expr, exception=False)
+                if fkp1 is not None and fkp1**2 < c1*fk**2:
                     # found an alpha value with sufficient reduction
                     # continue to the next step
                     break
