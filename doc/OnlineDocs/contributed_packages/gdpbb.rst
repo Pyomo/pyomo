@@ -37,5 +37,5 @@ To use the GDPbb solver, define your Pyomo GDP model as usual:
 GDP Branch and Bound implementation and optional arguments
 ----------------------------------------------------------
 
-.. autoclass:: pyomo.contrib.gdpbb.gdpbb.GDPbbSolver
+.. autoclass:: pyomo.contrib.gdpbb.GDPbb.GDPbbSolver
     :members:
