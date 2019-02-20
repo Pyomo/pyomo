@@ -18,7 +18,7 @@ import six
 from .deprecation import deprecated
 from . import config
 
-def thisFile():
+def this_file():
     """Returns the file name for the module that calls this function.
 
     This function is more reliable than __file__ on platforms like
@@ -36,13 +36,13 @@ def thisFile():
     return os.path.abspath(inspect.getfile(callerFrame[0]))
 
 
-def thisFileDir():
+def this_file_dir():
     """Returns the directory containing the module that calls this function.
     """
-    return os.path.dirname(thisFile())
+    return os.path.dirname(this_file())
 
 
-PYOMO_ROOT_DIR = os.path.dirname(os.path.dirname(thisFileDir()))
+PYOMO_ROOT_DIR = os.path.dirname(os.path.dirname(this_file_dir()))
 
 
 def find_file(filename, cwd=True, mode=os.R_OK, ext=None, pathlist=[],

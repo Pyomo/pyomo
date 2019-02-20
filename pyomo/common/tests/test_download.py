@@ -18,7 +18,7 @@ from pyutilib.misc import capture_output
 
 from pyomo.common import DeveloperError
 from pyomo.common.config import PYOMO_CONFIG_DIR
-from pyomo.common.fileutils import thisFile
+from pyomo.common.fileutils import this_file
 from pyomo.common.download import FileDownloader
 
 class Test_FileDownloader(unittest.TestCase):
@@ -41,9 +41,9 @@ class Test_FileDownloader(unittest.TestCase):
         self.assertIsNone(f.cacert)
         self.assertIsNone(f._fname)
 
-        f = FileDownloader(True, thisFile())
+        f = FileDownloader(True, this_file())
         self.assertTrue(f.insecure)
-        self.assertEqual(f.cacert, thisFile())
+        self.assertEqual(f.cacert, this_file())
         self.assertIsNone(f._fname)
 
         with self.assertRaisesRegexp(
@@ -65,15 +65,15 @@ class Test_FileDownloader(unittest.TestCase):
         self.assertIsNone(f.target)
 
         f = FileDownloader()
-        f.parse_args(['--insecure', '--cacert', thisFile()])
+        f.parse_args(['--insecure', '--cacert', this_file()])
         self.assertTrue(f.insecure)
-        self.assertEqual(f.cacert, thisFile())
+        self.assertEqual(f.cacert, this_file())
         self.assertIsNone(f.target)
 
         f = FileDownloader()
-        f.parse_args(['--insecure', 'bar', '--cacert', thisFile()])
+        f.parse_args(['--insecure', 'bar', '--cacert', this_file()])
         self.assertTrue(f.insecure)
-        self.assertEqual(f.cacert, thisFile())
+        self.assertEqual(f.cacert, this_file())
         self.assertEqual(f.target, 'bar')
 
         f = FileDownloader()

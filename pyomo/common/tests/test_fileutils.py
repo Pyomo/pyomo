@@ -24,11 +24,11 @@ from pyutilib.subprocess import run
 import pyomo.common.config as config
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.fileutils import (
-    thisFile, find_file, find_library, find_executable, ExecutableManager,
+    this_file, find_file, find_library, find_executable, ExecutableManager,
     _system, _path, _exeExt, _libExt,
 )
 
-_thisFile = thisFile()
+_this_file = this_file()
 
 class TestFileUtils(unittest.TestCase):
     def setUp(self):
@@ -57,18 +57,19 @@ class TestFileUtils(unittest.TestCase):
         mode = os.stat(fname).st_mode
         os.chmod( fname, mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH )
 
-    def test_thisFile(self):
-        self.assertEquals(_thisFile, __file__.replace('.pyc','.py'))
+    def test_this_file(self):
+        self.assertEquals(_this_file, __file__.replace('.pyc','.py'))
         # Note that in some versions of PyPy, this can return <module>
         # instead if the normal <string>
         self.assertIn(run([
             sys.executable,'-c',
-            'from pyomo.common.fileutils import thisFile;print(thisFile())'
+            'from pyomo.common.fileutils import this_file;'
+            'print(this_file())'
         ])[1].strip(), ['<string>','<module>'])
         self.assertEquals(run(
             [sys.executable],
-            stdin='from pyomo.common.fileutils import thisFile;'
-            'print(thisFile())'
+            stdin='from pyomo.common.fileutils import this_file;'
+            'print(this_file())'
         )[1].strip(), '<stdin>')
 
     def test_system(self):
