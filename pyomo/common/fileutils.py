@@ -135,7 +135,7 @@ _libExt = {
     'linux':   ('.so', '.so.*'),
     'windows': ('.dll',),
     'cygwin':  ('.dll', '.so', '.so.*'),
-    'darwin':  ('.dynlib',),
+    'darwin':  ('.dylib',),
 }
 
 def _system():
