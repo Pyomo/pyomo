@@ -748,7 +748,7 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         return False, None
 
 
-def fbbt_con(con):
+def fbbt_con(con, deactivate_satisfied_constraints=True):
     """
     Feasibility based bounds tightening for a constraint. This function attempts to improve the bounds of each variable
     in the constraint based on the bounds of the constraint and the bounds of the other variables in the constraint.
@@ -769,7 +769,13 @@ def fbbt_con(con):
     ----------
     con: pyomo.core.base.constraint.Constraint
         constraint on which to perform fbbt
+    deactivate_satisfied_constraints: bool
+        If deactivate_satisfied_constraints is True and the constraint is always satisfied, then the constranit
+        will be deactivated
     """
+    if not con.active:
+        return None
+
     bnds_dict = ComponentMap()  # a dictionary to store the bounds of
     #  every node in the tree
 
@@ -786,7 +792,14 @@ def fbbt_con(con):
         _lb = -math.inf
     if _ub is None:
         _ub = math.inf
+
+    # first check if the constraint is always satisfied
     lb, ub = bnds_dict[con.body]
+    if deactivate_satisfied_constraints:
+        if lb >= _lb and ub <= _ub:
+            con.deactivate()
+            return None
+
     if _lb > lb:
         lb = _lb
     if _ub < ub:
@@ -798,7 +811,7 @@ def fbbt_con(con):
     visitorB.dfs_postorder_stack(con.body)
 
 
-def fbbt_block(m, tol=1e-4):
+def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=True):
     """
     Feasibility based bounds tightening (FBBT) for a block or model. This
     loops through all of the constraints in the block and performs
@@ -813,6 +826,9 @@ def fbbt_block(m, tol=1e-4):
     ----------
     m: pyomo.core.base.block.Block or pyomo.core.base.PyomoModel.ConcreteModel
     tol: float
+    deactivate_satisfied_constraints: bool
+        If deactivate_satisfied_constraints is True and a constraint is always satisfied, then the constranit
+        will be deactivated
     """
     var_to_con_map = ComponentMap()
     var_lbs = ComponentMap()
@@ -835,7 +851,7 @@ def fbbt_block(m, tol=1e-4):
     improved_vars = ComponentSet()
     for c in m.component_data_objects(ctype=Constraint, active=True,
                                       descend_into=True, sort=True):
-        fbbt_con(c)
+        fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints)
         for v in identify_variables(c.body):
             if v.lb is not None:
                 if value(v.lb) > var_lbs[v] + tol:
@@ -849,7 +865,7 @@ def fbbt_block(m, tol=1e-4):
     while len(improved_vars) > 0:
         v = improved_vars.pop()
         for c in var_to_con_map[v]:
-            fbbt_con(c)
+            fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints)
             for _v in identify_variables(c.body):
                 if _v.lb is not None:
                     if value(_v.lb) > var_lbs[_v] + tol:
@@ -861,7 +877,7 @@ def fbbt_block(m, tol=1e-4):
                         var_ubs[_v] = value(_v.ub)
 
 
-def fbbt(comp):
+def fbbt(comp, deactivate_satisfied_constraints=True):
     """
     Perform FBBT on a constraint, block, or model. For more control,
     use fbbt_con and fbbt_block. For detailed documentation, see
@@ -870,14 +886,17 @@ def fbbt(comp):
     Parameters
     ----------
     comp: pyomo.core.base.constraint.Constraint or pyomo.core.base.block.Block or pyomo.core.base.PyomoModel.ConcreteModel
+    deactivate_satisfied_constraints: bool
+        If deactivate_satisfied_constraints is True and a constraint is always satisfied, then the constranit
+        will be deactivated
     """
     if comp.type() == Constraint:
         if comp.is_indexed():
             for _c in comp.values():
-                fbbt_con(comp)
+                fbbt_con(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints)
         else:
-            fbbt_con(comp)
+            fbbt_con(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints)
     elif comp.type() == Block:
-        fbbt_block(comp)
+        fbbt_block(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints)
     else:
         raise FBBTException('Cannot perform FBBT on objects of type {0}'.format(type(comp)))
