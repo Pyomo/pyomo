@@ -19,6 +19,7 @@ from pyomo.core.expr.expr_pyomo5 import (EqualityExpression,
                                         nonpyomo_leaf_types
                                         )
 from pyomo.environ import SymbolMap,NumericLabeler,Var, Constraint
+from pyomo.gdp import Disjunction,Disjunct
 
 class SMTSatSolver(object):
     """
@@ -35,35 +36,50 @@ class SMTSatSolver(object):
         string = ""
         string = string + "Variables:\n"
         for v in self.variable_list:
-            string = string + v + "\n"
+            string = string + v
         string = string + "Bounds:\n"
         for e in self.bounds_list:
-            string = string + e + "\n"
+            string = string + e
         string = string + "Expressions:\n"
         for e in self.expression_list:
-            string = string + e + "\n"
+            string = string + e
+        string = string + "Disjunctions:\n"
+        for djn in self.disjunctions_list:
+            string = string + "Disjunction: " + djn[0] + "\n"
+            for disj in djn[1]:
+                string = string + "  "+disj[0] + " : " + "\n"
+                for c in disj[1]:
+                    string = string + "    "+c+"\n"
         return string
     def __init__(self,model = None):
         self.variable_label_map = SymbolMap(NumericLabeler('x'))
-        self.prefix_expr_list = []
+        self.prefix_expr_list = self._get_default_functions()
         self.variable_list = []
         self.bounds_list = []
         self.expression_list= []
+        self.disjunctions_list = []
         self.walker = SMT_visitor(self.variable_label_map)
         self.solver = z3.Solver()
+
         if model is not None:
             self._process_model(model)
 
     #Set up functions to be added to beginning of string
     def _get_default_functions(self):
-        self.prefix_expr_list.append("(define-fun exp ((x Real)) Real (^ 2.718281828459045 x))")
-
+        default = []
+        default.append("(define-fun exp ((x Real)) Real (^ 2.718281828459045 x))")
+        return default
     #processes pyomo model into SMT model
     def _process_model(self,model):
-        for v in model.component_data_objects(ctype = Var, descend_into=True):
+        for v in model.component_data_objects(ctype = Var, descend_into=False):
             smtstring = self.add_var(v)
         for c in model.component_data_objects(ctype = Constraint, active = True):
             self.add_expr(c.expr)
+        for djn in model.component_data_objects(ctype = Disjunction):
+            if djn.active:
+                self._process_active_disjunction(djn)
+            else:
+                self._process_inactive_disjunction(djn)
 
     #define bound constraints
     def _add_bound(self,var):
@@ -71,38 +87,84 @@ class SMTSatSolver(object):
         lb = var.lb
         ub = var.ub
         if lb is not None:
-            self.bounds_list.append ("(assert (>= " + nm + " " + str(lb)+"))")
+            self.bounds_list.append ("(assert (>= " + nm + " " + str(lb)+"))\n")
         if ub is not None:
-            self.bounds_list.append ("(assert (<= " + nm + " " + str(ub)+"))")
+            self.bounds_list.append ("(assert (<= " + nm + " " + str(ub)+"))\n")
     #define variables
     def add_var(self,var):
         label = self.variable_label_map.getSymbol(var)
         domain = type(var.domain)
         if domain is RealSet:
-            self.variable_list.append("(declare-fun "+ label + "() Real)")
+            self.variable_list.append("(declare-fun "+ label + "() Real)\n")
             self._add_bound(var)
         elif domain is IntegerSet:
-            self.variable_list.append("(declare-fun "+ label + "() Int)")
+            self.variable_list.append("(declare-fun "+ label + "() Int)\n")
             self._add_bound(var)
         elif domain is BooleanSet:
-            self.variable_list.append("(declare-fun "+ label + "() Bool)")
+            self.variable_list.append("(declare-fun "+ label + "() Int)\n")
+            self._add_bound(var)
         else:
             raise NotImplementedError("SMT cannot handle" + str(domain) + "variables")
-
+        return label
     #Defines SMT expression from pyomo expression
     def add_expr(self,expression):
         smtexpr = self.walker.walk_expression(expression)
-        self.expression_list.append ("(assert " +smtexpr+")")
+        self.expression_list.append ("(assert " +smtexpr+")\n")
 
-    #Checks Satisfiability of model
-    def check(self):
+    #Computes the SMT Model for the disjunction from the internal class storage
+    def _compute_disjunction_string(self,smt_djn):
+        djn_string = smt_djn[0]
+        for disj in smt_djn[1]:
+            cons_string = "true"
+            for c in disj[1]:
+                cons_string = "(and " + cons_string +" "+ c + ")"
+            djn_string = djn_string + "(assert (=> ( = 1 " + disj[0] + ") " + cons_string +"))\n"
+        return djn_string
+
+    #converts disjunction to internal class storage
+    def _process_active_disjunction(self,djn):
+        xor_expr = "0"
+        disjuncts = []
+        for disj in djn.disjuncts:
+            constraints = []
+            iv = disj.indicator_var
+            label = self.add_var(iv)
+            xor_expr = "(+ "+xor_expr+" "+ label +")"
+            for c in disj.component_data_objects(ctype = Constraint, active = True):
+                constraints.append(self.walker.walk_expression(c.expr))
+            disjuncts.append((label,constraints))
+        xor_expr = "(assert (= 1 " + xor_expr + "))\n"
+        self.disjunctions_list.append((xor_expr,disjuncts))
+    #processes inactive disjunction indicator vars without constraints
+    def _process_inactive_disjunction(self,djn):
+        xor_expr = "0"
+        for disj in djn.disjuncts:
+            iv = disj.indicator_var
+            label = self.add_var(iv)
+            xor_expr = "(+ "+xor_expr+" "+ label +")"
+        xor_expr = "(assert (= 1 " + xor_expr + "))\n"
+        self.expression_list.append(xor_expr)
+    def get_SMT_string(self):
         prefix_string = ''.join(self.prefix_expr_list)
         variable_string = ''.join(self.variable_list)
         bounds_string = ''.join(self.bounds_list)
         expression_string = ''.join(self.expression_list)
-        smtstring = prefix_string + variable_string +bounds_string + expression_string
-        self.solver.append(z3.parse_smt2_string(smtstring))
+        disjunctions_string = ''.join([self._compute_disjunction_string(d) for d in self.disjunctions_list])
+        smtstring = prefix_string + variable_string +bounds_string + expression_string + disjunctions_string
+        return smtstring
+    def get_var_dict(self):
+        labels = [x for x in self.variable_label_map.bySymbol]
+        labels.sort()
+        vars = [self.variable_label_map.getObject(l) for l in labels]
+        return zip(labels,vars)
+    #Checks Satisfiability of model
+    def check(self):
+        self.solver.append(z3.parse_smt2_string(self.get_SMT_string()))
         return self.solver.check()
+
+
+
+
 
 
 class SMT_visitor(EXPR.StreamBasedExpressionVisitor):
