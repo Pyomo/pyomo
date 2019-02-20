@@ -35,7 +35,7 @@ To use the GDPbb solver, define your Pyomo GDP model as usual:
   >>> print(results.solver.termination_condition)
   optimal
 
-  >>> print([value(i) for i in m.y[:].indicator_var])
+  >>> print([value(m.y[i].indicator_var) for i in (1, 2)])
   [0, 1]
 
 
