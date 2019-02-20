@@ -5,7 +5,7 @@ ___________________________________
    :scale: 35%
    :align: right
 
-The Pyomo.GDP modeling extension allows userrs to include logical disjunctions in their models.
+The Pyomo.GDP modeling extension allows users to include logical disjunctions in their models.
 These disjunctions are often used to model discrete decisions that have implications on the system behavior.
 For example, in process design, a disjunction may model the choice between processes A and B.
 If A is selected, then its associated equations and inequalities will apply; otherwise, if B is selected,
