@@ -33,7 +33,7 @@ class TestGDPBB(unittest.TestCase):
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
         SolverFactory('gdpbb').solve(
-            eight_process, tee=False,
+            eight_process, tee=False,check_sat=True,
             solver=minlp_solver,
             solver_args=minlp_args,
         )
@@ -46,7 +46,7 @@ class TestGDPBB(unittest.TestCase):
             join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         strip_pack = exfile.build_rect_strip_packing_model()
         SolverFactory('gdpbb').solve(
-            strip_pack, tee=False,
+            strip_pack, tee=False,check_sat=True,
             solver=minlp_solver,
             solver_args=minlp_args,
         )
@@ -60,7 +60,7 @@ class TestGDPBB(unittest.TestCase):
             join(exdir, 'constrained_layout', 'cons_layout_model.py'))
         cons_layout = exfile.build_constrained_layout_model()
         SolverFactory('gdpbb').solve(
-            cons_layout, tee=False,
+            cons_layout, tee=False,check_sat=True,
             solver=minlp_solver,
             solver_args=minlp_args,
         )
@@ -74,7 +74,7 @@ class TestGDPBB(unittest.TestCase):
         exfile = import_file(join(exdir, 'small_lit', 'ex_633_trespalacios.py'))
         model = exfile.build_simple_nonconvex_gdp()
         SolverFactory('gdpbb').solve(
-            model, tee=False,
+            model, tee=False,check_sat=True,
             solver=minlp_solver,
             solver_args=minlp_args,
         )

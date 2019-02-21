@@ -46,6 +46,11 @@ class GDPbbSolver(object):
         domain=bool,
         description="Flag to stream solver output to console."
     ))
+    CONFIG.declare("check_sat", ConfigValue(
+        default=False,
+        domain=bool,
+        description="When True, solver will check satisfiability via z3 satisfiability solver at each node"
+    ))
     CONFIG.declare("logger", ConfigValue(
         default='pyomo.contrib.gdpbb',
         description="The logger object or name to use for reporting.",
@@ -177,7 +182,7 @@ class GDPbbSolver(object):
                         disj.indicator_var = 0
                     ss = SMTSatSolver(mnew)
                     # print ss.get_SMT_string()
-                    if ss.check() != "unsat":
+                    if not(config.check_sat) or ss.check() != "unsat":
                         obj_value, result, vars = self.subproblem_solve(mnew, solver, config)
                         counter += 1
                         ordering_tuple = (obj_sign * obj_value, djn_left, -counter)
