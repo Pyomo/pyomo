@@ -1,6 +1,18 @@
 Generalized Disjunctive Programming
 ___________________________________
 
+.. image:: /../logos/gdp/Pyomo-GDP-150.png
+   :scale: 35%
+   :align: right
+
+The Pyomo.GDP modeling extension allows users to include logical disjunctions in their models.
+These disjunctions are often used to model discrete decisions that have implications on the system behavior.
+For example, in process design, a disjunction may model the choice between processes A and B.
+If A is selected, then its associated equations and inequalities will apply; otherwise, if B is selected,
+then its respective constraints should be enforced.
+In the general case, if these models contain nonlinear relations,
+then they are Generalized Disjunctive Programming (GDP) models
+
 Disjunctions
 ============
 
