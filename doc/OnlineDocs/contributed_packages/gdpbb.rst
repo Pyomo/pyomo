@@ -19,12 +19,16 @@ To use the GDPbb solver, define your Pyomo GDP model as usual:
 
   Create a simple model
   >>> m = ConcreteModel()
-  >>> m.x = Var([1,2], bounds=(0,8))
-  >>> m.obj = Objective(expr=sum(m.x[:]), sense=minimize)
-  >>> m.y = Disjunct([1,2])
-  >>> m.y[1].c = Constraint([1,2], rule=lambda d,i: m.x[i] >= 2)
-  >>> m.y[2].c = Constraint([1,2], rule=lambda d,i: m.x[i] >= 3)
-  >>> m.djn = Disjunction(expr=m.y[:])
+  >>> m.x1 = Var(bounds = (0,8))
+  >>> m.x2 = Var(bounds = (0,8))
+  >>> m.obj = Objective(expr=m.x1 + m.x2, sense=minimize)
+  >>> m.y1 = Disjunct()
+  >>> m.y2 = Disjunct()
+  >>> m.y1.c1 = Constraint(expr=m.x1 >= 2)
+  >>> m.y1.c2 = Constraint(expr=m.x2 >= 2)
+  >>> m.y2.c1 = Constraint(expr=m.x1 >= 3)
+  >>> m.y2.c2 = Constraint(expr=m.x2 >= 3)
+  >>> m.djn = Disjunction(expr=[m.y1, m.y2])
 
   Invoke the GDPbb solver
   >>> results = SolverFactory('gdpbb').solve(m)
@@ -35,12 +39,12 @@ To use the GDPbb solver, define your Pyomo GDP model as usual:
   >>> print(results.solver.termination_condition)
   optimal
 
-  >>> print([value(m.y[i].indicator_var) for i in (1, 2)])
-  [0, 1]
+  >>> print([value(m.y1.indicator_var), value(m.y2.indicator_var)])
+  [1, 0]
 
 
 GDP Branch and Bound implementation and optional arguments
 ----------------------------------------------------------
 
-.. autoclass:: pyomo.contrib.gdpbb.gdpbb.GDPbbSolver
+.. autoclass:: pyomo.contrib.gdpbb.GDPbb.GDPbbSolver
     :members:
