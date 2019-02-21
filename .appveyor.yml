@@ -126,10 +126,6 @@ install:
   - windows_x64_64.exe /SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS
   - "SET PATH=%cd%\\gams;%PATH%"
   #
-  # Install z3 Satisfiability solver
-  #
-  - conda install -c asmeurer z3
-  #
   # Clone but don't install pyomo-model-libraries
   #
   - "git clone https://github.com/Pyomo/pyomo-model-libraries.git"
