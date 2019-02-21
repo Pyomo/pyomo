@@ -171,7 +171,11 @@ class Test_calc_var(unittest.TestCase):
         m.x.set_value(600)
         output = six.StringIO()
         with LoggingIntercept(output, 'pyomo', logging.WARNING):
-            with self.assertRaises(ValueError):
+            if six.PY2:
+                expectedException = ValueError
+            else:
+                expectedException = TypeError
+            with self.assertRaises(expectedException):
                 calculate_variable_from_constraint(m.x, m.f, linesearch=False)
         self.assertIn('Encountered an error evaluating the expression '
                       'at the initial guess', output.getvalue())
@@ -188,7 +192,11 @@ class Test_calc_var(unittest.TestCase):
         m.x = .1
         output = six.StringIO()
         with LoggingIntercept(output, 'pyomo', logging.WARNING):
-            with self.assertRaises(ValueError):
+            if six.PY2:
+                expectedException = ValueError
+            else:
+                expectedException = TypeError
+            with self.assertRaises(expectedException):
                 calculate_variable_from_constraint(m.x, m.c, linesearch=False)
         self.assertIn("Newton's method encountered an error evaluating "
                       "the expression.", output.getvalue())
