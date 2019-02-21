@@ -17,7 +17,7 @@ from pyomo.opt import SolverFactory
 
 import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
-from pyomo.contrib.parmest.graphics import pairwise_plot
+from pyomo.contrib.parmest.graphics import pairwise_plot, fit_rect_dist, fit_mvn_dist, fit_kde_dist
 
 __version__ = 0.1
 
@@ -960,22 +960,17 @@ class Estimator(object):
         for a in alphas:
             
             if distribution == 'Rect':
-                tval = stats.t.ppf(1-(1-a)/2, len(theta_values)-1) # Two-tail
-                m = theta_values.mean()
-                s = theta_values.std()
-                lower_bound = m-tval*s
-                upper_bound = m+tval*s
-                training_results[a] = ((theta_values > lower_bound).all(axis=1) & \
-                                  (theta_values < upper_bound).all(axis=1))
+                lb, ub = fit_rect_dist(theta_values, a)
+                training_results[a] = ((theta_values > lb).all(axis=1) & \
+                                  (theta_values < ub).all(axis=1))
                 
                 if test_theta_values is not None:
                     # use upper and lower bound from the training set
-                    test_result[a] = ((test_theta_values > lower_bound).all(axis=1) & \
-                                  (test_theta_values < upper_bound).all(axis=1))
+                    test_result[a] = ((test_theta_values > lb).all(axis=1) & \
+                                  (test_theta_values < ub).all(axis=1))
                     
             elif distribution == 'MVN':
-                dist = stats.multivariate_normal(theta_values.mean(), 
-                                            theta_values.cov(), allow_singular=True)
+                dist = fit_mvn_dist(theta_values, a)
                 Z = dist.pdf(theta_values)
                 score = stats.scoreatpercentile(Z, (1-a)*100) 
                 training_results[a] = (Z >= score)
@@ -986,9 +981,9 @@ class Estimator(object):
                     test_result[a] = (Z >= score) 
                 
             elif distribution == 'KDE':
-                dist = stats.gaussian_kde(theta_values.transpose().values)
+                dist = fit_kde_dist(theta_values, a)
                 Z = dist.pdf(theta_values.transpose())
-                score = stats.scoreatpercentile(Z.transpose(), (1-a)*100) 
+                score = stats.scoreatpercentile(Z, (1-a)*100) 
                 training_results[a] = (Z >= score)
                 
                 if test_theta_values is not None:
@@ -1000,3 +995,6 @@ class Estimator(object):
             return training_results, test_result
         else:
             return training_results
+
+
+    

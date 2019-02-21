@@ -80,20 +80,19 @@ def _add_scatter(x,y,color,label,columns,theta_star):
     ax.scatter(theta_star[xvar], theta_star[yvar], c=color, s=35)
     
     
-def _add_rectangle_CI(x,y,color,label,columns,alpha):
+def _add_rectangle_CI(x,y,color,label,columns,lower_bound,upper_bound):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
+
+    xmin = lower_bound[xvar]
+    ymin = lower_bound[yvar]
+    xmax = upper_bound[xvar]
+    ymax = upper_bound[yvar]
     
-    tval = stats.t.ppf(1-(1-alpha)/2, len(x)-1) # Two-tail
-    xm = x.mean()
-    ym = y.mean()
-    xs = x.std()
-    ys = y.std()
-    
-    ax.plot([xm-tval*xs, xm+tval*xs], [ym-tval*ys, ym-tval*ys], color=color)
-    ax.plot([xm+tval*xs, xm+tval*xs], [ym-tval*ys, ym+tval*ys], color=color)
-    ax.plot([xm+tval*xs, xm-tval*xs], [ym+tval*ys, ym+tval*ys], color=color)
-    ax.plot([xm-tval*xs, xm-tval*xs], [ym+tval*ys, ym-tval*ys], color=color)
+    ax.plot([xmin, xmax], [ymin, ymin], color=color)
+    ax.plot([xmax, xmax], [ymin, ymax], color=color)
+    ax.plot([xmax, xmin], [ymax, ymax], color=color)
+    ax.plot([xmin, xmin], [ymax, ymin], color=color)
 
 
 def _add_scipy_dist_CI(x,y,color,label,columns,ncells,alpha,dist,theta_star):
@@ -182,7 +181,7 @@ def _set_axis_limits(g, axis_limits, theta_vals, theta_star):
             
 def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[], 
                   axis_limits=None, title=None, add_obj_contour=True, 
-                  add_legend=True, filename=None, return_scipy_distributions=False):
+                  add_legend=True, filename=None):
     """
     Plot pairwise relationship for theta values, and optionally confidence 
     intervals and results from likelihood ratio tests
@@ -218,14 +217,6 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         Add a legend to the plot
     filename: string, optional
         Filename used to save the figure
-    return_scipy_distributions: bool, optional
-        Return the scipy distributions for MVN and KDE
-        
-    Returns
-    ----------
-    (mvn_dist, kde_dist): tuple
-        If return_scipy_distributions = True, return the MVN and KDE scipy 
-        distributions
     """
 
     if len(theta_values) == 0:
@@ -284,24 +275,24 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         kde_dist = None
         for i, dist in enumerate(distributions):
             if dist == 'Rect':
+                lb, ub = fit_rect_dist(thetas, alpha)
                 g.map_offdiag(_add_rectangle_CI, color=colors[i], columns=theta_names, 
-                            alpha=alpha)
+                            lower_bound=lb, upper_bound=ub)
                 legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
                 
             elif dist == 'MVN':
-                mvn_dist = stats.multivariate_normal(thetas.mean(), 
-                                        thetas.cov(), allow_singular=True)
+                mvn_dist = fit_mvn_dist(thetas, alpha)
                 Z = mvn_dist.pdf(thetas)
-                score = stats.scoreatpercentile(Z.transpose(), (1-alpha)*100) 
+                score = stats.scoreatpercentile(Z, (1-alpha)*100) 
                 g.map_offdiag(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
                             ncells=100, alpha=score, dist=mvn_dist, 
                             theta_star=theta_star)
                 legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
                 
             elif dist == 'KDE':
-                kde_dist = stats.gaussian_kde(thetas.transpose().values)
+                kde_dist = fit_kde_dist(thetas, alpha)
                 Z = kde_dist.pdf(thetas.transpose())
-                score = stats.scoreatpercentile(Z.transpose(), (1-alpha)*100) 
+                score = stats.scoreatpercentile(Z, (1-alpha)*100) 
                 g.map_offdiag(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
                             ncells=100, alpha=score, dist=kde_dist, 
                             theta_star=theta_star)
@@ -360,6 +351,65 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         plt.close(g.fig)
     
     plt.show()
+    
 
-    if return_scipy_distributions:
-        return mvn_dist, kde_dist
+def fit_rect_dist(theta_values, alpha):
+    """
+    Fit a rectangular distribution to theta values
+    
+    Parameters
+    ----------
+    theta_values: DataFrame, columns = variable names
+        Theta values
+    alpha: float, optional
+        Confidence interval value
+    
+    Returns
+    ---------
+    tuple containing lower bound and upper bound for each variable
+    """
+    tval = stats.t.ppf(1-(1-alpha)/2, len(theta_values)-1) # Two-tail
+    m = theta_values.mean()
+    s = theta_values.std()
+    lower_bound = m-tval*s
+    upper_bound = m+tval*s
+    
+    return lower_bound, upper_bound
+    
+def fit_mvn_dist(theta_values, alpha):
+    """
+    Fit a multivariate normal distribution to theta values
+    
+    Parameters
+    ----------
+    theta_values: DataFrame, columns = variable names
+        Theta values
+    alpha: float, optional
+        Confidence interval value
+    
+    Returns
+    ---------
+    scipy.stats.multivariate_normal distribution
+    """
+    dist = stats.multivariate_normal(theta_values.mean(), 
+                                    theta_values.cov(), allow_singular=True)
+    return dist
+
+def fit_kde_dist(theta_values, alpha):
+    """
+    Fit a gaussian kernel-density estimate to theta values
+    
+    Parameters
+    ----------
+    theta_values: DataFrame, columns = variable names
+        Theta values
+    alpha: float, optional
+        Confidence interval value
+    
+    Returns
+    ---------
+    scipy.stats.gaussian_kde distribution
+    """
+    dist = stats.gaussian_kde(theta_values.transpose().values)
+    
+    return dist
