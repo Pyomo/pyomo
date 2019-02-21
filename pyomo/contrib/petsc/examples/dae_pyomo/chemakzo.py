@@ -28,10 +28,10 @@ if __name__ == "__main__":
     #    (dy6/dt is not explicitly in the equations, so only 5 ydots)
     model.t = Var(initialize=0) #time, but not used anywhere could delete
                                 #using time explicilty in equations is possible
-    model.y = Var([1,2,3,4,5,6])  #
-    model.ydot = Var([1,2,3,4,5]) # dy/dt
-    model.r = Var([1,2,3,4,5])
-    model.Fin = Var()
+    model.y = Var([1,2,3,4,5,6], initialize=1.0)  #
+    model.ydot = Var([1,2,3,4,5], initialize=1.0) # dy/dt
+    model.r = Var([1,2,3,4,5], initialize=1.0)
+    model.Fin = Var(initialize=1.0)
 
     # Equations
     model.eq_ydot1 = Constraint(expr=model.ydot[1] == -2.0*model.r[1] +
@@ -64,8 +64,29 @@ if __name__ == "__main__":
     # variables (r and y6 well and the derivative vars too).
     y0 = {1:0.444, 2:0.00123, 3:0.0, 4:0.007, 5:0.0} #initial differntial vars
     for i in [1,2,3,4,5]: model.y[i].fix(y0[i])
-    print("Solving initial:")
-    res = opt.solve(model, tee=True, options={"-snes_monitor":""})
+
+    #---------------------------------------------------------------------------
+    # The scaling factor stuff here is just for testing and demonstration
+    # You don't need to supply scaling factors and if you do provide the
+    # scaling_factor suffix you don't need factors for each varibale and
+    # constaint.  These are used only for user scaling options
+    # "-scale_eqs 3" and "-scale_vars 1"
+    model.scaling_factor = Suffix(direction=Suffix.EXPORT, datatype=Suffix.FLOAT)
+    model.scaling_factor[model.Fin] = 0.5
+
+    model.scaling_factor[model.eq_Fin] = 100
+    #---------------------------------------------------------------------------
+
+    print("Solving initial conditions:")
+    res = opt.solve(
+        model,
+        tee=True,
+        options={
+            "-snes_monitor":"",
+            "-on_error_attach_debugger":"",
+            "-scale_vars":0,
+            "-scale_eqs":1})
+
     for i in [1,2,3,4,5]: model.y[i].unfix()
     model.display() # show the initial state
 
@@ -74,6 +95,7 @@ if __name__ == "__main__":
     # 3=time. dae_link associates differential variables to their derivatives
     model.dae_suffix = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
     model.dae_link = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+
     # Label the vars.  Seems 0 is default if I don't attach a suffix so don't
     # need to explicitly label algebraic vars
     model.dae_suffix[model.t] = 3 # this labels t as the time variables
@@ -90,19 +112,24 @@ if __name__ == "__main__":
     # would want to specify a time step, or an adaptive time stepping method
     res = opt.solve(model, tee=True,
         options={
-            "-dae_solve":"",              #tell solver to expect dae problem
-            "-ts_monitor":"",             #show progess of TS solver
-            "-ts_max_snes_failures":10,   #max nonlin solve fails before give up
-            #"-ts_type":"sundials",       #ts solver
-            "-ts_type":"alpha",           #ts_solver
-            "-snes_monitor":"",           #show progress on nonlinear solves
-            "-pc_type":"lu",              #direct solve MUMPS default LU fact
-            "-ksp_type":"preonly",        #no ksp used direct solve preconditioner
-            "-scale_vars":"0",            #currently not compatable dae
-            "-scale_eqs":"0",             #should work, but prob don't need
-            "-snes_type":"newtonls",      # newton line search for nonliner solver
-            "-ts_adapt_type":"basic",       # there are a lot of adaptive step
-            "-ts_max_time":180,           # final time
+            "-on_error_attach_debugger":"",
+            "-dae_solve":"",             #tell solver to expect dae problem
+            "-ts_monitor":"",            #show progess of TS solver
+            "-ts_max_snes_failures":40,  #max nonlin solve fails before give up
+            "-ts_max_reject":20,         #max steps to reject
+            "-ts_type":"alpha",          #ts_solver
+            "-snes_monitor":"",          #show progress on nonlinear solves
+            "-pc_type":"lu",             #direct solve MUMPS default LU fact
+            "-ksp_type":"preonly",       #no ksp used direct solve preconditioner
+            "-scale_vars":0,             #variable scaling method
+            "-scale_eqs":1,              #equation scaling method
+            #"-scale_eq_jac_max":100,    #set max J element to 1 for eq scaling
+            #"-show_scale_factors":"",
+            #"-show_jac":"",
+            #"-show_initial":"",
+            "-snes_type":"newtonls",     # newton line search for nonliner solver
+            "-ts_adapt_type":"basic",
+            "-ts_max_time":180,          # final time
             "-ts_save_trajectory":1,
             "-ts_trajectory_type":"visualization",
             #"-ts_exact_final_time":"stepover",

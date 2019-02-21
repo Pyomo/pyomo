@@ -47,7 +47,7 @@ PetscErrorCode FormDAEJacobian(
   ierr = VecGetArrayRead(xdot, &xxdot); CHKERRQ(ierr);
   for(i=0;i<sol_ctx->n_var_state;++i){
     x_asl[sol_ctx->dae_map_x[i]] = xx[i];
-    if(sol_ctx->dae_map_xdot[i] >= 0) x_asl[sol_ctx->dae_map_xdot[i]] = xx[i];
+    if(sol_ctx->dae_map_xdot[i] >= 0) x_asl[sol_ctx->dae_map_xdot[i]] = xxdot[i];
   }
   ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(xdot,&xxdot);CHKERRQ(ierr);
@@ -84,6 +84,7 @@ void dae_var_map(Solver_ctx *sol_ctx){
   for(i=0;i<n_var;++i){
     if(sol_ctx->dae_suffix_var->u.i[i]==2){ //a derivative var
       for(j=0;j<n_var;++j){
+        if(i == j) continue;
         if(sol_ctx->dae_link_var->u.i[i] == sol_ctx->dae_link_var->u.i[j]){
           sol_ctx->dae_link[i] = j;
           sol_ctx->dae_link[j] = i;
@@ -131,19 +132,4 @@ void get_dae_info(Solver_ctx *sol_ctx){
   }
   sol_ctx->n_var_state = n_var - sol_ctx->n_var_deriv - sol_ctx->explicit_time;
   sol_ctx->n_var_alg = sol_ctx->n_var_state - sol_ctx->n_var_diff;
-  if(sol_ctx->explicit_time>1){
-    PetscPrintf(PETSC_COMM_SELF, "ERROR: DAE: Multiple time variable (allowed 1 at most)");
-    ASL_free(&(sol_ctx->asl));
-    exit(P_EXIT_MULTIPLE_TIME);
-  }
-  if(sol_ctx->dof != sol_ctx->n_var_deriv + sol_ctx->explicit_time){
-    PetscPrintf(PETSC_COMM_SELF, "ERROR: DAE: DOF != number of derivative vars");
-    ASL_free(&(sol_ctx->asl));
-    exit(P_EXIT_DOF_DAE);
-  }
-  if(sol_ctx->n_var_diff != sol_ctx->n_var_deriv){
-    PetscPrintf(PETSC_COMM_SELF, "ERROR: DAE: number of differential vars != number of derivatives");
-    ASL_free(&(sol_ctx->asl));
-    exit(P_EXIT_VAR_DAE_MIS);
-  }
 }

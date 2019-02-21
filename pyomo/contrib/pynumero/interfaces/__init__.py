@@ -13,7 +13,12 @@ try:
     numpy_available = True
 except ImportError:
     numpy_available = False
+try:
+    import scipy
+    scipy_available = True
+except ImportError:
+    scipy_available = False
 
-if numpy_available:
+if numpy_available and scipy_available:
     from .nlp import AmplNLP, PyomoNLP
     from .nlp_compositions import TwoStageStochasticNLP

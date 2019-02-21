@@ -33,18 +33,20 @@ A :class:`~pyomo.contrib.parmest.parmest.Estimator` object can be created using
 the following code. A description of each argument is listed below.  Examples are provided in the :ref:`examplesection` Section.
 
 .. testsetup:: *
-    
+    :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
+
     import pandas as pd
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model as model_function
     data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
-                                   [4,16.0],[5,15.6],[6,19.8]],
-                                   columns=['hour', 'y'])
+                              [4,16.0],[5,15.6],[6,19.8]],
+                        columns=['hour', 'y'])
     theta_names = ['asymptote', 'rate_constant']
-    def objective_function(model, data):  
+    def objective_function(model, data):
         expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
         return expr
 
 .. doctest::
+    :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
 
     >>> import pyomo.contrib.parmest.parmest as parmest
     >>> pest = parmest.Estimator(model_function, data, theta_names, objective_function)
