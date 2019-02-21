@@ -15,7 +15,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 def calculate_variable_from_constraint(variable, constraint,
-                                       eps=1e-8, iterlim=1000, linesearch=True):
+                                       eps=1e-8, iterlim=1000,
+                                       linesearch=True, alpha_min=1e-8):
     """Calculate the variable value given a specified equality constraint
 
     This function calculates the value of the specified variable
@@ -41,6 +42,8 @@ def calculate_variable_from_constraint(variable, constraint,
     linesearch: `bool`
         Decides whether or not to use the linesearch (recommended).
         [default=True]
+    alpha_min: `float`
+        The minimum fractional step to use in the linesearch [default=1e-8].
 
     Returns:
     --------
@@ -87,7 +90,13 @@ def calculate_variable_from_constraint(variable, constraint,
     # While we have strategies for dealing with hitting numerically
     # invalid (e.g., sqrt(-1)) conditions below, if the initial point is
     # not valid, we will allow that exception to propagate up
-    residual_1 = value(constraint.body)
+    try:
+        residual_1 = value(constraint.body)
+    except:
+        logger.error(
+            "Encountered an error evaluating the expression at the "
+            "initial guess.\n\tPlease provide a different initial guess.")
+        raise
 
     variable.set_value(x1 - (residual_1-upper))
     residual_2 = value(constraint.body, exception=False)
@@ -111,7 +120,8 @@ def calculate_variable_from_constraint(variable, constraint,
         intercept = (residual_1-upper) - slope*x1
         if slope:
             variable.set_value(-intercept/slope)
-            if abs(value(constraint.body)-upper) < eps:
+            body_val = value(constraint.body, exception=False)
+            if body_val is not None and abs(body_val-upper) < eps:
                 return
 
     # Variable appears nonlinearly; solve using Newton's method
@@ -128,7 +138,8 @@ def calculate_variable_from_constraint(variable, constraint,
             'very close to zero.\n\tPlease provide a different initial guess.')
 
     iter_left = iterlim
-    while abs(value(expr)) > eps and iter_left:
+    fk = residual_1 - upper
+    while abs(fk) > eps and iter_left:
         iter_left -= 1
         if not iter_left:
             raise RuntimeError(
@@ -161,20 +172,23 @@ def calculate_variable_from_constraint(variable, constraint,
         # perform line search
         if linesearch:
             c1 = 0.999 # ensure sufficient progress
-            while alpha > 1e-8:
+            while alpha > alpha_min:
                 # check if the value at xkp1 has sufficient reduction in
                 # the residual
                 fkp1 = value(expr, exception=False)
                 if fkp1 is not None and fkp1**2 < c1*fk**2:
                     # found an alpha value with sufficient reduction
                     # continue to the next step
+                    fk = fkp1
                     break
                 alpha /= 2.0
                 xkp1 = xk + alpha * pk
                 variable.set_value(xkp1)
 
-            if alpha <= 1e-8:
+            if alpha <= alpha_min:
+                residual = value(expr, exception=False)
+                if residual is None:
+                    residual = "{function evaluation error}"
                 raise RuntimeError(
                     "Linesearch iteration limit reached; remaining "
-                    "residual = %s." % (value(expr),))
-
+                    "residual = %s." % (residual,))
