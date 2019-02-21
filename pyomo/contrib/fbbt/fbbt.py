@@ -264,9 +264,7 @@ def _prop_bnds_leaf_to_root_UnaryFunctionExpression(node, bnds_dict):
     if node.getname() in _unary_leaf_to_root_map:
         _unary_leaf_to_root_map[node.getname()](node, bnds_dict)
     else:
-        msg = ('Unsupported expression type for FBBT: ' +
-               '{0}'.format(type(node)))
-        raise FBBTException(msg)
+        bnds_dict[node] = (-math.inf, math.inf)
 
 
 _prop_bnds_leaf_to_root_map = dict()
@@ -638,7 +636,9 @@ def _prop_bnds_root_to_leaf_UnaryFunctionExpression(node, bnds_dict):
     if node.getname() in _unary_root_to_leaf_map:
         _unary_root_to_leaf_map[node.getname()](node, bnds_dict)
     else:
-        raise FBBTException('Unsupported expression type for FBBT: {0}'.format(type(node)))
+        logger.warning('Unsupported expression type for FBBT: {0}. Bounds will not be improved in this part of '
+                       'the tree.'
+                       ''.format(str(type(node))))
 
 
 _prop_bnds_root_to_leaf_map = dict()
@@ -663,13 +663,15 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
     This walker propagates bounds from the variables to each node in
     the expression tree (all the way to the root node).
     """
-    def __init__(self, bnds_dict):
+    def __init__(self, bnds_dict, binary_tol=1e-4):
         """
         Parameters
         ----------
         bnds_dict: ComponentMap
+        binary_tol: float
         """
         self.bnds_dict = bnds_dict
+        self.binary_tol = binary_tol
 
     def visit(self, node, values):
         if node.__class__ in _prop_bnds_leaf_to_root_map:
@@ -712,13 +714,17 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
     variables. Note that the bounds on every node in the tree must
     first be computed with _FBBTVisitorLeafToRoot.
     """
-    def __init__(self, bnds_dict):
+    def __init__(self, bnds_dict, update_variable_bounds=True, binary_tol=1e-4):
         """
         Parameters
         ----------
         bnds_dict: ComponentMap
+        update_variable_bounds: bool
+        binary_tol: float
         """
         self.bnds_dict = bnds_dict
+        self.update_var_bounds = update_variable_bounds
+        self.binary_tol = binary_tol
 
     def visit(self, node, values):
         pass
@@ -729,10 +735,26 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
 
         if node.is_variable_type():
             lb, ub = self.bnds_dict[node]
-            if lb != -math.inf:
-                node.setlb(lb)
-            if ub != math.inf:
-                node.setub(ub)
+            if node.is_binary():
+                if lb > self.binary_tol:
+                    lb = 1
+                else:
+                    lb = 0
+                if lb < value(node.lb):
+                    lb = value(node.lb)
+                if ub < 1 - self.binary_tol:
+                    ub = 0
+                else:
+                    ub = 1
+                if ub > value(node.ub):
+                    ub = value(node.ub)
+                self.bnds_dict[node] = (lb, ub)
+            if self.update_var_bounds:
+                lb, ub = self.bnds_dict[node]
+                if lb != -math.inf:
+                    node.setlb(lb)
+                if ub != math.inf:
+                    node.setub(ub)
             return True, None
 
         if not node.is_expression_type():
@@ -743,12 +765,12 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         else:
             logger.warning('Unsupported expression type for FBBT: {0}. Bounds will not be improved in this part of '
                            'the tree.'
-                           ''.format(type(node)))
+                           ''.format(str(type(node))))
 
         return False, None
 
 
-def fbbt_con(con, deactivate_satisfied_constraints=True):
+def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds=True, binary_tol=1e-4):
     """
     Feasibility based bounds tightening for a constraint. This function attempts to improve the bounds of each variable
     in the constraint based on the bounds of the constraint and the bounds of the other variables in the constraint.
@@ -772,6 +794,19 @@ def fbbt_con(con, deactivate_satisfied_constraints=True):
     deactivate_satisfied_constraints: bool
         If deactivate_satisfied_constraints is True and the constraint is always satisfied, then the constranit
         will be deactivated
+    update_variable_bounds: bool
+        If update_variable_bounds is True, then the bounds on variables will be automatically updated.
+    binary_tol: float
+        If the lower bound computed on a binary variable is less than or equal to binary_tol, then the
+        lower bound is left at 0. Otherwise, the lower bound is increased to 1. If the upper bound computed
+        on a binary variable is greater than or equal to 1-binary_tol, then the upper bound is left at 1.
+        Otherwise the upper bound is decreased to 0.
+
+    Returns
+    -------
+    new_var_bounds: ComponentMap
+        A ComponentMap mapping from variables a tuple containing the lower and upper bounds, respectively, computed
+        from FBBT.
     """
     if not con.active:
         return None
@@ -798,7 +833,6 @@ def fbbt_con(con, deactivate_satisfied_constraints=True):
     if deactivate_satisfied_constraints:
         if lb >= _lb and ub <= _ub:
             con.deactivate()
-            return None
 
     if _lb > lb:
         lb = _lb
@@ -807,11 +841,24 @@ def fbbt_con(con, deactivate_satisfied_constraints=True):
     bnds_dict[con.body] = (lb, ub)
 
     # Now, propagate bounds back from the root to the variables
-    visitorB = _FBBTVisitorRootToLeaf(bnds_dict)
+    visitorB = _FBBTVisitorRootToLeaf(bnds_dict, update_variable_bounds=update_variable_bounds, binary_tol=binary_tol)
     visitorB.dfs_postorder_stack(con.body)
 
+    new_var_bounds = ComponentMap()
+    for _node, _bnds in bnds_dict.items():
+        if _node.__class__ in nonpyomo_leaf_types:
+            continue
+        if _node.is_variable_type():
+            lb, ub = bnds_dict[_node]
+            if lb == -math.inf:
+                lb = None
+            if ub == math.inf:
+                ub = None
+            new_var_bounds[_node] = (lb, ub)
+    return new_var_bounds
 
-def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=True):
+
+def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_variable_bounds=True, binary_tol=1e-4):
     """
     Feasibility based bounds tightening (FBBT) for a block or model. This
     loops through all of the constraints in the block and performs
@@ -829,7 +876,21 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=True):
     deactivate_satisfied_constraints: bool
         If deactivate_satisfied_constraints is True and a constraint is always satisfied, then the constranit
         will be deactivated
+    update_variable_bounds: bool
+        If update_variable_bounds is True, then the bounds on variables will be automatically updated.
+    binary_tol: float
+        If the lower bound computed on a binary variable is less than or equal to binary_tol, then the
+        lower bound is left at 0. Otherwise, the lower bound is increased to 1. If the upper bound computed
+        on a binary variable is greater than or equal to 1-binary_tol, then the upper bound is left at 1.
+        Otherwise the upper bound is decreased to 0.
+
+    Returns
+    -------
+    new_var_bounds: ComponentMap
+        A ComponentMap mapping from variables a tuple containing the lower and upper bounds, respectively, computed
+        from FBBT.
     """
+    new_var_bounds = ComponentMap()
     var_to_con_map = ComponentMap()
     var_lbs = ComponentMap()
     var_ubs = ComponentMap()
@@ -851,8 +912,10 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=True):
     improved_vars = ComponentSet()
     for c in m.component_data_objects(ctype=Constraint, active=True,
                                       descend_into=True, sort=True):
-        fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints)
-        for v in identify_variables(c.body):
+        _new_var_bounds = fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
+                                   update_variable_bounds=update_variable_bounds, binary_tol=binary_tol)
+        new_var_bounds.update(_new_var_bounds)
+        for v in _new_var_bounds.keys():
             if v.lb is not None:
                 if value(v.lb) > var_lbs[v] + tol:
                     improved_vars.add(v)
@@ -865,8 +928,10 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=True):
     while len(improved_vars) > 0:
         v = improved_vars.pop()
         for c in var_to_con_map[v]:
-            fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints)
-            for _v in identify_variables(c.body):
+            _new_var_bounds = fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
+                                       update_variable_bounds=update_variable_bounds, binary_tol=binary_tol)
+            new_var_bounds.update(_new_var_bounds)
+            for _v in _new_var_bounds.keys():
                 if _v.lb is not None:
                     if value(_v.lb) > var_lbs[_v] + tol:
                         improved_vars.add(_v)
@@ -876,8 +941,10 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=True):
                         improved_vars.add(_v)
                         var_ubs[_v] = value(_v.ub)
 
+    return new_var_bounds
 
-def fbbt(comp, deactivate_satisfied_constraints=True):
+
+def fbbt(comp, deactivate_satisfied_constraints=False, update_variable_bounds=True, binary_tol=1e-4):
     """
     Perform FBBT on a constraint, block, or model. For more control,
     use fbbt_con and fbbt_block. For detailed documentation, see
@@ -889,14 +956,36 @@ def fbbt(comp, deactivate_satisfied_constraints=True):
     deactivate_satisfied_constraints: bool
         If deactivate_satisfied_constraints is True and a constraint is always satisfied, then the constranit
         will be deactivated
+    update_variable_bounds: bool
+        If update_variable_bounds is True, then the bounds on variables will be automatically updated.
+    binary_tol: float
+        If the lower bound computed on a binary variable is less than or equal to binary_tol, then the
+        lower bound is left at 0. Otherwise, the lower bound is increased to 1. If the upper bound computed
+        on a binary variable is greater than or equal to 1-binary_tol, then the upper bound is left at 1.
+        Otherwise the upper bound is decreased to 0.
+
+    Returns
+    -------
+    new_var_bounds: ComponentMap
+        A ComponentMap mapping from variables a tuple containing the lower and upper bounds, respectively, computed
+        from FBBT.
     """
+    new_var_bounds = ComponentMap()
     if comp.type() == Constraint:
         if comp.is_indexed():
             for _c in comp.values():
-                fbbt_con(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints)
+                _new_var_bounds = fbbt_con(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
+                                           update_variable_bounds=update_variable_bounds, binary_tol=binary_tol)
+                new_var_bounds.update(_new_var_bounds)
         else:
-            fbbt_con(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints)
+            _new_var_bounds = fbbt_con(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
+                                       update_variable_bounds=update_variable_bounds, binary_tol=binary_tol)
+            new_var_bounds.update(_new_var_bounds)
     elif comp.type() == Block:
-        fbbt_block(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints)
+        _new_var_bounds = fbbt_block(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
+                                     update_variable_bounds=update_variable_bounds, binary_tol=binary_tol)
+        new_var_bounds.update(_new_var_bounds)
     else:
         raise FBBTException('Cannot perform FBBT on objects of type {0}'.format(type(comp)))
+
+    return new_var_bounds
