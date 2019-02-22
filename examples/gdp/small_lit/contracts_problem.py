@@ -1,3 +1,11 @@
+""" Example from 'Lagrangean Relaxation of the Hull-Reformulation of Linear \
+    Generalized Disjunctive Programs and its use in Disjunctive Branch \
+    and Bound' Page 25 f.
+    Francisco Trespalacios and Ignacio E. Grossmann, 2015
+
+    Pyomo model implementation by @RomeoV
+"""
+
 from random import randint
 from pyomo.environ import \
     (ConcreteModel, Constraint, Set, RangeSet, Param,
