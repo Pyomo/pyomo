@@ -23,7 +23,9 @@ def twoSegments_SawayaGrossmann():
     m.disj2.c = Constraint(expr=inequality(2, m.x, 3))
     m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
 
-    m.obj = Objective(expr=m.x)
+    # this is my objective because I want to make sure that when I am testing
+    # cutting planes, my first solution to rBigM is not on the convex hull.
+    m.obj = Objective(expr=m.x - m.disj2.indicator_var)
 
     return m
 

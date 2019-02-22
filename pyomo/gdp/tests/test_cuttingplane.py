@@ -67,13 +67,12 @@ class OneVarDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_two_segment_cuts(self):
         m = models.twoSegments_SawayaGrossmann()
-        TransformationFactory('gdp.cuttingplane').apply_to(m)
+        # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
+        # 0 <= Y <= 1 (in the limit)
+        TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
 
-        # TODO: This adds no cuts... I don't know what I was thinking of testing
-        # really... I mean it exercises the sep problem obj = 0 termination
-        # criterion. I wish it found (0,0) first... It could. Which is why this
-        # is a bad test.
-        self.assertEqual(len(m._pyomo_gdp_cuttingplane_relaxation.cuts), 0)
+        # fail so I have output
+        self.assertTrue(False)
 
 class TwoTermDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
