@@ -1,10 +1,9 @@
 """Tests explicit bound to variable bound transformation module."""
 import pyutilib.th as unittest
-from pyomo.contrib.gdp_bounds.plugins.compute_bounds import (disjunctive_lb,
-                                                             disjunctive_ub)
-from pyomo.core import ComponentMap
+from pyomo.contrib.gdp_bounds.plugins.compute_bounds import (
+    disjunctive_lb, disjunctive_ub)
 from pyomo.environ import (ConcreteModel, Constraint, Objective,
-                           TransformationFactory, Var, value)
+                           TransformationFactory, Var)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import check_available_solvers
 
@@ -32,16 +31,6 @@ class TestGDPBounds(unittest.TestCase):
         self.assertEquals(disjunctive_ub(m.x, m.d1), 8)
         self.assertEquals(disjunctive_lb(m.x, m.d2), 0)
         self.assertEquals(disjunctive_ub(m.x, m.d2), 4)
-        self.assertEquals(len(m.d1._disjunctive_var_constraints), 2)
-        self.assertEquals(len(m.d2._disjunctive_var_constraints), 2)
-        self.assertIs(m.d1._disjunctive_var_constraints[1].body, m.x)
-        self.assertEquals(m.d1._disjunctive_var_constraints[1].lower, 2)
-        self.assertIs(m.d1._disjunctive_var_constraints[2].body, m.x)
-        self.assertEquals(m.d1._disjunctive_var_constraints[2].upper, 8)
-        self.assertIs(m.d2._disjunctive_var_constraints[1].body, m.x)
-        self.assertEquals(m.d2._disjunctive_var_constraints[1].lower, 0)
-        self.assertIs(m.d2._disjunctive_var_constraints[2].body, m.x)
-        self.assertEquals(m.d2._disjunctive_var_constraints[2].upper, 4)
 
 
 if __name__ == '__main__':
