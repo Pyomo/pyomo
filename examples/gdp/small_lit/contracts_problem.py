@@ -103,57 +103,61 @@ m_trafo = TransformationFactory('gdp.bigm').create_using(m, bigM=5000)
 res = SolverFactory('gams').solve(m_trafo, solver='cplex', tee=True)
 # m_trafo.pprint('model_trafo.log')
 
-print()
-print('#################')
-print('Solution choices:')
-print('#################')
-choices = []
-for t in m.T:
-    choice = filter(
-        lambda y: m_trafo.disjuncts[t, y].indicator_var.value == 1.0,
-        m.disjunct_choices)
-    choices.append(next(iter(choice)))
+def pprint_result(model):
+    print()
+    print('#################')
+    print('Solution choices:')
+    print('#################')
+    choices = []
+    for t in m.T:
+        choice = filter(
+            lambda y: model.disjuncts[t, y].indicator_var.value == 1.0,
+            m.disjunct_choices)
+        choices.append(next(iter(choice)))
 
-try:
-    from pandas import DataFrame
-    df = DataFrame(
-        columns=['choice', 'base_cost', 'reduction', 'reduced_cost', 'spending', 'stock', 'storage_cost', 'min_purchase', 'purchased', 'feed', 'demand'])
-    df.choice = choices
-    df.stock = [m_trafo.s[t].value for t in m.T]
-    df.storage_cost = [m_trafo.alpha[t] for t in m.T]
-    df.purchased = [m_trafo.x[t].value for t in m.T]
-    df.base_cost = [m_trafo.gamma[t] for t in m.T]
-    df.spending = [m_trafo.c[t].value for t in m.T]
-    df.feed = [m_trafo.f[t].value for t in m.T]
-    df.demand = [m_trafo.D[t] for t in m.T]
-    df.index = [t for t in m.T]
+    try:
+        from pandas import DataFrame
+        df = DataFrame(
+            columns=['choice', 'base_cost', 'reduction', 'reduced_cost', 'spending', 'stock', 'storage_cost', 'min_purchase', 'purchased', 'feed', 'demand'])
+        df.choice = choices
+        df.stock = [model.s[t].value for t in m.T]
+        df.storage_cost = [model.alpha[t] for t in m.T]
+        df.purchased = [model.x[t].value for t in m.T]
+        df.base_cost = [model.gamma[t] for t in m.T]
+        df.spending = [model.c[t].value for t in m.T]
+        df.feed = [model.f[t].value for t in m.T]
+        df.demand = [model.D[t] for t in m.T]
+        df.index = [t for t in m.T]
 
-    t = 1
-    while t <= m.T_max:
-        if df.loc[t, 'choice'] == 'S':
-            df.loc[t, 'reduction'] = 0
-            df.loc[t, 'min_purchase'] = 0
-            df.loc[t, 'reduced_cost'] = m.gamma[t]
-            df.loc[t, 'base_cost'] = m.gamma[t]
-            t = t+1
-        elif df.loc[t, 'choice'] == 'B':
-            df.loc[t, 'reduction'] = m.beta_B[t]
-            df.loc[t, 'min_purchase'] = m.F_B_lo[t]
-            df.loc[t, 'reduced_cost'] = (1-m.beta_B[t])*m.gamma[t]
-            df.loc[t, 'base_cost'] = m.gamma[t]
-            t = t+1
-        elif int(df.loc[t, 'choice']) == 0:
-            t = t+1
-        else:
-            q = int(df.loc[t, 'choice'])
-            t_contract = t
-            for t_ in range(t, t+q+1):
-                df.loc[t_, 'reduction'] = m.beta_L[t_contract, q]
-                df.loc[t_, 'min_purchase'] = m.F_L_lo[t_contract, q]
-                df.loc[t_, 'reduced_cost'] = (1-m.beta_L[t_contract, q])*m.gamma[t_contract]
-                df.loc[t_, 'base_cost'] = m.gamma[t_contract]
-            t = t_
-    print(df)
-    print(f'Solution: {m_trafo.objective()}')
-except ImportError:
-    print("Failed to load module 'pandas' to display solution")
+        t = 1
+        while t <= m.T_max:
+            if df.loc[t, 'choice'] == 'S':
+                df.loc[t, 'reduction'] = 0
+                df.loc[t, 'min_purchase'] = 0
+                df.loc[t, 'reduced_cost'] = m.gamma[t]
+                df.loc[t, 'base_cost'] = m.gamma[t]
+                t = t+1
+            elif df.loc[t, 'choice'] == 'B':
+                df.loc[t, 'reduction'] = m.beta_B[t]
+                df.loc[t, 'min_purchase'] = m.F_B_lo[t]
+                df.loc[t, 'reduced_cost'] = (1-m.beta_B[t])*m.gamma[t]
+                df.loc[t, 'base_cost'] = m.gamma[t]
+                t = t+1
+            elif int(df.loc[t, 'choice']) == 0:
+                t = t+1
+            else:
+                q = int(df.loc[t, 'choice'])
+                t_contract = t
+                for t_ in range(t, t+q+1):
+                    df.loc[t_, 'reduction'] = m.beta_L[t_contract, q]
+                    df.loc[t_, 'min_purchase'] = m.F_L_lo[t_contract, q]
+                    df.loc[t_, 'reduced_cost'] = (1-m.beta_L[t_contract, q])*m.gamma[t_contract]
+                    df.loc[t_, 'base_cost'] = m.gamma[t_contract]
+                t = t_
+        print(df)
+        print(f'Solution: {model.objective()}')
+    except ImportError:
+        print("Failed to load module 'pandas' to display solution")
+
+
+pprint_result(m_trafo)
