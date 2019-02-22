@@ -16,6 +16,7 @@ from pyomo.core.expr.expr_pyomo5 import (EqualityExpression,
                                          StreamBasedExpressionVisitor)
 from pyomo.environ import SymbolMap, NumericLabeler, Var, Constraint
 from pyomo.gdp import Disjunction
+import math
 
 _z3_available = True
 try:
@@ -91,12 +92,12 @@ class SMTSatSolver(object):
     # Set up functions to be added to beginning of string
     def _get_default_functions(self):
         default = list()
-        default.append("(define-fun exp ((x Real)) Real (^ 2.718281828459045 x))")
+        default.append("(define-fun exp ((x Real)) Real (^ %0.15f x))" % (math.exp(1),) )
         return default
 
     # processes pyomo model into SMT model
     def _process_model(self, model):
-        for v in model.component_data_objects(ctype=Var, descend_into=False):
+        for v in model.component_data_objects(ctype=Var, descend_into=True):
             smtstring = self.add_var(v)
         for c in model.component_data_objects(ctype=Constraint, active=True):
             self.add_expr(c.expr)

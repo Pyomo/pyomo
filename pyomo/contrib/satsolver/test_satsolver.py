@@ -2,6 +2,7 @@ import pyutilib.th as unittest
 from os.path import abspath, dirname, join, normpath
 from pyomo.contrib.satsolver.satsolver import satisfiable, _z3_available
 from pyomo.environ import ConcreteModel, Var, Constraint, Objective, sin, cos, tan, asin, acos, atan, sqrt, minimize
+from pyomo.core.kernel.set_types import *
 from pyutilib.misc import import_file
 from pyomo.gdp import Disjunct, Disjunction
 
@@ -176,6 +177,20 @@ class SatSolverTests(unittest.TestCase):
         m.z2.c2 = Constraint(expr=m.x2 <= 0)
         m.djn2 = Disjunction(expr=[m.z1, m.z2])
         self.assertTrue(satisfiable(m))
+
+    def test_integer_domains(self):
+        m = ConcreteModel()
+        m.x1 = Var(domain = PositiveIntegers)
+        m.c1 = Constraint(expr = m.x1 == 0.5)
+        self.assertFalse(satisfiable(m))
+
+
+    def test_real_domains(self):
+        m = ConcreteModel()
+        m.x1 = Var(domain = NonNegativeReals)
+        m.c1 = Constraint(expr = m.x1 == -1.3)
+        self.assertFalse(satisfiable(m))
+
 
     def test_8PP(self):
         exfile = import_file(
