@@ -26,7 +26,11 @@ The model viewer adds an IPython callback after each cell executes to update the
 
 ### Embedded IPython
 
-Run the ui.py script to get a stand alone model viewer with an embedded IPython console.
+Run the ui.py script to get a stand alone model viewer with an embedded IPython console. The veiwer will start with an empty Pyomo ConcreteModel called model. To set the viewer to look at a new model run:
+
+```python
+ui.set_model(model)
+```
 
 **Note:** Some versions of ipykernel my have a bug were an error message "Execution Stopped" appears when trying to run commands after a command results in an exception. Versions of ipykernel > 5.1.0 should be okay.  Running exit in the IPython console may not work depending on the ipykernel version. Close the main UI window or select exit from the file menu to quit.   
 
