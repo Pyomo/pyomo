@@ -151,28 +151,34 @@ class SMTSatSolver(object):
 
     # converts disjunction to internal class storage
     def _process_active_disjunction(self, djn):
-        xor_expr = "0"
+        or_expr = "0"
         disjuncts = []
         for disj in djn.disjuncts:
             constraints = []
             iv = disj.indicator_var
             label = self.add_var(iv)
-            xor_expr = "(+ " + xor_expr + " " + label + ")"
+            or_expr = "(+ " + or_expr + " " + label + ")"
             for c in disj.component_data_objects(ctype=Constraint, active=True):
                 constraints.append(self.walker.walk_expression(c.expr))
             disjuncts.append((label, constraints))
-        xor_expr = "(assert (= 1 " + xor_expr + "))\n"
-        self.disjunctions_list.append((xor_expr, disjuncts))
+        if djn.xor:
+            or_expr = "(assert (= 1 " + or_expr + "))\n"
+        else:
+            or_expr = "(assert (>= 1 " + or_expr + "))\n"
+        self.disjunctions_list.append((or_expr, disjuncts))
 
     # processes inactive disjunction indicator vars without constraints
     def _process_inactive_disjunction(self, djn):
-        xor_expr = "0"
+        or_expr = "0"
         for disj in djn.disjuncts:
             iv = disj.indicator_var
             label = self.add_var(iv)
-            xor_expr = "(+ " + xor_expr + " " + label + ")"
-        xor_expr = "(assert (= 1 " + xor_expr + "))\n"
-        self.expression_list.append(xor_expr)
+            or_expr = "(+ " + or_expr + " " + label + ")"
+        if djn.xor:
+            or_expr = "(assert (= 1 " + or_expr + "))\n"
+        else:
+            or_expr = "(assert (>= 1 " + or_expr + "))\n"
+        self.expression_list.append(or_expr)
 
     def get_SMT_string(self):
         prefix_string = ''.join(self.prefix_expr_list)
