@@ -287,6 +287,8 @@ def main():
     if not _can_containt_qtconsole:
         _log.error("Cannot import qtconsole")
         sys.exit(1)
+    # The code below is based on the example
+    # https://github.com/ipython/ipykernel/blob/master/examples/embedding/inprocess_qtconsole.py
     app = guisupport.get_app_qt4() # qt4 is okay even though its Qt5!
     kernel_manager = QtInProcessKernelManager()
     kernel_manager.start_kernel()
