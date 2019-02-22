@@ -157,6 +157,11 @@ class GDPoptSolver(object):
         description="The logger object or name to use for reporting.",
         domain=a_logger
     ))
+    CONFIG.declare("calc_disjunctive_bounds", ConfigValue(
+        default=False,
+        description="Calculate special disjunctive variable bounds for GLOA. False by default.",
+        domain=bool
+    ))
     CONFIG.declare("bound_tolerance", ConfigValue(
         default=1E-6, domain=NonNegativeFloat,
         description="Tolerance for bound convergence."
