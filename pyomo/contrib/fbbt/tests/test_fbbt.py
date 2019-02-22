@@ -449,11 +449,11 @@ class TestFBBT(unittest.TestCase):
         self.assertEqual(pe.value(m.x.ub), 1)
         self.assertEqual(pe.value(m.y.lb), None)
         self.assertEqual(pe.value(m.y.ub), None)
-        a = "Unsupported expression type for FBBT: <class 'pyomo.contrib.fbbt.tests.test_fbbt.DummyExpr'>. Bounds will not be improved in this part of the tree."
+        a = "Unsupported expression type for FBBT"
         b = logging_io.getvalue()
         a = a.strip()
         b = b.strip()
-        self.assertEqual(a, b)
+        self.assertTrue(b.startswith(a))
         logger.removeHandler(handler)
 
     def test_skip_unknown_expression2(self):
@@ -473,9 +473,9 @@ class TestFBBT(unittest.TestCase):
         handler.flush()
         self.assertEqual(pe.value(m.x.lb), 0)
         self.assertEqual(pe.value(m.x.ub), 4)
-        a = "Unsupported expression type for FBBT: <class 'pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression'>. Bounds will not be improved in this part of the tree."
+        a = "Unsupported expression type for FBBT"
         b = logging_io.getvalue()
         a = a.strip()
         b = b.strip()
-        self.assertEqual(a, b)
+        self.assertTrue(b.startswith(a))
         logger.removeHandler(handler)
