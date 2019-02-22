@@ -192,11 +192,13 @@ class Test_calc_var(unittest.TestCase):
         m.x = .1
         output = six.StringIO()
         with LoggingIntercept(output, 'pyomo', logging.WARNING):
-            if six.PY2:
-                expectedException = ValueError
-            else:
-                expectedException = TypeError
-            with self.assertRaises(expectedException):
+            with self.assertRaises(ValueError):
+                # Note that the ValueError is different between Python 2
+                # and Python 3: in Python 2 it is a specific error
+                # "negative number cannot be raised to a fractional
+                # power", and We mock up that error in Python 3 by
+                # raising a generic ValueError in
+                # calculate_variable_from_constraint
                 calculate_variable_from_constraint(m.x, m.c, linesearch=False)
         self.assertIn("Newton's method encountered an error evaluating "
                       "the expression.", output.getvalue())

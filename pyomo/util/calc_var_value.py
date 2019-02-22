@@ -108,7 +108,7 @@ def calculate_variable_from_constraint(variable, constraint,
     # "shortcuts" that assume the expression is linear and move directly
     # to using Newton's method.
 
-    if residual_2 is not None:
+    if residual_2 is not None and type(residual_2) is not complex:
         # if the variable appears linearly with a coefficient of 1, then we
         # are done
         if abs(residual_2-upper) < eps:
@@ -150,6 +150,9 @@ def calculate_variable_from_constraint(variable, constraint,
         xk = value(variable)
         try:
             fk = value(expr)
+            if type(fk) is complex:
+                raise ValueError(
+                    "Complex numbers are not allowed in Newton's method.")
         except:
             # We hit numerical problems with the last step (possible if
             # the line search is turned off)
@@ -176,6 +179,12 @@ def calculate_variable_from_constraint(variable, constraint,
                 # check if the value at xkp1 has sufficient reduction in
                 # the residual
                 fkp1 = value(expr, exception=False)
+                # HACK for Python3 support, pending resolution of #879
+                # Issue #879 also pertains to other checks for "complex"
+                # in this method.
+                if type(fkp1) is complex:
+                    # We cannot perform computations on complex numbers
+                    fkp1 = None
                 if fkp1 is not None and fkp1**2 < c1*fk**2:
                     # found an alpha value with sufficient reduction
                     # continue to the next step
@@ -187,7 +196,7 @@ def calculate_variable_from_constraint(variable, constraint,
 
             if alpha <= alpha_min:
                 residual = value(expr, exception=False)
-                if residual is None:
+                if residual is None or type(residual) is complex:
                     residual = "{function evaluation error}"
                 raise RuntimeError(
                     "Linesearch iteration limit reached; remaining "
