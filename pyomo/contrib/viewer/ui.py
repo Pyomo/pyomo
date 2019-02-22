@@ -22,7 +22,9 @@ import logging
 import threading
 import datetime
 import json
+import sys
 from IPython import get_ipython
+from IPython.lib import guisupport
 import pyomo.contrib.viewer.report as rpt
 import pyomo.environ as pe
 
@@ -54,6 +56,13 @@ else:
 
 from pyomo.contrib.viewer.model_browser import ModelBrowser
 
+try:
+    from qtconsole.rich_ipython_widget import RichIPythonWidget
+    from qtconsole.inprocess import QtInProcessKernelManager
+    _can_containt_qtconsole = True
+except:
+    _can_containt_qtconsole = False
+
 _mypath = os.path.dirname(__file__)
 try:
     _MainWindowUI, _MainWindow = \
@@ -67,17 +76,18 @@ except:
     class _MainWindow(object):
         pass
 
-def get_mainwindow_nb(model=None, show=True):
+def get_mainwindow_nb(model=None, show=True, main=False):
     """
-    Create a UI MainWindow to be used with a Jupyter notebook.
+    Create a UI MainWindow.
 
     Args:
         model: A Pyomo model to work with
         show: show the window after it is created
+        main: if true add a qtconsole to make this the main application
     """
     if model is None:
         model = pe.ConcreteModel()
-    ui = MainWindow(model=model)
+    ui = MainWindow(model=model, main=main)
     get_ipython().events.register('post_execute', ui.refresh_on_execute)
     if show: ui.show()
     return ui, model
@@ -143,6 +153,7 @@ class UISetup(QtCore.QObject):
 class MainWindow(_MainWindow, _MainWindowUI):
     def __init__(self, *args, **kwargs):
         model = self.model = kwargs.pop("model", None)
+        main = self.model = kwargs.pop("main", None)
         flags = kwargs.pop("flags", 0)
         if kwargs.pop("ontop", False):
             kwargs[flags] = flags | QtCore.Qt.WindowStaysOnTopHint
@@ -151,6 +162,13 @@ class MainWindow(_MainWindow, _MainWindowUI):
 
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
+        if main and _can_containt_qtconsole:
+            self._qtconsole = RichIPythonWidget(parent=self)
+            self.setCentralWidget(self._qtconsole)
+        elif main and not _can_containt_qtconsole:
+            _log.error("Cannot create qtconsole widget")
+            sys.exit(1)
+        self._main = main
 
         # Create model browsers these are dock widgets
         uis = self.ui_setup
@@ -180,6 +198,9 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self.actionInformation.triggered.connect(self.model_information)
         self.actionCalculateConstraints.triggered.connect(self.cons.calculate_all)
         self.actionCalculateExpressions.triggered.connect(self.exprs.calculate_all)
+
+    def set_model(self, model):
+        self.ui_setup.model = model
 
     def update_model(self):
         pass
@@ -251,6 +272,33 @@ class MainWindow(_MainWindow, _MainWindowUI):
             "Are you sure you want to exit ?",
             QMessageBox.Yes| QMessageBox.No)
         if result == QMessageBox.Yes:
+            if self._main:
+                self._qtconsole.kernel_client.stop_channels()
+                self._qtconsole.kernel_manager.shutdown_kernel()
+                guisupport.get_app_qt4().exit()
             event.accept()
         else:
             event.ignore()
+
+def main():
+    if QtCore is None:
+        _log.error("Cannot import PyQt")
+        sys.exit(1)
+    if not _can_containt_qtconsole:
+        _log.error("Cannot import qtconsole")
+        sys.exit(1)
+    app = guisupport.get_app_qt4() # qt4 is okay even though its Qt5!
+    kernel_manager = QtInProcessKernelManager()
+    kernel_manager.start_kernel()
+    kernel = kernel_manager.kernel
+    kernel.gui = 'qt'
+    kernel_client = kernel_manager.client()
+    kernel_client.start_channels()
+    ui, model = get_mainwindow_nb(main=True)
+    ui._qtconsole.kernel_manager = kernel_manager
+    ui._qtconsole.kernel_client = kernel_client
+    kernel.shell.push({"ui":ui, "model":model}) # push the ui and model vars
+    guisupport.start_event_loop_qt4(app)
+
+if __name__ == "__main__":
+    main()
