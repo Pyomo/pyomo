@@ -191,6 +191,12 @@ class SatSolverTests(unittest.TestCase):
         m.c1 = Constraint(expr = m.x1 == -1.3)
         self.assertFalse(satisfiable(m))
 
+    def test_binary_domains(self):
+        m = ConcreteModel()
+        m.x1 = Var(domain = Binary)
+        m.c1 = Constraint(expr = m.x1 == 2)
+        self.assertFalse(satisfiable(m))
+
 
     def test_8PP(self):
         exfile = import_file(
