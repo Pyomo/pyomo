@@ -118,25 +118,28 @@ class EquivalenceNode(BinaryNode):
 
 
 class UnaryNode(Node):
-    def __init__(self):
-        self.child = None
+    def __init__(self, single_node):
+        self.child = single_node
+
 
     def _children_as_list(self):
         return [self.child]
 
 
 class LeafNode(UnaryNode):
-    def __init__(self, single_node):
-        self.child = single_node
-
     def print(self):
         if isinstance(self.child, str):
             return self.child
         elif isinstance(self.child, _ComponentBase):
             return self.child.name
+        else:
+            return 'unknown-type'
 
     def evaluate(self, value_dict):
         return value_dict[self.child]
+
+    def xorToOr(self, recursive=False):
+        pass
 
     def ifToOr(self, recursive=False):
         pass
@@ -164,9 +167,6 @@ class LeafNode(UnaryNode):
 
 
 class NotNode(UnaryNode):
-    def __init__(self, single_node):
-        self.child = single_node
-
     def print(self):
         output = self.child.print()
         return '!'+output
@@ -212,9 +212,7 @@ class MultiNode(Node):
                 n.tryPurgingWithSingleChild(recursive=True)
 
         if len(self.children) == 1:
-            child = self.children.pop()
-            self.__class__ = type(child)
-            self.__init__(child.children)
+            self.becomeOtherNode(self.children.pop())
 
     def tryPurgingSameTypeChildren(self, recursive=False):
         if recursive:
