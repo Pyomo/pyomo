@@ -196,9 +196,8 @@ def build_nonexclusive_model():
 
 
 if __name__ == '__main__':
-    m = build_model()
-    # m = build_nonexclusive_model()
     from pyomo.environ import SolverFactory
+    m = build_model()
     result = SolverFactory('gdpopt').solve(
         m, tee=True, strategy='GLOA',
         nlp_solver='gams',
@@ -209,5 +208,16 @@ if __name__ == '__main__':
     # result = SolverFactory('gdpbb').solve(
     #     m, tee=True, solver='baron'
     # )
+    print(result)
+    m.x.display()
+
+    m = build_nonexclusive_model()
+    result = SolverFactory('gdpopt').solve(
+        m, tee=True, strategy='GLOA',
+        nlp_solver='gams',
+        nlp_solver_args=dict(add_options=['option optcr=0.01;']),
+        calc_disjunctive_bounds=True,
+        iterlim=50,
+    )
     print(result)
     m.x.display()
