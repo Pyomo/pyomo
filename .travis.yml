@@ -49,7 +49,7 @@ install:
   - |
     if [ -n "$SLIM" ]
     then
-        ${DOC} bash -c "pip uninstall -y ${DOCKER_PYTHON_OPTIONAL}"
+        ${DOC} bash -c 'pip uninstall -y "${DOCKER_PYTHON_OPTIONAL}"'
     fi
   - ${DOC} pip install nose coverage codecov
  # Clone but don't install pyomo-model-libraries
