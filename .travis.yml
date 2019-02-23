@@ -51,7 +51,7 @@ install:
     then
         ${DOC} bash -c 'pip uninstall -y "${DOCKER_PYTHON_OPTIONAL}"'
     fi
-  - ${DOC} pip install nose coverage codecov
+  - ${DOC} pip install -U nose coverage codecov
  # Clone but don't install pyomo-model-libraries
   - ${DOC} git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
  # Install PyUtilib (master branch)
