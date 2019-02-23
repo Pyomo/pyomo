@@ -49,10 +49,7 @@ install:
   - |
     if [ -n "$SLIM" ]
     then
-        ${DOC} pip uninstall -y numpy scipy matplotlib numba \
-                                mpi4py ipython openpyxl \
-                                sympy pymysql pyodbc pyro4 pyyaml \
-                                networkx xlrd pandas matplotlib dill
+        ${DOC} bash -c "pip uninstall -y ${DOCKER_PYTHON_OPTIONAL}"
     fi
   - ${DOC} pip install nose coverage codecov
  # Clone but don't install pyomo-model-libraries
