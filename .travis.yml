@@ -52,11 +52,14 @@ install:
   - |
     if [ -n "$SLIM" ]
     then
-        ${DOC} bash -c 'for PKG in `pip list --format freeze | cut -d= -f1`; \
-            do if [[ ! *" \$PKG "* == " \${DOCKER_PYTHON_CORE} " ]]; then \
-                pip uninstall -y \$PKG; \
-            fi; \
-        done'
+        ${DOC} bash -c 'echo ${DOCKER_PYTHON_CORE}; \
+            for PKG in `pip list --format freeze | cut -d= -f1`; \
+                do \
+                echo ${PKG}; \
+                if [[ ! *" ${PKG} "* == " ${DOCKER_PYTHON_CORE} " ]]; then \
+                    pip uninstall -y ${PKG}; \
+                fi; \
+            done'
     fi
  # Clone but don't install pyomo-model-libraries
   - ${DOC} git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
