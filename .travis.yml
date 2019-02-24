@@ -53,10 +53,9 @@ install:
     if [ -n "$SLIM" ]
     then
         ${DOC} bash -c 'echo ${DOCKER_PYTHON_CORE}; \
-            for PKG in `pip list --format freeze | cut -d= -f1`; \
-                do \
+            for PKG in `pip list --format freeze | cut -d= -f1`; do \
                 echo ${PKG}; \
-                if [[ ! *" ${PKG} "* == " ${DOCKER_PYTHON_CORE} " ]]; then \
+                if [[ ! \*" ${PKG} "\* == " ${DOCKER_PYTHON_CORE} " ]]; then \
                     pip uninstall -y ${PKG}; \
                 fi; \
             done'
