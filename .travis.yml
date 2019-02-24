@@ -54,7 +54,7 @@ install:
     then
         ${DOC} bash -c 'echo ${DOCKER_PYTHON_CORE}; \
             for PKG in `pip list --format freeze | cut -d= -f1`; do \
-                _core=`echo ${DOCKER_PYTHON_CORE} | grep " ${PKG} " | wc -l`; \
+                _core=`echo " ${DOCKER_PYTHON_CORE} "|grep " ${PKG} "|wc -l`; \
                 if test ${_core} -eq 0; then \
                     pip uninstall -y ${PKG}; \
                 else \
