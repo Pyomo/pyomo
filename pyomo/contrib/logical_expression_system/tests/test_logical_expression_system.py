@@ -12,7 +12,8 @@ from pyomo.contrib.logical_expression_system.util import \
 
 class TestLogicalExpressionSystem(unittest.TestCase):
 
-    def generate_value_dicts(self, var_names):
+    @staticmethod
+    def generate_value_dicts(var_names):
         bool_combinations = product([False, True], repeat=len(var_names))
         value_dicts = [dict(zip(var_names, bool_vals))
                        for bool_vals in bool_combinations]

@@ -36,7 +36,7 @@ class TestSimpleModels(unittest.TestCase):
                   + 1 * m.y[5] + 100 * (m.y[4] + m.y[6])))
 
         m_trafo = TransformationFactory('gdp.chull').create_using(m)
-        SolverFactory('baron').solve(m_trafo, tee=True)
+        SolverFactory('baron').solve(m_trafo, tee=False)
         self.assertTrue(
             m_trafo.y[1].value == 0.0 and m_trafo.y[2].value == 0.0
             and m_trafo.y[3].value == 1.0 and m_trafo.y[4].value == 0.0
