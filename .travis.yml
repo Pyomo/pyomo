@@ -45,13 +45,19 @@ before_install:
   - export DOC="docker exec ${CI_ENV} -e TAG -e COVERAGE_PROCESS_START ${DOC_ID}"
 
 install:
+    # NOTE: pip, setuptools, wheel, coverage, and codecov are all built
+    #   into the docker container.  We will upgrade the critical package
+    #   management packages here to reduce the volume of PIP warnings
   - ${DOC} pip install -U pip setuptools wheel
   - |
     if [ -n "$SLIM" ]
     then
-        ${DOC} bash -c 'pip uninstall -y ${DOCKER_PYTHON_OPTIONAL}'
+        ${DOC} bash -c 'for PKG in `pip list --format freeze | cut -d= -f1`; \
+            do if [[ ! *" $PKG "* == " ${DOCKER_PYTHON_CORE} " ]]; then \
+                pip uninstall -y $PKG; \
+            fi; \
+        done'
     fi
-  - ${DOC} pip install -U nose coverage codecov
  # Clone but don't install pyomo-model-libraries
   - ${DOC} git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
  # Install PyUtilib (master branch)
@@ -70,7 +76,7 @@ script:
   - ${DOC} python --version
   - ${DOC} pip --version
   - ${DOC} pip list
-  - ${DOC} env
+  - ${DOC} env | sort
   - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
  # Run documentation tests
   - |
