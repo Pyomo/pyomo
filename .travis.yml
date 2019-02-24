@@ -55,8 +55,11 @@ install:
         ${DOC} bash -c 'echo ${DOCKER_PYTHON_CORE}; \
             for PKG in `pip list --format freeze | cut -d= -f1`; do \
                 echo ${PKG}; \
-                if [[ ! \*" ${PKG} "\* == " ${DOCKER_PYTHON_CORE} " ]]; then \
+                _core=`echo ${DOCKER_PYTHON_CORE} | grep " ${PKG} " | wc -l`; \
+                if test ${_core} -eq 0; then \
                     pip uninstall -y ${PKG}; \
+                else \
+                    echo "Preserving ${PKG}; part of DOCKER_PYTHON_CORE"; \
                 fi; \
             done'
     fi
