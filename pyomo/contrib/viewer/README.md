@@ -32,7 +32,7 @@ Run the ui.py script to get a stand alone model viewer with an embedded IPython 
 ui.set_model(model)
 ```
 
-**Note:** Some versions of ipykernel my have a bug were an error message "Execution Stopped" appears when trying to run commands after a command results in an exception. Versions of ipykernel > 5.1.0 should be okay.  Running exit in the IPython console may not work depending on the ipykernel version. Close the main UI window or select exit from the file menu to quit.   
+**Note:** Some versions of ipykernel my have a bug where an error message "Execution Stopped" appears when trying to run commands after a command results in an exception. Versions of ipykernel > 5.1.0 should be okay.  Running exit in the IPython console may not work depending on the ipykernel version. Close the main UI window or select exit from the file menu to quit.   
 
 ## To Do
 
