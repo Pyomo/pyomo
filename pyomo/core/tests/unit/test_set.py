@@ -654,6 +654,125 @@ class InfiniteSetTester(unittest.TestCase):
             ))
         )
 
+
+class TestRangeOperations(unittest.TestCase):
+    def test_mixed_ranges_isdisjoint(self):
+        i = RangeSet(0,10,2)
+        j = SetOf([0,1,2,'a'])
+        k = Any
+
+        ir = list(i.ranges())
+        self.assertEqual(ir, [CNR(0,10,2)])
+        self.assertEqual(str(ir), "[[0:10:2]]")
+        ir = ir[0]
+
+        jr = list(j.ranges())
+        self.assertEqual(jr, [CNR(0,0,0), CNR(1,1,0), CNR(2,2,0), NNR('a')])
+        self.assertEqual(str(jr), "[[0], [1], [2], {a}]")
+        jr0, jr1, jr2, jr3 = jr
+
+        kr = list(k.ranges())
+        self.assertEqual(kr, [_AnyRange()])
+        self.assertEqual(str(kr), "[[*]]")
+        kr = kr[0]
+
+        self.assertFalse(ir.isdisjoint(ir))
+        self.assertFalse(ir.isdisjoint(jr0))
+        self.assertTrue(ir.isdisjoint(jr1))
+        self.assertTrue(ir.isdisjoint(jr3))
+        self.assertFalse(ir.isdisjoint(kr))
+
+        self.assertFalse(jr0.isdisjoint(ir))
+        self.assertFalse(jr0.isdisjoint(jr0))
+        self.assertTrue(jr0.isdisjoint(jr1))
+        self.assertTrue(jr0.isdisjoint(jr3))
+        self.assertFalse(jr0.isdisjoint(kr))
+
+        self.assertTrue(jr1.isdisjoint(ir))
+        self.assertTrue(jr1.isdisjoint(jr0))
+        self.assertFalse(jr1.isdisjoint(jr1))
+        self.assertTrue(jr1.isdisjoint(jr3))
+        self.assertFalse(jr1.isdisjoint(kr))
+
+        self.assertTrue(jr3.isdisjoint(ir))
+        self.assertTrue(jr3.isdisjoint(jr0))
+        self.assertTrue(jr3.isdisjoint(jr1))
+        self.assertFalse(jr3.isdisjoint(jr3))
+        self.assertFalse(jr3.isdisjoint(kr))
+
+        self.assertFalse(kr.isdisjoint(ir))
+        self.assertFalse(kr.isdisjoint(jr0))
+        self.assertFalse(kr.isdisjoint(jr1))
+        self.assertFalse(kr.isdisjoint(jr3))
+        self.assertFalse(kr.isdisjoint(kr))
+
+    def test_mixed_ranges_issubset(self):
+        i = RangeSet(0, 10, 2)
+        j = SetOf([0, 1, 2, 'a'])
+        k = Any
+
+        # Note that these ranges are verified in the test above
+        (ir,) = list(i.ranges())
+        jr0, jr1, jr2, jr3 = list(j.ranges())
+        kr, = list(k.ranges())
+
+        self.assertTrue(ir.issubset(ir))
+        self.assertFalse(ir.issubset(jr0))
+        self.assertFalse(ir.issubset(jr1))
+        self.assertFalse(ir.issubset(jr3))
+        self.assertTrue(ir.issubset(kr))
+
+        self.assertTrue(jr0.issubset(ir))
+        self.assertTrue(jr0.issubset(jr0))
+        self.assertFalse(jr0.issubset(jr1))
+        self.assertFalse(jr0.issubset(jr3))
+        self.assertTrue(jr0.issubset(kr))
+
+        self.assertFalse(jr1.issubset(ir))
+        self.assertFalse(jr1.issubset(jr0))
+        self.assertTrue(jr1.issubset(jr1))
+        self.assertFalse(jr1.issubset(jr3))
+        self.assertTrue(jr1.issubset(kr))
+
+        self.assertFalse(jr3.issubset(ir))
+        self.assertFalse(jr3.issubset(jr0))
+        self.assertFalse(jr3.issubset(jr1))
+        self.assertTrue(jr3.issubset(jr3))
+        self.assertTrue(jr3.issubset(kr))
+
+        self.assertFalse(kr.issubset(ir))
+        self.assertFalse(kr.issubset(jr0))
+        self.assertFalse(kr.issubset(jr1))
+        self.assertFalse(kr.issubset(jr3))
+        self.assertTrue(kr.issubset(kr))
+
+    def test_mixed_ranges_range_difference(self):
+        i = RangeSet(0, 10, 2)
+        j = SetOf([0, 1, 2, 'a'])
+        k = Any
+
+        # Note that these ranges are verified in the test above
+        ir, = list(i.ranges())
+        jr0, jr1, jr2, jr3 = list(j.ranges())
+        kr, = list(k.ranges())
+
+        self.assertEqual(ir.range_difference(i.ranges()), [])
+        self.assertEqual(ir.range_difference([jr0]), [CNR(2,10,2)])
+        self.assertEqual(ir.range_difference([jr1]), [CNR(0,10,2)])
+        self.assertEqual(ir.range_difference([jr2]), [CNR(0,0,0), CNR(4,10,2)])
+        self.assertEqual(ir.range_difference([jr3]), [CNR(0,10,2)])
+        self.assertEqual(ir.range_difference(j.ranges()), [CNR(4,10,2)])
+        self.assertEqual(ir.range_difference(k.ranges()), [])
+
+        #self.assertEqual(jr0.range_difference(i.ranges()), [])
+        #self.assertEqual(jr0.range_difference([jr0]), [])
+        #self.assertEqual(jr0.range_difference([jr1]), [jr0])
+        #self.assertEqual(jr0.range_difference([jr2]), [jr0])
+        #self.assertEqual(jr0.range_difference([jr3]), [jr0])
+        #self.assertEqual(jr0.range_difference(j.ranges()), [])
+        #self.assertEqual(jr0.range_difference(k.ranges()), [])
+
+
 class Test_SetOf_and_RangeSet(unittest.TestCase):
     def test_RangeSet_constructor(self):
         i = RangeSet(3)
@@ -999,7 +1118,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(SetOf_a.dimen, None)
 
 
-    def test_range_iter(self):
+    def test_rangeset_iter(self):
         i = RangeSet(0,10,2)
         self.assertEqual(tuple(i), (0,2,4,6,8,10))
 
@@ -1024,78 +1143,3 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         i = RangeSet(ranges=(CNR(0,0,0),CNR(3,3,0),CNR(2,2,0)))
         self.assertEqual(tuple(i), (0,2,3))
 
-    def test_mixed_ranges(self):
-        i = RangeSet(0,10,2)
-        j = SetOf([0,1,2,'a'])
-        k = Any
-
-        ir = list(i.ranges())
-        self.assertEqual(ir, [CNR(0,10,2)])
-        self.assertEqual(str(ir), "[[0:10:2]]")
-        jr = list(j.ranges())
-        self.assertEqual(jr, [CNR(0,0,0), CNR(1,1,0), CNR(2,2,0), NNR('a')])
-        self.assertEqual(str(jr), "[[0], [1], [2], {a}]")
-        kr = list(k.ranges())
-        self.assertEqual(kr, [_AnyRange()])
-        self.assertEqual(str(kr), "[[*]]")
-
-        self.assertFalse(ir[0].isdisjoint(ir[0]))
-        self.assertFalse(ir[0].isdisjoint(jr[0]))
-        self.assertTrue(ir[0].isdisjoint(jr[1]))
-        self.assertTrue(ir[0].isdisjoint(jr[3]))
-        self.assertFalse(ir[0].isdisjoint(kr[0]))
-
-        self.assertFalse(jr[0].isdisjoint(ir[0]))
-        self.assertFalse(jr[0].isdisjoint(jr[0]))
-        self.assertTrue(jr[0].isdisjoint(jr[1]))
-        self.assertTrue(jr[0].isdisjoint(jr[3]))
-        self.assertFalse(jr[0].isdisjoint(kr[0]))
-
-        self.assertTrue(jr[1].isdisjoint(ir[0]))
-        self.assertTrue(jr[1].isdisjoint(jr[0]))
-        self.assertFalse(jr[1].isdisjoint(jr[1]))
-        self.assertTrue(jr[1].isdisjoint(jr[3]))
-        self.assertFalse(jr[1].isdisjoint(kr[0]))
-
-        self.assertTrue(jr[3].isdisjoint(ir[0]))
-        self.assertTrue(jr[3].isdisjoint(jr[0]))
-        self.assertTrue(jr[3].isdisjoint(jr[1]))
-        self.assertFalse(jr[3].isdisjoint(jr[3]))
-        self.assertFalse(jr[3].isdisjoint(kr[0]))
-
-        self.assertFalse(kr[0].isdisjoint(ir[0]))
-        self.assertFalse(kr[0].isdisjoint(jr[0]))
-        self.assertFalse(kr[0].isdisjoint(jr[1]))
-        self.assertFalse(kr[0].isdisjoint(jr[3]))
-        self.assertFalse(kr[0].isdisjoint(kr[0]))
-        #
-        #
-        self.assertTrue(ir[0].issubset(ir[0]))
-        self.assertFalse(ir[0].issubset(jr[0]))
-        self.assertFalse(ir[0].issubset(jr[1]))
-        self.assertFalse(ir[0].issubset(jr[3]))
-        self.assertTrue(ir[0].issubset(kr[0]))
-
-        self.assertTrue(jr[0].issubset(ir[0]))
-        self.assertTrue(jr[0].issubset(jr[0]))
-        self.assertFalse(jr[0].issubset(jr[1]))
-        self.assertFalse(jr[0].issubset(jr[3]))
-        self.assertTrue(jr[0].issubset(kr[0]))
-
-        self.assertFalse(jr[1].issubset(ir[0]))
-        self.assertFalse(jr[1].issubset(jr[0]))
-        self.assertTrue(jr[1].issubset(jr[1]))
-        self.assertFalse(jr[1].issubset(jr[3]))
-        self.assertTrue(jr[1].issubset(kr[0]))
-
-        self.assertFalse(jr[3].issubset(ir[0]))
-        self.assertFalse(jr[3].issubset(jr[0]))
-        self.assertFalse(jr[3].issubset(jr[1]))
-        self.assertTrue(jr[3].issubset(jr[3]))
-        self.assertTrue(jr[3].issubset(kr[0]))
-
-        self.assertFalse(kr[0].issubset(ir[0]))
-        self.assertFalse(kr[0].issubset(jr[0]))
-        self.assertFalse(kr[0].issubset(jr[1]))
-        self.assertFalse(kr[0].issubset(jr[3]))
-        self.assertTrue(kr[0].issubset(kr[0]))

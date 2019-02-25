@@ -277,7 +277,7 @@ class _ClosedNumericRange(object):
         if cont.end - cont.start >= abs(disc.step):
             return False
         # At this point, the continuous set is shorter than the discrete
-        # step.  We need to see if the continuous set ovverlaps one of the
+        # step.  We need to see if the continuous set overlaps one of the
         # points, or lies completely between two.
         #
         # Note, taking the absolute value of the step is safe because we are
@@ -587,7 +587,8 @@ class _ClosedNumericRange(object):
             # subranges of this range that are outside the lhs range
             _subranges = [t]
             for s in _other:
-                if s.step and (lcm == 0 or (s.start-t.start) % lcm != 0 ):
+                if (s.step or (s.start is not None and s.start == s.end)) \
+                   and (lcm == 0 or (s.start-t.start) % lcm != 0 ):
                     continue
                 tmp = []
                 for ref in _subranges:
@@ -733,17 +734,17 @@ class _NonNumericRange(object):
     def issubset(self, other):
         return self.value in other
 
-    def range_difference(self, other):
-        if self.value in other:
-            return []
-        else:
-            return [self]
+    def range_difference(self, other_ranges):
+        for r in other_ranges:
+            if self.value in r:
+                return []
+        return [self]
 
-    def range_intersection(self, other):
-        if self.value in other:
-            return [self]
-        else:
-            return []
+    def range_intersection(self, other_ranges):
+        for r in other_ranges:
+            if self.value in r:
+                return [self]
+        return []
 
 
 class _AnyRange(object):
@@ -774,15 +775,15 @@ class _AnyRange(object):
     def issubset(self, other):
         return isinstance(other, _AnyRange)
 
-    def range_difference(self, other):
-        for o in other:
-            if isinstance(o, _AnyRange):
+    def range_difference(self, other_ranges):
+        for r in other_ranges:
+            if isinstance(r, _AnyRange):
                 return []
         else:
             return [self]
 
-    def range_intersection(self, other):
-        return other
+    def range_intersection(self, other_ranges):
+        return list(other_ranges)
 
 
 # A trivial class that we can use to test if an object is a "legitimate"
