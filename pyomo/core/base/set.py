@@ -218,7 +218,7 @@ class _ClosedNumericRange(object):
 
     def __str__(self):
         if self.step == 0:
-            if self.start == self.end:
+            if self.start == self.end and self.start is not None:
                 return "[%s]" % (self.start, )
             else:
                 return "[%s,%s]" % (self.start, self.end)
