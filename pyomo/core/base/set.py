@@ -537,7 +537,7 @@ class _ClosedNumericRange(object):
         return lcm
 
     def range_difference(self, other_ranges):
-        """Return the difference between this range and a set of other ranges.
+        """Return the difference between this range and a list of other ranges.
 
         FIXME: There is a known limitation with range_difference():
         Subtracting a range from another continuous closed range should
@@ -545,8 +545,8 @@ class _ClosedNumericRange(object):
         aren't supported and this method returns a closed range that
         includes endpoints that mathematically should have been removed.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
             other_ranges: `iterable`
                 An iterable of other range objects to subtract from this range
 
@@ -1847,7 +1847,10 @@ class _FiniteRangeSetData( _SortedSetMixin,
             % (item, self.name))
 
     def ranges(self):
-        return iter(self._ranges)
+        # We must redefine ranges() so that we get the
+        # _InfiniteRangeSetData version and not the one from
+        # _FiniteSetMixin.
+        return _InfiniteRangeSetData.ranges(self)
 
     def bounds(self):
         return _InfiniteRangeSetData.bounds(self)
