@@ -26,7 +26,7 @@ The model viewer adds an IPython callback after each cell executes to update the
 
 ### Embedded IPython
 
-Run the ui.py script to get a stand alone model viewer with an embedded IPython console. The veiwer will start with an empty Pyomo ConcreteModel called model. To set the viewer to look at a new model run:
+Run the ui.py script to get a stand alone model viewer with an embedded IPython console. The viewer will start with an empty Pyomo ConcreteModel called model. To set the viewer to look at a new model run:
 
 ```python
 ui.set_model(model)
