@@ -139,7 +139,7 @@ class SMTSatSolver(object):
         try:
             smtexpr = self.walker.walk_expression(expression)
             self.expression_list.append("(assert " + smtexpr + ")\n")
-        except Exception as e:
+        except NotImplementedError as e:
             if self.logger is not None:
                 self.logger.warning("Skipping Expression: " + str(e))
 
@@ -166,7 +166,7 @@ class SMTSatSolver(object):
             for c in disj.component_data_objects(ctype=Constraint, active=True):
                 try:
                     constraints.append(self.walker.walk_expression(c.expr))
-                except Exception as e:
+                except NotImplementedError as e:
                     if self.logger is not None:
                         self.logger.warning("Skipping Disjunct Expression: " + str(e))
             disjuncts.append((label, constraints))
