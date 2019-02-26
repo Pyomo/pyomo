@@ -76,7 +76,7 @@ class SMTSatSolver(object):
                     string = string + "    " + c + "\n"
         return string
 
-    def __init__(self, model=None):
+    def __init__(self, model=None,logger = None):
         self.variable_label_map = SymbolMap(NumericLabeler('x'))
         self.prefix_expr_list = self._get_default_functions()
         self.variable_list = []
@@ -85,7 +85,7 @@ class SMTSatSolver(object):
         self.disjunctions_list = []
         self.walker = SMT_visitor(self.variable_label_map)
         self.solver = z3.Solver()
-
+        self.logger = logger
         if model is not None:
             self._process_model(model)
 
@@ -136,8 +136,13 @@ class SMTSatSolver(object):
 
     # Defines SMT expression from pyomo expression
     def add_expr(self, expression):
-        smtexpr = self.walker.walk_expression(expression)
-        self.expression_list.append("(assert " + smtexpr + ")\n")
+        try:
+            smtexpr = self.walker.walk_expression(expression)
+            self.expression_list.append("(assert " + smtexpr + ")\n")
+        except Exception as e:
+            if self.logger is not None:
+                self.logger.warning("Skipping Expression: " + str(e))
+
 
     # Computes the SMT Model for the disjunction from the internal class storage
     def _compute_disjunction_string(self, smt_djn):
@@ -159,7 +164,11 @@ class SMTSatSolver(object):
             label = self.add_var(iv)
             or_expr = "(+ " + or_expr + " " + label + ")"
             for c in disj.component_data_objects(ctype=Constraint, active=True):
-                constraints.append(self.walker.walk_expression(c.expr))
+                try:
+                    constraints.append(self.walker.walk_expression(c.expr))
+                except Exception as e:
+                    if self.logger is not None:
+                        self.logger.warning("Skipping Disjunct Expression: " + str(e))
             disjuncts.append((label, constraints))
         if djn.xor:
             or_expr = "(assert (= 1 " + or_expr + "))\n"

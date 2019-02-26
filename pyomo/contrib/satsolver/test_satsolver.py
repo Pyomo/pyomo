@@ -1,7 +1,7 @@
 import pyutilib.th as unittest
 from os.path import abspath, dirname, join, normpath
 from pyomo.contrib.satsolver.satsolver import satisfiable, _z3_available
-from pyomo.environ import ConcreteModel, Var, Constraint, Objective, sin, cos, tan, asin, acos, atan, sqrt, minimize
+from pyomo.environ import ConcreteModel, Var, Constraint, Objective, sin, cos, tan, asin, acos, atan, sqrt,log, minimize
 from pyomo.core.kernel.set_types import *
 from pyutilib.misc import import_file
 from pyomo.gdp import Disjunct, Disjunction
@@ -76,7 +76,11 @@ class SatSolverTests(unittest.TestCase):
         m.c7 = Constraint(expr=0 <= sqrt(m.d))
         m.o = Objective(expr=m.x)
         self.assertTrue(satisfiable(m) is not False)
-
+    def test_unhandled_expressions(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c1 = Constraint(expr= 0 <= log(m.x))
+        self.assertTrue(satisfiable(m))
     def test_abs_expressions(self):
         m = ConcreteModel()
         m.x = Var()
