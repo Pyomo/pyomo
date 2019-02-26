@@ -8,7 +8,7 @@ class Node(object):
     def evaluate(self, value_dict):
         raise NotImplementedError()
 
-    def print(self):
+    def __repr__(self):
         raise NotImplementedError()
 
     def becomeOtherNode(self, target_node):
@@ -76,9 +76,9 @@ class BinaryNode(Node):
 
 
 class ImplicationNode(BinaryNode):
-    def print(self):
-        lhs = self.child_l.print()
-        rhs = self.child_r.print()
+    def __repr__(self):
+        lhs = repr(self.child_l)
+        rhs = repr(self.child_r)
         return lhs + ' => ' + rhs
 
     def evaluate(self, value_dict):
@@ -97,9 +97,9 @@ class ImplicationNode(BinaryNode):
 
 
 class EquivalenceNode(BinaryNode):
-    def print(self):
-        lhs = self.child_l.print()
-        rhs = self.child_r.print()
+    def __repr__(self):
+        lhs = repr(self.child_l)
+        rhs = repr(self.child_r)
         return lhs + ' <=> ' + rhs
 
     def evaluate(self, value_dict):
@@ -127,7 +127,7 @@ class UnaryNode(Node):
 
 
 class LeafNode(UnaryNode):
-    def print(self):
+    def __repr__(self):
         if isinstance(self.child, str):
             return self.child
         elif isinstance(self.child, _ComponentBase):
@@ -167,8 +167,8 @@ class LeafNode(UnaryNode):
 
 
 class NotNode(UnaryNode):
-    def print(self):
-        output = self.child.print()
+    def __repr__(self):
+        output = repr(self.child)
         return '!'+output
 
     def evaluate(self, value_dict):
@@ -231,8 +231,8 @@ class MultiNode(Node):
 
 
 class AndNode(MultiNode):
-    def print(self):
-        output = " ^ ".join([c.print() for c in self.children])
+    def __repr__(self):
+        output = " ^ ".join([repr(c) for c in self.children])
         return '{'+output+'}'
 
     def evaluate(self, value_dict):
@@ -262,8 +262,8 @@ class AndNode(MultiNode):
 
 
 class XOrNode(MultiNode):
-    def print(self):
-        output = " x ".join([c.print() for c in self.children])
+    def __repr__(self):
+        output = " x ".join([repr(c) for c in self.children])
         return '['+output+']'
 
     def evaluate(self, value_dict):
@@ -282,8 +282,8 @@ class XOrNode(MultiNode):
 
 
 class OrNode(MultiNode):
-    def print(self):
-        output = " v ".join([c.print() for c in self.children])
+    def __repr__(self):
+        output = " v ".join([repr(c) for c in self.children])
         return '('+output+')'
 
     def evaluate(self, value_dict):
