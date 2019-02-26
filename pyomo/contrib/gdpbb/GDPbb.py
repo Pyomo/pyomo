@@ -187,6 +187,7 @@ class GDPbbSolver(object):
                     disj._activate_without_unfixing_indicator()
                     if not disj.indicator_var.fixed:
                         disj.indicator_var = 0  # initially set all indicator vars to zero
+                added_disj_counter = 0
                 for disj in next_disjunction.disjuncts:
                     if not disj.indicator_var.fixed:
                         disj.indicator_var = 1
@@ -202,8 +203,9 @@ class GDPbbSolver(object):
                         counter += 1
                         ordering_tuple = (obj_sign * obj_value, djn_left, -counter)
                         heapq.heappush(heap, (ordering_tuple, mnew, result, vars))
-                        config.logger.info("Added %s new nodes with %s relaxed disjunctions to the heap. Size now %s." % (
-                        len(next_disjunction.disjuncts), djn_left, len(heap)))
+                        added_disj_counter = added_disj_counter + 1
+                config.logger.info("Added %s new nodes with %s relaxed disjunctions to the heap. Size now %s." % (
+                        len(added_disj_counter), djn_left, len(heap)))
 
     @staticmethod
     def validate_model(model):
