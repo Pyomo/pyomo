@@ -193,7 +193,9 @@ class GDPbbSolver(object):
                     mnew = mdl.clone()
                     if not disj.indicator_var.fixed:
                         disj.indicator_var = 0
-                    ss = SMTSatSolver(mnew)
+
+                    if config.check_sat:
+                        ss = SMTSatSolver(mnew,logger = config.logger)
                     # print ss.get_SMT_string()
                     if not(config.check_sat) or ss.check() != "unsat":
                         obj_value, result, vars = self.subproblem_solve(mnew, solver, config)
