@@ -17,6 +17,7 @@ Contributed packages distributed with Pyomo:
 
    preprocessing.rst
    gdpopt.rst
+   gdpbb.rst
    multistart.rst
    parmest/index.rst
    mcpp.rst
