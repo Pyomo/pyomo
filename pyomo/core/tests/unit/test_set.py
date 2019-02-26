@@ -333,6 +333,14 @@ class TestClosedNumericRange(unittest.TestCase):
 
     def test_lcm(self):
         self.assertEqual(
+            CNR(None,None,0)._lcm((CNR(0,1,0),)),
+            0
+        )
+        self.assertEqual(
+            CNR(None,None,0)._lcm((CNR(0,0,0),)),
+            1
+        )
+        self.assertEqual(
             CNR(0,None,3)._lcm((CNR(0,None,1),)),
             3
         )
@@ -342,7 +350,7 @@ class TestClosedNumericRange(unittest.TestCase):
         )
         self.assertEqual(
             CNR(0,None,0)._lcm((CNR(0,None,1),)),
-            0
+            1
         )
         self.assertEqual(
             CNR(0,None,3)._lcm((CNR(0,None,2),)),
@@ -764,13 +772,87 @@ class TestRangeOperations(unittest.TestCase):
         self.assertEqual(ir.range_difference(j.ranges()), [CNR(4,10,2)])
         self.assertEqual(ir.range_difference(k.ranges()), [])
 
-        #self.assertEqual(jr0.range_difference(i.ranges()), [])
-        #self.assertEqual(jr0.range_difference([jr0]), [])
-        #self.assertEqual(jr0.range_difference([jr1]), [jr0])
-        #self.assertEqual(jr0.range_difference([jr2]), [jr0])
-        #self.assertEqual(jr0.range_difference([jr3]), [jr0])
-        #self.assertEqual(jr0.range_difference(j.ranges()), [])
-        #self.assertEqual(jr0.range_difference(k.ranges()), [])
+        self.assertEqual(jr0.range_difference(i.ranges()), [])
+        self.assertEqual(jr0.range_difference([jr0]), [])
+        self.assertEqual(jr0.range_difference([jr1]), [jr0])
+        self.assertEqual(jr0.range_difference([jr2]), [jr0])
+        self.assertEqual(jr0.range_difference([jr3]), [jr0])
+        self.assertEqual(jr0.range_difference(j.ranges()), [])
+        self.assertEqual(jr0.range_difference(k.ranges()), [])
+
+        self.assertEqual(jr1.range_difference(i.ranges()), [jr1])
+        self.assertEqual(jr1.range_difference([jr0]), [jr1])
+        self.assertEqual(jr1.range_difference([jr1]), [])
+        self.assertEqual(jr1.range_difference([jr2]), [jr1])
+        self.assertEqual(jr1.range_difference([jr3]), [jr1])
+        self.assertEqual(jr1.range_difference(j.ranges()), [])
+        self.assertEqual(jr1.range_difference(k.ranges()), [])
+
+        self.assertEqual(jr3.range_difference(i.ranges()), [jr3])
+        self.assertEqual(jr3.range_difference([jr0]), [jr3])
+        self.assertEqual(jr3.range_difference([jr1]), [jr3])
+        self.assertEqual(jr3.range_difference([jr2]), [jr3])
+        self.assertEqual(jr3.range_difference([jr3]), [])
+        self.assertEqual(jr3.range_difference(j.ranges()), [])
+        self.assertEqual(jr3.range_difference(k.ranges()), [])
+
+        self.assertEqual(kr.range_difference(i.ranges()), [kr])
+        self.assertEqual(kr.range_difference([jr0]), [kr])
+        self.assertEqual(kr.range_difference([jr1]), [kr])
+        self.assertEqual(kr.range_difference([jr2]), [kr])
+        self.assertEqual(kr.range_difference([jr3]), [kr])
+        self.assertEqual(kr.range_difference(j.ranges()), [kr])
+        self.assertEqual(kr.range_difference(k.ranges()), [])
+
+    def test_mixed_ranges_range_intersection(self):
+        i = RangeSet(0, 10, 2)
+        j = SetOf([0, 1, 2, 'a'])
+        k = Any
+
+        # Note that these ranges are verified in the test above
+        ir, = list(i.ranges())
+        jr0, jr1, jr2, jr3 = list(j.ranges())
+        kr, = list(k.ranges())
+
+        self.assertEqual(ir.range_intersection(i.ranges()), [ir])
+        self.assertEqual(ir.range_intersection([jr0]), [jr0])
+        self.assertEqual(ir.range_intersection([jr1]), [])
+        self.assertEqual(ir.range_intersection([jr2]), [jr2])
+        self.assertEqual(ir.range_intersection([jr3]), [])
+        self.assertEqual(ir.range_intersection(j.ranges()), [jr0, jr2])
+        self.assertEqual(ir.range_intersection(k.ranges()), [ir])
+
+        self.assertEqual(jr0.range_intersection(i.ranges()), [jr0])
+        self.assertEqual(jr0.range_intersection([jr0]), [jr0])
+        self.assertEqual(jr0.range_intersection([jr1]), [])
+        self.assertEqual(jr0.range_intersection([jr2]), [])
+        self.assertEqual(jr0.range_intersection([jr3]), [])
+        self.assertEqual(jr0.range_intersection(j.ranges()), [jr0])
+        self.assertEqual(jr0.range_intersection(k.ranges()), [jr0])
+
+        self.assertEqual(jr1.range_intersection(i.ranges()), [])
+        self.assertEqual(jr1.range_intersection([jr0]), [])
+        self.assertEqual(jr1.range_intersection([jr1]), [jr1])
+        self.assertEqual(jr1.range_intersection([jr2]), [])
+        self.assertEqual(jr1.range_intersection([jr3]), [])
+        self.assertEqual(jr1.range_intersection(j.ranges()), [jr1])
+        self.assertEqual(jr1.range_intersection(k.ranges()), [jr1])
+
+        self.assertEqual(jr3.range_intersection(i.ranges()), [])
+        self.assertEqual(jr3.range_intersection([jr0]), [])
+        self.assertEqual(jr3.range_intersection([jr1]), [])
+        self.assertEqual(jr3.range_intersection([jr2]), [])
+        self.assertEqual(jr3.range_intersection([jr3]), [jr3])
+        self.assertEqual(jr3.range_intersection(j.ranges()), [jr3])
+        self.assertEqual(jr3.range_intersection(k.ranges()), [jr3])
+
+        self.assertEqual(kr.range_intersection(i.ranges()), [ir])
+        self.assertEqual(kr.range_intersection([jr0]), [jr0])
+        self.assertEqual(kr.range_intersection([jr1]), [jr1])
+        self.assertEqual(kr.range_intersection([jr2]), [jr2])
+        self.assertEqual(kr.range_intersection([jr3]), [jr3])
+        self.assertEqual(kr.range_intersection(j.ranges()), [jr0,jr1,jr2,jr3])
+        self.assertEqual(kr.range_intersection(k.ranges()), [kr])
 
 
 class Test_SetOf_and_RangeSet(unittest.TestCase):

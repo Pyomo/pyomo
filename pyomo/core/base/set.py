@@ -217,11 +217,10 @@ class _ClosedNumericRange(object):
             object.__setattr__(self, key, val)
 
     def __str__(self):
-        if self.step == 0:
-            if self.start == self.end and self.start is not None:
-                return "[%s]" % (self.start, )
-            else:
-                return "[%s,%s]" % (self.start, self.end)
+        if not self.is_discrete():
+            return "[%s,%s]" % (self.start, self.end)
+        if self.start == self.end:
+            return "[%s]" % (self.start, )
         elif self.step == 1:
             return "[%s:%s]" % (self.start, self.end)
         else:
@@ -303,9 +302,13 @@ class _ClosedNumericRange(object):
                     ans = x
         return ans
 
+    def is_discrete(self):
+        return self.step != 0 or \
+            (self.start == self.end and self.start is not None)
+
     def is_finite(self):
         return self.start is not None and self.end is not None \
-            and (self.step != 0 or self.start == self.end)
+            and self.is_discrete()
 
     def isdisjoint(self, other):
         if not isinstance(other, _ClosedNumericRange):
@@ -401,8 +404,8 @@ class _ClosedNumericRange(object):
                 return False
         elif e2 is not None and e1 > e2:
             return False
-        # If other is continuous, then by definition, self is a subset (
-        # regardless of step)
+        # If other is continuous (even a single point), then by
+        # definition, self is a subset (regardless of step)
         if other.step == 0:
             return True
         # If other is discrete and self is continuous, then self can't be a
@@ -519,21 +522,21 @@ class _ClosedNumericRange(object):
 
     def _lcm(self,other_ranges):
         """This computes an approximate Least Common Multiple step"""
-        if self.step:
-            steps = {abs(self.step)}
-            for s in other_ranges:
-                steps.add(abs(s.step))
-            if 0 in steps:
-                steps.remove(0)
-            for step1 in sorted(steps):
-                for step2 in sorted(steps):
-                    if step1 % step2 == 0 and step1 > step2:
-                        steps.remove(step2)
-            lcm = steps.pop()
-            for step in steps:
-                lcm *= step
-        else:
-            lcm = 0
+        steps = set()
+        if self.is_discrete():
+            steps.add(abs(self.step) or 1)
+        for s in other_ranges:
+            if s.is_discrete():
+                steps.add(abs(s.step) or 1)
+        for step1 in sorted(steps):
+            for step2 in sorted(steps):
+                if step1 % step2 == 0 and step1 > step2:
+                    steps.remove(step2)
+        if not steps:
+            return 0
+        lcm = steps.pop()
+        for step in steps:
+            lcm *= step
         return lcm
 
     def range_difference(self, other_ranges):
@@ -567,7 +570,7 @@ class _ClosedNumericRange(object):
         # will split discrete ranges into separate ranges with this step
         # so that we can more easily compare them.
         lcm = self._lcm(other_ranges)
-        if self.step == 0:
+        if not self.is_discrete():
             logger.warn(
                 "_ClosedNumericRange.range_difference() does not fully "
                 "support closed continuous ranges and gives mathematically "
@@ -587,8 +590,16 @@ class _ClosedNumericRange(object):
             # subranges of this range that are outside the lhs range
             _subranges = [t]
             for s in _other:
-                if (s.step or (s.start is not None and s.start == s.end)) \
-                   and (lcm == 0 or (s.start-t.start) % lcm != 0 ):
+                if t.is_discrete():
+                    # s and t are discrete ranges.  Note if there is a
+                    # discrete range in the list of ranges, then lcm > 0
+                    if s.is_discrete() and (s.start-t.start) % lcm != 0:
+                        # s is offset from t and cannot remove any
+                        # elements
+                        continue
+                elif s.is_discrete():
+                    # Since we don't support open ranges, we cannot
+                    # subtract a discrete set from a continuous set
                     continue
                 tmp = []
                 for ref in _subranges:
@@ -602,29 +613,29 @@ class _ClosedNumericRange(object):
                         s_min, s_max = s.end, s.start
 
                     if _ClosedNumericRange._lt(r_min, s_min):
-                        if s_min is not None and lcm:
+                        if s_min is not None and ref.step:
                             s_min -= lcm
 
                         if r_min is None:
                             tmp.append(_ClosedNumericRange(
                                 _ClosedNumericRange._min(r_max, s_min),
                                 r_min,
-                                -lcm
+                                -abs(ref.step)
                             ))
                         else:
                             tmp.append(_ClosedNumericRange(
                                 r_min,
                                 _ClosedNumericRange._min(r_max, s_min),
-                                lcm
+                                abs(ref.step)
                             ))
 
                     if _ClosedNumericRange._gt(r_max, s_max):
-                        if s_max is not None and lcm:
+                        if s_max is not None and ref.step:
                             s_max += lcm
                         tmp.append(_ClosedNumericRange(
                             _ClosedNumericRange._max(r_min, s_max),
                             r_max,
-                            lcm
+                            abs(ref.step)
                         ))
                 _subranges = tmp
             ans.extend(_subranges)
@@ -668,8 +679,13 @@ class _ClosedNumericRange(object):
             # Compare it against each rhs range and only keep the
             # subranges of this range that are inside the lhs range
             for s in _other:
-                if s.step and t.step and (s.start-t.start) % lcm != 0:
-                    continue
+                if s.is_discrete() and t.is_discrete():
+                    # s and t are discrete ranges.  Note if there is a
+                    # finite range in the list of ranges, then lcm > 0
+                    if (s.start-t.start) % lcm != 0:
+                        # s is offset from t and cannot have any
+                        # elements in common
+                        continue
                 if t.step >= 0:
                     t_min, t_max = t.start, t.end
                 else:
@@ -728,6 +744,12 @@ class _NonNumericRange(object):
     def __contains__(self, value):
         return value == self.value
 
+    def is_discrete(self):
+        return True
+
+    def is_finite(self):
+        return True
+
     def isdisjoint(self, other):
         return self.value not in other
 
@@ -751,9 +773,7 @@ class _AnyRange(object):
     """A range object for representing Any sets"""
 
     def __init__(self):
-        self.start = None
-        self.end = None
-        self.step = 0
+        pass
 
     def __str__(self):
         return "[*]"
@@ -768,6 +788,12 @@ class _AnyRange(object):
 
     def __contains__(self, value):
         return True
+
+    def is_discrete(self):
+        return False
+
+    def is_finite(self):
+        return False
 
     def isdisjoint(self, other):
         return False
