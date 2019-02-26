@@ -2,7 +2,7 @@ import pyutilib.th as unittest
 from itertools import product
 from copy import deepcopy
 from pyomo.contrib.logical_expression_system.nodes import \
-    (NotNode, LeafNode, OrNode, AndNode, IfNode, XOrNode,
+    (NotNode, LeafNode, OrNode, AndNode, ImplicationNode, XOrNode,
      EquivalenceNode, isNotNode, isOrNode)
 from pyomo.contrib.logical_expression_system.util import \
     (bring_to_conjunctive_normal_form,
@@ -19,8 +19,9 @@ class TestLogicalExpressionSystem(unittest.TestCase):
                        for bool_vals in bool_combinations]
         return value_dicts
 
-    def assert_model_equality(self, m1, m2, var_names):
-        value_dicts = self.generate_value_dicts(var_names)
+    @staticmethod
+    def assert_model_equality(m1, m2, var_names):
+        value_dicts = TestLogicalExpressionSystem.generate_value_dicts(var_names)
         for d in value_dicts:
             assert (m1.evaluate(d) == m2.evaluate(d))
 
@@ -75,7 +76,7 @@ class TestLogicalExpressionSystem(unittest.TestCase):
                                 ({'y1': True, 'y2': False}, False),
                                 ({'y1': True, 'y2': True}, True)]))
 
-        if_node = IfNode(l1, l2)
+        if_node = ImplicationNode(l1, l2)
         self.assertTrue(all(if_node.evaluate(lhs) is rhs for (lhs, rhs)
                             in [({'y1': False, 'y2': False}, True),
                                 ({'y1': False, 'y2': True}, True),
@@ -162,7 +163,7 @@ class TestLogicalExpressionSystem(unittest.TestCase):
     def simple_if_test(self):
         y = dict([(i, 'y' + str(i)) for i in range(1, 3)])
         l = dict([(i, LeafNode(y[i])) for i in y.keys()])
-        n1 = IfNode(l[1], l[2])
+        n1 = ImplicationNode(l[1], l[2])
         n1_ref = deepcopy(n1)
         n1.ifToOr()
         self.assertTrue(isinstance(n1, OrNode))
@@ -193,7 +194,7 @@ class TestLogicalExpressionSystem(unittest.TestCase):
         l = dict([(i, LeafNode(y[i])) for i in y.keys()])
         n1 = AndNode([NotNode(l[1]), l[2]])
         n2 = NotNode(OrNode([l[3], l[4]]))
-        n3 = IfNode(n1, n2)
+        n3 = ImplicationNode(n1, n2)
         n3_ref = deepcopy(n3)
         bring_to_conjunctive_normal_form(n3)
         self.assertTrue(is_conjunctive_normal_form(n3))

@@ -1,7 +1,7 @@
 from pyomo.core.base.component import _ComponentBase
 
 
-class Node:
+class Node(object):
     def __init__(self):
         raise RuntimeError("Tried to initialize abstract class 'Node'")
 
@@ -75,7 +75,7 @@ class BinaryNode(Node):
         return [self.child_l, self.child_r]
 
 
-class IfNode(BinaryNode):
+class ImplicationNode(BinaryNode):
     def print(self):
         lhs = self.child_l.print()
         rhs = self.child_r.print()
@@ -114,7 +114,7 @@ class EquivalenceNode(BinaryNode):
         child_l = self.child_l
         child_r = self.child_r
         self.becomeOtherNode(
-            AndNode([IfNode(child_l, child_r), IfNode(child_r, child_l)]))
+            AndNode([ImplicationNode(child_l, child_r), ImplicationNode(child_r, child_l)]))
 
 
 class UnaryNode(Node):
@@ -317,7 +317,7 @@ def isUnaryNode(n): return isinstance(n, UnaryNode)
 def isNotNode(n): return isinstance(n, NotNode)
 def isLeafNode(n): return isinstance(n, LeafNode)
 def isBinaryNode(n): return isinstance(n, BinaryNode)
-def isIfNode(n): return isinstance(n, IfNode)
+def isImplicationNode(n): return isinstance(n, ImplicationNode)
 def isMultiNode(n): return isinstance(n, MultiNode)
 def isAndNode(n): return isinstance(n, AndNode)
 def isOrNode(n): return isinstance(n, OrNode)

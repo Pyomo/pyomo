@@ -1,5 +1,5 @@
 from pyomo.contrib.logical_expression_system.nodes import \
-    (NotNode, LeafNode, OrNode, AndNode, IfNode)
+    (NotNode, LeafNode, OrNode, AndNode, ImplicationNode)
 from pyomo.contrib.logical_expression_system.util import \
     (bring_to_conjunctive_normal_form, CNF_to_linear_constraints)
 from pyomo.environ import \
@@ -9,7 +9,7 @@ from pyomo.gdp import (Disjunct)
 import pyutilib.th as unittest
 
 
-@unittest.skipUnless(SolverFactory('baron').available(), "Baron solver is not available.")
+@unittest.skipUnless(SolverFactory('cbc').available(), "CBC solver is not available.")
 class TestSimpleModels(unittest.TestCase):
     def test_CNF_constraints(self):
         m = ConcreteModel()
@@ -36,7 +36,7 @@ class TestSimpleModels(unittest.TestCase):
                   + 1 * m.y[5] + 100 * (m.y[4] + m.y[6])))
 
         m_trafo = TransformationFactory('gdp.chull').create_using(m)
-        SolverFactory('baron').solve(m_trafo, tee=False)
+        SolverFactory('cbc').solve(m_trafo, tee=False)
         self.assertTrue(
             m_trafo.y[1].value == 0.0 and m_trafo.y[2].value == 0.0
             and m_trafo.y[3].value == 1.0 and m_trafo.y[4].value == 0.0
@@ -61,11 +61,11 @@ class TestSimpleModels(unittest.TestCase):
 
         l1 = LeafNode(m.disjuncts[1, 1].indicator_var)
         l2 = LeafNode(m.disjuncts[2, 2].indicator_var)
-        n1 = IfNode(l1, l2)
+        n1 = ImplicationNode(l1, l2)
         bring_to_conjunctive_normal_form(n1)
         CNF_to_linear_constraints(m, n1)
 
         m_trafo = TransformationFactory('gdp.bigm').create_using(m, bigM=10)
-        SolverFactory('baron').solve(m_trafo)
+        SolverFactory('cbc').solve(m_trafo)
         self.assertTrue(abs(m_trafo.y[1].value - 0 < 1e-8))
         self.assertTrue(abs(m_trafo.y[2].value - 1 < 1e-8))
