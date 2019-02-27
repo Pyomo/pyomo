@@ -30,38 +30,8 @@ import pyomo.environ as pe
 
 _log = logging.getLogger(__name__)
 
-try: # this is for importing PyQt 4 or 5, looks a bit nasty, settle on pyqt5?
-    from PyQt5 import QtCore
-except:
-    _log.exception("Cannot import PyQt5.QtCore")
-    try:
-        from PyQt4 import QtCore
-    except:
-        _log.exception("Cannot import PyQt4.QtCore")
-        QtCore = None
-    else:
-        try:
-            from PyQt4.QtGui import QFileDialog, QMessageBox
-            from PyQt4 import uic
-        except:
-            _log.exception("Cannot import PyQt4")
-            QtCore = None
-else:
-    try:
-        from PyQt5.QtWidgets import QFileDialog, QMessageBox
-        from PyQt5 import uic
-    except:
-        _log.exception("Cannot import PyQt5")
-        QtCore = None
-
+from pyomo.contrib.viewer.pyqt_4or5 import *
 from pyomo.contrib.viewer.model_browser import ModelBrowser
-
-try:
-    from qtconsole.rich_ipython_widget import RichIPythonWidget
-    from qtconsole.inprocess import QtInProcessKernelManager
-    _can_containt_qtconsole = True
-except:
-    _can_containt_qtconsole = False
 
 _mypath = os.path.dirname(__file__)
 try:
@@ -162,42 +132,50 @@ class MainWindow(_MainWindow, _MainWindowUI):
 
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
-        if main and _can_containt_qtconsole:
+        if main and can_containt_qtconsole:
             self._qtconsole = RichIPythonWidget(parent=self)
             self.setCentralWidget(self._qtconsole)
-        elif main and not _can_containt_qtconsole:
+        elif main and not can_containt_qtconsole:
             _log.error("Cannot create qtconsole widget")
             sys.exit(1)
         self._main = main
 
         # Create model browsers these are dock widgets
         uis = self.ui_setup
-        self.vars = ModelBrowser(parent=self, standard="Var", ui_setup=uis)
-        self.cons = ModelBrowser(parent=self, standard="Constraint", ui_setup=uis)
-        self.params = ModelBrowser(parent=self, standard="Param", ui_setup=uis)
-        self.exprs = ModelBrowser(parent=self, standard="Expression", ui_setup=uis)
+        self.variables = ModelBrowser(parent=self, standard="Var", ui_setup=uis)
+        self.constraints = ModelBrowser(parent=self, standard="Constraint", ui_setup=uis)
+        self.parameters = ModelBrowser(parent=self, standard="Param", ui_setup=uis)
+        self.expressions = ModelBrowser(parent=self, standard="Expression", ui_setup=uis)
 
         # Dock the wigetes allong the bottom and tabify them
-        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.vars)
-        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.cons)
-        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.params)
-        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.exprs)
-        self.tabifyDockWidget(self.vars, self.params)
-        self.tabifyDockWidget(self.vars, self.exprs)
-        self.tabifyDockWidget(self.vars, self.cons)
-        self.vars.raise_()
+        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.variables)
+        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.constraints)
+        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.parameters)
+        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.expressions)
+        self.tabifyDockWidget(self.variables, self.parameters)
+        self.tabifyDockWidget(self.variables, self.expressions)
+        self.tabifyDockWidget(self.variables, self.constraints)
+        self.variables.raise_()
 
         # Set menu actions (rembeber the menu items are defined in the ui file)
         # you can edit the menus in qt-designer
         self.action_Exit.triggered.connect(self.exit_action)
-        self.action_toggle_variables.triggered.connect(self.vars.toggle)
-        self.action_toggle_constraints.triggered.connect(self.cons.toggle)
-        self.action_toggle_parameters.triggered.connect(self.params.toggle)
-        self.action_toggle_expressions.triggered.connect(self.exprs.toggle)
+        self.action_toggle_variables.triggered.connect(self.variables.toggle)
+        self.action_toggle_constraints.triggered.connect(self.constraints.toggle)
+        self.action_toggle_parameters.triggered.connect(self.parameters.toggle)
+        self.action_toggle_expressions.triggered.connect(self.expressions.toggle)
         self.actionToggle_Always_on_Top.triggered.connect(self.toggle_always_on_top)
         self.actionInformation.triggered.connect(self.model_information)
-        self.actionCalculateConstraints.triggered.connect(self.cons.calculate_all)
-        self.actionCalculateExpressions.triggered.connect(self.exprs.calculate_all)
+        self.actionCalculateConstraints.triggered.connect(self.calculate_constraints)
+        self.actionCalculateExpressions.triggered.connect(self.calculate_expressions)
+
+    def calculate_constraints(self):
+        self.constraints.calculate_all()
+        self.refresh_on_execute()
+
+    def calculate_expressions(self):
+        self.expressions.calculate_all()
+        self.refresh_on_execute()
 
     def set_model(self, model):
         self.ui_setup.model = model
@@ -252,10 +230,10 @@ class MainWindow(_MainWindow, _MainWindowUI):
         ipython kernel.  The main purpose of this right now it to refresh the
         UI display so that it matches the current state of the model.
         """
-        self.vars.refresh()
-        self.cons.refresh()
-        self.exprs.refresh()
-        self.params.refresh()
+        self.variables.refresh()
+        self.constraints.refresh()
+        self.expressions.refresh()
+        self.parameters.refresh()
 
     def exit_action(self):
         """
@@ -279,28 +257,3 @@ class MainWindow(_MainWindow, _MainWindowUI):
             event.accept()
         else:
             event.ignore()
-
-def main():
-    if QtCore is None:
-        _log.error("Cannot import PyQt")
-        sys.exit(1)
-    if not _can_containt_qtconsole:
-        _log.error("Cannot import qtconsole")
-        sys.exit(1)
-    # The code below is based on the example
-    # https://github.com/ipython/ipykernel/blob/master/examples/embedding/inprocess_qtconsole.py
-    app = guisupport.get_app_qt4() # qt4 is okay even though its Qt5!
-    kernel_manager = QtInProcessKernelManager()
-    kernel_manager.start_kernel()
-    kernel = kernel_manager.kernel
-    kernel.gui = 'qt'
-    kernel_client = kernel_manager.client()
-    kernel_client.start_channels()
-    ui, model = get_mainwindow_nb(main=True)
-    ui._qtconsole.kernel_manager = kernel_manager
-    ui._qtconsole.kernel_client = kernel_client
-    kernel.shell.push({"ui":ui, "model":model}) # push the ui and model vars
-    guisupport.start_event_loop_qt4(app)
-
-if __name__ == "__main__":
-    main()
