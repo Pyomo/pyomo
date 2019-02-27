@@ -120,14 +120,14 @@ class SMTSatSolver(object):
     # define variables
     def add_var(self, var):
         label = self.variable_label_map.getSymbol(var)
-        domain = type(var.domain)
-        if domain is RealSet:
+        domain = var.domain
+        if isinstance(domain, RealSet):
             self.variable_list.append("(declare-fun " + label + "() Real)\n")
             self._add_bound(var)
-        elif domain is IntegerSet:
+        elif isinstance(domain, IntegerSet):
             self.variable_list.append("(declare-fun " + label + "() Int)\n")
             self._add_bound(var)
-        elif domain is BooleanSet:
+        elif isinstance(domain, BooleanSet):
             self.variable_list.append("(declare-fun " + label + "() Int)\n")
             self._add_bound(var)
         else:
@@ -142,7 +142,6 @@ class SMTSatSolver(object):
         except NotImplementedError as e:
             if self.logger is not None:
                 self.logger.warning("Skipping Expression: " + str(e))
-
 
     # Computes the SMT Model for the disjunction from the internal class storage
     def _compute_disjunction_string(self, smt_djn):

@@ -1,6 +1,6 @@
 import pyutilib.th as unittest
 import pyomo.environ as pe
-from pyomo.contrib.fbbt.fbbt import fbbt
+from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr
 from pyomo.core.expr.expr_pyomo5 import ProductExpression, UnaryFunctionExpression
 import math
 import logging
@@ -481,3 +481,12 @@ class TestFBBT(unittest.TestCase):
         b = b.strip()
         self.assertTrue(b.startswith(a))
         logger.removeHandler(handler)
+
+    def test_compute_expr_bounds(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var(bounds=(-1,1))
+        m.y = pe.Var(bounds=(-1,1))
+        e = m.x + m.y
+        lb, ub = compute_bounds_on_expr(e)
+        self.assertAlmostEqual(lb, -2, 14)
+        self.assertAlmostEqual(ub, 2, 14)

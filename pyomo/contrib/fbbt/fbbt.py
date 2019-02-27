@@ -994,3 +994,23 @@ def fbbt(comp, deactivate_satisfied_constraints=False, update_variable_bounds=Tr
         raise FBBTException('Cannot perform FBBT on objects of type {0}'.format(type(comp)))
 
     return new_var_bounds
+
+
+def compute_bounds_on_expr(expr):
+    """
+    Compute bounds on an expression based on the bounds on the variables in the expression.
+
+    Parameters
+    ----------
+    expr: pyomo.core.expr.expr_pyomo5.ExpressionBase
+
+    Returns
+    -------
+    lb: float
+    ub: float
+    """
+    bnds_dict = ComponentMap()
+    visitor = _FBBTVisitorLeafToRoot(bnds_dict)
+    visitor.dfs_postorder_stack(expr)
+
+    return bnds_dict[expr]
