@@ -22,9 +22,12 @@ from pyomo.contrib.logical_expression_system.util import \
 
 def build_model():
     m = ConcreteModel()
-    seed(1)
+
+    seed(1)  # Fix seed to generate same parameters and solution every time
     m.T_max = randint(10, 10)
     m.T = RangeSet(m.T_max)
+
+    # Variables
     m.s = Var(m.T, domain=NonNegativeReals, bounds=(0, 10000), doc='stock')
     m.x = Var(m.T, domain=NonNegativeReals, bounds=(0, 10000), doc='purchased')
     m.c = Var(m.T, domain=NonNegativeReals, bounds=(0, 10000), doc='cost')
@@ -32,6 +35,7 @@ def build_model():
 
     m.max_q_idx = RangeSet(m.T_max)
 
+    # Randomly generated parameters
     m.D = Param(m.T, doc='demand',
                 initialize=dict((t, randint(50, 100)) for t in m.T))
     m.alpha = Param(m.T, doc='storage cost',
@@ -53,10 +57,12 @@ def build_model():
                                      for t in m.T for q in m.max_q_idx),
                      doc='long-term minimum purchase amount')
 
+    # Contract choices 'standard', 'bulk' and long term contracts '0','1',...
     m.disjunct_choices = Set(
         initialize=['S', 'B', *[str(t) for t in range(m.T_max)]])
     m.disjuncts = Disjunct(m.T, m.disjunct_choices)
 
+    # Create disjuncts for contracts in each timeset
     for t in m.T:
         m.disjuncts[t, 'S'].cost = Constraint(expr=m.c[t] == m.gamma[t]*m.x[t])
 
@@ -77,17 +83,20 @@ def build_model():
                 m.disjuncts[t, str(q)].amount[t_] =\
                     m.x[t_] >= m.F_L_lo[t, q]
 
+    # Create disjunctions
     @m.Disjunction(m.T, xor=True)
     def disjunctions(m, t):
         return [m.disjuncts[t, 'S'], m.disjuncts[t, 'B'], m.disjuncts[t, '0'],
                 *[m.disjuncts[t, str(q)] for q in range(1, m.T_max-t+1)]]
 
+    # Connect the disjuncts indicator variables using logical expressions
     m.logical_blocks = Block(range(1, m.T_max+1))
 
     not_y_1_0 = NotNode(LeafNode(m.disjuncts[1, '0'].indicator_var))
     bring_to_conjunctive_normal_form(not_y_1_0)
     CNF_to_linear_constraints(m.logical_blocks[1], not_y_1_0)
 
+    # Long-term contract implies '0'-disjunct in following timesteps
     for t in range(2, m.T_max+1):
         l1 = LeafNode(m.disjuncts[t, '0'].indicator_var)
         or_node = OrNode([LeafNode(m.disjuncts[t_, str(q)].indicator_var)
@@ -96,8 +105,10 @@ def build_model():
         bring_to_conjunctive_normal_form(equivalence_node)
         CNF_to_linear_constraints(m.logical_blocks[t], equivalence_node)
 
+    # Objective function
     m.objective = Objective(expr=sum(m.alpha[t]*m.s[t]+m.c[t] for t in m.T))
 
+    # Global constraints
     m.demand_satisfaction = Constraint(m.T)
     for t in m.T:
         m.demand_satisfaction[t] = m.f[t] >= m.D[t]
@@ -110,12 +121,19 @@ def build_model():
 
 
 def pprint_result(model):
+    """Use pandas to print solution variables
+
+    Printed variables:
+    contract choice, base cost, reduction (relative), reduced_cost, spending, stock, storage cost, minimal purchase amount, purchase amount, feed, demand
+    """
+
     print()
     print('#################')
     print('Solution choices:')
     print('#################')
     choices = []
     for t in model.T:
+        # Find activated disjunct/contract in each timestep
         choice = filter(
             lambda y: model.disjuncts[t, y].indicator_var.value == 1.0,
             model.disjunct_choices)
@@ -135,6 +153,7 @@ def pprint_result(model):
         df.demand = [model.D[t] for t in model.T]
         df.index = [t for t in model.T]
 
+        # Set properties based on contract type
         t = 1
         while t <= model.T_max:
             if df.loc[t, 'choice'] == 'S':

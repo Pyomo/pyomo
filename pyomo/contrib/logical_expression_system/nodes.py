@@ -2,6 +2,8 @@ from pyomo.core.base.component import _ComponentBase
 
 
 class Node(object):
+    """Base class for Logical Expression Nodes."""
+
     def __init__(self):
         raise RuntimeError("Tried to initialize abstract class 'Node'")
 
@@ -12,6 +14,8 @@ class Node(object):
         raise NotImplementedError()
 
     def becomeOtherNode(self, target_node):
+        """Replace itself with another node (by reference)"""
+
         if isMultiNode(target_node):
             children = target_node.children
             self.__class__ = type(target_node)
@@ -67,6 +71,8 @@ class Node(object):
 
 
 class BinaryNode(Node):
+    """Base class for nodes with exactly two children."""
+
     def __init__(self, child_l, child_r):
         self.child_l = child_l
         self.child_r = child_r
@@ -114,19 +120,23 @@ class EquivalenceNode(BinaryNode):
         child_l = self.child_l
         child_r = self.child_r
         self.becomeOtherNode(
-            AndNode([ImplicationNode(child_l, child_r), ImplicationNode(child_r, child_l)]))
+            AndNode([ImplicationNode(child_l, child_r),
+                     ImplicationNode(child_r, child_l)]))
 
 
 class UnaryNode(Node):
+    """Base class for nodes with exactly one child."""
+
     def __init__(self, single_node):
         self.child = single_node
-
 
     def _children_as_list(self):
         return [self.child]
 
 
 class LeafNode(UnaryNode):
+    """Class for wrapping variables (i.e. pyomo boolean-vars)."""
+
     def __repr__(self):
         if isinstance(self.child, str):
             return self.child
@@ -200,6 +210,7 @@ class NotNode(UnaryNode):
 
 
 class MultiNode(Node):
+    """Base class for nodes with an arbitrary amount of children."""
     def __init__(self, var_list):
         self.children = set([v for v in var_list])
 
@@ -207,6 +218,13 @@ class MultiNode(Node):
         return self.children
 
     def tryPurgingWithSingleChild(self, recursive=False):
+        """Replace itself with child node if there is only one child node
+
+        When applying rules like associativity, sometimes child nodes are
+        modified such that they 'collapse' into a single node. In this case
+        something like `AndNode([n])` can be 'purged' to just `n`.
+        """
+
         if recursive:
             for n in filter(isMultiNode, self.children):
                 n.tryPurgingWithSingleChild(recursive=True)
@@ -215,13 +233,19 @@ class MultiNode(Node):
             self.becomeOtherNode(self.children.pop())
 
     def tryPurgingSameTypeChildren(self, recursive=False):
+        """Merging together parent and child node if they're of the same type
+
+        Example: `AndNode([AndNode([a,b]), c])` can be 'purged' to
+        `AndNode([a,b,c])`
+        """
+
         if recursive:
             for n in filter(isMultiNode, self.children):
                 n.tryPurgingSameTypeChildren(recursive=True)
 
         def isSameType(n): return isinstance(n, type(self))
         for n in filter(isSameType, self.children.copy()):
-            self.children.update(n.children)
+            self.children.update(n.children)  # 'update' => set.add(...)
             self.children.remove(n)
 
     def notNodeIntoOtherNode(self, recursive=False):
@@ -246,6 +270,10 @@ class AndNode(MultiNode):
         self.tryPurgingWithSingleChild()
 
     def distributivity_and_in_or(self, recursive=True):
+        """Distributivity law
+
+        """
+
         while any(isinstance(n, OrNode) for n in self.children) \
                 and len(self.children) > 1:
             or_node = next(n for n in self.children if isinstance(n, OrNode))
