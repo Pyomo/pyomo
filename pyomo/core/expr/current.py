@@ -10,7 +10,6 @@
 
 from __future__ import division
 import math
-import copy
 
 #
 # Data and methods that are exposed when importing pyomo.core.expr
@@ -22,24 +21,44 @@ _public = ['log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
 #
 # Data and methods that are exposed when importing pyomo.core.expr.current
 #
-__all__ = copy.copy(_public)
+__all__ = list(_public)
 
 #
 # Provide a global value that indicates which expression system is being used
 #
 class Mode(object):
     pyomo5_trees = (3,)
-mode = Mode.pyomo5_trees
+_mode = Mode.pyomo5_trees
 
 #
 # Pull symbols from the appropriate expression system
 #
 # Pyomo5
-if mode == Mode.pyomo5_trees:
-    from pyomo.core.expr import expr_pyomo5 as curr
-    _public.extend(curr._public)
-    for obj in curr.__all__:
-        globals()[obj] = getattr(curr, obj)
+if _mode == Mode.pyomo5_trees:
+    #from pyomo.core.expr import expr_pyomo5 as curr
+    #_public.extend(curr._public)
+    #for obj in curr.__all__:
+    #    globals()[obj] = getattr(curr, obj)
+    from pyomo.core.expr.numeric_expr import *
+    from pyomo.core.expr.numeric_expr import (
+        _generate_sum_expression,
+        _generate_mul_expression,
+        _generate_other_expression,
+        _generate_intrinsic_function_expression,
+    )
+    from pyomo.core.expr.logical_expr import *
+    from pyomo.core.expr.logical_expr import (
+        _generate_relational_expression,
+        _using_chained_inequality,
+        _chainedInequality,
+    )
+    from pyomo.core.expr.visitor import *
+    from pyomo.core.expr import visitor as _visitor
+    # FIXME: we shouldn't need circular dependencies between modules
+    _visitor.LinearExpression = LinearExpression
+    _visitor.MonomialTermExpression = MonomialTermExpression
+    _visitor.NPV_expression_types = NPV_expression_types
+    _visitor.clone_counter = clone_counter
 else:
     raise ValueError("No other expression systems are supported in Pyomo right now.")    #pragma: no cover
 

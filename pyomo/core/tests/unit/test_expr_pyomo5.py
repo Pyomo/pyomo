@@ -26,10 +26,15 @@ from pyutilib.th import nottest
 
 from pyomo.environ import *
 import pyomo.kernel
-from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.expr_pyomo5 import _sizeof_expression
-from pyomo.core.expr.numvalue import native_types, nonpyomo_leaf_types, NumericConstant, as_numeric, is_potentially_variable
+from pyomo.core.expr.visitor import sizeof_expression
+from pyomo.core.expr.numvalue import (
+    native_types, nonpyomo_leaf_types, NumericConstant, as_numeric, 
+    is_potentially_variable,
+)
+from pyomo.core.expr.numeric_expr import (
+    _MutableLinearExpression, _MutableSumExpression, _decompose_linear_terms
+)
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.label import *
@@ -5306,32 +5311,32 @@ class TestLinearExpression(unittest.TestCase):
 
         with linear_expression() as e:
             e = e + 2
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
             e = e + m.p*(1+m.v[0])
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
             e = e + m.v[0]
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
 
             e = 2 + e
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
             e = m.p*(1+m.v[0]) + e
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
             e = m.v[0] + e
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
 
             e = e - 2
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
             e = e - m.p(1+m.v[0])
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
             e = e - m.v[0]
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
 
             e = 2 - e
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
             e = m.p*(1+m.v[0]) - e
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
             e = m.v[0] - e
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
 
         with linear_expression() as e:
             e += m.v[0]*m.v[1]
@@ -5354,10 +5359,10 @@ class TestLinearExpression(unittest.TestCase):
             e += 1
             e = 2 * e
             self.assertEqual("2", str(e))
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
             e = (1+m.v[0]) * e
             self.assertEqual("2 + 2*v[0]", str(e))
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
             try:
                 e = m.v[0] * e
                 self.fail("Expecting ValueError")
@@ -5368,19 +5373,19 @@ class TestLinearExpression(unittest.TestCase):
             e += 1
             e = e * m.p
             self.assertEqual("p", str(e))
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
 
         with linear_expression() as e:
             e += 1
             e = e * 0
             self.assertEqual(e.constant, 0)
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
 
         with linear_expression() as e:
             e += m.v[0]
             e = e * 2
             self.assertEqual("2*v[0]", str(e))
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
 
         with linear_expression() as e:
             e += 1
@@ -5406,13 +5411,13 @@ class TestLinearExpression(unittest.TestCase):
             e += m.v[0]
             e /= 2
             self.assertEqual("0.5*v[0]", str(e))
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
 
         with linear_expression() as e:
             e += m.v[0]
             e /= m.p
             self.assertEqual("(1/p)*v[0]", str(e))
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
 
         with linear_expression() as e:
             e += 1
@@ -5446,9 +5451,9 @@ class TestLinearExpression(unittest.TestCase):
 
         with linear_expression() as e:
             e = 2 - e
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
             e = - e
-            self.assertIs(e.__class__, EXPR._MutableLinearExpression)
+            self.assertIs(e.__class__, _MutableLinearExpression)
 
     def test_pow_other(self):
         m = ConcreteModel()
@@ -5477,7 +5482,7 @@ class TestNonlinearExpression(unittest.TestCase):
 
 
 #
-# Test the logic of EXPR._decompose_linear_terms
+# Test the logic of _decompose_linear_terms
 #
 class TestLinearDecomp(unittest.TestCase):
 
@@ -5493,55 +5498,55 @@ class TestLinearDecomp(unittest.TestCase):
         pass
 
     def test_numeric(self):
-        self.assertEqual(list(EXPR._decompose_linear_terms(2.0)), [(2.0,None)])
+        self.assertEqual(list(_decompose_linear_terms(2.0)), [(2.0,None)])
 
     def test_NPV(self):
         M = ConcreteModel()
         M.q = Param(initialize=2)
-        self.assertEqual(list(EXPR._decompose_linear_terms(M.q)), [(M.q,None)])
+        self.assertEqual(list(_decompose_linear_terms(M.q)), [(M.q,None)])
 
     def test_var(self):
         M = ConcreteModel()
         M.v = Var()
-        self.assertEqual(list(EXPR._decompose_linear_terms(M.v)), [(1,M.v)])
+        self.assertEqual(list(_decompose_linear_terms(M.v)), [(1,M.v)])
 
     def test_simple(self):
         M = ConcreteModel()
         M.v = Var()
-        self.assertEqual(list(EXPR._decompose_linear_terms(2*M.v)), [(2,M.v)])
+        self.assertEqual(list(_decompose_linear_terms(2*M.v)), [(2,M.v)])
 
     def test_sum(self):
         M = ConcreteModel()
         M.v = Var()
         M.w = Var()
         M.q = Param(initialize=2)
-        self.assertEqual(list(EXPR._decompose_linear_terms(2+M.v)), [(2,None), (1,M.v)])
-        self.assertEqual(list(EXPR._decompose_linear_terms(M.q+M.v)), [(2,None), (1,M.v)])
-        self.assertEqual(list(EXPR._decompose_linear_terms(M.v+M.q)), [(1,M.v), (2,None)])
-        self.assertEqual(list(EXPR._decompose_linear_terms(M.w+M.v)), [(1,M.w), (1,M.v)])
+        self.assertEqual(list(_decompose_linear_terms(2+M.v)), [(2,None), (1,M.v)])
+        self.assertEqual(list(_decompose_linear_terms(M.q+M.v)), [(2,None), (1,M.v)])
+        self.assertEqual(list(_decompose_linear_terms(M.v+M.q)), [(1,M.v), (2,None)])
+        self.assertEqual(list(_decompose_linear_terms(M.w+M.v)), [(1,M.w), (1,M.v)])
 
     def test_prod(self):
         M = ConcreteModel()
         M.v = Var()
         M.w = Var()
         M.q = Param(initialize=2)
-        self.assertEqual(list(EXPR._decompose_linear_terms(2*M.v)), [(2,M.v)])
-        self.assertEqual(list(EXPR._decompose_linear_terms(M.q*M.v)), [(2,M.v)])
-        self.assertEqual(list(EXPR._decompose_linear_terms(M.v*M.q)), [(2,M.v)])
-        self.assertRaises(EXPR.LinearDecompositionError, list, EXPR._decompose_linear_terms(M.w*M.v))
+        self.assertEqual(list(_decompose_linear_terms(2*M.v)), [(2,M.v)])
+        self.assertEqual(list(_decompose_linear_terms(M.q*M.v)), [(2,M.v)])
+        self.assertEqual(list(_decompose_linear_terms(M.v*M.q)), [(2,M.v)])
+        self.assertRaises(EXPR.LinearDecompositionError, list, _decompose_linear_terms(M.w*M.v))
 
     def test_negation(self):
         M = ConcreteModel()
         M.v = Var()
-        self.assertEqual(list(EXPR._decompose_linear_terms(-M.v)), [(-1,M.v)])
-        self.assertEqual(list(EXPR._decompose_linear_terms(-(2+M.v))), [(-2,None), (-1,M.v)])
+        self.assertEqual(list(_decompose_linear_terms(-M.v)), [(-1,M.v)])
+        self.assertEqual(list(_decompose_linear_terms(-(2+M.v))), [(-2,None), (-1,M.v)])
 
     def test_reciprocal(self):
         M = ConcreteModel()
         M.v = Var()
         M.q = Param(initialize=2)
-        self.assertRaises(EXPR.LinearDecompositionError, list, EXPR._decompose_linear_terms(1/M.v))
-        self.assertEqual(list(EXPR._decompose_linear_terms(1/M.q)), [(0.5,None)])
+        self.assertRaises(EXPR.LinearDecompositionError, list, _decompose_linear_terms(1/M.v))
+        self.assertEqual(list(_decompose_linear_terms(1/M.q)), [(0.5,None)])
         
     def test_multisum(self):
         M = ConcreteModel()
@@ -5549,13 +5554,13 @@ class TestLinearDecomp(unittest.TestCase):
         M.w = Var()
         M.q = Param(initialize=2)
         e = EXPR.SumExpression([2])
-        self.assertEqual(list(EXPR._decompose_linear_terms(e)), [(2,None)])
+        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None)])
         e = EXPR.SumExpression([2,M.v])
-        self.assertEqual(list(EXPR._decompose_linear_terms(e)), [(2,None), (1,M.v)])
+        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None), (1,M.v)])
         e = EXPR.SumExpression([2,M.q+M.v])
-        self.assertEqual(list(EXPR._decompose_linear_terms(e)), [(2,None), (2,None), (1,M.v)])
+        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None), (2,None), (1,M.v)])
         e = EXPR.SumExpression([2,M.q+M.v,M.w])
-        self.assertEqual(list(EXPR._decompose_linear_terms(e)), [(2,None), (2,None), (1,M.v), (1,M.w)])
+        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None), (2,None), (1,M.v), (1,M.w)])
         
 
 #
@@ -6447,7 +6452,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         self.assertEquals(walker.walk_expression(self.e), 10)
 
     def test_sizeof_expression(self):
-        self.assertEquals(_sizeof_expression(self.e), 10)
+        self.assertEquals(sizeof_expression(self.e), 10)
 
     def test_enterNode(self):
         # This is an alternative way to implement the beforeChild test:
