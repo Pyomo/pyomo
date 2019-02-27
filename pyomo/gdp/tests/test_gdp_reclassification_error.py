@@ -11,13 +11,8 @@ class TestGDPReclassificationError(unittest.TestCase):
         m.d1.c = pe.Constraint(expr=m.x == 1)
         m.d2 = gdp.Disjunct()
         m.d2.c = pe.Constraint(expr=m.x == 0)
-        try:
+        with self.assertRaisesRegex(gdp.GDP_Error, '.*not found in any Disjunctions.*'):
             pe.TransformationFactory('gdp.bigm').apply_to(m)
-        except gdp.GDP_Error as err:
-            s = str(err)
-            s = s.replace('\n', '')
-            s = s.replace(' ', '')
-            self.assertTrue('notfoundonanyDisjunctions' in s)
 
     def test_disjunct_not_in_active_disjunction(self):
         m = pe.ConcreteModel()
@@ -28,10 +23,5 @@ class TestGDPReclassificationError(unittest.TestCase):
         m.d2.c = pe.Constraint(expr=m.x == 0)
         m.disjunction = gdp.Disjunction(expr=[m.d1, m.d2])
         m.disjunction.deactivate()
-        try:
+        with self.assertRaisesRegex(gdp.GDP_Error, '.*While it participates in a Disjunction, that Disjunction is currently deactivated.*'):
             pe.TransformationFactory('gdp.bigm').apply_to(m)
-        except gdp.GDP_Error as err:
-            s = str(err)
-            s = s.replace('\n', '')
-            s = s.replace(' ', '')
-            self.assertTrue('notfoundonanyactiveDisjunctions' in s)

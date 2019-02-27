@@ -97,13 +97,20 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                         disjuncts_in_active_disjunctions.update(i.disjuncts)
 
                     if disjunct not in disjuncts_in_disjunctions:
-                        raise GDP_Error("""
-                        Disjunct {0} is active but was not found on any
-                        Disjunctions.""".format(disjunct.name))
+                        raise GDP_Error('Disjunct "%s" is currently active, '
+                                        'but was not found in any Disjunctions. '
+                                        'This is generally an error as the model '
+                                        'has not been fully relaxed to a '
+                                        'pure algebraic form.' % (disjunct.name,))
                     elif disjunct not in disjuncts_in_active_disjunctions:
-                        raise GDP_Error("""
-                        Disjunct {0} is active but was not found on any
-                        active Disjunctions.""".format(disjunct.name))
+                        raise GDP_Error('Disjunct "%s" is currently active. While '
+                                        'it participates in a Disjunction, '
+                                        'that Disjunction is currently deactivated. '
+                                        'This is generally an error as the '
+                                        'model has not been fully relaxed to a pure '
+                                        'algebraic form. Did you deactivate '
+                                        'the Disjunction without addressing the '
+                                        'individual Disjuncts?' % (disjunct.name,))
                     else:
                         raise GDP_Error("""
                         Reclassifying active Disjunct "%s" as a Block.  This
