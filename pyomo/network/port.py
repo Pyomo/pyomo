@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -204,6 +204,10 @@ class _PortData(ComponentData):
     def is_extensive(self, name):
         """Return True if the rule for this port member is Port.Extensive"""
         return self.rule_for(name) is Port.Extensive
+
+    def is_conservative(self, name):
+        """Return True if the rule for this port member is Port.Conservative"""
+        return self.rule_for(name) is Port.Conservative
 
     def fix(self):
         """
@@ -498,6 +502,27 @@ class Port(IndexedComponent):
         in_vars = Port._Combine(port, name, index_set)
 
     @staticmethod
+    def Conservative(port, name, index_set):
+        """
+        Arc Expansion procedure for conservative variable properties.
+
+        This procedure is the rule to use when variable quantities should
+        be conserved without fixing a split for inlets or fixing combinations
+        for outlet.
+
+        :param port:
+        :param name:
+        :param index_set:
+        :param include_splitfrac:
+        :param write_var_sum:
+        :return:
+        """
+
+        port_parent = port.parent_block()
+        out_vars = Port._Split_Conservative(port, name, index_set)
+        in_vars = Port._Combine(port, name, index_set)
+
+    @staticmethod
     def _Combine(port, name, index_set):
         port_parent = port.parent_block()
         var = port.vars[name]
@@ -656,6 +681,56 @@ class Port(IndexedComponent):
         return out_vars
 
     @staticmethod
+    def _Split_Conservative(port, name, index_set):
+        port_parent = port.parent_block()
+        var = port.vars[name]
+        out_vars = []
+        no_splitfrac = False
+        dests = port.dests(active=True)
+
+        if not len(dests):
+            return out_vars
+
+        if len(dests) == 1:
+            # No need for splitting on one outlet.
+            # Make sure they do not try to fix splitfrac not at 1.
+            splitfracspec = port.get_split_fraction(dests[0])
+            if splitfracspec is not None:
+                if splitfracspec[0] != 1 and splitfracspec[1] is True:
+                    raise ValueError(
+                        "Cannot fix splitfrac not at 1 for port '%s' with a "
+                        "single dest '%s'" % (port.name, dests[0].name))
+
+            if len(dests[0].destination.sources(active=True)) == 1:
+                # This is a 1-to-1 connection, no need for evar, just equality.
+                arc = dests[0]
+                Port._add_equality_constraint(arc, name, index_set)
+                return out_vars
+
+        for arc in dests:
+            eblock = arc.expanded_block
+
+            # Make and record new variables for every arc with this member.
+            evar = Port._create_evar(port.vars[name], name, eblock, index_set)
+            out_vars.append(evar)
+
+        # Create var total sum constraint: var == sum of evars
+        # Need to alphanum port name in case it is indexed.
+        cname = unique_component_name(port_parent, "%s_%s_outsum" %
+                                      (alphanum_label_from_name(port.local_name), name))
+
+        def rule(m, *args):
+            if len(args):
+                return sum(evar[args] for evar in out_vars) == var[args]
+            else:
+                return sum(evar for evar in out_vars) == var
+
+        con = Constraint(index_set, rule=rule)
+        port_parent.add_component(cname, con)
+
+        return out_vars
+
+    @staticmethod
     def _add_equality_constraint(arc, name, index_set):
         # This function will add the equality constraint if it doesn't exist.
         eblock = arc.expanded_block
@@ -693,5 +768,4 @@ class SimplePort(Port, _PortData):
 
 class IndexedPort(Port):
     pass
-
 
