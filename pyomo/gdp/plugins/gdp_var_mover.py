@@ -77,11 +77,39 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                         self._disjunct_not_relaxed(disjunct) and
                         self._disjunct_on_active_block(disjunct) and
                         self._disjunct_not_fixed_true(disjunct)):
-                    raise GDP_Error("""
-                    Reclassifying active Disjunct "%s" as a Block.  This
-                    is generally an error as it indicates that the model
-                    was not completely relaxed before applying the
-                    gdp.reclassify transformation""" % (disjunct.name,))
+
+                    # First, do a couple checks in order to give a more
+                    # useful error message
+                    disjunction_set = {i for i in
+                                       instance.component_data_objects(
+                                           Disjunction, descend_into=True,
+                                           active=None)}
+                    active_disjunction_set = {i for i in
+                                              instance.component_data_objects(
+                                                  Disjunction,
+                                                  descend_into=True,
+                                                  active=True)}
+                    disjuncts_in_disjunctions = set()
+                    for i in disjunction_set:
+                        disjuncts_in_disjunctions.update(i.disjuncts)
+                    disjuncts_in_active_disjunctions = set()
+                    for i in active_disjunction_set:
+                        disjuncts_in_active_disjunctions.update(i.disjuncts)
+
+                    if disjunct not in disjuncts_in_disjunctions:
+                        raise GDP_Error("""
+                        Disjunct {0} is active but was not found on any
+                        Disjunctions.""".format(disjunct.name))
+                    elif disjunct not in disjuncts_in_active_disjunctions:
+                        raise GDP_Error("""
+                        Disjunct {0} is active but was not found on any
+                        active Disjunctions.""".format(disjunct.name))
+                    else:
+                        raise GDP_Error("""
+                        Reclassifying active Disjunct "%s" as a Block.  This
+                        is generally an error as it indicates that the model
+                        was not completely relaxed before applying the
+                        gdp.reclassify transformation""" % (disjunct.name,))
 
             # Reclassify this disjunct as a block
             disjunct_component.parent_block().reclassify_component_type(
