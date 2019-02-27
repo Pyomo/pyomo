@@ -1,4 +1,4 @@
-from pyomo.core import value
+from pyomo.core import value, SymbolMap, NumericLabeler, Var, Constraint
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet,
                                          BooleanSet)
@@ -14,7 +14,6 @@ from pyomo.core.expr.expr_pyomo5 import (EqualityExpression,
                                          UnaryFunctionExpression,
                                          nonpyomo_leaf_types,
                                          StreamBasedExpressionVisitor)
-from pyomo.environ import SymbolMap, NumericLabeler, Var, Constraint
 from pyomo.gdp import Disjunction
 import math
 
