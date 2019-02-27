@@ -66,3 +66,9 @@ class TestDataModelItem(unittest.TestCase):
         assert(cdi.get("fixed"))
         cdi.set("fixed", False)
         assert(not cdi.get("fixed"))
+
+    def test_degrees_of_freedom(self):
+        import pyomo.contrib.viewer.report as rpt
+        # this should hit everything in report.  It only exists to calculate
+        # degrees of freedom for display in the ui
+        assert(rpt.degrees_of_freedom(self.m)==2)
