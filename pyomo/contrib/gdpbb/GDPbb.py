@@ -205,7 +205,7 @@ class GDPbbSolver(object):
                         heapq.heappush(heap, (ordering_tuple, mnew, result, vars))
                         added_disj_counter = added_disj_counter + 1
                 config.logger.info("Added %s new nodes with %s relaxed disjunctions to the heap. Size now %s." % (
-                        len(added_disj_counter), djn_left, len(heap)))
+                        added_disj_counter, djn_left, len(heap)))
 
     @staticmethod
     def validate_model(model):
