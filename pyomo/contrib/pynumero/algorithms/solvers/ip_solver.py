@@ -45,7 +45,9 @@ import sys
 if not found_mumps and not found_hsl:
     raise ImportError('Need MA27 or MUMPS to run pynumero interior-point')
 
+
 from pyomo.contrib.pynumero.linalg.solvers.kkt_solver import KKTSolver
+
 
 def dict_matrix(matrix, with_offset=True):
     # Note: this is just for printing in the logger

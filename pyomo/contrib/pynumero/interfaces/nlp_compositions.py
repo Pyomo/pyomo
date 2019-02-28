@@ -73,8 +73,13 @@ class TwoStageStochasticNLP(NLP):
                 n_z = len(l)
             else:
                 if len(l) != n_z:
-                    err_msg = "All scenarios must have the same number of complicated variables"
+                    err_msg = "All scenarios must have the same number of complicating variables"
                     raise RuntimeError(err_msg)
+
+            if len(set(l)) != len(l):
+                err_msg = 'Scenario {} has duplicates in list of complicating variables'
+                raise RuntimeError(err_msg.format(k))
+
             for val in l:
                 nlp = nlps[k]
                 if val > nlp.nx:

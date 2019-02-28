@@ -508,11 +508,8 @@ class BlockMatrix(object):
 
     def __setitem__(self, key, value):
 
-        if isinstance(key, slice):
-            raise NotImplementedError('slices not supported for BlockMatrix')
-
-        if not isinstance(key, tuple):
-            raise RuntimeError('Wrong index')
+        assert not isinstance(key, slice), 'slices not supported for BlockMatrix'
+        assert isinstance(key, tuple), 'Wrong index'
 
         idx, jdx = key
         assert idx >= 0 and jdx >= 0, 'indices must be positive'
