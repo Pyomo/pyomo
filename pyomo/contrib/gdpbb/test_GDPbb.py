@@ -9,7 +9,6 @@ from pyomo.environ import ConcreteModel, Objective, SolverFactory, Var, value, I
 from pyomo.gdp import Disjunct, Disjunction
 from pyutilib.misc import import_file
 from pyomo.opt import TerminationCondition
-from pyomo.contrib.gdpbb import *
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))
 
