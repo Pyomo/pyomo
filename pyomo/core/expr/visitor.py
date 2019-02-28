@@ -10,8 +10,6 @@
 
 from __future__ import division
 
-_using_chained_inequality = True
-
 import logging
 from copy import deepcopy
 from collections import deque
@@ -21,14 +19,19 @@ logger = logging.getLogger('pyomo.core')
 from pyutilib.misc.visitor import SimpleVisitor, ValueVisitor
 from pyutilib.math.util import isclose
 
-from pyomo.core.expr.symbol_map import SymbolMap
+from .symbol_map import SymbolMap
+from . import expr_common as common
+from .expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import (
     nonpyomo_leaf_types,
     native_numeric_types,
     value,
 )
-from pyomo.core.expr import expr_common as common
-from pyomo.core.expr.expr_errors import TemplateExpressionError
+# NOTE: This module also has dependencies on numeric_expr; however, to
+# avoid circular dependencies, we will NOT import them here.  Instead,
+# until we can resolve the circular dependencies, they will be injected
+# into this module by the .current module (which must be imported
+# *after* numeric_expr, logocal_expr, and this module.
 
 
 #-------------------------------------------------------

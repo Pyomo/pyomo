@@ -2,18 +2,26 @@ from pyomo.core import value
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet,
                                          BooleanSet)
-from pyomo.core.expr.expr_pyomo5 import (EqualityExpression,
-                                         InequalityExpression,
-                                         ProductExpression,
-                                         SumExpression,
-                                         PowExpression,
-                                         NegationExpression,
-                                         MonomialTermExpression,
-                                         ReciprocalExpression,
-                                         AbsExpression,
-                                         UnaryFunctionExpression,
-                                         nonpyomo_leaf_types,
-                                         StreamBasedExpressionVisitor)
+from pyomo.core.expr.logical_expr import (
+    EqualityExpression,
+    InequalityExpression,
+)
+from pyomo.core.expr.numeric_expr import (
+    ProductExpression,
+    SumExpression,
+    PowExpression,
+    NegationExpression,
+    MonomialTermExpression,
+    ReciprocalExpression,
+    AbsExpression,
+    UnaryFunctionExpression,
+)
+from pyomo.core.expr.numvalue import (
+    nonpyomo_leaf_types,
+)
+from pyomo.core.expr.visitor import (
+    StreamBasedExpressionVisitor,
+)
 from pyomo.environ import SymbolMap, NumericLabeler, Var, Constraint
 from pyomo.gdp import Disjunction
 import math

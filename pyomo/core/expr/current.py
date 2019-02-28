@@ -12,18 +12,6 @@ from __future__ import division
 import math
 
 #
-# Data and methods that are exposed when importing pyomo.core.expr
-#
-_public = ['log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
-           'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh',
-           'atanh', 'ceil', 'floor']
-
-#
-# Data and methods that are exposed when importing pyomo.core.expr.current
-#
-__all__ = list(_public)
-
-#
 # Provide a global value that indicates which expression system is being used
 #
 class Mode(object):
@@ -31,14 +19,17 @@ class Mode(object):
 _mode = Mode.pyomo5_trees
 
 #
+# Common intrinsic functions
+#
+from pyomo.core.expr import expr_common as common
+#
 # Pull symbols from the appropriate expression system
 #
+from pyomo.core.expr import numvalue as _numvalue
+
 # Pyomo5
 if _mode == Mode.pyomo5_trees:
-    #from pyomo.core.expr import expr_pyomo5 as curr
-    #_public.extend(curr._public)
-    #for obj in curr.__all__:
-    #    globals()[obj] = getattr(curr, obj)
+    from pyomo.core.expr import numeric_expr as _numeric_expr
     from pyomo.core.expr.numeric_expr import *
     from pyomo.core.expr.numeric_expr import (
         _generate_sum_expression,
@@ -46,30 +37,31 @@ if _mode == Mode.pyomo5_trees:
         _generate_other_expression,
         _generate_intrinsic_function_expression,
     )
+    from pyomo.core.expr import logical_expr as _logical_expr
     from pyomo.core.expr.logical_expr import *
     from pyomo.core.expr.logical_expr import (
         _generate_relational_expression,
-        _using_chained_inequality,
         _chainedInequality,
     )
-    from pyomo.core.expr.visitor import *
     from pyomo.core.expr import visitor as _visitor
+    from pyomo.core.expr.visitor import *
     # FIXME: we shouldn't need circular dependencies between modules
-    _visitor.LinearExpression = LinearExpression
-    _visitor.MonomialTermExpression = MonomialTermExpression
-    _visitor.NPV_expression_types = NPV_expression_types
-    _visitor.clone_counter = clone_counter
+    _visitor.LinearExpression = _numeric_expr.LinearExpression
+    _visitor.MonomialTermExpression = _numeric_expr.MonomialTermExpression
+    _visitor.NPV_expression_types = _numeric_expr.NPV_expression_types
+    _visitor.clone_counter = _numeric_expr.clone_counter
+
+    # Initialize numvalue functions
+    _numvalue._generate_sum_expression \
+        = _numeric_expr._generate_sum_expression
+    _numvalue._generate_mul_expression \
+        = _numeric_expr._generate_mul_expression
+    _numvalue._generate_other_expression \
+        = _numeric_expr._generate_other_expression
+    _numvalue._generate_relational_expression \
+        = _logical_expr._generate_relational_expression
 else:
     raise ValueError("No other expression systems are supported in Pyomo right now.")    #pragma: no cover
-
-
-
-# Initialize numvalue functions
-from pyomo.core.expr import numvalue
-numvalue._generate_sum_expression = _generate_sum_expression
-numvalue._generate_mul_expression = _generate_mul_expression
-numvalue._generate_other_expression = _generate_other_expression
-numvalue._generate_relational_expression = _generate_relational_expression
 
 
 def Expr_if(IF=None, THEN=None, ELSE=None):
@@ -77,11 +69,6 @@ def Expr_if(IF=None, THEN=None, ELSE=None):
     Function used to construct a logical conditional expression.
     """
     return Expr_ifExpression(IF_=IF, THEN_=THEN, ELSE_=ELSE)
-
-#
-# Common intrinsic functions
-#
-from pyomo.core.expr import expr_common as common
 
 #
 # NOTE: abs() and pow() are not defined here, because they are

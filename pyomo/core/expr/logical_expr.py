@@ -12,48 +12,26 @@ from __future__ import division
 
 _using_chained_inequality = True
 
-#
-# These symbols are part of pyomo.core.expr
-#
-_public = ['inequality']
-
-import math
 import logging
-import sys
 import traceback
-from copy import deepcopy
-from collections import deque
-from itertools import islice
-from six import next, string_types, itervalues
-from six.moves import xrange, builtins
-from weakref import ref
 
 logger = logging.getLogger('pyomo.core')
 
-from pyutilib.misc.visitor import SimpleVisitor, ValueVisitor
-from pyutilib.math.util import isclose
-
 from pyomo.common.deprecation import deprecation_warning
-from pyomo.core.expr.symbol_map import SymbolMap
-from pyomo.core.expr.numvalue import \
-    (NumericValue,
-     NumericConstant,
+from .numvalue import (
      native_types,
-     nonpyomo_leaf_types,
      native_numeric_types,
      as_numeric,
-     value)
-from pyomo.core.expr.expr_common import \
-    (_add, _sub, _mul, _div,
-     _pow, _neg, _abs, _inplace,
-     _unary, _radd, _rsub, _rmul,
-     _rdiv, _rpow, _iadd, _isub,
-     _imul, _idiv, _ipow, _lt, _le,
-     _eq)
-from pyomo.core.expr import expr_common as common
-from pyomo.core.expr.expr_errors import TemplateExpressionError
-
-from pyomo.core.expr.numeric_expr import _LinearOperatorExpression, _process_arg
+)
+from .expr_common import (
+    _add, _sub, _mul, _div,
+    _pow, _neg, _abs, _inplace,
+    _unary, _radd, _rsub, _rmul,
+    _rdiv, _rpow, _iadd, _isub,
+    _imul, _idiv, _ipow, _lt, _le,
+    _eq,
+)
+from .numeric_expr import _LinearOperatorExpression, _process_arg
 
 if _using_chained_inequality:               #pragma: no cover
     class _chainedInequality(object):

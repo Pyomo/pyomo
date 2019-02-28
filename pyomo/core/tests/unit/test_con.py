@@ -25,7 +25,7 @@ import pyutilib.th as unittest
 from pyomo.environ import ConcreteModel, AbstractModel, Var, Constraint, \
     ConstraintList, Param, RangeSet, Set, Expression, value, \
     simple_constraintlist_rule, simple_constraint_rule, inequality
-from pyomo.core.expr import current as EXPR
+from pyomo.core.expr import logical_expr
 from pyomo.core.base.constraint import _GeneralConstraintData
 
 from six import StringIO
@@ -1306,7 +1306,7 @@ class MiscConTests(unittest.TestCase):
         except ValueError:
             pass
 
-    @unittest.skipIf(not EXPR._using_chained_inequality, "Chained inequalities are not supported.")
+    @unittest.skipIf(not logical_expr._using_chained_inequality, "Chained inequalities are not supported.")
     def test_chainedInequalityError(self):
         m = ConcreteModel()
         m.x = Var()

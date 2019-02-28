@@ -15,18 +15,8 @@
 # that are used by general users, but pyomo.core.expr.current provides
 # symbols that are used by developers.
 # 
-__all__ = []
 
-from pyomo.core.expr import current
-from . import current
-#__all__.extend(current._public)
-#for obj in current._public:
-#    globals()[obj] = getattr(current, obj)
-
-from . import numvalue
-#__all__.extend(numvalue.__all__)
-#for obj in numvalue.__all__:
-#    globals()[obj] = getattr(numvalue, obj)
+from . import numvalue, numeric_expr, logical_expr, current
 
 from .numvalue import (
     value, is_constant, is_fixed, is_variable_type,
