@@ -16,8 +16,8 @@ env:
   - TAG=python_2.7    CATEGORY="nightly" KEY_JOB=1
   - TAG=pypy_3        CATEGORY="nightly" DISABLE_COVERAGE=1
   - TAG=pypy_2        CATEGORY="nightly" DISABLE_COVERAGE=1
-  - TAG=anaconda_3    CATEGORY="nightly" DISABLE_COVERAGE=1
-  - TAG=anaconda_2    CATEGORY="nightly" DISABLE_COVERAGE=1
+  - TAG=anaconda_3    CATEGORY="nightly"
+  - TAG=anaconda_2    CATEGORY="nightly"
   - TAG=python_3.6    CATEGORY="parallel"
   - TAG=python_2.7    CATEGORY="parallel"
 
