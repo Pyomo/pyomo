@@ -1,3 +1,9 @@
+"""
+Run a Pyomo model viewer with embeded Jupyter QtConsole
+"""
+
+import logging
+_log = logging.getLogger(__name__)
 from pyomo.contrib.viewer.ui import *
 
 def main():
