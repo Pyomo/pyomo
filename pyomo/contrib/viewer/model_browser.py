@@ -265,7 +265,7 @@ class ComponentDataItem(object):
                 return
 
     def _set_active_callback(self, val):
-        if val == "True" or val == "true" or val == "1" or val:
+        if val:
             val = True
         else:
             val = False
@@ -278,7 +278,7 @@ class ComponentDataItem(object):
             return
 
     def _set_fixed_callback(self, val):
-        if val == "True" or val == "true" or val == "1" or val:
+        if val:
             val = True
         else:
             val = False
