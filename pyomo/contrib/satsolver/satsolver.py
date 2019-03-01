@@ -1,4 +1,3 @@
-from pyomo.core import value, SymbolMap, NumericLabeler, Var, Constraint
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet,
                                          BooleanSet)
@@ -22,7 +21,7 @@ from pyomo.core.expr.numvalue import (
 from pyomo.core.expr.visitor import (
     StreamBasedExpressionVisitor,
 )
-from pyomo.environ import SymbolMap, NumericLabeler, Var, Constraint
+from pyomo.core import value, SymbolMap, NumericLabeler, Var, Constraint
 from pyomo.gdp import Disjunction
 import math
 
