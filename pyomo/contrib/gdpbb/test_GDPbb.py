@@ -9,6 +9,7 @@ from pyomo.environ import ConcreteModel, Objective, SolverFactory, Var, value, I
 from pyomo.gdp import Disjunct, Disjunction
 from pyutilib.misc import import_file
 from pyomo.opt import TerminationCondition
+from pyomo.contrib.satsolver.satsolver import _z3_available 
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))
 
@@ -22,6 +23,7 @@ minlp_args=dict()
 @unittest.skipIf(not SolverFactory(minlp_solver).available(),
                  "Required subsolver %s is not available"
                  % (minlp_solver,))
+@unittest.skipUnless(_z3_available, "Z3 SAT solver is not available.")
 class TestGDPBB(unittest.TestCase):
     """Tests for global logic-based outer approximation."""
 
