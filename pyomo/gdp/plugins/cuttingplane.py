@@ -516,18 +516,29 @@ class CuttingPlane_Transformation(Transformation):
     # assumes that constraints is a list of my own linear constraint repn (see
     # below)
     def fourier_motzkin_elimination(self, constraints, vars_to_eliminate):
-        # First we will preprocess so that all the constraints are either <= or
-        # >=
+        # First we will preprocess so that we have no equalities (break them
+        # into two constraints)
         tmpConstraints = [cons for cons in constraints]
         for cons in tmpConstraints:
             if cons['lower'] is not None and cons['upper'] is not None:
                 # make a copy to become the geq side 
                 geq = {'lower': None,
                        'upper': cons['upper'],
-                       'body': cons['body']} # TODO: I think this is a problem
-                                             # if this is by reference 
+                       # I'm doing this so that I know I have a copy:
+                       'body': ComponentMap(
+                           (var, coef) for (var, coef) in cons['body'].items()) 
+                }
                 cons['upper'] = None
                 constraints.append(geq)
+
+        # DEBUG
+        print("Checking constraints we are passing into recursive thing:")
+        for cons in constraints:
+            body = 0
+            for var, val in cons['body'].items():
+                body += val*var if var is not None else val
+            print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
+        print("OK, are they right??")
                 
         return self.fm_elimination(constraints, vars_to_eliminate)
 
@@ -536,18 +547,22 @@ class CuttingPlane_Transformation(Transformation):
             return constraints
         
         the_var = vars_to_eliminate.pop()
-        print("DEBUG: the_var is %s" % the_var.name)
+        print("DEBUG: we are eliminating %s" % the_var.name)
         # we are 'reorganizing' the constraints, we will map the coefficient of
         # the_var from that constraint and the rest of the expression and sorting
         # based on whether we have the_var <= other stuff or vice versa.
         leq_list = []
         geq_list = []
+        waiting_list = []
+
         # sort our constraints, make it so leq constraints have coef of -1 on
         # variable to eliminate, geq constraints have coef of 1 (so we can add
         # them)
         #DEBUG
         print("CONSTRAINTS:")
-        for cons in constraints:
+        while(constraints):
+            cons = constraints.pop()
+        #for cons in constraints:
             # DEBUG
             body = 0
             for var, val in cons['body'].items():
@@ -556,22 +571,36 @@ class CuttingPlane_Transformation(Transformation):
 
             leaving_var_coef = cons['body'].get(the_var)
             if leaving_var_coef is None or leaving_var_coef == 0:
+                waiting_list.append(cons)
+                print("\tskipping")
                 continue
+
             if cons['lower'] is not None:
                 if leaving_var_coef < 0:
+                    # don't flip the sign
                     leq_list.append(self.scalar_multiply_linear_constraint(
                         cons, -1.0/leaving_var_coef))
+                    print("\tleq (lower)")
                 else:
+                    # don't flip the sign
                     geq_list.append(self.scalar_multiply_linear_constraint(
                         cons, 1.0/leaving_var_coef))
-            if cons['upper'] is not None:
+                    print("\tgeq (lower)")
+
+            # NOTE: this else matters because we are changing the constraint
+            # when we flip it!!
+            elif cons['upper'] is not None:
                 if leaving_var_coef > 0:
-                    geq_list.append(self.scalar_multiply_linear_constraint(
-                        cons, 1.0/leaving_var_coef))
-                else:
+                    # flip the sign
                     leq_list.append(self.scalar_multiply_linear_constraint(
                         cons, -1.0/leaving_var_coef))
-            constraints.remove(cons)
+                    print("\tgeq (upper)")
+                else:
+                    # flip the sign
+                    geq_list.append(self.scalar_multiply_linear_constraint(
+                        cons, 1.0/leaving_var_coef))
+                    print("\tgeq (upper)")
+            #constraints.remove(cons)
 
         print("Here be leq constraints:")
         for cons in leq_list:
@@ -590,6 +619,11 @@ class CuttingPlane_Transformation(Transformation):
         for leq in leq_list:
             for geq in geq_list:
                 constraints.append(self.add_linear_constraints(leq, geq))
+
+        # add back in the constraints that didn't have the variable we were
+        # projecting out
+        for cons in waiting_list:
+            constraints.append(cons)
 
         print("This is what we have now:")
         for cons in constraints:
@@ -667,20 +701,46 @@ class CuttingPlane_Transformation(Transformation):
         return cons_dict
 
     def add_linear_constraints(self, cons1, cons2):
-        for var, coef in cons1['body'].items():
+        ans = {'lower': None, 'upper': None, 'body': ComponentMap()}
+        all_vars = cons1['body'].items() + \
+                   list(ComponentSet(cons2['body'].items()) - \
+                        ComponentSet(cons1['body'].items()))
+        for (var, coef) in all_vars:
+            if var is None:
+                ans['body'][None] = cons1['body'][None] + cons2['body'][None]
+                continue
+            print var.name
             cons2_coef = cons2['body'].get(var)
-            if cons2_coef is not None:
-                coef += cons2_coef
+            cons1_coef = cons1['body'].get(var)
+            if cons2_coef is not None and cons1_coef is not None:
+                ans['body'][var] = cons1_coef + cons2_coef
+            elif cons1_coef is not None:
+                ans['body'][var] = cons1_coef
+            elif cons2_coef is not None:
+                ans['body'][var] = cons2_coef
 
-        if cons1['lower'] is not None:
-            cons2_lower = 0 if cons2['lower'] is None else cons2['lower']
-            cons1['lower'] += cons2_lower
+        bounds_good = False
+        cons1_lower = cons1['lower']
+        cons2_lower = cons2['lower']
+        if cons1_lower is not None and cons2_lower is not None:
+            ans['lower'] = cons1_lower + cons2_lower
+            bounds_good = True
 
-        if cons1['upper'] is not None:
-            cons2_upper = 0 if cons2['upper'] is None else cons2['upper']
-            cons1['upper'] += cons2_upper
+        cons1_upper = cons1['upper']
+        cons2_upper = cons2['upper']
+        if cons1_upper is not None and cons2_upper is not None:
+            ans['upper'] = cons1_upper + cons2_upper
+            bounds_good = True
 
-        return cons1
+        # in all other cases we don't actually want add these constraints... I
+        # mean, what we would actually do is multiply one of them be negative
+        # one and then do it... But I guess I want to assume that I already did
+        # that because in the context of FME, I already did
+        if not bounds_good:
+            raise RuntimeError("You were adding a leq and geq constraint, "
+                               "which is a thing you haven't implemented")
+
+        return ans
 
     def scalar_multiply_linear_constraint(self, cons, scalar):
         for var, coef in cons['body'].items():
@@ -697,7 +757,13 @@ class CuttingPlane_Transformation(Transformation):
                 tmp_upper = cons['upper']
                 cons['upper'] = scalar*cons['lower']
                 cons['lower'] = None
-            if tmp_upper is not None:
+                if tmp_upper is not None:
+                    cons['lower'] = scalar*tmp_upper
+
+            elif cons['upper'] is not None:
+                tmp_upper = cons['upper']
+                # we actually know that lower is None
+                cons['upper'] = None
                 cons['lower'] = scalar*tmp_upper
 
         return cons
