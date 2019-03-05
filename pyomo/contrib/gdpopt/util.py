@@ -277,7 +277,7 @@ def setup_results_object(solve_data, config):
     # Create the solver results object
     res = solve_data.results
     prob = res.problem
-    res.problem.name = solve_data.working_model.name
+    res.problem.name = solve_data.original_model.name
     res.problem.number_of_nonzeros = None  # TODO
     # TODO work on termination condition and message
     res.solver.termination_condition = None
