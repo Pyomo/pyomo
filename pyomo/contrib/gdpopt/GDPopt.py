@@ -162,6 +162,12 @@ class GDPoptSolver(object):
         description="Calculate special disjunctive variable bounds for GLOA. False by default.",
         domain=bool
     ))
+    CONFIG.declare("obbt_disjunctive_bounds", ConfigValue(
+        default=False,
+        description="Use optimality-based bounds tightening rather than feasibility-based bounds tightening "
+        "to compute disjunctive variable bounds. False by default.",
+        domain=bool
+    ))
     CONFIG.declare("bound_tolerance", ConfigValue(
         default=1E-6, domain=NonNegativeFloat,
         description="Tolerance for bound convergence."

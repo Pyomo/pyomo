@@ -98,7 +98,10 @@ def add_affine_cuts(nlp_result, solve_data, config):
         m = solve_data.linear_GDP
         if config.calc_disjunctive_bounds:
             with time_code(solve_data.timing, "disjunctive variable bounding"):
-                TransformationFactory('contrib.compute_disj_var_bounds').apply_to(m, solver=config.mip_solver)
+                TransformationFactory('contrib.compute_disj_var_bounds').apply_to(
+                    m,
+                    solver=config.mip_solver if config.obbt_disjunctive_bounds else None
+                )
         config.logger.info("Adding affine cuts.")
         GDPopt = m.GDPopt_utils
         counter = 0
