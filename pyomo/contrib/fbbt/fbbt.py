@@ -933,10 +933,12 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_varia
         new_var_bounds.update(_new_var_bounds)
         for v in _new_var_bounds.keys():
             if v.lb is not None:
+                # TODO if update_variable_bounds = False, this will not work as intended.
                 if value(v.lb) > var_lbs[v] + tol:
                     improved_vars.add(v)
                     var_lbs[v] = value(v.lb)
             if v.ub is not None:
+                # TODO if update_variable_bounds = False, this will not work as intended.
                 if value(v.ub) < var_ubs[v] - tol:
                     improved_vars.add(v)
                     var_ubs[v] = value(v.ub)
@@ -950,10 +952,12 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_varia
             new_var_bounds.update(_new_var_bounds)
             for _v in _new_var_bounds.keys():
                 if _v.lb is not None:
+                    # TODO if update_variable_bounds = False, this will not work as intended.
                     if value(_v.lb) > var_lbs[_v] + tol:
                         improved_vars.add(_v)
                         var_lbs[_v] = value(_v.lb)
                 if _v.ub is not None:
+                    # TODO if update_variable_bounds = False, this will not work as intended.
                     if value(_v.ub) < var_ubs[_v] - tol:
                         improved_vars.add(_v)
                         var_ubs[_v] = value(_v.ub)
