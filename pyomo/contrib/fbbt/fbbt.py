@@ -863,7 +863,7 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds
     return new_var_bounds
 
 
-def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_variable_bounds=True, integer_tol=1e-4):
+def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_variable_bounds=True, integer_tol=1e-4, initial_bounds=ComponentMap()):
     """
     Feasibility based bounds tightening (FBBT) for a block or model. This
     loops through all of the constraints in the block and performs
@@ -904,14 +904,15 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_varia
         for v in identify_variables(c.body):
             if v not in var_to_con_map:
                 var_to_con_map[v] = list()
+            init_lb, init_ub = initial_bounds.get(v, (-math.inf, math.inf))
             if v.lb is None:
-                var_lbs[v] = -math.inf
+                var_lbs[v] = init_lb
             else:
-                var_lbs[v] = value(v.lb)
+                var_lbs[v] = max(value(v.lb), init_lb)
             if v.ub is None:
-                var_ubs[v] = math.inf
+                var_ubs[v] = init_ub
             else:
-                var_ubs[v] = value(v.ub)
+                var_ubs[v] = min(value(v.ub), init_ub)
             var_to_con_map[v].append(c)
 
     improved_vars = ComponentSet()

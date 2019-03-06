@@ -9,6 +9,7 @@ to variable bounds preprocessing transformation is recommended for NLP problems
 processed with this transformation.
 
 """
+from pyomo.contrib.fbbt.fbbt import fbbt_block
 from pyomo.core.base.block import Block, TraversalStrategy
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.kernel.component_set import ComponentSet
@@ -94,26 +95,36 @@ def disjunctive_obbt(model, solver):
     if model.type() == Disjunct:
         model._disjuncts_to_process.insert(0, model)
 
-    for disj_idx in range(model._disjuncts_to_process):
-        var_bnds = obbt_disjunct(model, disj_idx)
-        translate_dictionary()
+    linear_var_set = ComponentSet()
+    for constr in model.component_data_objects(
+            Constraint, active=True, descend_into=(Block, Disjunct)):
+        if constr.body.polynomial_degree() in linear_degrees:
+            linear_var_set.update(identify_variables(constr.body, include_fixed=False))
+    model._disj_bnds_linear_vars = list(linear_var_set)
+
+    for disj_idx, disjunct in enumerate(model._disjuncts_to_process):
+        var_bnds = obbt_disjunct(model, disj_idx, solver)
+        if var_bnds is not None:
+            # Add bounds to the disjunct
+            if not hasattr(disjunct, '_disj_var_bounds'):
+                # No bounds had been computed before. Attach the bounds dictionary.
+                disjunct._disj_var_bounds = var_bnds
+            else:
+                # Update the bounds dictionary.
+                for var, new_bnds in var_bnds.items():
+                    old_lb, old_ub = disjunct._disj_var_bounds.get(var, (-inf, inf))
+                    new_lb, new_ub = new_bnds
+                    disjunct._disj_var_bounds[var] = (max(old_lb, new_lb), min(old_ub, new_ub))
+        else:
+            disjunct.deactivate()  # prune disjunct
 
 
 def obbt_disjunct(orig_model, idx, solver):
-    linear_var_set = ComponentSet()
-    for constr in orig_model.component_data_objects(
-            Constraint, active=True, descend_into=(Block, Disjunct)):
-        if constr.polynomial_degree() in linear_degrees:
-            linear_var_set.update(identify_variables(constr.body, include_fixed=False))
-    orig_model._linear_vars = list(linear_var_set)
-    
     model = orig_model.clone()
 
     # Fix the disjunct to be active
     disjunct = model._disjuncts_to_process[idx]
     disjunct.indicator_var.fix(1)
-
-    var_bnds = ComponentMap()
 
     for obj in model.component_data_objects(Objective, active=True):
         obj.deactivate()
@@ -121,35 +132,77 @@ def obbt_disjunct(orig_model, idx, solver):
     # Deactivate nonlinear constraints
     for constr in model.component_data_objects(
             Constraint, active=True, descend_into=(Block, Disjunct)):
-        if constr.polynomial_degree() not in linear_degrees:
+        if constr.body.polynomial_degree() not in linear_degrees:
             constr.deactivate()
 
-    for var in model._linear_vars:
+    # Only look at the variables participating in active constraints within the scope
+    relevant_var_set = ComponentSet()
+    for constr in disjunct.component_data_objects(Constraint, active=True):
+        relevant_var_set.update(identify_variables(constr.body, include_fixed=False))
+
+    TransformationFactory('gdp.bigm').apply_to(model)
+
+    for var in relevant_var_set:
         model._var_bounding_obj = Objective(expr=var, sense=minimize)
         var_lb = solve_bounding_problem(model, solver)
+        if var_lb is None:
+            return None  # bounding problem infeasible
         model._var_bounding_obj.set_value(expr=-var)
-        var_ub = -1 * solve_bounding_problem(model, solver)
+        var_ub = solve_bounding_problem(model, solver)
+        if var_ub is None:
+            return None  # bounding problem infeasible
+        else:
+            var_ub = -var_ub  # sign correction
 
-        if var_lb is None or var_ub is None:
-            # One of the bounding problems came back infeasible
-            return None
+        var.setlb(var_lb)
+        var.setub(var_ub)
 
-        var.set_lb(var_lb)
-        var.set_ub(var_ub)
+    # Maps original variable --> (new computed LB, new computed UB)
+    var_bnds = ComponentMap(
+        ((orig_var, (
+            clone_var.lb if clone_var.has_lb() else -inf,
+            clone_var.ub if clone_var.has_ub() else inf))
+         for orig_var, clone_var in zip(
+            orig_model._disj_bnds_linear_vars, model._disj_bnds_linear_vars)
+         if clone_var in relevant_var_set)
+    )
+    return var_bnds
 
 
-def solve_bounding_problem(blk, solver):
-    results = SolverFactory(solver).solve(blk)
+def solve_bounding_problem(model, solver):
+    results = SolverFactory(solver).solve(model)
     if results.solver.termination_condition is tc.optimal:
-        return value(blk._var_bounding_obj.expr)
+        return value(model._var_bounding_obj.expr)
     elif results.solver.termination_condition is tc.infeasible:
         return None
     elif results.solver.termination_condition is tc.unbounded:
-        return float('-inf')
+        return -inf
     else:
         raise NotImplementedError(
             "Unhandled termination condition: %s"
             % results.solver.termination_condition)
+
+
+def disjunctive_fbbt(model):
+    """Applies FBBT to a model"""
+    fbbt_disjunct(model, ComponentMap())
+
+
+def fbbt_disjunct(disj, parent_bounds):
+    orig_bnds = ComponentMap(parent_bounds)
+    try:
+        for var, var_bnds in disj._disj_var_bounds.items():
+            scope_lb, scope_ub = var_bnds
+            parent_lb, parent_ub = parent_bounds.get(var, (-inf, inf))
+            orig_bnds[var] = (max(scope_lb, parent_lb), min(scope_ub, parent_ub))
+    except AttributeError:
+        # disj._disj_var_bounds does not exist yet
+        pass
+    new_bnds = fbbt_block(disj, update_variable_bounds=False, initial_bounds=orig_bnds)
+    disj._disj_var_bounds = new_bnds
+    # Handle nested disjuncts
+    for disj in disj.component_data_objects(Disjunct, active=True):
+        fbbt_disjunct(disj, new_bnds)
 
 
 @TransformationFactory.register('contrib.compute_disj_var_bounds',
@@ -181,112 +234,7 @@ class ComputeDisjunctiveVarBounds(Transformation):
             model: Pyomo model object on which to compute disjuctive bounds.
 
         """
-        disjuncts_to_process = list(model.component_data_objects(
-            ctype=Disjunct, active=True, descend_into=(Block, Disjunct),
-            descent_order=TraversalStrategy.BreadthFirstSearch))
-        if model.type() == Disjunct:
-            disjuncts_to_process.insert(0, model)
-
-        # Deactivate nonlinear constraints
-        model._tmp_constr_deactivated = ComponentSet()
-        for constraint in model.component_data_objects(
-                ctype=Constraint, active=True,
-                descend_into=(Block, Disjunct)):
-            if constraint.body.polynomial_degree() not in linear_degrees:
-                model._tmp_constr_deactivated.add(constraint)
-                constraint.deactivate()
-
-        for disjunct in disjuncts_to_process:
-            # If disjunct does not have a component map to store disjunctive
-            # bounds, then make one.
-            if not hasattr(disjunct, '_disj_var_bounds'):
-                disjunct._disj_var_bounds = ComponentMap()
-
-            # fix the disjunct to active, deactivate all nonlinear constraints,
-            # and apply the big-M transformation
-            old_disjunct_state = {'fixed': disjunct.indicator_var.fixed,
-                                  'value': disjunct.indicator_var.value}
-
-            disjunct.indicator_var.fix(1)
-            model._tmp_var_set = ComponentSet()
-            # Maps a variable in a cloned model instance to the original model
-            # variable
-            for constraint in disjunct.component_data_objects(
-                    ctype=Constraint, active=True, descend_into=True):
-                model._tmp_var_set.update(identify_variables(constraint.body))
-            model._var_list = list(model._tmp_var_set)
-            bigM_model = model.clone()
-            new_var_to_orig = ComponentMap(
-                zip(bigM_model._var_list, model._var_list))
-
-            TransformationFactory('gdp.bigm').apply_to(bigM_model)
-            for var in bigM_model._tmp_var_set:
-                # If variable is fixed, no need to calculate disjunctive bounds
-                if var.fixed:
-                    continue
-                # calculate the disjunctive variable bounds for these variables
-                # disable all other objectives
-                for obj in bigM_model.component_data_objects(ctype=Objective):
-                    obj.deactivate()
-                bigM_model.del_component('_var_bounding_obj')
-                # Calculate the lower bound
-                bigM_model._var_bounding_obj = Objective(
-                    expr=var, sense=minimize)
-                results = SolverFactory(solver).solve(bigM_model)
-                if results.solver.termination_condition is tc.optimal:
-                    disj_lb = value(var)
-                elif results.solver.termination_condition is tc.infeasible:
-                    disj_lb = None
-                    # TODO disjunct can be fathomed?
-                else:
-                    raise NotImplementedError(
-                        "Unhandled termination condition: %s"
-                        % results.solver.termination_condition)
-                # Calculate the upper bound
-                bigM_model._var_bounding_obj.sense = maximize
-                results = SolverFactory(solver).solve(bigM_model)
-                if results.solver.termination_condition is tc.optimal:
-                    disj_ub = value(var)
-                elif results.solver.termination_condition is tc.infeasible:
-                    disj_ub = None
-                    # TODO disjunct can be fathomed?
-                else:
-                    raise NotImplementedError(
-                        "Unhandled termination condition: %s"
-                        % results.solver.termination_condition)
-                old_bounds = disjunct._disj_var_bounds.get(
-                    new_var_to_orig[var], (None, None)  # default of None
-                )
-                # update bounds values
-                disjunct._disj_var_bounds[new_var_to_orig[var]] = (
-                    min_if_not_None(disj_lb, old_bounds[0]),
-                    max_if_not_None(disj_ub, old_bounds[1]))
-
-            # reset the disjunct
-            if not old_disjunct_state['fixed']:
-                disjunct.indicator_var.unfix()
-            disjunct.indicator_var.set_value(old_disjunct_state['value'])
-
-        # Reactivate deactivated nonlinear constraints
-        for constraint in model._tmp_constr_deactivated:
-            constraint.activate()
-
-
-def min_if_not_None(*args):
-    """Returns the minimum among non-None elements.
-
-    Returns None is no non-None elements exist.
-
-    """
-    non_nones = [a for a in args if a is not None]
-    return min(non_nones or [None])  # handling for empty non_nones list
-
-
-def max_if_not_None(*args):
-    """Returns the maximum among non-None elements.
-
-    Returns None is no non-None elements exist.
-
-    """
-    non_nones = [a for a in args if a is not None]
-    return max(non_nones or [None])  # handling for empty non_nones list
+        if solver is not None:
+            disjunctive_obbt(model, solver)
+        else:
+            disjunctive_fbbt(model)
