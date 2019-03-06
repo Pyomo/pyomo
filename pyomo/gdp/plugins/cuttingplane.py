@@ -210,7 +210,8 @@ class CuttingPlane_Transformation(Transformation):
 
         # this is the map that I need to translate my projected cuts and add
         # them to bigM and rBigM.
-        # TODO: If I had xstar to this (or don't) can I just replace var_info?
+        # [ESJ 5 March 2019] TODO: If I add xstar to this (or don't) can I just
+        # replace var_info?
         var_map = ComponentMap((transBlock_rCHull.all_vars[i],
                                 {'bigM': v,
                                  'rBigM': transBlock_rBigM.all_vars[i]})
@@ -236,7 +237,7 @@ class CuttingPlane_Transformation(Transformation):
                 orig_vars = disaggregatedVarMap.get(disaggregated_var)
                 if orig_vars is None:
                     # TODO: this is probably expensive, but I don't have another
-                    # idea...
+                    # idea... And I am only going to do it once
                     orig_cuid = ComponentUID(original)
                     disaggregatedVarMap[disaggregated_var] = \
                                     {'bigm': orig_cuid.find_component(bigm),
@@ -292,13 +293,13 @@ class CuttingPlane_Transformation(Transformation):
 
             # copy over xstar
             # DEBUG
-            print("x* is")
+            # print("x* is")
             for x_bigm, x_rbigm, x_chull, x_star in var_info:
                 x_star.value = x_rbigm.value
                 # initialize the X values
                 x_chull.value = x_rbigm.value
                 # DEBUG
-                print("\t%s: %s" % (x_rbigm.name, x_star.value))
+                #print("\t%s: %s" % (x_rbigm.name, x_star.value))
 
             # compare objectives: check absolute difference close to 0, relative
             # difference further from 0.
@@ -310,12 +311,12 @@ class CuttingPlane_Transformation(Transformation):
             # solve separation problem to get xhat.
             opt.solve(instance_rCHull, tee=stream_solver)
             # DEBUG
-            print("x_hat is")
-            for x_hat in rCHull_vars:
-               print("\t%s: %s" % (x_hat.name, x_hat.value))
-            print "Separation obj = %s" % (
-               value(next(instance_rCHull.component_data_objects(
-               Objective, active=True))),)
+            #print("x_hat is")
+            # for x_hat in rCHull_vars:
+            #    print("\t%s: %s" % (x_hat.name, x_hat.value))
+            # print "Separation obj = %s" % (
+            #    value(next(instance_rCHull.component_data_objects(
+            #    Objective, active=True))),)
 
             # [JDS 19 Dec 18] Note: we should check that the separation
             # objective was significantly nonzero.  If it is too close
@@ -403,7 +404,8 @@ class CuttingPlane_Transformation(Transformation):
                 active=True,
                 descend_into=Block,
                 sort=SortComponents.deterministic):
-            print "   CON: ", constraint.expr
+            # DEBUG
+            #print "   CON: ", constraint.expr
             multiplier = self.constraint_tight(instance_rCHull, constraint)
             if multiplier:
                 tight_constraints.append(
@@ -412,7 +414,7 @@ class CuttingPlane_Transformation(Transformation):
                 # print(constraint.name)
                 # print constraint.expr
                 # get normal vector to tangent plane to this constraint at xhat
-                print "      TIGHT", multiplier
+                # print "      TIGHT", multiplier
                 f = constraint.body
                 firstDerivs = differentiate(f, wrt_list=rCHull_vars)
                 #print "     ", firstDerivs
@@ -433,39 +435,18 @@ class CuttingPlane_Transformation(Transformation):
             (v,n) for v,n in zip(rCHull_vars, composite_normal))
 
         # DEBUG
-        print "COMPOSITE NORMAL, cut number %s" % cut_number
-        for x,v in composite_normal_map.iteritems():
-            print(x.name + '\t' + str(v))
+        # print "COMPOSITE NORMAL, cut number %s" % cut_number
+        # for x,v in composite_normal_map.iteritems():
+        #     print(x.name + '\t' + str(v))
 
-        # add a cut which is tangent to the composite normal at xhat:
-        # (we are projecting out the disaggregated variables)
-        # composite_cutexpr_bigm = 0
-        # composite_cutexpr_rBigM = 0
-        # projection_cutexpr_bigm = 0
-        # projection_cutexpr_rBigM = 0
+        
         composite_cutexpr_CHull = 0
-        # TODO: I don't think we need x_star in var_info anymore. Or maybe at
-        # all?
-        # DEBUG:
-        #print composite_normal
-        #print("FOR COMPARISON:\ncomposite\tx_hat - xstar")
         for x_bigm, x_rbigm, x_chull, x_star in var_info:
             # make the cut in the CHull space with the CHull variables. We will
             # translate it all to BigM and rBigM later when we have projected
             # out the disaggregated variables
             composite_cutexpr_CHull += composite_normal_map[x_chull]*\
                                        (x_chull - x_chull.value)
-
-            # composite_cutexpr_bigm \
-            #     += composite_normal_map[x_chull]*(x_bigm - x_chull.value)
-            # composite_cutexpr_rBigM \
-            #     += composite_normal_map[x_chull]*(x_rbigm - x_chull.value)
-
-            # # DEBUG: old way
-            # projection_cutexpr_bigm += 2*(x_star.value - x_chull.value)*\
-            #                            (x_bigm - x_chull.value)
-            # projection_cutexpr_rBigM += 2*(x_star.value - x_chull.value)*\
-            #                             (x_rbigm - x_chull.value)
             # DEBUG:
             # print("%s\t%s" %
             #       (composite_normal[x_chull], x_star.value - x_chull.value))
@@ -477,7 +458,7 @@ class CuttingPlane_Transformation(Transformation):
                                        (x_disaggregated - x_disaggregated.value)
             vars_to_eliminate.add(x_disaggregated)
     
-        print("The cut in extended space is: %s <= 0" % composite_cutexpr_CHull)
+        #print("The cut in extended space is: %s <= 0" % composite_cutexpr_CHull)
         cut_std_repn = generate_standard_repn(composite_cutexpr_CHull)
         cut_cons = {'lower': None, 
                     'upper': 0, 
@@ -493,52 +474,31 @@ class CuttingPlane_Transformation(Transformation):
             tight_constraints, vars_to_eliminate)
 
         # DEBUG:
-        print("These are the constraints we got from FME:")
+        #print("These are the constraints we got from FME:")
         for cons in projected_constraints:
             body = 0
             for var, val in cons['body'].items():
                 body += val*var if var is not None else val
-            print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
+            #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
 
         # we created these constraints with the variables from rCHull. We
         # actually need constraints for BigM and rBigM now!
         cuts = self.get_constraint_exprs(projected_constraints, var_map)
 
-        # for debugging, I think I want to add all the constraints just so I can
-        # see them. I can deactivate the ones I don't like.
-
-        #print "Composite normal cut"
-        #print "   %s" % (composite_cutexpr_rBigM,)
-        #print "optimal sol'n for rBigm"
-        #instance_rCHull._pyomo_gdp_cuttingplane_relaxation.xstar.pprint()
-
-        # print "Calculating the cut the old way we have:"
-        # print "   %s" % (projection_cutexpr_rBigM,)
-        # DEBUG
-        # print("++++++++++++++++++++++++++++++++++++++++++")
-        # print("So this is the cut expression:")
-        # print(cutexpr_bigm)
-
-        # cuts = self._project_cuts_to_bigM_space(
-        #     {'bigm': composite_cutexpr_bigm, 'rBigM': composite_cutexpr_rBigM},
-        #     composite_normal_map, disaggregated_var_info)
-
-        #return({'bigm': projection_cutexpr_bigm,
-        #        'rBigM': projection_cutexpr_rBigM})
         return(cuts)
 
     def get_constraint_exprs(self, constraints, var_map):
-        print("==========================\nBuilding actual expressions")
+        #print("==========================\nBuilding actual expressions")
         cuts = {}
         cuts['rBigM'] = []
         cuts['bigM'] = []
         for cons in constraints:
             # DEBUG
-            print("cons:")
+            #print("cons:")
             body = 0
             for var, val in cons['body'].items():
                 body += val*var if var is not None else val
-            print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
+            #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
             body_bigM = 0
             body_rBigM = 0
             # TODO: you need to check if this constraint actually has a body. If
@@ -579,7 +539,7 @@ class CuttingPlane_Transformation(Transformation):
                 # make a copy to become the geq side 
                 geq = {'lower': None,
                        'upper': cons['upper'],
-                       # I'm doing this so that I know I have a copy:
+                       # I'm doing this so that I have a copy, not a reference:
                        'body': ComponentMap(
                            (var, coef) for (var, coef) in cons['body'].items()) 
                 }
@@ -587,13 +547,12 @@ class CuttingPlane_Transformation(Transformation):
                 constraints.append(geq)
 
         # DEBUG
-        print("Checking constraints we are passing into recursive thing:")
+        #print("Checking constraints we are passing into recursive thing:")
         for cons in constraints:
             body = 0
             for var, val in cons['body'].items():
                 body += val*var if var is not None else val
-            print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
-        print("OK, are they right??")
+            #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
                 
         return self.fm_elimination(constraints, vars_to_eliminate)
 
@@ -602,7 +561,7 @@ class CuttingPlane_Transformation(Transformation):
             return constraints
         
         the_var = vars_to_eliminate.pop()
-        print("DEBUG: we are eliminating %s" % the_var.name)
+        #print("DEBUG: we are eliminating %s" % the_var.name)
         # we are 'reorganizing' the constraints, we will map the coefficient of
         # the_var from that constraint and the rest of the expression and sorting
         # based on whether we have the_var <= other stuff or vice versa.
@@ -614,7 +573,7 @@ class CuttingPlane_Transformation(Transformation):
         # variable to eliminate, geq constraints have coef of 1 (so we can add
         # them)
         #DEBUG
-        print("CONSTRAINTS:")
+        #print("CONSTRAINTS:")
         while(constraints):
             cons = constraints.pop()
         #for cons in constraints:
@@ -622,12 +581,12 @@ class CuttingPlane_Transformation(Transformation):
             body = 0
             for var, val in cons['body'].items():
                 body += val*var if var is not None else val
-            print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
+            #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
 
             leaving_var_coef = cons['body'].get(the_var)
             if leaving_var_coef is None or leaving_var_coef == 0:
                 waiting_list.append(cons)
-                print("\tskipping")
+                #print("\tskipping")
                 continue
 
             if cons['lower'] is not None:
@@ -635,41 +594,40 @@ class CuttingPlane_Transformation(Transformation):
                     # don't flip the sign
                     leq_list.append(self.scalar_multiply_linear_constraint(
                         cons, -1.0/leaving_var_coef))
-                    print("\tleq (lower)")
+                    #print("\tleq (lower)")
                 else:
                     # don't flip the sign
                     geq_list.append(self.scalar_multiply_linear_constraint(
                         cons, 1.0/leaving_var_coef))
-                    print("\tgeq (lower)")
+                    #print("\tgeq (lower)")
 
-            # NOTE: this else matters because we are changing the constraint
-            # when we flip it!!
+            # NOTE: this 'else' matters because we are changing the constraint
+            # when we flip it, so cons['upper'] may have become not None
             elif cons['upper'] is not None:
                 if leaving_var_coef > 0:
                     # flip the sign
                     leq_list.append(self.scalar_multiply_linear_constraint(
                         cons, -1.0/leaving_var_coef))
-                    print("\tgeq (upper)")
+                    #print("\tgeq (upper)")
                 else:
                     # flip the sign
                     geq_list.append(self.scalar_multiply_linear_constraint(
                         cons, 1.0/leaving_var_coef))
-                    print("\tgeq (upper)")
-            #constraints.remove(cons)
+                    #print("\tgeq (upper)")
 
-        print("Here be leq constraints:")
+        #print("Here be leq constraints:")
         for cons in leq_list:
             body = 0
             for var, val in cons['body'].items():
                 body += val*var if var is not None else val
-            print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
+            #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
 
-        print("Here be geq constraints:")
+        #print("Here be geq constraints:")
         for cons in geq_list:
             body = 0
             for var, val in cons['body'].items():
                 body += val*var if var is not None else val
-            print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))   
+            #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))   
 
         for leq in leq_list:
             for geq in geq_list:
@@ -680,54 +638,15 @@ class CuttingPlane_Transformation(Transformation):
         for cons in waiting_list:
             constraints.append(cons)
 
-        print("This is what we have now:")
+        #print("This is what we have now:")
         for cons in constraints:
             body = 0
             for var, val in cons['body'].items():
                 body += val*var if var is not None else val
-            print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
+            #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
         
         return self.fm_elimination(constraints, vars_to_eliminate)
-
-    def _project_cuts_to_bigM_space(self, cuts, normal_map,
-                                    disaggregated_var_info):
-        # Cut generator didn't return a valid cut, so there is nothing to
-        # project and we are done.
-        if not cuts:
-            return None
-
-        bigm_cut = cuts['bigm']
-        # DEBUG:
-        print "Cut we will project:"
-        print bigm_cut
-        rBigm_cut = cuts['rBigM']
-        expr_data = ComponentMap()
-        for x_disaggregated, x_orig_bigm, x_orig_rBigm in disaggregated_var_info:
-            data = expr_data.get(x_orig_bigm)
-            print("%s\t%s\t%s" % (x_disaggregated.name,
-                                  normal_map[x_disaggregated],
-                                  x_disaggregated.value))
-            if data is None:
-                data = expr_data[x_orig_bigm] = \
-                       {'coef': normal_map[x_disaggregated], 'const': 0}
-            # TODO: I have a feeling this isn't true...
-            assert data['coef'] == normal_map[x_disaggregated]
-            data['const'] += x_disaggregated.value
-
-        # TODO: The fact that I had to do this this way makes me think that
-        # disaggregated_var_info maybe should have been a map
-        for x_disaggregated, x_orig_bigm, x_orig_rBigm in disaggregated_var_info:
-            # we add a term for each variable which was disaggregated
-            data = expr_data.pop(x_orig_bigm, None)
-            if data is not None:
-                bigm_cut += data['coef']*(x_orig_bigm - data['const'])
-                rBigm_cut += data['coef']*(x_orig_rBigm - data['const'])
-
-        print "Composite cut"
-        print "      %s" % bigm_cut
-
-        return({'bigm': bigm_cut, 'rBigM': rBigm_cut})
-                
+            
     def constraint_tight(self, model, constraint):
         val = value(constraint.body)
         ans = 0
@@ -764,7 +683,7 @@ class CuttingPlane_Transformation(Transformation):
             if var is None:
                 ans['body'][None] = cons1['body'][None] + cons2['body'][None]
                 continue
-            print var.name
+            #print var.name
             cons2_coef = cons2['body'].get(var)
             cons1_coef = cons1['body'].get(var)
             if cons2_coef is not None and cons1_coef is not None:
@@ -787,7 +706,7 @@ class CuttingPlane_Transformation(Transformation):
             ans['upper'] = cons1_upper + cons2_upper
             bounds_good = True
 
-        # in all other cases we don't actually want add these constraints... I
+        # in all other cases we don't actually want to add these constraints... I
         # mean, what we would actually do is multiply one of them be negative
         # one and then do it... But I guess I want to assume that I already did
         # that because in the context of FME, I already did
