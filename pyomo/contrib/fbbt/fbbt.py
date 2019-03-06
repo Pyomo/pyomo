@@ -663,17 +663,15 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
     This walker propagates bounds from the variables to each node in
     the expression tree (all the way to the root node).
     """
-    def __init__(self, bnds_dict, integer_tol=1e-4, initial_bounds=ComponentMap()):
+    def __init__(self, bnds_dict, integer_tol=1e-4):
         """
         Parameters
         ----------
         bnds_dict: ComponentMap
         integer_tol: float
-        initial_bounds: ComponentMap
         """
         self.bnds_dict = bnds_dict
         self.integer_tol = integer_tol
-        self.initial_bounds=initial_bounds
 
     def visit(self, node, values):
         if node.__class__ in _prop_bnds_leaf_to_root_map:
@@ -698,8 +696,7 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
                     lb = -math.inf
                 if ub is None:
                     ub = math.inf
-            old_lb, old_ub = self.initial_bounds.get(node, (-math.inf, math.inf))
-            self.bnds_dict[node] = (max(lb, old_lb), min(ub, old_ub))
+            self.bnds_dict[node] = (lb, ub)
             return True, None
 
         if not node.is_expression_type():
@@ -778,7 +775,7 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         return False, None
 
 
-def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds=True, integer_tol=1e-4, initial_bounds=ComponentMap()):
+def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds=True, integer_tol=1e-4, initial_bounds=None):
     """
     Feasibility based bounds tightening for a constraint. This function attempts to improve the bounds of each variable
     in the constraint based on the bounds of the constraint and the bounds of the other variables in the constraint.
@@ -820,13 +817,17 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds
         from FBBT.
     """
     if not con.active:
-        return None
+        return ComponentMap()
 
-    bnds_dict = ComponentMap()  # a dictionary to store the bounds of
-    #  every node in the tree
+    bnds_dict = ComponentMap()  # a dictionary to store the bounds of every node in the tree
+    if initial_bounds is not None:
+        con_vars = ComponentSet(identify_variables(con.body))
+        for v in con_vars:
+            if v in initial_bounds:
+                bnds_dict[v] = initial_bounds[v]
 
     # a walker to propagate bounds from the variables to the root
-    visitorA = _FBBTVisitorLeafToRoot(bnds_dict, initial_bounds=initial_bounds)
+    visitorA = _FBBTVisitorLeafToRoot(bnds_dict)
     visitorA.dfs_postorder_stack(con.body)
 
     # Now we need to replace the bounds in bnds_dict for the root
@@ -869,7 +870,7 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds
     return new_var_bounds
 
 
-def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_variable_bounds=True, integer_tol=1e-4, initial_bounds=ComponentMap()):
+def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_variable_bounds=True, integer_tol=1e-4, initial_bounds=None):
     """
     Feasibility based bounds tightening (FBBT) for a block or model. This
     loops through all of the constraints in the block and performs
@@ -913,15 +914,14 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_varia
         for v in identify_variables(c.body):
             if v not in var_to_con_map:
                 var_to_con_map[v] = list()
-            init_lb, init_ub = initial_bounds.get(v, (-math.inf, math.inf))
             if v.lb is None:
-                var_lbs[v] = init_lb
+                var_lbs[v] = -math.inf
             else:
-                var_lbs[v] = max(value(v.lb), init_lb)
+                var_lbs[v] = value(v.lb)
             if v.ub is None:
-                var_ubs[v] = init_ub
+                var_ubs[v] = math.inf
             else:
-                var_ubs[v] = min(value(v.ub), init_ub)
+                var_ubs[v] = value(v.ub)
             var_to_con_map[v].append(c)
 
     improved_vars = ComponentSet()
@@ -931,17 +931,16 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_varia
                                    update_variable_bounds=update_variable_bounds, integer_tol=integer_tol,
                                    initial_bounds=initial_bounds)
         new_var_bounds.update(_new_var_bounds)
-        for v in _new_var_bounds.keys():
-            if v.lb is not None:
-                # TODO if update_variable_bounds = False, this will not work as intended.
-                if value(v.lb) > var_lbs[v] + tol:
+        for v, bnds in _new_var_bounds.items():
+            vlb, vub = bnds
+            if vlb is not None:
+                if vlb > var_lbs[v] + tol:
                     improved_vars.add(v)
-                    var_lbs[v] = value(v.lb)
-            if v.ub is not None:
-                # TODO if update_variable_bounds = False, this will not work as intended.
-                if value(v.ub) < var_ubs[v] - tol:
+                    var_lbs[v] = vlb
+            if vub is not None:
+                if vub < var_ubs[v] - tol:
                     improved_vars.add(v)
-                    var_ubs[v] = value(v.ub)
+                    var_ubs[v] = vub
 
     while len(improved_vars) > 0:
         v = improved_vars.pop()
@@ -950,17 +949,16 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_varia
                                        update_variable_bounds=update_variable_bounds, integer_tol=integer_tol,
                                        initial_bounds=initial_bounds)
             new_var_bounds.update(_new_var_bounds)
-            for _v in _new_var_bounds.keys():
-                if _v.lb is not None:
-                    # TODO if update_variable_bounds = False, this will not work as intended.
-                    if value(_v.lb) > var_lbs[_v] + tol:
+            for _v, bnds in _new_var_bounds.items():
+                _vlb, _vub = bnds
+                if _vlb is not None:
+                    if _vlb > var_lbs[_v] + tol:
                         improved_vars.add(_v)
-                        var_lbs[_v] = value(_v.lb)
-                if _v.ub is not None:
-                    # TODO if update_variable_bounds = False, this will not work as intended.
-                    if value(_v.ub) < var_ubs[_v] - tol:
+                        var_lbs[_v] = _vlb
+                if _vub is not None:
+                    if _vub < var_ubs[_v] - tol:
                         improved_vars.add(_v)
-                        var_ubs[_v] = value(_v.ub)
+                        var_ubs[_v] = _vub
 
     return new_var_bounds
 
