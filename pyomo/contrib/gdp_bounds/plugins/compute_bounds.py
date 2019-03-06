@@ -142,8 +142,10 @@ def obbt_disjunct(orig_model, idx, solver):
 
     TransformationFactory('gdp.bigm').apply_to(model)
 
+    model._var_bounding_obj = Objective(expr=1, sense=minimize)
+
     for var in relevant_var_set:
-        model._var_bounding_obj = Objective(expr=var, sense=minimize)
+        model._var_bounding_obj.set_value(expr=var)
         var_lb = solve_bounding_problem(model, solver)
         if var_lb is None:
             return None  # bounding problem infeasible
