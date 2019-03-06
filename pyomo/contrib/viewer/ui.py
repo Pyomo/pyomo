@@ -1,6 +1,6 @@
 ##############################################################################
 # Institute for the Design of Advanced Energy Systems Process Systems
-# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018, by the
+# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018-2019, by the
 # software owners: The Regents of the University of California, through
 # Lawrence Berkeley National Laboratory,  National Technology & Engineering
 # Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
@@ -22,36 +22,15 @@ import logging
 import threading
 import datetime
 import json
+import sys
 from IPython import get_ipython
+from IPython.lib import guisupport
 import pyomo.contrib.viewer.report as rpt
 import pyomo.environ as pe
 
 _log = logging.getLogger(__name__)
 
-try: # this is for importing PyQt 4 or 5, looks a bit nasty, settle on pyqt5?
-    from PyQt5 import QtCore
-except:
-    _log.exception("Cannot import PyQt5.QtCore")
-    try:
-        from PyQt4 import QtCore
-    except:
-        _log.exception("Cannot import PyQt4.QtCore")
-        QtCore = None
-    else:
-        try:
-            from PyQt4.QtGui import QFileDialog, QMessageBox
-            from PyQt4 import uic
-        except:
-            _log.exception("Cannot import PyQt4")
-            QtCore = None
-else:
-    try:
-        from PyQt5.QtWidgets import QFileDialog, QMessageBox
-        from PyQt5 import uic
-    except:
-        _log.exception("Cannot import PyQt5")
-        QtCore = None
-
+from pyomo.contrib.viewer.pyqt_4or5 import *
 from pyomo.contrib.viewer.model_browser import ModelBrowser
 
 _mypath = os.path.dirname(__file__)
@@ -67,17 +46,18 @@ except:
     class _MainWindow(object):
         pass
 
-def get_mainwindow_nb(model=None, show=True):
+def get_mainwindow_nb(model=None, show=True, main=False):
     """
-    Create a UI MainWindow to be used with a Jupyter notebook.
+    Create a UI MainWindow.
 
     Args:
         model: A Pyomo model to work with
         show: show the window after it is created
+        main: if true add a qtconsole to make this the main application
     """
     if model is None:
         model = pe.ConcreteModel()
-    ui = MainWindow(model=model)
+    ui = MainWindow(model=model, main=main)
     get_ipython().events.register('post_execute', ui.refresh_on_execute)
     if show: ui.show()
     return ui, model
@@ -143,6 +123,7 @@ class UISetup(QtCore.QObject):
 class MainWindow(_MainWindow, _MainWindowUI):
     def __init__(self, *args, **kwargs):
         model = self.model = kwargs.pop("model", None)
+        main = self.model = kwargs.pop("main", None)
         flags = kwargs.pop("flags", 0)
         if kwargs.pop("ontop", False):
             kwargs[flags] = flags | QtCore.Qt.WindowStaysOnTopHint
@@ -151,35 +132,53 @@ class MainWindow(_MainWindow, _MainWindowUI):
 
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
+        if main and can_containt_qtconsole:
+            self._qtconsole = RichIPythonWidget(parent=self)
+            self.setCentralWidget(self._qtconsole)
+        elif main and not can_containt_qtconsole:
+            _log.error("Cannot create qtconsole widget")
+            sys.exit(1)
+        self._main = main
 
         # Create model browsers these are dock widgets
         uis = self.ui_setup
-        self.vars = ModelBrowser(parent=self, standard="Var", ui_setup=uis)
-        self.cons = ModelBrowser(parent=self, standard="Constraint", ui_setup=uis)
-        self.params = ModelBrowser(parent=self, standard="Param", ui_setup=uis)
-        self.exprs = ModelBrowser(parent=self, standard="Expression", ui_setup=uis)
+        self.variables = ModelBrowser(parent=self, standard="Var", ui_setup=uis)
+        self.constraints = ModelBrowser(parent=self, standard="Constraint", ui_setup=uis)
+        self.parameters = ModelBrowser(parent=self, standard="Param", ui_setup=uis)
+        self.expressions = ModelBrowser(parent=self, standard="Expression", ui_setup=uis)
 
-        # Dock the wigetes allong the bottom and tabify them
-        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.vars)
-        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.cons)
-        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.params)
-        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.exprs)
-        self.tabifyDockWidget(self.vars, self.params)
-        self.tabifyDockWidget(self.vars, self.exprs)
-        self.tabifyDockWidget(self.vars, self.cons)
-        self.vars.raise_()
+        # Dock the widgets along the bottom and tabify them
+        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.variables)
+        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.constraints)
+        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.parameters)
+        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.expressions)
+        self.tabifyDockWidget(self.variables, self.parameters)
+        self.tabifyDockWidget(self.variables, self.expressions)
+        self.tabifyDockWidget(self.variables, self.constraints)
+        self.variables.raise_()
 
-        # Set menu actions (rembeber the menu items are defined in the ui file)
+        # Set menu actions (remember the menu items are defined in the ui file)
         # you can edit the menus in qt-designer
         self.action_Exit.triggered.connect(self.exit_action)
-        self.action_toggle_variables.triggered.connect(self.vars.toggle)
-        self.action_toggle_constraints.triggered.connect(self.cons.toggle)
-        self.action_toggle_parameters.triggered.connect(self.params.toggle)
-        self.action_toggle_expressions.triggered.connect(self.exprs.toggle)
+        self.action_toggle_variables.triggered.connect(self.variables.toggle)
+        self.action_toggle_constraints.triggered.connect(self.constraints.toggle)
+        self.action_toggle_parameters.triggered.connect(self.parameters.toggle)
+        self.action_toggle_expressions.triggered.connect(self.expressions.toggle)
         self.actionToggle_Always_on_Top.triggered.connect(self.toggle_always_on_top)
         self.actionInformation.triggered.connect(self.model_information)
-        self.actionCalculateConstraints.triggered.connect(self.cons.calculate_all)
-        self.actionCalculateExpressions.triggered.connect(self.exprs.calculate_all)
+        self.actionCalculateConstraints.triggered.connect(self.calculate_constraints)
+        self.actionCalculateExpressions.triggered.connect(self.calculate_expressions)
+
+    def calculate_constraints(self):
+        self.constraints.calculate_all()
+        self.refresh_on_execute()
+
+    def calculate_expressions(self):
+        self.expressions.calculate_all()
+        self.refresh_on_execute()
+
+    def set_model(self, model):
+        self.ui_setup.model = model
 
     def update_model(self):
         pass
@@ -231,10 +230,10 @@ class MainWindow(_MainWindow, _MainWindowUI):
         ipython kernel.  The main purpose of this right now it to refresh the
         UI display so that it matches the current state of the model.
         """
-        self.vars.refresh()
-        self.cons.refresh()
-        self.exprs.refresh()
-        self.params.refresh()
+        self.variables.refresh()
+        self.constraints.refresh()
+        self.expressions.refresh()
+        self.parameters.refresh()
 
     def exit_action(self):
         """
@@ -251,6 +250,10 @@ class MainWindow(_MainWindow, _MainWindowUI):
             "Are you sure you want to exit ?",
             QMessageBox.Yes| QMessageBox.No)
         if result == QMessageBox.Yes:
+            if self._main:
+                self._qtconsole.kernel_client.stop_channels()
+                self._qtconsole.kernel_manager.shutdown_kernel()
+                guisupport.get_app_qt4().exit()
             event.accept()
         else:
             event.ignore()
