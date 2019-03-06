@@ -52,23 +52,26 @@ class OneVarDisj(unittest.TestCase):
 
         # I really expect 1 or 0. If we are getting more here then we have
         # pretty much got to be adding unncessary cuts...
+
+        # [ESJ 6 March 2019] TODO: If I increase M, can I get a cut? I think it
+        # makes more sense to do a version like that... And then a version where
+        # probably bigm is tight? Need to think about that.
         self.assertLessEqual(len(cuts), 1)
-        for i in cuts:
-            cut_expr = cuts[i].body
+
+        # we check that all the cuts are valid:
+        for cut in cuts.values():
+            cut_expr = cut.body
+            lower = cut.lower
+            upper = cut.upper
             m.x.fix(1)
             m.disj1.indicator_var.fix(1)
             m.disj2.indicator_var.fix(0)
-            self.assertLessEqual(value(cut_expr), 0)
+            check_validity(self, cut_expr, lower, upper)
+
             m.x.fix(0)
             m.disj1.indicator_var.fix(0)
             m.disj2.indicator_var.fix(1)
-            val = value(cut_expr)
-            # TODO: How bad an idea is this?? (If you don't like it, just search
-            # for the assertAlmostEquals, the ones I changed will all have them)
-            #self.assertLessEqual(value(cut_expr), 0)
-            # if this isn't less than 0 it better BE 0
-            if val > 0:
-                self.assertAlmostEqual(val, 0)
+            check_validity(self, cut_expr, lower, upper)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_expected_two_segment_cut(self):
@@ -151,56 +154,44 @@ class TwoTermDisj(unittest.TestCase):
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
-        for i in cuts:
-            cut_expr = cuts[i].body
+        for cut in cuts.values():
+            cut_expr = cut.body
+            lower = cut.lower
+            upper = cut.upper
             m.d[0].indicator_var.fix(1)
             m.d[1].indicator_var.fix(0)
             m.x.fix(3)
             m.y.fix(1)
-            val = value(cut_expr)
-            if val > 0:
-                # TODO: so this isn't quite at tolerance of 1e-7
-                self.assertAlmostEqual(val, 0, places=6)
-            #self.assertLessEqual(value(cut_expr), 0)
+            check_validity(self, cut_expr, lower, upper)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cuts_valid_on_chull_vertices(self):
         m = models.makeTwoTermDisj_boxes()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
+        extreme_pts = [
+            (1,0,4,1),
+            (1,0,4,2),
+            (1,0,3,1),
+            (1,0,3,2),
+            (0,1,1,3),
+            (0,1,1,4),
+            (0,1,2,3),
+            (0,1,2,4)
+        ]
+
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
-        for i in cuts:
-            # DEBUG
-            print i
-            cut_expr = cuts[i].body
-            m.d[0].indicator_var.fix(1)
-            m.d[1].indicator_var.fix(0)
-            m.x.fix(4)
-            m.y.fix(2)
-            # (4,2)
-            self.assertLessEqual(value(cut_expr), 0)
-            m.y.fix(1)
-            # (4,1)
-            val = value(cut_expr)
-            if val > 0:
-                self.assertAlmostEqual(val, 0, places=6)
-            #self.assertLessEqual(value(cut_expr), 0)
-            m.d[0].indicator_var.fix(0)
-            m.d[1].indicator_var.fix(1)
-            m.x.fix(1)
-            m.y.fix(4)
-            # (1,4)
-            #self.assertLessEqual(value(cut_expr), 0)
-            self.assertTrue(value(cuts[i].expr))
-            m.x.fix(2)
-            # (2.4)
-            #self.assertLessEqual(value(cut_expr), 0)
-            self.assertTrue(value(cuts[i].expr))
-            m.x.fix(1)
-            m.y.fix(3)
-            # (1,3)
-            #self.assertLessEqual(value(cut_expr), 0)
-            self.assertTrue(value(cuts[i].expr))
+        for cut in cuts.values():
+            cut_expr = cut.body
+            lower = cut.lower
+            upper = cut.upper
+            # now there are 8 extreme points and we can test all of them
+            for pt in extreme_pts:
+                m.d[0].indicator_var.fix(pt[0])
+                m.d[1].indicator_var.fix(pt[1])
+                m.x.fix(pt[2])
+                m.y.fix(pt[3])
+                check_validity(self, cut_expr, lower, upper)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_create_using(self):
@@ -218,6 +209,11 @@ class TwoTermDisj(unittest.TestCase):
         m.pprint(ostream=model_buf)
         model_output = model_buf.getvalue()
         self.maxDiff = None
+        # [ESJ 6 March 2019] TODO: there is in fact no reason to expect this to
+        # pass right now because there is nothing to guaruntee that the order of
+        # the terms in the expressions of the constraints is going to be the
+        # same. And so they will prrint differently even though the math is the
+        # same.
         self.assertMultiLineEqual(modelcopy_output, model_output)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
@@ -234,192 +230,94 @@ class TwoTermDisj(unittest.TestCase):
 
 class Grossmann_TestCases(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_correct_soln(self):
+    def test_cuts_valid_at_extreme_pts(self):
         m = models.grossmann_oneDisj()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
-        # TODO: probably don't want to be solving here in the long term?
-        # checking if we get the optimal solution.
-        SolverFactory('cplex').solve(m)
-        # self.assertAlmostEqual(m.x.value, 2, delta=1e-4)
-        # self.assertAlmostEqual(m.y.value, 10, delta=1e-4)
-        # I'm calculating my own relative tolerance. Really, nosetests??
-        rel_tol = abs(m.x.value - 2)/float(min(m.x.value, 2))
-        # TODO: So this is the lowest tolerance at which this passes. But I'm
-        # not so unhappy with 1e-7, should we be?
-        self.assertLessEqual(rel_tol, 1e-7)
-        rel_tol = abs(m.y.value - 10)/float(min(m.y.value, 10))
-        self.assertLessEqual(rel_tol, 1e-7)
-
-    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cut_valid_at_optimal(self):
-        m = models.grossmann_oneDisj()
-        TransformationFactory('gdp.cuttingplane').apply_to(m)
+        extreme_points = [
+            (1,0,2,10),
+            (1,0,0,10),
+            (1,0,0,7),
+            (1,0,2,7),
+            (0,1,8,0),
+            (0,1,8,3),
+            (0,1,10,0),
+            (0,1,10,3)
+        ]
 
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
-        for i in cuts:
-            cut0 = cuts[i]
-            self.assertEqual(cut0.upper, 0)
-            self.assertIsNone(cut0.lower)
-            cut0_expr = cut0.body
+        for cut in cuts.values():
+            cut_expr = cut.body
+            lower = cut.lower
+            upper = cut.upper
 
-            # we check that the cut is valid at the upper righthand corners of
-            # the two regions (within a tolerance (in either direction))
-            m.x.fix(2)
-            m.y.fix(10)
-            m.disjunct1.indicator_var.fix(1)
-            m.disjunct2.indicator_var.fix(0)
-            # TODO: This fails, but it would be true with a tolerance of 1e-7
-            # (2,10) = optimal soln
-            self.assertLessEqual(value(cut0_expr), 0)
+            # we check that the cut is valid for all of the above points
+            for pt in extreme_points:
+                m.x.fix(pt[2])
+                m.y.fix(pt[3])
+                m.disjunct1.indicator_var.fix(pt[0])
+                m.disjunct2.indicator_var.fix(pt[1])
+                check_validity(self, cut_expr, lower, upper)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cut_valid_on_facets_containing_optimal(self):
-        m = models.grossmann_oneDisj()
-        TransformationFactory('gdp.cuttingplane').apply_to(m)
-
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
-        for i in cuts:
-            cut0_expr = cuts[i].body
-
-            m.x.fix(10)
-            m.y.fix(3)
-            m.disjunct1.indicator_var.fix(0)
-            m.disjunct2.indicator_var.fix(1)
-            # (10,3)
-            self.assertLessEqual(value(cut0_expr), 0)
-
-            m.disjunct1.indicator_var.fix(1)
-            m.disjunct2.indicator_var.fix(0)
-            m.x.fix(0)
-            m.y.fix(10)
-            # (0,10)
-            self.assertLessEqual(value(cut0_expr), 0)
-
-    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_soln_correct(self):
+    def test_cuts_valid_at_extreme_pts_rescaled(self):
         m = models.to_break_constraint_tolerances()
-
         TransformationFactory('gdp.cuttingplane').apply_to(m)
+        extreme_points = [
+            (1,0,2,127),
+            (1,0,0,127),
+            (1,0,0,117),
+            (1,0,2,117),
+            (0,1,118,0),
+            (0,1,118,3),
+            (0,1,120,0),
+            (0,1,120,3)
+        ]
 
-        # TODO: Need to either check for cplex or choose a different solver.
-        # Need a MIP solver though...
-        SolverFactory('cplex').solve(m)
-        # TODO: I'm playing the same game as above:
-        # self.assertAlmostEqual(m.x.value, 2)
-        # self.assertAlmostEqual(m.y.value, 127)
-        rel_tol = abs(m.x.value - 2)/float(min(m.x.value, 2))
-        self.assertLessEqual(rel_tol, 1e-4)
-        rel_tol = abs(m.y.value - 127)/float(min(m.y.value, 127))
-        self.assertLessEqual(rel_tol, 1e-4)
-
-    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cuts_valid_for_optimal(self):
-        m = models.to_break_constraint_tolerances()
-
-        TransformationFactory('gdp.cuttingplane').apply_to(m)
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
-        for i in cuts:
-            m.disjunct1.indicator_var.fix(1)
-            m.disjunct2.indicator_var.fix(0)
-            m.x.fix(2)
-            m.y.fix(127)
+        for cut in cuts.values():
+            cut_expr = cut.body
+            lower = cut.lower
+            upper = cut.upper
 
-            cut1_expr = cuts[i].body
-            # cut valid for optimal soln
-            self.assertGreaterEqual(0, value(cut1_expr))
-
-    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cuts_valid_for_facets_containing_optimal(self):
-        m = models.to_break_constraint_tolerances()
-
-        TransformationFactory('gdp.cuttingplane').apply_to(m)
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
-        for i in cuts:
-            cut1_expr = cuts[i].body
-
-            # check that the cut is valid for the other upper RH corner
-            m.disjunct1.indicator_var.fix(0)
-            m.disjunct2.indicator_var.fix(1)
-            m.x.fix(120)
-            m.y.fix(3)
-            self.assertGreaterEqual(0, value(cut1_expr))
-
-            # and check the other neighboring vertex
-            m.disjunct1.indicator_var.fix(1)
-            m.disjunct2.indicator_var.fix(0)
-            m.x.fix(0)
-            m.y.fix(127)
-            self.assertGreaterEqual(0, value(cut1_expr))
+            # we check that the cut is valid for all of the above points
+            for pt in extreme_points:
+                m.x.fix(pt[2])
+                m.y.fix(pt[3])
+                m.disjunct1.indicator_var.fix(pt[0])
+                m.disjunct2.indicator_var.fix(pt[1])
+                check_validity(self, cut_expr, lower, upper)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_2disj_cuts_valid_for_optimal(self):
+    def test_2disj_cuts_valid_for_extreme_pts(self):
         m = models.grossmann_twoDisj()
-        
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
-
-        # fix to optimal solution
-        m.x.fix(2)
-        m.y.fix(8)
-        m.disjunct1.indicator_var.fix(1)
-        m.disjunct3.indicator_var.fix(1)
-        m.disjunct2.indicator_var.fix(0)
-        m.disjunct4.indicator_var.fix(0)
-
-        for i in range(len(cuts)):
-            cut = cuts[i].body
-            self.assertGreaterEqual(0, value(cut))
-
-    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_2disj_cuts_valid_elsewhere(self):
-        # Check to see if it is cutting into the the feasible region somewhere
-        # other than the optimal value... That is, if the angle is off enough to
-        # cause problems.
-        m = models.grossmann_twoDisj()
-        
-        TransformationFactory('gdp.cuttingplane').apply_to(m)
+        extreme_points = [
+            (1,0,1,0,1,7),
+            (1,0,1,0,1,8),
+            (1,0,1,0,2,7),
+            (1,0,1,0,2,8),
+            (0,1,0,1,9,2),
+            (0,1,0,1,9,3),
+            (0,1,0,1,11,2),
+            (0,1,0,1,11,3)
+        ]
 
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        for cut in cuts.values():
+            cut_expr = cut.body
+            lower = cut.lower
+            upper = cut.upper
 
-        for i in range(len(cuts)):
-            cut = cuts[i].body
-
-            m.x.fix(10)
-            m.y.fix(3)
-            m.disjunct1.indicator_var.fix(0)
-            m.disjunct3.indicator_var.fix(0)
-            m.disjunct2.indicator_var.fix(1)
-            m.disjunct4.indicator_var.fix(1)
-            self.assertGreaterEqual(0, value(cut))
-        
-            m.y.fix(2)
-            self.assertGreaterEqual(0, value(cut))
-
-            m.x.fix(9)
-            self.assertGreaterEqual(0, value(cut))
-
-            m.y.fix(3)
-            self.assertGreaterEqual(0, value(cut))
-
-            m.disjunct1.indicator_var.fix(1)
-            m.disjunct2.indicator_var.fix(0)
-            m.disjunct3.indicator_var.fix(1)
-            m.disjunct4.indicator_var.fix(0)
-
-            m.x.fix(1)
-            m.y.fix(8)
-            self.assertGreaterEqual(0, value(cut))
-
-            m.y.fix(7)
-            self.assertGreaterEqual(0, value(cut))
-
-            m.x.fix(2)
-            self.assertGreaterEqual(0, value(cut))
-            
-            m.y.fix(8)
-            self.assertGreaterEqual(0, value(cut))
+            for pt in extreme_points:
+                m.x.fix(pt[4])
+                m.y.fix(pt[5])
+                m.disjunct1.indicator_var.fix(pt[0])
+                m.disjunct2.indicator_var.fix(pt[1])
+                m.disjunct3.indicator_var.fix(pt[2])
+                m.disjunct4.indicator_var.fix(pt[3])
+                check_validity(self, cut_expr, lower, upper)
 
 class NonlinearConvex_TwoCircles(unittest.TestCase):
     # This is a really weak test because it is not actually *this* apply_to call
