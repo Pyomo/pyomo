@@ -21,6 +21,7 @@ from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.opt import TerminationCondition as tc
 
 linear_degrees = {0, 1}
+inf = float('inf')
 
 
 def disjunctive_bounds(scope):
@@ -48,11 +49,13 @@ def disjunctive_bound(var, scope):
 
     Returns:
         numeric: the tighter of either the disjunctive lower bound, the
-            variable lower bound, or None if neither exist.
+            variable lower bound, or (-inf, inf) if neither exist.
 
     """
     # Initialize to the global variable bound
-    var_bnd = (value(var.lb, exception=False), value(var.ub, exception=False))
+    var_bnd = (
+        value(var.lb) if var.has_lb() else -inf,
+        value(var.ub) if var.has_ub() else inf)
     possible_disjunct = scope
     while possible_disjunct is not None:
         try:
@@ -83,6 +86,72 @@ def disjunctive_ub(var, scope):
     return disjunctive_bound(var, scope)[1]
 
 
+def disjunctive_obbt(model, solver):
+    """Provides Optimality-based bounds tightening to a model using a solver."""
+    model._disjuncts_to_process = list(model.component_data_objects(
+        ctype=Disjunct, active=True, descend_into=(Block, Disjunct),
+        descent_order=TraversalStrategy.BreadthFirstSearch))
+    if model.type() == Disjunct:
+        model._disjuncts_to_process.insert(0, model)
+
+    for disj_idx in range(model._disjuncts_to_process):
+        var_bnds = obbt_disjunct(model, disj_idx)
+        translate_dictionary()
+
+
+def obbt_disjunct(orig_model, idx, solver):
+    linear_var_set = ComponentSet()
+    for constr in orig_model.component_data_objects(
+            Constraint, active=True, descend_into=(Block, Disjunct)):
+        if constr.polynomial_degree() in linear_degrees:
+            linear_var_set.update(identify_variables(constr.body, include_fixed=False))
+    orig_model._linear_vars = list(linear_var_set)
+    
+    model = orig_model.clone()
+
+    # Fix the disjunct to be active
+    disjunct = model._disjuncts_to_process[idx]
+    disjunct.indicator_var.fix(1)
+
+    var_bnds = ComponentMap()
+
+    for obj in model.component_data_objects(Objective, active=True):
+        obj.deactivate()
+
+    # Deactivate nonlinear constraints
+    for constr in model.component_data_objects(
+            Constraint, active=True, descend_into=(Block, Disjunct)):
+        if constr.polynomial_degree() not in linear_degrees:
+            constr.deactivate()
+
+    for var in model._linear_vars:
+        model._var_bounding_obj = Objective(expr=var, sense=minimize)
+        var_lb = solve_bounding_problem(model, solver)
+        model._var_bounding_obj.set_value(expr=-var)
+        var_ub = -1 * solve_bounding_problem(model, solver)
+
+        if var_lb is None or var_ub is None:
+            # One of the bounding problems came back infeasible
+            return None
+
+        var.set_lb(var_lb)
+        var.set_ub(var_ub)
+
+
+def solve_bounding_problem(blk, solver):
+    results = SolverFactory(solver).solve(blk)
+    if results.solver.termination_condition is tc.optimal:
+        return value(blk._var_bounding_obj.expr)
+    elif results.solver.termination_condition is tc.infeasible:
+        return None
+    elif results.solver.termination_condition is tc.unbounded:
+        return float('-inf')
+    else:
+        raise NotImplementedError(
+            "Unhandled termination condition: %s"
+            % results.solver.termination_condition)
+
+
 @TransformationFactory.register('contrib.compute_disj_var_bounds',
           doc="Compute disjunctive bounds in a given model.")
 class ComputeDisjunctiveVarBounds(Transformation):
@@ -91,15 +160,21 @@ class ComputeDisjunctiveVarBounds(Transformation):
     Tries to compute the disjunctive bounds for all variables found in
     constraints that are in disjuncts under the given model.
 
-    This function uses the linear relaxation of the model to try to compute
-    disjunctive bounds.
+    Two strategies are available to compute the disjunctive bounds:
+     - Feasibility-based bounds tightening using the contrib.fbbt package. (Default)
+     - Optimality-based bounds tightening by solving the linear relaxation of the model.
+
+    This transformation introduces ComponentMap objects named _disj_var_bounds to
+    each Disjunct and the top-level model object. These map var --> (var.disj_lb, var.disj_ub)
+    for each disjunctive scope.
 
     Args:
         model (Component): The model under which to look for disjuncts.
+        solver (string): The solver to use for OBBT, or None for FBBT.
 
     """
 
-    def _apply_to(self, model, solver='cbc'):
+    def _apply_to(self, model, solver=None):
         """Apply the transformation.
 
         Args:
