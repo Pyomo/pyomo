@@ -663,15 +663,17 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
     This walker propagates bounds from the variables to each node in
     the expression tree (all the way to the root node).
     """
-    def __init__(self, bnds_dict, integer_tol=1e-4):
+    def __init__(self, bnds_dict, integer_tol=1e-4, initial_bounds=ComponentMap()):
         """
         Parameters
         ----------
         bnds_dict: ComponentMap
         integer_tol: float
+        initial_bounds: ComponentMap
         """
         self.bnds_dict = bnds_dict
         self.integer_tol = integer_tol
+        self.initial_bounds=initial_bounds
 
     def visit(self, node, values):
         if node.__class__ in _prop_bnds_leaf_to_root_map:
@@ -696,7 +698,7 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
                     lb = -math.inf
                 if ub is None:
                     ub = math.inf
-            old_lb, old_ub = self.bnds_dict.get(node, (-math.inf, math.inf))
+            old_lb, old_ub = self.initial_bounds.get(node, (-math.inf, math.inf))
             self.bnds_dict[node] = (max(lb, old_lb), min(ub, old_ub))
             return True, None
 
@@ -807,6 +809,9 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds
         lower bound is left at 0. Otherwise, the lower bound is increased to 1. If the upper bound computed
         on a binary variable is greater than or equal to 1-integer_tol, then the upper bound is left at 1.
         Otherwise the upper bound is decreased to 0.
+    initial_bounds: ComponentMap
+        If initial variable bound information is available within the scope of this constraint, then it can be provided
+        here in the form of a mapping Var --> tuple(lower bound, upper bound)
 
     Returns
     -------
@@ -817,11 +822,11 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds
     if not con.active:
         return None
 
-    bnds_dict = ComponentMap(initial_bounds)  # a dictionary to store the bounds of
+    bnds_dict = ComponentMap()  # a dictionary to store the bounds of
     #  every node in the tree
 
     # a walker to propagate bounds from the variables to the root
-    visitorA = _FBBTVisitorLeafToRoot(bnds_dict)
+    visitorA = _FBBTVisitorLeafToRoot(bnds_dict, initial_bounds=initial_bounds)
     visitorA.dfs_postorder_stack(con.body)
 
     # Now we need to replace the bounds in bnds_dict for the root
@@ -889,6 +894,9 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_varia
         lower bound is left at 0. Otherwise, the lower bound is increased to 1. If the upper bound computed
         on a binary variable is greater than or equal to 1-integer_tol, then the upper bound is left at 1.
         Otherwise the upper bound is decreased to 0.
+    initial_bounds: ComponentMap
+        If initial variable bound information is available within the scope of this block, then it can be provided
+        here in the form of a mapping Var --> tuple(lower bound, upper bound)
 
     Returns
     -------
@@ -937,7 +945,8 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_varia
         v = improved_vars.pop()
         for c in var_to_con_map[v]:
             _new_var_bounds = fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
-                                       update_variable_bounds=update_variable_bounds, integer_tol=integer_tol)
+                                       update_variable_bounds=update_variable_bounds, integer_tol=integer_tol,
+                                       initial_bounds=initial_bounds)
             new_var_bounds.update(_new_var_bounds)
             for _v in _new_var_bounds.keys():
                 if _v.lb is not None:
