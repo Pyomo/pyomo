@@ -696,7 +696,8 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
                     lb = -math.inf
                 if ub is None:
                     ub = math.inf
-            self.bnds_dict[node] = (lb, ub)
+            old_lb, old_ub = self.bnds_dict.get(node, (-math.inf, math.inf))
+            self.bnds_dict[node] = (max(lb, old_lb), min(ub, old_ub))
             return True, None
 
         if not node.is_expression_type():
@@ -775,7 +776,7 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         return False, None
 
 
-def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds=True, integer_tol=1e-4):
+def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds=True, integer_tol=1e-4, initial_bounds=ComponentMap()):
     """
     Feasibility based bounds tightening for a constraint. This function attempts to improve the bounds of each variable
     in the constraint based on the bounds of the constraint and the bounds of the other variables in the constraint.
@@ -816,7 +817,7 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds
     if not con.active:
         return None
 
-    bnds_dict = ComponentMap()  # a dictionary to store the bounds of
+    bnds_dict = ComponentMap(initial_bounds)  # a dictionary to store the bounds of
     #  every node in the tree
 
     # a walker to propagate bounds from the variables to the root
@@ -919,7 +920,8 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_varia
     for c in m.component_data_objects(ctype=Constraint, active=True,
                                       descend_into=True, sort=True):
         _new_var_bounds = fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
-                                   update_variable_bounds=update_variable_bounds, integer_tol=integer_tol)
+                                   update_variable_bounds=update_variable_bounds, integer_tol=integer_tol,
+                                   initial_bounds=initial_bounds)
         new_var_bounds.update(_new_var_bounds)
         for v in _new_var_bounds.keys():
             if v.lb is not None:
