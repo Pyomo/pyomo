@@ -200,9 +200,11 @@ if __name__ == '__main__':
     m = build_model()
     result = SolverFactory('gdpopt').solve(
         m, tee=True, strategy='GLOA',
+        mip_solver='gams',
         nlp_solver='gams',
         nlp_solver_args=dict(add_options=['option optcr=0.01;']),
         calc_disjunctive_bounds=True,
+        obbt_disjunctive_bounds=True,
         iterlim=50,
     )
     # result = SolverFactory('gdpbb').solve(
@@ -214,9 +216,11 @@ if __name__ == '__main__':
     m = build_nonexclusive_model()
     result = SolverFactory('gdpopt').solve(
         m, tee=True, strategy='GLOA',
+        mip_solver='gams',
         nlp_solver='gams',
         nlp_solver_args=dict(add_options=['option optcr=0.01;']),
         calc_disjunctive_bounds=True,
+        obbt_disjunctive_bounds=True,
         iterlim=50,
     )
     print(result)
