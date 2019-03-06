@@ -107,11 +107,12 @@ class CuttingPlane_Transformation(Transformation):
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
 
-        (instance_rBigM, instance_rCHull, var_info, disaggregated_var_info,
-         transBlockName) = self._setup_subproblems(instance, bigM)
+        (instance_rBigM, instance_rCHull, var_info, var_map,
+         disaggregated_var_info, transBlockName) = self._setup_subproblems(
+             instance, bigM)
 
         self._generate_cuttingplanes( instance, instance_rBigM, instance_rCHull,
-                                      var_info, disaggregated_var_info,
+                                      var_info, var_map, disaggregated_var_info,
                                       transBlockName)
 
     def _setup_subproblems(self, instance, bigM):
@@ -207,12 +208,20 @@ class CuttingPlane_Transformation(Transformation):
              disaggregatedVarMap[v]['rBigm'])
             for v in disaggregatedVarMap.keys())
 
+        # this is the map that I need to translate my projected cuts and add
+        # them to bigM and rBigM.
+        # TODO: If I had xstar to this (or don't) can I just replace var_info?
+        var_map = ComponentMap((transBlock_rCHull.all_vars[i],
+                                {'bigM': v,
+                                 'rBigM': transBlock_rBigM.all_vars[i]})
+                               for i,v in enumerate(transBlock.all_vars))
+
         #
         # Add the separation objective to the chull subproblem
         #
         self._add_separation_objective(var_info, transBlock_rCHull)
 
-        return (instance_rBigM, instance_rCHull, var_info,
+        return (instance_rBigM, instance_rCHull, var_info, var_map,
                 disaggregated_var_info, transBlockName)
 
     def _get_disaggregated_var_map(self, chull, bigm, rBigm):
@@ -237,7 +246,7 @@ class CuttingPlane_Transformation(Transformation):
 
     def _generate_cuttingplanes(
             self, instance, instance_rBigM, instance_rCHull,
-            var_info, disaggregated_var_info, transBlockName):
+            var_info, var_map, disaggregated_var_info, transBlockName):
 
         opt = SolverFactory(self._config.solver)
         stream_solver = self._config.stream_solver
@@ -318,7 +327,7 @@ class CuttingPlane_Transformation(Transformation):
                 # going nowhere...?
                 break
 
-            cuts = self._create_cuts(var_info, disaggregated_var_info,
+            cuts = self._create_cuts(var_info, var_map, disaggregated_var_info,
                                      rCHull_vars, instance_rCHull, transBlock,
                                      transBlock_rBigM, transBlock_rCHull)
            
@@ -327,17 +336,18 @@ class CuttingPlane_Transformation(Transformation):
                 break
 
             # add cut to rBigm
-            transBlock_rBigM.cuts.add(len(transBlock_rBigM.cuts),
-                                      cuts['rBigM'] <= 0)
+            for cut in cuts['rBigM']:
+                transBlock_rBigM.cuts.add(len(transBlock_rBigM.cuts), cut)
 
             # DEBUG
             #print("adding this cut to rBigM:\n%s <= 0" % cuts['rBigM'])
 
             if improving:
-                cut_number = len(transBlock.cuts)
-                logger.warning("GDP.cuttingplane: Adding cut %s to BM model."
-                               % (cut_number,))
-                transBlock.cuts.add(cut_number, cuts['bigm'] <= 0)
+                for cut in cuts['bigM']:
+                    cut_number = len(transBlock.cuts)
+                    logger.warning("GDP.cuttingplane: Adding cut %s to BM model."
+                                   % (cut_number,))
+                    transBlock.cuts.add(cut_number, cut)
 
             prev_obj = rBigM_objVal
 
@@ -365,8 +375,8 @@ class CuttingPlane_Transformation(Transformation):
         transBlock_rCHull.separation_objective = Objective(expr=obj_expr)
 
 
-    def _create_cuts(self, var_info, disaggregated_var_info, rCHull_vars,
-                     instance_rCHull, transBlock, transBlock_rBigm,
+    def _create_cuts(self, var_info, var_map, disaggregated_var_info, 
+                     rCHull_vars, instance_rCHull, transBlock, transBlock_rBigm,
                      transBlock_rCHull):
         cut_number = len(transBlock.cuts)
         logger.warning("gdp.cuttingplane: Creating (but not yet adding) cut %s."
@@ -490,6 +500,10 @@ class CuttingPlane_Transformation(Transformation):
                 body += val*var if var is not None else val
             print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
 
+        # we created these constraints with the variables from rCHull. We
+        # actually need constraints for BigM and rBigM now!
+        cuts = self.get_constraint_exprs(projected_constraints, var_map)
+
         # for debugging, I think I want to add all the constraints just so I can
         # see them. I can deactivate the ones I don't like.
 
@@ -505,13 +519,54 @@ class CuttingPlane_Transformation(Transformation):
         # print("So this is the cut expression:")
         # print(cutexpr_bigm)
 
-        cuts = self._project_cuts_to_bigM_space(
-            {'bigm': composite_cutexpr_bigm, 'rBigM': composite_cutexpr_rBigM},
-            composite_normal_map, disaggregated_var_info)
+        # cuts = self._project_cuts_to_bigM_space(
+        #     {'bigm': composite_cutexpr_bigm, 'rBigM': composite_cutexpr_rBigM},
+        #     composite_normal_map, disaggregated_var_info)
 
         #return({'bigm': projection_cutexpr_bigm,
         #        'rBigM': projection_cutexpr_rBigM})
         return(cuts)
+
+    def get_constraint_exprs(self, constraints, var_map):
+        print("==========================\nBuilding actual expressions")
+        cuts = {}
+        cuts['rBigM'] = []
+        cuts['bigM'] = []
+        for cons in constraints:
+            # DEBUG
+            print("cons:")
+            body = 0
+            for var, val in cons['body'].items():
+                body += val*var if var is not None else val
+            print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
+            body_bigM = 0
+            body_rBigM = 0
+            # TODO: you need to check if this constraint actually has a body. If
+            # not, that is what is getting the error about the boolean, and you
+            # don't want it anyway!
+            trivial_constraint = True
+            for var, coef in cons['body'].items():
+                if var is None:
+                    body_bigM += coef
+                    body_rBigM += coef
+                    continue
+                # TODO: do I want almost equal here? I'm going to crash if I get
+                # one of the disaggagregated variables... In case it didn't
+                # quite cancel?
+                if coef != 0:
+                    body_bigM += coef*var_map[var]['bigM']
+                    body_rBigM += coef*var_map[var]['rBigM']
+                    trivial_constraint = False
+            if trivial_constraint:
+                continue
+            if cons['lower'] is not None:
+                cuts['rBigM'].append(cons['lower'] <= body_rBigM)
+                cuts['bigM'].append(cons['lower'] <= body_bigM)
+            elif cons['upper'] is not None:
+                cuts['rBigM'].append(cons['upper'] >= body_rBigM)
+                cuts['bigM'].append(cons['upper'] >= body_bigM)
+        return cuts
+
 
     # assumes that constraints is a list of my own linear constraint repn (see
     # below)
