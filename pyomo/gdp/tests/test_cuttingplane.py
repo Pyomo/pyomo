@@ -36,6 +36,12 @@ def check_linear_coef(self, repn, var, coef):
     self.assertIsNotNone(var_id)
     self.assertAlmostEqual(repn.linear_coefs[var_id], coef)
 
+def check_validity(self, body, lower, upper):
+    if lower is not None:
+        self.assertGreaterEqual(value(body), lower)
+    if upper is not None:
+        self.assertLessEqual(value(body), upper)
+
 class OneVarDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cut_validity(self):
@@ -65,14 +71,65 @@ class OneVarDisj(unittest.TestCase):
                 self.assertAlmostEqual(val, 0)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_two_segment_cuts(self):
+    def test_expected_two_segment_cut(self):
         m = models.twoSegments_SawayaGrossmann()
         # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
         # 0 <= Y <= 1 (in the limit)
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
 
-        # fail so I have output
-        self.assertTrue(False)
+        # I actually know exactly the cut I am expecting in this case (I think I
+        # get it twice, which is a bummer, but I am just going to make sure I
+        # get it by testing that it is tight at two points)
+        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+
+        # I should get at least one cut because I made bigM really bad
+        self.assertGreaterEqual(len(cuts), 1)
+
+        cut_expr = cuts[0].body
+        # should be 2Y_2 <= x
+        m.x.fix(0)
+        m.disj2.indicator_var.fix(0)
+        self.assertAlmostEqual(value(cut_expr), 0)
+
+        m.x.fix(2)
+        m.disj2.indicator_var.fix(1)
+        self.assertAlmostEqual(value(cut_expr), 0)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_two_segment_cuts_valid(self):
+        m = models.twoSegments_SawayaGrossmann()
+        # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
+        # 0 <= Y <= 1 (in the limit)
+        TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
+
+        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+
+        # check that all the cuts are valid
+        for cut in cuts.values():
+            cut_expr = cut.body
+            cut_lower = cut.lower
+            cut_upper = cut.upper
+            # there are just 4 extreme points of convex hull, we'll test all of
+            # them
+
+            # (0,0)
+            m.x.fix(0)
+            m.disj2.indicator_var.fix(0)
+            check_validity(self, cut_expr, cut_lower, cut_upper)
+
+            # (1,0)
+            m.x.fix(1)
+            check_validity(self, cut_expr, cut_lower, cut_upper)
+
+            # (2, 1)
+            m.x.fix(2)
+            m.disj2.indicator_var.fix(1)
+            check_validity(self, cut_expr, cut_lower, cut_upper)
+            
+            # (3, 1)
+            m.x.fix(3)
+            check_validity(self, cut_expr, cut_lower, cut_upper)
+        
 
 class TwoTermDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
