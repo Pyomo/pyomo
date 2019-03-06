@@ -147,7 +147,7 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self.parameters = ModelBrowser(parent=self, standard="Param", ui_setup=uis)
         self.expressions = ModelBrowser(parent=self, standard="Expression", ui_setup=uis)
 
-        # Dock the wigetes allong the bottom and tabify them
+        # Dock the widgets along the bottom and tabify them
         self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.variables)
         self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.constraints)
         self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.parameters)
@@ -157,7 +157,7 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self.tabifyDockWidget(self.variables, self.constraints)
         self.variables.raise_()
 
-        # Set menu actions (rembeber the menu items are defined in the ui file)
+        # Set menu actions (remember the menu items are defined in the ui file)
         # you can edit the menus in qt-designer
         self.action_Exit.triggered.connect(self.exit_action)
         self.action_toggle_variables.triggered.connect(self.variables.toggle)

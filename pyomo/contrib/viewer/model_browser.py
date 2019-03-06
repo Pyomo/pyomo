@@ -269,7 +269,7 @@ class ComponentDataItem(object):
             val == "f" or val == "F":
             # depending on the version of Qt, you may see a combo box that
             # lets you select true/false or may be able to type the combo
-            # box will return True or Flase, if you have to type could be
+            # box will return True or False, if you have to type could be
             # something else
             val = False
         else:
@@ -287,7 +287,7 @@ class ComponentDataItem(object):
             val == "f" or val == "F":
             # depending on the version of Qt, you may see a combo box that
             # lets you select true/false or may be able to type the combo
-            # box will return True or Flase, if you have to type could be
+            # box will return True or False, if you have to type could be
             # something else
             val = False
         else:
