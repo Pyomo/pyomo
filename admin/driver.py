@@ -207,7 +207,7 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
             FILE.write('import coverage; coverage.process_startup()\n')
         with open(os.path.join(srcdir, '.coveragerc'), 'r') as FILE:
             coveragerc = FILE.readlines()
-        coveragerc.append("source=%s\n" % (srcdir, ))
+        #coveragerc.append("source=%s\n" % (srcdir, ))
         coveragerc.append("data_file=%s%s.coverage\n" % (srcdir, os.path.sep))
         coveragerc_file = os.path.join(srcdir, 'coveragerc')
         with open(coveragerc_file, 'w') as FILE:
