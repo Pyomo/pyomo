@@ -1,6 +1,6 @@
 ##############################################################################
 # Institute for the Design of Advanced Energy Systems Process Systems
-# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018, by the
+# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018-2019, by the
 # software owners: The Regents of the University of California, through
 # Lawrence Berkeley National Laboratory,  National Technology & Engineering
 # Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
@@ -22,52 +22,7 @@ import re
 
 _log = logging.getLogger(__name__)
 
-class DummyQtCore(object):
-    """
-    A dummy QtCore class to allow some testing without PyQt
-    """
-    class QModelIndex(object):
-        pass
-    class Qt(object):
-        class DisplayRole(object):
-            pass
-        class EditRole(object):
-            pass
-
-try:
-    from PyQt5 import QtCore
-except:
-    _log.exception("Cannot import PyQt5.QtCore")
-    try:
-        from PyQt4 import QtCore
-    except:
-        _log.exception("Cannot import PyQt4.QtCore")
-        class QAbstractItemModel(object):
-            def __init__(*args, **kwargs):
-                pass
-        QtCore = DummyQtCore
-    else:
-        try:
-            from PyQt4.QtGui import QAbstractItemView
-            from PyQt4.QtCore import QAbstractItemModel
-            from PyQt4 import uic
-        except:
-            _log.exception("Cannot import PyQt4")
-            class QAbstractItemModel(object):
-                def __init__(*args, **kwargs):
-                    pass
-            QtCore = DummyQtCore
-else:
-    try:
-        from PyQt5.QtWidgets import QAbstractItemView
-        from PyQt5.QtCore import QAbstractItemModel
-        from PyQt5 import uic
-    except:
-        _log.exception("Cannot import PyQt5")
-        class QAbstractItemModel(object):
-            def __init__(*args, **kwargs):
-                pass
-        QtCore = DummyQtCore
+from pyomo.contrib.viewer.pyqt_4or5 import *
 
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import _VarData
@@ -112,7 +67,7 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
             self.setWindowTitle("Variables")
         elif standard == "Constraint":
             components = Constraint
-            columns = ["name", "value", "ub", "lb", "active", "expr"]
+            columns = ["name", "value", "ub", "lb", "residual", "active", "expr"]
             editable = ["active"]
             self.setWindowTitle("Constraints")
         elif standard == "Param":
@@ -179,7 +134,8 @@ class ComponentDataItem(object):
             "value": self._get_value_callback,
             "lb": self._get_lb_callback,
             "ub": self._get_ub_callback,
-            "expr": self._get_expr_callback}
+            "expr": self._get_expr_callback,
+            "residual": self._get_residual}
         self.set_callback = {
             "value":self._set_value_callback,
             "lb":self._set_lb_callback,
@@ -188,7 +144,7 @@ class ComponentDataItem(object):
             "fixed":self._set_fixed_callback}
 
     def data_items():
-        """Iterate through chedren data items and this one"""
+        """Iterate through children data items and this one"""
         for i in self.children:
             i.data_items()
         yield self
@@ -267,6 +223,20 @@ class ComponentDataItem(object):
         else:
             return self._cache_ub
 
+    def _get_residual(self):
+        v = self._cache_value
+        if v is None:
+            return
+        if self._cache_lb is not None and v < self._cache_lb:
+            r1 = self._cache_lb - v
+        else:
+            r1 = 0
+        if self._cache_ub is not None and v > self._cache_ub:
+            r2 = v - self._cache_ub
+        else:
+            r2 = 0
+        return max(r1, r2)
+
     def _set_value_callback(self, val):
         if isinstance(self.data, _VarData):
             try:
@@ -295,10 +265,15 @@ class ComponentDataItem(object):
                 return
 
     def _set_active_callback(self, val):
-        if val == "True" or val == "true" or val == "1":
-            val = True
-        else:
+        if not val or val == "False" or val == "false" or val == "0" or \
+            val == "f" or val == "F":
+            # depending on the version of Qt, you may see a combo box that
+            # lets you select true/false or may be able to type the combo
+            # box will return True or False, if you have to type could be
+            # something else
             val = False
+        else:
+            val = True
         try:
             if val:
                 self.data.activate()
@@ -308,10 +283,15 @@ class ComponentDataItem(object):
             return
 
     def _set_fixed_callback(self, val):
-        if val == "True" or val == "true" or val == "1":
-            val = True
-        else:
+        if not val or val == "False" or val == "false" or val == "0" or \
+            val == "f" or val == "F":
+            # depending on the version of Qt, you may see a combo box that
+            # lets you select true/false or may be able to type the combo
+            # box will return True or False, if you have to type could be
+            # something else
             val = False
+        else:
+            val = True
         try:
             if val:
                 self.data.fix()

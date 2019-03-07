@@ -1178,6 +1178,13 @@ def evaluate_expression(exp, exception=True, constant=False):
             raise
         return None
 
+    except TypeError:
+        # This can be raised in Python3 when evaluating a operation
+        # returns a complex number (e.g., sqrt(-1))
+        if exception:
+            raise
+        return None
+
 
 # =====================================================
 #  identify_components
