@@ -1,15 +1,31 @@
 """Functions for solving the nonlinear subproblem."""
 from __future__ import division
 
+from math import fabs
+
 from pyomo.contrib.gdpopt.data_class import SubproblemResult
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
-                                       copy_and_fix_mip_values_to_nlp,
                                        is_feasible)
-from pyomo.core import Constraint, TransformationFactory, minimize, value
+from pyomo.core import Constraint, TransformationFactory, minimize, value, Objective
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.opt import TerminationCondition as tc
+from pyomo.gdp import Disjunct
 from pyomo.opt import SolverFactory
+from pyomo.opt import TerminationCondition as tc
+
+
+def solve_disjunctive_subproblem(mip_result, solve_data, config):
+    """Set up and solve the disjunctive subproblem."""
+    if config.force_subproblem_nlp:
+        if config.strategy == "LOA":
+            return solve_local_NLP(mip_result.var_values, solve_data, config)
+        elif config.strategy == 'GLOA':
+            return solve_global_subproblem(mip_result, solve_data, config)
+    else:
+        if config.strategy == "LOA":
+            return solve_local_subproblem(mip_result, solve_data, config)
+        elif config.strategy == 'GLOA':
+            return solve_global_subproblem(mip_result, solve_data, config)
 
 
 def solve_NLP(nlp_model, solve_data, config):
@@ -20,18 +36,16 @@ def solve_NLP(nlp_model, solve_data, config):
 
     # Error checking for unfixed discrete variables
     unfixed_discrete_vars = detect_unfixed_discrete_vars(nlp_model)
-    if unfixed_discrete_vars:
-        discrete_var_names = list(v.name for v in unfixed_discrete_vars)
-        config.logger.warning(
-            "Unfixed discrete variables exist on the NLP subproblem: %s"
-            % (discrete_var_names,))
+    assert len(unfixed_discrete_vars) == 0, \
+        "Unfixed discrete variables exist on the NLP subproblem: {0}".format(
+        list(v.name for v in unfixed_discrete_vars))
 
     GDPopt = nlp_model.GDPopt_utils
 
-    if config.nlp_presolve:
-        preprocess_NLP(nlp_model, config)
+    if config.subproblem_presolve:
+        preprocess_subproblem(nlp_model, config)
 
-    initialize_NLP(nlp_model, solve_data)
+    initialize_subproblem(nlp_model, solve_data)
 
     # Callback immediately before solving NLP subproblem
     config.call_before_subproblem_solve(nlp_model, solve_data)
@@ -45,11 +59,11 @@ def solve_NLP(nlp_model, solve_data, config):
 
     nlp_result = SubproblemResult()
     nlp_result.feasible = True
-    nlp_result.var_values = list(v.value for v in GDPopt.working_var_list)
+    nlp_result.var_values = list(v.value for v in GDPopt.variable_list)
     nlp_result.pyomo_results = results
     nlp_result.dual_values = list(
         nlp_model.dual.get(c, None)
-        for c in GDPopt.working_constraints_list)
+        for c in GDPopt.constraint_list)
 
     subprob_terminate_cond = results.solver.termination_condition
     if (subprob_terminate_cond is tc.optimal or
@@ -57,7 +71,7 @@ def solve_NLP(nlp_model, solve_data, config):
             subprob_terminate_cond is tc.feasible):
         pass
     elif subprob_terminate_cond is tc.infeasible:
-        config.logger.info('NLP subproblem was locally infeasible.')
+        config.logger.info('NLP subproblem was infeasible.')
         nlp_result.feasible = False
     elif subprob_terminate_cond is tc.maxIterations:
         # TODO try something else? Reinitialize with different initial
@@ -71,7 +85,7 @@ def solve_NLP(nlp_model, solve_data, config):
         else:
             nlp_result.feasible = False
     elif subprob_terminate_cond is tc.internalSolverError:
-        # Possible that IPOPT had a restoration failture
+        # Possible that IPOPT had a restoration failure
         config.logger.info(
             "NLP solver had an internal failure: %s" % results.solver.message)
         nlp_result.feasible = False
@@ -91,6 +105,76 @@ def solve_NLP(nlp_model, solve_data, config):
     return nlp_result
 
 
+def solve_MINLP(model, solve_data, config):
+    """Solve the MINLP subproblem."""
+    config.logger.info(
+        "Solving MINLP subproblem for fixed logical realizations."
+    )
+
+    GDPopt = model.GDPopt_utils
+
+    if config.subproblem_presolve:
+        preprocess_subproblem(model, config)
+
+    initialize_subproblem(model, solve_data)
+
+    # Callback immediately before solving NLP subproblem
+    config.call_before_subproblem_solve(model, solve_data)
+
+    minlp_solver = SolverFactory(config.minlp_solver)
+    if not minlp_solver.available():
+        raise RuntimeError("MINLP solver %s is not available." %
+                           config.minlp_solver)
+    with SuppressInfeasibleWarning():
+        results = minlp_solver.solve(model, **config.minlp_solver_args)
+
+    subprob_result = SubproblemResult()
+    subprob_result.feasible = True
+    subprob_result.var_values = list(v.value for v in GDPopt.variable_list)
+    subprob_result.pyomo_results = results
+    subprob_result.dual_values = list(
+        model.dual.get(c, None)
+        for c in GDPopt.constraint_list)
+
+    subprob_terminate_cond = results.solver.termination_condition
+    if (subprob_terminate_cond is tc.optimal or
+            subprob_terminate_cond is tc.locallyOptimal or
+            subprob_terminate_cond is tc.feasible):
+        pass
+    elif subprob_terminate_cond is tc.infeasible:
+        config.logger.info('MINLP subproblem was infeasible.')
+        subprob_result.feasible = False
+    elif subprob_terminate_cond is tc.maxIterations:
+        # TODO try something else? Reinitialize with different initial
+        # value?
+        config.logger.info(
+            'MINLP subproblem failed to converge within iteration limit.')
+        if is_feasible(model, config):
+            config.logger.info(
+                'MINLP solution is still feasible. '
+                'Using potentially suboptimal feasible solution.')
+        else:
+            subprob_result.feasible = False
+    elif subprob_terminate_cond is tc.intermediateNonInteger:
+        config.logger.info(
+            "MINLP solver could not find feasible integer solution: %s" % results.solver.message)
+        subprob_result.feasible = False
+    else:
+        raise ValueError(
+            'GDPopt unable to handle MINLP subproblem termination '
+            'condition of %s. Results: %s'
+            % (subprob_terminate_cond, results))
+
+    # Call the subproblem post-solve callback
+    config.call_after_subproblem_solve(model, solve_data)
+
+    # if feasible, call the subproblem post-feasible callback
+    if subprob_result.feasible:
+        config.call_after_subproblem_feasible(model, solve_data)
+
+    return subprob_result
+
+
 def detect_unfixed_discrete_vars(model):
     """Detect unfixed discrete variables in use on the model."""
     var_set = ComponentSet()
@@ -99,11 +183,11 @@ def detect_unfixed_discrete_vars(model):
         var_set.update(
             v for v in EXPR.identify_variables(
                 constr.body, include_fixed=False)
-            if v.is_binary())
+            if not v.is_continuous())
     return var_set
 
 
-def preprocess_NLP(m, config):
+def preprocess_subproblem(m, config):
     """Applies preprocessing transformations to the model."""
     xfrm = TransformationFactory
     xfrm('contrib.propagate_eq_var_bounds').apply_to(m)
@@ -121,17 +205,18 @@ def preprocess_NLP(m, config):
         m, tolerance=config.constraint_tolerance)
 
 
-def initialize_NLP(model, solve_data):
-    """Perform initialization of the NLP.
+def initialize_subproblem(model, solve_data):
+    """Perform initialization of the subproblem.
 
-    Presently, this just restores the variable to the original model values.
+    Presently, this just restores the continuous variables to the original model values.
 
     """
-    # restore original variable values
-    for var, old_value in zip(model.GDPopt_utils.working_var_list,
+    # restore original continuous variable values
+    for var, old_value in zip(model.GDPopt_utils.variable_list,
                               solve_data.initial_var_values):
-        if not var.fixed and not var.is_binary():
+        if not var.fixed and var.is_continuous():
             if old_value is not None:
+                # Adjust value if it falls outside the bounds
                 if var.has_lb() and old_value < var.lb:
                     old_value = var.lb
                 if var.has_ub() and old_value > var.ub:
@@ -140,47 +225,45 @@ def initialize_NLP(model, solve_data):
                 var.set_value(old_value)
 
 
-def update_nlp_progress_indicators(solved_model, solve_data, config):
-    """Update the progress indicators for the NLP subproblem."""
+def update_subproblem_progress_indicators(solved_model, solve_data, config):
+    """Update the progress indicators for the subproblem."""
     GDPopt = solved_model.GDPopt_utils
-    if GDPopt.objective.sense == minimize:
+    objective = next(solved_model.component_data_objects(Objective, active=True))
+    if objective.sense == minimize:
         old_UB = solve_data.UB
-        solve_data.UB = min(
-            value(GDPopt.objective.expr), solve_data.UB)
+        solve_data.UB = min(value(objective.expr), solve_data.UB)
         solve_data.feasible_solution_improved = (solve_data.UB < old_UB)
     else:
         old_LB = solve_data.LB
-        solve_data.LB = max(
-            value(GDPopt.objective.expr), solve_data.LB)
+        solve_data.LB = max(value(objective.expr), solve_data.LB)
         solve_data.feasible_solution_improved = (solve_data.LB > old_LB)
     solve_data.iteration_log[
         (solve_data.master_iteration,
          solve_data.mip_iteration,
          solve_data.nlp_iteration)
     ] = (
-        value(GDPopt.objective.expr),
-        value(GDPopt.objective.expr),
-        [v.value for v in GDPopt.working_var_list]
+        value(objective.expr),
+        value(objective.expr),
+        [v.value for v in GDPopt.variable_list]
     )
 
     if solve_data.feasible_solution_improved:
-        solve_data.best_solution_found = [
-            v.value for v in GDPopt.working_var_list]
+        solve_data.best_solution_found = solved_model.clone()
 
     improvement_tag = (
         "(IMPROVED) " if solve_data.feasible_solution_improved else "")
     lb_improved, ub_improved = (
         ("", improvement_tag)
-        if solve_data.objective_sense == minimize
+        if objective.sense == minimize
         else (improvement_tag, ""))
     config.logger.info(
-        'ITER %s.%s.%s-NLP: OBJ: %s  LB: %s %s UB: %s %s'
-        % (solve_data.master_iteration,
-           solve_data.mip_iteration,
-           solve_data.nlp_iteration,
-           value(GDPopt.objective.expr),
-           solve_data.LB, lb_improved,
-           solve_data.UB, ub_improved))
+        'ITER {:d}.{:d}.{:d}-NLP: OBJ: {:.10g}  LB: {:.10g} {:s} UB: {:.10g} {:s}'.format(
+            solve_data.master_iteration,
+            solve_data.mip_iteration,
+            solve_data.nlp_iteration,
+            value(objective.expr),
+            solve_data.LB, lb_improved,
+            solve_data.UB, ub_improved))
 
 
 def solve_local_NLP(mip_var_values, solve_data, config):
@@ -188,27 +271,140 @@ def solve_local_NLP(mip_var_values, solve_data, config):
     nlp_model = solve_data.working_model.clone()
     solve_data.nlp_iteration += 1
     # copy in the discrete variable values
-    copy_and_fix_mip_values_to_nlp(nlp_model.GDPopt_utils.working_var_list,
-                                   mip_var_values, config)
+    for var, val in zip(nlp_model.GDPopt_utils.variable_list, mip_var_values):
+        if val is None:
+            continue
+        if var.is_continuous():
+            var.value = val
+        elif ((fabs(val) > config.integer_tolerance and
+               fabs(val - 1) > config.integer_tolerance)):
+            raise ValueError(
+                "Binary variable %s value %s is not "
+                "within tolerance %s of 0 or 1." %
+                (var.name, var.value, config.integer_tolerance))
+        else:
+            # variable is binary and within tolerances
+            if config.round_discrete_vars:
+                var.fix(int(round(val)))
+            else:
+                var.fix(val)
     TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
 
     nlp_result = solve_NLP(nlp_model, solve_data, config)
     if nlp_result.feasible:  # NLP is feasible
-        update_nlp_progress_indicators(nlp_model, solve_data, config)
+        update_subproblem_progress_indicators(nlp_model, solve_data, config)
     return nlp_result
 
 
-def solve_global_NLP(mip_var_values, solve_data, config):
-    """Set up and solve the global LOA subproblem."""
-    nlp_model = solve_data.working_model.clone()
+def solve_local_subproblem(mip_result, solve_data, config):
+    """Set up and solve the local MINLP or NLP subproblem."""
+    subprob = solve_data.working_model.clone()
     solve_data.nlp_iteration += 1
-    # copy in the discrete variable values
-    copy_and_fix_mip_values_to_nlp(nlp_model.GDPopt_utils.working_var_list,
-                                   mip_var_values, config)
-    TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
-    nlp_model.dual.deactivate()  # global solvers may not give dual info
 
-    nlp_result = solve_NLP(nlp_model, solve_data, config)
-    if nlp_result.feasible:  # NLP is feasible
-        update_nlp_progress_indicators(nlp_model, solve_data, config)
-    return nlp_result
+    # TODO also copy over the variable values?
+
+    for disj, val in zip(subprob.GDPopt_utils.disjunct_list,
+                         mip_result.disjunct_values):
+        rounded_val = int(round(val))
+        if (fabs(val - rounded_val) > config.integer_tolerance or
+                rounded_val not in (0, 1)):
+            raise ValueError(
+                "Disjunct %s indicator value %s is not "
+                "within tolerance %s of 0 or 1." %
+                (disj.name, val.value, config.integer_tolerance)
+            )
+        else:
+            if config.round_discrete_vars:
+                disj.indicator_var.fix(rounded_val)
+            else:
+                disj.indicator_var.fix(val)
+
+    if config.force_subproblem_nlp:
+        # We also need to copy over the discrete variable values
+        for var, val in zip(subprob.GDPopt_utils.variable_list,
+                            mip_result.var_values):
+            if var.is_continuous():
+                continue
+            rounded_val = int(round(val))
+            if fabs(val - rounded_val) > config.integer_tolerance:
+                raise ValueError(
+                    "Discrete variable %s value %s is not "
+                    "within tolerance %s of %s." %
+                    (var.name, var.value, config.integer_tolerance, rounded_val))
+            else:
+                # variable is binary and within tolerances
+                if config.round_discrete_vars:
+                    var.fix(rounded_val)
+                else:
+                    var.fix(val)
+
+    TransformationFactory('gdp.fix_disjuncts').apply_to(subprob)
+
+    for disj in subprob.component_data_objects(Disjunct, active=True):
+        disj.deactivate()  # TODO this is a HACK for something that isn't happening correctly in fix_disjuncts
+
+    unfixed_discrete_vars = detect_unfixed_discrete_vars(subprob)
+    if config.force_subproblem_nlp and len(unfixed_discrete_vars) > 0:
+        raise RuntimeError("Unfixed discrete variables found on the NLP subproblem.")
+    elif len(unfixed_discrete_vars) == 0:
+        subprob_result = solve_NLP(subprob, solve_data, config)
+    else:
+        subprob_result = solve_MINLP(subprob, solve_data, config)
+    if subprob_result.feasible:  # subproblem is feasible
+        update_subproblem_progress_indicators(subprob, solve_data, config)
+    return subprob_result
+
+
+def solve_global_subproblem(mip_result, solve_data, config):
+    subprob = solve_data.working_model.clone()
+    solve_data.nlp_iteration += 1
+
+    # copy in the discrete variable values
+    for disj, val in zip(subprob.GDPopt_utils.disjunct_list,
+                         mip_result.disjunct_values):
+        rounded_val = int(round(val))
+        if (fabs(val - rounded_val) > config.integer_tolerance or
+                rounded_val not in (0, 1)):
+            raise ValueError(
+                "Disjunct %s indicator value %s is not "
+                "within tolerance %s of 0 or 1." %
+                (disj.name, val.value, config.integer_tolerance)
+            )
+        else:
+            if config.round_discrete_vars:
+                disj.indicator_var.fix(rounded_val)
+            else:
+                disj.indicator_var.fix(val)
+
+    if config.force_subproblem_nlp:
+        # We also need to copy over the discrete variable values
+        for var, val in zip(subprob.GDPopt_utils.variable_list,
+                            mip_result.var_values):
+            if var.is_continuous():
+                continue
+            rounded_val = int(round(val))
+            if fabs(val - rounded_val) > config.integer_tolerance:
+                raise ValueError(
+                    "Discrete variable %s value %s is not "
+                    "within tolerance %s of %s." %
+                    (var.name, var.value, config.integer_tolerance, rounded_val))
+            else:
+                # variable is binary and within tolerances
+                if config.round_discrete_vars:
+                    var.fix(rounded_val)
+                else:
+                    var.fix(val)
+
+    TransformationFactory('gdp.fix_disjuncts').apply_to(subprob)
+    subprob.dual.deactivate()  # global solvers may not give dual info
+
+    unfixed_discrete_vars = detect_unfixed_discrete_vars(subprob)
+    if config.force_subproblem_nlp and len(unfixed_discrete_vars) > 0:
+        raise RuntimeError("Unfixed discrete variables found on the NLP subproblem.")
+    elif len(unfixed_discrete_vars) == 0:
+        subprob_result = solve_NLP(subprob, solve_data, config)
+    else:
+        subprob_result = solve_MINLP(subprob, solve_data, config)
+    if subprob_result.feasible:  # NLP is feasible
+        update_subproblem_progress_indicators(subprob, solve_data, config)
+    return subprob_result
