@@ -14,7 +14,11 @@ class Node(object):
         raise NotImplementedError()
 
     def becomeOtherNode(self, target_node):
-        """Replace itself with another node (by reference)"""
+        """Replace itself with another node (by reference).
+
+        This is often used when structures are changing, i.e. in
+        :func:`~logical_expression_system.MultiNode.tryPurgingWithSingleChild`
+        """
 
         if isMultiNode(target_node):
             children = target_node.children
@@ -114,6 +118,7 @@ class EquivalenceNode(BinaryNode):
         return lhs == rhs
 
     def equivalentToAnd(self, recursive=False):
+        """(A <=> B) becomes (A => B) ^ (B => A)."""
         if recursive:
             self.child_l.equivalentToAnd(recursive=True)
             self.child_r.equivalentToAnd(recursive=True)
@@ -135,7 +140,11 @@ class UnaryNode(Node):
 
 
 class LeafNode(UnaryNode):
-    """Class for wrapping variables (i.e. pyomo boolean-vars)."""
+    """Class for wrapping variables (i.e. pyomo boolean-vars).
+
+    This class mostly makes sure recursion is stopped at the Leaf Node and the
+    content can be accessed and printed correctly.
+    """
 
     def __repr__(self):
         if isinstance(self.child, str):
@@ -185,6 +194,11 @@ class NotNode(UnaryNode):
         return not self.child.evaluate(value_dict)
 
     def notNodeIntoOtherNode(self, recursive=False):
+        """Negate all child notes
+
+        Example: !(a v b) becomes !a ^ !b
+        """
+
         if isMultiNode(self.child):
             if isAndNode(self.child):
                 new_child = OrNode([])
@@ -211,6 +225,7 @@ class NotNode(UnaryNode):
 
 class MultiNode(Node):
     """Base class for nodes with an arbitrary amount of children."""
+
     def __init__(self, var_list):
         self.children = set([v for v in var_list])
 
@@ -272,6 +287,8 @@ class AndNode(MultiNode):
     def distributivity_and_in_or(self, recursive=True):
         """Distributivity law
 
+        Example: (a v b) ^ (c v d) => [(a v b) ^ c] v [(a v b) ^ d]
+                                   => (a ^ c) v (b ^ c) v (a ^ d) v (b ^ d)
         """
 
         while any(isinstance(n, OrNode) for n in self.children) \
@@ -298,6 +315,8 @@ class XOrNode(MultiNode):
         return sum(n.evaluate(value_dict) for n in self.children) == 1
 
     def xorToOr(self, recursive=False):
+        """A xor B xor C => (A ^ !B ^ !C) v (!A ^ B ^ !C) v (!A ^ !B ^ !C)"""
+
         if recursive:
             for n in self.children:
                 n.xorToOr(recursive=True)
@@ -318,6 +337,11 @@ class OrNode(MultiNode):
         return any([n.evaluate(value_dict) for n in self.children])
 
     def distributivity_or_in_and(self, recursive=True):
+        """Distributibity law
+        Example: (a ^ b) v (c ^ d) => [(a ^ b) v c] ^ [(a ^ b) v d]
+                                   => (a v c) ^ (b v c) ^ (a v d) ^ (b v d)
+        """
+
         for n in filter(isMultiNode, self.children):
             n.distributivity_or_in_and(recursive=recursive)
         self.tryPurgingSameTypeChildren()
@@ -339,7 +363,7 @@ class OrNode(MultiNode):
             n.distributivity_and_in_or(recursive=recursive)
         self.tryPurgingSameTypeChildren()
 
-
+# Helper functions for looping over specific child-nodes
 def isNode(n): return isinstance(n, Node)
 def isUnaryNode(n): return isinstance(n, UnaryNode)
 def isNotNode(n): return isinstance(n, NotNode)
