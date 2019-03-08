@@ -322,7 +322,7 @@ class XOrNode(MultiNode):
                 n.xorToOr(recursive=True)
 
         new_or_node = OrNode(
-            [AndNode([selected_node, *[NotNode(other_nodes)
+            [AndNode([selected_node]+[NotNode(other_nodes)
                       for other_nodes in self.children.difference(n)]])
              for selected_node in self.children])
         self.becomeOtherNode(OrNode(new_or_node.children))
