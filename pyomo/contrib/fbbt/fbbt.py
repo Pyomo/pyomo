@@ -775,7 +775,7 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         return False, None
 
 
-def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds=True, integer_tol=1e-4, initial_bounds=None):
+def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds=True, integer_tol=1e-4):
     """
     Feasibility based bounds tightening for a constraint. This function attempts to improve the bounds of each variable
     in the constraint based on the bounds of the constraint and the bounds of the other variables in the constraint.
@@ -806,9 +806,6 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds
         lower bound is left at 0. Otherwise, the lower bound is increased to 1. If the upper bound computed
         on a binary variable is greater than or equal to 1-integer_tol, then the upper bound is left at 1.
         Otherwise the upper bound is decreased to 0.
-    initial_bounds: ComponentMap
-        If initial variable bound information is available within the scope of this constraint, then it can be provided
-        here in the form of a mapping Var --> tuple(lower bound, upper bound)
 
     Returns
     -------
@@ -820,11 +817,6 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds
         return ComponentMap()
 
     bnds_dict = ComponentMap()  # a dictionary to store the bounds of every node in the tree
-    if initial_bounds is not None:
-        con_vars = ComponentSet(identify_variables(con.body))
-        for v in con_vars:
-            if v in initial_bounds:
-                bnds_dict[v] = initial_bounds[v]
 
     # a walker to propagate bounds from the variables to the root
     visitorA = _FBBTVisitorLeafToRoot(bnds_dict)
@@ -870,7 +862,7 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds
     return new_var_bounds
 
 
-def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_variable_bounds=True, integer_tol=1e-4, initial_bounds=None):
+def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_variable_bounds=True, integer_tol=1e-4):
     """
     Feasibility based bounds tightening (FBBT) for a block or model. This
     loops through all of the constraints in the block and performs
@@ -895,9 +887,6 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_varia
         lower bound is left at 0. Otherwise, the lower bound is increased to 1. If the upper bound computed
         on a binary variable is greater than or equal to 1-integer_tol, then the upper bound is left at 1.
         Otherwise the upper bound is decreased to 0.
-    initial_bounds: ComponentMap
-        If initial variable bound information is available within the scope of this block, then it can be provided
-        here in the form of a mapping Var --> tuple(lower bound, upper bound)
 
     Returns
     -------
@@ -928,8 +917,7 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_varia
     for c in m.component_data_objects(ctype=Constraint, active=True,
                                       descend_into=True, sort=True):
         _new_var_bounds = fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
-                                   update_variable_bounds=update_variable_bounds, integer_tol=integer_tol,
-                                   initial_bounds=initial_bounds)
+                                   update_variable_bounds=update_variable_bounds, integer_tol=integer_tol)
         new_var_bounds.update(_new_var_bounds)
         for v, bnds in _new_var_bounds.items():
             vlb, vub = bnds
@@ -946,8 +934,7 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_varia
         v = improved_vars.pop()
         for c in var_to_con_map[v]:
             _new_var_bounds = fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
-                                       update_variable_bounds=update_variable_bounds, integer_tol=integer_tol,
-                                       initial_bounds=initial_bounds)
+                                       update_variable_bounds=update_variable_bounds, integer_tol=integer_tol)
             new_var_bounds.update(_new_var_bounds)
             for _v, bnds in _new_var_bounds.items():
                 _vlb, _vub = bnds
@@ -1028,3 +1015,41 @@ def compute_bounds_on_expr(expr):
     visitor.dfs_postorder_stack(expr)
 
     return bnds_dict[expr]
+
+
+class BoundsManager(object):
+    def __init__(self, comp):
+        self._vars = ComponentSet()
+        self._saved_bounds = list()
+
+        if comp.type() == Constraint:
+            if comp.is_indexed():
+                for c in comp.values():
+                    self._vars.update(identify_variables(c.body))
+            else:
+                self._vars.update(identify_variables(comp.body))
+        else:
+            for c in comp.component_data_objects(Constraint, descend_into=True, active=True, sort=True):
+                self._vars.update(identify_variables(c.body))
+
+    def save_bounds(self):
+        bnds = ComponentMap()
+        for v in self._vars:
+            bnds[v] = (v.lb, v.ub)
+        self._saved_bounds.append(bnds)
+
+    def pop_bounds(self, ndx=-1):
+        bnds = self._saved_bounds.pop(ndx)
+        for v, _bnds in bnds.items():
+            lb, ub = _bnds
+            v.setlb(lb)
+            v.setub(ub)
+
+    def load_bounds(self, bnds, save_current_bounds=True):
+        if save_current_bounds:
+            self.save_bounds()
+        for v, _bnds in bnds.items():
+            if v in self._vars:
+                lb, ub = _bnds
+                v.setlb(lb)
+                v.setub(ub)

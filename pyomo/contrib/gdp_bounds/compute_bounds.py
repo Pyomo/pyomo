@@ -9,7 +9,7 @@ to variable bounds preprocessing transformation is recommended for NLP problems
 processed with this transformation.
 
 """
-from pyomo.contrib.fbbt.fbbt import fbbt_block
+from pyomo.contrib.fbbt.fbbt import fbbt_block, BoundsManager
 from pyomo.core.base.block import Block, TraversalStrategy
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.kernel.component_set import ComponentSet
@@ -137,7 +137,10 @@ def fbbt_disjunct(disj, parent_bounds):
     except AttributeError:
         # disj._disj_var_bounds does not exist yet
         pass
-    new_bnds = fbbt_block(disj, update_variable_bounds=False, initial_bounds=orig_bnds)
+    bnds_manager = BoundsManager(disj)
+    bnds_manager.load_bounds(orig_bnds)
+    new_bnds = fbbt_block(disj)
+    bnds_manager.pop_bounds()
     disj._disj_var_bounds = new_bnds
     # Handle nested disjuncts
     for disj in disj.component_data_objects(Disjunct, active=True):
