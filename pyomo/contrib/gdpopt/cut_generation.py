@@ -3,7 +3,7 @@ from __future__ import division
 
 from math import copysign, fabs
 
-from pyomo.contrib.gdp_bounds.plugins.compute_bounds import disjunctive_bounds
+from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc
 from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,

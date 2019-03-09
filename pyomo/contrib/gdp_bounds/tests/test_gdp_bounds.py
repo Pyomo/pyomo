@@ -1,6 +1,6 @@
 """Tests explicit bound to variable bound transformation module."""
 import pyutilib.th as unittest
-from pyomo.contrib.gdp_bounds.plugins.compute_bounds import (
+from pyomo.contrib.gdp_bounds.info import (
     disjunctive_lb, disjunctive_ub)
 from pyomo.environ import (ConcreteModel, Constraint, Objective,
                            TransformationFactory, Var)
