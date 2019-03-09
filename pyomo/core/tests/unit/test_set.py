@@ -201,6 +201,9 @@ class TestClosedNumericRange(unittest.TestCase):
         _isdisjoint(False, CNR(0, 1, 0), CNR(-1, 1, 0))
         _isdisjoint(False, CNR(0, 1, 0), CNR(-1, 2, 0))
 
+        _isdisjoint(True, CNR(0, 1, 0, (True,False)), CNR(1, 2, 0))
+        _isdisjoint(True, CNR(0, 1, 0, (False,True)), CNR(-1, 0, 0))
+
         #
         # Continuous to discrete ranges (positive step)
         #
@@ -219,7 +222,18 @@ class TestClosedNumericRange(unittest.TestCase):
         _isdisjoint(False, CNR(0, 0.75, 0), CNR(-1, 1, 1))
         _isdisjoint(False, CNR(0, 0.75, 0), CNR(-1, 2, 1))
 
+        _isdisjoint(True, CNR(0.1, 0.9, 0), CNR(-1, 0, 1))
+        _isdisjoint(True, CNR(0.1, 0.9, 0), CNR(-1, 0.5, 1))
+        _isdisjoint(True, CNR(0.1, 0.9, 0), CNR(-1, 1, 1))
+        _isdisjoint(True, CNR(0.1, 0.9, 0), CNR(-1, 2, 1))
+
         # (additional edge cases)
+        _isdisjoint(False, CNR(0, 1, 0, closed=(True,True)), CNR(-1, 2, 1))
+        _isdisjoint(False, CNR(0, 1, 0, closed=(True,False)), CNR(-1, 2, 1))
+        _isdisjoint(False, CNR(0, 1, 0, closed=(False,True)), CNR(-1, 2, 1))
+        _isdisjoint(True, CNR(0, 1, 0, closed=(False,False)), CNR(-1, 2, 1))
+        _isdisjoint(True, CNR(0.1, 1, 0, closed=(True,False)), CNR(-1, 2, 1))
+        _isdisjoint(True, CNR(0, 0.9, 0, closed=(False,True)), CNR(-1, 2, 1))
         _isdisjoint(False, CNR(0, 0.99, 0), CNR(-1, 1, 1))
         _isdisjoint(True, CNR(0.001, 0.99, 0), CNR(-1, 1, 1))
 
@@ -294,6 +308,30 @@ class TestClosedNumericRange(unittest.TestCase):
         self.assertTrue(CNR(None, 0, 0).issubset(CNR(None, 0, 0)))
         self.assertFalse(CNR(None, 0, 0).issubset(CNR(None, -1, 0)))
         self.assertFalse(CNR(None, 0, 0).issubset(CNR(0, None, 0)))
+
+        B = True,True
+        self.assertTrue(CNR(0,1,0,(True,True)).issubset(CNR(0,1,0,B)))
+        self.assertTrue(CNR(0,1,0,(True,False)).issubset(CNR(0,1,0,B)))
+        self.assertTrue(CNR(0,1,0,(False,True)).issubset(CNR(0,1,0,B)))
+        self.assertTrue(CNR(0,1,0,(False,False)).issubset(CNR(0,1,0,B)))
+
+        B = True,False
+        self.assertFalse(CNR(0,1,0,(True,True)).issubset(CNR(0,1,0,B)))
+        self.assertTrue(CNR(0,1,0,(True,False)).issubset(CNR(0,1,0,B)))
+        self.assertFalse(CNR(0,1,0,(False,True)).issubset(CNR(0,1,0,B)))
+        self.assertTrue(CNR(0,1,0,(False,False)).issubset(CNR(0,1,0,B)))
+
+        B = False,True
+        self.assertFalse(CNR(0,1,0,(True,True)).issubset(CNR(0,1,0,B)))
+        self.assertFalse(CNR(0,1,0,(True,False)).issubset(CNR(0,1,0,B)))
+        self.assertTrue(CNR(0,1,0,(False,True)).issubset(CNR(0,1,0,B)))
+        self.assertTrue(CNR(0,1,0,(False,False)).issubset(CNR(0,1,0,B)))
+
+        B = False,False
+        self.assertFalse(CNR(0,1,0,(True,True)).issubset(CNR(0,1,0,B)))
+        self.assertFalse(CNR(0,1,0,(True,False)).issubset(CNR(0,1,0,B)))
+        self.assertFalse(CNR(0,1,0,(False,True)).issubset(CNR(0,1,0,B)))
+        self.assertTrue(CNR(0,1,0,(False,False)).issubset(CNR(0,1,0,B)))
 
         # Continuous - discrete
         self.assertTrue(CNR(0, None, 1).issubset(CNR(None, None, 0)))
@@ -407,11 +445,29 @@ class TestClosedNumericRange(unittest.TestCase):
 
         # Test continuous ranges
 
-        # FIXME: Subtracting a closed range from a closed range SHOULD
+        # Subtracting a closed range from a closed range SHOULD
         # result in an open range.
         self.assertEqual(
             CNR(0,None,0).range_difference([CNR(5,None,0)]),
-            [CNR(0,5,0)],
+            [CNR(0,5,0,'[)')],
+        )
+        self.assertEqual(
+            CNR(0,None,0).range_difference([CNR(5,10,0)]),
+            [CNR(0,5,0,'[)'), CNR(10,None,0,'(]')],
+        )
+        self.assertEqual(
+            CNR(None,0,0).range_difference([CNR(-5,None,0)]),
+            [CNR(None,-5,0,'[)')],
+        )
+        self.assertEqual(
+            CNR(None,0,0).range_difference([CNR(-5,0,0,'[)')]),
+            [CNR(None,-5,0,'[)')],
+        )
+        # Subtracting an open range from a closed range gives a closed
+        # range
+        self.assertEqual(
+            CNR(0,None,0).range_difference([CNR(5,10,0,'()')]),
+            [CNR(0,5,0,'[]'), CNR(10,None,0,'[]')],
         )
 
     def test_range_intersection(self):

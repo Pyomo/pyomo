@@ -114,6 +114,7 @@ def simple_set_rule( fn ):
         return value
     return wrapper_function
 
+class RangeDifferenceError(ValueError): pass
 
 class _UnknownSetDimen(object): pass
 
@@ -151,11 +152,13 @@ class _ClosedNumericRange(object):
     Start value, for continuous ranges only).
 
     """
-    __slots__ = ('start','end','step')
+    __slots__ = ('start','end','step','closed')
     _EPS = 1e-15
     _types_comparable_to_int = {int,}
+    _closedMap = {True:True, False:False,
+                  '[':True, ']':True, '(':False, ')':False}
 
-    def __init__(self, start, end, step):
+    def __init__(self, start, end, step, closed=(True,True)):
         if int(step) != step:
             raise ValueError(
                 "_ClosedNumericRange step must be int (got %s)" % (step,))
@@ -189,9 +192,19 @@ class _ClosedNumericRange(object):
             # If this is a scalar, we will force the step to be 0 (so that
             # things like [1:5:10] == [1:50:100] are easier to validate)
             step = 0
+
         self.start = start
         self.end = end
         self.step = step
+
+        closed = (self._closedMap[closed[0]], self._closedMap[closed[1]])
+        if self.is_discrete():
+            if closed != (True,True):
+                logger.warning(
+                    "_ClosedNumericRange is discrete, but passed closed=%s."
+                    "  Discrete ranges must be closed.")
+            closed = (True,True)
+        self.closed = closed
 
     def __getstate__(self):
         """
@@ -218,7 +231,11 @@ class _ClosedNumericRange(object):
 
     def __str__(self):
         if not self.is_discrete():
-            return "[%s,%s]" % (self.start, self.end)
+            return "%s%s,%s%s" % (
+                "[" if self.closed[0] else "(",
+                self.start, self.end,
+                "]" if self.closed[1] else ")",
+            )
         if self.start == self.end:
             return "[%s]" % (self.start, )
         elif self.step == 1:
@@ -233,7 +250,8 @@ class _ClosedNumericRange(object):
             return False
         return self.start == other.start \
             and self.end == other.end \
-            and self.step == other.step
+            and self.step == other.step \
+            and self.closed == other.closed
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -258,8 +276,15 @@ class _ClosedNumericRange(object):
                 and abs(remainder(value - self.start, self.step)) <= self._EPS
             )
         else:
-            return (self.start is None or value >= self.start) \
-                   and (self.end is None or value <= self.end)
+            return (
+                self.start is None
+                or ( value >= self.start if self.closed[0] else
+                     value > self.start )
+            ) and (
+                self.end is None
+                or ( value <= self.end if self.closed[1] else
+                     value < self.end )
+            )
 
     @staticmethod
     def _continuous_discrete_disjoint(cont, disc):
@@ -273,7 +298,9 @@ class _ClosedNumericRange(object):
         if cont.end is None or (
                 d_ub is not None and cont.end >= d_ub):
             return False
-        if cont.end - cont.start >= abs(disc.step):
+
+        EPS = _ClosedNumericRange._EPS
+        if cont.end - cont.start - EPS > abs(disc.step):
             return False
         # At this point, the continuous set is shorter than the discrete
         # step.  We need to see if the continuous set overlaps one of the
@@ -284,9 +311,12 @@ class _ClosedNumericRange(object):
         # underlying (unbounded) discrete sequence grounded by disc.start
         rStart = remainder(cont.start - disc.start, abs(disc.step))
         rEnd = remainder(cont.end - disc.start, abs(disc.step))
-        EPS = _ClosedNumericRange._EPS
-        return abs(rStart) > EPS and abs(rEnd) > EPS \
-               and rStart - rEnd > 0
+        return (
+            (abs(rStart) > EPS or not cont.closed[0])
+            and (abs(rEnd) > EPS or not cont.closed[1])
+            and (rStart - rEnd > 0 or not any(cont.closed))
+        )
+
 
     @staticmethod
     def _firstNonNull(minimize, *args):
@@ -317,14 +347,7 @@ class _ClosedNumericRange(object):
             return other.isdisjoint(self)
 
         # First, do a simple sanity check on the endpoints
-        s1, e1 = self.start, self.end
-        if self.step < 0:
-            s1, e1 = e1, s1
-        s2, e2 = other.start, other.end
-        if other.step < 0:
-            s2, e2 = e2, s2
-        if (e1 is not None and s2 is not None and e1 < s2) \
-                or (e2 is not None and s1 is not None and e2 < s1):
+        if self._nooverlap(other):
             return True
         # Now, check continuous sets
         if not self.step or not other.step:
@@ -386,24 +409,22 @@ class _ClosedNumericRange(object):
                 raise ValueError("Unknown range type, %s" % (type(other),))
 
         # First, do a simple sanity check on the endpoints
-        s1, e1 = self.start, self.end
-        if self.step < 0:
-            s1, e1 = e1, s1
-        s2, e2 = other.start, other.end
-        if other.step < 0:
-            s2, e2 = e2, s2
+        s1, e1, c1 = self._normalize_bounds()
+        s2, e2, c2 = other._normalize_bounds()
         # Checks for unbounded ranges and to make sure self's endpoints are
         # within other's endpoints.
         if s1 is None:
             if s2 is not None:
                 return False
-        elif s2 is not None and s1 < s2:
-            return False
+        elif s2 is not None:
+            if s1 < s2 or ( s1 == s2 and c1[0] and not c2[0] ):
+                return False
         if e1 is None:
             if e2 is not None:
                 return False
-        elif e2 is not None and e1 > e2:
-            return False
+        elif e2 is not None:
+            if e1 > e2 or ( e1 == e2 and c1[1] and not c2[1] ):
+                return False
         # If other is continuous (even a single point), then by
         # definition, self is a subset (regardless of step)
         if other.step == 0:
@@ -423,23 +444,44 @@ class _ClosedNumericRange(object):
         # ...and they must shart a point in common
         return abs(remainder(other.start-self.start, other.step)) <= EPS
 
+    def _normalize_bounds(self):
+        """Normalizes this _ClosedNumericRange.
+
+        This returns a normalized range by reversing lb and ub if the
+        _ClosedNumericRange step is less than zero.  If lb and ub are
+        reversed, then closed is updated to reflect that change.
+
+        Returns
+        -------
+        lb, ub, closed
+
+        """
+        if self.step >= 0:
+            return self.start, self.end, self.closed
+        else:
+            return self.end, self.start, (self.closed[1], self.closed[0])
+
+    def _nooverlap(self, other):
+        """Return True if the ranges for self and other are strictly separate
+
+        Note: a(None) == +inf and b(None) == -inf
+
+        """
+        s1, e1, c1 = self._normalize_bounds()
+        s2, e2, c2 = other._normalize_bounds()
+        if e1 is not None and s2 is not None:
+            if e1 < s2 or ( e1 == s2 and not ( c1[1] and c2[0] )):
+                return True
+        if e2 is not None and s1 is not None:
+            if e2 < s1 or ( e2 == s1 and not ( c2[1] and c1[0] )):
+                return True
+
     @staticmethod
     def _lt(a,b):
         "Return True if a is strictly less than b, with None == -inf"
         if a is None:
             return b is not None
         if b is None:
-            return False
-        return a < b
-
-    @staticmethod
-    def _nooverlap(a,b):
-        """Return True if a is strictly before b.
-
-        Note: a(None) == +inf and b(None) == -inf
-
-        """
-        if a is None or b is None:
             return False
         return a < b
 
@@ -590,6 +632,12 @@ class _ClosedNumericRange(object):
             # subranges of this range that are outside the lhs range
             _subranges = [t]
             for s in _other:
+                if t._nooverlap(s):
+                    # If s and t have no overlap, then s cannot remove
+                    # any elements from t
+                    continue
+
+                tmp = []
                 if t.is_discrete():
                     # s and t are discrete ranges.  Note if there is a
                     # discrete range in the list of ranges, then lcm > 0
@@ -598,44 +646,49 @@ class _ClosedNumericRange(object):
                         # elements
                         continue
                 elif s.is_discrete():
+                    s_min, s_max, _ = s._normalize_bounds()
+                    if ((s_min is None and t.start is None) or
+                        (s_max is None and t.end is None)):
+                        raise RangeDifferenceError(
+                            "We do not support subtracting an infinite "
+                            "discrete range %s from an infinite continuous "
+                            "range %s" % (s,t))
+
                     # Since we don't support open ranges, we cannot
                     # subtract a discrete set from a continuous set
                     continue
-                tmp = []
+
                 for ref in _subranges:
-                    if ref.step >= 0:
-                        r_min, r_max = ref.start, ref.end
-                    else:
-                        r_min, r_max = ref.end, ref.start
-                    if s.step >= 0:
-                        s_min, s_max = s.start, s.end
-                    else:
-                        s_min, s_max = s.end, s.start
+                    r_min, r_max, r_c = ref._normalize_bounds()
+                    s_min, s_max, s_c = s._normalize_bounds()
 
                     if _ClosedNumericRange._lt(r_min, s_min):
                         if s_min is not None and ref.step:
                             s_min -= lcm
 
-                        if r_min is None:
-                            tmp.append(_ClosedNumericRange(
-                                _ClosedNumericRange._min(r_max, s_min),
-                                r_min,
-                                -abs(ref.step)
-                            ))
-                        else:
-                            tmp.append(_ClosedNumericRange(
-                                r_min,
-                                _ClosedNumericRange._min(r_max, s_min),
-                                abs(ref.step)
-                            ))
+                        _min = _ClosedNumericRange._min(r_max, s_min)
+                        _closed = ( r_c[0],
+                                    not s_c[0] if _min is s_min else r_c[1] )
+                        _step = abs(ref.step)
+                        _rng = r_min, _min
+                        if r_min is None and ref.step:
+                            _step = -_step
+                            _rng = _rng[1], _rng[0]
+                            _closed = _closed[1], _closed[0]
+
+                        tmp.append(_ClosedNumericRange(
+                            _rng[0], _rng[1], _step, _closed))
 
                     if _ClosedNumericRange._gt(r_max, s_max):
                         if s_max is not None and ref.step:
                             s_max += lcm
+                        _max = _ClosedNumericRange._max(r_min, s_max)
                         tmp.append(_ClosedNumericRange(
-                            _ClosedNumericRange._max(r_min, s_max),
+                            _max,
                             r_max,
-                            abs(ref.step)
+                            abs(ref.step),
+                            ( not s_c[1] if _max is s_max else r_c[0],
+                              r_c[1] )
                         ))
                 _subranges = tmp
             ans.extend(_subranges)
@@ -686,33 +739,30 @@ class _ClosedNumericRange(object):
                         # s is offset from t and cannot have any
                         # elements in common
                         continue
-                if t.step >= 0:
-                    t_min, t_max = t.start, t.end
-                else:
-                    t_min, t_max = t.end, t.start
-                if s.step >= 0:
-                    s_min, s_max = s.start, s.end
-                else:
-                    s_min, s_max = s.end, s.start
-
-                if _ClosedNumericRange._nooverlap(s_max, t_min):
-                    continue
-                if _ClosedNumericRange._nooverlap(t_max, s_min):
+                if t._nooverlap(s):
                     continue
 
+                t_min, t_max, t_c = t._normalize_bounds()
+                s_min, s_max, s_c = s._normalize_bounds()
                 step = abs(t.step if t.step else s.step)
                 intersect_start = _ClosedNumericRange._max(t_min, s_min)
+                c = [True,True]
+                if intersect_start == t_min:
+                    c[0] &= t_c[0]
+                if intersect_start == s_min:
+                    c[0] &= s_c[0]
+                intersect_end = _ClosedNumericRange._min(t_max, s_max)
+                if intersect_end == t_max:
+                    c[0] &= t_c[1]
+                if intersect_end == s_max:
+                    c[0] &= s_c[1]
                 if step and intersect_start is None:
                     ans.append(_ClosedNumericRange(
-                        _ClosedNumericRange._min(t_max, s_max),
-                        intersect_start,
-                        -step
+                        intersect_end, intersect_start, -step, (c[1], c[0])
                     ))
                 else:
                     ans.append(_ClosedNumericRange(
-                        intersect_start,
-                        _ClosedNumericRange._min(t_max, s_max),
-                        step
+                        intersect_start, intersect_end, step, c
                     ))
         return ans
 
@@ -913,7 +963,13 @@ class _SetData(_SetDataBase):
             return False
         else:
             for r in self.ranges():
-                if r.range_difference(other.ranges()):
+                try:
+                    if r.range_difference(other.ranges()):
+                        return False
+                except RangeDifferenceError:
+                    # This only occurs when subtracting an infinite
+                    # discrete set from an infinite continuous set, so r
+                    # (and hence self) cannot be a subset of other
                     return False
             return True
 
