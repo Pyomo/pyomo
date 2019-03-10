@@ -14,7 +14,7 @@ from six import StringIO
 import pyutilib.th as unittest
 
 from pyomo.core.base.set import (
-    _ClosedNumericRange as CNR, _NonNumericRange as NNR, _AnyRange, _AnySet,
+    _NumericRange as NR, _NonNumericRange as NNR, _AnyRange, _AnySet,
     Any, Reals, NonNegativeReals, Integers, PositiveIntegers,
     RangeSet, Set, SetOf
 )
@@ -29,162 +29,162 @@ except ImportError:
 
 class TestClosedNumericRange(unittest.TestCase):
     def test_init(self):
-        a = CNR(None, None, 0)
+        a = NR(None, None, 0)
         self.assertIsNone(a.start)
         self.assertIsNone(a.end)
         self.assertEqual(a.step, 0)
 
-        a = CNR(0, None, 0)
+        a = NR(0, None, 0)
         self.assertEqual(a.start, 0)
         self.assertIsNone(a.end)
         self.assertEqual(a.step, 0)
 
-        a = CNR(0, 0, 0)
+        a = NR(0, 0, 0)
         self.assertEqual(a.start, 0)
         self.assertEqual(a.end, 0)
         self.assertEqual(a.step, 0)
 
         with self.assertRaisesRegexp(
                 ValueError, '.*start must be <= end for continuous ranges'):
-            CNR(0, -1, 0)
+            NR(0, -1, 0)
 
 
         with self.assertRaisesRegexp(ValueError, '.*start must not be None'):
-            CNR(None, None, 1)
+            NR(None, None, 1)
 
         with self.assertRaisesRegexp(ValueError, '.*step must be int'):
-            CNR(None, None, 1.5)
+            NR(None, None, 1.5)
 
         with self.assertRaisesRegexp(
                 ValueError,
                 '.*start, end ordering incompatible with step direction'):
-            CNR(0, 1, -1)
+            NR(0, 1, -1)
 
         with self.assertRaisesRegexp(
                 ValueError,
                 '.*start, end ordering incompatible with step direction'):
-            CNR(1, 0, 1)
+            NR(1, 0, 1)
 
         with self.assertRaisesRegexp(
                 ValueError,
                 '\[0:1\] is discrete, but passed closed=\(False, True\)'):
-            CNR(0, 1, 1, "(]")
+            NR(0, 1, 1, "(]")
 
-        a = CNR(0, None, 1)
+        a = NR(0, None, 1)
         self.assertEqual(a.start, 0)
         self.assertEqual(a.end, None)
         self.assertEqual(a.step, 1)
 
-        a = CNR(0, 5, 1)
+        a = NR(0, 5, 1)
         self.assertEqual(a.start, 0)
         self.assertEqual(a.end, 5)
         self.assertEqual(a.step, 1)
 
-        a = CNR(0, 5, 2)
+        a = NR(0, 5, 2)
         self.assertEqual(a.start, 0)
         self.assertEqual(a.end, 4)
         self.assertEqual(a.step, 2)
 
-        a = CNR(0, 5, 10)
+        a = NR(0, 5, 10)
         self.assertEqual(a.start, 0)
         self.assertEqual(a.end, 0)
         self.assertEqual(a.step, 0)
 
         with self.assertRaisesRegexp(
                 ValueError, '.*start, end ordering incompatible with step'):
-            CNR(0, -1, 1)
+            NR(0, -1, 1)
 
         with self.assertRaisesRegexp(
                 ValueError, '.*start, end ordering incompatible with step'):
-            CNR(0, 1, -2)
+            NR(0, 1, -2)
 
     def test_str(self):
-        self.assertEqual(str(CNR(1, 10, 0)), "[1,10]")
-        self.assertEqual(str(CNR(1, 10, 1)), "[1:10]")
-        self.assertEqual(str(CNR(1, 10, 3)), "[1:10:3]")
-        self.assertEqual(str(CNR(1, 1, 1)), "[1]")
+        self.assertEqual(str(NR(1, 10, 0)), "[1,10]")
+        self.assertEqual(str(NR(1, 10, 1)), "[1:10]")
+        self.assertEqual(str(NR(1, 10, 3)), "[1:10:3]")
+        self.assertEqual(str(NR(1, 1, 1)), "[1]")
 
     def test_eq(self):
-        self.assertEqual(CNR(1, 1, 1), CNR(1, 1, 1))
-        self.assertEqual(CNR(1, None, 0), CNR(1, None, 0))
-        self.assertEqual(CNR(0, 10, 3), CNR(0, 9, 3))
+        self.assertEqual(NR(1, 1, 1), NR(1, 1, 1))
+        self.assertEqual(NR(1, None, 0), NR(1, None, 0))
+        self.assertEqual(NR(0, 10, 3), NR(0, 9, 3))
 
-        self.assertNotEqual(CNR(1, 1, 1), CNR(1, None, 1))
-        self.assertNotEqual(CNR(1, None, 0), CNR(1, None, 1))
-        self.assertNotEqual(CNR(0, 10, 3), CNR(0, 8, 3))
+        self.assertNotEqual(NR(1, 1, 1), NR(1, None, 1))
+        self.assertNotEqual(NR(1, None, 0), NR(1, None, 1))
+        self.assertNotEqual(NR(0, 10, 3), NR(0, 8, 3))
 
     def test_contains(self):
         # Test non-numeric values
-        self.assertNotIn(None, CNR(None, None, 0))
-        self.assertNotIn(None, CNR(0, 10, 0))
-        self.assertNotIn(None, CNR(0, None, 1))
-        self.assertNotIn(None, CNR(0, 10, 1))
+        self.assertNotIn(None, NR(None, None, 0))
+        self.assertNotIn(None, NR(0, 10, 0))
+        self.assertNotIn(None, NR(0, None, 1))
+        self.assertNotIn(None, NR(0, 10, 1))
 
-        self.assertNotIn('1', CNR(None, None, 0))
-        self.assertNotIn('1', CNR(0, 10, 0))
-        self.assertNotIn('1', CNR(0, None, 1))
-        self.assertNotIn('1', CNR(0, 10, 1))
+        self.assertNotIn('1', NR(None, None, 0))
+        self.assertNotIn('1', NR(0, 10, 0))
+        self.assertNotIn('1', NR(0, None, 1))
+        self.assertNotIn('1', NR(0, 10, 1))
 
         # Test continuous ranges
-        self.assertIn(0, CNR(0, 10, 0))
-        self.assertIn(0, CNR(None, 10, 0))
-        self.assertIn(0, CNR(0, None, 0))
-        self.assertIn(1, CNR(0, 10, 0))
-        self.assertIn(1, CNR(None, 10, 0))
-        self.assertIn(1, CNR(0, None, 0))
-        self.assertIn(10, CNR(0, 10, 0))
-        self.assertIn(10, CNR(None, 10, 0))
-        self.assertIn(10, CNR(0, None, 0))
-        self.assertNotIn(-1, CNR(0, 10, 0))
-        self.assertNotIn(-1, CNR(0, None, 0))
-        self.assertNotIn(11, CNR(0, 10, 0))
-        self.assertNotIn(11, CNR(None, 10, 0))
+        self.assertIn(0, NR(0, 10, 0))
+        self.assertIn(0, NR(None, 10, 0))
+        self.assertIn(0, NR(0, None, 0))
+        self.assertIn(1, NR(0, 10, 0))
+        self.assertIn(1, NR(None, 10, 0))
+        self.assertIn(1, NR(0, None, 0))
+        self.assertIn(10, NR(0, 10, 0))
+        self.assertIn(10, NR(None, 10, 0))
+        self.assertIn(10, NR(0, None, 0))
+        self.assertNotIn(-1, NR(0, 10, 0))
+        self.assertNotIn(-1, NR(0, None, 0))
+        self.assertNotIn(11, NR(0, 10, 0))
+        self.assertNotIn(11, NR(None, 10, 0))
 
         # test discrete ranges (both increasing & decreasing)
-        self.assertIn(0, CNR(0, 10, 1))
-        self.assertIn(0, CNR(10, None, -1))
-        self.assertIn(0, CNR(0, None, 1))
-        self.assertIn(1, CNR(0, 10, 1))
-        self.assertIn(1, CNR(10, None, -1))
-        self.assertIn(1, CNR(0, None, 1))
-        self.assertIn(10, CNR(0, 10, 1))
-        self.assertIn(10, CNR(10, None, -1))
-        self.assertIn(10, CNR(0, None, 1))
-        self.assertNotIn(-1, CNR(0, 10, 1))
-        self.assertNotIn(-1, CNR(0, None, 1))
-        self.assertNotIn(11, CNR(0, 10, 1))
-        self.assertNotIn(11, CNR(10, None, -1))
-        self.assertNotIn(1.1, CNR(0, 10, 1))
-        self.assertNotIn(1.1, CNR(10, None, -1))
-        self.assertNotIn(1.1, CNR(0, None, 1))
+        self.assertIn(0, NR(0, 10, 1))
+        self.assertIn(0, NR(10, None, -1))
+        self.assertIn(0, NR(0, None, 1))
+        self.assertIn(1, NR(0, 10, 1))
+        self.assertIn(1, NR(10, None, -1))
+        self.assertIn(1, NR(0, None, 1))
+        self.assertIn(10, NR(0, 10, 1))
+        self.assertIn(10, NR(10, None, -1))
+        self.assertIn(10, NR(0, None, 1))
+        self.assertNotIn(-1, NR(0, 10, 1))
+        self.assertNotIn(-1, NR(0, None, 1))
+        self.assertNotIn(11, NR(0, 10, 1))
+        self.assertNotIn(11, NR(10, None, -1))
+        self.assertNotIn(1.1, NR(0, 10, 1))
+        self.assertNotIn(1.1, NR(10, None, -1))
+        self.assertNotIn(1.1, NR(0, None, 1))
 
         # test discrete ranges (increasing/decreasing by 2)
-        self.assertIn(0, CNR(0, 10, 2))
-        self.assertIn(0, CNR(0, -10, -2))
-        self.assertIn(0, CNR(10, None, -2))
-        self.assertIn(0, CNR(0, None, 2))
-        self.assertIn(2, CNR(0, 10, 2))
-        self.assertIn(-2, CNR(0, -10, -2))
-        self.assertIn(2, CNR(10, None, -2))
-        self.assertIn(2, CNR(0, None, 2))
-        self.assertIn(10, CNR(0, 10, 2))
-        self.assertIn(-10, CNR(0, -10, -2))
-        self.assertIn(10, CNR(10, None, -2))
-        self.assertIn(10, CNR(0, None, 2))
-        self.assertNotIn(1, CNR(0, 10, 2))
-        self.assertNotIn(-1, CNR(0, -10, -2))
-        self.assertNotIn(1, CNR(10, None, -2))
-        self.assertNotIn(1, CNR(0, None, 2))
-        self.assertNotIn(-2, CNR(0, 10, 2))
-        self.assertNotIn(2, CNR(0, -10, -2))
-        self.assertNotIn(-2, CNR(0, None, 2))
-        self.assertNotIn(12, CNR(0, 10, 2))
-        self.assertNotIn(-12, CNR(0, -10, -2))
-        self.assertNotIn(12, CNR(10, None, -2))
-        self.assertNotIn(1.1, CNR(0, 10, 2))
-        self.assertNotIn(1.1, CNR(0, -10, -2))
-        self.assertNotIn(-1.1, CNR(10, None, -2))
-        self.assertNotIn(1.1, CNR(0, None, 2))
+        self.assertIn(0, NR(0, 10, 2))
+        self.assertIn(0, NR(0, -10, -2))
+        self.assertIn(0, NR(10, None, -2))
+        self.assertIn(0, NR(0, None, 2))
+        self.assertIn(2, NR(0, 10, 2))
+        self.assertIn(-2, NR(0, -10, -2))
+        self.assertIn(2, NR(10, None, -2))
+        self.assertIn(2, NR(0, None, 2))
+        self.assertIn(10, NR(0, 10, 2))
+        self.assertIn(-10, NR(0, -10, -2))
+        self.assertIn(10, NR(10, None, -2))
+        self.assertIn(10, NR(0, None, 2))
+        self.assertNotIn(1, NR(0, 10, 2))
+        self.assertNotIn(-1, NR(0, -10, -2))
+        self.assertNotIn(1, NR(10, None, -2))
+        self.assertNotIn(1, NR(0, None, 2))
+        self.assertNotIn(-2, NR(0, 10, 2))
+        self.assertNotIn(2, NR(0, -10, -2))
+        self.assertNotIn(-2, NR(0, None, 2))
+        self.assertNotIn(12, NR(0, 10, 2))
+        self.assertNotIn(-12, NR(0, -10, -2))
+        self.assertNotIn(12, NR(10, None, -2))
+        self.assertNotIn(1.1, NR(0, 10, 2))
+        self.assertNotIn(1.1, NR(0, -10, -2))
+        self.assertNotIn(-1.1, NR(10, None, -2))
+        self.assertNotIn(1.1, NR(0, None, 2))
 
     def test_isdisjoint(self):
         def _isdisjoint(expected_result, a, b):
@@ -193,264 +193,264 @@ class TestClosedNumericRange(unittest.TestCase):
 
         #
         # Simple continuous ranges
-        _isdisjoint(True, CNR(0, 1, 0), CNR(2, 3, 0))
-        _isdisjoint(True, CNR(2, 3, 0), CNR(0, 1, 0))
+        _isdisjoint(True, NR(0, 1, 0), NR(2, 3, 0))
+        _isdisjoint(True, NR(2, 3, 0), NR(0, 1, 0))
 
-        _isdisjoint(False, CNR(0, 1, 0), CNR(1, 2, 0))
-        _isdisjoint(False, CNR(0, 1, 0), CNR(0.5, 2, 0))
-        _isdisjoint(False, CNR(0, 1, 0), CNR(0, 2, 0))
-        _isdisjoint(False, CNR(0, 1, 0), CNR(-1, 2, 0))
+        _isdisjoint(False, NR(0, 1, 0), NR(1, 2, 0))
+        _isdisjoint(False, NR(0, 1, 0), NR(0.5, 2, 0))
+        _isdisjoint(False, NR(0, 1, 0), NR(0, 2, 0))
+        _isdisjoint(False, NR(0, 1, 0), NR(-1, 2, 0))
 
-        _isdisjoint(False, CNR(0, 1, 0), CNR(-1, 0, 0))
-        _isdisjoint(False, CNR(0, 1, 0), CNR(-1, 0.5, 0))
-        _isdisjoint(False, CNR(0, 1, 0), CNR(-1, 1, 0))
-        _isdisjoint(False, CNR(0, 1, 0), CNR(-1, 2, 0))
+        _isdisjoint(False, NR(0, 1, 0), NR(-1, 0, 0))
+        _isdisjoint(False, NR(0, 1, 0), NR(-1, 0.5, 0))
+        _isdisjoint(False, NR(0, 1, 0), NR(-1, 1, 0))
+        _isdisjoint(False, NR(0, 1, 0), NR(-1, 2, 0))
 
-        _isdisjoint(True, CNR(0, 1, 0, (True,False)), CNR(1, 2, 0))
-        _isdisjoint(True, CNR(0, 1, 0, (False,True)), CNR(-1, 0, 0))
+        _isdisjoint(True, NR(0, 1, 0, (True,False)), NR(1, 2, 0))
+        _isdisjoint(True, NR(0, 1, 0, (False,True)), NR(-1, 0, 0))
 
         #
         # Continuous to discrete ranges (positive step)
         #
-        _isdisjoint(True, CNR(0, 1, 0), CNR(2, 3, 1))
-        _isdisjoint(True, CNR(2, 3, 0), CNR(0, 1, 1))
+        _isdisjoint(True, NR(0, 1, 0), NR(2, 3, 1))
+        _isdisjoint(True, NR(2, 3, 0), NR(0, 1, 1))
 
-        _isdisjoint(False, CNR(0, 1, 0), CNR(-1, 2, 1))
+        _isdisjoint(False, NR(0, 1, 0), NR(-1, 2, 1))
 
-        _isdisjoint(False, CNR(0.25, 1, 0), CNR(1, 2, 1))
-        _isdisjoint(False, CNR(0.25, 1, 0), CNR(0.5, 2, 1))
-        _isdisjoint(False, CNR(0.25, 1, 0), CNR(0, 2, 1))
-        _isdisjoint(False, CNR(0.25, 1, 0), CNR(-1, 2, 1))
+        _isdisjoint(False, NR(0.25, 1, 0), NR(1, 2, 1))
+        _isdisjoint(False, NR(0.25, 1, 0), NR(0.5, 2, 1))
+        _isdisjoint(False, NR(0.25, 1, 0), NR(0, 2, 1))
+        _isdisjoint(False, NR(0.25, 1, 0), NR(-1, 2, 1))
 
-        _isdisjoint(False, CNR(0, 0.75, 0), CNR(-1, 0, 1))
-        _isdisjoint(False, CNR(0, 0.75, 0), CNR(-1, 0.5, 1))
-        _isdisjoint(False, CNR(0, 0.75, 0), CNR(-1, 1, 1))
-        _isdisjoint(False, CNR(0, 0.75, 0), CNR(-1, 2, 1))
+        _isdisjoint(False, NR(0, 0.75, 0), NR(-1, 0, 1))
+        _isdisjoint(False, NR(0, 0.75, 0), NR(-1, 0.5, 1))
+        _isdisjoint(False, NR(0, 0.75, 0), NR(-1, 1, 1))
+        _isdisjoint(False, NR(0, 0.75, 0), NR(-1, 2, 1))
 
-        _isdisjoint(True, CNR(0.1, 0.9, 0), CNR(-1, 0, 1))
-        _isdisjoint(True, CNR(0.1, 0.9, 0), CNR(-1, 0.5, 1))
-        _isdisjoint(True, CNR(0.1, 0.9, 0), CNR(-1, 1, 1))
-        _isdisjoint(True, CNR(0.1, 0.9, 0), CNR(-1, 2, 1))
+        _isdisjoint(True, NR(0.1, 0.9, 0), NR(-1, 0, 1))
+        _isdisjoint(True, NR(0.1, 0.9, 0), NR(-1, 0.5, 1))
+        _isdisjoint(True, NR(0.1, 0.9, 0), NR(-1, 1, 1))
+        _isdisjoint(True, NR(0.1, 0.9, 0), NR(-1, 2, 1))
 
-        _isdisjoint(False, CNR(-.1, 1.1, 0), CNR(-1, 2, 1))
-        _isdisjoint(False, CNR(-.1, 1.1, 0), CNR(-2, 0, 2))
-        _isdisjoint(True, CNR(-.1, 1.1, 0), CNR(-1, -1, 1))
-        _isdisjoint(True, CNR(-.1, 1.1, 0), CNR(-2, -1, 1))
+        _isdisjoint(False, NR(-.1, 1.1, 0), NR(-1, 2, 1))
+        _isdisjoint(False, NR(-.1, 1.1, 0), NR(-2, 0, 2))
+        _isdisjoint(True, NR(-.1, 1.1, 0), NR(-1, -1, 1))
+        _isdisjoint(True, NR(-.1, 1.1, 0), NR(-2, -1, 1))
 
         # (additional edge cases)
-        _isdisjoint(False, CNR(0, 1, 0, closed=(True,True)), CNR(-1, 2, 1))
-        _isdisjoint(False, CNR(0, 1, 0, closed=(True,False)), CNR(-1, 2, 1))
-        _isdisjoint(False, CNR(0, 1, 0, closed=(False,True)), CNR(-1, 2, 1))
-        _isdisjoint(True, CNR(0, 1, 0, closed=(False,False)), CNR(-1, 2, 1))
-        _isdisjoint(True, CNR(0.1, 1, 0, closed=(True,False)), CNR(-1, 2, 1))
-        _isdisjoint(True, CNR(0, 0.9, 0, closed=(False,True)), CNR(-1, 2, 1))
-        _isdisjoint(False, CNR(0, 0.99, 0), CNR(-1, 1, 1))
-        _isdisjoint(True, CNR(0.001, 0.99, 0), CNR(-1, 1, 1))
+        _isdisjoint(False, NR(0, 1, 0, closed=(True,True)), NR(-1, 2, 1))
+        _isdisjoint(False, NR(0, 1, 0, closed=(True,False)), NR(-1, 2, 1))
+        _isdisjoint(False, NR(0, 1, 0, closed=(False,True)), NR(-1, 2, 1))
+        _isdisjoint(True, NR(0, 1, 0, closed=(False,False)), NR(-1, 2, 1))
+        _isdisjoint(True, NR(0.1, 1, 0, closed=(True,False)), NR(-1, 2, 1))
+        _isdisjoint(True, NR(0, 0.9, 0, closed=(False,True)), NR(-1, 2, 1))
+        _isdisjoint(False, NR(0, 0.99, 0), NR(-1, 1, 1))
+        _isdisjoint(True, NR(0.001, 0.99, 0), NR(-1, 1, 1))
 
         #
         # Continuous to discrete ranges (negative step)
         #
-        _isdisjoint(True, CNR(0, 1, 0), CNR(3, 2, -1))
-        _isdisjoint(True, CNR(2, 3, 0), CNR(1, 0, -1))
+        _isdisjoint(True, NR(0, 1, 0), NR(3, 2, -1))
+        _isdisjoint(True, NR(2, 3, 0), NR(1, 0, -1))
 
-        _isdisjoint(False, CNR(0, 1, 0), CNR(2, -1, -1))
+        _isdisjoint(False, NR(0, 1, 0), NR(2, -1, -1))
 
-        _isdisjoint(False, CNR(0.25, 1, 0), CNR(2, 1, -1))
-        _isdisjoint(False, CNR(0.25, 1, 0), CNR(2, 0.5, -1))
-        _isdisjoint(False, CNR(0.25, 1, 0), CNR(2, 0, -1))
-        _isdisjoint(False, CNR(0.25, 1, 0), CNR(2, -1, -1))
+        _isdisjoint(False, NR(0.25, 1, 0), NR(2, 1, -1))
+        _isdisjoint(False, NR(0.25, 1, 0), NR(2, 0.5, -1))
+        _isdisjoint(False, NR(0.25, 1, 0), NR(2, 0, -1))
+        _isdisjoint(False, NR(0.25, 1, 0), NR(2, -1, -1))
 
-        _isdisjoint(False, CNR(0, 0.75, 0), CNR(0, -1, -1))
-        _isdisjoint(False, CNR(0, 0.75, 0), CNR(0.5, -1, -1))
-        _isdisjoint(False, CNR(0, 0.75, 0), CNR(1, -1, -1))
-        _isdisjoint(False, CNR(0, 0.75, 0), CNR(2, -1, -1))
+        _isdisjoint(False, NR(0, 0.75, 0), NR(0, -1, -1))
+        _isdisjoint(False, NR(0, 0.75, 0), NR(0.5, -1, -1))
+        _isdisjoint(False, NR(0, 0.75, 0), NR(1, -1, -1))
+        _isdisjoint(False, NR(0, 0.75, 0), NR(2, -1, -1))
 
         # (additional edge cases)
-        _isdisjoint(False, CNR(0, 0.99, 0), CNR(1, -1, -1))
-        _isdisjoint(True, CNR(0.01, 0.99, 0), CNR(1, -1, -1))
+        _isdisjoint(False, NR(0, 0.99, 0), NR(1, -1, -1))
+        _isdisjoint(True, NR(0.01, 0.99, 0), NR(1, -1, -1))
 
         #
         # Discrete to discrete sets
         #
-        _isdisjoint(False, CNR(0,10,2), CNR(2,10,2))
-        _isdisjoint(True, CNR(0,10,2), CNR(1,10,2))
+        _isdisjoint(False, NR(0,10,2), NR(2,10,2))
+        _isdisjoint(True, NR(0,10,2), NR(1,10,2))
 
-        _isdisjoint(False, CNR(0,50,5), CNR(0,50,7))
-        _isdisjoint(False, CNR(0,34,5), CNR(0,34,7))
-        _isdisjoint(False, CNR(5,50,5), CNR(7,50,7))
-        _isdisjoint(True, CNR(5,34,5), CNR(7,34,7))
-        _isdisjoint(False, CNR(5,50,5), CNR(49,7,-7))
-        _isdisjoint(True, CNR(5,34,5), CNR(28,7,-7))
+        _isdisjoint(False, NR(0,50,5), NR(0,50,7))
+        _isdisjoint(False, NR(0,34,5), NR(0,34,7))
+        _isdisjoint(False, NR(5,50,5), NR(7,50,7))
+        _isdisjoint(True, NR(5,34,5), NR(7,34,7))
+        _isdisjoint(False, NR(5,50,5), NR(49,7,-7))
+        _isdisjoint(True, NR(5,34,5), NR(28,7,-7))
 
         # 1, 8, 15, 22, 29, 36
-        _isdisjoint(False, CNR(0, None, 5), CNR(1, None, 7))
-        _isdisjoint(False, CNR(0, None, -5), CNR(1, None, -7))
+        _isdisjoint(False, NR(0, None, 5), NR(1, None, 7))
+        _isdisjoint(False, NR(0, None, -5), NR(1, None, -7))
         # 2, 9, 16, 23, 30, 37
-        _isdisjoint(True, CNR(0, None, 5), CNR(23, None, -7))
+        _isdisjoint(True, NR(0, None, 5), NR(23, None, -7))
         # 0, 7, 14, 21, 28, 35
-        _isdisjoint(False, CNR(0, None, 5), CNR(28, None, -7))
+        _isdisjoint(False, NR(0, None, 5), NR(28, None, -7))
 
     def test_issubset(self):
         # Continuous-continuous
-        self.assertTrue(CNR(0, 10, 0).issubset(CNR(0, 10, 0)))
-        self.assertTrue(CNR(1, 10, 0).issubset(CNR(0, 10, 0)))
-        self.assertTrue(CNR(0, 9, 0).issubset(CNR(0, 10, 0)))
-        self.assertTrue(CNR(1, 9, 0).issubset(CNR(0, 10, 0)))
-        self.assertFalse(CNR(0, 11, 0).issubset(CNR(0, 10, 0)))
-        self.assertFalse(CNR(-1, 10, 0).issubset(CNR(0, 10, 0)))
+        self.assertTrue(NR(0, 10, 0).issubset(NR(0, 10, 0)))
+        self.assertTrue(NR(1, 10, 0).issubset(NR(0, 10, 0)))
+        self.assertTrue(NR(0, 9, 0).issubset(NR(0, 10, 0)))
+        self.assertTrue(NR(1, 9, 0).issubset(NR(0, 10, 0)))
+        self.assertFalse(NR(0, 11, 0).issubset(NR(0, 10, 0)))
+        self.assertFalse(NR(-1, 10, 0).issubset(NR(0, 10, 0)))
 
-        self.assertTrue(CNR(0, 10, 0).issubset(CNR(0, None, 0)))
-        self.assertTrue(CNR(1, 10, 0).issubset(CNR(0, None, 0)))
-        self.assertFalse(CNR(-1, 10, 0).issubset(CNR(0, None, 0)))
+        self.assertTrue(NR(0, 10, 0).issubset(NR(0, None, 0)))
+        self.assertTrue(NR(1, 10, 0).issubset(NR(0, None, 0)))
+        self.assertFalse(NR(-1, 10, 0).issubset(NR(0, None, 0)))
 
-        self.assertTrue(CNR(0, 10, 0).issubset(CNR(None, 10, 0)))
-        self.assertTrue(CNR(0, 9, 0).issubset(CNR(None, 10, 0)))
-        self.assertFalse(CNR(0, 11, 0).issubset(CNR(None, 10, 0)))
+        self.assertTrue(NR(0, 10, 0).issubset(NR(None, 10, 0)))
+        self.assertTrue(NR(0, 9, 0).issubset(NR(None, 10, 0)))
+        self.assertFalse(NR(0, 11, 0).issubset(NR(None, 10, 0)))
 
-        self.assertTrue(CNR(0, None, 0).issubset(CNR(None, None, 0)))
-        self.assertTrue(CNR(0, None, 0).issubset(CNR(-1, None, 0)))
-        self.assertTrue(CNR(0, None, 0).issubset(CNR(0, None, 0)))
-        self.assertFalse(CNR(0, None, 0).issubset(CNR(1, None, 0)))
-        self.assertFalse(CNR(0, None, 0).issubset(CNR(None, 1, 0)))
+        self.assertTrue(NR(0, None, 0).issubset(NR(None, None, 0)))
+        self.assertTrue(NR(0, None, 0).issubset(NR(-1, None, 0)))
+        self.assertTrue(NR(0, None, 0).issubset(NR(0, None, 0)))
+        self.assertFalse(NR(0, None, 0).issubset(NR(1, None, 0)))
+        self.assertFalse(NR(0, None, 0).issubset(NR(None, 1, 0)))
 
-        self.assertTrue(CNR(None, 0, 0).issubset(CNR(None, None, 0)))
-        self.assertTrue(CNR(None, 0, 0).issubset(CNR(None, 1, 0)))
-        self.assertTrue(CNR(None, 0, 0).issubset(CNR(None, 0, 0)))
-        self.assertFalse(CNR(None, 0, 0).issubset(CNR(None, -1, 0)))
-        self.assertFalse(CNR(None, 0, 0).issubset(CNR(0, None, 0)))
+        self.assertTrue(NR(None, 0, 0).issubset(NR(None, None, 0)))
+        self.assertTrue(NR(None, 0, 0).issubset(NR(None, 1, 0)))
+        self.assertTrue(NR(None, 0, 0).issubset(NR(None, 0, 0)))
+        self.assertFalse(NR(None, 0, 0).issubset(NR(None, -1, 0)))
+        self.assertFalse(NR(None, 0, 0).issubset(NR(0, None, 0)))
 
         B = True,True
-        self.assertTrue(CNR(0,1,0,(True,True)).issubset(CNR(0,1,0,B)))
-        self.assertTrue(CNR(0,1,0,(True,False)).issubset(CNR(0,1,0,B)))
-        self.assertTrue(CNR(0,1,0,(False,True)).issubset(CNR(0,1,0,B)))
-        self.assertTrue(CNR(0,1,0,(False,False)).issubset(CNR(0,1,0,B)))
+        self.assertTrue(NR(0,1,0,(True,True)).issubset(NR(0,1,0,B)))
+        self.assertTrue(NR(0,1,0,(True,False)).issubset(NR(0,1,0,B)))
+        self.assertTrue(NR(0,1,0,(False,True)).issubset(NR(0,1,0,B)))
+        self.assertTrue(NR(0,1,0,(False,False)).issubset(NR(0,1,0,B)))
 
         B = True,False
-        self.assertFalse(CNR(0,1,0,(True,True)).issubset(CNR(0,1,0,B)))
-        self.assertTrue(CNR(0,1,0,(True,False)).issubset(CNR(0,1,0,B)))
-        self.assertFalse(CNR(0,1,0,(False,True)).issubset(CNR(0,1,0,B)))
-        self.assertTrue(CNR(0,1,0,(False,False)).issubset(CNR(0,1,0,B)))
+        self.assertFalse(NR(0,1,0,(True,True)).issubset(NR(0,1,0,B)))
+        self.assertTrue(NR(0,1,0,(True,False)).issubset(NR(0,1,0,B)))
+        self.assertFalse(NR(0,1,0,(False,True)).issubset(NR(0,1,0,B)))
+        self.assertTrue(NR(0,1,0,(False,False)).issubset(NR(0,1,0,B)))
 
         B = False,True
-        self.assertFalse(CNR(0,1,0,(True,True)).issubset(CNR(0,1,0,B)))
-        self.assertFalse(CNR(0,1,0,(True,False)).issubset(CNR(0,1,0,B)))
-        self.assertTrue(CNR(0,1,0,(False,True)).issubset(CNR(0,1,0,B)))
-        self.assertTrue(CNR(0,1,0,(False,False)).issubset(CNR(0,1,0,B)))
+        self.assertFalse(NR(0,1,0,(True,True)).issubset(NR(0,1,0,B)))
+        self.assertFalse(NR(0,1,0,(True,False)).issubset(NR(0,1,0,B)))
+        self.assertTrue(NR(0,1,0,(False,True)).issubset(NR(0,1,0,B)))
+        self.assertTrue(NR(0,1,0,(False,False)).issubset(NR(0,1,0,B)))
 
         B = False,False
-        self.assertFalse(CNR(0,1,0,(True,True)).issubset(CNR(0,1,0,B)))
-        self.assertFalse(CNR(0,1,0,(True,False)).issubset(CNR(0,1,0,B)))
-        self.assertFalse(CNR(0,1,0,(False,True)).issubset(CNR(0,1,0,B)))
-        self.assertTrue(CNR(0,1,0,(False,False)).issubset(CNR(0,1,0,B)))
+        self.assertFalse(NR(0,1,0,(True,True)).issubset(NR(0,1,0,B)))
+        self.assertFalse(NR(0,1,0,(True,False)).issubset(NR(0,1,0,B)))
+        self.assertFalse(NR(0,1,0,(False,True)).issubset(NR(0,1,0,B)))
+        self.assertTrue(NR(0,1,0,(False,False)).issubset(NR(0,1,0,B)))
 
         # Continuous - discrete
-        self.assertTrue(CNR(0, None, 1).issubset(CNR(None, None, 0)))
-        self.assertTrue(CNR(0, None, 1).issubset(CNR(0, None, 0)))
-        self.assertFalse(CNR(0, None, 1).issubset(CNR(None, 0, 0)))
+        self.assertTrue(NR(0, None, 1).issubset(NR(None, None, 0)))
+        self.assertTrue(NR(0, None, 1).issubset(NR(0, None, 0)))
+        self.assertFalse(NR(0, None, 1).issubset(NR(None, 0, 0)))
 
-        self.assertTrue(CNR(0, None, -1).issubset(CNR(None, None, 0)))
-        self.assertFalse(CNR(0, None, -1).issubset(CNR(0, None, 0)))
-        self.assertTrue(CNR(0, None, -1).issubset(CNR(None, 0, 0)))
+        self.assertTrue(NR(0, None, -1).issubset(NR(None, None, 0)))
+        self.assertFalse(NR(0, None, -1).issubset(NR(0, None, 0)))
+        self.assertTrue(NR(0, None, -1).issubset(NR(None, 0, 0)))
 
-        self.assertTrue(CNR(0, 10, 1).issubset(CNR(None, None, 0)))
-        self.assertTrue(CNR(0, 10, 1).issubset(CNR(0, None, 0)))
-        self.assertTrue(CNR(0, 10, 1).issubset(CNR(0, 10, 0)))
+        self.assertTrue(NR(0, 10, 1).issubset(NR(None, None, 0)))
+        self.assertTrue(NR(0, 10, 1).issubset(NR(0, None, 0)))
+        self.assertTrue(NR(0, 10, 1).issubset(NR(0, 10, 0)))
 
-        self.assertFalse(CNR(0, None, 0).issubset(CNR(0, None, 1)))
-        self.assertFalse(CNR(None, 0, 0).issubset(CNR(0, None, -1)))
-        self.assertFalse(CNR(0, 10, 0).issubset(CNR(0, 10, 1)))
+        self.assertFalse(NR(0, None, 0).issubset(NR(0, None, 1)))
+        self.assertFalse(NR(None, 0, 0).issubset(NR(0, None, -1)))
+        self.assertFalse(NR(0, 10, 0).issubset(NR(0, 10, 1)))
 
         # Discrete - discrete
-        self.assertTrue(CNR(0, 10, 2).issubset(CNR(0, 10, 2)))
-        self.assertTrue(CNR(0, 10, 2).issubset(CNR(-2, 10, 2)))
-        self.assertTrue(CNR(0, 10, 2).issubset(CNR(0, 12, 2)))
-        self.assertFalse(CNR(0, 10, 3).issubset(CNR(0, 10, 2)))
-        self.assertTrue(CNR(0, 11, 2).issubset(CNR(0, 10, 2)))
-        self.assertFalse(CNR(1, 10, 2).issubset(CNR(0, 10, 2)))
-        self.assertFalse(CNR(0, 10, 2).issubset(CNR(0, 10, 4)))
-        self.assertTrue(CNR(0, 10, 2).issubset(CNR(0, 10, 1)))
+        self.assertTrue(NR(0, 10, 2).issubset(NR(0, 10, 2)))
+        self.assertTrue(NR(0, 10, 2).issubset(NR(-2, 10, 2)))
+        self.assertTrue(NR(0, 10, 2).issubset(NR(0, 12, 2)))
+        self.assertFalse(NR(0, 10, 3).issubset(NR(0, 10, 2)))
+        self.assertTrue(NR(0, 11, 2).issubset(NR(0, 10, 2)))
+        self.assertFalse(NR(1, 10, 2).issubset(NR(0, 10, 2)))
+        self.assertFalse(NR(0, 10, 2).issubset(NR(0, 10, 4)))
+        self.assertTrue(NR(0, 10, 2).issubset(NR(0, 10, 1)))
 
-        self.assertTrue(CNR(10, 0, -2).issubset(CNR(10, 0, -2)))
-        self.assertTrue(CNR(10, 0, -2).issubset(CNR(10, -2, -2)))
-        self.assertTrue(CNR(10, 0, -2).issubset(CNR(12, 0, -2)))
-        self.assertFalse(CNR(10, 0, -3).issubset(CNR(10, 0, -2)))
-        self.assertTrue(CNR(10, 1, -2).issubset(CNR(10, 0, -2)))
-        self.assertTrue(CNR(8, 0, -2).issubset(CNR(10, 0, -2)))
-        self.assertFalse(CNR(10, 0, -2).issubset(CNR(10, 0, -4)))
-        self.assertTrue(CNR(10, 0, -2).issubset(CNR(10, 0, -1)))
+        self.assertTrue(NR(10, 0, -2).issubset(NR(10, 0, -2)))
+        self.assertTrue(NR(10, 0, -2).issubset(NR(10, -2, -2)))
+        self.assertTrue(NR(10, 0, -2).issubset(NR(12, 0, -2)))
+        self.assertFalse(NR(10, 0, -3).issubset(NR(10, 0, -2)))
+        self.assertTrue(NR(10, 1, -2).issubset(NR(10, 0, -2)))
+        self.assertTrue(NR(8, 0, -2).issubset(NR(10, 0, -2)))
+        self.assertFalse(NR(10, 0, -2).issubset(NR(10, 0, -4)))
+        self.assertTrue(NR(10, 0, -2).issubset(NR(10, 0, -1)))
 
     def test_lcm(self):
         self.assertEqual(
-            CNR(None,None,0)._lcm((CNR(0,1,0),)),
+            NR(None,None,0)._lcm((NR(0,1,0),)),
             0
         )
         self.assertEqual(
-            CNR(None,None,0)._lcm((CNR(0,0,0),)),
+            NR(None,None,0)._lcm((NR(0,0,0),)),
             1
         )
         self.assertEqual(
-            CNR(0,None,3)._lcm((CNR(0,None,1),)),
+            NR(0,None,3)._lcm((NR(0,None,1),)),
             3
         )
         self.assertEqual(
-            CNR(0,None,3)._lcm((CNR(0,None,0),)),
+            NR(0,None,3)._lcm((NR(0,None,0),)),
             3
         )
         self.assertEqual(
-            CNR(0,None,0)._lcm((CNR(0,None,1),)),
+            NR(0,None,0)._lcm((NR(0,None,1),)),
             1
         )
         self.assertEqual(
-            CNR(0,None,3)._lcm((CNR(0,None,2),)),
+            NR(0,None,3)._lcm((NR(0,None,2),)),
             6
         )
         self.assertEqual(
-            CNR(0,None,3)._lcm((CNR(0,None,2),CNR(0,None,5))),
+            NR(0,None,3)._lcm((NR(0,None,2),NR(0,None,5))),
             30
         )
         self.assertEqual(
-            CNR(0,None,3)._lcm((CNR(0,None,2),CNR(0,None,10))),
+            NR(0,None,3)._lcm((NR(0,None,2),NR(0,None,10))),
             30
         )
 
     def test_range_difference(self):
         self.assertEqual(
-            CNR(0,None,1).range_difference([CNR(1,None,0)]),
-            [CNR(0,0,0)],
+            NR(0,None,1).range_difference([NR(1,None,0)]),
+            [NR(0,0,0)],
         )
         self.assertEqual(
-            CNR(0,None,1).range_difference([CNR(0,0,0)]),
-            [CNR(1,None,1)],
+            NR(0,None,1).range_difference([NR(0,0,0)]),
+            [NR(1,None,1)],
         )
         self.assertEqual(
-            CNR(0,None,2).range_difference([CNR(10,None,3)]),
-            [CNR(0,None,6), CNR(2,None,6), CNR(4,4,0)],
+            NR(0,None,2).range_difference([NR(10,None,3)]),
+            [NR(0,None,6), NR(2,None,6), NR(4,4,0)],
         )
 
         # test relatively prime ranges that don't expand to all offsets
         self.assertEqual(
-            CNR(0,7,2).range_difference([CNR(6,None,10)]),
-            [CNR(0,0,0), CNR(2,2,0), CNR(4,4,0)],
+            NR(0,7,2).range_difference([NR(6,None,10)]),
+            [NR(0,0,0), NR(2,2,0), NR(4,4,0)],
         )
 
         # test ranges running in the other direction
         self.assertEqual(
-            CNR(10,0,-1).range_difference([CNR(7,4,-2)]),
-            [CNR(10,0,-2), CNR(1,3,2), CNR(9,9,0)],
+            NR(10,0,-1).range_difference([NR(7,4,-2)]),
+            [NR(10,0,-2), NR(1,3,2), NR(9,9,0)],
         )
         self.assertEqual(
-            CNR(0,None,-1).range_difference([CNR(-10,10,0)]),
-            [CNR(-11,None,-1)],
+            NR(0,None,-1).range_difference([NR(-10,10,0)]),
+            [NR(-11,None,-1)],
         )
 
         # Test non-overlapping ranges
         self.assertEqual(
-            CNR(0,4,0).range_difference([CNR(5,10,0)]),
-            [CNR(0,4,0)],
+            NR(0,4,0).range_difference([NR(5,10,0)]),
+            [NR(0,4,0)],
         )
         self.assertEqual(
-            CNR(5,10,0).range_difference([CNR(0,4,0)]),
-            [CNR(5,10,0)],
+            NR(5,10,0).range_difference([NR(0,4,0)]),
+            [NR(5,10,0)],
         )
 
         # Test continuous ranges
@@ -458,101 +458,101 @@ class TestClosedNumericRange(unittest.TestCase):
         # Subtracting a closed range from a closed range should
         # result in an open range.
         self.assertEqual(
-            CNR(0,None,0).range_difference([CNR(5,None,0)]),
-            [CNR(0,5,0,'[)')],
+            NR(0,None,0).range_difference([NR(5,None,0)]),
+            [NR(0,5,0,'[)')],
         )
         self.assertEqual(
-            CNR(0,None,0).range_difference([CNR(5,10,0)]),
-            [CNR(0,5,0,'[)'), CNR(10,None,0,'(]')],
+            NR(0,None,0).range_difference([NR(5,10,0)]),
+            [NR(0,5,0,'[)'), NR(10,None,0,'(]')],
         )
         self.assertEqual(
-            CNR(None,0,0).range_difference([CNR(-5,None,0)]),
-            [CNR(None,-5,0,'[)')],
+            NR(None,0,0).range_difference([NR(-5,None,0)]),
+            [NR(None,-5,0,'[)')],
         )
         self.assertEqual(
-            CNR(None,0,0).range_difference([CNR(-5,0,0,'[)')]),
-            [CNR(None,-5,0,'[)')],
+            NR(None,0,0).range_difference([NR(-5,0,0,'[)')]),
+            [NR(None,-5,0,'[)')],
         )
         # Subtracting an open range from a closed range gives a closed
         # range
         self.assertEqual(
-            CNR(0,None,0).range_difference([CNR(5,10,0,'()')]),
-            [CNR(0,5,0,'[]'), CNR(10,None,0,'[]')],
+            NR(0,None,0).range_difference([NR(5,10,0,'()')]),
+            [NR(0,5,0,'[]'), NR(10,None,0,'[]')],
         )
         # Subtracting a discrete range from a continuous range gives a
         # set of open continuous ranges
         self.assertEqual(
-            CNR(None,None,0).range_difference([CNR(5,10,5)]),
-            [CNR(None,5,0,'[)'), CNR(5,10,0,'()'), CNR(10,None,0,'(]')],
+            NR(None,None,0).range_difference([NR(5,10,5)]),
+            [NR(None,5,0,'[)'), NR(5,10,0,'()'), NR(10,None,0,'(]')],
         )
         self.assertEqual(
-            CNR(-10,20,0).range_difference([CNR(5,10,5)]),
-            [CNR(-10,5,0,'[)'), CNR(5,10,0,'()'), CNR(10,20,0,'(]')],
+            NR(-10,20,0).range_difference([NR(5,10,5)]),
+            [NR(-10,5,0,'[)'), NR(5,10,0,'()'), NR(10,20,0,'(]')],
         )
         self.assertEqual(
-            CNR(-10,20,0,"()").range_difference([CNR(5,10,5)]),
-            [CNR(-10,5,0,'()'), CNR(5,10,0,'()'), CNR(10,20,0,'()')],
+            NR(-10,20,0,"()").range_difference([NR(5,10,5)]),
+            [NR(-10,5,0,'()'), NR(5,10,0,'()'), NR(10,20,0,'()')],
         )
         self.assertEqual(
-            CNR(-3,3,0).range_difference([CNR(0,None,5),CNR(0,None,-5)]),
-            [CNR(-3,0,0,'[)'), CNR(0,3,0,'(]')],
+            NR(-3,3,0).range_difference([NR(0,None,5),NR(0,None,-5)]),
+            [NR(-3,0,0,'[)'), NR(0,3,0,'(]')],
         )
 
 
     def test_range_intersection(self):
         self.assertEqual(
-            CNR(0,None,1).range_intersection([CNR(1,None,0)]),
-            [CNR(1,None,1)],
+            NR(0,None,1).range_intersection([NR(1,None,0)]),
+            [NR(1,None,1)],
         )
         self.assertEqual(
-            CNR(0,None,1).range_intersection([CNR(0,0,0)]),
-            [CNR(0,0,0)],
+            NR(0,None,1).range_intersection([NR(0,0,0)]),
+            [NR(0,0,0)],
         )
         self.assertEqual(
-            CNR(0,None,1).range_intersection([CNR(0.5,1.5,0)]),
-            [CNR(1,1,0)],
+            NR(0,None,1).range_intersection([NR(0.5,1.5,0)]),
+            [NR(1,1,0)],
         )
         self.assertEqual(
-            CNR(0,None,2).range_intersection([CNR(1,None,3)]),
-            [CNR(4,None,6)],
+            NR(0,None,2).range_intersection([NR(1,None,3)]),
+            [NR(4,None,6)],
         )
 
         # Test non-overlapping ranges
         self.assertEqual(
-            CNR(0,4,0).range_intersection([CNR(5,10,0)]),
+            NR(0,4,0).range_intersection([NR(5,10,0)]),
             [],
         )
         self.assertEqual(
-            CNR(5,10,0).range_intersection([CNR(0,4,0)]),
+            NR(5,10,0).range_intersection([NR(0,4,0)]),
             [],
         )
 
         # test ranges running in the other direction
         self.assertEqual(
-            CNR(10,0,-1).range_intersection([CNR(7,4,-2)]),
-            [CNR(5,7,2)],
+            NR(10,0,-1).range_intersection([NR(7,4,-2)]),
+            [NR(5,7,2)],
         )
         self.assertEqual(
-            CNR(10,0,-1).range_intersection([CNR(7,None,-2)]),
-            [CNR(1,7,2)],
+            NR(10,0,-1).range_intersection([NR(7,None,-2)]),
+            [NR(1,7,2)],
         )
         self.assertEqual(
-            CNR(0,None,-1).range_intersection([CNR(None,-10,0)]),
-            [CNR(-10,None,-1)],
+            NR(0,None,-1).range_intersection([NR(None,-10,0)]),
+            [NR(-10,None,-1)],
         )
 
         # Test continuous ranges
         self.assertEqual(
-            CNR(0,5,0).range_intersection([CNR(5,10,0)]),
-            [CNR(5,5,0)],
+            NR(0,5,0).range_intersection([NR(5,10,0)]),
+            [NR(5,5,0)],
         )
         self.assertEqual(
-            CNR(0,None,0).range_intersection([CNR(5,None,0)]),
-            [CNR(5,None,0)],
+            NR(0,None,0).range_intersection([NR(5,None,0)]),
+            [NR(5,None,0)],
         )
 
     def test_pickle(self):
-        a = CNR(0,100,5)
+        a = NR(0,100,5)
         b = pickle.loads(pickle.dumps(a))
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
@@ -567,7 +567,7 @@ class TestAnyRange(unittest.TestCase):
         self.assertTrue(a.issubset(b))
         self.assertEqual(a, b)
 
-        c = CNR(None, None, 0)
+        c = NR(None, None, 0)
         self.assertFalse(a.issubset(c))
         self.assertTrue(c.issubset(b))
         self.assertNotEqual(a, c)
@@ -580,26 +580,26 @@ class TestAnyRange(unittest.TestCase):
 
     def test_range_difference(self):
         self.assertEqual(
-            _AnyRange().range_difference([CNR(0,None,1)]),
+            _AnyRange().range_difference([NR(0,None,1)]),
             [_AnyRange()]
         )
         self.assertEqual(
-            CNR(0,None,1).range_difference([_AnyRange()]),
+            NR(0,None,1).range_difference([_AnyRange()]),
             []
         )
 
     def test_range_intersection(self):
         self.assertEqual(
-            _AnyRange().range_intersection([CNR(0,None,1)]),
-            [CNR(0,None,1)]
+            _AnyRange().range_intersection([NR(0,None,1)]),
+            [NR(0,None,1)]
         )
         self.assertEqual(
-            CNR(0,None,1).range_intersection([_AnyRange()]),
-            [CNR(0,None,1)]
+            NR(0,None,1).range_intersection([_AnyRange()]),
+            [NR(0,None,1)]
         )
         self.assertEqual(
-            CNR(0,None,-1).range_intersection([_AnyRange()]),
-            [CNR(0,None,-1)]
+            NR(0,None,-1).range_intersection([_AnyRange()]),
+            [NR(0,None,-1)]
         )
 
 
@@ -644,12 +644,12 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertTrue(Any.issuperset(Any2))
         self.assertFalse(Any.isdisjoint(Any2))
 
-        Reals2 = RangeSet(ranges=(CNR(None,None,0),))
+        Reals2 = RangeSet(ranges=(NR(None,None,0),))
         self.assertTrue(Reals.issubset(Reals2))
         self.assertTrue(Reals.issuperset(Reals2))
         self.assertFalse(Reals.isdisjoint(Reals2))
 
-        Integers2 = RangeSet(ranges=(CNR(0,None,-1), CNR(0,None,1)))
+        Integers2 = RangeSet(ranges=(NR(0,None,-1), NR(0,None,1)))
         self.assertTrue(Integers.issubset(Integers2))
         self.assertTrue(Integers.issuperset(Integers2))
         self.assertFalse(Integers.isdisjoint(Integers2))
@@ -690,11 +690,11 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertEqual(Any, _AnySet())
         self.assertEqual(
             Reals,
-            RangeSet(ranges=(CNR(None,None,0),))
+            RangeSet(ranges=(NR(None,None,0),))
         )
         self.assertEqual(
             Integers,
-            RangeSet(ranges=(CNR(0,None,-1), CNR(0,None,1)))
+            RangeSet(ranges=(NR(0,None,-1), NR(0,None,1)))
         )
 
         self.assertNotEqual(Integers, Reals)
@@ -704,50 +704,50 @@ class InfiniteSetTester(unittest.TestCase):
 
         # For equality, ensure that the ranges can be in any order
         self.assertEqual(
-            RangeSet(ranges=(CNR(0,None,-1), CNR(0,None,1))),
-            RangeSet(ranges=(CNR(0,None,1), CNR(0,None,-1)))
+            RangeSet(ranges=(NR(0,None,-1), NR(0,None,1))),
+            RangeSet(ranges=(NR(0,None,1), NR(0,None,-1)))
         )
 
         # And integer ranges can be grounded at different points
         self.assertEqual(
-            RangeSet(ranges=(CNR(10,None,-1), CNR(10,None,1))),
-            RangeSet(ranges=(CNR(0,None,1), CNR(0,None,-1)))
+            RangeSet(ranges=(NR(10,None,-1), NR(10,None,1))),
+            RangeSet(ranges=(NR(0,None,1), NR(0,None,-1)))
         )
         self.assertEqual(
-            RangeSet(ranges=(CNR(0,None,-1), CNR(0,None,1))),
-            RangeSet(ranges=(CNR(10,None,1), CNR(10,None,-1)))
+            RangeSet(ranges=(NR(0,None,-1), NR(0,None,1))),
+            RangeSet(ranges=(NR(10,None,1), NR(10,None,-1)))
         )
 
         # Odd positive integers and even positive integers are positive
         # integers
         self.assertEqual(
             PositiveIntegers,
-            RangeSet(ranges=(CNR(1,None,2), CNR(2,None,2)))
+            RangeSet(ranges=(NR(1,None,2), NR(2,None,2)))
         )
 
         # Nututally prime sets of ranges
         self.assertEqual(
-            RangeSet(ranges=(CNR(1,None,2), CNR(2,None,2))),
+            RangeSet(ranges=(NR(1,None,2), NR(2,None,2))),
             RangeSet(ranges=(
-                CNR(1,None,3), CNR(2,None,3), CNR(3,None,3)
+                NR(1,None,3), NR(2,None,3), NR(3,None,3)
             ))
         )
 
         # Nututally prime sets of ranges
         #  ...omitting one of the subranges breaks equality
         self.assertNotEqual(
-            RangeSet(ranges=(CNR(1,None,2), CNR(2,None,2))),
+            RangeSet(ranges=(NR(1,None,2), NR(2,None,2))),
             RangeSet(ranges=(
-                CNR(1,None,3), CNR(2,None,3)
+                NR(1,None,3), NR(2,None,3)
             ))
         )
 
         # Mututally prime sets of ranges
-        #  ...changing a reference point (so redundant CNR) breaks equality
+        #  ...changing a reference point (so redundant NR) breaks equality
         self.assertNotEqual(
-            RangeSet(ranges=(CNR(0,None,2), CNR(0,None,2))),
+            RangeSet(ranges=(NR(0,None,2), NR(0,None,2))),
             RangeSet(ranges=(
-                CNR(1,None,3), CNR(2,None,3), CNR(3,None,3)
+                NR(1,None,3), NR(2,None,3), NR(3,None,3)
             ))
         )
 
@@ -759,12 +759,12 @@ class TestRangeOperations(unittest.TestCase):
         k = Any
 
         ir = list(i.ranges())
-        self.assertEqual(ir, [CNR(0,10,2)])
+        self.assertEqual(ir, [NR(0,10,2)])
         self.assertEqual(str(ir), "[[0:10:2]]")
         ir = ir[0]
 
         jr = list(j.ranges())
-        self.assertEqual(jr, [CNR(0,0,0), CNR(1,1,0), CNR(2,2,0), NNR('a')])
+        self.assertEqual(jr, [NR(0,0,0), NR(1,1,0), NR(2,2,0), NNR('a')])
         self.assertEqual(str(jr), "[[0], [1], [2], {a}]")
         jr0, jr1, jr2, jr3 = jr
 
@@ -854,11 +854,11 @@ class TestRangeOperations(unittest.TestCase):
         kr, = list(k.ranges())
 
         self.assertEqual(ir.range_difference(i.ranges()), [])
-        self.assertEqual(ir.range_difference([jr0]), [CNR(2,10,2)])
-        self.assertEqual(ir.range_difference([jr1]), [CNR(0,10,2)])
-        self.assertEqual(ir.range_difference([jr2]), [CNR(0,0,0), CNR(4,10,2)])
-        self.assertEqual(ir.range_difference([jr3]), [CNR(0,10,2)])
-        self.assertEqual(ir.range_difference(j.ranges()), [CNR(4,10,2)])
+        self.assertEqual(ir.range_difference([jr0]), [NR(2,10,2)])
+        self.assertEqual(ir.range_difference([jr1]), [NR(0,10,2)])
+        self.assertEqual(ir.range_difference([jr2]), [NR(0,0,0), NR(4,10,2)])
+        self.assertEqual(ir.range_difference([jr3]), [NR(0,10,2)])
+        self.assertEqual(ir.range_difference(j.ranges()), [NR(4,10,2)])
         self.assertEqual(ir.range_difference(k.ranges()), [])
 
         self.assertEqual(jr0.range_difference(i.ranges()), [])
@@ -1234,7 +1234,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         r = list(i.ranges())
         self.assertEqual(len(r), 4)
         for idx, x in enumerate(r):
-            self.assertIsInstance(x, CNR)
+            self.assertIsInstance(x, NR)
             self.assertTrue(x.is_finite())
             self.assertEqual(x.start, i[idx+1])
             self.assertEqual(x.end, i[idx+1])
@@ -1248,31 +1248,31 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                          ('apple','cat'))
 
         self.assertEqual(
-            RangeSet(ranges=(CNR(0,10,2),CNR(3,20,2))).bounds(),
+            RangeSet(ranges=(NR(0,10,2),NR(3,20,2))).bounds(),
             (0,19)
         )
         self.assertEqual(
-            RangeSet(ranges=(CNR(None,None,0),CNR(0,10,2))).bounds(),
+            RangeSet(ranges=(NR(None,None,0),NR(0,10,2))).bounds(),
             (None,None)
         )
         self.assertEqual(
-            RangeSet(ranges=(CNR(100,None,-2),CNR(0,10,2))).bounds(),
+            RangeSet(ranges=(NR(100,None,-2),NR(0,10,2))).bounds(),
             (None,100)
         )
         self.assertEqual(
-            RangeSet(ranges=(CNR(-10,None,2),CNR(0,10,2))).bounds(),
+            RangeSet(ranges=(NR(-10,None,2),NR(0,10,2))).bounds(),
             (-10,None)
         )
         self.assertEqual(
-            RangeSet(ranges=(CNR(0,10,2),CNR(None,None,0))).bounds(),
+            RangeSet(ranges=(NR(0,10,2),NR(None,None,0))).bounds(),
             (None,None)
         )
         self.assertEqual(
-            RangeSet(ranges=(CNR(0,10,2),CNR(100,None,-2))).bounds(),
+            RangeSet(ranges=(NR(0,10,2),NR(100,None,-2))).bounds(),
             (None,100)
         )
         self.assertEqual(
-            RangeSet(ranges=(CNR(0,10,2),CNR(-10,None,2))).bounds(),
+            RangeSet(ranges=(NR(0,10,2),NR(-10,None,2))).bounds(),
             (-10,None)
         )
 
@@ -1293,24 +1293,24 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         i = RangeSet(0,10,2)
         self.assertEqual(tuple(i), (0,2,4,6,8,10))
 
-        i = RangeSet(ranges=(CNR(0,5,2),CNR(6,10,2)))
+        i = RangeSet(ranges=(NR(0,5,2),NR(6,10,2)))
         self.assertEqual(tuple(i), (0,2,4,6,8,10))
 
-        i = RangeSet(ranges=(CNR(0,10,2),CNR(0,10,2)))
+        i = RangeSet(ranges=(NR(0,10,2),NR(0,10,2)))
         self.assertEqual(tuple(i), (0,2,4,6,8,10))
 
-        i = RangeSet(ranges=(CNR(0,10,2),CNR(10,0,-2)))
+        i = RangeSet(ranges=(NR(0,10,2),NR(10,0,-2)))
         self.assertEqual(tuple(i), (0,2,4,6,8,10))
 
-        i = RangeSet(ranges=(CNR(0,10,2),CNR(9,0,-2)))
+        i = RangeSet(ranges=(NR(0,10,2),NR(9,0,-2)))
         self.assertEqual(tuple(i), (0,1,2,3,4,5,6,7,8,9,10))
 
-        i = RangeSet(ranges=(CNR(0,10,2),CNR(1,10,2)))
+        i = RangeSet(ranges=(NR(0,10,2),NR(1,10,2)))
         self.assertEqual(tuple(i), tuple(range(11)))
 
-        i = RangeSet(ranges=(CNR(0,30,10),CNR(12,14,1)))
+        i = RangeSet(ranges=(NR(0,30,10),NR(12,14,1)))
         self.assertEqual(tuple(i), (0,10,12,13,14,20,30))
 
-        i = RangeSet(ranges=(CNR(0,0,0),CNR(3,3,0),CNR(2,2,0)))
+        i = RangeSet(ranges=(NR(0,0,0),NR(3,3,0),NR(2,2,0)))
         self.assertEqual(tuple(i), (0,2,3))
 

@@ -139,7 +139,7 @@ class _UnknownSetDimen(object): pass
 # When we do math, the least specific set dictates the API of the resulting set.
 
 
-class _ClosedNumericRange(object):
+class _NumericRange(object):
     """A representation of a closed numeric range.
 
     This class represents a contiguous range of numbers.  The class
@@ -161,21 +161,21 @@ class _ClosedNumericRange(object):
     def __init__(self, start, end, step, closed=(True,True)):
         if int(step) != step:
             raise ValueError(
-                "_ClosedNumericRange step must be int (got %s)" % (step,))
+                "_NumericRange step must be int (got %s)" % (step,))
         step = int(step)
         if start is None:
             if step:
-                raise ValueError("_ClosedNumericRange: start must not be None "
+                raise ValueError("_NumericRange: start must not be None "
                                  "for non-continuous steps")
         elif end is not None:
             if step == 0 and end < start:
                 raise ValueError(
-                    "_ClosedNumericRange: start must be <= end for "
+                    "_NumericRange: start must be <= end for "
                     "continuous ranges (got %s..%s)" % (start,end)
                 )
             elif (end-start)*step < 0:
                 raise ValueError(
-                    "_ClosedNumericRange: start, end ordering incompatible "
+                    "_NumericRange: start, end ordering incompatible "
                     "with step direction (got [%s:%s:%s])" % (start,end,step)
                 )
             if step:
@@ -200,7 +200,7 @@ class _ClosedNumericRange(object):
         self.closed = (self._closedMap[closed[0]], self._closedMap[closed[1]])
         if self.is_discrete() and self.closed != (True,True):
             raise ValueError(
-                "_ClosedNumericRange %s is discrete, but passed closed=%s."
+                "_NumericRange %s is discrete, but passed closed=%s."
                 "  Discrete ranges must be closed." % (self, self.closed,))
 
     def __getstate__(self):
@@ -209,8 +209,8 @@ class _ClosedNumericRange(object):
 
         This method must be defined because this class uses slots.
         """
-        state = {} #super(_ClosedNumericRange, self).__getstate__()
-        for i in _ClosedNumericRange.__slots__:
+        state = {} #super(_NumericRange, self).__getstate__()
+        for i in _NumericRange.__slots__:
             state[i] = getattr(self, i)
         return state
 
@@ -243,7 +243,7 @@ class _ClosedNumericRange(object):
     __repr__ = __str__
 
     def __eq__(self, other):
-        if type(other) is not _ClosedNumericRange:
+        if type(other) is not _NumericRange:
             return False
         return self.start == other.start \
             and self.end == other.end \
@@ -296,7 +296,7 @@ class _ClosedNumericRange(object):
                 d_ub is not None and cont.end >= d_ub):
             return False
 
-        EPS = _ClosedNumericRange._EPS
+        EPS = _NumericRange._EPS
         if cont.end - cont.start - EPS > abs(disc.step):
             return False
         # At this point, the continuous set is shorter than the discrete
@@ -338,7 +338,7 @@ class _ClosedNumericRange(object):
             and self.is_discrete()
 
     def isdisjoint(self, other):
-        if not isinstance(other, _ClosedNumericRange):
+        if not isinstance(other, _NumericRange):
             # It is easier to just use _NonNumericRange/_AnyRange's
             # implementation
             return other.isdisjoint(self)
@@ -357,10 +357,10 @@ class _ClosedNumericRange(object):
             # We now need to check a continuous set is a subset of a discrete
             # set and the continuous set sits between discrete points
             if self.step:
-                return _ClosedNumericRange._continuous_discrete_disjoint(
+                return _NumericRange._continuous_discrete_disjoint(
                     other, self)
             elif other.step:
-                return _ClosedNumericRange._continuous_discrete_disjoint(
+                return _NumericRange._continuous_discrete_disjoint(
                     self, other)
             else:
                 # 2 continuous sets, with overlapping end points: not disjoint
@@ -381,10 +381,10 @@ class _ClosedNumericRange(object):
                 and self.step*other.step > 0:
             return False
         # OK - just check all the members of one set against the other
-        end = _ClosedNumericRange._firstNonNull(
+        end = _NumericRange._firstNonNull(
             self.step > 0,
             self.end,
-            _ClosedNumericRange._firstNonNull(
+            _NumericRange._firstNonNull(
                 self.step < 0, other.start, other.end)
         )
         i = 0
@@ -397,7 +397,7 @@ class _ClosedNumericRange(object):
         return True
 
     def issubset(self, other):
-        if not isinstance(other, _ClosedNumericRange):
+        if not isinstance(other, _NumericRange):
             if type(other) is _AnyRange:
                 return True
             elif type(other) is _NonNumericRange:
@@ -435,17 +435,17 @@ class _ClosedNumericRange(object):
                 return False
         # At this point, both sets are discrete.  Self's period must be a
         # positive integer multiple of other's ...
-        EPS = _ClosedNumericRange._EPS
+        EPS = _NumericRange._EPS
         if abs(remainder(self.step, other.step)) > EPS:
             return False
         # ...and they must shart a point in common
         return abs(remainder(other.start-self.start, other.step)) <= EPS
 
     def _normalize_bounds(self):
-        """Normalizes this _ClosedNumericRange.
+        """Normalizes this _NumericRange.
 
         This returns a normalized range by reversing lb and ub if the
-        _ClosedNumericRange step is less than zero.  If lb and ub are
+        _NumericRange step is less than zero.  If lb and ub are
         reversed, then closed is updated to reflect that change.
 
         Returns
@@ -495,7 +495,7 @@ class _ClosedNumericRange(object):
     def _min(*args):
         """Modified implementation of min() with special None handling
 
-        In _ClosedNumericRange objects, None can represent {positive,
+        In _NumericRange objects, None can represent {positive,
         negative} infintiy.  In the context that this method is used,
         None will always be positive infinity, so None is greater than any
         non-None value.
@@ -515,7 +515,7 @@ class _ClosedNumericRange(object):
     def _max(*args):
         """Modified implementation of max() with special None handling
 
-        In _ClosedNumericRange objects, None can represent {positive,
+        In _NumericRange objects, None can represent {positive,
         negative} infintiy.  In the context that this method is used,
         None will always be negative infinity, so None is less than
         any non-None value.
@@ -535,14 +535,14 @@ class _ClosedNumericRange(object):
     def _split_ranges(cnr, new_step):
         """Split a discrete range into a list of ranges using a new step.
 
-        This takes a single _ClosedNumericRange and splits it into a set
+        This takes a single _NumericRange and splits it into a set
         of new ranges, all of which use a new step.  The new_step must
         be a multiple of the current step.  CNR objects with a step of 0
         are returned unchanged.
 
         Parameters
         ----------
-            cnr: `_ClosedNumericRange`
+            cnr: `_NumericRange`
                 The range to split
             new_step: `int`
                 The new step to use for returned ranges
@@ -562,7 +562,7 @@ class _ClosedNumericRange(object):
                 # (all remaining offsets will be farther past the end)
                 break
 
-            _subranges.append(_ClosedNumericRange(
+            _subranges.append(_NumericRange(
                 cnr.start + i*cnr.step, cnr.end, _dir*new_step
             ))
         return _subranges
@@ -614,7 +614,7 @@ class _ClosedNumericRange(object):
         """
         _cnr_other_ranges = []
         for r in other_ranges:
-            if isinstance(r, _ClosedNumericRange):
+            if isinstance(r, _NumericRange):
                 _cnr_other_ranges.append(r)
             elif type(r) is _AnyRange:
                 return []
@@ -630,11 +630,11 @@ class _ClosedNumericRange(object):
         lcm = self._lcm(other_ranges)
 
         # Split this range into subranges
-        _this = _ClosedNumericRange._split_ranges(self, lcm)
+        _this = _NumericRange._split_ranges(self, lcm)
         # Split the other range(s) into subranges
         _other = []
         for s in other_ranges:
-            _other.extend(_ClosedNumericRange._split_ranges(s, lcm))
+            _other.extend(_NumericRange._split_ranges(s, lcm))
         # For each rhs subrange, s
         for s in _other:
             _new_subranges = []
@@ -668,22 +668,22 @@ class _ClosedNumericRange(object):
                             "range %s" % (s,t))
 
                     # At least one of s_min amd t.start must be non-None
-                    start = _ClosedNumericRange._max(
+                    start = _NumericRange._max(
                         s_min, t._push_to_discrete_boundary(t.start, s, True))
                     # At least one of s_max amd t.end must be non-None
-                    end = _ClosedNumericRange._min(
+                    end = _NumericRange._min(
                         s_max, t._push_to_discrete_boundary(t.end, s, False))
 
-                    if _ClosedNumericRange._lt(t.start, start):
-                        _new_subranges.append(_ClosedNumericRange(
+                    if _NumericRange._lt(t.start, start):
+                        _new_subranges.append(_NumericRange(
                             t.start, start, 0, (t.closed[0], False)
                         ))
                     for i in range(int(start//s.step), int(end//s.step)):
-                        _new_subranges.append(_ClosedNumericRange(
+                        _new_subranges.append(_NumericRange(
                             i*s.step, (i+1)*s.step, 0, '()'
                         ))
-                    if _ClosedNumericRange._gt(t.end, end):
-                        _new_subranges.append(_ClosedNumericRange(
+                    if _NumericRange._gt(t.end, end):
+                        _new_subranges.append(_NumericRange(
                             end, t.end, 0, (False,t.closed[1])
                         ))
                 else:
@@ -691,13 +691,13 @@ class _ClosedNumericRange(object):
                     # This handles discrete-discrete,
                     # continuous-continuous, and discrete-continuous
                     #
-                    if _ClosedNumericRange._lt(t_min, s_min):
+                    if _NumericRange._lt(t_min, s_min):
                         # Note that s_min will never be None due to the
                         # _lt test
                         if t.step:
                             s_min -= lcm
                             closed1 = True
-                        _min = _ClosedNumericRange._min(t_max, s_min)
+                        _min = _NumericRange._min(t_max, s_min)
                         if not t.step:
                             closed1 = not s_c[0] if _min is s_min else t_c[1]
                         _closed = ( t_c[0], closed1 )
@@ -708,18 +708,18 @@ class _ClosedNumericRange(object):
                             _rng = _rng[1], _rng[0]
                             _closed = _closed[1], _closed[0]
 
-                        _new_subranges.append(_ClosedNumericRange(
+                        _new_subranges.append(_NumericRange(
                             _rng[0], _rng[1], _step, _closed))
 
-                    if _ClosedNumericRange._gt(t_max, s_max):
+                    if _NumericRange._gt(t_max, s_max):
                         # Note that s_max will never be None due to the _gt test
                         if t.step:
                             s_max += lcm
                             closed0 = True
-                        _max = _ClosedNumericRange._max(t_min, s_max)
+                        _max = _NumericRange._max(t_min, s_max)
                         if not t.step:
                             closed0 = not s_c[1] if _max is s_max else t_c[0]
-                        _new_subranges.append(_ClosedNumericRange(
+                        _new_subranges.append(_NumericRange(
                             _max, t_max, abs(t.step), (closed0, t_c[1])
                         ))
                 _this = _new_subranges
@@ -736,7 +736,7 @@ class _ClosedNumericRange(object):
         """
         _cnr_other_ranges = []
         for r in other_ranges:
-            if isinstance(r, _ClosedNumericRange):
+            if isinstance(r, _NumericRange):
                 _cnr_other_ranges.append(r)
             elif type(r) is _AnyRange:
                 return [self]
@@ -753,11 +753,11 @@ class _ClosedNumericRange(object):
 
         ans = []
         # Split this range into subranges
-        _this = _ClosedNumericRange._split_ranges(self, lcm)
+        _this = _NumericRange._split_ranges(self, lcm)
         # Split the other range(s) into subranges
         _other = []
         for s in other_ranges:
-            _other.extend(_ClosedNumericRange._split_ranges(s, lcm))
+            _other.extend(_NumericRange._split_ranges(s, lcm))
         # For each lhs subrange, t
         for t in _this:
             # Compare it against each rhs range and only keep the
@@ -777,12 +777,12 @@ class _ClosedNumericRange(object):
                 s_min, s_max, s_c = s._normalize_bounds()
                 step = abs(t.step if t.step else s.step)
 
-                intersect_start = _ClosedNumericRange._max(
+                intersect_start = _NumericRange._max(
                     s._push_to_discrete_boundary(s_min, t, True),
                     t._push_to_discrete_boundary(t_min, s, True),
                 )
 
-                intersect_end = _ClosedNumericRange._min(
+                intersect_end = _NumericRange._min(
                     s._push_to_discrete_boundary(s_max, t, False),
                     t._push_to_discrete_boundary(t_max, s, False),
                 )
@@ -796,11 +796,11 @@ class _ClosedNumericRange(object):
                 if intersect_end == s_max:
                     c[1] &= s_c[1]
                 if step and intersect_start is None:
-                    ans.append(_ClosedNumericRange(
+                    ans.append(_NumericRange(
                         intersect_end, intersect_start, -step, (c[1], c[0])
                     ))
                 else:
-                    ans.append(_ClosedNumericRange(
+                    ans.append(_NumericRange(
                         intersect_start, intersect_end, step, c
                     ))
         return ans
@@ -812,7 +812,7 @@ class _NonNumericRange(object):
     The class name is a bit of a misnomer, as this object does not
     represent a range but rather a single value.  However, as it
     duplicates the Range API (as used by
-    :py:class:`_ClosedNumericRange`), it is called a "Range".
+    :py:class:`_NumericRange`), it is called a "Range".
 
     """
 
@@ -1176,13 +1176,13 @@ class _FiniteSetMixin(object):
         # Finite set is the list of scalars
         for i in self:
             if i.__class__ in native_numeric_types:
-                yield _ClosedNumericRange(i,i,0)
+                yield _NumericRange(i,i,0)
             elif i.__class__ in native_types:
                 yield _NonNumericRange(i)
             else:
                 try:
                     as_numeric(i)
-                    yield _ClosedNumericRange(i,i,0)
+                    yield _NumericRange(i,i,0)
                 except:
                     yield _NonNumericRange(i)
 
@@ -1823,7 +1823,7 @@ class _InfiniteRangeSetData(_SetData):
     """Data class for a infinite set.
 
     This Set implements an interface to an *infinite set* defined by one
-    or more _ClosedNumericRange objeccts.  As there are an infinite
+    or more _NumericRange objeccts.  As there are an infinite
     number of members, Infinite Range Sets are not iterable.
 
     """
@@ -1834,10 +1834,10 @@ class _InfiniteRangeSetData(_SetData):
         super(_InfiniteRangeSetData, self).__init__(component)
         ranges = tuple(ranges)
         for r in ranges:
-            if not isinstance(r, _ClosedNumericRange):
+            if not isinstance(r, _NumericRange):
                 raise TypeError(
                     "_InfiniteRangeSetData range argument must be an "
-                    "interable of _ClosedNumericRange objects")
+                    "interable of _NumericRange objects")
         self._ranges = ranges
 
     def __getstate__(self):
@@ -2006,11 +2006,11 @@ class RangeSet(Component):
         elif type(ranges) is not list:
             ranges = [ranges]
         if len(args) == 1:
-            ranges.append(_ClosedNumericRange(1,args[0],1))
+            ranges.append(_NumericRange(1,args[0],1))
         elif len(args) == 2:
-            ranges.append(_ClosedNumericRange(args[0],args[1],1))
+            ranges.append(_NumericRange(args[0],args[1],1))
         elif len(args) == 3:
-            ranges.append(_ClosedNumericRange(*args))
+            ranges.append(_NumericRange(*args))
         elif args:
             raise ValueError("RangeSet expects 3 or fewer positional "
                              "arguments (received %s)" % (len(args),))
@@ -2539,39 +2539,39 @@ Any = _AnySet(name='Any', doc="A global Pyomo Set that admits any value")
 Reals = RangeSet(
     name='Reals',
     doc='A global Pyomo Set that admits any real (floating point) value',
-    ranges=(_ClosedNumericRange(None,None,0),))
+    ranges=(_NumericRange(None,None,0),))
 
 NonNegativeReals = RangeSet(
     name='NonNegativeReals',
     doc='A global Pyomo Set admitting any real value in [0, +inf)',
-    ranges=(_ClosedNumericRange(0,None,0),))
+    ranges=(_NumericRange(0,None,0),))
 
 NonPositiveReals = RangeSet(
     name='NonPositiveReals',
     doc='A global Pyomo Set admitting any real value in (-inf, 0]',
-    ranges=(_ClosedNumericRange(None,0,0),))
+    ranges=(_NumericRange(None,0,0),))
 
 Integers = RangeSet(
     name='Integers',
     doc='A global Pyomo Set admitting any integer value',
-    ranges=(_ClosedNumericRange(0,None,1), _ClosedNumericRange(0,None,-1)))
+    ranges=(_NumericRange(0,None,1), _NumericRange(0,None,-1)))
 
 NonNegativeIntegers = RangeSet(
     name='NonNegativeIntegers',
     doc='A global Pyomo Set admitting any integer value in [0, +inf)',
-    ranges=(_ClosedNumericRange(0,None,1),))
+    ranges=(_NumericRange(0,None,1),))
 
 NonPositiveIntegers = RangeSet(
     name='NonPositiveIntegers',
     doc='A global Pyomo Set admitting any integer value in (-inf, 0]',
-    ranges=(_ClosedNumericRange(0,None,-1),))
+    ranges=(_NumericRange(0,None,-1),))
 
 NegativeIntegers = RangeSet(
     name='NegativeIntegers',
     doc='A global Pyomo Set admitting any integer value in (-inf, -1]',
-    ranges=(_ClosedNumericRange(-1,None,-1),))
+    ranges=(_NumericRange(-1,None,-1),))
 
 PositiveIntegers = RangeSet(
     name='PositiveIntegers',
     doc='A global Pyomo Set admitting any integer value in [1, +inf)',
-    ranges=(_ClosedNumericRange(1,None,1),))
+    ranges=(_NumericRange(1,None,1),))
