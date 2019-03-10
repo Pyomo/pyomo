@@ -65,6 +65,11 @@ class TestClosedNumericRange(unittest.TestCase):
                 '.*start, end ordering incompatible with step direction'):
             CNR(1, 0, 1)
 
+        with self.assertRaisesRegexp(
+                ValueError,
+                '\[0:1\] is discrete, but passed closed=\(False, True\)'):
+            CNR(0, 1, 1, "(]")
+
         a = CNR(0, None, 1)
         self.assertEqual(a.start, 0)
         self.assertEqual(a.end, None)
@@ -226,6 +231,11 @@ class TestClosedNumericRange(unittest.TestCase):
         _isdisjoint(True, CNR(0.1, 0.9, 0), CNR(-1, 0.5, 1))
         _isdisjoint(True, CNR(0.1, 0.9, 0), CNR(-1, 1, 1))
         _isdisjoint(True, CNR(0.1, 0.9, 0), CNR(-1, 2, 1))
+
+        _isdisjoint(False, CNR(-.1, 1.1, 0), CNR(-1, 2, 1))
+        _isdisjoint(False, CNR(-.1, 1.1, 0), CNR(-2, 0, 2))
+        _isdisjoint(True, CNR(-.1, 1.1, 0), CNR(-1, -1, 1))
+        _isdisjoint(True, CNR(-.1, 1.1, 0), CNR(-2, -1, 1))
 
         # (additional edge cases)
         _isdisjoint(False, CNR(0, 1, 0, closed=(True,True)), CNR(-1, 2, 1))
@@ -445,7 +455,7 @@ class TestClosedNumericRange(unittest.TestCase):
 
         # Test continuous ranges
 
-        # Subtracting a closed range from a closed range SHOULD
+        # Subtracting a closed range from a closed range should
         # result in an open range.
         self.assertEqual(
             CNR(0,None,0).range_difference([CNR(5,None,0)]),
@@ -469,6 +479,25 @@ class TestClosedNumericRange(unittest.TestCase):
             CNR(0,None,0).range_difference([CNR(5,10,0,'()')]),
             [CNR(0,5,0,'[]'), CNR(10,None,0,'[]')],
         )
+        # Subtracting a discrete range from a continuous range gives a
+        # set of open continuous ranges
+        self.assertEqual(
+            CNR(None,None,0).range_difference([CNR(5,10,5)]),
+            [CNR(None,5,0,'[)'), CNR(5,10,0,'()'), CNR(10,None,0,'(]')],
+        )
+        self.assertEqual(
+            CNR(-10,20,0).range_difference([CNR(5,10,5)]),
+            [CNR(-10,5,0,'[)'), CNR(5,10,0,'()'), CNR(10,20,0,'(]')],
+        )
+        self.assertEqual(
+            CNR(-10,20,0,"()").range_difference([CNR(5,10,5)]),
+            [CNR(-10,5,0,'()'), CNR(5,10,0,'()'), CNR(10,20,0,'()')],
+        )
+        self.assertEqual(
+            CNR(-3,3,0).range_difference([CNR(0,None,5),CNR(0,None,-5)]),
+            [CNR(-3,0,0,'[)'), CNR(0,3,0,'(]')],
+        )
+
 
     def test_range_intersection(self):
         self.assertEqual(
@@ -478,6 +507,10 @@ class TestClosedNumericRange(unittest.TestCase):
         self.assertEqual(
             CNR(0,None,1).range_intersection([CNR(0,0,0)]),
             [CNR(0,0,0)],
+        )
+        self.assertEqual(
+            CNR(0,None,1).range_intersection([CNR(0.5,1.5,0)]),
+            [CNR(1,1,0)],
         )
         self.assertEqual(
             CNR(0,None,2).range_intersection([CNR(1,None,3)]),

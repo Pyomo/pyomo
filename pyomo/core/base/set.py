@@ -11,8 +11,8 @@
 
 import itertools
 import logging
+import math
 
-from math import copysign
 try:
     from math import remainder
 except ImportError:
@@ -179,7 +179,7 @@ class _ClosedNumericRange(object):
                     "with step direction (got [%s:%s:%s])" % (start,end,step)
                 )
             if step:
-                n = int( (end - start) / step )
+                n = int( (end - start) // step )
                 new_end = start + n*step
                 assert abs(end - new_end) < abs(step)
                 end = new_end
@@ -197,14 +197,11 @@ class _ClosedNumericRange(object):
         self.end = end
         self.step = step
 
-        closed = (self._closedMap[closed[0]], self._closedMap[closed[1]])
-        if self.is_discrete():
-            if closed != (True,True):
-                logger.warning(
-                    "_ClosedNumericRange is discrete, but passed closed=%s."
-                    "  Discrete ranges must be closed.")
-            closed = (True,True)
-        self.closed = closed
+        self.closed = (self._closedMap[closed[0]], self._closedMap[closed[1]])
+        if self.is_discrete() and self.closed != (True,True):
+            raise ValueError(
+                "_ClosedNumericRange %s is discrete, but passed closed=%s."
+                "  Discrete ranges must be closed." % (self, self.closed,))
 
     def __getstate__(self):
         """
@@ -268,9 +265,9 @@ class _ClosedNumericRange(object):
                 return False
 
         if self.step:
-            _dir = copysign(1, self.step)
+            _dir = math.copysign(1, self.step)
             return (
-                (value - self.start) * copysign(1, self.step) >= 0
+                (value - self.start) * math.copysign(1, self.step) >= 0
                 and (self.end is None or
                      _dir*(self.end - self.start) >= _dir*(value - self.start))
                 and abs(remainder(value - self.start, self.step)) <= self._EPS
@@ -495,36 +492,44 @@ class _ClosedNumericRange(object):
         return a > b
 
     @staticmethod
-    def _min(a,b):
+    def _min(*args):
         """Modified implementation of min() with special None handling
 
         In _ClosedNumericRange objects, None can represent {positive,
         negative} infintiy.  In the context that this method is used,
-        None will always be negative infinity, so None is less than any
+        None will always be positive infinity, so None is greater than any
         non-None value.
 
         """
-        if a is None:
-            return b
-        elif b is None:
-            return a
-        return min(a, b)
+        a = args[0]
+        for b in args[1:]:
+            if a is None:
+                a = b
+            elif b is None:
+                pass
+            else:
+                a = min(a, b)
+        return a
 
     @staticmethod
-    def _max(a,b):
+    def _max(*args):
         """Modified implementation of max() with special None handling
 
         In _ClosedNumericRange objects, None can represent {positive,
         negative} infintiy.  In the context that this method is used,
-        None will always be positive infinity, so None is greater than
+        None will always be negative infinity, so None is less than
         any non-None value.
 
         """
-        if a is None:
-            return b
-        elif b is None:
-            return a
-        return max(a, b)
+        a = args[0]
+        for b in args[1:]:
+            if a is None:
+                a = b
+            elif b is None:
+                pass
+            else:
+                a = max(a, b)
+        return a
 
     @staticmethod
     def _split_ranges(cnr, new_step):
@@ -548,7 +553,7 @@ class _ClosedNumericRange(object):
 
         assert new_step >= abs(cnr.step)
         assert new_step % cnr.step == 0
-        _dir = copysign(1, cnr.step)
+        _dir = math.copysign(1, cnr.step)
         _subranges = []
         for i in range(abs(new_step // cnr.step)):
             if ( cnr.end is not None
@@ -581,14 +586,25 @@ class _ClosedNumericRange(object):
             lcm *= step
         return lcm
 
+    def _push_to_discrete_boundary(self, val, other, push_toward_end):
+        if self.step or val is None or not other.step:
+            # If S is discrete, then the code above guarantees
+            # it is aligned with T
+            return val
+        else:
+            # S is continuous and T is diecrete.  Move s_min to
+            # the first aligned point
+            #
+            # Note that we need to push the value INTO the range defined
+            # by other, so floor/ceil depends on the sign of other.step
+            if push_toward_end:
+                _rndFcn = math.ceil if other.step > 0 else math.floor
+            else:
+                _rndFcn = math.floor if other.step > 0 else math.ceil
+            return other.step*_rndFcn((val - other.start) / float(other.step))
+
     def range_difference(self, other_ranges):
         """Return the difference between this range and a list of other ranges.
-
-        FIXME: There is a known limitation with range_difference():
-        Subtracting a range from another continuous closed range should
-        result in an open range.  However, at this moment Open ranges
-        aren't supported and this method returns a closed range that
-        includes endpoints that mathematically should have been removed.
 
         Parameters
         ----------
@@ -612,41 +628,38 @@ class _ClosedNumericRange(object):
         # will split discrete ranges into separate ranges with this step
         # so that we can more easily compare them.
         lcm = self._lcm(other_ranges)
-        if not self.is_discrete():
-            logger.warn(
-                "_ClosedNumericRange.range_difference() does not fully "
-                "support closed continuous ranges and gives mathematically "
-                "invalid answers (the set should be open, but the endpoints "
-                "from the subtracted sets are still present in the result.")
 
-        ans = []
         # Split this range into subranges
         _this = _ClosedNumericRange._split_ranges(self, lcm)
         # Split the other range(s) into subranges
         _other = []
         for s in other_ranges:
             _other.extend(_ClosedNumericRange._split_ranges(s, lcm))
-        # For each lhs subrange, t
-        for t in _this:
-            # Compare it against each rhs range and only keep the
-            # subranges of this range that are outside the lhs range
-            _subranges = [t]
-            for s in _other:
+        # For each rhs subrange, s
+        for s in _other:
+            _new_subranges = []
+            for t in _this:
                 if t._nooverlap(s):
                     # If s and t have no overlap, then s cannot remove
                     # any elements from t
+                    _new_subranges.append(t)
                     continue
 
-                tmp = []
                 if t.is_discrete():
                     # s and t are discrete ranges.  Note if there is a
                     # discrete range in the list of ranges, then lcm > 0
                     if s.is_discrete() and (s.start-t.start) % lcm != 0:
                         # s is offset from t and cannot remove any
                         # elements
+                        _new_subranges.append(t)
                         continue
-                elif s.is_discrete():
-                    s_min, s_max, _ = s._normalize_bounds()
+
+                t_min, t_max, t_c = t._normalize_bounds()
+                s_min, s_max, s_c = s._normalize_bounds()
+
+                if s.is_discrete() and not t.is_discrete():
+                    #
+                    # This handles the special case of continuous-discrete
                     if ((s_min is None and t.start is None) or
                         (s_max is None and t.end is None)):
                         raise RangeDifferenceError(
@@ -654,45 +667,63 @@ class _ClosedNumericRange(object):
                             "discrete range %s from an infinite continuous "
                             "range %s" % (s,t))
 
-                    # Since we don't support open ranges, we cannot
-                    # subtract a discrete set from a continuous set
-                    continue
+                    # At least one of s_min amd t.start must be non-None
+                    start = _ClosedNumericRange._max(
+                        s_min, t._push_to_discrete_boundary(t.start, s, True))
+                    # At least one of s_max amd t.end must be non-None
+                    end = _ClosedNumericRange._min(
+                        s_max, t._push_to_discrete_boundary(t.end, s, False))
 
-                for ref in _subranges:
-                    r_min, r_max, r_c = ref._normalize_bounds()
-                    s_min, s_max, s_c = s._normalize_bounds()
-
-                    if _ClosedNumericRange._lt(r_min, s_min):
-                        if s_min is not None and ref.step:
+                    if _ClosedNumericRange._lt(t.start, start):
+                        _new_subranges.append(_ClosedNumericRange(
+                            t.start, start, 0, (t.closed[0], False)
+                        ))
+                    for i in range(int(start//s.step), int(end//s.step)):
+                        _new_subranges.append(_ClosedNumericRange(
+                            i*s.step, (i+1)*s.step, 0, '()'
+                        ))
+                    if _ClosedNumericRange._gt(t.end, end):
+                        _new_subranges.append(_ClosedNumericRange(
+                            end, t.end, 0, (False,t.closed[1])
+                        ))
+                else:
+                    #
+                    # This handles discrete-discrete,
+                    # continuous-continuous, and discrete-continuous
+                    #
+                    if _ClosedNumericRange._lt(t_min, s_min):
+                        # Note that s_min will never be None due to the
+                        # _lt test
+                        if t.step:
                             s_min -= lcm
-
-                        _min = _ClosedNumericRange._min(r_max, s_min)
-                        _closed = ( r_c[0],
-                                    not s_c[0] if _min is s_min else r_c[1] )
-                        _step = abs(ref.step)
-                        _rng = r_min, _min
-                        if r_min is None and ref.step:
+                            closed1 = True
+                        _min = _ClosedNumericRange._min(t_max, s_min)
+                        if not t.step:
+                            closed1 = not s_c[0] if _min is s_min else t_c[1]
+                        _closed = ( t_c[0], closed1 )
+                        _step = abs(t.step)
+                        _rng = t_min, _min
+                        if t_min is None and t.step:
                             _step = -_step
                             _rng = _rng[1], _rng[0]
                             _closed = _closed[1], _closed[0]
 
-                        tmp.append(_ClosedNumericRange(
+                        _new_subranges.append(_ClosedNumericRange(
                             _rng[0], _rng[1], _step, _closed))
 
-                    if _ClosedNumericRange._gt(r_max, s_max):
-                        if s_max is not None and ref.step:
+                    if _ClosedNumericRange._gt(t_max, s_max):
+                        # Note that s_max will never be None due to the _gt test
+                        if t.step:
                             s_max += lcm
-                        _max = _ClosedNumericRange._max(r_min, s_max)
-                        tmp.append(_ClosedNumericRange(
-                            _max,
-                            r_max,
-                            abs(ref.step),
-                            ( not s_c[1] if _max is s_max else r_c[0],
-                              r_c[1] )
+                            closed0 = True
+                        _max = _ClosedNumericRange._max(t_min, s_max)
+                        if not t.step:
+                            closed0 = not s_c[1] if _max is s_max else t_c[0]
+                        _new_subranges.append(_ClosedNumericRange(
+                            _max, t_max, abs(t.step), (closed0, t_c[1])
                         ))
-                _subranges = tmp
-            ans.extend(_subranges)
-        return ans
+                _this = _new_subranges
+        return _this
 
     def range_intersection(self, other_ranges):
         """Return the intersection between this range and a set of other ranges.
@@ -745,17 +776,25 @@ class _ClosedNumericRange(object):
                 t_min, t_max, t_c = t._normalize_bounds()
                 s_min, s_max, s_c = s._normalize_bounds()
                 step = abs(t.step if t.step else s.step)
-                intersect_start = _ClosedNumericRange._max(t_min, s_min)
+
+                intersect_start = _ClosedNumericRange._max(
+                    s._push_to_discrete_boundary(s_min, t, True),
+                    t._push_to_discrete_boundary(t_min, s, True),
+                )
+
+                intersect_end = _ClosedNumericRange._min(
+                    s._push_to_discrete_boundary(s_max, t, False),
+                    t._push_to_discrete_boundary(t_max, s, False),
+                )
                 c = [True,True]
                 if intersect_start == t_min:
                     c[0] &= t_c[0]
                 if intersect_start == s_min:
                     c[0] &= s_c[0]
-                intersect_end = _ClosedNumericRange._min(t_max, s_max)
                 if intersect_end == t_max:
-                    c[0] &= t_c[1]
+                    c[1] &= t_c[1]
                 if intersect_end == s_max:
-                    c[0] &= s_c[1]
+                    c[1] &= s_c[1]
                 if step and intersect_start is None:
                     ans.append(_ClosedNumericRange(
                         intersect_end, intersect_start, -step, (c[1], c[0])
