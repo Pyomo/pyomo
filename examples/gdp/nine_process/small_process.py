@@ -204,12 +204,9 @@ if __name__ == '__main__':
         nlp_solver='gams',
         nlp_solver_args=dict(add_options=['option optcr=0.01;']),
         calc_disjunctive_bounds=True,
-        obbt_disjunctive_bounds=True,
+        obbt_disjunctive_bounds=False,
         iterlim=50,
     )
-    # result = SolverFactory('gdpbb').solve(
-    #     m, tee=True, solver='baron'
-    # )
     print(result)
     m.x.display()
 
@@ -220,8 +217,8 @@ if __name__ == '__main__':
         nlp_solver='gams',
         nlp_solver_args=dict(add_options=['option optcr=0.01;']),
         calc_disjunctive_bounds=True,
-        obbt_disjunctive_bounds=True,
-        iterlim=50,
+        obbt_disjunctive_bounds=False,
+        iterlim=75,
     )
     print(result)
     m.x.display()
