@@ -8,8 +8,11 @@ from pyomo.environ import \
 from pyomo.gdp import (Disjunct)
 import pyutilib.th as unittest
 
+mip_solver = 'cbc'
+solver_available = SolverFactory(mip_solver).available()
 
-@unittest.skipUnless(SolverFactory('cbc').available(), "CBC solver is not available.")
+
+@unittest.skipUnless(solver_available, "%s solver is not available." % mip_solver)
 class TestSimpleModels(unittest.TestCase):
     def test_CNF_constraints(self):
         m = ConcreteModel()
@@ -36,7 +39,7 @@ class TestSimpleModels(unittest.TestCase):
                   + 1 * m.y[5] + 100 * (m.y[4] + m.y[6])))
 
         m_trafo = TransformationFactory('gdp.chull').create_using(m)
-        SolverFactory('cbc').solve(m_trafo, tee=False)
+        SolverFactory(mip_solver).solve(m_trafo, tee=False)
         self.assertTrue(
             m_trafo.y[1].value == 0.0 and m_trafo.y[2].value == 0.0
             and m_trafo.y[3].value == 1.0 and m_trafo.y[4].value == 0.0
@@ -66,6 +69,6 @@ class TestSimpleModels(unittest.TestCase):
         CNF_to_linear_constraints(m, n1)
 
         m_trafo = TransformationFactory('gdp.bigm').create_using(m, bigM=10)
-        SolverFactory('cbc').solve(m_trafo)
+        SolverFactory(mip_solver).solve(m_trafo)
         self.assertTrue(abs(m_trafo.y[1].value - 0 < 1e-8))
         self.assertTrue(abs(m_trafo.y[2].value - 1 < 1e-8))
