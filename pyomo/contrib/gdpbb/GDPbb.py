@@ -7,14 +7,13 @@ from pyomo.common.config import (ConfigBlock, ConfigValue)
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdpopt.util import create_utility_block, time_code, a_logger, restore_logger_level, \
     setup_results_object
+from pyomo.contrib.satsolver.satsolver import satisfiable
 from pyomo.core.base import (
     Objective, TransformationFactory,
     minimize, value)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory, SolverStatus, SolverResults
 from pyomo.opt import TerminationCondition as tc
-from pyomo.util.model_size import build_model_size_report
-from pyomo.contrib.satsolver.satsolver import SMTSatSolver
 
 __version__ = (19, 2, 19)  # Date-based versioning
 
@@ -53,7 +52,7 @@ class GDPbbSolver(object):
     CONFIG.declare("check_sat", ConfigValue(
         default=False,
         domain=bool,
-        description="When True, solver will check satisfiability via z3 satisfiability solver at each node"
+        description="When True, GDPBB will check satisfiability via the pyomo.contrib.satsolver interface at each node"
     ))
     CONFIG.declare("logger", ConfigValue(
         default='pyomo.contrib.gdpbb',
@@ -195,17 +194,18 @@ class GDPbbSolver(object):
                     if not disj.indicator_var.fixed:
                         disj.indicator_var = 0
 
-                    if config.check_sat:
-                        ss = SMTSatSolver(mnew,logger = config.logger)
-                    # print ss.get_SMT_string()
-                    if not(config.check_sat) or ss.check() != "unsat":
-                        obj_value, result, vars = self.subproblem_solve(mnew, solver, config)
-                        counter += 1
-                        ordering_tuple = (obj_sign * obj_value, djn_left, -counter)
-                        heapq.heappush(heap, (ordering_tuple, mnew, result, vars))
-                        added_disj_counter = added_disj_counter + 1
+                    # Check feasibility
+                    if config.check_sat and satisfiable(mnew, config.logger) is False:
+                        # problem is not satisfiable. Skip this disjunct.
+                        continue
+
+                    obj_value, result, vars = self.subproblem_solve(mnew, solver, config)
+                    counter += 1
+                    ordering_tuple = (obj_sign * obj_value, djn_left, -counter)
+                    heapq.heappush(heap, (ordering_tuple, mnew, result, vars))
+                    added_disj_counter = added_disj_counter + 1
                 config.logger.info("Added %s new nodes with %s relaxed disjunctions to the heap. Size now %s." % (
-                        added_disj_counter, djn_left, len(heap)))
+                    added_disj_counter, djn_left, len(heap)))
 
     @staticmethod
     def validate_model(model):

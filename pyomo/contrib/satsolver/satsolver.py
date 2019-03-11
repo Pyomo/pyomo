@@ -1,7 +1,6 @@
+import math
+
 from pyomo.core import value, SymbolMap, NumericLabeler, Var, Constraint
-from pyomo.core.kernel.set_types import (RealSet,
-                                         IntegerSet,
-                                         BooleanSet)
 from pyomo.core.expr.expr_pyomo5 import (EqualityExpression,
                                          InequalityExpression,
                                          ProductExpression,
@@ -14,8 +13,10 @@ from pyomo.core.expr.expr_pyomo5 import (EqualityExpression,
                                          UnaryFunctionExpression,
                                          nonpyomo_leaf_types,
                                          StreamBasedExpressionVisitor)
+from pyomo.core.kernel.set_types import (RealSet,
+                                         IntegerSet,
+                                         BooleanSet)
 from pyomo.gdp import Disjunction
-import math
 
 _z3_available = True
 try:
@@ -24,7 +25,7 @@ except ImportError:
     _z3_available = False
 
 
-def satisfiable(model):
+def satisfiable(model, logger=None):
     """Checks if the model is satisfiable.
 
     Returns:
@@ -32,7 +33,7 @@ def satisfiable(model):
         False if model is unsatisfiable,
         None  if satisfiability cannot be determined.
     """
-    result = SMTSatSolver(model).check()
+    result = SMTSatSolver(model, logger=logger).check()
     if result == z3.sat:
         return True
     elif result == z3.unsat:
@@ -75,7 +76,7 @@ class SMTSatSolver(object):
                     string = string + "    " + c + "\n"
         return string
 
-    def __init__(self, model=None,logger = None):
+    def __init__(self, model=None, logger=None):
         self.variable_label_map = SymbolMap(NumericLabeler('x'))
         self.prefix_expr_list = self._get_default_functions()
         self.variable_list = []
@@ -91,7 +92,7 @@ class SMTSatSolver(object):
     # Set up functions to be added to beginning of string
     def _get_default_functions(self):
         default = list()
-        default.append("(define-fun exp ((x Real)) Real (^ %0.15f x))" % (math.exp(1),) )
+        default.append("(define-fun exp ((x Real)) Real (^ %0.15f x))" % (math.exp(1),))
         return default
 
     # processes pyomo model into SMT model
