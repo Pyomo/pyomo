@@ -24,7 +24,7 @@ from pyomo.opt.base import SolverFactory
 from pyomo.opt.results import SolverResults
 from pyutilib.misc import Container
 
-__version__ = (19, 3, 6)  # Move to date-based versioning.
+__version__ = (19, 3, 11)  # Note: date-based version number
 
 
 @SolverFactory.register(
@@ -347,6 +347,8 @@ If you use this software, you may cite the following:
         solve_data.results.solver.timing = solve_data.timing
         solve_data.results.solver.user_time = solve_data.timing.total
         solve_data.results.solver.wallclock_time = solve_data.timing.total
+
+        solve_data.results.solver.iterations = solve_data.master_iteration
 
         return solve_data.results
 
