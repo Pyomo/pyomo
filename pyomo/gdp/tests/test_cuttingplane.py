@@ -44,7 +44,7 @@ def check_validity(self, body, lower, upper):
 
 class OneVarDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cut_validity(self):
+    def test_no_cuts_for_optimal_m(self):
         m = models.oneVarDisj_2pts()
 
         TransformationFactory('gdp.cuttingplane').apply_to(m)
@@ -53,25 +53,9 @@ class OneVarDisj(unittest.TestCase):
         # I really expect 1 or 0. If we are getting more here then we have
         # pretty much got to be adding unncessary cuts...
 
-        # [ESJ 6 March 2019] TODO: If I increase M, can I get a cut? I think it
-        # makes more sense to do a version like that... And then a version where
-        # probably bigm is tight? Need to think about that.
-        self.assertLessEqual(len(cuts), 1)
-
-        # we check that all the cuts are valid:
-        for cut in cuts.values():
-            cut_expr = cut.body
-            lower = cut.lower
-            upper = cut.upper
-            m.x.fix(1)
-            m.disj1.indicator_var.fix(1)
-            m.disj2.indicator_var.fix(0)
-            check_validity(self, cut_expr, lower, upper)
-
-            m.x.fix(0)
-            m.disj1.indicator_var.fix(0)
-            m.disj2.indicator_var.fix(1)
-            check_validity(self, cut_expr, lower, upper)
+        # Big-m is actually tight for the optimal M value, so I should have no
+        # cuts. If I have any then we are wasting our time.
+        self.assertEqual(len(cuts), 0)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_expected_two_segment_cut(self):
@@ -85,13 +69,17 @@ class OneVarDisj(unittest.TestCase):
         # get it by testing that it is tight at two points)
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
 
-        # I should get at least one cut because I made bigM really bad
-        self.assertGreaterEqual(len(cuts), 1)
+        # I should get one cut because I made bigM really bad, but I only need
+        # one facet of the convex hull for this problem to be done.
+        self.assertEqual(len(cuts), 1)
 
         cut_expr = cuts[0].body
         # should be 2Y_2 <= x
         m.x.fix(0)
         m.disj2.indicator_var.fix(0)
+        # The almost equal here is OK because we are going to check that it is
+        # actually valid in the next test. I just wanted to make sure it is the
+        # line I am expecting, so I want to know that it is tight here.
         self.assertAlmostEqual(value(cut_expr), 0)
 
         m.x.fix(2)
@@ -107,7 +95,7 @@ class OneVarDisj(unittest.TestCase):
 
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
 
-        # check that all the cuts are valid
+        # check that all the cuts are valid everywhere
         for cut in cuts.values():
             cut_expr = cut.body
             cut_lower = cut.lower
