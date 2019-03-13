@@ -7,22 +7,23 @@ services:
 - docker
 env:
   global:
-  - DOCKERHUB_USERNAME=qkjqvazeqfjqftchxlgw
+  - DOCKERHUB_REPOSITORY=pyomo/linux-test-images
   matrix:
-  - IMAGE_NAME=test-builds:python_3.7    CATEGORY="nightly"
-  - IMAGE_NAME=test-builds:python_3.6    CATEGORY="nightly"
-  - IMAGE_NAME=test-builds:python_3.6    CATEGORY="nightly" SLIM=1
-  - IMAGE_NAME=test-builds:python_3.5    CATEGORY="nightly"
-  - IMAGE_NAME=test-builds:python_2.7    CATEGORY="nightly" KEY_JOB=1
-  - IMAGE_NAME=test-builds:pypy_3        CATEGORY="nightly" DISABLE_COVERAGE=1
-  - IMAGE_NAME=test-builds:pypy_2        CATEGORY="nightly" DISABLE_COVERAGE=1
-  - IMAGE_NAME=test-builds:anaconda_3    CATEGORY="nightly" DISABLE_COVERAGE=1
-  - IMAGE_NAME=test-builds:anaconda_2    CATEGORY="nightly" DISABLE_COVERAGE=1
-  - IMAGE_NAME=test-builds:python_3.6    CATEGORY="parallel"
-  - IMAGE_NAME=test-builds:python_2.7    CATEGORY="parallel"
+  - TAG=python_3.7    CATEGORY="nightly"
+  - TAG=python_3.6    CATEGORY="nightly"
+  - TAG=python_3.6    CATEGORY="nightly" SLIM=1
+  - TAG=python_3.5    CATEGORY="nightly"
+  - TAG=python_2.7    CATEGORY="nightly" KEY_JOB=1
+  - TAG=pypy_3        CATEGORY="nightly" DISABLE_COVERAGE=1
+  - TAG=pypy_2        CATEGORY="nightly" DISABLE_COVERAGE=1
+  - TAG=anaconda_3    CATEGORY="nightly"
+  - TAG=anaconda_2    CATEGORY="nightly"
+  - TAG=python_3.6    CATEGORY="parallel"
+  - TAG=python_2.7    CATEGORY="parallel"
 
 before_install:
-  - docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}
+  - IMAGE=${DOCKERHUB_REPOSITORY}:${TAG}
+  - docker pull ${IMAGE}
  # (1) We are mounting the current directory onto the
  #     docker container and giving it a mount location with
  #     an identical name, which avoids issues with file
@@ -31,7 +32,7 @@ before_install:
  #     runs a semi-infinite sleep call. This allows us to
  #     run separate docker exec commands that keep the state
  #     of the container between calls.
-  - export DOC_ID=`docker run -d -v $(pwd):$(pwd) -w $(pwd) ${DOCKERHUB_USERNAME}/${IMAGE_NAME} sleep 10000000000`
+  - export DOC_ID=`docker run -d -v $(pwd):$(pwd) -w $(pwd) ${IMAGE} sleep 10000000000`
  # used by codecov when uploading the coverage report
   - export CI_ENV=`bash <(curl -s https://codecov.io/env)`
  # enable tracking of coverage for subprocesses launched
@@ -41,19 +42,26 @@ before_install:
   - echo "data_file=${TRAVIS_BUILD_DIR}/.coverage" >> ${COVERAGE_PROCESS_START}
  # commands prefixed by ${DOC} will execute inside the
  # running docker container
-  - export DOC="docker exec ${CI_ENV} -e IMAGE_NAME -e COVERAGE_PROCESS_START ${DOC_ID}"
+  - export DOC="docker exec ${CI_ENV} -e TAG -e COVERAGE_PROCESS_START ${DOC_ID}"
 
 install:
+    # NOTE: pip, setuptools, wheel, coverage, and codecov are all built
+    #   into the docker container.  We will upgrade the critical package
+    #   management packages here to reduce the volume of PIP warnings
   - ${DOC} pip install -U pip setuptools wheel
   - |
     if [ -n "$SLIM" ]
     then
-        ${DOC} pip uninstall -y numpy scipy matplotlib numba \
-                                mpi4py ipython openpyxl \
-                                sympy pymysql pyodbc pyro4 pyyaml \
-                                networkx xlrd pandas matplotlib dill
+        ${DOC} bash -c 'echo ${DOCKER_PYTHON_CORE}; \
+            for PKG in `pip list --format freeze | cut -d= -f1`; do \
+                _core=`echo " ${DOCKER_PYTHON_CORE} "|grep " ${PKG} "|wc -l`; \
+                if test ${_core} -eq 0; then \
+                    pip uninstall -y ${PKG}; \
+                else \
+                    echo "Preserving ${PKG}; part of DOCKER_PYTHON_CORE"; \
+                fi; \
+            done'
     fi
-  - ${DOC} pip install nose coverage codecov
  # Clone but don't install pyomo-model-libraries
   - ${DOC} git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
  # Install PyUtilib (master branch)
@@ -71,28 +79,15 @@ install:
 script:
   - ${DOC} python --version
   - ${DOC} pip --version
-  - ${DOC} bash -c 'echo CPLEX_VERSION="$CPLEX_VERSION"'
-  - ${DOC} bash -c 'echo CPLEX_AMPL_VERSION="$CPLEX_AMPL_VERSION"'
-  - ${DOC} bash -c 'echo GUROBI_AMPL_VERSION="$GUROBI_AMPL_VERSION"'
-  - ${DOC} bash -c 'echo BARON_VERSION="$BARON_VERSION"'
-  - ${DOC} bash -c 'echo GLPK_VERSION="$GLPK_VERSION"'
-  - ${DOC} bash -c 'echo IPOPT_VERSION="$IPOPT_VERSION"'
-  - ${DOC} bash -c 'echo CBC_VERSION="$CBC_VERSION"'
-  - ${DOC} bash -c 'echo GAMS_VERSION="$GAMS_VERSION"'
-  - ${DOC} bash -c 'echo GSL_VERSION="$GSL_VERSION"'
-  - ${DOC} bash -c 'echo GJH_VERSION="$GJH_VERSION"'
-  - ${DOC} bash -c 'echo GJH_ASL_JSON_VERSION="$GJH_ASL_JSON_VERSION"'
   - ${DOC} pip list
+  - ${DOC} env | sort
   - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
- 
  # Run documentation tests
   - |
     if [ -z "$SLIM" ]; then
-      # As of July 2018, Sphinx wasn't completely Python 3.7 compatible
-      if [[ "$IMAGE_NAME" != "test-builds:python_3.7" ]]; then
-         ${DOC} make -C doc/OnlineDocs doctest -d
-      fi
+      ${DOC} make -C doc/OnlineDocs doctest -d
     fi
+
 after_script:
  # Kill the docker container
   - docker kill ${DOC_ID}
@@ -101,7 +96,7 @@ after_success:
  # Combine coverage reports over all subprocesses and upload
   - ${DOC} find . -maxdepth 10 -name ".cov*"
   - ${DOC} coverage combine
-  - ${DOC} codecov --env IMAGE_NAME -X gcov
+  - ${DOC} codecov --env TAG -X gcov
  # Trigger PyomoGallery build
   - "if [ -n \"${KEY_JOB}\" ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token 4DadIB521uUPyBXMtvQVOw' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
 
