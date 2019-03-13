@@ -94,7 +94,7 @@ class FileDownloader(object):
             'target',
             nargs="?",
             default=None,
-            help="Target distination directory or filename"
+            help="Target destination directory or filename"
         )
         parser.parse_args(argv, self)
         if self.cacert is not None:
