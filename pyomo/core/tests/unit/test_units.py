@@ -83,15 +83,15 @@ class TestPyomoUnit(unittest.TestCase):
 
         # should not assert
         # check __mul__
-        self.assertTrue(str(uc.get_units(kg*3)), 'kg')
+        self.assertEqual(str(uc.get_units(kg*3)), 'kg')
         # check __rmul__
-        self.assertTrue(str(uc.get_units(3*kg)), 'kg')
+        self.assertEqual(str(uc.get_units(3*kg)), 'kg')
         # check div / truediv
-        self.assertTrue(str(uc.get_units(kg/3.0)), 'kg')
+        self.assertEqual(str(uc.get_units(kg/3.0)), 'kg')
         # check rdiv / rtruediv
-        self.assertTrue(str(uc.get_units(3.0/kg)), '1 / kg)')
+        self.assertEqual(str(uc.get_units(3.0/kg)), '1 / kg')
         # check pow
-        self.assertTrue(str(uc.get_units(kg**2)), 'kg**2')
+        self.assertEqual(str(uc.get_units(kg**2)), 'kg ** 2')
 
         # check rpow
         x = 2 ** kg  # creation is allowed, only fails when units are "checked"
@@ -101,23 +101,23 @@ class TestPyomoUnit(unittest.TestCase):
 
         x = kg
         x += kg
-        self.assertTrue(str(uc.get_units(x)), 'kg')
+        self.assertEqual(str(uc.get_units(x)), 'kg')
 
         x = kg
         x -= 2.0*kg
-        self.assertTrue(str(uc.get_units(x)), 'kg')
+        self.assertEqual(str(uc.get_units(x)), 'kg')
 
         x = kg
         x *= 3
-        self.assertTrue(str(uc.get_units(x)), 'kg')
+        self.assertEqual(str(uc.get_units(x)), 'kg')
 
         x = kg
         x **= 3
-        self.assertTrue(str(uc.get_units(x)), 'kg**3')
+        self.assertEqual(str(uc.get_units(x)), 'kg ** 3')
 
-        self.assertTrue(str(uc.get_units(-kg)), 'kg')
-        self.assertTrue(str(uc.get_units(+kg)), 'kg')
-        self.assertTrue(str(uc.get_units(abs(kg))), 'kg')
+        self.assertEqual(str(uc.get_units(-kg)), 'kg')
+        self.assertEqual(str(uc.get_units(+kg)), 'kg')
+        self.assertEqual(str(uc.get_units(abs(kg))), 'kg')
 
         self.assertEqual(str(kg), 'kg')
         self.assertEqual(kg.to_string(), 'kg')
@@ -422,11 +422,11 @@ class TestPyomoUnit(unittest.TestCase):
         self._get_check_units_ok(2.0*K + 3.0*K, uc, 'K', expr.NPV_SumExpression)
 
         ex = 2.0*delta_degC + 3.0*delta_degC + 1.0*delta_degC
-        self.assertTrue(type(ex), expr.NPV_SumExpression)
+        self.assertEqual(type(ex), expr.NPV_SumExpression)
         self.assertTrue(uc.check_units_consistency(ex))
 
         ex = 2.0*delta_degF + 3.0*delta_degF
-        self.assertTrue(type(ex), expr.NPV_SumExpression)
+        self.assertEqual(type(ex), expr.NPV_SumExpression)
         self.assertTrue(uc.check_units_consistency(ex))
 
         self._get_check_units_fail(2.0*K + 3.0*R, uc, expr.NPV_SumExpression)
