@@ -441,6 +441,4 @@ class TestPyomoUnit(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # t = TestPyomoUnit()
-    # t.test_temperatures()
     unittest.main()
