@@ -30,11 +30,11 @@ def mcpp_available():
     return os.path.isfile(path + '/mcppInterface.so')
 
 
-NPV_expressions = set(
-    (NPV_AbsExpression, NPV_ExternalFunctionExpression,
-     NPV_NegationExpression, NPV_PowExpression,
-     NPV_ProductExpression, NPV_ReciprocalExpression, NPV_SumExpression,
-     NPV_UnaryFunctionExpression))
+NPV_expressions = {
+    NPV_AbsExpression, NPV_ExternalFunctionExpression,
+    NPV_NegationExpression, NPV_PowExpression,
+    NPV_ProductExpression, NPV_ReciprocalExpression, NPV_SumExpression,
+    NPV_UnaryFunctionExpression}
 
 
 class MCPP_visitor(StreamBasedExpressionVisitor):
@@ -45,7 +45,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
 
     """
 
-    def __init__(self, mcpp_lib, expression):
+    def __init__(self, mcpp_lib, expression, improved_var_bounds=ComponentMap()):
         super(MCPP_visitor, self).__init__()
         self.expr = expression
         self.mcpp = mcpp_lib
@@ -59,7 +59,10 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         # Pre-register all variables
         for i, var in enumerate(vars):
             self.var_to_idx[var] = i
-            self.known_vars[var] = self.register_var(var)
+            # check if improved variable bound is provided
+            inf = float('inf')
+            lb, ub = improved_var_bounds.get(var, (-inf, inf))
+            self.known_vars[var] = self.register_var(var, lb, ub)
 
     def declare_mcpp_library_calls(self):
         # Create MC type variable
@@ -179,23 +182,23 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             #             self.mcpp.new_createConstant(coef),
             #             self.register_num(var)))
         elif isinstance(node, UnaryFunctionExpression):
-            if (node.name == "exp"):
+            if node.name == "exp":
                 ans = self.mcpp.new_exponential(data[0])
-            elif (node.name == "log"):
+            elif node.name == "log":
                 ans = self.mcpp.new_logarithm(data[0])
-            elif (node.name == "sin"):
+            elif node.name == "sin":
                 ans = self.mcpp.new_trigSin(data[0])
-            elif (node.name == "cos"):
+            elif node.name == "cos":
                 ans = self.mcpp.new_trigCos(data[0])
-            elif (node.name == "tan"):
+            elif node.name == "tan":
                 ans = self.mcpp.new_trigTan(data[0])
-            elif (node.name == "asin"):
+            elif node.name == "asin":
                 ans = self.mcpp.new_atrigSin(data[0])
-            elif (node.name == "acos"):
+            elif node.name == "acos":
                 ans = self.mcpp.new_atrigCos(data[0])
-            elif (node.name == "atan"):
+            elif node.name == "atan":
                 ans = self.mcpp.new_atrigTan(data[0])
-            elif (node.name == "sqrt"):
+            elif node.name == "sqrt":
                 ans = self.mcpp.new_sqrt(data[0])
             else:
                 raise NotImplementedError("Unknown unary function: %s" % (node.name,))
@@ -231,18 +234,19 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         else:
             return self.known_vars[num]
 
-    def register_var(self, var):
+    def register_var(self, var, lb, ub):
         """Registers a new variable."""
         var_idx = self.var_to_idx[var]
-        lb = var.lb
-        ub = var.ub
+        inf = float('inf')
+        lb = max(var.lb if var.has_lb() else -inf, lb)
+        ub = min(var.ub if var.has_ub() else inf, ub)
         var_val = value(var, exception=False)
-        if lb is None:
+        if lb == -inf:
             lb = -500000
             logger.warning(
                 'Var %s missing lower bound. Assuming LB of %s'
                 % (var.name, lb))
-        if ub is None:
+        if ub == inf:
             ub = 500000
             logger.warning(
                 'Var %s missing upper bound. Assuming UB of %s'
@@ -297,10 +301,10 @@ class McCormick(object):
     pyomo side and the current point on the MC++ side.
                                                                     """
 
-    def __init__(self, expression):
+    def __init__(self, expression, improved_var_bounds=ComponentMap()):
         self.mcpp_lib = ctypes.CDLL(path + '/mcppInterface.so')
         self.oExpr = expression
-        self.visitor = MCPP_visitor(self.mcpp_lib, expression)
+        self.visitor = MCPP_visitor(self.mcpp_lib, expression, improved_var_bounds)
         self.mcppExpression = self.visitor.walk_expression(expression)
         self.expr = self.mcppExpression
 
