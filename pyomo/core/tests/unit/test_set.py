@@ -426,6 +426,8 @@ class TestClosedNumericRange(unittest.TestCase):
             NR(0,None,2).range_difference([NR(10,None,3)]),
             [NR(0,None,6), NR(2,None,6), NR(4,4,0)],
         )
+        with self.assertRaisesRegexp(ValueError, "Unknown range type, list"):
+            NR(0,None,0).range_difference([[0]])
 
         # test relatively prime ranges that don't expand to all offsets
         self.assertEqual(
@@ -516,6 +518,8 @@ class TestClosedNumericRange(unittest.TestCase):
             NR(0,None,2).range_intersection([NR(1,None,3)]),
             [NR(4,None,6)],
         )
+        with self.assertRaisesRegexp(ValueError, "Unknown range type, list"):
+            NR(0,None,0).range_intersection([[0]])
 
         # Test non-overlapping ranges
         self.assertEqual(

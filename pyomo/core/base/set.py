@@ -402,8 +402,8 @@ class _NumericRange(object):
                 return True
             elif type(other) is _NonNumericRange:
                 return False
-            else:
-                raise ValueError("Unknown range type, %s" % (type(other),))
+            # Other non _NumericRange objects wil generate
+            # AttributeError exceptions below
 
         # First, do a simple sanity check on the endpoints
         s1, e1, c1 = self._normalize_bounds()
@@ -621,7 +621,11 @@ class _NumericRange(object):
             elif type(r) is _NonNumericRange:
                 continue
             else:
-                raise ValueError("Unknown range type, %s" % (type(r),))
+                # Note: important to check and raise an exception here;
+                # otherwise, unrecognized range types would be silently
+                # ignored.
+                raise ValueError("Unknown range type, %s" % (type(r).__name__,))
+
         other_ranges = _cnr_other_ranges
 
         # Find the Least Common Multiple of all the range steps.  We
@@ -743,7 +747,10 @@ class _NumericRange(object):
             elif type(r) is _NonNumericRange:
                 continue
             else:
-                raise ValueError("Unknown range type, %s" % (type(r),))
+                # Note: important to check and raise an exception here;
+                # otherwise, unrecognized range types would be silently
+                # ignored.
+                raise ValueError("Unknown range type, %s" % (type(r).__name__,))
         other_ranges = _cnr_other_ranges
 
         # Find the Least Common Multiple of all the range steps.  We
