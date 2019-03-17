@@ -118,6 +118,9 @@ class RangeDifferenceError(ValueError): pass
 
 class _UnknownSetDimen(object): pass
 
+#
+# DESIGN NOTES
+#
 # What do sets do?
 #
 # ALL:
@@ -137,7 +140,23 @@ class _UnknownSetDimen(object): pass
 #   ord()
 #
 # When we do math, the least specific set dictates the API of the resulting set.
+#
+# Note that is_finite and is_ordered must be resolvable when the class
+# is instantiated (*before* construction).  We will key off these fields
+# when performing set operations to know what type of operation to
+# create, and we will allow set operations in Abstract before
+# construction.
+#   - TODO: verify that RangeSet checks its params match is_*
 
+
+#
+# Set rewrite TODOs:
+#
+#   - Right now, many things implicitly only support concrete models.
+#     We need to go back and make sure that things all support Abstract
+#     models, and in particular that all Simple (scalar) API methods
+#     correctly check the _constructed flag.
+#
 
 class _NumericRange(object):
     """A representation of a closed numeric range.
@@ -818,8 +837,8 @@ class _NonNumericRange(object):
 
     The class name is a bit of a misnomer, as this object does not
     represent a range but rather a single value.  However, as it
-    duplicates the Range API (as used by
-    :py:class:`_NumericRange`), it is called a "Range".
+    duplicates the Range API (as used by :py:class:`_NumericRange`), it
+    is called a "Range".
 
     """
 
@@ -1761,7 +1780,7 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
         self._ref = reference
 
     def __contains__(self, value):
-        # Note that the efficience of this depends on the reference object
+        # Note that the efficiency of this depends on the reference object
         return value in self._ref
 
     def __len__(self):
