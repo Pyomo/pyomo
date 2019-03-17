@@ -27,7 +27,7 @@ except ImportError:
     numpy_available = False
 
 
-class TestClosedNumericRange(unittest.TestCase):
+class TestNumericRange(unittest.TestCase):
     def test_init(self):
         a = NR(None, None, 0)
         self.assertIsNone(a.start)
@@ -569,12 +569,14 @@ class TestAnyRange(unittest.TestCase):
         a = _AnyRange()
         b = _AnyRange()
         self.assertTrue(a.issubset(b))
+        self.assertEqual(a, a)
         self.assertEqual(a, b)
 
         c = NR(None, None, 0)
         self.assertFalse(a.issubset(c))
         self.assertTrue(c.issubset(b))
         self.assertNotEqual(a, c)
+        self.assertNotEqual(c, a)
 
     def test_contains(self):
         a = _AnyRange()
@@ -605,6 +607,88 @@ class TestAnyRange(unittest.TestCase):
             NR(0,None,-1).range_intersection([_AnyRange()]),
             [NR(0,None,-1)]
         )
+
+    def test_info_methods(self):
+        a = _AnyRange()
+        self.assertFalse(a.is_discrete())
+        self.assertFalse(a.is_finite())
+
+    def test_pickle(self):
+        a = _AnyRange()
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a,b)
+        self.assertEqual(a,b)
+
+
+class TestNonNumericRange(unittest.TestCase):
+    def test_str(self):
+        a = NNR('a')
+        aa = NNR('a')
+        b = NNR(None)
+        self.assertEqual(str(a), '{a}')
+        self.assertEqual(str(aa), '{a}')
+        self.assertEqual(str(b), '{None}')
+
+    def test_range_relational(self):
+        a = NNR('a')
+        aa = NNR('a')
+        b = NNR(None)
+        self.assertTrue(a.issubset(aa))
+        self.assertFalse(a.issubset(b))
+        self.assertEqual(a, a)
+        self.assertEqual(a, aa)
+        self.assertNotEqual(a, b)
+
+        c = NR(None, None, 0)
+        self.assertFalse(a.issubset(c))
+        self.assertFalse(c.issubset(b))
+        self.assertNotEqual(a, c)
+        self.assertNotEqual(c, a)
+
+    def test_contains(self):
+        a = NNR('a')
+        b = NNR(None)
+        self.assertIn('a', a)
+        self.assertNotIn(0, a)
+        self.assertNotIn(None, a)
+        self.assertNotIn('a', b)
+        self.assertNotIn(0, b)
+        self.assertIn(None, b)
+
+    def test_range_difference(self):
+        a = NNR('a')
+        b = NNR(None)
+        self.assertEqual(
+            a.range_difference([NNR('a')]),
+            []
+        )
+        self.assertEqual(
+            a.range_difference([b]),
+            [NNR('a')]
+        )
+
+    def test_range_intersection(self):
+        a = NNR('a')
+        b = NNR(None)
+        self.assertEqual(
+            a.range_intersection([b]),
+            []
+        )
+        self.assertEqual(
+            a.range_intersection([NNR('a')]),
+            [NNR('a')]
+        )
+
+    def test_info_methods(self):
+        a = NNR('a')
+        self.assertTrue(a.is_discrete())
+        self.assertTrue(a.is_finite())
+
+    def test_pickle(self):
+        a = NNR('a')
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a,b)
+        self.assertEqual(a,b)
 
 
 class InfiniteSetTester(unittest.TestCase):
