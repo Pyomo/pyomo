@@ -842,6 +842,8 @@ class _NonNumericRange(object):
 
     """
 
+    __slots__ = ('value',)
+
     def __init__(self, val):
         self.value = val
 
@@ -858,6 +860,29 @@ class _NonNumericRange(object):
 
     def __contains__(self, value):
         return value == self.value
+
+    def __getstate__(self):
+        """
+        Retrieve the state of this object as a dictionary.
+
+        This method must be defined because this class uses slots.
+        """
+        state = {} #super(_NonNumericRange, self).__getstate__()
+        for i in _NonNumericRange.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    def __setstate__(self, state):
+        """
+        Set the state of this object using values from a state dictionary.
+
+        This method must be defined because this class uses slots.
+        """
+        for key, val in iteritems(state):
+            # Note: per the Python data model docs, we explicitly
+            # set the attribute using object.__setattr__() instead
+            # of setting self.__dict__[key] = val.
+            object.__setattr__(self, key, val)
 
     def is_discrete(self):
         return True
@@ -886,6 +911,8 @@ class _NonNumericRange(object):
 
 class _AnyRange(object):
     """A range object for representing Any sets"""
+
+    __slots__ = ()
 
     def __init__(self):
         pass
@@ -1906,6 +1933,7 @@ class _FiniteRangeSetData( _SortedSetMixin,
                            _OrderedSetMixin,
                            _FiniteSetMixin,
                            _InfiniteRangeSetData ):
+    __slots__ = ()
 
     @staticmethod
     def _range_gen(r):
