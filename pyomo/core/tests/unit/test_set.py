@@ -16,7 +16,8 @@ import pyutilib.th as unittest
 from pyomo.core.base.set import (
     _NumericRange as NR, _NonNumericRange as NNR, _AnyRange, _AnySet,
     Any, Reals, NonNegativeReals, Integers, PositiveIntegers,
-    RangeSet, Set, SetOf
+    RangeSet, Set, SetOf,
+    _SetUnion_OrderedSet,
 )
 from pyomo.environ import ConcreteModel
 
@@ -1402,3 +1403,52 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         i = RangeSet(ranges=(NR(0,0,0),NR(3,3,0),NR(2,2,0)))
         self.assertEqual(tuple(i), (0,2,3))
 
+
+class TestSetOperators(unittest.TestCase):
+    def test_ordered_union(self):
+        a = SetOf([1,3,2])
+        b = SetOf([5,3,4])
+        # Note the placement of the second "3" in the middle of the set.
+        # This helps catch edge cases where we need to ensure it doesn't
+        # count as part of the set membership
+        self.assertTrue(a.is_ordered())
+        self.assertTrue(b.is_finite())
+        self.assertTrue(a.is_ordered())
+        self.assertTrue(b.is_finite())
+
+        x = a | b
+        self.assertIs(type(x), _SetUnion_OrderedSet)
+        self.assertTrue(x.is_finite())
+        self.assertTrue(x.is_ordered())
+        self.assertEqual(len(x), 5)
+        self.assertEqual(list(x), [1,3,2,5,4])
+        self.assertEqual(x.ordered(), (1,3,2,5,4))
+        self.assertEqual(x.sorted(), (1,2,3,4,5))
+
+        self.assertIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertIn(4, x)
+        self.assertIn(5, x)
+        self.assertNotIn(6, x)
+
+        self.assertEqual(x.ord(1), 1)
+        self.assertEqual(x.ord(2), 3)
+        self.assertEqual(x.ord(3), 2)
+        self.assertEqual(x.ord(4), 5)
+        self.assertEqual(x.ord(5), 4)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot identify position of 6 in Set %s"):
+            x.ord(6)
+
+        self.assertEqual(x[1], 1)
+        self.assertEqual(x[2], 3)
+        self.assertEqual(x[3], 2)
+        self.assertEqual(x[4], 5)
+        self.assertEqual(x[5], 4)
+
+        self.assertEqual(x[-1], 4)
+        self.assertEqual(x[-2], 5)
+        self.assertEqual(x[-3], 2)
+        self.assertEqual(x[-4], 3)
+        self.assertEqual(x[-5], 1)
