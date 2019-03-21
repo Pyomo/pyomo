@@ -814,10 +814,9 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, update_variable_bounds
         from FBBT.
     """
     if not con.active:
-        return None
+        return ComponentMap()
 
-    bnds_dict = ComponentMap()  # a dictionary to store the bounds of
-    #  every node in the tree
+    bnds_dict = ComponentMap()  # a dictionary to store the bounds of every node in the tree
 
     # a walker to propagate bounds from the variables to the root
     visitorA = _FBBTVisitorLeafToRoot(bnds_dict)
@@ -920,15 +919,16 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_varia
         _new_var_bounds = fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
                                    update_variable_bounds=update_variable_bounds, integer_tol=integer_tol)
         new_var_bounds.update(_new_var_bounds)
-        for v in _new_var_bounds.keys():
-            if v.lb is not None:
-                if value(v.lb) > var_lbs[v] + tol:
+        for v, bnds in _new_var_bounds.items():
+            vlb, vub = bnds
+            if vlb is not None:
+                if vlb > var_lbs[v] + tol:
                     improved_vars.add(v)
-                    var_lbs[v] = value(v.lb)
-            if v.ub is not None:
-                if value(v.ub) < var_ubs[v] - tol:
+                    var_lbs[v] = vlb
+            if vub is not None:
+                if vub < var_ubs[v] - tol:
                     improved_vars.add(v)
-                    var_ubs[v] = value(v.ub)
+                    var_ubs[v] = vub
 
     while len(improved_vars) > 0:
         v = improved_vars.pop()
@@ -936,15 +936,16 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, update_varia
             _new_var_bounds = fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
                                        update_variable_bounds=update_variable_bounds, integer_tol=integer_tol)
             new_var_bounds.update(_new_var_bounds)
-            for _v in _new_var_bounds.keys():
-                if _v.lb is not None:
-                    if value(_v.lb) > var_lbs[_v] + tol:
+            for _v, bnds in _new_var_bounds.items():
+                _vlb, _vub = bnds
+                if _vlb is not None:
+                    if _vlb > var_lbs[_v] + tol:
                         improved_vars.add(_v)
-                        var_lbs[_v] = value(_v.lb)
-                if _v.ub is not None:
-                    if value(_v.ub) < var_ubs[_v] - tol:
+                        var_lbs[_v] = _vlb
+                if _vub is not None:
+                    if _vub < var_ubs[_v] - tol:
                         improved_vars.add(_v)
-                        var_ubs[_v] = value(_v.ub)
+                        var_ubs[_v] = _vub
 
     return new_var_bounds
 
@@ -1014,3 +1015,41 @@ def compute_bounds_on_expr(expr):
     visitor.dfs_postorder_stack(expr)
 
     return bnds_dict[expr]
+
+
+class BoundsManager(object):
+    def __init__(self, comp):
+        self._vars = ComponentSet()
+        self._saved_bounds = list()
+
+        if comp.type() == Constraint:
+            if comp.is_indexed():
+                for c in comp.values():
+                    self._vars.update(identify_variables(c.body))
+            else:
+                self._vars.update(identify_variables(comp.body))
+        else:
+            for c in comp.component_data_objects(Constraint, descend_into=True, active=True, sort=True):
+                self._vars.update(identify_variables(c.body))
+
+    def save_bounds(self):
+        bnds = ComponentMap()
+        for v in self._vars:
+            bnds[v] = (v.lb, v.ub)
+        self._saved_bounds.append(bnds)
+
+    def pop_bounds(self, ndx=-1):
+        bnds = self._saved_bounds.pop(ndx)
+        for v, _bnds in bnds.items():
+            lb, ub = _bnds
+            v.setlb(lb)
+            v.setub(ub)
+
+    def load_bounds(self, bnds, save_current_bounds=True):
+        if save_current_bounds:
+            self.save_bounds()
+        for v, _bnds in bnds.items():
+            if v in self._vars:
+                lb, ub = _bnds
+                v.setlb(lb)
+                v.setub(ub)
