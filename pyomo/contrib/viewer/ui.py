@@ -48,7 +48,7 @@ except:
 
 if not qt_available:
     _log.error("Qt is not available. Cannot create UI classes.")
-    sys.exit(1)
+    raise ImportError("Could not import PyQt4 or PyQt5")
 
 def get_mainwindow_nb(model=None, show=True, main=False):
     """
