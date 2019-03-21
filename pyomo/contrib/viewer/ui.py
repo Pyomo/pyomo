@@ -46,6 +46,10 @@ except:
     class _MainWindow(object):
         pass
 
+if not qt_available:
+    _log.error("Qt is not available. Cannot create UI classes.")
+    raise ImportError("Could not import PyQt4 or PyQt5")
+
 def get_mainwindow_nb(model=None, show=True, main=False):
     """
     Create a UI MainWindow.
@@ -61,18 +65,6 @@ def get_mainwindow_nb(model=None, show=True, main=False):
     get_ipython().events.register('post_execute', ui.refresh_on_execute)
     if show: ui.show()
     return ui, model
-
-def setup_environment():
-    """
-    Setup the standard environment
-    """
-    lines = [
-        "import pyomo.environ as pe",
-        "from pyomo.environ import SolverFactory, TransformationFactory",
-        "from pyomo.contrib.viewer.ui import get_mainwindow_nb"]
-    lines = "\n".join(lines)
-    print(lines)
-    return(lines)
 
 
 class UISetup(QtCore.QObject):
