@@ -32,7 +32,7 @@ class TestModelSizeReport(unittest.TestCase):
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
         model_size = build_model_size_report(eight_process)
-        self.assertEqual(model_size.activated.variables, 38)
+        self.assertEqual(model_size.activated.variables, 44)
         self.assertEqual(model_size.overall.variables, 44)
         self.assertEqual(model_size.activated.binary_variables, 12)
         self.assertEqual(model_size.overall.binary_variables, 12)
@@ -45,13 +45,21 @@ class TestModelSizeReport(unittest.TestCase):
         self.assertEqual(model_size.activated.disjunctions, 5)
         self.assertEqual(model_size.overall.disjunctions, 5)
 
+    def test_nine_process(self):
+        """Test with the nine process problem model."""
+        exfile = import_file(join(exdir, 'nine_process', 'small_process.py'))
+        simple_model = exfile.build_model()
+        simple_model_size = build_model_size_report(simple_model)
+        self.assertEqual(simple_model_size.overall.variables, 34)
+        self.assertEqual(simple_model_size.activated.variables, 34)
+
     def test_constrained_layout(self):
         """Test with the constrained layout GDP model."""
         exfile = import_file(join(
             exdir, 'constrained_layout', 'cons_layout_model.py'))
         model = exfile.build_constrained_layout_model()
         model_size = build_model_size_report(model)
-        self.assertEqual(model_size.activated.variables, 24)
+        self.assertEqual(model_size.activated.variables, 30)
         self.assertEqual(model_size.overall.variables, 30)
         self.assertEqual(model_size.activated.binary_variables, 18)
         self.assertEqual(model_size.overall.binary_variables, 18)
@@ -63,6 +71,17 @@ class TestModelSizeReport(unittest.TestCase):
         self.assertEqual(model_size.overall.disjuncts, 18)
         self.assertEqual(model_size.activated.disjunctions, 6)
         self.assertEqual(model_size.overall.disjunctions, 6)
+
+    def test_deactivated_variables(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.c = Constraint(expr=m.x >= 1)
+        m.c2 = Constraint(expr=m.y <= 6)
+        m.c2.deactivate()
+        model_size = build_model_size_report(m)
+        self.assertEqual(model_size.activated.variables, 1)
+        self.assertEqual(model_size.overall.variables, 2)
 
     def test_nested_blocks(self):
         """Test with nested blocks."""
@@ -95,7 +114,7 @@ class TestModelSizeReport(unittest.TestCase):
         from pyomo.gdp.tests.models import makeNestedDisjunctions
         m = makeNestedDisjunctions()
         model_size = build_model_size_report(m)
-        self.assertEqual(model_size.activated.variables, 9)
+        self.assertEqual(model_size.activated.variables, 10)
         self.assertEqual(model_size.overall.variables, 10)
         self.assertEqual(model_size.activated.binary_variables, 7)
         self.assertEqual(model_size.overall.binary_variables, 7)
