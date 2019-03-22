@@ -21,11 +21,17 @@ class TestDataModelItem(unittest.TestCase):
         # Borrowed this test model from the trust region tests
         m = ConcreteModel()
         m.z = Var(range(3), domain=Reals, initialize=2.)
-        m.x = Var(range(2), initialize=2.)
+        m.x = Var(range(4), initialize=2.)
         m.x[1] = 1.0
+        m.x[2] = 0.0
+        m.x[3] = None
 
         m.b1 = Block()
         m.b1.e1 = Expression(expr=m.x[0] + m.x[1])
+        m.b1.e2 = Expression(expr=m.x[0]/m.x[2])
+        m.b1.e3 = Expression(expr=m.x[3]*m.x[1])
+        m.b1.e4 = Expression(expr=log(m.x[2]))
+        m.b1.e5 = Expression(expr=log(m.x[2] - 2))
 
         def blackbox(a,b):
             return sin(a-b)
@@ -38,6 +44,10 @@ class TestDataModelItem(unittest.TestCase):
         m.c1 = Constraint(expr=m.x[0] * m.z[0]**2 + self.bb(m.x[0],m.x[1]) == 2*sqrt(2.0))
         m.c2 = Constraint(expr=m.z[2]**4 * m.z[1]**2 + m.z[1] == 8+sqrt(2.0))
         m.c3 = Constraint(expr=m.x[1] == 3)
+        m.c4 = Constraint(expr=0 == 3/m.x[2])
+        m.c5 = Constraint(expr=0 == log(m.x[2]))
+        m.c6 = Constraint(expr=0 == log(m.x[2]-4))
+        m.c7 = Constraint(expr=0 == log(m.x[3]))
         self.m = m.clone()
 
     def test_expr_calc(self):
@@ -45,10 +55,50 @@ class TestDataModelItem(unittest.TestCase):
         cdi.calculate()
         assert(abs(cdi.get("value")-3) < 0.0001)
 
+    def test_expr_calc_div0(self):
+        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e2)
+        cdi.calculate()
+        assert(cdi.get("value") == "Divide_by_0")
+
+    def test_expr_calc_log0(self):
+        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e4)
+        cdi.calculate()
+        assert(cdi.get("value") == None)
+
+    def test_expr_calc_log_neg(self):
+        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e5)
+        cdi.calculate()
+        assert(cdi.get("value") == None)
+
+    def test_expr_calc_value_None(self):
+        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e3)
+        cdi.calculate()
+        assert(cdi.get("value") == None)
+
     def test_cons_calc(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c3)
         cdi.calculate()
         assert(abs(cdi.get("residual") - 2) < 0.0001)
+
+    def test_cons_calc_div0(self):
+        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c4)
+        cdi.calculate()
+        assert(cdi.get("value") == "Divide_by_0")
+
+    def test_cons_calc_log0(self):
+        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c5)
+        cdi.calculate()
+        assert(cdi.get("value") == None)
+
+    def test_cons_calc_log_neg(self):
+        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c6)
+        cdi.calculate()
+        assert(cdi.get("value") == None)
+
+    def test_cons_calc_value_None(self):
+        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c7)
+        cdi.calculate()
+        assert(cdi.get("value") == None)
 
     def test_var_get_value(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.x[1])
@@ -79,4 +129,4 @@ class TestDataModelItem(unittest.TestCase):
         import pyomo.contrib.viewer.report as rpt
         # this should hit everything in report.  It only exists to calculate
         # degrees of freedom for display in the ui
-        assert(rpt.degrees_of_freedom(self.m)==2)
+        assert(rpt.degrees_of_freedom(self.m)==0)
