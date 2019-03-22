@@ -60,7 +60,7 @@ class TestFileUtils(unittest.TestCase):
     def test_this_file(self):
         self.assertEquals(_this_file, __file__.replace('.pyc','.py'))
         # Note that in some versions of PyPy, this can return <module>
-        # instead if the normal <string>
+        # instead of the normal <string>
         self.assertIn(run([
             sys.executable,'-c',
             'from pyomo.common.fileutils import this_file;'
@@ -84,7 +84,7 @@ class TestFileUtils(unittest.TestCase):
             self.assertEqual(os.pathsep.join(_path()), os.environ['PATH'])
         os.environ.pop('PATH', None)
         self.assertEqual(os.pathsep.join(_path()), os.defpath)
-        # PATH restored by teadDown()
+        # NOTE: PATH restored by tearDown()
 
     def test_findfile(self):
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())

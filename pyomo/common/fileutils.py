@@ -28,7 +28,7 @@ def this_file():
     """
     # __file__ fails if script is called in different ways on Windows
     # __file__ fails if someone does os.chdir() before
-    # sys.argv[0] also fails because it doesn't not always contains the path
+    # sys.argv[0] also fails because it does not always contains the path
     callerFrame = inspect.stack()[1]
     frameName = callerFrame[1]
     if frameName and frameName[0] == '<' and frameName[-1] == '>':
@@ -400,9 +400,9 @@ class ExecutableManager(object):
     The :py:class:`ExecutableManager` caches the location / existence of
     the target executable.  If something in the environment changes
     (e.g., the PATH) or the file is created or removed after the first
-    time something querried the location or availability, the
+    time a client queried the location or availability, the
     ExecutionManager will return incorrect information.  You can cause
-    the :py:class:`ExecutionManager` to refresh it's cache by calling
+    the :py:class:`ExecutionManager` to refresh its cache by calling
     ``rehash()`` on either the :py:class:`_ExecutableData` (for the
     single file) or the :py:class:`ExecutionManager` to refresh the
     cache for all files:
@@ -428,7 +428,7 @@ class ExecutableManager(object):
         ...     pyomo.common.config.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file')
 
     Explicitly setting the executable is an absolute operation and will
-    set the location wether or not that location points to an actual
+    set the location whether or not that location points to an actual
     executable file.  Additionally, the explicit location will persist
     through calls to ``rehash()``.  If you wish to remove the explicit
     executable location, set the ``executable`` to ``None``:
