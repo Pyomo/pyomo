@@ -2791,7 +2791,7 @@ class UnaryFunctionExpression(ExpressionBase):
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
             return "{0}({1})".format(self.getname(), values[0])
-        if values[0][0] == '(':
+        if values[0] and values[0][0] == '(' and values[0][-1] == ')':
             return '{0}{1}'.format(self._name, values[0])
         else:
             return '{0}({1})'.format(self._name, values[0])

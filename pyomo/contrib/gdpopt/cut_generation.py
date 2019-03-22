@@ -3,10 +3,11 @@ from __future__ import division
 
 from math import copysign, fabs
 
+from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc
 from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,
-                        minimize, value)
+                        minimize, value, TransformationFactory)
 from pyomo.core.base.symbolic import differentiate
 from pyomo.core.expr.expr_pyomo5 import identify_variables
 from pyomo.core.kernel.component_map import ComponentMap
@@ -95,6 +96,12 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
 def add_affine_cuts(nlp_result, solve_data, config):
     with time_code(solve_data.timing, "affine cut generation"):
         m = solve_data.linear_GDP
+        if config.calc_disjunctive_bounds:
+            with time_code(solve_data.timing, "disjunctive variable bounding"):
+                TransformationFactory('contrib.compute_disj_var_bounds').apply_to(
+                    m,
+                    solver=config.mip_solver if config.obbt_disjunctive_bounds else None
+                )
         config.logger.info("Adding affine cuts.")
         GDPopt = m.GDPopt_utils
         counter = 0
@@ -105,6 +112,8 @@ def add_affine_cuts(nlp_result, solve_data, config):
         for constr in constraints_in_True_disjuncts(m, config):
             # Note: this includes constraints that are deactivated in the current model (linear_GDP)
 
+            disjunctive_var_bounds = disjunctive_bounds(constr.parent_block())
+
             if constr.body.polynomial_degree() in (1, 0):
                 continue
 
@@ -114,7 +123,8 @@ def add_affine_cuts(nlp_result, solve_data, config):
                 continue  # a variable has no values
 
             # mcpp stuff
-            mc_eqn = mc(constr.body)
+            mc_eqn = mc(constr.body, disjunctive_var_bounds)
+            # mc_eqn = mc(constr.body)
             ccSlope = mc_eqn.subcc()
             cvSlope = mc_eqn.subcv()
             ccStart = mc_eqn.concave()

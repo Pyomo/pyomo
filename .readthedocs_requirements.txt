@@ -4,3 +4,4 @@ networkx
 pandas
 numpy
 seaborn
+pint
