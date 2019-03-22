@@ -12,11 +12,9 @@
 #
 
 import os
-from os.path import abspath, dirname
-currdir = dirname(abspath(__file__))+os.sep
+import pickle
 
 import pyutilib.th as unittest
-from six import itervalues
 
 from pyomo.environ import *
 from pyomo.core.base.block import _BlockData
@@ -461,7 +459,48 @@ class TestComponentSlices(unittest.TestCase):
             [((1,4), m.b[1,4]), ((1,5), m.b[1,5]), ((1,6), m.b[1,6])]
         )
 
+    def test_pickle_slices(self):
+        _slicer = self.m.b[1,:].c[:,4].x
+        _new_slicer = pickle.loads(pickle.dumps(_slicer))
+        self.assertIsNot(_slicer, _new_slicer)
+        self.assertIsNot(_slicer._call_stack, _new_slicer._call_stack)
+        self.assertIs(type(_slicer._call_stack), type(_new_slicer._call_stack))
+        self.assertEqual(len(_slicer._call_stack), len(_new_slicer._call_stack))
 
+        ref = ['b[1,4].c[1,4].x', 'b[1,4].c[2,4].x', 'b[1,4].c[3,4].x',
+               'b[1,5].c[1,4].x', 'b[1,5].c[2,4].x', 'b[1,5].c[3,4].x',
+               'b[1,6].c[1,4].x', 'b[1,6].c[2,4].x', 'b[1,6].c[3,4].x',
+               ]
+        self.assertEqual([str(x) for x in _slicer], ref )
+        self.assertEqual([str(x) for x in _new_slicer], ref )
+        for x,y in zip(iter(_slicer), iter(_new_slicer)):
+            self.assertIs(type(x), type(y))
+            self.assertEqual(x.name, y.name)
+            self.assertIsNot(x, y)
+
+    def test_clone_on_model(self):
+        self.m.slicer = self.m.b[1,:].c[:,4].x
+        m = self.m
+        n = self.m.clone()
+
+        self.assertIsNot(m, n)
+        self.assertIsNot(m.slicer, n.slicer)
+        self.assertIsNot(m.slicer._call_stack, n.slicer._call_stack)
+        self.assertIs(type(m.slicer._call_stack), type(n.slicer._call_stack))
+        self.assertEqual(len(m.slicer._call_stack), len(n.slicer._call_stack))
+
+        ref = ['b[1,4].c[1,4].x', 'b[1,4].c[2,4].x', 'b[1,4].c[3,4].x',
+               'b[1,5].c[1,4].x', 'b[1,5].c[2,4].x', 'b[1,5].c[3,4].x',
+               'b[1,6].c[1,4].x', 'b[1,6].c[2,4].x', 'b[1,6].c[3,4].x',
+               ]
+        self.assertEqual([str(x) for x in m.slicer], ref )
+        self.assertEqual([str(x) for x in n.slicer], ref )
+        for x,y in zip(iter(m.slicer), iter(n.slicer)):
+            self.assertIs(type(x), type(y))
+            self.assertEqual(x.name, y.name)
+            self.assertIsNot(x, y)
+            self.assertIs(x.model(), m)
+            self.assertIs(y.model(), n)
 
 if __name__ == "__main__":
     unittest.main()
