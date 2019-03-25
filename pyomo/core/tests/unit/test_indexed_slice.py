@@ -20,25 +20,35 @@ from pyomo.environ import *
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.indexed_component import _IndexedComponent_slice
 
+def _x_init(m, k):
+    return k
+
+def _y_init(m, i, j):
+    return i*10+j
+
+def _cx_init(b, k):
+    i, j = b.index()[:2]
+    return i*100+j*10+k
+
+def _c(b, i, j):
+    b.x = Var(b.model().K, initialize=_cx_init)
+
+def _b(b, i, j):
+    _c(b,i,j)
+    b.c = Block(b.model().I, b.model().J, rule=_c)
+
+def _bb(b, i, j, k):
+    _c(b,i,j)
+    b.c = Block(b.model().I, b.model().J, rule=_c)
 
 class TestComponentSlices(unittest.TestCase):
     def setUp(self):
-        def _c(b, i, j):
-            b.x = Var(b.model().K, initialize=lambda m,k: i*100+j*10+k)
-
-        def _b(b, i, j):
-            _c(b,i,j)
-            b.c = Block(b.model().I, b.model().J, rule=_c)
-        def _bb(b, i, j, k):
-            _c(b,i,j)
-            b.c = Block(b.model().I, b.model().J, rule=_c)
-
         self.m = m = ConcreteModel()
         m.I = RangeSet(1,3)
         m.J = RangeSet(4,6)
         m.K = RangeSet(7,9)
-        m.x = Var(m.K, initialize=lambda m,k: k)
-        m.y = Var(m.I, m.J, initialize=lambda m,i,j: i*10+j)
+        m.x = Var(m.K, initialize=_x_init)
+        m.y = Var(m.I, m.J, initialize=_y_init)
         m.b = Block(m.I, m.J, rule=_b)
         m.bb = Block(m.I, m.J, m.K, rule=_bb)
 
@@ -460,8 +470,10 @@ class TestComponentSlices(unittest.TestCase):
         )
 
     def test_pickle_slices(self):
-        _slicer = self.m.b[1,:].c[:,4].x
+        m = self.m
+        _slicer = m.b[1,:].c[:,4].x
         _new_slicer = pickle.loads(pickle.dumps(_slicer))
+
         self.assertIsNot(_slicer, _new_slicer)
         self.assertIsNot(_slicer._call_stack, _new_slicer._call_stack)
         self.assertIs(type(_slicer._call_stack), type(_new_slicer._call_stack))
@@ -479,9 +491,9 @@ class TestComponentSlices(unittest.TestCase):
             self.assertIsNot(x, y)
 
     def test_clone_on_model(self):
-        self.m.slicer = self.m.b[1,:].c[:,4].x
         m = self.m
-        n = self.m.clone()
+        m.slicer = m.b[1,:].c[:,4].x
+        n = m.clone()
 
         self.assertIsNot(m, n)
         self.assertIsNot(m.slicer, n.slicer)
