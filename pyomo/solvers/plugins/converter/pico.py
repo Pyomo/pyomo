@@ -26,7 +26,7 @@ class PicoMIPConverter(object):
         #
         # Test if the glpsol executable is available
         #
-        if pyomo.common.registered_executable("pico_convert") is None:
+        if not pyomo.common.Executable("pico_convert"):
             return False
         #
         # Return True for specific from/to pairs
@@ -42,8 +42,7 @@ class PicoMIPConverter(object):
         return False
 
     def available(self):
-        cmd = pyomo.common.registered_executable("pico_convert")
-        return not cmd is None
+        return pyomo.common.Executable("pico_convert").available()
 
     def apply(self, *args, **kwargs):
         """
@@ -51,11 +50,11 @@ class PicoMIPConverter(object):
         """
         if len(args) != 3:
             raise ConverterError("Cannot apply pico_convert with more than one filename or model")
-        cmd = pyomo.common.registered_executable("pico_convert")
-        if cmd is None:
+        _exe = pyomo.common.Executable("pico_convert")
+        if not _exe:
             raise ConverterError("The 'pico_convert' application cannot be found")
 
-        pico_convert_cmd = cmd.get_path()
+        pico_convert_cmd = _exe.path()
         target=str(args[1])
         if target=="cpxlp":
             target="lp"

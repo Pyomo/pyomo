@@ -72,17 +72,18 @@ class ASL(SystemCallSolver):
         if self.options.solver is None:
             logger.warning("No solver option specified for ASL solver interface")
             return None
-        try:
-            pyomo.common.register_executable(self.options.solver)
-        except:
-            logger.warning("No solver option specified for ASL solver interface")
+        if not self.options.solver:
+            logger.warning(
+                "No solver option specified for ASL solver interface")
             return None
-        executable = pyomo.common.registered_executable(self.options.solver)
-        if executable is None:
-            logger.warning("Could not locate the '%s' executable, which is required for solver %s" % (self.options.solver, self.name))
+        executable = pyomo.common.Executable(self.options.solver)
+        if not executable:
+            logger.warning(
+                "Could not locate the '%s' executable, which is required "
+                "for solver %s" % (self.options.solver, self.name))
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     def _get_version(self):
         """

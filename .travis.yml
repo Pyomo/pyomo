@@ -8,6 +8,11 @@ services:
 env:
   global:
   - DOCKERHUB_REPOSITORY=pyomo/linux-test-images
+    # Configure Pyomo to put the configuration directory here (so that it
+    # is both writable, and will be cleared between test runs
+  - PYOMO_CONFIG_DIR=${TRAVIS_BUILD_DIR}/config
+  - COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/coveragerc
+  - DOCKERENV="-e TAG -e COVERAGE_PROCESS_START -e PYOMO_CONFIG_DIR"
   matrix:
   - TAG=python_3.7    CATEGORY="nightly"
   - TAG=python_3.6    CATEGORY="nightly"
@@ -24,25 +29,24 @@ env:
 before_install:
   - IMAGE=${DOCKERHUB_REPOSITORY}:${TAG}
   - docker pull ${IMAGE}
- # (1) We are mounting the current directory onto the
- #     docker container and giving it a mount location with
- #     an identical name, which avoids issues with file
- #     paths in coverage reports.
- # (2) We are starting a container in detached mode that
- #     runs a semi-infinite sleep call. This allows us to
- #     run separate docker exec commands that keep the state
- #     of the container between calls.
+    # (1) We are mounting the current directory onto the
+    #     docker container and giving it a mount location with
+    #     an identical name, which avoids issues with file
+    #     paths in coverage reports.
+    # (2) We are starting a container in detached mode that
+    #     runs a semi-infinite sleep call. This allows us to
+    #     run separate docker exec commands that keep the state
+    #     of the container between calls.
   - export DOC_ID=`docker run -d -v $(pwd):$(pwd) -w $(pwd) ${IMAGE} sleep 10000000000`
- # used by codecov when uploading the coverage report
+    # used by codecov when uploading the coverage report
   - export CI_ENV=`bash <(curl -s https://codecov.io/env)`
- # enable tracking of coverage for subprocesses launched
- # during tests
-  - export COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/coveragerc
+    # enable tracking of coverage for subprocesses launched
+    # during tests
   - cp ${TRAVIS_BUILD_DIR}/.coveragerc ${COVERAGE_PROCESS_START}
   - echo "data_file=${TRAVIS_BUILD_DIR}/.coverage" >> ${COVERAGE_PROCESS_START}
- # commands prefixed by ${DOC} will execute inside the
- # running docker container
-  - export DOC="docker exec ${CI_ENV} -e TAG -e COVERAGE_PROCESS_START ${DOC_ID}"
+    # commands prefixed by ${DOC} will execute inside the
+    # running docker container
+  - export DOC="docker exec ${CI_ENV} ${DOCKERENV} ${DOC_ID}"
 
 install:
     # NOTE: pip, setuptools, wheel, coverage, and codecov are all built
@@ -62,19 +66,20 @@ install:
                 fi; \
             done'
     fi
- # Clone but don't install pyomo-model-libraries
+    # Clone but don't install pyomo-model-libraries
   - ${DOC} git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
- # Install PyUtilib (master branch)
+    # Install PyUtilib (master branch)
   - ${DOC} pip install --quiet git+https://github.com/PyUtilib/pyutilib
- # Install this package
+    # Install this package
   - ${DOC} python setup.py develop
- # Finish setting up coverage tracking for subprocesses
+    # Finish setting up coverage tracking for subprocesses
   - DOCKER_SITE_PACKAGES=`${DOC} python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
   - |
     if [ -z "$DISABLE_COVERAGE" ]
     then
         ${DOC} bash -c "echo 'import coverage; coverage.process_startup()' > ${DOCKER_SITE_PACKAGES}/run_coverage_at_startup.pth"
     fi
+  - ${DOC} pyomo download-extensions
 
 script:
   - ${DOC} python --version
@@ -93,11 +98,11 @@ after_script:
   - docker kill ${DOC_ID}
 
 after_success:
- # Combine coverage reports over all subprocesses and upload
+    # Combine coverage reports over all subprocesses and upload
   - ${DOC} find . -maxdepth 10 -name ".cov*"
   - ${DOC} coverage combine
   - ${DOC} codecov --env TAG -X gcov
- # Trigger PyomoGallery build
+    # Trigger PyomoGallery build
   - "if [ -n \"${KEY_JOB}\" ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token 4DadIB521uUPyBXMtvQVOw' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
 
 deploy:

@@ -5,6 +5,7 @@ from os.path import abspath, dirname, join, normpath
 
 from six import StringIO
 
+import pyomo.environ
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
