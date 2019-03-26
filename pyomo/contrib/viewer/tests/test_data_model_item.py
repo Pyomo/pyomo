@@ -13,6 +13,7 @@ Test data model items for QTreeView. These tests should work even without PyQt.
 """
 
 import pyutilib.th as unittest
+
 from pyomo.environ import *
 from pyomo.contrib.viewer.model_browser import ComponentDataItem
 
@@ -48,6 +49,9 @@ class TestDataModelItem(unittest.TestCase):
         m.c5 = Constraint(expr=0 == log(m.x[2]))
         m.c6 = Constraint(expr=0 == log(m.x[2]-4))
         m.c7 = Constraint(expr=0 == log(m.x[3]))
+        m.p1 = Param(mutable=True, initialize=1)
+        m.c8 = Constraint(expr = m.x[1] <= 1/m.p1)
+        m.p1 = 0
         self.m = m.clone()
 
     def test_expr_calc(self):
@@ -99,6 +103,16 @@ class TestDataModelItem(unittest.TestCase):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c7)
         cdi.calculate()
         assert(cdi.get("value") == None)
+
+    def test_cons_calc_upper_div0(self):
+        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c8)
+        cdi.calculate()
+        # the ui lists the upper and lower attributes as ub and lb
+        # this was originally so I could easily combine variables and
+        # constarints in the same view, but I split them up, so may want
+        # to reconsider that choise in the future. This is to remind myself
+        # why I'm getting "ub" and not "upper"
+        assert(cdi.get("ub") == "Divide_by_0")
 
     def test_var_get_value(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.x[1])

@@ -179,10 +179,14 @@ class ComponentDataItem(object):
                 self._cache_value = value(self.data.body, exception=False)
             except ZeroDivisionError:
                 self._cache_value = "Divide_by_0"
-            # I think these are constants, so don't think I need try/except
-            self._cache_lb = value(self.data.lower, exception=False)
-            self._cache_ub = value(self.data.upper, exception=False)
-
+            try:
+                self._cache_lb = value(self.data.lower, exception=False)
+            except ZeroDivisionError:
+                self._cache_lb = "Divide_by_0"
+            try:
+                self._cache_ub = value(self.data.upper, exception=False)
+            except ZeroDivisionError:
+                self._cache_ub = "Divide_by_0"
 
     def get(self, a):
         """Get an attribute"""
