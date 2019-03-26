@@ -202,10 +202,14 @@ class _ComponentBase(object):
                             'paranoid' mode by adding '__paranoid__' ==
                             True to the memo before calling
                             copy.deepcopy.""")
+                    if self.model() is self:
+                        what = 'Model'
+                    else:
+                        what = 'Component'
                     logger.error(
                         "Unable to clone Pyomo component attribute.\n"
-                        "Component '%s' contains an uncopyable field '%s' (%s)"
-                        % ( self.name, k, type(v) ))
+                        "%s '%s' contains an uncopyable field '%s' (%s)"
+                        % ( what, self.name, k, type(v) ))
         ans.__setstate__(new_state)
         return ans
 
