@@ -57,52 +57,52 @@ class TestDataModelItem(unittest.TestCase):
     def test_expr_calc(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e1)
         cdi.calculate()
-        assert(abs(cdi.get("value")-3) < 0.0001)
+        self.assertAlmostEqual(cdi.get("value"), 3)
 
     def test_expr_calc_div0(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e2)
         cdi.calculate()
-        assert(cdi.get("value") == "Divide_by_0")
+        self.assertEqual(cdi.get("value"), "Divide_by_0")
 
     def test_expr_calc_log0(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e4)
         cdi.calculate()
-        assert(cdi.get("value") == None)
+        self.assertIsNone(cdi.get("value"))
 
     def test_expr_calc_log_neg(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e5)
         cdi.calculate()
-        assert(cdi.get("value") == None)
+        self.assertIsNone(cdi.get("value"))
 
     def test_expr_calc_value_None(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e3)
         cdi.calculate()
-        assert(cdi.get("value") == None)
+        self.assertIsNone(cdi.get("value"))
 
     def test_cons_calc(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c3)
         cdi.calculate()
-        assert(abs(cdi.get("residual") - 2) < 0.0001)
+        self.assertAlmostEqual(cdi.get("residual"), 2)
 
     def test_cons_calc_div0(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c4)
         cdi.calculate()
-        assert(cdi.get("value") == "Divide_by_0")
+        self.assertEqual(cdi.get("value"), "Divide_by_0")
 
     def test_cons_calc_log0(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c5)
         cdi.calculate()
-        assert(cdi.get("value") == None)
+        self.assertIsNone(cdi.get("value"))
 
     def test_cons_calc_log_neg(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c6)
         cdi.calculate()
-        assert(cdi.get("value") == None)
+        self.assertIsNone(cdi.get("value"))
 
     def test_cons_calc_value_None(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c7)
         cdi.calculate()
-        assert(cdi.get("value") == None)
+        self.assertIsNone(cdi.get("value"))
 
     def test_cons_calc_upper_div0(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c8)
@@ -112,35 +112,35 @@ class TestDataModelItem(unittest.TestCase):
         # constarints in the same view, but I split them up, so may want
         # to reconsider that choise in the future. This is to remind myself
         # why I'm getting "ub" and not "upper"
-        assert(cdi.get("ub") == "Divide_by_0")
+        self.assertEqual(cdi.get("ub"), "Divide_by_0")
 
     def test_var_get_value(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.x[1])
-        assert(abs(cdi.get("value") - 1) < 0.0001)
+        self.assertAlmostEqual(cdi.get("value"), 1)
 
     def test_var_get_bounds(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.x[1])
         self.m.x[1].setlb(0)
         self.m.x[1].setub(10)
-        assert(abs(cdi.get("lb") - 0) < 0.0001)
-        assert(abs(cdi.get("ub") - 10) < 0.0001)
+        self.assertAlmostEqual(cdi.get("lb"), 0)
+        self.assertAlmostEqual(cdi.get("ub"), 10)
 
     def test_var_set_bounds(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.x[1])
         cdi.set("lb", 2)
         cdi.set("ub", 8)
-        assert(abs(cdi.get("lb") - 2) < 0.0001)
-        assert(abs(cdi.get("ub") - 8) < 0.0001)
+        self.assertAlmostEqual(cdi.get("lb"), 2)
+        self.assertAlmostEqual(cdi.get("ub"), 8)
 
     def test_var_fixed_bounds(self):
         cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.x[1])
         cdi.set("fixed", True)
-        assert(cdi.get("fixed"))
+        self.assertTrue(cdi.get("fixed"))
         cdi.set("fixed", False)
-        assert(not cdi.get("fixed"))
+        self.assertFalse(cdi.get("fixed"))
 
     def test_degrees_of_freedom(self):
         import pyomo.contrib.viewer.report as rpt
         # this should hit everything in report.  It only exists to calculate
         # degrees of freedom for display in the ui
-        assert(rpt.degrees_of_freedom(self.m)==0)
+        self.assertEqual(rpt.degrees_of_freedom(self.m),0)
