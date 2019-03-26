@@ -16,7 +16,7 @@ import os
 from six import StringIO
 
 import pyutilib.th as unittest
-from pyomo.core.base import NumericLabeler, SymbolMap
+from pyomo.core.base import NumericLabeler, SymbolMap, Binary
 from pyomo.environ import (Block, ConcreteModel, Connector, Constraint,
                            Objective, TransformationFactory, Var, exp, log)
 from pyomo.repn.plugins.gams_writer import (StorageTreeChecker,
@@ -263,6 +263,17 @@ class Test(unittest.TestCase):
             m.c.body, tc, smap=smap), "(4)*(-7)*(-2)")
         self.assertEqual(expression_to_string(
             m.c2.body, tc, smap=smap), "x1 ** (-1.5)")
+
+    def test_fixed_value_identification(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.y = Var(domain=Binary)
+        m.c = Constraint(expr=m.x ** 2 + m.y >= 1)
+        m.y.fix(1)
+        m.o = Objective(expr=m.x)
+        os = StringIO()
+        m.write(os, format='gams', io_options=dict(solver='ipopt'))
+        self.assertIn("USING nlp", os.getvalue())
 
 
 class TestGams_writer(unittest.TestCase):
