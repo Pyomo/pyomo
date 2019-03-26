@@ -13,6 +13,7 @@
 
 import os
 
+from pyomo.gdp import Disjunction
 from six import StringIO
 
 import pyutilib.th as unittest
@@ -264,16 +265,34 @@ class Test(unittest.TestCase):
         self.assertEqual(expression_to_string(
             m.c2.body, tc, smap=smap), "x1 ** (-1.5)")
 
-    def test_fixed_value_identification(self):
+    def test_nested_GDP_with_deactivate(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1))
-        m.y = Var(domain=Binary)
-        m.c = Constraint(expr=m.x ** 2 + m.y >= 1)
-        m.y.fix(1)
+
+        @m.Disjunct([0, 1])
+        def disj(disj, _):
+            @disj.Disjunct(['A', 'B'])
+            def nested(n_disj, _):
+                return n_disj
+
+            return disj
+
+        m.choice = Disjunction(expr=[m.disj[0], m.disj[1]])
+
+        m.c = Constraint(expr=m.x ** 2 + m.disj[1].nested['A'].indicator_var >= 1)
+
+        m.disj[0].indicator_var.fix(1)
+        m.disj[1].deactivate()
+        m.disj[0].nested['A'].indicator_var.fix(1)
+        m.disj[0].nested['B'].deactivate()
+        m.disj[1].nested['A'].indicator_var.set_value(1)
+        m.disj[1].nested['B'].deactivate()
         m.o = Objective(expr=m.x)
+        TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+
         os = StringIO()
-        m.write(os, format='gams', io_options=dict(solver='ipopt'))
-        self.assertIn("USING nlp", os.getvalue())
+        m.write(os, format='gams', io_options=dict(solver='dicopt'))
+        self.assertIn("USING minlp", os.getvalue())
 
 
 class TestGams_writer(unittest.TestCase):
