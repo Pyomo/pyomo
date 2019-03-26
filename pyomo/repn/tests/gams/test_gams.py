@@ -17,7 +17,7 @@ from pyomo.gdp import Disjunction
 from six import StringIO
 
 import pyutilib.th as unittest
-from pyomo.core.base import NumericLabeler, SymbolMap, Binary
+from pyomo.core.base import NumericLabeler, SymbolMap
 from pyomo.environ import (Block, ConcreteModel, Connector, Constraint,
                            Objective, TransformationFactory, Var, exp, log)
 from pyomo.repn.plugins.gams_writer import (StorageTreeChecker,
