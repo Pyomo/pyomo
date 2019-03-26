@@ -154,14 +154,11 @@ class Categorizer(object):
         self.ints = []
         self.positive = []
         self.reals = []
-        self.fixed = []
 
         # categorize variables
         for var in var_list:
             v = symbol_map.getObject(var)
-            if v.fixed:
-                self.fixed.append(var)
-            elif v.is_binary():
+            if v.is_binary():
                 self.binary.append(var)
             elif v.is_integer():
                 if (v.has_lb() and (value(v.lb) >= 0)) and \
@@ -405,7 +402,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             return ans
 
         def var_label(obj):
-            # if obj.is_fixed():
+            #if obj.is_fixed():
             #    return str(value(obj))
             return symbolMap.getSymbol(obj, var_recorder)
 
@@ -564,9 +561,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
             output_file.write("\n\t".join(categorized_vars.positive))
         output_file.write(";\n\nVARIABLES\n\tGAMS_OBJECTIVE\n\t")
         output_file.write("\n\t".join(categorized_vars.reals))
-        if categorized_vars.fixed:
-            output_file.write(";\n\n*fixed variables\nVARIABLES\n\t")
-            output_file.write("\n\t".join(categorized_vars.fixed))
         output_file.write(";\n\n")
 
         for line in ConstraintIO.getvalue().splitlines():
@@ -620,8 +614,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
                                       (var_name, _get_bound(var.ub)))
-            elif category == 'fixed':
-                output_file.write("%s.fx = %s;\n" % (var_name, var.value))
             else:
                 raise KeyError('Category %s not supported' % category)
             if warmstart and var.value is not None:
