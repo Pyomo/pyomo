@@ -5149,6 +5149,12 @@ class TestExpressionUtilities(unittest.TestCase):
         #self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a, allow_duplicates=True)),
         #                  [ m.a, m.a, m.a,  ] )
 
+    def test_identify_vars_linear_expression(self):
+        m = ConcreteModel()
+        m.x = Var()
+        expr = quicksum([m.x, m.x], linear=True)
+        self.assertEqual(list(EXPR.identify_variables(expr, include_fixed=False)), [m.x])
+
 
 class TestIdentifyParams(unittest.TestCase):
 
