@@ -17,9 +17,9 @@ from pyomo.gdp import Disjunction
 from six import StringIO
 
 import pyutilib.th as unittest
-from pyomo.core.base import NumericLabeler, SymbolMap, Binary
+from pyomo.core.base import NumericLabeler, SymbolMap
 from pyomo.environ import (Block, ConcreteModel, Connector, Constraint,
-                           Objective, TransformationFactory, Var, exp, log)
+                           Objective, TransformationFactory, Var, exp, log, Binary, quicksum)
 from pyomo.repn.plugins.gams_writer import (StorageTreeChecker,
                                             expression_to_string,
                                             split_long_line)
@@ -293,6 +293,27 @@ class Test(unittest.TestCase):
         os = StringIO()
         m.write(os, format='gams', io_options=dict(solver='dicopt'))
         self.assertIn("USING minlp", os.getvalue())
+
+    def test_quicksum(self):
+        m = ConcreteModel()
+        m.y = Var(domain=Binary)
+        m.c = Constraint(expr=quicksum([m.y, m.y], linear=True) == 1)
+        m.y.fix(1)
+        lbl = NumericLabeler('x')
+        smap = SymbolMap(lbl)
+        tc = StorageTreeChecker(m)
+        self.assertEqual(expression_to_string(m.c.body, tc, smap=smap), "1 + 1")
+
+    def test_quicksum_integer_var_fixed(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var(domain=Binary)
+        m.c = Constraint(expr=quicksum([m.y, m.y], linear=True) == 1)
+        m.o = Objective(expr=m.x ** 2)
+        m.y.fix(1)
+        os = StringIO()
+        m.write(os, format='gams')
+        self.assertIn("USING nlp", os.getvalue())
 
 
 class TestGams_writer(unittest.TestCase):
