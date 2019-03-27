@@ -2911,8 +2911,10 @@ class LinearExpression(ExpressionBase):
             tmp = [self.constant.to_string(compute_values=False)]
         if verbose:
             for c,v in zip(self.linear_coefs, self.linear_vars):
-                if smap:                        # TODO: coverage
+                if smap and not v.fixed:
                     v_ = smap.getSymbol(v)
+                elif v.fixed:
+                    v_ = str(v.value)
                 else:
                     v_ = str(v)
                 if c.__class__ in native_numeric_types or compute_values:
@@ -2927,8 +2929,10 @@ class LinearExpression(ExpressionBase):
                     tmp.append("prod(%s, %s)" % (str(c), v_))
             return "{0}({1})".format(self.getname(), ', '.join(tmp))
         for c,v in zip(self.linear_coefs, self.linear_vars):
-            if smap:
+            if smap and not v.fixed:
                 v_ = smap.getSymbol(v)
+            elif v.fixed:
+                v_ = str(v.value)
             else:
                 v_ = str(v)
             if c.__class__ in native_numeric_types or compute_values:
