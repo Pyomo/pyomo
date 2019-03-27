@@ -1,6 +1,8 @@
 """Iteration code."""
 from __future__ import division
 
+import timeit
+
 from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_outer_approximation_cuts,
                                                  add_affine_cuts)
@@ -87,6 +89,14 @@ def algorithm_should_terminate(solve_data, config):
             'Final bound values: LB: {:.10g}  UB: {:.10g}'.format(
                 solve_data.LB, solve_data.UB))
         solve_data.results.solver.termination_condition = tc.maxIterations
+        return True
+
+    if (timeit.default_timer() - solve_data.start_time) >= config.reslim:
+        config.logger.info(
+            "GDPopt unable to converge bounds before time limit of %s seconds."
+            % (config.reslim,)
+        )
+        solve_data.results.solver.termination_condition = tc.maxTimeLimit
         return True
 
     if not algorithm_is_making_progress(solve_data, config):

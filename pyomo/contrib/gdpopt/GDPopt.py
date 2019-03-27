@@ -1,8 +1,15 @@
 # -*- coding: utf-8 -*-
-"""Main driver module for GDPopt solver."""
+"""Main driver module for GDPopt solver.
+
+19.3.25 changes:
+- add rudimentary time limit support
+- start keeping basic changelog
+
+"""
 from __future__ import division
 
 import logging
+import timeit
 
 from pyomo.common.config import (
     ConfigBlock, ConfigList, ConfigValue, In, NonNegativeFloat, NonNegativeInt,
@@ -24,7 +31,7 @@ from pyomo.opt.base import SolverFactory
 from pyomo.opt.results import SolverResults
 from pyutilib.misc import Container
 
-__version__ = (19, 3, 11)  # Note: date-based version number
+__version__ = (19, 3, 25)  # Note: date-based version number
 
 
 @SolverFactory.register(
@@ -63,6 +70,10 @@ class GDPoptSolver(object):
     CONFIG.declare("iterlim", ConfigValue(
         default=30, domain=NonNegativeInt,
         description="Iteration limit."
+    ))
+    CONFIG.declare("reslim", ConfigValue(
+        default=float('inf'), domain=NonNegativeFloat,
+        description="Time limit (rudimentary). You need to also set subsolver time limits for now."
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="LOA", domain=In(["LOA", "GLOA"]),
@@ -237,6 +248,7 @@ class GDPoptSolver(object):
         solve_data = GDPoptSolveData()
         solve_data.results = SolverResults()
         solve_data.timing = Container()
+        solve_data.start_time = timeit.default_timer()
 
         old_logger_level = config.logger.getEffectiveLevel()
         with time_code(solve_data.timing, 'total'), \

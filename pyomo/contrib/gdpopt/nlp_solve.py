@@ -9,7 +9,6 @@ from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
 from pyomo.core import Constraint, TransformationFactory, minimize, value, Objective
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.gdp import Disjunct
 from pyomo.opt import SolverFactory
 from pyomo.opt import TerminationCondition as tc
 
@@ -41,9 +40,6 @@ def solve_NLP(nlp_model, solve_data, config):
         list(v.name for v in unfixed_discrete_vars))
 
     GDPopt = nlp_model.GDPopt_utils
-
-    if config.subproblem_presolve:
-        preprocess_subproblem(nlp_model, config)
 
     initialize_subproblem(nlp_model, solve_data)
 
@@ -113,12 +109,9 @@ def solve_MINLP(model, solve_data, config):
 
     GDPopt = model.GDPopt_utils
 
-    if config.subproblem_presolve:
-        preprocess_subproblem(model, config)
-
     initialize_subproblem(model, solve_data)
 
-    # Callback immediately before solving NLP subproblem
+    # Callback immediately before solving MINLP subproblem
     config.call_before_subproblem_solve(model, solve_data)
 
     minlp_solver = SolverFactory(config.minlp_solver)
@@ -184,6 +177,9 @@ def detect_unfixed_discrete_vars(model):
             v for v in EXPR.identify_variables(
                 constr.body, include_fixed=False)
             if not v.is_continuous())
+    for obj in model.component_data_objects(Objective, active=True):
+        var_set.update(v for v in EXPR.identify_variables(obj.expr, include_fixed=False)
+                       if not v.is_continuous())
     return var_set
 
 
@@ -340,8 +336,11 @@ def solve_local_subproblem(mip_result, solve_data, config):
 
     TransformationFactory('gdp.fix_disjuncts').apply_to(subprob)
 
-    for disj in subprob.component_data_objects(Disjunct, active=True):
-        disj.deactivate()  # TODO this is a HACK for something that isn't happening correctly in fix_disjuncts
+    # for disj in subprob.component_data_objects(Disjunct, active=True):
+    #     disj.deactivate()  # TODO this is a HACK for something that isn't happening correctly in fix_disjuncts
+
+    if config.subproblem_presolve:
+        preprocess_subproblem(subprob, config)
 
     unfixed_discrete_vars = detect_unfixed_discrete_vars(subprob)
     if config.force_subproblem_nlp and len(unfixed_discrete_vars) > 0:
@@ -397,6 +396,9 @@ def solve_global_subproblem(mip_result, solve_data, config):
 
     TransformationFactory('gdp.fix_disjuncts').apply_to(subprob)
     subprob.dual.deactivate()  # global solvers may not give dual info
+
+    if config.subproblem_presolve:
+        preprocess_subproblem(subprob, config)
 
     unfixed_discrete_vars = detect_unfixed_discrete_vars(subprob)
     if config.force_subproblem_nlp and len(unfixed_discrete_vars) > 0:

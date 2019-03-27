@@ -208,6 +208,20 @@ class TestGDPopt(unittest.TestCase):
             tee=False)
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
+    @unittest.skipUnless(SolverFactory('gams').available(), 'GAMS solver not available')
+    def test_LOA_8PP_gams_solver(self):
+        # Make sure that the duals are still correct
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        SolverFactory('gdpopt').solve(
+            eight_process, strategy='LOA',
+            mip_solver=mip_solver,
+            nlp_solver='gams',
+            max_slack=0,
+            tee=False)
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
     def test_LOA_8PP_force_NLP(self):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
