@@ -26,6 +26,8 @@ import base64
 import tempfile
 import logging
 
+logger = logging.getLogger('pyomo.neos')
+
 class NEOS(object):
     # NEOS currently only supports HTTPS access
     scheme = 'https'
@@ -104,8 +106,6 @@ else: # Python 3.x
             connection.set_tunnel(host)
             return connection
 
-logger = logging.getLogger('pyomo.solvers')
-
 
 class kestrelAMPL:
 
@@ -147,7 +147,7 @@ class kestrelAMPL:
 
     def kill(self,jobnumber,password):
         response = self.neos.killJob(jobNumber,password)
-        sys.stdout.write(response+"\n")
+        logger.info(response)
 
     def solvers(self):
         return self.neos.listSolversInCategory("kestrel") \
@@ -168,15 +168,27 @@ class kestrelAMPL:
         solfile.close()
 
     def submit(self, xml):
-        user = "%s on %s" % (os.getenv('LOGNAME'),socket.getfqdn(socket.gethostname()))
+        # LOGNAME and USER should map to the effective user (i.e., the
+        # one sudo-ed to), whereas USERNAME is the original user who ran
+        # sudo.  We include USERNAME to cover Windows, where LOGNAME and
+        # USER may not be defined.
+        for _ in ('LOGNAME','USER','USERNAME'):
+            uname = os.getenv(_)
+            if uname is not None:
+                break
+        hostname = socket.getfqdn(socket.gethostname())
+        user = "%s on %s" % (uname,hostname)
         (jobNumber,password) = self.neos.submitJob(xml,user,"kestrel")
         if jobNumber == 0:
-            sys.stdout.write("Error: %s\nJob not submitted.\n" % password)
-            sys.exit(1)
-        sys.stdout.write("Job %d submitted to NEOS, password='%s'\n" %
-                         (jobNumber,password))
-        sys.stdout.write("Check the following URL for progress report :\n")
-        sys.stdout.write(urlscheme+"://www.neos-server.org/neos/cgi-bin/nph-neos-solver.cgi?admin=results&jobnumber=%d&pass=%s\n" % (jobNumber,password))
+            raise RuntimeError("%s\n\tJob not submitted" % (password,))
+
+        logger.info("Job %d submitted to NEOS, password='%s'\n" %
+                    (jobNumber,password))
+        logger.info("Check the following URL for progress report :\n")
+        logger.info(
+            "%s://www.neos-server.org/neos/cgi-bin/nph-neos-solver.cgi"
+            "?admin=results&jobnumber=%d&pass=%s\n"
+            % (NEOS.scheme, jobNumber,password))
         return (jobNumber,password)
 
     def getJobAndPassword(self):
@@ -228,18 +240,14 @@ class kestrelAMPL:
                       break
                 #
                 if not NEOS_solver_name:
-                    sys.stdout.write("%s is not available on NEOS.  Choose from:\n" % solver_name)
-                    for s in kestrelAmplSolvers:
-                        sys.stdout.write("\t%s\n"%s)
-                    sys.stdout.write('To choose: option kestrel_options "solver=xxx";\n\n')
-                    sys.exit(1)
+                    raise RuntimeError(
+                        "%s is not available on NEOS.  Choose from:\n\t%s"
+                        % (solver_name, "\n\t".join(kestrelAmplSolvers)))
         #
         if self.options is None or m is None:
-            sys.stdout.write("No solver name selected.  Choose from:\n")
-            for s in kestrelAmplSolvers:
-                sys.stdout.write("\t%s\n"%s)
-            sys.stdout.write('\nTo choose: option kestrel_options "solver=xxx";\n\n')
-            sys.exit(1)
+            raise RuntimeError(
+                "%s is not available on NEOS.  Choose from:\n\t%s"
+                % (solver_name, "\n\t".join(kestrelAmplSolvers)))
         return NEOS_solver_name
 
     def formXML(self,stub):
@@ -377,7 +385,7 @@ if __name__=="__main__":            #pragma:nocover
       if not jobNumber:
         xml = kestrel.formXML(stub)
         (jobNumber,password) = kestrel.submit(xml)
-      
+
     except KeyboardInterrupt:
       e = sys.exc_info()[1]
       sys.stdout.write("Keyboard Interrupt while submitting problem.\n")
@@ -390,7 +398,7 @@ if __name__=="__main__":            #pragma:nocover
       while status == "Running" or status == "Waiting":
         (output,offset) = kestrel.neos.getIntermediateResults(jobNumber,
                                                            password,offset)
-      
+
         if isinstance(output,xmlrpclib.Binary):
           output = output.data
         sys.stdout.write(output)

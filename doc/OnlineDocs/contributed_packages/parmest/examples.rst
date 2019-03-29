@@ -3,102 +3,33 @@
 Examples
 ========
 
-Examples can be found in the subdirectories of `pyomo/contrib/parmest/examples`.
+Examples can be found in `pyomo/contrib/parmest/examples` and include:
 
-Generally, two Python files are used to run parmest (although it can be
-done using one or many):
+* Reactor design example [PyomoBookII]_
+* Semibatch example [SemiBatch]_
+* Rooney Biegler example [RooneyBiegler]_
 
-* Driver: This file contains code that uses parmest to compute parameter estimation and confidence regions.
+Each example contains a Python file that contains the Pyomo model and a Python file to run parameter estimation.
 
-* Callback: This file contains a PySP callback function that returns a model for one scenario (or experiment).  
+The description below uses the reactor design example.
+The file **reactor_design.py** includes a function which returns an populated instance of the Pyomo model.  
+Note that the model is defined to maximize `cb` and that `k1`, `k2`, and `k3` are fixed.  
+The _main_ program is included for easy testing of the model declaration.
 
-The Rooney Biegler example below includes an example where the driver and callback are in the same file.
-
-Rooney Biegler Example
-----------------------
-
-This example uses the model and data given in [RooneyBiegler]_. 
-
-Callback
-^^^^^^^^
-
-The callback file includes:
-
-* Function to generate the model from data. This example defines the model with the objective function
-  Expressions named FirstStageCost and SecondStage cost respectively. 
-* Callback function, which returns a model for one experiment.
-
-The main program is included for easy testing of the model declaration.
-
-.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/rooney_biegler/rooney_biegler.py
-   :language: python
-   
-Driver
-^^^^^^
-
-The driver file creates a :class:`~pyomo.contrib.parmest.parmest.ParmEstimator` object using the file that contains the callback
-and uses its methods for parameter estimation.
-
-.. literalinclude::  ../../../../pyomo/contrib/parmest/examples/rooney_biegler/rb_drive_parmest.py
+.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/reactor_design/reactor_design.py
    :language: python
 
-.. _AllInOne:
-	      
-All in One
-^^^^^^^^^^
+The file **reactor_design_parmest.py** uses parmest to estimate values of `k1`, `k2`, and `k3` by minimizing the sum of 
+squared error between model and observed values of `ca`, `cb`, `cc`, and `cd`.  The file also uses parmest to 
+run parameter estimation with bootstrap resampling and perform a likelihood ratio test over a range of 
+theta values.
 
-This example illustrates combining the model, callback and driver in
-one file as well as supplying the callback function to the
-parmest object constructor instead of strings for the module
-and function name. (It is not shown here, but it is also
-possible to supply a module and a function name as a string). Note
-that this example uses the PySP callback signature, while the example
-above uses the parmest callback signature.
-
-.. literalinclude::  ../../../../pyomo/contrib/parmest/examples/rooney_biegler/all_in_one.py
+.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/reactor_design/reactor_design_parmest.py
    :language: python
 
-	      
-Semibatch Example
------------------
+The semibatch and Rooney Biegler examples are defined in a similar manner.  
 
-The semibatch example was created from [SemiBatch]_ by Bethany Nicholson.
+Additional use cases include:
 
-Callback
-^^^^^^^^
-
-The callback file includes:
-
-* Function to generate the model from data
-* Callback function, which loads data from text files
-
-The main program is included for easy testing of the model declaration.
-
-.. literalinclude::  ../../../../pyomo/contrib/parmest/examples/semibatch/semibatch.py
-   :language: python
-   
-Driver
-^^^^^^
-
-The driver file creates a class:`~pyomo.contrib.parmest.parmest.ParmEstimator` object using the file that contains the callback
-and uses its methods for parameter estimation.
-
-.. literalinclude::  ../../../../pyomo/contrib/parmest/examples/semibatch/sb_drive_parmest.py
-   :language: python
-   
-MEA Example
------------
-
-MEA is an IDAES model.
-
-Callback
-^^^^^^^^
-
-.. literalinclude::  ../../../../pyomo/contrib/parmest/examples/mea/mea_estimate_pysp.py
-   :language: python
-
-Driver
-^^^^^^
-
-.. literalinclude::  ../../../../pyomo/contrib/parmest/examples/mea/mea_drive_parmest.py
-   :language: python
+* Parameter estimation using data with duplicate sensors and time-series data (reactor design example)
+* Parameter estimation using mpi4py, the example saves results to a file for later analysis/graphics (semibatch example)

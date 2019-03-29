@@ -7,7 +7,6 @@ class GDPoptSolveData(object):
     Key attributes:
         - original_model: the original model that the user gave us to solve
         - working_model: the original model after preprocessing
-        - linear_GDP: the linear-discrete master problem
         - results: Pyomo results objective
         - timing: dictionary of time elapsed for solver functions
 

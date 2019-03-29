@@ -5,13 +5,14 @@ Solving Pyomo Models
    :hide:
 
    >>> import pyomo.environ as pyo
-   >>> from pyomo.opt import SolverFactory
+
    >>> m = pyo.AbstractModel()
    >>> m.n = pyo.Param(default=4)
    >>> m.x = pyo.Var(pyo.RangeSet(m.n), within=pyo.Binary)
    >>> def o_rule(m):
    ...    return pyo.summation(m.x)
    >>> m.o = pyo.Objective(rule=o_rule)
+
    >>> model = m.create_instance()
    >>> model.c = pyo.Constraint(expr=model.x[2]+model.x[3]>=1)
 
@@ -44,24 +45,29 @@ your model before solving it using the same lines as above:
    >>> opt = pyo.SolverFactory('glpk')
    >>> opt.solve(instance) # doctest: +SKIP
 
-`pyomo solve` Command
----------------------
+``pyomo solve`` Command
+-----------------------
 
-To solve a ConcreteModel contained in the file `my_model.py` using the
-`pyomo` command and the solver GLPK, use the following line in a
-terminal window
+To solve a ConcreteModel contained in the file ``my_model.py`` using the
+``pyomo`` command and the solver GLPK, use the following line in a
+terminal window::
 
-   `$ pyomo solve my_model.py --solver='glpk'`
+   pyomo solve my_model.py --solver='glpk'
 
-To solve an AbstractModel contained in the file `my_model.py` with data
-in the file `my_data.dat` using the `pyomo` command and the solver GLPK,
-use the following line in a terminal window
+To solve an AbstractModel contained in the file ``my_model.py`` with data
+in the file ``my_data.dat`` using the ``pyomo`` command and the solver GLPK,
+use the following line in a terminal window::
 
-   `$ pyomo solve my_model.py my_data.dat --solver='glpk'`
+   pyomo solve my_model.py my_data.dat --solver='glpk'
 
 Supported Solvers
 -----------------
 
-Pyomo supports any solvers that read `.lp` or `.nl` files and also
-includes special interfaces to a few others.
+Pyomo supports a wide variety of solvers.  Pyomo has specialized
+interfaces to some solvers (for example, BARON, CBC, CPLEX, and Gurobi).
+It also has generic interfaces that support calling any solver that can
+read AMPL "``.nl``" and write "``.sol``" files and the ability to
+generate GAMS-format models and retrieve the results.  You can get the
+current list of supported solvers using the ``pyomo`` command::
 
+   pyomo help --solvers

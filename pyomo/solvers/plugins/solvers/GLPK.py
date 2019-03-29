@@ -15,9 +15,9 @@ import csv
 
 import pyutilib.subprocess
 from pyutilib.misc import Bunch, Options
-from pyutilib.services import register_executable, registered_executable
 from pyutilib.services import TempfileManager
 
+from pyomo.common import Executable
 from pyomo.opt import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver
@@ -32,10 +32,10 @@ def configure_glpk():
     if _glpk_version is not None:
         return
     _glpk_version = _extract_version("")
-    if registered_executable("glpsol") is None:
+    if not Executable("glpsol"):
         return
     errcode, results = pyutilib.subprocess.run(
-        [registered_executable('glpsol').get_path(), "--version"], timelimit=2)
+        [Executable('glpsol').path(), "--version"], timelimit=2)
     if errcode == 0:
         _glpk_version = _extract_version(results)
 
@@ -143,14 +143,14 @@ class GLPKSHELL(SystemCallSolver):
         return ResultsFormat.soln
 
     def _default_executable(self):
-        executable = registered_executable('glpsol')
-        if executable is None:
+        executable = Executable('glpsol')
+        if not executable:
             msg = ("Could not locate the 'glpsol' executable, which is "
                    "required for solver '%s'")
             logger.warning(msg % self.name)
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     def _get_version(self):
         """
@@ -524,6 +524,3 @@ class GLPKSHELL(SystemCallSolver):
 
                 else:
                     raise ValueError("Unexpected row type: "+rtype)
-
-
-register_executable(name='glpsol')

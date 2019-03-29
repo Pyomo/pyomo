@@ -150,7 +150,7 @@ def perform_install(package, config=None, user='hudson', dest='python', virtuale
         else:
             cmd.extend(virtualenv_args)
         cmd.append( os.path.join(os.environ['WORKSPACE'], dest) )
-        sys.stdout.write("Running Command: %s\n" % " ".join(cmd))
+        sys.stdout.write( "Running Command: %s\n    from %s\n" % (" ".join(cmd), os.getcwd()) )
         sys.stdout.flush()
         if platform == 'win':
             sys.stdout.write( str(subprocess.call(['cmd','/c']+cmd)) + '\n' )
@@ -172,7 +172,7 @@ def perform_install(package, config=None, user='hudson', dest='python', virtuale
                     python,
                     'setup.py',
                     'develop', '--no-deps', '--prefix', os.path.join( os.environ['WORKSPACE'],'python') ]
-                sys.stdout.write("Running Command: %s\n" % " ".join(cmd))
+                sys.stdout.write("Running Command: %s\n    from %s\n" % (" ".join(cmd), os.getcwd()))
                 sys.stdout.flush()
                 os.chdir(file)
                 if platform == 'win':
@@ -191,11 +191,33 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
     else:
         cmd = [os.path.join( os.environ['WORKSPACE'],'python','bin','test.'+package ), '--cat', cat]
     cmd.append('-v')
+    srcdir = os.path.join(os.environ['WORKSPACE'],'src','pyomo')
+    os.chdir(os.path.join( srcdir ))
     if coverage:
-        cmd.extend(['--coverage','--cover-erase'])
+        # Remove any preexisting coverage files
+        if os.path.exists(os.path.join(srcdir, '.coverage')):
+            os.remove(os.path.join(srcdir, '.coverage'))
+        for f in glob.glob(os.path.join(srcdir, '.coverage.*')):
+            os.remove(f)
+        sitedir = os.path.join(
+            os.environ['WORKSPACE'],'python','lib',
+            'python'+'.'.join(map(str,sys.version_info[:2])),'site-packages')
+        pthfile = os.path.join(sitedir, 'run_coverage_at_startup.pth')
+        with open(pthfile, 'w') as FILE:
+            FILE.write('import coverage; coverage.process_startup()\n')
+        with open(os.path.join(srcdir, '.coveragerc'), 'r') as FILE:
+            coveragerc = FILE.readlines()
+        #coveragerc.append("source=%s\n" % (srcdir, ))
+        coveragerc.append("data_file=%s%s.coverage\n" % (srcdir, os.path.sep))
+        coveragerc_file = os.path.join(srcdir, 'coveragerc')
+        with open(coveragerc_file, 'w') as FILE:
+            FILE.write(''.join(coveragerc))
+        os.environ['COVERAGE_PROCESS_START'] = coveragerc_file
+        # The above supersedes the need for --coverage
+        #cmd.extend(['--coverage','--cover-erase'])
     if 'TEST_PACKAGES' in os.environ:
         cmd = cmd + re.split('[ \t]+', os.environ['TEST_PACKAGES'].strip())
-    sys.stdout.write( "Running Command: %s\n" % " ".join(cmd) )
+    sys.stdout.write("Running Command: %s\n    from %s\n" % (" ".join(cmd), os.getcwd()))
     sys.stdout.flush()
     if platform == 'win':
         sys.stdout.write( str(subprocess.call(['cmd','/c']+cmd)) + '\n' )
@@ -210,19 +232,35 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
     #
     if not coverage:
         return
-    os.chdir(os.path.join( os.environ['WORKSPACE'],'src','pyomo' ))
-    libdir = os.path.join( os.environ['WORKSPACE'],'python','lib','*' )
-    libdir = libdir + "," + os.path.join( libdir,'site-packages','*' )
-    if omit is not None:
-        omit = ","+omit
-    else:
-        omit = ""
-    covFName = os.path.join( os.environ['WORKSPACE'],'src','coverage.xml' )
+    cover_cmd=[os.path.join(os.environ['WORKSPACE'],'python','bin','coverage')]
     if platform == 'win':
-        cmd = [os.path.join( os.environ['WORKSPACE'],'python','bin','coverage.exe' ), 'xml', '--omit="%s%s"' % (libdir,omit), '-o', covFName ]
+        cover_cmd[0] += '.exe'
+    cmd = cover_cmd + ['combine']
+    sys.stdout.write("Running Command: %s\n    from %s\n" % (" ".join(cmd), os.getcwd()))
+    sys.stdout.flush()
+    if platform == 'win':
+        sys.stdout.write( str(subprocess.call(['cmd','/c']+cmd)) + '\n' )
     else:
-        cmd = [os.path.join( os.environ['WORKSPACE'],'python','bin','coverage' ), 'xml', '--omit="%s%s"' % (libdir,omit), '-o', covFName ]
-    sys.stdout.write( "Running Command: %s\n" % " ".join(cmd) )
+        sys.stdout.write( str(subprocess.call(cmd)) + '\n' )
+
+    # We used to hard-code the ommission of the site-packages and the
+    # python libraries here.  That directive is now managed by the
+    # coveragerc file.  The commented code below is maintained strictly
+    # for historical reference.
+    #
+    #libdir = os.path.join( os.environ['WORKSPACE'],'python','lib','*' )
+    #libdir = libdir + "," + os.path.join( libdir,'site-packages','*' )
+    #if omit is not None:
+    #    omit = ","+omit
+    #else:
+    #    omit = ""
+
+    cmd = cover_cmd + ['xml']
+    if omit is not None:
+        cmd.append('--omit=%s' % (omit,))
+    covFName = os.path.join(srcdir,'coverage.xml')
+    cmd.extend(['-o', covFName])
+    sys.stdout.write("Running Command: %s\n    from %s\n" % (" ".join(cmd), os.getcwd()))
     sys.stdout.flush()
     if platform == 'win':
         sys.stdout.write( str(subprocess.call(['cmd','/c']+cmd)) + '\n' )
@@ -231,7 +269,9 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
         #sys.stdout.write( str(subprocess.call(['ls', '-la'])) + '\n')
         sys.stdout.write( str(subprocess.call(cmd)) + '\n' )
 
-    # NB: for Hudson source rendering to work correctly, the XML must include the relative path to the source filenames *from the project workspace*
+    # NB: for Hudson source rendering to work correctly, the XML must
+    # include the relative path to the source filenames *from the
+    # project workspace*
     try:
         keep(covFName, 'package', 'name', '.*\.tests', covFName)
         doc = xml.dom.minidom.parse(covFName)

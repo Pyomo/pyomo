@@ -1,0 +1,6 @@
+m = ConcreteModel()
+m.p = Param(default=10, mutable=False)
+m.q = Param(default=10, mutable=True)
+m.x = Var()
+m.y = Var(initialize=1)
+m.y.fixed = True

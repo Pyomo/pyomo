@@ -8,76 +8,137 @@ Sets can be declared using the `Set` and `RangeSet` functions or by
 assigning set expressions.  The simplest set declaration creates a set
 and postpones creation of its members:
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Declare_set.spy
-   :language: python
+.. doctest::
+    :hide:
+
+    >>> from pyomo.environ import *
+    >>> model = ConcreteModel()
+
+.. doctest::
+
+    >>> model.A = Set()
 
 The ``Set`` function takes optional arguments such as:
 
 - doc = String describing the set
 - dimen = Dimension of the members of the set
-- filter = A boolean function used during construction to indicate if a
+- filter = A Boolean function used during construction to indicate if a
   potential new member should be assigned to the set
-- initialize = A function that returns the members to initialize the set.
-- ordered = A boolean indicator that the set is ordered; the default is ``False``
-- validate = A boolean function that validates new member data
-- virtual = A boolean indicator that the set will never have elements;
+- initialize = An iterable containing the initial members of the Set, or
+  function that returns an iterable of the initial members the set.
+- ordered = A Boolean indicator that the set is ordered; the default is ``False``
+- validate = A Boolean function that validates new member data
+- virtual = A Boolean indicator that the set will never have elements;
   it is unusual for a modeler to create a virtual set; they are
   typically used as domains for sets, parameters and variables
 - within = Set used for validation; it is a super-set of the set being declared.
 
-One way to create a set whose members will be two dimensional is to use
-the ``dimen`` argument:
+In general, Pyomo attempts to infer the "dimensionality" of Set
+components (that is, the number of apparent indices) when they are
+constructed.  However, there are situations where Pyomo either cannot
+detect a dimensionality (e.g., a Set that was not initialized with any
+members), or you the user may want to assert the dimensionality of the
+set.  This can be accomplished through the ``dimen`` keyword.  For
+example, to create a set whose members will be two dimensional, one
+could write:
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Set_dim.spy
-   :language: python
+.. doctest::
+
+    >>> model.B = Set(dimen=2)
 
 To create a set of all the numbers in set ``model.A`` doubled, one could
 use
 
-.. literalinclude:: ../script_spy_files/doubleA.py
-   :language: python
+.. doctest::
+
+    >>> def DoubleA_init(model):
+    ...     return (i*2 for i in model.A)
+    >>> model.C = Set(initialize=DoubleA_init)
 
 As an aside we note that as always in Python, there are lot of ways to
 accomplish the same thing. Also, note that this will generate an error
 if ``model.A`` contains elements for which multiplication times two is
 not defined.
 
-The ``initialize`` option can refer to a Python set, which can be
-returned by a function or given directly as in
+The ``initialize`` option can accept any Python iterable, including a
+``set``, ``list``, or ``tuple``.  This data may be returned from a
+function or specified directly as in
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Initialize_python_sets.spy
-   :language: python
+.. doctest::
 
-The ``initialize`` option can also specify a function that is applied
-sequentially to generate set members. Consider the case of a simple
-set. In this case, the initialization function accepts a set element
-number and model and returns the set element associated with that
-number:
+    >>> model.D = Set(initialize=['red', 'green', 'blue'])
 
-.. literalinclude:: ../script_spy_files/Z_init.py
-   :language: python
+The ``initialize`` option can also specify either a generator or a
+function to specify the Set members.  In the case of a generator, all
+data yielded by the generator will become the initial set members:
 
-The ``Set.End`` return value terminates input to the set. Additional
-information about iterators for set initialization is in the
+.. doctest::
+
+    >>> def X_init(m):
+    ...     for i in range(10):
+    ...         yield 2*i+1
+    >>> model.X = Set(initialize=X_init)
+
+For initialization functions, Pyomo supports two signatures.  In the
+first, the function returns an iterable (``set``, ``list``, or
+``tuple``) containing the data with which to initialize the Set:
+
+.. doctest::
+
+    >>> def Y_init(m):
+    ...     return [2*i+1 for i in range(10)]
+    >>> model.Y = Set(initialize=Y_init)
+
+In the second signature, the function is called for each element,
+passing the element number in as an extra argument.  This is repeated
+until the function returns the special value ``Set.End``:
+
+.. doctest::
+
+    >>> def Z_init(model, i):
+    ...     if i > 10:
+    ...         return Set.End
+    ...     return 2*i+1
+    >>> model.Z = Set(initialize=Z_init)
+
+Note that the element number starts with 1 and not 0:
+
+.. doctest::
+
+    >>> model.X.pprint()
+    X : Dim=0, Dimen=1, Size=10, Domain=None, Ordered=False, Bounds=(1, 19)
+        [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
+    >>> model.Y.pprint()
+    Y : Dim=0, Dimen=1, Size=10, Domain=None, Ordered=False, Bounds=(1, 19)
+        [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
+    >>> model.Z.pprint()
+    Z : Dim=0, Dimen=1, Size=10, Domain=None, Ordered=False, Bounds=(3, 21)
+        [3, 5, 7, 9, 11, 13, 15, 17, 19, 21]
+
+Additional information about iterators for set initialization is in the
 [PyomoBookII]_ book.
 
 .. note::
 
-   Data specified in an input file will override the data specified by
-   the initialize options.
+   For Abstract models, data specified in an input file or through the
+   ``data`` argument to ``create_instance()`` will override the data
+   specified by the initialize options.
 
 If sets are given as arguments to ``Set`` without keywords, they are
 interpreted as indexes for an array of sets. For example, to create an
-array of sets that is indexed by the members of the set ``model.A``, use
+array of sets that is indexed by the members of the set ``model.A``, use:
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Sets_without_keywords.spy
-   :language: python
+.. doctest::
 
-Arguments can be combined. For example, to create an array of sets with
-three dimensional members indexed by set ``model.A``, use
+   >>> model.E = Set(model.A)
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Combined_arguments.spy
-   :language: python
+Arguments can be combined. For example, to create an array of sets,
+indexed by set ``model.A`` where each set contains three dimensional
+members, use:
+
+.. doctest::
+
+   >>> model.F = Set(model.A, dimen=3)
 
 The ``initialize`` option can be used to create a set that contains a
 sequence of numbers, but the ``RangeSet`` function provides a concise
@@ -89,42 +150,49 @@ given, they are the first and last value in the sequence and the step
 size defaults to one. For example, the following declaration creates a
 set with the numbers 1.5, 5 and 8.5:
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_RangeSet_simple_sequence.spy
-   :language: python
+.. doctest::
+
+   >>> model.G = RangeSet(1.5, 10, 3.5)
 
 Operations
 -----------
 
-Sets may also be created by assigning other Pyomo sets as in these
-examples that also illustrate the set operators union, intersection,
-difference, and exclusive-or:
+Sets may also be created by storing the result of *set operations* using
+other Pyomo sets.  Pyomo supports set operations including union, intersection,
+difference, and symmetric difference:
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Set_operators.spy
-   :language: python
+.. doctest::
 
-The cross-product operator is the asterisk (*). For example, to assign a
-set the cross product of two other sets, one could use
+    >>> model.I = model.A | model.D # union
+    >>> model.J = model.A & model.D # intersection
+    >>> model.K = model.A - model.D # difference
+    >>> model.L = model.A ^ model.D # exclusive-or
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Set_cross_product.spy
-   :language: python
+For example, the cross-product operator is the asterisk (*).  To define
+a new set ``M`` that is the cross product of sets ``B`` and ``C``, one
+could use
 
-or to indicate the the members of a set are restricted to be in the
-cross product of two other sets, one could use
+.. doctest::
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Restrict_to_crossproduct.spy
-   :language: python
+    >>> model.M = model.B * model.C
 
-The cross-product operator is the asterisk (*).  For example, to create
-a set that contains the cross-product of sets A and B, use
+This creates a *virtual* set that holds references to the original sets,
+so any updates to the original sets (``B`` and ``C``) will be reflected
+in the new set (``M``).  In contrast, you can also create a *concrete*
+set, which directly stores the values of the cross product at the time
+of creation and will *not* reflect subsequent changes in the original
+sets with:
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Assign_to_crossproduct.spy
-   :language: python
+.. doctest::
 
-to instead create a set that can contain a subset of the members of this
-cross-product, use
+    >>> model.M_concrete = Set(initialize=model.B * model.C)
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Contain_crossproduct_subset.spy
-   :language: python
+Finally, you can indicate that the members of a set are restricted to be in the
+cross product of two other sets, one can use the ``within`` keyword:
+
+.. doctest::
+
+    >>> model.N = Set(within=model.B * model.C)
 
 Predefined Virtual Sets
 -----------------------
@@ -145,9 +213,9 @@ provides the following pre-defined virtual sets:
 - NonPositiveIntegers = non-positive integer values
 - NegativeIntegers = negative integer values
 - NonNegativeIntegers = non-negative integer values
-- Boolean = boolean values, which can be represented as False/True, 0/1,
+- Boolean = Boolean values, which can be represented as False/True, 0/1,
   ’False’/’True’ and ’F’/’T’
-- Binary = same as boolean
+- Binary = same as Boolean
 
 For example, if the set ``model.M`` is declared to be within the virtual
 set ``NegativeIntegers`` then an attempt to add anything other than a
@@ -164,7 +232,7 @@ Sparse Index Sets
 Sets provide indexes for parameters, variables and other sets. Index set
 issues are important for modelers in part because of efficiency
 considerations, but primarily because the right choice of index sets can
-result in very natural formulations that are condusive to understanding
+result in very natural formulations that are conducive to understanding
 and maintenance. Pyomo leverages Python to provide a rich collection of
 options for index set creation and use.
 
@@ -280,7 +348,9 @@ Sparse Index Sets Example
 
 One may want to have a constraint that holds
 
->>> for i in model.I, k in model.K, v in model.V[k] # doctest: +SKIP
+.. doctest::
+
+   >>> for i in model.I, k in model.K, v in model.V[k] # doctest: +SKIP
 
 There are many ways to accomplish this, but one good way is to create a
 set of tuples composed of all of ``model.k, model.V[k]`` pairs.  This
@@ -291,8 +361,10 @@ can be done as follows:
 
 So then if there was a constraint defining rule such as
 
->>> def MyC_rule(model, i, k, v): # doctest: +SKIP
->>>    return ...                 # doctest: +SKIP
+.. doctest::
+
+   >>> def MyC_rule(model, i, k, v): # doctest: +SKIP
+   >>>    return ...                 # doctest: +SKIP
 
 Then a constraint could be declared using
 

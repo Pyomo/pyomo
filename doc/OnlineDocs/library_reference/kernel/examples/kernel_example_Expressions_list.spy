@@ -1,0 +1,5 @@
+# uses 0-based indexed
+m.el = pmo.expression_list()
+for j in m.q:
+    m.el.append(
+        pmo.expression(-m.vl[j]))

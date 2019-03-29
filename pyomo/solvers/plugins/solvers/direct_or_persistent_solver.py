@@ -20,8 +20,6 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt.base.formats import ResultsFormat
 from pyutilib.misc import Options
-from collections import MutableMapping
-
 
 class DirectOrPersistentSolver(OptSolver):
     """

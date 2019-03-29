@@ -520,10 +520,16 @@ class _TestDictContainerBase(object):
         cdict[2] = self._ctype_factory()
         traversal.append(cdict[2])
 
+        descend = lambda x: not x._is_heterogeneous_container
+
         self.assertEqual([c.name for c in traversal],
-                         [c.name for c in cdict.preorder_traversal()])
+                         [c.name for c in pmo.preorder_traversal(
+                             cdict,
+                             descend=descend)])
         self.assertEqual([id(c) for c in traversal],
-                         [id(c) for c in cdict.preorder_traversal()])
+                         [id(c) for c in pmo.preorder_traversal(
+                             cdict,
+                             descend=descend)])
         return cdict, traversal
 
     def test_preorder_traversal_descend_check(self):
@@ -544,7 +550,8 @@ class _TestDictContainerBase(object):
             descend.seen.append(x)
             return False
         descend.seen = []
-        order = list(cdict.preorder_traversal(descend=descend))
+        order = list(pmo.preorder_traversal(cdict,
+                                            descend=descend))
         self.assertEqual(len(order), 1)
         self.assertIs(order[0], cdict)
         self.assertEqual(len(descend.seen), 1)
@@ -553,39 +560,37 @@ class _TestDictContainerBase(object):
         def descend(x):
             self.assertTrue(x._is_container)
             descend.seen.append(x)
-            return True
+            return not x._is_heterogeneous_container
         descend.seen = []
-        order = list(cdict.preorder_traversal(descend=descend))
+        order = list(pmo.preorder_traversal(cdict,
+                                            descend=descend))
         self.assertEqual([c.name for c in traversal],
                          [c.name for c in order])
         self.assertEqual([id(c) for c in traversal],
                          [id(c) for c in order])
         self.assertEqual([c.name for c in traversal
-                          if c._is_container and \
-                          (not c._is_heterogeneous_container)],
+                          if c._is_container],
                          [c.name for c in descend.seen])
         self.assertEqual([id(c) for c in traversal
-                          if c._is_container and \
-                          (not c._is_heterogeneous_container)],
+                          if c._is_container],
                          [id(c) for c in descend.seen])
 
         def descend(x):
             self.assertTrue(x._is_container)
             descend.seen.append(x)
-            return True
+            return not x._is_heterogeneous_container
         descend.seen = []
-        order = list(cdict.preorder_traversal(descend=descend))
+        order = list(pmo.preorder_traversal(cdict,
+                                            descend=descend))
         self.assertEqual([c.name for c in traversal],
                          [c.name for c in order])
         self.assertEqual([id(c) for c in traversal],
                          [id(c) for c in order])
         self.assertEqual([c.name for c in traversal
-                          if c._is_container and \
-                          (not c._is_heterogeneous_container)],
+                          if c._is_container],
                          [c.name for c in descend.seen])
         self.assertEqual([id(c) for c in traversal
-                          if c._is_container and \
-                          (not c._is_heterogeneous_container)],
+                          if c._is_container],
                          [id(c) for c in descend.seen])
         return cdict, traversal
 
@@ -654,7 +659,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         for c in cdict.values():
             self.assertEqual(c.active, False)
         self.assertNotEqual(len(list(cdict.components())),
-                            len(list(cdict.components(active=True))))
+                            len(list(cdict.components(active=None))))
         self.assertEqual(len(list(cdict.components(active=True))), 0)
 
         test_key = list(children.keys())[0]
@@ -670,7 +675,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         for c in cdict.values():
             self.assertEqual(c.active, False)
         self.assertNotEqual(len(list(cdict.components())),
-                            len(list(cdict.components(active=True))))
+                            len(list(cdict.components(active=None))))
         self.assertEqual(len(list(cdict.components(active=True))), 0)
 
         del cdict[test_key]
@@ -704,7 +709,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         for c in cdict.components(active=True):
             self.assertEqual(c.active, True)
         self.assertNotEqual(len(list(cdict.components())),
-                            len(list(cdict.components(active=True))))
+                            len(list(cdict.components(active=None))))
         self.assertEqual(len(list(cdict.components(active=True))), 1)
 
 
@@ -738,7 +743,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         for c in cdict.values():
             self.assertEqual(c.active, False)
         self.assertNotEqual(len(list(cdict.components())),
-                            len(list(cdict.components(active=True))))
+                            len(list(cdict.components(active=None))))
         self.assertEqual(len(list(cdict.components(active=True))), 0)
 
         cdict.activate(shallow=False)
@@ -788,7 +793,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         for c in cdict.components(active=True):
             self.assertEqual(c.active, True)
         self.assertNotEqual(len(list(cdict.components())),
-                            len(list(cdict.components(active=True))))
+                            len(list(cdict.components(active=None))))
         self.assertEqual(len(list(cdict.components(active=True))), 1)
 
     def test_preorder_traversal(self):
@@ -796,26 +801,38 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
             super(_TestActiveDictContainerBase, self).\
             test_preorder_traversal()
 
+        descend = lambda x: not x._is_heterogeneous_container
+
         cdict[1].deactivate()
         self.assertEqual([None, '[0]', '[2]'],
-                         [c.name for c in cdict.preorder_traversal(
-                             active=True)])
+                         [c.name for c in pmo.preorder_traversal(
+                             cdict,
+                             active=True,
+                             descend=descend)])
         self.assertEqual([id(cdict),id(cdict[0]),id(cdict[2])],
-                         [id(c) for c in cdict.preorder_traversal(
-                             active=True)])
+                         [id(c) for c in pmo.preorder_traversal(
+                             cdict,
+                             active=True,
+                             descend=descend)])
 
         cdict[1].deactivate(shallow=False)
         self.assertEqual([c.name for c in traversal if c.active],
-                         [c.name for c in cdict.preorder_traversal(
-                             active=True)])
+                         [c.name for c in pmo.preorder_traversal(
+                             cdict,
+                             active=True,
+                             descend=descend)])
         self.assertEqual([id(c) for c in traversal if c.active],
-                         [id(c) for c in cdict.preorder_traversal(
-                             active=True)])
+                         [id(c) for c in pmo.preorder_traversal(
+                             cdict,
+                             active=True,
+                             descend=descend)])
 
         cdict.deactivate()
-        self.assertEqual(len(list(cdict.preorder_traversal(active=True))),
+        self.assertEqual(len(list(pmo.preorder_traversal(cdict,
+                                                         active=True))),
                          0)
-        self.assertEqual(len(list(pmo.generate_names(cdict, active=True))),
+        self.assertEqual(len(list(pmo.generate_names(cdict,
+                                                     active=True))),
                          0)
 
     def test_preorder_traversal_descend_check(self):
@@ -827,77 +844,101 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         def descend(x):
             self.assertTrue(x._is_container)
             descend.seen.append(x)
-            return True
+            return not x._is_heterogeneous_container
         descend.seen = []
-        order = list(cdict.preorder_traversal(active=True,
-                                              descend=descend))
+        pmo.pprint(cdict)
+        order = list(pmo.preorder_traversal(cdict,
+                                            active=True,
+                                            descend=descend))
         self.assertEqual([None, '[0]', '[2]'],
                          [c.name for c in order])
         self.assertEqual([id(cdict),id(cdict[0]),id(cdict[2])],
                          [id(c) for c in order])
-        self.assertEqual([None],
-                         [c.name for c in descend.seen])
-        self.assertEqual([id(cdict)],
-                         [id(c) for c in descend.seen])
+        if cdict.ctype._is_heterogeneous_container:
+            self.assertEqual([None, '[0]', '[2]'],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(cdict),id(cdict[0]),id(cdict[2])],
+                             [id(c) for c in descend.seen])
+        else:
+            self.assertEqual([None],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(cdict)],
+                             [id(c) for c in descend.seen])
 
         def descend(x):
             self.assertTrue(x._is_container)
             descend.seen.append(x)
-            return x.active
+            return x.active and (not x._is_heterogeneous_container)
         descend.seen = []
-        order = list(cdict.preorder_traversal(descend=descend))
+        order = list(pmo.preorder_traversal(cdict,
+                                            active=None,
+                                            descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
                          [c.name for c in order])
         self.assertEqual([id(cdict),id(cdict[0]),id(cdict[1]),id(cdict[2])],
                          [id(c) for c in order])
-        self.assertEqual([None,'[1]'],
-                         [c.name for c in descend.seen])
-        self.assertEqual([id(cdict),id(cdict[1])],
-                         [id(c) for c in descend.seen])
+        if cdict.ctype._is_heterogeneous_container:
+            self.assertEqual([None,'[0]','[1]','[2]'],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(cdict),id(cdict[0]),id(cdict[1]),id(cdict[2])],
+                             [id(c) for c in descend.seen])
+        else:
+            self.assertEqual([None,'[1]'],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(cdict),id(cdict[1])],
+                             [id(c) for c in descend.seen])
 
         cdict[1].deactivate(shallow=False)
         def descend(x):
             descend.seen.append(x)
-            return True
+            return not x._is_heterogeneous_container
         descend.seen = []
-        order = list(cdict.preorder_traversal(active=True,
-                                              descend=descend))
+        order = list(pmo.preorder_traversal(cdict,
+                                            active=True,
+                                            descend=descend))
         self.assertEqual([c.name for c in traversal if c.active],
                          [c.name for c in order])
         self.assertEqual([id(c) for c in traversal if c.active],
                          [id(c) for c in order])
         self.assertEqual([c.name for c in traversal
                           if c.active and \
-                          c._is_container and \
-                          (not c._is_heterogeneous_container)],
+                          c._is_container],
                          [c.name for c in descend.seen])
         self.assertEqual([id(c) for c in traversal
                           if c.active and \
-                          c._is_container and \
-                          (not c._is_heterogeneous_container)],
+                          c._is_container],
                          [id(c) for c in descend.seen])
 
         def descend(x):
             descend.seen.append(x)
-            return x.active
+            return x.active and (not x._is_heterogeneous_container)
         descend.seen = []
-        order = list(cdict.preorder_traversal(descend=descend))
+        order = list(pmo.preorder_traversal(cdict,
+                                            active=None,
+                                            descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
                          [c.name for c in order])
         self.assertEqual([id(cdict),id(cdict[0]),id(cdict[1]),id(cdict[2])],
                          [id(c) for c in order])
-        self.assertEqual([None,'[1]'],
-                         [c.name for c in descend.seen])
-        self.assertEqual([id(cdict),id(cdict[1])],
-                         [id(c) for c in descend.seen])
+        if cdict.ctype._is_heterogeneous_container:
+            self.assertEqual([None,'[0]','[1]','[2]'],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(cdict),id(cdict[0]),id(cdict[1]),id(cdict[2])],
+                             [id(c) for c in descend.seen])
+        else:
+            self.assertEqual([None,'[1]'],
+                             [c.name for c in descend.seen])
+            self.assertEqual([id(cdict),id(cdict[1])],
+                             [id(c) for c in descend.seen])
 
         cdict.deactivate()
         def descend(x):
             descend.seen.append(x)
             return True
         descend.seen = []
-        order = list(cdict.preorder_traversal(active=True,
-                                              descend=descend))
+        order = list(pmo.preorder_traversal(cdict,
+                                            active=True,
+                                            descend=descend))
         self.assertEqual(len(descend.seen), 0)
         self.assertEqual(len(list(pmo.generate_names(cdict,
                                                      active=True))),
@@ -907,7 +948,9 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
             descend.seen.append(x)
             return x.active
         descend.seen = []
-        order = list(cdict.preorder_traversal(descend=descend))
+        order = list(pmo.preorder_traversal(cdict,
+                                            active=None,
+                                            descend=descend))
         self.assertEqual(len(descend.seen), 1)
         self.assertIs(descend.seen[0], cdict)
 

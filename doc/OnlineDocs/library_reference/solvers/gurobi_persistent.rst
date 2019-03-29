@@ -8,21 +8,14 @@ Methods
 
 .. autosummary::
 
-   GurobiPersistent.activate
    GurobiPersistent.add_block
    GurobiPersistent.add_constraint
    GurobiPersistent.set_objective
    GurobiPersistent.add_sos_constraint
    GurobiPersistent.add_var
-   GurobiPersistent.alias
    GurobiPersistent.available
-   GurobiPersistent.deactivate
-   GurobiPersistent.disable
-   GurobiPersistent.enable
-   GurobiPersistent.enabled
    GurobiPersistent.has_capability
    GurobiPersistent.has_instance
-   GurobiPersistent.implements
    GurobiPersistent.load_vars
    GurobiPersistent.problem_format
    GurobiPersistent.remove_block

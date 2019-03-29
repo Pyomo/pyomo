@@ -8,22 +8,21 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import weakref
-try:
-    # python 3.7+
-    from collections.abc import Sequence as _Sequence
-    from collections.abc import Set as _Set
-except:                                           #pragma:nocover
-    from collections import Sequence as _Sequence
-    from collections import Set as _Set
-
 from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 
+import six
 from six.moves import xrange as range
 
+if six.PY3:
+    from collections.abc import Sequence as collections_Sequence
+    from collections.abc import Set as collections_Set
+else:
+    from collections import Sequence as collections_Sequence
+    from collections import Set as collections_Set
+
 class TupleContainer(IHomogeneousContainer,
-                     _Sequence):
+                     collections_Sequence):
     """
     A partial implementation of the IHomogeneousContainer
     interface that provides tuple-like storage functionality.
@@ -57,8 +56,7 @@ class TupleContainer(IHomogeneousContainer,
                 self._insert(len(self), item)
 
     def _fast_insert(self, i, item):
-        item._parent = weakref.ref(self)
-        item._storage_key = i
+        item._update_parent_and_storage_key(self, i)
         self._data.insert(i, item)
 
     def _insert(self, i, item):
@@ -124,7 +122,8 @@ class TupleContainer(IHomogeneousContainer,
     # Convert both objects to a plain tuple of (type(val),
     # id(val)) tuples and compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, (_Set, _Sequence)):
+        if not isinstance(other, (collections_Set,
+                                  collections_Sequence)):
             return False
         return tuple((type(val), id(val))
                      for val in self) == \

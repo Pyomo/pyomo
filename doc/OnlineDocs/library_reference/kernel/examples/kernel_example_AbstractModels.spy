@@ -1,0 +1,5 @@
+def create(data):
+    instance = pmo.block()
+    # ... define instance ...
+    return instance
+instance = create(data)

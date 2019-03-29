@@ -1,0 +1,12 @@
+from pyomo.core.expr import current as EXPR
+
+M = ConcreteModel()
+M.x = Var()
+M.y = Var()
+
+e = M.x+M.y
+M.y.value = 1
+M.y.fixed = True
+
+assert(set(id(v) for v in EXPR.identify_variables(e)) == set([id(M.x), id(M.y)]))
+assert(set(id(v) for v in EXPR.identify_variables(e, include_fixed=False)) == set([id(M.x)]))

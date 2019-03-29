@@ -10,7 +10,6 @@
 
 import sys
 import logging
-import weakref
 import collections
 if sys.version_info[:2] >= (3,6):
     _ordered_dict_ = dict
@@ -20,19 +19,19 @@ else:
     except ImportError:                           #pragma:nocover
         import ordereddict
         _ordered_dict_ = ordereddict.OrderedDict
-try:
-    # python 3.7+
-    from collections.abc import MutableMapping as _MutableMapping
-    from collections.abc import Mapping as _Mapping
-except:                                           #pragma:nocover
-    from collections import MutableMapping as _MutableMapping
-    from collections import Mapping as _Mapping
 
 from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 
 import six
 from six import itervalues, iteritems
+
+if six.PY3:
+    from collections.abc import MutableMapping as collections_MutableMapping
+    from collections.abc import Mapping as collections_Mapping
+else:
+    from collections import MutableMapping as collections_MutableMapping
+    from collections import Mapping as collections_Mapping
 
 logger = logging.getLogger('pyomo.core')
 
@@ -45,7 +44,7 @@ logger = logging.getLogger('pyomo.core')
 # closer to a Python 3-only world these types of objects are
 # not memory bottlenecks.
 class DictContainer(IHomogeneousContainer,
-                    _MutableMapping):
+                    collections_MutableMapping):
     """
     A partial implementation of the IHomogeneousContainer
     interface that provides dict-like storage functionality.
@@ -75,6 +74,10 @@ class DictContainer(IHomogeneousContainer,
         if len(kwds):
             self.update(**kwds)
 
+    def _fast_insert(self, key, item):
+        item._update_parent_and_storage_key(self, key)
+        self._data[key] = item
+
     #
     # Define the ICategorizedObjectContainer abstract methods
     #
@@ -93,11 +96,6 @@ class DictContainer(IHomogeneousContainer,
         """A generator over the children of this container."""
         return itervalues(self._data)
 
-    def _fast_insert(self, key, item):
-        item._parent = weakref.ref(self)
-        item._storage_key = key
-        self._data[key] = item
-
     #
     # Define the MutableMapping abstract methods
     #
@@ -115,9 +113,7 @@ class DictContainer(IHomogeneousContainer,
                         % (self[key].name,
                            self[key].__class__.__name__,
                            item.__class__.__name__))
-                    obj_ = self._data[key]
-                    obj_._parent = None
-                    obj_._storage_key = None
+                    self._data[key]._clear_parent_and_storage_key()
                 self._fast_insert(key, item)
                 return
             elif (key in self._data) and (self._data[key] is item):
@@ -148,9 +144,7 @@ class DictContainer(IHomogeneousContainer,
                    item.ctype))
 
     def __delitem__(self, key):
-        obj = self._data[key]
-        obj._parent = None
-        obj._storage_key = None
+        self._data[key]._clear_parent_and_storage_key()
         del self._data[key]
 
     def __getitem__(self, key):
@@ -174,7 +168,7 @@ class DictContainer(IHomogeneousContainer,
     # plain dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, _Mapping):
+        if not isinstance(other, collections_Mapping):
             return False
         return dict((key, (type(val), id(val)))
                     for key, val in self.items()) == \

@@ -1,10 +1,10 @@
-Working with AbstractModels
-===========================
+Working with Abstract Models
+============================
 
 .. toctree::
    :maxdepth: 1
 
-   importing_data.rst
-   BuildAction.rst
-   pyomo_command.rst
+   instantiating_models.rst
    data/index.rst
+   pyomo_command.rst
+   BuildAction.rst

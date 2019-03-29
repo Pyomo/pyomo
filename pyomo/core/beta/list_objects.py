@@ -8,11 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = () #('XVarList', 'XConstraintList', 'XObjectiveList', 'XExpressionList')
+__all__ = ()
 
 import logging
 from weakref import ref as weakref_ref
-import collections
 
 from pyomo.core.base.set_types import Any
 from pyomo.core.base.var import (IndexedVar,
@@ -24,6 +23,13 @@ from pyomo.core.base.objective import (IndexedObjective,
 from pyomo.core.base.expression import (IndexedExpression,
                                         _ExpressionData)
 
+import six
+
+if six.PY3:
+    from collections.abc import MutableSequence as collections_MutableSequence
+else:
+    from collections import MutableSequence as collections_MutableSequence
+
 logger = logging.getLogger('pyomo.core')
 
 #
@@ -33,7 +39,7 @@ logger = logging.getLogger('pyomo.core')
 # be implemented on top of these classes.
 #
 
-class ComponentList(collections.MutableSequence):
+class ComponentList(collections_MutableSequence):
 
     def __init__(self, interface_datatype, *args):
         self._interface_datatype = interface_datatype

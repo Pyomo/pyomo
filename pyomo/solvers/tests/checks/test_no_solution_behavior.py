@@ -67,6 +67,7 @@ def create_test_method(model,
                     test_case.testcase.options,
                     symbolic_labels,
                     load_solutions)
+        model_class.post_solve_test_validation(self, results)
         if len(results.solution) == 0:
             self.assertIn("No solution is available",
                           out.getvalue())
@@ -80,6 +81,13 @@ def create_test_method(model,
         def skipping_this(self):
             return self.skipTest(test_case.msg)
         return skipping_this
+
+    if is_expected_failure:
+        @unittest.expectedFailure
+        def failing_failed_solve_test(self):
+            return failed_solve_test(self)
+        # Return a test that is expected to fail
+        return failing_failed_solve_test
 
     # Return a normal test
     return failed_solve_test

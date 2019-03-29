@@ -1,0 +1,5 @@
+# Sum the product of x_i/y_i
+e1 = sum_product(M.x, denom=M.y)
+
+# Sum the product of 1/(x_i*y_i)
+e2 = sum_product(denom=(M.x, M.y))

@@ -34,8 +34,6 @@ from pyomo.opt.results import (SolverResults, SolverStatus, Solution,
 
 logger = logging.getLogger('pyomo.solvers')
 
-pyomo.common.register_executable(name="gams")
-
 class _GAMSSolver(object):
     """Aggregate of common methods for GAMS interfaces"""
 
@@ -163,10 +161,9 @@ class GAMSDirect(_GAMSSolver):
             return _extract_version('')
         from gams import GamsWorkspace
         ws = GamsWorkspace()
-        version = tuple(int(i) for i in ws._version.split('.'))
+        version = tuple(int(i) for i in ws._version.split('.')[:4])
         while(len(version) < 4):
             version += (0,)
-        version = version[:4]
         return version
 
     def solve(self, *args, **kwds):
@@ -570,11 +567,11 @@ class GAMSShell(_GAMSSolver):
 
     def available(self, exception_flag=True):
         """True if the solver is available."""
-        exe = pyomo.common.registered_executable("gams")
+        exe = pyomo.common.Executable("gams")
         if exception_flag is False:
-            return exe is not None
+            return exe.available()
         else:
-            if exe is not None:
+            if exe.available():
                 return True
             else:
                 raise NameError(
@@ -582,13 +579,13 @@ class GAMSShell(_GAMSSolver):
                     "solver functionality is not available.")
 
     def _default_executable(self):
-        executable = pyomo.common.registered_executable("gams")
-        if executable is None:
+        executable = pyomo.common.Executable("gams")
+        if not executable:
             logger.warning("Could not locate the 'gams' executable, "
                            "which is required for solver gams")
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     def executable(self):
         """Returns the executable used by this solver."""
@@ -601,8 +598,12 @@ class GAMSShell(_GAMSSolver):
         if solver_exec is None:
             return _extract_version('')
         else:
-            results = pyutilib.subprocess.run([solver_exec])
-            return _extract_version(results[1])
+            # specify logging to stdout for windows compatibility
+            # technically this command makes gams complain because we're not
+            # providing a filename, but it will include the version name anyway
+            cmd = [solver_exec, "", "lo=3"]
+            _, txt = pyutilib.subprocess.run(cmd, tee=False)
+            return _extract_version(txt)
 
     def solve(self, *args, **kwds):
         """

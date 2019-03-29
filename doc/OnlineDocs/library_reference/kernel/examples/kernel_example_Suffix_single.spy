@@ -1,0 +1,2 @@
+m.dual = pmo.suffix(
+    direction=pmo.suffix.IMPORT)

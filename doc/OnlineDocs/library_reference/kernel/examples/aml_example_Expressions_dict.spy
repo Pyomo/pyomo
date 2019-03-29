@@ -1,0 +1,4 @@
+def ed_(m, i):
+    return -m.vd[i]
+m.ed = aml.Expression(m.s,
+                      rule=ed_)

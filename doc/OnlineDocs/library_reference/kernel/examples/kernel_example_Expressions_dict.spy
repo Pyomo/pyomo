@@ -1,0 +1,4 @@
+m.ed = pmo.expression_dict()
+for i in m.s:
+    m.ed[i] = \
+        pmo.expression(-m.vd[i])

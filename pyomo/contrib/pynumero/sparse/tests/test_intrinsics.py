@@ -11,6 +11,7 @@ import sys
 import pyutilib.th as unittest
 try:
     import numpy as np
+    import scipy
 except ImportError:
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 

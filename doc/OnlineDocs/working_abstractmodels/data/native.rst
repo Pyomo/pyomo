@@ -4,9 +4,7 @@ Using Standard Data Types
 Defining Constant Values
 ------------------------
 
-In many cases, Pyomo models can be constructed without :class:`Set <ref
-pyomo.core.base.sets.Set>` and :class:`Param <ref
-pyomo.core.base.param.Param>` data components.  Native Python data types
+In many cases, Pyomo models can be constructed without :class:`~pyomo.environ.Set` and :class:`~pyomo.environ.Param` data components.  Native Python data types
 class can be simply used to define constant values in Pyomo expressions.
 Consequently, Python sets, lists and dictionaries can be used to
 construct Pyomo models, as well as a wide range of other Python classes.
@@ -19,19 +17,18 @@ construct Pyomo models, as well as a wide range of other Python classes.
 Initializing Set and Parameter Components
 -----------------------------------------
 
-The :class:`Set <ref pyomo.core.base.sets.Set>` and :class:`Param
-<ref pyomo.core.base.param.Param>` components used in a Pyomo model
+The :class:`~pyomo.environ.Set` and :class:`~pyomo.environ.Param` components used in a Pyomo model
 can also be initialized with standard Python data types.  This
 enables some modeling efficiencies when manipulating sets (e.g.
 when re-using sets for indices), and it supports validation of set
-and parameter data values.  The :class:`Set <ref pyomo.core.base.sets.Set>`
-and :class:`Param <ref pyomo.core.base.param.Param>` components are
-initialized with Python data using the \code{initialize} option.
+and parameter data values.  The :class:`~pyomo.environ.Set`
+and :class:`~pyomo.environ.Param` components are
+initialized with Python data using the ``initialize`` option.
 
 Set Components
 ^^^^^^^^^^^^^^
 
-In general, :class:`Set <ref pyomo.core.base.sets.Set>` components
+In general, :class:`~pyomo.environ.Set` components
 can be initialized with iterable data.  For example, simple sets
 can be initialized with:
 
@@ -66,14 +63,13 @@ dictionary values are iterable data:
 Parameter Components
 ^^^^^^^^^^^^^^^^^^^^
 
-When a parameter is a single value, then a :class:`Param <ref
-pyomo.core.base.param.Param>` component can be simply initialized with a
+When a parameter is a single value, then a :class:`~pyomo.environ.Param` component can be simply initialized with a
 value:
 
 .. literalinclude:: ../../tests/dataportal/param_initialization_decl1.spy
     :language: python
 
-More generally, :class:`Param <ref pyomo.core.base.param.Param>`
+More generally, :class:`~pyomo.environ.Param`
 components can be initialized with dictionary data where the dictionary
 values are single values:
 
