@@ -115,6 +115,7 @@ class CuttingPlane_Transformation(Transformation):
                                       var_info, var_map, disaggregated_var_info,
                                       transBlockName)
 
+
     def _setup_subproblems(self, instance, bigM):
         # create transformation block
         transBlockName, transBlock = self._add_relaxation_block(
@@ -548,13 +549,17 @@ class CuttingPlane_Transformation(Transformation):
 
         # DEBUG
         #print("Checking constraints we are passing into recursive thing:")
+        vars_that_appear = ComponentSet()
         for cons in constraints:
             body = 0
             for var, val in cons['body'].items():
                 body += val*var if var is not None else val
+                # AAAAAAA, this can't be a good idea
+                if var in vars_to_eliminate:
+                    vars_that_appear.add(var)
             #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
                 
-        return self.fm_elimination(constraints, vars_to_eliminate)
+        return self.fm_elimination(constraints, vars_that_appear)
 
     def fm_elimination(self, constraints, vars_to_eliminate):
         if not vars_to_eliminate:
@@ -635,8 +640,9 @@ class CuttingPlane_Transformation(Transformation):
 
         # add back in the constraints that didn't have the variable we were
         # projecting out
-        for cons in waiting_list:
-            constraints.append(cons)
+        constraints.extend(waiting_list)
+        # for cons in waiting_list:
+        #     constraints.append(cons)
 
         #print("This is what we have now:")
         for cons in constraints:
