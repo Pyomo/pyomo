@@ -554,104 +554,101 @@ class CuttingPlane_Transformation(Transformation):
             body = 0
             for var, val in cons['body'].items():
                 body += val*var if var is not None else val
-                # AAAAAAA, this can't be a good idea
+                # We only need to eliminate variables that actually appear in
+                # this set of constraints
                 if var in vars_to_eliminate:
                     vars_that_appear.add(var)
             #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
-                
-        return self.fm_elimination(constraints, vars_that_appear)
 
-    def fm_elimination(self, constraints, vars_to_eliminate):
-        if not vars_to_eliminate:
-            return constraints
-        
-        the_var = vars_to_eliminate.pop()
-        #print("DEBUG: we are eliminating %s" % the_var.name)
-        # we are 'reorganizing' the constraints, we will map the coefficient of
-        # the_var from that constraint and the rest of the expression and sorting
-        # based on whether we have the_var <= other stuff or vice versa.
-        leq_list = []
-        geq_list = []
-        waiting_list = []
+        # we are done preprocessing, now we can actually do the recursion
+        while vars_that_appear:
+            the_var = vars_that_appear.pop()
+            #print("DEBUG: we are eliminating %s" % the_var.name) we are
+            # 'reorganizing' the constraints, we will map the coefficient of
+            # the_var from that constraint and the rest of the expression and
+            # sorting based on whether we have the_var <= other stuff or vice
+            # versa.
+            leq_list = []
+            geq_list = []
+            waiting_list = []
 
-        # sort our constraints, make it so leq constraints have coef of -1 on
-        # variable to eliminate, geq constraints have coef of 1 (so we can add
-        # them)
-        #DEBUG
-        #print("CONSTRAINTS:")
-        while(constraints):
-            cons = constraints.pop()
-        #for cons in constraints:
-            # DEBUG
-            body = 0
-            for var, val in cons['body'].items():
-                body += val*var if var is not None else val
-            #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
+            # sort our constraints, make it so leq constraints have coef of -1
+            # on variable to eliminate, geq constraints have coef of 1 (so we
+            # can add them) 
+            # DEBUG 
+            # print("CONSTRAINTS:")
+            while(constraints):
+                cons = constraints.pop()
+                #for cons in constraints:
+                # DEBUG
+                # body = 0
+                # for var, val in cons['body'].items():
+                #     body += val*var if var is not None else val
+                #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
 
-            leaving_var_coef = cons['body'].get(the_var)
-            if leaving_var_coef is None or leaving_var_coef == 0:
-                waiting_list.append(cons)
-                #print("\tskipping")
-                continue
+                leaving_var_coef = cons['body'].get(the_var)
+                if leaving_var_coef is None or leaving_var_coef == 0:
+                    waiting_list.append(cons)
+                    #print("\tskipping")
+                    continue
 
-            if cons['lower'] is not None:
-                if leaving_var_coef < 0:
-                    # don't flip the sign
-                    leq_list.append(self.scalar_multiply_linear_constraint(
-                        cons, -1.0/leaving_var_coef))
-                    #print("\tleq (lower)")
-                else:
-                    # don't flip the sign
-                    geq_list.append(self.scalar_multiply_linear_constraint(
-                        cons, 1.0/leaving_var_coef))
-                    #print("\tgeq (lower)")
+                if cons['lower'] is not None:
+                    if leaving_var_coef < 0:
+                        # don't flip the sign
+                        leq_list.append(self.scalar_multiply_linear_constraint(
+                            cons, -1.0/leaving_var_coef))
+                        #print("\tleq (lower)")
+                    else:
+                        # don't flip the sign
+                        geq_list.append(self.scalar_multiply_linear_constraint(
+                            cons, 1.0/leaving_var_coef))
+                        #print("\tgeq (lower)")
 
-            # NOTE: this 'else' matters because we are changing the constraint
-            # when we flip it, so cons['upper'] may have become not None
-            elif cons['upper'] is not None:
-                if leaving_var_coef > 0:
-                    # flip the sign
-                    leq_list.append(self.scalar_multiply_linear_constraint(
-                        cons, -1.0/leaving_var_coef))
-                    #print("\tgeq (upper)")
-                else:
-                    # flip the sign
-                    geq_list.append(self.scalar_multiply_linear_constraint(
-                        cons, 1.0/leaving_var_coef))
-                    #print("\tgeq (upper)")
+                # NOTE: this 'else' matters because we are changing the
+                # constraint when we flip it, so cons['upper'] may have become
+                # not None
+                elif cons['upper'] is not None:
+                    if leaving_var_coef > 0:
+                        # flip the sign
+                        leq_list.append(self.scalar_multiply_linear_constraint(
+                            cons, -1.0/leaving_var_coef))
+                        #print("\tgeq (upper)")
+                    else:
+                        # flip the sign
+                        geq_list.append(self.scalar_multiply_linear_constraint(
+                            cons, 1.0/leaving_var_coef))
+                        #print("\tgeq (upper)")
 
-        #print("Here be leq constraints:")
-        for cons in leq_list:
-            body = 0
-            for var, val in cons['body'].items():
-                body += val*var if var is not None else val
-            #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
+            #print("Here be leq constraints:")
+            for cons in leq_list:
+                body = 0
+                for var, val in cons['body'].items():
+                    body += val*var if var is not None else val
+                #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
 
-        #print("Here be geq constraints:")
-        for cons in geq_list:
-            body = 0
-            for var, val in cons['body'].items():
-                body += val*var if var is not None else val
-            #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))   
+            #print("Here be geq constraints:")
+            for cons in geq_list:
+                body = 0
+                for var, val in cons['body'].items():
+                    body += val*var if var is not None else val
+                #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
 
-        for leq in leq_list:
-            for geq in geq_list:
-                constraints.append(self.add_linear_constraints(leq, geq))
+            for leq in leq_list:
+                for geq in geq_list:
+                    constraints.append(self.add_linear_constraints(leq, geq))
 
-        # add back in the constraints that didn't have the variable we were
-        # projecting out
-        constraints.extend(waiting_list)
-        # for cons in waiting_list:
-        #     constraints.append(cons)
+            # add back in the constraints that didn't have the variable we were
+            # projecting out
+            constraints.extend(waiting_list)
 
-        #print("This is what we have now:")
-        for cons in constraints:
-            body = 0
-            for var, val in cons['body'].items():
-                body += val*var if var is not None else val
-            #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
-        
-        return self.fm_elimination(constraints, vars_to_eliminate)
+            #print("This is what we have now:")
+            # for cons in constraints:
+            #     body = 0
+            #     for var, val in cons['body'].items():
+            #         body += val*var if var is not None else val
+                #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
+            #return self.fm_elimination(constraints, vars_that_appear)
+        return(constraints)
             
     def constraint_tight(self, model, constraint):
         val = value(constraint.body)
