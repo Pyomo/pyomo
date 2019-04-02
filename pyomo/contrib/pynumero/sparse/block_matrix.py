@@ -696,7 +696,7 @@ class BlockMatrix(object):
         elif isinstance(other, BlockVector):
             assert bn == other.bshape[0], 'Dimension mismatch'
             assert self.shape[1] == other.shape[0], 'Dimension mismatch'
-            other._check_mask()
+            assert not other.has_none, 'Block vector must not have none entries'
             nblocks = self.bshape[0]
             result = BlockVector(nblocks)
             for i in range(bm):
@@ -815,6 +815,3 @@ class BlockSymMatrix(BlockMatrix):
             assert is_symmetric_sparse(value), 'Matrix is not symmetric'
         super(BlockSymMatrix, self).__setitem__(key, value)
         super(BlockSymMatrix, self).__setitem__((jdx, idx), value.transpose())
-
-
-

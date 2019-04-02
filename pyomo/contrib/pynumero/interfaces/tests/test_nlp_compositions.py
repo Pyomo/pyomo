@@ -933,6 +933,11 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
             self.assertTrue(np.allclose(di, d[i]))
             self.assertTrue(np.allclose(d_nz, d[i  + n_scenarios]))
 
+        x = self.nlp2.x_init()
+        d = self.nlp2.evaluate_d(x)
+        d2 = self.nlp2.evaluate_d(x.flatten())
+        self.assertTrue(np.allclose(d.flatten(), d2.flatten()))
+
         # test out
         d.fill(0.0)
         self.nlp2.evaluate_d(x, out=d)
@@ -1554,6 +1559,13 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
             self.assertEqual(zs[i].size, nz)
         self.assertEqual(zs[n_scenarios].size, nz)
 
+    def test_block_id(self):
+        bid = self.nlp2.block_id("s0")
+        self.assertEqual(bid, 0)
+
+    def test_block_name(self):
+        bname = self.nlp2.block_name(0)
+        self.assertEqual(bname, "s0")
 
 def create_simple_problem(begin, end, nfe, ncp, with_ic=True):
 
@@ -2376,6 +2388,7 @@ class TestDynoptNLP(unittest.TestCase):
 
         x = self.nlp1.x_init()
         self.assertAlmostEqual(obj, self.nlp1.objective(x))
+        self.assertAlmostEqual(obj, self.nlp1.objective(x.flatten()))
 
         # second nlp
         nblocks = len(self.blocks2)
@@ -2388,6 +2401,7 @@ class TestDynoptNLP(unittest.TestCase):
 
         x = self.nlp2.x_init()
         self.assertAlmostEqual(obj, self.nlp2.objective(x))
+        self.assertAlmostEqual(obj, self.nlp2.objective(x.flatten()))
 
     def test_grad_objective(self):
 
@@ -2406,6 +2420,9 @@ class TestDynoptNLP(unittest.TestCase):
         self.assertEqual(df_.nblocks, df.nblocks)
         self.assertTrue(np.allclose(df_.block_sizes(), df.block_sizes()))
         self.assertTrue(np.allclose(df_.flatten(), df.flatten()))
+
+        df2 = self.nlp1.grad_objective(x_init.flatten())
+        self.assertTrue(np.allclose(df2.flatten(), df.flatten()))
 
         df_out = self.nlp1.create_vector_x()
         self.nlp1.grad_objective(x_init, out=df_out)
@@ -2431,8 +2448,11 @@ class TestDynoptNLP(unittest.TestCase):
         self.assertTrue(np.allclose(df_.block_sizes(), df.block_sizes()))
         self.assertTrue(np.allclose(df_.flatten(), df.flatten()))
 
+        df2 = self.nlp2.grad_objective(x_init.flatten())
+
         df_out = self.nlp2.create_vector_x()
         self.nlp2.grad_objective(x_init, out=df_out)
+        self.assertTrue(np.allclose(df2.flatten(), df.flatten()))
 
         self.assertEqual(df_.shape, df_out.shape)
         self.assertEqual(df_.nblocks, df_out.nblocks)
@@ -2468,6 +2488,12 @@ class TestDynoptNLP(unittest.TestCase):
         self.assertTrue(np.allclose(g_.block_sizes(), g.block_sizes()))
         self.assertTrue(np.allclose(g_.flatten(), g.flatten()))
 
+        g = self.nlp1.evaluate_g(x_init.flatten())
+        self.assertEqual(g_.shape, g.shape)
+        self.assertEqual(g_.nblocks, g.nblocks)
+        self.assertTrue(np.allclose(g_.block_sizes(), g.block_sizes()))
+        self.assertTrue(np.allclose(g_.flatten(), g.flatten()))
+
         g_out = self.nlp1.create_vector_y()
         self.nlp1.evaluate_g(x_init, out=g_out)
         self.assertEqual(g_.shape, g_out.shape)
@@ -2497,6 +2523,12 @@ class TestDynoptNLP(unittest.TestCase):
                 g_[i + 2 * nblocks] = x_init[nblocks + i] - A_end_matrix[i, i] * x
 
         g = self.nlp2.evaluate_g(x_init)
+        self.assertEqual(g_.shape, g.shape)
+        self.assertEqual(g_.nblocks, g.nblocks)
+        self.assertTrue(np.allclose(g_.block_sizes(), g.block_sizes()))
+        self.assertTrue(np.allclose(g_.flatten(), g.flatten()))
+
+        g = self.nlp2.evaluate_g(x_init.flatten())
         self.assertEqual(g_.shape, g.shape)
         self.assertEqual(g_.nblocks, g.nblocks)
         self.assertTrue(np.allclose(g_.block_sizes(), g.block_sizes()))
@@ -2538,6 +2570,12 @@ class TestDynoptNLP(unittest.TestCase):
         self.assertTrue(np.allclose(c_.block_sizes(), c.block_sizes()))
         self.assertTrue(np.allclose(c_.flatten(), c.flatten()))
 
+        c = self.nlp1.evaluate_c(x_init.flatten())
+        self.assertEqual(c_.shape, c.shape)
+        self.assertEqual(c_.nblocks, c.nblocks)
+        self.assertTrue(np.allclose(c_.block_sizes(), c.block_sizes()))
+        self.assertTrue(np.allclose(c_.flatten(), c.flatten()))
+
         c_out = self.nlp1.create_vector_y(subset='c')
         self.nlp1.evaluate_c(x_init, out=c_out)
         self.assertEqual(c_.shape, c_out.shape)
@@ -2572,6 +2610,12 @@ class TestDynoptNLP(unittest.TestCase):
         self.assertTrue(np.allclose(c_.block_sizes(), c.block_sizes()))
         self.assertTrue(np.allclose(c_.flatten(), c.flatten()))
 
+        c = self.nlp2.evaluate_c(x_init.flatten())
+        self.assertEqual(c_.shape, c.shape)
+        self.assertEqual(c_.nblocks, c.nblocks)
+        self.assertTrue(np.allclose(c_.block_sizes(), c.block_sizes()))
+        self.assertTrue(np.allclose(c_.flatten(), c.flatten()))
+
         c_out = self.nlp2.create_vector_y(subset='c')
         self.nlp2.evaluate_c(x_init, out=c_out)
         self.assertEqual(c_.shape, c_out.shape)
@@ -2600,6 +2644,12 @@ class TestDynoptNLP(unittest.TestCase):
         self.assertTrue(np.allclose(d_.block_sizes(), d.block_sizes()))
         self.assertTrue(np.allclose(d_.flatten(), d.flatten()))
 
+        d = self.nlp1.evaluate_d(x_init.flatten())
+        self.assertEqual(d_.shape, d.shape)
+        self.assertEqual(d_.nblocks, d.nblocks)
+        self.assertTrue(np.allclose(d_.block_sizes(), d.block_sizes()))
+        self.assertTrue(np.allclose(d_.flatten(), d.flatten()))
+
         d_out = self.nlp1.create_vector_y(subset='d')
         self.nlp1.evaluate_d(x_init, out=d_out)
         self.assertEqual(d_.shape, d_out.shape)
@@ -2621,6 +2671,12 @@ class TestDynoptNLP(unittest.TestCase):
                 d_[i + 2 * nblocks] = np.zeros(0)
 
         d = self.nlp2.evaluate_d(x_init)
+        self.assertEqual(d_.shape, d.shape)
+        self.assertEqual(d_.nblocks, d.nblocks)
+        self.assertTrue(np.allclose(d_.block_sizes(), d.block_sizes()))
+        self.assertTrue(np.allclose(d_.flatten(), d.flatten()))
+
+        d = self.nlp2.evaluate_d(x_init.flatten())
         self.assertEqual(d_.shape, d.shape)
         self.assertEqual(d_.nblocks, d.nblocks)
         self.assertTrue(np.allclose(d_.block_sizes(), d.block_sizes()))

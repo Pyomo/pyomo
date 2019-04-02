@@ -136,7 +136,7 @@ class MA27LinearSolver(object):
         else:
             raise RuntimeError('Matrix must be coo_matrix or a block_matrix')
 
-    def do_back_solve(self, rhs):
+    def do_back_solve(self, rhs, flat_solution=False):
 
         msg = 'RHS dimension does not agree with matrix {} != {}'.format(self._dim,
                                                                          rhs.size)
@@ -144,6 +144,10 @@ class MA27LinearSolver(object):
         flat_rhs = rhs.flatten()
         x = np.zeros(self._dim)
         self._ma27.DoBacksolve(flat_rhs, x)
+
+        if flat_solution:
+            return x
+
         if self._col_blocks == -1 and not isinstance(rhs, BlockVector):
             return x
         if isinstance(rhs, BlockVector):
@@ -155,7 +159,14 @@ class MA27LinearSolver(object):
         block_x.copyfrom(x)
         return block_x
 
-    def solve(self, matrix, rhs, diagonal=None, do_symbolic=True, check_symmetry=True, desired_num_neg_eval=-1):
+    def solve(self,
+              matrix,
+              rhs,
+              diagonal=None,
+              do_symbolic=True,
+              check_symmetry=True,
+              desired_num_neg_eval=-1,
+              max_iterative_refinement=10):
 
         include_diagonal = False
         if diagonal is not None:
@@ -165,7 +176,27 @@ class MA27LinearSolver(object):
             self.do_symbolic_factorization(matrix, include_diagonal, check_symmetry)
 
         self.do_numeric_factorization(matrix, diagonal, desired_num_neg_eval)
-        return self.do_back_solve(rhs)
+
+        if max_iterative_refinement > 0:
+            x = self.do_back_solve(rhs)
+            xr = x.flatten()
+            flat_matrix = matrix.tocsr()
+            flat_rhs = rhs.flatten()
+
+            for i in range(max_iterative_refinement):
+                res = flat_rhs - flat_matrix.dot(x)
+                d = self.do_back_solve(res, flat_solution=True)
+                xr += d
+                if np.linalg.norm(res, ord=np.inf) <= 1e-12:
+                    break
+            if isinstance(x, BlockVector):
+                x.copyfrom(xr)
+            else:
+                x = xr
+        else:
+            x = self.do_back_solve(rhs)
+
+        return x
 
 
 if __name__ == "__main__":
@@ -187,6 +218,8 @@ if __name__ == "__main__":
     x = linear_solver.solve(M, b)
     print(x)
     print(np.linalg.solve(dense_A, b))
+
+    print(np.linalg.norm(b-M.dot(x), ord=np.inf))
 
     linear_solver.do_symbolic_factorization(M)
     status = linear_solver.do_numeric_factorization(M)
