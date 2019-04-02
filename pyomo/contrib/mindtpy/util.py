@@ -31,6 +31,7 @@ def model_is_valid(solve_data, config):
     constraints.
 
     """
+
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
 
@@ -49,12 +50,14 @@ def model_is_valid(solve_data, config):
         prob.number_of_integer_variables == 0 and
             prob.number_of_disjunctions == 0):
         config.logger.info('Problem has no discrete decisions.')
-        if len(MindtPy.working_nonlinear_constraints) > 0:
+        obj = next(m.component_data_objects(Objective, active=True))
+        if (any(c.body.polynomial_degree() not in (1, 0) for c in MindtPy.constraint_list) or
+                obj.expr.polynomial_degree() not in (1, 0)):
             config.logger.info(
                 "Your model is an NLP (nonlinear program). "
-                "Using NLP solver %s to solve." % config.nlp)
-            SolverFactory(config.nlp).solve(
-                solve_data.original_model, **config.nlp_options)
+                "Using NLP solver %s to solve." % config.nlp_solver)
+            SolverFactory(config.nlp_solver).solve(
+                solve_data.original_model, **config.nlp_solver_args)
             return False
         else:
             config.logger.info(
@@ -93,8 +96,6 @@ def add_feas_slacks(m):
     for i, constr in enumerate(MindtPy.constraint_list, 1):
         rhs = ((0 if constr.upper is None else constr.upper) +
                (0 if constr.lower is None else constr.lower))
-        c = MindtPy.MindtPy_feas.feas_constraints.add(
+        MindtPy.MindtPy_feas.feas_constraints.add(
             constr.body - rhs
             <= MindtPy.MindtPy_feas.slack_var[i])
-
-
