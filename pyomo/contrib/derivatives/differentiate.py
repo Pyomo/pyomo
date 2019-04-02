@@ -1,3 +1,4 @@
+from pyomo.core.base.expression import SimpleExpression, _GeneralExpressionData
 from pyomo.core.kernel.component_map import ComponentMap
 import pyomo.core.expr.expr_pyomo5 as _expr
 from pyomo.core.expr.expr_pyomo5 import ExpressionValueVisitor, nonpyomo_leaf_types, value
@@ -246,6 +247,11 @@ def _diff_UnaryFunctionExpression(node, val_dict, der_dict):
         raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(node)))
 
 
+def _diff_SimpleExpression(node, val_dict, der_dict):
+    der = der_dict[node]
+    der_dict[node.expr] += der
+
+
 _diff_map = dict()
 _diff_map[_expr.ProductExpression] = _diff_ProductExpression
 _diff_map[_expr.ReciprocalExpression] = _diff_ReciprocalExpression
@@ -254,6 +260,8 @@ _diff_map[_expr.SumExpression] = _diff_SumExpression
 _diff_map[_expr.MonomialTermExpression] = _diff_ProductExpression
 _diff_map[_expr.NegationExpression] = _diff_NegationExpression
 _diff_map[_expr.UnaryFunctionExpression] = _diff_UnaryFunctionExpression
+_diff_map[SimpleExpression] = _diff_SimpleExpression
+_diff_map[_GeneralExpressionData] = _diff_SimpleExpression
 
 
 class _ReverseADVisitorLeafToRoot(ExpressionValueVisitor):
