@@ -74,7 +74,6 @@ class TestFileUtils(unittest.TestCase):
         )[1].strip(), '<stdin>')
 
     def test_this_file_dir(self):
-        print(_this_file_dir)
         expected_path = os.path.join('pyomo','common','tests')
         self.assertTrue(_this_file_dir.endswith(expected_path))
 
