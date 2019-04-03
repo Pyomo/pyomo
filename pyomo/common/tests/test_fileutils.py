@@ -24,11 +24,12 @@ from pyutilib.subprocess import run
 import pyomo.common.config as config
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.fileutils import (
-    this_file, find_file, find_library, find_executable, ExecutableManager,
-    _system, _path, _exeExt, _libExt,
+    this_file, this_file_dir, find_file, find_library, find_executable, 
+    ExecutableManager, _system, _path, _exeExt, _libExt,
 )
 
 _this_file = this_file()
+_this_file_dir = this_file_dir()
 
 class TestFileUtils(unittest.TestCase):
     def setUp(self):
@@ -71,6 +72,10 @@ class TestFileUtils(unittest.TestCase):
             stdin='from pyomo.common.fileutils import this_file;'
             'print(this_file())'
         )[1].strip(), '<stdin>')
+
+    def test_this_file_dir(self):
+        expected_path = os.path.join('pyomo','common','tests')
+        self.assertTrue(_this_file_dir.endswith(expected_path))
 
     def test_system(self):
         self.assertTrue(platform.system().lower().startswith(_system()))
