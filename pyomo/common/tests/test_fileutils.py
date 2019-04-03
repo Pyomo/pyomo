@@ -75,7 +75,8 @@ class TestFileUtils(unittest.TestCase):
 
     def test_this_file_dir(self):
         print(_this_file_dir)
-        self.assertTrue(_this_file_dir.endswith('pyomo/common/tests'))
+        expected_path = os.path.join('pyomo','common','tests')
+        self.assertTrue(_this_file_dir.endswith(expected_path))
 
     def test_system(self):
         self.assertTrue(platform.system().lower().startswith(_system()))
