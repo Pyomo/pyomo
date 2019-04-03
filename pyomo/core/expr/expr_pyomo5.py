@@ -1249,6 +1249,19 @@ class _VariableVisitor(SimpleExpressionVisitor):
             self.seen.add(id(node))
             return node
 
+        if node.is_expression_type() and isinstance(node, LinearExpression):
+            if id(node) in self.seen:
+                return
+            self.seen.add(id(node))
+
+            def unique_vars_generator():
+                for var in node.linear_vars:
+                    if id(var) in self.seen:
+                        continue
+                    self.seen.add(id(var))
+                    yield var
+            return tuple(v for v in unique_vars_generator())
+
 
 def identify_variables(expr, include_fixed=True):
     """
@@ -1267,11 +1280,20 @@ def identify_variables(expr, include_fixed=True):
     visitor = _VariableVisitor()
     if include_fixed:
         for v in visitor.xbfs_yield_leaves(expr):
-            yield v
+            if isinstance(v, tuple):
+                for v_i in v:
+                    yield v_i
+            else:
+                yield v
     else:
         for v in visitor.xbfs_yield_leaves(expr):
-            if not v.is_fixed():
-                yield v
+            if isinstance(v, tuple):
+                for v_i in v:
+                    if not v_i.is_fixed():
+                        yield v_i
+            else:
+                if not v.is_fixed():
+                    yield v
 
 
 # =====================================================
