@@ -21,11 +21,11 @@ from scipy.sparse import isspmatrix_coo, coo_matrix
 import numpy as np
 
 
-class MA27LinearSolver(object):
+class MA57LinearSolver(object):
 
-    def __init__(self, pivotol=1e-8):
+    def __init__(self, pivotol=1e-8, prealocate_factor=1.05):
 
-        self._ma27 = _hsl.MA27_LinearSolver(pivotol)
+        self._ma57 = _hsl.MA57_LinearSolver(pivotol, prealocate_factor)
         self._nnz = 0
         self._dim = 0
         self._row_blocks = -1
@@ -33,7 +33,7 @@ class MA27LinearSolver(object):
         self._col_sizes = None
 
     def _get_num_neg_evals(self):
-        return self._ma27.get_num_neg_evals()
+        return self._ma57.get_num_neg_evals()
 
     def do_symbolic_factorization(self, matrix, include_diagonal=False, check_symmetry=True):
 
@@ -62,8 +62,7 @@ class MA27LinearSolver(object):
             irows += 1
             jcols += 1
 
-            status = self._ma27.DoSymbolicFactorization(dim, irows, jcols)
-
+            status = self._ma57.DoSymbolicFactorization(dim, irows, jcols)
             self._dim = dim
             self._nnz = irows.size
 
@@ -86,13 +85,11 @@ class MA27LinearSolver(object):
             irows += 1
             jcols += 1
 
-            status = self._ma27.DoSymbolicFactorization(dim, irows, jcols)
+            status = self._ma57.DoSymbolicFactorization(dim, irows, jcols)
             self._dim = dim
             self._nnz = irows.size
-
         else:
             raise RuntimeError("Matrix must be coo_matrix or a block_matrix")
-
         return status
 
     def do_numeric_factorization(self, matrix, diagonal=None, desired_num_neg_eval=-1):
@@ -116,7 +113,7 @@ class MA27LinearSolver(object):
             if diagonal is not None:
                 values = np.concatenate((values, diagonal))
 
-            return self._ma27.DoNumericFactorization(self._dim, values, desired_num_neg_eval)
+            return self._ma57.DoNumericFactorization(self._dim, values, desired_num_neg_eval)
 
         elif isspmatrix_coo(matrix):
             lower_mask = matrix.row >= matrix.col
@@ -134,7 +131,7 @@ class MA27LinearSolver(object):
             if diagonal is not None:
                 values = np.concatenate((values, diagonal))
 
-            return self._ma27.DoNumericFactorization(self._dim, values, desired_num_neg_eval)
+            return self._ma57.DoNumericFactorization(self._dim, values, desired_num_neg_eval)
 
         else:
             raise RuntimeError('Matrix must be coo_matrix or a block_matrix')
@@ -146,7 +143,7 @@ class MA27LinearSolver(object):
         assert self._dim == rhs.size, msg
         flat_rhs = rhs.flatten()
         x = np.zeros(self._dim)
-        self._ma27.DoBacksolve(flat_rhs, x)
+        self._ma57.DoBacksolve(flat_rhs, x)
 
         if flat_solution:
             return x
@@ -177,9 +174,7 @@ class MA27LinearSolver(object):
             include_diagonal = True
 
         if do_symbolic:
-            status = self.do_symbolic_factorization(matrix,
-                                                    include_diagonal,
-                                                    check_symmetry)
+            self.do_symbolic_factorization(matrix, include_diagonal, check_symmetry)
 
         self.do_numeric_factorization(matrix, diagonal, desired_num_neg_eval)
 
@@ -218,14 +213,14 @@ if __name__ == "__main__":
     dense_A = A.toarray()
     print(dense_A)
 
-    linear_solver = MA27LinearSolver()
+    linear_solver = MA57LinearSolver()
     b = np.array([1, 1, 0])
     M = A.tocoo()
     x = linear_solver.solve(M, b)
     print(x)
     print(np.linalg.solve(dense_A, b))
 
-    print(np.linalg.norm(b-M.dot(x), ord=np.inf))
+    print(np.linalg.norm(b - M.dot(x), ord=np.inf))
 
     linear_solver.do_symbolic_factorization(M)
     status = linear_solver.do_numeric_factorization(M)

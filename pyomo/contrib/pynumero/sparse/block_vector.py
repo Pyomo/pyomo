@@ -86,8 +86,6 @@ class BlockVector(np.ndarray):
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
 
-        # Note: this for now just flatten the inputs and call super
-
         unary_funcs = [np.log10, np.sin, np.cos, np.exp, np.ceil,
                        np.floor, np.tan, np.arctan, np.arcsin,
                        np.arccos, np.sinh, np.cosh, np.abs,
@@ -108,7 +106,6 @@ class BlockVector(np.ndarray):
                         np.hypot]
 
         args = [input_ for i, input_ in enumerate(inputs)]
-
         outputs = kwargs.pop('out', None)
         out_no = []
         if outputs:
@@ -140,13 +137,14 @@ class BlockVector(np.ndarray):
                 _args = [x[i]] + [args[j] for j in range(1, len(args))]
                 v[i] = self._unary_operation(ufunc, method, *_args, **kwargs)
             return v
-        elif isinstance(x, np.ndarray):
+        elif type(x) == np.ndarray:
             return super(BlockVector, self).__array_ufunc__(ufunc, method,
                                                             *args, **kwargs)
         else:
             raise NotImplementedError()
 
     def _binary_operation(self, ufunc, method, *args, **kwargs):
+
         # ToDo: deal with out
         x1 = args[0]
         x2 = args[1]
@@ -161,7 +159,7 @@ class BlockVector(np.ndarray):
                 _args = [x1[i]] + [x2[i]] + [args[j] for j in range(2, len(args))]
                 res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
             return res
-        elif isinstance(x1, np.ndarray) and isinstance(x2, BlockVector):
+        elif type(x1)==np.ndarray and isinstance(x2, BlockVector):
             assert not x2.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
             assert x1.size == x2.size, 'Dimension missmatch {}!={}'.format(x1.size, x2.size)
             res = BlockVector(x2.nblocks)
@@ -172,7 +170,7 @@ class BlockVector(np.ndarray):
                 res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
                 accum += nelements
             return res
-        elif isinstance(x2, np.ndarray) and isinstance(x1, BlockVector):
+        elif type(x2)==np.ndarray and isinstance(x1, BlockVector):
             assert not x1.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
             assert x1.size == x2.size, 'Dimension missmatch {}!={}'.format(x1.size, x2.size)
             res = BlockVector(x1.nblocks)
@@ -197,11 +195,17 @@ class BlockVector(np.ndarray):
                 _args = [x1[i]] + [x2] + [args[j] for j in range(2, len(args))]
                 res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
             return res
-        elif (isinstance(x1, np.ndarray) or np.isscalar(x1)) and (isinstance(x2, np.ndarray) or np.isscalar(x2)):
+        elif (type(x1)==np.ndarray or np.isscalar(x1)) and (type(x2)==np.ndarray or np.isscalar(x2)):
             return super(BlockVector, self).__array_ufunc__(ufunc, method,
                                                             *args, **kwargs)
         else:
-            raise NotImplementedError()
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(x1, MPIBlockVector):
+                return x1.__array_ufunc__(ufunc, method, *args, **kwargs)
+            elif isinstance(x2, MPIBlockVector):
+                return x2.__array_ufunc__(ufunc, method, *args, **kwargs)
+            else:
+                raise NotImplementedError()
 
     @property
     def nblocks(self):
@@ -284,7 +288,7 @@ class BlockVector(np.ndarray):
             assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                                                               other.nblocks)
             return sum(self[i].dot(other[i]) for i in range(self.nblocks))
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             bv = self.flatten()
             return bv.dot(other)
         else:
@@ -301,7 +305,9 @@ class BlockVector(np.ndarray):
         """
         Returns True if all elements evaluate to True.
         """
-        d = tuple(v.flatten() for v in self if v is not None)
+        if self.has_none:
+            return False
+        d = tuple(v.flatten() for v in self)
         arr = np.concatenate(d)
         return arr.all(axis=axis, out=out, keepdims=keepdims)
 
@@ -370,7 +376,7 @@ class BlockVector(np.ndarray):
             for idx, blk in enumerate(self):
                 result[idx] = blk.compress(condition[idx])
             return result
-        elif isinstance(condition, np.ndarray):
+        elif type(condition)==np.ndarray:
             assert self.shape == condition.shape, 'Dimension mismatch {} != {}'.format(self.shape,
                                                                                        condition.shape)
             accum = 0
@@ -789,6 +795,7 @@ class BlockVector(np.ndarray):
             self[idx] = blk
 
     def __add__(self, other):
+
         result = BlockVector(self.nblocks)
         assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
         if isinstance(other, BlockVector):
@@ -799,7 +806,7 @@ class BlockVector(np.ndarray):
             for idx, blk in enumerate(self):
                 result[idx] = blk + other[idx]
             return result
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
@@ -812,6 +819,15 @@ class BlockVector(np.ndarray):
                 result[idx] = blk + other
             return result
         else:
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(other, MPIBlockVector):
+                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
+                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                  other.nblocks)
+                assert self.nblocks == other.nblocks, msg
+                for i in other.owned_blocks:
+                    result[i] = self[i] + other[i]
+                return result
             raise NotImplementedError()
 
     def __radd__(self, other):  # other + self
@@ -828,7 +844,7 @@ class BlockVector(np.ndarray):
             for idx, blk in enumerate(self):
                 result[idx] = blk - other[idx]
             return result
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
@@ -841,9 +857,18 @@ class BlockVector(np.ndarray):
                 result[idx] = blk - other
             return result
         else:
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(other, MPIBlockVector):
+                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
+                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                  other.nblocks)
+                for i in other.owned_blocks:
+                    result[i] = self[i] - other[i]
+                return result
             raise NotImplementedError()
 
     def __rsub__(self, other):  # other - self
+
         result = BlockVector(self.nblocks)
         assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
         if isinstance(other, BlockVector):
@@ -854,7 +879,8 @@ class BlockVector(np.ndarray):
             for idx, blk in enumerate(self):
                 result[idx] = other[idx] - blk
             return result
-        elif isinstance(other, np.ndarray):
+
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
@@ -867,9 +893,18 @@ class BlockVector(np.ndarray):
                 result[idx] = other - blk
             return result
         else:
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(other, MPIBlockVector):
+                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
+                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                  other.nblocks)
+                for i in other.owned_blocks:
+                    result[i] = other[i] - self[i]
+                return result
             raise NotImplementedError()
 
     def __mul__(self, other):
+
         assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
         result = BlockVector(self.nblocks)
         if isinstance(other, BlockVector):
@@ -880,7 +915,7 @@ class BlockVector(np.ndarray):
             for idx, blk in enumerate(self):
                 result[idx] = blk .__mul__(other[idx])
             return result
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
@@ -893,6 +928,14 @@ class BlockVector(np.ndarray):
                 result[idx] = blk.__mul__(other)
             return result
         else:
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(other, MPIBlockVector):
+                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
+                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                  other.nblocks)
+                for i in other.owned_blocks:
+                    result[i] = other[i].__mul__(self[i])
+                return result
             raise NotImplementedError()
 
     def __rmul__(self, other):  # other + self
@@ -909,7 +952,7 @@ class BlockVector(np.ndarray):
             for idx, blk in enumerate(self):
                 result[idx] = blk / other[idx]
             return result
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
@@ -922,6 +965,14 @@ class BlockVector(np.ndarray):
                 result[idx] = blk / other
             return result
         else:
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(other, MPIBlockVector):
+                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
+                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                  other.nblocks)
+                for i in other.owned_blocks:
+                    result[i] = self[i] / other[i]
+                return result
             raise NotImplementedError()
 
     def __rtruediv__(self, other):
@@ -935,7 +986,7 @@ class BlockVector(np.ndarray):
             for idx, blk in enumerate(self):
                 result[idx] = other[idx] / blk
             return result
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
@@ -948,6 +999,14 @@ class BlockVector(np.ndarray):
                 result[idx] = other / blk
             return result
         else:
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(other, MPIBlockVector):
+                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
+                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                  other.nblocks)
+                for i in other.owned_blocks:
+                    result[i] = other[i] / self[i]
+                return result
             raise NotImplementedError()
 
     def __floordiv__(self, other):
@@ -961,7 +1020,7 @@ class BlockVector(np.ndarray):
             for idx, blk in enumerate(self):
                 result[idx] = blk // other[idx]
             return result
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
@@ -974,6 +1033,14 @@ class BlockVector(np.ndarray):
                 result[idx] = blk // other
             return result
         else:
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(other, MPIBlockVector):
+                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
+                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                  other.nblocks)
+                for i in other.owned_blocks:
+                    result[i] = self[i] // other[i]
+                return result
             raise NotImplementedError()
 
     def __rfloordiv__(self, other):
@@ -987,7 +1054,7 @@ class BlockVector(np.ndarray):
             for idx, blk in enumerate(self):
                 result[idx] = other[idx] // blk
             return result
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
@@ -1000,6 +1067,14 @@ class BlockVector(np.ndarray):
                 result[idx] = other // blk
             return result
         else:
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(other, MPIBlockVector):
+                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
+                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                  other.nblocks)
+                for i in other.owned_blocks:
+                    result[i] =  other[i] // self[i]
+                return result
             raise NotImplementedError()
 
     def __iadd__(self, other):
@@ -1016,7 +1091,7 @@ class BlockVector(np.ndarray):
             for idx, blk in enumerate(self):
                 self[idx] = self[idx] + other[idx]
             return self
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
@@ -1041,7 +1116,7 @@ class BlockVector(np.ndarray):
             for idx, blk in enumerate(self):
                 self[idx] = self[idx] - other[idx]
             return self
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
@@ -1066,7 +1141,7 @@ class BlockVector(np.ndarray):
             for idx, blk in enumerate(self):
                 self[idx] = self[idx] * other[idx]
             return self
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
@@ -1091,7 +1166,7 @@ class BlockVector(np.ndarray):
             for idx, blk in enumerate(self):
                 self[idx] = self[idx] / other[idx]
             return self
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
@@ -1167,7 +1242,7 @@ class BlockVector(np.ndarray):
             flags = [vv.__le__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             result = BlockVector(self.nblocks)
             accum = 0
@@ -1191,7 +1266,7 @@ class BlockVector(np.ndarray):
             flags = [vv.__lt__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             result = BlockVector(self.nblocks)
             accum = 0
@@ -1215,7 +1290,7 @@ class BlockVector(np.ndarray):
             flags = [vv.__ge__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             result = BlockVector(self.nblocks)
             accum = 0
@@ -1239,7 +1314,7 @@ class BlockVector(np.ndarray):
             flags = [vv.__gt__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             result = BlockVector(self.nblocks)
             accum = 0
@@ -1263,7 +1338,7 @@ class BlockVector(np.ndarray):
             flags = [vv.__eq__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             result = BlockVector(self.nblocks)
             accum = 0
@@ -1287,7 +1362,7 @@ class BlockVector(np.ndarray):
             flags = [vv.__ne__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
-        elif isinstance(other, np.ndarray):
+        elif type(other)==np.ndarray:
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             result = BlockVector(self.nblocks)
             accum = 0

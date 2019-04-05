@@ -242,7 +242,7 @@ class MUMPSSymLinearSolver(object):
         else:
             raise RuntimeError('Matrix must be coo_matrix or a block_matrix')
 
-    def do_back_solve(self, rhs):
+    def do_back_solve(self, rhs, flat_solution=False):
 
         msg = 'RHS dimension does not agree with matrix'
         assert self._dim == rhs.size, msg
@@ -258,6 +258,9 @@ class MUMPSSymLinearSolver(object):
         if status < 0:
             raise RuntimeError("MUMPS returned INFO(1) = {} fatal error".format(status))
 
+        if flat_solution:
+            return x
+
         if self._col_blocks == -1 and not isinstance(rhs, BlockVector):
             return x
         if isinstance(rhs, BlockVector):
@@ -269,7 +272,15 @@ class MUMPSSymLinearSolver(object):
         block_x.copyfrom(x)
         return block_x
 
-    def solve(self, matrix, rhs, diagonal=None, do_symbolic=True, check_symmetry=True, desired_num_neg_eval=-1):
+    def solve(self,
+              matrix,
+              rhs,
+              diagonal=None,
+              do_symbolic=True,
+              check_symmetry=True,
+              desired_num_neg_eval=-1,
+              max_iter_ref=10,
+              tol_iter_ref=1e-8):
 
         include_diagonal = False
         if diagonal is not None:
@@ -281,7 +292,32 @@ class MUMPSSymLinearSolver(object):
         status = self.do_numeric_factorization(matrix, diagonal, desired_num_neg_eval)
         if status == 1:
             raise RuntimeError('Matrix is singular')
-        return self.do_back_solve(rhs)
+
+        # if max_iterative_refinement >0:
+        #     self.ctx.id.icntl[9] = max_iterative_refinement
+        # x = self.do_back_solve(rhs)
+        # self.ctx.id.icntl[9] = 0
+
+        if max_iter_ref > 0:
+            x = self.do_back_solve(rhs)
+            xr = x.flatten()
+            flat_matrix = matrix.tocsr()
+            flat_rhs = rhs.flatten()
+
+            for i in range(max_iter_ref):
+                res = flat_rhs - flat_matrix.dot(xr)
+                d = self.do_back_solve(res, flat_solution=True)
+                xr += d
+                if np.linalg.norm(res, ord=np.inf) <= tol_iter_ref:
+                    break
+            if isinstance(x, BlockVector):
+                x.copyfrom(xr)
+            else:
+                x = xr
+        else:
+            x = self.do_back_solve(rhs)
+
+        return x
 
 if __name__ == "__main__":
 
@@ -294,26 +330,7 @@ if __name__ == "__main__":
     new_data = np.concatenate([data, data[off_diagonal_mask]])
     A = coo_matrix((data, (row, col)), shape=(3, 3))
     b = np.array([1, 1, 0], dtype='d')
-    # print(A)
-    # dense_A = A.toarray()
-    # print(np.linalg.solve(dense_A, b))
-    #
-    # ctx = mumps.DMumpsContext(sym=2, par=1)
-    #
-    # ctx.set_shape(3)
-    # ctx.set_centralized_assembled(A.row+1, A.col+1, A.data)
-    # ctx.set_silent() # Turn off verbose output
-    # ctx.run(job=1) # Analysis
-    # print(ctx.id.infog[0])
-    # ctx.run(job=2) # Factorization
-    # print(ctx.id.infog[0])
-    # x = b.copy()
-    # ctx.set_rhs(x)
-    # ctx.run(job=3) # Solve
-    # print(ctx.id.infog[0])
-    # print("Solution is %s." % (x,))
-    #
-    # ctx.destroy()
+    print(A.todense())
 
     linear_solver = MUMPSSymLinearSolver()
     A = coo_matrix((new_data, (new_row, new_col)), shape=(3, 3))
@@ -322,21 +339,5 @@ if __name__ == "__main__":
     x = linear_solver.do_back_solve(b)
     print(x)
     print(linear_solver.solve(A, b))
+    print(np.linalg.norm(b - A.dot(x), ord=np.inf))
     linear_solver2 = MUMPSSymLinearSolver()
-    # print("TEST")
-    # irow = np.array([1, 2, 3, 2, 3, 3], dtype='i')
-    # jcol = np.array([1, 1, 1, 2, 2, 3], dtype='i')
-    # data = np.array([1.0,  7.0,  3.0,  4.0, -5.0,  6.0], dtype='d')
-    # print(irow.dtype)
-    # print(jcol.dtype)
-    # print(data.dtype)
-    # ctx = mumps.DMumpsContext(sym=2, par=1)
-    # ctx.set_shape(3)
-    # ctx.set_centralized_assembled_rows_cols(irow, jcol)
-    # ctx.run(job=1)  # symbolic
-    # print(ctx.id.infog[0])
-    # ctx.set_centralized_assembled_values(data)
-    # print(ctx.id.infog[0])
-    # ctx.run(job=2)  # Factorization
-    # print(ctx.id.infog[0])
-    # ctx.destroy()
