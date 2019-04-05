@@ -409,8 +409,6 @@ class CuttingPlane_Transformation(Transformation):
             #print "   CON: ", constraint.expr
             multiplier = self.constraint_tight(instance_rCHull, constraint)
             if multiplier:
-                tight_constraints.append(
-                    self.get_linear_constraint_repn(constraint))
                 # DEBUG
                 # print(constraint.name)
                 # print constraint.expr
@@ -419,8 +417,18 @@ class CuttingPlane_Transformation(Transformation):
                 f = constraint.body
                 firstDerivs = differentiate(f, wrt_list=rCHull_vars)
                 #print "     ", firstDerivs
-                normal_vectors.append(
-                    [multiplier*value(_) for _ in firstDerivs])
+                normal_vec = [multiplier*value(_) for _ in firstDerivs]
+                normal_vectors.append(normal_vec)
+                # check if constraint is linear
+                if f.polynomial_degree() == 1:
+                    tight_constraints.append(
+                        self.get_linear_constraint_repn(constraint))
+                else: 
+                    # we will use the linear approximation of this constraint at
+                    # x_hat
+                    tight_constraints.append(
+                        self.get_linear_approximation_repn(normal_vec,
+                                                           rCHull_vars))
 
         # It is possible that the separation problem returned a point in
         # the interior of the convex hull.  It is also possible that the
@@ -539,27 +547,33 @@ class CuttingPlane_Transformation(Transformation):
     # below)
     def fourier_motzkin_elimination(self, constraints, vars_to_eliminate):
         # First we will preprocess so that we have no equalities (break them
-        # into two constraints)
+        # into two constraints). We will also make everything a leq constraint
+        # to make life easier later.
         tmpConstraints = [cons for cons in constraints]
         for cons in tmpConstraints:
             if cons['lower'] is not None and cons['upper'] is not None:
                 # make a copy to become the geq side 
-                geq = {'lower': None,
-                       'upper': cons['upper'],
+                geq = {'lower': -cons['upper'],
+                       'upper': None,
                        # I'm doing this so that I have a copy, not a reference:
                        'body': ComponentMap(
-                           (var, coef) for (var, coef) in cons['body'].items()),
+                           (var, -coef) for (var, coef) in cons['body'].items()),
                        'key_order': cons['key_order'] # this is a reference, but
                                                       # it's fine, I won't
                                                       # change it.
                 }
                 cons['upper'] = None
                 constraints.append(geq)
+            elif cons['upper'] is not None:
+                constraints.remove(cons)
+                constraints.append(
+                    self.scalar_multiply_linear_constraint(cons, -1))
 
         # DEBUG
         #print("Checking constraints we are passing into recursive thing:")
         vars_that_appear = ComponentSet()
         for cons in constraints:
+            assert cons['upper'] is None
             body = 0
             for var, val in cons['body'].items():
                 #body += val*var if var is not None else val
@@ -686,6 +700,20 @@ class CuttingPlane_Transformation(Transformation):
         cons_dict['key_order'] = list(std_repn.linear_vars)
         cons_dict['key_order'].append(None)
 
+        return cons_dict
+
+    def get_linear_approximation_repn(self, normal_vec, point):
+        # the constraint is normal_vec^T(point - point.values) <= 0
+        cons_dict = {}
+        cons_dict['lower'] = None
+        cons_dict['upper'] = sum(normal_vec[idx]*v.value 
+                                 for (idx, v) in enumerate(point))
+        cons_dict['body'] = ComponentMap(zip(point, normal_vec))
+        cons_dict['body'][None] = 0
+        # need a copy of this, not a reference
+        cons_dict['key_order'] = [v for v in point]
+        cons_dict['key_order'].append(None)
+        
         return cons_dict
 
     def add_linear_constraints(self, cons1, cons2):
