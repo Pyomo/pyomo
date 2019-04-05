@@ -1243,9 +1243,8 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
     """A general unordered iterable Set"""
     __slots__ = ('_values', '_domain', '_validate', '_dimen')
 
-    def __init__(self, **kwds):
-        domain = kwds.pop('domain', None)
-        super(_FiniteSetData, self).__init__(**kwds)
+    def __init__(self, component, domain):
+        _SetData.__init__(self, component=component)
         self._values = set()
         if domain is None:
             self._domain = Any
@@ -1474,8 +1473,8 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
 
     __slots__ = ('_ordered_values',)
 
-    def __init__(self, **kwds):
-        super(_OrderedSetData, self).__init__(**kwds)
+    def __init__(self, component, domain):
+        _FiniteSetData.__init__(self, component=component, domain=domain)
         self._values = {}
         self._ordered_values = []
 
@@ -1567,7 +1566,7 @@ class _SortedSetMixin(object):
     __slots__ = ()
 
 
-class _SortedSetData(_OrderedSetData, _SortedSetMixin):
+class _SortedSetData(_SortedSetMixin, _OrderedSetData):
     """
     This class defines the data for a sorted set.
 
@@ -1579,8 +1578,8 @@ class _SortedSetData(_OrderedSetData, _SortedSetMixin):
 
     __slots__ = ('_is_sorted',)
 
-    def __init__(self, **kwds):
-        super(_SortedSetData, self).__init__(**kwds)
+    def __init__(self, component, domain):
+        _OrderedSetData.__init__(self, component=component, domain=domain)
         # An empty set is sorted...
         self._is_sorted = True
 
@@ -1751,7 +1750,7 @@ class Set(IndexedComponent):
         kwds.setdefault('ctype', Set)
         # Drop the ordered flag: this was processed by __new__
         kwds.pop('ordered',None)
-        super(Set, self).__init__(*args, **kwds)
+        IndexedComponent.__init__(self, *args, **kwds)
 
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
@@ -1784,18 +1783,21 @@ class Set(IndexedComponent):
 
 class FiniteSimpleSet(_FiniteSetData, Set):
     def __init__(self, **kwds):
-        kwds.setdefault('component', self)
-        super(FiniteSimpleSet, self).__init__(**kwds)
+        domain = kwds.pop('domain', None)
+        _FiniteSetData.__init__(self, component=self, domain=domain)
+        Set.__init__(self, **kwds)
 
 class OrderedSimpleSet(_OrderedSetData, Set):
     def __init__(self, **kwds):
-        kwds.setdefault('component', self)
-        super(OrderedSimpleSet, self).__init__(**kwds)
+        domain = kwds.pop('domain', None)
+        _OrderedSetData.__init__(self, component=self, domain=domain)
+        Set.__init__(self, **kwds)
 
 class SortedSimpleSet(_SortedSetData, Set):
     def __init__(self, **kwds):
-        kwds.setdefault('component', self)
-        super(SortedSimpleSet, self).__init__(**kwds)
+        domain = kwds.pop('domain', None)
+        _SortedSetData.__init__(self, component=self, domain=domain)
+        Set.__init__(self, **kwds)
 
 class IndexedSet(Set):
     pass
@@ -1813,9 +1815,9 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
             return _UnorderedSetOf.__new__(_UnorderedSetOf, reference)
 
     def __init__(self, reference, **kwds):
+        _SetData.__init__(self, component=self)
         kwds.setdefault('ctype', SetOf)
-        kwds.setdefault('component', self)
-        super(SetOf, self).__init__(**kwds)
+        Component.__init__(self, **kwds)
         self._ref = reference
 
     def __contains__(self, value):
@@ -1895,9 +1897,8 @@ class _InfiniteRangeSetData(_SetData):
 
     __slots__ = ('_ranges',)
 
-    def __init__(self, **kwds):
-        ranges = tuple(kwds.pop('ranges', ()))
-        super(_InfiniteRangeSetData, self).__init__(**kwds)
+    def __init__(self, component, ranges=()):
+        _SetData.__init__(self, component=component)
         for r in ranges:
             if not isinstance(r, _NumericRange):
                 raise TypeError(
@@ -2070,7 +2071,10 @@ class RangeSet(Component):
 
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', RangeSet)
-        ranges = kwds.pop('ranges', [])
+        Component.__init__(self, **kwds)
+
+
+    def _process_args(self, args, ranges):
         if type(ranges) is tuple:
             ranges = list(ranges)
         elif type(ranges) is not list:
@@ -2084,27 +2088,8 @@ class RangeSet(Component):
         elif args:
             raise ValueError("RangeSet expects 3 or fewer positional "
                              "arguments (received %s)" % (len(args),))
-        super(RangeSet, self).__init__(**kwds)
+        return ranges
 
-        # kwds.setdefault('ctype', RangeSet)
-        # ranges = kwds.pop('ranges', [])
-        # _init_class = kwds.pop('_init_class')
-        # Component.__init__(self, **kwds)
-
-        # if type(ranges) is tuple:
-        #     ranges = list(ranges)
-        # elif type(ranges) is not list:
-        #     ranges = [ranges]
-        # if len(args) == 1:
-        #     ranges.append(_NumericRange(1,args[0],1))
-        # elif len(args) == 2:
-        #     ranges.append(_NumericRange(args[0],args[1],1))
-        # elif len(args) == 3:
-        #     ranges.append(_NumericRange(*args))
-        # elif args:
-        #     raise ValueError("RangeSet expects 3 or fewer positional "
-        #                      "arguments (received %s)" % (len(args),))
-        # _init_class.__init__(self, component=self, ranges=ranges)
 
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
@@ -2116,6 +2101,7 @@ class RangeSet(Component):
         # TODO: verify that the constructed ranges match finite
         self._constructed=True
         timer.report()
+
 
     def _pprint(self):
         """
@@ -2135,10 +2121,17 @@ class RangeSet(Component):
 
 
 class InfiniteSimpleRangeSet(_InfiniteRangeSetData, RangeSet):
-    pass
+    def __init__(self, *args, **kwds):
+        ranges = self._process_args(args, kwds.pop('ranges', []))
+        _InfiniteRangeSetData.__init__(self, component=self, ranges=ranges)
+        RangeSet.__init__(self, **kwds)
+
 
 class FiniteSimpleRangeSet(_FiniteRangeSetData, RangeSet):
-    pass
+    def __init__(self, *args, **kwds):
+        ranges = self._process_args(args, kwds.pop('ranges', []))
+        _FiniteRangeSetData.__init__(self, component=self, ranges=ranges)
+        RangeSet.__init__(self, **kwds)
 
 
 ############################################################################
@@ -2149,7 +2142,8 @@ class _SetOperator(_SetData, Set):
     __slots__ = ('_sets','_implicit_subsets')
 
     def __init__(self, *args, **kwds):
-        super(_SetOperator, self).__init__(**kwds)
+        _SetData.__init__(self, component=self)
+        Set.__init__(self, **kwds)
         self._sets, self._implicit_subsets = self._processArgs(*args)
 
     def __getstate__(self):
@@ -2630,8 +2624,8 @@ class _SetProduct_OrderedSet(_SetProduct_FiniteSet, _OrderedSetMixin):
 
 class _AnySet(_SetData, Set):
     def __init__(self, **kwds):
-        kwds.setdefault('component', self)
-        super(_AnySet, self).__init__(**kwds)
+        _SetData.__init__(self, component=self)
+        Set.__init__(self, **kwds)
 
     def __contains__(self, val):
         return True

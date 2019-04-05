@@ -17,7 +17,7 @@ from pyomo.core.base.set import (
     _NumericRange as NR, _NonNumericRange as NNR, _AnyRange, _AnySet,
     Any, Reals, NonNegativeReals, Integers, PositiveIntegers,
     RangeSet, Set, SetOf,
-    _SetUnion_OrderedSet,
+    _FiniteRangeSetData, _InfiniteRangeSetData, _SetUnion_OrderedSet,
 )
 from pyomo.environ import ConcreteModel
 
@@ -1128,14 +1128,17 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         i = RangeSet(3)
         self.assertTrue(i.is_finite())
         self.assertTrue(i.is_ordered())
+        self.assertIsInstance(i, _FiniteRangeSetData)
 
         i = RangeSet(1,3)
         self.assertTrue(i.is_finite())
         self.assertTrue(i.is_ordered())
+        self.assertIsInstance(i, _FiniteRangeSetData)
 
         i = RangeSet(1,3,0)
         self.assertFalse(i.is_finite())
         self.assertFalse(i.is_ordered())
+        self.assertIsInstance(i, _InfiniteRangeSetData)
 
     def test_pprint(self):
         m = ConcreteModel()
@@ -1438,7 +1441,8 @@ class TestSetOperators(unittest.TestCase):
         self.assertEqual(x.ord(4), 5)
         self.assertEqual(x.ord(5), 4)
         with self.assertRaisesRegexp(
-                IndexError, "Cannot identify position of 6 in Set %s"):
+                IndexError,
+                "Cannot identify position of 6 in Set _SetUnion_OrderedSet"):
             x.ord(6)
 
         self.assertEqual(x[1], 1)
