@@ -12,13 +12,13 @@ try:
     import numpy as np
     from scipy.sparse import coo_matrix, tril
 except ImportError:
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run MA57 solvers")
 
-from pyomo.contrib.pynumero.extensions.hsl import MA57_LinearSolver
-if not MA57_LinearSolver.available():
-    raise unittest.SkipTest("Pynumero needs the HSL extension to run MA57 tests")
+try:
+    from pyomo.contrib.pynumero.linalg.solvers.ma57_solver import MA57LinearSolver
+except ImportError:
+    raise unittest.SkipTest("Pynumero needs libpynumero_MA57 to run MA57 solvers")
 
-from pyomo.contrib.pynumero.linalg.solvers.ma57_solver import MA57LinearSolver
 from pyomo.contrib.pynumero.sparse import (BlockSymMatrix,
                                            BlockMatrix,
                                            BlockVector,

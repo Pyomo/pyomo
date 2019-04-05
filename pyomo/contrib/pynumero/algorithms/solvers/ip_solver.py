@@ -15,12 +15,9 @@ from pyomo.contrib.pynumero.sparse import (BlockVector,
 
 try:
     from pyomo.contrib.pynumero.linalg.solvers import ma27_solver
-    found_hsl = True
-    import pyomo.contrib.pynumero.extensions.hsl as _hsl
-    if not _hsl.MA27_LinearSolver.available():
-        found_hsl = False
+    found_ma27 = True
 except ImportError as e:
-    found_hsl = False
+    found_ma27 = False
 
 try:
     from pyomo.contrib.pynumero.linalg.solvers.mumps_solver import MUMPSSymLinearSolver
@@ -42,7 +39,7 @@ from scipy.sparse import coo_matrix as scipy_coo_matrix
 from scipy.sparse import identity
 import sys
 
-if not found_mumps and not found_hsl:
+if not found_mumps and not found_ma27:
     raise ImportError('Need MA27 or MUMPS to run pynumero interior-point')
 
 
@@ -1234,7 +1231,7 @@ class InteriorPointSolver(object):
 
         store_walker = kwargs.pop('store_walker', None)
 
-        if found_hsl:
+        if found_ma27:
             linear_solver = kwargs.pop('linear_solver', 'ma27')
         else:
             linear_solver = kwargs.pop('linear_solver', 'mumps')

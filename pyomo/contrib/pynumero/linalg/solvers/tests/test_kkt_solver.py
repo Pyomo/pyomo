@@ -14,11 +14,17 @@ try:
 except ImportError:
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
-from pyomo.contrib.pynumero.extensions.hsl import MA27_LinearSolver
-if not MA27_LinearSolver.available():
-    found_hsl = False
-else:
-    found_hsl = True
+try:
+    from pyomo.contrib.pynumero.linalg.solvers.ma27_solver import MA27LinearSolver
+    found_ma27 = True
+except ImportError as e:
+    found_ma27 = False
+
+try:
+    from pyomo.contrib.pynumero.linalg.solvers.ma57_solver import MA57LinearSolver
+    found_ma57 = True
+except ImportError as e:
+    found_ma57 = False
 
 try:
     from pyomo.contrib.pynumero.linalg.solvers.mumps_solver import MUMPSSymLinearSolver
@@ -26,7 +32,7 @@ try:
 except ImportError as e:
     found_mumps = False
 
-if not found_mumps and not found_hsl:
+if not found_mumps and not found_ma27:
     raise unittest.SkipTest("Pynumero needs pymumps or ma27 to run kkt solver tests")
 
 from pyomo.contrib.pynumero.linalg.solvers.kkt_solver import FullKKTSolver, TwoStageStochasticSchurKKTSolver
@@ -79,7 +85,7 @@ class TestFullKKTSolver(unittest.TestCase):
             self.assertTrue(np.allclose(x, np.array([2.0, -1.0, 1.0])))
             self.assertTrue(np.allclose(yc, np.array([-3.0, 2.0])))
 
-        if found_hsl:
+        if found_ma27:
             solver = FullKKTSolver('ma27')
             sol, info = solver.solve(kkt, rhs, nlp=nlp)
             x = sol[0]
@@ -87,8 +93,15 @@ class TestFullKKTSolver(unittest.TestCase):
             self.assertTrue(np.allclose(x, np.array([2.0, -1.0, 1.0])))
             self.assertTrue(np.allclose(yc, np.array([-3.0, 2.0])))
 
+        if found_ma57:
+            solver = FullKKTSolver('ma57')
+            sol, info = solver.solve(kkt, rhs, nlp=nlp)
+            x = sol[0]
+            yc = sol[2]
+            self.assertTrue(np.allclose(x, np.array([2.0, -1.0, 1.0])))
+            self.assertTrue(np.allclose(yc, np.array([-3.0, 2.0])))
 
-@unittest.skipIf(not found_hsl, "Need ma27")
+
 class TestTwoStageStochasticSchurKKTSolver(unittest.TestCase):
 
     @classmethod
@@ -141,13 +154,24 @@ class TestTwoStageStochasticSchurKKTSolver(unittest.TestCase):
                             nlp.evaluate_c(x),
                             BlockVector([np.zeros(0), np.zeros(0)])
                             ])
+        if found_mumps:
+            solver = TwoStageStochasticSchurKKTSolver('mumps')
+            sol, info = solver.solve(kkt, rhs, nlp=nlp)
+            x = sol[0]
+            yc = sol[2]
 
-        solver = TwoStageStochasticSchurKKTSolver('ma27')
-        sol, info = solver.solve(kkt, rhs, nlp=nlp)
-        x = sol[0]
-        yc = sol[2]
+            x_sol = np.array([8.44301052, -19.90217852, 6.98749613, 8.44301052, -0.73386561, -7.96556946, 8.44301052])
+            y_sol = np.array([-65.23851729, 71.6498793, 22.17255261, 5.71444595,  55.39731506, -55.39731506])
+            self.assertTrue(np.allclose(x.flatten(), x_sol))
+            self.assertTrue(np.allclose(yc.flatten(), y_sol))
 
-        x_sol = np.array([8.44301052, -19.90217852, 6.98749613, 8.44301052, -0.73386561, -7.96556946, 8.44301052])
-        y_sol = np.array([-65.23851729, 71.6498793, 22.17255261, 5.71444595,  55.39731506, -55.39731506])
-        self.assertTrue(np.allclose(x.flatten(), x_sol))
-        self.assertTrue(np.allclose(yc.flatten(), y_sol))
+        if found_ma27:
+            solver = TwoStageStochasticSchurKKTSolver('ma27')
+            sol, info = solver.solve(kkt, rhs, nlp=nlp)
+            x = sol[0]
+            yc = sol[2]
+
+            x_sol = np.array([8.44301052, -19.90217852, 6.98749613, 8.44301052, -0.73386561, -7.96556946, 8.44301052])
+            y_sol = np.array([-65.23851729, 71.6498793, 22.17255261, 5.71444595,  55.39731506, -55.39731506])
+            self.assertTrue(np.allclose(x.flatten(), x_sol))
+            self.assertTrue(np.allclose(yc.flatten(), y_sol))

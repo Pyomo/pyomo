@@ -7,12 +7,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-try:
-    import pyomo.contrib.pynumero.extensions.hsl as _hsl
-except ImportError as e:
-    print('{}'.format(e))
-    raise ImportError('Error importing hsl while running ma27 linear solver. '
-                      'Make sure libpynumero_HSL is installed and added to path.')
+from pyomo.contrib.pynumero.extensions.hsl import _MA27_LinearSolver
+if not _MA27_LinearSolver.available():
+    raise ImportError('MA27 library not available.'
+                      ' Make sure libpynumero_MA27 is in pynumero.extensions.lib')
 
 from pyomo.contrib.pynumero.sparse import BlockMatrix, BlockVector
 from pyomo.contrib.pynumero.sparse.utils import is_symmetric_sparse
@@ -25,7 +23,7 @@ class MA27LinearSolver(object):
 
     def __init__(self, pivotol=1e-8):
 
-        self._ma27 = _hsl.MA27_LinearSolver(pivotol)
+        self._ma27 = _MA27_LinearSolver(pivotol)
         self._nnz = 0
         self._dim = 0
         self._row_blocks = -1

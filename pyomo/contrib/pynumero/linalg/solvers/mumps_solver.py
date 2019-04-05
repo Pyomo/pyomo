@@ -13,7 +13,8 @@ import numpy as np
 try:
     import mumps
 except ImportError as e:
-    raise ImportError('Error importing mumps. Install pymumps https://github.com/PyMumps/pymumps.git')
+    raise ImportError('Error importing mumps. Install pymumps '
+                      'conda install -c conda-forge pymumps')
 
 from pyomo.contrib.pynumero.sparse.utils import is_symmetric_sparse
 from pyomo.contrib.pynumero.sparse import BlockMatrix, BlockVector

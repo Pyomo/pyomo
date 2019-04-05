@@ -14,9 +14,10 @@ try:
 except ImportError:
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
-from pyomo.contrib.pynumero.extensions.hsl import MA27_LinearSolver
-if not MA27_LinearSolver.available():
-    raise unittest.SkipTest("Pynumero needs the HSL extension to run MA27 tests")
+try:
+    from pyomo.contrib.pynumero.linalg.solvers.ma27_solver import MA27LinearSolver
+except ImportError:
+    raise unittest.SkipTest("Pynumero needs libpynumero_MA27 to run MA27 solvers")
 
 from pyomo.contrib.pynumero.linalg.solvers.ma27_solver import MA27LinearSolver
 from pyomo.contrib.pynumero.sparse import (BlockSymMatrix,
@@ -166,4 +167,3 @@ class TestMA27(unittest.TestCase):
         x = linear_solver2.do_back_solve(self.block_rhs2)
         npx = np.linalg.solve(A.toarray(), self.block_rhs2.flatten())
         self.assertTrue(np.allclose(x.flatten(), npx))
-

@@ -8,7 +8,7 @@ import sys
 import os
 
 
-class MA27_LinearSolver(object):
+class _MA27_LinearSolver(object):
 
     libname = find_pynumero_library('pynumero_MA27')
 
@@ -24,12 +24,12 @@ class MA27_LinearSolver(object):
                  n_iw_factor=5.0,
                  mem_increase=2.0):
 
-        if not MA27_LinearSolver.available():
+        if not _MA27_LinearSolver.available():
             raise RuntimeError(
                 "HSL interface is not supported on this platform (%s)"
                 % (os.name,) )
 
-        self.HSLib = ctypes.cdll.LoadLibrary(MA27_LinearSolver.libname)
+        self.HSLib = ctypes.cdll.LoadLibrary(_MA27_LinearSolver.libname)
 
         # define 1d array
         array_1d_double = npct.ndpointer(dtype=np.double, ndim=1, flags='CONTIGUOUS')
@@ -182,7 +182,7 @@ class MA27_LinearSolver(object):
                                                               len(psol))
 
 
-class MA57_LinearSolver(object):
+class _MA57_LinearSolver(object):
 
     libname = find_pynumero_library('pynumero_MA57')
 
@@ -194,12 +194,12 @@ class MA57_LinearSolver(object):
 
     def __init__(self, pivottol=1e-8, prealocate_factor=1.05):
 
-        if not MA57_LinearSolver.available():
+        if not _MA57_LinearSolver.available():
             raise RuntimeError(
                 "HSL interface is not supported on this platform (%s)"
                 % (os.name,) )
 
-        self.HSLib = ctypes.cdll.LoadLibrary(MA57_LinearSolver.libname)
+        self.HSLib = ctypes.cdll.LoadLibrary(_MA57_LinearSolver.libname)
 
         # define 1d array
         array_1d_double = npct.ndpointer(dtype=np.double, ndim=1, flags='CONTIGUOUS')
