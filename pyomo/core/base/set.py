@@ -23,7 +23,7 @@ except ImportError:
         return ans
 from six import iteritems
 from six.moves import xrange
-from sys import exc_info
+import sys
 
 from pyutilib.misc.misc import flatten_tuple
 
@@ -40,6 +40,8 @@ from pyomo.core.base.indexed_component import (
 from pyomo.core.base.misc import sorted_robust, apply_indexed_rule
 
 logger = logging.getLogger('pyomo.core')
+
+_prePython37 = sys.version_info[:2] < (3,7)
 
 def process_setarg(arg):
     """
@@ -1243,15 +1245,21 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
     """A general unordered iterable Set"""
     __slots__ = ('_values', '_domain', '_validate', '_dimen')
 
-    def __init__(self, component, domain):
+    def __init__(self, component, domain, initialize):
         _SetData.__init__(self, component=component)
-        self._values = set()
+        # Derived classes (like _OrderedSetData) may want to change the
+        # storage
+        if not hasattr(self, '_values'):
+            self._values = set()
         if domain is None:
             self._domain = Any
         else:
             self._domain = domain
         self._dimen = _UnknownSetDimen
         self._validate = None
+        if initialize is not None:
+            for i in initialize:
+                self.add(i)
 
     def __getstate__(self):
         """
@@ -1302,7 +1310,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
                     % (value, self.name))
                 return False
         except:
-            exc = exc_info()
+            exc = sys.exc_info()
             raise TypeError("Unable to insert '%s' into set %s:\n\t%s: %s"
                             % (value, self.name, exc[0].__name__, exc[1]))
         if self._validate is not None:
@@ -1473,10 +1481,21 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
 
     __slots__ = ('_ordered_values',)
 
-    def __init__(self, component, domain):
-        _FiniteSetData.__init__(self, component=component, domain=domain)
+    _UnorderedInitializers = {set}
+    if _prePython37:
+        _UnorderedInitializers.add(dict)
+
+    def __init__(self, component, domain, initialize):
         self._values = {}
         self._ordered_values = []
+        _FiniteSetData.__init__(self, component=component, domain=domain,
+                                initialize=initialize)
+        if type(initialize) in self._UnorderedInitializers:
+            logger.warning(
+                "Initializing an Ordered set with a fundamentally unordered "
+                "'initialize' data source (type: %s).  This WILL potentially "
+                "lead to nondeterministic behaior in Pyomo"
+                % (type(initialize).__name__,))
 
     def __getstate__(self):
         """
@@ -1578,10 +1597,11 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
 
     __slots__ = ('_is_sorted',)
 
-    def __init__(self, component, domain):
-        _OrderedSetData.__init__(self, component=component, domain=domain)
+    def __init__(self, component, domain, initialize):
         # An empty set is sorted...
         self._is_sorted = True
+        _OrderedSetData.__init__(self, component=component, domain=domain,
+                                 initialize=initialize)
 
     def __getstate__(self):
         """
@@ -1720,7 +1740,7 @@ class Set(IndexedComponent):
         if cls != Set:
             return super(Set, cls).__new__(cls)
 
-        ordered = kwds.pop('ordered', False)
+        ordered = kwds.pop('ordered', True)
         if ordered is True:
             ordered = Set.InsertionOrder
         if ordered not in Set._ValidOrderedAuguments:
@@ -1784,19 +1804,25 @@ class Set(IndexedComponent):
 class FiniteSimpleSet(_FiniteSetData, Set):
     def __init__(self, **kwds):
         domain = kwds.pop('domain', None)
-        _FiniteSetData.__init__(self, component=self, domain=domain)
+        initialize = kwds.pop('initialize', None)
+        _FiniteSetData.__init__(self, component=self, domain=domain,
+                                initialize=initialize)
         Set.__init__(self, **kwds)
 
 class OrderedSimpleSet(_OrderedSetData, Set):
     def __init__(self, **kwds):
         domain = kwds.pop('domain', None)
-        _OrderedSetData.__init__(self, component=self, domain=domain)
+        initialize = kwds.pop('initialize', None)
+        _OrderedSetData.__init__(self, component=self, domain=domain,
+                                 initialize=initialize)
         Set.__init__(self, **kwds)
 
 class SortedSimpleSet(_SortedSetData, Set):
     def __init__(self, **kwds):
         domain = kwds.pop('domain', None)
-        _SortedSetData.__init__(self, component=self, domain=domain)
+        initialize = kwds.pop('initialize', None)
+        _SortedSetData.__init__(self, component=self, domain=domain,
+                                initialize=initialize)
         Set.__init__(self, **kwds)
 
 class IndexedSet(Set):
@@ -2168,7 +2194,8 @@ class _SetOperator(_SetData, Set):
                 if s.parent_block() is None:
                     implicit.append(s)
             else:
-                ans.append(Set(initialize=s))
+                ans.append(Set(initialize=s,
+                               ordered=type(s) in {tuple, list}))
                 implicit.append(ans[-1])
         return tuple(ans), tuple(implicit)
 
@@ -2203,7 +2230,7 @@ class _SetUnion(_SetOperator):
         return cls.__new__(cls)
 
     def ranges(self):
-        return itertools.chain(self._sets[i].ranges() for i in (0,1))
+        return itertools.chain(*tuple(s.ranges() for s in self._sets))
 
 
 class _SetUnion_InfiniteSet(_SetUnion):

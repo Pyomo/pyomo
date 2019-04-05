@@ -17,7 +17,8 @@ from pyomo.core.base.set import (
     _NumericRange as NR, _NonNumericRange as NNR, _AnyRange, _AnySet,
     Any, Reals, NonNegativeReals, Integers, PositiveIntegers,
     RangeSet, Set, SetOf,
-    _FiniteRangeSetData, _InfiniteRangeSetData, _SetUnion_OrderedSet,
+    _FiniteRangeSetData, _InfiniteRangeSetData,
+    _SetUnion_InfiniteSet, _SetUnion_FiniteSet, _SetUnion_OrderedSet,
 )
 from pyomo.environ import ConcreteModel
 
@@ -1408,16 +1409,20 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
 
 class TestSetOperators(unittest.TestCase):
-    def test_ordered_union(self):
-        a = SetOf([1,3,2])
-        b = SetOf([5,3,4])
+    def _verify_ordered_union(self, a, b):
         # Note the placement of the second "3" in the middle of the set.
         # This helps catch edge cases where we need to ensure it doesn't
         # count as part of the set membership
-        self.assertTrue(a.is_ordered())
-        self.assertTrue(b.is_finite())
-        self.assertTrue(a.is_ordered())
-        self.assertTrue(b.is_finite())
+        if isinstance(a, SetOf):
+            self.assertTrue(a.is_ordered())
+            self.assertTrue(a.is_finite())
+        else:
+            self.assertIs(type(a), list)
+        if isinstance(b, SetOf):
+            self.assertTrue(b.is_ordered())
+            self.assertTrue(b.is_finite())
+        else:
+            self.assertIs(type(b), list)
 
         x = a | b
         self.assertIs(type(x), _SetUnion_OrderedSet)
@@ -1456,3 +1461,100 @@ class TestSetOperators(unittest.TestCase):
         self.assertEqual(x[-3], 2)
         self.assertEqual(x[-4], 3)
         self.assertEqual(x[-5], 1)
+
+    def test_ordered_setunion(self):
+        self._verify_ordered_union(SetOf([1,3,2]), SetOf([5,3,4]))
+        self._verify_ordered_union([1,3,2], SetOf([5,3,4]))
+        self._verify_ordered_union(SetOf([1,3,2]), [5,3,4])
+
+
+    def _verify_finite_union(self, a, b):
+        # Note the placement of the second "3" in the middle of the set.
+        # This helps catch edge cases where we need to ensure it doesn't
+        # count as part of the set membership
+        if isinstance(a, SetOf):
+            if type(a._ref) is list:
+                self.assertTrue(a.is_ordered())
+            else:
+                self.assertFalse(a.is_ordered())
+            self.assertTrue(a.is_finite())
+        else:
+            self.assertIn(type(a), (list, set))
+        if isinstance(b, SetOf):
+            if type(b._ref) is list:
+                self.assertTrue(b.is_ordered())
+            else:
+                self.assertFalse(b.is_ordered())
+            self.assertTrue(b.is_finite())
+        else:
+            self.assertIn(type(b), (list, set))
+
+        x = a | b
+        self.assertIs(type(x), _SetUnion_FiniteSet)
+        self.assertTrue(x.is_finite())
+        self.assertFalse(x.is_ordered())
+        self.assertEqual(len(x), 5)
+        if x._sets[0].is_ordered():
+            self.assertEqual(list(x)[:3], [1,3,2])
+        if x._sets[1].is_ordered():
+            self.assertEqual(list(x)[-2:], [5,4])
+        self.assertEqual(sorted(list(x)), [1,2,3,4,5])
+        self.assertEqual(x.ordered(), (1,2,3,4,5))
+        self.assertEqual(x.sorted(), (1,2,3,4,5))
+
+        self.assertIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertIn(4, x)
+        self.assertIn(5, x)
+        self.assertNotIn(6, x)
+
+        # THe ranges should at least filter out the duplicates
+        self.assertEqual(
+            len(list(x._sets[0].ranges()) + list(x._sets[1].ranges())), 6)
+        self.assertEqual(len(list(x.ranges())), 5)
+
+    def test_finite_setunion(self):
+        self._verify_finite_union(SetOf({1,3,2}), SetOf({5,3,4}))
+        self._verify_finite_union([1,3,2], SetOf({5,3,4}))
+        self._verify_finite_union(SetOf({1,3,2}), [5,3,4])
+        self._verify_finite_union({1,3,2}, SetOf([5,3,4]))
+        self._verify_finite_union(SetOf([1,3,2]), {5,3,4})
+
+
+    def _verify_infinite_union(self, a, b):
+        # Note the placement of the second "3" in the middle of the set.
+        # This helps catch edge cases where we need to ensure it doesn't
+        # count as part of the set membership
+        if isinstance(a, RangeSet):
+            self.assertFalse(a.is_ordered())
+            self.assertFalse(a.is_finite())
+        else:
+            self.assertIn(type(a), (list, set))
+        if isinstance(b, RangeSet):
+            self.assertFalse(b.is_ordered())
+            self.assertFalse(b.is_finite())
+        else:
+            self.assertIn(type(b), (list, set))
+
+        x = a | b
+        self.assertIs(type(x), _SetUnion_InfiniteSet)
+        self.assertFalse(x.is_finite())
+        self.assertFalse(x.is_ordered())
+
+        self.assertIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertIn(4, x)
+        self.assertIn(5, x)
+        self.assertNotIn(6, x)
+
+        self.assertEqual(list(x.ranges()),
+                         list(x._sets[0].ranges()) + list(x._sets[1].ranges()))
+
+    def test_infinite_setunion(self):
+        self._verify_infinite_union(RangeSet(1,3,0), RangeSet(3,5,0))
+        self._verify_infinite_union([1,3,2], RangeSet(3,5,0))
+        self._verify_infinite_union(RangeSet(1,3,0), [5,3,4])
+        self._verify_infinite_union({1,3,2}, RangeSet(3,5,0))
+        self._verify_infinite_union(RangeSet(1,3,0), {5,3,4})
