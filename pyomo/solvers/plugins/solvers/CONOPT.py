@@ -62,13 +62,13 @@ class CONOPT(SystemCallSolver):
         return ResultsFormat.sol
 
     def _default_executable(self):
-        executable = pyomo.common.registered_executable("conopt")
-        if executable is None:
+        executable = pyomo.common.Executable("conopt")
+        if not executable:
             logger.warning("Could not locate the 'conopt' executable, "
                            "which is required for solver %s" % self.name)
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     def _get_version(self):
         """
@@ -160,5 +160,3 @@ class CONOPT(SystemCallSolver):
             'Locally optimal' in results.solver.message:
             results.solver.status = SolverStatus.ok
         return results
-
-pyomo.common.register_executable(name="conopt")

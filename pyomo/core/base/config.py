@@ -8,7 +8,9 @@ except ImportError:
     yaml_available = False
 
 from pyutilib.misc.config import ConfigBase
-from pyomo.common.config import ConfigBlock, ConfigValue, ADVANCED_OPTION
+from pyomo.common.config import (
+    ConfigBlock, ConfigValue, ADVANCED_OPTION, PYOMO_CONFIG_DIR,
+)
 
 
 class PyomoOptions_(object):
@@ -22,8 +24,7 @@ class PyomoOptions_(object):
             sources.append( (yaml.load, 'yml') )
             sources.append( (yaml.load, 'yaml') )
         for parser, suffix in sources:
-            cfg_file = os.path.join( appdirs.user_data_dir('pyomo'),
-                                     'config.'+suffix)
+            cfg_file = os.path.join( PYOMO_CONFIG_DIR, 'config.'+suffix)
             if os.path.exists(cfg_file):
                 fp = open(cfg_file)
                 try:

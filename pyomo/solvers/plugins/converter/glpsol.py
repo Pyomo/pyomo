@@ -26,7 +26,7 @@ class GlpsolMIPConverter(object):
         #
         # Test if the glpsol executable is available
         #
-        if pyomo.common.registered_executable("glpsol") is None:
+        if not pyomo.common.Executable("glpsol"):
             return False
         #
         # Return True for specific from/to pairs
@@ -34,7 +34,7 @@ class GlpsolMIPConverter(object):
         if from_type == ProblemFormat.mod and to_type == ProblemFormat.cpxlp:
             return True
         if from_type == ProblemFormat.mod and to_type == ProblemFormat.mps:
-            if pyomo.common.registered_executable("ampl") is None:
+            if not pyomo.common.Executable("ampl"):
                 #
                 # Only convert mod->mps with ampl
                 #
@@ -45,10 +45,10 @@ class GlpsolMIPConverter(object):
         """Convert an instance of one type into another"""
         if not isinstance(args[2],six.string_types):
             raise ConverterError("Can only apply glpsol to convert file data")
-        cmd = pyomo.common.registered_executable("glpsol").get_path()
-        if cmd is None:
+        _exec = pyomo.common.Executable("glpsol")
+        if not _exec:
             raise ConverterError("The 'glpsol' executable cannot be found")
-        cmd = cmd +" --math"
+        cmd = [_exec.path(), "--math"]
         #
         # MPS->LP conversion is ignored in coverage because it's not being
         #   used; instead, we're using pico_convert for this conversion
@@ -56,12 +56,20 @@ class GlpsolMIPConverter(object):
         modfile=''
         if args[1] == ProblemFormat.mps: #pragma:nocover
             ofile = pyutilib.services.TempfileManager.create_tempfile(suffix = '.glpsol.mps')
-            cmd = cmd + " --check --name 'MPS model derived from "+os.path.basename(args[2])+"' --wfreemps "+ofile
+            cmd.extend([
+                "--check",
+                "--name", "MPS model derived from "+os.path.basename(args[2]),
+                "--wfreemps", ofile
+            ])
         elif args[1] == ProblemFormat.cpxlp:
             ofile = pyutilib.services.TempfileManager.create_tempfile(suffix = '.glpsol.lp')
-            cmd = cmd + " --check --name 'MPS model derived from "+os.path.basename(args[2])+"' --wcpxlp "+ofile
+            cmd.extend([
+                "--check",
+                "--name","MPS model derived from "+os.path.basename(args[2]),
+                "--wcpxlp", ofile
+            ])
         if len(args[2:]) == 1:
-            cmd = cmd+" "+args[2]
+            cmd.append(args[2])
         else:
             #
             # Create a temporary model file, since GLPSOL can only
@@ -94,7 +102,7 @@ class GlpsolMIPConverter(object):
                 INPUT.close()
                 OUTPUT.write("end;\n")
             OUTPUT.close()
-            cmd = cmd+" "+modfile
+            cmd.append(modfile)
         pyutilib.subprocess.run(cmd)
         if not os.path.exists(ofile):       #pragma:nocover
             raise pyutilib.common.ApplicationError("Problem launching 'glpsol' to create "+ofile)

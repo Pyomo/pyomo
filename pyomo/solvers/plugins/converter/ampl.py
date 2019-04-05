@@ -30,7 +30,7 @@ class AmplMIPConverter(object):
         #
         # Test if the ampl executable is available
         #
-        if pyomo.common.registered_executable("ampl") is None:
+        if not pyomo.common.Executable("ampl"):
             return False
         #
         # Return True for specific from/to pairs
@@ -45,8 +45,8 @@ class AmplMIPConverter(object):
         """Convert an instance of one type into another"""
         if not isinstance(args[2],basestring):
             raise ConverterError("Can only apply ampl to convert file data")
-        cmd = pyomo.common.registered_executable("ampl").get_path()
-        if cmd is None:
+        _exec = pyomo.common.Executable("ampl")
+        if not _exec:
             raise ConverterError("The 'ampl' executable cannot be found")
         script_filename = pyutilib.services.TempfileManager.create_tempfile(suffix = '.ampl')
 
@@ -55,7 +55,7 @@ class AmplMIPConverter(object):
         else:
             output_filename = pyutilib.services.TempfileManager.create_tempfile(suffix = '.mps')
 
-        cmd += " " + script_filename
+        cmd = [_exec.path(), script_filename]
         #
         # Create the AMPL script
         #

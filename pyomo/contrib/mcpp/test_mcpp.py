@@ -10,8 +10,8 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, mcpp_available
 from pyomo.core import (
     ConcreteModel, Expression, Var, acos, asin, atan, cos, exp, quicksum, sin,
-    tan, value
-)
+    tan, value,
+    ComponentMap)
 from pyomo.core.expr.current import identify_variables
 
 
@@ -130,6 +130,15 @@ class TestMcCormick(unittest.TestCase):
         mc_expr = mc(m.z - (m.x * m.y * (m.x + m.y) / 2) ** (1/3))
         self.assertAlmostEqual(mc_expr.convex(), -407.95444629965016)
         self.assertAlmostEqual(mc_expr.lower(), -499.99999999999983)
+
+    def test_improved_bounds(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 100), initialize=5)
+        improved_bounds = ComponentMap()
+        improved_bounds[m.x] = (10, 20)
+        mc_expr = mc(m.x, improved_var_bounds=improved_bounds)
+        self.assertEqual(mc_expr.lower(), 10)
+        self.assertEqual(mc_expr.upper(), 20)
 
 
 def make2dPlot(expr, numticks=10, show_plot=False):
