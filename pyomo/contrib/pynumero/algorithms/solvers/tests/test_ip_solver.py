@@ -262,7 +262,7 @@ class TestInteriorPointSolver(unittest.TestCase):
 
         nlp1 = PyomoNLP(model)
         opt = InteriorPointSolver(nlp1)
-        x, info = opt.solve(linear_solver='mumps', tee=False)
+        x, info = opt.solve(linear_solver='mumps', tee=False, refine_max_iter=0)
 
         self.ipopt.solve(model)
         nlp_ipopt = PyomoNLP(model)

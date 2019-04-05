@@ -63,32 +63,35 @@ class KKTSolver(object):
 
 class FullKKTSolver(KKTSolver):
 
-    def __init__(self, linear_solver):
+    def __init__(self, linear_solver, pivotol=1e-8, options=None):
+
+        if options is None:
+            options = dict()
 
         # create linear solver
         if linear_solver == 'mumps':
             if found_mumps:
-                lsolver = MUMPSSymLinearSolver()
+                lsolver = MUMPSSymLinearSolver(pivotol, **options)
             else:
                 if found_ma27:
                     print('WARNING: Running with ma27 linear solver. Mumps not available')
-                    lsolver = MA27LinearSolver()
+                    lsolver = MA27LinearSolver(pivotol, **options)
                 raise RuntimeError('Did not found MUMPS linear solver')
         elif linear_solver == 'ma27':
             if found_ma27:
-                lsolver = MA27LinearSolver()
+                lsolver = MA27LinearSolver(pivotol, **options)
             else:
                 if found_mumps:
                     print('WARNING: Running with mumps linear solver. MA27 not available')
-                    lsolver = MUMPSSymLinearSolver()
+                    lsolver = MUMPSSymLinearSolver(pivotol, **options)
                 raise RuntimeError('Did not found MA27 linear solver')
         elif linear_solver == 'ma57':
             if found_ma57:
-                lsolver = MA57LinearSolver()
+                lsolver = MA57LinearSolver(pivotol, **options)
             else:
                 if found_mumps:
                     print('WARNING: Running with mumps linear solver. MA57 not available')
-                    lsolver = MUMPSSymLinearSolver()
+                    lsolver = MUMPSSymLinearSolver(pivotol, **options)
                 raise RuntimeError('Did not found MA57 linear solver')
         else:
             raise RuntimeError('{} Linear solver not recognized'.format(linear_solver))
@@ -101,6 +104,8 @@ class FullKKTSolver(KKTSolver):
         do_symbolic = kwargs.pop('do_symbolic', True)
         max_iter_reg = kwargs.pop('max_iter_reg', 40)
         wr = kwargs.pop('regularize', True)
+        max_iter_ref = kwargs.pop('max_iter_ref', 10)
+        tol_iter_ref = kwargs.pop('tol_iter_ref', 1e-8)
 
         # set auxiliary variables
         diagonal = None
@@ -146,7 +151,29 @@ class FullKKTSolver(KKTSolver):
                 raise RuntimeError('Could not regularized the problem')
 
         info = {'status': status, 'delta_reg': val_reg, 'reg_iter': count_iter}
-        return lsolver.do_back_solve(rhs), info
+
+        # iterative refinement
+        if max_iter_ref > 0:
+            x = lsolver.do_back_solve(rhs)
+            xr = x.flatten()
+            flat_matrix = kkt.tocsr()
+            flat_rhs = rhs.flatten()
+
+            for i in range(max_iter_ref):
+                res = flat_rhs - flat_matrix.dot(xr)
+                d = lsolver.do_back_solve(res, flat_solution=True)
+                xr += d
+                #print(np.linalg.norm(res, ord=np.inf))
+                if np.linalg.norm(res, ord=np.inf) <= tol_iter_ref:
+                    break
+            if isinstance(x, BlockVector):
+                x.copyfrom(xr)
+            else:
+                x = xr
+        else:
+            x = lsolver.do_back_solve(rhs)
+
+        return x, info
 
     def reset_inertia_parameters(self):
         self._inertia_params.reset()

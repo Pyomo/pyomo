@@ -918,7 +918,7 @@ class _InteriorPointWalker(object):
         self._rhs[2] = calc.evaluate_c()
         self._rhs[3] = calc.residual_d()
 
-    def compute_step(self, max_iter_reg=40):
+    def compute_step(self, max_iter_reg=40, max_iter_ref=10):
 
         calc = self._calculator
         data = calc._data
@@ -929,7 +929,8 @@ class _InteriorPointWalker(object):
                                           self._rhs,
                                           nlp,
                                           do_symbolic=False,  # done already in setup
-                                          max_iter_reg=max_iter_reg)
+                                          max_iter_reg=max_iter_reg,
+                                          max_iter_ref=max_iter_ref)
 
         val_reg = info['delta_reg']
         if info['status'] != 0:
@@ -1225,6 +1226,7 @@ class InteriorPointSolver(object):
         outer_max_iter = kwargs.pop('max_iter_outer', 1000)
         inner_max_iter = kwargs.pop('max_iter_inner', 1000)
         reg_max_iter = kwargs.pop('reg_max_iter', 40)
+        refine_max_iter = kwargs.pop('refine_max_iter', 10)
         iter_limit = kwargs.pop('iter_limit', 100000)
         wls = kwargs.pop('wls', True)
         log_level = kwargs.pop('log_level', 0)
@@ -1289,7 +1291,8 @@ class InteriorPointSolver(object):
                     self._log(counter_iter, level=10)
 
                 # compute step direction
-                steps, val_reg = walker.compute_step(max_iter_reg=reg_max_iter)
+                steps, val_reg = walker.compute_step(max_iter_reg=reg_max_iter,
+                                                    max_iter_ref=refine_max_iter)
 
                 # compute step size (line search)
                 alpha_primal, alpha_dual = walker.compute_step_size(steps, wls=wls)
