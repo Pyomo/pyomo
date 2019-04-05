@@ -71,6 +71,7 @@ class OneVarDisj(unittest.TestCase):
 
         # I should get one cut because I made bigM really bad, but I only need
         # one facet of the convex hull for this problem to be done.
+        cuts.pprint()
         self.assertEqual(len(cuts), 1)
 
         cut_expr = cuts[0].body
@@ -219,43 +220,41 @@ class TwoTermDisj(unittest.TestCase):
     # the convex hull (in the original space). I don't think this is a very
     # robust test yet because I am asking for exact equality. But on the other
     # hand, exact means numerically life is very good.
-    # @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    # def test_cuts_tight_somewhere(self):
-    #     m = models.makeTwoTermDisj_boxes()
-    #     TransformationFactory('gdp.cuttingplane').apply_to(m)
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cuts_tight_somewhere(self):
+        m = models.makeTwoTermDisj_boxes()
+        TransformationFactory('gdp.cuttingplane').apply_to(m)
 
-    #     # TODO: this is redundant code, I should probably centralize this
-    #     extreme_pts = [
-    #         (1,0,4,1),
-    #         (1,0,4,2),
-    #         (1,0,3,1),
-    #         (1,0,3,2),
-    #         (0,1,1,3),
-    #         (0,1,1,4),
-    #         (0,1,2,3),
-    #         (0,1,2,4)
-    #     ]
+        # TODO: this is redundant code, I should probably centralize this
+        extreme_pts = [
+            (1,0,4,1),
+            (1,0,4,2),
+            (1,0,3,1),
+            (1,0,3,2),
+            (0,1,1,3),
+            (0,1,1,4),
+            (0,1,2,3),
+            (0,1,2,4)
+        ]
 
-    #     cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
-    #     for cut in cuts.values():
-    #         cut_expr = cut.body
-    #         lower = cut.lower
-    #         upper = cut.upper
-    #         tight = 0
-    #         for pt in extreme_pts:
-    #             m.d[0].indicator_var.fix(pt[0])
-    #             m.d[1].indicator_var.fix(pt[1])
-    #             m.x.fix(pt[2])
-    #             m.y.fix(pt[3])
-    #             if lower is not None:
-    #                 if value(cut_expr) == lower:
-    #                     print(pt)
-    #                     tight += 1
-    #             if upper is not None:
-    #                 if value(cut_expr) == upper:
-    #                     print(pt)
-    #                     tight += 1
-    #         self.assertGreaterEqual(tight, 1)
+        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        for cut in cuts.values():
+            cut_expr = cut.body
+            lower = cut.lower
+            upper = cut.upper
+            tight = 0
+            for pt in extreme_pts:
+                m.d[0].indicator_var.fix(pt[0])
+                m.d[1].indicator_var.fix(pt[1])
+                m.x.fix(pt[2])
+                m.y.fix(pt[3])
+                if lower is not None:
+                    if value(cut_expr) == lower:
+                        tight += 1
+                if upper is not None:
+                    if value(cut_expr) == upper:
+                        tight += 1
+            self.assertGreaterEqual(tight, 1)
    
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_create_using(self):

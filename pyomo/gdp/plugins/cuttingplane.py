@@ -464,8 +464,10 @@ class CuttingPlane_Transformation(Transformation):
         cut_cons = {'lower': None, 
                     'upper': 0, 
                     'body': ComponentMap(zip(cut_std_repn.linear_vars,
-                                          cut_std_repn.linear_coefs))}
+                                             cut_std_repn.linear_coefs)),
+                    'key_order': list(cut_std_repn.linear_vars)}
         cut_cons['body'][None] = value(cut_std_repn.constant)
+        cut_cons['key_order'].append(None)
         tight_constraints.append(cut_cons)
         
         # [ESJ 22 Feb 2019] TODO: It is probably worth checking that the
@@ -478,7 +480,10 @@ class CuttingPlane_Transformation(Transformation):
         #print("These are the constraints we got from FME:")
         for cons in projected_constraints:
             body = 0
-            for var, val in cons['body'].items():
+            # We make sure that this loop happens in a deterministic order so
+            # that the expression we produce is the same every time
+            for var in cons['key_order']:
+                val = cons['body'][var]
                 body += val*var if var is not None else val
             #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
 
@@ -497,16 +502,17 @@ class CuttingPlane_Transformation(Transformation):
             # DEBUG
             #print("cons:")
             body = 0
-            for var, val in cons['body'].items():
+            for var in cons['key_order']:
+                val = cons['body'][var]
                 body += val*var if var is not None else val
             #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
             body_bigM = 0
             body_rBigM = 0
-            # TODO: you need to check if this constraint actually has a body. If
-            # not, that is what is getting the error about the boolean, and you
-            # don't want it anyway!
+            # Check if this constraint actually has a body. If not, we don't
+            # want it anyway--it's just a trivial thing coming out of FME
             trivial_constraint = True
-            for var, coef in cons['body'].items():
+            for var in cons['key_order']:
+                coef = cons['body'][var]
                 if var is None:
                     body_bigM += coef
                     body_rBigM += coef
@@ -542,7 +548,10 @@ class CuttingPlane_Transformation(Transformation):
                        'upper': cons['upper'],
                        # I'm doing this so that I have a copy, not a reference:
                        'body': ComponentMap(
-                           (var, coef) for (var, coef) in cons['body'].items()) 
+                           (var, coef) for (var, coef) in cons['body'].items()),
+                       'key_order': cons['key_order'] # this is a reference, but
+                                                      # it's fine, I won't
+                                                      # change it.
                 }
                 cons['upper'] = None
                 constraints.append(geq)
@@ -553,7 +562,7 @@ class CuttingPlane_Transformation(Transformation):
         for cons in constraints:
             body = 0
             for var, val in cons['body'].items():
-                body += val*var if var is not None else val
+                #body += val*var if var is not None else val
                 # We only need to eliminate variables that actually appear in
                 # this set of constraints
                 if var in vars_to_eliminate:
@@ -674,11 +683,23 @@ class CuttingPlane_Transformation(Transformation):
         cons_dict['body'] = ComponentMap(
             zip(std_repn.linear_vars, std_repn.linear_coefs))
         cons_dict['body'][None] = value(std_repn.constant)
+        cons_dict['key_order'] = list(std_repn.linear_vars)
+        cons_dict['key_order'].append(None)
 
         return cons_dict
 
     def add_linear_constraints(self, cons1, cons2):
-        ans = {'lower': None, 'upper': None, 'body': ComponentMap()}
+        # creating a list of variables so we will have a deterministic ordering
+
+        # This list is just a hack to have a version which does not have None in
+        # it because we can't compare to it.
+        cons1_vars = [var for var in cons1['key_order'] if var is not None]
+        var_list = [var for var in cons1['key_order']] + \
+                   [var for var in cons2['key_order'] if var is not None and
+                    var not in cons1_vars]
+        var_list.append(None)
+        ans = {'lower': None, 'upper': None, 'body': ComponentMap(), 
+               'key_order': var_list}
         all_vars = cons1['body'].items() + \
                    list(ComponentSet(cons2['body'].items()) - \
                         ComponentSet(cons1['body'].items()))
