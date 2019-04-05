@@ -137,7 +137,12 @@ class MA27LinearSolver(object):
         else:
             raise RuntimeError('Matrix must be coo_matrix or a block_matrix')
 
-    def do_back_solve(self, rhs, flat_solution=False):
+    def do_back_solve(self, rhs, **kwargs):
+
+        flat_solution = kwargs.pop('flat_solution', False)
+        matrix = kwargs.pop('matrix', None)
+        max_iter_ref = kwargs.pop('max_iter_ref', 10)
+        tol_iter_ref = kwargs.pop('tol_iter_ref', 1e-8)
 
         msg = 'RHS dimension does not agree with matrix {} != {}'.format(self._dim,
                                                                          rhs.size)
@@ -145,6 +150,18 @@ class MA27LinearSolver(object):
         flat_rhs = rhs.flatten()
         x = np.zeros(self._dim)
         self._ma27.DoBacksolve(flat_rhs, x)
+
+        if matrix is not None and max_iter_ref > 0:
+            xr = x.flatten()
+            flat_matrix = matrix.tocsr()
+
+            for i in range(max_iter_ref):
+                res = flat_rhs - flat_matrix.dot(xr)
+                d = self.do_back_solve(res, flat_solution=True)
+                xr += d
+                if np.linalg.norm(res, ord=np.inf) <= tol_iter_ref:
+                    break
+            x = xr
 
         if flat_solution:
             return x
@@ -181,25 +198,13 @@ class MA27LinearSolver(object):
 
         self.do_numeric_factorization(matrix, diagonal, desired_num_neg_eval)
 
-        if max_iter_ref > 0:
-            x = self.do_back_solve(rhs)
-            xr = x.flatten()
-            flat_matrix = matrix.tocsr()
-            flat_rhs = rhs.flatten()
-
-            for i in range(max_iter_ref):
-                res = flat_rhs - flat_matrix.dot(xr)
-                d = self.do_back_solve(res, flat_solution=True)
-                xr += d
-                if np.linalg.norm(res, ord=np.inf) <= tol_iter_ref:
-                    break
-            if isinstance(x, BlockVector):
-                x.copyfrom(xr)
-            else:
-                x = xr
+        if max_iter_ref>0:
+            x = self.do_back_solve(rhs,
+                                   matrix=matrix,
+                                   max_iter_ref=max_iter_ref,
+                                   tol_iter_ref=tol_iter_ref)
         else:
             x = self.do_back_solve(rhs)
-
         return x
 
 

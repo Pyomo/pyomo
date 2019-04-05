@@ -154,22 +154,10 @@ class FullKKTSolver(KKTSolver):
 
         # iterative refinement
         if max_iter_ref > 0:
-            x = lsolver.do_back_solve(rhs)
-            xr = x.flatten()
-            flat_matrix = kkt.tocsr()
-            flat_rhs = rhs.flatten()
-
-            for i in range(max_iter_ref):
-                res = flat_rhs - flat_matrix.dot(xr)
-                d = lsolver.do_back_solve(res, flat_solution=True)
-                xr += d
-                #print(np.linalg.norm(res, ord=np.inf))
-                if np.linalg.norm(res, ord=np.inf) <= tol_iter_ref:
-                    break
-            if isinstance(x, BlockVector):
-                x.copyfrom(xr)
-            else:
-                x = xr
+            x = lsolver.do_back_solve(rhs,
+                                      matrix=kkt,
+                                      max_iter_ref=max_iter_ref,
+                                      tol_iter_ref=tol_iter_ref)
         else:
             x = lsolver.do_back_solve(rhs)
 
@@ -326,6 +314,8 @@ class TwoStageStochasticSchurKKTSolver(KKTSolver):
 
         do_symbolic = kwargs.pop('do_symbolic', True)
         max_iter_reg = kwargs.pop('max_iter_reg', 40)
+        max_iter_ref = kwargs.pop('max_iter_ref', 10)
+        tol_iter_ref = kwargs.pop('tol_iter_ref', 1e-8)
         wr = kwargs.pop('regularize', True)
 
         # create auxiliary variables
@@ -434,6 +424,7 @@ class TwoStageStochasticSchurKKTSolver(KKTSolver):
         sc_values = []
         rhs_sc = permuted_rhs[nblocks].copy()
         for bid in range(nblocks):
+            block_kkt = permuted_kkt[bid, bid]
             lsolver = self._lsolver[bid]
             # compute schur-complement contribution of bid block
             BiT = permuted_kkt[bid, nblocks].tocoo()
@@ -442,7 +433,13 @@ class TwoStageStochasticSchurKKTSolver(KKTSolver):
             BiT_csc = BiT.tocsc()
             for j in nnz_cols:
                 si = BiT_csc.getcol(j).toarray()
-                sij = lsolver.do_back_solve(si)
+                if max_iter_ref >0:
+                    sij = lsolver.do_back_solve(si,
+                                                matrix=block_kkt,
+                                                max_iter_ref=max_iter_ref,
+                                                tol_iter_ref=tol_iter_ref)
+                else:
+                    sij = lsolver.do_back_solve(si)
                 sc_values.append(-Bi.dot(sij))
                 sc_row.append(np.arange(nlp.nz))
                 tmp = np.ones(nlp.nz, dtype='i')
@@ -450,7 +447,13 @@ class TwoStageStochasticSchurKKTSolver(KKTSolver):
                 sc_col.append(tmp)
             # compute rhs_sc contribution of bid block
             ri = permuted_rhs[bid].flatten()
-            pi = lsolver.do_back_solve(ri)
+            if max_iter_ref >0:
+                pi = lsolver.do_back_solve(ri,
+                                           matrix=block_kkt,
+                                           max_iter_ref=max_iter_ref,
+                                           tol_iter_ref=tol_iter_ref)
+            else:
+                pi = lsolver.do_back_solve(ri)
             rhs_sc -= Bi.dot(pi)
 
         row = np.concatenate(sc_row)
@@ -460,15 +463,26 @@ class TwoStageStochasticSchurKKTSolver(KKTSolver):
         S.sum_duplicates()
 
         # solve schur-complement
-        delta_z = self._sc_solver.solve(S, rhs_sc, check_symmetry=False)
+        delta_z = self._sc_solver.solve(S,
+                                        rhs_sc,
+                                        check_symmetry=False,
+                                        max_iter_ref=max_iter_ref,
+                                        tol_iter_ref=tol_iter_ref)
 
         # perform backsolves each block kkt
         permuted_sol = BlockVector(nblocks)
         for bid in range(nblocks):
+            block_kkt = permuted_kkt[bid, bid]
             lsolver = self._lsolver[bid]
             ri = permuted_rhs[bid]
             rhs_i = ri - permuted_kkt[bid, nblocks].tocsr().dot(delta_z)
-            xi = lsolver.do_back_solve(rhs_i)
+            if max_iter_ref >0:
+                xi = lsolver.do_back_solve(rhs_i,
+                                           matrix=block_kkt,
+                                           max_iter_ref=max_iter_ref,
+                                           tol_iter_ref=tol_iter_ref)
+            else:
+                xi = lsolver.do_back_solve(rhs_i)
             permuted_sol[bid] = xi
 
         # permute solution back

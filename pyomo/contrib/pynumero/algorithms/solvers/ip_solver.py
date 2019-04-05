@@ -1226,7 +1226,7 @@ class InteriorPointSolver(object):
         outer_max_iter = kwargs.pop('max_iter_outer', 1000)
         inner_max_iter = kwargs.pop('max_iter_inner', 1000)
         reg_max_iter = kwargs.pop('reg_max_iter', 40)
-        refine_max_iter = kwargs.pop('refine_max_iter', 10)
+        refine_max_iter = kwargs.pop('refine_max_iter', 0)  # need further testing
         iter_limit = kwargs.pop('iter_limit', 100000)
         wls = kwargs.pop('wls', True)
         log_level = kwargs.pop('log_level', 0)
@@ -1245,8 +1245,6 @@ class InteriorPointSolver(object):
 
         walker = _InteriorPointWalker(self._calculator,
                                       linear_solver=linear_solver)
-
-
 
         if tee:
             print_nlp_info(nlp, linearsolver=linear_solver)

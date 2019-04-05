@@ -27,7 +27,11 @@ try:
 except ImportError:
     raise unittest.SkipTest(
         "Pynumero needs mpi4py to run mpi block vector tests")
-from pyomo.contrib.pynumero.sparse import BlockVector
+try:
+    from pyomo.contrib.pynumero.sparse import BlockVector
+except ImportError:
+    raise unittest.SkipTest(
+        "Could not import BlockVector")
 
 @unittest.skipIf(comm.Get_size() < 3, "Need at least 3 processors to run tests")
 class TestMPIBlockVector(unittest.TestCase):

@@ -243,7 +243,12 @@ class MUMPSSymLinearSolver(object):
         else:
             raise RuntimeError('Matrix must be coo_matrix or a block_matrix')
 
-    def do_back_solve(self, rhs, flat_solution=False):
+    def do_back_solve(self, rhs, **kwargs):
+
+        flat_solution = kwargs.pop('flat_solution', False)
+        matrix = kwargs.pop('matrix', None)
+        max_iter_ref = kwargs.pop('max_iter_ref', 10)
+        tol_iter_ref = kwargs.pop('tol_iter_ref', 1e-8)
 
         msg = 'RHS dimension does not agree with matrix'
         assert self._dim == rhs.size, msg
@@ -258,6 +263,18 @@ class MUMPSSymLinearSolver(object):
             status = self.ctx.id.infog[0]
         if status < 0:
             raise RuntimeError("MUMPS returned INFO(1) = {} fatal error".format(status))
+
+        if matrix is not None and max_iter_ref > 0:
+            xr = x.flatten()
+            flat_matrix = matrix.tocsr()
+
+            for i in range(max_iter_ref):
+                res = flat_rhs - flat_matrix.dot(xr)
+                d = self.do_back_solve(res, flat_solution=True)
+                xr += d
+                if np.linalg.norm(res, ord=np.inf) <= tol_iter_ref:
+                    break
+            x = xr
 
         if flat_solution:
             return x
@@ -299,22 +316,11 @@ class MUMPSSymLinearSolver(object):
         # x = self.do_back_solve(rhs)
         # self.ctx.id.icntl[9] = 0
 
-        if max_iter_ref > 0:
-            x = self.do_back_solve(rhs)
-            xr = x.flatten()
-            flat_matrix = matrix.tocsr()
-            flat_rhs = rhs.flatten()
-
-            for i in range(max_iter_ref):
-                res = flat_rhs - flat_matrix.dot(xr)
-                d = self.do_back_solve(res, flat_solution=True)
-                xr += d
-                if np.linalg.norm(res, ord=np.inf) <= tol_iter_ref:
-                    break
-            if isinstance(x, BlockVector):
-                x.copyfrom(xr)
-            else:
-                x = xr
+        if max_iter_ref>0:
+            x = self.do_back_solve(rhs,
+                                   matrix=matrix,
+                                   max_iter_ref=max_iter_ref,
+                                   tol_iter_ref=tol_iter_ref)
         else:
             x = self.do_back_solve(rhs)
 
