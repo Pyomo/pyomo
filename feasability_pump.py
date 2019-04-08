@@ -1,3 +1,4 @@
+from math import inf
 from pyomo.environ import (ConcreteModel, Var, Constraint, ConstraintList,
                            Objective, Integers, Reals, RangeSet, Block,
                            TransformationFactory, SolverFactory,
@@ -6,71 +7,89 @@ from pyomo.core.base.symbolic import differentiate
 from pyomo.core.expr.current import identify_variables
 from pyomo.common.config import (ConfigBlock, ConfigValue, In,
                                  PositiveFloat, PositiveInt)
-from pyomo.contrib.gdpopt.util import (create_utility_block, process_objective,
-                                       setup_results_object, a_logger,
-                                       copy_var_list_values)
-from pyomo.contrib.mindtpy.util import MindtPySolveData
+from pyomo.contrib.gdpopt.util import \
+    (create_utility_block, process_objective, setup_results_object, a_logger,
+     copy_var_list_values, SuppressInfeasibleWarning)
+from pyomo.contrib.mindtpy.util import MindtPySolveData, calc_jacobians
 from pyomo.contrib.preprocessing.plugins.int_to_binary import IntegerToBinary
 from pyomo.opt import SolverResults
+from pyomo.opt import TerminationCondition as TC
 from IPython.core.debugger import Pdb
+
+
+class InfeasibleException(Exception):
+    """Thrown when feasibility pump doesn't converge"""
+    pass
 
 
 class IterationLimitExceeded(Exception):
     """Thrown when an iteration limit gets exceeded"""
 
-    def __init__(self, n_iter):
-        super().__init__(f"Iteration limit exceeded with N={n_iter}")
+    def __init__(self, method, n_iter):
+        super().__init__(f'Iteration limit exceeded in method {method} with N={n_iter}')
 
 
-def add_L1_objective_function(model, setpoint_var_list):
+def add_L1_objective_function(model, setpoint_model):
     """Adds minimum absolute distance objective function"""
     model.L1_obj_var = Var(domain=Reals, bounds=(0, None))
     model.L1_obj_fun = Objective(expr=model.L1_obj_var)
     model.L1_obj_ub_idx = RangeSet(
-        len(model.MindtPy_utils.variable_list))
+        len(model.binary_var_list))
     model.L1_obj_ub_constr = Constraint(
         model.L1_obj_ub_idx, rule=lambda i: model.L1_obj_var >= 0)
     model.L1_obj_lb_idx = RangeSet(
-        len(model.MindtPy_utils.variable_list))
+        len(model.binary_var_list))
     model.L1_obj_lb_constr = Constraint(
         model.L1_obj_lb_idx, rule=lambda i: model.L1_obj_var >= 0)
 
     for (c_lb, c_ub, v_model, v_setpoint) in zip(model.L1_obj_lb_idx,
                                                  model.L1_obj_ub_idx,
-                                                 model.var_list,
-                                                 setpoint_var_list):
+                                                 model.binary_var_list,
+                                                 setpoint_model.binary_var_list):
         model.L1_obj_lb_constr[c_lb].set_value(
             expr=v_model - v_setpoint.value >= -model.L1_obj_var)
         model.L1_obj_ub_constr[c_ub].set_value(
             expr=v_model - v_setpoint.value <= model.L1_obj_var)
 
 
-def add_L2_objective_function(model, setpoint_var_list):
+def add_L2_objective_function(model, setpoint_model):
     """Adds minimum euclidean distance objective function"""
-    model.L2_obj_fun = Objective(expr=sqrt(
+    model.L2_obj_fun = Objective(expr=(
         sum([(nlp_var - milp_var.value)**2
              for (nlp_var, milp_var) in
-             zip(model.var_list, setpoint_var_list)])))
+             zip(model.binary_var_list, setpoint_model.binary_var_list)])))
 
 
 def solution_distance(nlp_vars, milp_vars):
     """Calculates the euclidean norm between two var lists"""
     return sqrt(sum([(nlp_var.value - milp_var.value)**2
                      for (nlp_var, milp_var) in
-                     zip(nlp_vars, milp_vars)]))
+                     zip(nlp_vars, milp_vars)
+                     if not milp_var.is_continuous()]))
 
 
 def setup_milp_model(solve_data):
     """Sets up MILP from MINLP by deactivating nonliear constraints"""
     solve_data.milp_model = solve_data.working_model.clone()
-    for obj in solve_data.milp_model.component_data_objects(
-            Objective, active=True):
+    milp_model = solve_data.milp_model
+    milp_model.MindtPy_utils.linear_cuts.activate()
+
+    for obj in milp_model.component_data_objects(Objective, active=True):
         obj.deactivate()
-    for constr in solve_data.milp_model. \
-            MindtPy_utils.nonlin_constraints:
-        constr.deactivate()
+
     if hasattr(solve_data.milp_model.MindtPy_utils, 'objective_constr'):
         solve_data.milp_model.MindtPy_utils.objective_constr.deactivate()
+
+    if solve_data.incumbent_obj_val < inf:
+        milp_model.MindtPy_utils.linear_cuts.increasing_objective_cuts.add(
+            expr=milp_model.MindtPy_utils.objective_value
+                 <= solve_data.incumbent_obj_val - abs(0.1*solve_data.incumbent_obj_val) )
+
+    for constr in filter(
+            lambda c: c.body.polynomial_degree() not in (0,1),
+            milp_model.component_data_objects(ctype=Constraint, active=True)):
+        constr.deactivate()
+
     return solve_data.milp_model
 
 
@@ -78,28 +97,20 @@ def setup_nlp_model(solve_data):
     """Sets up NLP from MINLP working model by fixing discrete variables"""
     # --- Setup NLP model ---
     solve_data.nlp_model = solve_data.working_model.clone()
-    for obj in solve_data.nlp_model.component_data_objects(
-            Objective, active=True):
+    nlp_model = solve_data.nlp_model
+
+    for obj in nlp_model.component_data_objects(Objective, active=True):
         obj.deactivate()
+
     if hasattr(solve_data.nlp_model.MindtPy_utils, 'objective_constr'):
         solve_data.nlp_model.MindtPy_utils.objective_constr.deactivate()
+
     TransformationFactory('core.relax_integrality'). \
         apply_to(solve_data.nlp_model)
     return solve_data.nlp_model
 
 
-def initialize_vars_to_lower_bound(model):
-    """Initializes all model variables to their lower bound"""
-    for var in model.var_list:
-        if var.lb is not None:
-            var.set_value(var.lb)
-        elif var.ub is not None:
-            var.set_value(var.ub)
-        else:
-            var.set_value(0)
-
-
-def solve_feasibility_pump(solve_data, config, write_back=True):
+def solve_feasibility_pump(solve_data, config):
     """Solves NLP and MILP subproblems until a feasible solution is  found
 
     If `write_back==True`, the resulting feasible solution is copied to
@@ -108,59 +119,113 @@ def solve_feasibility_pump(solve_data, config, write_back=True):
     opt_milp = SolverFactory(config.mip_solver)
     opt_nlp = SolverFactory(config.nlp_solver)
     n_iter = 0
+    solve_data.incumbent_obj_val = inf  # assumes minimization
 
-    nlp_model = setup_nlp_model(solve_data)
     milp_model = setup_milp_model(solve_data)
-    copy_var_list_values(solve_data.working_model.var_list,
-                         nlp_model.var_list, config)
-    with open('iter_log/dist', 'w') as logfile:
-        while n_iter == 0 or \
-                solution_distance(nlp_model.var_list, milp_model.var_list) \
-                > config.bound_tolerance:
+    add_L1_objective_function(milp_model, solve_data.relaxed_nlp_model)
+    milp_result = opt_milp.solve(milp_model, **config.mip_solver_args)
 
-            n_iter += 1
-            if n_iter >= config.iteration_limit:
-                raise IterationLimitExceeded(n_iter)
+    while milp_result.solver.termination_condition is not TC.infeasible:
+        if n_iter >= config.iteration_limit:
+            raise IterationLimitExceeded('feasibility_pump', n_iter)
 
-            # Solve MILP auxiliary problem
-            milp_model = setup_milp_model(solve_data)
-            add_L1_objective_function(milp_model, nlp_model.var_list)
-            opt_milp.solve(milp_model)
-
-            # Solve NLP auxiliary problem
-            nlp_model = setup_nlp_model(solve_data)
-            add_L2_objective_function(nlp_model, milp_model.var_list)
-            opt_nlp.solve(nlp_model)
-
-            logfile.write(str(solution_distance(nlp_model.var_list, milp_model.var_list)))
-            logfile.write('\n')
-
-    if write_back:
+        # Solve NLP auxiliary problem
+        nlp_model = setup_nlp_model(solve_data)
+        add_L2_objective_function(nlp_model, milp_model)
+        nlp_result = opt_nlp.solve(nlp_model)
         copy_var_list_values(
             nlp_model.var_list,
             solve_data.working_model.var_list,
             config)
 
+        if solution_distance(nlp_model.var_list, milp_model.var_list) < config.zero_tolerance:
+            fixed_nlp = solve_fixed_nlp(solve_data, config)
+            objective_value = next(fixed_nlp.component_data_objects(
+                Objective, active=True)).expr()
 
-def solve_fixed_nlp(solve_data, config, write_back=True):
+            copy_var_list_values(
+                fixed_nlp.var_list,
+                solve_data.working_model.var_list,
+                config)
+
+            if objective_value < solve_data.incumbent_obj_val:
+                solve_data.incumbent_obj_val = objective_value
+                solve_data.best_solution_found = solve_data.working_model.clone()
+                print(f'New objective val: {solve_data.incumbent_obj_val}')
+
+            create_no_good_cut(solve_data.working_model, fixed_nlp)
+
+        create_oa_cut(solve_data, config)
+        n_iter += 1
+
+        # Solve MILP auxiliary problem
+        milp_model = setup_milp_model(solve_data)
+        add_L1_objective_function(milp_model, nlp_model)
+        milp_result = opt_milp.solve(milp_model, **config.mip_solver_args)
+    else:
+        raise InfeasibleException()
+
+
+def initialize_FP(solve_data, config):
+    """Relaxes integrality and generates first constraint."""
+    solve_data.relaxed_nlp_model = solve_data.working_model.clone()
+    TransformationFactory('core.relax_integrality'). \
+        apply_to(solve_data.relaxed_nlp_model)
+
+    with SuppressInfeasibleWarning():
+        opt_nlp = SolverFactory(config.nlp_solver)
+        res = opt_nlp.solve(
+            solve_data.relaxed_nlp_model, **config.nlp_solver_args)
+
+    if res.solver.termination_condition is TC.infeasible:
+        print('Infeasible problem')
+        raise InfeasibleException()
+
+
+def solve_fixed_nlp(solve_data, config):
     """Fixes discretes and solves NLP
 
     An auxiliary problem is cloned from the working model and stored in
     solve_data. The discrete variables get fixed and the resulting NLP is
     solved.
-    If `write_back==True`, the result is written back to the working model.
+
+    Currently doesn't calculate any duals
     """
     solve_data.fixed_integer_model = solve_data.working_model.clone()
-    fixed_discretes_model = solve_data.fixed_integer_model
+    f_nlp_model = solve_data.fixed_integer_model
     TransformationFactory('core.fix_discrete').apply_to(
-        fixed_discretes_model)
-    opt_nlp = SolverFactory('ipopt')
-    opt_nlp.solve(fixed_discretes_model)
-    # opt_nlp = SolverFactory(config.nlp_solver)
-    # opt_nlp.solve(fixed_discretes_model, tee=True, **config.nlp_solver_args)
-    if write_back:
-        copy_var_list_values(fixed_discretes_model.var_list,
-                             solve_data.working_model.var_list, config)
+        f_nlp_model)
+
+    with SuppressInfeasibleWarning():
+        opt_nlp = SolverFactory(config.nlp_solver)
+        opt_nlp.solve(f_nlp_model, **config.nlp_solver_args)
+    return solve_data.fixed_integer_model
+
+
+def create_oa_cut(solve_data, config):
+    for constr in solve_data.working_model.component_data_objects(
+            ctype=Constraint, active=True):
+        if abs(constr.slack()) > config.bound_tolerance*100:
+            continue
+        if constr.body.polynomial_degree() in (0, 1):
+            continue
+        if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
+            continue
+
+        constr_vars = list(identify_variables(constr.body))
+        partial_derivatives = differentiate(constr.body, wrt_list=constr_vars)
+
+        if constr.upper is not None:
+            solve_data.working_model.MindtPy_utils.linear_cuts.oa_cuts.add(
+                expr=(sum(value(pd)*(var - var.value) for (var, pd)
+                          in zip(constr_vars, partial_derivatives))
+                      <= constr.upper))
+
+        if constr.lower is not None:
+            solve_data.working_model.MindtPy_utils.linear_cuts.oa_cuts.add(
+                expr=(sum(value(pd)*(var - var.value) for (var, pd)
+                          in zip(constr_vars, partial_derivatives))
+                      >= constr.lower))
 
 
 def create_linearized_objective_cuts(solve_data, config):
@@ -182,15 +247,18 @@ def create_linearized_objective_cuts(solve_data, config):
         linear_cuts.increasing_objective_cuts.add(
             expr=(sum(value(pd)*(var - var.value) for (var, pd)
                       in zip(obj_vars, partial_derivatives))
-                  + config.bound_tolerance <= 0))
+                  <= 0))
 
 
-def create_no_good_cut(solve_data):
-    solve_data.working_model.MindtPy_utils. \
+def create_no_good_cut(target_model, value_model):
+    """Cut out current binary combination"""
+    target_model.MindtPy_utils. \
         linear_cuts.no_good_combination_cuts.add(
-            expr=(sum(var if var.value == 0 else (1-var)
-                      for var in solve_data.working_model.var_list
-                      if var.is_binary()) >= 1))
+            expr=(sum(target_var if value_var.value == 0 else (1-target_var)
+                      for (target_var, value_var)
+                      in zip(target_model.var_list, value_model.var_list)
+                      if target_var.is_binary() and value_var.is_binary())
+                  >= 1))
 
 
 def setup_simple_model():
@@ -208,11 +276,66 @@ def setup_simple_model():
     return simple_model
 
 
+def do_the_solving(model):
+    """Runs the feasibility pump with objective cuts"""
+
+    solve_data = MindtPySolveData()
+    solve_data.results = SolverResults()
+    solve_data.original_model = model
+    solve_data.working_model = model.clone()
+    working_model = solve_data.working_model
+    config = setup_config()
+    TransformationFactory('contrib.integer_to_binary'). \
+        apply_to(solve_data.working_model)
+
+    with create_utility_block(working_model, 'MindtPy_utils', solve_data):
+        mp_utils = working_model.MindtPy_utils
+        mp_utils.linear_cuts = Block()
+        mp_utils.linear_cuts.deactivate()
+        mp_utils.linear_cuts.oa_cuts = ConstraintList(
+            doc="Outer Approximation for MILP model")
+        mp_utils.linear_cuts.increasing_objective_cuts = ConstraintList(
+            doc="Objective values need to increase")
+        mp_utils.linear_cuts.no_good_combination_cuts = ConstraintList(
+            doc="Discrete combination needs to change")
+        setup_results_object(solve_data, config)
+
+        working_model.var_list = mp_utils.variable_list
+        working_model.binary_var_list = [var for var in mp_utils.variable_list
+                                         if var.is_binary()]
+
+        process_objective(solve_data, config, always_move_objective=True)
+        calc_jacobians(solve_data, config)
+
+        try:
+            initialize_FP(solve_data, config)
+        except InfeasibleException:
+            return
+
+        try:
+            solve_feasibility_pump(solve_data, config)
+        except IterationLimitExceeded as exept:
+            print(exept)
+            raise
+        except InfeasibleException:
+            print("Feasibility Pump stopped converging-> optimal solution")
+            del solve_data.best_solution_found.MindtPy_utils
+            # solve_data.best_solution_found.pprint()
+            print(solve_data.incumbent_obj_val)
+            print([(v.name, v.value) for v in solve_data.best_solution_found.component_data_objects(ctype=Var)])
+            return
+        except RuntimeError as exept:
+            print(exept)
+            return
+
+    return solve_data
+
+
 def setup_config():
     """This is later done in the MindtPy main file"""
     config = ConfigBlock("FeasabilityPump")
     config.declare("integer_tolerance", ConfigValue(
-        default=1E-5,
+        default=1E-4,
         description="Tolerance on integral values."
     ))
     config.declare("zero_tolerance", ConfigValue(
@@ -227,7 +350,7 @@ def setup_config():
     ))
     config.declare("nlp_solver", ConfigValue(
         default="gams",
-        domain=In(["gams", "ipopt", "ipopth", "conopt"]),
+        domain=In(["baron", "gams", "ipopt", "ipopth", "conopt"]),
         description="NLP subsolver name",
         doc="Which NLP subsolver is going to be used for solving the nonlinear"
             "subproblems"
@@ -239,10 +362,10 @@ def setup_config():
             "solving the nonlinear subproblems"
     ))
     config.nlp_solver_args.add('solver', 'ipopth')
-    config.nlp_solver_args.add('add_options', f'option optrc={config.bound_tolerance*1e-2};')
+    config.nlp_solver_args.add('add_options', ['option optcr=0;'])
 
     config.declare("mip_solver", ConfigValue(
-        default="gams",
+        default="cplex",
         domain=In(["gurobi", "cplex", "cbc", "glpk", "gams"]),
         description="MIP subsolver name",
         doc="Which MIP subsolver is going to be used for solving the mixed-"
@@ -254,81 +377,22 @@ def setup_config():
         doc="Which MIP subsolver options to be passed to the solver while "
             "solving the mixed-integer master problems"
     ))
-    config.mip_solver_args.add('solver', 'gurobi')
-    config.mip_solver_args.add('add_options', f'option optrc={config.bound_tolerance*1e-2};')
+    # config.mip_solver_args.add('solver', 'gurobi')
+    # config.mip_solver_args.add('add_options',
+    #     f'option optrc={config.bound_tolerance*1e-2};')
 
     config.declare("logger", ConfigValue(
         default='pyomo.contrib.mindtpy',
         description='The logger object name to use for reporting.',
         domain=a_logger))
     config.declare("iteration_limit", ConfigValue(
-        default=50,
+        default=500,
         domain=PositiveInt,
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods"
     ))
     return config
 
-
-def do_the_solving(model):
-    """Runs the feasibility pump with objective cuts"""
-
-    solve_data = MindtPySolveData()
-    solve_data.results = SolverResults()
-    solve_data.original_model = model
-    solve_data.working_model = model.clone()
-    working_model = solve_data.working_model
-    config = setup_config()
-    TransformationFactory('contrib.integer_to_binary'). \
-        apply_to(solve_data.working_model)
-
-    with create_utility_block(working_model, 'MindtPy_utils', solve_data):
-        # process_objective(solve_data, config)
-        mp_utils = working_model.MindtPy_utils
-        mp_utils.linear_cuts = Block()
-        mp_utils.linear_cuts.increasing_objective_cuts = ConstraintList(
-            doc="Objective values need to increase")
-        mp_utils.linear_cuts.no_good_combination_cuts = ConstraintList(
-            doc="Discrete combination needs to change")
-        setup_results_object(solve_data, config)
-        mp_utils.lin_constraints = [c for c in mp_utils.constraint_list
-                                    if c.body.polynomial_degree() in (0, 1)]
-        mp_utils.nonlin_constraints = [c for c in mp_utils.constraint_list
-                                       if c.body.polynomial_degree()
-                                       not in (0, 1)]
-        working_model.var_list = mp_utils.variable_list
-
-        initialize_vars_to_lower_bound(working_model)
-        n_feas_problem_iter = 0
-        while n_feas_problem_iter <= config.iteration_limit:
-            try:
-                solve_feasibility_pump(solve_data, config)
-            except IterationLimitExceeded:
-                print('Found optimal solution!')
-                print(working_model.obj.expr())
-                # working_model.pprint()
-                break
-            except RuntimeError as e:
-                print(e)
-                print('Gams proved infeasibility -- optimal solution found!')
-                pass
-                break
-
-            try:
-                solve_fixed_nlp(solve_data, config)
-            except RuntimeError as e:
-                print(e)
-                break
-            create_linearized_objective_cuts(solve_data, config)
-            create_no_good_cut(solve_data)
-            print(f'{solve_data.working_model.obj.expr()}')
-            print([v.value for v in solve_data.working_model.var_list if not v.is_continuous()])
-        else:
-            raise IterationLimitExceeded(
-                    "Too many cuts generated."
-                    "It doesn't seem the algorithm converges")
-
-    return solve_data
 
 if __name__ == "__main__":
     do_the_solving(setup_simple_model())

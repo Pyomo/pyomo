@@ -4,7 +4,7 @@ from __future__ import division
 from math import copysign, fabs
 
 from pyomo.core import Constraint, Var, minimize, value
-from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.current import identify_variables
 from pyomo.core.expr.current import ExpressionReplacementVisitor
 from pyomo.repn import generate_standard_repn
 from pyomo.core.kernel.component_set import ComponentSet
@@ -29,7 +29,7 @@ def add_objective_linearization(solve_data, config):
         c = MindtPy.MindtPy_linear_cuts.ecp_cuts.add(
             expr=sign_adjust * sum(
                 value(MindtPy.jacs[obj][id(var)]) * (var - value(var))
-                for var in list(EXPR.identify_variables(obj.body))) +
+                for var in list(identify_variables(obj.body))) +
                  value(obj.body) <= 0)
         MindtPy.ECP_constr_map[obj, solve_data.mip_iter] = c
 
@@ -41,6 +41,7 @@ def add_oa_cut(var_values, duals, solve_data, config):
     sign_adjust = -1 if solve_data.objective_sense == minimize else 1
 
     # Copy values over
+    # TODO: Do this using gdpopt.util.copy_var_list_values
     for var, val in zip(MindtPy.variable_list, var_values):
         if val is not None and not var.fixed:
             var.value = val
@@ -55,13 +56,15 @@ def add_oa_cut(var_values, duals, solve_data, config):
                (0 if constr.lower is None else constr.lower))
         # Properly handle equality constraints and ranged inequalities
         # TODO special handling for ranged inequalities? a <= x <= b
-        rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
+        # TODO make this dependent on dual sign (@David)
+        rhs = constr.upper if constr.has_lb() and constr.has_ub() else rhs
         slack_var = MindtPy.MindtPy_linear_cuts.slack_vars.add()
         MindtPy.MindtPy_linear_cuts.oa_cuts.add(
-            expr=copysign(1, sign_adjust * dual_value) * (sum(
-                value(jacs[constr][var]) * (var - value(var))
-                for var in list(EXPR.identify_variables(constr.body))) +
-                                                          value(constr.body) - rhs) - slack_var <= 0)
+            expr=(copysign(1, sign_adjust * dual_value)
+                  * (sum(value(jacs[constr][var]) * (var - value(var))
+                         for var in identify_variables(constr.body))
+                     + value(constr.body) - rhs)
+                  - slack_var <= 0))
 
 
 def add_int_cut(var_values, solve_data, config, feasible=False):

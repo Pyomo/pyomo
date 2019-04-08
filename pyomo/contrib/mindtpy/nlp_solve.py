@@ -12,8 +12,42 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 
+def solve_fixed_NLP(solve_data, config):
+    f_nlp_model = solve_data.working_model.clone()
+    mp_utils = f_nlp_model.MindtPy_utils
+    solve_data.nlp_iter += 1
+    config.logger.info('NLP %s: Solve subproblem for fixed binaries.'
+                       % (solve_data.nlp_iter,))
+
+    TransformationFactory('core.fix_discrete'). \
+        apply_to(f_nlp_model)
+
+    copy_var_list_values(
+        solve_data.initial_var_values,
+        mp_utils.variable_list,
+        config)
+
+    mp_utils.MindtPy_linear_cuts.deactivate()
+    f_nlp_model.tmp_duals = ComponentMap()
+    # TODO can we make this more clear?
+    for c in f_nlp_model.component_data_objects(ctype=Constraint, active=True,
+                                      descend_into=True):
+        rhs = ((c.upper if c.has_ub() else 0)
+              +(c.lower if c.had_lb() else 0))
+        # TODO check sign_adjust
+        sign_adjust = -1 if c.has_ub() else 1
+        f_nlp_model.tmp_duals[c] = \
+            sign_adjust * max(0, sign_adjust * (rhs - value(c.body)))
+# Solve the NLP
+# f_nlp_model.pprint() # print nlp problem for debugging
+    with SuppressInfeasibleWarning():
+        solver_result = SolverFactory(config.nlp_solver).solve(
+            f_nlp_model, **config.nlp_solver_args)
+    return solver_result
+
 
 def solve_NLP_subproblem(solve_data, config):
+    """Fixes discretes, solves NLP, calculates duals, calls OA (or similar)"""
     m = solve_data.working_model.clone()
     MindtPy = m.MindtPy_utils
     main_objective = next(m.component_data_objects(Objective, active=True))
@@ -24,8 +58,14 @@ def solve_NLP_subproblem(solve_data, config):
     for v in MindtPy.variable_list:
         if v.is_binary():
             v.fix(int(round(value(v))))
+    # TransformationFactory('core.fix_discrete'). \
+    #     apply_to(m)
 
     # restore original variable values
+    # copy_var_list_values(
+    #     solve_data.initial_var_values,
+    #     MindtPy.variable_list,
+    #     config)
     for nlp_var, orig_val in zip(
             MindtPy.variable_list,
             solve_data.initial_var_values):
@@ -42,18 +82,17 @@ def solve_NLP_subproblem(solve_data, config):
         m.tmp_duals[c] = sign_adjust * max(0,
                                            sign_adjust * (rhs - value(c.body)))
         # TODO check sign_adjust
-    t = TransformationFactory('contrib.deactivate_trivial_constraints')
-    t.apply_to(m, tmp=True, ignore_infeasible=True)
+    TransformationFactory('contrib.deactivate_trivial_constraints'). \
+        apply_to(m, tmp=True, ignore_infeasible=True)
     # Solve the NLP
     # m.pprint() # print nlp problem for debugging
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.nlp_solver).solve(
             m, **config.nlp_solver_args)
     var_values = list(v.value for v in MindtPy.variable_list)
-    subprob_terminate_cond = results.solver.termination_condition
-    if subprob_terminate_cond is tc.optimal:
+    if results.solver.termination_condition is tc.optimal:
         copy_var_list_values(
-            m.MindtPy_utils.variable_list,
+            MindtPy.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
         for c in m.tmp_duals:
@@ -73,6 +112,7 @@ def solve_NLP_subproblem(solve_data, config):
             .format(solve_data.nlp_iter, value(main_objective.expr), solve_data.LB, solve_data.UB))
         if solve_data.solution_improved:
             solve_data.best_solution_found = m.clone()
+        # TODO All this additional logic doesn't belong in here but rather in the OA/PSC/GBD methods
         # Add the linear cut
         if config.strategy == 'OA':
             add_oa_cut(var_values, duals, solve_data, config)
@@ -88,7 +128,8 @@ def solve_NLP_subproblem(solve_data, config):
         add_int_cut(var_values, solve_data, config, feasible=True)
 
         config.call_after_subproblem_feasible(m, solve_data)
-    elif subprob_terminate_cond is tc.infeasible:
+
+    elif results.solver.termination_condition is tc.infeasible:
         # TODO try something else? Reinitialize with different initial
         # value?
         config.logger.info('NLP subproblem was locally infeasible.')
@@ -117,9 +158,9 @@ def solve_NLP_subproblem(solve_data, config):
                 # config.initial_feas = False
                 var_values, duals = solve_NLP_feas(solve_data, config)
                 add_oa_cut(var_values, duals, solve_data, config)
-        # Add an integer cut to exclude this discrete option
+        # Add an integer cut to exclude this discrete combination
         add_int_cut(var_values, solve_data, config)
-    elif subprob_terminate_cond is tc.maxIterations:
+    elif results.solver.termination_condition is tc.maxIterations:
         # TODO try something else? Reinitialize with different initial
         # value?
         config.logger.info('NLP subproblem failed to converge within iteration limit.')

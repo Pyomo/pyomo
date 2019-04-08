@@ -80,14 +80,14 @@ def calc_jacobians(solve_data, config):
     # Map nonlinear_constraint --> Map(
     #     variable --> jacobian of constraint wrt. variable)
     solve_data.jacobians = ComponentMap()
-    for c in solve_data.mip.MindtPy_utils.constraint_list:
+    for c in solve_data.working_model.MindtPy_utils.constraint_list:
         if c.body.polynomial_degree() in (1, 0):
             continue  # skip linear constraints
         vars_in_constr = list(EXPR.identify_variables(c.body))
         jac_list = differentiate(c.body, wrt_list=vars_in_constr)
         solve_data.jacobians[c] = ComponentMap(
-            (var, jac_wrt_var)
-            for var, jac_wrt_var in zip(vars_in_constr, jac_list))
+            (var, derivative)
+            for var, derivative in zip(vars_in_constr, jac_list))
 
 
 def add_feas_slacks(m):
