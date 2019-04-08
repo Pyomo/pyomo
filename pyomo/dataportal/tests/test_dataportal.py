@@ -631,6 +631,8 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
         data.store(data=model.A, **self.create_write_options('set1'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
         else:
             self.assertFileEqualsBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
 
@@ -642,6 +644,8 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
         data.store(data="A", model=model, **self.create_write_options('set1'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
         else:
             self.assertFileEqualsBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
 
