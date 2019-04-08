@@ -353,6 +353,8 @@ more than one objective). If both ``model.obj1`` and ``model.obj2`` have
 been declared using ``Objective``, then one can ensure that
 ``model.obj2`` is passed to the solver as shown in this simple example:
 
+.. doctest::
+
    >>> model = pyo.ConcreteModel()
    >>> model.obj1 = pyo.Objective(expr = 0)
    >>> model.obj2 = pyo.Objective(expr = 0)
@@ -363,6 +365,38 @@ been declared using ``Objective``, then one can ensure that
 For abstract models this would be done prior to instantiation or else
 the ``activate`` and ``deactivate`` calls would be on the instance
 rather than the model.
+
+Activating and Deactivating Constraints
+---------------------------------------
+
+Constraints can be temporarily disabled using the ``deactivate()`` method.
+When the model is sent to a solver inactive constraints are not included. 
+Disabled constraints can be re-enabled using the ``activate()`` method.
+
+.. doctest::
+
+   >>> model = pyo.ConcreteModel()
+   >>> model.v = pyo.Var()
+   >>> model.con = pyo.Constraint(expr=model.v**2 + model.v >= 3)
+   >>> model.con.deactivate()
+   >>> model.con.activate()
+
+Indexed constraints can be deactivated/activated as a whole or by 
+individual index:
+
+.. doctest::
+
+   >>> model = pyo.ConcreteModel()
+   >>> model.s = pyo.Set(initialize=[1,2,3])
+   >>> model.v = pyo.Var(model.s)
+   >>> def _con(m, s):
+   ...    return m.v[s]**2 + m.v[s] >= 3
+   >>> model.con = pyo.Constraint(model.s, rule=_con)
+   >>> model.con.deactivate()   # Deactivate all indices
+   >>> model.con[1].activate()  # Activate single index
+
+
+
 
 .. _VarAccess:
 
