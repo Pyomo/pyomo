@@ -1,7 +1,8 @@
 from pyomo.core.base.expression import SimpleExpression, _GeneralExpressionData
 from pyomo.core.kernel.component_map import ComponentMap
-import pyomo.core.expr.expr_pyomo5 as _expr
-from pyomo.core.expr.expr_pyomo5 import ExpressionValueVisitor, nonpyomo_leaf_types, value
+import pyomo.core.expr.current as _expr
+from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
+from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.current import exp, log, sin, cos, tan, asin, acos, atan
 
 
@@ -27,7 +28,7 @@ def _diff_ProductExpression(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    node: pyomo.core.expr.numeric_expr.ProductExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
@@ -43,7 +44,7 @@ def _diff_SumExpression(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.SumExpression
+    node: pyomo.core.expr.numeric_expr.SumExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
@@ -57,7 +58,7 @@ def _diff_PowExpression(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.PowExpression
+    node: pyomo.core.expr.numeric_expr.PowExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
@@ -76,7 +77,7 @@ def _diff_ReciprocalExpression(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.ReciprocalExpression
+    node: pyomo.core.expr.numeric_expr.ReciprocalExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
@@ -91,7 +92,7 @@ def _diff_NegationExpression(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
@@ -106,7 +107,7 @@ def _diff_exp(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
@@ -121,7 +122,7 @@ def _diff_log(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
@@ -136,7 +137,7 @@ def _diff_sin(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
@@ -151,7 +152,7 @@ def _diff_cos(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
@@ -166,7 +167,7 @@ def _diff_tan(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
@@ -181,7 +182,7 @@ def _diff_asin(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
@@ -196,7 +197,7 @@ def _diff_acos(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
@@ -211,7 +212,7 @@ def _diff_atan(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
@@ -237,7 +238,7 @@ def _diff_UnaryFunctionExpression(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
@@ -332,7 +333,7 @@ def reverse_ad(expr):
 
     Parameters
     ----------
-    expr: pyomo.core.expr.expr_pyomo5.ExpressionBase
+    expr: pyomo.core.expr.numeric_expr.ExpressionBase
         expression to differentiate
 
     Returns
@@ -421,7 +422,7 @@ def reverse_sd(expr):
 
     Parameters
     ----------
-    expr: pyomo.core.expr.expr_pyomo5.ExpressionBase
+    expr: pyomo.core.expr.numeric_expr.ExpressionBase
         expression to differentiate
 
     Returns
