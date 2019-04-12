@@ -21,7 +21,7 @@ def reactor_design_model(data):
     
     # Inlet concentration of A, gmol/m^3
     model.caf = float(data['caf']) 
-	
+    
 	# Space velocity (flowrate/volume)
     model.sv = float(data['sv']) 
     

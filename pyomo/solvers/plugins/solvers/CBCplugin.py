@@ -45,9 +45,10 @@ def configure_cbc():
         return
     # manually look for the cbc executable to prevent the
     # CBC.execute() from logging an error when CBC is missing
-    if pyomo.common.registered_executable("cbc") is None:
+    executable = pyomo.common.Executable("cbc")
+    if not executable:
         return
-    cbc_exec = pyomo.common.registered_executable("cbc").get_path()
+    cbc_exec = executable.path()
     results = pyutilib.subprocess.run( [cbc_exec,"-stop"], timelimit=1 )
     _cbc_version = _extract_version(results[1])
     results = pyutilib.subprocess.run(
@@ -183,12 +184,14 @@ class CBCSHELL(SystemCallSolver):
     #    SystemCallSolver._presolve(self, *args, **kwds)
 
     def _default_executable(self):
-        executable = pyomo.common.registered_executable("cbc")
-        if executable is None:
-            logger.warning("Could not locate the 'cbc' executable, which is required for solver %s" % self.name)
+        executable = pyomo.common.Executable("cbc")
+        if not executable:
+            logger.warning(
+                "Could not locate the 'cbc' executable, which is "
+                "required for solver %s" % self.name)
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     def _get_version(self):
         """
@@ -621,5 +624,3 @@ class MockCBC(CBCSHELL,MockMIP):
         else:
             return (args, ProblemFormat.mps, None)
 
-
-pyomo.common.register_executable(name="cbc")

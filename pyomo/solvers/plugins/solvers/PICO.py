@@ -119,12 +119,13 @@ class PICOSHELL(SystemCallSolver):
         return ResultsFormat.soln
 
     def _default_executable(self):
-        executable = pyomo.common.registered_executable("PICO")
-        if executable is None:
-            logger.warning("Could not locate the 'PICO' executable, which is required for solver %s" % self.name)
+        executable = pyomo.common.Executable("PICO")
+        if not executable:
+            logger.warning("Could not locate the 'PICO' executable, "
+                           "which is required for solver %s" % self.name)
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     def _get_version(self):
         """

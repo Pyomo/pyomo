@@ -22,6 +22,7 @@ else:
 # These packages contain plugins that need to be loaded
 #
 _packages = [
+    'pyomo.common',
     'pyomo.opt',
     'pyomo.core',
     'pyomo.dataportal',
@@ -103,3 +104,5 @@ from pyomo.opt import (
     SolverFactory, SolverManagerFactory, UnknownSolver,
     TerminationCondition, SolverStatus,
     )
+from pyomo.core.base.units_container import units
+

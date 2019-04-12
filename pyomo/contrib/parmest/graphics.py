@@ -8,8 +8,9 @@ try:
     import matplotlib.pyplot as plt
     import matplotlib.tri as tri
     from matplotlib.lines import Line2D
-except:
-    pass
+    imports_available = True
+except ImportError:
+    imports_available = False
 
 
 def _get_variables(ax,columns):

@@ -393,7 +393,7 @@ class Estimator(object):
         return model
     
 
-    def _Q_opt(self, ThetaVals=None, solver="ef_ipopt", bootlist=None):
+    def _Q_opt(self, ThetaVals=None, solver="ef_ipopt", bootlist=None, return_model_values=None):
         """
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
@@ -431,6 +431,7 @@ class Estimator(object):
         stsolver = st.StochSolver(fsfile = "pyomo.contrib.parmest.parmest",
                                   fsfct = "_pysp_instance_creation_callback",
                                   tree_model = tree_model)
+        
         if solver == "ef_ipopt":
             sopts = {}
             sopts['max_iter'] = 6000
@@ -445,6 +446,18 @@ class Estimator(object):
                  thetavals[name] = solval
 
             objval = stsolver.root_E_obj()
+            
+            if return_model_values is not None:
+                modelvals = []
+                for exp_i in stsolver.ef_instance.block_data_objects():
+                    if exp_i.name == 'MASTER':
+                        continue
+                    vals = {}
+                    for var in return_model_values:
+                        vals[var] = exp_i.component(var).value
+                    modelvals.append(vals)
+                        
+                return objval, thetavals, modelvals
 
             return objval, thetavals
         
@@ -599,6 +612,7 @@ class Estimator(object):
             objval = pyo.value(objobject)
             totobj += objval
         retval = totobj / len(self._numbers_list) # -1??
+
         return retval, thetavals, WorstStatus
 
     def _get_sample_list(self, samplesize, num_samples, replacement=True):
@@ -636,7 +650,7 @@ class Estimator(object):
         
         return samplelist
     
-    def theta_est(self, solver="ef_ipopt", bootlist=None): 
+    def theta_est(self, solver="ef_ipopt", bootlist=None, return_model_values=None): 
         """
         Run parameter estimation using all data
 
@@ -655,7 +669,7 @@ class Estimator(object):
             A dictionary of dictionaries for the Hessian.
             The Hessian is not returned if the solver is ef.
         """
-        return self._Q_opt(solver=solver, bootlist=bootlist)
+        return self._Q_opt(solver=solver, bootlist=bootlist, return_model_values=return_model_values)
     
     
     def theta_est_bootstrap(self, bootstrap_samples, samplesize=None, 
@@ -703,7 +717,7 @@ class Estimator(object):
             objval, thetavals = self.theta_est(bootlist=sample)
             thetavals['samples'] = sample
             bootstrap_theta.append(thetavals)
-        
+            
         # Reset numbers_list (back to original)
         self._numbers_list =  list(range(len(self.callback_data)))
         
@@ -712,7 +726,7 @@ class Estimator(object):
 
         if not return_samples:
             del bootstrap_theta['samples']
-                    
+            
         return bootstrap_theta
     
     
@@ -879,7 +893,7 @@ class Estimator(object):
         global_all_obj = task_mgr.allgather_global_data(all_obj)
         dfcols = list(theta_names) + ['obj']
         obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
-
+            
         return obj_at_theta
     
     
