@@ -29,3 +29,4 @@ import pyomo.solvers.plugins.solvers.gurobi_persistent
 import pyomo.solvers.plugins.solvers.cplex_direct
 import pyomo.solvers.plugins.solvers.cplex_persistent
 import pyomo.solvers.plugins.solvers.GAMS
+import pyomo.solvers.plugins.solvers.mosek_direct

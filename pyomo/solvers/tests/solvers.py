@@ -79,6 +79,20 @@ def test_solver_cases(*args):
     if len(_test_solver_cases) == 0:
         logging.disable(logging.WARNING)
 
+	#
+        # MOSEK
+        #
+
+        _mosek_capabilities = set(['linear',
+                                   'integer',
+                                   'quadratic_objective',
+                                   'quadratic_constraint'])
+
+        _test_solver_cases['MOSEK', 'mosek_direct'] = initialize(
+            name='MOSEK',
+            io='mosek_direct',
+            capabilities=_mosek_capabilities,
+            import_suffixes=['dual', 'rc', 'slack'])
         #
         # CPLEX
         #
