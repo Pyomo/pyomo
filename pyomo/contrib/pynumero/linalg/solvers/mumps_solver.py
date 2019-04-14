@@ -68,7 +68,8 @@ class MUMPSSymLinearSolver(object):
 
         if isinstance(matrix, BlockMatrix):
 
-            assert not matrix.has_empty_rows(), "Block matrix has undefined row sizes"
+            assert not matrix.has_empty_rows(), \
+                "Block matrix has undefined row sizes"
             shape = matrix.bshape
             self._row_blocks = shape[0]
             self._col_blocks = shape[1]
@@ -126,19 +127,19 @@ class MUMPSSymLinearSolver(object):
 
         if isinstance(matrix, BlockMatrix):
 
-            msg = 'Call symbolic factorization first'
-            assert self._dim != 0 and self._nnz != 0, msg
-            msg = 'Need to pass the same matrix that was factorized symbolically'
-            assert self._dim == matrix.shape[0], msg
-            msg = 'Need to pass the same block matrix that was factorized symbolically'
-            assert self._col_blocks == matrix.bshape[1] and self._row_blocks == matrix.bshape[0], msg
+            assert self._dim != 0 and self._nnz != 0, \
+                'Call symbolic factorization first'
+            assert self._dim == matrix.shape[0], \
+                'Need to pass the same matrix that was factorized symbolically'
+            assert self._col_blocks == matrix.bshape[1] and self._row_blocks == matrix.bshape[0], \
+                'Need to pass the same block matrix that was factorized symbolically'
 
             expanded_matrix = matrix.tocoo()
             lower_mask = expanded_matrix.row >= expanded_matrix.col
             lower_rows = expanded_matrix.row[lower_mask]
-            msg = 'Dimensions do not agree. Make sure diagonal is passed if symbolic factorization included diagonal'
             assert ((diagonal is None and lower_rows.size == self._nnz) or
-                    (diagonal is not None and lower_rows.size + self._dim == self._nnz)), msg
+                    (diagonal is not None and lower_rows.size + self._dim == self._nnz)), \
+                'Dimensions do not agree. Make sure diagonal is passed if symbolic factorization included diagonal'
 
             values = expanded_matrix.data[lower_mask]
             if diagonal is not None:
@@ -187,14 +188,14 @@ class MUMPSSymLinearSolver(object):
         elif isspmatrix_coo(matrix):
             lower_mask = matrix.row >= matrix.col
             lower_rows = matrix.row[lower_mask]
-            msg = 'Call symbolic factorization first'
-            assert self._dim != 0 and self._nnz != 0, msg
-            msg = 'Need to pass the same matrix that was factorized symbolically'
-            assert self._dim == matrix.shape[0], msg
+            assert self._dim != 0 and self._nnz != 0, \
+                'Call symbolic factorization first'
+            assert self._dim == matrix.shape[0], \
+                'Need to pass the same matrix that was factorized symbolically'
 
-            msg = 'Dimensions do not agree. Make sure diagonal is passed if symbolic factorization included diagonal'
             assert ((diagonal is None and lower_rows.size == self._nnz) or
-                    (diagonal is not None and lower_rows.size + self._dim == self._nnz)), msg
+                    (diagonal is not None and lower_rows.size + self._dim == self._nnz)), \
+                'Dimensions do not agree. Make sure diagonal is passed if symbolic factorization included diagonal'
 
             values = matrix.data[lower_mask]
             if diagonal is not None:
@@ -247,11 +248,11 @@ class MUMPSSymLinearSolver(object):
 
         flat_solution = kwargs.pop('flat_solution', False)
         matrix = kwargs.pop('matrix', None)
-        max_iter_ref = kwargs.pop('max_iter_ref', 10)
+        max_iter_ref = kwargs.pop('max_iter_ref', 1)
         tol_iter_ref = kwargs.pop('tol_iter_ref', 1e-8)
 
-        msg = 'RHS dimension does not agree with matrix'
-        assert self._dim == rhs.size, msg
+        assert self._dim == rhs.size, \
+            'RHS dimension does not agree with matrix'
         flat_rhs = rhs.flatten()
         x = flat_rhs.copy()
         self.ctx.set_rhs(x)
@@ -297,7 +298,7 @@ class MUMPSSymLinearSolver(object):
               do_symbolic=True,
               check_symmetry=True,
               desired_num_neg_eval=-1,
-              max_iter_ref=10,
+              max_iter_ref=1,
               tol_iter_ref=1e-8):
 
         include_diagonal = False

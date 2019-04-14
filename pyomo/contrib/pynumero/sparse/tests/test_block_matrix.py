@@ -18,13 +18,14 @@ except ImportError:
 from pyomo.contrib.pynumero.sparse import (BlockMatrix,
                                            BlockSymMatrix,
                                            BlockVector)
+import warnings
 
 
 class TestBlockMatrix(unittest.TestCase):
     def setUp(self):
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])
-        data = np.array([2, 1, 3, 4, 5, 1])
+        data = np.array([2., 1, 3, 4, 5, 1])
         m = coo_matrix((data, (row, col)), shape=(4, 4))
 
         self.block_m = m
@@ -156,6 +157,40 @@ class TestBlockMatrix(unittest.TestCase):
         #with self.assertRaises(Exception) as context:
         #    mat = self.basic_m * self.basic_m.tocoo()
 
+    def test_mul_sparse_matrix(self):
+        m = self.basic_m
+
+        flat_prod = m.tocoo() * m.tocoo()
+        prod = m * m
+
+        self.assertIsInstance(prod, BlockMatrix)
+        self.assertTrue(np.allclose(flat_prod.toarray(), prod.toarray()))
+
+        prod = m * m.tocoo()
+        self.assertIsInstance(prod, BlockMatrix)
+        self.assertTrue(np.allclose(flat_prod.toarray(), prod.toarray()))
+
+        prod = m.tocoo() * m
+        self.assertIsInstance(prod, BlockMatrix)
+        self.assertTrue(np.allclose(flat_prod.toarray(), prod.toarray()))
+
+        m2 = m.copy_structure()
+        ones = np.ones(m.shape)
+        m2.copyfrom(ones)
+        flat_prod = m.tocoo() * m2.tocoo()
+        prod = m * m2
+
+        self.assertIsInstance(prod, BlockMatrix)
+        self.assertTrue(np.allclose(flat_prod.toarray(), prod.toarray()))
+
+        prod = m * m2.tocoo()
+        self.assertIsInstance(prod, BlockMatrix)
+        self.assertTrue(np.allclose(flat_prod.toarray(), prod.toarray()))
+
+        prod = m.tocoo() * m2
+        self.assertIsInstance(prod, BlockMatrix)
+        self.assertTrue(np.allclose(flat_prod.toarray(), prod.toarray()))
+
     def test_getitem(self):
 
         m = BlockMatrix(3, 3)
@@ -255,9 +290,6 @@ class TestBlockMatrix(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(len(self.basic_m.__repr__()), 17)
 
-    #def test_str(self):
-    #    self.assertEqual(len(self.basic_m.__str__()), 328)
-
     def test_set_item(self):
 
         self.basic_m[1, 0] = None
@@ -284,7 +316,26 @@ class TestBlockMatrix(unittest.TestCase):
         r = A_block + A_block.tocoo()
         dense_res = A_block.toarray() + A_block.toarray()
         self.assertIsInstance(r, BlockMatrix)
+        self.assertTrue(np.allclose(r.toarray(), dense_res))
 
+        r = A_block.tocoo() + A_block
+        dense_res = A_block.toarray() + A_block.toarray()
+        #self.assertIsInstance(r, BlockMatrix)
+        self.assertTrue(np.allclose(r.toarray(), dense_res))
+
+        r = A_block + 2 * A_block.tocoo()
+        dense_res = A_block.toarray() + 2 * A_block.toarray()
+        self.assertIsInstance(r, BlockMatrix)
+        self.assertTrue(np.allclose(r.toarray(), dense_res))
+
+        r = 2 * A_block.tocoo() + A_block
+        dense_res = 2 * A_block.toarray() + A_block.toarray()
+        #self.assertIsInstance(r, BlockMatrix)
+        self.assertTrue(np.allclose(r.toarray(), dense_res))
+
+        r = A_block.T + A_block.tocoo()
+        dense_res = A_block.toarray().T + A_block.toarray()
+        self.assertIsInstance(r, BlockMatrix)
         self.assertTrue(np.allclose(r.toarray(), dense_res))
 
         with self.assertRaises(Exception) as context:
@@ -315,6 +366,10 @@ class TestBlockMatrix(unittest.TestCase):
         mm = A_block2.tocoo() - A_block
         self.assertTrue(np.allclose(A_block.toarray(), mm.toarray()))
 
+        mm = A_block2.T - A_block.tocoo()
+        dense_r = A_block2.toarray().T - A_block.toarray()
+        self.assertTrue(np.allclose(dense_r, mm.toarray()))
+
         with self.assertRaises(Exception) as context:
             mm = A_block.__rsub__(A_block.toarray())
 
@@ -338,7 +393,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertTrue(np.allclose(aa, mm.toarray()))
 
     def test_copyfrom(self):
-
         A_dense = self.basic_m.toarray()
         A_block = 2 * self.basic_m
         A_block2 = 2 * self.basic_m
@@ -348,12 +402,17 @@ class TestBlockMatrix(unittest.TestCase):
         dd = A_block.toarray()
         self.assertTrue(np.allclose(dd, A_dense))
 
-        A_block.copyfrom(2 * self.basic_m)
+        A_block = 2 * self.basic_m
+        flat = np.ones(A_block.shape)
+        A_block.copyfrom(flat)
+        self.assertTrue(np.allclose(flat, A_block.toarray()))
+
+        A_block = self.basic_m.copy_structure()
+        to_copy = 2 * self.basic_m
+        A_block.copyfrom(to_copy)
+
         dd = A_block.toarray()
         self.assertTrue(np.allclose(dd, A_block2.toarray()))
-
-        with self.assertRaises(Exception) as context:
-            A_block.copyfrom(A_dense)
 
     def test_copy(self):
 
@@ -361,6 +420,281 @@ class TestBlockMatrix(unittest.TestCase):
         A_block = self.basic_m
         clone = A_block.copy()
         self.assertTrue(np.allclose(clone.toarray(), A_dense))
+
+    def test_iadd(self):
+
+        A_dense = self.basic_m.toarray()
+        A_block = self.basic_m.copy()
+        A_dense += A_dense
+        A_block += A_block
+
+        self.assertTrue(np.allclose(A_block.toarray(), A_dense))
+
+        A_dense = self.basic_m.toarray()
+        A_block = self.basic_m.copy()
+        A_dense += A_dense
+        A_block += A_block.tocoo()
+
+        self.assertTrue(np.allclose(A_block.toarray(), A_dense))
+
+        A_dense = self.basic_m.toarray()
+        A_block = self.basic_m.copy()
+        A_block += 2 * A_block.tocoo()
+
+        self.assertTrue(np.allclose(A_block.toarray(), 3 * A_dense))
+
+        with self.assertRaises(Exception) as context:
+            A_block += 1.0
+
+    def test_isub(self):
+
+        A_dense = self.basic_m.toarray()
+        A_block = self.basic_m
+        A_dense -= A_dense
+        A_block -= A_block
+
+        self.assertTrue(np.allclose(A_block.toarray(), A_dense))
+
+        A_dense = self.basic_m.toarray()
+        A_block = self.basic_m
+        A_dense -= A_dense
+        A_block -= A_block.tocoo()
+
+        self.assertTrue(np.allclose(A_block.toarray(), A_dense))
+
+        A_dense = self.basic_m.toarray()
+        A_block = self.basic_m.copy()
+        A_block -= 2 * A_block.tocoo()
+
+        self.assertTrue(np.allclose(A_block.toarray(), -A_dense))
+
+        with self.assertRaises(Exception) as context:
+            A_block -= 1.0
+
+    def test_imul(self):
+
+        A_dense = self.basic_m.toarray()
+        A_block = self.basic_m
+        A_dense *= 3
+        A_block *= 3.
+
+        self.assertTrue(np.allclose(A_block.toarray(), A_dense))
+
+        with self.assertRaises(Exception) as context:
+            A_block *= A_block
+
+        with self.assertRaises(Exception) as context:
+            A_block *= A_block.tocoo()
+
+        with self.assertRaises(Exception) as context:
+            A_block *= A_block.toarray()
+
+    def test_itruediv(self):
+
+        A_dense = self.basic_m.toarray()
+        A_block = self.basic_m
+        A_dense /= 3
+        A_block /= 3.
+
+        self.assertTrue(np.allclose(A_block.toarray(), A_dense))
+
+        with self.assertRaises(Exception) as context:
+            A_block /= A_block
+
+        with self.assertRaises(Exception) as context:
+            A_block /= A_block.tocoo()
+
+        with self.assertRaises(Exception) as context:
+            A_block /= A_block.toarray()
+
+    def test_truediv(self):
+
+        A_dense = self.basic_m.toarray()
+        A_block = self.basic_m
+        B_block = A_block / 3.
+        self.assertTrue(np.allclose(B_block.toarray(), A_dense/3.))
+
+        with self.assertRaises(Exception) as context:
+            b = A_block / A_block
+
+        with self.assertRaises(Exception) as context:
+            b = A_block / A_block.tocoo()
+
+        with self.assertRaises(Exception) as context:
+            b = A_block / A_block.toarray()
+
+        with self.assertRaises(Exception) as context:
+            B_block = 3./ A_block
+
+    def test_eq(self):
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            A_flat = self.basic_m.tocoo()
+            A_block = self.basic_m
+
+            A_bool_flat = A_flat == 2.0
+            A_bool_block = A_block == 2.0
+
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+            A_bool_flat = A_flat == A_flat
+            A_bool_block = A_block == A_block
+
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+
+            A_bool_flat = 2.0 != A_flat
+            A_bool_block = 2.0 != A_block
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+    def test_ne(self):
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            A_flat = self.basic_m.tocoo()
+            A_block = self.basic_m
+
+            A_bool_flat = A_flat != 2.0
+            A_bool_block = A_block != 2.0
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+            A_bool_flat = 2.0 != A_flat
+            A_bool_block = 2.0 != A_block
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+            A_bool_flat = A_flat != A_flat
+            A_bool_block = A_block != A_block
+
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+    def test_le(self):
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            A_flat = self.basic_m.tocoo()
+            A_block = self.basic_m
+
+            A_bool_flat = A_flat <= 2.0
+            A_bool_block = A_block <= 2.0
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+            # A_bool_flat = 2.0 <= A_flat
+            # A_bool_block = 2.0 <= A_block
+            # self.assertTrue(np.allclose(A_bool_flat.toarray(),
+            #                             A_bool_block.toarray()))
+
+            A_bool_flat = A_flat <= A_flat
+            A_bool_block = A_block <= A_block
+
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+            A_bool_flat = A_flat <= 2 * A_flat
+            A_bool_block = A_block <= 2 * A_block
+
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+            A_bool_flat = 2.0 >= A_flat
+            A_bool_block = 2.0 >= A_block
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+    def test_lt(self):
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            A_flat = self.basic_m.tocoo()
+            A_block = self.basic_m
+
+            A_bool_flat = A_flat < 2.0
+            A_bool_block = A_block < 2.0
+
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+            # A_bool_flat = 2.0 <= A_flat
+            # A_bool_block = 2.0 <= A_block
+            # self.assertTrue(np.allclose(A_bool_flat.toarray(),
+            #                             A_bool_block.toarray()))
+
+            A_bool_flat = A_flat < A_flat
+            A_bool_block = A_block < A_block
+
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+            A_bool_flat = A_flat < 2 * A_flat
+            A_bool_block = A_block < 2 * A_block
+
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+            A_bool_flat = 2.0 > A_flat
+            A_bool_block = 2.0 > A_block
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+    def test_ge(self):
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            A_flat = self.basic_m.tocoo()
+            A_block = self.basic_m
+
+            A_bool_flat = A_flat >= 2.0
+            A_bool_block = A_block >= 2.0
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+            A_bool_flat = 2.0 <= A_flat
+            A_bool_block = 2.0 <= A_block
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+            A_bool_flat = A_flat >= A_flat
+            A_bool_block = A_block >= A_block
+
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+            A_bool_flat = A_flat >= 0.5 * A_flat
+            A_bool_block = A_block >= 0.5 * A_block
+
+            self.assertTrue(np.allclose(A_bool_flat.toarray(),
+                                        A_bool_block.toarray()))
+
+    def test_abs(self):
+
+        row = np.array([0, 3, 1, 2, 3, 0])
+        col = np.array([0, 0, 1, 2, 3, 3])
+        data = -1.0 * np.array([2., 1, 3, 4, 5, 1])
+        m = coo_matrix((data, (row, col)), shape=(4, 4))
+
+        self.block_m = m
+
+        bm = BlockMatrix(2, 2)
+        bm.name = 'basic_matrix'
+        bm[0, 0] = m
+        bm[1, 1] = m
+        bm[0, 1] = m
+
+        abs_flat = abs(bm.tocoo())
+        abs_mat = abs(bm)
+
+        self.assertIsInstance(abs_mat, BlockMatrix)
+        self.assertTrue(np.allclose(abs_flat.toarray(),
+                                    abs_mat.toarray()))
+
+
 
 class TestSymBlockMatrix(unittest.TestCase):
 
@@ -445,8 +779,3 @@ class TestSymBlockMatrix(unittest.TestCase):
         self.basic_m *= 5.0
         self.assertTrue(np.allclose(self.basic_m.toarray(), dense_m, atol=1e-3))
     # ToDo: Add test for transpose
-
-
-
-
-
