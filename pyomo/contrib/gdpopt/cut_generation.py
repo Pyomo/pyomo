@@ -118,7 +118,7 @@ def add_affine_cuts(nlp_result, solve_data, config):
                 continue
 
             vars_in_constr = list(
-                identify_variables(constr.body, include_fixed=False))
+                identify_variables(constr.body))
             if any(var.value is None for var in vars_in_constr):
                 continue  # a variable has no values
 
