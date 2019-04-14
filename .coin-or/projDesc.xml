@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type = "text/xsl" href = "http://www.coin-or.org/projects/autoGen.xsl"?>
+<projectData xmlns="coin-or.org"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="coin-or.org http://www.coin-or.org/projects/autoGen.xsd">
+
+	<!-- This file is a template that will you fill in in order to provide -->
+	<!-- specific information about your project. Once the template is     -->
+	<!-- filled in and checked into your projects repository in the conf/  -->
+	<!-- directory, it will be automatically parsed and displayed in a     -->
+	<!-- standard HTML format when users call up the file from the main    -->
+	<!-- COIN Web site. The file is extensively commented to help you      -->
+	<!-- understand where to fill in the various pieces of required        -->
+	<!-- information. The comments are enclosed in blocks like this one.   -->
+
+	<projectBasics>
+
+		<!-- Fill in your project's name in this block.                -->
+		<!-- For example, for SYMPHONY, you would put:                 -->
+		<!--                                                           -->
+		<!-- <projectName>                                             -->
+		<!--    SYMPHONY                                               -->
+		<!-- </projectName>                                            -->
+		<!--                                                           -->
+		<!-- Fill in your text below (outside the comment block).      -->
+
+		<projectName>Pyomo</projectName>
+
+		<!-- Fill in a brief description of your project here.         -->
+		<!-- For example, for SYMPHONY, you might put:                 -->
+		<!--                                                           -->
+		<!-- <projectDescription>                                      -->
+		<!--    SYMPHONY is an open-source generic MILP solver,        -->
+		<!--    callable library, and extensible framework for         -->
+		<!--    implementing customized solvers for mixed-integer      -->
+		<!--    linear programs (MILPs). Blah, blah, blah.             -->
+		<!-- </projectDescription>                                     -->
+		<!--                                                           -->
+		<!-- Fill in your text below (outside the comment block)       -->
+
+		<projectDescription>
+Pyomo is a Python-based open-source software package that supports a
+diverse set of optimization capabilities for formulating and analyzing
+optimization models.
+
+Modeling optimization applications is a core capability of Pyomo.  Pyomo
+can be used to define symbolic problems, create concrete problem
+instances, and solve these instances with standard solvers.  Thus, Pyomo
+provides a capability that is commonly associated with algebraic
+modeling languages such as AMPL, AIMMS, and GAMS, but Pyomo's modeling
+objects are embedded within a full-featured high-level programming
+language with a rich set of supporting libraries.
+		</projectDescription>
+		<projectShortDescription>
+Pyomo is a Python-based open-source software package that supports a
+diverse set of optimization capabilities for formulating and analyzing
+optimization models.
+		</projectShortDescription>
+
+		<!-- Fill in the project manager's name and (obfuscated)       -->
+		<!-- e-mail address here (only one name allowed).              -->
+		<!-- For example, for the SYMPHONY project, you would put      -->
+		<!--                                                           -->
+		<!--<projectManager>                                           -->
+		<!--   Ted Ralphs, tkralphs at lehigh dot edu                  -->
+		<!--</projectManager>                                          -->
+		<!--                                                           -->
+		<!--Fill in your text below (outside the comment block).       -->
+
+		<projectManager>
+Carl D. Laird, Chair, Pyomo Management Committee, cdlaird at sandia dot gov
+		</projectManager>
+
+		<!-- Fill in the URLS you would like use for your main         -->
+		<!-- home page. This could be either your Trac page or         -->
+		<!-- your static page (if you have one).                       -->
+		<!-- For example, for SYMPHONY, you would put                  -->
+		<!--                                                           -->
+		<!--                                                           -->
+		<!--<projectHomePage>					       -->
+		<!--   https://projects.coin-or.org/SYMPHONY                   -->
+		<!--</projectHomePage>                                         -->
+		<!--                                                           -->
+		<!--Fill in your text below (outside the comment block).       -->
+
+		<projectHomePage>https://www.pyomo.org/</projectHomePage>
+
+		<!-- Fill in the name of the license your project uses         -->
+		<!-- and a link to its page on www.opensource.org              -->
+		<!-- For example, if you use the CPL, you would put            -->
+		<!--                                                           -->
+		<!--<projectLicense>					       -->
+		<!--   Common Public License 1.0                               -->
+		<!--</projectLicense>                                          -->
+		<!--<projectLicenseURL>				               -->
+		<!--   http://www.opensource.org/licenses/cpl1.0.php           -->
+		<!--</projectLicenseURL>                                       -->
+		<!--                                                           -->
+		<!--Fill in your text below (outside the comment block).       -->
+
+		<projectLicense>BSD</projectLicense>
+                <!-- Note that while Pyomo is licensed under the
+                     3-clause BSD license, see
+                        https://opensource.org/licenses/BSD-3-Clause
+                     Sandia / DOE require an additional disclaimer as
+                     part of the license, so we will point to our
+                     license file directly.
+                -->
+		<projectLicenseURL>
+		  https://github.com/Pyomo/pyomo/blob/master/LICENSE.txt
+		</projectLicenseURL>
+
+		<!-- Below, you can list other COIN projects your project      -->
+		<!-- depends on. These are listed one by one, as in the        -->
+		<!-- following example for SYMPHONY:                           -->
+		<!--                                                           -->
+		<!--<coinLinkedProjects>                                       -->
+		<!--                                                           -->
+		<!--   <coinProject>                                           -->
+		<!--      <repoName>                                           -->
+		<!--         CoinUtils                                         -->
+		<!--      </repoName>                                          -->
+		<!--   </coinProject>                                          -->
+		<!--                                                           -->
+		<!--   <coinProject>                                           -->
+		<!--      <repoName>                                           -->
+		<!--         Cgl                                               -->
+		<!--      </repoName>                                          -->
+		<!--   </coinProject>                                          -->
+		<!--                                                           -->
+		<!--   <coinProject>                                           -->
+		<!--      <repoName>                                           -->
+		<!--         Osi                                               -->
+		<!--      </repoName>                                          -->
+		<!--   </coinProject>                                          -->
+		<!--                                                           -->
+		<!--   <coinProject>                                           -->
+		<!--      <repoName>                                           -->
+		<!--         Clp                                               -->
+		<!--      </repoName>                                          -->
+		<!--   </coinProject>                                          -->
+		<!--                                                           -->
+		<!--</coinLinkedProjects>                                      -->
+		<!--                                                           -->
+		<!--Fill in your text below (outside the comment block).       -->
+
+		<coinLinkedProjects> </coinLinkedProjects>
+
+		<!-- Below, you can list other packages your project           -->
+		<!-- either requires or can optionally link to. These are      -->
+		<!-- one by one, as in the following example:                  -->
+		<!--                                                           -->
+		<!--<otherLinkedPackages>                                      -->
+		<!--                                                           -->
+		<!--   <otherPackage>                                          -->
+		<!--      <packageName>                                        -->
+		<!--         GLPK                                              -->
+		<!--      </packageName>                                       -->
+		<!--      <packageURL>                                         -->
+		<!--         http://www.gnu.org/software/glpk/                 -->
+		<!--      </packageURL>                                        -->
+		<!--      <requiredOrOptional>                                 -->
+		<!--         Optional                                          -->
+		<!--      </requiredOrOptional>                                -->
+		<!--   </otherPackage>                                         -->
+		<!--                                                           -->
+		<!--   <otherPackage>                                          -->
+		<!--      <packageName>                                        -->
+		<!--         GNU Readline                                      -->
+		<!--      </packageName>                                       -->
+		<!--      <packageURL>                                         -->
+		<!--      </packageURL>                                        -->
+		<!--      <requiredOrOptional>                                 -->
+		<!--         Optional                                          -->
+		<!--      </requiredOrOptional>                                -->
+		<!--   </otherPackage>                                         -->
+		<!--                                                           -->
+		<!--   <otherPackage>                                          -->
+		<!--      <packageName>                                        -->
+		<!--         GNU History                                       -->
+		<!--      </packageName>                                       -->
+		<!--      <packageURL>                                         -->
+		<!--      </packageURL>                                        -->
+		<!--      <requiredOrOptional>                                 -->
+		<!--         Optional                                          -->
+		<!--      </requiredOrOptional>                                -->
+		<!--   </otherPackage>                                         -->
+		<!--                                                           -->
+		<!--</otherLinkedPackages>                                     -->
+		<!--                                                           -->
+		<!--Fill in your text below (outside the comment block).       -->
+
+		<otherLinkedPackages> </otherLinkedPackages>
+
+		<!-- Below, you can list the programming language(s) used in   -->
+		<!-- the project. For example:                                 -->
+		<!--<projectLanguage>C</projectLanguage>                       -->
+		<!--                                                           -->
+		<!--Fill in your text below (outside the comment block).       -->
+
+		<projectLanguage>Python</projectLanguage>
+
+
+		<!--The following fields describe the development status       -->
+		<!--of the project.                                            -->
+		<!--                                                           -->
+		<!--Fill in your text below (outside the comment block).       -->
+
+		<developmentStatus>
+
+			<!--If you are actively managing your project, use     -->
+
+			<activityStatus>Active</activityStatus>
+
+			<!--The maturity level is determined during project    -->
+			<!--review and should have been reported to you.       -->
+			<!--See http://www.coin-or.org/faqs.html#q18 for       -->
+			<!--more information on maturity level.                -->
+			<!--Fill it in like this:                              -->
+			<!--                                                   -->
+			<!--<maturityLevel>5</maturityLevel>                   -->
+			<!--                                                   -->
+
+			<maturityLevel>4</maturityLevel>
+
+			<!-- Very non-standard (by COIN standards) repo structure.
+			     Use explicit overrides to disable use of automated
+			     version reporting.
+			-->
+			<stableVersionNumber>5.6.1</stableVersionNumber>
+			<releaseNumber>5.6.1</releaseNumber>
+
+		</developmentStatus>
+
+		<!--Below, you can list the platforms on which your            -->
+		<!--project has been tested. Again, these are listed one       -->
+		<!--by one. There are fields for both operating system and     -->
+		<!--compiler. Here is an example for SYMPHONY                  -->
+		<!--                                                           -->
+		<!--<testedPlatforms>                                          -->
+		<!--                                                           -->
+		<!--   <platform>                                              -->
+		<!--      <operatingSystem>Microsoft Windows</operatingSystem> -->
+		<!--      <compiler>MSVC++/cl</compiler>                       -->
+		<!--   </platform>                                             -->
+		<!--                                                           -->
+		<!--   <platform>                                              -->
+		<!--      <operatingSystem>Microsoft Windows</operatingSystem> -->
+		<!--      <compiler>CYGWIN/cl</compiler>                       -->
+		<!--   </platform>                                             -->
+		<!--                                                           -->
+		<!--   <platform>                                              -->
+		<!--      <operatingSystem>Microsoft Windows</operatingSystem> -->
+		<!--      <compiler>CYGWIN/gcc</compiler>                      -->
+		<!--   </platform>                                             -->
+		<!--                                                           -->
+		<!--   <platform>                                              -->
+		<!--      <operatingSystem>Microsoft Windows</operatingSystem> -->
+		<!--      <compiler>MSys/gcc</compiler>                        -->
+		<!--   </platform>                                             -->
+		<!--                                                           -->
+		<!--   <platform>                                              -->
+		<!--      <operatingSystem>Linux</operatingSystem> -->
+		<!--      <compiler>gcc</compiler>                             -->
+		<!--   </platform>                                             -->
+		<!--                                                           -->
+		<!--   <platform>                                              -->
+		<!--      <operatingSystem>Mac OSX</operatingSystem>           -->
+		<!--      <compiler>gcc</compiler>                             -->
+		<!--   </platform>                                             -->
+		<!--                                                           -->
+		<!--   <platform>                                              -->
+		<!--      <operatingSystem>Solaris x86</operatingSystem>       -->
+		<!--      <compiler>gcc</compiler>                             -->
+		<!--   </platform>                                             -->
+		<!--                                                           -->
+		<!--   <platform>                                              -->
+		<!--      <operatingSystem>Solaris x86</operatingSystem>       -->
+		<!--      <compiler>sunpro</compiler>                          -->
+		<!--   </platform>                                             -->
+		<!--                                                           -->
+		<!--</testedPlatforms>					       -->
+		<!--                                                           -->
+		<!--Fill in your text below (outside the comment block).       -->
+
+		<testedPlatforms>
+
+			<platform>
+				<operatingSystem>Any</operatingSystem>
+				<compiler>Python 2.7, 3.4, 3.5, 3.6, 3.7</compiler>
+			</platform>
+
+		</testedPlatforms>
+		
+		<projectCategories>
+			<!-- Start  of projectCategories block   -->
+		
+			<!--Below is the list of COIN-OR project categores.    -->
+			<!--Simply "un-comment" any categories that apply to   -->
+			<!--your project.                                      -->
+			
+			<category> Modeling systems </category>
+			<category> Development tools </category>
+			<category> Optimization stochastic </category>
+			<category> Optimization utility </category>
+			
+			<!-- End of projectCategories block                    -->
+		</projectCategories>
+
+		<!-- End of projectBasics block                                -->
+
+	</projectBasics>
+
+	<!--Below, you can specify the links for the left-hand side menu.      -->
+	<!--Note that these are optional, so if there is a blank, there will   -->
+	<!--be no corresponding menu item                                      -->
+	<!--                                                                   -->
+	<!--For SYMPHONY, this block would look like this:                     -->
+	<!--                                                                   -->
+	<!--<leftMenuLinks>                                                    -->
+	<!--                                                                   -->
+	<!--   <documentation>                                                 -->
+	<!--      http://www.coin-or.org/SYMPHONY/man-5.1                      -->
+	<!--   </documentation>                                                -->
+	<!--                                                                   -->
+	<!--   <sourceCodeDownload>                                            -->
+	<!--      http://www.coin-or.org/download/source/SYMPHONY              -->
+	<!--   </sourceCodeDownload>                                           -->
+	<!--                                                                   -->
+	<!--   <binaryDownload>                                                -->
+	<!--      http://www.coin-or.org/download/binary/SYMPHONY              -->
+	<!--   </binaryDownload>                                               -->
+	<!--                                                                   -->
+	<!--   <mailingList>                                                   -->
+	<!--      http://list.coin-or.org/mailman/listinfo/coin-symphony       -->
+	<!--   </mailingList>                                                  -->
+	<!--</leftMenuLinks>                                                   -->
+	<!--                                                                   -->
+	<!--Fill in your text below (outside the comment block).               -->
+
+	<leftMenuLinks>
+
+		<documentation>https://pyomo.readthedocs.org/</documentation>
+
+		<sourceCodeDownload>https://www.pyomo.org/installation</sourceCodeDownload>
+
+		<binaryDownload>https://www.pyomo.org/installation</binaryDownload>
+
+		<mailingList>https://groups.google.com/group/pyomo-forum</mailingList>
+
+	</leftMenuLinks>
+
+	<!-- End of projectData block                                          -->
+</projectData>

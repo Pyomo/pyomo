@@ -1,9 +1,8 @@
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
-import pyomo.core.expr.expr_pyomo5 as _expr
-from pyomo.core.expr.expr_pyomo5 import (ExpressionValueVisitor,
-                                         nonpyomo_leaf_types, value,
-                                         identify_variables)
+import pyomo.core.expr.numeric_expr as numeric_expr
+from pyomo.core.expr.visitor import ExpressionValueVisitor, identify_variables
+from pyomo.core.expr.numvalue import nonpyomo_leaf_types, value
 from pyomo.core.expr.numvalue import is_fixed
 import pyomo.contrib.fbbt.interval as interval
 import math
@@ -61,7 +60,7 @@ def _prop_bnds_leaf_to_root_ProductExpression(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 2
@@ -76,7 +75,7 @@ def _prop_bnds_leaf_to_root_SumExpression(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.SumExpression
+    node: pyomo.core.expr.numeric_expr.SumExpression
     bnds_dict: ComponentMap
     """
     arg0 = node.arg(0)
@@ -93,7 +92,7 @@ def _prop_bnds_leaf_to_root_PowExpression(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.PowExpression
+    node: pyomo.core.expr.numeric_expr.PowExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 2
@@ -108,7 +107,7 @@ def _prop_bnds_leaf_to_root_ReciprocalExpression(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.ReciprocalExpression
+    node: pyomo.core.expr.numeric_expr.ReciprocalExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -122,7 +121,7 @@ def _prop_bnds_leaf_to_root_NegationExpression(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -136,7 +135,7 @@ def _prop_bnds_leaf_to_root_exp(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -150,7 +149,7 @@ def _prop_bnds_leaf_to_root_log(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -164,7 +163,7 @@ def _prop_bnds_leaf_to_root_sin(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -178,7 +177,7 @@ def _prop_bnds_leaf_to_root_cos(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -192,7 +191,7 @@ def _prop_bnds_leaf_to_root_tan(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -206,7 +205,7 @@ def _prop_bnds_leaf_to_root_asin(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -220,7 +219,7 @@ def _prop_bnds_leaf_to_root_acos(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -234,7 +233,7 @@ def _prop_bnds_leaf_to_root_atan(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -259,7 +258,7 @@ def _prop_bnds_leaf_to_root_UnaryFunctionExpression(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     if node.getname() in _unary_leaf_to_root_map:
@@ -269,20 +268,20 @@ def _prop_bnds_leaf_to_root_UnaryFunctionExpression(node, bnds_dict):
 
 
 _prop_bnds_leaf_to_root_map = dict()
-_prop_bnds_leaf_to_root_map[_expr.ProductExpression] = _prop_bnds_leaf_to_root_ProductExpression
-_prop_bnds_leaf_to_root_map[_expr.ReciprocalExpression] = _prop_bnds_leaf_to_root_ReciprocalExpression
-_prop_bnds_leaf_to_root_map[_expr.PowExpression] = _prop_bnds_leaf_to_root_PowExpression
-_prop_bnds_leaf_to_root_map[_expr.SumExpression] = _prop_bnds_leaf_to_root_SumExpression
-_prop_bnds_leaf_to_root_map[_expr.MonomialTermExpression] = _prop_bnds_leaf_to_root_ProductExpression
-_prop_bnds_leaf_to_root_map[_expr.NegationExpression] = _prop_bnds_leaf_to_root_NegationExpression
-_prop_bnds_leaf_to_root_map[_expr.UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.ProductExpression] = _prop_bnds_leaf_to_root_ProductExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.ReciprocalExpression] = _prop_bnds_leaf_to_root_ReciprocalExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.PowExpression] = _prop_bnds_leaf_to_root_PowExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.SumExpression] = _prop_bnds_leaf_to_root_SumExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.MonomialTermExpression] = _prop_bnds_leaf_to_root_ProductExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.NegationExpression] = _prop_bnds_leaf_to_root_NegationExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
 
-_prop_bnds_leaf_to_root_map[_expr.NPV_ProductExpression] = _prop_bnds_leaf_to_root_ProductExpression
-_prop_bnds_leaf_to_root_map[_expr.NPV_ReciprocalExpression] = _prop_bnds_leaf_to_root_ReciprocalExpression
-_prop_bnds_leaf_to_root_map[_expr.NPV_PowExpression] = _prop_bnds_leaf_to_root_PowExpression
-_prop_bnds_leaf_to_root_map[_expr.NPV_SumExpression] = _prop_bnds_leaf_to_root_SumExpression
-_prop_bnds_leaf_to_root_map[_expr.NPV_NegationExpression] = _prop_bnds_leaf_to_root_NegationExpression
-_prop_bnds_leaf_to_root_map[_expr.NPV_UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.NPV_ProductExpression] = _prop_bnds_leaf_to_root_ProductExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.NPV_ReciprocalExpression] = _prop_bnds_leaf_to_root_ReciprocalExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.NPV_PowExpression] = _prop_bnds_leaf_to_root_PowExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.NPV_SumExpression] = _prop_bnds_leaf_to_root_SumExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.NPV_NegationExpression] = _prop_bnds_leaf_to_root_NegationExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.NPV_UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
 
 
 def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict):
@@ -290,7 +289,7 @@ def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 2
@@ -340,7 +339,7 @@ def _prop_bnds_root_to_leaf_SumExpression(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
     """
     # first accumulate bounds
@@ -386,7 +385,7 @@ def _prop_bnds_root_to_leaf_PowExpression(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 2
@@ -420,7 +419,7 @@ def _prop_bnds_root_to_leaf_ReciprocalExpression(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -440,7 +439,7 @@ def _prop_bnds_root_to_leaf_NegationExpression(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -460,7 +459,7 @@ def _prop_bnds_root_to_leaf_exp(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -480,7 +479,7 @@ def _prop_bnds_root_to_leaf_log(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.ProductExpression
+    node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -500,7 +499,7 @@ def _prop_bnds_root_to_leaf_sin(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -520,7 +519,7 @@ def _prop_bnds_root_to_leaf_cos(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -540,7 +539,7 @@ def _prop_bnds_root_to_leaf_tan(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -560,7 +559,7 @@ def _prop_bnds_root_to_leaf_asin(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -580,7 +579,7 @@ def _prop_bnds_root_to_leaf_acos(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -600,7 +599,7 @@ def _prop_bnds_root_to_leaf_atan(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     assert len(node.args) == 1
@@ -631,7 +630,7 @@ def _prop_bnds_root_to_leaf_UnaryFunctionExpression(node, bnds_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.expr_pyomo5.UnaryFunctionExpression
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
     """
     if node.getname() in _unary_root_to_leaf_map:
@@ -643,20 +642,20 @@ def _prop_bnds_root_to_leaf_UnaryFunctionExpression(node, bnds_dict):
 
 
 _prop_bnds_root_to_leaf_map = dict()
-_prop_bnds_root_to_leaf_map[_expr.ProductExpression] = _prop_bnds_root_to_leaf_ProductExpression
-_prop_bnds_root_to_leaf_map[_expr.ReciprocalExpression] = _prop_bnds_root_to_leaf_ReciprocalExpression
-_prop_bnds_root_to_leaf_map[_expr.PowExpression] = _prop_bnds_root_to_leaf_PowExpression
-_prop_bnds_root_to_leaf_map[_expr.SumExpression] = _prop_bnds_root_to_leaf_SumExpression
-_prop_bnds_root_to_leaf_map[_expr.MonomialTermExpression] = _prop_bnds_root_to_leaf_ProductExpression
-_prop_bnds_root_to_leaf_map[_expr.NegationExpression] = _prop_bnds_root_to_leaf_NegationExpression
-_prop_bnds_root_to_leaf_map[_expr.UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.ProductExpression] = _prop_bnds_root_to_leaf_ProductExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.ReciprocalExpression] = _prop_bnds_root_to_leaf_ReciprocalExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.PowExpression] = _prop_bnds_root_to_leaf_PowExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.SumExpression] = _prop_bnds_root_to_leaf_SumExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.MonomialTermExpression] = _prop_bnds_root_to_leaf_ProductExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.NegationExpression] = _prop_bnds_root_to_leaf_NegationExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
 
-_prop_bnds_root_to_leaf_map[_expr.NPV_ProductExpression] = _prop_bnds_root_to_leaf_ProductExpression
-_prop_bnds_root_to_leaf_map[_expr.NPV_ReciprocalExpression] = _prop_bnds_root_to_leaf_ReciprocalExpression
-_prop_bnds_root_to_leaf_map[_expr.NPV_PowExpression] = _prop_bnds_root_to_leaf_PowExpression
-_prop_bnds_root_to_leaf_map[_expr.NPV_SumExpression] = _prop_bnds_root_to_leaf_SumExpression
-_prop_bnds_root_to_leaf_map[_expr.NPV_NegationExpression] = _prop_bnds_root_to_leaf_NegationExpression
-_prop_bnds_root_to_leaf_map[_expr.NPV_UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.NPV_ProductExpression] = _prop_bnds_root_to_leaf_ProductExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.NPV_ReciprocalExpression] = _prop_bnds_root_to_leaf_ReciprocalExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.NPV_PowExpression] = _prop_bnds_root_to_leaf_PowExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.NPV_SumExpression] = _prop_bnds_root_to_leaf_SumExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.NPV_NegationExpression] = _prop_bnds_root_to_leaf_NegationExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.NPV_UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
 
 
 class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
@@ -1001,7 +1000,7 @@ def compute_bounds_on_expr(expr):
 
     Parameters
     ----------
-    expr: pyomo.core.expr.expr_pyomo5.ExpressionBase
+    expr: pyomo.core.expr.numeric_expr.ExpressionBase
 
     Returns
     -------

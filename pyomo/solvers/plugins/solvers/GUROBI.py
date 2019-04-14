@@ -244,15 +244,15 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
     def _default_executable(self):
         if sys.platform == 'win32':
-            executable = pyomo.common.registered_executable("gurobi.bat")
+            executable = pyomo.common.Executable("gurobi.bat")
         else:
-            executable = pyomo.common.registered_executable("gurobi.sh")
-        if executable is None:
+            executable = pyomo.common.Executable("gurobi.sh")
+        if not executable:
             logger.warning("Could not locate the 'gurobi' executable, "
                            "which is required for solver %s" % self.name)
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     def _get_version(self):
         """
@@ -535,8 +535,3 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
 
         return results
-
-if sys.platform == 'win32':
-    pyomo.common.register_executable(name='gurobi.bat')
-else:
-    pyomo.common.register_executable(name='gurobi.sh')

@@ -22,6 +22,7 @@ else:
 # These packages contain plugins that need to be loaded
 #
 _packages = [
+    'pyomo.common',
     'pyomo.opt',
     'pyomo.core',
     'pyomo.dataportal',

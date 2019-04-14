@@ -18,7 +18,7 @@ from weakref import ref as weakref_ref
 
 import pyutilib.math
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.expr import current as EXPR
+from pyomo.core.expr import logical_expr
 from pyomo.core.expr.numvalue import (ZeroConstant,
                                       value,
                                       as_numeric,
@@ -495,14 +495,14 @@ class _GeneralConstraintData(_ConstraintData):
         # user did ( var < 1 > 0 ) (which also results in a non-None
         # chainedInequality value)
         #
-        if EXPR._using_chained_inequality and EXPR._chainedInequality.prev is not None:
-            raise TypeError(EXPR._chainedInequality.error_message())
+        if logical_expr._using_chained_inequality and logical_expr._chainedInequality.prev is not None:
+            raise TypeError(logical_expr._chainedInequality.error_message())
         #
         # Process relational expressions
         # (i.e. explicit '==', '<', and '<=')
         #
         if relational_expr:
-            if _expr_type is EXPR.EqualityExpression:
+            if _expr_type is logical_expr.EqualityExpression:
                 # Equality expression: only 2 arguments!
                 self._equality = True
 
@@ -516,7 +516,7 @@ class _GeneralConstraintData(_ConstraintData):
                     self._lower = self._upper = ZeroConstant
                     self._body = expr.arg(0) - expr.arg(1)
 
-            elif _expr_type is EXPR.InequalityExpression:
+            elif _expr_type is logical_expr.InequalityExpression:
                 if expr._strict:
                     raise ValueError(
                         "Constraint '%s' encountered a strict "
@@ -857,15 +857,15 @@ class Constraint(ActiveIndexedComponent):
             # non-None, but the expression will be a bool.  For
             # example, model.a < 1 > 0.
             #
-            if EXPR._using_chained_inequality and EXPR._chainedInequality.prev is not None:
+            if logical_expr._using_chained_inequality and logical_expr._chainedInequality.prev is not None:
 
                 buf = StringIO()
-                EXPR._chainedInequality.prev.pprint(buf)
+                logical_expr._chainedInequality.prev.pprint(buf)
                 #
                 # We are about to raise an exception, so it's OK to
                 # reset chainedInequality
                 #
-                EXPR._chainedInequality.prev = None
+                logical_expr._chainedInequality.prev = None
                 raise ValueError(
                     "Invalid chained (2-sided) inequality detected. "
                     "The expression is resolving to %s instead of a "

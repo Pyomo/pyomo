@@ -15,10 +15,10 @@ import sys
 
 from pyutilib.common import ApplicationError
 from pyutilib.misc import Bunch, Options
-from pyutilib.services import register_executable, registered_executable
 from pyutilib.services import TempfileManager
 import pyutilib.subprocess
 
+import pyomo.common
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -85,14 +85,14 @@ class GLPKSHELL_4_42(SystemCallSolver):
         return ResultsFormat.soln
 
     def _default_executable(self):
-        executable = registered_executable('glpsol')
-        if executable is None:
+        executable = pyomo.common.Executable('glpsol')
+        if not executable:
             msg = ("Could not locate the 'glpsol' executable, which is "
                    "required for solver '%s'")
             logger.warning(msg % self.name)
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     def _get_version(self):
         """
@@ -439,14 +439,14 @@ class GLPKSHELL_old(SystemCallSolver):
         return ResultsFormat.soln
 
     def _default_executable(self):
-        executable = registered_executable('glpsol')
-        if executable is None:
+        executable = pyomo.common.Executable('glpsol')
+        if not executable:
             msg = "Could not locate the 'glpsol' executable, which is " \
                   "required for solver '%s'"
             logger.warning(msg % self.name)
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     def _get_version(self):
         """
@@ -1009,6 +1009,3 @@ class MockGLPK(GLPKSHELL_old,MockMIP):
             return (args,pformat,None)
         else:
             return (args,ProblemFormat.cpxlp,None)
-
-
-register_executable( name='glpsol')
