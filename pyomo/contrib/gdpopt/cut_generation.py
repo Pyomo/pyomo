@@ -2,6 +2,7 @@
 from __future__ import division
 
 from math import copysign, fabs
+from pyomo.contrib.derivatives.differentiate import reverse_ad
 
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
@@ -64,10 +65,15 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
             # Cache jacobians
             jacobians = GDPopt.jacobians.get(constr, None)
             if jacobians is None:
-                constr_vars = list(identify_variables(constr.body))
-                jac_list = differentiate(constr.body, wrt_list=constr_vars)
-                jacobians = ComponentMap(zip(constr_vars, jac_list))
-                GDPopt.jacobians[constr] = jacobians
+                constr_vars = list(identify_variables(constr.body, include_fixed=False))
+                if len(constr_vars) >= 1000:
+                    jac_map = reverse_ad(constr.body)
+                    jacobians = ComponentMap((v, jac_map[v]) for v in constr_vars)
+                    GDPopt.jacobians[constr] = jacobians
+                else:
+                    jac_list = differentiate(constr.body, wrt_list=constr_vars)
+                    jacobians = ComponentMap(zip(constr_vars, jac_list))
+                    GDPopt.jacobians[constr] = jacobians
 
             # Create a block on which to put outer approximation cuts.
             oa_utils = parent_block.component('GDPopt_OA')
@@ -83,12 +89,24 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
             oa_cuts = oa_utils.GDPopt_OA_cuts
             slack_var = oa_utils.GDPopt_OA_slacks.add()
             rhs = value(constr.lower) if constr.has_lb() else value(constr.upper)
-            oa_cuts.add(
-                expr=copysign(1, sign_adjust * dual_value) * (
-                    value(constr.body) - rhs + sum(
-                        value(jacobians[var]) * (var - value(var))
-                        for var in jacobians)) - slack_var <= 0)
-            counter += 1
+            try:
+                new_oa_cut = (
+                    copysign(1, sign_adjust * dual_value) * (
+                        value(constr.body) - rhs + sum(
+                            value(jacobians[var]) * (var - value(var))
+                            for var in jacobians)) - slack_var <= 0)
+                if new_oa_cut.polynomial_degree() not in (1, 0):
+                    for var in jacobians:
+                        print(var.name, value(jacobians[var]))
+                oa_cuts.add(expr=new_oa_cut)
+                counter += 1
+            except ZeroDivisionError:
+                config.logger.warning(
+                    "Zero division occured attempting to generate OA cut for constraint %s.\n"
+                    "Skipping OA cut generation for this constraint."
+                    % (constr.name,)
+                )
+                # Simply continue on to the next constraint.
 
         config.logger.info('Added %s OA cuts' % counter)
 

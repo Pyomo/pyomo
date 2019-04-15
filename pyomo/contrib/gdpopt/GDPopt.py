@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """Main driver module for GDPopt solver.
 
+19.4.15 changes:
+- add support for linear subproblems
+- use automatic differentiation for large constraints
 19.3.25 changes:
 - add rudimentary time limit support
 - start keeping basic changelog
@@ -31,7 +34,7 @@ from pyomo.opt.base import SolverFactory
 from pyomo.opt.results import SolverResults
 from pyutilib.misc import Container
 
-__version__ = (19, 3, 25)  # Note: date-based version number
+__version__ = (19, 4, 15)  # Note: date-based version number
 
 
 @SolverFactory.register(

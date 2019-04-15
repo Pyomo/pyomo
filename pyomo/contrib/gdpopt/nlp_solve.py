@@ -9,7 +9,7 @@ from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
 from pyomo.core import Constraint, TransformationFactory, minimize, value, Objective
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.opt import SolverFactory
+from pyomo.opt import SolverFactory, SolverResults
 from pyomo.opt import TerminationCondition as tc
 
 
@@ -25,6 +25,48 @@ def solve_disjunctive_subproblem(mip_result, solve_data, config):
             return solve_local_subproblem(mip_result, solve_data, config)
         elif config.strategy == 'GLOA':
             return solve_global_subproblem(mip_result, solve_data, config)
+
+
+def solve_linear_subproblem(mip_model, solve_data, config):
+    GDPopt = mip_model.GDPopt_utils
+
+    initialize_subproblem(mip_model, solve_data)
+
+    # Callback immediately before solving NLP subproblem
+    config.call_before_subproblem_solve(mip_model, solve_data)
+
+    mip_solver = SolverFactory(config.mip_solver)
+    if not mip_solver.available():
+        raise RuntimeError("MIP solver %s is not available." % config.mip_solver)
+    with SuppressInfeasibleWarning():
+        results = mip_solver.solve(mip_model, **config.mip_solver_args)
+
+    subprob_result = SubproblemResult()
+    subprob_result.feasible = True
+    subprob_result.var_values = list(v.value for v in GDPopt.variable_list)
+    subprob_result.pyomo_results = results
+    subprob_result.dual_values = list(mip_model.dual.get(c, None) for c in GDPopt.constraint_list)
+
+    subprob_terminate_cond = results.solver.termination_condition
+    if subprob_terminate_cond is tc.optimal:
+        pass
+    elif subprob_terminate_cond is tc.infeasible:
+        config.logger.info('MIP subproblem was infeasible.')
+        subprob_result.feasible = False
+    else:
+        raise ValueError(
+            'GDPopt unable to handle MIP subproblem termination '
+            'condition of %s. Results: %s'
+            % (subprob_terminate_cond, results))
+
+    # Call the NLP post-solve callback
+    config.call_after_subproblem_solve(mip_model, solve_data)
+
+    # if feasible, call the NLP post-feasible callback
+    if subprob_result.feasible:
+        config.call_after_subproblem_feasible(mip_model, solve_data)
+
+    return subprob_result
 
 
 def solve_NLP(nlp_model, solve_data, config):
@@ -51,7 +93,15 @@ def solve_NLP(nlp_model, solve_data, config):
         raise RuntimeError("NLP solver %s is not available." %
                            config.nlp_solver)
     with SuppressInfeasibleWarning():
-        results = nlp_solver.solve(nlp_model, **config.nlp_solver_args)
+        try:
+            results = nlp_solver.solve(nlp_model, **config.nlp_solver_args)
+        except ValueError as err:
+            if 'Cannot load SolverResults object with bad status: error' in str(err):
+                results = SolverResults()
+                results.solver.termination_condition = tc.error
+                results.solver.message = str(err)
+            else:
+                raise
 
     nlp_result = SubproblemResult()
     nlp_result.feasible = True
@@ -84,6 +134,21 @@ def solve_NLP(nlp_model, solve_data, config):
         # Possible that IPOPT had a restoration failure
         config.logger.info(
             "NLP solver had an internal failure: %s" % results.solver.message)
+        nlp_result.feasible = False
+    elif (subprob_terminate_cond is tc.other and
+          "Too few degrees of freedom" in str(results.solver.message)):
+        # Possible IPOPT degrees of freedom error
+        config.logger.info(
+            "IPOPT has too few degrees of freedom: %s" %
+            results.solver.message)
+        nlp_result.feasible = False
+    elif subprob_terminate_cond is tc.other:
+        config.logger.info(
+            "NLP solver had a termination condition of 'other': %s" %
+            results.solver.message)
+        nlp_result.feasible = False
+    elif subprob_terminate_cond is tc.error:
+        config.logger.info("NLP solver had a termination condition of 'error': %s" % results.solver.message)
         nlp_result.feasible = False
     else:
         raise ValueError(
@@ -342,13 +407,18 @@ def solve_local_subproblem(mip_result, solve_data, config):
     if config.subproblem_presolve:
         preprocess_subproblem(subprob, config)
 
-    unfixed_discrete_vars = detect_unfixed_discrete_vars(subprob)
-    if config.force_subproblem_nlp and len(unfixed_discrete_vars) > 0:
-        raise RuntimeError("Unfixed discrete variables found on the NLP subproblem.")
-    elif len(unfixed_discrete_vars) == 0:
-        subprob_result = solve_NLP(subprob, solve_data, config)
+    if not any(constr.body.polynomial_degree() not in (1, 0)
+               for constr in subprob.component_data_objects(Constraint, active=True)):
+        subprob_result = solve_linear_subproblem(subprob, solve_data, config)
     else:
-        subprob_result = solve_MINLP(subprob, solve_data, config)
+        unfixed_discrete_vars = detect_unfixed_discrete_vars(subprob)
+        if config.force_subproblem_nlp and len(unfixed_discrete_vars) > 0:
+            raise RuntimeError("Unfixed discrete variables found on the NLP subproblem.")
+        elif len(unfixed_discrete_vars) == 0:
+            subprob_result = solve_NLP(subprob, solve_data, config)
+        else:
+            subprob_result = solve_MINLP(subprob, solve_data, config)
+
     if subprob_result.feasible:  # subproblem is feasible
         update_subproblem_progress_indicators(subprob, solve_data, config)
     return subprob_result
