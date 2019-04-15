@@ -9,14 +9,16 @@ import os
 
 from pyomo.core import value, Expression
 from pyomo.core.base.block import SubclassOf
-from pyomo.core.expr.current import identify_variables
-from pyomo.core.expr.expr_pyomo5 import (
+from pyomo.core.expr.numvalue import nonpyomo_leaf_types
+from pyomo.core.expr.numeric_expr import (
     AbsExpression, LinearExpression, NegationExpression, NPV_AbsExpression,
     NPV_ExternalFunctionExpression, NPV_NegationExpression, NPV_PowExpression,
     NPV_ProductExpression, NPV_ReciprocalExpression, NPV_SumExpression,
     NPV_UnaryFunctionExpression, PowExpression, ProductExpression,
-    ReciprocalExpression, StreamBasedExpressionVisitor, SumExpression,
-    UnaryFunctionExpression, nonpyomo_leaf_types
+    ReciprocalExpression, SumExpression, UnaryFunctionExpression,
+)
+from pyomo.core.expr.visitor import (
+    StreamBasedExpressionVisitor, identify_variables,
 )
 from pyomo.core.kernel.component_map import ComponentMap
 

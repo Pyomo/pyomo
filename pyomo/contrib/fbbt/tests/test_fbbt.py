@@ -1,7 +1,7 @@
 import pyutilib.th as unittest
 import pyomo.environ as pe
 from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr
-from pyomo.core.expr.expr_pyomo5 import ProductExpression, UnaryFunctionExpression
+from pyomo.core.expr.numeric_expr import ProductExpression, UnaryFunctionExpression
 import math
 import logging
 import io

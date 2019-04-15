@@ -9,7 +9,7 @@ from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc
 from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,
                         minimize, value, TransformationFactory)
 from pyomo.core.base.symbolic import differentiate
-from pyomo.core.expr.expr_pyomo5 import identify_variables
+from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct
