@@ -1,4 +1,8 @@
 import math
+import warnings
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def add(xl, xu, yl, yu):
@@ -34,7 +38,11 @@ def power(xl, xu, yl, yu):
         elif yu <= 0:
             lb = xu ** yl
             ub = xl ** yu
+        else:
+            raise RuntimeError('This was unexpected.')
     elif xl == 0:
+        # this section is only needed so we do not encounter math domain errors;
+        # The logic is essentially the same as above (xl > 0)
         if xu == 0 and yl < 0:
             _lba = math.inf
         else:
@@ -55,6 +63,7 @@ def power(xl, xu, yl, yu):
             _ubb = xu ** yu
         ub = max(_uba, _ubb)
     elif yl == yu and yl == round(yl):
+        # the exponent is an integer, so x can be negative
         y = yl
         if xu <= 0:
             if y < 0:
@@ -93,10 +102,45 @@ def power(xl, xu, yl, yu):
                     lb = xl ** y
                     ub = xu ** y
     else:
-        lb = -math.inf
-        ub = math.inf
+        # the exponent is allowed to be fractional, so x must be positive
+        msg = 'encountered an exponent where the base is allowed to be negative '
+        msg += 'and the exponent is either allowed to be fractional or is not fixed. '
+        msg += 'Changing the lower bound of the base to be 0.'
+        warnings.warn(msg)
+        logger.warning(msg)
+        xl = 0
+        lb, ub = power(xl, xu, yl, yu)
 
     return lb, ub
+
+
+def _inverse_power1(zl, zu, yl, yu):
+    """
+    z = x**y => compute bounds on x
+    x = exp(ln(z) / y)
+    """
+    xl, xu = log(zl, zu)
+    xl, xu = div(xl, xu, yl, yu)
+    xl, xu = exp(xl, xu)
+
+    # if y is an integer, then x can be negative
+    if yl == yu and yl == round(yl):
+        _xl, _xu = sub(0, 0, xl, xu)
+        xl = min(xl, _xl)
+        xu = max(xu, _xu)
+
+    return xl, xu
+
+
+def _inverse_power2(zl, zu, xl, xu):
+    """
+    z = x**y => compute bounds on y
+    y = ln(z) / ln(x)
+    """
+    lba, uba = log(zl, zu)
+    lbb, ubb = log(xl, xu)
+    yl, yu = div(lba, uba, lbb, ubb)
+    return yl, yu
 
 
 def exp(xl, xu):

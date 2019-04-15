@@ -393,15 +393,8 @@ def _prop_bnds_root_to_leaf_PowExpression(node, bnds_dict):
     lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
-    _lb1a, _ub1a = interval.log(lb0, ub0)
-    _lb1a, _ub1a = interval.div(_lb1a, _ub1a, lb2, ub2)
-    _lb1a, _ub1a = interval.exp(_lb1a, _ub1a)
-    _lb1b, _ub1b = interval.sub(0, 0, _lb1a, _ub1a)
-    _lb1 = min(_lb1a, _lb1b)
-    _ub1 = max(_ub1a, _ub1b)
-    _lb2a, _ub2a = interval.log(lb0, ub0)
-    _lb2b, _ub2b = interval.log(lb1, ub1)
-    _lb2, _ub2 = interval.div(_lb2a, _ub2a, _lb2b, _ub2b)
+    _lb1, _ub1 = interval._inverse_power1(lb0, ub0, lb2, ub2)
+    _lb2, _ub2 = interval._inverse_power2(lb0, ub0, lb1, ub1)
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
