@@ -62,7 +62,8 @@ def _validate_file_name(cplex, filename, description):
                 "CPLEX or remove the space from the %s path."
                 % (description, filename, description))
     return filename
-_validate_file_name.allowed_characters = r"a-zA-Z0-9 :\.\-_\%s" % (os.path.sep,)
+_validate_file_name.allowed_characters = r"a-zA-Z0-9 ~:\.\-_\%s" % (
+    os.path.sep,)
 _validate_file_name.illegal_characters = re.compile(
     '[^%s]' % (_validate_file_name.allowed_characters,))
 

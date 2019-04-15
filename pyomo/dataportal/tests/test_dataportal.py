@@ -631,6 +631,8 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
         data.store(data=model.A, **self.create_write_options('set1'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
         else:
             self.assertFileEqualsBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
 
@@ -642,6 +644,8 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
         data.store(data="A", model=model, **self.create_write_options('set1'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
         else:
             self.assertFileEqualsBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
 
@@ -666,6 +670,8 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
         data.store(data=model.p, **self.create_write_options('param1'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'param1'+self.suffix, currdir+'param1.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'param1'+self.suffix, currdir+'param1.baseline'+self.suffix)
         else:
             self.assertFileEqualsBaseline(currdir+'param1'+self.suffix, currdir+'param1.baseline'+self.suffix)
 
@@ -678,6 +684,8 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
         data.store(data=model.p, **self.create_write_options('param2'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'param2'+self.suffix, currdir+'param2.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'param2'+self.suffix, currdir+'param2.baseline'+self.suffix)
         else:
             self.assertFileEqualsBaseline(currdir+'param2'+self.suffix, currdir+'param2.baseline'+self.suffix)
 
@@ -691,6 +699,8 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
         data.store(data=(model.p,model.q), **self.create_write_options('param3'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'param3'+self.suffix, currdir+'param3.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'param3'+self.suffix, currdir+'param3.baseline'+self.suffix)
         else:
             self.assertFileEqualsBaseline(currdir+'param3'+self.suffix, currdir+'param3.baseline'+self.suffix)
 
@@ -704,6 +714,8 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
         data.store(data=(model.p,model.q), columns=('a','b','c','d'), **self.create_write_options('param4'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'param4'+self.suffix, currdir+'param4.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'param4'+self.suffix, currdir+'param4.baseline'+self.suffix)
         else:
             self.assertFileEqualsBaseline(currdir+'param4'+self.suffix, currdir+'param4.baseline'+self.suffix)
 
@@ -912,7 +924,12 @@ class TestTextPortal(unittest.TestCase):
         model.A = Set(initialize=set([1,3,5]))
         data = DataPortal()
         data.store(set=model.A, **self.create_write_options('set1'))
-        self.assertFileEqualsBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
+        if self.suffix == '.json':
+            self.assertMatchesJsonBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
+        else:
+            self.assertFileEqualsBaseline(currdir+'set1'+self.suffix, currdir+'set1.baseline'+self.suffix)
 
     def test_store_set2(self):
         # Write 2-D set
@@ -937,6 +954,8 @@ class TestTextPortal(unittest.TestCase):
         data.store(param=model.p, **self.create_write_options('param1'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'param1'+self.suffix, currdir+'param1.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'param1'+self.suffix, currdir+'param1.baseline'+self.suffix)
         else:
             self.assertFileEqualsBaseline(currdir+'param1'+self.suffix, currdir+'param1.baseline'+self.suffix)
 
@@ -950,6 +969,8 @@ class TestTextPortal(unittest.TestCase):
         data.store(param=model.p, **self.create_write_options('param2'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'param2'+self.suffix, currdir+'param2.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'param2'+self.suffix, currdir+'param2.baseline'+self.suffix)
         else:
             self.assertFileEqualsBaseline(currdir+'param2'+self.suffix, currdir+'param2.baseline'+self.suffix)
 
@@ -964,6 +985,8 @@ class TestTextPortal(unittest.TestCase):
         data.store(param=(model.p,model.q), **self.create_write_options('param3'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'param3'+self.suffix, currdir+'param3.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'param3'+self.suffix, currdir+'param3.baseline'+self.suffix)
         else:
             self.assertFileEqualsBaseline(currdir+'param3'+self.suffix, currdir+'param3.baseline'+self.suffix)
 
@@ -978,6 +1001,8 @@ class TestTextPortal(unittest.TestCase):
         data.store(param=(model.p,model.q), columns=('a','b','c','d'), **self.create_write_options('param4'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'param4'+self.suffix, currdir+'param4.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'param4'+self.suffix, currdir+'param4.baseline'+self.suffix)
         else:
             self.assertFileEqualsBaseline(currdir+'param4'+self.suffix, currdir+'param4.baseline'+self.suffix)
 
