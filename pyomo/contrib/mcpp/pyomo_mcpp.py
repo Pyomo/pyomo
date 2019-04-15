@@ -7,6 +7,7 @@ import ctypes
 import logging
 import os
 
+from pyomo.core.base.expression import _ExpressionData
 from pyomo.core import value, Expression
 from pyomo.core.base.block import SubclassOf
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types
@@ -210,7 +211,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             ans = self.mcpp.new_createConstant(node)
         elif not node.is_expression_type():
             ans = self.register_num(node)
-        elif type(node) in SubclassOf(Expression):
+        elif type(node) in SubclassOf(Expression) or isinstance(node, _ExpressionData):
             ans = data[0]
         else:
             raise RuntimeError("Unhandled expression type: %s" % (type(node)))
