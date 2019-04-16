@@ -402,14 +402,20 @@ class TestFileUtils(unittest.TestCase):
         self.assertEqual( "%s" % Executable(f_in_tmp), "" )
         self.assertIsNone( Executable(f_in_tmp).executable )
 
-        # While the local CONFIG is set up with Pyomo, it will not be
-        # reflected in the Executable pathlist, as that was set up when
-        # Pyomo was first imported
+        # If we override the pathlist, then we will not find the CONFIGDIR
+        Executable.pathlist = []
         self.assertFalse( Executable(f_in_cfg).available() )
         Executable.pathlist.append(config_bindir)
         # and adding it won't change things (status is cached)
         self.assertFalse( Executable(f_in_cfg).available() )
         # until we tell the manager to rehash the executables
+        Executable.rehash()
+        self.assertTrue( Executable(f_in_cfg).available() )
+        self.assertEqual( Executable(f_in_cfg).path(),
+                          os.path.join(config_bindir, f_in_cfg) )
+        # Note that if we clear the pathlist, then the current value of
+        # CONFIGDIR will be honored
+        Executable.pathlist = None
         Executable.rehash()
         self.assertTrue( Executable(f_in_cfg).available() )
         self.assertEqual( Executable(f_in_cfg).path(),

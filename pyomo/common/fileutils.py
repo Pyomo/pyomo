@@ -582,15 +582,15 @@ class PathManager(object):
 
     """
     def __init__(self, finder, dataClass):
-        self._exec = {}
+        self._pathTo = {}
         self._find = finder
         self._dataClass = dataClass
-        self.pathlist = [ os.path.join(config.PYOMO_CONFIG_DIR, 'bin') ]
+        self.pathlist = None
 
-    def __call__(self, executable):
-        if executable not in self._exec:
-            self._exec[executable] = self._dataClass(self, executable)
-        return self._exec[executable]
+    def __call__(self, path):
+        if path not in self._pathTo:
+            self._pathTo[path] = self._dataClass(self, path)
+        return self._pathTo[path]
 
     def rehash(self):
         """Requery the location of all registered executables
@@ -600,8 +600,8 @@ class PathManager(object):
         through the PATH.
 
         """
-        for _exe in six.itervalues(self._exec):
-            _exe.rehash()
+        for _path in six.itervalues(self._pathTo):
+            _path.rehash()
 
 #
 # Define singleton objects for Pyomo / Users to interact with
