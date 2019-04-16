@@ -7,6 +7,7 @@ import ctypes
 import logging
 import os
 
+from pyomo.common.fileutils import Library
 from pyomo.core import value, Expression
 from pyomo.core.base.block import SubclassOf
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types
@@ -29,7 +30,7 @@ path = os.path.dirname(__file__)
 
 def mcpp_available():
     """True if the MC++ shared object file exists. False otherwise."""
-    return os.path.isfile(path + '/mcppInterface.so')
+    return Library('mcppInterface').path() is not None
 
 
 NPV_expressions = {
@@ -304,7 +305,7 @@ class McCormick(object):
                                                                     """
 
     def __init__(self, expression, improved_var_bounds=ComponentMap()):
-        self.mcpp_lib = ctypes.CDLL(path + '/mcppInterface.so')
+        self.mcpp_lib = ctypes.CDLL(Library('mcppInterface').path())
         self.oExpr = expression
         self.visitor = MCPP_visitor(self.mcpp_lib, expression, improved_var_bounds)
         self.mcppExpression = self.visitor.walk_expression(expression)
