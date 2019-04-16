@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.download import DownloadFactory
+from pyomo.common.extensions import ExtensionBuilderFactory
 from .getMCPP import get_mcpp
 from .setup import build_mcpp
 
