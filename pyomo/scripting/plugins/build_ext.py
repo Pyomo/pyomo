@@ -8,6 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+from six import iteritems
+
 from pyomo.common.extensions import ExtensionBuilderFactory
 from pyomo.scripting.pyomo_parser import add_subparser
 
@@ -16,9 +19,21 @@ class ExtensionBuilder(object):
         return parser
 
     def call(self, args, unparsed):
+        logger = logging.getLogger('pyomo.common')
+        logger.setLevel(logging.INFO)
+        results = {}
         for target in ExtensionBuilderFactory:
-            ExtensionBuilderFactory(target)
-
+            try:
+                ExtensionBuilderFactory(target)
+                results[target] = ' OK '
+            except SystemExit:
+                results[target] = 'FAIL'
+            except:
+                results[target] = 'FAIL'
+        logger.info("Finished building Pyomo extensions.")
+        logger.info(
+            "The following extensions were built:\n    " +
+            "\n    ".join(["[%s]  %s" % (v,k) for k,v in iteritems(results)]))
 
 #
 # Add a subparser for the download-extensions command
