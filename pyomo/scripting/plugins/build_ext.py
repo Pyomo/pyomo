@@ -12,9 +12,6 @@ from pyomo.common.extensions import ExtensionBuilderFactory
 from pyomo.scripting.pyomo_parser import add_subparser
 
 class ExtensionBuilder(object):
-    def __init__(self):
-        self.downloader = FileDownloader()
-
     def create_parser(self, parser):
         return parser
 
