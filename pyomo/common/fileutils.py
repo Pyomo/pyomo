@@ -394,7 +394,7 @@ class _PathData(object):
         self.rehash()
         if not self._status:
             logging.getLogger('pyomo.common').warning(
-                "explicitly setting the path for '%s' to a "
+                "explicitly setting the path for '%s' to an "
                 "invalid object or nonexistent location ('%s')"
                 % (self._registered_name, value))
 

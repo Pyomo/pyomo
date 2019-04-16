@@ -25,7 +25,7 @@ import pyomo.common.config as config
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.fileutils import (
     this_file, this_file_dir, find_file, find_library, find_executable, 
-    ExecutableManager, _system, _path, _exeExt, _libExt,
+    PathManager, _system, _path, _exeExt, _libExt, _ExecutableData,
 )
 
 _this_file = this_file()
@@ -361,8 +361,8 @@ class TestFileUtils(unittest.TestCase):
         )
 
 
-    def test_ExecutableManager(self):
-        Executable = ExecutableManager()
+    def test_PathManager(self):
+        Executable = PathManager(find_executable, _ExecutableData)
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
 
         config.PYOMO_CONFIG_DIR = self.tmpdir
@@ -423,8 +423,8 @@ class TestFileUtils(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.common', logging.WARNING):
             Executable(f_in_path2).executable = f_loc
             self.assertIn(
-                "explicitly setting the path for executable '%s' to a "
-                "non-executable file or nonexistent location ('%s')"
+                "explicitly setting the path for '%s' to an "
+                "invalid object or nonexistent location ('%s')"
                 % (f_in_path2, f_loc), output.getvalue())
         self.assertFalse( Executable(f_in_path2).available() )
         self._make_exec(os.path.join(pathdir,f_in_path2))
