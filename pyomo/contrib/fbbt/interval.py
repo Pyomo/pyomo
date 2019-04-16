@@ -101,11 +101,14 @@ def power(xl, xu, yl, yu):
                 else:
                     lb = xl ** y
                     ub = xu ** y
-    else:
+    elif yl == yu:
         # the exponent is allowed to be fractional, so x must be positive
+        xl = 0
+        lb, ub = power(xl, xu, yl, yu)
+    else:
         msg = 'encountered an exponent where the base is allowed to be negative '
-        msg += 'and the exponent is either allowed to be fractional or is not fixed. '
-        msg += 'Changing the lower bound of the base to be 0.'
+        msg += 'and the exponent is allowed to be fractional and is not fixed. '
+        msg += 'Assuming the lower bound of the base to be 0.'
         warnings.warn(msg)
         logger.warning(msg)
         xl = 0
