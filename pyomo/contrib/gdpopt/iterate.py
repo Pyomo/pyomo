@@ -94,7 +94,7 @@ def algorithm_should_terminate(solve_data, config):
     if (timeit.default_timer() - solve_data.start_time) >= config.reslim:
         config.logger.info(
             "GDPopt unable to converge bounds before time limit of %s seconds."
-            % (config.reslim,)
+            % (config.timelimit,)
         )
         solve_data.results.solver.termination_condition = tc.maxTimeLimit
         return True
