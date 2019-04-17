@@ -9,6 +9,6 @@
 #  ___________________________________________________________________________
 
 from setuptools import setup
-from . import build
+from pyomo.contrib.mcpp import build
 
 setup(**build._generate_configuration())
