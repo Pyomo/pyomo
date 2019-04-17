@@ -49,9 +49,6 @@ if not qt_available:
     _log.error("Qt is not available. Cannot create UI classes.")
     raise ImportError("Could not import PyQt4 or PyQt5")
 
-def get_environ_file():
-    return os.join(os.path.dirname(__file__), "pyomo_viewer_envorion.ipy")
-
 def get_mainwindow(model=None, show=True):
     """
     Create a UI MainWindow.
@@ -118,7 +115,7 @@ class UISetup(QtCore.QObject):
     def model(self, value):
         self._model = value
         self.emit_update()
-        
+
 
 class MainWindow(_MainWindow, _MainWindowUI):
     def __init__(self, *args, **kwargs):
