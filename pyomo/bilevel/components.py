@@ -13,10 +13,14 @@ __all__ = ['SubModel']
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import Component
 from pyomo.core.base.block import SimpleBlock
+from pyomo.common.deprecation import deprecated
 
 # TODO: Do we need to have SimpleSubModel and IndexedSubModel classes?
 
 
+@deprecated("Use of the pyomo.bilevel package is deprecated. Development of bilevel \
+optimization capabilities has been shifted to the Pyomo Adversarial Optimization (PAO) library. \
+Please contact William Hart for further details (wehart@sandia.gov).")
 @ModelComponentFactory.register("A submodel in a bilevel program")
 class SubModel(SimpleBlock):
 
