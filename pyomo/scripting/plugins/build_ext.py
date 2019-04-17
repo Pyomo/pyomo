@@ -22,18 +22,22 @@ class ExtensionBuilder(object):
         logger = logging.getLogger('pyomo.common')
         logger.setLevel(logging.INFO)
         results = {}
+        returncode = 0
         for target in ExtensionBuilderFactory:
             try:
                 ExtensionBuilderFactory(target)
                 results[target] = ' OK '
             except SystemExit:
                 results[target] = 'FAIL'
+                returncode = 1
             except:
                 results[target] = 'FAIL'
+                returncode = 1
         logger.info("Finished building Pyomo extensions.")
         logger.info(
             "The following extensions were built:\n    " +
             "\n    ".join(["[%s]  %s" % (v,k) for k,v in iteritems(results)]))
+        return returncode
 
 #
 # Add a subparser for the download-extensions command
