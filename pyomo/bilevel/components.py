@@ -21,9 +21,11 @@ from pyomo.common.deprecation import deprecated
 @ModelComponentFactory.register("A submodel in a bilevel program")
 class SubModel(SimpleBlock):
 
-    @deprecated("Use of the pyomo.bilevel package is deprecated. Development of bilevel \
-optimization capabilities has been shifted to the Pyomo Adversarial Optimization (PAO) library. \
-Please contact William Hart for further details (wehart@sandia.gov).")
+    @deprecated("Use of the pyomo.bilevel package is deprecated. There are known bugs "
+                "with this code, and we do not recommend the use of this code. "
+                "Development of bilevel optimization capabilities has been shifted to "
+                "the Pyomo Adversarial Optimization (PAO) library. Please contact "
+                "William Hart for further details (wehart@sandia.gov).")
     def __init__(self, *args, **kwargs):
         """Constructor"""
         #
