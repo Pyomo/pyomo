@@ -9,7 +9,7 @@ def deprecation_warning(msg, logger='pyomo.core'):
     """Standardized formatter for deprecation warnings
 
     This is a standardized routine for formatting deprecation warnings
-    so that things look consistent ant "nice".
+    so that things look consistent and "nice".
 
     Args:
         msg (str): the deprecation message to format
