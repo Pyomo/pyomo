@@ -62,23 +62,18 @@ class IIdentityExpression(NumericValue):
         """
         return value(self._expr, exception=exception)
 
-    def is_constant(self):
-        """A boolean indicating whether this expression is constant."""
-        return is_constant(self._expr)
-
-    def is_variable_type(self):
-        """A boolean indicating whether this expression is a
-        variable object."""
-        return is_variable_type(self._expr)
-
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
         return is_fixed(self._expr)
 
-    def is_potentially_variable(self):
-        """A boolean indicating whether this expression can
-        reference variables."""
-        return is_potentially_variable(self._expr)
+    def is_parameter_type(self):
+        """A boolean indicating whether this expression is a parameter object."""
+        return False
+
+    def is_variable_type(self):
+        """A boolean indicating whether this expression is a
+        variable object."""
+        return False
 
     def is_named_expression_type(self):
         """A boolean indicating whether this in a named expression."""
@@ -136,9 +131,6 @@ class IIdentityExpression(NumericValue):
     def _precedence(self):
         return 0
 
-    def clone(self):
-        raise NotImplementedError     #pragma:nocover
-
     def _apply_operation(self, result):
         return result[0]
 
@@ -154,6 +146,15 @@ class IIdentityExpression(NumericValue):
         node, which is used in tree visitor scripts.
         """
         return self.__class__(expr=values[0])
+
+    def is_constant(self):
+        raise NotImplementedError     #pragma:nocover
+
+    def is_potentially_variable(self):
+        raise NotImplementedError     #pragma:nocover
+
+    def clone(self):
+        raise NotImplementedError     #pragma:nocover
 
 class noclone(IIdentityExpression):
     """
@@ -189,8 +190,18 @@ class noclone(IIdentityExpression):
         return "{%s}" % EXPR.expression_to_string(self)
 
     #
-    # Ducktyping ExpressionBase functionality
+    # Override some of the NumericValue methods implemented
+    # by the base class
     #
+
+    def is_constant(self):
+        """A boolean indicating whether this expression is constant."""
+        return is_constant(self._expr)
+
+    def is_potentially_variable(self):
+        """A boolean indicating whether this expression can
+        reference variables."""
+        return is_potentially_variable(self._expr)
 
     def clone(self):
         """Return a clone of this expression (no-op)."""
@@ -220,22 +231,10 @@ class IExpression(ICategorizedObject, IIdentityExpression):
         """A boolean indicating whether this expression is constant."""
         return False
 
-    def is_parameter_type(self):
-        """A boolean indicating whether this expression is a parameter object."""
-        return False
-
-    def is_variable_type(self):
-        """A boolean indicating whether this expression is a variable object."""
-        return False
-
     def is_potentially_variable(self):
         """A boolean indicating whether this expression can
         reference variables."""
         return True
-
-    #
-    # Ducktyping ExpressionBase functionality
-    #
 
     def clone(self):
         """Return a clone of this expression (no-op)."""
