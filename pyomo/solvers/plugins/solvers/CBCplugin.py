@@ -189,7 +189,7 @@ class CBCSHELL(SystemCallSolver):
         return ResultsFormat.soln
 
     def warm_start_capable(self):
-        if self._problem_format == ProblemFormat.lp \
+        if self._problem_format == ProblemFormat.cpxlp \
                 and _cbc_version >= (2,8,0,0):
             return True
         else:
