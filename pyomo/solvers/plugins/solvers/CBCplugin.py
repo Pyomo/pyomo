@@ -16,6 +16,7 @@ import time
 import logging
 
 from six import iteritems
+from six import string_types
 
 import pyomo.common
 import pyutilib.misc
@@ -29,12 +30,6 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.solvers.mockmip import MockMIP
-
-# define basestring in python3
-try:
-    unicode
-except:
-    basestring = unicode = str
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -249,11 +244,11 @@ class CBCSHELL(SystemCallSolver):
         # create the temporary file - assuming that the user has already, via some external
         # mechanism, invoked warm_start() with a instance to create the warm start file.
         if self._warm_start_solve and \
-                isinstance(args[0], basestring):
+                isinstance(args[0], string_types):
             # we assume the user knows what they are doing...
             pass
         elif self._warm_start_solve and \
-                (not isinstance(args[0], basestring)):
+                (not isinstance(args[0], string_types)):
             # assign the name of the warm start file *before* calling the base class
             # presolve - the base class method ends up creating the command line,
             # and the warm start file-name is (obviously) needed there.
@@ -269,7 +264,7 @@ class CBCSHELL(SystemCallSolver):
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
 
-        if (len(args) > 0) and (not isinstance(args[0], basestring)):
+        if (len(args) > 0) and (not isinstance(args[0], string_types)):
 
             if len(args) != 1:
                 raise ValueError(
