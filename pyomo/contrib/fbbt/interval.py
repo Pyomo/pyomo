@@ -117,7 +117,7 @@ def power(xl, xu, yl, yu):
     return lb, ub
 
 
-def _inverse_power1(zl, zu, yl, yu):
+def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu):
     """
     z = x**y => compute bounds on x
     x = exp(ln(z) / y)
@@ -128,9 +128,69 @@ def _inverse_power1(zl, zu, yl, yu):
 
     # if y is an integer, then x can be negative
     if yl == yu and yl == round(yl):
-        _xl, _xu = sub(0, 0, xl, xu)
-        xl = min(xl, _xl)
-        xu = max(xu, _xu)
+        y = yl
+        if y == 0:
+            xl = -math.inf
+            xu = math.inf
+        elif y % 2 == 0:
+            if zu < 0:
+                raise ValueError('Infeasible. Anything to the power of {0} must be positive.'.format(y))
+            if y > 0:
+                if zu == 0:
+                    _xl = 0
+                    _xu = 0
+                elif zl <= 0:
+                    _xl = -xu
+                    _xu = xu
+                else:
+                    if orig_xl <= -xl:
+                        _xl = -xu
+                    else:
+                        _xl = xl
+                    if orig_xu < xl:
+                        _xu = -xl
+                    else:
+                        _xu = xu
+                xl = _xl
+                xu = _xu
+            else:
+                if zu == 0:
+                    raise ValueError('Infeasible.')
+                elif zl <= 0:
+                    _xl = -math.inf
+                    _xu = math.inf
+                else:
+                    if orig_xl <= -xl:
+                        _xl = -xu
+                    else:
+                        _xl = xl
+                    if orig_xu < xl:
+                        _xu = -xl
+                    else:
+                        _xu = xu
+                xl = _xl
+                xu = _xu
+        elif y % 2 == 1:
+            if y > 0:
+                xl = abs(zl)**(1/y)
+                xl = math.copysign(xl, zl)
+                xu = abs(zu)**(1/y)
+                xu = math.copysign(xu, zu)
+            else:
+                if zl >= 0:
+                    pass
+                elif zu <= 0:
+                    if zu == 0:
+                        xl = -math.inf
+                    else:
+                        xl = -abs(zu)**(1/y)
+                    if zl == 0:
+                        xu = -math.inf
+                    else:
+                        xu = -abs(zl)**(1/y)
+                else:
+                    xl = -math.inf
+                    xu = math.inf
 
     return xl, xu
 
