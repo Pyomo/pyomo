@@ -30,6 +30,12 @@ from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.solvers.mockmip import MockMIP
 
+# define basestring in python3
+try:
+    unicode
+except:
+    basestring = unicode = str
+
 logger = logging.getLogger('pyomo.solvers')
 
 def _version_to_string(version):
