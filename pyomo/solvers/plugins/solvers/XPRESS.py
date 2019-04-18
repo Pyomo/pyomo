@@ -105,13 +105,13 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         return False
 
     def _default_executable(self):
-        executable = pyomo.common.registered_executable("optimizer")
-        if executable is None:
+        executable = pyomo.common.Executable("optimizer")
+        if not executable:
             logger.warning("Could not locate the 'optimizer' executable, "
                            "which is required for solver %s" % self.name)
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     # TODO: If anyone can get their hands on a working 'optimizer' executable
     #       we could add a custom version method
@@ -431,7 +431,4 @@ class MockXPRESS(XPRESS_shell,MockMIP):
 
     def _execute_command(self,cmd):
         return MockMIP._execute_command(self,cmd)
-
-
-pyomo.common.register_executable(name="optimizer")
 

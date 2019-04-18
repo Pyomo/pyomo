@@ -1,9 +1,13 @@
-import pyutilib.th as unittest
 from os.path import abspath, dirname, join, normpath
-from pyomo.contrib.satsolver.satsolver import satisfiable, _z3_available
-from pyomo.environ import ConcreteModel, Var, Constraint, Objective, sin, cos, tan, asin, acos, atan, sqrt,log, minimize
-from pyomo.core.kernel.set_types import *
+
+import pyutilib.th as unittest
 from pyutilib.misc import import_file
+
+from pyomo.contrib.satsolver.satsolver import satisfiable, _z3_available
+from pyomo.core.kernel.set_types import PositiveIntegers, NonNegativeReals, Binary
+from pyomo.environ import (
+    ConcreteModel, Var, Constraint, Objective, sin, cos, tan, asin, acos, atan, sqrt, log,
+    minimize)
 from pyomo.gdp import Disjunct, Disjunction
 
 currdir = dirname(abspath(__file__))
@@ -76,11 +80,13 @@ class SatSolverTests(unittest.TestCase):
         m.c7 = Constraint(expr=0 <= sqrt(m.d))
         m.o = Objective(expr=m.x)
         self.assertTrue(satisfiable(m) is not False)
+
     def test_unhandled_expressions(self):
         m = ConcreteModel()
         m.x = Var()
-        m.c1 = Constraint(expr= 0 <= log(m.x))
+        m.c1 = Constraint(expr=0 <= log(m.x))
         self.assertTrue(satisfiable(m))
+
     def test_abs_expressions(self):
         m = ConcreteModel()
         m.x = Var()
@@ -184,23 +190,21 @@ class SatSolverTests(unittest.TestCase):
 
     def test_integer_domains(self):
         m = ConcreteModel()
-        m.x1 = Var(domain = PositiveIntegers)
-        m.c1 = Constraint(expr = m.x1 == 0.5)
+        m.x1 = Var(domain=PositiveIntegers)
+        m.c1 = Constraint(expr=m.x1 == 0.5)
         self.assertFalse(satisfiable(m))
-
 
     def test_real_domains(self):
         m = ConcreteModel()
-        m.x1 = Var(domain = NonNegativeReals)
-        m.c1 = Constraint(expr = m.x1 == -1.3)
+        m.x1 = Var(domain=NonNegativeReals)
+        m.c1 = Constraint(expr=m.x1 == -1.3)
         self.assertFalse(satisfiable(m))
 
     def test_binary_domains(self):
         m = ConcreteModel()
-        m.x1 = Var(domain = Binary)
-        m.c1 = Constraint(expr = m.x1 == 2)
+        m.x1 = Var(domain=Binary)
+        m.c1 = Constraint(expr=m.x1 == 2)
         self.assertFalse(satisfiable(m))
-
 
     def test_8PP(self):
         exfile = import_file(

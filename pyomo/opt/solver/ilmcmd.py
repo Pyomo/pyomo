@@ -35,17 +35,19 @@ class ILMLicensedSystemCallSolver(SystemCallSolver):
             return True
         if not pyomo.opt.solver.shellcmd.SystemCallSolver.available(self, exception_flag):
             return False
-        executable = pyomo.common.registered_executable("ilmlist")
-        if not executable is None:
+        executable = pyomo.common.Executable("ilmlist")
+        if executable:
             try:
+                cmd = [executable.path()]
                 if sys.platform[0:3] == "win":
-                    # on windows, the ilm license manager by default pauses after displaying
-                    # the token status, so that the window doesn't disappear and the user
-                    # can actually read it. however, if we don't suppress this behavior,
-                    # this command will stall until the user hits Ctrl-C.
-                    [rc,log] = pyutilib.subprocess.run(executable.get_path()+" -batch")
-                else:
-                    [rc,log] = pyutilib.subprocess.run(executable.get_path())
+                    # on windows, the ilm license manager by default
+                    # pauses after displaying the token status, so that
+                    # the window doesn't disappear and the user can
+                    # actually read it. however, if we don't suppress
+                    # this behavior, this command will stall until the
+                    # user hits Ctrl-C.
+                    cmd.append("-batch")
+                [rc,log] = pyutilib.subprocess.run(cmd)
             except pyutilib.common.WindowsError:
                 msg = sys.exc_info()[1]
                 raise pyutilib.common.ApplicationError("Could not execute the command: ilmtest\n\tError message: "+msg)
@@ -63,5 +65,3 @@ class ILMLicensedSystemCallSolver(SystemCallSolver):
                 elif len(tokens) == 6 and tokens[1] == 'server' and tokens[5] == 'DOWN.':
                     return False
         return True
-
-pyomo.common.register_executable(name="ilmlist")

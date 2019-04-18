@@ -170,14 +170,23 @@ class ComponentDataItem(object):
     def calculate(self):
         """Calculate items, applies to expressions and constraints"""
         if isinstance(self.data, _ExpressionData):
-            self._cache_value = value(self.data)
+            try:
+                self._cache_value = value(self.data, exception=False)
+            except ZeroDivisionError:
+                self._cache_value = "Divide_by_0"
         if isinstance(self.data, _ConstraintData) and self.data.active:
             try:
                 self._cache_value = value(self.data.body, exception=False)
+            except ZeroDivisionError:
+                self._cache_value = "Divide_by_0"
+            try:
                 self._cache_lb = value(self.data.lower, exception=False)
+            except ZeroDivisionError:
+                self._cache_lb = "Divide_by_0"
+            try:
                 self._cache_ub = value(self.data.upper, exception=False)
-            except:
-                pass
+            except ZeroDivisionError:
+                self._cache_ub = "Divide_by_0"
 
     def get(self, a):
         """Get an attribute"""
