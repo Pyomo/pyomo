@@ -4,7 +4,7 @@
 # WORKSPACE: path to the base WORKSPACE.  This script assumes that there
 #     are 3 available subdirectories: pyomo (the pyomo source checkout,
 #     pyutilib (the pyutilib source checkout) and pyomo-model-libraries
-#     (the checkout of the additional model lobraries repo).  It will
+#     (the checkout of the additional model libraries repo).  It will
 #     create two additional directories within WORKSPACE: python (a
 #     virtualenv) and config (the local Pyomo configuration/cache
 #     directory)
