@@ -2,17 +2,23 @@
 # Important environment variables:
 #
 # WORKSPACE: path to the base WORKSPACE.  This script assumes that there
-#     are 3 available subdirectories: pyomo (the pyomo source checkout",
+#     are 3 available subdirectories: pyomo (the pyomo source checkout,
 #     pyutilib (the pyutilib source checkout) and pyomo-model-libraries
-#     (the checkout of the additional model lobraries repo.
+#     (the checkout of the additional model lobraries repo).  It will
+#     create two additional directories within WORKSPACE: python (a
+#     virtualenv) and config (the local Pyomo configuration/cache
+#     directory)
 #
-# CATEGORY: the category to pass to test.pyomo
+# CATEGORY: the category to pass to test.pyomo (defaults to nightly)
 #
 # SLIM: If nonempty, then the virtualenv will only have pip, setuptools,
 #     and wheel installed.  Otherwise the virtualenv will inherit the
 #     system site-packages.
 #
 # CODECOV_TOKEN: the token to use when uploading results to codecov.io
+#
+# CODECOV_ARGS: additional arguments to pass to the codecov uploader
+#     (e.g., to support SSL certificates)
 #
 # DISABLE_COVERAGE: if nonempty, then coverage analysis is disabled
 #
@@ -153,7 +159,7 @@ if test -z "$MODE" -o "$MODE" == test; then
         if test -z "$CODECOV_TOKEN"; then
             coverage xml
         else
-        	CODECOV_JOB_NAME=`echo ${JOB_NAME} | sed -r 's/^(.*autotest_)?Pyomo_([^\/]+).*/\1/'`.$BUILD_NUMBER.$python
+            CODECOV_JOB_NAME=`echo ${JOB_NAME} | sed -r 's/^(.*autotest_)?Pyomo_([^\/]+).*/\1/'`.$BUILD_NUMBER.$python
             i=0
             while test $i -lt 3; do
                 i=$[$i+1]
