@@ -134,7 +134,7 @@ class CBCSHELL(SystemCallSolver):
         # Call base constructor
         #
         kwds['type'] = 'cbc'
-        SystemCallSolver.__init__(self, **kwds)
+        super(CBCSHELL, self).__init__(**kwds)
 
         # NOTE: eventually both of the following attributes should be migrated to a common base class.
         # is the current solve warm-started? a transient data member to communicate state information
@@ -259,7 +259,7 @@ class CBCSHELL(SystemCallSolver):
 
         # let the base class handle any remaining keywords/actions.
         # let the base class handle any remaining keywords/actions.
-        SystemCallSolver._presolve(self, *args, **kwds)
+        super(CBCSHELL, self)._presolve(*args, **kwds)
 
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
@@ -695,7 +695,7 @@ class CBCSHELL(SystemCallSolver):
     def _postsolve(self):
 
         # let the base class deal with returning results.
-        results = SystemCallSolver._postsolve(self)
+        results = super(CBCSHELL, self)._postsolve()
 
         # finally, clean any temporary files registered with the temp file
         # manager, created populated *directly* by this plugin. does not
