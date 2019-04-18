@@ -1,3 +1,5 @@
+import os
+
 from pyomo.environ import *
 from pyomo.gdp import *
 
@@ -486,7 +488,7 @@ def build_model():
     # model.accept_or_reject4 = Constraint(model.ScreenNodePairs,
     #                                      rule=accept_or_reject_rule4)
 
-    instance = model.create_instance(DATFILE)
+    instance = model.create_instance(os.path.join(os.path.dirname(__file__), DATFILE))
 
     # fix the variables they fix in GAMS
     for s in instance.Screens:
