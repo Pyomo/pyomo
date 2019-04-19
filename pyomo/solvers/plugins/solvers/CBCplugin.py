@@ -211,7 +211,7 @@ class CBCSHELL(SystemCallSolver):
                 if var.value and (id(var) in byObject):
                     name = byObject[id(var)]
                     solnfile.write(
-                        '0 {} {}'.format(
+                        '0 {} {}\n'.format(
                             name, var.value
                         )
                     )
