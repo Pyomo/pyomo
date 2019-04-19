@@ -241,7 +241,7 @@ _exeExt = {
 
 _libExt = {
     'linux':   ('.so', '.so.*'),
-    'windows': ('.dll',),
+    'windows': ('.dll', '.pyd'),
     'cygwin':  ('.dll', '.so', '.so.*'),
     'darwin':  ('.dylib', '.so', '.so.*'),
 }
