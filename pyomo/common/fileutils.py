@@ -45,6 +45,90 @@ def this_file_dir():
 PYOMO_ROOT_DIR = os.path.dirname(os.path.dirname(this_file_dir()))
 
 
+def find_path(name, validate, cwd=True, mode=os.R_OK, ext=None,
+              pathlist=[], allow_pathlist_deep_references=True):
+    """Locate a path, given a set of search parameters
+
+    Parameters
+    ----------
+    name : str
+        The name to locate.  The name may contain references to a user's
+        home directory (``~user``), environment variables
+        (``${HOME}/bin``), and shell wildcards (``?`` and ``*``); all of
+        which will be expanded.
+
+    validate : function
+        A function to call to validate the path (used by find_file and
+        find_dir to discriminate files and directories)
+
+    cwd : bool
+        Start by looking in the current working directory
+        [default: True]
+
+    mode : mask
+        If not None, only return entries that can be accessed for
+        reading/writing/executing.  Valid values are the inclusive OR of
+        {os.R_OK, os.W_OK, os.X_OK} [default: ``os.R_OK``]
+
+    ext : str or iterable of str
+        If not None, also look for name+ext [default: None]
+
+    pathlist : str or iterable of str
+        A list of strings containing paths to search, each string
+        contains a single path.  If pathlist is a string, then it is
+        first split using os.pathsep to generate the pathlist
+        [default: ``[]``].
+
+    allow_pathlist_deep_references : bool
+       If allow_pathlist_deep_references is True and the name
+       appears to be a relative path, allow deep reference matches
+       relative to directories in the pathlist (e.g., if name is
+       ``foo/my.exe`` and ``/usr/bin`` is in the pathlist, then
+       :py:func:`find_file` could return ``/usr/bin/foo/my.exe``).  If
+       allow_pathlist_deep_references is False and the name appears
+       to be a relative path, then only matches relative to the current
+       directory are allowed (assuming cwd==True).  [default: True]
+
+    Notes
+    -----
+        find_path uses glob, so the path and/or name may contain
+        wildcards.  The first matching entry is returned.
+
+    """
+
+    # Support shell-style paths like ~user and $HOME/bin
+    name = os.path.expanduser(os.path.expandvars(name))
+
+    locations = []
+    if cwd:
+        locations.append(os.getcwd())
+
+    if allow_pathlist_deep_references or os.path.basename(name) == name:
+        if isinstance(pathlist, six.string_types):
+            locations.extend( pathlist.split(os.pathsep) )
+        else:
+            locations.extend(pathlist)
+
+    extlist = ['']
+    if ext:
+        if isinstance(ext, six.string_types):
+            extlist.append(ext)
+        else:
+            extlist.extend(ext)
+
+    for path in locations:
+        if not path:
+            continue
+        for _ext in extlist:
+            for test in glob.glob(os.path.join(path, name+_ext)):
+                if not validate(test):
+                    continue
+                if mode is not None and not os.access(test, mode):
+                    continue
+                return os.path.abspath(test)
+    return None
+
+
 def find_file(filename, cwd=True, mode=os.R_OK, ext=None, pathlist=[],
               allow_pathlist_deep_references=True):
     """Locate a file, given a set of search parameters
@@ -91,38 +175,62 @@ def find_file(filename, cwd=True, mode=os.R_OK, ext=None, pathlist=[],
         wildcards.  The first matching file is returned.
 
     """
+    return find_path(
+        filename, os.path.isfile, cwd=cwd, mode=mode, ext=ext,
+        pathlist=pathlist,
+        allow_pathlist_deep_references=allow_pathlist_deep_references
+    )
 
-    # Support shell-style paths like ~user and $HOME/bin
-    filename = os.path.expanduser(os.path.expandvars(filename))
 
-    locations = []
-    if cwd:
-        locations.append(os.getcwd())
 
-    if allow_pathlist_deep_references or os.path.basename(filename) == filename:
-        if isinstance(pathlist, six.string_types):
-            locations.extend( pathlist.split(os.pathsep) )
-        else:
-            locations.extend(pathlist)
+def find_dir(dirname, cwd=True, mode=os.R_OK, pathlist=[],
+             allow_pathlist_deep_references=True):
+    """Locate a directory, given a set of search parameters
 
-    extlist = ['']
-    if ext:
-        if isinstance(ext, six.string_types):
-            extlist.append(ext)
-        else:
-            extlist.extend(ext)
+    Parameters
+    ----------
+    dirname : str
+        The directory name to locate.  The name may contain references
+        to a user's home directory (``~user``), environment variables
+        (``${HOME}/bin``), and shell wildcards (``?`` and ``*``); all of
+        which will be expanded.
 
-    for path in locations:
-        if not path:
-            continue
-        for _ext in extlist:
-            for test in glob.glob(os.path.join(path, filename+_ext)):
-                if not os.path.isfile(test):
-                    continue
-                if mode is not None and not os.access(test, mode):
-                    continue
-                return os.path.abspath(test)
-    return None
+    cwd : bool
+        Start by looking in the current working directory
+        [default: True]
+
+    mode : mask
+        If not None, only return directories that can be accessed for
+        reading/writing/executing.  Valid values are the inclusive OR of
+        {os.R_OK, os.W_OK, os.X_OK} [default: ``os.R_OK``]
+
+    pathlist : str or iterable of str
+        A list of strings containing paths to search, each string
+        contains a single path.  If pathlist is a string, then it is
+        first split using os.pathsep to generate the pathlist
+        [default: ``[]``].
+
+    allow_pathlist_deep_references : bool
+       If allow_pathlist_deep_references is True and the dirname
+       appears to be a relative path, allow deep reference matches
+       relative to directories in the pathlist (e.g., if dirname is
+       ``foo/bar`` and ``/usr/bin`` is in the pathlist, then
+       :py:func:`find_dir` could return ``/usr/bin/foo/bar``).  If
+       allow_pathlist_deep_references is False and the dirname appears
+       to be a relative path, then only matches relative to the current
+       directory are allowed (assuming cwd==True).  [default: True]
+
+    Notes
+    -----
+        find_dir uses glob, so the path and/or directory name may contain
+        wildcards.  The first matching directory is returned.
+
+    """
+    return find_path(
+        dirname, os.path.isdir, cwd=cwd, mode=mode, pathlist=pathlist,
+        allow_pathlist_deep_references=allow_pathlist_deep_references
+    )
+
 
 _exeExt = {
     'linux':   None,
@@ -133,9 +241,9 @@ _exeExt = {
 
 _libExt = {
     'linux':   ('.so', '.so.*'),
-    'windows': ('.dll',),
+    'windows': ('.dll', '.pyd'),
     'cygwin':  ('.dll', '.so', '.so.*'),
-    'darwin':  ('.dylib',),
+    'darwin':  ('.dylib', '.so', '.so.*'),
 }
 
 def _system():
@@ -256,18 +364,18 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
                      pathlist=pathlist, allow_pathlist_deep_references=False)
 
 
-class _ExecutableData(object):
-    def __init__(self, manager, executable):
+class _PathData(object):
+    def __init__(self, manager, name):
         self._mngr = manager
-        self._registered_name = executable
+        self._registered_name = name
         self._path = None
         self._path_override = None
         self._status = None
 
     def path(self):
-        """Return the full, normalized path to the registered executable.
+        """Return the full, normalized path to the registered path entry.
 
-        If the executable is not found (or was marked "disabled"),
+        If the object is not found (or was marked "disabled"),
         ``path()`` returns None.
 
         """
@@ -276,21 +384,29 @@ class _ExecutableData(object):
                 target = self._path_override
             else:
                 target = self._registered_name
-            tmp = find_executable(target, pathlist=self._mngr.pathlist)
+            tmp = self._mngr._find(target, pathlist=self._mngr.pathlist)
             self._path = tmp if tmp else self._path_override
             self._status = bool(tmp)
         return self._path
 
-    @deprecated("registered_executable(name).get_path() is deprecated; "
-                "use pyomo.common.Executable(name).path()")
+    def set_path(self, value):
+        self._path_override = value
+        self.rehash()
+        if not self._status:
+            logging.getLogger('pyomo.common').warning(
+                "explicitly setting the path for '%s' to an "
+                "invalid object or nonexistent location ('%s')"
+                % (self._registered_name, value))
+
+    @deprecated("get_path() is deprecated; use path()")
     def get_path(self):
         return self.path()
 
     def disable(self):
-        """Disable this executable
+        """Disable this path entry
 
-        This method "disables" this executable by marking it as "not
-        found".  Disabled executables return False for `available()` and
+        This method "disables" this path entry by marking it as "not
+        found".  Disabled entries return False for `available()` and
         None for `path()`.  The disabled status will persist until the
         next call to `rehash()`.
 
@@ -299,13 +415,18 @@ class _ExecutableData(object):
         self._path = None
 
     def available(self):
-        """Return True if the executable was found in the search locations"""
+        """Returns True if the registered path is available.
+
+        Entries are available if the object was found found in the
+        search locations and has not been explicitly disabled.
+
+        """
         if self._status is None:
             self.path()
         return self._status
 
     def rehash(self):
-        """Requery the location of this executables
+        """Requery the location of this path entry
 
         This method derives its name from the csh command of the same
         name, which rebuilds the hash table of executables reachable
@@ -328,39 +449,36 @@ class _ExecutableData(object):
             return ""
         return ans
 
+
+class _ExecutableData(_PathData):
     @property
     def executable(self):
         return self.path()
 
     @executable.setter
     def executable(self, value):
-        self._path_override = value
-        self.rehash()
-        if not self._status:
-            logging.getLogger('pyomo.common').warning(
-                "explicitly setting the path for executable '%s' to a "
-                "non-executable file or nonexistent location ('%s')"
-                % (self._registered_name, value))
+        self.set_path(value)
 
 
-class ExecutableManager(object):
-    """The ExecutableManager defines a registry class for executable files
+class PathManager(object):
+    """The PathManager defines a registry class for path locations
 
-    The :py:class:`ExecutableManager` defines a class very similar to the
+    The :py:class:`PathManager` defines a class very similar to the
     :py:class:`CachedFactory` class; however it does not register type
     constructors.  Instead, it registers instances of
-    :py:class:`_ExecutableData`.  These contain the resolved path to the
-    executable under which the :py:class:`_ExecutableData` object was
-    registered.  We do not use the PyUtilib ``register_executable`` and
-    ``registered_executable`` functions so that we can automatically
-    include Pyomo-specific locations in the search path (namely the
-    ``PYOMO_CONFIG_DIR``).
+    :py:class:`_PathData` (or :py:class:`_ExecutableData`).  These
+    contain the resolved path to the directory object under which the
+    :py:class:`_PathData` object was registered.  We do not use
+    the PyUtilib ``register_executable`` and ``registered_executable``
+    functions so that we can automatically include Pyomo-specific
+    locations in the search path (namely the ``PYOMO_CONFIG_DIR``).
 
-    Pyomo declares a single global instance of this class as
-    ``pyomo.common.Executable``.
+    Users will generally interact with this class through global
+    instances of this class (``pyomo.common.Executable`` and
+    ``pyomo.common.Library``).
 
     Users are not required or expected to register file names with the
-    :py:class:`ExecutableManager`; they will be automatically registered
+    :py:class:`PathManager`; they will be automatically registered
     upon first use.  Generally, users interact through the ``path()``
     and ``available()`` methods:
 
@@ -389,22 +507,22 @@ class ExecutableManager(object):
         True
 
     For convenience, :py:meth:`available()` and :py:meth:`path()` are
-    available by casting the :py:class:`_ExecutableData` object requrned
-    from ``Executable`` to either a ``bool`` or ``str``:
+    available by casting the :py:class:`_PathData` object requrned
+    from ``Executable`` or ``Library`` to either a ``bool`` or ``str``:
 
     .. doctest::
 
         >>> if Executable('demo_exec_file'):
         ...     cmd = "%s --help" % Executable('demo_exec_file')
 
-    The :py:class:`ExecutableManager` caches the location / existence of
-    the target executable.  If something in the environment changes
+    The :py:class:`PathManager` caches the location / existence of
+    the target directory entry.  If something in the environment changes
     (e.g., the PATH) or the file is created or removed after the first
     time a client queried the location or availability, the
-    ExecutionManager will return incorrect information.  You can cause
-    the :py:class:`ExecutionManager` to refresh its cache by calling
-    ``rehash()`` on either the :py:class:`_ExecutableData` (for the
-    single file) or the :py:class:`ExecutionManager` to refresh the
+    PathManager will return incorrect information.  You can cause
+    the :py:class:`PathManager` to refresh its cache by calling
+    ``rehash()`` on either the :py:class:`_PathData` (for the
+    single file) or the :py:class:`PathManager` to refresh the
     cache for all files:
 
     .. doctest::
@@ -414,29 +532,47 @@ class ExecutableManager(object):
         >>> # or all registered files
         >>> Executable.rehash()
 
-    :py:class:`ExecutionManager` looks for executables in the system
-    `PATH` and in the list of directories specified by the ``pathlist``
+    The ``Executable`` singleton looks for executables in the system
+    ``PATH`` and in the list of directories specified by the ``pathlist``
     attribute.  ``Executable.pathlist`` defaults to a list containing the
-    initial value of `pyomo.common.config.PYOMO_CONFIG_DIR`.
+    ``os.path.join(pyomo.common.config.PYOMO_CONFIG_DIR, 'bin')``.
+
+    The ``Library`` singleton looks for executables in the system
+    ``LD_LIBRARY_PATH``, ``PATH`` and in the list of directories
+    specified by the ``pathlist`` attribute.  ``Library.pathlist``
+    defaults to a list containing the
+    ``os.path.join(pyomo.common.config.PYOMO_CONFIG_DIR, 'lib')``.
 
     Users may also override the normal file resolution by explicitly
-    setting the files ``executable`` attribute:
+    setting the location using :py:meth:`set_path`:
 
     .. doctest::
 
+        >>> Executable('demo_exec_file').set_path(os.path.join(
+        ...     pyomo.common.config.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file'))
+
+    Explicitly setting the path is an absolute operation and will
+    set the location whether or not that location points to an actual
+    file.  Additionally, the explicit location will persist
+    through calls to ``rehash()``.  If you wish to remove the explicit
+    executable location, call ``set_path(None)``:
+
+    .. doctest::
+
+        >>> Executable('demo_exec_file').set_path(None)
+
+    The ``Executable`` singleton uses :py:class:`_ExecutableData`, an
+    extended form of the :py:class:`_PathData` class, which provides the
+    ``executable`` property as an alais for :py:meth:`path()` and
+    :py:meth:`set_path()`:
+
+    .. doctest::
+
+        >>> loc = Executable('demo_exec_file').executable
+        >>> print(os.path.isfile(loc))
         >>> Executable('demo_exec_file').executable = os.path.join(
         ...     pyomo.common.config.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file')
-
-    Explicitly setting the executable is an absolute operation and will
-    set the location whether or not that location points to an actual
-    executable file.  Additionally, the explicit location will persist
-    through calls to ``rehash()``.  If you wish to remove the explicit
-    executable location, set the ``executable`` to ``None``:
-
-    .. doctest::
-
         >>> Executable('demo_exec_file').executable = None
-
 
     .. doctest::
         :hide:
@@ -445,14 +581,16 @@ class ExecutableManager(object):
         ...     os.remove(_testfile)
 
     """
-    def __init__(self):
-        self._exec = {}
-        self.pathlist = [ os.path.join(config.PYOMO_CONFIG_DIR, 'bin') ]
+    def __init__(self, finder, dataClass):
+        self._pathTo = {}
+        self._find = finder
+        self._dataClass = dataClass
+        self.pathlist = None
 
-    def __call__(self, executable):
-        if executable not in self._exec:
-            self._exec[executable] = _ExecutableData(self, executable)
-        return self._exec[executable]
+    def __call__(self, path):
+        if path not in self._pathTo:
+            self._pathTo[path] = self._dataClass(self, path)
+        return self._pathTo[path]
 
     def rehash(self):
         """Requery the location of all registered executables
@@ -462,10 +600,15 @@ class ExecutableManager(object):
         through the PATH.
 
         """
-        for _exe in six.itervalues(self._exec):
-            _exe.rehash()
+        for _path in six.itervalues(self._pathTo):
+            _path.rehash()
 
-Executable = ExecutableManager()
+#
+# Define singleton objects for Pyomo / Users to interact with
+#
+Executable = PathManager(find_executable, _ExecutableData)
+Library = PathManager(find_library, _PathData)
+
 
 @deprecated("pyomo.common.register_executable(name) has been deprecated; "
             "explicit registration is no longer necessary")
