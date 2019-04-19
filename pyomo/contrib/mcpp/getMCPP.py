@@ -27,9 +27,6 @@ def get_mcpp(downloader):
 
     downloader.get_zip_archive(url, dirOffset=1)
 
-def build_mcpp():
-    pass
-
 def main(argv):
     downloader = FileDownloader()
     downloader.parse_args(argv)
