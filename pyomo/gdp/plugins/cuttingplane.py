@@ -547,7 +547,7 @@ class CuttingPlane_Transformation(Transformation):
     # below)
     def fourier_motzkin_elimination(self, constraints, vars_to_eliminate):
         # First we will preprocess so that we have no equalities (break them
-        # into two constraints). We will also make everything a leq constraint
+        # into two constraints). We will also make everything a geq constraint
         # to make life easier later.
         tmpConstraints = [cons for cons in constraints]
         for cons in tmpConstraints:
@@ -569,11 +569,8 @@ class CuttingPlane_Transformation(Transformation):
                 constraints.append(
                     self.scalar_multiply_linear_constraint(cons, -1))
 
-        # DEBUG
-        #print("Checking constraints we are passing into recursive thing:")
         vars_that_appear = ComponentSet()
         for cons in constraints:
-            assert cons['upper'] is None
             body = 0
             for var, val in cons['body'].items():
                 #body += val*var if var is not None else val
@@ -586,9 +583,10 @@ class CuttingPlane_Transformation(Transformation):
         # we are done preprocessing, now we can actually do the recursion
         while vars_that_appear:
             the_var = vars_that_appear.pop()
-            #print("DEBUG: we are eliminating %s" % the_var.name) we are
-            # 'reorganizing' the constraints, we will map the coefficient of
-            # the_var from that constraint and the rest of the expression and
+            #print("DEBUG: we are eliminating %s" % the_var.name) 
+
+            # we are 'reorganizing' the constraints, we will map the coefficient
+            # of the_var from that constraint and the rest of the expression and
             # sorting based on whether we have the_var <= other stuff or vice
             # versa.
             leq_list = []
@@ -612,34 +610,34 @@ class CuttingPlane_Transformation(Transformation):
                 leaving_var_coef = cons['body'].get(the_var)
                 if leaving_var_coef is None or leaving_var_coef == 0:
                     waiting_list.append(cons)
-                    #print("\tskipping")
                     continue
 
                 # at this point, we know that the constraint is a geq constraint
                 assert cons['upper'] is None
 
+                # NOTE: neither of the scalar multiplications below flip the
+                # constraint. So we are sure to have only geq constraints
+                # forever, which is exactly what we want.
                 if leaving_var_coef < 0:
-                    # don't flip the sign
                     leq_list.append(self.scalar_multiply_linear_constraint(
                         cons, -1.0/leaving_var_coef))
                 else:
-                    # don't flip the sign
                     geq_list.append(self.scalar_multiply_linear_constraint(
                         cons, 1.0/leaving_var_coef))
 
-            #print("Here be leq constraints:")
-            for cons in leq_list:
-                body = 0
-                for var, val in cons['body'].items():
-                    body += val*var if var is not None else val
-                #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
+            # #print("Here be leq constraints:")
+            # for cons in leq_list:
+            #     body = 0
+            #     for var, val in cons['body'].items():
+            #         body += val*var if var is not None else val
+            #     print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
 
-            #print("Here be geq constraints:")
-            for cons in geq_list:
-                body = 0
-                for var, val in cons['body'].items():
-                    body += val*var if var is not None else val
-                #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
+            # #print("Here be geq constraints:")
+            # for cons in geq_list:
+            #     body = 0
+            #     for var, val in cons['body'].items():
+            #         body += val*var if var is not None else val
+            #     print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
 
             for leq in leq_list:
                 for geq in geq_list:
@@ -748,8 +746,7 @@ class CuttingPlane_Transformation(Transformation):
         # one and then do it... But I guess I want to assume that I already did
         # that because in the context of FME, I already did
         if not bounds_good:
-            raise RuntimeError("You were adding a leq and geq constraint, "
-                               "which is a thing you haven't implemented")
+            raise RuntimeError("Trying to add a leq and geq constraint!")
 
         return ans
 
@@ -765,6 +762,10 @@ class CuttingPlane_Transformation(Transformation):
         else:
             # we have to flip the constraint
             if cons['lower'] is not None:
+                # TODO: This case can actually never happen right now because I
+                # am preprocessing all the constraints in FME. But in general
+                # you would need this. (This is true in a few other places too,
+                # I don't know if I should remove those cases or leave them.)
                 tmp_upper = cons['upper']
                 cons['upper'] = scalar*cons['lower']
                 cons['lower'] = None
