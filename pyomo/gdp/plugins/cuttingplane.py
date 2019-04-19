@@ -615,32 +615,17 @@ class CuttingPlane_Transformation(Transformation):
                     #print("\tskipping")
                     continue
 
-                if cons['lower'] is not None:
-                    if leaving_var_coef < 0:
-                        # don't flip the sign
-                        leq_list.append(self.scalar_multiply_linear_constraint(
-                            cons, -1.0/leaving_var_coef))
-                        #print("\tleq (lower)")
-                    else:
-                        # don't flip the sign
-                        geq_list.append(self.scalar_multiply_linear_constraint(
-                            cons, 1.0/leaving_var_coef))
-                        #print("\tgeq (lower)")
+                # at this point, we know that the constraint is a geq constraint
+                assert cons['upper'] is None
 
-                # NOTE: this 'else' matters because we are changing the
-                # constraint when we flip it, so cons['upper'] may have become
-                # not None
-                elif cons['upper'] is not None:
-                    if leaving_var_coef > 0:
-                        # flip the sign
-                        leq_list.append(self.scalar_multiply_linear_constraint(
-                            cons, -1.0/leaving_var_coef))
-                        #print("\tgeq (upper)")
-                    else:
-                        # flip the sign
-                        geq_list.append(self.scalar_multiply_linear_constraint(
-                            cons, 1.0/leaving_var_coef))
-                        #print("\tgeq (upper)")
+                if leaving_var_coef < 0:
+                    # don't flip the sign
+                    leq_list.append(self.scalar_multiply_linear_constraint(
+                        cons, -1.0/leaving_var_coef))
+                else:
+                    # don't flip the sign
+                    geq_list.append(self.scalar_multiply_linear_constraint(
+                        cons, 1.0/leaving_var_coef))
 
             #print("Here be leq constraints:")
             for cons in leq_list:
