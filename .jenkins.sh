@@ -159,7 +159,7 @@ if test -z "$MODE" -o "$MODE" == test; then
         if test -z "$CODECOV_TOKEN"; then
             coverage xml
         else
-            CODECOV_JOB_NAME=`echo ${JOB_NAME} | sed -r 's/^(.*autotest_)?Pyomo_([^\/]+).*/\1/'`.$BUILD_NUMBER.$python
+            CODECOV_JOB_NAME=`echo ${JOB_NAME} | sed -r 's/^(.*autotest_)?Pyomo_([^\/]+).*/\2/'`.$BUILD_NUMBER.$python
             i=0
             while test $i -lt 3; do
                 i=$[$i+1]
