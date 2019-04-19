@@ -25,6 +25,7 @@ import pyutilib.subprocess
 
 from pyomo.core.base import Var
 from pyomo.core.kernel.block import IBlock
+from pyomo.core.kernel.set_types import BooleanSet, IntegerSet
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -208,7 +209,10 @@ class CBCSHELL(SystemCallSolver):
 
         with open(filename, 'w') as solnfile:
             for var in instance.component_data_objects(Var):
-                if var.value and (id(var) in byObject):
+                # Cbc only expects integer variables with non-zero values for mipstart.
+                if var.value \
+                        and isinstance(var.domain, (BooleanSet, IntegerSet)) \
+                        and (id(var) in byObject):
                     name = byObject[id(var)]
                     solnfile.write(
                         '0 {} {}\n'.format(
