@@ -357,7 +357,7 @@ class TestFBBT(unittest.TestCase):
         m.y.setlb(-5)
         m.y.setub(8)
         fbbt(m)
-        self.assertAlmostEqual(m.x.lb, -5**(1/3))
+        self.assertAlmostEqual(m.x.lb, -5.0**(1.0/3.0))
         self.assertAlmostEqual(m.x.ub, 2)
 
         m.x.setlb(None)
@@ -427,7 +427,6 @@ class TestFBBT(unittest.TestCase):
                     xu = np.inf
                 else:
                     xu = m.x.ub
-                print(yl, yu, _exp_val, xl, xu)
                 _x = np.exp(np.log(y) / _exp_val)
                 self.assertTrue(np.all(xl <= _x))
                 self.assertTrue(np.all(xu >= _x))

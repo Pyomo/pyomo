@@ -20,7 +20,7 @@ def mul(xl, xu, yl, yu):
 def inv(xl, xu):
     if xl <= 0 and xu >= 0:
         return -math.inf, math.inf
-    return 1/xu, 1/xl
+    return 1.0/xu, 1.0/xl
 
 
 def div(xl, xu, yl, yu):
@@ -172,9 +172,9 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu):
                 xu = _xu
         elif y % 2 == 1:
             if y > 0:
-                xl = abs(zl)**(1/y)
+                xl = abs(zl)**(1.0/y)
                 xl = math.copysign(xl, zl)
-                xu = abs(zu)**(1/y)
+                xu = abs(zu)**(1.0/y)
                 xu = math.copysign(xu, zu)
             else:
                 if zl >= 0:
@@ -183,11 +183,11 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu):
                     if zu == 0:
                         xl = -math.inf
                     else:
-                        xl = -abs(zu)**(1/y)
+                        xl = -abs(zu)**(1.0/y)
                     if zl == 0:
                         xu = -math.inf
                     else:
-                        xu = -abs(zl)**(1/y)
+                        xu = -abs(zl)**(1.0/y)
                 else:
                     xl = -math.inf
                     xu = math.inf
