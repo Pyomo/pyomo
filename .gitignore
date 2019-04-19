@@ -15,8 +15,12 @@ doc/OnlineDocs/_build
 # Running pyomo / tests / solvers occasionally leaves extra files
 *.out
 pyomo/core/data/parse_table_datacmds.py
+pyomo/dataportal/parse_table_datacmds.py
 gurobi.log
 
 # Results from nosetests --with-coverage
 .coverage
 *.cover
+
+# Jupyterhub/Jupyterlab checkpoints
+.ipynb_checkpoints
