@@ -51,9 +51,12 @@ class MainWindow(QMainWindow):
         self.jupyter_widget.kernel_client.stop_channels()
         self.jupyter_widget.kernel_manager.shutdown_kernel()
 
-if __name__ == "__main__":
+def main():
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
     app.aboutToQuit.connect(window.shutdown_kernel)
-sys.exit(app.exec_())
+    app.exec_()
+
+if __name__ == "__main__":
+    main()
