@@ -17,8 +17,9 @@ import time
 import pytest
 
 from pyomo.environ import *
-from pyomo.contrib.viewer.ui import get_mainwindow, qt_available, ModelBrowser
-from pyomo.contrib.viewer.pyqt_4or5 import QtCore, QMessageBox
+from pyomo.contrib.viewer.pyqt_4or5 import QtCore, QMessageBox, qt_available
+if qt_available:
+    from pyomo.contrib.viewer.ui import get_mainwindow, ModelBrowser
 
 
 def get_model():
