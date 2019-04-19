@@ -207,6 +207,7 @@ class CBCSHELL(SystemCallSolver):
             smap = instance.solutions.symbol_map[self._smap_id]
         byObject = smap.byObject
 
+        column_index = 0
         with open(filename, 'w') as solnfile:
             for var in instance.component_data_objects(Var):
                 # Cbc only expects integer variables with non-zero values for mipstart.
@@ -215,10 +216,12 @@ class CBCSHELL(SystemCallSolver):
                         and (id(var) in byObject):
                     name = byObject[id(var)]
                     solnfile.write(
-                        '0 {} {}\n'.format(
-                            name, var.value
+                        '{} {} {}\n'.format(
+                            column_index, name, var.value
                         )
                     )
+                    # Cbc ignores column indexes, so the value does not matter.
+                    column_index += 1
 
     #
     # Write a warm-start file in the SOLN format.
