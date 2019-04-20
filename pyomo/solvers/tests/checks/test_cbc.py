@@ -13,9 +13,14 @@ from pyomo.environ import *
 import pyutilib.th as unittest
 from pyutilib.misc import capture_output
 
+opt_cbc = SolverFactory('cbc')
+cbc_available = opt_cbc.available(exception_flag=False)
+
 
 class CBCTests(unittest.TestCase):
 
+    @unittest.skipIf(not cbc_available,
+                     "The CBC solver is not available")
     def test_warm_start(self):
 
         m = ConcreteModel()
