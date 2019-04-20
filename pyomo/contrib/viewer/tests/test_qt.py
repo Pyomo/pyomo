@@ -73,7 +73,7 @@ def get_button(w, label):
     return None
 
 @unittest.skipIf(SKIP_ALL, "must be run with pytest")
-@pytest.mark.skipif(not qt_available, reason="PyQt not found")
+@unittest.skipIf(not qt_available, "PyQt not found")
 def test_get_mainwindow(qtbot):
     m = get_model()
     mw, m = get_mainwindow(model=m, testing=True)
@@ -91,7 +91,7 @@ def test_get_mainwindow(qtbot):
     assert(isinstance(mw.parameters, ModelBrowser))
 
 @unittest.skipIf(SKIP_ALL, "must be run with pytest")
-@pytest.mark.skipif(not qt_available, reason="PyQt not found")
+@unittest.skipIf(not qt_available, "PyQt not found")
 def test_model_information(qtbot):
     m = get_model()
     mw, m = get_mainwindow(model=m, testing=True)
