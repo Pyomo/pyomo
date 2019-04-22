@@ -959,9 +959,11 @@ class TestBlockVector(unittest.TestCase):
                        np.fabs, np.sqrt, np.log, np.log2,
                        np.absolute, np.isfinite, np.isinf, np.isnan,
                        np.log1p, np.logical_not, np.exp2, np.expm1,
-                       np.sign, np.rint, np.square, np.positive,
+                       np.sign, np.rint, np.square,
                        np.negative, np.rad2deg, np.deg2rad,
                        np.conjugate, np.reciprocal]
+        if np.lib.NumpyVersion(np.__version__) >= '1.13.0':
+            unary_funcs.append(np.positive)
 
         for fun in unary_funcs:
             v2[0] = fun(v[0])
@@ -1019,7 +1021,9 @@ class TestBlockVector(unittest.TestCase):
                          np.maximum, np.minimum,
                          np.fmax, np.fmin, np.equal,
                          np.logaddexp, np.logaddexp2, np.remainder,
-                         np.heaviside, np.hypot]
+                         np.hypot]
+        if np.lib.NumpyVersion(np.__version__) >= '1.13.0':
+            binary_ufuncs.append(np.heaviside)
 
         for fun in binary_ufuncs:
             flat_res = fun(v.flatten(), v2.flatten())

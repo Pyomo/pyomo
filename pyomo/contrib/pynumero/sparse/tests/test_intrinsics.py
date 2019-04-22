@@ -72,6 +72,8 @@ class TestSparseIntrinsics(unittest.TestCase):
         res_flat = pn.where(flat_condition, np.ones(bv.size) * 2.0, np.ones(bv.size))
         self.assertTrue(np.allclose(res.flatten(), res_flat))
 
+    @unittest.skipIf(np.lib.NumpyVersion(np.__version__) < '1.13.0',
+                     "numpy>=1.13.0 required to test isin")
     def test_isin(self):
 
         bv = self.bv
