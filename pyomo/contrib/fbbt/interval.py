@@ -1,6 +1,7 @@
 import math
 import warnings
 import logging
+from pyomo.common.errors import DeveloperError
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,13 @@ def div(xl, xu, yl, yu):
 
 
 def power(xl, xu, yl, yu):
+    """
+    Compute bounds on x**y.
+    """
     if xl > 0:
+        """
+        If x is always positive, things are simple. We only need to worry about the sign of y.
+        """
         if yl < 0 and yu > 0:
             lb = min(xu ** yl, xl ** yu)
             ub = max(xl ** yl, xu ** yu)
@@ -39,7 +46,7 @@ def power(xl, xu, yl, yu):
             lb = xu ** yl
             ub = xl ** yu
         else:
-            raise RuntimeError('This was unexpected.')
+            raise DeveloperError()
     elif xl == 0:
         # this section is only needed so we do not encounter math domain errors;
         # The logic is essentially the same as above (xl > 0)
@@ -64,6 +71,14 @@ def power(xl, xu, yl, yu):
         ub = max(_uba, _ubb)
     elif yl == yu and yl == round(yl):
         # the exponent is an integer, so x can be negative
+        """
+        The logic here depends on several things:
+        1) The sign of x
+        2) The sign of y
+        3) Whether y is even or odd.
+        
+        There are also special cases to avoid math domain errors.
+        """
         y = yl
         if xu <= 0:
             if y < 0:
@@ -119,20 +134,40 @@ def power(xl, xu, yl, yu):
 
 def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu):
     """
-    z = x**y => compute bounds on x
-    x = exp(ln(z) / y)
+    z = x**y => compute bounds on x.
+
+    First, start by computing bounds on x with
+
+        x = exp(ln(z) / y)
+
+    However, if y is an integer, then x can be negative, so there are several special cases. See the docs below.
     """
     xl, xu = log(zl, zu)
     xl, xu = div(xl, xu, yl, yu)
     xl, xu = exp(xl, xu)
 
     # if y is an integer, then x can be negative
-    if yl == yu and yl == round(yl):
+    if yl == yu and yl == round(yl):  # y is a fixed integer
         y = yl
         if y == 0:
+            # Anything to the power of 0 is 1, so if y is 0, then x can be anything
+            # (assuming zl <= 1 <= zu, which is enforced when traversing the tree in the other direction)
             xl = -math.inf
             xu = math.inf
         elif y % 2 == 0:
+            """
+            if y is even, then there are two primary cases (note that it is much easier to walk through these
+            while looking at plots):
+            case 1: y is positive
+                x**y is convex, positive, and symmetric. The bounds on x depend on the lower bound of z. If zl <= 0, 
+                then xl should simply be -xu. However, if zl > 0, then we may be able to say something better. For 
+                example, if the original lower bound on x is positive, then we can keep xl computed from 
+                x = exp(ln(z) / y). Furthermore, if the original lower bound on x is larger than -xl computed from 
+                x = exp(ln(z) / y), then we can still keep the xl computed from x = exp(ln(z) / y). Similar logic
+                applies to the upper bound of x.
+            case 2: y is negative
+                The ideas are similar to case 1.
+            """
             if zu < 0:
                 raise ValueError('Infeasible. Anything to the power of {0} must be positive.'.format(y))
             if y > 0:
@@ -170,7 +205,18 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu):
                         _xu = xu
                 xl = _xl
                 xu = _xu
-        elif y % 2 == 1:
+        else:  # y % 2 == 1
+            """
+            y is odd. 
+            Case 1: y is positive
+                x**y is monotonically increasing. If y is positive, then we can can compute the bounds on x using
+                x = z**(1/y) and the signs on xl and xu depend on the signs of zl and zu.
+            Case 2: y is negative
+                Again, this is easier to visualize with a plot. x**y approaches zero when x approaches -inf or inf. 
+                Thus, if zl < 0 < zu, then no bounds can be inferred for x. If z is positive (zl >=0 ) then we can
+                use the bounds computed from x = exp(ln(z) / y). If z is negative (zu <= 0), then we live in the
+                bottom left quadrant, xl depends on zu, and xu depends on zl.
+            """
             if y > 0:
                 xl = abs(zl)**(1.0/y)
                 xl = math.copysign(xl, zl)
