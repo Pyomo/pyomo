@@ -8,20 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# The log should be imported first so that the Pyomo LogHandler can be
-# set up as soon as possible
-from . import log
+from pyomo.common.download import DownloadFactory
+from pyomo.common.extensions import ExtensionBuilderFactory
+from .getMCPP import get_mcpp
+from .build import build_mcpp
 
-from pyutilib.factory.factory import (
-    Factory, CachedFactory
-)
+def load():
+    DownloadFactory.register('mcpp')(get_mcpp)
+    ExtensionBuilderFactory.register('mcpp')(build_mcpp)
 
-from .fileutils import (
-    Executable, Library,
-    # The following will be deprecated soon
-    register_executable, registered_executable, unregister_executable
-)
-from . import config
-from .errors import DeveloperError
-from ._task import pyomo_api, PyomoAPIData, PyomoAPIFactory
-from ._command import pyomo_command, get_pyomo_commands

@@ -303,6 +303,7 @@ class CBCSHELL(SystemCallSolver):
         """
         Process logfile
         """
+
         results = SolverResults()
 
         # The logfile output for cbc when using nl files
@@ -314,7 +315,7 @@ class CBCSHELL(SystemCallSolver):
         # Initial values
         #
         soln = Solution()
-        soln.objective['__default_objective__'] = {'Value': float('inf')}
+
         #
         # Process logfile
         #
@@ -326,111 +327,231 @@ class CBCSHELL(SystemCallSolver):
         #
         results.problem.sense = ProblemSense.minimize
         results.problem.name = None
+        optim_value = float('inf')
+        lower_bound = None
+        upper_bound = None
+        gap = None
+        nodes = None
+        # See https://www.coin-or.org/Cbc/cbcuserguide.html#messages
         for line in output.split("\n"):
-            tokens = re.split('[ \t]+',line.strip())
-            if len(tokens) == 10 and tokens[0] == "Current" and tokens[1] == "default" and tokens[2] == "(if" and results.problem.name is None:
-                results.problem.name = tokens[-1]
-                if '.' in results.problem.name:
-                    parts = results.problem.name.split('.')
-                    if len(parts) > 2:
-                        results.problem.name = '.'.join(parts[:-1])
-                    else:
-                        results.problem.name = results.problem.name.split('.')[0]
-                if '/' in results.problem.name:
-                    results.problem.name = results.problem.name.split('/')[-1]
-                if '\\' in results.problem.name:
-                    results.problem.name = results.problem.name.split('\\')[-1]
-            if len(tokens) ==11 and tokens[0] == "Presolve" and tokens[3] == "rows,":
-                results.problem.number_of_variables = eval(tokens[4])-eval(tokens[5][1:-1])
-                results.problem.number_of_constraints = eval(tokens[1])-eval(tokens[2][1:-1])
-                results.problem.number_of_nonzeros = eval(tokens[8])-eval(tokens[9][1:-1])
-                results.problem.number_of_objectives = "1"
-            if len(tokens) >=9 and tokens[0] == "Problem" and tokens[2] == "has":
-                results.problem.number_of_variables = eval(tokens[5])
-                results.problem.number_of_constraints = eval(tokens[3])
-                results.problem.number_of_nonzeros = eval(tokens[8])
-                results.problem.number_of_objectives = "1"
-            if len(tokens) == 5 and tokens[3] == "NAME":
-                results.problem.name = tokens[4]
-            if " ".join(tokens) == '### WARNING: CoinLpIO::readLp(): Maximization problem reformulated as minimization':
-                results.problem.sense = ProblemSense.maximize
-            if len(tokens) > 6 and tokens[0] == "Presolve" and tokens[6] == "infeasible":
-                soln.status = SolutionStatus.infeasible
-                soln.objective['__default_objective__']['Value'] = None
-            if len(tokens) > 3 and tokens[0] == "Result" and tokens[2] == "Optimal":
-                # parser for log file generetated with discrete variable
-                soln.status = SolutionStatus.optimal
-            if len(tokens) >= 3 and tokens[0] == "Objective" and tokens[1] == "value:":
-                # parser for log file generetated with discrete variable
-                soln.objective['__default_objective__']['Value'] = float(tokens[2])
-            if len(tokens) > 4 and tokens[0] == "Optimal" and tokens[2] == "objective" and tokens[4] != "and":
-                # parser for log file generetated without discrete variable
-                # see pull request #339: last check avoids lines like "Optimal - objective gap and complementarity gap both smallish and small steps"
-                soln.status = SolutionStatus.optimal
-                soln.objective['__default_objective__']['Value'] = float(tokens[4])
-            if len(tokens) > 6 and tokens[4] == "best" and tokens[5] == "objective":
-                if tokens[6].endswith(','):
-                    tokens[6] = tokens[6][:-1]
-                soln.objective['__default_objective__']['Value'] = float(tokens[6])
-            if len(tokens) > 9 and tokens[7] == "(best" and tokens[8] == "possible":
-                results.problem.lower_bound=tokens[9]
-                results.problem.lower_bound = eval(results.problem.lower_bound.split(")")[0])
-            if len(tokens) > 12 and tokens[10] == "best" and tokens[11] == "possible":
-                results.problem.lower_bound=eval(tokens[12])
-            if len(tokens) > 3 and tokens[0] == "Result" and tokens[2] == "Finished":
-                soln.status = SolutionStatus.optimal
-                soln.objective['__default_objective__']['Value'] = float(tokens[4])
-            if len(tokens) > 10 and tokens[4] == "time" and tokens[9] == "nodes":
-                results.solver.statistics.branch_and_bound.number_of_created_subproblems=eval(tokens[8])
-                results.solver.statistics.branch_and_bound.number_of_bounded_subproblems=eval(tokens[8])
-                if eval(results.solver.statistics.branch_and_bound.number_of_bounded_subproblems) > 0:
-                    soln.objective['__default_objective__']['Value'] = float(tokens[6])
-            if len(tokens) == 5 and tokens[1] == "Exiting" and tokens[4] == "time":
-                soln.status = SolutionStatus.stoppedByLimit
-            if len(tokens) > 8 and tokens[7] == "nodes":
-                results.solver.statistics.branch_and_bound.number_of_created_subproblems=eval(tokens[6])
-                results.solver.statistics.branch_and_bound.number_of_bounded_subproblems=eval(tokens[6])
-            if len(tokens) == 2 and tokens[0] == "sys":
-                results.solver.system_time=float(tokens[1])
-            if len(tokens) == 2 and tokens[0] == "user":
-                results.solver.user_time=float(tokens[1])
-            if len(tokens) == 10 and "Presolve" in tokens and  \
-               "iterations" in tokens and tokens[0] == "Optimal" and "objective" == tokens[1]:
-                soln.status = SolutionStatus.optimal
-                soln.objective['__default_objective__']['Value'] = float(tokens[2])
-            results.solver.user_time=-1.0
-
-        if soln.objective['__default_objective__']['Value'] == "1e+50":
-            if results.problem.sense == ProblemSense.minimize:
-                soln.objective['__default_objective__']['Value'] = float('inf')
-            else:
-                soln.objective['__default_objective__']['Value'] = float('-inf')
-        elif results.problem.sense == ProblemSense.maximize and soln.status != SolutionStatus.infeasible:
-            soln.objective['__default_objective__']['Value'] *= -1
-        if soln.status is SolutionStatus.optimal:
-            soln.gap=0.0
-            results.problem.lower_bound = soln.objective['__default_objective__']['Value']
-            results.problem.upper_bound = soln.objective['__default_objective__']['Value']
-
-        if soln.status == SolutionStatus.optimal:
-            results.solver.termination_condition = TerminationCondition.optimal
-        elif soln.status == SolutionStatus.infeasible:
-            results.solver.termination_condition = TerminationCondition.infeasible
+            tokens = tuple(re.split('[ \t]+', line.strip()))
+            n_tokens = len(tokens)
+            if n_tokens > 1:
+                # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L3769
+                if n_tokens > 4 and tokens[:4] == ('Continuous', 'objective', 'value', 'is'):
+                    lower_bound = float(tokens[4])
+                # Search completed - best objective %g, took %d iterations and %d nodes
+                elif n_tokens > 12 and tokens[1:3] == ('Search', 'completed') \
+                        and tokens[4:6] == ('best', 'objective') and tokens[9] == 'iterations' \
+                        and tokens[12] == 'nodes':
+                    optim_value = float(tokens[6][:-1])
+                    results.solver.statistics.black_box.number_of_iterations = int(tokens[8])
+                    nodes = int(tokens[11])
+                elif tokens[1] == 'Exiting' and n_tokens > 4:
+                    if tokens[2:4] == ('on', 'maximum'):
+                        results.solver.termination_condition = {'nodes': TerminationCondition.maxEvaluations,
+                                                                'time': TerminationCondition.maxTimeLimit,
+                                                                'solutions': TerminationCondition.other,
+                                                                'iterations': TerminationCondition.maxIterations
+                                                                }.get(tokens[4], TerminationCondition.other)
+                    # elif tokens[2:5] == ('as', 'integer', 'gap'):
+                    #     # We might want to handle this case
+                # Integer solution of %g found...
+                elif n_tokens >= 4 and tokens[1:4] == ('Integer', 'solution', 'of'):
+                    optim_value = float(tokens[4])
+                    try:
+                        results.solver.statistics.black_box.number_of_iterations = \
+                            int(tokens[tokens.index('iterations') - 1])
+                        nodes = int(tokens[tokens.index('nodes') - 1])
+                    except ValueError:
+                        pass
+                # Partial search - best objective %g (best possible %g), took %d iterations and %d nodes
+                elif n_tokens > 15 and tokens[1:3] == ('Partial', 'search') \
+                        and tokens[4:6] == ('best', 'objective') and tokens[7:9] == ('(best', 'possible') \
+                        and tokens[12] == 'iterations' and tokens[15] == 'nodes':
+                    optim_value = float(tokens[6][:-1])
+                    lower_bound = float(tokens[9][:-2])
+                    results.solver.statistics.black_box.number_of_iterations = int(tokens[11])
+                    nodes = int(tokens[14])
+                elif n_tokens > 12 and tokens[1] == 'After' and tokens[3] == 'nodes,' \
+                        and tokens[8:10] == ('best', 'solution,') and tokens[10:12] == ('best', 'possible'):
+                    nodes = int(tokens[2])
+                    optim_value = float(tokens[7])
+                    lower_bound = float(tokens[12])
+                elif tokens[0] == "Current" and n_tokens == 10 and tokens[1] == "default" and tokens[2] == "(if" \
+                        and results.problem.name is None:
+                    results.problem.name = tokens[-1]
+                    if '.' in results.problem.name:
+                        parts = results.problem.name.split('.')
+                        if len(parts) > 2:
+                            results.problem.name = '.'.join(parts[:-1])
+                        else:
+                            results.problem.name = results.problem.name.split('.')[0]
+                    if '/' in results.problem.name:
+                        results.problem.name = results.problem.name.split('/')[-1]
+                    if '\\' in results.problem.name:
+                        results.problem.name = results.problem.name.split('\\')[-1]
+                # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L10840
+                elif tokens[0] == 'Presolve':
+                    if n_tokens > 9 and tokens[3] == 'rows,' and tokens[6] == 'columns':
+                        results.problem.number_of_variables = int(tokens[4]) - int(tokens[5][1:-1])
+                        results.problem.number_of_constraints = int(tokens[1]) - int(tokens[2][1:-1])
+                        results.problem.number_of_objectives = 1
+                    elif n_tokens > 6 and tokens[6] == 'infeasible':
+                        soln.status = SolutionStatus.infeasible
+                # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L11105
+                elif n_tokens > 11 and tokens[:2] == ('Problem', 'has') and tokens[3] == 'rows,' and \
+                        tokens[5] == 'columns' and tokens[7:9] == ('with', 'objective)'):
+                    results.problem.number_of_variables = int(tokens[4])
+                    results.problem.number_of_constraints = int(tokens[2])
+                    results.problem.number_of_nonzeros = int(tokens[6][1:])
+                    results.problem.number_of_objectives = 1
+                # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L10814
+                elif n_tokens > 8 and tokens[:3] == ('Original', 'problem', 'has') and tokens[4] == 'integers' \
+                        and tokens[6:9] == ('of', 'which', 'binary)'):
+                    results.problem.number_of_integer_variables = int(tokens[3])
+                    results.problem.number_of_binary_variables = int(tokens[5][1:])
+                elif n_tokens == 5 and tokens[3] == "NAME":
+                    results.problem.name = tokens[4]
+                elif 'CoinLpIO::readLp(): Maximization problem reformulated as minimization' in ' '.join(tokens):
+                    results.problem.sense = ProblemSense.maximize
+                # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L3047
+                elif n_tokens > 3 and tokens[:2] == ('Result', '-'):
+                    if tokens[2:4] in [('Run', 'abandoned'), ('User', 'ctrl-c')]:
+                        results.solver.termination_condition = TerminationCondition.userInterrupt
+                    if n_tokens > 4:
+                        if tokens[2:5] == ('Optimal', 'solution', 'found'):
+                            # parser for log file generetated with discrete variable
+                            soln.status = SolutionStatus.optimal
+                            # if n_tokens > 7 and tokens[5:8] == ('(within', 'gap', 'tolerance)'):
+                            #     # We might want to handle this case
+                        elif tokens[2:5] in [('Linear', 'relaxation', 'infeasible'),
+                                             ('Problem', 'proven', 'infeasible')]:
+                            soln.status = SolutionStatus.infeasible
+                        elif tokens[2:5] == ('Linear', 'relaxation', 'unbounded'):
+                            soln.status = SolutionStatus.unbounded
+                        elif n_tokens > 5 and tokens[2:4] == ('Stopped', 'on') and tokens[5] == 'limit':
+                            results.solver.termination_condition = {'node': TerminationCondition.maxEvaluations,
+                                                                    'time': TerminationCondition.maxTimeLimit,
+                                                                    'solution': TerminationCondition.other,
+                                                                    'iterations': TerminationCondition.maxIterations
+                                                                    }.get(tokens[4], TerminationCondition.other)
+                    # perhaps from https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L12318
+                    elif n_tokens > 3 and tokens[2] == "Finished":
+                        soln.status = SolutionStatus.optimal
+                        optim_value = float(tokens[4])
+                # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L7904
+                elif n_tokens >= 3 and tokens[:2] == ('Objective', 'value:'):
+                    # parser for log file generetated with discrete variable
+                    optim_value = float(tokens[2])
+                # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L7904
+                elif n_tokens >= 4 and tokens[:4] == ('No', 'feasible', 'solution', 'found'):
+                    soln.status = SolutionStatus.infeasible
+                elif n_tokens > 2 and tokens[:2] == ('Lower', 'bound:'):
+                    if lower_bound is None:  # Only use if not already found since this is to less decimal places
+                        results.problem.lower_bound = float(tokens[2])
+                # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L7918
+                elif tokens[0] == 'Gap:':
+                    # This is relative and only to 2 decimal places - could calculate explicitly using lower bound
+                    gap = float(tokens[1])
+                # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L7923
+                elif n_tokens > 2 and tokens[:2] == ('Enumerated', 'nodes:'):
+                    nodes = int(tokens[2])
+                # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L7926
+                elif n_tokens > 2 and tokens[:2] == ('Total', 'iterations:'):
+                    results.solver.statistics.black_box.number_of_iterations = int(tokens[2])
+                # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L7930
+                elif n_tokens > 3 and tokens[:3] == ('Time', '(CPU', 'seconds):'):
+                    results.solver.system_time = float(tokens[3])
+                # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L7933
+                elif n_tokens > 3 and tokens[:3] == ('Time', '(Wallclock', 'Seconds):'):
+                    results.solver.wallclock_time = float(tokens[3])
+                # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L10477
+                elif n_tokens > 4 and tokens[:4] == ('Total', 'time', '(CPU', 'seconds):'):
+                    results.solver.system_time = float(tokens[4])
+                    if n_tokens > 7 and tokens[5:7] == ('(Wallclock', 'seconds):'):
+                        results.solver.wallclock_time = float(tokens[7])
+                elif tokens[0] == "Optimal":
+                    if n_tokens > 4 and tokens[2] == "objective" and tokens[4] != "and":
+                        # parser for log file generetated without discrete variable
+                        # see pull request #339: last check avoids lines like "Optimal - objective gap and
+                        # complementarity gap both smallish and small steps"
+                        soln.status = SolutionStatus.optimal
+                        optim_value = float(tokens[4])
+                    elif n_tokens > 5 and tokens[1] == 'objective' and tokens[5] == 'iterations':
+                        soln.status = SolutionStatus.optimal
+                        optim_value = float(tokens[2])
+                        results.solver.statistics.black_box.number_of_iterations = int(tokens[4])
+                elif tokens[0] == "sys" and n_tokens == 2:
+                    results.solver.system_time = float(tokens[1])
+                elif tokens[0] == "user" and n_tokens == 2:
+                    results.solver.user_time = float(tokens[1])
+                elif n_tokens == 10 and "Presolve" in tokens and \
+                        "iterations" in tokens and tokens[0] == "Optimal" and "objective" == tokens[1]:
+                    soln.status = SolutionStatus.optimal
+                    optim_value = float(tokens[2])
+                results.solver.user_time = -1.0  # Why is this set to -1?
 
         if results.problem.name is None:
             results.problem.name = 'unknown'
 
-        if not results.solver.status is SolverStatus.error and \
-            results.solver.termination_condition in [TerminationCondition.unknown,
-                        #TerminationCondition.maxIterations,
-                        #TerminationCondition.minFunctionValue,
-                        #TerminationCondition.minStepLength,
-                        TerminationCondition.globallyOptimal,
-                        TerminationCondition.locallyOptimal,
-                        TerminationCondition.optimal,
-                        #TerminationCondition.maxEvaluations,
-                        TerminationCondition.other]:
-                results.solution.insert(soln)
+        if soln.status is SolutionStatus.optimal:
+            results.solver.termination_message = "Model was solved to optimality (subject to tolerances), and an " \
+                                                 "optimal solution is available."
+            results.solver.termination_condition = TerminationCondition.optimal
+            results.solver.status = SolverStatus.ok
+            if gap is None:
+                lower_bound = optim_value
+                gap = 0.0
+        elif soln.status == SolutionStatus.infeasible:
+            results.solver.termination_message = "Model was proven to be infeasible."
+            results.solver.termination_condition = TerminationCondition.infeasible
+            results.solver.status = SolverStatus.warning
+        elif soln.status == SolutionStatus.unbounded:
+            results.solver.termination_message = "Model was proven to be unbounded."
+            results.solver.termination_condition = TerminationCondition.unbounded
+            results.solver.status = SolverStatus.warning
+        elif results.solver.termination_condition in [TerminationCondition.maxTimeLimit,
+                                                      TerminationCondition.maxEvaluations,
+                                                      TerminationCondition.other,
+                                                      TerminationCondition.maxIterations]:
+            results.solver.status = SolverStatus.aborted
+            soln.status = SolutionStatus.stoppedByLimit
+            if results.solver.termination_condition == TerminationCondition.maxTimeLimit:
+                results.solver.termination_message = "Optimization terminated because the time expended " \
+                                                     "exceeded the value specified in the seconds " \
+                                                     "parameter."
+            elif results.solver.termination_condition == TerminationCondition.maxEvaluations:
+                results.solver.termination_message = \
+                    "Optimization terminated because the total number of branch-and-cut nodes explored " \
+                    "exceeded the value specified in the maxNodes parameter"
+            elif results.solver.termination_condition == TerminationCondition.other:
+                results.solver.termination_message = "Optimization terminated because the number of " \
+                                                     "solutions found reached the value specified in the " \
+                                                     "maxSolutions parameter."
+            elif results.solver.termination_condition == TerminationCondition.maxIterations:
+                results.solver.termination_message = "Optimization terminated because the total number of simplex " \
+                                                     "iterations performed exceeded the value specified in the " \
+                                                     "maxIterations parameter."
+        soln.gap = gap
+        if results.problem.sense == ProblemSense.minimize:
+            upper_bound = optim_value
+        elif results.problem.sense == ProblemSense.maximize:
+            optim_value *= -1
+            upper_bound = None if lower_bound is None else -lower_bound
+            lower_bound = optim_value
+        soln.objective['__default_objective__'] = {'Value': optim_value}
+        results.problem.lower_bound = lower_bound
+        results.problem.upper_bound = upper_bound
+
+        results.solver.statistics.branch_and_bound.number_of_bounded_subproblems = nodes
+        results.solver.statistics.branch_and_bound.number_of_created_subproblems = nodes
+
+        if soln.status in [SolutionStatus.optimal,
+                           SolutionStatus.stoppedByLimit,
+                           SolutionStatus.unknown,
+                           SolutionStatus.other]:
+            results.solution.insert(soln)
 
         return results
 
@@ -460,11 +581,10 @@ class CBCSHELL(SystemCallSolver):
         # otherwise, go with the native CBC solution format.
         if len(results.solution) > 0:
             solution = results.solution(0)
-        if results.solver.termination_condition is TerminationCondition.infeasible:
-            # NOTE: CBC _does_ print a solution file.  However, I'm not
-            # sure how to interpret it yet.
-            return
-        results.problem.number_of_objectives=1
+        else:
+            solution = Solution()
+
+        results.problem.number_of_objectives = 1
 
         processing_constraints = None # None means header, True means constraints, False means variables.
         header_processed = False
@@ -476,45 +596,84 @@ class CBCSHELL(SystemCallSolver):
             INPUT = []
 
         for line in INPUT:
-            tokens = re.split('[ \t]+',line.strip())
-
+            tokens = tuple(re.split('[ \t]+',line.strip()))
+            n_tokens = len(tokens)
             #
             # These are the only header entries CBC will generate (identified via browsing CbcSolver.cpp)
+            # See https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp
+            # Search for (no integer solution - continuous used)      Currently line 9912 as of rev2497
+            # Note that since this possibly also covers old CBC versions, we shall not be removing any functionality,
+            # even if it is not seen in the current revision
             #
             if not header_processed:
-                if tokens[0] == "Optimal":
+                if tokens[0] == 'Optimal':
+                    results.solver.termination_condition = TerminationCondition.optimal
+                    results.solver.status = SolverStatus.ok
+                    results.solver.termination_message = "Model was solved to optimality (subject to tolerances), " \
+                                                         "and an optimal solution is available."
                     solution.status = SolutionStatus.optimal
-                    solution.gap = 0.0
                     optim_value = float(tokens[-1])
-
-                elif tokens[0] == "Unbounded" or (len(tokens)>2 and tokens[0] == "Problem" and tokens[2] == 'unbounded') or (len(tokens)>1 and tokens[0] ==    'Dual' and tokens[1] == 'infeasible'):
-                    results.solver.termination_condition = TerminationCondition.unbounded
-                    solution.gap = None
-                    results.solution.delete(0)
-                    INPUT.close()
-                    return
-
-                elif tokens[0] == "Infeasible" or tokens[0] == 'PrimalInfeasible' or (len(tokens)>1 and tokens[0] == 'Integer' and tokens[1] == 'infeasible'):
+                elif tokens[0] in ('Infeasible', 'PrimalInfeasible') or (
+                        n_tokens > 1 and tokens[0:2] == ('Integer', 'infeasible')):
+                    results.solver.termination_message = "Model was proven to be infeasible."
                     results.solver.termination_condition = TerminationCondition.infeasible
-                    solution.gap = None
-                    results.solution.delete(0)
+                    results.solver.status = SolverStatus.warning
+                    solution.status = SolutionStatus.infeasible
                     INPUT.close()
                     return
-
-                elif len(tokens) > 2 and tokens[0:3] == ['Stopped','on','time']:
-                    if tokens[4] == 'objective':
+                elif tokens[0] == 'Unbounded' or (
+                        n_tokens > 2 and tokens[0] == 'Problem' and tokens[2] == 'unbounded') or (
+                        n_tokens > 1 and tokens[0:2] == ('Dual', 'infeasible')):
+                    results.solver.termination_message = "Model was proven to be unbounded."
+                    results.solver.termination_condition = TerminationCondition.unbounded
+                    results.solver.status = SolverStatus.warning
+                    solution.status = SolutionStatus.unbounded
+                    INPUT.close()
+                    return
+                elif n_tokens > 2 and tokens[0:2] == ('Stopped', 'on'):
+                    optim_value = float(tokens[-1])
+                    solution.gap = None
+                    results.solver.status = SolverStatus.aborted
+                    solution.status = SolutionStatus.stoppedByLimit
+                    if tokens[2] == 'time':
+                        results.solver.termination_message = "Optimization terminated because the time expended " \
+                                                             "exceeded the value specified in the seconds " \
+                                                             "parameter."
                         results.solver.termination_condition = TerminationCondition.maxTimeLimit
-                        solution.gap = None
-                        optim_value = float(tokens[-1])
-                    elif len(tokens) > 8 and tokens[3:9] == ['(no', 'integer', 'solution', '-', 'continuous', 'used)']:
-                        results.solver.termination_condition = TerminationCondition.intermediateNonInteger
-                        solution.gap = None
-                        optim_value = float(tokens[-1])
+                    elif tokens[2] == 'iterations':
+                        # Only add extra info if not already obtained from logs (which give a better description)
+                        if results.solver.termination_condition not in [TerminationCondition.maxEvaluations,
+                                                                        TerminationCondition.other,
+                                                                        TerminationCondition.maxIterations]:
+                            results.solver.termination_message = "Optimization terminated because a limit was hit"
+                            results.solver.termination_condition = TerminationCondition.maxIterations
+                    elif tokens[2] == 'difficulties':
+                        results.solver.termination_condition = TerminationCondition.solverFailure
+                        results.solver.status = SolverStatus.error
+                        solution.status = SolutionStatus.error
+                    elif tokens[2] == 'ctrl-c':
+                        results.solver.termination_message = "Optimization was terminated by the user."
+                        results.solver.termination_condition = TerminationCondition.userInterrupt
+                        solution.status = SolutionStatus.unknown
                     else:
-                        print("***WARNING: CBC plugin currently not processing this solution status correctly. Full status line is: "+line.strip())
-
-                elif tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
-                    print("***WARNING: CBC plugin currently not processing solution status="+tokens[0]+" correctly. Full status line is: "+line.strip())
+                        results.solver.termination_condition = TerminationCondition.unknown
+                        results.solver.status = SolverStatus.unknown
+                        solution.status = SolutionStatus.unknown
+                        results.solver.termination_message = ' '.join(tokens)
+                        print('***WARNING: CBC plugin currently not processing solution status=Stopped correctly. Full '
+                              'status line is: {}'.format(line.strip()))
+                    if n_tokens > 8 and tokens[3:9] == ('(no', 'integer', 'solution', '-', 'continuous', 'used)'):
+                        results.solver.termination_message = "Optimization terminated because a limit was hit, " \
+                                                             "however it had not found an integer solution yet."
+                        results.solver.termination_condition = TerminationCondition.intermediateNonInteger
+                        solution.status = SolutionStatus.other
+                else:
+                    results.solver.termination_condition = TerminationCondition.unknown
+                    results.solver.status = SolverStatus.unknown
+                    solution.status = SolutionStatus.unknown
+                    results.solver.termination_message = ' '.join(tokens)
+                    print('***WARNING: CBC plugin currently not processing solution status={} correctly. Full status '
+                          'line is: {}'.format(tokens[0], line.strip()))
 
             # most of the first tokens should be integers
             # if it's not an integer, only then check the list of results
@@ -529,16 +688,16 @@ class CBCSHELL(SystemCallSolver):
                         raise RuntimeError("CBC plugin encountered unexpected line=("+line.strip()+") in solution file="+self._soln_file+"; constraint and variable sections already processed!")
             except ValueError:
                 if tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
-                    if optim_value:
-                        solution.objective['__default_objective__']['Value'] = optim_value
+                    if optim_value is not None:
                         if results.problem.sense == ProblemSense.maximize:
-                            solution.objective['__default_objective__']['Value'] *= -1
+                            optim_value *= -1
+                        solution.objective['__default_objective__'] = {'Value': optim_value}
                     header_processed = True
 
             if (processing_constraints is True) and (extract_duals is True):
-                if len(tokens) == 4:
+                if n_tokens == 4:
                     pass
-                elif (len(tokens) == 5) and tokens[0] == "**":
+                elif (n_tokens == 5) and tokens[0] == "**":
                     tokens = tokens[1:]
                 else:
                     raise RuntimeError("Unexpected line format encountered in CBC solution file - line="+line)
@@ -564,9 +723,9 @@ class CBCSHELL(SystemCallSolver):
                         solution.constraint[ 'r_l_' + constraint[4:] ] = {"Dual": constraint_dual}
 
             elif processing_constraints is False:
-                if len(tokens) == 4:
+                if n_tokens == 4:
                     pass
-                elif (len(tokens) == 5) and tokens[0] == "**":
+                elif (n_tokens == 5) and tokens[0] == "**":
                     tokens = tokens[1:]
                 else:
                     raise RuntimeError("Unexpected line format encountered "
@@ -590,6 +749,12 @@ class CBCSHELL(SystemCallSolver):
 
         if not type(INPUT) is list:
             INPUT.close()
+
+        if len(results.solution) == 0 and solution.status in [SolutionStatus.optimal,
+                                                              SolutionStatus.stoppedByLimit,
+                                                              SolutionStatus.unknown,
+                                                              SolutionStatus.other]:
+            results.solution.insert(solution)
 
 
 @SolverFactory.register('_mock_cbc')

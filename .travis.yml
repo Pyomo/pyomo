@@ -80,6 +80,7 @@ install:
         ${DOC} bash -c "echo 'import coverage; coverage.process_startup()' > ${DOCKER_SITE_PACKAGES}/run_coverage_at_startup.pth"
     fi
   - ${DOC} pyomo download-extensions
+  - ${DOC} pyomo build-extensions
 
 script:
   - ${DOC} python --version
