@@ -91,11 +91,11 @@ def command_exec(options):
         return
     if len(options.command) == 0:
         print("  ERROR: no command specified")
-        return
+        return 1
     if not os.path.exists(cmddir+options.command[0]):
         print("  ERROR: the command '%s' does not exist" % (cmddir+options.command[0]))
-        return
-    pyutilib.subprocess.run(cmddir+' '.join(options.command), tee=True)
+        return 1
+    return pyutilib.subprocess.run(cmddir+' '.join(options.command), tee=True)[0]
 
 #
 # Add a subparser for the pyomo command
