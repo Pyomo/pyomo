@@ -54,8 +54,9 @@ except:
         QtCore = DummyQtCore
     else:
         try:
-            from PyQt4.QtGui import QAbstractItemView, QFileDialog, QMessageBox
-            from PyQt4.QtCore import QAbstractItemModel
+            from PyQt4.QtGui import (QAbstractItemView, QFileDialog, QMainWindow,
+                                     QMessageBox, QMdiArea, QApplication)
+            from PyQt4.QtCore import QAbstractItemModel, QTimer
             from PyQt4 import uic
             qt_available = True
         except:
@@ -64,19 +65,12 @@ except:
             QtCore = DummyQtCore
 else:
     try:
-        from PyQt5.QtWidgets import QAbstractItemView, QFileDialog, QMessageBox
-        from PyQt5.QtCore import QAbstractItemModel
+        from PyQt5.QtWidgets import (QAbstractItemView, QFileDialog, QMainWindow,
+                                     QMessageBox, QMdiArea, QApplication)
+        from PyQt5.QtCore import QAbstractItemModel, QTimer
         from PyQt5 import uic
         qt_available = True
     except:
         _log.exception("Cannot import PyQt5")
         QAbstractItemModel = DummyQAbstractItemModel
         QtCore = DummyQtCore
-
-try:
-    from qtconsole.rich_jupyter_widget import RichIPythonWidget
-    from qtconsole.inprocess import QtInProcessKernelManager
-    can_containt_qtconsole = True
-except:
-    _log.exception("Cannot import modules requied for qtconsole")
-    can_containt_qtconsole = False
