@@ -1,9 +1,10 @@
 import heapq
 import logging
+import timeit
 
 from pyutilib.misc import Container
 
-from pyomo.common.config import (ConfigBlock, ConfigValue)
+from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat)
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdpopt.util import create_utility_block, time_code, a_logger, restore_logger_level, \
     setup_results_object
@@ -59,6 +60,10 @@ class GDPbbSolver(object):
         description="The logger object or name to use for reporting.",
         domain=a_logger
     ))
+    CONFIG.declare("time_limit", ConfigValue(
+        default=float('inf'), domain=NonNegativeFloat,
+        description="Time limit (rudimentary). You need to also set subsolver time limits for now."
+    ))
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -84,6 +89,7 @@ class GDPbbSolver(object):
         solve_data.timing = Container()
         solve_data.original_model = model
         solve_data.results = SolverResults()
+        solve_data.start_time = timeit.default_timer()
 
         old_logger_level = config.logger.getEffectiveLevel()
         with time_code(solve_data.timing, 'total'), \
@@ -174,6 +180,7 @@ class GDPbbSolver(object):
                     solve_data.results.problem.lower_bound = mdl_results.problem.lower_bound
                     solve_data.results.problem.upper_bound = mdl_results.problem.upper_bound
                     solve_data.results.solver.timing = solve_data.timing
+                    solve_data.results.solver.iterations = counter
                     solve_data.results.solver.termination_condition = mdl_results.solver.termination_condition
                     return solve_data.results
 
@@ -188,6 +195,14 @@ class GDPbbSolver(object):
                         disj.indicator_var = 0  # initially set all indicator vars to zero
                 added_disj_counter = 0
                 for disj in next_disjunction.disjuncts:
+                    elapsed = timeit.default_timer() - solve_data.start_time
+                    if elapsed >= config.time_limit:
+                        config.logger.info("Time limit reached. No solution obtained.")
+                        solve_data.results.problem.lower_bound = mdl_results.problem.lower_bound
+                        solve_data.results.problem.upper_bound = float('inf')
+                        solve_data.results.solver.timing = solve_data.timing
+                        solve_data.results.solver.iterations = counter
+                        solve_data.results.solver.termination_condition = mdl_results.solver.termination_condition
                     if not disj.indicator_var.fixed:
                         disj.indicator_var = 1
                     mnew = mdl.clone()
@@ -228,10 +243,13 @@ class GDPbbSolver(object):
     def subproblem_solve(gdp, solver, config):
         subproblem = gdp.clone()
         TransformationFactory('gdp.fix_disjuncts').apply_to(subproblem)
-
-        result = solver.solve(subproblem, **config.solver_args)
         main_obj = next(subproblem.component_data_objects(Objective, active=True))
         obj_sign = 1 if main_obj.sense == minimize else -1
+
+        try:
+            result = solver.solve(subproblem, **config.solver_args)
+        except RuntimeError:
+            return obj_sign * float('inf'), SolverResults(), subproblem.GDPbb_utils.variable_list
         if (result.solver.status is SolverStatus.ok and
                 result.solver.termination_condition is tc.optimal):
             return value(main_obj.expr), result, subproblem.GDPbb_utils.variable_list
