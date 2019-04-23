@@ -14,7 +14,7 @@ import pyutilib.th as unittest
 
 import pyomo.contrib.pynumero as pn
 if not (pn.sparse.numpy_available and pn.sparse.scipy_available):
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run BlockVector tests")
 
 import numpy as np
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector

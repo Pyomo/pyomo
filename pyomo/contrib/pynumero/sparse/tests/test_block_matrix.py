@@ -11,7 +11,7 @@ import pyutilib.th as unittest
 
 from pyomo.contrib.pynumero import numpy_available, scipy_available
 if not (numpy_available and scipy_available):
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run BlockMatrix tests")
 
 from scipy.sparse import coo_matrix, bmat
 import numpy as np

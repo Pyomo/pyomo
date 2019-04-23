@@ -8,12 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import pyutilib.th as unittest
-try:
-    from scipy.sparse import coo_matrix, bmat
-    import numpy as np
-except ImportError:
-    raise unittest.SkipTest(
-        "Pynumero needs scipy and numpy to run block matrix tests")
+
+import pyomo.contrib.pynumero as pn
+if not (pn.sparse.numpy_available and pn.sparse.scipy_available):
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run BlockVector tests")
+
+from scipy.sparse import coo_matrix, bmat
+import numpy as np
 
 try:
     from mpi4py import MPI
