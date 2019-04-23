@@ -100,10 +100,7 @@ install:
   #   that usually come with the full Anaconda distribution
   #
   - SET MINICONDA_EXTRAS=""
-  - IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml=3.12 networkx xlrd pandas matplotlib dill seaborn)
-  #
-  #    Note: We are fixing pyyaml to 3.12 because newer versions break
-  #          the DataPortal unit tests
+  - IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn)
   #
   - "IF DEFINED EXTRAS (SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% pymysql pyro4 pint %MINICONDA_EXTRAS%)"
   #- "IF DEFINED EXTRAS (%CONDAFORGE% mkl)"
