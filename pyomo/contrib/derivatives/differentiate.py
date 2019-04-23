@@ -366,7 +366,7 @@ class _ReverseSDVisitorLeafToRoot(ExpressionValueVisitor):
         self.der_dict = der_dict
 
     def visit(self, node, values):
-        self.val_dict[node] = node.create_node_with_local_data(values)
+        self.val_dict[node] = node.create_node_with_local_data(tuple(values))
         self.der_dict[node] = 0
         return self.val_dict[node]
 
