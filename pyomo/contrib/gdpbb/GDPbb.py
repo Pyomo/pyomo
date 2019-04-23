@@ -203,6 +203,7 @@ class GDPbbSolver(object):
                         solve_data.results.solver.timing = solve_data.timing
                         solve_data.results.solver.iterations = counter
                         solve_data.results.solver.termination_condition = mdl_results.solver.termination_condition
+                        return solve_data.results
                     if not disj.indicator_var.fixed:
                         disj.indicator_var = 1
                     mnew = mdl.clone()
