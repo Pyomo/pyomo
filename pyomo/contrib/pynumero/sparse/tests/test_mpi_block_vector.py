@@ -34,14 +34,17 @@ except ImportError:
     raise unittest.SkipTest(
         "Could not import BlockVector")
 
-#@unittest.skipIf(comm.Get_size() < 3, "Need at least 3 processors to run tests")
-@unittest.skip('Skipping parallel tests for now')
+@unittest.skipIf(comm.Get_size() < 3, "Need at least 3 processors to run tests")
+#@unittest.skip('Skipping parallel tests for now')
 class TestMPIBlockVector(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         # test problem 1
 
+        if comm.Get_size() < 3:
+            raise unitest.SkipTest("Need at least 3 processors to run tests")
+        
         v1 = MPIBlockVector(4, [0,1,0,1], comm)
 
         rank = comm.Get_rank()
