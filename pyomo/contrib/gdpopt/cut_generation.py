@@ -160,10 +160,10 @@ def add_affine_cuts(nlp_result, solve_data, config):
             aff_cuts = aff_utils.GDPopt_aff_cons
             concave_cut = sum(ccSlope[var] * (var - var.value)
                               for var in vars_in_constr
-                              ) + ccStart >= lb_int
+                              if not var.fixed) + ccStart >= lb_int
             convex_cut = sum(cvSlope[var] * (var - var.value)
                              for var in vars_in_constr
-                             ) + cvStart <= ub_int
+                             if not var.fixed) + cvStart <= ub_int
             aff_cuts.add(expr=concave_cut)
             aff_cuts.add(expr=convex_cut)
             counter += 2

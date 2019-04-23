@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Main driver module for GDPopt solver.
 
-19.4.15 changes:
+19.4.23 changes:
 - add support for linear subproblems
 - use automatic differentiation for large constraints
+- bugfixes on time limit support
+- treat fixed variables as constants in GLOA cut generation
 19.3.25 changes:
 - add rudimentary time limit support
 - start keeping basic changelog
@@ -34,7 +36,7 @@ from pyomo.opt.base import SolverFactory
 from pyomo.opt.results import SolverResults
 from pyutilib.misc import Container
 
-__version__ = (19, 4, 15)  # Note: date-based version number
+__version__ = (19, 4, 23)  # Note: date-based version number
 
 
 @SolverFactory.register(
@@ -75,6 +77,10 @@ class GDPoptSolver(object):
         description="Iteration limit."
     ))
     CONFIG.declare("reslim", ConfigValue(
+        default=float('inf'), domain=NonNegativeFloat,
+        description="Time limit (rudimentary). You need to also set subsolver time limits for now."
+    ))
+    CONFIG.declare("time_limit", ConfigValue(
         default=float('inf'), domain=NonNegativeFloat,
         description="Time limit (rudimentary). You need to also set subsolver time limits for now."
     ))

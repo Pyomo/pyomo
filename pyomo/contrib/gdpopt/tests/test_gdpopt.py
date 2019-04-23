@@ -5,7 +5,6 @@ from os.path import abspath, dirname, join, normpath
 
 from six import StringIO
 
-import pyomo.environ
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
@@ -19,8 +18,8 @@ from pyutilib.misc import import_file
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.opt import TerminationCondition
 
-currdir = dirname(abspath(__file__))
-exdir = normpath(join(currdir, '..', '..', '..', '..', 'examples', 'gdp'))
+from pyomo.common.fileutils import PYOMO_ROOT_DIR
+exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
 mip_solver = 'glpk'
 nlp_solver = 'ipopt'

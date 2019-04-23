@@ -111,15 +111,13 @@ def solve_NLP(nlp_model, solve_data, config):
         nlp_model.dual.get(c, None)
         for c in GDPopt.constraint_list)
 
-    subprob_terminate_cond = results.solver.termination_condition
-    if (subprob_terminate_cond is tc.optimal or
-            subprob_terminate_cond is tc.locallyOptimal or
-            subprob_terminate_cond is tc.feasible):
+    term_cond = results.solver.termination_condition
+    if any(term_cond == cond for cond in (tc.optimal, tc.locallyOptimal, tc.feasible)):
         pass
-    elif subprob_terminate_cond is tc.infeasible:
+    elif term_cond == tc.infeasible:
         config.logger.info('NLP subproblem was infeasible.')
         nlp_result.feasible = False
-    elif subprob_terminate_cond is tc.maxIterations:
+    elif term_cond == tc.maxIterations:
         # TODO try something else? Reinitialize with different initial
         # value?
         config.logger.info(
@@ -130,31 +128,34 @@ def solve_NLP(nlp_model, solve_data, config):
                 'Using potentially suboptimal feasible solution.')
         else:
             nlp_result.feasible = False
-    elif subprob_terminate_cond is tc.internalSolverError:
+    elif term_cond == tc.internalSolverError:
         # Possible that IPOPT had a restoration failure
         config.logger.info(
             "NLP solver had an internal failure: %s" % results.solver.message)
         nlp_result.feasible = False
-    elif (subprob_terminate_cond is tc.other and
+    elif (term_cond == tc.other and
           "Too few degrees of freedom" in str(results.solver.message)):
         # Possible IPOPT degrees of freedom error
         config.logger.info(
             "IPOPT has too few degrees of freedom: %s" %
             results.solver.message)
         nlp_result.feasible = False
-    elif subprob_terminate_cond is tc.other:
+    elif term_cond == tc.other:
         config.logger.info(
             "NLP solver had a termination condition of 'other': %s" %
             results.solver.message)
         nlp_result.feasible = False
-    elif subprob_terminate_cond is tc.error:
+    elif term_cond == tc.error:
         config.logger.info("NLP solver had a termination condition of 'error': %s" % results.solver.message)
+        nlp_result.feasible = False
+    elif term_cond == tc.maxTimeLimit:
+        config.logger.info("NLP solver ran out of time. Assuming infeasible for now.")
         nlp_result.feasible = False
     else:
         raise ValueError(
             'GDPopt unable to handle NLP subproblem termination '
             'condition of %s. Results: %s'
-            % (subprob_terminate_cond, results))
+            % (term_cond, results))
 
     # Call the NLP post-solve callback
     config.call_after_subproblem_solve(nlp_model, solve_data)
@@ -194,15 +195,13 @@ def solve_MINLP(model, solve_data, config):
         model.dual.get(c, None)
         for c in GDPopt.constraint_list)
 
-    subprob_terminate_cond = results.solver.termination_condition
-    if (subprob_terminate_cond is tc.optimal or
-            subprob_terminate_cond is tc.locallyOptimal or
-            subprob_terminate_cond is tc.feasible):
+    term_cond = results.solver.termination_condition
+    if any(term_cond == cond for cond in (tc.optimal, tc.locallyOptimal, tc.feasible)):
         pass
-    elif subprob_terminate_cond is tc.infeasible:
+    elif term_cond == tc.infeasible:
         config.logger.info('MINLP subproblem was infeasible.')
         subprob_result.feasible = False
-    elif subprob_terminate_cond is tc.maxIterations:
+    elif term_cond == tc.maxIterations:
         # TODO try something else? Reinitialize with different initial
         # value?
         config.logger.info(
@@ -213,7 +212,7 @@ def solve_MINLP(model, solve_data, config):
                 'Using potentially suboptimal feasible solution.')
         else:
             subprob_result.feasible = False
-    elif subprob_terminate_cond is tc.intermediateNonInteger:
+    elif term_cond == tc.intermediateNonInteger:
         config.logger.info(
             "MINLP solver could not find feasible integer solution: %s" % results.solver.message)
         subprob_result.feasible = False
@@ -221,7 +220,7 @@ def solve_MINLP(model, solve_data, config):
         raise ValueError(
             'GDPopt unable to handle MINLP subproblem termination '
             'condition of %s. Results: %s'
-            % (subprob_terminate_cond, results))
+            % (term_cond, results))
 
     # Call the subproblem post-solve callback
     config.call_after_subproblem_solve(model, solve_data)
