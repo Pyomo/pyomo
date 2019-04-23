@@ -148,7 +148,7 @@ MC *NPV(MC *var1)
     return ans;
 }
 
-void *displayOutput(void *ptr)
+void displayOutput(void *ptr)
 {
     MC *var  = (MC*) ptr;
     MC F = *var;
@@ -320,7 +320,7 @@ extern "C"
         return ans;
     }
 
-    void *new_displayOutput(void *ptr)
+    void new_displayOutput(void *ptr)
     {
         displayOutput(ptr);
     }

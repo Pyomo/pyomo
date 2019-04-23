@@ -37,7 +37,7 @@ for entrypoint in pyomo_commands:
         raise ImportError(msg)
 
 
-def main(args=None, get_return=False):
+def main(args=None, get_return=True):
     #
     # Load subcommands
     #

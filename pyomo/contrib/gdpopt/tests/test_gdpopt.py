@@ -31,6 +31,7 @@ LOA_solvers = (mip_solver, nlp_solver)
 GLOA_solvers = (mip_solver, global_nlp_solver, minlp_solver)
 LOA_solvers_available = all(SolverFactory(s).available() for s in LOA_solvers)
 GLOA_solvers_available = all(SolverFactory(s).available() for s in GLOA_solvers)
+license_available = SolverFactory(global_nlp_solver).license_is_valid() if GLOA_solvers_available else False
 
 
 class TestGDPoptUnit(unittest.TestCase):
@@ -385,6 +386,7 @@ class TestGLOA(unittest.TestCase):
         )
         self.assertEqual(res.solver.termination_condition, TerminationCondition.infeasible)
 
+    @unittest.skipUnless(license_available, "Global NLP solver license not available.")
     def test_GLOA_8PP(self):
         """Test the global logic-based outer approximation algorithm."""
         exfile = import_file(
@@ -398,6 +400,7 @@ class TestGLOA(unittest.TestCase):
         )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
+    @unittest.skipUnless(license_available, "Global NLP solver license not available.")
     def test_GLOA_8PP_force_NLP(self):
         """Test the global logic-based outer approximation algorithm."""
         exfile = import_file(
@@ -412,6 +415,7 @@ class TestGLOA(unittest.TestCase):
         )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
+    @unittest.skipUnless(license_available, "Global NLP solver license not available.")
     def test_GLOA_strip_pack_default_init(self):
         """Test logic-based outer approximation with strip packing."""
         exfile = import_file(
@@ -425,6 +429,7 @@ class TestGLOA(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
+    @unittest.skipUnless(license_available, "Global NLP solver license not available.")
     def test_GLOA_constrained_layout_default_init(self):
         """Test LOA with constrained layout."""
         exfile = import_file(

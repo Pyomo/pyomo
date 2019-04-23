@@ -16,7 +16,7 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       is_numeric_data,
                                       value,
                                       _sub)
-from pyomo.core.expr import current as EXPR
+from pyomo.core.expr import logical_expr
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
      _abstract_readwrite_property,
@@ -137,7 +137,7 @@ class IConstraint(ICategorizedObject):
                 return body_expr <= self.ub
             elif self.ub is None:
                 return self.lb <= body_expr
-            return EXPR.RangedExpression((self.lb, body_expr, self.ub), (False,False))
+            return logical_expr.RangedExpression((self.lb, body_expr, self.ub), (False,False))
 
     @property
     def bounds(self):
@@ -511,15 +511,15 @@ class constraint(_MutableBoundsConstraintMixin,
         # user did ( var < 1 > 0 ) (which also results in a non-None
         # chainedInequality value)
         #
-        if EXPR._using_chained_inequality and \
-           (EXPR._chainedInequality.prev is not None):
-            raise TypeError(EXPR._chainedInequality.error_message())
+        if logical_expr._using_chained_inequality and \
+           (logical_expr._chainedInequality.prev is not None):
+            raise TypeError(logical_expr._chainedInequality.error_message())
         #
         # Process relational expressions
         # (i.e. explicit '==', '<', and '<=')
         #
         if relational_expr:
-            if _expr_type is EXPR.EqualityExpression:
+            if _expr_type is logical_expr.EqualityExpression:
                 # assigning to the rhs property
                 # will set the equality flag to True
                 if not is_potentially_variable(expr.arg(1)):
@@ -533,7 +533,7 @@ class constraint(_MutableBoundsConstraintMixin,
                     self.body = expr.arg(0)
                     self.body -= expr.arg(1)
 
-            elif _expr_type is EXPR.InequalityExpression:
+            elif _expr_type is logical_expr.InequalityExpression:
                 if expr._strict:
                     raise ValueError(
                         "Constraint '%s' encountered a strict "

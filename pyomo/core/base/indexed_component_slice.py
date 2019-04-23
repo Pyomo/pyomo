@@ -7,7 +7,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
+import copy
 from six import PY3, iteritems, advance_iterator
 from pyomo.common import DeveloperError
 
@@ -46,6 +46,29 @@ class _IndexedComponent_slice(object):
         set_attr('call_errors_generate_exceptions', True)
         set_attr('key_errors_generate_exceptions', True)
         set_attr('attribute_errors_generate_exceptions', True)
+
+    def __getstate__(self):
+        """Serialize this object.
+
+        In general, we would not need to implement this (the object does
+        not leverage ``__slots__``).  However, because we have a
+        "blanket" implementation of :py:meth:`__getattr__`, we need to
+        explicitly implement these to avoid "accidentally" extending or
+        evaluating this slice."""
+        return dict(
+            (k,getattr(self,k)) for k in self.__dict__)
+
+    def __setstate__(self, state):
+        """Deserialize the state into this object. """
+        set_attr = super(_IndexedComponent_slice, self).__setattr__
+        for k,v in iteritems(state):
+            set_attr(k,v)
+
+    def __deepcopy__(self, memo):
+        """Deepcopy this object (leveraging :py:meth:`__getstate__`)"""
+        ans = memo[id(self)] = self.__class__.__new__(self.__class__)
+        ans.__setstate__(copy.deepcopy(self.__getstate__(), memo))
+        return ans
 
     def __iter__(self):
         """Return an iterator over this slice"""

@@ -21,7 +21,13 @@ def active_equalities(blk):
         blk: a Pyomo block in which to look for variables.
     """
     for o in blk.component_data_objects(Constraint, active=True):
-        if o.upper == o.lower: yield o
+        try:
+            u = value(o.upper, exception=False)
+            l = value(o.lower, exception=False)
+            if u == l and l is not None:
+                yield o
+        except ZeroDivisionError:
+            pass
 
 def count_free_variables(blk):
     """
