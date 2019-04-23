@@ -9,12 +9,12 @@
 #  ___________________________________________________________________________
 import sys
 import pyutilib.th as unittest
-try:
-    import numpy as np
-    import scipy
-except ImportError:
+
+from .. import numpy_available, scipy_available
+if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
+import numpy as np
 from pyomo.contrib.pynumero.sparse import BlockVector
 import pyomo.contrib.pynumero as pn
 
@@ -72,8 +72,6 @@ class TestSparseIntrinsics(unittest.TestCase):
         res_flat = pn.where(flat_condition, np.ones(bv.size) * 2.0, np.ones(bv.size))
         self.assertTrue(np.allclose(res.flatten(), res_flat))
 
-    @unittest.skipIf(np.lib.NumpyVersion(np.__version__) < '1.13.0',
-                     "numpy>=1.13.0 required to test isin")
     def test_isin(self):
 
         bv = self.bv
