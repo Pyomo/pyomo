@@ -149,10 +149,16 @@ class BlockVector(np.ndarray):
         x1 = args[0]
         x2 = args[1]
         if isinstance(x1, BlockVector) and isinstance(x2, BlockVector):
-            assert not x1.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert not x2.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert x1.nblocks == x2.nblocks, 'Operation on BlockVectors need the same number of blocks on each operand'
-            assert x1.size == x2.size, 'Dimension missmatch {}!={}'.format(x1.size, x2.size)
+            assert not x1.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert not x2.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert x1.nblocks == x2.nblocks, \
+                'Operation on BlockVectors need the same number of blocks on each operand'
+            assert x1.size == x2.size, \
+                'Dimension missmatch {}!={}'.format(x1.size, x2.size)
             res = BlockVector(x1.nblocks)
 
             for i in range(x1.nblocks):
@@ -160,8 +166,11 @@ class BlockVector(np.ndarray):
                 res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
             return res
         elif type(x1)==np.ndarray and isinstance(x2, BlockVector):
-            assert not x2.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert x1.size == x2.size, 'Dimension missmatch {}!={}'.format(x1.size, x2.size)
+            assert not x2.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert x1.size == x2.size, \
+                'Dimension missmatch {}!={}'.format(x1.size, x2.size)
             res = BlockVector(x2.nblocks)
             accum = 0
             for i in range(x2.nblocks):
@@ -171,8 +180,11 @@ class BlockVector(np.ndarray):
                 accum += nelements
             return res
         elif type(x2)==np.ndarray and isinstance(x1, BlockVector):
-            assert not x1.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert x1.size == x2.size, 'Dimension missmatch {}!={}'.format(x1.size, x2.size)
+            assert not x1.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert x1.size == x2.size, \
+                'Dimension missmatch {}!={}'.format(x1.size, x2.size)
             res = BlockVector(x1.nblocks)
             accum = 0
             for i in range(x1.nblocks):
@@ -182,14 +194,18 @@ class BlockVector(np.ndarray):
                 accum += nelements
             return res
         elif np.isscalar(x1) and isinstance(x2, BlockVector):
-            assert not x2.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+            assert not x2.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
             res = BlockVector(x2.nblocks)
             for i in range(x2.nblocks):
                 _args = [x1] + [x2[i]] + [args[j] for j in range(2, len(args))]
                 res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
             return res
         elif np.isscalar(x2) and isinstance(x1, BlockVector):
-            assert not x1.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+            assert not x1.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
             res = BlockVector(x1.nblocks)
             for i in range(x1.nblocks):
                 _args = [x1[i]] + [x2] + [args[j] for j in range(2, len(args))]
@@ -281,12 +297,18 @@ class BlockVector(np.ndarray):
         float
 
         """
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                              other.nblocks)
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            other.nblocks)
             return sum(self[i].dot(other[i]) for i in range(self.nblocks))
         elif type(other)==np.ndarray:
             bv = self.flatten()
@@ -367,18 +389,25 @@ class BlockVector(np.ndarray):
         if out is not None:
             raise NotImplementedError('compress not supported with out')
         result = BlockVector(self.nblocks)
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if isinstance(condition, BlockVector):
-            assert not condition.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert self.shape == condition.shape, 'Dimension mismatch {} != {}'.format(self.shape, condition.shape)
-            assert self.nblocks == condition.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                                  condition.nblocks)
+            assert not condition.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert self.shape == condition.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, condition.shape)
+            assert self.nblocks == condition.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            condition.nblocks)
             for idx, blk in enumerate(self):
                 result[idx] = blk.compress(condition[idx])
             return result
         elif type(condition)==np.ndarray:
-            assert self.shape == condition.shape, 'Dimension mismatch {} != {}'.format(self.shape,
-                                                                                       condition.shape)
+            assert self.shape == condition.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape,
+                                                     condition.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
@@ -449,7 +478,9 @@ class BlockVector(np.ndarray):
         """
         Peak to peak (maximum - minimum) value along a given axis.
         """
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         return self.flatten().ptp(axis=axis, out=out)
 
     def put(self, indices, values, mode='raise'):
@@ -616,21 +647,27 @@ class BlockVector(np.ndarray):
         """
         Returns the index of the largest element.
         """
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         return self.flatten().argmax(axis=axis, out=out)
 
     def argmin(self, axis=None, out=None):
         """
         Returns the index of the smallest element.
         """
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         return self.flatten().argmin(axis=axis, out=out)
 
     def cumprod(self, axis=None, dtype=None, out=None):
         """
         Returns the cumulative product of the elements along the given axis.
         """
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         flat = self.flatten().cumprod(axis=axis, dtype=dtype, out=out)
         v = self.clone()
         v.copyfrom(flat)
@@ -640,7 +677,9 @@ class BlockVector(np.ndarray):
         """
         Returns the cumulative sum of the elements along the given axis.
         """
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         flat = self.flatten().cumsum(axis=axis, dtype=dtype, out=out)
         v = self.clone()
         v.copyfrom(flat)
@@ -687,9 +726,11 @@ class BlockVector(np.ndarray):
         """
 
         if isinstance(other, BlockVector):
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                              other.nblocks)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            other.nblocks)
             for idx, blk in enumerate(other):
                 if isinstance(self[idx], BlockVector):
                     self[idx].copyfrom(blk)
@@ -713,9 +754,11 @@ class BlockVector(np.ndarray):
                 else:
                     raise RuntimeError('Should never get here')
         elif isinstance(other, np.ndarray):
-            msg = 'Operation not allowed with None blocks. Specify all blocks'
-            assert not self.has_none, msg
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+
+            assert not self.has_none, \
+                'Operation not allowed with None blocks. Specify all blocks'
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
 
             offset = 0
             for idx, blk in enumerate(self):
@@ -788,26 +831,35 @@ class BlockVector(np.ndarray):
         -------
         None
         """
-        assert isinstance(blocks, list), 'blocks should be passed in ordered list'
-        msg = 'More blocks passed than allocated {} != {}'.format(len(blocks), self.nblocks)
-        assert len(blocks) == self.nblocks, msg
+        assert isinstance(blocks, list), \
+            'blocks should be passed in ordered list'
+        assert len(blocks) == self.nblocks, \
+            'More blocks passed than allocated {} != {}'.format(len(blocks),
+                                                                self.nblocks)
         for idx, blk in enumerate(blocks):
             self[idx] = blk
 
     def __add__(self, other):
 
         result = BlockVector(self.nblocks)
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                              other.nblocks)
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            other.nblocks)
             for idx, blk in enumerate(self):
                 result[idx] = blk + other[idx]
             return result
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
@@ -821,10 +873,10 @@ class BlockVector(np.ndarray):
         else:
             from .mpi_block_vector import MPIBlockVector
             if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
-                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                  other.nblocks)
-                assert self.nblocks == other.nblocks, msg
+                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
+                assert self.nblocks == other.nblocks, \
+                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                other.nblocks)
                 for i in other.owned_blocks:
                     result[i] = self[i] + other[i]
                 return result
@@ -835,17 +887,24 @@ class BlockVector(np.ndarray):
 
     def __sub__(self, other):
         result = BlockVector(self.nblocks)
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks. ' \
+            'Specify all blocks in BlockVector'
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                              other.nblocks)
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            other.nblocks)
             for idx, blk in enumerate(self):
                 result[idx] = blk - other[idx]
             return result
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
@@ -859,9 +918,11 @@ class BlockVector(np.ndarray):
         else:
             from .mpi_block_vector import MPIBlockVector
             if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
-                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                  other.nblocks)
+                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
+
+                assert self.nblocks == other.nblocks, \
+                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                other.nblocks)
                 for i in other.owned_blocks:
                     result[i] = self[i] - other[i]
                 return result
@@ -870,18 +931,25 @@ class BlockVector(np.ndarray):
     def __rsub__(self, other):  # other - self
 
         result = BlockVector(self.nblocks)
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                              other.nblocks)
+            assert not other.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            other.nblocks)
             for idx, blk in enumerate(self):
                 result[idx] = other[idx] - blk
             return result
 
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
@@ -895,9 +963,11 @@ class BlockVector(np.ndarray):
         else:
             from .mpi_block_vector import MPIBlockVector
             if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
-                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                  other.nblocks)
+                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
+
+                assert self.nblocks == other.nblocks, \
+                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                other.nblocks)
                 for i in other.owned_blocks:
                     result[i] = other[i] - self[i]
                 return result
@@ -905,18 +975,25 @@ class BlockVector(np.ndarray):
 
     def __mul__(self, other):
 
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         result = BlockVector(self.nblocks)
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                              other.nblocks)
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            other.nblocks)
             for idx, blk in enumerate(self):
                 result[idx] = blk .__mul__(other[idx])
             return result
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
@@ -930,9 +1007,12 @@ class BlockVector(np.ndarray):
         else:
             from .mpi_block_vector import MPIBlockVector
             if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
-                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                  other.nblocks)
+                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
+
+                assert self.nblocks == other.nblocks, \
+                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                other.nblocks)
+
                 for i in other.owned_blocks:
                     result[i] = other[i].__mul__(self[i])
                 return result
@@ -942,18 +1022,25 @@ class BlockVector(np.ndarray):
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         result = BlockVector(self.nblocks)
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                              other.nblocks)
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            other.nblocks)
             for idx, blk in enumerate(self):
                 result[idx] = blk / other[idx]
             return result
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
@@ -967,27 +1054,37 @@ class BlockVector(np.ndarray):
         else:
             from .mpi_block_vector import MPIBlockVector
             if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
-                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                  other.nblocks)
+                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
+
+                assert self.nblocks == other.nblocks, \
+                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                other.nblocks)
+
                 for i in other.owned_blocks:
                     result[i] = self[i] / other[i]
                 return result
             raise NotImplementedError()
 
     def __rtruediv__(self, other):
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         result = BlockVector(self.nblocks)
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                              other.nblocks)
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            other.nblocks)
             for idx, blk in enumerate(self):
                 result[idx] = other[idx] / blk
             return result
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
@@ -1001,27 +1098,37 @@ class BlockVector(np.ndarray):
         else:
             from .mpi_block_vector import MPIBlockVector
             if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
-                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                  other.nblocks)
+                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
+
+                assert self.nblocks == other.nblocks, \
+                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                other.nblocks)
+
                 for i in other.owned_blocks:
                     result[i] = other[i] / self[i]
                 return result
             raise NotImplementedError()
 
     def __floordiv__(self, other):
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         result = BlockVector(self.nblocks)
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                              other.nblocks)
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            other.nblocks)
             for idx, blk in enumerate(self):
                 result[idx] = blk // other[idx]
             return result
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
@@ -1035,27 +1142,37 @@ class BlockVector(np.ndarray):
         else:
             from .mpi_block_vector import MPIBlockVector
             if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
-                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                  other.nblocks)
+                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
+
+                assert self.nblocks == other.nblocks, \
+                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                other.nblocks)
+
                 for i in other.owned_blocks:
                     result[i] = self[i] // other[i]
                 return result
             raise NotImplementedError()
 
     def __rfloordiv__(self, other):
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks. '\
+            'Specify all blocks in BlockVector'
         result = BlockVector(self.nblocks)
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                              other.nblocks)
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            other.nblocks)
             for idx, blk in enumerate(self):
                 result[idx] = other[idx] // blk
             return result
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
@@ -1069,30 +1186,40 @@ class BlockVector(np.ndarray):
         else:
             from .mpi_block_vector import MPIBlockVector
             if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_owners, other._mpiw)
-                msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                  other.nblocks)
+                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
+
+                assert self.nblocks == other.nblocks, \
+                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                other.nblocks)
+
                 for i in other.owned_blocks:
                     result[i] =  other[i] // self[i]
                 return result
             raise NotImplementedError()
 
     def __iadd__(self, other):
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if np.isscalar(other):
             for idx, blk in enumerate(self):
                 self[idx] = self[idx] + other # maybe it suffice with doing self[idx] = self[idf] + other
             return self
         elif isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                              other.nblocks)
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            other.nblocks)
             for idx, blk in enumerate(self):
                 self[idx] = self[idx] + other[idx]
             return self
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
@@ -1103,21 +1230,28 @@ class BlockVector(np.ndarray):
             raise NotImplementedError()
 
     def __isub__(self, other):
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if np.isscalar(other):
             for idx, blk in enumerate(self):
                 self[idx] = self[idx] - other
             return self
         elif isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                              other.nblocks)
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            other.nblocks)
             for idx, blk in enumerate(self):
                 self[idx] = self[idx] - other[idx]
             return self
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
@@ -1128,21 +1262,28 @@ class BlockVector(np.ndarray):
             raise NotImplementedError()
 
     def __imul__(self, other):
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if np.isscalar(other):
             for idx, blk in enumerate(self):
                 self[idx] = self[idx] * other
             return self
         elif isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                              other.nblocks)
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            other.nblocks)
             for idx, blk in enumerate(self):
                 self[idx] = self[idx] * other[idx]
             return self
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
@@ -1153,21 +1294,28 @@ class BlockVector(np.ndarray):
             raise NotImplementedError()
 
     def __itruediv__(self, other):
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if np.isscalar(other):
             for idx, blk in enumerate(self):
                 self[idx] = self[idx] / other
             return self
         elif isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            assert self.nblocks == other.nblocks, 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                                              other.nblocks)
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                'Specify all blocks in BlockVector'
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                            other.nblocks)
             for idx, blk in enumerate(self):
                 self[idx] = self[idx] / other[idx]
             return self
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
@@ -1227,8 +1375,9 @@ class BlockVector(np.ndarray):
             self._brow_lengths[key] = 0
             self._has_none = True
         else:
-            msg = 'Blocks need to be numpy arrays or BlockVectors'
-            assert isinstance(value, np.ndarray) or isinstance(value, BlockVector), msg
+            assert isinstance(value, np.ndarray) or \
+                isinstance(value, BlockVector), \
+                    'Blocks need to be numpy arrays or BlockVectors'
             assert value.ndim == 1, 'Blocks need to be 1D'
             super(BlockVector, self).__setitem__(key, value)
             self._block_mask[key] = True
@@ -1236,14 +1385,19 @@ class BlockVector(np.ndarray):
 
     def __le__(self, other):
 
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
             flags = [vv.__le__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             result = BlockVector(self.nblocks)
             accum = 0
             for idx, blk in enumerate(self):
@@ -1256,18 +1410,32 @@ class BlockVector(np.ndarray):
             bv = BlockVector(flags)
             return bv
         else:
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(other, MPIBlockVector):
+                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
+                assert self.nblocks == other.nblocks, \
+                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                other.nblocks)
+                for i in other.owned_blocks:
+                    result[i] = self[i].__le__(other[i])
+                return result
             raise NotImplementedError()
 
     def __lt__(self, other):
 
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                'Specify all blocks in BlockVector'
             flags = [vv.__lt__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             result = BlockVector(self.nblocks)
             accum = 0
             for idx, blk in enumerate(self):
@@ -1280,18 +1448,32 @@ class BlockVector(np.ndarray):
             bv = BlockVector(flags)
             return bv
         else:
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(other, MPIBlockVector):
+                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
+                assert self.nblocks == other.nblocks, \
+                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                other.nblocks)
+                for i in other.owned_blocks:
+                    result[i] = self[i].__lt__(other[i])
+                return result
             raise NotImplementedError()
 
     def __ge__(self, other):
 
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
             flags = [vv.__ge__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             result = BlockVector(self.nblocks)
             accum = 0
             for idx, blk in enumerate(self):
@@ -1304,18 +1486,32 @@ class BlockVector(np.ndarray):
             bv = BlockVector(flags)
             return bv
         else:
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(other, MPIBlockVector):
+                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
+                assert self.nblocks == other.nblocks, \
+                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                other.nblocks)
+                for i in other.owned_blocks:
+                    result[i] = self[i].__ge__(other[i])
+                return result
             raise NotImplementedError()
 
     def __gt__(self, other):
 
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
             flags = [vv.__gt__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             result = BlockVector(self.nblocks)
             accum = 0
             for idx, blk in enumerate(self):
@@ -1328,18 +1524,32 @@ class BlockVector(np.ndarray):
             bv = BlockVector(flags)
             return bv
         else:
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(other, MPIBlockVector):
+                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
+                assert self.nblocks == other.nblocks, \
+                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                other.nblocks)
+                for i in other.owned_blocks:
+                    result[i] = self[i].__gt__(other[i])
+                return result
             raise NotImplementedError()
 
     def __eq__(self, other):
 
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
             flags = [vv.__eq__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             result = BlockVector(self.nblocks)
             accum = 0
             for idx, blk in enumerate(self):
@@ -1352,18 +1562,32 @@ class BlockVector(np.ndarray):
             bv = BlockVector(flags)
             return bv
         else:
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(other, MPIBlockVector):
+                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
+                assert self.nblocks == other.nblocks, \
+                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                other.nblocks)
+                for i in other.owned_blocks:
+                    result[i] = other[i].__eq__(self[i])
+                return result
             raise NotImplementedError()
 
     def __ne__(self, other):
 
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+            assert not other.has_none, \
+                'Operation not allowed with None blocks.' \
+                ' Specify all blocks in BlockVector'
             flags = [vv.__ne__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
         elif type(other)==np.ndarray:
-            assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
+            assert self.shape == other.shape, \
+                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             result = BlockVector(self.nblocks)
             accum = 0
             for idx, blk in enumerate(self):
@@ -1376,11 +1600,22 @@ class BlockVector(np.ndarray):
             bv = BlockVector(flags)
             return bv
         else:
+            from .mpi_block_vector import MPIBlockVector
+            if isinstance(other, MPIBlockVector):
+                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
+                assert self.nblocks == other.nblocks, \
+                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
+                                                                other.nblocks)
+                for i in other.owned_blocks:
+                    result[i] = other[i].__ne__(self[i])
+                return result
             raise NotImplementedError()
 
     def __contains__(self, item):
         other = item
-        assert not self.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
         if np.isscalar(other):
             contains = False
             for idx, blk in enumerate(self):

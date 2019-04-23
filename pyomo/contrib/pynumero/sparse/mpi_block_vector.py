@@ -56,6 +56,14 @@ class MPIBlockVector(np.ndarray):
                 obj._owned_blocks.append(i)
                 if owner == rank:
                     obj._unique_owned_blocks.append(i)
+
+        obj._owned_blocks = np.array(obj._owned_blocks)
+        obj._unique_owned_blocks = np.array(obj._unique_owned_blocks)
+
+        # make some pointer unmutable
+        obj._rank_owner.flags.writeable = False
+        obj._owned_blocks.flags.writeable = False
+        obj._unique_owned_blocks.flags.writeable = False
         return obj
 
     def __array_prepare__(self, out_arr, context=None):
@@ -242,7 +250,7 @@ class MPIBlockVector(np.ndarray):
         """
         Returns array of inidices of blocks owned by this processor
         """
-        return self._owned_blocks.copy()
+        return self._owned_blocks
 
     @property
     def shared_blocks(self):
@@ -252,11 +260,11 @@ class MPIBlockVector(np.ndarray):
         return np.array([i for i in range(self.nblocks) if self._rank_owner[i]<0])
 
     @property
-    def rank_owners(self):
+    def rank_ownership(self):
         """
         Returns array of processor rank that own blocks
         """
-        return self._rank_owner.copy()
+        return self._rank_owner
 
     def block_sizes(self):
         raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -497,7 +505,6 @@ class MPIBlockVector(np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         else:
             raise NotImplementedError('Input not recognized')
-
 
     def copyto(self, other):
         """
@@ -740,8 +747,8 @@ class MPIBlockVector(np.ndarray):
         result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
+            assert np.array_equal(self._rank_owner, other._rank_owner), \
+                'MPIBlockVectors must be distributed in same processors'
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
@@ -1257,16 +1264,16 @@ class MPIBlockVector(np.ndarray):
 
         owner = self._rank_owner[key]
         rank = self._mpiw.Get_rank()
-        msg = 'Block {} not own by processor {}'.format(key, rank)
-        assert owner == rank or owner < 0
+        assert owner == rank or \
+               owner < 0, 'Block {} not own by processor {}'.format(key, rank)
         return self._block_vector[key]
 
     def __setitem__(self, key, value):
 
         owner = self._rank_owner[key]
         rank = self._mpiw.Get_rank()
-        msg = 'Block {} own by processor {}'.format(key, rank)
-        assert owner == rank or owner < 0, msg
+        assert owner == rank or \
+               owner < 0, 'Block {} not owned by processor {}'.format(key, rank)
         self._block_vector[key] = value
 
     def __iter__(self):

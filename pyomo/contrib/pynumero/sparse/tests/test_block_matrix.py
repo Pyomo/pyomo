@@ -153,10 +153,6 @@ class TestBlockMatrix(unittest.TestCase):
         dense_mat = mat.toarray()
         self.assertTrue(np.allclose(dense_mat, dense_result))
 
-        # not supported block matrix times block matrix for now
-        #with self.assertRaises(Exception) as context:
-        #    mat = self.basic_m * self.basic_m.tocoo()
-
     def test_mul_sparse_matrix(self):
         m = self.basic_m
 
@@ -694,7 +690,33 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertTrue(np.allclose(abs_flat.toarray(),
                                     abs_mat.toarray()))
 
+    def test_getcol(self):
 
+        m = self.basic_m
+
+        flat_mat = m.tocoo()
+        flat_col = flat_mat.getcol(2)
+        block_col = m.getcol(2)
+        self.assertTrue(np.allclose(flat_col.toarray(), block_col.toarray()))
+
+    def test_getrow(self):
+
+        m = self.basic_m
+
+        flat_mat = m.tocoo()
+        flat_row = flat_mat.getrow(2)
+        block_row = m.getrow(2)
+        self.assertTrue(np.allclose(flat_row.toarray(), block_row.toarray()))
+
+    def test_nonzero(self):
+
+        m = self.basic_m
+
+        flat_mat = m.tocoo()
+        flat_row, flat_col = flat_mat.nonzero()
+        block_row, block_col = m.nonzero()
+        self.assertTrue(np.allclose(flat_col, block_col))
+        self.assertTrue(np.allclose(flat_row, block_row))
 
 class TestSymBlockMatrix(unittest.TestCase):
 

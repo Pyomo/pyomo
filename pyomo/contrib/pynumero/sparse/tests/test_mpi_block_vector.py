@@ -33,7 +33,8 @@ except ImportError:
     raise unittest.SkipTest(
         "Could not import BlockVector")
 
-@unittest.skipIf(comm.Get_size() < 3, "Need at least 3 processors to run tests")
+#@unittest.skipIf(comm.Get_size() < 3, "Need at least 3 processors to run tests")
+@unittest.skip('Skipping parallel tests for now')
 class TestMPIBlockVector(unittest.TestCase):
 
     @classmethod
@@ -1183,7 +1184,35 @@ class TestMPIBlockVector(unittest.TestCase):
             self.assertTrue(np.allclose(np.ones(4, dtype=bool), res[1]))
         self.assertTrue(np.allclose(np.ones(2, dtype=bool), res[2]))
 
+        res = bv >= v
+
+        self.assertTrue(isinstance(res, MPIBlockVector))
+        self.assertEqual(3, res.nblocks)
+        self.assertTrue(np.allclose(res.shared_blocks, v.shared_blocks))
+
+        if rank == 0:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.zeros(3, dtype=bool), res[0]))
+        if rank == 1:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.ones(4, dtype=bool), res[1]))
+        self.assertTrue(np.allclose(np.ones(2, dtype=bool), res[2]))
+
         res = v <= 3.0
+
+        self.assertTrue(isinstance(res, MPIBlockVector))
+        self.assertEqual(3, res.nblocks)
+        self.assertTrue(np.allclose(res.shared_blocks, v.shared_blocks))
+
+        if rank == 0:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.zeros(3, dtype=bool), res[0]))
+        if rank == 1:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.ones(4, dtype=bool), res[1]))
+        self.assertTrue(np.allclose(np.zeros(2, dtype=bool), res[2]))
+
+        res = 3.0 >= v
 
         self.assertTrue(isinstance(res, MPIBlockVector))
         self.assertEqual(3, res.nblocks)
@@ -1247,7 +1276,35 @@ class TestMPIBlockVector(unittest.TestCase):
             self.assertTrue(np.allclose(np.ones(4, dtype=bool), res[1]))
         self.assertTrue(np.allclose(np.zeros(2, dtype=bool), res[2]))
 
-        res = v <= 3.0
+        res = bv > v
+
+        self.assertTrue(isinstance(res, MPIBlockVector))
+        self.assertEqual(3, res.nblocks)
+        self.assertTrue(np.allclose(res.shared_blocks, v.shared_blocks))
+
+        if rank == 0:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.zeros(3, dtype=bool), res[0]))
+        if rank == 1:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.ones(4, dtype=bool), res[1]))
+        self.assertTrue(np.allclose(np.zeros(2, dtype=bool), res[2]))
+
+        res = v < 3.0
+
+        self.assertTrue(isinstance(res, MPIBlockVector))
+        self.assertEqual(3, res.nblocks)
+        self.assertTrue(np.allclose(res.shared_blocks, v.shared_blocks))
+
+        if rank == 0:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.zeros(3, dtype=bool), res[0]))
+        if rank == 1:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.ones(4, dtype=bool), res[1]))
+        self.assertTrue(np.allclose(np.zeros(2, dtype=bool), res[2]))
+
+        res = 3.0 > v
 
         self.assertTrue(isinstance(res, MPIBlockVector))
         self.assertEqual(3, res.nblocks)
@@ -1311,7 +1368,35 @@ class TestMPIBlockVector(unittest.TestCase):
             self.assertTrue(np.allclose(np.zeros(4, dtype=bool), res[1]))
         self.assertTrue(np.allclose(np.ones(2, dtype=bool), res[2]))
 
+        res = bv <= v
+
+        self.assertTrue(isinstance(res, MPIBlockVector))
+        self.assertEqual(3, res.nblocks)
+        self.assertTrue(np.allclose(res.shared_blocks, v.shared_blocks))
+
+        if rank == 0:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.ones(3, dtype=bool), res[0]))
+        if rank == 1:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.zeros(4, dtype=bool), res[1]))
+        self.assertTrue(np.allclose(np.ones(2, dtype=bool), res[2]))
+
         res = v >= 3.0
+
+        self.assertTrue(isinstance(res, MPIBlockVector))
+        self.assertEqual(3, res.nblocks)
+        self.assertTrue(np.allclose(res.shared_blocks, v.shared_blocks))
+
+        if rank == 0:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.ones(3, dtype=bool), res[0]))
+        if rank == 1:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.zeros(4, dtype=bool), res[1]))
+        self.assertTrue(np.allclose(np.ones(2, dtype=bool), res[2]))
+
+        res = 3.0 <= v
 
         self.assertTrue(isinstance(res, MPIBlockVector))
         self.assertEqual(3, res.nblocks)
@@ -1375,7 +1460,35 @@ class TestMPIBlockVector(unittest.TestCase):
             self.assertTrue(np.allclose(np.zeros(4, dtype=bool), res[1]))
         self.assertTrue(np.allclose(np.zeros(2, dtype=bool), res[2]))
 
+        res = bv < v
+
+        self.assertTrue(isinstance(res, MPIBlockVector))
+        self.assertEqual(3, res.nblocks)
+        self.assertTrue(np.allclose(res.shared_blocks, v.shared_blocks))
+
+        if rank == 0:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.ones(3, dtype=bool), res[0]))
+        if rank == 1:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.zeros(4, dtype=bool), res[1]))
+        self.assertTrue(np.allclose(np.zeros(2, dtype=bool), res[2]))
+
         res = v > 3.0
+
+        self.assertTrue(isinstance(res, MPIBlockVector))
+        self.assertEqual(3, res.nblocks)
+        self.assertTrue(np.allclose(res.shared_blocks, v.shared_blocks))
+
+        if rank == 0:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.ones(3, dtype=bool), res[0]))
+        if rank == 1:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.zeros(4, dtype=bool), res[1]))
+        self.assertTrue(np.allclose(np.ones(2, dtype=bool), res[2]))
+
+        res = 3.0 < v
 
         self.assertTrue(isinstance(res, MPIBlockVector))
         self.assertEqual(3, res.nblocks)
@@ -1439,7 +1552,35 @@ class TestMPIBlockVector(unittest.TestCase):
             self.assertTrue(np.allclose(np.zeros(4, dtype=bool), res[1]))
         self.assertTrue(np.allclose(np.ones(2, dtype=bool), res[2]))
 
+        res = bv == v
+
+        self.assertTrue(isinstance(res, MPIBlockVector))
+        self.assertEqual(3, res.nblocks)
+        self.assertTrue(np.allclose(res.shared_blocks, v.shared_blocks))
+
+        if rank == 0:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.zeros(3, dtype=bool), res[0]))
+        if rank == 1:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.zeros(4, dtype=bool), res[1]))
+        self.assertTrue(np.allclose(np.ones(2, dtype=bool), res[2]))
+
         res = v == 8.0
+
+        self.assertTrue(isinstance(res, MPIBlockVector))
+        self.assertEqual(3, res.nblocks)
+        self.assertTrue(np.allclose(res.shared_blocks, v.shared_blocks))
+
+        if rank == 0:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.ones(3, dtype=bool), res[0]))
+        if rank == 1:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.zeros(4, dtype=bool), res[1]))
+        self.assertTrue(np.allclose(np.zeros(2, dtype=bool), res[2]))
+
+        res = 8.0 == v
 
         self.assertTrue(isinstance(res, MPIBlockVector))
         self.assertEqual(3, res.nblocks)
@@ -1503,7 +1644,35 @@ class TestMPIBlockVector(unittest.TestCase):
             self.assertTrue(np.allclose(np.ones(4, dtype=bool), res[1]))
         self.assertTrue(np.allclose(np.zeros(2, dtype=bool), res[2]))
 
+        res = bv != v
+
+        self.assertTrue(isinstance(res, MPIBlockVector))
+        self.assertEqual(3, res.nblocks)
+        self.assertTrue(np.allclose(res.shared_blocks, v.shared_blocks))
+
+        if rank == 0:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.ones(3, dtype=bool), res[0]))
+        if rank == 1:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.ones(4, dtype=bool), res[1]))
+        self.assertTrue(np.allclose(np.zeros(2, dtype=bool), res[2]))
+
         res = v != 8.0
+
+        self.assertTrue(isinstance(res, MPIBlockVector))
+        self.assertEqual(3, res.nblocks)
+        self.assertTrue(np.allclose(res.shared_blocks, v.shared_blocks))
+
+        if rank == 0:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.zeros(3, dtype=bool), res[0]))
+        if rank == 1:
+            self.assertTrue(np.allclose(res.owned_blocks, v.owned_blocks))
+            self.assertTrue(np.allclose(np.ones(4, dtype=bool), res[1]))
+        self.assertTrue(np.allclose(np.ones(2, dtype=bool), res[2]))
+
+        res = 8.0 != v
 
         self.assertTrue(isinstance(res, MPIBlockVector))
         self.assertEqual(3, res.nblocks)
@@ -1707,7 +1876,6 @@ class TestMPIBlockVector(unittest.TestCase):
             self.assertEqual(res.nblocks, 2)
             for i in res.owned_blocks:
                 self.assertTrue(np.allclose(res[i], serial_res[i]))
-
 
     def test_contains(self):
 
