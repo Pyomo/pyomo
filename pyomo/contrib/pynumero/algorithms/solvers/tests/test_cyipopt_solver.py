@@ -11,7 +11,7 @@
 import pyutilib.th as unittest
 import pyomo.environ as aml
 
-from ... import numpy_available, scipy_available
+from pyomo.contrib.pynumero import numpy_available, scipy_available
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
@@ -211,6 +211,3 @@ class TestCyIpoptSolver(unittest.TestCase):
 
         self.assertTrue(np.allclose(x, x_sol, rtol=1e-4))
         self.assertAlmostEqual(nlp.objective(x), -6.99899, 3)
-
-
-
