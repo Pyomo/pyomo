@@ -57,7 +57,7 @@ def add_oa_cut(var_values, duals, solve_data, config):
         # Properly handle equality constraints and ranged inequalities
         # TODO special handling for ranged inequalities? a <= x <= b
         # TODO make this dependent on dual sign (@David)
-        rhs = constr.upper if constr.has_lb() and constr.has_ub() else rhs
+        rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
         slack_var = MindtPy.MindtPy_linear_cuts.slack_vars.add()
         MindtPy.MindtPy_linear_cuts.oa_cuts.add(
             expr=(copysign(1, sign_adjust * dual_value)
