@@ -2455,18 +2455,30 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         M.q = Param(range(3), initialize=3, mutable=True)
 
         e = M.x*M.y + sum_product(M.p, M.a) + quicksum(M.q[i]*M.a[i] for i in M.a) / M.x
-        self.assertEqual(str(e), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
-        self.assertEqual(e.to_string(), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
-        self.assertEqual(e.to_string(compute_values=True), "x*y + 2*a[0] + 2*a[1] + 2*a[2] + (3*a[0] + 3*a[1] + 3*a[2])*(1/x)")
+        self.assertEqual(
+            str(e),
+            "x*y + (2*a[0] + 2*a[1] + 2*a[2]) + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
+        self.assertEqual(
+            e.to_string(),
+            "x*y + (2*a[0] + 2*a[1] + 2*a[2]) + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
+        self.assertEqual(
+            e.to_string(compute_values=True),
+            "x*y + (2*a[0] + 2*a[1] + 2*a[2]) + (3*a[0] + 3*a[1] + 3*a[2])*(1/x)")
 
         labeler = NumericLabeler('x')
-        self.assertEqual(expression_to_string(e, labeler=labeler), "x1*x2 + 2*x3 + 2*x4 + 2*x5 + (q[0]*x3 + q[1]*x4 + q[2]*x5)*(1/x1)")
+        self.assertEqual(
+            expression_to_string(e, labeler=labeler),
+            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (q[0]*x3 + q[1]*x4 + q[2]*x5)*(1/x1)")
 
         from pyomo.core.expr.symbol_map import SymbolMap
         labeler = NumericLabeler('x')
         smap = SymbolMap(labeler)
-        self.assertEqual(expression_to_string(e, smap=smap), "x1*x2 + 2*x3 + 2*x4 + 2*x5 + (q[0]*x3 + q[1]*x4 + q[2]*x5)*(1/x1)")
-        self.assertEqual(expression_to_string(e, smap=smap, compute_values=True), "x1*x2 + 2*x3 + 2*x4 + 2*x5 + (3*x3 + 3*x4 + 3*x5)*(1/x1)")
+        self.assertEqual(
+            expression_to_string(e, smap=smap),
+            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (q[0]*x3 + q[1]*x4 + q[2]*x5)*(1/x1)")
+        self.assertEqual(
+            expression_to_string(e, smap=smap, compute_values=True),
+            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (3*x3 + 3*x4 + 3*x5)*(1/x1)")
 
 #
 # TODO:What is this checking?

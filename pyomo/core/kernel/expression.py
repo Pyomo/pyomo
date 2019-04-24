@@ -131,6 +131,9 @@ class IIdentityExpression(NumericValue):
     def _precedence(self):
         return 0
 
+    def _associativity(self):
+        return 0
+
     def _apply_operation(self, result):
         return result[0]
 
