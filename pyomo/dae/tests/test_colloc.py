@@ -244,9 +244,11 @@ class TestCollocation(unittest.TestCase):
         self.assertTrue(len(m.dv2_disc_eq) == 45)
         self.assertTrue(len(m.v2) == 48)
 
-        expected_tau_points = [0.0, 0.1550510257216822, 0.64494897427831788,
+        expected_tau_points = [0.0, 0.1550510257216822,
+                               0.64494897427831788,
                                1.0]
-        expected_disc_points = [0, 0.310102, 1.289898, 2.0, 2.310102, 3.289898,
+        expected_disc_points = [0, 0.310102, 1.289898, 2.0, 2.310102,
+                                3.289898,
                                 4.0, 4.310102, 5.289898, 6.0, 6.310102,
                                 7.289898, 8.0, 8.310102, 9.289898, 10]
         disc_info = m.t.get_discretization_info()
@@ -259,7 +261,8 @@ class TestCollocation(unittest.TestCase):
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
 
-        self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(
+            hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
         self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
         self.assertTrue(m.dv2 in m._pyomo_dae_reclassified_derivativevars)
 
@@ -293,6 +296,50 @@ class TestCollocation(unittest.TestCase):
         self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
         self.assertTrue(m.dv2dt in m._pyomo_dae_reclassified_derivativevars)
         self.assertTrue(m.dv2dt2 in m._pyomo_dae_reclassified_derivativevars)
+
+    # test collocation discretization on var indexed by ContinuousSet
+    # and multi-dimensional Set
+    def test_disc_multidimen_index(self):
+        m = self.m.clone()
+        m.s2 = Set(initialize=[('A', 'B'), ('C', 'D'), ('E', 'F')])
+        m.v2 = Var(m.t, m.s2)
+        m.dv2 = DerivativeVar(m.v2)
+        m.v3 = Var(m.s2, m.t)
+        m.dv3 = DerivativeVar(m.v3)
+
+        disc = TransformationFactory('dae.collocation')
+        disc.apply_to(m, nfe=5, ncp=3)
+
+        self.assertTrue(hasattr(m, 'dv1_disc_eq'))
+        self.assertTrue(hasattr(m, 'dv2_disc_eq'))
+        self.assertTrue(hasattr(m, 'dv3_disc_eq'))
+        self.assertTrue(len(m.dv2_disc_eq) == 45)
+        self.assertTrue(len(m.v2) == 48)
+        self.assertTrue(len(m.dv3_disc_eq) == 45)
+        self.assertTrue(len(m.v3) == 48)
+
+        expected_tau_points = [0.0, 0.1550510257216822,
+                               0.64494897427831788,
+                               1.0]
+        expected_disc_points = [0, 0.310102, 1.289898, 2.0, 2.310102,
+                                3.289898,
+                                4.0, 4.310102, 5.289898, 6.0, 6.310102,
+                                7.289898, 8.0, 8.310102, 9.289898, 10]
+        disc_info = m.t.get_discretization_info()
+
+        self.assertTrue(disc_info['scheme'] == 'LAGRANGE-RADAU')
+
+        for idx, val in enumerate(disc_info['tau_points']):
+            self.assertAlmostEqual(val, expected_tau_points[idx])
+
+        for idx, val in enumerate(list(m.t)):
+            self.assertAlmostEqual(val, expected_disc_points[idx])
+
+        self.assertTrue(
+            hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
+        self.assertTrue(m.dv2 in m._pyomo_dae_reclassified_derivativevars)
+        self.assertTrue(m.dv3 in m._pyomo_dae_reclassified_derivativevars)
 
     # test passing the discretization invalid options
     def test_disc_invalid_options(self):
