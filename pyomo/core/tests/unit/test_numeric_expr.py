@@ -2329,6 +2329,38 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         e = m.x[t+m.P[t+1]] + 3
         self.assertEqual("x({I} + P({I} + 1)) + 3", str(e))
 
+    def test_associativity_rules(self):
+        m = ConcreteModel()
+        m.w = Var()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+
+        self.assertEqual(str( m.z+m.x+m.y ), "z + x + y")
+        self.assertEqual(str( (m.z+m.x)+m.y ), "z + x + y")
+        # FIXME: Pyomo currently returns "z + y + x"
+        # self.assertEqual(str( m.z+(m.x+m.y) ), "z + x + y")
+        self.assertEqual(str( (m.w+m.z)+(m.x+m.y) ), "w + z + x + y")
+
+        self.assertEqual(str( (m.z/m.x)/(m.y/m.w) ), "z*(1/x)*(1/(y*(1/w)))")
+
+        self.assertEqual(str( m.z/m.x/m.y ), "z*(1/x)*(1/y)")
+        self.assertEqual(str( (m.z/m.x)/m.y ), "z*(1/x)*(1/y)")
+        self.assertEqual(str( m.z/(m.x/m.y) ), "z*(1/(x*(1/y)))")
+
+        self.assertEqual(str( m.z*m.x/m.y ), "z*x*(1/y)")
+        self.assertEqual(str( (m.z*m.x)/m.y ), "z*x*(1/y)")
+        self.assertEqual(str( m.z*(m.x/m.y) ), "z*(x*(1/y))")
+
+        self.assertEqual(str( m.z/m.x*m.y ), "z*(1/x)*y")
+        self.assertEqual(str( (m.z/m.x)*m.y ), "z*(1/x)*y")
+        self.assertEqual(str( m.z/(m.x*m.y) ), "z*(1/(x*y))")
+
+        self.assertEqual(str( m.x**m.y**m.z ), "x**(y**z)")
+        self.assertEqual(str( (m.x**m.y)**m.z ), "(x**y)**z")
+        self.assertEqual(str( m.x**(m.y**m.z) ), "x**(y**z)")
+
+
     def test_small_expression(self):
         #
         # Print complex expression
