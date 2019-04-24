@@ -559,6 +559,21 @@ class TestCollocation(unittest.TestCase):
         except RuntimeError:
             pass
 
+    # test trying to discretize a ContinuousSet twice
+    def test_discretize_twice(self):
+        m = self.m.clone()
+
+        disc1 = TransformationFactory('dae.collocation')
+        disc1.apply_to(m, nfe=5, ncp=3)
+
+        disc2 = TransformationFactory('dae.collocation')
+
+        try:
+            disc2.apply_to(m, nfe=5, ncp=3)
+            self.fail('Expected DAE_Error')
+        except DAE_Error:
+            pass
+
     # test reduce_collocation_points on var indexed by single ContinuousSet
     def test_reduce_colloc_single_index(self):
         m = self.m.clone()

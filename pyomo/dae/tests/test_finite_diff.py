@@ -334,5 +334,21 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
         except DAE_Error:
             pass
 
+    # test trying to discretize a ContinuousSet twice
+    def test_discretize_twice(self):
+        m = self.m.clone()
+
+        disc1 = TransformationFactory('dae.finite_difference')
+        disc1.apply_to(m, nfe=5)
+
+        disc2 = TransformationFactory('dae.finite_difference')
+
+        try:
+            disc2.apply_to(m, nfe=5)
+            self.fail('Expected DAE_Error')
+        except DAE_Error:
+            pass
+
+
 if __name__ == "__main__":
     unittest.main()

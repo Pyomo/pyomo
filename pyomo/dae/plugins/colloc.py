@@ -403,6 +403,10 @@ class Collocation_Discretization_Transformation(Transformation):
         self._fe = {}
         for ds in block.component_objects(ContinuousSet, descend_into=True):
             if currentds is None or currentds == ds.name:
+                if 'scheme' in ds.get_discretization_info():
+                    raise DAE_Error("Attempting to discretize ContinuousSet "
+                                    "'%s' after it has already been discretized. "
+                                    % ds.name)
                 generate_finite_elements(ds, self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds) - 1 > self._nfe[currentds]:
