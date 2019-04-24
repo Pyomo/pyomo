@@ -7,16 +7,22 @@ from six import StringIO
 
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
-from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, mcpp_available
+from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, mcpp_available, MCPP_Error
 from pyomo.core import (
     ConcreteModel, Expression, Var, acos, asin, atan, cos, exp, quicksum, sin,
     tan, value,
-    ComponentMap)
+    ComponentMap, log)
 from pyomo.core.expr.current import identify_variables
 
 
 @unittest.skipIf(not mcpp_available(), "MC++ is not available")
 class TestMcCormick(unittest.TestCase):
+
+    def test_outofbounds(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-1, 5), initialize=2)
+        with self.assertRaisesRegexp(MCPP_Error, '.*Log with negative values in range'):
+            mc(log(m.x))
 
     def test_mc_2d(self):
         m = ConcreteModel()

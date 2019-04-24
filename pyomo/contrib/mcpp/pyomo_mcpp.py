@@ -6,6 +6,7 @@ from __future__ import division
 import ctypes
 import logging
 import os
+import six
 
 from pyomo.common.fileutils import Library
 from pyomo.core import value, Expression
@@ -41,6 +42,10 @@ NPV_expressions = {
     NPV_UnaryFunctionExpression}
 
 
+class MCPP_Error(Exception):
+    pass
+
+
 class MCPP_visitor(StreamBasedExpressionVisitor):
     """Creates an MC++ expression from the corresponding Pyomo expression.
 
@@ -67,6 +72,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             inf = float('inf')
             lb, ub = improved_var_bounds.get(var, (-inf, inf))
             self.known_vars[var] = self.register_var(var, lb, ub)
+        self.refs = set()
 
     def declare_mcpp_library_calls(self):
         # Create MC type variable
@@ -147,11 +153,25 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         self.mcpp.new_exponential.restype = ctypes.c_void_p
 
         # log(MC Variable)
-        self.mcpp.new_logarithm.argtypes = [ctypes.c_void_p]
-        self.mcpp.new_logarithm.restype = ctypes.c_void_p
+        self.mcpp.logarithm.argtypes = [ctypes.c_void_p]
+        self.mcpp.logarithm.restype = ctypes.c_void_p
 
         self.mcpp.new_NPV.argtypes = [ctypes.c_void_p]
         self.mcpp.new_NPV.restype = ctypes.c_void_p
+
+        # Releases object from memory (prevent memory leaks)
+        self.mcpp.release.argtypes = [ctypes.c_void_p]
+
+        # Unary function exception wrapper
+        self.mcpp.try_unary_fcn.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        self.mcpp.try_unary_fcn.restype = ctypes.c_void_p
+
+        # Binary function exception wrapper
+        self.mcpp.try_binary_fcn.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+        self.mcpp.try_binary_fcn.restype = ctypes.c_void_p
+
+        # Error message retrieval
+        self.mcpp.get_last_exception_message.restype = ctypes.c_char_p
 
     def exitNode(self, node, data):
         if isinstance(node, ProductExpression):
@@ -167,7 +187,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                 # Non-integer exponent. Must reformulate.
                 # We use x^n = exp(n*log(x))
                 ans = self.mcpp.new_exponential(
-                    self.mcpp.new_mult(data[1], self.mcpp.new_logarithm(data[0])))
+                    self.mcpp.new_mult(data[1], self.mcpp.logarithm(data[0])))
         elif isinstance(node, ReciprocalExpression):
             ans = self.mcpp.new_reciprocal(
                 self.mcpp.new_createConstant(1), data[0])
@@ -189,7 +209,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             if node.name == "exp":
                 ans = self.mcpp.new_exponential(data[0])
             elif node.name == "log":
-                ans = self.mcpp.new_logarithm(data[0])
+                ans = self.mcpp.try_unary_fcn(self.mcpp.logarithm, data[0])
             elif node.name == "sin":
                 ans = self.mcpp.new_trigSin(data[0])
             elif node.name == "cos":
@@ -217,6 +237,12 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         else:
             raise RuntimeError("Unhandled expression type: %s" % (type(node)))
 
+        if ans is None:
+            msg = self.mcpp.get_last_exception_message()
+            if six.PY3:
+                msg = msg.decode("utf-8")
+            raise MCPP_Error(msg)
+
         return ans
 
     def beforeChild(self, node, child):
@@ -230,6 +256,11 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         else:
             # this is an expression node
             return True, None
+
+    def acceptChildResult(self, node, data, child_result):
+        self.refs.add(child_result)
+        data.append(child_result)
+        return data
 
     def register_num(self, num):
         """Registers a new number: Param, Var, or NumericConstant."""
@@ -264,6 +295,9 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             lb, var_val, ub, self.num_vars, var_idx)
 
     def finalizeResult(self, node_result):
+        for r in self.refs:
+            if r != node_result:
+                self.mcpp.release(r)
         return node_result
 
 

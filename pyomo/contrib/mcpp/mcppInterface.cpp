@@ -3,6 +3,7 @@
 typedef mc::Interval I;
 typedef mc::McCormick<I> MC;
 
+std::string lastException;
 
 //Build pyomo expression in MC++
 void *createVar(double lb, double pt, double ub, int count, int index)
@@ -158,14 +159,6 @@ void displayOutput(void *ptr)
 MC *exponential(MC *var1)
 {
     MC F = exp(*var1);
-
-    MC *ans = new MC(F);
-    return ans;
-}
-
-MC *logarithm(MC *var1)
-{
-    MC F = log(*var1);
 
     MC *ans = new MC(F);
     return ans;
@@ -331,11 +324,7 @@ extern "C"
         return ans;
     }
 
-    MC *new_logarithm(MC *ptr1)
-    {
-        MC *ans = logarithm(ptr1);
-        return ans;
-    }
+    MC* logarithm(MC *arg1) {return new MC( log(*arg1) );}
 
     double new_lower(MC *expr)
     {
@@ -367,10 +356,42 @@ extern "C"
         return ans;
     }
 
-        double new_subcv(MC *expr, int index)
+    double new_subcv(MC *expr, int index)
     {
         double ans = subcv(expr, index);
         return ans;
+    }
+
+    void release(MC *expr)
+    {
+        delete expr;
+    }
+
+    // Catch MC++ exceptions so that we don't core dump,
+    // saving the exception message so that Python can retrieve it later.
+    MC* try_unary_fcn(MC*(*fcn)(MC*), MC *arg)
+    {
+        try {
+            return fcn(arg);
+        } catch (MC::Exceptions &e) {
+            lastException = e.what();
+            return NULL;
+        }
+    }
+
+    MC* try_binary_fcn(MC*(*fcn)(MC*, MC*), MC *arg1, MC *arg2)
+    {
+        try {
+            return fcn(arg1, arg2);
+        } catch (MC::Exceptions &e) {
+            lastException = e.what();
+            return NULL;
+        }
+    }
+
+    const char* get_last_exception_message()
+    {
+        return lastException.c_str();
     }
 }
 
