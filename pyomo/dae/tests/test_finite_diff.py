@@ -287,7 +287,14 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
 
         try:
             TransformationFactory('dae.finite_difference').apply_to(m,
-                                                                scheme='foo')
+                                                                    scheme='foo')
+            self.fail('Expected ValueError')
+        except ValueError:
+            pass
+
+        try:
+            TransformationFactory('dae.finite_difference').apply_to(m,
+                                                                    foo=True)
             self.fail('Expected ValueError')
         except ValueError:
             pass

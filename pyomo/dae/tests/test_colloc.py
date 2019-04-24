@@ -322,6 +322,12 @@ class TestCollocation(unittest.TestCase):
         except ValueError:
             pass
 
+        try:
+            TransformationFactory('dae.collocation').apply_to(m, foo=True)
+            self.fail('Expected ValueError')
+        except ValueError:
+            pass
+
         TransformationFactory('dae.collocation').apply_to(m, wrt=m.t)
         try:
             TransformationFactory('dae.collocation').apply_to(m, wrt=m.t)
