@@ -2001,7 +2001,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.a = Var()
 
         expr = 5 * model.a * model.a
-        self.assertEqual("prod(prod(5, a), a)", str(expr))
+        self.assertEqual("prod(mon(5, a), a)", str(expr))
 
         # This returns an integer, which has no pprint().
         #expr = expr*0
@@ -2010,15 +2010,15 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         #self.assertEqual("0.0", buf.getvalue())
 
         expr = 5 * model.a / model.a
-        self.assertEqual( "prod(prod(5, a), recip(a))",
+        self.assertEqual( "prod(mon(5, a), recip(a))",
                           str(expr) )
 
         expr = expr / model.a
-        self.assertEqual( "prod(prod(prod(5, a), recip(a)), recip(a))",
+        self.assertEqual( "prod(prod(mon(5, a), recip(a)), recip(a))",
                           str(expr) )
 
         expr = 5 * model.a / model.a / 2
-        self.assertEqual( "prod(prod(prod(5, a), recip(a)), 0.5)",
+        self.assertEqual( "prod(prod(mon(5, a), recip(a)), 0.5)",
                           str(expr) )
 
     def test_other(self):

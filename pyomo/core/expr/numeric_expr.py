@@ -760,6 +760,8 @@ class NPV_ProductExpression(ProductExpression):
 class MonomialTermExpression(ProductExpression):
     __slots__ = ()
 
+    def getname(self, *args, **kwds):
+        return 'mon'
 
 class ReciprocalExpression(ExpressionBase):
     """
