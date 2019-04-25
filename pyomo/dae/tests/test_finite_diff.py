@@ -302,47 +302,29 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
     def test_disc_invalid_options(self):
         m = self.m.clone()
 
-        try:
+        with self.assertRaises(TypeError):
             TransformationFactory('dae.finite_difference').apply_to(m, wrt=m.s)
-            self.fail('Expected TypeError')
-        except TypeError:
-            pass
 
-        try:
+        with self.assertRaises(ValueError):
             TransformationFactory('dae.finite_difference').apply_to(m, nfe=-1)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
-        try:
+        with self.assertRaises(ValueError):
             TransformationFactory('dae.finite_difference').apply_to(m,
                                                                     scheme='foo')
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
-        try:
+        with self.assertRaises(ValueError):
             TransformationFactory('dae.finite_difference').apply_to(m,
                                                                     foo=True)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
         TransformationFactory('dae.finite_difference').apply_to(m, wrt=m.t)
-        try:
+        with self.assertRaises(ValueError):
             TransformationFactory('dae.finite_difference').apply_to(m, wrt=m.t)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
         m = self.m.clone()
         disc = TransformationFactory('dae.finite_difference')
         disc.apply_to(m)
-        try:
+        with self.assertRaises(ValueError):
             disc.apply_to(m)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
     # test discretization using fewer points than ContinuousSet initialized
     # with
@@ -364,11 +346,8 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
         m.v = Var(m.t)
         m.dv = DerivativeVar(m.v, wrt=(m.t, m.t, m.t))
 
-        try:
+        with self.assertRaises(DAE_Error):
             TransformationFactory('dae.finite_difference').apply_to(m)
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
 
     # test trying to discretize a ContinuousSet twice
     def test_discretize_twice(self):
@@ -379,11 +358,8 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
 
         disc2 = TransformationFactory('dae.finite_difference')
 
-        try:
+        with self.assertRaises(DAE_Error):
             disc2.apply_to(m, nfe=5)
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
 
 
 if __name__ == "__main__":
