@@ -21,6 +21,8 @@ from pyomo.dae.misc import add_discretization_equations
 from pyomo.dae.misc import block_fully_discretized
 from pyomo.dae.diffvar import DAE_Error
 
+from pyomo.common.config import ConfigBlock, ConfigValue, PositiveInt, In
+
 logger = logging.getLogger('pyomo.dae')
 
 
@@ -117,6 +119,28 @@ class Finite_Difference_Transformation(Transformation):
     DAE, ODE, or PDE models.
     """
 
+    CONFIG = ConfigBlock("dae.finite_difference")
+    CONFIG.declare('nfe', ConfigValue(
+        default=10,
+        domain=PositiveInt,
+        description="The desired number of finite element points to be "
+                    "included in the discretization"
+    ))
+    CONFIG.declare('wrt', ConfigValue(
+        default=None,
+        description="The ContinuousSet to be discretized",
+        doc="Indicates which ContinuousSet the transformation should be "
+            "applied to. If this keyword argument is not specified then the "
+            "same scheme will be applied to all ContinuousSets."
+    ))
+    CONFIG.declare('scheme', ConfigValue(
+        default='BACKWARD',
+        domain=In(['BACKWARD', 'CENTRAL', 'FORWARD']),
+        description="Indicates which finite difference scheme to apply",
+        doc="Options are BACKWARD, CENTRAL, or FORWARD. The default scheme is "
+            "the backward difference method"
+    ))
+
     def __init__(self):
         super(Finite_Difference_Transformation, self).__init__()
         self._nfe = {}
@@ -141,10 +165,10 @@ class Finite_Difference_Transformation(Transformation):
                       scheme is the backward difference method
         """
 
-        tmpnfe = kwds.pop('nfe', 10)
-        tmpds = kwds.pop('wrt', None)
-        tmpscheme = kwds.pop('scheme', 'BACKWARD')
-        self._scheme_name = tmpscheme.upper()
+        config = self.CONFIG(kwds)
+
+        tmpnfe = config.nfe
+        tmpds = config.wrt
 
         if tmpds is not None:
             if tmpds.type() is not ContinuousSet:
@@ -155,10 +179,6 @@ class Finite_Difference_Transformation(Transformation):
                                  "been applied to the ContinuousSet '%s'" %
                                  (tmpds.get_discretization_info()['scheme'],
                                   tmpds.name))
-
-        if tmpnfe < 1:
-            raise ValueError(
-                "The number of finite elements must be at least 1")
 
         if None in self._nfe:
             raise ValueError(
@@ -175,12 +195,8 @@ class Finite_Difference_Transformation(Transformation):
             self._nfe[tmpds.name] = tmpnfe
             currentds = tmpds.name
 
+        self._scheme_name = config.scheme
         self._scheme = self.all_schemes.get(self._scheme_name, None)
-        if self._scheme is None:
-            raise ValueError("Unknown finite difference scheme '%s' specified "
-                             "using the 'scheme' keyword. Valid schemes are "
-                             "'BACKWARD', 'CENTRAL', and 'FORWARD'" %
-                             tmpscheme)
 
         self._transformBlock(instance, currentds)
 
@@ -191,6 +207,10 @@ class Finite_Difference_Transformation(Transformation):
         self._fe = {}
         for ds in block.component_objects(ContinuousSet):
             if currentds is None or currentds == ds.name or currentds is ds:
+                if 'scheme' in ds.get_discretization_info():
+                    raise DAE_Error("Attempting to discretize ContinuousSet "
+                                    "'%s' after it has already been discretized. "
+                                    % ds.name)
                 generate_finite_elements(ds, self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds) - 1 > self._nfe[currentds]:

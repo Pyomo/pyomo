@@ -244,9 +244,11 @@ class TestCollocation(unittest.TestCase):
         self.assertTrue(len(m.dv2_disc_eq) == 45)
         self.assertTrue(len(m.v2) == 48)
 
-        expected_tau_points = [0.0, 0.1550510257216822, 0.64494897427831788,
+        expected_tau_points = [0.0, 0.1550510257216822,
+                               0.64494897427831788,
                                1.0]
-        expected_disc_points = [0, 0.310102, 1.289898, 2.0, 2.310102, 3.289898,
+        expected_disc_points = [0, 0.310102, 1.289898, 2.0, 2.310102,
+                                3.289898,
                                 4.0, 4.310102, 5.289898, 6.0, 6.310102,
                                 7.289898, 8.0, 8.310102, 9.289898, 10]
         disc_info = m.t.get_discretization_info()
@@ -259,7 +261,8 @@ class TestCollocation(unittest.TestCase):
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
 
-        self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(
+            hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
         self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
         self.assertTrue(m.dv2 in m._pyomo_dae_reclassified_derivativevars)
 
@@ -294,49 +297,78 @@ class TestCollocation(unittest.TestCase):
         self.assertTrue(m.dv2dt in m._pyomo_dae_reclassified_derivativevars)
         self.assertTrue(m.dv2dt2 in m._pyomo_dae_reclassified_derivativevars)
 
+    # test collocation discretization on var indexed by ContinuousSet
+    # and multi-dimensional Set
+    def test_disc_multidimen_index(self):
+        m = self.m.clone()
+        m.s2 = Set(initialize=[('A', 'B'), ('C', 'D'), ('E', 'F')])
+        m.v2 = Var(m.t, m.s2)
+        m.dv2 = DerivativeVar(m.v2)
+        m.v3 = Var(m.s2, m.t)
+        m.dv3 = DerivativeVar(m.v3)
+
+        disc = TransformationFactory('dae.collocation')
+        disc.apply_to(m, nfe=5, ncp=3)
+
+        self.assertTrue(hasattr(m, 'dv1_disc_eq'))
+        self.assertTrue(hasattr(m, 'dv2_disc_eq'))
+        self.assertTrue(hasattr(m, 'dv3_disc_eq'))
+        self.assertTrue(len(m.dv2_disc_eq) == 45)
+        self.assertTrue(len(m.v2) == 48)
+        self.assertTrue(len(m.dv3_disc_eq) == 45)
+        self.assertTrue(len(m.v3) == 48)
+
+        expected_tau_points = [0.0, 0.1550510257216822,
+                               0.64494897427831788,
+                               1.0]
+        expected_disc_points = [0, 0.310102, 1.289898, 2.0, 2.310102,
+                                3.289898,
+                                4.0, 4.310102, 5.289898, 6.0, 6.310102,
+                                7.289898, 8.0, 8.310102, 9.289898, 10]
+        disc_info = m.t.get_discretization_info()
+
+        self.assertTrue(disc_info['scheme'] == 'LAGRANGE-RADAU')
+
+        for idx, val in enumerate(disc_info['tau_points']):
+            self.assertAlmostEqual(val, expected_tau_points[idx])
+
+        for idx, val in enumerate(list(m.t)):
+            self.assertAlmostEqual(val, expected_disc_points[idx])
+
+        self.assertTrue(
+            hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
+        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
+        self.assertTrue(m.dv2 in m._pyomo_dae_reclassified_derivativevars)
+        self.assertTrue(m.dv3 in m._pyomo_dae_reclassified_derivativevars)
+
     # test passing the discretization invalid options
     def test_disc_invalid_options(self):
         m = self.m.clone()
 
-        try:
+        with self.assertRaises(TypeError):
             TransformationFactory('dae.collocation').apply_to(m, wrt=m.s)
-            self.fail('Expected TypeError')
-        except TypeError:
-            pass
 
-        try:
+        with self.assertRaises(ValueError):
             TransformationFactory('dae.collocation').apply_to(m, nfe=-1)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
-        try:
+        with self.assertRaises(ValueError):
             TransformationFactory('dae.collocation').apply_to(m, ncp=0)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
-        try:
+        with self.assertRaises(ValueError):
             TransformationFactory('dae.collocation').apply_to(m, scheme='foo')
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
+
+        with self.assertRaises(ValueError):
+            TransformationFactory('dae.collocation').apply_to(m, foo=True)
 
         TransformationFactory('dae.collocation').apply_to(m, wrt=m.t)
-        try:
+        with self.assertRaises(ValueError):
             TransformationFactory('dae.collocation').apply_to(m, wrt=m.t)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
         m = self.m.clone()
         disc = TransformationFactory('dae.collocation')
         disc.apply_to(m)
-        try:
+        with self.assertRaises(ValueError):
             disc.apply_to(m)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
     # test looking up radau collocation points
     def test_lookup_radau_collocation_points(self):
@@ -372,12 +404,9 @@ class TestCollocation(unittest.TestCase):
             self.assertAlmostEqual(val, expected_disc_points[idx])
 
         m = self.m.clone()
-        try:
+        with self.assertRaises(ValueError):
             disc = TransformationFactory('dae.collocation')
             disc.apply_to(m, ncp=15, scheme='LAGRANGE-RADAU')
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
         # Restore initial flag value
         pyomo.dae.plugins.colloc.numpy_available = colloc_numpy_avail
@@ -416,12 +445,9 @@ class TestCollocation(unittest.TestCase):
             self.assertAlmostEqual(val, expected_disc_points[idx])
 
         m = self.m.clone()
-        try:
+        with self.assertRaises(ValueError):
             disc = TransformationFactory('dae.collocation')
             disc.apply_to(m, ncp=15, scheme='LAGRANGE-LEGENDRE')
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
         # Restore initial flag value
         pyomo.dae.plugins.colloc.numpy_available = colloc_numpy_avail
@@ -446,11 +472,8 @@ class TestCollocation(unittest.TestCase):
         m.v = Var(m.t)
         m.dv = DerivativeVar(m.v, wrt=(m.t, m.t, m.t))
 
-        try:
+        with self.assertRaises(DAE_Error):
             TransformationFactory('dae.collocation').apply_to(m)
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
 
     # test reduce_collocation_points invalid options
     def test_reduce_colloc_invalid(self):
@@ -463,101 +486,74 @@ class TestCollocation(unittest.TestCase):
         disc.apply_to(m, nfe=5, ncp=3)
 
         # No ContinuousSet specified
-        try:
+        with self.assertRaises(TypeError):
             disc.reduce_collocation_points(m, contset=None)
-            self.fail('Expected TypeError')
-        except TypeError:
-            pass
 
         # Component passed in is not a ContinuousSet
-        try:
+        with self.assertRaises(TypeError):
             disc.reduce_collocation_points(m, contset=m.s)
-            self.fail('Expected TypeError')
-        except TypeError:
-            pass
 
         # Call reduce_collocation_points method before applying discretization
-        try:
+        with self.assertRaises(RuntimeError):
             disc2.reduce_collocation_points(m2, contset=m2.t)
-            self.fail('Expected RuntimeError')
-        except RuntimeError:
-            pass
 
         # Call reduce_collocation_points on a ContinuousSet that hasn't been
         #  discretized
         m2.tt = ContinuousSet(bounds=(0, 1))
         disc2.apply_to(m2, wrt=m2.t)
-        try:
+        with self.assertRaises(ValueError):
             disc2.reduce_collocation_points(m2, contset=m2.tt)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
         # No Var specified
-        try:
+        with self.assertRaises(TypeError):
             disc.reduce_collocation_points(m, contset=m.t, var=None)
-            self.fail('Expected TypeError')
-        except TypeError:
-            pass
 
         # Component passed in is not a Var
-        try:
+        with self.assertRaises(TypeError):
             disc.reduce_collocation_points(m, contset=m.t, var=m.s)
-            self.fail('Expected TypeError')
-        except TypeError:
-            pass
 
         # New ncp not specified
-        try:
+        with self.assertRaises(TypeError):
             disc.reduce_collocation_points(m, contset=m.t, var=m.v1, ncp=None)
-            self.fail('Expected TypeError')
-        except TypeError:
-            pass
 
         # Negative ncp specified
-        try:
+        with self.assertRaises(ValueError):
             disc.reduce_collocation_points(m, contset=m.t, var=m.v1, ncp=-3)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
         # Too large ncp specified
-        try:
+        with self.assertRaises(ValueError):
             disc.reduce_collocation_points(m, contset=m.t, var=m.v1, ncp=10)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
         # Passing Vars not indexed by the ContinuousSet
         m.v2 = Var()
         m.v3 = Var(m.s)
         m.v4 = Var(m.s, m.s)
 
-        try:
+        with self.assertRaises(IndexError):
             disc.reduce_collocation_points(m, contset=m.t, var=m.v2, ncp=1)
-            self.fail('Expected IndexError')
-        except IndexError:
-            pass
 
-        try:
+        with self.assertRaises(IndexError):
             disc.reduce_collocation_points(m, contset=m.t, var=m.v3, ncp=1)
-            self.fail('Expected IndexError')
-        except IndexError:
-            pass
 
-        try:
+        with self.assertRaises(IndexError):
             disc.reduce_collocation_points(m, contset=m.t, var=m.v4, ncp=1)
-            self.fail('Expected IndexError')
-        except IndexError:
-            pass
 
         # Calling reduce_collocation_points more than once
         disc.reduce_collocation_points(m, contset=m.t, var=m.u, ncp=1)
-        try:
+        with self.assertRaises(RuntimeError):
             disc.reduce_collocation_points(m, contset=m.t, var=m.u, ncp=1)
-            self.fail('Expected RuntimeError')
-        except RuntimeError:
-            pass
+
+    # test trying to discretize a ContinuousSet twice
+    def test_discretize_twice(self):
+        m = self.m.clone()
+
+        disc1 = TransformationFactory('dae.collocation')
+        disc1.apply_to(m, nfe=5, ncp=3)
+
+        disc2 = TransformationFactory('dae.collocation')
+
+        with self.assertRaises(DAE_Error):
+            disc2.apply_to(m, nfe=5, ncp=3)
 
     # test reduce_collocation_points on var indexed by single ContinuousSet
     def test_reduce_colloc_single_index(self):

@@ -269,44 +269,62 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
         for idx, val in enumerate(list(m.t2)):
             self.assertAlmostEqual(val, expected_t2_disc_points[idx])
 
+    # test collocation discretization on var indexed by ContinuousSet and
+    # multi-dimensional Set
+    def test_disc_multidimen_index(self):
+        m = self.m.clone()
+        m.s2 = Set(initialize=[('A', 'B'), ('C', 'D'), ('E', 'F')])
+        m.v2 = Var(m.t, m.s2)
+        m.dv2 = DerivativeVar(m.v2)
+        m.v3 = Var(m.s2, m.t)
+        m.dv3 = DerivativeVar(m.v3)
+
+        disc = TransformationFactory('dae.finite_difference')
+        disc.apply_to(m, nfe=5)
+
+        self.assertTrue(hasattr(m, 'dv1_disc_eq'))
+        self.assertTrue(hasattr(m, 'dv2_disc_eq'))
+        self.assertTrue(hasattr(m, 'dv3_disc_eq'))
+        self.assertTrue(len(m.dv2_disc_eq) == 15)
+        self.assertTrue(len(m.v2) == 18)
+        self.assertTrue(len(m.dv3_disc_eq) == 15)
+        self.assertTrue(len(m.v3) == 18)
+
+        expected_disc_points = [0, 2.0, 4.0, 6.0, 8.0, 10]
+        disc_info = m.t.get_discretization_info()
+
+        self.assertTrue(disc_info['scheme'] == 'BACKWARD Difference')
+
+        for idx, val in enumerate(list(m.t)):
+            self.assertAlmostEqual(val, expected_disc_points[idx])
+
     # test passing the discretization invalid options
     def test_disc_invalid_options(self):
         m = self.m.clone()
 
-        try:
+        with self.assertRaises(TypeError):
             TransformationFactory('dae.finite_difference').apply_to(m, wrt=m.s)
-            self.fail('Expected TypeError')
-        except TypeError:
-            pass
 
-        try:
+        with self.assertRaises(ValueError):
             TransformationFactory('dae.finite_difference').apply_to(m, nfe=-1)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
-        try:
+        with self.assertRaises(ValueError):
             TransformationFactory('dae.finite_difference').apply_to(m,
-                                                                scheme='foo')
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
+                                                                    scheme='foo')
+
+        with self.assertRaises(ValueError):
+            TransformationFactory('dae.finite_difference').apply_to(m,
+                                                                    foo=True)
 
         TransformationFactory('dae.finite_difference').apply_to(m, wrt=m.t)
-        try:
+        with self.assertRaises(ValueError):
             TransformationFactory('dae.finite_difference').apply_to(m, wrt=m.t)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
         m = self.m.clone()
         disc = TransformationFactory('dae.finite_difference')
         disc.apply_to(m)
-        try:
+        with self.assertRaises(ValueError):
             disc.apply_to(m)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
     # test discretization using fewer points than ContinuousSet initialized
     # with
@@ -328,11 +346,21 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
         m.v = Var(m.t)
         m.dv = DerivativeVar(m.v, wrt=(m.t, m.t, m.t))
 
-        try:
+        with self.assertRaises(DAE_Error):
             TransformationFactory('dae.finite_difference').apply_to(m)
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
+
+    # test trying to discretize a ContinuousSet twice
+    def test_discretize_twice(self):
+        m = self.m.clone()
+
+        disc1 = TransformationFactory('dae.finite_difference')
+        disc1.apply_to(m, nfe=5)
+
+        disc2 = TransformationFactory('dae.finite_difference')
+
+        with self.assertRaises(DAE_Error):
+            disc2.apply_to(m, nfe=5)
+
 
 if __name__ == "__main__":
     unittest.main()

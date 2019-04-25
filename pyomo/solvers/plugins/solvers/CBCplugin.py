@@ -12,15 +12,19 @@ __all__ = ['CBC', 'MockCBC']
 
 import os
 import re
+import time
 import logging
 
 from six import iteritems
+from six import string_types
 
 import pyomo.common
 import pyutilib.misc
 import pyutilib.common
 import pyutilib.subprocess
 
+from pyomo.core.base import Var
+from pyomo.core.kernel.block import IBlock
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -130,7 +134,14 @@ class CBCSHELL(SystemCallSolver):
         # Call base constructor
         #
         kwds['type'] = 'cbc'
-        SystemCallSolver.__init__(self, **kwds)
+        super(CBCSHELL, self).__init__(**kwds)
+
+        # NOTE: eventually both of the following attributes should be migrated to a common base class.
+        # is the current solve warm-started? a transient data member to communicate state information
+        # across the _presolve, _apply_solver, and _postsolve methods.
+        self._warm_start_solve = False
+        # related to the above, the temporary name of the SOLN warm-start file (if any).
+        self._warm_start_file_name = None
 
         #
         # Set up valid problem formats and valid results for each problem format
@@ -178,10 +189,104 @@ class CBCSHELL(SystemCallSolver):
             return ResultsFormat.sol
         return ResultsFormat.soln
 
-    # Nothing needs to be done here
-    #def _presolve(self, *args, **kwds):
-    #    # let the base class handle any remaining keywords/actions.
-    #    SystemCallSolver._presolve(self, *args, **kwds)
+    def warm_start_capable(self):
+        if self._problem_format == ProblemFormat.cpxlp \
+                and _cbc_version >= (2,8,0,0):
+            return True
+        else:
+            return False
+
+    def _write_soln_file(self, instance, filename):
+
+        # Maybe this could be a useful method for any instance.
+
+        if isinstance(instance, IBlock):
+            smap = getattr(instance, "._symbol_maps")[self._smap_id]
+        else:
+            smap = instance.solutions.symbol_map[self._smap_id]
+        byObject = smap.byObject
+
+        column_index = 0
+        with open(filename, 'w') as solnfile:
+            for var in instance.component_data_objects(Var):
+                # Cbc only expects integer variables with non-zero values for mipstart.
+                if var.value \
+                        and (var.is_integer() or var.is_binary()) \
+                        and (id(var) in byObject):
+                    name = byObject[id(var)]
+                    solnfile.write(
+                        '{} {} {}\n'.format(
+                            column_index, name, var.value
+                        )
+                    )
+                    # Cbc ignores column indexes, so the value does not matter.
+                    column_index += 1
+
+    #
+    # Write a warm-start file in the SOLN format.
+    #
+    def _warm_start(self, instance):
+
+        self._write_soln_file(instance, self._warm_start_file_name)
+
+    # over-ride presolve to extract the warm-start keyword, if specified.
+    def _presolve(self, *args, **kwds):
+
+        # create a context in the temporary file manager for
+        # this plugin - is "pop"ed in the _postsolve method.
+        pyutilib.services.TempfileManager.push()
+
+        # if the first argument is a string (representing a filename),
+        # then we don't have an instance => the solver is being applied
+        # to a file.
+        self._warm_start_solve = kwds.pop('warmstart', False)
+        self._warm_start_file_name = kwds.pop('warmstart_file', None)
+        user_warmstart = False
+        if self._warm_start_file_name is not None:
+            user_warmstart = True
+
+        # the input argument can currently be one of two things: an instance or a filename.
+        # if a filename is provided and a warm-start is indicated, we go ahead and
+        # create the temporary file - assuming that the user has already, via some external
+        # mechanism, invoked warm_start() with a instance to create the warm start file.
+        if self._warm_start_solve and \
+                isinstance(args[0], string_types):
+            # we assume the user knows what they are doing...
+            pass
+        elif self._warm_start_solve and \
+                (not isinstance(args[0], string_types)):
+            # assign the name of the warm start file *before* calling the base class
+            # presolve - the base class method ends up creating the command line,
+            # and the warm start file-name is (obviously) needed there.
+            if self._warm_start_file_name is None:
+                assert not user_warmstart
+                self._warm_start_file_name = pyutilib.services.TempfileManager.\
+                                             create_tempfile(suffix = '.cbc.soln')
+
+        # let the base class handle any remaining keywords/actions.
+        # let the base class handle any remaining keywords/actions.
+        super(CBCSHELL, self)._presolve(*args, **kwds)
+
+        # NB: we must let the base class presolve run first so that the
+        # symbol_map is actually constructed!
+
+        if (len(args) > 0) and (not isinstance(args[0], string_types)):
+
+            if len(args) != 1:
+                raise ValueError(
+                    "CBCplugin _presolve method can only handle a single "
+                    "problem instance - %s were supplied" % (len(args),))
+
+            # write the warm-start file - currently only supports MIPs.
+            # we only know how to deal with a single problem instance.
+            if self._warm_start_solve and (not user_warmstart):
+
+                start_time = time.time()
+                self._warm_start(args[0])
+                end_time = time.time()
+                if self._report_timing is True:
+                    print("Warm start write time=%.2f seconds" % (end_time-start_time))
+
 
     def _default_executable(self):
         executable = pyomo.common.Executable("cbc")
@@ -293,6 +398,8 @@ class CBCSHELL(SystemCallSolver):
             cmd.extend(["-printingOptions", "all",
                         "-import", problem_files[0]])
             cmd.extend(action_options)
+            if self._warm_start_solve:
+                cmd.extend(["-mipstart",self._warm_start_file_name])
             cmd.extend(["-stat=1",
                         "-solve",
                         "-solu", self._soln_file])
@@ -755,6 +862,20 @@ class CBCSHELL(SystemCallSolver):
                                                               SolutionStatus.unknown,
                                                               SolutionStatus.other]:
             results.solution.insert(solution)
+
+
+    def _postsolve(self):
+
+        # let the base class deal with returning results.
+        results = super(CBCSHELL, self)._postsolve()
+
+        # finally, clean any temporary files registered with the temp file
+        # manager, created populated *directly* by this plugin. does not
+        # include, for example, the execution script. but does include
+        # the warm-start file.
+        pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
+
+        return results
 
 
 @SolverFactory.register('_mock_cbc')

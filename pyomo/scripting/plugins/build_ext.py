@@ -21,22 +21,24 @@ class ExtensionBuilder(object):
     def call(self, args, unparsed):
         logger = logging.getLogger('pyomo.common')
         logger.setLevel(logging.INFO)
-        results = {}
+        results = []
+        result_fmt = "[%s]  %s"
         returncode = 0
         for target in ExtensionBuilderFactory:
             try:
                 ExtensionBuilderFactory(target)
-                results[target] = ' OK '
+                result = ' OK '
             except SystemExit:
-                results[target] = 'FAIL'
+                result = 'FAIL'
                 returncode = 1
             except:
-                results[target] = 'FAIL'
+                result = 'FAIL'
                 returncode = 1
+            results.append(result_fmt % (result, target))
         logger.info("Finished building Pyomo extensions.")
         logger.info(
             "The following extensions were built:\n    " +
-            "\n    ".join(["[%s]  %s" % (v,k) for k,v in iteritems(results)]))
+            "\n    ".join(results))
         return returncode
 
 #

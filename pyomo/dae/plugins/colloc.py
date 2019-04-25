@@ -26,6 +26,8 @@ from pyomo.dae.misc import block_fully_discretized
 from pyomo.dae.misc import get_index_information
 from pyomo.dae.diffvar import DAE_Error
 
+from pyomo.common.config import ConfigBlock, ConfigValue, PositiveInt, In
+
 # If the user has numpy then the collocation points and the a matrix for
 # the Runge-Kutta basis formulation will be calculated as needed.
 # If the user does not have numpy then these values will be read from a
@@ -235,11 +237,38 @@ def calc_afinal(cp):
     return afinal
 
 
-@TransformationFactory.register('dae.collocation', 
-            doc="Discretizes a DAE model using "
-            "orthogonal collocation over finite elements transforming "
-            "the model into an NLP.")
+@TransformationFactory.register('dae.collocation',
+                doc="Discretizes a DAE model using orthogonal collocation over"
+                " finite elements transforming the model into an NLP.")
 class Collocation_Discretization_Transformation(Transformation):
+
+    CONFIG = ConfigBlock("dae.collocation")
+    CONFIG.declare('nfe', ConfigValue(
+        default=10,
+        domain=PositiveInt,
+        description="The desired number of finite element points to be "
+                    "included in the discretization"
+    ))
+    CONFIG.declare('ncp', ConfigValue(
+        default=3,
+        domain=PositiveInt,
+        description="The desired number of collocation points over each "
+                    "finite element"
+    ))
+    CONFIG.declare('wrt', ConfigValue(
+        default=None,
+        description="The ContinuousSet to be discretized",
+        doc="Indicates which ContinuousSet the transformation should be "
+            "applied to. If this keyword argument is not specified then the "
+            "same scheme will be applied to all ContinuousSets."
+    ))
+    CONFIG.declare('scheme', ConfigValue(
+        default='LAGRANGE-RADAU',
+        domain=In(['LAGRANGE-RADAU', 'LAGRANGE-LEGENDRE']),
+        description="Indicates which collocation scheme to apply",
+        doc="Options are 'LAGRANGE-RADAU' and 'LAGRANGE-LEGENDRE'. "
+            "The default scheme is Lagrange polynomials with Radau roots"
+    ))
 
     def __init__(self):
         super(Collocation_Discretization_Transformation, self).__init__()
@@ -335,17 +364,17 @@ class Collocation_Discretization_Transformation(Transformation):
                       should be applied to. If this keyword argument is not
                       specified then the same scheme will be applied to all
                       ContinuousSets.
-        scheme        Indicates which finite difference method to apply.
+        scheme        Indicates which collocation scheme to apply.
                       Options are 'LAGRANGE-RADAU' and 'LAGRANGE-LEGENDRE'. 
                       The default scheme is Lagrange polynomials with Radau
                       roots.
         """
 
-        tmpnfe = kwds.pop('nfe', 10)
-        tmpncp = kwds.pop('ncp', 3)
-        tmpds = kwds.pop('wrt', None)
-        tmpscheme = kwds.pop('scheme', 'LAGRANGE-RADAU')
-        self._scheme_name = tmpscheme.upper()
+        config = self.CONFIG(kwds)
+
+        tmpnfe = config.nfe
+        tmpncp = config.ncp
+        tmpds = config.wrt
 
         if tmpds is not None:
             if tmpds.type() is not ContinuousSet:
@@ -356,13 +385,6 @@ class Collocation_Discretization_Transformation(Transformation):
                                  "been applied to the ContinuousSet '%s'"
                                  % (tmpds.get_discretization_info()['scheme'],
                                     tmpds.name))
-
-        if tmpnfe <= 0:
-            raise ValueError(
-                "The number of finite elements must be at least 1")
-        if tmpncp <= 0:
-            raise ValueError(
-                "The number of collocation points must be at least 1")
 
         if None in self._nfe:
             raise ValueError(
@@ -382,12 +404,8 @@ class Collocation_Discretization_Transformation(Transformation):
             self._ncp[tmpds.name] = tmpncp
             currentds = tmpds.name
 
+        self._scheme_name = config.scheme
         self._scheme = self.all_schemes.get(self._scheme_name, None)
-        if self._scheme is None:
-            raise ValueError("Unknown collocation scheme '%s' specified using "
-                             "the 'scheme' keyword. Valid schemes are "
-                             "'LAGRANGE-RADAU' and 'LAGRANGE-LEGENDRE'"
-                              % tmpscheme)
 
         if self._scheme_name == 'LAGRANGE-RADAU':
             self._get_radau_constants(currentds)
@@ -403,6 +421,10 @@ class Collocation_Discretization_Transformation(Transformation):
         self._fe = {}
         for ds in block.component_objects(ContinuousSet, descend_into=True):
             if currentds is None or currentds == ds.name:
+                if 'scheme' in ds.get_discretization_info():
+                    raise DAE_Error("Attempting to discretize ContinuousSet "
+                                    "'%s' after it has already been discretized. "
+                                    % ds.name)
                 generate_finite_elements(ds, self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds) - 1 > self._nfe[currentds]:
