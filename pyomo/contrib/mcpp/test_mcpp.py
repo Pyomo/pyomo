@@ -71,6 +71,7 @@ class TestMcCormick(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.mcpp', logging.WARNING):
             mc_var = mc(m.no_val)
+            mc_var.subcv()
             self.assertIn("Var no_val missing value.",
                           output.getvalue().strip())
             self.assertEqual(mc_var.lower(), 0)
@@ -84,6 +85,9 @@ class TestMcCormick(unittest.TestCase):
         mc_expr = mc(m.x * m.y)
         self.assertEqual(mc_expr.lower(), -100)
         self.assertEqual(mc_expr.upper(), 160)
+        self.assertEqual(
+            str(mc_expr),
+            "[ -1.00000e+02 :  1.60000e+02 ] [  6.00000e+00 :  6.00000e+00 ] [ ( 2.00000e+00) : ( 2.00000e+00) ]")
 
     def test_reciprocal(self):
         m = ConcreteModel()
@@ -145,6 +149,23 @@ class TestMcCormick(unittest.TestCase):
         mc_expr = mc(m.x, improved_var_bounds=improved_bounds)
         self.assertEqual(mc_expr.lower(), 10)
         self.assertEqual(mc_expr.upper(), 20)
+
+    def test_powers(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 2), initialize=1)
+        m.y = Var(bounds=(1e-4, 2), initialize=1)
+        with self.assertRaisesRegexp(MCPP_Error, "Log with negative values in range"):
+            mc(m.x ** 1.5)
+        mc_expr = mc(m.y ** 1.5)
+        self.assertAlmostEqual(mc_expr.lower(), 1e-4**1.5)
+        self.assertAlmostEqual(mc_expr.upper(), 2**1.5)
+        mc_expr = mc(m.y ** m.x)
+        self.assertAlmostEqual(mc_expr.lower(), 1e-4**2)
+        self.assertAlmostEqual(mc_expr.upper(), 4)
+        m.z = Var(bounds=(-1, 1), initialize=0)
+        mc_expr = mc(m.z ** 2)
+        self.assertAlmostEqual(mc_expr.lower(), 0)
+        self.assertAlmostEqual(mc_expr.upper(), 1)
 
 
 def make2dPlot(expr, numticks=10, show_plot=False):

@@ -56,6 +56,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
 
     def __init__(self, mcpp_lib, expression, improved_var_bounds=ComponentMap()):
         super(MCPP_visitor, self).__init__()
+        self.missing_value_warnings = []
         self.expr = expression
         self.mcpp = mcpp_lib
         self.declare_mcpp_library_calls()
@@ -76,88 +77,79 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
 
     def declare_mcpp_library_calls(self):
         # Create MC type variable
-        self.mcpp.new_createVar.argtypes = [ctypes.c_double,
-                                            ctypes.c_double,
-                                            ctypes.c_double,
-                                            ctypes.c_int,
-                                            ctypes.c_int]
-        self.mcpp.new_createVar.restype = ctypes.c_void_p
+        self.mcpp.newVar.argtypes = [ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_int, ctypes.c_int]
+        self.mcpp.newVar.restype = ctypes.c_void_p
 
         # Create MC type constant
-        self.mcpp.new_createConstant.argtypes = [ctypes.c_double]
-        self.mcpp.new_createConstant.restype = ctypes.c_void_p
+        self.mcpp.newConstant.argtypes = [ctypes.c_double]
+        self.mcpp.newConstant.restype = ctypes.c_void_p
 
         # Multiply MC objects
-        self.mcpp.new_mult.argtypes = [ctypes.c_void_p,
-                                       ctypes.c_void_p]
-        self.mcpp.new_mult.restype = ctypes.c_void_p
+        self.mcpp.multiply.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        self.mcpp.multiply.restype = ctypes.c_void_p
 
         # Add MC objects
-        self.mcpp.new_add.argtypes = [ctypes.c_void_p,
-                                      ctypes.c_void_p]
-        self.mcpp.new_add.restype = ctypes.c_void_p
+        self.mcpp.add.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        self.mcpp.add.restype = ctypes.c_void_p
 
-        # pow(x, y) function, where y is an int
-        self.mcpp.new_power.argtypes = [ctypes.c_void_p,
-                                        ctypes.c_void_p]
-        self.mcpp.new_power.restype = ctypes.c_void_p
+        # pow(x, y) functions
+        # y is integer
+        self.mcpp.power.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        self.mcpp.power.restype = ctypes.c_void_p
+        # y is fractional
+        self.mcpp.powerf.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        self.mcpp.powerf.restype = ctypes.c_void_p
+        # y is an expression
+        self.mcpp.powerx.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        self.mcpp.powerx.restype = ctypes.c_void_p
 
         # sqrt function
-        self.mcpp.new_sqrt.argtypes = [ctypes.c_void_p]
-        self.mcpp.new_sqrt.restype = ctypes.c_void_p
-
-        # MC constant * MC Variable
-        self.mcpp.new_monomial.argtypes = [ctypes.c_void_p,
-                                           ctypes.c_void_p]
-        self.mcpp.new_monomial.restype = ctypes.c_void_p
+        self.mcpp.mc_sqrt.argtypes = [ctypes.c_void_p]
+        self.mcpp.mc_sqrt.restype = ctypes.c_void_p
 
         # 1 / MC Variable
-        self.mcpp.new_reciprocal.argtypes = [ctypes.c_void_p,
-                                             ctypes.c_void_p]
-        self.mcpp.new_reciprocal.restype = ctypes.c_void_p
+        self.mcpp.reciprocal.argtypes = [ctypes.c_void_p]
+        self.mcpp.reciprocal.restype = ctypes.c_void_p
 
         # - MC Variable
-        self.mcpp.new_negation.argtypes = [ctypes.c_void_p]
-        self.mcpp.new_negation.restype = ctypes.c_void_p
+        self.mcpp.negation.argtypes = [ctypes.c_void_p]
+        self.mcpp.negation.restype = ctypes.c_void_p
 
         # fabs(MC Variable)
-        self.mcpp.new_abs.argtypes = [ctypes.c_void_p]
-        self.mcpp.new_abs.restype = ctypes.c_void_p
+        self.mcpp.mc_abs.argtypes = [ctypes.c_void_p]
+        self.mcpp.mc_abs.restype = ctypes.c_void_p
 
         # sin(MC Variable)
-        self.mcpp.new_trigSin.argtypes = [ctypes.c_void_p]
-        self.mcpp.new_trigSin.restype = ctypes.c_void_p
+        self.mcpp.trigSin.argtypes = [ctypes.c_void_p]
+        self.mcpp.trigSin.restype = ctypes.c_void_p
 
         # cos(MC Variable)
-        self.mcpp.new_trigCos.argtypes = [ctypes.c_void_p]
-        self.mcpp.new_trigCos.restype = ctypes.c_void_p
+        self.mcpp.trigCos.argtypes = [ctypes.c_void_p]
+        self.mcpp.trigCos.restype = ctypes.c_void_p
 
         # tan(MC Variable)
-        self.mcpp.new_trigTan.argtypes = [ctypes.c_void_p]
-        self.mcpp.new_trigTan.restype = ctypes.c_void_p
+        self.mcpp.trigTan.argtypes = [ctypes.c_void_p]
+        self.mcpp.trigTan.restype = ctypes.c_void_p
 
         # asin(MC Variable)
-        self.mcpp.new_atrigSin.argtypes = [ctypes.c_void_p]
-        self.mcpp.new_atrigSin.restype = ctypes.c_void_p
+        self.mcpp.atrigSin.argtypes = [ctypes.c_void_p]
+        self.mcpp.atrigSin.restype = ctypes.c_void_p
 
         # acos(MC Variable)
-        self.mcpp.new_atrigCos.argtypes = [ctypes.c_void_p]
-        self.mcpp.new_atrigCos.restype = ctypes.c_void_p
+        self.mcpp.atrigCos.argtypes = [ctypes.c_void_p]
+        self.mcpp.atrigCos.restype = ctypes.c_void_p
 
         # atan(MC Variable)
-        self.mcpp.new_atrigTan.argtypes = [ctypes.c_void_p]
-        self.mcpp.new_atrigTan.restype = ctypes.c_void_p
+        self.mcpp.atrigTan.argtypes = [ctypes.c_void_p]
+        self.mcpp.atrigTan.restype = ctypes.c_void_p
 
         # exp(MC Variable)
-        self.mcpp.new_exponential.argtypes = [ctypes.c_void_p]
-        self.mcpp.new_exponential.restype = ctypes.c_void_p
+        self.mcpp.exponential.argtypes = [ctypes.c_void_p]
+        self.mcpp.exponential.restype = ctypes.c_void_p
 
         # log(MC Variable)
         self.mcpp.logarithm.argtypes = [ctypes.c_void_p]
         self.mcpp.logarithm.restype = ctypes.c_void_p
-
-        self.mcpp.new_NPV.argtypes = [ctypes.c_void_p]
-        self.mcpp.new_NPV.restype = ctypes.c_void_p
 
         # Releases object from memory (prevent memory leaks)
         self.mcpp.release.argtypes = [ctypes.c_void_p]
@@ -175,61 +167,59 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
 
     def exitNode(self, node, data):
         if isinstance(node, ProductExpression):
-            ans = self.mcpp.new_mult(data[0], data[1])
+            ans = self.mcpp.multiply(data[0], data[1])
         elif isinstance(node, SumExpression):
             ans = data[0]
             for arg in data[1:]:
-                ans = self.mcpp.new_add(ans, arg)
+                ans = self.mcpp.add(ans, arg)
         elif isinstance(node, PowExpression):
             if type(node.arg(1)) == int:
-                ans = self.mcpp.new_power(data[0], data[1])
+                ans = self.mcpp.try_binary_fcn(self.mcpp.power, data[0], data[1])
+            elif type(node.arg(1)) == float:
+                ans = self.mcpp.try_binary_fcn(self.mcpp.powerf, data[0], data[1])
             else:
-                # Non-integer exponent. Must reformulate.
-                # We use x^n = exp(n*log(x))
-                ans = self.mcpp.new_exponential(
-                    self.mcpp.new_mult(data[1], self.mcpp.logarithm(data[0])))
+                ans = self.mcpp.try_binary_fcn(self.mcpp.powerx, data[0], data[1])
         elif isinstance(node, ReciprocalExpression):
-            ans = self.mcpp.new_reciprocal(
-                self.mcpp.new_createConstant(1), data[0])
+            ans = self.mcpp.try_unary_fcn(self.mcpp.reciprocal, data[0])
         elif isinstance(node, NegationExpression):
-            ans = self.mcpp.new_negation(data[0])
+            ans = self.mcpp.negation(data[0])
         elif isinstance(node, AbsExpression):
-            ans = self.mcpp.new_abs(data[0])
+            ans = self.mcpp.try_unary_fcn(self.mcpp.mc_abs, data[0])
         elif isinstance(node, LinearExpression):
             raise NotImplementedError(
                 'Quicksum has bugs that prevent proper usage of MC++.')
-            # ans = self.mcpp.new_createConstant(node.constant)
+            # ans = self.mcpp.newConstant(node.constant)
             # for coef, var in zip(node.linear_coefs, node.linear_vars):
-            #     ans = self.mcpp.new_add(
+            #     ans = self.mcpp.add(
             #         ans,
-            #         self.mcpp.new_mult(
-            #             self.mcpp.new_createConstant(coef),
+            #         self.mcpp.multiply(
+            #             self.mcpp.newConstant(coef),
             #             self.register_num(var)))
         elif isinstance(node, UnaryFunctionExpression):
             if node.name == "exp":
-                ans = self.mcpp.new_exponential(data[0])
+                ans = self.mcpp.try_unary_fcn(self.mcpp.exponential, data[0])
             elif node.name == "log":
                 ans = self.mcpp.try_unary_fcn(self.mcpp.logarithm, data[0])
             elif node.name == "sin":
-                ans = self.mcpp.new_trigSin(data[0])
+                ans = self.mcpp.try_unary_fcn(self.mcpp.trigSin, data[0])
             elif node.name == "cos":
-                ans = self.mcpp.new_trigCos(data[0])
+                ans = self.mcpp.try_unary_fcn(self.mcpp.trigCos, data[0])
             elif node.name == "tan":
-                ans = self.mcpp.new_trigTan(data[0])
+                ans = self.mcpp.try_unary_fcn(self.mcpp.trigTan, data[0])
             elif node.name == "asin":
-                ans = self.mcpp.new_atrigSin(data[0])
+                ans = self.mcpp.try_unary_fcn(self.mcpp.atrigSin, data[0])
             elif node.name == "acos":
-                ans = self.mcpp.new_atrigCos(data[0])
+                ans = self.mcpp.try_unary_fcn(self.mcpp.atrigCos, data[0])
             elif node.name == "atan":
-                ans = self.mcpp.new_atrigTan(data[0])
+                ans = self.mcpp.try_unary_fcn(self.mcpp.atrigTan, data[0])
             elif node.name == "sqrt":
-                ans = self.mcpp.new_sqrt(data[0])
+                ans = self.mcpp.try_unary_fcn(self.mcpp.mc_sqrt, data[0])
             else:
                 raise NotImplementedError("Unknown unary function: %s" % (node.name,))
         elif any(isinstance(node, npv) for npv in NPV_expressions):
-            ans = self.mcpp.new_NPV(value(data[0]))
+            ans = self.mcpp.newConstant(value(data[0]))
         elif type(node) in nonpyomo_leaf_types:
-            ans = self.mcpp.new_createConstant(node)
+            ans = self.mcpp.newConstant(node)
         elif not node.is_expression_type():
             ans = self.register_num(node)
         elif type(node) in SubclassOf(Expression) or isinstance(node, _ExpressionData):
@@ -249,7 +239,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         if type(child) in nonpyomo_leaf_types:
             # This means the child is POD
             # i.e., int, float, string
-            return False, self.mcpp.new_createConstant(child)
+            return False, self.mcpp.newConstant(child)
         elif not child.is_expression_type():
             # node is either a Param, Var, or NumericConstant
             return False, self.register_num(child)
@@ -265,7 +255,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
     def register_num(self, num):
         """Registers a new number: Param, Var, or NumericConstant."""
         if num.is_fixed():
-            return self.mcpp.new_createConstant(value(num))
+            return self.mcpp.newConstant(value(num))
         else:
             return self.known_vars[num]
 
@@ -288,10 +278,9 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                 % (var.name, ub))
         if var_val is None:
             var_val = (lb + ub) / 2
-            logger.warning(
-                'Var %s missing value. Assuming midpoint value of %s'
-                % (var.name, var_val))
-        return self.mcpp.new_createVar(
+            self.missing_value_warnings.append(
+                'Var %s missing value. Assuming midpoint value of %s' % (var.name, var_val))
+        return self.mcpp.newVar(
             lb, var_val, ub, self.num_vars, var_idx)
 
     def finalizeResult(self, node_result):
@@ -341,63 +330,79 @@ class McCormick(object):
 
     def __init__(self, expression, improved_var_bounds=ComponentMap()):
         self.mcpp_lib = ctypes.CDLL(Library('mcppInterface').path())
-        self.oExpr = expression
+        self.pyomo_expr = expression
         self.visitor = MCPP_visitor(self.mcpp_lib, expression, improved_var_bounds)
-        self.mcppExpression = self.visitor.walk_expression(expression)
-        self.expr = self.mcppExpression
+        self.mc_expr = self.visitor.walk_expression(expression)
 
-        self.mcpp_lib.new_displayOutput.argtypes = [ctypes.c_void_p]
+        self.mcpp_lib.toString.argtypes = [ctypes.c_void_p]
+        self.mcpp_lib.toString.restype = ctypes.c_char_p
 
-        self.mcpp_lib.new_lower.argtypes = [ctypes.c_void_p]
-        self.mcpp_lib.new_lower.restype = ctypes.c_double
+        self.mcpp_lib.lower.argtypes = [ctypes.c_void_p]
+        self.mcpp_lib.lower.restype = ctypes.c_double
 
-        self.mcpp_lib.new_upper.argtypes = [ctypes.c_void_p]
-        self.mcpp_lib.new_upper.restype = ctypes.c_double
+        self.mcpp_lib.upper.argtypes = [ctypes.c_void_p]
+        self.mcpp_lib.upper.restype = ctypes.c_double
 
-        self.mcpp_lib.new_concave.argtypes = [ctypes.c_void_p]
-        self.mcpp_lib.new_concave.restype = ctypes.c_double
+        self.mcpp_lib.concave.argtypes = [ctypes.c_void_p]
+        self.mcpp_lib.concave.restype = ctypes.c_double
 
-        self.mcpp_lib.new_convex.argtypes = [ctypes.c_void_p]
-        self.mcpp_lib.new_convex.restype = ctypes.c_double
+        self.mcpp_lib.convex.argtypes = [ctypes.c_void_p]
+        self.mcpp_lib.convex.restype = ctypes.c_double
 
-        self.mcpp_lib.new_subcc.argtypes = [ctypes.c_void_p, ctypes.c_int]
-        self.mcpp_lib.new_subcc.restype = ctypes.c_double
+        self.mcpp_lib.subcc.argtypes = [ctypes.c_void_p, ctypes.c_int]
+        self.mcpp_lib.subcc.restype = ctypes.c_double
 
-        self.mcpp_lib.new_subcv.argtypes = [ctypes.c_void_p, ctypes.c_int]
-        self.mcpp_lib.new_subcv.restype = ctypes.c_double
+        self.mcpp_lib.subcv.argtypes = [ctypes.c_void_p, ctypes.c_int]
+        self.mcpp_lib.subcv.restype = ctypes.c_double
 
-    def displayOutput(self):
-        return self.mcpp_lib.new_displayOutput(self.expr)
+    def __repn__(self):
+        repn = self.mcpp_lib.toString(self.mc_expr)
+        self.mcpp_lib.clearString()
+        if six.PY3:
+            repn = repn.decode("utf-8")
+        return repn
+
+    def __str__(self):
+        return self.__repn__()
 
     def lower(self):
-        return self.mcpp_lib.new_lower(self.expr)
+        return self.mcpp_lib.lower(self.mc_expr)
 
     def upper(self):
-        return self.mcpp_lib.new_upper(self.expr)
+        return self.mcpp_lib.upper(self.mc_expr)
 
     def concave(self):
-        return self.mcpp_lib.new_concave(self.expr)
+        self.warn_if_var_missing_value()
+        return self.mcpp_lib.concave(self.mc_expr)
 
     def convex(self):
-        return self.mcpp_lib.new_convex(self.expr)
+        self.warn_if_var_missing_value()
+        return self.mcpp_lib.convex(self.mc_expr)
 
     def subcc(self):
+        self.warn_if_var_missing_value()
         ans = ComponentMap()
         for key in self.visitor.var_to_idx:
             i = self.visitor.var_to_idx[key]
-            ans[key] = self.mcpp_lib.new_subcc(self.expr, i)
+            ans[key] = self.mcpp_lib.subcc(self.mc_expr, i)
         return ans
 
     def subcv(self):
+        self.warn_if_var_missing_value()
         ans = ComponentMap()
         for key in self.visitor.var_to_idx:
             i = self.visitor.var_to_idx[key]
-            ans[key] = self.mcpp_lib.new_subcv(self.expr, i)
+            ans[key] = self.mcpp_lib.subcv(self.mc_expr, i)
         return ans
 
     def changePoint(self, var, point):
         var.set_value(point)
         # WARNING: TODO: this has side effects
-        self.visitor = MCPP_visitor(self.mcpp_lib, self.oExpr)
-        self.mcppExpression = self.visitor.walk_expression(self.oExpr)
-        self.expr = self.mcppExpression
+        self.visitor = MCPP_visitor(self.mcpp_lib, self.pyomo_expr)
+        self.mc_expr = self.visitor.walk_expression(self.pyomo_expr)
+
+    def warn_if_var_missing_value(self):
+        if self.visitor.missing_value_warnings:
+            for message in self.visitor.missing_value_warnings:
+                logger.warning(message)
+            self.visitor.missing_value_warnings.clear()
