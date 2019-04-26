@@ -142,6 +142,19 @@ class TestCollocation(unittest.TestCase):
         repn_gen = repn_to_rounded_dict(repn, 5)
         self.assertEqual(repn_baseline, repn_gen)
 
+    # test second order derivative with single collocation point
+    def test_disc_second_order_1cp(self):
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0,1))
+        m.t2 = ContinuousSet(bounds=(0,10))
+        m.v = Var(m.t, m.t2)
+        m.dv = DerivativeVar(m.v, wrt=(m.t, m.t2))
+        TransformationFactory('dae.collocation').apply_to(m, nfe=2, ncp=1)
+
+        self.assertTrue(hasattr(m, 'dv_disc_eq'))
+        self.assertTrue(len(m.dv_disc_eq) == 4)
+        self.assertTrue(len(m.v) == 9)                        
+
     # test collocation discretization with legendre points 
     # on var indexed by single ContinuousSet
     def test_disc_single_index_legendre(self):
