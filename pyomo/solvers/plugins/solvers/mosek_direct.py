@@ -165,7 +165,7 @@ class MosekDirect(DirectSolver):
             x, y = v
             qsubj.append(self._pyomo_var_to_solver_var_map[x])
             qsubi.append(self._pyomo_var_to_solver_var_map[y])
-            qval.append(repn.quadratic_coefs[i]*2)
+            qval.append(repn.quadratic_coefs[i]*((qsubi==qsubj)+1))
             referenced_vars.add(x)
             referenced_vars.add(y)
         new_expr.extend([qval, qsubi, qsubj])
@@ -233,20 +233,6 @@ class MosekDirect(DirectSolver):
 
         self._add_block(model)
 
-        for var, n_ref in self._referenced_variables.items():
-            if n_ref != 0:
-                if var.fixed:
-                    if not self._output_fixed_variable_bounds:
-                        raise ValueError(
-                            "Encountered a fixed variable (%s) inside "
-                            "an active objective or constraint "
-                            "expression on model %s, which is usually "
-                            "indicative of a preprocessing error. Use "
-                            "the IO-option 'output_fixed_variable_bounds=True' "
-                            "to suppress this error and fix the variable "
-                            "by overwriting its bounds in the Gurobi instance."
-                            % (var.name, self._pyomo_model.name,))
-
     def _add_block(self, block):
         DirectOrPersistentSolver._add_block(self, block)
 
@@ -293,8 +279,6 @@ class MosekDirect(DirectSolver):
         self._vars_referenced_by_con[con] = referenced_vars
         self._pyomo_con_to_solver_con_map[con] = con_index
         self._solver_con_to_pyomo_con_map[con_index] = con
-
-    # def _add_sos_constraint(self, con):
 
     def _mosek_vtype_from_var(self, var):
         """
@@ -405,8 +389,6 @@ class MosekDirect(DirectSolver):
         msk = self._mosek
 
         itr_soltypes = [msk.problemtype.qo, msk.problemtype.qcqo]
-        if self._version_major < 9:
-            itr_soltypes.append(msk.problemtype.geco)
 
         if (msk_task.getnumintvar() >= 1):
             self._whichsol = msk.soltype.itg
@@ -509,7 +491,7 @@ class MosekDirect(DirectSolver):
 
         else:
             self.results.solver.termination_message = " Optimization terminated %s response code." \
-                "Check Mosek response code documentetion for further explanation." % self._termcode
+                "Check Mosek response code documentation for further explanation." % self._termcode
             self.results.solver.termination_condition = TerminationCondition.unknown
 
         if SOLSTA_MAP[sol_status] == 'unknown':
@@ -601,24 +583,20 @@ class MosekDirect(DirectSolver):
 
         if msk_task.getnumintvar() == 0:
             try:
-                self.results.problem.upper_bound = msk_task.getprimalobj(
-                    whichsol)
-                self.results.problem.lower_bound = msk_task.getprimalobj(
-                    whichsol)
+                if msk_task.getobjsense() == msk.objsense.minimize:
+                    self.results.problem.upper_bound = msk_task.getprimalobj(
+                        whichsol)
+                    self.results.problem.lower_bound = msk_task.getdualobj(
+                        whichsol)
+                elif msk_task.getobjsense() == msk.objsense.maximize:
+                    self.results.problem.upper_bound = msk_task.getprimalobj(
+                        whichsol)
+                    self.results.problem.lower_bound = msk_task.getdualobj(
+                        whichsol)
+
             except (msk.MosekException, AttributeError):
                 pass
         elif msk_task.getobjsense() == msk.objsense.minimize:  # minimizing
-            try:
-                self.results.problem.upper_bound = msk_task.getdouinf(
-                    msk.dinfitem.mio_obj_bound)
-            except (msk.MosekException, AttributeError):
-                pass
-            try:
-                self.results.problem.lower_bound = msk_task.getprimalobj(
-                    whichsol)  # check this part again
-            except (msk.MosekException, AttributeError):
-                pass
-        elif msk_task.getobjsense() == msk.objsense.maximize:  # maximizing
             try:
                 self.results.problem.upper_bound = msk_task.getprimalobj(
                     whichsol)
@@ -627,6 +605,17 @@ class MosekDirect(DirectSolver):
             try:
                 self.results.problem.lower_bound = msk_task.getdouinf(
                     msk.dinfitem.mio_obj_bound)
+            except (msk.MosekException, AttributeError):
+                pass
+        elif msk_task.getobjsense() == msk.objsense.maximize:  # maximizing
+            try:
+                self.results.problem.upper_bound = msk_task.getdouinf(
+                    msk.dinfitem.mio_obj_bound)
+            except (msk.MosekException, AttributeError):
+                pass
+            try:
+                self.results.problem.lower_bound = msk_task.getprimalobj(
+                    whichsol)
             except (msk.MosekException, AttributeError):
                 pass
         else:
@@ -744,8 +733,9 @@ class MosekDirect(DirectSolver):
     def _warm_start(self):
         for pyomo_var, mosek_var in self._pyomo_var_to_solver_var_map.items():
             if pyomo_var.value is not None:
-                self._solver_model.putxxslice(
-                    self._whichsol, mosek_var, mosek_var+1, [(pyomo_var.value)])
+                for solType in self._mosek.soltype:
+                    self._solver_model.putxxslice(
+                        solType, mosek_var, mosek_var+1, [(pyomo_var.value)])
 
     def _load_vars(self, vars_to_load=None):
         var_map = self._pyomo_var_to_solver_var_map
