@@ -349,17 +349,23 @@ def constraints_in_True_disjuncts(model, config):
 
 
 @contextmanager
-def time_code(timing_data_obj, code_block_name):
-    if timing_data_obj[code_block_name] is None:
-        timing_data_obj[code_block_name] = Container()
+def time_code(timing_data_obj, code_block_name, is_main_timer = False):
     start_time = timeit.default_timer()
-    timing_data_obj[code_block_name].start = start_time
+    if is_main_timer:
+        timing_data_obj.main_timer_start_time = start_time
     yield
-    end_time = timeit.default_timer()
-    timing_data_obj[code_block_name].end = end_time
-    elapsed_time = end_time - start_time
-    prev_time = timing_data_obj[code_block_name].get('elapsed', 0)
-    timing_data_obj[code_block_name].elapsed = prev_time + elapsed_time
+    elapsed_time = timeit.default_timer() - start_time
+    prev_time = timing_data_obj.get(code_block_name, 0)
+    timing_data_obj[code_block_name] = prev_time + elapsed_time
+
+
+def get_main_elapsed_time(timing_data_obj):
+    current_time = timeit.default_timer()
+    try:
+        return current_time - timing_data_obj.main_timer_start_time
+    except AttributeError as e:
+        raise AttributeError("{}.\nYou need to be in a 'time_code' context to" \
+                             "get the main elapsed time".format(str(e)))
 
 
 @contextmanager

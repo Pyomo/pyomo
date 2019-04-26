@@ -1,11 +1,11 @@
 """Iteration loop for MindtPy."""
 from __future__ import division
 
-from timeit import default_timer
 from pyomo.contrib.mindtpy.mip_solve import (solve_OA_master)
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.core import minimize, Objective
 from pyomo.opt import TerminationCondition as tc
+from pyomo.contrib.gdpopt.util import get_main_elapsed_time
 
 
 def MindtPy_iteration_loop(solve_data, config):
@@ -94,8 +94,7 @@ def algorithm_should_terminate(solve_data, config):
         return True
 
     # Check time limit
-    total_time_elapsed = default_timer() - solve_data.timing.total.start
-    if total_time_elapsed > config.time_limit:
+    if get_main_elapsed_time(solve_data.timing) > config.time_limit:
         config.logger.info(
             'MindtPy unable to converge bounds '
             'after {} seconds.'.format(total_time_elapsed))

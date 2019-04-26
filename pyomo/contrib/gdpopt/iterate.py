@@ -1,14 +1,13 @@
 """Iteration code."""
 from __future__ import division
 
-from timeit import default_timer
 from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_outer_approximation_cuts,
                                                  add_affine_cuts)
 from pyomo.contrib.gdpopt.mip_solve import solve_LOA_master
 from pyomo.contrib.gdpopt.nlp_solve import (solve_global_subproblem, solve_local_subproblem)
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.gdpopt.util import time_code
+from pyomo.contrib.gdpopt.util import time_code, get_total_time_elapsed
 
 
 def GDPopt_iteration_loop(solve_data, config):
@@ -91,8 +90,7 @@ def algorithm_should_terminate(solve_data, config):
         return True
 
     # Check time limit
-    total_time_elapsed = default_timer() - solve_data.timing.total.start
-    if total_time_elapsed > config.time_limit:
+    if get_main_elapsed_time(solve_data.timing) > config.time_limit:
         config.logger.info(
             'MindtPy unable to converge bounds '
             'after {} seconds.'.format(total_time_elapsed))
