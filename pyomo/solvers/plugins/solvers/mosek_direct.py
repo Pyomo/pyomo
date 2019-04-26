@@ -733,7 +733,7 @@ class MosekDirect(DirectSolver):
     def _warm_start(self):
         for pyomo_var, mosek_var in self._pyomo_var_to_solver_var_map.items():
             if pyomo_var.value is not None:
-                for solType in self._mosek.soltype:
+                for solType in self._mosek.soltype._values:
                     self._solver_model.putxxslice(
                         solType, mosek_var, mosek_var+1, [(pyomo_var.value)])
 
