@@ -131,6 +131,7 @@ class Test(unittest.TestCase):
         model = ConcreteModel()
         model.x = Var()
         model.other = Foo()
+        model.other.deactivate()
         model.other.a = Var()
         model.c = Constraint(expr=model.other.a + 2*model.x <= 0)
         model.obj = Objective(expr=model.x)

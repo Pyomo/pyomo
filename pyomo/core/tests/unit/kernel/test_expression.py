@@ -96,6 +96,9 @@ class Test_noclone(unittest.TestCase):
         pyomo.kernel.pprint(e)
         pyomo.kernel.pprint(b)
         pyomo.kernel.pprint(m)
+        # tests compatibility with _ToStringVisitor
+        pyomo.kernel.pprint(noclone(v)+1)
+        pyomo.kernel.pprint(noclone(v+1))
 
     def test_pickle(self):
         v = variable()
