@@ -11,15 +11,22 @@
 """
 UI Tests
 """
-
-#import pyutilib.th as unittest
+import pyutilib.th as unittest
 import time
-import pytest
+
+SKIP_ALL = True
+
+try:
+    import pytest
+    pytest_available = True
+except:
+    pytest_available = False
 
 from pyomo.environ import *
-from pyomo.contrib.viewer.ui import get_mainwindow, qt_available, ModelBrowser
-from pyomo.contrib.viewer.pyqt_4or5 import QtCore, QMessageBox
-
+from pyomo.contrib.viewer.pyqt_4or5 import qt_available
+if qt_available:
+    from pyomo.contrib.viewer.pyqt_4or5 import QtCore, QMessageBox
+    from pyomo.contrib.viewer.ui import get_mainwindow, ModelBrowser
 
 def get_model():
     # Borrowed this test model from the trust region tests
@@ -65,7 +72,8 @@ def get_button(w, label):
             return b
     return None
 
-@pytest.mark.skipif(not qt_available, reason="PyQt not found")
+@unittest.skipIf(SKIP_ALL, "must be run with pytest")
+@unittest.skipIf(not qt_available, "PyQt not found")
 def test_get_mainwindow(qtbot):
     m = get_model()
     mw, m = get_mainwindow(model=m, testing=True)
@@ -82,7 +90,8 @@ def test_get_mainwindow(qtbot):
     assert(isinstance(mw.expressions, ModelBrowser))
     assert(isinstance(mw.parameters, ModelBrowser))
 
-@pytest.mark.skipif(not qt_available, reason="PyQt not found")
+@unittest.skipIf(SKIP_ALL, "must be run with pytest")
+@unittest.skipIf(not qt_available, "PyQt not found")
 def test_model_information(qtbot):
     m = get_model()
     mw, m = get_mainwindow(model=m, testing=True)
