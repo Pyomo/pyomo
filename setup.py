@@ -148,6 +148,7 @@ def run_setup():
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Software Development :: Libraries :: Python Modules' ],
       packages=packages,
+      package_data={"pyomo.contrib.viewer":["*.ui"]},
       keywords=['optimization'],
       install_requires=requires,
       ext_modules = ext_modules,
@@ -175,6 +176,7 @@ def run_setup():
         pyomo_python = pyomo.scripting.commands:pyomo_python
         pyomo_old=pyomo.scripting.pyomo_command:main
         get_pyomo_extras = scripts.get_pyomo_extras:main
+        pyomo_viewer = pyomo.contrib.viewer.pyomo_viewer:main
 
         [pyomo.command]
         pyomo.runbenders=pyomo.pysp.benders
