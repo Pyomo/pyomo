@@ -1,6 +1,7 @@
 """Iteration code."""
 from __future__ import division
 
+from timeit import default_timer
 from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_outer_approximation_cuts,
                                                  add_affine_cuts)
@@ -87,6 +88,18 @@ def algorithm_should_terminate(solve_data, config):
             'Final bound values: LB: {:.10g}  UB: {:.10g}'.format(
                 solve_data.LB, solve_data.UB))
         solve_data.results.solver.termination_condition = tc.maxIterations
+        return True
+
+    # Check time limit
+    total_time_elapsed = default_timer() - solve_data.timing.total.start
+    if total_time_elapsed > config.timelimit:
+        config.logger.info(
+            'MindtPy unable to converge bounds '
+            'after {} seconds.'.format(total_time_elapsed))
+        config.logger.info(
+            'Final bound values: LB: {}  UB: {}'.
+            format(solve_data.LB, solve_data.UB))
+        solve_data.results.solver.termination_condition = tc.maxTimeLimit
         return True
 
     if not algorithm_is_making_progress(solve_data, config):

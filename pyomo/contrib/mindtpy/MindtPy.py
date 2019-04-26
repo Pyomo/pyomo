@@ -66,6 +66,12 @@ class MindtPySolver(object):
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods"
     ))
+    CONFIG.declare("timelimit", ConfigValue(
+        default=10,
+        domain=PositiveInt,
+        description="Time limit (seconds)",
+        doc="Seconds allowed until terminated"
+    ))
     CONFIG.declare("strategy", ConfigValue(
         default="OA",
         domain=In(["OA", "GBD", "ECP", "PSC"]),
@@ -362,6 +368,14 @@ class MindtPySolver(object):
 
             solve_data.results.problem.lower_bound = solve_data.LB
             solve_data.results.problem.upper_bound = solve_data.UB
+
+        solve_data.results.solver.timing = solve_data.timing
+        solve_data.results.solver.user_time = solve_data.timing.total.elapsed
+        solve_data.results.solver.wallclock_time = solve_data.timing.total.elapsed
+
+        solve_data.results.solver.iterations = solve_data.mip_iter  # TODO @David this makes sense right?
+
+        return solve_data.results
 
     #
     # Support "with" statements.

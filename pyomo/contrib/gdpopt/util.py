@@ -17,6 +17,7 @@ from pyomo.common.log import LoggingIntercept
 import timeit
 from contextlib import contextmanager
 from pyomo.util.model_size import build_model_size_report
+from pyutilib.misc import Container
 
 
 class _DoNothing(object):
@@ -349,11 +350,16 @@ def constraints_in_True_disjuncts(model, config):
 
 @contextmanager
 def time_code(timing_data_obj, code_block_name):
+    if timing_data_obj[code_block_name] is None:
+        timing_data_obj[code_block_name] = Container()
     start_time = timeit.default_timer()
+    timing_data_obj[code_block_name].start = start_time
     yield
-    elapsed_time = timeit.default_timer() - start_time
-    prev_time = timing_data_obj.get(code_block_name, 0)
-    timing_data_obj[code_block_name] = prev_time + elapsed_time
+    end_time = timeit.default_timer()
+    timing_data_obj[code_block_name].end = end_time
+    elapsed_time = end_time - start_time
+    prev_time = timing_data_obj[code_block_name].get('elapsed', 0)
+    timing_data_obj[code_block_name].elapsed = prev_time + elapsed_time
 
 
 @contextmanager

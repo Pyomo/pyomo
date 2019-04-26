@@ -6,7 +6,7 @@ import logging
 
 from pyomo.common.config import (
     ConfigBlock, ConfigList, ConfigValue, In, NonNegativeFloat, NonNegativeInt,
-    add_docstring_list
+    add_docstring_list, PositiveInt
 )
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
@@ -63,6 +63,12 @@ class GDPoptSolver(object):
     CONFIG.declare("iterlim", ConfigValue(
         default=30, domain=NonNegativeInt,
         description="Iteration limit."
+    ))
+    CONFIG.declare("timelimit", ConfigValue(
+        default=10,
+        domain=PositiveInt,
+        description="Time limit (seconds)",
+        doc="Seconds allowed until terminated"
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="LOA", domain=In(["LOA", "GLOA"]),
@@ -345,8 +351,8 @@ If you use this software, you may cite the following:
             solve_data.results.problem.upper_bound = solve_data.UB
 
         solve_data.results.solver.timing = solve_data.timing
-        solve_data.results.solver.user_time = solve_data.timing.total
-        solve_data.results.solver.wallclock_time = solve_data.timing.total
+        solve_data.results.solver.user_time = solve_data.timing.total.elapsed
+        solve_data.results.solver.wallclock_time = solve_data.timing.total.elapsed
 
         solve_data.results.solver.iterations = solve_data.master_iteration
 
