@@ -95,7 +95,7 @@ def algorithm_should_terminate(solve_data, config):
 
     # Check time limit
     total_time_elapsed = default_timer() - solve_data.timing.total.start
-    if total_time_elapsed > config.timelimit:
+    if total_time_elapsed > config.time_limit:
         config.logger.info(
             'MindtPy unable to converge bounds '
             'after {} seconds.'.format(total_time_elapsed))

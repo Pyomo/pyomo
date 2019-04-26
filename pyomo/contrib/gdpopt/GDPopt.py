@@ -64,7 +64,7 @@ class GDPoptSolver(object):
         default=30, domain=NonNegativeInt,
         description="Iteration limit."
     ))
-    CONFIG.declare("timelimit", ConfigValue(
+    CONFIG.declare("time_limit", ConfigValue(
         default=10,
         domain=PositiveInt,
         description="Time limit (seconds)",

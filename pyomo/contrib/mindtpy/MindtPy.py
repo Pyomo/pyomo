@@ -66,7 +66,7 @@ class MindtPySolver(object):
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods"
     ))
-    CONFIG.declare("timelimit", ConfigValue(
+    CONFIG.declare("time_limit", ConfigValue(
         default=10,
         domain=PositiveInt,
         description="Time limit (seconds)",
