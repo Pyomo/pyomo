@@ -111,14 +111,10 @@ class TestDaeMisc(unittest.TestCase):
         m.p5 = Param(m.t, initialize=_rule1, default=_rule2)
 
         generate_finite_elements(m.t, 5)
-        
-        try:
+        # Expected ValueError because no default value was specified
+        with self.assertRaises(ValueError):
             for i in m.t:
                 m.p1[i]
-            self.fail("Expected ValueError because no default value was "
-                      "specified")
-        except ValueError:
-            pass
 
         for i in m.t:
             self.assertEqual(m.p2[i], 2)
@@ -154,13 +150,12 @@ class TestDaeMisc(unittest.TestCase):
 
         generate_finite_elements(m.t, 5)
 
-        try:
+        # Expected TypeError because a function with the wrong number of
+        # arguments was specified as the default
+
+        with self.assertRaises(TypeError):
             for i in m.p1:
                 m.p1[i]
-            self.fail("Expected TypeError because a function with the wrong "
-                      "number of arguments was specified as the default")
-        except TypeError:
-            pass
 
         for i in m.p2:
             self.assertEqual(m.p2[i], 5)
@@ -747,13 +742,10 @@ class TestDaeMisc(unittest.TestCase):
         generate_finite_elements(m.t, 5)
         expansion_map = ComponentMap()
 
-        try:
+        # Expected TypeError because Set is not a component that supports
+        # indexing by a ContinuousSet
+        with self.assertRaises(TypeError):
             update_contset_indexed_component(m.s, expansion_map)
-            self.fail("Expected TypeError because Set is not a component "
-                      "that supports indexing by a ContinuousSet")
-
-        except TypeError:
-            pass
 
     # test unsupported components indexed by multiple sets
     def test_update_contset_indexed_component_unsupported_multiple(self):
@@ -764,13 +756,10 @@ class TestDaeMisc(unittest.TestCase):
         generate_finite_elements(m.t, 5)
         expansion_map = ComponentMap()
 
-        try:
+        # Expected TypeError because Set is not a component that supports
+        # indexing by a ContinuousSet
+        with self.assertRaises(TypeError):
             update_contset_indexed_component(m.s, expansion_map)
-            self.fail("Expected TypeError because Set is not a component "
-                      "that supports indexing by a ContinuousSet")
-
-        except TypeError:
-            pass  
 
     def test_update_block_derived(self):
         class Foo(Block):

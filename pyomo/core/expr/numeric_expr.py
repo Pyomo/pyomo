@@ -268,8 +268,8 @@ class ExpressionBase(NumericValue):
         """Return the associativity of this operator.
 
         Returns 1 if this operator is left-to-right associative or -1 if
-        it is right-to-left associative.  ANy other return value will be
-        interpresed as "not associative" (implying any arguments that
+        it is right-to-left associative.  Any other return value will be
+        interpreted as "not associative" (implying any arguments that
         are at this operator's _precedence() will be enclosed in parens).
         """
         # Most operators in Python are left-to-right associative
