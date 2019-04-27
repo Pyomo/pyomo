@@ -462,10 +462,16 @@ class CuttingPlane_Transformation(Transformation):
 
         # I am going to expand the composite_cutexprs to be in the extended space
         vars_to_eliminate = ComponentSet()
+        do_fme = False
         for x_disaggregated, x_orig_bigm, x_orig_rBigm in disaggregated_var_info:
-            composite_cutexpr_CHull += composite_normal_map[x_disaggregated]*\
+            normal_vec_component = composite_normal_map[x_disaggregated]
+            composite_cutexpr_CHull += normal_vec_component*\
                                        (x_disaggregated - x_disaggregated.value)
             vars_to_eliminate.add(x_disaggregated)
+            # check that at least one disaggregated variable appears in the
+            # constraint. Else we don't need to do FME
+            if not do_fme and normal_vec_component != 0:
+                do_fme = True
     
         #print("The cut in extended space is: %s <= 0" % composite_cutexpr_CHull)
         cut_std_repn = generate_standard_repn(composite_cutexpr_CHull)
@@ -478,14 +484,14 @@ class CuttingPlane_Transformation(Transformation):
         cut_cons['key_order'].append(None)
         tight_constraints.append(cut_cons)
         
-        # [ESJ 22 Feb 2019] TODO: It is probably worth checking that the
-        # disaggregated vars actually appear in the cut before we bother with
-        # FME
-        projected_constraints = self.fourier_motzkin_elimination(
-            tight_constraints, vars_to_eliminate)
+        if do_fme:
+            projected_constraints = self.fourier_motzkin_elimination(
+                tight_constraints, vars_to_eliminate)
+        else:
+            projected_constraints = [cut_cons]
 
         # DEBUG:
-        #print("These are the constraints we got from FME:")
+        print("These are the constraints we got from FME:")
         for cons in projected_constraints:
             body = 0
             # We make sure that this loop happens in a deterministic order so
@@ -493,11 +499,21 @@ class CuttingPlane_Transformation(Transformation):
             for var in cons['key_order']:
                 val = cons['body'][var]
                 body += val*var if var is not None else val
-            #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
+            print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
 
         # we created these constraints with the variables from rCHull. We
         # actually need constraints for BigM and rBigM now!
         cuts = self.get_constraint_exprs(projected_constraints, var_map)
+
+        # We likely have some cuts that duplicate other constraints now. We will
+        # filter them to make sure that they do in fact cut off x*. If not then
+        # they are not what we were going for.
+        for i, cut in enumerate(cuts['rBigM']):
+            # x* is still in rBigM, so we can just remove this constraint if it
+            # is satisfied at x*
+            if value(cut):
+                del cuts['rBigM'][i]
+                del cuts['bigM'][i]
 
         return(cuts)
 
