@@ -18,6 +18,7 @@ from pyomo.core.expr.numeric_expr import (
     NPV_ProductExpression, NPV_ReciprocalExpression, NPV_SumExpression,
     NPV_UnaryFunctionExpression, PowExpression, ProductExpression,
     ReciprocalExpression, SumExpression, UnaryFunctionExpression,
+    NPV_DivisionExpression, DivisionExpression,
 )
 from pyomo.core.expr.visitor import (
     StreamBasedExpressionVisitor, identify_variables,
@@ -38,7 +39,8 @@ NPV_expressions = {
     NPV_AbsExpression, NPV_ExternalFunctionExpression,
     NPV_NegationExpression, NPV_PowExpression,
     NPV_ProductExpression, NPV_ReciprocalExpression, NPV_SumExpression,
-    NPV_UnaryFunctionExpression}
+    NPV_UnaryFunctionExpression, NPV_DivisionExpression,
+}
 
 
 class MCPP_visitor(StreamBasedExpressionVisitor):
@@ -169,8 +171,11 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                 ans = self.mcpp.new_exponential(
                     self.mcpp.new_mult(data[1], self.mcpp.new_logarithm(data[0])))
         elif isinstance(node, ReciprocalExpression):
+            # Note: unreachable after ReciprocalExpression was removed
             ans = self.mcpp.new_reciprocal(
                 self.mcpp.new_createConstant(1), data[0])
+        elif isinstance(node, DivisionExpression):
+            ans = self.mcpp.new_division(data[0], data[1])
         elif isinstance(node, NegationExpression):
             ans = self.mcpp.new_negation(data[0])
         elif isinstance(node, AbsExpression):

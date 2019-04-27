@@ -129,32 +129,32 @@ class Test(unittest.TestCase):
         expr = M.abc**2.0
         self.assertEqual(str(expr), "abc**2.0")
         self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), "power(abc, 2.0)")
+            expr, tc, smap=smap), "power(abc, 2)")
 
         expr = log(M.abc**2.0)
         self.assertEqual(str(expr), "log(abc**2.0)")
         self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), "log(power(abc, 2.0))")
+            expr, tc, smap=smap), "log(power(abc, 2))")
 
         expr = log(M.abc**2.0) + 5
         self.assertEqual(str(expr), "log(abc**2.0) + 5")
         self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), "log(power(abc, 2.0)) + 5")
+            expr, tc, smap=smap), "log(power(abc, 2)) + 5")
 
         expr = exp(M.abc**2.0) + 5
         self.assertEqual(str(expr), "exp(abc**2.0) + 5")
         self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), "exp(power(abc, 2.0)) + 5")
+            expr, tc, smap=smap), "exp(power(abc, 2)) + 5")
 
         expr = log(M.abc**2.0)**4
         self.assertEqual(str(expr), "log(abc**2.0)**4")
         self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), "power(log(power(abc, 2.0)), 4)")
+            expr, tc, smap=smap), "power(log(power(abc, 2)), 4)")
 
         expr = log(M.abc**2.0)**4.5
         self.assertEqual(str(expr), "log(abc**2.0)**4.5")
         self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), "log(power(abc, 2.0)) ** 4.5")
+            expr, tc, smap=smap), "log(power(abc, 2)) ** 4.5")
 
     def test_power_function_to_string(self):
         m = ConcreteModel()

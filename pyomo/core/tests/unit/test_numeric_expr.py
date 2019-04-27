@@ -33,9 +33,9 @@ from pyomo.core.expr.numvalue import (
 from pyomo.core.expr.numeric_expr import (
     ExpressionBase, UnaryFunctionExpression, SumExpression, PowExpression,
     ProductExpression, ReciprocalExpression, NegationExpression,
-    MonomialTermExpression, LinearExpression,
+    MonomialTermExpression, LinearExpression, DivisionExpression,
     NPV_NegationExpression, NPV_ProductExpression, NPV_ReciprocalExpression,
-    NPV_PowExpression,
+    NPV_PowExpression, NPV_DivisionExpression,
     decompose_term, clone_counter,
     _MutableLinearExpression, _MutableSumExpression, _decompose_linear_terms,
     LinearDecompositionError,
@@ -1735,12 +1735,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         #   / \
         #  a   b
         e = m.a / m.b
-        self.assertIs(type(e), ProductExpression)
+        self.assertIs(type(e), DivisionExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.a)
-        self.assertIs(type(e.arg(1)), ReciprocalExpression)
-        self.assertIs(e.arg(1).arg(0), m.b)
-        self.assertEqual(e.size(), 4)
+        self.assertIs(e.arg(1), m.b)
+        self.assertEqual(e.size(), 3)
 
     def test_constDivision(self):
         #
@@ -1763,12 +1762,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         #   / \
         #  5   a
         e = 5 / m.a
-        self.assertIs(type(e), ProductExpression)
+        self.assertIs(type(e), DivisionExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertEqual(e.arg(0), 5)
-        self.assertIs(type(e.arg(1)), ReciprocalExpression)
-        self.assertIs(e.arg(1).arg(0), m.a)
-        self.assertEqual(e.size(), 4)
+        self.assertIs(e.arg(1), m.a)
+        self.assertEqual(e.size(), 3)
 
     def test_nestedDivision(self):
         #
@@ -1800,14 +1798,13 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         #   a   b
         e1 = m.a / m.b
         e = e1 / 5
-        self.assertIs(type(e), ProductExpression)
+        self.assertIs(type(e), DivisionExpression)
         self.assertEqual(e.nargs(), 2)
-        self.assertEqual(e.arg(1), 1./5)
-        self.assertIs(type(e.arg(0)), ProductExpression)
+        self.assertEqual(e.arg(1), 5)
+        self.assertIs(type(e.arg(0)), DivisionExpression)
         self.assertIs(e.arg(0).arg(0), m.a)
-        self.assertIs(type(e.arg(0).arg(1)), ReciprocalExpression)
-        self.assertIs(e.arg(0).arg(1).arg(0), m.b)
-        self.assertEqual(e.size(), 6)
+        self.assertIs(e.arg(0).arg(1), m.b)
+        self.assertEqual(e.size(), 5)
 
         #       /
         #      / \
@@ -1816,14 +1813,13 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         #       a   b
         e1 = m.a / m.b
         e = 5 / e1
-        self.assertIs(type(e), ProductExpression)
+        self.assertIs(type(e), DivisionExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertEqual(e.arg(0), 5)
-        self.assertIs(type(e.arg(1)), ReciprocalExpression)
-        self.assertIs(type(e.arg(1).arg(0)), ProductExpression)
-        self.assertIs(e.arg(1).arg(0).arg(0), m.a)
-        self.assertIs(e.arg(1).arg(0).arg(1).arg(0), m.b)
-        self.assertEqual(e.size(), 7)
+        self.assertIs(type(e.arg(1)), DivisionExpression)
+        self.assertIs(e.arg(1).arg(0), m.a)
+        self.assertIs(e.arg(1).arg(1), m.b)
+        self.assertEqual(e.size(), 5)
 
         #       /
         #      / \
@@ -1832,15 +1828,13 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         #   a   b
         e1 = m.a / m.b
         e = e1 / m.c
-        self.assertIs(type(e), ProductExpression)
+        self.assertIs(type(e), DivisionExpression)
         self.assertEqual(e.nargs(), 2)
-        self.assertIs(type(e.arg(1)), ReciprocalExpression)
-        self.assertIs(e.arg(1).arg(0), m.c)
-        self.assertIs(type(e.arg(0)), ProductExpression)
+        self.assertIs(e.arg(1), m.c)
+        self.assertIs(type(e.arg(0)), DivisionExpression)
         self.assertIs(e.arg(0).arg(0), m.a)
-        self.assertIs(type(e.arg(0).arg(1)), ReciprocalExpression)
-        self.assertIs(e.arg(0).arg(1).arg(0), m.b)
-        self.assertEqual(e.size(), 7)
+        self.assertIs(e.arg(0).arg(1), m.b)
+        self.assertEqual(e.size(), 5)
 
         #       /
         #      / \
@@ -1849,13 +1843,13 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         #       a   b
         e1 = m.a / m.b
         e = m.c / e1
-        self.assertIs(type(e), ProductExpression)
+        self.assertIs(type(e), DivisionExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(e.arg(0), m.c)
-        self.assertIs(type(e.arg(1)), ReciprocalExpression)
-        self.assertIs(e.arg(1).arg(0).arg(0), m.a)
-        self.assertIs(e.arg(1).arg(0).arg(1).arg(0), m.b)
-        self.assertEqual(e.size(), 7)
+        self.assertIs(type(e.arg(1)), DivisionExpression)
+        self.assertIs(e.arg(1).arg(0), m.a)
+        self.assertIs(e.arg(1).arg(1), m.b)
+        self.assertEqual(e.size(), 5)
 
         #            /
         #          /   \
@@ -1865,15 +1859,15 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         e1 = m.a / m.b
         e2 = m.c / m.d
         e = e1 / e2
-        self.assertIs(type(e), ProductExpression)
+        self.assertIs(type(e), DivisionExpression)
         self.assertEqual(e.nargs(), 2)
-        self.assertIs(type(e.arg(0)), ProductExpression)
-        self.assertIs(type(e.arg(1)), ReciprocalExpression)
+        self.assertIs(type(e.arg(0)), DivisionExpression)
+        self.assertIs(type(e.arg(1)), DivisionExpression)
         self.assertIs(e.arg(0).arg(0), m.a)
-        self.assertIs(e.arg(0).arg(1).arg(0), m.b)
-        self.assertIs(e.arg(1).arg(0).arg(0), m.c)
-        self.assertIs(e.arg(1).arg(0).arg(1).arg(0), m.d)
-        self.assertEqual(e.size(), 10)
+        self.assertIs(e.arg(0).arg(1), m.b)
+        self.assertIs(e.arg(1).arg(0), m.c)
+        self.assertIs(e.arg(1).arg(1), m.d)
+        self.assertEqual(e.size(), 7)
 
     def test_trivialDivision(self):
         #
@@ -1904,33 +1898,37 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         # Check the structure dividing 1 by an expression
         #
         e = 1 / m.a
-        self.assertIs(type(e), ReciprocalExpression)
-        self.assertEqual(e.nargs(), 1)
-        self.assertIs(e.arg(0), m.a)
+        self.assertIs(type(e), DivisionExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), 1)
+        self.assertIs(e.arg(1), m.a)
 
         #
         # Check the structure dividing 1 by an expression
         #
         e = 1 / m.p
-        self.assertIs(type(e), NPV_ReciprocalExpression)
-        self.assertEqual(e.nargs(), 1)
-        self.assertIs(e.arg(0), m.p)
+        self.assertIs(type(e), NPV_DivisionExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(e.arg(0), 1)
+        self.assertIs(e.arg(1), m.p)
 
         #
         # Check the structure dividing 1 by an expression
         #
         e = 1 / m.q
-        self.assertIs(type(e), NPV_ReciprocalExpression)
-        self.assertEqual(e.nargs(), 1)
-        self.assertIs(e.arg(0), m.q)
+        self.assertIs(type(e), NPV_DivisionExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(e.arg(0), 1)
+        self.assertIs(e.arg(1), m.q)
 
         #
         # Check the structure dividing 1 by an expression
         #
         e = 1 / m.r
-        self.assertIs(type(e), NPV_ReciprocalExpression)
-        self.assertEqual(e.nargs(), 1)
-        self.assertIs(e.arg(0), m.r)
+        self.assertIs(type(e), NPV_DivisionExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(e.arg(0), 1)
+        self.assertIs(e.arg(1), m.r)
 
         #
         # Check that dividing two non-zero constants gives a constant
@@ -2010,15 +2008,15 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         #self.assertEqual("0.0", buf.getvalue())
 
         expr = 5 * model.a / model.a
-        self.assertEqual( "prod(mon(5, a), recip(a))",
+        self.assertEqual( "div(mon(5, a), a)",
                           str(expr) )
 
         expr = expr / model.a
-        self.assertEqual( "prod(prod(mon(5, a), recip(a)), recip(a))",
+        self.assertEqual( "div(div(mon(5, a), a), a)",
                           str(expr) )
 
         expr = 5 * model.a / model.a / 2
-        self.assertEqual( "prod(prod(mon(5, a), recip(a)), 0.5)",
+        self.assertEqual( "div(div(mon(5, a), a), 2)",
                           str(expr) )
 
     def test_other(self):
@@ -2114,7 +2112,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         expr = + expr
         expr = abs(expr)
         self.assertEqual(
-            "abs(neg(pow(2, prod(2, recip(prod(2, sum(1, neg(pow(prod(prod(sum(a, 1, -1), a), recip(a)), b)), 1)))))))",
+            "abs(neg(pow(2, div(2, prod(2, sum(1, neg(pow(div(prod(sum(a, 1, -1), a), a), b)), 1))))))",
             str(expr) )
 
 
@@ -2215,19 +2213,19 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         #self.assertEqual("0.0", buf.getvalue())
 
         expr = 5 * model.a / model.a
-        self.assertEqual( "5*a*(1/a)",
+        self.assertEqual( "5*a/a",
                           str(expr) )
 
         expr = expr / model.a
-        self.assertEqual( "5*a*(1/a)*(1/a)",
+        self.assertEqual( "5*a/a/a",
                           str(expr) )
 
         expr = 5 * model.a / (model.a * model.a)
-        self.assertEqual( "5*a*(1/(a*a))",
+        self.assertEqual( "5*a/(a*a)",
                           str(expr) )
 
         expr = 5 * model.a / model.a / 2
-        self.assertEqual( "5*a*(1/a)*0.5",
+        self.assertEqual( "5*a/a/2",
                           str(expr) )
 
         expr = model.a * model.b
@@ -2335,26 +2333,25 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         m.x = Var()
         m.y = Var()
         m.z = Var()
-
         self.assertEqual(str( m.z+m.x+m.y ), "z + x + y")
         self.assertEqual(str( (m.z+m.x)+m.y ), "z + x + y")
         # FIXME: Pyomo currently returns "z + y + x"
         # self.assertEqual(str( m.z+(m.x+m.y) ), "z + x + y")
         self.assertEqual(str( (m.w+m.z)+(m.x+m.y) ), "w + z + x + y")
 
-        self.assertEqual(str( (m.z/m.x)/(m.y/m.w) ), "z*(1/x)*(1/(y*(1/w)))")
+        self.assertEqual(str( (m.z/m.x)/(m.y/m.w) ), "z/x/(y/w)")
 
-        self.assertEqual(str( m.z/m.x/m.y ), "z*(1/x)*(1/y)")
-        self.assertEqual(str( (m.z/m.x)/m.y ), "z*(1/x)*(1/y)")
-        self.assertEqual(str( m.z/(m.x/m.y) ), "z*(1/(x*(1/y)))")
+        self.assertEqual(str( m.z/m.x/m.y ), "z/x/y")
+        self.assertEqual(str( (m.z/m.x)/m.y ), "z/x/y")
+        self.assertEqual(str( m.z/(m.x/m.y) ), "z/(x/y)")
 
-        self.assertEqual(str( m.z*m.x/m.y ), "z*x*(1/y)")
-        self.assertEqual(str( (m.z*m.x)/m.y ), "z*x*(1/y)")
-        self.assertEqual(str( m.z*(m.x/m.y) ), "z*(x*(1/y))")
+        self.assertEqual(str( m.z*m.x/m.y ), "z*x/y")
+        self.assertEqual(str( (m.z*m.x)/m.y ), "z*x/y")
+        self.assertEqual(str( m.z*(m.x/m.y) ), "z*(x/y)")
 
-        self.assertEqual(str( m.z/m.x*m.y ), "z*(1/x)*y")
-        self.assertEqual(str( (m.z/m.x)*m.y ), "z*(1/x)*y")
-        self.assertEqual(str( m.z/(m.x*m.y) ), "z*(1/(x*y))")
+        self.assertEqual(str( m.z/m.x*m.y ), "z/x*y")
+        self.assertEqual(str( (m.z/m.x)*m.y ), "z/x*y")
+        self.assertEqual(str( m.z/(m.x*m.y) ), "z/(x*y)")
 
         self.assertEqual(str( m.x**m.y**m.z ), "x**(y**z)")
         self.assertEqual(str( (m.x**m.y)**m.z ), "(x**y)**z")
@@ -2383,7 +2380,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         expr = + expr
         expr = abs(expr)
         self.assertEqual(
-            "abs(- 2**(2*(1/(2*(1 - ((a + 1 - 1)*a*(1/a))**b + 1)))))",
+            "abs(- 2**(2/(2*(1 - ((a + 1 - 1)*a/a)**b + 1))))",
             str(expr) )
 
     def test_large_expression(self):
@@ -2489,28 +2486,28 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         e = M.x*M.y + sum_product(M.p, M.a) + quicksum(M.q[i]*M.a[i] for i in M.a) / M.x
         self.assertEqual(
             str(e),
-            "x*y + (2*a[0] + 2*a[1] + 2*a[2]) + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
+            "x*y + (2*a[0] + 2*a[1] + 2*a[2]) + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])/x")
         self.assertEqual(
             e.to_string(),
-            "x*y + (2*a[0] + 2*a[1] + 2*a[2]) + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])*(1/x)")
+            "x*y + (2*a[0] + 2*a[1] + 2*a[2]) + (q[0]*a[0] + q[1]*a[1] + q[2]*a[2])/x")
         self.assertEqual(
             e.to_string(compute_values=True),
-            "x*y + (2*a[0] + 2*a[1] + 2*a[2]) + (3*a[0] + 3*a[1] + 3*a[2])*(1/x)")
+            "x*y + (2*a[0] + 2*a[1] + 2*a[2]) + (3*a[0] + 3*a[1] + 3*a[2])/x")
 
         labeler = NumericLabeler('x')
         self.assertEqual(
             expression_to_string(e, labeler=labeler),
-            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (q[0]*x3 + q[1]*x4 + q[2]*x5)*(1/x1)")
+            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (q[0]*x3 + q[1]*x4 + q[2]*x5)/x1")
 
         from pyomo.core.expr.symbol_map import SymbolMap
         labeler = NumericLabeler('x')
         smap = SymbolMap(labeler)
         self.assertEqual(
             expression_to_string(e, smap=smap),
-            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (q[0]*x3 + q[1]*x4 + q[2]*x5)*(1/x1)")
+            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (q[0]*x3 + q[1]*x4 + q[2]*x5)/x1")
         self.assertEqual(
             expression_to_string(e, smap=smap, compute_values=True),
-            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (3*x3 + 3*x4 + 3*x5)*(1/x1)")
+            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (3*x3 + 3*x4 + 3*x5)/x1")
 
 #
 # TODO:What is this checking?
@@ -2588,13 +2585,15 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
         x = 1
 
         x /= m.a
-        self.assertIs(type(x), ReciprocalExpression)
-        self.assertIs(x.arg(0), m.a)
+        self.assertIs(type(x), DivisionExpression)
+        self.assertEqual(x.arg(0), 1)
+        self.assertIs(x.arg(1), m.a)
 
         x /= m.a
-        self.assertIs(type(x), ProductExpression)
-        self.assertIs(type(x.arg(1)), ReciprocalExpression)
-        self.assertIs(x.arg(1).arg(0), m.a)
+        self.assertIs(type(x), DivisionExpression)
+        self.assertIs(type(x.arg(0)), DivisionExpression)
+        self.assertIs(x.arg(0).arg(1), m.a)
+        self.assertIs(x.arg(1), m.a)
 
     def test_ipow(self):
         m = self.m
@@ -3525,7 +3524,7 @@ class TestSummationExpression(unittest.TestCase):
         e = sum_product(self.m.b, denom=self.m.a)
         self.assertEqual( e(), 10 )
         self.assertIs(type(e), SumExpression)
-        self.assertEqual(e.size(), 21)
+        self.assertEqual(e.size(), 16)
 
     def test_summation6(self):
         e = sum_product(self.m.a, denom=self.m.p)
@@ -3615,7 +3614,7 @@ class TestSumExpression(unittest.TestCase):
         e = quicksum(self.m.b[i]/self.m.a[i] for i in self.m.a)
         self.assertEqual( e(), 10 )
         self.assertIs(type(e), SumExpression)
-        self.assertEqual(e.size(), 21)
+        self.assertEqual(e.size(), 16)
 
     def test_summation6(self):
         e = quicksum((self.m.a[i]/self.m.p[i] for i in self.m.a), linear=False)
@@ -3623,7 +3622,7 @@ class TestSumExpression(unittest.TestCase):
         self.assertIs(type(e), SumExpression)
         self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(1)) )
         self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(1)) )
-        self.assertEqual(e.size(), 21)
+        self.assertEqual(e.size(), 26)
         #
         e = quicksum(self.m.a[i]/self.m.p[i] for i in self.m.a)
         self.assertEqual( e(), 25 )
@@ -3830,19 +3829,19 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( expr1(), 0.5 )
             self.assertEqual( expr2(), 0.5 )
             self.assertNotEqual( id(expr1),       id(expr2) )
-            self.assertNotEqual( id(expr1._args_),    id(expr2._args_) )
+            # Note: _args_ are the same because tuples are not copied
+            self.assertEqual( id(expr1._args_),    id(expr2._args_) )
             self.assertEqual( id(expr1.arg(0)), id(expr2.arg(0)) )
-            self.assertEqual( id(expr1.arg(1).arg(0)), id(expr2.arg(1).arg(0)) )
+            self.assertEqual( id(expr1.arg(1)), id(expr2.arg(1)) )
 
             expr1 /= self.m.b
             self.assertEqual( expr1(), 0.05 )
             self.assertEqual( expr2(), 0.5 )
             self.assertNotEqual( id(expr1),                 id(expr2) )
             self.assertNotEqual( id(expr1._args_),           id(expr2._args_) )
-            self.assertNotEqual( id(expr1.arg(0)._args_),  id(expr2._args_) )
-            self.assertEqual( id(expr1.arg(1).arg(0)),  id(expr2.arg(1).arg(0)) )
+            self.assertEqual( id(expr1.arg(0)._args_),  id(expr2._args_) )
             self.assertEqual( id(expr1.arg(0).arg(0)),  id(expr2.arg(0)) )
-            self.assertEqual( id(expr1.arg(0).arg(1).arg(0)),  id(expr2.arg(1).arg(0)) )
+            self.assertEqual( id(expr1.arg(0).arg(1)),  id(expr2.arg(1)) )
 
             expr1 = self.m.a / (self.m.b + self.m.a)
             expr2 = expr1.clone()
@@ -3945,15 +3944,15 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1.arg(0)(), expr2.arg(0)())
             self.assertEqual(expr1.arg(1)(), expr2.arg(1)())
 
+            self.assertEqual(expr1.nargs(), 2)
+            self.assertEqual(expr2.nargs(), 2)
             self.assertEqual(expr1.arg(0).nargs(), 2)
             self.assertEqual(expr2.arg(0).nargs(), 2)
-            self.assertEqual(expr1.arg(1).nargs(), 1)
-            self.assertEqual(expr2.arg(1).nargs(), 1)
+            self.assertEqual(expr1.arg(1).nargs(), 2)
+            self.assertEqual(expr2.arg(1).nargs(), 2)
 
             self.assertIs( expr1.arg(0).arg(0), expr2.arg(0).arg(0) )
             self.assertIs( expr1.arg(0).arg(1), expr2.arg(0).arg(1) )
-            self.assertIs( expr1.arg(1).arg(0).arg(0), expr2.arg(1).arg(0).arg(0) )
-            self.assertIs( expr1.arg(1).arg(0).arg(1), expr2.arg(1).arg(0).arg(1) )
 
             expr1 /= self.m.b
             self.assertAlmostEqual(expr1(), .15)

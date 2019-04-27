@@ -68,6 +68,14 @@ MC *monomial(MC *var1, MC *var2)
     return ans;
 }
 
+MC *division(MC *var1, MC *var2)
+{
+    MC F = *var1 / *var2;
+
+    MC *ans = new MC(F);
+    return ans;
+}
+
 MC *reciprocal(MC *var1, MC *var2)
 {
     MC F = inv(*var2);
@@ -263,6 +271,12 @@ extern "C"
     MC *new_reciprocal(MC *var1, MC *var2)
     {
         MC *ans = reciprocal(var1, var2);
+        return ans;
+    }
+
+    MC *new_division(MC *var1, MC *var2)
+    {
+        MC *ans = division(var1, var2);
         return ans;
     }
 
