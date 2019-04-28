@@ -287,7 +287,12 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         for r in self.refs:
             if r != node_result:
                 self.mcpp.release(r)
+        self.refs = [node_result, ]
         return node_result
+
+    def __del__(self):
+        for r in self.refs:
+            self.mcpp.release(r)
 
 
 class McCormick(object):
@@ -296,7 +301,7 @@ class McCormick(object):
     This class takes the constructed expression from MCPP_Visitor and
     allows for MC methods to be performed on pyomo expressions.
 
-    displayOutput(self): displays an MC expression in the form:
+    __repn__(self): returns a display of an MC expression in the form:
     F: [lower interval : upper interval ] [convex underestimator :
     concave overestimator ] [ (convex subgradient) : (concave subgradient]
 
@@ -357,7 +362,6 @@ class McCormick(object):
 
     def __repn__(self):
         repn = self.mcpp_lib.toString(self.mc_expr)
-        self.mcpp_lib.clearString()
         if six.PY3:
             repn = repn.decode("utf-8")
         return repn
@@ -405,4 +409,5 @@ class McCormick(object):
         if self.visitor.missing_value_warnings:
             for message in self.visitor.missing_value_warnings:
                 logger.warning(message)
-            self.visitor.missing_value_warnings.clear()
+            del self.visitor.missing_value_warnings[:]  # list.clear() does not exist in python 2.7
+

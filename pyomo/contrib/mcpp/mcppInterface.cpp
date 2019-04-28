@@ -8,7 +8,7 @@ using std::ostringstream;
 
 // Module-level variables as utilities to pass information back to Python
 std::string lastException;
-const char* lastDisplay;
+std::string lastDisplay;
 
 extern "C"
 {
@@ -70,12 +70,8 @@ extern "C"
     {
         ostringstream Fstrm;
         Fstrm << *arg << std::flush;
-        lastDisplay = strdup(Fstrm.str().c_str());
-        return lastDisplay;
-    }
-    void clearString()
-    {
-        delete lastDisplay;
+        lastDisplay = Fstrm.str();
+        return lastDisplay.c_str();
     }
 
     // Lower and upper interval bounds on expression
