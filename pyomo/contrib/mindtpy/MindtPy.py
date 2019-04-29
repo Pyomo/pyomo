@@ -376,7 +376,7 @@ class MindtPySolver(object):
         solve_data.results.solver.user_time = solve_data.timing.total
         solve_data.results.solver.wallclock_time = solve_data.timing.total
 
-        solve_data.results.solver.iterations = solve_data.mip_iter  # TODO @David this makes sense right?
+        solve_data.results.solver.iterations = solve_data.mip_iter
 
         return solve_data.results
 
