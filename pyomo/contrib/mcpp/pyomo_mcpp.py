@@ -44,11 +44,11 @@ def mcpp_available():
     return Library('mcppInterface').path() is not None
 
 
-NPV_expressions = {
+NPV_expressions = (
     NPV_AbsExpression, NPV_ExternalFunctionExpression,
     NPV_NegationExpression, NPV_PowExpression,
     NPV_ProductExpression, NPV_ReciprocalExpression, NPV_SumExpression,
-    NPV_UnaryFunctionExpression}
+    NPV_UnaryFunctionExpression)
 
 
 class MCPP_Error(Exception):
@@ -225,7 +225,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                 ans = self.mcpp.try_unary_fcn(self.mcpp.mc_sqrt, data[0])
             else:
                 raise NotImplementedError("Unknown unary function: %s" % (node.name,))
-        elif any(isinstance(node, npv) for npv in NPV_expressions):
+        elif isinstance(node, NPV_expressions):
             ans = self.mcpp.newConstant(value(data[0]))
         elif type(node) in nonpyomo_leaf_types:
             ans = self.mcpp.newConstant(node)
