@@ -68,7 +68,9 @@ class GDPoptSolver(object):
         default=600,
         domain=PositiveInt,
         description="Time limit (seconds)",
-        doc="Seconds allowed until terminated"
+        doc="Seconds allowed until terminated. Note that currently only the"
+            "master problem can be checked and terminated, so you might need"
+            "to set a subsolver timelimit too."
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="LOA", domain=In(["LOA", "GLOA"]),
