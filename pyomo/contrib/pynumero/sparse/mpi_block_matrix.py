@@ -197,6 +197,10 @@ class MPIBlockMatrix(object):
         return self._owned_mask
 
     @property
+    def mpi_comm(self):
+        return self._mpiw
+
+    @property
     def T(self):
         """
         Transpose matrix
@@ -244,7 +248,6 @@ class MPIBlockMatrix(object):
             if self[i, j] is not None:
                 result[j, i] = self[i, j].transpose(copy=copy)
         return result
-
 
     def tocoo(self):
         """
@@ -520,6 +523,8 @@ class MPIBlockMatrix(object):
         result._brow_lengths = self._brow_lengths.copy()
         result._bcol_lengths = self._bcol_lengths.copy()
         return result
+
+    # ToDo: need support for copy from and copy to
 
     def _assert_broadcasted_sizes(self):
 
@@ -872,7 +877,7 @@ class MPIBlockMatrix(object):
             rank = self._mpiw.Get_rank()
             m, n = self.bshape
             assert n == other.nblocks, 'Dimension mismatch'
-            assert not other.has_none, 'Block vector must not have none entries'
+            assert not other.has_none, 'Block vector must not have none entries' # this check is expensive
             assert np.compress(self._row_type == MULTIPLE_OWNER,
                                self._row_type).size == 0, \
                 'Matrix-vector multiply only supported for ' \
@@ -895,7 +900,7 @@ class MPIBlockMatrix(object):
                                     self._mpiw,
                                     block_sizes=self._brow_lengths.copy())
 
-            # check same same mpi spaces in matrix and vector
+            # check same mpi spaces in matrix and vector
             owners_match = True
             for i in range(m):
                 for j in range(n):
@@ -905,6 +910,7 @@ class MPIBlockMatrix(object):
                         if mat_owner >= 0 and vector_owner >= 0:
                             owners_match = False
                             break
+
             if owners_match:
                 for i in range(m):
                     local_sum = np.zeros(self._brow_lengths[i])
