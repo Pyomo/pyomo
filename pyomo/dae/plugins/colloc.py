@@ -213,7 +213,7 @@ def calc_adot(cp, order=1):
         pder = numpy.polyder(p, order)
         arow = []
         for j in range(len(cp)):
-            arow.append(numpy.polyval(pder, cp[j]))
+            arow.append(float(numpy.polyval(pder, cp[j])))
         a.append(arow)
     return a
 
