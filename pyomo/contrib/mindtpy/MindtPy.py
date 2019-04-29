@@ -71,9 +71,9 @@ class MindtPySolver(object):
         default=600,
         domain=PositiveInt,
         description="Time limit (seconds)",
-        doc="Seconds allowed until terminated. Note that currently only the"
-            "master problem can be checked and terminated, so you might need"
-            "to set a subsolver timelimit too."
+        doc="Seconds allowed until terminated. Note that the time limit can"
+            "currently only be enforced between subsolver invocations. You may"
+            "need to set subsolver time limits as well."
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="OA",
