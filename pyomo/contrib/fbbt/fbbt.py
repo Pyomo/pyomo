@@ -765,7 +765,7 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         return False, None
 
 
-def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-4):
+def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-4, infeasible_tol=1e-6):
     """
     Feasibility based bounds tightening for a constraint. This function attempts to improve the bounds of each variable
     in the constraint based on the bounds of the constraint and the bounds of the other variables in the constraint.
@@ -794,6 +794,8 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-4):
         lower bound is left at 0. Otherwise, the lower bound is increased to 1. If the upper bound computed
         on a binary variable is greater than or equal to 1-integer_tol, then the upper bound is left at 1.
         Otherwise the upper bound is decreased to 0.
+    infeasible_tol: float
+        Tolerance for detecting infeasible constraints
 
     Returns
     -------
@@ -820,8 +822,13 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-4):
     if _ub is None:
         _ub = math.inf
 
-    # first check if the constraint is always satisfied
     lb, ub = bnds_dict[con.body]
+
+    # check if the constraint is infeasible
+    if lb > _ub + infeasible_tol or ub < _lb - infeasible_tol:
+        raise FBBTException('Detected an infeasible constraint during FBBT: {0}'.format(str(con)))
+
+    # check if the constraint is always satisfied
     if deactivate_satisfied_constraints:
         if lb >= _lb and ub <= _ub:
             con.deactivate()
