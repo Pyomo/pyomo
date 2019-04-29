@@ -913,6 +913,8 @@ _repn_collectors = {
     _GeneralObjectiveData                       : _collect_identity,
     SimpleObjective                             : _collect_identity,
     objective                                   : _collect_identity,
+    float                                       : _collect_const,
+    int                                         : _collect_const,
     }
 
 
