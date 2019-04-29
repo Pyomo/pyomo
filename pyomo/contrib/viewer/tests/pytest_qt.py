@@ -14,8 +14,6 @@ UI Tests
 import pyutilib.th as unittest
 import time
 
-SKIP_ALL = True
-
 try:
     import pytest
     pytest_available = True
@@ -72,7 +70,6 @@ def get_button(w, label):
             return b
     return None
 
-@unittest.skipIf(SKIP_ALL, "must be run with pytest")
 @unittest.skipIf(not qt_available, "PyQt not found")
 def test_get_mainwindow(qtbot):
     m = get_model()
@@ -90,7 +87,6 @@ def test_get_mainwindow(qtbot):
     assert(isinstance(mw.expressions, ModelBrowser))
     assert(isinstance(mw.parameters, ModelBrowser))
 
-@unittest.skipIf(SKIP_ALL, "must be run with pytest")
 @unittest.skipIf(not qt_available, "PyQt not found")
 def test_model_information(qtbot):
     m = get_model()
