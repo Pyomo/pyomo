@@ -3260,54 +3260,31 @@ class Test(unittest.TestCase):
 
     def test_fixed_exponent(self):
         m = ConcreteModel()
-        m.a = Var()
-        m.b = Var()
-        e = m.a ** m.b
+        m.x = Var()
+        m.y = Var()
+        e = m.y + 2**m.x
 
-        m.b.fix(1)
+        m.x.fix(1)
         rep = generate_standard_repn(e)
-        #
+
         self.assertFalse( rep.is_fixed() )
         self.assertEqual( rep.polynomial_degree(), 1 )
         self.assertFalse( rep.is_constant() )
         self.assertTrue( rep.is_linear() )
         self.assertFalse( rep.is_quadratic() )
         self.assertFalse( rep.is_nonlinear() )
-        #
+
         self.assertTrue(len(rep.linear_vars) == 1)
         self.assertTrue(len(rep.linear_coefs) == 1)
         self.assertTrue(len(rep.quadratic_vars) == 0)
         self.assertTrue(len(rep.quadratic_coefs) == 0)
         self.assertTrue(rep.nonlinear_expr is None)
         self.assertTrue(len(rep.nonlinear_vars) == 0)
-        baseline = { id(m.a):1 }
+        baseline = { id(m.y):1, None: 2 }
         self.assertEqual(baseline, repn_to_dict(rep))
         s = pickle.dumps(rep)
         rep = pickle.loads(s)
-        baseline = { id(rep.linear_vars[0]):1 }
-        self.assertEqual(baseline, repn_to_dict(rep))
-
-        m.b.fix(2)
-        rep = generate_standard_repn(e)
-        #
-        self.assertFalse( rep.is_fixed() )
-        self.assertEqual( rep.polynomial_degree(), 2 )
-        self.assertFalse( rep.is_constant() )
-        self.assertFalse( rep.is_linear() )
-        self.assertTrue( rep.is_quadratic() )
-        self.assertTrue( rep.is_nonlinear() )
-        #
-        self.assertTrue(len(rep.linear_vars) == 0)
-        self.assertTrue(len(rep.linear_coefs) == 0)
-        self.assertTrue(len(rep.quadratic_vars) == 1)
-        self.assertTrue(len(rep.quadratic_coefs) == 1)
-        self.assertTrue(rep.nonlinear_expr is None)
-        self.assertTrue(len(rep.nonlinear_vars) == 0)
-        baseline = { (id(m.a),id(m.a)):1 }
-        self.assertEqual(baseline, repn_to_dict(rep))
-        s = pickle.dumps(rep)
-        rep = pickle.loads(s)
-        baseline = { (id(rep.quadratic_vars[0][0]),id(rep.quadratic_vars[0][1])):1 }
+        baseline = { id(rep.linear_vars[0]):1, None: 2 }
         self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_abs(self):
