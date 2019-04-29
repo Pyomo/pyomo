@@ -17,7 +17,6 @@ from pyomo.common.log import LoggingIntercept
 import timeit
 from contextlib import contextmanager
 from pyomo.util.model_size import build_model_size_report
-from pyutilib.misc import Container
 
 
 class _DoNothing(object):
@@ -349,7 +348,13 @@ def constraints_in_True_disjuncts(model, config):
 
 
 @contextmanager
-def time_code(timing_data_obj, code_block_name, is_main_timer = False):
+def time_code(timing_data_obj, code_block_name, is_main_timer=False):
+    """Starts timer at entry, stores elapsed time at exit
+
+    If `is_main_timer=True`, the start time is stored in the timing_data_obj,
+    allowing to calculate the total elapsed time 'on the fly' (i.e. to abort
+    the calculation after a specified time
+    """
     start_time = timeit.default_timer()
     if is_main_timer:
         timing_data_obj.main_timer_start_time = start_time
@@ -360,6 +365,7 @@ def time_code(timing_data_obj, code_block_name, is_main_timer = False):
 
 
 def get_main_elapsed_time(timing_data_obj):
+    """Returns the time since entering the main `time_code` context"""
     current_time = timeit.default_timer()
     try:
         return current_time - timing_data_obj.main_timer_start_time

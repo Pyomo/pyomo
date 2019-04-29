@@ -7,7 +7,7 @@ from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
 from pyomo.contrib.gdpopt.mip_solve import solve_LOA_master
 from pyomo.contrib.gdpopt.nlp_solve import (solve_global_subproblem, solve_local_subproblem)
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.gdpopt.util import time_code, get_total_time_elapsed
+from pyomo.contrib.gdpopt.util import time_code, get_main_elapsed_time
 
 
 def GDPopt_iteration_loop(solve_data, config):
@@ -92,8 +92,9 @@ def algorithm_should_terminate(solve_data, config):
     # Check time limit
     if get_main_elapsed_time(solve_data.timing) > config.time_limit:
         config.logger.info(
-            'MindtPy unable to converge bounds '
-            'after {} seconds.'.format(total_time_elapsed))
+            'GDPopt unable to converge bounds '
+            'after time limit of {} seconds.'
+            .format(get_main_elapsed_time(solve_data.timing)))
         config.logger.info(
             'Final bound values: LB: {}  UB: {}'.
             format(solve_data.LB, solve_data.UB))

@@ -245,7 +245,7 @@ class GDPoptSolver(object):
         solve_data.timing = Container()
 
         old_logger_level = config.logger.getEffectiveLevel()
-        with time_code(solve_data.timing, 'total'), \
+        with time_code(solve_data.timing, 'total', is_main_timer=True), \
                 restore_logger_level(config.logger), \
                 create_utility_block(model, 'GDPopt_utils', solve_data):
             if config.tee and old_logger_level > logging.INFO:
@@ -351,8 +351,8 @@ If you use this software, you may cite the following:
             solve_data.results.problem.upper_bound = solve_data.UB
 
         solve_data.results.solver.timing = solve_data.timing
-        solve_data.results.solver.user_time = solve_data.timing.total.elapsed
-        solve_data.results.solver.wallclock_time = solve_data.timing.total.elapsed
+        solve_data.results.solver.user_time = solve_data.timing.total
+        solve_data.results.solver.wallclock_time = solve_data.timing.total
 
         solve_data.results.solver.iterations = solve_data.master_iteration
 
