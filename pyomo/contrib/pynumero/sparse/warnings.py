@@ -1,0 +1,4 @@
+
+
+class MPISpaceWarning(Warning):
+    pass

@@ -29,7 +29,7 @@ class MPIBlockVector(np.ndarray):
     list of ranks that own blocks. negative entries mean its own by all.
     """
 
-    def __new__(cls, nblocks, rank_owner, mpi_comm):
+    def __new__(cls, nblocks, rank_owner, mpi_comm, block_sizes=None):
 
         assert isinstance(nblocks, int)
         assert len(rank_owner) == nblocks
@@ -49,22 +49,47 @@ class MPIBlockVector(np.ndarray):
         # empty the blocks that are not owned by this processor
         obj._owned_blocks = list()
         obj._unique_owned_blocks = list()
+        obj._owned_mask = np.zeros(nblocks, dtype=bool)
         for i, owner in enumerate(obj._rank_owner):
             if owner != rank and owner >= 0:
                 obj._block_vector[i] = np.zeros(0)
             else:
                 obj._owned_blocks.append(i)
+                obj._owned_mask[i] = True
                 if owner == rank:
                     obj._unique_owned_blocks.append(i)
 
+        # containers that facilitate looping
         obj._owned_blocks = np.array(obj._owned_blocks)
         obj._unique_owned_blocks = np.array(obj._unique_owned_blocks)
 
         # make some pointer unmutable
         obj._rank_owner.flags.writeable = False
         obj._owned_blocks.flags.writeable = False
+        obj._owned_mask.flags.writeable = False
         obj._unique_owned_blocks.flags.writeable = False
         return obj
+
+    def __init__(self, nblocks, rank_owner, mpi_comm, block_sizes=None):
+
+        # keep track of global sizes
+        if block_sizes is None:
+            self._need_broadcast_sizes = True
+            self._done_first_broadcast_sizes = False
+            self._brow_lengths = np.zeros(nblocks, dtype=np.int64)
+        else:
+            sizes = np.array(block_sizes, dtype=np.int64)
+            assert sizes.size == self.nblocks
+            assert (sizes >= 0).size == self.nblocks, \
+                'Blocks must have positive sizes'
+            self._need_broadcast_sizes = False
+            self._done_first_broadcast_sizes = True
+            self._brow_lengths = sizes
+
+        # Note: this requires communication but is disabled when assertions
+        # are turned off
+        assert self._assert_correct_owners(), \
+            'rank_owner must be the same in all processors'
 
     def __array_prepare__(self, out_arr, context=None):
         return super(MPIBlockVector, self).__array_prepare__(self, out_arr, context)
@@ -196,7 +221,6 @@ class MPIBlockVector(np.ndarray):
         else:
             raise NotImplementedError()
 
-
     @property
     def nblocks(self):
         """
@@ -223,13 +247,17 @@ class MPIBlockVector(np.ndarray):
         """
         Returns total number of elements in the block vector
         """
-        rank = self._mpiw.Get_rank()
-        indices = self._unique_owned_blocks if rank != 0 else self._owned_blocks
-        local_size = 0
-        for i in indices:
-            assert self._block_vector[i] is not None
-            local_size += self._block_vector[i].size
-        return self._mpiw.allreduce(local_size, op=MPI.SUM)
+        if self._need_broadcast_sizes:
+            rank = self._mpiw.Get_rank()
+            indices = self._unique_owned_blocks if rank != 0 else self._owned_blocks
+            local_size = 0
+            for i in indices:
+                assert self._block_vector[i] is not None
+                local_size += self._block_vector[i].size
+            return self._mpiw.allreduce(local_size, op=MPI.SUM)
+        else:
+            self._assert_broadcasted_sizes()
+            return np.sum(self._brow_lengths)
 
     @property
     def ndim(self):
@@ -266,8 +294,89 @@ class MPIBlockVector(np.ndarray):
         """
         return self._rank_owner
 
-    def block_sizes(self):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
+    @property
+    def ownership_mask(self):
+        """
+        Returns boolean array that indicates which blocks are owned by this process
+        """
+        return self._owned_mask
+
+    @property
+    def mpi_comm(self):
+        return self._mpiw
+
+    def block_sizes(self, copy=True):
+        self._assert_broadcasted_sizes()
+        if copy:
+            return self._brow_lengths.copy()
+        return self._brow_lengths
+
+    def broadcast_block_sizes(self):
+        rank = self._mpiw.Get_rank()
+        num_processors = self._mpiw.Get_size()
+
+        local_length_data = self._block_vector.block_sizes()
+        receive_data = np.empty(num_processors * self.nblocks, dtype=np.int64)
+
+        self._mpiw.Allgather(local_length_data, receive_data)
+
+        proc_dims = np.split(receive_data, num_processors)
+
+        for i in range(self.nblocks):
+            block_length = set()
+            for k in range(num_processors):
+                processor_sizes = proc_dims[k]
+                block_length.add(processor_sizes[i])
+            if len(block_length)>2:
+                msg = 'Block {} has more than one dimension accross processors'.format(i)
+                raise RuntimeError(msg)
+            elif len(block_length) == 2:
+                if 0 not in block_length:
+                    msg = 'Block {} has more than one dimension accross processors'.format(i)
+                    raise RuntimeError(msg)
+                block_length.remove(0)
+
+            # here block_length must only have one element
+            self._brow_lengths[i] = block_length.pop()
+
+        self._need_broadcast_sizes = False
+        self._done_first_broadcast_sizes = True
+
+    def _assert_broadcasted_sizes(self):
+
+        if not self._done_first_broadcast_sizes:
+            assert not self._need_broadcast_sizes, \
+                'First need to call broadcast_block_sizes()'
+        else:
+            assert not self._need_broadcast_sizes, \
+                'Structure changed. Need to recall broadcast_block_sizes()'
+
+    # Note: this requires communication
+    def _assert_correct_owners(self, root=0):
+
+        rank = self._mpiw.Get_rank()
+        num_processors = self._mpiw.Get_size()
+
+        if num_processors == 1:
+            return True
+
+        local_owners = self._rank_owner.copy()
+        receive_data = None
+        if rank == root:
+            receive_data = np.empty(self.nblocks * num_processors,
+                                    dtype=np.int64)
+
+        self._mpiw.Gather(local_owners, receive_data, root=root)
+
+        if rank == root:
+            owners_in_processor = np.split(receive_data, num_processors)
+            root_rank_owners = owners_in_processor[root]
+            for i in range(self.nblocks):
+                for k in range(num_processors):
+                    if k != root:
+                        if owners_in_processor[k][i] != root_rank_owners[i]:
+                            return False
+        return True
 
     def all(self, axis=None, out=None, keepdims=False):
         """
@@ -360,7 +469,7 @@ class MPIBlockVector(np.ndarray):
         Complex-conjugate all elements.
         """
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         for i in self._owned_blocks:
             if self._block_vector[i] is not None:
                 result[i] = self._block_vector[i].conj()
@@ -378,7 +487,7 @@ class MPIBlockVector(np.ndarray):
         """
         Return the indices of the elements that are non-zero.
         """
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
 
         for i in self._owned_blocks:
             if self._block_vector[i] is not None:
@@ -392,7 +501,7 @@ class MPIBlockVector(np.ndarray):
         Return a vector with each element rounded to the given number of decimals
         """
         assert out is None
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         for i in self._owned_blocks:
             if self._block_vector[i] is not None:
                 result[i] = self._block_vector[i].round(decimals=decimals)
@@ -402,7 +511,7 @@ class MPIBlockVector(np.ndarray):
 
     def clip(self, min=None, max=None, out=None):
         assert out is None
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         for i in self._owned_blocks:
             if self._block_vector[i] is not None:
                 result[i] = self._block_vector[i].clip(min=min, max=max)
@@ -413,7 +522,7 @@ class MPIBlockVector(np.ndarray):
     def compress(self, condition, axis=None, out=None):
         assert out is None
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(condition, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -452,6 +561,11 @@ class MPIBlockVector(np.ndarray):
             msg = 'BlockVectors must be distributed in same processors'
             assert np.array_equal(self._rank_owner, other._rank_owner), msg
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
+
+            if not other._need_broadcast_sizes:
+                self._brow_lengths = other._brow_lengths.copy()
+                self._need_broadcast_sizes = False
+                self._done_first_broadcast_sizes = True
 
             for i in self._owned_blocks:
                 if isinstance(self._block_vector[i], BlockVector):
@@ -522,8 +636,14 @@ class MPIBlockVector(np.ndarray):
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
+            assert np.array_equal(self._rank_owner, other.rank_ownership), msg
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
+
+            if not self._need_broadcast_sizes:
+                other._brow_lengths = self._brow_lengths.copy()
+                other._need_broadcast_sizes = False
+                other._done_first_broadcast_sizes = True
+
             for i in self._owned_blocks:
                 blk = self._block_vector[i]
                 if isinstance(other[i], BlockVector):
@@ -541,7 +661,48 @@ class MPIBlockVector(np.ndarray):
                 else:
                     raise RuntimeError('Should never get here')
         elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
+            assert other.nblocks == self.nblocks
+            if self._need_broadcast_sizes:
+                # need to add warning here
+                self.broadcast_block_sizes()
+
+            # figure size sent by each processor
+            num_processors = self._mpiw.Get_size()
+            nblocks = self.nblocks
+            rank = self._mpiw.Get_rank()
+            chunk_size_per_processor = np.zeros(num_processors, dtype=np.int64)
+            sizes_within_processor = [np.zeros(nblocks, dtype=np.int64) for k in range(num_processors)]
+            for i in range(nblocks):
+                owner = self._rank_owner[i]
+                if owner >= 0:
+                    chunk_size = self._brow_lengths[i]
+                    sizes_within_processor[owner][i] = chunk_size
+                    chunk_size_per_processor[owner] += chunk_size
+
+            receive_size = sum(chunk_size_per_processor)
+            send_data = np.concatenate([self._block_vector[bid] for bid in self._unique_owned_blocks])
+            receive_data = np.empty(receive_size, dtype=send_data.dtype)
+
+            # communicate data to all
+            self._mpiw.Allgatherv(send_data, (receive_data, chunk_size_per_processor))
+
+            # split data by processor
+            proc_dims = np.split(receive_data, chunk_size_per_processor.cumsum())
+
+            # split data within processor
+            splitted_data = []
+            for k in range(num_processors):
+                splitted_data.append(np.split(proc_dims[k],
+                                            sizes_within_processor[k].cumsum()))
+            # populate block vector
+            for bid in range(nblocks):
+                owner = self._rank_owner[bid]
+                if owner >= 0:
+                    block_data = splitted_data[owner][bid]
+                else:
+                    block_data = self._block_vector[bid]
+                other[bid] = block_data
+
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         else:
@@ -567,7 +728,7 @@ class MPIBlockVector(np.ndarray):
         assert len(blocks) == self.nblocks, msg
 
         for i in self._owned_blocks:
-            self._block_vector[i] = blocks[i]
+            self[i] = blocks[i]
 
     def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
         raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -637,11 +798,25 @@ class MPIBlockVector(np.ndarray):
         """
         result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
         result._block_vector = self._block_vector.clone(value=value, copy=copy)
+        result._need_broadcast_sizes = self._need_broadcast_sizes
+        result._done_first_broadcast_sizes = self._done_first_broadcast_sizes
+        result._brow_lengths = self._brow_lengths.copy()
         return result
 
     def copy(self, order='C'):
         v = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
         v._block_vector = self._block_vector.copy()
+        v._need_broadcast_sizes = self._need_broadcast_sizes
+        v._done_first_broadcast_sizes = self._done_first_broadcast_sizes
+        v._brow_lengths = self._brow_lengths.copy()
+        return v
+
+    def copy_structure(self, order='C'):
+        v = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        v._block_vector = self._block_vector.copy_structure()
+        v._need_broadcast_sizes = self._need_broadcast_sizes
+        v._done_first_broadcast_sizes = self._done_first_broadcast_sizes
+        v._brow_lengths = self._brow_lengths.copy()
         return v
 
     def fill(self, value):
@@ -744,7 +919,7 @@ class MPIBlockVector(np.ndarray):
 
     def __add__(self, other):
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             assert np.array_equal(self._rank_owner, other._rank_owner), \
@@ -775,7 +950,7 @@ class MPIBlockVector(np.ndarray):
 
     def __sub__(self, other):
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -803,7 +978,7 @@ class MPIBlockVector(np.ndarray):
 
     def __rsub__(self, other):
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -831,7 +1006,7 @@ class MPIBlockVector(np.ndarray):
 
     def __mul__(self, other):
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -862,7 +1037,7 @@ class MPIBlockVector(np.ndarray):
 
     def __truediv__(self, other):
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -890,7 +1065,7 @@ class MPIBlockVector(np.ndarray):
 
     def __rtruediv__(self, other):
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -918,7 +1093,7 @@ class MPIBlockVector(np.ndarray):
 
     def __floordiv__(self, other):
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -947,7 +1122,7 @@ class MPIBlockVector(np.ndarray):
 
     def __rfloordiv__(self, other):
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -1083,7 +1258,7 @@ class MPIBlockVector(np.ndarray):
 
     def __le__(self, other):
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -1111,7 +1286,7 @@ class MPIBlockVector(np.ndarray):
 
     def __lt__(self, other):
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -1139,7 +1314,7 @@ class MPIBlockVector(np.ndarray):
 
     def __ge__(self, other):
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -1167,7 +1342,7 @@ class MPIBlockVector(np.ndarray):
 
     def __gt__(self, other):
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -1195,7 +1370,7 @@ class MPIBlockVector(np.ndarray):
 
     def __eq__(self, other):
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -1223,7 +1398,7 @@ class MPIBlockVector(np.ndarray):
 
     def __ne__(self, other):
         rank = self._mpiw.Get_rank()
-        result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -1274,6 +1449,14 @@ class MPIBlockVector(np.ndarray):
         rank = self._mpiw.Get_rank()
         assert owner == rank or \
                owner < 0, 'Block {} not owned by processor {}'.format(key, rank)
+        if value is None:
+            if self._block_vector[key] is not None:
+                self._need_broadcast_sizes = True
+        else:
+            new_size = value.size
+            if self._brow_lengths[key] != new_size:
+                self._need_broadcast_sizes = True
+
         self._block_vector[key] = value
 
     def __iter__(self):
@@ -1281,15 +1464,44 @@ class MPIBlockVector(np.ndarray):
             yield j
 
     def __str__(self):
-        msg = ''
-        msg += '{}{}:\n'.format(self.__class__.__name__, self.bshape)
+        msg = '{}{}:\n'.format(self.__class__.__name__, self.bshape)
         for idx in range(self.nblocks):
-            msg += '    {}: {}\n'.format(idx, self._rank_owner[idx])
+            msg += '{}: Owned by processor {}\n'.format(idx, self._rank_owner[idx])
 
         return msg
 
     def __repr__(self):
         return '{}{}'.format(self.__class__.__name__, self.bshape)
+
+    def pprint(self, root=0):
+        self._assert_broadcasted_sizes()
+        msg = self.__repr__() + '\n'
+        num_processors = self._mpiw.Get_size()
+        local_mask = self._block_vector._block_mask.flatten()
+        receive_data = np.empty(num_processors * self.nblocks,
+                                dtype=np.bool)
+        self._mpiw.Allgather(local_mask, receive_data)
+        processor_to_mask = np.split(receive_data, num_processors)
+
+        global_mask = np.zeros(self.nblocks, dtype=np.bool)
+
+        for bid in range(self.nblocks):
+            owner = self._rank_owner[bid]
+            if owner >= 0:
+                global_mask[bid] = processor_to_mask[owner][bid]
+            else:
+                # checks only the mask of one of them since all must have the same
+                global_mask[bid] = processor_to_mask[0][bid]
+
+            is_none = '' if global_mask[bid] else '*'
+            repn = 'Owned by {} Shape({},){}'.format(owner,
+                                                     self._brow_lengths[bid],
+                                                     is_none)
+            msg += '{}: {}\n'.format(bid, repn)
+        if self._mpiw.Get_rank() == root:
+            print(msg)
+
+
 
     def __len__(self):
         return self.size

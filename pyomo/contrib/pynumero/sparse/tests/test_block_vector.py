@@ -11,7 +11,6 @@ from __future__ import division
 import sys
 import pyutilib.th as unittest
 
-
 import pyomo.contrib.pynumero as pn
 if not (pn.sparse.numpy_available and pn.sparse.scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run BlockVector tests")
@@ -958,6 +957,16 @@ class TestBlockVector(unittest.TestCase):
         v[1] = b
         v2 = v.copy()
         self.assertTrue(np.allclose(v.flatten(), v2.flatten()))
+
+    def test_copy_structure(self):
+        v = BlockVector(2)
+        a = np.ones(5)
+        b = np.zeros(9)
+        v[0] = a
+        v[1] = b
+        v2 = v.copy_structure()
+        self.assertEqual(v[0].size, v2[0].size)
+        self.assertEqual(v[1].size, v2[1].size)
 
     def test_unary_ufuncs(self):
 

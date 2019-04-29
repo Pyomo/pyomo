@@ -278,11 +278,13 @@ class BlockVector(np.ndarray):
         self._has_none = it_has
         return it_has
 
-    def block_sizes(self):
+    def block_sizes(self, copy=True):
         """
         Returns array with sizes of individual blocks
         """
-        return np.copy(self._brow_lengths)
+        if copy:
+            return np.copy(self._brow_lengths)
+        return self._brow_lengths
 
     def dot(self, other, out=None):
         """
@@ -814,8 +816,18 @@ class BlockVector(np.ndarray):
         for bid, vv in enumerate(self):
             if self._block_mask[bid]:
                 bv[bid] = vv.copy(order=order)
-            else:
-                bv[bid] = None
+        return bv
+
+    def copy_structure(self):
+        bv = BlockVector(self.nblocks)
+        for bid, vv in enumerate(self):
+            if vv is not None:
+                if isinstance(self._block_mask[bid], BlockVector):
+                    bv[bid] = vv.copy_structure()
+                elif type(vv) == np.ndarray:
+                    bv[bid] = np.zeros(vv.size, dtype=vv.dtype)
+                else:
+                    raise NotImplementedError('Should never get here')
         return bv
 
     def set_blocks(self, blocks):

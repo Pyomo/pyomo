@@ -387,7 +387,7 @@ class BlockMatrix(object):
         for i in range(m):
             for j in range(n):
                 if not self.is_empty_block(i, j):
-                    mat[j, i] = self[i, j].transpose()
+                    mat[j, i] = self[i, j].transpose(copy=copy)
                 else:
                     mat[j, i] = None
         return mat
@@ -547,20 +547,22 @@ class BlockMatrix(object):
         result = BlockMatrix(self.bshape[0], self.bshape[1])
         ii, jj = np.nonzero(self._block_mask)
         for i, j in zip(ii, jj):
-            nrows, ncols = self._blocks[i, j].shape
-            result[i, j] = empty_matrix(nrows, ncols)
+            if isinstance(self._blocks[i, j], BlockMatrix):
+                result[i, j] = self._blocks[i, j].copy_structure()
+            else:
+                nrows, ncols = self._blocks[i, j].shape
+                result[i, j] = empty_matrix(nrows, ncols)
         return result
 
     def __repr__(self):
-        return '{}{}'.format(self.__class__.__name__, self.shape)
+        return '{}{}'.format(self.__class__.__name__, self.bshape)
 
     def __str__(self):
-        msg = ''
+        msg = '{}{}\n'.format(self.__class__.__name__, self.bshape)
         for idx in range(self.bshape[0]):
             for jdx in range(self.bshape[1]):
-                if self._blocks[idx, jdx] is not None:
-                    repn = self._blocks[idx, jdx].__repr__() if self._block_mask[idx, jdx] else None
-                    msg += '({}, {}): {}\n'.format(idx, jdx, repn)
+                repn = self._blocks[idx, jdx].__repr__() if self._block_mask[idx, jdx] else None
+                msg += '({}, {}): {}\n'.format(idx, jdx, repn)
         return msg
 
     def __getitem__(self, item):
@@ -605,8 +607,8 @@ class BlockMatrix(object):
             if all_none_rows:
                 self._bcol_lengths[jdx] = 0
         else:
-            msg = 'blocks need to be sparse matrices'
-            assert isinstance(value, BlockMatrix) or isspmatrix(value), msg
+            assert isinstance(value, BlockMatrix) or isspmatrix(value), \
+                'blocks need to be sparse matrices'
             if self._brow_lengths[idx] == 0 and self._bcol_lengths[jdx] == 0:
                 self._blocks[idx, jdx] = value
                 self._brow_lengths[idx] = value.shape[0]
@@ -686,7 +688,7 @@ class BlockMatrix(object):
             from .mpi_block_matrix import MPIBlockMatrix
             if isinstance(other, MPIBlockMatrix):
                 # ToDo: this might not be needed
-                other._assert_setup()
+                other._assert_broadcasted_sizes()
 
                 assert other.bshape == self.bshape, \
                     'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
@@ -744,7 +746,7 @@ class BlockMatrix(object):
             from .mpi_block_matrix import MPIBlockMatrix
             if isinstance(other, MPIBlockMatrix):
                 # ToDo: this might not be needed
-                other._assert_setup()
+                other._assert_broadcasted_sizes()
 
                 assert other.bshape == self.bshape, \
                     'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
@@ -796,7 +798,7 @@ class BlockMatrix(object):
             from .mpi_block_matrix import MPIBlockMatrix
             if isinstance(other, MPIBlockMatrix):
                 # ToDo: this might not be needed
-                other._assert_setup()
+                other._assert_broadcasted_sizes()
 
                 assert other.bshape == self.bshape, \
                     'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
@@ -1035,7 +1037,7 @@ class BlockMatrix(object):
         else:
             from .mpi_block_matrix import MPIBlockMatrix
             if isinstance(other, MPIBlockMatrix):
-                other._assert_setup()
+                other._assert_broadcasted_sizes()
                 result = other.copy_structure()
                 assert other.bshape == self.bshape, \
                     'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
@@ -1102,7 +1104,7 @@ class BlockMatrix(object):
         else:
             from .mpi_block_matrix import MPIBlockMatrix
             if isinstance(other, MPIBlockMatrix):
-                other._assert_setup()
+                other._assert_broadcasted_sizes()
                 result = other.copy_structure()
                 assert other.bshape == self.bshape, \
                     'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
@@ -1169,7 +1171,7 @@ class BlockMatrix(object):
         else:
             from .mpi_block_matrix import MPIBlockMatrix
             if isinstance(other, MPIBlockMatrix):
-                other._assert_setup() # needed for the nones
+                other._assert_broadcasted_sizes() # needed for the nones
                 result = other.copy_structure()
                 assert other.bshape == self.bshape, \
                     'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
@@ -1237,7 +1239,7 @@ class BlockMatrix(object):
         else:
             from .mpi_block_matrix import MPIBlockMatrix
             if isinstance(other, MPIBlockMatrix):
-                other._assert_setup() # needed for the nones
+                other._assert_broadcasted_sizes() # needed for the nones
                 result = other.copy_structure()
                 assert other.bshape == self.bshape, \
                     'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
@@ -1305,7 +1307,7 @@ class BlockMatrix(object):
         else:
             from .mpi_block_matrix import MPIBlockMatrix
             if isinstance(other, MPIBlockMatrix):
-                other._assert_setup() # needed for the nones
+                other._assert_broadcasted_sizes() # needed for the nones
                 result = other.copy_structure()
                 assert other.bshape == self.bshape, \
                     'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
@@ -1373,7 +1375,7 @@ class BlockMatrix(object):
         else:
             from .mpi_block_matrix import MPIBlockMatrix
             if isinstance(other, MPIBlockMatrix):
-                other._assert_setup() # needed for the nones
+                other._assert_broadcasted_sizes() # needed for the nones
                 result = other.copy_structure()
                 assert other.bshape == self.bshape, \
                     'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
@@ -1541,10 +1543,10 @@ class BlockSymMatrix(BlockMatrix):
         super(BlockSymMatrix, self).__init__(nrowcols, nrowcols)
 
     def __repr__(self):
-        return '{}{}'.format(self.__class__.__name__, self.shape)
+        return '{}{}'.format(self.__class__.__name__, self.bshape)
 
     def __str__(self):
-        msg = ''
+        msg = '{}{}\n'.format(self.__class__.__name__, self.bshape)
         for idx in range(self.bshape[0]):
             for jdx in range(self.bshape[1]):
                 if idx >= jdx:
@@ -1581,3 +1583,27 @@ class BlockSymMatrix(BlockMatrix):
             assert is_symmetric_sparse(value), 'Matrix is not symmetric'
         super(BlockSymMatrix, self).__setitem__(key, value)
         super(BlockSymMatrix, self).__setitem__((jdx, idx), value.transpose())
+
+    def transpose(self, axes=None, copy=False):
+        """
+        Reverses the dimensions of the block matrix.
+
+        Parameters
+        ----------
+        axes: None, optional
+            This argument is in the signature solely for NumPy compatibility reasons. Do not pass in
+            anything except for the default value.
+        copy: bool, optional
+            Indicates whether or not attributes of self should be copied whenever possible.
+
+        Returns
+        -------
+        BlockMatrix with dimensions reversed
+        """
+        if axes is not None:
+            raise ValueError(("Sparse matrices do not support "
+                              "an 'axes' parameter because swapping "
+                              "dimensions is the only logical permutation."))
+        if copy:
+            return self.copy()
+        return self

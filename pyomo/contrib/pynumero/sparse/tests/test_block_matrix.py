@@ -55,7 +55,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertEqual(self.basic_m.shape, shape)
 
     def test_tocoo(self):
-
         block = self.block_m
         m = self.basic_m
         scipy_mat = bmat([[block, block], [None, block]], format='coo')
@@ -801,4 +800,13 @@ class TestSymBlockMatrix(unittest.TestCase):
 
         self.basic_m *= 5.0
         self.assertTrue(np.allclose(self.basic_m.toarray(), dense_m, atol=1e-3))
-    # ToDo: Add test for transpose
+
+    def test_transpose(self):
+
+        m = self.basic_m.transpose()
+        dense_m = self.basic_m.toarray().transpose()
+        self.assertTrue(np.allclose(m.toarray(), dense_m))
+
+        m = self.basic_m.transpose(copy=True)
+        dense_m = self.basic_m.toarray().transpose()
+        self.assertTrue(np.allclose(m.toarray(), dense_m))

@@ -30,6 +30,16 @@ except ImportError:
     logging.getLogger('pyomo.contrib.pynumero').warn(
         "Scipy not available. Install scipy before using pynumero")
 
+try:
+    from mpi4py import MPI
+    mpi4py_available = True
+except ImportError:
+    mpi4py_available = False
+    import pyomo.common  # ...to set up the logger
+    import logging
+    logging.getLogger('pyomo.contrib.pynumero').warn(
+        "Mpi4py not available. Install Mpi4py before using pynumero")
+
 if numpy_available:
     from .sparse.intrinsic import *
 else:

@@ -19,6 +19,9 @@ import numpy as np
 try:
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
+    if comm.Get_size() < 3:
+        raise unittest.SkipTest(
+            "These tests need at least 3 processors")
 except ImportError:
     raise unittest.SkipTest(
         "Pynumero needs mpi4py to run mpi block vector tests")
@@ -28,14 +31,11 @@ try:
 except ImportError:
     raise unittest.SkipTest(
         "Pynumero needs mpi4py to run mpi block vector tests")
-try:
-    from pyomo.contrib.pynumero.sparse import BlockVector
-except ImportError:
-    raise unittest.SkipTest(
-        "Could not import BlockVector")
+
+from pyomo.contrib.pynumero.sparse import BlockVector
+
 
 @unittest.skipIf(comm.Get_size() < 3, "Need at least 3 processors to run tests")
-#@unittest.skip('Skipping parallel tests for now')
 class TestMPIBlockVector(unittest.TestCase):
 
     @classmethod
@@ -43,8 +43,8 @@ class TestMPIBlockVector(unittest.TestCase):
         # test problem 1
 
         if comm.Get_size() < 3:
-            raise unitest.SkipTest("Need at least 3 processors to run tests")
-        
+            raise unittest.SkipTest("Need at least 3 processors to run tests")
+
         v1 = MPIBlockVector(4, [0,1,0,1], comm)
 
         rank = comm.Get_rank()
@@ -1896,12 +1896,13 @@ class TestMPIBlockVector(unittest.TestCase):
     def test_len(self):
 
         v = MPIBlockVector(2, [0,1], comm)
+
         rank = comm.Get_rank()
         if rank == 0:
             v[0] = np.ones(3)
         if rank == 1:
             v[1] = np.zeros(2)
-
+        v.broadcast_block_sizes()
         self.assertEqual(len(v), 5)
 
     def test_copyfrom(self):
