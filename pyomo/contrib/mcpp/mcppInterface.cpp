@@ -1,10 +1,8 @@
 #include "interval.hpp"
 #include "mccormick.hpp"
-#include "string.h"
+#include <sstream>
 typedef mc::Interval I;
 typedef mc::McCormick<I> MC;
-
-using std::ostringstream;
 
 // Module-level variables as utilities to pass information back to Python
 std::string lastException;
@@ -68,7 +66,7 @@ extern "C"
     // Get the MC++ string representation of the MC object
     const char* toString(MC *arg)
     {
-        ostringstream Fstrm;
+        std::ostringstream Fstrm;
         Fstrm << *arg << std::flush;
         lastDisplay = Fstrm.str();
         return lastDisplay.c_str();
