@@ -78,7 +78,7 @@ ExpectedFailures['glpk', 'mps', 'LP_duals_maximize'] = \
 #
 
 ExpectedFailures['cbc', 'lp', 'LP_duals_maximize'] = \
-    (lambda v: v <= _trunk_version,
+    (lambda v: v <= (2,10,1,0),
     "For a maximization problem where a variable is pushed to its "
     "lower bound, Cbc reports the reduced cost as a positive number. In "
     "practice this should be reported as a negative number. A ticket has "

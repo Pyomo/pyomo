@@ -6,23 +6,27 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>924</width>
-    <height>753</height>
+    <width>1531</width>
+    <height>1078</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>IDAES/Pyomo Model View</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_3"/>
+   <layout class="QVBoxLayout" name="verticalLayout_3">
+    <item>
+     <widget class="QMdiArea" name="mdiArea"/>
+    </item>
+   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>924</width>
-     <height>20</height>
+     <width>1531</width>
+     <height>38</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -37,19 +41,15 @@
     <property name="title">
      <string>&amp;View</string>
     </property>
-    <addaction name="action_toggle_variables"/>
-    <addaction name="action_toggle_constraints"/>
-    <addaction name="action_toggle_parameters"/>
-    <addaction name="action_toggle_expressions"/>
+    <addaction name="actionRestart_Variable_View"/>
+    <addaction name="actionRestart_Constraint_View"/>
+    <addaction name="actionRestart_Parameter_View"/>
+    <addaction name="actionRestart_Expression_View"/>
     <addaction name="separator"/>
-    <addaction name="action_toggle_streams"/>
+    <addaction name="actionTile"/>
+    <addaction name="actionCascade"/>
     <addaction name="separator"/>
-    <addaction name="separator"/>
-   </widget>
-   <widget class="QMenu" name="menu_Help">
-    <property name="title">
-     <string>&amp;Help</string>
-    </property>
+    <addaction name="actionTabs"/>
    </widget>
    <widget class="QMenu" name="menuCalculate">
     <property name="title">
@@ -68,7 +68,6 @@
    <addaction name="menu_View"/>
    <addaction name="menuCalculate"/>
    <addaction name="menuModel"/>
-   <addaction name="menu_Help"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="action_toggle_variables">
@@ -235,6 +234,41 @@
   <action name="actionSolve_2">
    <property name="text">
     <string>Solve</string>
+   </property>
+  </action>
+  <action name="actionRestart_Variable_View">
+   <property name="text">
+    <string>Restart Variable View</string>
+   </property>
+  </action>
+  <action name="actionRestart_Constraint_View">
+   <property name="text">
+    <string>Restart Constraint View</string>
+   </property>
+  </action>
+  <action name="actionRestart_Parameter_View">
+   <property name="text">
+    <string>Restart Parameter View</string>
+   </property>
+  </action>
+  <action name="actionRestart_Expression_View">
+   <property name="text">
+    <string>Restart Expression View</string>
+   </property>
+  </action>
+  <action name="actionTile">
+   <property name="text">
+    <string>Tile</string>
+   </property>
+  </action>
+  <action name="actionCascade">
+   <property name="text">
+    <string>Cascade</string>
+   </property>
+  </action>
+  <action name="actionTabs">
+   <property name="text">
+    <string>Toggle Tabs</string>
    </property>
   </action>
  </widget>

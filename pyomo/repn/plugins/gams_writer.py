@@ -19,7 +19,9 @@ from pyutilib.misc import PauseGC
 
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import (
-    is_fixed, value, as_numeric, native_types, native_numeric_types)
+    is_fixed, value, as_numeric, native_types, native_numeric_types,
+    nonpyomo_leaf_types,
+)
 from pyomo.core.base import (
     SymbolMap, ShortNameLabeler, NumericLabeler, Block, Constraint, Expression,
     Objective, Var, Param, minimize, Suffix, SortComponents)
@@ -52,26 +54,29 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             arg = node._args_[i]
 
             if arg is None:
-                tmp.append('Undefined')
-            elif arg.__class__ in native_numeric_types:
-                if arg < 0:
-                    # Wrap negative values in parens to avoid double operator
-                    tmp.append("(%s)" % val)
-                else:
-                    tmp.append(val)
-            elif arg.__class__ in native_types:
-                tmp.append("'{0}'".format(val))
-            elif arg.is_variable_type():
-                if arg.is_fixed():
-                    # bind fixed var values in parens to avoid double negatives
-                    tmp.append("(%s)" % val)
-                else:
-                    tmp.append(val)
-            elif (arg.is_expression_type() and
-                  node._precedence() < arg._precedence()):
-                tmp.append("({0})".format(val))
+                tmp.append('Undefined')                 # TODO: coverage
             else:
-                tmp.append(val)
+                parens = False
+                if val and val[0] in '-+':
+                    parens = True
+                elif arg.__class__ in native_numeric_types:
+                    pass
+                elif arg.__class__ in nonpyomo_leaf_types:
+                    val = "'{0}'".format(val)
+                elif arg.is_expression_type():
+                    if node._precedence() < arg._precedence():
+                        parens = True
+                    elif node._precedence() == arg._precedence():
+                        if i == 0:
+                            parens = node._associativity() != 1
+                        elif i == len(node._args_)-1:
+                            parens = node._associativity() != -1
+                        else:
+                            parens = True
+                if parens:
+                    tmp.append("({0})".format(val))
+                else:
+                    tmp.append(val)
 
         if node.__class__ is EXPR.PowExpression:
             # If the exponent is a positive integer, use the power() function.
@@ -119,11 +124,14 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
 
         if node.is_variable_type():
             if node.fixed:
-                return True, str(value(node))
-            label = self.smap.getSymbol(node)
-            return True, label
+                return True, node.to_string(
+                    verbose=False, smap=self.smap, compute_values=True)
+            else:
+                label = self.smap.getSymbol(node)
+                return True, label
 
-        return True, str(value(node))
+        return True, node.to_string(
+            verbose=False, smap=self.smap, compute_values=True)
 
     def ctype(self, comp):
         if isinstance(comp, ICategorizedObject):

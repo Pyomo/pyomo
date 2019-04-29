@@ -115,53 +115,32 @@ class TestIntegral(unittest.TestCase):
             return m.v2[s,t]
 
         # Integrals must be indexed by a ContinuousSet
-        try:
+        with self.assertRaises(ValueError):
             m.int = Integral(rule=_int)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
         # Specifying multiple aliases of same option
-        try:
+        with self.assertRaises(TypeError):
             m.int = Integral(m.t, wrt=m.t, withrespectto=m.t, rule=_int)
-            self.fail('Expected TypeError')
-        except TypeError:
-            pass
 
         # No ContinuousSet specified
-        try:
+        with self.assertRaises(ValueError):
             m.int2 = Integral(m.x, m.t, rule= _int2)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
         # 'wrt' is not a ContinuousSet
-        try:
+        with self.assertRaises(ValueError):
             m.int = Integral(m.s, m.t, wrt=m.s, rule=_int2)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
         # 'wrt' is not in argument list
-        try:
+        with self.assertRaises(ValueError):
             m.int = Integral(m.t, wrt=m.x, rule=_int)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
         # 'bounds' not supported
-        try:
+        with self.assertRaises(DAE_Error):
             m.int = Integral(m.t, wrt=m.t, rule=_int, bounds=(0,0.5))
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
 
         # No rule specified
-        try:
+        with self.assertRaises(ValueError):
             m.int = Integral(m.t, wrt=m.t)
-            self.fail('Expected ValueError')
-        except ValueError:
-            pass
 
             # test DerivativeVar reclassification after discretization
 
