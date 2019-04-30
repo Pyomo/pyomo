@@ -17,6 +17,7 @@ from __future__ import print_function
 import sys
 import time
 
+from pyomo.scripting.pyomo_parser import add_subparser
 from pyomo.contrib.viewer.pyqt_4or5 import *
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
@@ -51,12 +52,21 @@ class MainWindow(QMainWindow):
         self.jupyter_widget.kernel_client.stop_channels()
         self.jupyter_widget.kernel_manager.shutdown_kernel()
 
-def main():
+def main(args):
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
     app.aboutToQuit.connect(window.shutdown_kernel)
     app.exec_()
+
+# Add a subparser for the download-extensions command
+add_subparser(
+    'model-viewer',
+    func=main,
+    help='Run the Pyomo model viewer',
+    add_help=False,
+    description='This runs the Pyomo model viewer'
+)
 
 if __name__ == "__main__":
     main()

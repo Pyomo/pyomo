@@ -176,7 +176,6 @@ def run_setup():
         pyomo_python = pyomo.scripting.commands:pyomo_python
         pyomo_old=pyomo.scripting.pyomo_command:main
         get_pyomo_extras = scripts.get_pyomo_extras:main
-        pyomo_viewer = pyomo.contrib.viewer.pyomo_viewer:main
 
         [pyomo.command]
         pyomo.runbenders=pyomo.pysp.benders
@@ -191,6 +190,7 @@ def run_setup():
         pyomo.test.pyomo = pyomo.scripting.runtests
         pyomo.pyro_mip_server = pyomo.scripting.pyro_mip_server
         pyomo.results_schema=pyomo.scripting.commands
+        pyomo.viewer=pyomo.contrib.viewer.pyomo_viewer
       """
       )
 
