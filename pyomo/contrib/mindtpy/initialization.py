@@ -82,7 +82,8 @@ def init_rNLP(solve_data, config):
             % (solve_data.nlp_iter, value(main_objective.expr),
                solve_data.LB, solve_data.UB))
         if config.strategy == 'OA':
-            add_oa_cut(nlp_solution_values, dual_values, solve_data, config)
+            add_oa_cut(nlp_solution_values, dual_values, solve_data, config,
+                       ignore_integrality=True)
     elif subprob_terminate_cond is tc.infeasible:
         # TODO fail? try something else?
         config.logger.info(

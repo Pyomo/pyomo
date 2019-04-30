@@ -8,6 +8,7 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.current import ExpressionReplacementVisitor
 from pyomo.repn import generate_standard_repn
 from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.contrib.gdpopt.util import copy_var_list_values
 
 
 def add_objective_linearization(solve_data, config):
@@ -34,16 +35,21 @@ def add_objective_linearization(solve_data, config):
         MindtPy.ECP_constr_map[obj, solve_data.mip_iter] = c
 
 
-def add_oa_cut(var_values, duals, solve_data, config):
+def add_oa_cut(var_values, duals, solve_data, config, ignore_integrality=False):
+    """TODO
+
+    ignore_integrality: useful for cut in initial relaxation
+    """
+
     m = solve_data.mip
     MindtPy = m.MindtPy_utils
     MindtPy.MindtPy_linear_cuts.nlp_iters.add(solve_data.nlp_iter)
     sign_adjust = -1 if solve_data.objective_sense == minimize else 1
 
-    # Copy values over
-    for var, val in zip(MindtPy.variable_list, var_values):
-        if val is not None and not var.fixed:
-            var.value = val
+    copy_var_list_values(from_list=var_values,
+                         to_list=MindtPy.variable_list,
+                         config=config,
+                         ignore_integrality=ignore_integrality)
 
     # generate new constraints
     # TODO some kind of special handling if the dual is phenomenally small?
@@ -51,17 +57,18 @@ def add_oa_cut(var_values, duals, solve_data, config):
     for constr, dual_value in zip(MindtPy.constraint_list, duals):
         if constr.body.polynomial_degree() in (1, 0):
             continue
-        rhs = ((0 if constr.upper is None else constr.upper) +
-               (0 if constr.lower is None else constr.lower))
+        rhs = ((0 if constr.upper is None else constr.upper)
+               + (0 if constr.lower is None else constr.lower))
         # Properly handle equality constraints and ranged inequalities
         # TODO special handling for ranged inequalities? a <= x <= b
         rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
         slack_var = MindtPy.MindtPy_linear_cuts.slack_vars.add()
         MindtPy.MindtPy_linear_cuts.oa_cuts.add(
-            expr=copysign(1, sign_adjust * dual_value) * (sum(
-                value(jacs[constr][var]) * (var - value(var))
-                for var in list(EXPR.identify_variables(constr.body))) +
-                                                          value(constr.body) - rhs) - slack_var <= 0)
+            expr=copysign(1, sign_adjust * dual_value)
+                 * (sum(value(jacs[constr][var]) * (var - value(var))
+                        for var in list(EXPR.identify_variables(constr.body)))
+                    + value(constr.body) - rhs)
+                 - slack_var <= 0)
 
 
 def add_int_cut(var_values, solve_data, config, feasible=False):

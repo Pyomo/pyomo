@@ -2,8 +2,6 @@
 from __future__ import division
 
 import logging
-
-import six
 from math import fabs, floor, log
 
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
@@ -89,7 +87,7 @@ def model_is_valid(solve_data, config):
     return True
 
 
-def process_objective(solve_data, config):
+def process_objective(solve_data, config, always_move_objective=False):
     m = solve_data.working_model
     util_blk = getattr(m, solve_data.util_block_name)
     # Handle missing or multiple objectives
@@ -110,7 +108,8 @@ def process_objective(solve_data, config):
     solve_data.objective_sense = main_obj.sense
 
     # Move the objective to the constraints if it is nonlinear
-    if main_obj.expr.polynomial_degree() not in (1, 0):
+    if main_obj.expr.polynomial_degree() not in (1, 0) \
+            or always_move_objective:
         config.logger.info("Objective is nonlinear. Moving it to constraint set.")
 
         util_blk.objective_value = Var(domain=Reals, initialize=0)
@@ -144,11 +143,19 @@ def a_logger(str_or_logger):
         return logging.getLogger(str_or_logger)
 
 
-def copy_var_list_values(from_list, to_list, config, skip_stale=False):
-    """Copy variable values from one list to another."""
+def copy_var_list_values(from_list, to_list, config,
+                         skip_stale=False, skip_fixed=True,
+                         ignore_integrality=False):
+    """Copy variable values from one list to another.
+
+    Rounds to Binary/Integer if neccessary
+    Sets to zero for NonNegativeReals if neccessary
+    """
     for v_from, v_to in zip(from_list, to_list):
         if skip_stale and v_from.stale:
             continue  # Skip stale variable values.
+        if skip_fixed and v_to.is_fixed():
+            continue  # Skip fixed variables.
         try:
             v_to.set_value(value(v_from, exception=False))
             if skip_stale:
@@ -156,12 +163,17 @@ def copy_var_list_values(from_list, to_list, config, skip_stale=False):
         except ValueError as err:
             err_msg = getattr(err, 'message', str(err))
             var_val = value(v_from)
-            rounded_val = int(round(var_val))
+            rounded_val = round(var_val)
             # Check to see if this is just a tolerance issue
-            if 'is not in domain Binary' in err_msg and (
+            if ignore_integrality \
+                and ('is not in domain Binary' in err_msg
+                or 'is not in domain Integers' in err_msg):
+               v_to.value = value(v_from, exception=False)
+            elif 'is not in domain Binary' in err_msg and (
                     fabs(var_val - 1) <= config.integer_tolerance or
                     fabs(var_val) <= config.integer_tolerance):
                 v_to.set_value(rounded_val)
+            # TODO What about PositiveIntegers etc?
             elif 'is not in domain Integers' in err_msg and (
                     fabs(var_val - rounded_val) <= config.integer_tolerance):
                 v_to.set_value(rounded_val)
