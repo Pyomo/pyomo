@@ -3845,25 +3845,25 @@ class Test(unittest.TestCase):
 
         e = (1 + m.v + m.w)*(m.v + m.w)
         rep = generate_standard_repn(e, compute_values=True)
-        self.assertEqual(str(rep.to_expression()), "v + w + v**2 + 2*v*w + w**2")
+        self.assertEqual(str(rep.to_expression()), "v + w + v**2 + 2*(v*w) + w**2")
         rep = generate_standard_repn(e, compute_values=True, quadratic=False)
         self.assertEqual(str(rep.to_expression()), "(1 + v + w)*(v + w)")
 
         e = (1 + m.v + m.w + m.v**2)*(m.v + m.w + m.v**2)
         rep = generate_standard_repn(e, compute_values=True)
-        self.assertEqual(str(rep.to_expression()), "v + w + 2*v**2 + 2*v*w + w**2 + (v + w)*v*v + v*v*(v + w)")
+        self.assertEqual(str(rep.to_expression()), "v + w + 2*v**2 + 2*(v*w) + w**2 + (v + w)*(v*v) + v*v*(v + w)")
         rep = generate_standard_repn(e, compute_values=True, quadratic=False)
         self.assertEqual(str(rep.to_expression()), "(1 + v + w + v**2)*(v + w + v**2)")
 
         e = (m.v + m.w + m.v**2)*(1 + m.v + m.w + m.v**2)
         rep = generate_standard_repn(e, compute_values=True)
-        self.assertEqual(str(rep.to_expression()), "v + w + 2*v**2 + 2*v*w + w**2 + (v + w)*v*v + v*v*(v + w)")
+        self.assertEqual(str(rep.to_expression()), "v + w + 2*v**2 + 2*(v*w) + w**2 + (v + w)*(v*v) + v*v*(v + w)")
         rep = generate_standard_repn(e, compute_values=True, quadratic=False)
         self.assertEqual(str(rep.to_expression()), "(v + w + v**2)*(1 + v + w + v**2)")
 
         e = (1 + m.v + m.w + m.v**2)*(1 + m.v + m.w + m.v**2)
         rep = generate_standard_repn(e, compute_values=True)
-        self.assertEqual(str(rep.to_expression()), "1 + 2*v + 2*w + 3*v**2 + 2*v*w + w**2 + (v + w)*v*v + v*v*(v + w)")
+        self.assertEqual(str(rep.to_expression()), "1 + 2*v + 2*w + 3*v**2 + 2*(v*w) + w**2 + (v + w)*(v*v) + v*v*(v + w)")
         rep = generate_standard_repn(e, compute_values=True, quadratic=False)
         self.assertEqual(str(rep.to_expression()), "(1 + v + w + v**2)*(1 + v + w + v**2)")
 
@@ -3897,7 +3897,7 @@ class Test(unittest.TestCase):
 
         e = sin(m.v)/m.p
         rep = generate_standard_repn(e, compute_values=False)
-        self.assertEqual(str(rep.to_expression()), "(1/p)*sin(v)")
+        self.assertEqual(str(rep.to_expression()), "1/p*sin(v)")
         rep = generate_standard_repn(e, compute_values=True)
         self.assertEqual(str(rep.to_expression()), "2.0*sin(v)")
 

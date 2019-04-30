@@ -8,12 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import pyutilib.th as unittest
-try:
-    from scipy.sparse import coo_matrix, bmat
-    import numpy as np
-except ImportError:
-    raise unittest.SkipTest(
-        "Pynumero needs scipy and numpy to run block matrix tests")
+
+from .. import numpy_available, scipy_available
+if not (numpy_available and scipy_available):
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+
+from scipy.sparse import coo_matrix, bmat
+import numpy as np
 
 from pyomo.contrib.pynumero.sparse import BlockSymMatrix
 from pyomo.contrib.pynumero.sparse.utils import is_symmetric_dense, is_symmetric_sparse

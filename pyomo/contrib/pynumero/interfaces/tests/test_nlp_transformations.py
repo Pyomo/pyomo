@@ -12,11 +12,12 @@ from pyomo.common.plugin import alias
 import pyomo.environ as aml
 import os
 
-try:
-    import scipy.sparse as spa
-    import numpy as np
-except ImportError:
+from .. import numpy_available, scipy_available
+if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+
+import scipy.sparse as spa
+import numpy as np
 
 from pyomo.contrib.pynumero.extensions.asl import AmplInterface
 

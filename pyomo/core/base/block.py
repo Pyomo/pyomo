@@ -10,7 +10,7 @@
 
 __all__ = ['Block', 'TraversalStrategy', 'SortComponents',
            'active_components', 'components', 'active_components_data',
-           'components_data']
+           'components_data', 'SimpleBlock']
 
 import copy
 import sys

@@ -179,7 +179,7 @@ class TestFBBT(unittest.TestCase):
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_pow1(self):
-        x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        x_bounds = [(0, 2.8), (0.5, 2.8), (1, 2.8), (0.5, 1)]
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
@@ -206,7 +206,7 @@ class TestFBBT(unittest.TestCase):
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_pow2(self):
         x_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
-        c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        c_bounds = [(-2.5, 2.8), (0.5, 2.8), (0, 2.8), (1, 2.8), (0.5, 1)]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
                 m = pe.Block(concrete=True)
@@ -228,9 +228,208 @@ class TestFBBT(unittest.TestCase):
                     _y = np.exp(np.log(abs(z)) / _x)
                     self.assertTrue(np.all(yl <= _y))
                     self.assertTrue(np.all(yu >= _y))
-                    _y = - _y
-                    self.assertTrue(np.all(yl <= _y))
-                    self.assertTrue(np.all(yu >= _y))
+
+    def test_x_sq(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.c = pe.Constraint(expr=m.x**2 == m.y)
+
+        fbbt(m)
+        self.assertEqual(m.x.lb, None)
+        self.assertEqual(m.x.ub, None)
+        self.assertEqual(m.y.lb, 0)
+        self.assertEqual(m.y.ub, None)
+
+        m.x.setlb(None)
+        m.x.setub(None)
+        m.y.setlb(1)
+        m.y.setub(4)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, -2)
+        self.assertAlmostEqual(m.x.ub, 2)
+
+        m.x.setlb(0)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, 1)
+        self.assertAlmostEqual(m.x.ub, 2)
+
+        m.x.setlb(-0.5)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, 1)
+        self.assertAlmostEqual(m.x.ub, 2)
+
+        m.x.setlb(-1)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, -1)
+        self.assertAlmostEqual(m.x.ub, 2)
+
+        m.x.setlb(None)
+        m.x.setub(0)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, -2)
+        self.assertAlmostEqual(m.x.ub, -1)
+
+        m.x.setlb(None)
+        m.x.setub(None)
+        m.y.setlb(-5)
+        m.y.setub(-1)
+        with self.assertRaises(ValueError):
+            fbbt(m)
+
+        m.y.setub(0)
+        fbbt(m)
+        self.assertEqual(m.x.lb, 0)
+        self.assertEqual(m.x.ub, 0)
+
+    def test_x_pow_minus_2(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.c = pe.Constraint(expr=m.x**(-2) == m.y)
+
+        fbbt(m)
+        self.assertEqual(m.x.lb, None)
+        self.assertEqual(m.x.ub, None)
+        self.assertEqual(m.y.lb, 0)
+        self.assertEqual(m.y.ub, None)
+
+        m.y.setlb(-5)
+        m.y.setub(-1)
+        with self.assertRaises(ValueError):
+            fbbt(m)
+
+        m.x.setlb(None)
+        m.x.setub(None)
+        m.y.setub(0)
+        with self.assertRaises(ValueError):
+            fbbt(m)
+
+        m.x.setlb(None)
+        m.x.setub(None)
+        m.y.setub(1)
+        m.y.setlb(0.25)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, -2)
+        self.assertAlmostEqual(m.x.ub, 2)
+
+        m.x.setlb(0)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, 1)
+        self.assertAlmostEqual(m.x.ub, 2)
+
+        m.x.setlb(None)
+        m.x.setub(0)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, -2)
+        self.assertAlmostEqual(m.x.ub, -1)
+
+    def test_x_cubed(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.c = pe.Constraint(expr=m.x**3 == m.y)
+
+        fbbt(m)
+        self.assertEqual(m.x.lb, None)
+        self.assertEqual(m.x.ub, None)
+        self.assertEqual(m.y.lb, None)
+        self.assertEqual(m.y.ub, None)
+
+        m.x.setlb(None)
+        m.x.setub(None)
+        m.y.setlb(1)
+        m.y.setub(8)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, 1)
+        self.assertAlmostEqual(m.x.ub, 2)
+
+        m.x.setlb(None)
+        m.x.setub(None)
+        m.y.setlb(-8)
+        m.y.setub(8)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, -2)
+        self.assertAlmostEqual(m.x.ub, 2)
+
+        m.x.setlb(None)
+        m.x.setub(None)
+        m.y.setlb(-5)
+        m.y.setub(8)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, -5.0**(1.0/3.0))
+        self.assertAlmostEqual(m.x.ub, 2)
+
+        m.x.setlb(None)
+        m.x.setub(None)
+        m.y.setlb(-8)
+        m.y.setub(-1)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, -2)
+        self.assertAlmostEqual(m.x.ub, -1)
+
+    def test_x_pow_minus_3(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.c = pe.Constraint(expr=m.x**(-3) == m.y)
+
+        fbbt(m)
+        self.assertEqual(m.x.lb, None)
+        self.assertEqual(m.x.ub, None)
+        self.assertEqual(m.y.lb, None)
+        self.assertEqual(m.y.ub, None)
+
+        m.y.setlb(-1)
+        m.y.setub(-0.125)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, -2)
+        self.assertAlmostEqual(m.x.ub, -1)
+
+        m.x.setlb(None)
+        m.x.setub(None)
+        m.y.setub(0)
+        fbbt(m)
+        self.assertEqual(m.x.lb, None)
+        self.assertAlmostEqual(m.x.ub, -1)
+
+        m.x.setlb(None)
+        m.x.setub(None)
+        m.y.setub(-1)
+        m.y.setlb(1)
+        fbbt(m)
+        self.assertEqual(m.x.lb, None)
+        self.assertEqual(m.x.ub, None)
+
+        m.y.setlb(0.125)
+        m.y.setub(1)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, 1)
+        self.assertAlmostEqual(m.x.ub, 2)
+
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
+    def test_pow4(self):
+        y_bounds = [(0.5, 2.8), (0, 2.8), (1, 2.8), (0.5, 1), (0, 0.5)]
+        exp_vals = [-3, -2.5, -2, -1.5, -1, -0.5, 0.5, 1, 1.5, 2, 2.5, 3]
+        for yl, yu in y_bounds:
+            for _exp_val in exp_vals:
+                m = pe.Block(concrete=True)
+                m.x = pe.Var()
+                m.y = pe.Var(bounds=(yl, yu))
+                m.c = pe.Constraint(expr=m.x**_exp_val == m.y)
+                fbbt(m)
+                y = np.linspace(pe.value(m.y.lb) + 1e-6, pe.value(m.y.ub), 100, endpoint=True)
+                if m.x.lb is None:
+                    xl = -np.inf
+                else:
+                    xl = m.x.lb
+                if m.x.ub is None:
+                    xu = np.inf
+                else:
+                    xu = m.x.ub
+                _x = np.exp(np.log(y) / _exp_val)
+                self.assertTrue(np.all(xl <= _x))
+                self.assertTrue(np.all(xu >= _x))
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_exp(self):
@@ -415,21 +614,6 @@ class TestFBBT(unittest.TestCase):
         self.assertTrue(m.c.active)
         fbbt(m, deactivate_satisfied_constraints=True)
         self.assertFalse(m.c.active)
-
-    def test_no_update_bounds(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(0, 1))
-        m.y = pe.Var(bounds=(1, 1))
-        m.c = pe.Constraint(expr=m.x + m.y == 1)
-        new_bounds = fbbt(m, update_variable_bounds=False)
-        self.assertEqual(pe.value(m.x.lb), 0)
-        self.assertEqual(pe.value(m.x.ub), 1)
-        self.assertEqual(pe.value(m.y.lb), 1)
-        self.assertEqual(pe.value(m.y.ub), 1)
-        self.assertAlmostEqual(new_bounds[m.x][0], 0, 12)
-        self.assertAlmostEqual(new_bounds[m.x][1], 0, 12)
-        self.assertAlmostEqual(new_bounds[m.y][0], 1, 12)
-        self.assertAlmostEqual(new_bounds[m.y][1], 1, 12)
 
     @unittest.skip('This test passes locally, but not on travis or appveyor. I will add an issue.')
     def test_skip_unknown_expression1(self):
