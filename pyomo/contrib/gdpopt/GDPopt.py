@@ -14,11 +14,10 @@
 from __future__ import division
 
 import logging
-import timeit
 
 from pyomo.common.config import (
     ConfigBlock, ConfigList, ConfigValue, In, NonNegativeFloat, NonNegativeInt,
-    add_docstring_list
+    add_docstring_list, PositiveInt
 )
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
@@ -76,13 +75,13 @@ class GDPoptSolver(object):
         default=30, domain=NonNegativeInt,
         description="Iteration limit."
     ))
-    CONFIG.declare("reslim", ConfigValue(
-        default=float('inf'), domain=NonNegativeFloat,
-        description="Time limit (rudimentary). You need to also set subsolver time limits for now."
-    ))
     CONFIG.declare("time_limit", ConfigValue(
-        default=float('inf'), domain=NonNegativeFloat,
-        description="Time limit (rudimentary). You need to also set subsolver time limits for now."
+        default=600,
+        domain=PositiveInt,
+        description="Time limit (seconds, default=600)",
+        doc="Seconds allowed until terminated. Note that the time limit can"
+            "currently only be enforced between subsolver invocations. You may"
+            "need to set subsolver time limits as well."
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="LOA", domain=In(["LOA", "GLOA"]),
@@ -257,10 +256,9 @@ class GDPoptSolver(object):
         solve_data = GDPoptSolveData()
         solve_data.results = SolverResults()
         solve_data.timing = Container()
-        solve_data.start_time = timeit.default_timer()
 
         old_logger_level = config.logger.getEffectiveLevel()
-        with time_code(solve_data.timing, 'total'), \
+        with time_code(solve_data.timing, 'total', is_main_timer=True), \
                 restore_logger_level(config.logger), \
                 create_utility_block(model, 'GDPopt_utils', solve_data):
             if config.tee and old_logger_level > logging.INFO:
