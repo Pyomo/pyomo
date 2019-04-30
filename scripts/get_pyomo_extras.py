@@ -31,5 +31,4 @@ if __name__ == '__main__':
         extras = __import__('extras')
         extras.install_extras()
     except:
-        raise
         print("Error running get-pyomo-extras.py")
