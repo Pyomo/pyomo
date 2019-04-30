@@ -2,6 +2,8 @@
 from __future__ import division
 
 import logging
+
+import six
 from math import fabs, floor, log
 
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
@@ -352,8 +354,8 @@ def time_code(timing_data_obj, code_block_name, is_main_timer=False):
     """Starts timer at entry, stores elapsed time at exit
 
     If `is_main_timer=True`, the start time is stored in the timing_data_obj,
-    allowing to calculate the total elapsed time 'on the fly' (i.e. to abort
-    the calculation after a specified time
+    allowing calculation of total elapsed time 'on the fly' (e.g. to enforce
+    a time limit) using `get_main_elapsed_time(timing_data_obj)`.
     """
     start_time = timeit.default_timer()
     if is_main_timer:
@@ -370,8 +372,10 @@ def get_main_elapsed_time(timing_data_obj):
     try:
         return current_time - timing_data_obj.main_timer_start_time
     except AttributeError as e:
-        raise AttributeError("{}.\nYou need to be in a 'time_code' context to" \
-                             "get the main elapsed time".format(str(e)))
+        if 'main_timer_start_time' in str(e):
+            six.raise_from(e, AttributeError(
+                "You need to be in a 'time_code' context to use `get_main_elapsed_time()`."
+            ))
 
 
 @contextmanager

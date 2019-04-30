@@ -70,7 +70,7 @@ class MindtPySolver(object):
     CONFIG.declare("time_limit", ConfigValue(
         default=600,
         domain=PositiveInt,
-        description="Time limit (seconds)",
+        description="Time limit (seconds, default=600)",
         doc="Seconds allowed until terminated. Note that the time limit can"
             "currently only be enforced between subsolver invocations. You may"
             "need to set subsolver time limits as well."
