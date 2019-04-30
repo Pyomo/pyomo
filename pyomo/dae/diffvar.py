@@ -86,7 +86,10 @@ class DerivativeVar(Var):
 
         try:
             num_contset = len(sVar._contset)
-        except:
+        except AttributeError:
+            # This dictionary keeps track of where the ContinuousSet appears
+            # in the index. This implementation assumes that every element
+            # in an indexing set has the same dimension.
             sVar._contset = {}
             sVar._derivative = {}
             if sVar.dim() == 0:
@@ -97,9 +100,11 @@ class DerivativeVar(Var):
                     sVar._contset[sidx_sets] = 0
             else:
                 sidx_sets = sVar._implicit_subsets
+                loc = 0
                 for i, s in enumerate(sidx_sets):
                     if s.type() is ContinuousSet:
-                        sVar._contset[s] = i
+                        sVar._contset[s] = loc
+                    loc += s.dimen
             num_contset = len(sVar._contset)
 
         if num_contset == 0:
