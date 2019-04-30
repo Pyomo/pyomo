@@ -1,7 +1,8 @@
 """Iteration loop for MindtPy."""
 from __future__ import division
 
-from pyomo.contrib.mindtpy.mip_solve import (solve_OA_master)
+from pyomo.contrib.mindtpy.mip_solve import (solve_OA_master,
+        handle_master_mip_optimal, handle_master_mip_other_conditions)
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
     handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
     handle_NLP_subproblem_other_termination)
@@ -11,9 +12,8 @@ from pyomo.contrib.gdpopt.util import get_main_elapsed_time
 
 
 def MindtPy_iteration_loop(solve_data, config):
-    m = solve_data.working_model
-    main_objective = next(m.component_data_objects(Objective, active=True))
-    MindtPy = m.MindtPy_utils
+    working_model = solve_data.working_model
+    main_objective = next(working_model.component_data_objects(Objective, active=True))
     while solve_data.mip_iter < config.iteration_limit:
         config.logger.info(
             '---MindtPy Master Iteration %s---'
@@ -25,7 +25,14 @@ def MindtPy_iteration_loop(solve_data, config):
         solve_data.mip_subiter = 0
         # solve MILP master problem
         if config.strategy == 'OA':
-            solve_OA_master(solve_data, config)
+            master_mip, master_mip_results = solve_OA_master(solve_data, config)
+            if master_mip_results.solver.termination_condition is tc.optimal:
+                handle_master_mip_optimal(master_mip, solve_data, config)
+            else:
+                handle_master_mip_other_conditions(master_mip, master_mip_results,
+                                                   solve_data, config)
+            # Call the MILP post-solve callback
+            config.call_after_master_solve(master_mip, solve_data)
         else:
             raise NotImplementedError()
 
