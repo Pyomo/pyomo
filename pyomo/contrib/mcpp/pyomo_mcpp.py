@@ -51,6 +51,131 @@ NPV_expressions = (
     NPV_UnaryFunctionExpression)
 
 
+def _MCPP_lib():
+    """A singleton interface to the MC++ library"""
+    if _MCPP_lib._mcpp is not None:
+        return _MCPP_lib._mcpp
+
+    _MCPP_lib._mcpp = mcpp = ctypes.CDLL(Library('mcppInterface').path())
+
+    mcpp.toString.argtypes = [ctypes.c_void_p]
+    mcpp.toString.restype = ctypes.c_char_p
+
+    mcpp.lower.argtypes = [ctypes.c_void_p]
+    mcpp.lower.restype = ctypes.c_double
+
+    mcpp.upper.argtypes = [ctypes.c_void_p]
+    mcpp.upper.restype = ctypes.c_double
+
+    mcpp.concave.argtypes = [ctypes.c_void_p]
+    mcpp.concave.restype = ctypes.c_double
+
+    mcpp.convex.argtypes = [ctypes.c_void_p]
+    mcpp.convex.restype = ctypes.c_double
+
+    mcpp.subcc.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    mcpp.subcc.restype = ctypes.c_double
+
+    mcpp.subcv.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    mcpp.subcv.restype = ctypes.c_double
+
+    # Create MC type variable
+    mcpp.newVar.argtypes = [ctypes.c_double, ctypes.c_double,
+                                 ctypes.c_double, ctypes.c_int, ctypes.c_int]
+    mcpp.newVar.restype = ctypes.c_void_p
+
+    # Create MC type constant
+    mcpp.newConstant.argtypes = [ctypes.c_double]
+    mcpp.newConstant.restype = ctypes.c_void_p
+
+    # Multiply MC objects
+    mcpp.multiply.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    mcpp.multiply.restype = ctypes.c_void_p
+
+    # Add MC objects
+    mcpp.add.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    mcpp.add.restype = ctypes.c_void_p
+
+    # pow(x, y) functions
+    # y is integer
+    mcpp.power.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    mcpp.power.restype = ctypes.c_void_p
+    # y is fractional
+    mcpp.powerf.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    mcpp.powerf.restype = ctypes.c_void_p
+    # y is an expression
+    mcpp.powerx.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    mcpp.powerx.restype = ctypes.c_void_p
+
+    # sqrt function
+    mcpp.mc_sqrt.argtypes = [ctypes.c_void_p]
+    mcpp.mc_sqrt.restype = ctypes.c_void_p
+
+    # 1 / MC Variable
+    mcpp.reciprocal.argtypes = [ctypes.c_void_p]
+    mcpp.reciprocal.restype = ctypes.c_void_p
+
+    # - MC Variable
+    mcpp.negation.argtypes = [ctypes.c_void_p]
+    mcpp.negation.restype = ctypes.c_void_p
+
+    # fabs(MC Variable)
+    mcpp.mc_abs.argtypes = [ctypes.c_void_p]
+    mcpp.mc_abs.restype = ctypes.c_void_p
+
+    # sin(MC Variable)
+    mcpp.trigSin.argtypes = [ctypes.c_void_p]
+    mcpp.trigSin.restype = ctypes.c_void_p
+
+    # cos(MC Variable)
+    mcpp.trigCos.argtypes = [ctypes.c_void_p]
+    mcpp.trigCos.restype = ctypes.c_void_p
+
+    # tan(MC Variable)
+    mcpp.trigTan.argtypes = [ctypes.c_void_p]
+    mcpp.trigTan.restype = ctypes.c_void_p
+
+    # asin(MC Variable)
+    mcpp.atrigSin.argtypes = [ctypes.c_void_p]
+    mcpp.atrigSin.restype = ctypes.c_void_p
+
+    # acos(MC Variable)
+    mcpp.atrigCos.argtypes = [ctypes.c_void_p]
+    mcpp.atrigCos.restype = ctypes.c_void_p
+
+    # atan(MC Variable)
+    mcpp.atrigTan.argtypes = [ctypes.c_void_p]
+    mcpp.atrigTan.restype = ctypes.c_void_p
+
+    # exp(MC Variable)
+    mcpp.exponential.argtypes = [ctypes.c_void_p]
+    mcpp.exponential.restype = ctypes.c_void_p
+
+    # log(MC Variable)
+    mcpp.logarithm.argtypes = [ctypes.c_void_p]
+    mcpp.logarithm.restype = ctypes.c_void_p
+
+    # Releases object from memory (prevent memory leaks)
+    mcpp.release.argtypes = [ctypes.c_void_p]
+
+    # Unary function exception wrapper
+    mcpp.try_unary_fcn.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    mcpp.try_unary_fcn.restype = ctypes.c_void_p
+
+    # Binary function exception wrapper
+    mcpp.try_binary_fcn.argtypes = [ctypes.c_void_p, ctypes.c_void_p,
+                                         ctypes.c_void_p]
+    mcpp.try_binary_fcn.restype = ctypes.c_void_p
+
+    # Error message retrieval
+    mcpp.get_last_exception_message.restype = ctypes.c_char_p
+
+    return mcpp
+
+# Initialize the singleton to None
+_MCPP_lib._mcpp = None
+
+
 class MCPP_Error(Exception):
     pass
 
@@ -61,14 +186,18 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
     This class walks a pyomo expression tree and builds up the corresponding
     expression of type McCormick.
 
+    Note on memory management: The MCPP_visitor will return a pointer to
+    an MC++ interval object that was dynamically alloacted within the C
+    interface.  It is the caller's responsibility to call
+    `mcpp_lib.release()` on that object to prevent a memory leak
+
     """
 
-    def __init__(self, mcpp_lib, expression, improved_var_bounds=ComponentMap()):
+    def __init__(self, expression, improved_var_bounds=None):
         super(MCPP_visitor, self).__init__()
+        self.mcpp = _MCPP_lib()
         self.missing_value_warnings = []
         self.expr = expression
-        self.mcpp = mcpp_lib
-        self.declare_mcpp_library_calls()
         vars = list(identify_variables(expression, include_fixed=False))
         self.num_vars = len(vars)
         # Map expression variables to MC variables
@@ -76,103 +205,22 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         # Map expression variables to their index
         self.var_to_idx = ComponentMap()
         # Pre-register all variables
+        inf = float('inf')
         for i, var in enumerate(vars):
             self.var_to_idx[var] = i
             # check if improved variable bound is provided
-            inf = float('inf')
-            lb, ub = improved_var_bounds.get(var, (-inf, inf))
+            if improved_var_bounds is not None:
+                lb, ub = improved_var_bounds.get(var, (-inf, inf))
+            else:
+                lb, ub = -inf, inf
             self.known_vars[var] = self.register_var(var, lb, ub)
+        self.refs = None
+
+    def walk_expression(self):
         self.refs = set()
-
-    def declare_mcpp_library_calls(self):
-        # Create MC type variable
-        self.mcpp.newVar.argtypes = [ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_int, ctypes.c_int]
-        self.mcpp.newVar.restype = ctypes.c_void_p
-
-        # Create MC type constant
-        self.mcpp.newConstant.argtypes = [ctypes.c_double]
-        self.mcpp.newConstant.restype = ctypes.c_void_p
-
-        # Multiply MC objects
-        self.mcpp.multiply.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-        self.mcpp.multiply.restype = ctypes.c_void_p
-
-        # Add MC objects
-        self.mcpp.add.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-        self.mcpp.add.restype = ctypes.c_void_p
-
-        # pow(x, y) functions
-        # y is integer
-        self.mcpp.power.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-        self.mcpp.power.restype = ctypes.c_void_p
-        # y is fractional
-        self.mcpp.powerf.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-        self.mcpp.powerf.restype = ctypes.c_void_p
-        # y is an expression
-        self.mcpp.powerx.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-        self.mcpp.powerx.restype = ctypes.c_void_p
-
-        # sqrt function
-        self.mcpp.mc_sqrt.argtypes = [ctypes.c_void_p]
-        self.mcpp.mc_sqrt.restype = ctypes.c_void_p
-
-        # 1 / MC Variable
-        self.mcpp.reciprocal.argtypes = [ctypes.c_void_p]
-        self.mcpp.reciprocal.restype = ctypes.c_void_p
-
-        # - MC Variable
-        self.mcpp.negation.argtypes = [ctypes.c_void_p]
-        self.mcpp.negation.restype = ctypes.c_void_p
-
-        # fabs(MC Variable)
-        self.mcpp.mc_abs.argtypes = [ctypes.c_void_p]
-        self.mcpp.mc_abs.restype = ctypes.c_void_p
-
-        # sin(MC Variable)
-        self.mcpp.trigSin.argtypes = [ctypes.c_void_p]
-        self.mcpp.trigSin.restype = ctypes.c_void_p
-
-        # cos(MC Variable)
-        self.mcpp.trigCos.argtypes = [ctypes.c_void_p]
-        self.mcpp.trigCos.restype = ctypes.c_void_p
-
-        # tan(MC Variable)
-        self.mcpp.trigTan.argtypes = [ctypes.c_void_p]
-        self.mcpp.trigTan.restype = ctypes.c_void_p
-
-        # asin(MC Variable)
-        self.mcpp.atrigSin.argtypes = [ctypes.c_void_p]
-        self.mcpp.atrigSin.restype = ctypes.c_void_p
-
-        # acos(MC Variable)
-        self.mcpp.atrigCos.argtypes = [ctypes.c_void_p]
-        self.mcpp.atrigCos.restype = ctypes.c_void_p
-
-        # atan(MC Variable)
-        self.mcpp.atrigTan.argtypes = [ctypes.c_void_p]
-        self.mcpp.atrigTan.restype = ctypes.c_void_p
-
-        # exp(MC Variable)
-        self.mcpp.exponential.argtypes = [ctypes.c_void_p]
-        self.mcpp.exponential.restype = ctypes.c_void_p
-
-        # log(MC Variable)
-        self.mcpp.logarithm.argtypes = [ctypes.c_void_p]
-        self.mcpp.logarithm.restype = ctypes.c_void_p
-
-        # Releases object from memory (prevent memory leaks)
-        self.mcpp.release.argtypes = [ctypes.c_void_p]
-
-        # Unary function exception wrapper
-        self.mcpp.try_unary_fcn.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-        self.mcpp.try_unary_fcn.restype = ctypes.c_void_p
-
-        # Binary function exception wrapper
-        self.mcpp.try_binary_fcn.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
-        self.mcpp.try_binary_fcn.restype = ctypes.c_void_p
-
-        # Error message retrieval
-        self.mcpp.get_last_exception_message.restype = ctypes.c_char_p
+        ans = super(MCPP_visitor, self).walk_expression(self.expr)
+        self.refs = None
+        return ans
 
     def exitNode(self, node, data):
         if isinstance(node, ProductExpression):
@@ -288,20 +336,18 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         if var_val is None:
             var_val = (lb + ub) / 2
             self.missing_value_warnings.append(
-                'Var %s missing value. Assuming midpoint value of %s' % (var.name, var_val))
+                'Var %s missing value. Assuming midpoint value of %s'
+                % (var.name, var_val))
         return self.mcpp.newVar(
             lb, var_val, ub, self.num_vars, var_idx)
 
     def finalizeResult(self, node_result):
-        for r in self.refs:
-            if r != node_result:
-                self.mcpp.release(r)
-        self.refs = [node_result, ]
-        return node_result
-
-    def __del__(self):
+        # Note, the node_result should NOT be in self.refs
+        #    self.refs.remove(node_result)
+        assert node_result not in self.refs
         for r in self.refs:
             self.mcpp.release(r)
+        return node_result
 
 
 class McCormick(object):
@@ -342,35 +388,22 @@ class McCormick(object):
     pyomo side and the current point on the MC++ side.
                                                                     """
 
-    def __init__(self, expression, improved_var_bounds=ComponentMap()):
-        self.mcpp_lib = ctypes.CDLL(Library('mcppInterface').path())
+    def __init__(self, expression, improved_var_bounds=None):
+        # Guarantee that McCormick objects have mc_expr defined
+        self.mc_expr = None
+
+        self.mcpp = _MCPP_lib()
         self.pyomo_expr = expression
-        self.visitor = MCPP_visitor(self.mcpp_lib, expression, improved_var_bounds)
-        self.mc_expr = self.visitor.walk_expression(expression)
+        self.visitor = MCPP_visitor(expression, improved_var_bounds)
+        self.mc_expr = self.visitor.walk_expression()
 
-        self.mcpp_lib.toString.argtypes = [ctypes.c_void_p]
-        self.mcpp_lib.toString.restype = ctypes.c_char_p
-
-        self.mcpp_lib.lower.argtypes = [ctypes.c_void_p]
-        self.mcpp_lib.lower.restype = ctypes.c_double
-
-        self.mcpp_lib.upper.argtypes = [ctypes.c_void_p]
-        self.mcpp_lib.upper.restype = ctypes.c_double
-
-        self.mcpp_lib.concave.argtypes = [ctypes.c_void_p]
-        self.mcpp_lib.concave.restype = ctypes.c_double
-
-        self.mcpp_lib.convex.argtypes = [ctypes.c_void_p]
-        self.mcpp_lib.convex.restype = ctypes.c_double
-
-        self.mcpp_lib.subcc.argtypes = [ctypes.c_void_p, ctypes.c_int]
-        self.mcpp_lib.subcc.restype = ctypes.c_double
-
-        self.mcpp_lib.subcv.argtypes = [ctypes.c_void_p, ctypes.c_int]
-        self.mcpp_lib.subcv.restype = ctypes.c_double
+    def __del__(self):
+        if self.mc_expr is not None:
+            self.mcpp.release(self.mc_expr)
+            self.mc_expr = None
 
     def __repn__(self):
-        repn = self.mcpp_lib.toString(self.mc_expr)
+        repn = self.mcpp.toString(self.mc_expr)
         if six.PY3:
             repn = repn.decode("utf-8")
         return repn
@@ -379,25 +412,25 @@ class McCormick(object):
         return self.__repn__()
 
     def lower(self):
-        return self.mcpp_lib.lower(self.mc_expr)
+        return self.mcpp.lower(self.mc_expr)
 
     def upper(self):
-        return self.mcpp_lib.upper(self.mc_expr)
+        return self.mcpp.upper(self.mc_expr)
 
     def concave(self):
         self.warn_if_var_missing_value()
-        return self.mcpp_lib.concave(self.mc_expr)
+        return self.mcpp.concave(self.mc_expr)
 
     def convex(self):
         self.warn_if_var_missing_value()
-        return self.mcpp_lib.convex(self.mc_expr)
+        return self.mcpp.convex(self.mc_expr)
 
     def subcc(self):
         self.warn_if_var_missing_value()
         ans = ComponentMap()
         for key in self.visitor.var_to_idx:
             i = self.visitor.var_to_idx[key]
-            ans[key] = self.mcpp_lib.subcc(self.mc_expr, i)
+            ans[key] = self.mcpp.subcc(self.mc_expr, i)
         return ans
 
     def subcv(self):
@@ -405,18 +438,20 @@ class McCormick(object):
         ans = ComponentMap()
         for key in self.visitor.var_to_idx:
             i = self.visitor.var_to_idx[key]
-            ans[key] = self.mcpp_lib.subcv(self.mc_expr, i)
+            ans[key] = self.mcpp.subcv(self.mc_expr, i)
         return ans
 
     def changePoint(self, var, point):
         var.set_value(point)
-        # WARNING: TODO: this has side effects
-        self.visitor = MCPP_visitor(self.mcpp_lib, self.pyomo_expr)
-        self.mc_expr = self.visitor.walk_expression(self.pyomo_expr)
+        # WARNING: TODO: this has side effects.  If we do not use a
+        # fresh MCPP_visitor, we get segfaults and different results.
+        self.visitor = MCPP_visitor(self.visitor.expr)
+        self.mcpp.release(self.mc_expr)
+        self.mc_expr = self.visitor.walk_expression()
 
     def warn_if_var_missing_value(self):
         if self.visitor.missing_value_warnings:
             for message in self.visitor.missing_value_warnings:
                 logger.warning(message)
-            del self.visitor.missing_value_warnings[:]  # list.clear() does not exist in python 2.7
+            self.visitor.missing_value_warnings = []
 
