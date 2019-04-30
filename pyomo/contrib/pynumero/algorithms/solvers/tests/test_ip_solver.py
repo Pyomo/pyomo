@@ -11,11 +11,13 @@ import pyutilib.th as unittest
 import pyomo.environ as aml
 import os
 
-try:
-    import scipy.sparse as spa
-    import numpy as np
-except ImportError:
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+
+import pyomo.contrib.pynumero as pn
+if not (pn.sparse.numpy_available and pn.sparse.scipy_available):
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run InteriorPointSolver tests")
+
+import scipy.sparse as spa
+import numpy as np
 
 from pyomo.contrib.pynumero.extensions.asl import AmplInterface
 if not AmplInterface.available():
@@ -28,7 +30,7 @@ except ImportError:
     raise unittest.SkipTest("Pynumero needs ma27 or mumps linear solver to run InteriorPointSolver tests")
 
 from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP
-from pyomo.contrib.pynumero.algorithms.solvers.tests import cute_models
+from pyomo.contrib.pynumero.algorithms.solvers.tests import ip_test_models
 
 from inspect import getmembers, isfunction
 
@@ -40,7 +42,7 @@ class TestInteriorPointSolver(unittest.TestCase):
         cls.ipopt = aml.SolverFactory('ipopt')
         cls.ipopt.options['nlp_scaling_method'] = 'none'
         cls.ipopt.options['linear_system_scaling'] = 'none'
-        cls.functions_list = {o[0]:o[1] for o in getmembers(cute_models) if isfunction(o[1])}
+        cls.functions_list = {o[0]:o[1] for o in getmembers(ip_test_models) if isfunction(o[1])}
 
     def test_model1(self):
 
@@ -161,7 +163,7 @@ class TestInteriorPointSolver(unittest.TestCase):
         self.assertTrue(np.allclose(x, xx, atol=1e-4))
 
     def test_model10(self):
-        model = self.functions_list['create_model11']()
+        model = self.functions_list['create_model10']()
 
         nlp1 = PyomoNLP(model)
         opt = InteriorPointSolver(nlp1)
@@ -174,7 +176,7 @@ class TestInteriorPointSolver(unittest.TestCase):
         self.assertTrue(np.allclose(x, xx, atol=1e-4))
 
     def test_model11(self):
-        model = self.functions_list['create_model13']()
+        model = self.functions_list['create_model11']()
 
         nlp1 = PyomoNLP(model)
         opt = InteriorPointSolver(nlp1)
@@ -188,7 +190,7 @@ class TestInteriorPointSolver(unittest.TestCase):
         self.assertTrue(np.allclose(x, xx, atol=1e-4))
 
     def test_model12(self):
-        model = self.functions_list['create_model14']()
+        model = self.functions_list['create_model12']()
 
         nlp1 = PyomoNLP(model)
         opt = InteriorPointSolver(nlp1)
@@ -202,7 +204,7 @@ class TestInteriorPointSolver(unittest.TestCase):
         self.assertTrue(np.allclose(x, xx, atol=1e-4))
 
     def test_model13(self):
-        model = self.functions_list['create_model16']()
+        model = self.functions_list['create_model13']()
 
         nlp1 = PyomoNLP(model)
         opt = InteriorPointSolver(nlp1)
@@ -216,7 +218,7 @@ class TestInteriorPointSolver(unittest.TestCase):
         self.assertTrue(np.allclose(x, xx, atol=1e-4))
 
     def test_model14(self):
-        model = self.functions_list['create_model17']()
+        model = self.functions_list['create_model14']()
 
         nlp1 = PyomoNLP(model)
         opt = InteriorPointSolver(nlp1)
@@ -230,7 +232,7 @@ class TestInteriorPointSolver(unittest.TestCase):
         self.assertTrue(np.allclose(x, xx, atol=1e-4))
 
     def test_model15(self):
-        model = self.functions_list['create_model18']()
+        model = self.functions_list['create_model15']()
 
         nlp1 = PyomoNLP(model)
         opt = InteriorPointSolver(nlp1)
@@ -244,7 +246,7 @@ class TestInteriorPointSolver(unittest.TestCase):
         self.assertTrue(np.allclose(x, xx, atol=1e-4))
 
     def test_model16(self):
-        model = self.functions_list['create_model19']()
+        model = self.functions_list['create_model16']()
 
         nlp1 = PyomoNLP(model)
         opt = InteriorPointSolver(nlp1)
@@ -258,7 +260,7 @@ class TestInteriorPointSolver(unittest.TestCase):
         self.assertTrue(np.allclose(x, xx, atol=1e-4))
 
     def test_model17(self):
-        model = self.functions_list['create_model20']()
+        model = self.functions_list['create_model17']()
 
         nlp1 = PyomoNLP(model)
         opt = InteriorPointSolver(nlp1)
@@ -272,7 +274,7 @@ class TestInteriorPointSolver(unittest.TestCase):
         self.assertTrue(np.allclose(x, xx, atol=1e-4))
 
     def test_model18(self):
-        model = self.functions_list['create_model22']()
+        model = self.functions_list['create_model18']()
 
         nlp1 = PyomoNLP(model)
         opt = InteriorPointSolver(nlp1)
@@ -286,7 +288,7 @@ class TestInteriorPointSolver(unittest.TestCase):
         self.assertTrue(np.allclose(x, xx, atol=1e-4))
 
     def test_model19(self):
-        model = self.functions_list['create_model23']()
+        model = self.functions_list['create_model19']()
 
         nlp1 = PyomoNLP(model)
         opt = InteriorPointSolver(nlp1)
@@ -300,7 +302,7 @@ class TestInteriorPointSolver(unittest.TestCase):
         self.assertTrue(np.allclose(x, xx, atol=1e-4))
 
     def test_model20(self):
-        model = self.functions_list['create_model24']()
+        model = self.functions_list['create_model20']()
 
         nlp1 = PyomoNLP(model)
         opt = InteriorPointSolver(nlp1)
