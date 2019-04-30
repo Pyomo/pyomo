@@ -36,7 +36,7 @@ def add_objective_linearization(solve_data, config):
 
 
 def add_oa_cut(var_values, duals, solve_data, config, ignore_integrality=False):
-    """TODO
+    """TODO-romeo
 
     ignore_integrality: useful for cut in initial relaxation
     """

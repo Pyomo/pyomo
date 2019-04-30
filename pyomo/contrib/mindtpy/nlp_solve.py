@@ -38,7 +38,7 @@ def solve_NLP_subproblem(solve_data, config):
         if v.is_binary():
             v.fix(int(round(value(v))))
     # TransformationFactory('core.fix_discrete').apply_to(fix_nlp)
-    # I think the transformation factory is broken
+    # I think the transformation factory is broken TODO-romeo
 
     # restore original variable values
     for nlp_var, orig_val in zip(

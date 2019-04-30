@@ -33,6 +33,7 @@ def MindtPy_iteration_loop(solve_data, config):
             break
 
         # Solve NLP subproblem
+        # The constraint linearization happens in the handlers
         fix_nlp, fix_nlp_result = solve_NLP_subproblem(solve_data, config)
         if fix_nlp_result.solver.termination_condition is tc.optimal:
             handle_NLP_subproblem_optimal(fix_nlp, solve_data, config)
@@ -83,6 +84,8 @@ def algorithm_should_terminate(solve_data, config):
     """Check if the algorithm should terminate.
 
     Termination conditions based on solver options and progress.
+    Sets the solve_data.results.solver.termination_condition to the appropriate
+    condition, i.e. optimal, maxIterations, maxTimeLimit
 
     """
     # Check bound convergence
