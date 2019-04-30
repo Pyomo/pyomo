@@ -1,13 +1,12 @@
 import heapq
 import logging
-import timeit
 
 from pyutilib.misc import Container
 
-from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat)
+from pyomo.common.config import (ConfigBlock, ConfigValue, PositiveInt)
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdpopt.util import create_utility_block, time_code, a_logger, restore_logger_level, \
-    setup_results_object
+    setup_results_object, get_main_elapsed_time
 from pyomo.contrib.satsolver.satsolver import satisfiable
 from pyomo.core.base import (
     Objective, TransformationFactory,
@@ -61,8 +60,12 @@ class GDPbbSolver(object):
         domain=a_logger
     ))
     CONFIG.declare("time_limit", ConfigValue(
-        default=float('inf'), domain=NonNegativeFloat,
-        description="Time limit (rudimentary). You need to also set subsolver time limits for now."
+        default=600,
+        domain=PositiveInt,
+        description="Time limit (seconds, default=600)",
+        doc="Seconds allowed until terminated. Note that the time limit can"
+            "currently only be enforced between subsolver invocations. You may"
+            "need to set subsolver time limits as well."
     ))
 
     def available(self, exception_flag=True):
@@ -89,10 +92,9 @@ class GDPbbSolver(object):
         solve_data.timing = Container()
         solve_data.original_model = model
         solve_data.results = SolverResults()
-        solve_data.start_time = timeit.default_timer()
 
         old_logger_level = config.logger.getEffectiveLevel()
-        with time_code(solve_data.timing, 'total'), \
+        with time_code(solve_data.timing, 'total', is_main_timer=True), \
                 restore_logger_level(config.logger), \
                 create_utility_block(model, 'GDPbb_utils', solve_data):
             if config.tee and old_logger_level > logging.INFO:
@@ -195,11 +197,17 @@ class GDPbbSolver(object):
                         disj.indicator_var = 0  # initially set all indicator vars to zero
                 added_disj_counter = 0
                 for disj in next_disjunction.disjuncts:
-                    elapsed = timeit.default_timer() - solve_data.start_time
-                    if elapsed >= config.time_limit:
-                        config.logger.info("Time limit reached. No solution obtained.")
+                    if get_main_elapsed_time(solve_data.timing) >= config.time_limit:
                         solve_data.results.problem.lower_bound = mdl_results.problem.lower_bound
                         solve_data.results.problem.upper_bound = float('inf')
+                        config.logger.info(
+                            'GDPopt unable to converge bounds '
+                            'before time limit of {} seconds. '
+                            'Elapsed: {} seconds'
+                            .format(config.time_limit, get_main_elapsed_time(solve_data.timing)))
+                        config.logger.info(
+                            'Final bound values: LB: {}  UB: {}'.
+                            format(solve_data.results.problem.lower_bound, solve_data.results.problem.upper_bound))
                         solve_data.results.solver.timing = solve_data.timing
                         solve_data.results.solver.iterations = counter
                         solve_data.results.solver.termination_condition = mdl_results.solver.termination_condition
