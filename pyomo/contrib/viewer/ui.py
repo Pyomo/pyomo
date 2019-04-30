@@ -23,7 +23,11 @@ import threading
 import datetime
 import json
 import sys
-from IPython import get_ipython
+try:
+    from IPython import get_ipython
+except ImportError:
+    def get_ipython():
+        raise AttributeError("IPython not available")
 import pyomo.contrib.viewer.report as rpt
 import pyomo.environ as pe
 
