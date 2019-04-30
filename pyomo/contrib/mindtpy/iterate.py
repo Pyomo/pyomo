@@ -2,7 +2,9 @@
 from __future__ import division
 
 from pyomo.contrib.mindtpy.mip_solve import (solve_OA_master)
-from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
+from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
+    handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
+    handle_NLP_subproblem_other_termination)
 from pyomo.core import minimize, Objective
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time
@@ -31,7 +33,18 @@ def MindtPy_iteration_loop(solve_data, config):
             break
 
         # Solve NLP subproblem
-        solve_NLP_subproblem(solve_data, config)
+        fix_nlp, fix_nlp_result = solve_NLP_subproblem(solve_data, config)
+        if fix_nlp_result.solver.termination_condition is tc.optimal:
+            handle_NLP_subproblem_optimal(fix_nlp, fix_nlp_result,
+                                          solve_data, config)
+        elif fix_nlp_result.solver.termination_condition is tc.infeasible:
+            handle_NLP_subproblem_infeasible(fix_nlp, fix_nlp_result,
+                                             solve_data, config)
+        else:
+            handle_NLP_subproblem_other_termination(fix_nlp, fix_nlp_result,
+                                                    solve_data, config)
+        # Call the NLP post-solve callback
+        config.call_after_subproblem_solve(fix_nlp, solve_data)
 
         # If the hybrid algorithm is not making progress, switch to OA.
         progress_required = 1E-6
@@ -45,6 +58,7 @@ def MindtPy_iteration_loop(solve_data, config):
         # bound does not improve before switching to OA
         max_nonimprove_iter = 5
         making_progress = True
+        # TODO-romeo Unneccesary for OA and LOA, right?
         for i in range(1, max_nonimprove_iter + 1):
             try:
                 if (sign_adjust * log[-i]
