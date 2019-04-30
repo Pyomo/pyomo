@@ -11,6 +11,9 @@
 #
 # CATEGORY: the category to pass to test.pyomo (defaults to nightly)
 #
+# TEST_SUITES: Paths (module or directory) to be passed to nosetests to
+#     run. (defaults to "pyomo '$WORKSPACE/pyomo-model-libraries'")
+#
 # SLIM: If nonempty, then the virtualenv will only have pip, setuptools,
 #     and wheel installed.  Otherwise the virtualenv will inherit the
 #     system site-packages.
@@ -27,6 +30,9 @@ if test -z "$WORKSPACE"; then
 fi
 if test -z "$CATEGORY"; then
     export CATEGORY=nightly
+fi
+if test -z "$TEST_SUITES"; then
+    export TEST_SUITES="pyomo ${WORKSPACE}/pyomo-model-libraries"
 fi
 if test -z "$SLIM"; then
     export VENV_SYSTEM_PACKAGES='--system-site-packages'
@@ -143,7 +149,7 @@ if test -z "$MODE" -o "$MODE" == test; then
     echo "#"
     echo "# Running Pyomo tests"
     echo "#"
-    test.pyomo -v --cat=$CATEGORY pyomo "$WORKSPACE/pyomo-model-libraries"
+    test.pyomo -v --cat=$CATEGORY $TEST_SUITES
 
     # Combine the coverage results and upload
     if test -z "$DISABLE_COVERAGE"; then

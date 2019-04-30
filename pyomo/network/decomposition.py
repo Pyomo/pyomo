@@ -598,7 +598,7 @@ class SequentialDecomposition(FOQUSGraph):
 
     def load_values(self, port, default, fixed, use_guesses):
         sources = port.sources()
-        for name, obj in port.iter_vars(fixed=False, names=True):
+        for name, index, obj in port.iter_vars(fixed=False, names=True):
             evars = None
             if port.is_extensive(name):
                 # collect evars if there are any
@@ -610,9 +610,8 @@ class SequentialDecomposition(FOQUSGraph):
                     try:
                         # index into them if necessary, now that
                         # we know they are not None
-                        i = obj.index()
                         for j in range(len(evars)):
-                            evars[j] = evars[j][i]
+                            evars[j] = evars[j][index]
                     except AttributeError:
                         pass
             if evars is not None:
@@ -827,16 +826,12 @@ class SequentialDecomposition(FOQUSGraph):
             arc = G.edges[edge_list[tear]]["arc"]
             src, dest = arc.src, arc.dest
             sf = arc.expanded_block.component("splitfrac")
-            for name, mem in src.iter_vars(names=True):
+            for name, index, mem in src.iter_vars(names=True):
                 if src.is_extensive(name) and sf is not None:
                     # TODO: same as above, what if there's no splitfrac
                     svals.append(value(mem * sf))
                 else:
                     svals.append(value(mem))
-                try:
-                    index = mem.index()
-                except AttributeError:
-                    index = None
                 dvals.append(value(self.source_dest_peer(arc, name, index)))
         svals = numpy.array(svals)
         dvals = numpy.array(dvals)
@@ -889,11 +884,7 @@ class SequentialDecomposition(FOQUSGraph):
             if dest_unit not in fixed_inputs:
                 fixed_inputs[dest_unit] = ComponentSet()
 
-            for name, mem in src.iter_vars(names=True):
-                try:
-                    index = mem.index()
-                except AttributeError:
-                    index = None
+            for name, index, mem in src.iter_vars(names=True):
                 peer = self.source_dest_peer(arc, name, index)
                 self.pass_single_value(dest, name, peer, x[i],
                     fixed_inputs[dest_unit])
@@ -906,7 +897,7 @@ class SequentialDecomposition(FOQUSGraph):
             arc = G.edges[edge_list[tear]]["arc"]
             src = arc.src
             sf = arc.expanded_block.component("splitfrac")
-            for name, mem in src.iter_vars(names=True):
+            for name, index, mem in src.iter_vars(names=True):
                 if src.is_extensive(name) and sf is not None:
                     # TODO: same as above, what if there's no splitfrac
                     gofx.append(value(mem * sf))
@@ -920,11 +911,7 @@ class SequentialDecomposition(FOQUSGraph):
         x = []
         for tear in tears:
             arc = G.edges[edge_list[tear]]["arc"]
-            for name, mem in arc.src.iter_vars(names=True):
-                try:
-                    index = mem.index()
-                except AttributeError:
-                    index = None
+            for name, index, mem in arc.src.iter_vars(names=True):
                 peer = self.source_dest_peer(arc, name, index)
                 x.append(value(peer))
         x = numpy.array(x)
