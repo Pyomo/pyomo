@@ -72,8 +72,7 @@ def install_extras(args=[], quiet=False):
             pkg_import = package
         try:
             # Allow the user to provide extra options
-            #pip.main(cmd + args + [package])
-            print(cmd + args + [package])
+            pip.main(cmd + args + [package])
             __import__(pkg_import)
             results[package] = True
         except:
