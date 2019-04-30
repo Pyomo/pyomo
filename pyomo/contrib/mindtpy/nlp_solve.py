@@ -14,14 +14,16 @@ from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 
 
 def solve_NLP_subproblem(solve_data, config):
-    """
+    """ Solves fixed NLP with fixed working model binaries
+
     Sets up local working model `fix_nlp`
     Fixes binaries
     Sets continuous variables to initial var values
     Precomputes dual values
     Deactivates trivial constraints
     Solves NLP model
-    Branches on NLP termination condition
+
+    Returns the fixed-NLP model and the solver results
     """
 
     fix_nlp = solve_data.working_model.clone()
@@ -64,8 +66,9 @@ def solve_NLP_subproblem(solve_data, config):
     return fix_nlp, results
 
 
-def handle_NLP_subproblem_optimal(fix_nlp, results,
-                                  solve_data, config):
+def handle_NLP_subproblem_optimal(fix_nlp, solve_data, config):
+    """Copies result to working model, updates bound, adds OA and integer cut,
+    stores best solution if new one is best"""
     copy_var_list_values(
         fix_nlp.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
@@ -110,8 +113,11 @@ def handle_NLP_subproblem_optimal(fix_nlp, results,
     config.call_after_subproblem_feasible(fix_nlp, solve_data)
 
 
-def handle_NLP_subproblem_infeasible(fix_nlp, results,
-                                     solve_data, config):
+def handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config):
+    """Solve feasibility problem, add cut according to strategy.
+
+    The solution of the feasibility problem is copied to the working model.
+    """
     # TODO try something else? Reinitialize with different initial
     # value?
     config.logger.info('NLP subproblem was locally infeasible.')
@@ -123,8 +129,8 @@ def handle_NLP_subproblem_infeasible(fix_nlp, results,
         fix_nlp.dual[c] = (sign_adjust
                 * max(0, sign_adjust * (rhs - value(c.body))))
 
-    for var in fix_nlp.component_data_objects(ctype=Var, descend_into=True):
-        if config.strategy == 'PSC' or config.strategy == 'GBD':
+    if config.strategy == 'PSC' or config.strategy == 'GBD':
+        for var in fix_nlp.component_data_objects(ctype=Var, descend_into=True):
             fix_nlp.ipopt_zL_out[var] = 0
             fix_nlp.ipopt_zU_out[var] = 0
             if var.ub is not None and abs(var.ub - value(var)) < config.bound_tolerance:
@@ -132,8 +138,7 @@ def handle_NLP_subproblem_infeasible(fix_nlp, results,
             elif var.lb is not None and abs(value(var) - var.lb) < config.bound_tolerance:
                 fix_nlp.ipopt_zU_out[var] = -1
 
-    # fix_nlp.pprint() #print infeasible nlp problem for debugging
-    if config.strategy == 'OA':
+    elif config.strategy == 'OA':
         config.logger.info('Solving feasibility problem')
         if config.initial_feas:
             # add_feas_slacks(fix_nlp, solve_data)
@@ -144,21 +149,26 @@ def handle_NLP_subproblem_infeasible(fix_nlp, results,
     add_int_cut(var_values, solve_data, config)  # excludes current discrete option
 
 
-def handle_NLP_subproblem_other_termination(fix_nlp, nlp_result,
+def handle_NLP_subproblem_other_termination(fix_nlp, termination_condition,
                                             solve_data, config):
-    """Case that's not optimal nor infeasible (i.e. max_iterations)"""
-    if nlp_result.solver.termination_condition is tc.maxIterations:
+    """Case that fix-NLP is neither optimal nor infeasible (i.e. max_iterations)"""
+    if termination_condition is tc.maxIterations:
         # TODO try something else? Reinitialize with different initial value?
         config.logger.info(
             'NLP subproblem failed to converge within iteration limit.')
-        add_int_cut(solve_data, config)  # excludes current discrete option
+        var_values = list(v.value for v in fix_nlp.MindtPy_utils.variable_list)
+        add_int_cut(var_values, solve_data, config)  # excludes current discrete option
     else:
         raise ValueError(
             'MindtPy unable to handle NLP subproblem termination '
-            'condition of {}'.format(subprob_terminate_cond))
+            'condition of {}'.format(termination_condition))
 
 
 def solve_NLP_feas(solve_data, config):
+    """Solves feasibility NLP and copies result to working model
+
+    Returns: Result values and dual values
+    """
     fix_nlp = solve_data.working_model.clone()
     add_feas_slacks(fix_nlp)
     MindtPy = fix_nlp.MindtPy_utils
