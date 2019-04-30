@@ -165,7 +165,7 @@ def run_setup():
         results_schema=pyomo.scripting.commands:results_schema
         pyro_mip_server = pyomo.scripting.pyro_mip_server:main
         test.pyomo = pyomo.scripting.runtests:runPyomoTests
-        pyomo = pyomo.scripting.pyomo_main:main
+        pyomo = pyomo.scripting.pyomo_main:main_console_script
         pyomo_ns = pyomo.scripting.commands:pyomo_ns
         pyomo_nsc = pyomo.scripting.commands:pyomo_nsc
         kill_pyro_mip_servers = pyomo.scripting.commands:kill_pyro_mip_servers

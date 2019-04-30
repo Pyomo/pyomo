@@ -8,9 +8,5 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-try:
-    import numpy as np
-    numpy_available = True
-except ImportError:
-    numpy_available = False
+from .. import numpy_available
 

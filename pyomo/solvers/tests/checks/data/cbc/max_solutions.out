@@ -1,0 +1,67 @@
+Solver command line: ['/Users/edwardnorton/PycharmProjects/pyomo_cbc_return_handling/solvers/cbc/Darwin/cbc', '-randomCbcSeed', '42', '-randomSeed', '42', '-maxSolutions', '1', '-printingOptions', 'all', '-import', '/var/folders/17/g4zpz4f11h59hqtf94dlhhd80000gp/T/tmpjfxkx0zo.pyomo.lp', '-stat=1', '-solve', '-solu', '/var/folders/17/g4zpz4f11h59hqtf94dlhhd80000gp/T/tmpjfxkx0zo.pyomo.soln']
+
+Welcome to the CBC MILP Solver 
+Version: 2.9.9 
+Build Date: Aug 25 2017 
+
+command line - /Users/edwardnorton/PycharmProjects/pyomo_cbc_return_handling/solvers/cbc/Darwin/cbc -randomCbcSeed 42 -randomSeed 42 -maxSolutions 1 -printingOptions all -import /var/folders/17/g4zpz4f11h59hqtf94dlhhd80000gp/T/tmpjfxkx0zo.pyomo.lp -stat=1 -solve -solu /var/folders/17/g4zpz4f11h59hqtf94dlhhd80000gp/T/tmpjfxkx0zo.pyomo.soln (default strategy 1)
+randomCbcSeed was changed from -1 to 42
+randomSeed was changed from 1234567 to 42
+maxSolutions was changed from 9999999 to 1
+Option for printingOptions changed from normal to all
+Presolve 344 (-1) rows, 360 (-1) columns and 1602 (-1) elements
+Statistics for presolved model
+Original problem has 342 integers (342 of which binary)
+Presolved problem has 342 integers (342 of which binary)
+==== 18 zero objective 343 different
+==== absolute objective values 343 different
+==== for integers 0 zero objective 342 different
+==== for integers absolute objective values 342 different
+===== end objective counts
+
+
+Problem has 344 rows, 360 columns (342 with objective) and 1602 elements
+Column breakdown:
+18 of type 0.0->inf, 0 of type 0.0->up, 0 of type lo->inf, 
+0 of type lo->up, 0 of type free, 0 of type fixed, 
+0 of type -inf->0.0, 0 of type -inf->up, 342 of type 0.0->1.0 
+Row breakdown:
+0 of type E 0.0, 38 of type E 1.0, 0 of type E -1.0, 
+0 of type E other, 0 of type G 0.0, 0 of type G 1.0, 
+0 of type G other, 0 of type L 0.0, 0 of type L 1.0, 
+306 of type L other, 0 of type Range 0.0->1.0, 0 of type Range other, 
+0 of type Free 
+Continuous objective value is 0.925437 - 0.00 seconds
+Cgl0004I processed model has 344 rows, 360 columns (342 integer (342 of which binary)) and 1602 elements
+Cbc0038I Initial state - 12 integers unsatisfied sum - 1.26316
+Cbc0038I Pass   1: suminf.    0.42105 (4) obj. 0.959223 iterations 26
+Cbc0038I Pass   2: suminf.    0.00000 (0) obj. 1.35482 iterations 18
+Cbc0038I Solution found of 1.35482
+Cbc0038I Relaxing continuous gives 1.35482
+Cbc0038I After 0.01 seconds - Feasibility pump exiting with objective of 1.35482 (stopping after 1 solutions) - took 0.00 seconds
+Cbc0012I Integer solution of 1.3548195 found by feasibility pump after 0 iterations and 0 nodes (0.01 seconds)
+Cbc0019I Exiting on maximum solutions
+Cbc0005I Partial search - best objective 1.3548195 (best possible 0.92543678), took 0 iterations and 0 nodes (0.01 seconds)
+Cbc0035I Maximum depth 0, 0 variables fixed on reduced cost
+Cuts at root node changed objective from 0.925437 to 0.925437
+Probing was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+Gomory was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+Knapsack was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+Clique was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+MixedIntegerRounding2 was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+FlowCover was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+TwoMirCuts was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+
+Result - Stopped on solution limit
+
+Objective value:                1.35481947
+Lower bound:                    0.925
+Gap:                            0.46
+Enumerated nodes:               0
+Total iterations:               0
+Time (CPU seconds):             0.02
+Time (Wallclock seconds):       0.02
+
+Total time (CPU seconds):       0.03   (Wallclock seconds):       0.03
+
+

@@ -25,7 +25,7 @@ import pyomo.common.config as config
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.fileutils import (
     this_file, this_file_dir, find_file, find_library, find_executable, 
-    ExecutableManager, _system, _path, _exeExt, _libExt,
+    PathManager, _system, _path, _exeExt, _libExt, _ExecutableData,
 )
 
 _this_file = this_file()
@@ -361,8 +361,8 @@ class TestFileUtils(unittest.TestCase):
         )
 
 
-    def test_ExecutableManager(self):
-        Executable = ExecutableManager()
+    def test_PathManager(self):
+        Executable = PathManager(find_executable, _ExecutableData)
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
 
         config.PYOMO_CONFIG_DIR = self.tmpdir
@@ -402,14 +402,20 @@ class TestFileUtils(unittest.TestCase):
         self.assertEqual( "%s" % Executable(f_in_tmp), "" )
         self.assertIsNone( Executable(f_in_tmp).executable )
 
-        # While the local CONFIG is set up with Pyomo, it will not be
-        # reflected in the Executable pathlist, as that was set up when
-        # Pyomo was first imported
+        # If we override the pathlist, then we will not find the CONFIGDIR
+        Executable.pathlist = []
         self.assertFalse( Executable(f_in_cfg).available() )
         Executable.pathlist.append(config_bindir)
         # and adding it won't change things (status is cached)
         self.assertFalse( Executable(f_in_cfg).available() )
         # until we tell the manager to rehash the executables
+        Executable.rehash()
+        self.assertTrue( Executable(f_in_cfg).available() )
+        self.assertEqual( Executable(f_in_cfg).path(),
+                          os.path.join(config_bindir, f_in_cfg) )
+        # Note that if we clear the pathlist, then the current value of
+        # CONFIGDIR will be honored
+        Executable.pathlist = None
         Executable.rehash()
         self.assertTrue( Executable(f_in_cfg).available() )
         self.assertEqual( Executable(f_in_cfg).path(),
@@ -423,8 +429,8 @@ class TestFileUtils(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.common', logging.WARNING):
             Executable(f_in_path2).executable = f_loc
             self.assertIn(
-                "explicitly setting the path for executable '%s' to a "
-                "non-executable file or nonexistent location ('%s')"
+                "explicitly setting the path for '%s' to an "
+                "invalid object or nonexistent location ('%s')"
                 % (f_in_path2, f_loc), output.getvalue())
         self.assertFalse( Executable(f_in_path2).available() )
         self._make_exec(os.path.join(pathdir,f_in_path2))

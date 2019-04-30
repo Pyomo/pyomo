@@ -9,7 +9,7 @@ VARIABLES x1;
 EQUATIONS c_e_FIX_ONE_VAR_CONST__, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14;
 
 c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
-c1: 1.0 * x1 == 0;
+c1: x1 == 0;
 c2: 0.0 * x1 + x1 == 0;
 c3: x1 == 0;
 c4: x1 == 0;
@@ -24,7 +24,7 @@ c12: 0.0 * x1 ^ 2 == 0;
 c13: 0.0 * x1 * 1.0 == 0;
 c14: 0.0 * x1 == 0;
 
-OBJ: minimize 1.0 * x1 + 0.0 * x1 + 0.0 * x1 + x1 * x1 * 0.0 + x1 * x1 * 0.0 + 0.0 * x1 ^ 2;
+OBJ: minimize x1 + 0.0 * x1 + 0.0 * x1 + x1 * x1 * 0.0 + x1 * x1 * 0.0 + 0.0 * x1 ^ 2;
 
 STARTING_POINT{
 ONE_VAR_CONST__: 1;
