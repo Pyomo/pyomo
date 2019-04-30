@@ -91,19 +91,18 @@ def process_objective(solve_data, config, always_move_objective=False):
     m = solve_data.working_model
     util_blk = getattr(m, solve_data.util_block_name)
     # Handle missing or multiple objectives
-    objs = list(m.component_data_objects(
+    active_objectives = list(m.component_data_objects(
         ctype=Objective, active=True, descend_into=True))
-    num_objs = len(objs)
-    solve_data.results.problem.number_of_objectives = num_objs
-    if num_objs == 0:
+    solve_data.results.problem.number_of_objectives = len(active_objectives)
+    if len(active_objectives) == 0:
         config.logger.warning(
             'Model has no active objectives. Adding dummy objective.')
         util_blk.dummy_objective = Objective(expr=1)
         main_obj = util_blk.dummy_objective
-    elif num_objs > 1:
+    elif len(active_objectives) > 1:
         raise ValueError('Model has multiple active objectives.')
     else:
-        main_obj = objs[0]
+        main_obj = active_objectives[0]
     solve_data.results.problem.sense = main_obj.sense
     solve_data.objective_sense = main_obj.sense
 
