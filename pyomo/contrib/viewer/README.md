@@ -38,7 +38,7 @@ The model viewer adds a callback after each cell executes to update the viewer i
 
 ### Opening the Stand-Alone Version
 
-Run the "pyomo_viewer.py" script to get a stand-alone model viewer.  The standalone viewer is based on the example code at https://github.com/jupyter/qtconsole/blob/master/examples/embed_qtconsole.py. The viewer will start with an empty Pyomo ConcreteModel called ```model```. The advantage of the stand-alone viewer is that it will automatically set up the environment and start the UI, saving typing a few lines of code. In the kernel ``pyomo.environ`` is imported as ```pyo```. An empty ConcreteModel is available as ```model``` and linked to the viewer. The main user interface window is imported as ```ui```.  This provides a useful ability to script UI actions. You can link ```ui``` to other models.
+Run the ``pyomo model-viewer`` script to get a stand-alone model viewer.  The standalone viewer is based on the example code at https://github.com/jupyter/qtconsole/blob/master/examples/embed_qtconsole.py. The viewer will start with an empty Pyomo ConcreteModel called ```model```. The advantage of the stand-alone viewer is that it will automatically set up the environment and start the UI, saving typing a few lines of code. In the kernel ``pyomo.environ`` is imported as ```pyo```. An empty ConcreteModel is available as ```model``` and linked to the viewer. The main user interface window is imported as ```ui```.  This provides a useful ability to script UI actions. You can link ```ui``` to other models.
 
 ### Setting the Model
 
