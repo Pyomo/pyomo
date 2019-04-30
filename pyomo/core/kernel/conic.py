@@ -11,6 +11,7 @@
 
 import math
 
+from pyomo.core.expr.numvalue import is_numeric_data
 from pyomo.core.expr.current import (value,
                                      exp)
 from pyomo.core.kernel.variable import IVariable
@@ -359,6 +360,12 @@ class primal_power(_ConicBase):
                    for xi in self._x)
         assert isinstance(self._r1, IVariable)
         assert isinstance(self._r2, IVariable)
+        if not is_numeric_data(self._alpha):
+            raise TypeError(
+                "The type of the alpha parameter of a conic "
+                "constraint is restricted numeric data or "
+                "objects that store numeric data.")
+
 
     @property
     def x(self):
@@ -529,6 +536,11 @@ class dual_power(_ConicBase):
                    for xi in self._x)
         assert isinstance(self._r1, IVariable)
         assert isinstance(self._r2, IVariable)
+        if not is_numeric_data(self._alpha):
+            raise TypeError(
+                "The type of the alpha parameter of a conic "
+                "constraint is restricted numeric data or "
+                "objects that store numeric data.")
 
     @property
     def x(self):

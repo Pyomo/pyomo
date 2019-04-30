@@ -11,6 +11,8 @@ from pyomo.core.kernel.constraint import (IConstraint,
 from pyomo.core.kernel.variable import variable
 from pyomo.core.kernel.block import block
 from pyomo.core.kernel.parameter import parameter
+from pyomo.core.kernel.expression import (expression,
+                                          data_expression)
 from pyomo.core.kernel.conic import (quadratic,
                                      rotated_quadratic,
                                      primal_exponential,
@@ -378,6 +380,34 @@ class Test_primal_power(_conic_tester_base,
         r2=variable(lb=0),
         alpha=parameter(value=0.4))
 
+    def test_bad_alpha_type(self):
+        c = primal_power(
+            x=[variable(),
+               variable()],
+            r1=variable(lb=0),
+            r2=variable(lb=0),
+            alpha=parameter())
+        c = primal_power(
+            x=[variable(),
+               variable()],
+            r1=variable(lb=0),
+            r2=variable(lb=0),
+            alpha=data_expression())
+        with self.assertRaises(TypeError):
+            c = primal_power(
+                x=[variable(),
+                   variable()],
+                r1=variable(lb=0),
+                r2=variable(lb=0),
+                alpha=variable())
+        with self.assertRaises(TypeError):
+            c = primal_power(
+                x=[variable(),
+                   variable()],
+                r1=variable(lb=0),
+                r2=variable(lb=0),
+                alpha=expression())
+
     def test_expression(self):
         c = self._object_factory()
         self.assertIs(c._body, None)
@@ -550,6 +580,34 @@ class Test_dual_power(_conic_tester_base,
         r1=variable(lb=0),
         r2=variable(lb=0),
         alpha=parameter(value=0.4))
+
+    def test_bad_alpha_type(self):
+        c = dual_power(
+            x=[variable(),
+               variable()],
+            r1=variable(lb=0),
+            r2=variable(lb=0),
+            alpha=parameter())
+        c = dual_power(
+            x=[variable(),
+               variable()],
+            r1=variable(lb=0),
+            r2=variable(lb=0),
+            alpha=data_expression())
+        with self.assertRaises(TypeError):
+            c = dual_power(
+                x=[variable(),
+                   variable()],
+                r1=variable(lb=0),
+                r2=variable(lb=0),
+                alpha=variable())
+        with self.assertRaises(TypeError):
+            c = dual_power(
+                x=[variable(),
+                   variable()],
+                r1=variable(lb=0),
+                r2=variable(lb=0),
+                alpha=expression())
 
     def test_expression(self):
         c = self._object_factory()
