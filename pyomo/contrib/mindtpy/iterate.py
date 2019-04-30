@@ -35,13 +35,11 @@ def MindtPy_iteration_loop(solve_data, config):
         # Solve NLP subproblem
         fix_nlp, fix_nlp_result = solve_NLP_subproblem(solve_data, config)
         if fix_nlp_result.solver.termination_condition is tc.optimal:
-            handle_NLP_subproblem_optimal(fix_nlp, fix_nlp_result,
-                                          solve_data, config)
+            handle_NLP_subproblem_optimal(fix_nlp, solve_data, config)
         elif fix_nlp_result.solver.termination_condition is tc.infeasible:
-            handle_NLP_subproblem_infeasible(fix_nlp, fix_nlp_result,
-                                             solve_data, config)
+            handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config)
         else:
-            handle_NLP_subproblem_other_termination(fix_nlp, fix_nlp_result,
+            handle_NLP_subproblem_other_termination(fix_nlp, fix_nlp_result.solver.termination_condition,
                                                     solve_data, config)
         # Call the NLP post-solve callback
         config.call_after_subproblem_solve(fix_nlp, solve_data)
