@@ -19,6 +19,7 @@ Current Development
   - Update DataPortal tests requiring PyYaml to not rely on file diffs (#931)
   - Add infrastructure for building compiled extensions (#940, #959)
   - Return the subcommand error code from the pyomo script (#958)
+  - Fix the "pyomo install-extras" command (#981)
 - Testing
   - Update Appveyor configuration to use --no-update-deps conda option (#837)
   - Enable publication of coverage results from Jenkins (#842, #892)
@@ -57,17 +58,17 @@ Current Development
 - Contributed Packages
   - ParmEst updates to make API more flexible, updated examples, documentation 
     and tests (#814)
-  - GDPopt algorithm enhancements, cut generation bug fix, add example to tests 
-    (#805, #826, #852)
+  - GDPopt algorithm enhancements, cut generation bug fix, add example to tests, 
+    time limit option support (#805, #826, #852, #970)
   - Multistart solver wrapper bug fix for identifying the Objective (#807)
-  - Updates to MC++ interface and documentation (#827, #929, #939, #964)
+  - Updates to MC++ interface and documentation (#827, #929, #939, #964, #968)
   - Add import guards for optional packages like Scipy and Pandas (#853, #889)
   - PETSc wrapper fixes and enhancements (#806)
   - Disjunctive bound tightening with GLOA (#877)
   - Use CBC for GDP_bounds OBBT computation (#933)
   - Set minimum Numpy version for Pynumero (#962)
   - New packages:
-    - Mixed-Integer Decomposition Toolbox in Pyomo (MindtPy) (#386)
+    - Mixed-Integer Decomposition Toolbox in Pyomo (MindtPy) (#386, #970)
     - Feasibility based bounds tightening (#825, #863, #883, #954)
     - GDP branch and bound solver (#847, #870, #886)
     - Satisfiability solver interface to z3 (#862, #885)
