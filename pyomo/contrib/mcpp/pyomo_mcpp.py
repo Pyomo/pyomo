@@ -187,7 +187,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
     expression of type McCormick.
 
     Note on memory management: The MCPP_visitor will return a pointer to
-    an MC++ interval object that was dynamically alloacted within the C
+    an MC++ interval object that was dynamically allocated within the C
     interface.  It is the caller's responsibility to call
     `mcpp_lib.release()` on that object to prevent a memory leak
 
