@@ -383,5 +383,5 @@ def run(args=None):
     if args is None:
         return main()
     else:
-        return main(['solve']+args, get_return=True)
+        return main(['solve']+args)
 

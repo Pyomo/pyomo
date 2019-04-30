@@ -37,7 +37,7 @@ for entrypoint in pyomo_commands:
         raise ImportError(msg)
 
 
-def main(args=None, get_return=True):
+def main(args=None):
     #
     # Load subcommands
     #
@@ -82,5 +82,15 @@ def main(args=None, get_return=True):
         retval = _options.func(_options)
     else:
         retval = _options.func(_options, _unparsed)
-    if get_return:
-        return retval
+    return retval
+
+
+def main_console_script():
+    "This is the entry point for the main Pyomo script"
+    # Note that we eat the retval data structure and only return the
+    # process return code
+    ans = main()
+    try:
+        return ans.errorcode
+    except AttributeError:
+        return ans
