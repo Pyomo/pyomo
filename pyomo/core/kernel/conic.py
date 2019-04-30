@@ -9,8 +9,6 @@
 #  ___________________________________________________________________________
 """Various conic constraint implementations."""
 
-import math
-
 from pyomo.core.expr.numvalue import is_numeric_data
 from pyomo.core.expr.current import (value,
                                      exp)
@@ -422,10 +420,9 @@ class primal_power(_ConicBase):
 class dual_exponential(_ConicBase):
     """A dual exponential conic constraint of the form:
 
-        -(x2/e)*exp(x1/x2) <= r
+        -x2*exp((x1/x2)-1) <= r
 
     which is recognized as convex for x2 <= 0 and r >= 0.
-    Note that e in the expression is Euler's constant.
 
     Parameters
     ----------
@@ -472,7 +469,7 @@ class dual_exponential(_ConicBase):
 
     def _body_function(self, x1, x2, r):
         """A function that defines the body expression"""
-        return -(x2/math.e)*exp(x1/x2) - r
+        return -x2*exp((x1/x2) - 1) - r
 
     def _body_function_variables(self, values=False):
         """Returns variables in the order they should be
