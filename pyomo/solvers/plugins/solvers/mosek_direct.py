@@ -45,11 +45,11 @@ def _is_numeric(x):
     return True
 
 
-@SolverFactory.register('mosek_direct', doc='Direct python interface to Mosek')
+@SolverFactory.register('mosek', doc='Direct python interface to Mosek')
 class MosekDirect(DirectSolver):
 
     def __init__(self, **kwds):
-        kwds['type'] = 'mosek_direct'
+        kwds['type'] = 'mosek'
         DirectSolver.__init__(self, **kwds)
         self._pyomo_var_to_solver_var_map = ComponentMap()
         self._solver_var_to_pyomo_var_map = ComponentMap()
@@ -147,7 +147,7 @@ class MosekDirect(DirectSolver):
         degree = repn.polynomial_degree()
         if (degree is None) or (degree > max_degree):
             raise DegreeError(
-                'MosekDirect does not support expressions of degree {0}.'.format(degree))
+                'Mosek does not support expressions of degree {0}.'.format(degree))
 
         # if len(repn.linear_vars) > 0:
         referenced_vars.update(repn.linear_vars)
@@ -383,7 +383,7 @@ class MosekDirect(DirectSolver):
                 flag = True
             if not flag:
                 raise RuntimeError(
-                    "***The mosek_direct solver plugin cannot extract solution suffix="+suffix)
+                    "***The mosek solver plugin cannot extract solution suffix="+suffix)
 
         msk_task = self._solver_model
         msk = self._mosek

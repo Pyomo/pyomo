@@ -9,7 +9,7 @@ try:
 except ImportError:
     mosek_available = False
 
-diff_tol = 1e-4
+diff_tol = 1e-3
 
 
 class MosekDirectTests(unittest.TestCase):
@@ -24,7 +24,7 @@ class MosekDirectTests(unittest.TestCase):
     @unittest.skipIf(not mosek_available,
                      "The 'mosek' python bindings are not available")
     def test_infeasible_lp(self):
-        with SolverFactory("mosek_direct") as opt:
+        with SolverFactory("mosek") as opt:
 
             model = ConcreteModel()
             model.X = Var(within=NonNegativeReals)
@@ -40,7 +40,7 @@ class MosekDirectTests(unittest.TestCase):
     @unittest.skipIf(not mosek_available,
                      "The 'mosek' python bindings are not available")
     def test_unbounded_lp(self):
-        with SolverFactory("mosek_direct") as opt:
+        with SolverFactory("mosek") as opt:
 
             model = ConcreteModel()
             model.X = Var()
@@ -55,7 +55,7 @@ class MosekDirectTests(unittest.TestCase):
     @unittest.skipIf(not mosek_available,
                      "The 'mosek' python bindings are not available")
     def test_optimal_lp(self):
-        with SolverFactory("mosek_direct") as opt:
+        with SolverFactory("mosek") as opt:
 
             model = ConcreteModel()
             model.X = Var(within=NonNegativeReals)
@@ -69,7 +69,7 @@ class MosekDirectTests(unittest.TestCase):
     @unittest.skipIf(not mosek_available,
                      "The 'mosek' python bindings are not available")
     def test_get_duals_lp(self):
-        with SolverFactory("mosek_direct") as opt:
+        with SolverFactory("mosek") as opt:
 
             model = ConcreteModel()
             model.X = Var(within=NonNegativeReals)
@@ -91,7 +91,7 @@ class MosekDirectTests(unittest.TestCase):
     @unittest.skipIf(not mosek_available,
                      "The 'mosek' python bindings are not available")
     def test_infeasible_mip(self):
-        with SolverFactory("mosek_direct") as opt:
+        with SolverFactory("mosek") as opt:
 
             model = ConcreteModel()
             model.X = Var(within=NonNegativeIntegers)
@@ -107,7 +107,7 @@ class MosekDirectTests(unittest.TestCase):
     @unittest.skipIf(not mosek_available,
                      "The 'mosek' python bindings are not available")
     def test_unbounded_mip(self):
-        with SolverFactory("mosek_direct") as opt:
+        with SolverFactory("mosek") as opt:
 
             model = AbstractModel()
             model.X = Var(within=Integers)
@@ -123,7 +123,7 @@ class MosekDirectTests(unittest.TestCase):
     @unittest.skipIf(not mosek_available,
                      "The 'mosek' python bindings are not available")
     def test_optimal_mip(self):
-        with SolverFactory("mosek_direct") as opt:
+        with SolverFactory("mosek") as opt:
 
             model = ConcreteModel()
             model.X = Var(within=NonNegativeIntegers)

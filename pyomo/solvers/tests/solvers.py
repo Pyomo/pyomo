@@ -88,9 +88,9 @@ def test_solver_cases(*args):
                                    'quadratic_objective',
                                    'quadratic_constraint'])
 
-        _test_solver_cases['MOSEK', 'mosek_direct'] = initialize(
-            name='MOSEK',
-            io='mosek_direct',
+        _test_solver_cases['mosek', 'python'] = initialize(
+            name='mosek',
+            io='python',
             capabilities=_mosek_capabilities,
             import_suffixes=['dual', 'rc', 'slack'])
         #
