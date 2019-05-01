@@ -21,6 +21,7 @@ Pyomo 5.6.2
   - Return the subcommand error code from the pyomo script (#958)
   - Fix the "pyomo install-extras" command (#981, #986)
   - Deprecate pyomo.bilevel and pyomo.duality (#943)
+  - Update deprecation decorator to include version number (#943)
 - Testing
   - Update Appveyor configuration to use --no-update-deps conda option (#837)
   - Enable publication of coverage results from Jenkins (#842, #892)
