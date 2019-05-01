@@ -5,6 +5,8 @@ import functools
 import inspect
 import textwrap
 
+from pyomo.common.errors import DeveloperError
+
 def deprecation_warning(msg, logger='pyomo.core'):
     """Standardized formatter for deprecation warnings
 
@@ -33,13 +35,18 @@ def deprecated( msg=None, logger='pyomo.core', version=None, remove_in=None ):
         logger (str): the logger to use for emitting the warning
             (default: "pyomo.core")
 
-        version (str): the version in which the decorated
-            object was deprecated.
+        version (str): [required] the version in which the decorated
+            object was deprecated.  General practice is to set version
+            to '' or 'TBD' during development and update it to the
+            actual release as part of the release process.
 
         remove_in (str): the version in which the decorated object will be
             removed from the code.
 
     """
+    if version is None:  # or version in ('','tbd','TBD'):
+        raise DeveloperError("@deprecated missing initial version")
+
     def wrap(func):
         message = _default_msg(msg, func)
 

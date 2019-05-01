@@ -282,7 +282,8 @@ class _ExecutableData(object):
         return self._path
 
     @deprecated("registered_executable(name).get_path() is deprecated; "
-                "use pyomo.common.Executable(name).path()")
+                "use pyomo.common.Executable(name).path()",
+                version='5.6.2')
     def get_path(self):
         return self.path()
 
@@ -468,7 +469,8 @@ class ExecutableManager(object):
 Executable = ExecutableManager()
 
 @deprecated("pyomo.common.register_executable(name) has been deprecated; "
-            "explicit registration is no longer necessary")
+            "explicit registration is no longer necessary",
+            version='5.6.2')
 def register_executable(name, validate=None):
     # Setting to None will cause Executable to re-search the pathlist
     return Executable(name).rehash()
@@ -478,7 +480,8 @@ def register_executable(name, validate=None):
     pyomo.common.Executable(name).path() to get the path or
     pyomo.common.Executable(name).available() to get a bool indicating
     file availability.  Equivalent results can be obtained by casting
-    Executable(name) to string or bool.""")
+    Executable(name) to string or bool.""",
+    version='5.6.2')
 def registered_executable(name):
     ans = Executable(name)
     if ans.path() is None:
@@ -487,6 +490,7 @@ def registered_executable(name):
         return ans
 
 @deprecated("pyomo.common.unregister_executable(name) has been deprecated; "
-            "use Executable(name).disable()")
+            "use Executable(name).disable()",
+            version='5.6.2')
 def unregister_executable(name):
     Executable(name).disable()
