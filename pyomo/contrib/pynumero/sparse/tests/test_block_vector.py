@@ -9,11 +9,12 @@
 #  ___________________________________________________________________________
 import sys
 import pyutilib.th as unittest
-try:
-    import numpy as np
-except ImportError:
+
+import pyomo.contrib.pynumero as pn
+if not (pn.sparse.numpy_available and pn.sparse.scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
+import numpy as np
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 
 

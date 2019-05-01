@@ -221,25 +221,25 @@ def pyomo2lp(args=None):
     if args is None:
         return main()
     else:
-        return main(['convert', '--format=lp']+args, get_return=True)
+        return main(['convert', '--format=lp']+args)
 
 def pyomo2nl(args=None):
     from pyomo.scripting.pyomo_main import main
     if args is None:
         return main()
     else:
-        return main(['convert', '--format=nl']+args, get_return=True)
+        return main(['convert', '--format=nl']+args)
 
 def pyomo2bar(args=None):
     from pyomo.scripting.pyomo_main import main
     if args is None:
         return main()
     else:
-        return main(['convert', '--format=bar']+args, get_return=True)
+        return main(['convert', '--format=bar']+args)
 
 def pyomo2dakota(args=None):
     from pyomo.scripting.pyomo_main import main
     if args is None:
         return main()
     else:
-        return main(['convert','--format=dakota']+args, get_return=True)
+        return main(['convert','--format=dakota']+args)

@@ -39,45 +39,25 @@ class TestContinuousSet(unittest.TestCase):
         model.t = ContinuousSet(bounds=(0, 5), initialize=[1, 3, 5])
         del model.t
 
-        try:
+        # Expected ValueError because a ContinuousSet component
+        # must contain at least two values upon construction
+        with self.assertRaises(ValueError):
             model.t = ContinuousSet()
-            self.fail("Expected ValueError because a ContinuousSet component"
-                      " must contain at least two values upon construction")
-        except ValueError:
-            pass
 
     # test bad keyword arguments
     def test_bad_kwds(self):
         model = ConcreteModel()
-        try:
+        with self.assertRaises(TypeError):
             model.t = ContinuousSet(bounds=(0, 1), filter=True)
-            self.fail("Expected TypeError")
-        except TypeError:
-            pass
-        
-        # try:
-        #     model.t = ContinuousSet(bounds=(0,1),within=NonNegativeReals)
-        #     self.fail("Expected TypeError")
-        # except TypeError:
-        #     pass
-        
-        try:
-            model.t = ContinuousSet(bounds=(0, 1), dimen=2)
-            self.fail("Expected TypeError")
-        except TypeError:
-            pass
-        
-        try:
-            model.t = ContinuousSet(bounds=(0, 1), virtual=True)
-            self.fail("Expected TypeError")
-        except TypeError:
-            pass
 
-        try:
+        with self.assertRaises(TypeError):
+            model.t = ContinuousSet(bounds=(0, 1), dimen=2)
+
+        with self.assertRaises(TypeError):
+            model.t = ContinuousSet(bounds=(0, 1), virtual=True)
+
+        with self.assertRaises(TypeError):
             model.t = ContinuousSet(bounds=(0, 1), validate=True)
-            self.fail("Expected TypeError")
-        except TypeError:
-            pass
 
     # test valid declarations
     def test_valid_declaration(self):
@@ -123,47 +103,26 @@ class TestContinuousSet(unittest.TestCase):
         model = ConcreteModel()
         model.s = Set(initialize=[1, 2, 3])
 
-        try:
+        with self.assertRaises(TypeError):
             model.t = ContinuousSet(model.s, bounds=(0, 1))
-            self.fail("Expected TypeError")
-        except TypeError:
-            pass
 
-        try:
+        with self.assertRaises(ValueError):
             model.t = ContinuousSet(bounds=(0, 0))
-            self.fail("Expected ValueError")
-        except ValueError:
-            pass
 
-        try:
+        with self.assertRaises(ValueError):
             model.t = ContinuousSet(initialize=[1])
-            self.fail("Expected ValueError")
-        except ValueError:
-            pass
 
-        try:
+        with self.assertRaises(ValueError):
             model.t = ContinuousSet(bounds=(None, 1))
-            self.fail("Expected ValueError")
-        except ValueError:
-            pass
 
-        try:
+        with self.assertRaises(ValueError):
             model.t = ContinuousSet(bounds=(0, None))
-            self.fail("Expected ValueError")
-        except ValueError:
-            pass
 
-        try:
+        with self.assertRaises(ValueError):
             model.t = ContinuousSet(initialize=[(1, 2), (3, 4)])
-            self.fail("Expected ValueError")
-        except ValueError:
-            pass
 
-        try:
+        with self.assertRaises(ValueError):
             model.t = ContinuousSet(initialize=['foo', 'bar'])
-            self.fail("Expected ValueError")
-        except ValueError:
-            pass
 
     # test the get_changed method
     def test_get_changed(self):
@@ -182,11 +141,8 @@ class TestContinuousSet(unittest.TestCase):
         model.t.set_changed(False)
         self.assertFalse(model.t._changed)
 
-        try:
+        with self.assertRaises(ValueError):
             model.t.set_changed(3)
-            self.fail("Expected a ValueError")
-        except ValueError:
-            pass
 
     # test get_upper_element_boundary
     def test_get_upper_element_boundary(self):
@@ -286,14 +242,13 @@ class TestIO(unittest.TestCase):
         OUTPUT.write("set B := 1;\n")
         OUTPUT.write("end;\n")
         OUTPUT.close()
+
+        # Expected ValueError because data set has only one value and no
+        # bounds are specified
         self.model.B = ContinuousSet()
-        try:
+        with self.assertRaises(ValueError):
             self.instance = self.model.create_instance("diffset.dat")
-            self.fail("Expected ValueError because data set has only one value"
-                      " and no bounds are specified")
-        except ValueError:
-            pass
-            
+
     def test_io7(self):
         OUTPUT = open("diffset.dat", "w")
         OUTPUT.write("data;\n")

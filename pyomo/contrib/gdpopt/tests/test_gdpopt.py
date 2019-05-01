@@ -5,6 +5,7 @@ from os.path import abspath, dirname, join, normpath
 
 from six import StringIO
 
+import pyomo.environ
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
@@ -30,6 +31,7 @@ LOA_solvers = (mip_solver, nlp_solver)
 GLOA_solvers = (mip_solver, global_nlp_solver, minlp_solver)
 LOA_solvers_available = all(SolverFactory(s).available() for s in LOA_solvers)
 GLOA_solvers_available = all(SolverFactory(s).available() for s in GLOA_solvers)
+license_available = SolverFactory(global_nlp_solver).license_is_valid() if GLOA_solvers_available else False
 
 
 class TestGDPoptUnit(unittest.TestCase):
@@ -384,6 +386,7 @@ class TestGLOA(unittest.TestCase):
         )
         self.assertEqual(res.solver.termination_condition, TerminationCondition.infeasible)
 
+    @unittest.skipUnless(license_available, "Global NLP solver license not available.")
     def test_GLOA_8PP(self):
         """Test the global logic-based outer approximation algorithm."""
         exfile = import_file(
@@ -397,6 +400,7 @@ class TestGLOA(unittest.TestCase):
         )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
+    @unittest.skipUnless(license_available, "Global NLP solver license not available.")
     def test_GLOA_8PP_force_NLP(self):
         """Test the global logic-based outer approximation algorithm."""
         exfile = import_file(
@@ -411,6 +415,7 @@ class TestGLOA(unittest.TestCase):
         )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
+    @unittest.skipUnless(license_available, "Global NLP solver license not available.")
     def test_GLOA_strip_pack_default_init(self):
         """Test logic-based outer approximation with strip packing."""
         exfile = import_file(
@@ -424,6 +429,7 @@ class TestGLOA(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
+    @unittest.skipUnless(license_available, "Global NLP solver license not available.")
     def test_GLOA_constrained_layout_default_init(self):
         """Test LOA with constrained layout."""
         exfile = import_file(
@@ -462,6 +468,19 @@ class TestGLOA(unittest.TestCase):
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args,
+            tee=False)
+        objective_value = value(model.objective.expr)
+        self.assertAlmostEqual(objective_value * 1E-5, 1.14385, 2)
+
+    def test_GLOA_disjunctive_bounds(self):
+        exfile = import_file(join(exdir, 'small_lit', 'nonconvex_HEN.py'))
+        model = exfile.build_gdp_model()
+        SolverFactory('gdpopt').solve(
+            model, strategy='GLOA',
+            mip_solver=mip_solver,
+            nlp_solver=global_nlp_solver,
+            nlp_solver_args=global_nlp_solver_args,
+            calc_disjunctive_bounds=True,
             tee=False)
         objective_value = value(model.objective.expr)
         self.assertAlmostEqual(objective_value * 1E-5, 1.14385, 2)

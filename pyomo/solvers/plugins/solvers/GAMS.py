@@ -34,8 +34,6 @@ from pyomo.opt.results import (SolverResults, SolverStatus, Solution,
 
 logger = logging.getLogger('pyomo.solvers')
 
-pyomo.common.register_executable(name="gams")
-
 class _GAMSSolver(object):
     """Aggregate of common methods for GAMS interfaces"""
 
@@ -569,11 +567,11 @@ class GAMSShell(_GAMSSolver):
 
     def available(self, exception_flag=True):
         """True if the solver is available."""
-        exe = pyomo.common.registered_executable("gams")
+        exe = pyomo.common.Executable("gams")
         if exception_flag is False:
-            return exe is not None
+            return exe.available()
         else:
-            if exe is not None:
+            if exe.available():
                 return True
             else:
                 raise NameError(
@@ -581,13 +579,13 @@ class GAMSShell(_GAMSSolver):
                     "solver functionality is not available.")
 
     def _default_executable(self):
-        executable = pyomo.common.registered_executable("gams")
-        if executable is None:
+        executable = pyomo.common.Executable("gams")
+        if not executable:
             logger.warning("Could not locate the 'gams' executable, "
                            "which is required for solver gams")
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     def executable(self):
         """Returns the executable used by this solver."""

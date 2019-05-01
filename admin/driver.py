@@ -150,7 +150,7 @@ def perform_install(package, config=None, user='hudson', dest='python', virtuale
         else:
             cmd.extend(virtualenv_args)
         cmd.append( os.path.join(os.environ['WORKSPACE'], dest) )
-        sys.stdout.write("Running Command: %s\n" % " ".join(cmd))
+        sys.stdout.write( "Running Command: %s\n    from %s\n" % (" ".join(cmd), os.getcwd()) )
         sys.stdout.flush()
         if platform == 'win':
             sys.stdout.write( str(subprocess.call(['cmd','/c']+cmd)) + '\n' )
@@ -172,7 +172,7 @@ def perform_install(package, config=None, user='hudson', dest='python', virtuale
                     python,
                     'setup.py',
                     'develop', '--no-deps', '--prefix', os.path.join( os.environ['WORKSPACE'],'python') ]
-                sys.stdout.write("Running Command: %s\n" % " ".join(cmd))
+                sys.stdout.write("Running Command: %s\n    from %s\n" % (" ".join(cmd), os.getcwd()))
                 sys.stdout.flush()
                 os.chdir(file)
                 if platform == 'win':
@@ -191,16 +191,23 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
     else:
         cmd = [os.path.join( os.environ['WORKSPACE'],'python','bin','test.'+package ), '--cat', cat]
     cmd.append('-v')
+    srcdir = os.path.join(os.environ['WORKSPACE'],'src','pyomo')
+    os.chdir(os.path.join( srcdir ))
     if coverage:
+        # Remove any preexisting coverage files
+        if os.path.exists(os.path.join(srcdir, '.coverage')):
+            os.remove(os.path.join(srcdir, '.coverage'))
+        for f in glob.glob(os.path.join(srcdir, '.coverage.*')):
+            os.remove(f)
         sitedir = os.path.join(
             os.environ['WORKSPACE'],'python','lib',
             'python'+'.'.join(map(str,sys.version_info[:2])),'site-packages')
         pthfile = os.path.join(sitedir, 'run_coverage_at_startup.pth')
         with open(pthfile, 'w') as FILE:
             FILE.write('import coverage; coverage.process_startup()\n')
-        srcdir = os.path.join(os.environ['WORKSPACE'],'src','pyomo')
         with open(os.path.join(srcdir, '.coveragerc'), 'r') as FILE:
             coveragerc = FILE.readlines()
+        #coveragerc.append("source=%s\n" % (srcdir, ))
         coveragerc.append("data_file=%s%s.coverage\n" % (srcdir, os.path.sep))
         coveragerc_file = os.path.join(srcdir, 'coveragerc')
         with open(coveragerc_file, 'w') as FILE:
@@ -210,7 +217,7 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
         #cmd.extend(['--coverage','--cover-erase'])
     if 'TEST_PACKAGES' in os.environ:
         cmd = cmd + re.split('[ \t]+', os.environ['TEST_PACKAGES'].strip())
-    sys.stdout.write( "Running Command: %s\n" % " ".join(cmd) )
+    sys.stdout.write("Running Command: %s\n    from %s\n" % (" ".join(cmd), os.getcwd()))
     sys.stdout.flush()
     if platform == 'win':
         sys.stdout.write( str(subprocess.call(['cmd','/c']+cmd)) + '\n' )
@@ -225,12 +232,11 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
     #
     if not coverage:
         return
-    os.chdir(os.path.join( os.environ['WORKSPACE'],'src','pyomo' ))
     cover_cmd=[os.path.join(os.environ['WORKSPACE'],'python','bin','coverage')]
     if platform == 'win':
         cover_cmd[0] += '.exe'
     cmd = cover_cmd + ['combine']
-    sys.stdout.write( "Running Command: %s\n" % " ".join(cmd) )
+    sys.stdout.write("Running Command: %s\n    from %s\n" % (" ".join(cmd), os.getcwd()))
     sys.stdout.flush()
     if platform == 'win':
         sys.stdout.write( str(subprocess.call(['cmd','/c']+cmd)) + '\n' )
@@ -252,9 +258,9 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
     cmd = cover_cmd + ['xml']
     if omit is not None:
         cmd.append('--omit=%s' % (omit,))
-    covFName = os.path.join( os.environ['WORKSPACE'],'src','coverage.xml' )
+    covFName = os.path.join(srcdir,'coverage.xml')
     cmd.extend(['-o', covFName])
-    sys.stdout.write( "Running Command: %s\n" % " ".join(cmd) )
+    sys.stdout.write("Running Command: %s\n    from %s\n" % (" ".join(cmd), os.getcwd()))
     sys.stdout.flush()
     if platform == 'win':
         sys.stdout.write( str(subprocess.call(['cmd','/c']+cmd)) + '\n' )

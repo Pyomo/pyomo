@@ -92,7 +92,7 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create_instance()
         expr = sum_product(denom=[instance.y,instance.x])
-        baseline = "(1/(y[1]*x[1])) + (1/(y[2]*x[2])) + (1/(y[3]*x[3]))"
+        baseline = "1/(y[1]*x[1]) + 1/(y[2]*x[2]) + 1/(y[3]*x[3])"
         self.assertEqual( str(expr), baseline )
 
     def test_expr5(self):

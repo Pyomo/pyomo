@@ -14,7 +14,7 @@ EQUATIONS c_e_FIX_ONE_VAR_CONST__, c1, c2, c3;
 
 c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
 c1: x1 * x1 >= 2;
-c2: x1 - 0.5 * x2 <= 0;
+c2: x1 + (-0.5) * x2 <= 0;
 c3: x3 - (x1 + 2.0) <= 0;
 
 OBJ: minimize x3 + x2 * x2 + x1;

@@ -60,13 +60,13 @@ class SCIPAMPL(SystemCallSolver):
         return ResultsFormat.sol
 
     def _default_executable(self):
-        executable = pyomo.common.registered_executable("scipampl")
-        if executable is None:
+        executable = pyomo.common.Executable("scipampl")
+        if not executable:
             logger.warning("Could not locate the 'scipampl' executable, "
                            "which is required for solver %s" % self.name)
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     def _get_version(self):
         """
@@ -292,4 +292,3 @@ class SCIPAMPL(SystemCallSolver):
                     SolutionStatus.unknown
 
         return results
-pyomo.common.register_executable(name="scipampl")

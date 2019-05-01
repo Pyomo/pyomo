@@ -140,7 +140,7 @@ class OptConvertDebug(unittest.TestCase):
             ans = pyomo.opt.convert_problem( (currdir+"unknown.nl",), None, [pyomo.opt.ProblemFormat.cpxlp])
             self.fail("Expected pyomo.opt.ConverterError exception")
         except pyutilib.common.ApplicationError:
-            if pyomo.common.registered_executable("pico_convert").enabled():
+            if pyomo.common.Executable("pico_convert"):
                 self.fail("Expected ApplicationError because pico_convert is not available")
             return
         except pyomo.opt.ConverterError:
@@ -148,16 +148,15 @@ class OptConvertDebug(unittest.TestCase):
 
     def test_error9(self):
         """ The Opt configuration has not been initialized """
-        cmd = pyomo.common.registered_executable("pico_convert")
-        if not cmd is None:
+        cmd = pyomo.common.Executable("pico_convert")
+        if cmd:
             cmd.disable()
         try:
             ans = pyomo.opt.convert_problem( (currdir+"test4.nl",), None, [pyomo.opt.ProblemFormat.cpxlp])
             self.fail("This test didn't fail, but pico_convert should not be defined.")
         except pyomo.opt.ConverterError:
             pass
-        if not cmd is None:
-            cmd.enable()
+        cmd.rehash()
 
     def test_error10(self):
         """ GLPSOL can only convert file data """
@@ -174,7 +173,7 @@ class OptConvertDebug(unittest.TestCase):
             ans = pyomo.opt.convert_problem( (currdir+"test3.mod",currdir+"test5.dat"), None, [pyomo.opt.ProblemFormat.cpxlp])
             self.fail("Expected pyomo.opt.ConverterError exception because we provided a MOD file with a 'data;' declaration")
         except pyutilib.common.ApplicationError:
-            if pyutilib.registered_executable("glpsol").enabled():
+            if pyomo.common.Executable("glpsol"):
                 self.fail("Expected ApplicationError because glpsol is not available")
             return
         except pyomo.opt.ConverterError:
