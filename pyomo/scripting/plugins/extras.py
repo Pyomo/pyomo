@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import logging
 import six
 from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
 
@@ -77,7 +76,11 @@ def install_extras(args=[], quiet=False):
             results[package] = True
         except:
             results[package] = False
-        pip.logger.consumers = []
+        try:
+            pip.logger.consumers = []
+        except AttributeError:
+            # old pip versions (prior to 6.0~104^2)
+            pip.log.consumers = []
 
     if not quiet:
         print(' ')
