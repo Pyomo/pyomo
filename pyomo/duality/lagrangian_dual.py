@@ -34,7 +34,13 @@ class DualTransformation(IsomorphicTransformation):
         neg_suffix                  Defaults to _minus
     """
 
-
+    @deprecated(
+        "Use of the pyomo.duality package is deprecated. There are known bugs "
+        "in pyomo.duality, and we do not recommend the use of this code. "
+        "Development of dualization capabilities has been shifted to "
+        "the Pyomo Adversarial Optimization (PAO) library. Please contact "
+        "William Hart for further details (wehart@sandia.gov).",
+        version='5.6.2')
     def __init__(self, **kwds):
         kwds['name'] = "linear_dual"
         super(DualTransformation, self).__init__(**kwds)
