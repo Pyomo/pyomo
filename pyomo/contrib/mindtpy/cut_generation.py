@@ -35,8 +35,8 @@ def add_objective_linearization(solve_data, config):
         MindtPy.ECP_constr_map[obj, solve_data.mip_iter] = c
 
 
-def add_oa_cut(var_values, duals, solve_data, config, ignore_integrality=False):
-    """TODO-romeo
+def add_oa_equality_relaxation(var_values, duals, solve_data, config, ignore_integrality=False):
+    """TODO-david change name, write short docstring
 
     ignore_integrality: useful for cut in initial relaxation
     """
@@ -53,6 +53,7 @@ def add_oa_cut(var_values, duals, solve_data, config, ignore_integrality=False):
 
     # generate new constraints
     # TODO some kind of special handling if the dual is phenomenally small?
+    # TODO-romeo conditional for 'global' option, i.e. slack or no slack
     jacs = solve_data.jacobians
     for constr, dual_value in zip(MindtPy.constraint_list, duals):
         if constr.body.polynomial_degree() in (1, 0):

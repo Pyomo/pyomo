@@ -114,17 +114,6 @@ def handle_master_mip_other_conditions(master_mip, master_mip_results, solve_dat
 
 
 def handle_master_mip_infeasible(master_mip, solve_data, config):
-    config.logger.info(
-        'MILP master problem is infeasible. '
-        'Problem may have no more feasible binary combinations.')
-    if solve_data.mip_iter == 1:
-        config.logger.info(
-            'MindtPy initialization may have generated poor '
-            'quality cuts.')
-
-
-# TODO-romeo which one is the correct one?
-def handle_master_mip_infeasible2(master_mip, solve_data, config):
         config.logger.info(
             'MILP master problem is infeasible. '
             'Problem may have no more feasible '
