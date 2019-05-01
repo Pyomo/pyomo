@@ -1,7 +1,7 @@
 """Solution of NLP subproblems."""
 from __future__ import division
 
-from pyomo.contrib.mindtpy.cut_generation import (add_oa_cut,
+from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
         add_int_cut)
 from pyomo.contrib.mindtpy.util import add_feas_slacks
 from pyomo.contrib.gdpopt.util import copy_var_list_values
@@ -76,7 +76,7 @@ def handle_NLP_subproblem_optimal(fix_nlp, solve_data, config):
     for c in fix_nlp.tmp_duals:
         if fix_nlp.dual.get(c, None) is None:
             fix_nlp.dual[c] = fix_nlp.tmp_duals[c]
-    duals = list(fix_nlp.dual[c] for c in fix_nlp.MindtPy_utils.constraint_list)
+    dual_values = list(fix_nlp.dual[c] for c in fix_nlp.MindtPy_utils.constraint_list)
 
     main_objective = next(fix_nlp.component_data_objects(Objective, active=True))
     if main_objective.sense == minimize:
@@ -90,15 +90,19 @@ def handle_NLP_subproblem_optimal(fix_nlp, solve_data, config):
 
     config.logger.info(
         'NLP {}: OBJ: {}  LB: {}  UB: {}'
-        .format(solve_data.nlp_iter, value(main_objective.expr), solve_data.LB, solve_data.UB))
+        .format(solve_data.nlp_iter,
+                value(main_objective.expr),
+                solve_data.LB, solve_data.UB))
 
     if solve_data.solution_improved:
         solve_data.best_solution_found = fix_nlp.clone()
 
     # Add the linear cut
-    var_values = list(v.value for v in fix_nlp.MindtPy_utils.variable_list)
     if config.strategy == 'OA':
-        add_oa_cut(var_values, duals, solve_data, config)
+        copy_var_list_values(fix_nlp.MindtPy_utils.variable_list,
+                             solve_data.mip.MindtPy_utils.variable_list,
+                             config)
+        add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
     elif config.strategy == 'PSC':
         add_psc_cut(solve_data, config)
     elif config.strategy == 'GBD':
@@ -108,6 +112,7 @@ def handle_NLP_subproblem_optimal(fix_nlp, solve_data, config):
     # ConstraintList, which is not activated by default. However, it
     # may be activated as needed in certain situations or for certain
     # values of option flags.
+    var_values = list(v.value for v in fix_nlp.MindtPy_utils.variable_list)
     add_int_cut(var_values, solve_data, config, feasible=True)
 
     config.call_after_subproblem_feasible(fix_nlp, solve_data)
@@ -128,6 +133,7 @@ def handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config):
         sign_adjust = 1 if value(c.upper) is None else -1
         fix_nlp.dual[c] = (sign_adjust
                 * max(0, sign_adjust * (rhs - value(c.body))))
+    dual_values = list(fix_nlp.dual[c] for c in fix_nlp.MindtPy_utils.constraint_list)
 
     if config.strategy == 'PSC' or config.strategy == 'GBD':
         for var in fix_nlp.component_data_objects(ctype=Var, descend_into=True):
@@ -143,9 +149,13 @@ def handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config):
         if config.initial_feas:
             # add_feas_slacks(fix_nlp, solve_data)
             # config.initial_feas = False
-            var_values, duals = solve_NLP_feas(solve_data, config)
-            add_oa_cut(var_values, duals, solve_data, config)
+            feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
+            copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
+                                 solve_data.mip.MindtPy_utils.variable_list,
+                                 config)
+            add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
     # Add an integer cut to exclude this discrete option
+    var_values = list(v.value for v in fix_nlp.MindtPy_utils.variable_list)
     add_int_cut(var_values, solve_data, config)  # excludes current discrete option
 
 
@@ -217,4 +227,4 @@ def solve_NLP_feas(solve_data, config):
         raise ValueError(
             'Problem is not feasible, check NLP solver')
 
-    return var_values, duals
+    return fix_nlp, feas_soln
