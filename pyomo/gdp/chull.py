@@ -17,7 +17,8 @@ from pyomo.core import IPyomoScriptModifyInstance, TransformationFactory
 import pyomo.gdp.plugins.chull
 
 @deprecated('The GDP Pyomo script plugins are deprecated.  '
-            'Use BuildActions or the --transform option.')
+            'Use BuildActions or the --transform option.',
+            version='5.4')
 class ConvexHull_Transformation_PyomoScript_Plugin(Plugin):
     """Plugin to automatically call the GDP Convex Hull relaxation within
     the Pyomo script.

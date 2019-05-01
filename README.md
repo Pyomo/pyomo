@@ -33,7 +33,7 @@ Pyomo is currently tested with the following Python implementations:
 
 ### Installation
 
-#### PyPI [![PyPI](https://img.shields.io/pypi/v/pyomo.svg?maxAge=2592000)]()
+#### PyPI [![PyPI](https://img.shields.io/pypi/v/pyomo.svg?maxAge=2592000)](https://pypi.org/project/Pyomo/)
 <!---
 # PyPI download stats appear to be broken
 [![PyPI](https://img.shields.io/pypi/dm/pyomo.svg?maxAge=2592000)]()

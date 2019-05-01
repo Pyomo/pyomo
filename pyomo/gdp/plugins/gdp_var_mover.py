@@ -39,7 +39,8 @@ class HACK_GDP_Var_Mover(Transformation):
     """
 
     @deprecated(msg="The gdp.varmover transformation has been deprecated in "
-                "favor of the gdp.reclassify transformation.")
+                "favor of the gdp.reclassify transformation.",
+                version='5.5.1')
     def _apply_to(self, instance, **kwds):
         assert not kwds
         count = 0
