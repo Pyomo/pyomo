@@ -4,6 +4,8 @@ from __future__ import division
 from pyomo.contrib.mindtpy.mip_solve import (solve_OA_master)
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.core import minimize, Objective
+from pyomo.opt import TerminationCondition as tc
+from pyomo.contrib.gdpopt.util import get_main_elapsed_time
 
 
 def MindtPy_iteration_loop(solve_data, config):
@@ -77,7 +79,7 @@ def algorithm_should_terminate(solve_data, config):
             'MindtPy exiting on bound convergence. '
             'LB: {} + (tol {}) >= UB: {}\n'.format(
                 solve_data.LB, config.bound_tolerance, solve_data.UB))
-        # res.solver.termination_condition = tc.optimal
+        solve_data.results.solver.termination_condition = tc.optimal
         return True
 
     # Check iteration limit
@@ -88,8 +90,21 @@ def algorithm_should_terminate(solve_data, config):
         config.logger.info(
             'Final bound values: LB: {}  UB: {}'.
             format(solve_data.LB, solve_data.UB))
+        solve_data.results.solver.termination_condition = tc.maxIterations
         return True
 
+    # Check time limit
+    if get_main_elapsed_time(solve_data.timing) > config.time_limit:
+        config.logger.info(
+            'MindtPy unable to converge bounds '
+            'before time limit of {} seconds. '
+            'Elapsed: {} seconds'
+            .format(config.time_limit, get_main_elapsed_time(solve_data.timing)))
+        config.logger.info(
+            'Final bound values: LB: {}  UB: {}'.
+            format(solve_data.LB, solve_data.UB))
+        solve_data.results.solver.termination_condition = tc.maxTimeLimit
+        return True
     # if not algorithm_is_making_progress(solve_data, config):
     #     config.logger.debug(
     #         'Algorithm is not making enough progress. '

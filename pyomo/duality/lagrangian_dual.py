@@ -11,11 +11,12 @@
 #
 # NOTE: deprecated code
 #
-
+from pyomo.common.deprecation import deprecated
 from pyomo.core import *
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.standard_form import StandardForm
 from pyomo.core.plugins.transform.util import partial, process_canonical_repn
+from pyomo.common.deprecation import deprecated
 
 
 @TransformationFactory.register("core.lagrangian_dual", doc="Create the LP dual model.")
@@ -34,7 +35,13 @@ class DualTransformation(IsomorphicTransformation):
         neg_suffix                  Defaults to _minus
     """
 
-
+    @deprecated(
+        "Use of the pyomo.duality package is deprecated. There are known bugs "
+        "in pyomo.duality, and we do not recommend the use of this code. "
+        "Development of dualization capabilities has been shifted to "
+        "the Pyomo Adversarial Optimization (PAO) library. Please contact "
+        "William Hart for further details (wehart@sandia.gov).",
+        version='5.6.2')
     def __init__(self, **kwds):
         kwds['name'] = "linear_dual"
         super(DualTransformation, self).__init__(**kwds)
