@@ -9,14 +9,11 @@ Pyomo 5.6.2
 - General
   - Fix setup.py for Windows installation with Python3 and Cython (#823)
   - Reorganize how Pyomo manages the version number (#854)
-  - Add logic to control signals in shellcmd solvers (#856)
   - Updated build badges on main Github page (#867)
-  - Add missing import to kestrel_plugin.py (#895)
   - Fix bug in model size report utility (#904)
   - Catch eval errors in calculate_variable_from_constraint utility (#872)
   - Add project description file used by COIN-OR server (#891)
   - Add common utility for downloading files (#819, #927)
-  - Update DataPortal tests requiring PyYaml to not rely on file diffs (#931)
   - Add infrastructure for building compiled extensions (#940, #959)
   - Return the subcommand error code from the pyomo script (#958)
   - Fix the "pyomo install-extras" command (#981, #986)
@@ -27,6 +24,7 @@ Pyomo 5.6.2
   - Enable publication of coverage results from Jenkins (#842, #892)
   - Update Travis configuration with new docker image location (#880)
   - Activate coverage for Anaconda Travis builds (#887)
+  - Update DataPortal tests requiring PyYaml to not rely on file diffs (#931)
   - Add simplified Jenkins test driver (#949, #952, #960)
   - Restrict auto-build of PyomoGallery to master branch builds (#985)
 - Core
@@ -36,12 +34,14 @@ Pyomo 5.6.2
   - Make component slice objects picklable/deepcopyable (#914)
   - Allow variable identification for LinearExpression (#920)
   - Split expr_pyomo5.py into three files (#888)
-  - Fix sets not iterating in correct order (#936)
+  - Fix ordered sets not iterating in correct order (#936)
   - Add SimpleBlock to pyomo.core namespace (#941)
   - Kernel updates (#951)
   - Fix expression infix representation (#966)
 - Solver Interfaces
+  - Add logic to control signals in shellcmd solvers (#856)
   - Narrow the check for a valid Baron license (#857)
+  - Add missing import to kestrel_plugin.py (#895)
   - Allow '~' in CPLEX file names (#925)
   - Updates to CBC plugin to handle all return statuses and support warm starts
     (#874, #946)
@@ -62,8 +62,8 @@ Pyomo 5.6.2
 - Contributed Packages
   - ParmEst updates to make API more flexible, updated examples, documentation 
     and tests (#814)
-  - GDPopt algorithm enhancements, cut generation bug fix, add example to tests, 
-    time limit option support (#805, #826, #852, #970)
+  - GDPopt algorithm enhancements, cut generation bug fix, add example
+    to tests, time limit option support (#805, #826, #852, #970)
   - Multistart solver wrapper bug fix for identifying the Objective (#807)
   - Updates to MC++ interface and documentation (#827, #929, #939, #964, #968)
   - Add import guards for optional packages like Scipy and Pandas (#853, #889)
