@@ -17,8 +17,17 @@ from pyutilib.services import TempfileManager
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
-from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
-from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
+from pyomo.solvers.plugins.solvers.direct_solver import \
+    DirectSolver
+from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import \
+    DirectOrPersistentSolver
+from pyomo.core.kernel.conic import (_ConicBase,
+                                     quadratic,
+                                     rotated_quadratic,
+                                     primal_exponential,
+                                     primal_power,
+                                     dual_exponential,
+                                     dual_power)
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.component_map import ComponentMap
@@ -55,6 +64,8 @@ class MosekDirect(DirectSolver):
         self._solver_var_to_pyomo_var_map = ComponentMap()
         self._pyomo_con_to_solver_con_map = dict()
         self._solver_con_to_pyomo_con_map = ComponentMap()
+        self._pyomo_cone_to_solver_cone_map = dict()
+        self._solver_cone_to_pyomo_cone_map = ComponentMap()
         self._init()
 
     def _init(self):
@@ -141,6 +152,58 @@ class MosekDirect(DirectSolver):
         # FIXME: can we get a return code indicating if Mosek had a significant failure?
         return Bunch(rc=None, log=None)
 
+    def _get_cone_data(self, con):
+        # if the cone is not recognized, this function
+        # will return None for cone_type and cone_members
+        cone_type = None
+        cone_param = 0
+        cone_members = None
+        if isinstance(con, quadratic):
+            assert con.has_ub() and \
+                (con.ub == 0) and (not con.has_lb())
+            assert con.check_convexity_conditions(relax=True)
+            cone_type = self._mosek.conetype.quad
+            cone_members = [con.r] + list(con.x)
+        elif isinstance(con, rotated_quadratic):
+            assert con.has_ub() and \
+                (con.ub == 0) and (not con.has_lb())
+            assert con.check_convexity_conditions(relax=True)
+            cone_type = self._mosek.conetype.rquad
+            cone_members = [con.r1, con.r2] + list(con.x)
+        elif self._version > (8, 1, 0):
+            if isinstance(con, primal_exponential):
+                assert con.has_ub() and \
+                    (con.ub == 0) and (not con.has_lb())
+                assert con.check_convexity_conditions(
+                    relax=False)
+                cone_type = self._mosek.conetype.pexp
+                cone_members = [con.r, con.x1, con.x2]
+            elif isinstance(con, primal_power):
+                assert con.has_ub() and \
+                    (con.ub == 0) and (not con.has_lb())
+                assert con.check_convexity_conditions(
+                    relax=False)
+                cone_type = self._mosek.conetype.ppow
+                cone_param = value(con.alpha)
+                cone_members = [con.r1, con.r2] + list(con.x)
+            elif isinstance(con, dual_exponential):
+                assert con.has_ub() and \
+                    (con.ub == 0) and (not con.has_lb())
+                assert con.check_convexity_conditions(
+                    relax=False)
+                cone_type = self._mosek.conetype.dexp
+                cone_members = [con.r, con.x1, con.x2]
+            elif isinstance(con, dual_power):
+                assert con.has_ub() and \
+                    (con.ub == 0) and (not con.has_lb())
+                assert con.check_convexity_conditions(
+                    relax=False)
+                cone_type = self._mosek.conetype.dpow
+                cone_param = value(con.alpha)
+                cone_members = [con.r1, con.r2] + list(con.x)
+
+        return cone_type, cone_param, cone_members
+
     def _get_expr_from_pyomo_repn(self, repn, max_degree=2):
         referenced_vars = ComponentSet()
 
@@ -216,6 +279,8 @@ class MosekDirect(DirectSolver):
         DirectOrPersistentSolver._set_instance(self, model, kwds)
         self._pyomo_con_to_solver_con_map = dict()
         self._solver_con_to_pyomo_con_map = ComponentMap()
+        self._pyomo_cone_to_solver_cone_map = dict()
+        self._solver_cone_to_pyomo_cone_map = ComponentMap()
         self._pyomo_var_to_solver_var_map = ComponentMap()
         self._solver_var_to_pyomo_var_map = ComponentMap()
         self._whichsol = getattr(
@@ -246,39 +311,71 @@ class MosekDirect(DirectSolver):
 
         conname = self._symbol_map.getSymbol(con, self._labeler)
 
+        mosek_expr = None
+        referenced_vars = None
+        cone_type = None
+        cone_param = 0
+        cone_members = None
         if con._linear_canonical_form:
             mosek_expr, referenced_vars = self._get_expr_from_pyomo_repn(
                 con.canonical_form(),
                 self._max_constraint_degree)
+        elif isinstance(con, _ConicBase):
+            cone_type, cone_param, cone_members = \
+                self._get_cone_data(con)
+            if cone_type is not None:
+                assert cone_members is not None
+                referenced_vars = ComponentSet(cone_members)
+            else:
+                # the cone was not recognized, treat
+                # it like a standard constraint, which
+                # will in all likelihood lead to Mosek
+                # reporting a helpful error message
+                assert mosek_expr is None
+        if (mosek_expr is None) and (cone_type is None):
+            mosek_expr, referenced_vars = \
+                self._get_expr_from_pyomo_expr(
+                    con.body,
+                    self._max_constraint_degree)
 
+        assert referenced_vars is not None
+        if mosek_expr is not None:
+            assert cone_type is None
+            self._solver_model.appendcons(1)
+            con_index = self._solver_model.getnumcon()-1
+            con_type, ub, lb = self.set_con_bounds(con, mosek_expr[2])
+
+            if con.has_lb():
+                if not is_fixed(con.lower):
+                    raise ValueError("Lower bound of constraint {0} "
+                                     "is not constant.".format(con))
+            if con.has_ub():
+                if not is_fixed(con.upper):
+                    raise ValueError("Upper bound of constraint {0} "
+                                     "is not constant.".format(con))
+
+            self._solver_model.putarow(con_index, mosek_expr[1], mosek_expr[0])
+            self._solver_model.putqconk(
+                con_index, mosek_expr[4], mosek_expr[5], mosek_expr[3])
+            self._solver_model.putconbound(con_index, con_type, lb, ub)
+            self._solver_model.putconname(con_index, conname)
+            self._pyomo_con_to_solver_con_map[con] = con_index
+            self._solver_con_to_pyomo_con_map[con_index] = con
         else:
-            mosek_expr, referenced_vars = self._get_expr_from_pyomo_expr(
-                con.body,
-                self._max_constraint_degree)
-        self._solver_model.appendcons(1)
-        con_index = self._solver_model.getnumcon()-1
-        con_type, ub, lb = self.set_con_bounds(con, mosek_expr[2])
-
-        if con.has_lb():
-            if not is_fixed(con.lower):
-                raise ValueError("Lower bound of constraint {0} "
-                                 "is not constant.".format(con))
-        if con.has_ub():
-            if not is_fixed(con.upper):
-                raise ValueError("Upper bound of constraint {0} "
-                                 "is not constant.".format(con))
-
-        self._solver_model.putarow(con_index, mosek_expr[1], mosek_expr[0])
-        self._solver_model.putqconk(
-            con_index, mosek_expr[4], mosek_expr[5], mosek_expr[3])
-        self._solver_model.putconbound(con_index, con_type, lb, ub)
-        self._solver_model.putconname(con_index, conname)
+            assert cone_type is not None
+            members = [self._pyomo_var_to_solver_var_map[v_]
+                       for v_ in cone_members]
+            self._solver_model.appendcone(cone_type,
+                                          cone_param,
+                                          members)
+            cone_index = self._solver_model.getnumcone()-1
+            self._solver_model.putconename(cone_index, conname)
+            self._pyomo_cone_to_solver_cone_map[con] = cone_index
+            self._solver_cone_to_pyomo_cone_map[cone_index] = con
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1
         self._vars_referenced_by_con[con] = referenced_vars
-        self._pyomo_con_to_solver_con_map[con] = con_index
-        self._solver_con_to_pyomo_con_map[con_index] = con
 
     def _mosek_vtype_from_var(self, var):
         """
@@ -388,7 +485,9 @@ class MosekDirect(DirectSolver):
         msk_task = self._solver_model
         msk = self._mosek
 
-        itr_soltypes = [msk.problemtype.qo, msk.problemtype.qcqo]
+        itr_soltypes = [msk.problemtype.qo,
+                        msk.problemtype.qcqo,
+                        msk.problemtype.conic]
 
         if (msk_task.getnumintvar() >= 1):
             self._whichsol = msk.soltype.itg
@@ -679,6 +778,13 @@ class MosekDirect(DirectSolver):
                         con_names.append(msk_task.getconname(con))
                     for name in con_names:
                         soln_constraints[name] = {}
+                    # GH: We would also initialized space
+                    #     for any cones in the solution
+                    #     dictionary here, but, as far as I
+                    #     can tell, Mosek currently does not
+                    #     support extracting the dual for a
+                    #     conic constraint.
+
 
                 if extract_duals:
                     vals = [0.0]*msk_task.getnumcon()
