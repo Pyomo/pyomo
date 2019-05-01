@@ -19,13 +19,14 @@ Current Development
   - Update DataPortal tests requiring PyYaml to not rely on file diffs (#931)
   - Add infrastructure for building compiled extensions (#940, #959)
   - Return the subcommand error code from the pyomo script (#958)
-  - Fix the "pyomo install-extras" command (#981)
+  - Fix the "pyomo install-extras" command (#981, #986)
 - Testing
   - Update Appveyor configuration to use --no-update-deps conda option (#837)
   - Enable publication of coverage results from Jenkins (#842, #892)
   - Update Travis configuration with new docker image location (#880)
   - Activate coverage for Anaconda Travis builds (#887)
   - Add simplified Jenkins test driver (#949, #952, #960)
+  - Restrict auto-build of PyomoGallery to master branch builds (#985)
 - Core
   - Reference improvements to support sparse components (#830)
   - Fixed typo on Var docstring (#865)
@@ -42,6 +43,7 @@ Current Development
   - Allow '~' in CPLEX file names (#925)
   - Updates to CBC plugin to handle all return statuses and support warm starts
     (#874, #946)
+  - Add Mosek solver plugin (#971)
 - GDP updates
   - Add nonconvex heat exchanger network example (#824)
   - Bugfix for GDP Var mover (#667)
