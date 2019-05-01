@@ -7,12 +7,32 @@ Documentation for MC++ may be found on the `MC++ website`_.
 
 .. _MC++ website: https://omega-icl.github.io/mcpp/
 
-Installation
-------------
+
+Default Installation
+--------------------
+Pyomo now supports automated downloading and compilation of MC++.
+To install MC++ and other third party compiled extensions, run:
+
+.. code::
+
+    pyomo download-extensions
+    pyomo build-extensions
+
+To get and install just MC++, run the following commands in the ``pyomo/contrib/mcpp`` directory:
+
+.. code::
+
+    python getMCPP.py
+    python build.py
+
+This should install MC++ to the pyomo plugins directory, by default located at ``$HOME/.pyomo/``.
+
+
+Manual Installation
+-------------------
 
 Support for MC++ has only been validated by Pyomo developers using Linux and OSX.
 Installation instructions for the MC++ library may be found on the `MC++ website`_.
-Until a more simple installation scheme is developed, you may install MC++ and this interface using this guide.
 
 We assume that you have installed MC++ into a directory of your choice.
 We will denote this directory by ``$MCPP_PATH``.

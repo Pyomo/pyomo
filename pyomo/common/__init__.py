@@ -17,7 +17,7 @@ from pyutilib.factory.factory import (
 )
 
 from .fileutils import (
-    Executable,
+    Executable, Library,
     # The following will be deprecated soon
     register_executable, registered_executable, unregister_executable
 )

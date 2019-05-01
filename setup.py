@@ -165,7 +165,7 @@ def run_setup():
         results_schema=pyomo.scripting.commands:results_schema
         pyro_mip_server = pyomo.scripting.pyro_mip_server:main
         test.pyomo = pyomo.scripting.runtests:runPyomoTests
-        pyomo = pyomo.scripting.pyomo_main:main
+        pyomo = pyomo.scripting.pyomo_main:main_console_script
         pyomo_ns = pyomo.scripting.commands:pyomo_ns
         pyomo_nsc = pyomo.scripting.commands:pyomo_nsc
         kill_pyro_mip_servers = pyomo.scripting.commands:kill_pyro_mip_servers
@@ -174,7 +174,6 @@ def run_setup():
         OSSolverService = pyomo.scripting.commands:OSSolverService
         pyomo_python = pyomo.scripting.commands:pyomo_python
         pyomo_old=pyomo.scripting.pyomo_command:main
-        get_pyomo_extras = scripts.get_pyomo_extras:main
 
         [pyomo.command]
         pyomo.runbenders=pyomo.pysp.benders

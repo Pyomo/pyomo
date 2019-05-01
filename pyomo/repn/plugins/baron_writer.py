@@ -21,7 +21,9 @@ from pyutilib.math import isclose
 
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter, WriterFactory
-from pyomo.core.expr.numvalue import is_fixed, value, native_numeric_types, native_types
+from pyomo.core.expr.numvalue import (
+    is_fixed, value, native_numeric_types, native_types, nonpyomo_leaf_types,
+)
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base import (SortComponents,
                              SymbolMap,
@@ -30,12 +32,16 @@ from pyomo.core.base import (SortComponents,
                              BooleanSet, Constraint,
                              IntegerSet, Objective,
                              Var, Param)
+from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.set_types import *
+from pyomo.core.kernel.base import ICategorizedObject
 #CLH: EXPORT suffixes "constraint_types" and "branching_priorities"
 #     pass their respective information to the .bar file
 import pyomo.core.base.suffix
 import pyomo.core.kernel.suffix
 from pyomo.core.kernel.block import IBlock
+from pyomo.repn.util import valid_expr_ctypes_minlp, \
+    valid_active_ctypes_minlp
 
 logger = logging.getLogger('pyomo.core')
 
@@ -58,34 +64,41 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
             arg = node._args_[i]
 
             if arg is None:
-                tmp.append('Undefined')
-            elif arg.__class__ in native_numeric_types:
-                tmp.append(val)
-            elif arg.__class__ in native_types:
-                tmp.append("'{0}'".format(val))
-            elif arg.is_variable_type():
-                tmp.append(val)
-            elif arg.is_expression_type() and node._precedence() < arg._precedence():
-                tmp.append("({0})".format(val))
+                tmp.append('Undefined')                 # TODO: coverage
             else:
-                tmp.append(val)
+                parens = False
+                if val and val[0] in '-+':
+                    parens = True
+                elif arg.__class__ in native_numeric_types:
+                    pass
+                elif arg.__class__ in nonpyomo_leaf_types:
+                    val = "'{0}'".format(val)
+                elif arg.is_expression_type():
+                    if node._precedence() < arg._precedence():
+                        parens = True
+                    elif node._precedence() == arg._precedence():
+                        if i == 0:
+                            parens = node._associativity() != 1
+                        elif i == len(node._args_)-1:
+                            parens = node._associativity() != -1
+                        else:
+                            parens = True
+                if parens:
+                    tmp.append("({0})".format(val))
+                else:
+                    tmp.append(val)
 
         if node.__class__ is EXPR.LinearExpression:
             for v in node.linear_vars:
                 self.variables.add(id(v))
 
-        if node.__class__ is EXPR.ProductExpression:
+        if node.__class__ in {
+                EXPR.ProductExpression, EXPR.MonomialTermExpression}:
+            if tmp[0] in node._to_string.minus_one:
+                return "- {0}".format(tmp[1])
+            if tmp[0] in node._to_string.one:
+                return tmp[1]
             return "{0} * {1}".format(tmp[0], tmp[1])
-        elif node.__class__ is EXPR.MonomialTermExpression:
-            if tmp[0] == '-1':
-                # It seems dumb to construct a temporary
-                # NegationExpression object Should we copy the logic
-                # from that function here?
-                return EXPR.NegationExpression._to_string(
-                    EXPR.NegationExpression((None,)),
-                    [tmp[1]], None, self.smap, True)
-            else:
-                return "{0} * {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.PowExpression:
             x,y = node.args
             if type(x) not in native_types and not x.is_fixed() and \
@@ -125,17 +138,37 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
         if node.__class__ in native_types:
             return True, str(node)
 
+        if node.is_expression_type():
+            # we will descend into this, so type checking will happen later
+            if node.is_component_type():
+                self.treechecker(node)
+            return False, None
+
+        if node.is_component_type():
+            if isinstance(node, ICategorizedObject):
+                _ctype = node.ctype
+            else:
+                _ctype = node.type()
+            if _ctype not in valid_expr_ctypes_minlp:
+                # Make sure all components in active constraints
+                # are basic ctypes we know how to deal with.
+                raise RuntimeError(
+                    "Unallowable component '%s' of type %s found in an active "
+                    "constraint or objective.\nThe GAMS writer cannot export "
+                    "expressions with this component type."
+                    % (node.name, _ctype.__name__))
+
         if node.is_variable_type():
             if node.fixed:
-                return True, str(value(node))
-            self.variables.add(id(node))
-            label = self.smap.getSymbol(node)
-            return True, label
+                return True, node.to_string(
+                    verbose=False, smap=self.smap, compute_values=True)
+            else:
+                self.variables.add(id(node))
+                label = self.smap.getSymbol(node)
+                return True, label
 
-        if not node.is_expression_type():
-            return True, str(value(node))
-
-        return False, None
+        return True, node.to_string(
+            verbose=False, smap=self.smap, compute_values=True)
 
 
 def expression_to_string(expr, variables, labeler=None, smap=None):
@@ -569,6 +602,20 @@ class ProblemWriter_bar(AbstractProblemWriter):
             raise ValueError("Baron problem writer: Using both the "
                              "'symbolic_solver_labels' and 'labeler' "
                              "I/O options is forbidden")
+
+        # Make sure there are no strange ActiveComponents. The expression
+        # walker will handle strange things in constraints later.
+        model_ctypes = model.collect_ctypes(active=True)
+        invalids = set()
+        for t in (model_ctypes - valid_active_ctypes_minlp):
+            if issubclass(t, ActiveComponent):
+                invalids.add(t)
+        if len(invalids):
+            invalids = [t.__name__ for t in invalids]
+            raise RuntimeError(
+                "Unallowable active component(s) %s.\nThe BARON writer cannot "
+                "export models with this component type." %
+                ", ".join(invalids))
 
         if output_filename is None:
             output_filename = model.name + ".bar"

@@ -20,11 +20,29 @@ class GroupDownloader(object):
         return self.downloader.create_parser(parser)
 
     def call(self, args, unparsed):
-        logging.getLogger('pyomo.common').setLevel(logging.INFO)
+        logger = logging.getLogger('pyomo.common')
+        logger.setLevel(logging.INFO)
+        results = []
+        result_fmt = "[%s]  %s"
+        returncode = 0
         self.downloader.cacert = args.cacert
         self.downloader.insecure = args.insecure
         for target in DownloadFactory:
-            DownloadFactory(target, downloader=self.downloader)
+            try:
+                DownloadFactory(target, downloader=self.downloader)
+                result = ' OK '
+            except SystemExit:
+                result = 'FAIL'
+                returncode = 1
+            except:
+                result = 'FAIL'
+                returncode = 1
+            results.append(result_fmt % (result, target))
+        logger.info("Finished downloading Pyomo extensions.")
+        logger.info(
+            "The following extensions were downloaded:\n    " +
+            "\n    ".join(results))
+        return returncode
 
 
 #
