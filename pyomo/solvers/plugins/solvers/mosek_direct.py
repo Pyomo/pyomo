@@ -483,7 +483,7 @@ class MosekDirect(DirectSolver):
                                 msk.rescode.trm_mio_num_branches,
                                 msk.rescode.trm_num_max_num_int_solutions]:
             self.results.solver.status = SolverStatus.ok
-            self.results.solver.termination_message = "Optimization terminated because maximum number if relaxations" \
+            self.results.solver.termination_message = "Optimization terminated because maximum number of relaxations" \
                 " / branches / integer solutions exceeded " \
                 "the value specified in the TimeLimit parameter."
             self.results.solver.termination_condition = TerminationCondition.maxEvaluations
