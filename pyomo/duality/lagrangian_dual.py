@@ -11,7 +11,7 @@
 #
 # NOTE: deprecated code
 #
-
+from pyomo.common.deprecation import deprecated
 from pyomo.core import *
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.standard_form import StandardForm
