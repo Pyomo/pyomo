@@ -766,7 +766,7 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         return False, None
 
 
-def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-5, infeasible_tol=1e-6):
+def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-5, infeasible_tol=1e-8):
     """
     Feasibility based bounds tightening for a constraint. This function attempts to improve the bounds of each variable
     in the constraint based on the bounds of the constraint and the bounds of the other variables in the constraint.
@@ -859,7 +859,7 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-5, infe
     return new_var_bounds
 
 
-def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=1e-5, infeasible_tol=1e-6):
+def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=1e-5, infeasible_tol=1e-8):
     """
     Feasibility based bounds tightening (FBBT) for a block or model. This
     loops through all of the constraints in the block and performs
@@ -954,7 +954,7 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=
     return new_var_bounds
 
 
-def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, infeasible_tol=1e-6):
+def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, infeasible_tol=1e-8):
     """
     Perform FBBT on a constraint, block, or model. For more control,
     use fbbt_con and fbbt_block. For detailed documentation, see
