@@ -53,7 +53,7 @@ Pyomo is currently tested with the following Python implementations:
 
 #### Anaconda [![Anaconda version](https://anaconda.org/conda-forge/pyomo/badges/version.svg)](https://anaconda.org/conda-forge/pyomo) [![Anaconda downloads](https://anaconda.org/conda-forge/pyomo/badges/downloads.svg)](https://anaconda.org/conda-forge/pyomo)
 
-    conda install -c https://conda.anaconda.org/conda-forge pyomo
+    conda install -c conda-forge pyomo
 
 ### Getting Help
 
