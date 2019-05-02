@@ -24,7 +24,7 @@ from pyomo.opt.base import SolverFactory
 from pyomo.opt.results import SolverResults
 from pyutilib.misc import Container
 
-__version__ = (19, 1, 16)  # Move to date-based versioning.
+__version__ = (19, 3, 11)  # Note: date-based version number
 
 
 @SolverFactory.register(
@@ -156,6 +156,17 @@ class GDPoptSolver(object):
         default='pyomo.contrib.gdpopt',
         description="The logger object or name to use for reporting.",
         domain=a_logger
+    ))
+    CONFIG.declare("calc_disjunctive_bounds", ConfigValue(
+        default=False,
+        description="Calculate special disjunctive variable bounds for GLOA. False by default.",
+        domain=bool
+    ))
+    CONFIG.declare("obbt_disjunctive_bounds", ConfigValue(
+        default=False,
+        description="Use optimality-based bounds tightening rather than feasibility-based bounds tightening "
+        "to compute disjunctive variable bounds. False by default.",
+        domain=bool
     ))
     CONFIG.declare("bound_tolerance", ConfigValue(
         default=1E-6, domain=NonNegativeFloat,
@@ -336,6 +347,8 @@ If you use this software, you may cite the following:
         solve_data.results.solver.timing = solve_data.timing
         solve_data.results.solver.user_time = solve_data.timing.total
         solve_data.results.solver.wallclock_time = solve_data.timing.total
+
+        solve_data.results.solver.iterations = solve_data.master_iteration
 
         return solve_data.results
 

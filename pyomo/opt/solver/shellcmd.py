@@ -18,9 +18,10 @@ import logging
 import pyutilib.misc
 from pyutilib.common import ApplicationError, WindowsError
 from pyutilib.misc import Bunch
-from pyutilib.services import registered_executable, TempfileManager
+from pyutilib.services import TempfileManager
 from pyutilib.subprocess import run
 
+import pyomo.common
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import *
 from pyomo.opt.results import SolverStatus, SolverResults
@@ -82,26 +83,16 @@ class SystemCallSolver(OptSolver):
         if not validate:
             self._user_executable = name
         else:
-            name = os.path.expanduser(name)
-            if os.path.isabs(name):
-                exe = pyutilib.misc.search_file(name,
-                                                executable=True,
-                                                search_path=[''])
-            elif os.path.basename(name) != name:
-                exe = pyutilib.misc.search_file(os.path.relpath(name),
-                                                executable=True,
-                                                search_path=[os.path.curdir])
-            else:
-                # Only search directories in the PATH if
-                # name is not in the form of an absolute or
-                # relative path.  E.g., it would be
-                # confusing if someone called
-                # set_executable('./foo') and forgot to copy
-                # 'foo' into the local directory, but this
-                # function picked up another 'foo' in the
-                # users PATH that they did not want to use.
-                exe = pyutilib.misc.search_file(name,
-                                                executable=True)
+            exe = pyomo.common.Executable(name)
+            # This is a bit awkward, but we want Executable to re-check
+            # the PATH, so we will explicitly call rehash().  In the
+            # future, we should move to have the solver directly use the
+            # Executable() singleton to manage getting / setting /
+            # overriding paths to various executables.  Setting the
+            # executable through the Executable() singleton will
+            # automatically re-check the PATH.
+            exe.rehash()
+            exe = exe.path()
             if exe is None:
                 raise ValueError(
                     "Failed to set executable for solver %s. File "
@@ -165,7 +156,7 @@ class SystemCallSolver(OptSolver):
     #       adding an optional search_path keyword to the
     #       _default_executable method implemented by
     #       derived classes. How to propagate that through
-    #       the pyomo.common.registered_executable
+    #       the pyomo.common.Executable
     #       framework once it gets there is another question
     #       (that I won't be dealing with today).
     #
@@ -175,6 +166,11 @@ class SystemCallSolver(OptSolver):
     #
     #      where executable would call
     #      self._default_executable(self._search_path)
+    #
+    # UPDATE [30 Jan 19]: The Pyomo executable search system has moved
+    #     away from the use of pyutilib's 'registered_executable'
+    #     mechanisms.  The new system allows clients to augment the
+    #     search path through a "pathlist" attribute.
     #
 
     def executable(self):
@@ -226,8 +222,8 @@ class SystemCallSolver(OptSolver):
             os.remove(self._soln_file)
 
     def _apply_solver(self):
-        if registered_executable('timer'):
-            self._timer = registered_executable('timer').get_path()
+        if pyomo.common.Executable('timer'):
+            self._timer = pyomo.common.Executable('timer').path()
         #
         # Execute the command
         #

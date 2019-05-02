@@ -154,13 +154,13 @@ class BARONSHELL(SystemCallSolver):
             return True
 
     def _default_executable(self):
-        executable = pyomo.common.registered_executable("baron")
-        if executable is None:
+        executable = pyomo.common.Executable("baron")
+        if not executable:
             logger.warning("Could not locate the 'baron' executable, "
                            "which is required for solver %s" % self.name)
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     def _get_version(self):
         """
@@ -564,5 +564,3 @@ the Pyomo model and BARON version) to the Pyomo Developers.""")
 
             # Fill the solution for most cases, except errors
             results.solution.insert(soln)
-
-pyomo.common.register_executable(name="baron")

@@ -12,35 +12,43 @@
 #
 
 import os
-from os.path import abspath, dirname
-currdir = dirname(abspath(__file__))+os.sep
+import pickle
 
 import pyutilib.th as unittest
-from six import itervalues
 
 from pyomo.environ import *
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.indexed_component import _IndexedComponent_slice
 
+def _x_init(m, k):
+    return k
+
+def _y_init(m, i, j):
+    return i*10+j
+
+def _cx_init(b, k):
+    i, j = b.index()[:2]
+    return i*100+j*10+k
+
+def _c(b, i, j):
+    b.x = Var(b.model().K, initialize=_cx_init)
+
+def _b(b, i, j):
+    _c(b,i,j)
+    b.c = Block(b.model().I, b.model().J, rule=_c)
+
+def _bb(b, i, j, k):
+    _c(b,i,j)
+    b.c = Block(b.model().I, b.model().J, rule=_c)
 
 class TestComponentSlices(unittest.TestCase):
     def setUp(self):
-        def _c(b, i, j):
-            b.x = Var(b.model().K, initialize=lambda m,k: i*100+j*10+k)
-
-        def _b(b, i, j):
-            _c(b,i,j)
-            b.c = Block(b.model().I, b.model().J, rule=_c)
-        def _bb(b, i, j, k):
-            _c(b,i,j)
-            b.c = Block(b.model().I, b.model().J, rule=_c)
-
         self.m = m = ConcreteModel()
         m.I = RangeSet(1,3)
         m.J = RangeSet(4,6)
         m.K = RangeSet(7,9)
-        m.x = Var(m.K, initialize=lambda m,k: k)
-        m.y = Var(m.I, m.J, initialize=lambda m,i,j: i*10+j)
+        m.x = Var(m.K, initialize=_x_init)
+        m.y = Var(m.I, m.J, initialize=_y_init)
         m.b = Block(m.I, m.J, rule=_b)
         m.bb = Block(m.I, m.J, m.K, rule=_bb)
 
@@ -461,7 +469,50 @@ class TestComponentSlices(unittest.TestCase):
             [((1,4), m.b[1,4]), ((1,5), m.b[1,5]), ((1,6), m.b[1,6])]
         )
 
+    def test_pickle_slices(self):
+        m = self.m
+        _slicer = m.b[1,:].c[:,4].x
+        _new_slicer = pickle.loads(pickle.dumps(_slicer))
 
+        self.assertIsNot(_slicer, _new_slicer)
+        self.assertIsNot(_slicer._call_stack, _new_slicer._call_stack)
+        self.assertIs(type(_slicer._call_stack), type(_new_slicer._call_stack))
+        self.assertEqual(len(_slicer._call_stack), len(_new_slicer._call_stack))
+
+        ref = ['b[1,4].c[1,4].x', 'b[1,4].c[2,4].x', 'b[1,4].c[3,4].x',
+               'b[1,5].c[1,4].x', 'b[1,5].c[2,4].x', 'b[1,5].c[3,4].x',
+               'b[1,6].c[1,4].x', 'b[1,6].c[2,4].x', 'b[1,6].c[3,4].x',
+               ]
+        self.assertEqual([str(x) for x in _slicer], ref )
+        self.assertEqual([str(x) for x in _new_slicer], ref )
+        for x,y in zip(iter(_slicer), iter(_new_slicer)):
+            self.assertIs(type(x), type(y))
+            self.assertEqual(x.name, y.name)
+            self.assertIsNot(x, y)
+
+    def test_clone_on_model(self):
+        m = self.m
+        m.slicer = m.b[1,:].c[:,4].x
+        n = m.clone()
+
+        self.assertIsNot(m, n)
+        self.assertIsNot(m.slicer, n.slicer)
+        self.assertIsNot(m.slicer._call_stack, n.slicer._call_stack)
+        self.assertIs(type(m.slicer._call_stack), type(n.slicer._call_stack))
+        self.assertEqual(len(m.slicer._call_stack), len(n.slicer._call_stack))
+
+        ref = ['b[1,4].c[1,4].x', 'b[1,4].c[2,4].x', 'b[1,4].c[3,4].x',
+               'b[1,5].c[1,4].x', 'b[1,5].c[2,4].x', 'b[1,5].c[3,4].x',
+               'b[1,6].c[1,4].x', 'b[1,6].c[2,4].x', 'b[1,6].c[3,4].x',
+               ]
+        self.assertEqual([str(x) for x in m.slicer], ref )
+        self.assertEqual([str(x) for x in n.slicer], ref )
+        for x,y in zip(iter(m.slicer), iter(n.slicer)):
+            self.assertIs(type(x), type(y))
+            self.assertEqual(x.name, y.name)
+            self.assertIsNot(x, y)
+            self.assertIs(x.model(), m)
+            self.assertIs(y.model(), n)
 
 if __name__ == "__main__":
     unittest.main()

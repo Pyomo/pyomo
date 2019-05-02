@@ -154,7 +154,7 @@ def copy_var_list_values(from_list, to_list, config, skip_stale=False):
         except ValueError as err:
             err_msg = getattr(err, 'message', str(err))
             var_val = value(v_from)
-            rounded_val = round(var_val)
+            rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
             if 'is not in domain Binary' in err_msg and (
                     fabs(var_val - 1) <= config.integer_tolerance or

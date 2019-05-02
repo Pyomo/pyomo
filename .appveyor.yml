@@ -102,7 +102,7 @@ install:
   - SET MINICONDA_EXTRAS=""
   - IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn)
   #
-  - "IF DEFINED EXTRAS (SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% pymysql pyro4 %MINICONDA_EXTRAS%)"
+  - "IF DEFINED EXTRAS (SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% pymysql pyro4 pint %MINICONDA_EXTRAS%)"
   #- "IF DEFINED EXTRAS (%CONDAFORGE% mkl)"
   #
   # Finally, add any solvers we want to the list
@@ -141,16 +141,16 @@ install:
   - "echo data_file=%BUILD_DIR%\\.coverage >> %COVERAGE_PROCESS_START%"
   - python -c "from distutils.sysconfig import get_python_lib; import os; FILE=open(os.path.join(get_python_lib(),'run_coverage_at_startup.pth'), 'w'); FILE.write('import coverage; coverage.process_startup()'); FILE.close()"
 
+  # Configure Pyomo to put the configuration directory here (so that it
+  # is both writable, and will be cleared between test runs
+  - "SET PYOMO_CONFIG_DIR=%BUILD_DIR%\\config"
+
   # Fetch additional solvers
   #
-  - "mkdir %cd%\\bin"
-  - "SET PATH=%cd%\\bin;%PATH%"
-  - "python pyomo\\common\\getGSL.py %cd%\\bin"
-  - "python pyomo\\contrib\\trustregion\\getGJH.py %cd%\\bin"
+  - "pyomo download-extensions"
 
   # Report relevant package versions
   #
-  - "gjh -v"
   - "glpsol -v"
   - "ipopt -v"
   - python --version
@@ -171,6 +171,9 @@ test_script:
   # subprocesses launched by tests
   - "SET BUILD_DIR=%cd%"
   - "SET COVERAGE_PROCESS_START=%BUILD_DIR%\\coveragerc"
+  # Configure Pyomo to put the configuration directory here (so that it
+  # is both writable, and will be cleared between test runs
+  - "SET PYOMO_CONFIG_DIR=%BUILD_DIR%\\config"
 
   # Run Pyomo tests
   - "test.pyomo -v --cat=%CATEGORY% pyomo %BUILD_DIR%\\pyomo-model-libraries"

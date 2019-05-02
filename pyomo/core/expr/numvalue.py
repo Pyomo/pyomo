@@ -10,7 +10,8 @@
 
 __all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type',
            'is_potentially_variable', 'NumericValue', 'ZeroConstant',
-           'native_numeric_types', 'native_types', 'polynomial_degree')
+           'native_numeric_types', 'native_types', 'nonpyomo_leaf_types',
+           'polynomial_degree')
 
 import sys
 import logging

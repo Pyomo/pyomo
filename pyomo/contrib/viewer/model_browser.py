@@ -81,7 +81,7 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
             editable = []
             self.setWindowTitle("Expressions")
         else:
-            raise Exception("Not a valid view type")
+            raise ValueError("{} is not a valid view type".format(standard))
         # Create a data model.  This is what translates the Pyomo model into
         # a tree view.
         datmodel = ComponentDataModel(self, ui_setup=ui_setup,
@@ -99,12 +99,6 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
     def refresh(self):
         added = self.datmodel._update_tree()
         self.datmodel.layoutChanged.emit()
-
-    def toggle(self):
-        if self.isVisible():
-            self.hide()
-        else:
-            self.show()
 
     def update_model(self):
         self.datmodel.update_model()
@@ -170,14 +164,23 @@ class ComponentDataItem(object):
     def calculate(self):
         """Calculate items, applies to expressions and constraints"""
         if isinstance(self.data, _ExpressionData):
-            self._cache_value = value(self.data)
+            try:
+                self._cache_value = value(self.data, exception=False)
+            except ZeroDivisionError:
+                self._cache_value = "Divide_by_0"
         if isinstance(self.data, _ConstraintData) and self.data.active:
             try:
                 self._cache_value = value(self.data.body, exception=False)
+            except ZeroDivisionError:
+                self._cache_value = "Divide_by_0"
+            try:
                 self._cache_lb = value(self.data.lower, exception=False)
+            except ZeroDivisionError:
+                self._cache_lb = "Divide_by_0"
+            try:
                 self._cache_ub = value(self.data.upper, exception=False)
-            except:
-                pass
+            except ZeroDivisionError:
+                self._cache_ub = "Divide_by_0"
 
     def get(self, a):
         """Get an attribute"""
