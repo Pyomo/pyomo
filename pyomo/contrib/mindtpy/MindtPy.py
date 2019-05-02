@@ -41,6 +41,7 @@ from pyomo.core import (
 from pyomo.opt import SolverFactory, SolverResults
 from pyutilib.misc import Container
 
+
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 __version__ = (0, 1, 0)
@@ -65,6 +66,14 @@ class MindtPySolver(object):
         domain=PositiveInt,
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods"
+    ))
+    CONFIG.declare("time_limit", ConfigValue(
+        default=600,
+        domain=PositiveInt,
+        description="Time limit (seconds, default=600)",
+        doc="Seconds allowed until terminated. Note that the time limit can"
+            "currently only be enforced between subsolver invocations. You may"
+            "need to set subsolver time limits as well."
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="OA",
@@ -231,7 +240,7 @@ class MindtPySolver(object):
         solve_data.timing = Container()
 
         old_logger_level = config.logger.getEffectiveLevel()
-        with time_code(solve_data.timing, 'total'), \
+        with time_code(solve_data.timing, 'total', is_main_timer=True), \
              restore_logger_level(config.logger), \
              create_utility_block(model, 'MindtPy_utils', solve_data):
             if config.tee and old_logger_level > logging.INFO:
@@ -362,6 +371,14 @@ class MindtPySolver(object):
 
             solve_data.results.problem.lower_bound = solve_data.LB
             solve_data.results.problem.upper_bound = solve_data.UB
+
+        solve_data.results.solver.timing = solve_data.timing
+        solve_data.results.solver.user_time = solve_data.timing.total
+        solve_data.results.solver.wallclock_time = solve_data.timing.total
+
+        solve_data.results.solver.iterations = solve_data.mip_iter
+
+        return solve_data.results
 
     #
     # Support "with" statements.
