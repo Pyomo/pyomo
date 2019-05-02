@@ -243,6 +243,20 @@ def _prop_bnds_leaf_to_root_atan(node, bnds_dict):
     bnds_dict[node] = interval.atan(lb1, ub1, -math.inf, math.inf)
 
 
+def _prop_bnds_leaf_to_root_sqrt(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
+    bnds_dict: ComponentMap
+    """
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb1, ub1 = bnds_dict[arg]
+    bnds_dict[node] = interval.power(lb1, ub1, 0.5, 0.5)
+
+
 _unary_leaf_to_root_map = dict()
 _unary_leaf_to_root_map['exp'] = _prop_bnds_leaf_to_root_exp
 _unary_leaf_to_root_map['log'] = _prop_bnds_leaf_to_root_log
@@ -252,6 +266,7 @@ _unary_leaf_to_root_map['tan'] = _prop_bnds_leaf_to_root_tan
 _unary_leaf_to_root_map['asin'] = _prop_bnds_leaf_to_root_asin
 _unary_leaf_to_root_map['acos'] = _prop_bnds_leaf_to_root_acos
 _unary_leaf_to_root_map['atan'] = _prop_bnds_leaf_to_root_atan
+_unary_leaf_to_root_map['sqrt'] = _prop_bnds_leaf_to_root_sqrt
 
 
 def _prop_bnds_leaf_to_root_UnaryFunctionExpression(node, bnds_dict):
@@ -406,6 +421,27 @@ def _prop_bnds_root_to_leaf_PowExpression(node, bnds_dict):
         ub2 = _ub2
     bnds_dict[arg1] = (lb1, ub1)
     bnds_dict[arg2] = (lb2, ub2)
+
+
+def _prop_bnds_root_to_leaf_sqrt(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
+    bnds_dict: ComponentMap
+    """
+    assert len(node.args) == 1
+    arg1 = node.args[0]
+    lb0, ub0 = bnds_dict[node]
+    lb1, ub1 = bnds_dict[arg1]
+    lb2, ub2 = (0.5, 0.5)
+    _lb1, _ub1 = interval._inverse_power1(lb0, ub0, lb2, ub2, orig_xl=lb1, orig_xu=ub1)
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    bnds_dict[arg1] = (lb1, ub1)
 
 
 def _prop_bnds_root_to_leaf_ReciprocalExpression(node, bnds_dict):
@@ -617,6 +653,7 @@ _unary_root_to_leaf_map['tan'] = _prop_bnds_root_to_leaf_tan
 _unary_root_to_leaf_map['asin'] = _prop_bnds_root_to_leaf_asin
 _unary_root_to_leaf_map['acos'] = _prop_bnds_root_to_leaf_acos
 _unary_root_to_leaf_map['atan'] = _prop_bnds_root_to_leaf_atan
+_unary_root_to_leaf_map['sqrt'] = _prop_bnds_root_to_leaf_sqrt
 
 
 def _prop_bnds_root_to_leaf_UnaryFunctionExpression(node, bnds_dict):
