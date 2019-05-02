@@ -766,7 +766,7 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         return False, None
 
 
-def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-4, infeasible_tol=1e-6):
+def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-5, infeasible_tol=1e-6):
     """
     Feasibility based bounds tightening for a constraint. This function attempts to improve the bounds of each variable
     in the constraint based on the bounds of the constraint and the bounds of the other variables in the constraint.
@@ -796,7 +796,8 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-4, infe
         on a binary variable is greater than or equal to 1-integer_tol, then the upper bound is left at 1.
         Otherwise the upper bound is decreased to 0.
     infeasible_tol: float
-        Tolerance for detecting infeasible constraints
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        infeasible_tol, then the constraint is considered infeasible and an exception is raised.
 
     Returns
     -------
@@ -858,7 +859,7 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-4, infe
     return new_var_bounds
 
 
-def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=1e-4):
+def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=1e-5, infeasible_tol=1e-6):
     """
     Feasibility based bounds tightening (FBBT) for a block or model. This
     loops through all of the constraints in the block and performs
@@ -881,6 +882,9 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=
         lower bound is left at 0. Otherwise, the lower bound is increased to 1. If the upper bound computed
         on a binary variable is greater than or equal to 1-integer_tol, then the upper bound is left at 1.
         Otherwise the upper bound is decreased to 0.
+    infeasible_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        infeasible_tol, then the constraint is considered infeasible and an exception is raised.
 
     Returns
     -------
@@ -917,7 +921,7 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=
     for c in m.component_data_objects(ctype=Constraint, active=True,
                                       descend_into=True, sort=True):
         _new_var_bounds = fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
-                                   integer_tol=integer_tol)
+                                   integer_tol=integer_tol, infeasible_tol=infeasible_tol)
         new_var_bounds.update(_new_var_bounds)
         for v, bnds in _new_var_bounds.items():
             vlb, vub = bnds
@@ -934,7 +938,7 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=
         v = improved_vars.pop()
         for c in var_to_con_map[v]:
             _new_var_bounds = fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
-                                       integer_tol=integer_tol)
+                                       integer_tol=integer_tol, infeasible_tol=infeasible_tol)
             new_var_bounds.update(_new_var_bounds)
             for _v, bnds in _new_var_bounds.items():
                 _vlb, _vub = bnds
@@ -950,7 +954,7 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=
     return new_var_bounds
 
 
-def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-4):
+def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, infeasible_tol=1e-6):
     """
     Perform FBBT on a constraint, block, or model. For more control,
     use fbbt_con and fbbt_block. For detailed documentation, see
@@ -967,6 +971,9 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-4):
         lower bound is left at 0. Otherwise, the lower bound is increased to 1. If the upper bound computed
         on a binary variable is greater than or equal to 1-integer_tol, then the upper bound is left at 1.
         Otherwise the upper bound is decreased to 0.
+    infeasible_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        infeasible_tol, then the constraint is considered infeasible and an exception is raised.
 
     Returns
     -------
@@ -979,15 +986,15 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-4):
         if comp.is_indexed():
             for _c in comp.values():
                 _new_var_bounds = fbbt_con(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
-                                           integer_tol=integer_tol)
+                                           integer_tol=integer_tol, infeasible_tol=infeasible_tol)
                 new_var_bounds.update(_new_var_bounds)
         else:
             _new_var_bounds = fbbt_con(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
-                                       integer_tol=integer_tol)
+                                       integer_tol=integer_tol, infeasible_tol=infeasible_tol)
             new_var_bounds.update(_new_var_bounds)
     elif comp.type() == Block:
         _new_var_bounds = fbbt_block(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
-                                     integer_tol=integer_tol)
+                                     integer_tol=integer_tol, infeasible_tol=infeasible_tol)
         new_var_bounds.update(_new_var_bounds)
     else:
         raise FBBTException('Cannot perform FBBT on objects of type {0}'.format(type(comp)))
