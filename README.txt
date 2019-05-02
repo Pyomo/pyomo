@@ -38,9 +38,13 @@ Organization
 
   * pyomo - The root directory for Pyomo source code
 
-+ Documentation and Bug Tracking
++ Documentation
 
-  * Trac wiki: https://software.sandia.gov/trac/pyomo
+  * https://pyomo.readthedocs.io/en/latest/
+
++ Issue Tracking
+
+  * https://github.com/Pyomo/pyomo/issues
 
 + Authors
 
