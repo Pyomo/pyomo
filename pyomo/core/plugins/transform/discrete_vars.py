@@ -114,7 +114,7 @@ class FixDiscreteVars(Transformation):
         _base_model_vars = model.component_data_objects(
             Var, active=True, descend_into=True )
         for var in _base_model_vars:
-            if var.domain in _discrete_relaxation_map and not var.is_fixed():
+            if any(type(var.domain) is type(domain) for domain in _discrete_relaxation_map) and not var.is_fixed():
                 fixed_vars.append(var)
                 var.fix()
         model._fixed_discrete_vars = Suffix(direction=Suffix.LOCAL)
