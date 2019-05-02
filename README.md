@@ -26,7 +26,6 @@ Pyomo is a Python-based open-source software package that supports a diverse set
  -  Mixed-integer stochastic programming
  -  Generalized disjunctive programming
  -  Differential algebraic equations
- -  Bilevel programming
  -  Mathematical programming with equilibrium constraints
 
 Pyomo supports analysis and scripting within a full-featured programming language. Further, Pyomo has also proven an effective framework for developing high-level optimization and analysis tools.  For example, the PySP package provides generic solvers for stochastic programming. PySP leverages the fact that Pyomo's modeling objects are embedded within a full-featured high-level programming language, which allows for transparent parallelization of subproblems using Python parallel communication libraries.
