@@ -1,6 +1,7 @@
 import pyutilib.th as unittest
 import pyomo.environ as pe
 from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.expr.numeric_expr import ProductExpression, UnaryFunctionExpression
 import math
 import logging
@@ -180,7 +181,7 @@ class TestFBBT(unittest.TestCase):
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_pow1(self):
         x_bounds = [(0, 2.8), (0.5, 2.8), (1, 2.8), (0.5, 1)]
-        c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        c_bounds = [(-2.5, 2.8), (0.5, 2.8), (-2.5, 0), (0, 2.8), (1, 2.8), (0.5, 1)]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
                 m = pe.Block(concrete=True)
@@ -274,7 +275,7 @@ class TestFBBT(unittest.TestCase):
         m.x.setub(None)
         m.y.setlb(-5)
         m.y.setub(-1)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InfeasibleConstraintException):
             fbbt(m)
 
         m.y.setub(0)
@@ -296,13 +297,13 @@ class TestFBBT(unittest.TestCase):
 
         m.y.setlb(-5)
         m.y.setub(-1)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InfeasibleConstraintException):
             fbbt(m)
 
         m.x.setlb(None)
         m.x.setub(None)
         m.y.setub(0)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InfeasibleConstraintException):
             fbbt(m)
 
         m.x.setlb(None)

@@ -25,3 +25,5 @@ class DeveloperError(NotImplementedError):
                  % ( repr(self.parameter), ) )
 
 
+class InfeasibleConstraintException(Exception):
+    pass

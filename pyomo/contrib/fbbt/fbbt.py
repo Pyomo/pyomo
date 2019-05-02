@@ -10,6 +10,7 @@ from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 import logging
+from pyomo.common.errors import InfeasibleConstraintException
 
 logger = logging.getLogger(__name__)
 
@@ -826,7 +827,7 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-4, infe
 
     # check if the constraint is infeasible
     if lb > _ub + infeasible_tol or ub < _lb - infeasible_tol:
-        raise FBBTException('Detected an infeasible constraint during FBBT: {0}'.format(str(con)))
+        raise InfeasibleConstraintException('Detected an infeasible constraint during FBBT: {0}'.format(str(con)))
 
     # check if the constraint is always satisfied
     if deactivate_satisfied_constraints:

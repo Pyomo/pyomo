@@ -1,7 +1,7 @@
 import math
 import warnings
 import logging
-from pyomo.common.errors import DeveloperError
+from pyomo.common.errors import DeveloperError, InfeasibleConstraintException
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +169,7 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu):
                 The ideas are similar to case 1.
             """
             if zu < 0:
-                raise ValueError('Infeasible. Anything to the power of {0} must be positive.'.format(y))
+                raise InfeasibleConstraintException('Infeasible. Anything to the power of {0} must be positive.'.format(y))
             if y > 0:
                 if zu == 0:
                     _xl = 0
@@ -190,7 +190,7 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu):
                 xu = _xu
             else:
                 if zu == 0:
-                    raise ValueError('Infeasible.')
+                    raise InfeasibleConstraintException('Infeasible. Anything to the power of {0} must be positive.'.format(y))
                 elif zl <= 0:
                     _xl = -math.inf
                     _xu = math.inf
