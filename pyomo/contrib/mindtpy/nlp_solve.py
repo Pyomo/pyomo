@@ -34,8 +34,8 @@ def solve_NLP_subproblem(solve_data, config):
                        % (solve_data.nlp_iter,))
 
     # Set up NLP
-    for v in MindtPy.variable_list:
-        if v.is_binary():
+    for v in fix_nlp.component_data_objects(Var, active=True):
+        if v.is_binary() or not v.is_continuous():
             v.fix(int(round(value(v))))
     # TransformationFactory('core.fix_discrete').apply_to(fix_nlp)
     # I think the transformation factory is broken TODO-romeo
@@ -113,7 +113,8 @@ def handle_NLP_subproblem_optimal(fix_nlp, solve_data, config):
     # may be activated as needed in certain situations or for certain
     # values of option flags.
     var_values = list(v.value for v in fix_nlp.MindtPy_utils.variable_list)
-    add_int_cut(var_values, solve_data, config, feasible=True)
+    if config.add_integer_cuts:
+        add_int_cut(var_values, solve_data, config, feasible=True)
 
     config.call_after_subproblem_feasible(fix_nlp, solve_data)
 
@@ -126,8 +127,7 @@ def handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config):
     # TODO try something else? Reinitialize with different initial
     # value?
     config.logger.info('NLP subproblem was locally infeasible.')
-    for c in fix_nlp.component_data_objects(ctype=Constraint, active=True,
-            descend_into=True):
+    for c in fix_nlp.component_data_objects(ctype=Constraint):
         rhs = ((0 if c.upper is None else c.upper)
                + (0 if c.lower is None else c.lower))
         sign_adjust = 1 if value(c.upper) is None else -1
@@ -156,7 +156,8 @@ def handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config):
             add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
     # Add an integer cut to exclude this discrete option
     var_values = list(v.value for v in fix_nlp.MindtPy_utils.variable_list)
-    add_int_cut(var_values, solve_data, config)  # excludes current discrete option
+    if config.add_integer_cuts:
+        add_int_cut(var_values, solve_data, config)  # excludes current discrete option
 
 
 def handle_NLP_subproblem_other_termination(fix_nlp, termination_condition,
@@ -167,7 +168,8 @@ def handle_NLP_subproblem_other_termination(fix_nlp, termination_condition,
         config.logger.info(
             'NLP subproblem failed to converge within iteration limit.')
         var_values = list(v.value for v in fix_nlp.MindtPy_utils.variable_list)
-        add_int_cut(var_values, solve_data, config)  # excludes current discrete option
+        if config.add_integer_cuts:
+            add_int_cut(var_values, solve_data, config)  # excludes current discrete option
     else:
         raise ValueError(
             'MindtPy unable to handle NLP subproblem termination '
@@ -185,13 +187,15 @@ def solve_NLP_feas(solve_data, config):
     next(fix_nlp.component_data_objects(Objective, active=True)).deactivate()
     for constr in fix_nlp.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
-        constr.deactivate()
+        if constr.body.polynomial_degree() not in [0,1]:
+            constr.deactivate()
+
     MindtPy.MindtPy_feas.activate()
     MindtPy.MindtPy_feas_obj = Objective(
         expr=sum(s for s in MindtPy.MindtPy_feas.slack_var[...]),
         sense=minimize)
     for v in MindtPy.variable_list:
-        if v.is_binary():
+        if v.is_binary() or not v.is_continuous():
             v.fix(int(round(v.value)))
     # fix_nlp.pprint()  #print nlp feasibility problem for debugging
     with SuppressInfeasibleWarning():
