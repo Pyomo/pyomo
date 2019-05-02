@@ -34,11 +34,7 @@ def solve_NLP_subproblem(solve_data, config):
                        % (solve_data.nlp_iter,))
 
     # Set up NLP
-    for v in fix_nlp.component_data_objects(Var, active=True):
-        if v.is_binary() or not v.is_continuous():
-            v.fix(int(round(value(v))))
-    # TransformationFactory('core.fix_discrete').apply_to(fix_nlp)
-    # I think the transformation factory is broken TODO-romeo
+    TransformationFactory('core.fix_discrete').apply_to(fix_nlp)
 
     # restore original variable values
     for nlp_var, orig_val in zip(
@@ -194,10 +190,8 @@ def solve_NLP_feas(solve_data, config):
     MindtPy.MindtPy_feas_obj = Objective(
         expr=sum(s for s in MindtPy.MindtPy_feas.slack_var[...]),
         sense=minimize)
-    for v in MindtPy.variable_list:
-        if v.is_binary() or not v.is_continuous():
-            v.fix(int(round(v.value)))
-    # fix_nlp.pprint()  #print nlp feasibility problem for debugging
+    TransformationFactory('core.fix_discrete').apply_to(fix_nlp)
+
     with SuppressInfeasibleWarning():
         feas_soln = SolverFactory(config.nlp_solver).solve(
             fix_nlp, **config.nlp_solver_args)
