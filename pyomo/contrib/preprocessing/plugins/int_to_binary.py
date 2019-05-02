@@ -81,7 +81,7 @@ class IntegerToBinary(IsomorphicTransformation):
         reform_block.int_var_set = RangeSet(0, len(integer_vars) - 1)
 
         reform_block.new_binary_var = Var(
-            Any, domain=Binary, dense=False,
+            Any, domain=Binary, dense=False, initialize=0,
             doc="Binary variable with index (int_var_idx, idx)")
         reform_block.integer_to_binary_constraint = Constraint(
             reform_block.int_var_set,
@@ -103,16 +103,18 @@ class IntegerToBinary(IsomorphicTransformation):
                     "variables." % (int_var.name,)
                 )
             # do the reformulation
-            highest_power = int(floor(log(value(int_var.ub), 2)))
+            highest_power = int(floor(log(value(int_var.ub - int_var.lb), 2)))
             # TODO potentially fragile due to floating point
 
             reform_block.integer_to_binary_constraint.add(
                 idx, expr=int_var == sum(
                     reform_block.new_binary_var[idx, pwr] * (2 ** pwr)
-                    for pwr in range(0, highest_power + 1)))
+                    for pwr in range(0, highest_power + 1))
+                    + int_var.lb)
 
             # Relax the original integer variable
-            int_var.domain = NonNegativeReals
+            # TODO-romeo @qtothec why do we need this?
+            #int_var.domain = NonNegativeReals
 
         logger.info(
             "Reformulated %s integer variables using "
