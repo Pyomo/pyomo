@@ -48,7 +48,7 @@ def get_version():
     return _verInfo['__version__']
 
 requires = [
-    'PyUtilib>=5.6.6.dev0',
+    'PyUtilib>=5.7.1.dev0',
     'appdirs',
     'ply',
     'six>=1.4',
@@ -174,7 +174,6 @@ def run_setup():
         OSSolverService = pyomo.scripting.commands:OSSolverService
         pyomo_python = pyomo.scripting.commands:pyomo_python
         pyomo_old=pyomo.scripting.pyomo_command:main
-        get_pyomo_extras = scripts.get_pyomo_extras:main
 
         [pyomo.command]
         pyomo.runbenders=pyomo.pysp.benders
