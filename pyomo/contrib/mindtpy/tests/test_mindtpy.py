@@ -149,7 +149,23 @@ class TestMindtPy(unittest.TestCase):
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(abs(value(model.cost.expr) - 0.66555) <= 1E-2)
+            self.assertTrue(abs(value(model.obj.expr) - 0.66555) <= 1E-2)
+
+
+    def test_OA_Proposal_with_int_cuts(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = ProposalModel()
+            print('\n Solving problem with Outer Approximation')
+            opt.solve(model, strategy='OA',
+                      mip_solver=required_solvers[1],
+                      nlp_solver=required_solvers[0],
+                      add_integer_cuts=True,
+                      integer_to_binary=True)
+
+            # self.assertIs(results.solver.termination_condition,
+            #               TerminationCondition.optimal)
+            self.assertTrue(abs(value(model.obj.expr) - 0.66555) <= 1E-2)
 
     # def test_PSC(self):
     #     """Test the partial surrogate cuts decomposition algorithm."""
