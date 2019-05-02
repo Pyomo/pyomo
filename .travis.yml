@@ -103,8 +103,8 @@ after_success:
   - ${DOC} find . -maxdepth 10 -name ".cov*"
   - ${DOC} coverage combine
   - ${DOC} codecov --env TAG -X gcov
-    # Trigger PyomoGallery build
-  - "if [ -n \"${KEY_JOB}\" ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token 4DadIB521uUPyBXMtvQVOw' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
+    # Trigger PyomoGallery build, but only when building the master branch
+  - "if [ -n \"${KEY_JOB}\" -a \"${TRAVIS_PULL_REQUEST}\" == false ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token 4DadIB521uUPyBXMtvQVOw' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
 
 deploy:
   - provider: pypi
