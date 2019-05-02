@@ -283,6 +283,16 @@ class TestFBBT(unittest.TestCase):
         self.assertEqual(m.x.lb, 0)
         self.assertEqual(m.x.ub, 0)
 
+    def test_pow5(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var(bounds=(0.5, 1))
+        m.c = pe.Constraint(expr=2**m.x == m.y)
+
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, -1)
+        self.assertAlmostEqual(m.x.ub, 0)
+
     def test_x_pow_minus_2(self):
         m = pe.ConcreteModel()
         m.x = pe.Var()
@@ -431,6 +441,49 @@ class TestFBBT(unittest.TestCase):
                 _x = np.exp(np.log(y) / _exp_val)
                 self.assertTrue(np.all(xl <= _x))
                 self.assertTrue(np.all(xu >= _x))
+
+    def test_sqrt(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.c = pe.Constraint(expr=pe.sqrt(m.x) == m.y)
+
+        fbbt(m)
+        self.assertEqual(m.x.lb, 0)
+        self.assertEqual(m.x.ub, None)
+        self.assertEqual(m.y.lb, 0)
+        self.assertEqual(m.y.ub, None)
+
+        m.x.setlb(None)
+        m.x.setub(None)
+        m.y.setlb(-5)
+        m.y.setub(-1)
+        with self.assertRaises(InfeasibleConstraintException):
+            fbbt(m)
+
+        m.x.setlb(None)
+        m.x.setub(None)
+        m.y.setub(0)
+        m.y.setlb(None)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, 0)
+        self.assertAlmostEqual(m.x.ub, 0)
+
+        m.x.setlb(None)
+        m.x.setub(None)
+        m.y.setub(2)
+        m.y.setlb(1)
+        fbbt(m)
+        self.assertAlmostEqual(m.x.lb, 1)
+        self.assertAlmostEqual(m.x.ub, 4)
+
+        m.x.setlb(None)
+        m.x.setub(0)
+        m.y.setlb(None)
+        m.y.setub(None)
+        fbbt(m)
+        self.assertAlmostEqual(m.y.lb, 0)
+        self.assertAlmostEqual(m.y.ub, 0)
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_exp(self):
