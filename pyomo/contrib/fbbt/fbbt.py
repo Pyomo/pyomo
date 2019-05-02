@@ -669,7 +669,7 @@ def _prop_bnds_root_to_leaf_UnaryFunctionExpression(node, bnds_dict):
     else:
         logger.warning('Unsupported expression type for FBBT: {0}. Bounds will not be improved in this part of '
                        'the tree.'
-                       ''.format(str(type(node))))
+                       ''.format(node.getname()))
 
 
 _prop_bnds_root_to_leaf_map = dict()
