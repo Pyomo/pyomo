@@ -2307,14 +2307,14 @@ class _SetUnion_OrderedSet(_OrderedSetMixin, _SetUnion_FiniteSet):
 class _SetIntersection(_SetOperator):
     __slots__ = tuple()
 
-    def __new__(cls, set0, set1):
-        if cls != _SetUnion:
-            return super(_SetUnion, cls).__new__(cls)
+    def __new__(cls, *args):
+        if cls != _SetIntersection:
+            return super(_SetIntersection, cls).__new__(cls)
 
-        (set0, set1), implicit = _SetOperator._processArgs(set0, set1)
-        if set0.is_ordered() or set1.is_ordered():
+        set0, set1 = _SetOperator._checkArgs(*args)
+        if set0[0] or set1[0]:
             cls = _SetIntersection_OrderedSet
-        elif set0.is_finite() or set1.is_finite():
+        elif set0[1] or set1[1]:
             cls = _SetIntersection_FiniteSet
         else:
             cls = _SetIntersection_InfiniteSet
