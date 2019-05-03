@@ -2101,16 +2101,14 @@ class RangeSet(Component):
 
 
     def _process_args(self, args, ranges):
-        if type(ranges) is tuple:
-            ranges = list(ranges)
-        elif type(ranges) is not list:
-            ranges = [ranges]
+        if type(ranges) is not tuple:
+            ranges = tuple(ranges)
         if len(args) == 1:
-            ranges.append(_NumericRange(1,args[0],1))
+            ranges = ranges + (_NumericRange(1,args[0],1),)
         elif len(args) == 2:
-            ranges.append(_NumericRange(args[0],args[1],1))
+            ranges = ranges + (_NumericRange(args[0],args[1],1),)
         elif len(args) == 3:
-            ranges.append(_NumericRange(*args))
+            ranges = ranges + (_NumericRange(*args),)
         elif args:
             raise ValueError("RangeSet expects 3 or fewer positional "
                              "arguments (received %s)" % (len(args),))
