@@ -25,7 +25,7 @@ _init_url="$URL$"
 # master and needs a hard reference to "suitably new" development.
 major=5
 minor=6
-micro=2
+micro=3
 releaselevel='invalid'
 #releaselevel='final'
 serial=0
