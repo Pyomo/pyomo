@@ -167,6 +167,23 @@ class Test(unittest.TestCase):
         self.assertEqual(rinst.e.bounds, instance_cloned.e.bounds)
         self.assertEqual(rinst.f.bounds, instance_cloned.f.bounds)
 
+    def test_relax_integrality(self):
+        # Coverage of the _clear_attribute method
+        self.model.d = Var(within=Integers, bounds=(-2,3))
+        instance=self.model.create_instance()
+        instance_cloned = instance.clone()
+        xfrm = TransformationFactory('core.relax_integrality')
+        rinst = xfrm.create_using(instance_cloned)
+        self.assertEqual(type(rinst.d.domain), RealSet)
+
+    def test_relax_integrality_simple_cloned(self):
+        self.model.x = Var(within=Integers, bounds=(-2,3))
+        instance = self.model.create_instance()
+        instance_cloned = instance.clone()
+        xfrm = TransformationFactory('core.relax_discrete')
+        rinst = xfrm.create_using(instance_cloned)
+        self.assertNotEqual(type(rinst.x.domain), RealSet)
+
     def test_nonnegativity_transformation_1(self):
         self.model.a = Var()
         self.model.b = Var(within=NonNegativeIntegers)
