@@ -2179,7 +2179,7 @@ class _SetOperator(_SetData, Set):
             state[i] = getattr(self, i)
         return state
 
-    # Note: because None of the slots on this class need to be edited,
+    # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
     @staticmethod
@@ -2304,7 +2304,7 @@ class _SetUnion_OrderedSet(_OrderedSetMixin, _SetUnion_FiniteSet):
 
 ############################################################################
 
-class _SetIntersection(_SetData):
+class _SetIntersection(_SetOperator):
     __slots__ = tuple()
 
     def __new__(cls, set0, set1):
@@ -2333,7 +2333,7 @@ class _SetIntersection_InfiniteSet(_SetIntersection):
         return all(val in s for s in self._sets)
 
 
-class _SetIntersection_FiniteSet(_SetIntersection_InfiniteSet, _FiniteSetMixin):
+class _SetIntersection_FiniteSet(_FiniteSetMixin, _SetIntersection_InfiniteSet):
     __slots__ = tuple()
 
     def __iter__(self):
@@ -2351,7 +2351,7 @@ class _SetIntersection_FiniteSet(_SetIntersection_InfiniteSet, _FiniteSetMixin):
         return sum(1 for _ in self)
 
 
-class _SetIntersection_OrderedSet(_SetIntersection_FiniteSet, _OrderedSetMixin):
+class _SetIntersection_OrderedSet(_OrderedSetMixin, _SetIntersection_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
@@ -2411,7 +2411,7 @@ class _SetDifference_InfiniteSet(_SetDifference):
         return val in self._sets[0] and not val in self._sets[1]
 
 
-class _SetDifference_FiniteSet(_SetDifference_InfiniteSet, _FiniteSetMixin):
+class _SetDifference_FiniteSet(_FiniteSetMixin, _SetDifference_InfiniteSet):
     __slots__ = tuple()
 
     def __iter__(self):
@@ -2425,7 +2425,7 @@ class _SetDifference_FiniteSet(_SetDifference_InfiniteSet, _FiniteSetMixin):
         return sum(1 for _ in self)
 
 
-class _SetDifference_OrderedSet(_SetDifference_FiniteSet, _OrderedSetMixin):
+class _SetDifference_OrderedSet(_OrderedSetMixin, _SetDifference_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
@@ -2488,8 +2488,8 @@ class _SetSymmetricDifference_InfiniteSet(_SetSymmetricDifference):
         return (val in self._sets[0]) ^ (val in self._sets[1])
 
 
-class _SetSymmetricDifference_FiniteSet(_SetSymmetricDifference_InfiniteSet,
-                                        _FiniteSetMixin):
+class _SetSymmetricDifference_FiniteSet(_FiniteSetMixin,
+                                        _SetSymmetricDifference_InfiniteSet):
     __slots__ = tuple()
 
     def __iter__(self):
@@ -2506,8 +2506,8 @@ class _SetSymmetricDifference_FiniteSet(_SetSymmetricDifference_InfiniteSet,
         return sum(1 for _ in self)
 
 
-class _SetSymmetricDifference_OrderedSet(_SetSymmetricDifference_FiniteSet,
-                                         _OrderedSetMixin):
+class _SetSymmetricDifference_OrderedSet(_OrderedSetMixin,
+                                         _SetSymmetricDifference_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
@@ -2583,7 +2583,7 @@ class _SetProduct_InfiniteSet(_SetProduct):
         return False
 
 
-class _SetProduct_FiniteSet(_SetProduct_InfiniteSet, _FiniteSetMixin):
+class _SetProduct_FiniteSet(_FiniteSetMixin, _SetProduct_InfiniteSet):
     __slots__ = tuple()
 
     def __iter__(self):
@@ -2596,7 +2596,7 @@ class _SetProduct_FiniteSet(_SetProduct_InfiniteSet, _FiniteSetMixin):
         return len(self._sets[0]) * len(self._sets[1])
 
 
-class _SetProduct_OrderedSet(_SetProduct_FiniteSet, _OrderedSetMixin):
+class _SetProduct_OrderedSet(_OrderedSetMixin, _SetProduct_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
