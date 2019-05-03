@@ -95,9 +95,24 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
 
 
 def add_oa_equality_relaxation(var_values, duals, solve_data, config, ignore_integrality=False):
-    """TODO-david change name, write short docstring
+    """More general case for outer approximation
 
-    ignore_integrality: useful for cut in initial relaxation
+    This method covers nonlinear inequalities g(x)<=b and g(x)>=b as well as 
+    equalities g(x)=b all in the same linearization call. It combines the dual
+    with the objective sense to figure out how to generate the cut.
+    Note that the dual sign is defined as follows (according to IPOPT):
+      sgn  | min | max
+    -------|-----|-----
+    g(x)<=b|  +1 | -1
+    g(x)>=b|  -1 | +1
+
+    Note additionally that the dual value is not strictly neccesary for inequality
+    constraints, but definitely neccesary for equality constraints. For equality 
+    constraints the cut will always be generated so that the side with the worse objective
+    function is the 'interior'.
+
+    ignore_integrality: Accepts float values for discrete variables.
+                        Useful for cut in initial relaxation
     """
 
     m = solve_data.mip
