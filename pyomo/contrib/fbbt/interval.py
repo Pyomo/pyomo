@@ -20,8 +20,18 @@ def mul(xl, xu, yl, yu):
 
 def inv(xl, xu):
     if xl <= 0 and xu >= 0:
-        return -math.inf, math.inf
-    return 1.0/xu, 1.0/xl
+        lb = -math.inf
+        ub = math.inf
+    else:
+        if xl == 0:
+            ub = math.inf
+        else:
+            ub = 1.0 / xl
+        if xu == 0:
+            lb = -math.inf
+        else:
+            lb = 1.0 / xu
+    return lb, ub
 
 
 def div(xl, xu, yl, yu):
@@ -246,6 +256,8 @@ def _inverse_power2(zl, zu, xl, xu):
     z = x**y => compute bounds on y
     y = ln(z) / ln(x)
     """
+    if (xl > 0 and zu <= 0) or (xl >= 0 and zu < 0):
+        raise InfeasibleConstraintException('A positive variable raised to the power of anything must be positive.')
     lba, uba = log(zl, zu)
     lbb, ubb = log(xl, xu)
     yl, yu = div(lba, uba, lbb, ubb)
@@ -264,8 +276,10 @@ def log(xl, xu):
             return -math.inf, math.log(xu)
         else:
             return -math.inf, -math.inf
+    elif xu <= 0:
+        return -math.inf, -math.inf
     else:
-        return -math.inf, math.inf
+        return -math.inf, math.log(xu)
 
 
 def sin(xl, xu):

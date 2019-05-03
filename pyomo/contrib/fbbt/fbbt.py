@@ -694,15 +694,17 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
     This walker propagates bounds from the variables to each node in
     the expression tree (all the way to the root node).
     """
-    def __init__(self, bnds_dict, integer_tol=1e-4):
+    def __init__(self, bnds_dict, integer_tol=1e-4, infeasibility_tol=1e-8):
         """
         Parameters
         ----------
         bnds_dict: ComponentMap
         integer_tol: float
+        infeasibility_tol: float
         """
         self.bnds_dict = bnds_dict
         self.integer_tol = integer_tol
+        self.infeasibility_tol = infeasibility_tol
 
     def visit(self, node, values):
         if node.__class__ in _prop_bnds_leaf_to_root_map:
@@ -727,6 +729,8 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
                     lb = -math.inf
                 if ub is None:
                     ub = math.inf
+                if lb - self.infeasibility_tol > ub:
+                    raise InfeasibleConstraintException('Variable has a lower bound which is larger than its upper bound: {0}'.format(str(node)))
             self.bnds_dict[node] = (lb, ub)
             return True, None
 
@@ -745,15 +749,17 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
     variables. Note that the bounds on every node in the tree must
     first be computed with _FBBTVisitorLeafToRoot.
     """
-    def __init__(self, bnds_dict, integer_tol=1e-4):
+    def __init__(self, bnds_dict, integer_tol=1e-4, infeasibility_tol=1e-8):
         """
         Parameters
         ----------
         bnds_dict: ComponentMap
         integer_tol: float
+        infeasibility_tol: float
         """
         self.bnds_dict = bnds_dict
         self.integer_tol = integer_tol
+        self.infeasibility_tol = infeasibility_tol
 
     def visit(self, node, values):
         pass
@@ -784,6 +790,12 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
                 self.bnds_dict[node] = (lb, ub)
 
             lb, ub = self.bnds_dict[node]
+            if lb - self.infeasibility_tol > ub:
+                raise InfeasibleConstraintException('Lower bound computed for variable {0} is larger than the computed upper bound.'.format(node))
+            if lb == math.inf:
+                raise InfeasibleConstraintException('Computed a lower bound of +inf for variable {0}'.format(node))
+            if ub == -math.inf:
+                raise InfeasibleConstraintException('Computed an upper bound of -inf for variable {0}'.format(node))
             if lb != -math.inf:
                 node.setlb(lb)
             if ub != math.inf:
@@ -848,7 +860,7 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-5, infe
     bnds_dict = ComponentMap()  # a dictionary to store the bounds of every node in the tree
 
     # a walker to propagate bounds from the variables to the root
-    visitorA = _FBBTVisitorLeafToRoot(bnds_dict)
+    visitorA = _FBBTVisitorLeafToRoot(bnds_dict, infeasibility_tol=infeasible_tol)
     visitorA.dfs_postorder_stack(con.body)
 
     # Now we need to replace the bounds in bnds_dict for the root
@@ -879,7 +891,7 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-5, infe
     bnds_dict[con.body] = (lb, ub)
 
     # Now, propagate bounds back from the root to the variables
-    visitorB = _FBBTVisitorRootToLeaf(bnds_dict, integer_tol=integer_tol)
+    visitorB = _FBBTVisitorRootToLeaf(bnds_dict, integer_tol=integer_tol, infeasibility_tol=infeasible_tol)
     visitorB.dfs_postorder_stack(con.body)
 
     new_var_bounds = ComponentMap()
