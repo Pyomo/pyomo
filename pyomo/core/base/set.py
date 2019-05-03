@@ -703,10 +703,11 @@ class _NumericRange(object):
                         _new_subranges.append(_NumericRange(
                             t.start, start, 0, (t.closed[0], False)
                         ))
-                    for i in range(int(start//s.step), int(end//s.step)):
-                        _new_subranges.append(_NumericRange(
-                            i*s.step, (i+1)*s.step, 0, '()'
-                        ))
+                    if s.step: # i.e., not a single point
+                        for i in range(int(start//s.step), int(end//s.step)):
+                            _new_subranges.append(_NumericRange(
+                                i*s.step, (i+1)*s.step, 0, '()'
+                            ))
                     if _NumericRange._gt(t.end, end):
                         _new_subranges.append(_NumericRange(
                             end, t.end, 0, (False,t.closed[1])
@@ -2461,14 +2462,14 @@ class _SetDifference_OrderedSet(_OrderedSetMixin, _SetDifference_FiniteSet):
 class _SetSymmetricDifference(_SetOperator):
     __slots__ = tuple()
 
-    def __new__(cls, set0, set1):
+    def __new__(cls, *args):
         if cls != _SetSymmetricDifference:
             return super(_SetSymmetricDifference, cls).__new__(cls)
 
-        (set0, set1), implicit = _SetOperator._processArgs(set0, set1)
-        if set0.is_ordered() and set1.is_ordered():
+        set0, set1 = _SetOperator._checkArgs(*args)
+        if set0[0] and set1[0]:
             cls = _SetSymmetricDifference_OrderedSet
-        elif set0.is_finite() and set1.is_finite():
+        elif set0[1] and set1[1]:
             cls = _SetSymmetricDifference_FiniteSet
         else:
             cls = _SetSymmetricDifference_InfiniteSet
@@ -2478,8 +2479,8 @@ class _SetSymmetricDifference(_SetOperator):
         # Note: the following loop implements for (a,b), (b,a)
         assert len(self._sets) == 2
         for set_a, set_b in (self._sets, reversed(self._sets)):
-            for a in set_a:
-                for r in set_a.range_difference(set_b.ranges()):
+            for a_r in set_a.ranges():
+                for r in a_r.range_difference(set_b.ranges()):
                     yield r
 
 class _SetSymmetricDifference_InfiniteSet(_SetSymmetricDifference):
