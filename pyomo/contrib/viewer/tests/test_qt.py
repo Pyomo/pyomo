@@ -32,7 +32,6 @@ def run_subproc_pytest(test_file, test_func, freq=1, timeout=10.0):
     p = Popen(["pytest", "::".join([test_file, test_func])])
     i = 0
     while p.poll() is None:
-        print(p.poll())
         time.sleep(1.0/freq)
         i += 1
         if(i > timeout*freq):
