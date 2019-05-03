@@ -2385,14 +2385,15 @@ class _SetIntersection_OrderedSet(_OrderedSetMixin, _SetIntersection_FiniteSet):
 class _SetDifference(_SetOperator):
     __slots__ = tuple()
 
-    def __new__(cls, set0, set1):
+    def __new__(cls, *args):
         if cls != _SetDifference:
             return super(_SetDifference, cls).__new__(cls)
 
-        (set0, set1), implicit = _SetOperator._processArgs(set0, set1)
-        if set0.is_ordered():
+        set0, set1 = _SetOperator._checkArgs(*args)
+        print set0, set1
+        if set0[0]:
             cls = _SetDifference_OrderedSet
-        elif set0.is_finite():
+        elif set0[1]:
             cls = _SetDifference_FiniteSet
         else:
             cls = _SetDifference_InfiniteSet

@@ -21,6 +21,8 @@ from pyomo.core.base.set import (
     _SetUnion_InfiniteSet, _SetUnion_FiniteSet, _SetUnion_OrderedSet,
     _SetIntersection_InfiniteSet, _SetIntersection_FiniteSet,
     _SetIntersection_OrderedSet,
+    _SetDifference_InfiniteSet, _SetDifference_FiniteSet,
+    _SetDifference_OrderedSet,
 )
 from pyomo.environ import ConcreteModel
 
@@ -1570,6 +1572,7 @@ class TestSetUnion(unittest.TestCase):
         self._verify_infinite_union({1,3,2}, RangeSet(3,5,0))
         self._verify_infinite_union(RangeSet(1,3,0), {5,3,4})
 
+
 class TestSetIntersection(unittest.TestCase):
     def _verify_ordered_intersection(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
@@ -1607,8 +1610,8 @@ class TestSetIntersection(unittest.TestCase):
         self.assertEqual(x.ord(3), ref.index(3)+1)
         self.assertEqual(x.ord(5), 3)
         with self.assertRaisesRegexp(
-                IndexError,
-                "Cannot identify position of 6 in Set _SetIntersection_OrderedSet"):
+                IndexError, "Cannot identify position of 6 in Set "
+                "_SetIntersection_OrderedSet"):
             x.ord(6)
 
         self.assertEqual(x[1], ref[0])
@@ -1708,3 +1711,127 @@ class TestSetIntersection(unittest.TestCase):
 
     def test_infinite_setintersection(self):
         self._verify_infinite_intersection(RangeSet(0,4,0), RangeSet(2,6,0))
+
+
+class TestSetDifference(unittest.TestCase):
+    def _verify_ordered_difference(self, a, b):
+        if isinstance(a, (Set, SetOf, RangeSet)):
+            a_ordered = a.is_ordered()
+        else:
+            a_ordered = type(a) is list
+        if isinstance(b, (Set, SetOf, RangeSet)):
+            b_ordered = b.is_ordered()
+        else:
+            b_ordered = type(b) is list
+        self.assertTrue(a_ordered)
+
+        x = a - b
+        self.assertIs(type(x), _SetDifference_OrderedSet)
+        self.assertTrue(x.is_finite())
+        self.assertTrue(x.is_ordered())
+        self.assertEqual(len(x), 3)
+        self.assertEqual(list(x), [3,2,5])
+        self.assertEqual(x.ordered(), (3,2,5))
+        self.assertEqual(x.sorted(), (2,3,5))
+
+        self.assertNotIn(0, x)
+        self.assertNotIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertNotIn(4, x)
+        self.assertIn(5, x)
+        self.assertNotIn(6, x)
+
+        self.assertEqual(x.ord(2), 2)
+        self.assertEqual(x.ord(3), 1)
+        self.assertEqual(x.ord(5), 3)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot identify position of 6 in Set "
+                "_SetDifference_OrderedSet"):
+            x.ord(6)
+
+        self.assertEqual(x[1], 3)
+        self.assertEqual(x[2], 2)
+        self.assertEqual(x[3], 5)
+
+        self.assertEqual(x[-1], 5)
+        self.assertEqual(x[-2], 2)
+        self.assertEqual(x[-3], 3)
+
+    def test_ordered_setdifference(self):
+        self._verify_ordered_difference(SetOf([0,3,2,1,5,4]), SetOf([0,1,4]))
+        self._verify_ordered_difference(SetOf([0,3,2,1,5,4]), SetOf({0,1,4}))
+        self._verify_ordered_difference(SetOf([0,3,2,1,5,4]), [0,1,4])
+        self._verify_ordered_difference(SetOf([0,3,2,1,5,4]), {0,1,4})
+        self._verify_ordered_difference(SetOf([0,3,2,1,5,4]),
+                                        RangeSet(ranges=(NR(0,1,0),NR(4,4,0))))
+        self._verify_ordered_difference([0,3,2,1,5,4], SetOf([0,1,4]))
+        self._verify_ordered_difference([0,3,2,1,5,4], SetOf({0,1,4}))
+
+
+    def _verify_finite_difference(self, a, b):
+        # Note the placement of the second "3" in the middle of the set.
+        # This helps catch edge cases where we need to ensure it doesn't
+        # count as part of the set membership
+        if isinstance(a, (Set, SetOf, RangeSet)):
+            a_finite = a.is_finite()
+        else:
+            a_finite = True
+        if isinstance(b, (Set, SetOf, RangeSet)):
+            b_finite = b.is_finite()
+        else:
+            b_finite = True
+        self.assertTrue(a_finite or b_finite)
+
+        x = a - b
+        self.assertIs(type(x), _SetDifference_FiniteSet)
+        self.assertTrue(x.is_finite())
+        self.assertFalse(x.is_ordered())
+        self.assertEqual(len(x), 3)
+        self.assertEqual(sorted(list(x)), [2,3,5])
+        self.assertEqual(x.ordered(), (2,3,5))
+        self.assertEqual(x.sorted(), (2,3,5))
+
+        self.assertNotIn(0, x)
+        self.assertNotIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertNotIn(4, x)
+        self.assertIn(5, x)
+        self.assertNotIn(6, x)
+
+        # The ranges should at least filter out the duplicates
+        self.assertEqual(
+            len(list(x._sets[0].ranges()) + list(x._sets[1].ranges())), 9)
+        self.assertEqual(len(list(x.ranges())), 3)
+
+
+    def test_finite_setdifference(self):
+        self._verify_finite_difference(SetOf({0,3,2,1,5,4}), SetOf({0,1,4}))
+        self._verify_finite_difference(SetOf({0,3,2,1,5,4}), SetOf([0,1,4]))
+        self._verify_finite_difference(SetOf({0,3,2,1,5,4}), [0,1,4])
+        self._verify_finite_difference(SetOf({0,3,2,1,5,4}), {0,1,4})
+        self._verify_finite_difference(
+            SetOf({0,3,2,1,5,4}),
+            RangeSet(ranges=(NR(0,1,0),NR(4,4,0),NR(6,10,0))))
+        self._verify_finite_difference({0,3,2,1,5,4}, SetOf([0,1,4]))
+        self._verify_finite_difference({0,3,2,1,5,4}, SetOf({0,1,4}))
+
+
+    def test_infinite_setdifference(self):
+        x = RangeSet(0,4,0) - RangeSet(2,6,0)
+        self.assertIs(type(x), _SetDifference_InfiniteSet)
+        self.assertFalse(x.is_finite())
+        self.assertFalse(x.is_ordered())
+
+        self.assertNotIn(-1, x)
+        self.assertIn(0, x)
+        self.assertIn(1, x)
+        self.assertIn(1.9, x)
+        self.assertNotIn(2, x)
+        self.assertNotIn(6, x)
+        self.assertNotIn(8, x)
+
+        self.assertEqual(
+            list(x.ranges()),
+            list(RangeSet(ranges={NR(0,2,0,(True,False))}).ranges()))
