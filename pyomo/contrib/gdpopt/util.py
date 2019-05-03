@@ -2,6 +2,7 @@
 from __future__ import division
 
 import logging
+import six
 from math import fabs, floor, log
 
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
@@ -12,7 +13,6 @@ from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory
 from pyomo.opt.results import ProblemSense
-from six import StringIO
 from pyomo.common.log import LoggingIntercept
 import timeit
 from contextlib import contextmanager
@@ -49,7 +49,7 @@ class SuppressInfeasibleWarning(LoggingIntercept):
 
     def __init__(self):
         super(SuppressInfeasibleWarning, self).__init__(
-            StringIO(), 'pyomo.core', logging.WARNING)
+            six.StringIO(), 'pyomo.core', logging.WARNING)
 
 
 def model_is_valid(solve_data, config):
@@ -162,7 +162,7 @@ def copy_var_list_values(from_list, to_list, config,
         except ValueError as err:
             err_msg = getattr(err, 'message', str(err))
             var_val = value(v_from)
-            rounded_val = round(var_val)
+            rounded_val = round(var_val) if six.PY3 else int(round(var_val))
             # Check to see if this is just a tolerance issue
             if ignore_integrality \
                 and ('is not in domain Binary' in err_msg
