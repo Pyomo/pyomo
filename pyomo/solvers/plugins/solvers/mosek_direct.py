@@ -170,7 +170,7 @@ class MosekDirect(DirectSolver):
             assert con.check_convexity_conditions(relax=True)
             cone_type = self._mosek.conetype.rquad
             cone_members = [con.r1, con.r2] + list(con.x)
-        elif self._version > (8, 1, 0):
+        elif self._version >= (9, 0, 0):
             if isinstance(con, primal_exponential):
                 assert con.has_ub() and \
                     (con.ub == 0) and (not con.has_lb())
@@ -327,6 +327,8 @@ class MosekDirect(DirectSolver):
                 assert cone_members is not None
                 referenced_vars = ComponentSet(cone_members)
             else:
+                logger.warning("Cone %s was not recognized by Mosek"
+                               % (str(con)))
                 # the cone was not recognized, treat
                 # it like a standard constraint, which
                 # will in all likelihood lead to Mosek
