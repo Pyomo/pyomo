@@ -3,6 +3,8 @@ from __future__ import division
 
 from math import fabs
 
+from pyomo.common.errors import InfeasibleConstraintException
+from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.data_class import SubproblemResult
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
                                        is_feasible)
@@ -249,6 +251,7 @@ def detect_unfixed_discrete_vars(model):
 
 def preprocess_subproblem(m, config):
     """Applies preprocessing transformations to the model."""
+    # fbbt(m, integer_tol=config.integer_tolerance)
     xfrm = TransformationFactory
     xfrm('contrib.propagate_eq_var_bounds').apply_to(m)
     xfrm('contrib.detect_fixed_vars').apply_to(
@@ -404,7 +407,11 @@ def solve_local_subproblem(mip_result, solve_data, config):
     #     disj.deactivate()  # TODO this is a HACK for something that isn't happening correctly in fix_disjuncts
 
     if config.subproblem_presolve:
-        preprocess_subproblem(subprob, config)
+        try:
+            preprocess_subproblem(subprob, config)
+        except InfeasibleConstraintException:
+            return get_infeasible_result_object(
+                subprob, "Preprocessing determined problem to be infeasible.")
 
     if not any(constr.body.polynomial_degree() not in (1, 0)
                for constr in subprob.component_data_objects(Constraint, active=True)):
@@ -467,7 +474,12 @@ def solve_global_subproblem(mip_result, solve_data, config):
     subprob.dual.deactivate()  # global solvers may not give dual info
 
     if config.subproblem_presolve:
-        preprocess_subproblem(subprob, config)
+        try:
+            preprocess_subproblem(subprob, config)
+        except InfeasibleConstraintException as e:
+            # FBBT found the problem to be infeasible
+            return get_infeasible_result_object(
+                subprob, "Preprocessing determined problem to be infeasible.")
 
     unfixed_discrete_vars = detect_unfixed_discrete_vars(subprob)
     if config.force_subproblem_nlp and len(unfixed_discrete_vars) > 0:
@@ -479,3 +491,14 @@ def solve_global_subproblem(mip_result, solve_data, config):
     if subprob_result.feasible:  # NLP is feasible
         update_subproblem_progress_indicators(subprob, solve_data, config)
     return subprob_result
+
+
+def get_infeasible_result_object(model, message=""):
+    infeas_result = SubproblemResult()
+    infeas_result.feasible = False
+    infeas_result.var_values = list(v.value for v in model.GDPopt_utils.variable_list)
+    infeas_result.pyomo_results = SolverResults()
+    infeas_result.pyomo_results.solver.termination_condition = tc.infeasible
+    infeas_result.pyomo_results.message = message
+    infeas_result.dual_values = list(None for _ in model.GDPopt_utils.constraint_list)
+    return infeas_result

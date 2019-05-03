@@ -6,7 +6,7 @@ from pyomo.contrib.derivatives.differentiate import reverse_ad
 
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
-from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc
+from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,
                         minimize, value, TransformationFactory)
 from pyomo.core.base.symbolic import differentiate
@@ -141,8 +141,11 @@ def add_affine_cuts(nlp_result, solve_data, config):
                 continue  # a variable has no values
 
             # mcpp stuff
-            mc_eqn = mc(constr.body, disjunctive_var_bounds)
-            # mc_eqn = mc(constr.body)
+            try:
+                mc_eqn = mc(constr.body, disjunctive_var_bounds)
+            except MCPP_Error as e:
+                config.logger.debug("Skipping constraint %s due to MCPP error %s" % (constr.name, str(e)))
+                continue  # skip to the next constraint
             ccSlope = mc_eqn.subcc()
             cvSlope = mc_eqn.subcv()
             ccStart = mc_eqn.concave()
