@@ -780,22 +780,32 @@ class MosekDirect(DirectSolver):
                         con_names.append(msk_task.getconname(con))
                     for name in con_names:
                         soln_constraints[name] = {}
-                    # GH: We would also initialized space
-                    #     for any cones in the solution
-                    #     dictionary here, but, as far as I
-                    #     can tell, Mosek currently does not
-                    #     support extracting the dual for a
-                    #     conic constraint.
-
+                    """TODO wrong length, needs to be getnumvars()
+                    mosek_cones = list(range(msk_task.getnumcone()))
+                    cone_names = []
+                    for cone in mosek_cones:
+                        cone_names.append(msk_task.getconename(cone))
+                    for name in cone_names:
+                        soln_constraints[name] = {}
+                    """
 
                 if extract_duals:
-                    vals = [0.0]*msk_task.getnumcon()
-                    msk_task.gety(whichsol, vals)
-                    for val, name in zip(vals, con_names):
-                        soln_constraints[name]["Dual"] = val
+                    ncon = msk_task.getnumcon()
+                    if ncon > 0:
+                        vals = [0.0]*ncon
+                        msk_task.gety(whichsol, vals)
+                        for val, name in zip(vals, con_names):
+                            soln_constraints[name]["Dual"] = val
+                    """TODO: wrong length, needs to be getnumvars()
+                    ncone = msk_task.getnumcone()
+                    if ncone > 0:
+                        vals = [0.0]*ncone
+                        msk_task.getsnx(whichsol, vals)
+                        for val, name in zip(vals, cone_names):
+                            soln_constraints[name]["Dual"] = val
+                    """
 
                 if extract_slacks:
-
                     Ax = [0]*len(mosek_cons)
                     msk_task.getxc(self._whichsol, Ax)
                     for con, name in zip(mosek_cons, con_names):
@@ -878,25 +888,69 @@ class MosekDirect(DirectSolver):
             if ref_vars[var] > 0:
                 rc[var] = val
 
-    def _load_duals(self, cons_to_load=None):
+    def _load_duals(self, objs_to_load=None):
         if not hasattr(self._pyomo_model, 'dual'):
             self._pyomo_model.dual = Suffix(direction=Suffix.IMPORT)
         con_map = self._pyomo_con_to_solver_con_map
         reverse_con_map = self._solver_con_to_pyomo_con_map
+        cone_map = self._pyomo_cone_to_solver_cone_map
+        reverse_cone_map = self._solver_cone_to_pyomo_cone_map
         dual = self._pyomo_model.dual
 
-        if cons_to_load is None:
+        if objs_to_load is None:
+            # constraints
             mosek_cons_to_load = range(self._solver_model.getnumcon())
+            vals = [0.0]*len(mosek_cons_to_load)
+            self._solver_model.gety(self._whichsol, vals)
+            for mosek_con, val in zip(mosek_cons_to_load, vals):
+                pyomo_con = reverse_con_map[mosek_con]
+                dual[pyomo_con] = val
+            """TODO wrong length, needs to be getnumvars()
+            # cones
+            mosek_cones_to_load = range(self._solver_model.getnumcone())
+            vals = [0.0]*len(mosek_cones_to_load)
+            self._solver_model.getsnx(self._whichsol, vals)
+            for mosek_cone, val in zip(mosek_cones_to_load, vals):
+                pyomo_cone = reverse_cone_map[mosek_cone]
+                dual[pyomo_cone] = val
+            """
         else:
-            mosek_cons_to_load = set([con_map[pyomo_con]
-                                      for pyomo_con in cons_to_load])
-
-        vals = [0.0]*self._solver_model.getnumcon()
-        self._solver_model.gety(self._whichsol, vals)
-
-        for mosek_con, val in zip(mosek_cons_to_load, vals):
-            pyomo_con = reverse_con_map[mosek_con]
-            dual[pyomo_con] = val
+            mosek_cons_to_load = []
+            mosek_cones_to_load = []
+            for obj in objs_to_load:
+                if obj in con_map:
+                    mosek_cons_to_load.append(con_map[obj])
+                else:
+                    # assume it is a cone
+                    mosek_cones_to_load.append(cone_map[obj])
+            # constraints
+            mosek_cons_first = min(mosek_cons_to_load)
+            mosek_cons_last = max(mosek_cons_to_load)
+            vals = [0.0]*(mosek_cons_last - mosek_cons_first + 1)
+            self._solver_model.getyslice(self._whichsol,
+                                         mosek_cons_first,
+                                         mosek_cons_last,
+                                         vals)
+            for mosek_con in mosek_cons_to_load:
+                slice_index = mosek_con - mosek_cons_first
+                val = vals[slice_index]
+                pyomo_con = reverse_con_map[mosek_con]
+                dual[pyomo_con] = val
+            """TODO wrong length, needs to be getnumvars()
+            # cones
+            mosek_cones_first = min(mosek_cones_to_load)
+            mosek_cones_last = max(mosek_cones_to_load)
+            vals = [0.0]*(mosek_cones_last - mosek_cones_first + 1)
+            self._solver_model.getsnxslice(self._whichsol,
+                                           mosek_cones_first,
+                                           mosek_cones_last,
+                                           vals)
+            for mosek_cone in mosek_cones_to_load:
+                slice_index = mosek_cone - mosek_cones_first
+                val = vals[slice_index]
+                pyomo_cone = reverse_cone_map[mosek_cone]
+                dual[pyomo_cone] = val
+            """
 
     def _load_slacks(self, cons_to_load=None):
         if not hasattr(self._pyomo_model, 'slack'):
