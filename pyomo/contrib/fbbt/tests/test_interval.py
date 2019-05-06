@@ -266,3 +266,8 @@ class TestInterval(unittest.TestCase):
         yl, yu = interval.atan(-0.5, 0.5, -1.5*math.pi+0.1, 1.5*math.pi-0.1)
         self.assertAlmostEqual(yl, math.atan(-0.5)-math.pi, 12)
         self.assertAlmostEqual(yu, math.atan(0.5)+math.pi, 12)
+
+    def test_encountered_bugs(self):
+        lb, ub = interval._inverse_power1(88893.4225, 88893.4225, 2, 2, 298.15, 298.15)
+        self.assertAlmostEqual(lb, 298.15)
+        self.assertAlmostEqual(ub, 298.15)

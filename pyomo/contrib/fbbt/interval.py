@@ -1,9 +1,16 @@
 import math
 import warnings
 import logging
-from pyomo.common.errors import DeveloperError, InfeasibleConstraintException
+from pyomo.common.errors import DeveloperError, InfeasibleConstraintException, PyomoException
 
 logger = logging.getLogger(__name__)
+
+
+class IntervalException(PyomoException):
+    pass
+
+
+feasibility_tol = 1e-8
 
 
 def add(xl, xu, yl, yu):
@@ -35,7 +42,12 @@ def inv(xl, xu):
 
 
 def div(xl, xu, yl, yu):
-    return mul(xl, xu, *inv(yl, yu))
+    if yl <= 0 and yu >= 0:
+        lb = -math.inf
+        ub = math.inf
+    else:
+        lb, ub = mul(xl, xu, *inv(yl, yu))
+    return lb, ub
 
 
 def power(xl, xu, yl, yu):
@@ -192,7 +204,7 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu):
                         _xl = -xu
                     else:
                         _xl = xl
-                    if orig_xu < xl:
+                    if orig_xu < xl - feasibility_tol:
                         _xu = -xl
                     else:
                         _xu = xu
@@ -209,7 +221,7 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu):
                         _xl = -xu
                     else:
                         _xl = xl
-                    if orig_xu < xl:
+                    if orig_xu < xl - feasibility_tol:
                         _xu = -xl
                     else:
                         _xu = xu
@@ -255,7 +267,12 @@ def _inverse_power2(zl, zu, xl, xu):
     """
     z = x**y => compute bounds on y
     y = ln(z) / ln(x)
+
+    This function assumes the exponent can be fractional, so x must be positive. This method should not be called
+    if the exponent is an integer.
     """
+    if xu <= 0:
+        raise IntervalException('Cannot raise a negative variable to a fractional power.')
     if (xl > 0 and zu <= 0) or (xl >= 0 and zu < 0):
         raise InfeasibleConstraintException('A positive variable raised to the power of anything must be positive.')
     lba, uba = log(zl, zu)
@@ -270,16 +287,14 @@ def exp(xl, xu):
 
 def log(xl, xu):
     if xl > 0:
-        return math.log(xl), math.log(xu)
-    elif xl == 0:
-        if xu > 0:
-            return -math.inf, math.log(xu)
-        else:
-            return -math.inf, -math.inf
-    elif xu <= 0:
-        return -math.inf, -math.inf
+        lb = math.log(xl)
     else:
-        return -math.inf, math.log(xu)
+        lb = -math.inf
+    if xu > 0:
+        ub = math.log(xu)
+    else:
+        ub = -math.inf
+    return lb, ub
 
 
 def sin(xl, xu):
