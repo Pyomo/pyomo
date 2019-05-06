@@ -74,12 +74,12 @@ class TestInterval(unittest.TestCase):
         self.assertAlmostEqual(ub, -5)
 
         lb, ub = interval.inv(0, -1e-16)
-        self.assertEqual(lb, -1e16)
+        self.assertEqual(lb, -math.inf)
         self.assertEqual(ub, math.inf)
 
         lb, ub = interval.inv(1e-16, 0)
         self.assertEqual(lb, -math.inf)
-        self.assertAlmostEqual(ub, 1e16)
+        self.assertAlmostEqual(ub, math.inf)
 
         lb, ub = interval.inv(-1, 1)
         self.assertAlmostEqual(lb, -math.inf)

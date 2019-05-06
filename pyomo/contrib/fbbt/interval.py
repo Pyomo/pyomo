@@ -26,23 +26,17 @@ def mul(xl, xu, yl, yu):
 
 
 def inv(xl, xu):
-    if xl <= 0 and xu >= 0:
+    if xl <= feasibility_tol and xu >= -feasibility_tol:
         lb = -math.inf
         ub = math.inf
     else:
-        if xl == 0:
-            ub = math.inf
-        else:
-            ub = 1.0 / xl
-        if xu == 0:
-            lb = -math.inf
-        else:
-            lb = 1.0 / xu
+        ub = 1.0 / xl
+        lb = 1.0 / xu
     return lb, ub
 
 
 def div(xl, xu, yl, yu):
-    if yl <= 0 and yu >= 0:
+    if yl <= feasibility_tol and yu >= -feasibility_tol:
         lb = -math.inf
         ub = math.inf
     else:
