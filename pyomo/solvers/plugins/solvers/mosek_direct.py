@@ -95,6 +95,22 @@ class MosekDirect(DirectSolver):
         self._capabilities.sos1 = False
         self._capabilities.sos2 = False
 
+    @staticmethod
+    def license_is_valid():
+        """
+        Runs a check for a valid Mosek license. Returns False
+        if Mosek fails to run on a trivial test case.
+        """
+        try:
+            import mosek
+        except ImportError:
+            return False
+        try:
+            mosek.Env().Task(0,0).optimize()
+        except mosek.Error:
+            return False
+        return True
+
     def _apply_solver(self):
         if not self._save_results:
             for block in self._pyomo_model.block_data_objects(descend_into=True,
