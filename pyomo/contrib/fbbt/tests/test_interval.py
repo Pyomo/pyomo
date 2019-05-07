@@ -52,6 +52,39 @@ class TestInterval(unittest.TestCase):
             self.assertTrue(np.all(zl <= _z))
             self.assertTrue(np.all(zu >= _z))
 
+    def test_inv(self):
+        lb, ub = interval.inv(0.1, 0.2)
+        self.assertAlmostEqual(lb, 5)
+        self.assertAlmostEqual(ub, 10)
+
+        lb, ub = interval.inv(0, 0.1)
+        self.assertEqual(lb, -math.inf)
+        self.assertEqual(ub, math.inf)
+
+        lb, ub = interval.inv(0, 0)
+        self.assertEqual(lb, -math.inf)
+        self.assertEqual(ub, math.inf)
+
+        lb, ub = interval.inv(-0.1, 0)
+        self.assertEqual(lb, -math.inf)
+        self.assertEqual(ub, math.inf)
+
+        lb, ub = interval.inv(-0.2, -0.1)
+        self.assertAlmostEqual(lb, -10)
+        self.assertAlmostEqual(ub, -5)
+
+        lb, ub = interval.inv(0, -1e-16)
+        self.assertEqual(lb, -math.inf)
+        self.assertEqual(ub, math.inf)
+
+        lb, ub = interval.inv(1e-16, 0)
+        self.assertEqual(lb, -math.inf)
+        self.assertAlmostEqual(ub, math.inf)
+
+        lb, ub = interval.inv(-1, 1)
+        self.assertAlmostEqual(lb, -math.inf)
+        self.assertAlmostEqual(ub, math.inf)
+
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_div(self):
         x_bounds = [(np.random.uniform(-5, -2), np.random.uniform(2, 5))]
@@ -233,3 +266,8 @@ class TestInterval(unittest.TestCase):
         yl, yu = interval.atan(-0.5, 0.5, -1.5*math.pi+0.1, 1.5*math.pi-0.1)
         self.assertAlmostEqual(yl, math.atan(-0.5)-math.pi, 12)
         self.assertAlmostEqual(yu, math.atan(0.5)+math.pi, 12)
+
+    def test_encountered_bugs(self):
+        lb, ub = interval._inverse_power1(88893.4225, 88893.4225, 2, 2, 298.15, 298.15)
+        self.assertAlmostEqual(lb, 298.15)
+        self.assertAlmostEqual(ub, 298.15)
