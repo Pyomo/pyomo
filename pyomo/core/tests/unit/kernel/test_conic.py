@@ -5,15 +5,19 @@ import pyutilib.th as unittest
 import pyomo.kernel
 from pyomo.core.kernel.base import ICategorizedObject
 from pyomo.core.kernel.constraint import (IConstraint,
+                                          linear_constraint,
+                                          constraint,
                                           constraint_dict,
                                           constraint_tuple,
                                           constraint_list)
-from pyomo.core.kernel.variable import variable
+from pyomo.core.kernel.variable import (variable,
+                                        variable_tuple)
 from pyomo.core.kernel.block import block
 from pyomo.core.kernel.parameter import parameter
 from pyomo.core.kernel.expression import (expression,
                                           data_expression)
-from pyomo.core.kernel.conic import (quadratic,
+from pyomo.core.kernel.conic import (_build_linking_constraints,
+                                     quadratic,
                                      rotated_quadratic,
                                      primal_exponential,
                                      primal_power,
@@ -208,6 +212,31 @@ class Test_quadratic(_conic_tester_base,
         self.assertEqual(c.check_convexity_conditions(),
                          False)
 
+    def test_as_domain(self):
+        ret = quadratic.as_domain(
+            x=[1,2],r=3)
+        self.assertIs(type(ret), block)
+        q,c,x,r = ret.q,ret.c,ret.x,ret.r
+        self.assertEqual(q.check_convexity_conditions(), True)
+        self.assertIs(type(q), quadratic)
+        self.assertIs(type(x), variable_tuple)
+        self.assertEqual(len(x), 2)
+        self.assertIs(type(r), variable)
+        self.assertIs(type(c), constraint_tuple)
+        self.assertEqual(len(c), 3)
+        self.assertEqual(c[0].rhs, 1)
+        x[0].value = 1
+        self.assertEqual(c[0].slack, 0)
+        x[0].value = None
+        self.assertEqual(c[1].rhs, 2)
+        x[1].value = 2
+        self.assertEqual(c[1].slack, 0)
+        x[1].value = None
+        self.assertEqual(c[2].rhs, 3)
+        r.value = 3
+        self.assertEqual(c[2].slack, 0)
+        r.value = None
+
 class Test_rotated_quadratic(_conic_tester_base,
                              unittest.TestCase):
 
@@ -290,6 +319,35 @@ class Test_rotated_quadratic(_conic_tester_base,
         self.assertEqual(c.check_convexity_conditions(),
                          False)
 
+    def test_as_domain(self):
+        ret = rotated_quadratic.as_domain(
+            x=[1,2],r1=3,r2=4)
+        self.assertIs(type(ret), block)
+        q,c,x,r1,r2 = ret.q,ret.c,ret.x,ret.r1,ret.r2
+        self.assertEqual(q.check_convexity_conditions(), True)
+        self.assertIs(type(q), rotated_quadratic)
+        self.assertIs(type(x), variable_tuple)
+        self.assertEqual(len(x), 2)
+        self.assertIs(type(r1), variable)
+        self.assertIs(type(r2), variable)
+        self.assertIs(type(c), constraint_tuple)
+        self.assertEqual(len(c), 4)
+        self.assertEqual(c[0].rhs, 1)
+        x[0].value = 1
+        self.assertEqual(c[0].slack, 0)
+        x[0].value = None
+        self.assertEqual(c[1].rhs, 2)
+        x[1].value = 2
+        self.assertEqual(c[1].slack, 0)
+        x[1].value = None
+        self.assertEqual(c[2].rhs, 3)
+        r1.value = 3
+        self.assertEqual(c[2].slack, 0)
+        r1.value = None
+        r2.value = 4
+        self.assertEqual(c[3].slack, 0)
+        r2.value = None
+
 class Test_primal_exponential(_conic_tester_base,
                               unittest.TestCase):
 
@@ -369,6 +427,31 @@ class Test_primal_exponential(_conic_tester_base,
         c.r.lb = -1
         self.assertEqual(c.check_convexity_conditions(),
                          False)
+
+    def test_as_domain(self):
+        ret = primal_exponential.as_domain(
+            x1=1,x2=2,r=3)
+        self.assertIs(type(ret), block)
+        q,c,x1,x2,r = ret.q,ret.c,ret.x1,ret.x2,ret.r
+        self.assertEqual(q.check_convexity_conditions(), True)
+        self.assertIs(type(q), primal_exponential)
+        self.assertIs(type(x1), variable)
+        self.assertIs(type(x2), variable)
+        self.assertIs(type(r), variable)
+        self.assertIs(type(c), constraint_tuple)
+        self.assertEqual(len(c), 3)
+        self.assertEqual(c[0].rhs, 1)
+        x1.value = 1
+        self.assertEqual(c[0].slack, 0)
+        x1.value = None
+        self.assertEqual(c[1].rhs, 2)
+        x2.value = 2
+        self.assertEqual(c[1].slack, 0)
+        x2.value = None
+        self.assertEqual(c[2].rhs, 3)
+        r.value = 3
+        self.assertEqual(c[2].slack, 0)
+        r.value = None
 
 class Test_primal_power(_conic_tester_base,
                         unittest.TestCase):
@@ -491,6 +574,35 @@ class Test_primal_power(_conic_tester_base,
         self.assertEqual(c.check_convexity_conditions(),
                          False)
 
+    def test_as_domain(self):
+        ret = primal_power.as_domain(
+            x=[1,2],r1=3,r2=4,alpha=0.5)
+        self.assertIs(type(ret), block)
+        q,c,x,r1,r2 = ret.q,ret.c,ret.x,ret.r1,ret.r2
+        self.assertEqual(q.check_convexity_conditions(), True)
+        self.assertIs(type(q), primal_power)
+        self.assertIs(type(x), variable_tuple)
+        self.assertEqual(len(x), 2)
+        self.assertIs(type(r1), variable)
+        self.assertIs(type(r2), variable)
+        self.assertIs(type(c), constraint_tuple)
+        self.assertEqual(len(c), 4)
+        self.assertEqual(c[0].rhs, 1)
+        x[0].value = 1
+        self.assertEqual(c[0].slack, 0)
+        x[0].value = None
+        self.assertEqual(c[1].rhs, 2)
+        x[1].value = 2
+        self.assertEqual(c[1].slack, 0)
+        x[1].value = None
+        self.assertEqual(c[2].rhs, 3)
+        r1.value = 3
+        self.assertEqual(c[2].slack, 0)
+        r1.value = None
+        r2.value = 4
+        self.assertEqual(c[3].slack, 0)
+        r2.value = None
+
 class Test_dual_exponential(_conic_tester_base,
                             unittest.TestCase):
 
@@ -570,6 +682,31 @@ class Test_dual_exponential(_conic_tester_base,
         c.r.lb = -1
         self.assertEqual(c.check_convexity_conditions(),
                          False)
+
+    def test_as_domain(self):
+        ret = dual_exponential.as_domain(
+            x1=1,x2=2,r=3)
+        self.assertIs(type(ret), block)
+        q,c,x1,x2,r = ret.q,ret.c,ret.x1,ret.x2,ret.r
+        self.assertEqual(q.check_convexity_conditions(), True)
+        self.assertIs(type(q), dual_exponential)
+        self.assertIs(type(x1), variable)
+        self.assertIs(type(x2), variable)
+        self.assertIs(type(r), variable)
+        self.assertIs(type(c), constraint_tuple)
+        self.assertEqual(len(c), 3)
+        self.assertEqual(c[0].rhs, 1)
+        x1.value = 1
+        self.assertEqual(c[0].slack, 0)
+        x1.value = None
+        self.assertEqual(c[1].rhs, 2)
+        x2.value = 2
+        self.assertEqual(c[1].slack, 0)
+        x2.value = None
+        self.assertEqual(c[2].rhs, 3)
+        r.value = 3
+        self.assertEqual(c[2].slack, 0)
+        r.value = None
 
 class Test_dual_power(_conic_tester_base,
                       unittest.TestCase):
@@ -692,6 +829,78 @@ class Test_dual_power(_conic_tester_base,
         c.alpha.value = 1
         self.assertEqual(c.check_convexity_conditions(),
                          False)
+
+    def test_as_domain(self):
+        ret = dual_power.as_domain(
+            x=[1,2],r1=3,r2=4,alpha=0.5)
+        self.assertIs(type(ret), block)
+        q,c,x,r1,r2 = ret.q,ret.c,ret.x,ret.r1,ret.r2
+        self.assertEqual(q.check_convexity_conditions(), True)
+        self.assertIs(type(q), dual_power)
+        self.assertIs(type(x), variable_tuple)
+        self.assertEqual(len(x), 2)
+        self.assertIs(type(r1), variable)
+        self.assertIs(type(r2), variable)
+        self.assertIs(type(c), constraint_tuple)
+        self.assertEqual(len(c), 4)
+        self.assertEqual(c[0].rhs, 1)
+        x[0].value = 1
+        self.assertEqual(c[0].slack, 0)
+        x[0].value = None
+        self.assertEqual(c[1].rhs, 2)
+        x[1].value = 2
+        self.assertEqual(c[1].slack, 0)
+        x[1].value = None
+        self.assertEqual(c[2].rhs, 3)
+        r1.value = 3
+        self.assertEqual(c[2].slack, 0)
+        r1.value = None
+        r2.value = 4
+        self.assertEqual(c[3].slack, 0)
+        r2.value = None
+
+class TestMisc(unittest.TestCase):
+
+    def test_build_linking_constraints(self):
+        c = _build_linking_constraints([],[])
+        self.assertIs(type(c), constraint_tuple)
+        self.assertEqual(len(c), 0)
+        v = [1,
+             data_expression(),
+             variable(),
+             expression(expr=1.0)]
+        vaux = [variable(),
+                variable(),
+                variable(),
+                variable()]
+        c = _build_linking_constraints(v, vaux)
+        self.assertIs(type(c), constraint_tuple)
+        self.assertEqual(len(c), 4)
+        self.assertIs(type(c[0]), linear_constraint)
+        self.assertEqual(c[0].rhs, 1)
+        self.assertEqual(len(list(c[0].terms)), 1)
+        self.assertIs(list(c[0].terms)[0][0], vaux[0])
+        self.assertEqual(list(c[0].terms)[0][1], 1)
+        self.assertIs(type(c[1]), linear_constraint)
+        self.assertIs(c[1].rhs, v[1])
+        self.assertEqual(len(list(c[1].terms)), 1)
+        self.assertIs(list(c[1].terms)[0][0], vaux[1])
+        self.assertEqual(list(c[1].terms)[0][1], 1)
+        self.assertIs(type(c[2]), linear_constraint)
+        self.assertEqual(c[2].rhs, 0)
+        self.assertEqual(len(list(c[2].terms)), 2)
+        self.assertIs(list(c[2].terms)[0][0], vaux[2])
+        self.assertEqual(list(c[2].terms)[0][1], 1)
+        self.assertIs(list(c[2].terms)[1][0], v[2])
+        self.assertEqual(list(c[2].terms)[1][1], -1)
+        self.assertIs(type(c[3]), constraint)
+        self.assertEqual(c[3].rhs, 0)
+        from pyomo.repn import generate_standard_repn
+        repn = generate_standard_repn(c[3].body)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], vaux[3])
+        self.assertEqual(repn.linear_coefs[0], 1)
+        self.assertEqual(repn.constant, -1)
 
 if __name__ == "__main__":
     unittest.main()

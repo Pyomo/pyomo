@@ -12,8 +12,35 @@
 from pyomo.core.expr.numvalue import is_numeric_data
 from pyomo.core.expr.current import (value,
                                      exp)
-from pyomo.core.kernel.variable import IVariable
-from pyomo.core.kernel.constraint import IConstraint
+from pyomo.core.kernel.block import block
+from pyomo.core.kernel.variable import (IVariable,
+                                        variable,
+                                        variable_tuple)
+from pyomo.core.kernel.constraint import (IConstraint,
+                                          linear_constraint,
+                                          constraint,
+                                          constraint_tuple)
+
+def _build_linking_constraints(v, v_aux):
+    assert len(v) == len(v_aux)
+    c_aux = []
+    for vi, vi_aux in zip(v, v_aux):
+        assert vi_aux.ctype is IVariable
+        if is_numeric_data(vi):
+            c_aux.append(
+                linear_constraint(variables=(vi_aux,),
+                                  coefficients=(1,),
+                                  rhs=vi))
+        elif isinstance(vi, IVariable):
+            c_aux.append(
+                linear_constraint(variables=(vi_aux, vi),
+                                  coefficients=(1, -1),
+                                  rhs=0))
+        else:
+            c_aux.append(
+                constraint(body=vi_aux - vi,
+                           rhs=0))
+    return constraint_tuple(c_aux)
 
 class _ConicBase(IConstraint):
     """Base class for a few conic constraints that
@@ -31,6 +58,11 @@ class _ConicBase(IConstraint):
         # (i.e., when someone asks for it via the body
         # property method)
         self._body = None
+
+    @classmethod
+    def as_domain(cls, *args, **kwds):
+        """Builds a conic domain"""
+        raise NotImplementedError     #pragma:nocover
 
     def _body_function(self, *args):
         """A function that defines the body expression"""
@@ -130,6 +162,30 @@ class quadratic(_ConicBase):
                    for xi in self._x)
         assert isinstance(self._r, IVariable)
 
+    @classmethod
+    def as_domain(cls, x, r):
+        """Builds a conic domain. Input arguments take the
+        same form as those of the conic constraint, but in
+        place of each variable, one can optionally supply a
+        constant or linear expression.
+
+        Returns
+        -------
+        block
+            A block object with the core conic constraint
+            (block.q) expressed using auxiliary variables
+            (block.x, block.r) linked to the input arguments
+            through auxiliary constraints (block.c).
+        """
+        b = block()
+        b.x = variable_tuple(
+            [variable() for i in range(len(x))])
+        b.r = variable(lb=0)
+        b.c = _build_linking_constraints(list(x) + [r],
+                                         list(b.x) + [b.r])
+        b.q = cls(x=b.x, r=b.r)
+        return b
+
     @property
     def x(self):
         return self._x
@@ -200,6 +256,32 @@ class rotated_quadratic(_ConicBase):
                    for xi in self._x)
         assert isinstance(self._r1, IVariable)
         assert isinstance(self._r2, IVariable)
+
+    @classmethod
+    def as_domain(cls, x, r1, r2):
+        """Builds a conic domain. Input arguments take the
+        same form as those of the conic constraint, but in
+        place of each variable, one can optionally supply a
+        constant or linear expression.
+
+        Returns
+        -------
+        block
+            A block object with the core conic constraint
+            (block.q) expressed using auxiliary variables
+            (block.x, block.r1, block.r2) linked to the
+            input arguments through auxiliary constraints
+            (block.c).
+        """
+        b = block()
+        b.x = variable_tuple(
+            [variable() for i in range(len(x))])
+        b.r1 = variable(lb=0)
+        b.r2 = variable(lb=0)
+        b.c = _build_linking_constraints(list(x) + [r1,r2],
+                                         list(b.x) + [b.r1,b.r2])
+        b.q = cls(x=b.x, r1=b.r1, r2=b.r2)
+        return b
 
     @property
     def x(self):
@@ -277,6 +359,31 @@ class primal_exponential(_ConicBase):
         assert isinstance(self._x1, IVariable)
         assert isinstance(self._x2, IVariable)
         assert isinstance(self._r, IVariable)
+
+    @classmethod
+    def as_domain(cls, x1, x2, r):
+        """Builds a conic domain. Input arguments take the
+        same form as those of the conic constraint, but in
+        place of each variable, one can optionally supply a
+        constant or linear expression.
+
+        Returns
+        -------
+        block
+            A block object with the core conic constraint
+            (block.q) expressed using auxiliary variables
+            (block.x1, block.x2, block.r) linked to the
+            input arguments through auxiliary constraints
+            (block.c).
+        """
+        b = block()
+        b.x1 = variable(lb=0)
+        b.x2 = variable()
+        b.r = variable(lb=0)
+        b.c = _build_linking_constraints([x1,x2,r],
+                                         [b.x1,b.x2,b.r])
+        b.q = cls(x1=b.x1, x2=b.x2, r=b.r)
+        return b
 
     @property
     def x1(self):
@@ -364,6 +471,31 @@ class primal_power(_ConicBase):
                 "constraint is restricted numeric data or "
                 "objects that store numeric data.")
 
+    @classmethod
+    def as_domain(cls, x, r1, r2, alpha):
+        """Builds a conic domain. Input arguments take the
+        same form as those of the conic constraint, but in
+        place of each variable, one can optionally supply a
+        constant or linear expression.
+
+        Returns
+        -------
+        block
+            A block object with the core conic constraint
+            (block.q) expressed using auxiliary variables
+            (block.x, block.r1, block.r2) linked to the
+            input arguments through auxiliary constraints
+            (block.c).
+        """
+        b = block()
+        b.x = variable_tuple(
+            [variable() for i in range(len(x))])
+        b.r1 = variable(lb=0)
+        b.r2 = variable(lb=0)
+        b.c = _build_linking_constraints(list(x) + [r1,r2],
+                                         list(b.x) + [b.r1,b.r2])
+        b.q = cls(x=b.x, r1=b.r1, r2=b.r2, alpha=alpha)
+        return b
 
     @property
     def x(self):
@@ -450,6 +582,31 @@ class dual_exponential(_ConicBase):
         assert isinstance(self._x1, IVariable)
         assert isinstance(self._x2, IVariable)
         assert isinstance(self._r, IVariable)
+
+    @classmethod
+    def as_domain(cls, x1, x2, r):
+        """Builds a conic domain. Input arguments take the
+        same form as those of the conic constraint, but in
+        place of each variable, one can optionally supply a
+        constant or linear expression.
+
+        Returns
+        -------
+        block
+            A block object with the core conic constraint
+            (block.q) expressed using auxiliary variables
+            (block.x1, block.x2, block.r) linked to the
+            input arguments through auxiliary constraints
+            (block.c).
+        """
+        b = block()
+        b.x1 = variable()
+        b.x2 = variable(ub=0)
+        b.r = variable(lb=0)
+        b.c = _build_linking_constraints([x1,x2,r],
+                                         [b.x1,b.x2,b.r])
+        b.q = cls(x1=b.x1, x2=b.x2, r=b.r)
+        return b
 
     @property
     def x1(self):
@@ -538,6 +695,32 @@ class dual_power(_ConicBase):
                 "The type of the alpha parameter of a conic "
                 "constraint is restricted numeric data or "
                 "objects that store numeric data.")
+
+    @classmethod
+    def as_domain(cls, x, r1, r2, alpha):
+        """Builds a conic domain. Input arguments take the
+        same form as those of the conic constraint, but in
+        place of each variable, one can optionally supply a
+        constant or linear expression.
+
+        Returns
+        -------
+        block
+            A block object with the core conic constraint
+            (block.q) expressed using auxiliary variables
+            (block.x, block.r1, block.r2) linked to the
+            input arguments through auxiliary constraints
+            (block.c).
+        """
+        b = block()
+        b.x = variable_tuple(
+            [variable() for i in range(len(x))])
+        b.r1 = variable(lb=0)
+        b.r2 = variable(lb=0)
+        b.c = _build_linking_constraints(list(x) + [r1,r2],
+                                         list(b.x) + [b.r1,b.r2])
+        b.q = cls(x=b.x, r1=b.r1, r2=b.r2, alpha=alpha)
+        return b
 
     @property
     def x(self):
