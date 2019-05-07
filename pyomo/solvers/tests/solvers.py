@@ -21,7 +21,7 @@ from pyomo.opt.base.solvers import UnknownSolver
 import pyomo.environ
 from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
 from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
-
+from pyomo.solvers.plugins.solvers.mosek_direct import MosekDirect
 
 # ----------------------------------------------------------------
 
@@ -51,6 +51,9 @@ def initialize(**kwds):
         obj.available = False
     elif (obj.name == "baron") and \
        (not BARONSHELL.license_is_valid()):
+        obj.available = False
+    elif (obj.name == "mosek") and \
+       (not MosekDirect.license_is_valid()):
         obj.available = False
     else:
         obj.available = \
