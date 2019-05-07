@@ -322,7 +322,7 @@ You can silence this warning by one of three ways:
             if new_index.__class__ is _IndexedComponent_slice:
                 return new_index
             # The index could have contained constant but nonhashable
-            # objects (e.g., scalae immutable Params).
+            # objects (e.g., scalar immutable Params).
             # _processUnhashableIndex will evaluate those constants, so
             # if it made any changes to the index, we need to re-check
             # the _data dict for menbership.
