@@ -10,6 +10,7 @@ from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 import logging
+from pyomo.common.errors import InfeasibleConstraintException
 
 logger = logging.getLogger(__name__)
 
@@ -242,6 +243,20 @@ def _prop_bnds_leaf_to_root_atan(node, bnds_dict):
     bnds_dict[node] = interval.atan(lb1, ub1, -math.inf, math.inf)
 
 
+def _prop_bnds_leaf_to_root_sqrt(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
+    bnds_dict: ComponentMap
+    """
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb1, ub1 = bnds_dict[arg]
+    bnds_dict[node] = interval.power(lb1, ub1, 0.5, 0.5)
+
+
 _unary_leaf_to_root_map = dict()
 _unary_leaf_to_root_map['exp'] = _prop_bnds_leaf_to_root_exp
 _unary_leaf_to_root_map['log'] = _prop_bnds_leaf_to_root_log
@@ -251,6 +266,7 @@ _unary_leaf_to_root_map['tan'] = _prop_bnds_leaf_to_root_tan
 _unary_leaf_to_root_map['asin'] = _prop_bnds_leaf_to_root_asin
 _unary_leaf_to_root_map['acos'] = _prop_bnds_leaf_to_root_acos
 _unary_leaf_to_root_map['atan'] = _prop_bnds_leaf_to_root_atan
+_unary_leaf_to_root_map['sqrt'] = _prop_bnds_leaf_to_root_sqrt
 
 
 def _prop_bnds_leaf_to_root_UnaryFunctionExpression(node, bnds_dict):
@@ -405,6 +421,27 @@ def _prop_bnds_root_to_leaf_PowExpression(node, bnds_dict):
         ub2 = _ub2
     bnds_dict[arg1] = (lb1, ub1)
     bnds_dict[arg2] = (lb2, ub2)
+
+
+def _prop_bnds_root_to_leaf_sqrt(node, bnds_dict):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
+    bnds_dict: ComponentMap
+    """
+    assert len(node.args) == 1
+    arg1 = node.args[0]
+    lb0, ub0 = bnds_dict[node]
+    lb1, ub1 = bnds_dict[arg1]
+    lb2, ub2 = (0.5, 0.5)
+    _lb1, _ub1 = interval._inverse_power1(lb0, ub0, lb2, ub2, orig_xl=lb1, orig_xu=ub1)
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    bnds_dict[arg1] = (lb1, ub1)
 
 
 def _prop_bnds_root_to_leaf_ReciprocalExpression(node, bnds_dict):
@@ -616,6 +653,7 @@ _unary_root_to_leaf_map['tan'] = _prop_bnds_root_to_leaf_tan
 _unary_root_to_leaf_map['asin'] = _prop_bnds_root_to_leaf_asin
 _unary_root_to_leaf_map['acos'] = _prop_bnds_root_to_leaf_acos
 _unary_root_to_leaf_map['atan'] = _prop_bnds_root_to_leaf_atan
+_unary_root_to_leaf_map['sqrt'] = _prop_bnds_root_to_leaf_sqrt
 
 
 def _prop_bnds_root_to_leaf_UnaryFunctionExpression(node, bnds_dict):
@@ -631,7 +669,7 @@ def _prop_bnds_root_to_leaf_UnaryFunctionExpression(node, bnds_dict):
     else:
         logger.warning('Unsupported expression type for FBBT: {0}. Bounds will not be improved in this part of '
                        'the tree.'
-                       ''.format(str(type(node))))
+                       ''.format(node.getname()))
 
 
 _prop_bnds_root_to_leaf_map = dict()
@@ -765,7 +803,7 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         return False, None
 
 
-def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-4):
+def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-5, infeasible_tol=1e-8):
     """
     Feasibility based bounds tightening for a constraint. This function attempts to improve the bounds of each variable
     in the constraint based on the bounds of the constraint and the bounds of the other variables in the constraint.
@@ -794,6 +832,9 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-4):
         lower bound is left at 0. Otherwise, the lower bound is increased to 1. If the upper bound computed
         on a binary variable is greater than or equal to 1-integer_tol, then the upper bound is left at 1.
         Otherwise the upper bound is decreased to 0.
+    infeasible_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        infeasible_tol, then the constraint is considered infeasible and an exception is raised.
 
     Returns
     -------
@@ -820,8 +861,13 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-4):
     if _ub is None:
         _ub = math.inf
 
-    # first check if the constraint is always satisfied
     lb, ub = bnds_dict[con.body]
+
+    # check if the constraint is infeasible
+    if lb > _ub + infeasible_tol or ub < _lb - infeasible_tol:
+        raise InfeasibleConstraintException('Detected an infeasible constraint during FBBT: {0}'.format(str(con)))
+
+    # check if the constraint is always satisfied
     if deactivate_satisfied_constraints:
         if lb >= _lb and ub <= _ub:
             con.deactivate()
@@ -850,7 +896,7 @@ def fbbt_con(con, deactivate_satisfied_constraints=False, integer_tol=1e-4):
     return new_var_bounds
 
 
-def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=1e-4):
+def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=1e-5, infeasible_tol=1e-8):
     """
     Feasibility based bounds tightening (FBBT) for a block or model. This
     loops through all of the constraints in the block and performs
@@ -873,6 +919,9 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=
         lower bound is left at 0. Otherwise, the lower bound is increased to 1. If the upper bound computed
         on a binary variable is greater than or equal to 1-integer_tol, then the upper bound is left at 1.
         Otherwise the upper bound is decreased to 0.
+    infeasible_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        infeasible_tol, then the constraint is considered infeasible and an exception is raised.
 
     Returns
     -------
@@ -909,7 +958,7 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=
     for c in m.component_data_objects(ctype=Constraint, active=True,
                                       descend_into=True, sort=True):
         _new_var_bounds = fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
-                                   integer_tol=integer_tol)
+                                   integer_tol=integer_tol, infeasible_tol=infeasible_tol)
         new_var_bounds.update(_new_var_bounds)
         for v, bnds in _new_var_bounds.items():
             vlb, vub = bnds
@@ -926,7 +975,7 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=
         v = improved_vars.pop()
         for c in var_to_con_map[v]:
             _new_var_bounds = fbbt_con(c, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
-                                       integer_tol=integer_tol)
+                                       integer_tol=integer_tol, infeasible_tol=infeasible_tol)
             new_var_bounds.update(_new_var_bounds)
             for _v, bnds in _new_var_bounds.items():
                 _vlb, _vub = bnds
@@ -942,7 +991,7 @@ def fbbt_block(m, tol=1e-4, deactivate_satisfied_constraints=False, integer_tol=
     return new_var_bounds
 
 
-def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-4):
+def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, infeasible_tol=1e-8):
     """
     Perform FBBT on a constraint, block, or model. For more control,
     use fbbt_con and fbbt_block. For detailed documentation, see
@@ -959,6 +1008,9 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-4):
         lower bound is left at 0. Otherwise, the lower bound is increased to 1. If the upper bound computed
         on a binary variable is greater than or equal to 1-integer_tol, then the upper bound is left at 1.
         Otherwise the upper bound is decreased to 0.
+    infeasible_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        infeasible_tol, then the constraint is considered infeasible and an exception is raised.
 
     Returns
     -------
@@ -971,15 +1023,15 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-4):
         if comp.is_indexed():
             for _c in comp.values():
                 _new_var_bounds = fbbt_con(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
-                                           integer_tol=integer_tol)
+                                           integer_tol=integer_tol, infeasible_tol=infeasible_tol)
                 new_var_bounds.update(_new_var_bounds)
         else:
             _new_var_bounds = fbbt_con(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
-                                       integer_tol=integer_tol)
+                                       integer_tol=integer_tol, infeasible_tol=infeasible_tol)
             new_var_bounds.update(_new_var_bounds)
     elif comp.type() == Block:
         _new_var_bounds = fbbt_block(comp, deactivate_satisfied_constraints=deactivate_satisfied_constraints,
-                                     integer_tol=integer_tol)
+                                     integer_tol=integer_tol, infeasible_tol=infeasible_tol)
         new_var_bounds.update(_new_var_bounds)
     else:
         raise FBBTException('Cannot perform FBBT on objects of type {0}'.format(type(comp)))
