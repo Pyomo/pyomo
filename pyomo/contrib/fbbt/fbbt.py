@@ -9,6 +9,7 @@ import math
 from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
+from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
 import logging
 from pyomo.common.errors import InfeasibleConstraintException
 
@@ -283,6 +284,19 @@ def _prop_bnds_leaf_to_root_UnaryFunctionExpression(node, bnds_dict):
         bnds_dict[node] = (-math.inf, math.inf)
 
 
+def _prop_bnds_leaf_to_root_GeneralExpression(node, bnds_dict):
+    """
+    Propagate bounds from children to parent
+
+    Parameters
+    ----------
+    node: pyomo.core.base.expression._GeneralExpressionData
+    bnds_dict: ComponentMap
+    """
+    expr_lb, expr_ub = bnds_dict[node.expr]
+    bnds_dict[node] = (expr_lb, expr_ub)
+
+
 _prop_bnds_leaf_to_root_map = dict()
 _prop_bnds_leaf_to_root_map[numeric_expr.ProductExpression] = _prop_bnds_leaf_to_root_ProductExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.ReciprocalExpression] = _prop_bnds_leaf_to_root_ReciprocalExpression
@@ -298,6 +312,9 @@ _prop_bnds_leaf_to_root_map[numeric_expr.NPV_PowExpression] = _prop_bnds_leaf_to
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_SumExpression] = _prop_bnds_leaf_to_root_SumExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_NegationExpression] = _prop_bnds_leaf_to_root_NegationExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
+
+_prop_bnds_leaf_to_root_map[_GeneralExpressionData] = _prop_bnds_leaf_to_root_GeneralExpression
+_prop_bnds_leaf_to_root_map[SimpleExpression] = _prop_bnds_leaf_to_root_GeneralExpression
 
 
 def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict):
@@ -676,6 +693,19 @@ def _prop_bnds_root_to_leaf_UnaryFunctionExpression(node, bnds_dict):
                        ''.format(node.getname()))
 
 
+def _prop_bnds_root_to_leaf_GeneralExpression(node, bnds_dict):
+    """
+    Propagate bounds from parent to children.
+
+    Parameters
+    ----------
+    node: pyomo.core.base.expression._GeneralExpressionData
+    bnds_dict: ComponentMap
+    """
+    expr_lb, expr_ub = bnds_dict[node]
+    bnds_dict[node.expr] = (expr_lb, expr_ub)
+
+
 _prop_bnds_root_to_leaf_map = dict()
 _prop_bnds_root_to_leaf_map[numeric_expr.ProductExpression] = _prop_bnds_root_to_leaf_ProductExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.ReciprocalExpression] = _prop_bnds_root_to_leaf_ReciprocalExpression
@@ -691,6 +721,9 @@ _prop_bnds_root_to_leaf_map[numeric_expr.NPV_PowExpression] = _prop_bnds_root_to
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_SumExpression] = _prop_bnds_root_to_leaf_SumExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_NegationExpression] = _prop_bnds_root_to_leaf_NegationExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
+
+_prop_bnds_root_to_leaf_map[_GeneralExpressionData] = _prop_bnds_root_to_leaf_GeneralExpression
+_prop_bnds_root_to_leaf_map[SimpleExpression] = _prop_bnds_root_to_leaf_GeneralExpression
 
 
 class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
