@@ -325,7 +325,7 @@ You can silence this warning by one of three ways:
             # objects (e.g., scalar immutable Params).
             # _processUnhashableIndex will evaluate those constants, so
             # if it made any changes to the index, we need to re-check
-            # the _data dict for menbership.
+            # the _data dict for membership.
             if new_index is not index:
                 index = new_index
                 obj = self._data.get(index, _NotFound)
