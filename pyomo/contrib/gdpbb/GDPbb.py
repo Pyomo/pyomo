@@ -145,7 +145,8 @@ class GDPbbSolver(object):
             for constr in root.GDPbb_utils.deactivated_constraints:
                 constr.deactivate()
             root.GDPbb_utils.branched_disjuncts = ComponentSet()
-            root.BigM = Suffix()
+            if not hasattr(root, 'BigM'):
+                root.BigM = Suffix()
 
             # Check satisfiability
             if config.check_sat and satisfiable(root, config.logger) is False:
