@@ -42,8 +42,10 @@ except:
 try:
     import scipy
     has_scipy = True
+    _scipy_ver = tuple(int(_) for _ in scipy.version.version.split('.')[:2])
 except:
     has_scipy = False
+    _scipy_ver = (0,0)
 
 def _create_variable_list(size, **kwds):
     assert size > 0
@@ -247,9 +249,8 @@ class Test_matrix_constraint(unittest.TestCase):
         for i, c in enumerate(ctuple):
             self.assertEqual(c.index, i)
 
-    @unittest.skipIf(
-        tuple(int(_) for _ in scipy.version.version.split('.')[:2]) < (1,1),
-        "csr_matrix.reshape only available in scipy >= 1.1")
+    @unittest.skipIf(_scipy_ver < (1,1),
+                     "csr_matrix.reshape only available in scipy >= 1.1")
     def test_A(self):
         A = numpy.ones((4,5))
 
