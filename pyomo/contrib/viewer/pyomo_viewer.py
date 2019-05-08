@@ -20,9 +20,13 @@ import time
 from pyomo.scripting.pyomo_parser import add_subparser
 from pyomo.contrib.viewer.pyqt_4or5 import *
 
+qtconsole_available = True
 if qt_available:
-    from qtconsole.rich_jupyter_widget import RichJupyterWidget
-    from qtconsole.manager import QtKernelManager
+    try:
+        from qtconsole.rich_jupyter_widget import RichJupyterWidget
+        from qtconsole.manager import QtKernelManager
+    except ImportError:
+        qtconsole_available = False
 
 class MainWindow(QMainWindow):
     """A window that contains a single Qt console."""
@@ -50,7 +54,10 @@ class MainWindow(QMainWindow):
         self.jupyter_widget.kernel_client.stop_channels()
         self.jupyter_widget.kernel_manager.shutdown_kernel()
 
-def main(args):
+def main(*args):
+    if not qtconsole_available:
+        print("qtconsole not available")
+        return
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
