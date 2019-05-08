@@ -24,6 +24,34 @@ class MindtPySolveData(object):
     pass
 
 
+def model_is_feasible(model, config):
+    """Checks if all variables are assigned and within their bounds and if all constraints are satisfied"""
+
+    zt = config.zero_tolerance
+
+    all_vars_assigned = all(
+        var.value is not None
+        for var in model.component_data_objects(Var, active=True)
+    )
+    if not all_vars_assigned:
+        return False
+
+    all_vars_in_bounds = all(
+        var.value <= var.ub+zt if var.has_ub() else True
+        and var.value >= var.lb-zt if var.has_lb() else True
+        for var in model.component_data_objects(Var, active=True)
+    )
+    if not all_vars_in_bounds:
+        return False
+
+    all_constraints_feasible = all(
+        constr.slack >= -zt
+        for constr in model.component_data_objects(Constraint, active=True)
+    )
+
+    return all_vars_assigned and all_vars_in_bounds and all_constraints_feasible
+
+
 def model_is_valid(solve_data, config):
     """Validate that the model is solveable by MindtPy.
 
