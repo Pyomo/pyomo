@@ -90,7 +90,7 @@ if using_cython:
             "pyomo/core/expr/numvalue.pyx",
             "pyomo/core/expr/numeric_expr.pyx",
             "pyomo/core/expr/logical_expr.pyx",
-            "pyomo/core/expr/visitor_expr.pyx",
+            #"pyomo/core/expr/visitor.pyx",
             "pyomo/core/util.pyx",
             "pyomo/repn/standard_repn.pyx",
             "pyomo/repn/plugins/cpxlp.pyx",
@@ -100,7 +100,8 @@ if using_cython:
         ]
         for f in files:
             shutil.copyfile(f[:-1], f)
-        ext_modules = cythonize(files)
+        ext_modules = cythonize(files, compiler_directives={
+            "language_level": 3 if sys.version_info >= (3, ) else 2})
     except:
         if using_cython == CYTHON_REQUIRED:
             print("""
