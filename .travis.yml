@@ -15,8 +15,9 @@ env:
   - DOCKERENV="-e TAG -e COVERAGE_PROCESS_START -e PYOMO_CONFIG_DIR"
   matrix:
   - TAG=python_3.7    CATEGORY="nightly"
+  - TAG=python_3.7    CATEGORY="nightly" SLIM=1
+  - TAG=python_3.7    CATEGORY="smoke"   SETUP_OPTIONS="--with-cython"
   - TAG=python_3.6    CATEGORY="nightly"
-  - TAG=python_3.6    CATEGORY="nightly" SLIM=1
   - TAG=python_3.5    CATEGORY="nightly"
   - TAG=python_2.7    CATEGORY="nightly" KEY_JOB=1
   - TAG=pypy_3        CATEGORY="nightly" DISABLE_COVERAGE=1
@@ -71,7 +72,7 @@ install:
     # Install PyUtilib (master branch)
   - ${DOC} pip install --quiet git+https://github.com/PyUtilib/pyutilib
     # Install this package
-  - ${DOC} python setup.py develop
+  - ${DOC} python setup.py develop ${SETUP_OPTIONS}
     # Finish setting up coverage tracking for subprocesses
   - DOCKER_SITE_PACKAGES=`${DOC} python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
   - |
@@ -80,6 +81,7 @@ install:
         ${DOC} bash -c "echo 'import coverage; coverage.process_startup()' > ${DOCKER_SITE_PACKAGES}/run_coverage_at_startup.pth"
     fi
   - ${DOC} pyomo download-extensions
+  - ${DOC} pyomo build-extensions
 
 script:
   - ${DOC} python --version
@@ -102,8 +104,8 @@ after_success:
   - ${DOC} find . -maxdepth 10 -name ".cov*"
   - ${DOC} coverage combine
   - ${DOC} codecov --env TAG -X gcov
-    # Trigger PyomoGallery build
-  - "if [ -n \"${KEY_JOB}\" ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token 4DadIB521uUPyBXMtvQVOw' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
+    # Trigger PyomoGallery build, but only when building the master branch
+  - "if [ -n \"${KEY_JOB}\" -a \"${TRAVIS_PULL_REQUEST}\" == false ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token 4DadIB521uUPyBXMtvQVOw' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
 
 deploy:
   - provider: pypi

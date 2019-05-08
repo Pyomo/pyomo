@@ -3,20 +3,31 @@
 [![Appveyor Status](https://ci.appveyor.com/api/projects/status/km08tbkv05ik14n9/branch/master?svg=true)](https://ci.appveyor.com/project/WilliamHart/pyomo/branch/master)
 [![Jenkins Status](https://img.shields.io/jenkins/s/https/software.sandia.gov/downloads/pub/pyomo/jenkins/Pyomo_trunk.svg?logo=jenkins&logoColor=white)](https://jenkins-srn.sandia.gov/job/Pyomo_trunk)
 [![codecov](https://codecov.io/gh/Pyomo/pyomo/branch/master/graph/badge.svg)](https://codecov.io/gh/Pyomo/pyomo)
-[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/Pyomo/pyomo/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/Pyomo/pyomo/?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/pyomo/badge/?version=latest)](http://pyomo.readthedocs.org/en/latest/)
 
 [![GitHub contributors](https://img.shields.io/github/contributors/pyomo/pyomo.svg)](https://github.com/pyomo/pyomo/graphs/contributors)
 [![Merged PRs](https://img.shields.io/github/issues-pr-closed-raw/pyomo/pyomo.svg?label=merged+PRs)](https://github.com/pyomo/pyomo/pulls?q=is:pr+is:merged)
 [![Issue stats](http://isitmaintained.com/badge/resolution/pyomo/pyomo.svg)](http://isitmaintained.com/project/pyomo/pyomo)
-[![Research software impact](http://depsy.org/api/package/pypi/Pyomo/badge.svg)](http://depsy.org/package/python/Pyomo)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
 
 [![a COIN-OR project](https://www.coin-or.org/GitHub/coin-or-badge.png)](https://www.coin-or.org)
 
 ## Pyomo Overview
 
-Pyomo is a Python-based open-source software package that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
+Pyomo is a Python-based open-source software package that supports a diverse set of optimization capabilities for formulating and analyzing optimization models. Pyomo can be used to define symbolic problems, create concrete problem instances, and solve these instances with standard solvers. Pyomo supports a wide range of problem types, including:
+
+ -  Linear programming
+ -  Quadratic programming
+ -  Nonlinear programming
+ -  Mixed-integer linear programming
+ -  Mixed-integer quadratic programming
+ -  Mixed-integer nonlinear programming
+ -  Mixed-integer stochastic programming
+ -  Generalized disjunctive programming
+ -  Differential algebraic equations
+ -  Mathematical programming with equilibrium constraints
+
+Pyomo supports analysis and scripting within a full-featured programming language. Further, Pyomo has also proven an effective framework for developing high-level optimization and analysis tools.  For example, the PySP package provides generic solvers for stochastic programming. PySP leverages the fact that Pyomo's modeling objects are embedded within a full-featured high-level programming language, which allows for transparent parallelization of subproblems using Python parallel communication libraries.
 
 * [Pyomo Home](http://www.pyomo.org)
 * [About Pyomo](http://www.pyomo.org/about)
@@ -25,7 +36,9 @@ Pyomo is a Python-based open-source software package that supports a diverse set
 * [Performance Plots](https://software.sandia.gov/downloads/pub/pyomo/performance/index.html)
 * [Blog](http://www.pyomo.org/blog/)
 
-Pyomo is available under the BSD License.
+Pyomo was formerly released as the Coopr software library.
+
+Pyomo is available under the BSD License, see the LICENSE.txt file.
 
 Pyomo is currently tested with the following Python implementations:
 
@@ -34,17 +47,13 @@ Pyomo is currently tested with the following Python implementations:
 
 ### Installation
 
-#### PyPI [![PyPI](https://img.shields.io/pypi/v/pyomo.svg?maxAge=2592000)]()
-<!---
-# PyPI download stats appear to be broken
-[![PyPI](https://img.shields.io/pypi/dm/pyomo.svg?maxAge=2592000)]()
---->
+#### PyPI [![PyPI version](https://img.shields.io/pypi/v/pyomo.svg?maxAge=3600)](https://pypi.org/project/Pyomo/) [![PyPI downloads](https://img.shields.io/pypi/dm/pyomo.svg?maxAge=21600)](https://pypistats.org/packages/pyomo)
 
     pip install pyomo
 
-#### BinStar [![Binstar Badge](https://anaconda.org/conda-forge/pyomo/badges/version.svg)](https://anaconda.org/conda-forge/pyomo) [![Binstar Badge](https://anaconda.org/conda-forge/pyomo/badges/downloads.svg)](https://anaconda.org/conda-forge/pyomo)
+#### Anaconda [![Anaconda version](https://anaconda.org/conda-forge/pyomo/badges/version.svg)](https://anaconda.org/conda-forge/pyomo) [![Anaconda downloads](https://anaconda.org/conda-forge/pyomo/badges/downloads.svg)](https://anaconda.org/conda-forge/pyomo)
 
-    conda install -c https://conda.anaconda.org/conda-forge pyomo
+    conda install -c conda-forge pyomo
 
 ### Getting Help
 

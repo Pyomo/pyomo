@@ -155,3 +155,19 @@ class TestDerivs(unittest.TestCase):
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
         self.assertAlmostEqual(derivs[m.p], approx_deriv(e, m.p), tol)
+
+    def test_expressiondata(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var(initialize=3)
+        m.e = pe.Expression(expr=m.x * 2)
+
+        @m.Expression([1, 2])
+        def e2(m, i):
+            if i == 1:
+                return m.x + 4
+            else:
+                return m.x ** 2
+        m.o = pe.Objective(expr=m.e + 1 + m.e2[1] + m.e2[2])
+        derivs = reverse_ad(m.o.expr)
+        symbolic = reverse_sd(m.o.expr)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol)

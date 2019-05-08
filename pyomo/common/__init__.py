@@ -17,11 +17,12 @@ from pyutilib.factory.factory import (
 )
 
 from .fileutils import (
-    Executable,
+    Executable, Library,
     # The following will be deprecated soon
     register_executable, registered_executable, unregister_executable
 )
 from . import config
+from .deprecation import deprecated
 from .errors import DeveloperError
 from ._task import pyomo_api, PyomoAPIData, PyomoAPIFactory
 from ._command import pyomo_command, get_pyomo_commands

@@ -2,6 +2,7 @@
 from __future__ import division
 
 import logging
+import six
 from math import fabs, floor, log
 
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
@@ -12,7 +13,6 @@ from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory
 from pyomo.opt.results import ProblemSense
-from six import StringIO
 from pyomo.common.log import LoggingIntercept
 import timeit
 from contextlib import contextmanager
@@ -49,7 +49,7 @@ class SuppressInfeasibleWarning(LoggingIntercept):
 
     def __init__(self):
         super(SuppressInfeasibleWarning, self).__init__(
-            StringIO(), 'pyomo.core', logging.WARNING)
+            six.StringIO(), 'pyomo.core', logging.WARNING)
 
 
 def model_is_valid(solve_data, config):
@@ -91,19 +91,18 @@ def process_objective(solve_data, config, always_move_objective=False):
     m = solve_data.working_model
     util_blk = getattr(m, solve_data.util_block_name)
     # Handle missing or multiple objectives
-    objs = list(m.component_data_objects(
+    active_objectives = list(m.component_data_objects(
         ctype=Objective, active=True, descend_into=True))
-    num_objs = len(objs)
-    solve_data.results.problem.number_of_objectives = num_objs
-    if num_objs == 0:
+    solve_data.results.problem.number_of_objectives = len(active_objectives)
+    if len(active_objectives) == 0:
         config.logger.warning(
             'Model has no active objectives. Adding dummy objective.')
         util_blk.dummy_objective = Objective(expr=1)
         main_obj = util_blk.dummy_objective
-    elif num_objs > 1:
+    elif len(active_objectives) > 1:
         raise ValueError('Model has multiple active objectives.')
     else:
-        main_obj = objs[0]
+        main_obj = active_objectives[0]
     solve_data.results.problem.sense = main_obj.sense
     solve_data.objective_sense = main_obj.sense
 
@@ -144,7 +143,8 @@ def a_logger(str_or_logger):
 
 
 def copy_var_list_values(from_list, to_list, config,
-                         skip_stale=False, skip_fixed=True):
+                         skip_stale=False, skip_fixed=True,
+                         ignore_integrality=False):
     """Copy variable values from one list to another.
 
     Rounds to Binary/Integer if neccessary
@@ -162,9 +162,13 @@ def copy_var_list_values(from_list, to_list, config,
         except ValueError as err:
             err_msg = getattr(err, 'message', str(err))
             var_val = value(v_from)
-            rounded_val = round(var_val)
+            rounded_val = round(var_val) if six.PY3 else int(round(var_val))
             # Check to see if this is just a tolerance issue
-            if 'is not in domain Binary' in err_msg and (
+            if ignore_integrality \
+                and ('is not in domain Binary' in err_msg
+                or 'is not in domain Integers' in err_msg):
+               v_to.value = value(v_from, exception=False)
+            elif 'is not in domain Binary' in err_msg and (
                     fabs(var_val - 1) <= config.integer_tolerance or
                     fabs(var_val) <= config.integer_tolerance):
                 v_to.set_value(rounded_val)
@@ -357,12 +361,32 @@ def constraints_in_True_disjuncts(model, config):
 
 
 @contextmanager
-def time_code(timing_data_obj, code_block_name):
+def time_code(timing_data_obj, code_block_name, is_main_timer=False):
+    """Starts timer at entry, stores elapsed time at exit
+
+    If `is_main_timer=True`, the start time is stored in the timing_data_obj,
+    allowing calculation of total elapsed time 'on the fly' (e.g. to enforce
+    a time limit) using `get_main_elapsed_time(timing_data_obj)`.
+    """
     start_time = timeit.default_timer()
+    if is_main_timer:
+        timing_data_obj.main_timer_start_time = start_time
     yield
     elapsed_time = timeit.default_timer() - start_time
     prev_time = timing_data_obj.get(code_block_name, 0)
     timing_data_obj[code_block_name] = prev_time + elapsed_time
+
+
+def get_main_elapsed_time(timing_data_obj):
+    """Returns the time since entering the main `time_code` context"""
+    current_time = timeit.default_timer()
+    try:
+        return current_time - timing_data_obj.main_timer_start_time
+    except AttributeError as e:
+        if 'main_timer_start_time' in str(e):
+            six.raise_from(e, AttributeError(
+                "You need to be in a 'time_code' context to use `get_main_elapsed_time()`."
+            ))
 
 
 @contextmanager

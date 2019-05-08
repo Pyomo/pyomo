@@ -247,6 +247,37 @@ class Test_matrix_constraint(unittest.TestCase):
         for i, c in enumerate(ctuple):
             self.assertEqual(c.index, i)
 
+    def test_A(self):
+        A = numpy.ones((4,5))
+
+        # sparse
+        c = matrix_constraint(A)
+        self.assertEqual(c.A.shape, A.shape)
+        self.assertTrue((c.A == A).all())
+        self.assertEqual(c.sparse, True)
+        with self.assertRaises(ValueError):
+            c.A.data[0] = 2
+        with self.assertRaises(ValueError):
+            c.A.indices[0] = 2
+        with self.assertRaises(ValueError):
+            c.A.indptr[0] = 2
+        cA = c.A
+        cA.shape = (5,4)
+        # the shape of c.A should not be changed
+        self.assertEqual(c.A.shape, (4,5))
+
+        # dense
+        c = matrix_constraint(A, sparse=False)
+        self.assertEqual(c.A.shape, A.shape)
+        self.assertTrue((c.A == A).all())
+        self.assertEqual(c.sparse, False)
+        with self.assertRaises(ValueError):
+            c.A[0,0] = 2
+        cA = c.A
+        cA.shape = (5,4)
+        # the shape of c.A should not be changed
+        self.assertEqual(c.A.shape, (4,5))
+
     def test_x(self):
         A = numpy.ones((4,5))
         ctuple = matrix_constraint(A)
