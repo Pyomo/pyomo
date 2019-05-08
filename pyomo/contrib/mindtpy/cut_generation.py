@@ -62,7 +62,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
             target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
                 expr=copysign(1, sign_adjust * dual_value)
                      * (sum(value(jacs[constr][var]) * (var - value(var))
-                            for var in list(EXPR.identify_variables(constr.body)))
+                            for var in list(identify_variables(constr.body)))
                         + value(constr.body) - rhs)
                      - slack_var <= 0)
 

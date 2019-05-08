@@ -135,7 +135,7 @@ def handle_NLP_subproblem_optimal(fix_nlp, solve_data, config):
         copy_var_list_values(fix_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
-        add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+        add_oa_cuts(solve_data.mip, dual_values, solve_data, config)  # TODO-romeo @bernalde is it reasonalb to copy the NLP solution as the start point for the MIP model?
     elif config.strategy == 'PSC':
         add_psc_cut(solve_data, config)
     elif config.strategy == 'GBD':

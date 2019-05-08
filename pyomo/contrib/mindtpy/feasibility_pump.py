@@ -322,7 +322,7 @@ def solve_feasibility_pump(model, copy_back=True):
                                          if var.is_binary()]
 
         process_objective(solve_data, config, always_move_objective=True)
-        calc_jacobians(solve_data, config)
+        # calc_jacobians(solve_data, config)  # TODO-romeo use this again
 
         try:
             initialize_FP(solve_data, config)
@@ -364,6 +364,10 @@ def setup_config():
         description="Bound tolerance",
         doc="Relative tolerance for bound feasibility checks"
     ))
+    config.declare("constraint_tolerance", ConfigValue(
+        default=1E-6,
+        description="Tolerance on constraint satisfaction."
+    ))
     config.declare("nlp_solver", ConfigValue(
         default="gams",
         domain=In(["baron", "gams", "ipopt", "ipopth", "conopt"]),
@@ -402,7 +406,7 @@ def setup_config():
         description='The logger object name to use for reporting.',
         domain=a_logger))
     config.declare("iteration_limit", ConfigValue(
-        default=30,
+        default=500,
         domain=PositiveInt,
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods"

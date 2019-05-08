@@ -7,6 +7,7 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
+from pyomo.contrib.mindtpy.objective_generation import generate_L1_objective_function
 
 
 def solve_OA_master(solve_data, config):
@@ -25,14 +26,18 @@ def solve_OA_master(solve_data, config):
     main_objective = next(master_mip.component_data_objects(Objective, active=True))
     main_objective.deactivate()
 
-    sign_adjust = 1 if main_objective.sense == minimize else -1
-    MindtPy.MindtPy_penalty_expr = Expression(
-        expr=sign_adjust * config.OA_penalty_factor * sum(
-            v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
+    if config.solver in ['OA', 'LOA']:
+        # TODO only for 'global' solver
+        sign_adjust = 1 if main_objective.sense == minimize else -1
+        MindtPy.MindtPy_penalty_expr = Expression(
+            expr=sign_adjust * config.OA_penalty_factor * sum(
+                v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
 
-    MindtPy.MindtPy_oa_obj = Objective(
-        expr=main_objective.expr + MindtPy.MindtPy_penalty_expr,
-        sense=main_objective.sense)
+        MindtPy.MindtPy_oa_obj = Objective(
+            expr=main_objective.expr + MindtPy.MindtPy_penalty_expr,
+            sense=main_objective.sense)
+    elif config.solver is 'feas_pump':
+        MindtPy.feas_pump_mip_obj = generate_L1_objective_function(master_mip, solve_data.nlp)
 
     # Deactivate extraneous IMPORT/EXPORT suffixes
     getattr(master_mip, 'ipopt_zL_out', _DoNothing()).deactivate()

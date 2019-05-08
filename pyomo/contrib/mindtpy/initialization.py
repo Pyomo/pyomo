@@ -3,7 +3,7 @@ from __future__ import division
 
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values
 from pyomo.contrib.mindtpy.cut_generation import (
-    add_oa_cuts, add_objective_linearization,
+    add_oa_cut, add_objective_linearization,
 )
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.contrib.mindtpy.util import (calc_jacobians)
@@ -23,10 +23,11 @@ def MindtPy_initialize_master(solve_data, config):
 
     m.dual.activate()
 
-    if config.strategy == 'OA':
+    if config.strategy in ['OA', 'LOA', 'feas_pump']:
         calc_jacobians(solve_data, config)  # preload jacobians
         MindtPy.MindtPy_linear_cuts.oa_cuts = ConstraintList(
             doc='Outer approximation cuts')
+
     # elif config.strategy == 'ECP':
     #     calc_jacobians(solve_data, config)  # preload jacobians
     #     MindtPy.MindtPy_linear_cuts.ecp_cuts = ConstraintList(
@@ -39,21 +40,27 @@ def MindtPy_initialize_master(solve_data, config):
     #     MindtPy.MindtPy_linear_cuts.gbd_cuts = ConstraintList(
     #         doc='Generalized Benders cuts')
 
-    # Set default initialization_strategy
-    if config.init_strategy is None:
-        if config.strategy == 'OA':
-            config.init_strategy = 'rNLP'
-        else:
-            config.init_strategy = 'max_binary'
-    # Do the initialization
-    elif config.init_strategy == 'rNLP':
+
+    if config.strategy in ['OA', 'LOA']:
+        # Set default initialization_strategy
+        if config.init_strategy is None:
+            if config.strategy == 'OA':
+                config.init_strategy = 'rNLP'
+            else:
+                config.init_strategy = 'max_binary'
+        # Do the initialization
+        elif config.init_strategy == 'rNLP':
+            init_rNLP(solve_data, config)
+        elif config.init_strategy == 'max_binary':
+            init_max_binaries(solve_data, config)
+            # if config.strategy == 'ECP':
+            #     add_ecp_cut(solve_data, config)
+            # else:
+            solve_NLP_subproblem(solve_data, config)
+    elif config.strategy is 'feas_pump':
         init_rNLP(solve_data, config)
-    elif config.init_strategy == 'max_binary':
-        init_max_binaries(solve_data, config)
-        # if config.strategy == 'ECP':
-        #     add_ecp_cut(solve_data, config)
-        # else:
-        solve_NLP_subproblem(solve_data, config)
+        copy_var_list_values(solve_data.mip.variable_list,
+                             solve_data.working_model.variable_list)
 
 
 def init_rNLP(solve_data, config):
@@ -81,7 +88,7 @@ def init_rNLP(solve_data, config):
             'NLP %s: OBJ: %s  LB: %s  UB: %s'
             % (solve_data.nlp_iter, value(main_objective.expr),
                solve_data.LB, solve_data.UB))
-        if config.strategy == 'OA':
+        if config.strategy in ['OA', 'feas_pump']:
             copy_var_list_values(m.MindtPy_utils.variable_list, 
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config, ignore_integrality=True)
