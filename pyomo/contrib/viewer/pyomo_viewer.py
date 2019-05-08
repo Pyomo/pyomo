@@ -19,12 +19,10 @@ import time
 
 from pyomo.scripting.pyomo_parser import add_subparser
 from pyomo.contrib.viewer.pyqt_4or5 import *
-from qtconsole.rich_jupyter_widget import RichJupyterWidget
-from qtconsole.manager import QtKernelManager
 
-def make_jupyter_widget_with_kernel():
-
-    return jupyter_widget
+if qt_available:
+    from qtconsole.rich_jupyter_widget import RichJupyterWidget
+    from qtconsole.manager import QtKernelManager
 
 class MainWindow(QMainWindow):
     """A window that contains a single Qt console."""
