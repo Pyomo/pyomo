@@ -247,6 +247,9 @@ class Test_matrix_constraint(unittest.TestCase):
         for i, c in enumerate(ctuple):
             self.assertEqual(c.index, i)
 
+    @unittest.skipIf(
+        tuple(int(_) for _ in scipy.version.version.split('.')[:2]) < (1,1),
+        "csr_matrix.reshape only available in scipy >= 1.1")
     def test_A(self):
         A = numpy.ones((4,5))
 
