@@ -318,10 +318,18 @@ You can silence this warning by one of three ways:
         try:
             obj = self._data.get(index, _NotFound)
         except TypeError:
-            obj = _NotFound
             index = self._processUnhashableIndex(index)
             if index.__class__ is _IndexedComponent_slice:
                 return index
+            # The index could have contained constant but nonhashable
+            # objects (e.g., scalar immutable Params).
+            # _processUnhashableIndex will evaluate those constants, so
+            # if it made any changes to the index, we need to re-check
+            # the _data dict for membership.
+            try:
+                obj = self._data.get(index, _NotFound)
+            except TypeError:
+                obj = _NotFound
 
         if obj is _NotFound:
             # Not good: we have to defer this import to now
@@ -564,7 +572,7 @@ You can silence this warning by one of three ways:
 
                 except TemplateExpressionError:
                     #
-                    # The index is a template expression, so return the 
+                    # The index is a template expression, so return the
                     # templatized expression.
                     #
                     from pyomo.core.expr import current as EXPR
