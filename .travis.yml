@@ -15,8 +15,9 @@ env:
   - DOCKERENV="-e TAG -e COVERAGE_PROCESS_START -e PYOMO_CONFIG_DIR"
   matrix:
   - TAG=python_3.7    CATEGORY="nightly"
+  - TAG=python_3.7    CATEGORY="nightly" SLIM=1
+  - TAG=python_3.7    CATEGORY="smoke"   SETUP_OPTIONS="--with-cython"
   - TAG=python_3.6    CATEGORY="nightly"
-  - TAG=python_3.6    CATEGORY="nightly" SLIM=1
   - TAG=python_3.5    CATEGORY="nightly"
   - TAG=python_2.7    CATEGORY="nightly" KEY_JOB=1
   - TAG=pypy_3        CATEGORY="nightly" DISABLE_COVERAGE=1
@@ -71,7 +72,7 @@ install:
     # Install PyUtilib (master branch)
   - ${DOC} pip install --quiet git+https://github.com/PyUtilib/pyutilib
     # Install this package
-  - ${DOC} python setup.py develop
+  - ${DOC} python setup.py develop ${SETUP_OPTIONS}
     # Finish setting up coverage tracking for subprocesses
   - DOCKER_SITE_PACKAGES=`${DOC} python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
   - |
