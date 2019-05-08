@@ -99,7 +99,8 @@ if using_cython:
         ]
         for f in files:
             shutil.copyfile(f[:-1], f)
-        ext_modules = cythonize(files)
+        ext_modules = cythonize(files, compiler_directives={
+            "language_level": 3 if sys.version_info >= (3, ) else 2})
     except:
         if using_cython == CYTHON_REQUIRED:
             print("""
