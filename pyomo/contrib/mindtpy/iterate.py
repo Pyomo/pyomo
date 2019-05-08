@@ -53,40 +53,44 @@ def MindtPy_iteration_loop(solve_data, config):
         config.call_after_subproblem_solve(fix_nlp, solve_data)
 
         if config.strategy == 'PSC':
-            # If the hybrid algorithm is not making progress, switch to OA.
-            progress_required = 1E-6
-            if main_objective.sense == minimize:
-                log = solve_data.LB_progress
-                sign_adjust = 1
-            else:
-                log = solve_data.UB_progress
-                sign_adjust = -1
-            # Maximum number of iterations in which the lower (optimistic)
-            # bound does not improve before switching to OA
-            max_nonimprove_iter = 5
-            making_progress = True
-            # TODO-romeo Unneccesary for OA and LOA, right?
-            for i in range(1, max_nonimprove_iter + 1):
-                try:
-                    if (sign_adjust * log[-i]
-                            <= (log[-i - 1] + progress_required)
-                            * sign_adjust):
-                        making_progress = False
-                    else:
-                        making_progress = True
-                        break
-                except IndexError:
-                    # Not enough history yet, keep going.
-                    making_progress = True
-                    break
-            if not making_progress and (
-                    config.strategy == 'hPSC' and
-                    config.strategy == 'PSC'):
-                config.logger.info(
-                    'Not making enough progress for {} iterations. '
-                    'Switching to OA.'.format(max_nonimprove_iter))
-                config.strategy = 'OA'
+            PSC_switch_to_OA_if_no_progress(solve_data, config)
 
+
+def PSC_switch_to_OA_if_no_progress(solve_data, config):
+    """If the hybrid algorithm is not making progress, switch to OA."""
+    working_model = solve_data.working_model
+    main_objective = next(working_model.component_data_objects(Objective, active=True))
+    progress_required = 1E-6
+    if main_objective.sense == minimize:
+        log = solve_data.LB_progress
+        sign_adjust = 1
+    else:
+        log = solve_data.UB_progress
+        sign_adjust = -1
+    # Maximum number of iterations in which the lower (optimistic)
+    # bound does not improve before switching to OA
+    max_nonimprove_iter = 5
+    making_progress = True
+    for i in range(1, max_nonimprove_iter + 1):
+        try:
+            if (sign_adjust * log[-i]
+                    <= (log[-i - 1] + progress_required)
+                    * sign_adjust):
+                making_progress = False
+            else:
+                making_progress = True
+                break
+        except IndexError:
+            # Not enough history yet, keep going.
+            making_progress = True
+            break
+    if not making_progress and (
+            config.strategy == 'hPSC' and
+            config.strategy == 'PSC'):
+        config.logger.info(
+            'Not making enough progress for {} iterations. '
+            'Switching to OA.'.format(max_nonimprove_iter))
+        config.strategy = 'OA'
 
 def algorithm_should_terminate(solve_data, config):
     """Check if the algorithm should terminate.
