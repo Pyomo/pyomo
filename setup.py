@@ -90,7 +90,6 @@ if using_cython:
             "pyomo/core/expr/numvalue.pyx",
             "pyomo/core/expr/numeric_expr.pyx",
             "pyomo/core/expr/logical_expr.pyx",
-            "pyomo/core/expr/visitor_expr.pyx",
             "pyomo/core/util.pyx",
             "pyomo/repn/standard_repn.pyx",
             "pyomo/repn/plugins/cpxlp.pyx",
