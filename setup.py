@@ -48,7 +48,7 @@ def get_version():
     return _verInfo['__version__']
 
 requires = [
-    'PyUtilib>=5.6.6.dev0',
+    'PyUtilib>=5.7.1.dev0',
     'appdirs',
     'ply',
     'six>=1.4',
@@ -90,7 +90,7 @@ if using_cython:
             "pyomo/core/expr/numvalue.pyx",
             "pyomo/core/expr/numeric_expr.pyx",
             "pyomo/core/expr/logical_expr.pyx",
-            "pyomo/core/expr/visitor_expr.pyx",
+            #"pyomo/core/expr/visitor.pyx",
             "pyomo/core/util.pyx",
             "pyomo/repn/standard_repn.pyx",
             "pyomo/repn/plugins/cpxlp.pyx",
@@ -100,7 +100,8 @@ if using_cython:
         ]
         for f in files:
             shutil.copyfile(f[:-1], f)
-        ext_modules = cythonize(files)
+        ext_modules = cythonize(files, compiler_directives={
+            "language_level": 3 if sys.version_info >= (3, ) else 2})
     except:
         if using_cython == CYTHON_REQUIRED:
             print("""
@@ -124,7 +125,7 @@ def run_setup():
       license='BSD',
       platforms=["any"],
       description='Pyomo: Python Optimization Modeling Objects',
-      long_description=read('README.txt'),
+      long_description=read('README.md'),
       classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: End Users/Desktop',
@@ -174,7 +175,6 @@ def run_setup():
         OSSolverService = pyomo.scripting.commands:OSSolverService
         pyomo_python = pyomo.scripting.commands:pyomo_python
         pyomo_old=pyomo.scripting.pyomo_command:main
-        get_pyomo_extras = scripts.get_pyomo_extras:main
 
         [pyomo.command]
         pyomo.runbenders=pyomo.pysp.benders
