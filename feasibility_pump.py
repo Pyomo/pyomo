@@ -1,15 +1,16 @@
 from math import inf
-from pyomo.environ import (ConcreteModel, Var, Constraint, ConstraintList,
+from pyomo.core import (ConcreteModel, Var, Constraint, ConstraintList,
                            Objective, Integers, Reals, RangeSet, Block,
-                           TransformationFactory, SolverFactory,
+                           TransformationFactory, 
                            sqrt, value)
+from pyomo.opt import SolverFactory
 from pyomo.core.base.symbolic import differentiate
 from pyomo.core.expr.current import identify_variables
 from pyomo.common.config import (ConfigBlock, ConfigValue, In,
                                  PositiveFloat, PositiveInt)
 from pyomo.contrib.gdpopt.util import \
     (create_utility_block, process_objective, setup_results_object, a_logger,
-     copy_var_list_values, SuppressInfeasibleWarning)
+     copy_var_list_values, SuppressInfeasibleWarning, _DoNothing)
 from pyomo.contrib.mindtpy.util import MindtPySolveData, calc_jacobians
 from pyomo.contrib.preprocessing.plugins.int_to_binary import IntegerToBinary
 from pyomo.opt import SolverResults
@@ -110,7 +111,7 @@ def setup_nlp_model(solve_data):
     return solve_data.nlp_model
 
 
-def solve_feasibility_pump(solve_data, config):
+def execute_feasibility_pump(solve_data, config):
     """Solves NLP and MILP subproblems until a feasible solution is  found
 
     If `write_back==True`, the resulting feasible solution is copied to
@@ -123,6 +124,10 @@ def solve_feasibility_pump(solve_data, config):
 
     milp_model = setup_milp_model(solve_data)
     add_L1_objective_function(milp_model, solve_data.relaxed_nlp_model)
+    # Deactivate extraneous IMPORT/EXPORT suffixes
+    getattr(milp_model, 'ipopt_zL_out', _DoNothing()).deactivate()
+    getattr(milp_model, 'ipopt_zU_out', _DoNothing()).deactivate()
+
     milp_result = opt_milp.solve(milp_model, **config.mip_solver_args)
 
     while milp_result.solver.termination_condition is not TC.infeasible:
@@ -136,7 +141,8 @@ def solve_feasibility_pump(solve_data, config):
         copy_var_list_values(
             nlp_model.var_list,
             solve_data.working_model.var_list,
-            config)
+            config,
+            ignore_integrality=True)
 
         if solution_distance(nlp_model.var_list, milp_model.var_list) < config.zero_tolerance:
             fixed_nlp = solve_fixed_nlp(solve_data, config)
@@ -147,6 +153,7 @@ def solve_feasibility_pump(solve_data, config):
                 fixed_nlp.var_list,
                 solve_data.working_model.var_list,
                 config)
+            return  # TODO-romeo remove this DEBUG
 
             if objective_value < solve_data.incumbent_obj_val:
                 solve_data.incumbent_obj_val = objective_value
@@ -161,6 +168,9 @@ def solve_feasibility_pump(solve_data, config):
         # Solve MILP auxiliary problem
         milp_model = setup_milp_model(solve_data)
         add_L1_objective_function(milp_model, nlp_model)
+        # Deactivate extraneous IMPORT/EXPORT suffixes
+        getattr(milp_model, 'ipopt_zL_out', _DoNothing()).deactivate()
+        getattr(milp_model, 'ipopt_zU_out', _DoNothing()).deactivate()
         milp_result = opt_milp.solve(milp_model, **config.mip_solver_args)
     else:
         raise InfeasibleException()
@@ -203,8 +213,10 @@ def solve_fixed_nlp(solve_data, config):
 
 
 def create_oa_cut(solve_data, config):
+    # TODO-romeo replace this with mindtpy methods
     for constr in solve_data.working_model.component_data_objects(
             ctype=Constraint, active=True):
+        # Check if constraint is active
         if abs(constr.slack()) > config.bound_tolerance*100:
             continue
         if constr.body.polynomial_degree() in (0, 1):
@@ -247,7 +259,9 @@ def create_linearized_objective_cuts(solve_data, config):
         linear_cuts.increasing_objective_cuts.add(
             expr=(sum(value(pd)*(var - var.value) for (var, pd)
                       in zip(obj_vars, partial_derivatives))
+                  + 0.1 * max(abs(solve_data.incumbent_obj_val), 1)  # TODO-romeo replace this with variable
                   <= 0))
+                  #  TODO-romeo flag for objective improvement
 
 
 def create_no_good_cut(target_model, value_model):
@@ -276,8 +290,11 @@ def setup_simple_model():
     return simple_model
 
 
-def do_the_solving(model):
-    """Runs the feasibility pump with objective cuts"""
+def solve_feasibility_pump(model, copy_back=True):
+    """Runs the feasibility pump with objective cuts
+
+    copy_back = True writes the feasible solution to the input model
+    """
 
     solve_data = MindtPySolveData()
     solve_data.results = SolverResults()
@@ -285,8 +302,8 @@ def do_the_solving(model):
     solve_data.working_model = model.clone()
     working_model = solve_data.working_model
     config = setup_config()
-    TransformationFactory('contrib.integer_to_binary'). \
-        apply_to(solve_data.working_model)
+    if hasattr(solve_data.working_model, 'MindtPy_utils'):
+        del solve_data.working_model.MindtPy_utils
 
     with create_utility_block(working_model, 'MindtPy_utils', solve_data):
         mp_utils = working_model.MindtPy_utils
@@ -313,21 +330,20 @@ def do_the_solving(model):
             return
 
         try:
-            solve_feasibility_pump(solve_data, config)
+            execute_feasibility_pump(solve_data, config)
         except IterationLimitExceeded as exept:
             print(exept)
             raise
         except InfeasibleException:
             print("Feasibility Pump stopped converging-> optimal solution")
-            del solve_data.best_solution_found.MindtPy_utils
             # solve_data.best_solution_found.pprint()
-            print(solve_data.incumbent_obj_val)
-            print([(v.name, v.value) for v in solve_data.best_solution_found.component_data_objects(ctype=Var)])
-            return
-        except RuntimeError as exept:
-            print(exept)
-            return
+            # print(solve_data.incumbent_obj_val)
+            # print([(v.name, v.value) for v in solve_data.best_solution_found.component_data_objects(ctype=Var)])
 
+    if copy_back:
+        copy_var_list_values(solve_data.working_model.component_data_objects(Var),
+                             model.component_data_objects(Var),
+                             config)
     return solve_data
 
 
@@ -365,7 +381,7 @@ def setup_config():
     config.nlp_solver_args.add('add_options', ['option optcr=0;'])
 
     config.declare("mip_solver", ConfigValue(
-        default="cplex",
+        default="gurobi",
         domain=In(["gurobi", "cplex", "cbc", "glpk", "gams"]),
         description="MIP subsolver name",
         doc="Which MIP subsolver is going to be used for solving the mixed-"
@@ -386,7 +402,7 @@ def setup_config():
         description='The logger object name to use for reporting.',
         domain=a_logger))
     config.declare("iteration_limit", ConfigValue(
-        default=500,
+        default=30,
         domain=PositiveInt,
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods"
@@ -395,4 +411,4 @@ def setup_config():
 
 
 if __name__ == "__main__":
-    do_the_solving(setup_simple_model())
+    solve_feasibility_pump(setup_simple_model())
