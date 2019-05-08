@@ -43,6 +43,8 @@ logger = logging.getLogger('pyomo.core')
 
 _prePython37 = sys.version_info[:2] < (3,7)
 
+FLATTEN_CROSS_PRODUCT = True
+
 def process_setarg(arg):
     """
     Process argument and return an associated set object.
@@ -159,7 +161,10 @@ class _UnknownSetDimen(object): pass
 #     models, and in particular that all Simple (scalar) API methods
 #     correctly check the _constructed flag.
 #
-
+#   - Set() constructs implicitly on declaration with initialize=
+#
+#   - Test index/ord for equivalence of 1 and (1,)
+#
 class _NumericRange(object):
     """A representation of a closed numeric range.
 
@@ -1014,6 +1019,10 @@ class _SetData(_SetDataBase):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @property
+    def dimen(self):
+        return None
+
     def isdisjoint(self, other):
         try:
             other_is_finite = other.is_finite()
@@ -1116,23 +1125,17 @@ class _SetData(_SetDataBase):
             tmp = _SetDifference(tmp, arg)
         return tmp
 
-    def symmetric_difference(self, *args):
+    def symmetric_difference(self, other):
         """
-        Return the symmetric difference of this set with one or more sets
+        Return the symmetric difference of this set with another set
         """
-        tmp = self
-        for arg in args:
-            tmp = _SetSymmetricDifference(tmp, arg)
-        return tmp
+        return _SetSymmetricDifference(self, other)
 
     def cross(self, *args):
         """
         Return the cross-product between this set and one or more sets
         """
-        tmp = self
-        for arg in args:
-            tmp = _SetProduct(tmp, arg)
-        return tmp
+        return _SetProduct(self, *args)
 
     # <= is equivalent to issubset
     # >= is equivalent to issuperset
@@ -1246,7 +1249,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
     """A general unordered iterable Set"""
     __slots__ = ('_values', '_domain', '_validate', '_dimen')
 
-    def __init__(self, component, domain, initialize):
+    def __init__(self, component, domain, initialize, dimen):
         _SetData.__init__(self, component=component)
         # Derived classes (like _OrderedSetData) may want to change the
         # storage
@@ -1256,7 +1259,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
             self._domain = Any
         else:
             self._domain = domain
-        self._dimen = _UnknownSetDimen
+        self._dimen = dimen
         self._validate = None
         if initialize is not None:
             for i in initialize:
@@ -1278,6 +1281,11 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         """
         Return True if the set contains a given value.
         """
+        # The bulk of single-value set members were stored as scalars.
+        # Check that first.
+        if value.__class__ is tuple and len(value) == 1:
+            if value[0] in self._values:
+                return True
         return value in self._values
 
     def __iter__(self):
@@ -1294,6 +1302,10 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
 
     def data(self):
         return tuple(self._values)
+
+    @property
+    def dimen(self):
+        return self._dimen
 
     def _verify(self, value):
         if value not in self._domain:
@@ -1486,11 +1498,11 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
     if _prePython37:
         _UnorderedInitializers.add(dict)
 
-    def __init__(self, component, domain, initialize):
+    def __init__(self, component, domain, initialize, dimen):
         self._values = {}
         self._ordered_values = []
         _FiniteSetData.__init__(self, component=component, domain=domain,
-                                initialize=initialize)
+                                initialize=initialize, dimen=dimen)
         if type(initialize) in self._UnorderedInitializers:
             logger.warning(
                 "Initializing an Ordered set with a fundamentally unordered "
@@ -1561,6 +1573,13 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
         If the search item is not in the Set, then an IndexError is raised.
         """
         try:
+            # The bulk of single-value set members were stored as scalars.
+            # Check that first.
+            if item.__class__ is tuple and len(item) == 1:
+                try:
+                    return self._values[item[0]] + 1
+                except KeyError:
+                    pass
             return self._values[item] + 1
         except KeyError:
             raise IndexError(
@@ -1806,24 +1825,27 @@ class FiniteSimpleSet(_FiniteSetData, Set):
     def __init__(self, **kwds):
         domain = kwds.pop('domain', None)
         initialize = kwds.pop('initialize', None)
+        dimen = kwds.pop('dimen', _UnknownSetDimen)
         _FiniteSetData.__init__(self, component=self, domain=domain,
-                                initialize=initialize)
+                                initialize=initialize, dimen=dimen)
         Set.__init__(self, **kwds)
 
 class OrderedSimpleSet(_OrderedSetData, Set):
     def __init__(self, **kwds):
         domain = kwds.pop('domain', None)
         initialize = kwds.pop('initialize', None)
+        dimen = kwds.pop('dimen', _UnknownSetDimen)
         _OrderedSetData.__init__(self, component=self, domain=domain,
-                                 initialize=initialize)
+                                 initialize=initialize, dimen=dimen)
         Set.__init__(self, **kwds)
 
 class SortedSimpleSet(_SortedSetData, Set):
     def __init__(self, **kwds):
         domain = kwds.pop('domain', None)
         initialize = kwds.pop('initialize', None)
+        dimen = kwds.pop('dimen', _UnknownSetDimen)
         _SortedSetData.__init__(self, component=self, domain=domain,
-                                initialize=initialize)
+                                initialize=initialize, dimen=dimen)
         Set.__init__(self, **kwds)
 
 class IndexedSet(Set):
@@ -1849,6 +1871,12 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
 
     def __contains__(self, value):
         # Note that the efficiency of this depends on the reference object
+        #
+        # The bulk of single-value set members were stored as scalars.
+        # Check that first.
+        if value.__class__ is tuple and len(value) == 1:
+            if value[0] in self._ref:
+                return True
         return value in self._ref
 
     def __len__(self):
@@ -1908,6 +1936,13 @@ class _OrderedSetOf(_OrderedSetMixin, SetOf):
         return self._ref[self._to_0_based_index(index)]
 
     def ord(self, item):
+        # The bulk of single-value set members were stored as scalars.
+        # Check that first.
+        if item.__class__ is tuple and len(item) == 1:
+            try:
+                return self._ref.index(item[0]) + 1
+            except ValueError:
+                pass
         return self._ref.index(item) + 1
 
 
@@ -1945,8 +1980,14 @@ class _InfiniteRangeSetData(_SetData):
     # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
-    def __contains__(self, val):
-        return any(val in r for r in self._ranges)
+    def __contains__(self, value):
+        # The bulk of single-value set members were stored as scalars.
+        # Check that first.
+        if value.__class__ is tuple and len(value) == 1:
+            v = value[0]
+            if any(v in r for r in self._ranges):
+                return True
+        return any(value in r for r in self._ranges)
 
     def ranges(self):
         return iter(self._ranges)
@@ -2049,6 +2090,7 @@ class _FiniteRangeSetData( _SortedSetMixin,
 
     def ord(self, item):
         if len(self._ranges) == 1:
+            r = self._ranges[0]
             i = float(item - r.start) / r.step
             if i - int(i+0.5) < EPS:
                 return int(i+0.5) + 1
@@ -2391,7 +2433,6 @@ class _SetDifference(_SetOperator):
             return super(_SetDifference, cls).__new__(cls)
 
         set0, set1 = _SetOperator._checkArgs(*args)
-        print set0, set1
         if set0[0]:
             cls = _SetDifference_OrderedSet
         elif set0[1]:
@@ -2544,23 +2585,25 @@ class _SetSymmetricDifference_OrderedSet(_OrderedSetMixin,
 class _SetProduct(_SetOperator):
     __slots__ = tuple()
 
-    def __new__(cls, set0, set1):
+    def __new__(cls, *args):
         if cls != _SetProduct:
             return super(_SetProduct, cls).__new__(cls)
 
-        (set0, set1), implicit = _SetOperator._processArgs(set0, set1)
-        if set0.is_ordered() and set1.is_ordered():
+        _sets = _SetOperator._checkArgs(*args)
+        if all(_[0] for _ in _sets):
             cls = _SetProduct_OrderedSet
-        elif set0.is_finite() and set1.is_finite():
+        elif all(_[1] for _ in _sets):
             cls = _SetProduct_FiniteSet
         else:
             cls = _SetProduct_InfiniteSet
         return cls.__new__(cls)
 
-    def expand_crossproduct(self):
+    def flatten_cross_product(self):
+        # This is recursive, but the chances of a deeply nested product
+        # of Sets is exceptionally low.
         for s in self._sets:
             if isinstance(s, _SetProduct):
-                for ss in s.expand_crossproduct():
+                for ss in s.flatten_cross_product():
                     yield ss
             else:
                 yield s
@@ -2569,49 +2612,170 @@ class _SetProduct_InfiniteSet(_SetProduct):
     __slots__ = tuple()
 
     def __contains__(self, val):
-        set0, set1 = self._sets
-        if len(val) == 2 and val[0] in set0 and val[1] in set1:
-            return True
+        return self._find_val(val) is not None
+
+    def _find_val(self, val):
+        if type(val) is not tuple:
+            val = (val,)
+
+        # Support for ambiguous cross products: if val matches the
+        # number of subsets, we will start by checking each value
+        # against the corresponding subset.  Failure is not sufficient
+        # to determine the val is not in this set.
+        if len(val) == len(self._sets):
+            if all(v in self._sets[i] for i,v in enumerate(val)):
+                return val, None
+
         val = flatten_tuple(val)
-        if self._sets[0].dimen:
-            return val[:set0.dimen] in set0 and val[set0.dimen:] in set1
-        if self._sets[1].dimen:
-            return val[:-set1.dimen] in set0 and val[-set1.dimen:] in set1
-        # At this point, neither base set has a fixed dimention.  The
-        # only thing we can do is test all possible split points.
-        for i in xrange(len(val)):
-            if val[:i] in set0 and val[i:] in set1:
-                return True
-        return False
+        # Get the dimentionality of all the component sets
+        setDims = list(s.dimen for s in self._sets)
+        # Find the starting index for each subset (based on dimentionality)
+        index = [None]*len(setDims)
+        lastIndex = 0
+        for i,dim in enumerate(setDims):
+            index[i] = lastIndex
+            if dim is None:
+                firstNonDimSet = i
+                break
+            lastIndex += dim
+            # We can also check for this subset member immediately.
+            # Non-membership is sufficient to return "not found"
+            if lastIndex > len(val):
+                return None
+            elif val[index[i]:lastIndex] not in self._sets[i]:
+                return None
+        # The end of the last subset is always the length of the val
+        index.append(len(val))
+
+        # If there were no non-dimentioned sets, then we have checked
+        # each subset, found a match, and can reach a verdict:
+        if None not in setDims:
+            return val, index
+
+        # If a subset is non-dimentioned, then we will have broken out
+        # of the forward loop early.  Start at the end and work
+        # backwards.
+        lastIndex = index[-1]
+        for iEnd,dim in enumerate(reversed(setDims)):
+            i = len(setDims)-(iEnd+1)
+            if dim is None:
+                lastNonDimSet = i
+                break
+            lastIndex -= dim
+            index[i] = lastIndex
+            # We can also check for this subset member immediately.
+            # Non-membership is sufficient to return "not found"
+            if val[index[i]:index[i+1]] not in self._sets[i]:
+                return None
+
+        if firstNonDimSet == lastNonDimSet:
+            # We have inferred the subpart of val that must be in the
+            # (single) non-dimentioned subset.  Check membership and
+            # return the final verdict.
+            if ( val[index[firstNonDimSet]:index[firstNonDimSet+1]]
+                 in self._sets[firstNonDimSet] ):
+                return val, index
+            else:
+                return None
+
+        # There were multiple subsets with dimen==None.  The only thing
+        # we can do at this point is to search for any possible
+        # combination that works
+
+        subsets = self._sets[firstNonDimSet:lastNonDimSet+1]
+        _val = val[index[firstNonDimSet]:index[lastNonDimSet+1]]
+        for cuts in self._cutPointGenerator(subsets, len(_val)):
+            if all(_val[cuts[i]:cuts[i+1]] in s for i,s in enumerate(subsets)):
+                offset = index[firstNonDimSet]
+                for i in xrange(1,len(subsets)):
+                    index[firstNonDimSet+i] = offset + cuts[i]
+                return val, index
+        return None
+
+
+    @staticmethod
+    def _cutPointGenerator(subsets, val_len):
+        """Generate the sequence of cut points for a series of subsets.
+
+        This generator produces the valid set of cut points for
+        separating a list of length val_len into chunks that are valid
+        for the specified subsets.  In this method, the first and last
+        subsets must have dimen==None.  The return value is a list with
+        length one greater that then number of subsets.  Value slices
+        (for membership tests) are determined by
+
+            cuts[i]:cuts[i+1] in subsets[i]
+
+        """
+        setDims = list(_.dimen for _ in subsets)
+        cutIters = [None] * (len(subsets)+1)
+        cutPoints = [0] * (len(subsets)+1)
+        i = 1
+        cutIters[i] = iter(xrange(val_len+1))
+        cutPoints[-1] = val_len
+        while i > 0:
+            try:
+                cutPoints[i] = next(cutIters[i])
+                if i < len(subsets)-1:
+                    if setDims[i] is not None:
+                        cutIters[i+1] = iter((cutPoints[i]+setDims[i],))
+                    else:
+                        cutIters[i+1] = iter(xrange(cutPoints[i], val_len+1))
+                    i += 1
+                elif cutPoints[i] > val_len:
+                    i -= 1
+                else:
+                    yield cutPoints
+            except StopIteration:
+                i -= 1
+
 
 
 class _SetProduct_FiniteSet(_FiniteSetMixin, _SetProduct_InfiniteSet):
     __slots__ = tuple()
 
     def __iter__(self):
-        return itertools.product(self._sets[0], self._sets[1])
+        _iter = itertools.product(*self._sets)
+        # Note: if all the member sets are simple 1-d sets, then there
+        # is no need to call flatten_tuple.
+        if FLATTEN_CROSS_PRODUCT and self.dimen != len(self._sets):
+            return (flatten_tuple(_) for _ in _iter)
+        return _iter
 
     def __len__(self):
         """
         Return the number of elements in the set.
         """
-        return len(self._sets[0]) * len(self._sets[1])
+        ans = 1
+        for s in self._sets:
+            ans *= max(1, len(s))
+        return ans
+
+    @property
+    def dimen(self):
+        ans = 0
+        for s in self._sets:
+            s_dim = s.dimen
+            if s_dim is None:
+                return None
+            ans += s_dim
+        return ans
 
 
 class _SetProduct_OrderedSet(_OrderedSetMixin, _SetProduct_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
-        idx = self._to_0_based_index(index)
-        I_len = len(self._sets[0])
-        i = idx // I_len
-        a = self._sets[0][i]
-        if type(a) is not tuple:
-            a = (a,)
-        b = self._sets[1][idx - i*I_len]
-        if type(b) is not tuple:
-            b = (b,)
-        return a + b
+        _idx = self._to_0_based_index(index)
+        _ord = list(len(_) for _ in self._sets)
+        i = len(_ord)
+        while i:
+            i -= 1
+            _ord[i], _idx = _idx % _ord[i], _idx // _ord[i]
+        ans = tuple(s[i+1] for s,i in zip(self._sets, _ord))
+        if FLATTEN_CROSS_PRODUCT and self.dimen != len(ans):
+            return flatten_tuple(ans)
+        return ans
 
     def ord(self, item):
         """
@@ -2621,31 +2785,23 @@ class _SetProduct_OrderedSet(_OrderedSetMixin, _SetProduct_FiniteSet):
 
         If the search item is not in the Set, then an IndexError is raised.
         """
-        set0, set1 = self._sets
-        if len(item) == 2 and item[0] in set0 and item[1] in set1:
-            return (set0.ord(item[0])-1) * len(set0) + set1.ord(item[1])
-
-        item = flatten_tuple(item)
-        _idx = None
-        if set0.dimen \
-           and item[:set0.dimen] in set0 and item[set0.dimen:] in set1:
-            _idx = set0.dimen
-        elif set1.dimen \
-             and item[:-set1.dimen] in set1 and item[-set1.dimen:] in set1:
-            _idx = -set1.dimen
-        else:
-            # At this point, neither base set has a fixed dimention.  The
-            # only thing we can do is test all possible split points.
-            for i in xrange(len(item)):
-                if item[:i] in self._sets[0] and item[i:] in self._sets[1]:
-                    _idx = i
-                    break
-
-        if _idx is None:
+        found = self._find_val(item)
+        if found is None:
             raise IndexError(
                 "Cannot identify position of %s in Set %s: item not in Set"
                 % (item, self.name))
-        return (set0.ord(item[:_idx])-1) * len(set0) + set1.ord(item[_idx:])
+        val, cutPoints = found
+        if cutPoints is not None:
+            val = tuple( val[cutPoints[i]:cutPoints[i+1]]
+                          for i in xrange(len(self._sets)) )
+        _idx = tuple(s.ord(val[i])-1 for i,s in enumerate(self._sets))
+        _len = list(len(_) for _ in self._sets)
+        _len.append(1)
+        ans = 0
+        for pos, n in zip(_idx, _len[1:]):
+            ans += pos
+            ans *= n
+        return ans+1
 
 ############################################################################
 

@@ -13,6 +13,7 @@ from six import StringIO
 
 import pyutilib.th as unittest
 
+import pyomo.core.base.set as SetModule
 from pyomo.core.base.set import (
     _NumericRange as NR, _NonNumericRange as NNR, _AnyRange, _AnySet,
     Any, Reals, NonNegativeReals, Integers, PositiveIntegers,
@@ -25,6 +26,8 @@ from pyomo.core.base.set import (
     _SetDifference_OrderedSet,
     _SetSymmetricDifference_InfiniteSet, _SetSymmetricDifference_FiniteSet,
     _SetSymmetricDifference_OrderedSet,
+    _SetProduct_InfiniteSet, _SetProduct_FiniteSet,
+    _SetProduct_OrderedSet,
 )
 from pyomo.environ import ConcreteModel
 
@@ -2011,3 +2014,261 @@ class TestSetSymmetricDifference(unittest.TestCase):
                 NR(4,5,0,(False,False)),
                 NR(5,6,0,(False, True))
             }))
+
+class TestSetProduct(unittest.TestCase):
+    def test_cutPointGenerator(self):
+        CG = _SetProduct_InfiniteSet._cutPointGenerator
+        i = Any
+        j = SetOf([(1,1),(1,2),(2,1),(2,2)])
+
+        test = list(tuple(_) for _ in CG((i,i), 3))
+        ref =  [(0,0,3),(0,1,3),(0,2,3),(0,3,3)]
+        self.assertEqual(test, ref)
+
+        test = list(tuple(_) for _ in CG((i,i,i), 3))
+        ref =  [
+            (0,0,0,3),(0,0,1,3),(0,0,2,3),(0,0,3,3),
+            (0,1,1,3),(0,1,2,3),(0,1,3,3),
+            (0,2,2,3),(0,2,3,3),
+            (0,3,3,3)
+        ]
+        self.assertEqual(test, ref)
+
+        test = list(tuple(_) for _ in CG((i,j,i), 5))
+        ref =  [
+            (0,0,2,5),(0,1,3,5),(0,2,4,5),(0,3,5,5),
+        ]
+        self.assertEqual(test, ref)
+
+    def test_flatten_cross_product(self):
+        a = SetOf([1])
+        b = SetOf([1])
+        c = SetOf([1])
+        d = SetOf([1])
+
+        x = a * b
+        self.assertEqual(len(x._sets), 2)
+        self.assertEqual(list(x.flatten_cross_product()), [a,b])
+        x = a * b * c
+        self.assertEqual(len(x._sets), 2)
+        self.assertEqual(list(x.flatten_cross_product()), [a,b,c])
+        x = (a * b) * (c * d)
+        self.assertEqual(len(x._sets), 2)
+        self.assertEqual(list(x.flatten_cross_product()), [a,b,c,d])
+
+    def test_infinite_setproduct(self):
+        x = PositiveIntegers * SetOf([2,3,5,7])
+        self.assertFalse(x.is_finite())
+        self.assertFalse(x.is_ordered())
+        self.assertIn((1,2), x)
+        self.assertNotIn((0,2), x)
+        self.assertNotIn((1,1), x)
+        self.assertNotIn(('a',2), x)
+        self.assertNotIn((2,'a'), x)
+
+        x = SetOf([2,3,5,7]) * PositiveIntegers
+        self.assertFalse(x.is_finite())
+        self.assertFalse(x.is_ordered())
+        self.assertIn((3,2), x)
+        self.assertNotIn((1,2), x)
+        self.assertNotIn((2,0), x)
+        self.assertNotIn(('a',2), x)
+        self.assertNotIn((2,'a'), x)
+
+        x = PositiveIntegers * PositiveIntegers
+        self.assertFalse(x.is_finite())
+        self.assertFalse(x.is_ordered())
+        self.assertIn((3,2), x)
+        self.assertNotIn((0,2), x)
+        self.assertNotIn((2,0), x)
+        self.assertNotIn(('a',2), x)
+        self.assertNotIn((2,'a'), x)
+
+    def _verify_finite_product(self, a, b):
+        if isinstance(a, (Set, SetOf, RangeSet)):
+            a_ordered = a.is_ordered()
+        else:
+            a_ordered = type(a) is list
+        if isinstance(b, (Set, SetOf, RangeSet)):
+            b_ordered = b.is_ordered()
+        else:
+            b_ordered = type(b) is list
+        self.assertFalse(a_ordered and b_ordered)
+
+        x = a * b
+
+        self.assertIs(type(x), _SetProduct_FiniteSet)
+        self.assertTrue(x.is_finite())
+        self.assertFalse(x.is_ordered())
+        self.assertEqual(len(x), 6)
+        self.assertEqual(
+            sorted(list(x)), [(1,5),(1,6),(2,5),(2,6),(3,5),(3,6)])
+        self.assertEqual(x.ordered(), ((1,5),(1,6),(2,5),(2,6),(3,5),(3,6)))
+        self.assertEqual(x.sorted(), ((1,5),(1,6),(2,5),(2,6),(3,5),(3,6)))
+
+        self.assertNotIn(1, x)
+        self.assertIn((1,5), x)
+        self.assertIn(((1,),5), x)
+        self.assertNotIn((1,2,3), x)
+        self.assertNotIn((2,4), x)
+
+    def test_finite_setproduct(self):
+        self._verify_finite_product(SetOf({3,1,2}), SetOf({6,5}))
+        self._verify_finite_product(SetOf({3,1,2}), SetOf([6,5]))
+        self._verify_finite_product(SetOf([3,1,2]), SetOf({6,5}))
+        self._verify_finite_product(SetOf([3,1,2]), {6,5})
+        self._verify_finite_product({3,1,2}, SetOf([6,5]))
+        self._verify_finite_product(SetOf({3,1,2}), [6,5])
+        self._verify_finite_product([3,1,2], SetOf({6,5}))
+
+    def _verify_ordered_product(self, a, b):
+        if isinstance(a, (Set, SetOf, RangeSet)):
+            a_ordered = a.is_ordered()
+        else:
+            a_ordered = type(a) is list
+        self.assertTrue(a_ordered)
+        if isinstance(b, (Set, SetOf, RangeSet)):
+            b_ordered = b.is_ordered()
+        else:
+            b_ordered = type(b) is list
+        self.assertTrue(b_ordered)
+
+        x = a * b
+
+        self.assertIs(type(x), _SetProduct_OrderedSet)
+        self.assertTrue(x.is_finite())
+        self.assertTrue(x.is_ordered())
+        self.assertEqual(len(x), 6)
+        self.assertEqual(list(x), [(3,6),(3,5),(1,6),(1,5),(2,6),(2,5)])
+        self.assertEqual(x.ordered(), ((3,6),(3,5),(1,6),(1,5),(2,6),(2,5)))
+        self.assertEqual(x.sorted(), ((1,5),(1,6),(2,5),(2,6),(3,5),(3,6)))
+
+        self.assertNotIn(1, x)
+        self.assertIn((1,5), x)
+        self.assertIn(((1,),5), x)
+        self.assertNotIn((1,2,3), x)
+        self.assertNotIn((2,4), x)
+
+        self.assertEqual(x.ord((3,6)), 1)
+        self.assertEqual(x.ord((3,5)), 2)
+        self.assertEqual(x.ord((1,6)), 3)
+        self.assertEqual(x.ord((1,5)), 4)
+        self.assertEqual(x.ord((2,6)), 5)
+        self.assertEqual(x.ord((2,5)), 6)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot identify position of \(3, 4\) in Set "
+                "_SetProduct_OrderedSet"):
+            x.ord((3,4))
+
+        self.assertEqual(x[1], (3,6))
+        self.assertEqual(x[2], (3,5))
+        self.assertEqual(x[3], (1,6))
+        self.assertEqual(x[4], (1,5))
+        self.assertEqual(x[5], (2,6))
+        self.assertEqual(x[6], (2,5))
+
+        self.assertEqual(x[-6], (3,6))
+        self.assertEqual(x[-5], (3,5))
+        self.assertEqual(x[-4], (1,6))
+        self.assertEqual(x[-3], (1,5))
+        self.assertEqual(x[-2], (2,6))
+        self.assertEqual(x[-1], (2,5))
+
+    def test_ordered_setproduct(self):
+        self._verify_ordered_product(SetOf([3,1,2]), SetOf([6,5]))
+        self._verify_ordered_product(SetOf([3,1,2]), [6,5])
+        self._verify_ordered_product([3,1,2], SetOf([6,5]))
+
+    def test_ordered_multidim_setproduct(self):
+        x = SetOf([(1,2),(3,4)]) * SetOf([(5,6),(7,8)])
+        self.assertEqual(x.dimen, 4)
+        try:
+            origFlattenCross = SetModule.FLATTEN_CROSS_PRODUCT
+
+            SetModule.FLATTEN_CROSS_PRODUCT = True
+            ref = [(1,2,5,6), (1,2,7,8), (3,4,5,6), (3,4,7,8)]
+            self.assertEqual(list(x), ref)
+
+            SetModule.FLATTEN_CROSS_PRODUCT = False
+            ref = [((1,2),(5,6)), ((1,2),(7,8)), ((3,4),(5,6)), ((3,4),(7,8))]
+            self.assertEqual(list(x), ref)
+        finally:
+            SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
+
+        self.assertIn(((1,2),(5,6)), x)
+        self.assertIn((1,(2,5),6), x)
+        self.assertIn((1,2,5,6), x)
+        self.assertNotIn((5,6,1,2), x)
+
+    def test_ordered_nondim_setproduct(self):
+        NonDim = Set(initialize=[2, (2,3)], dimen=None)
+        NonDim.construct()
+
+        NonDim2 = Set(initialize=[4, (3,4)], dimen=None)
+        NonDim2.construct()
+
+        x = SetOf([1]).cross(NonDim, SetOf([3,4,5]))
+
+        self.assertEqual(len(x), 6)
+        try:
+            origFlattenCross = SetModule.FLATTEN_CROSS_PRODUCT
+
+            SetModule.FLATTEN_CROSS_PRODUCT = True
+            ref = [(1,2,3), (1,2,4), (1,2,5),
+                   (1,2,3,3), (1,2,3,4), (1,2,3,5)]
+            self.assertEqual(list(x), ref)
+
+            SetModule.FLATTEN_CROSS_PRODUCT = False
+            ref = [(1,2,3), (1,2,4), (1,2,5),
+                   (1,(2,3),3), (1,(2,3),4), (1,(2,3),5)]
+            self.assertEqual(list(x), ref)
+        finally:
+            SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
+
+        self.assertIn((1,2,3), x)
+        self.assertNotIn((1,2,6), x)
+        self.assertIn((1,(2,3),3), x)
+        self.assertIn((1,2,3,3), x)
+        self.assertNotIn((1,(2,4),3), x)
+
+        self.assertEqual(x.ord((1, 2, 3)), 1)
+        self.assertEqual(x.ord((1, (2, 3), 3)), 4)
+        self.assertEqual(x.ord((1, (2, 3), 5)), 6)
+        self.assertEqual(x.ord((1, 2, 3, 3)), 4)
+        self.assertEqual(x.ord((1, 2, 3, 5)), 6)
+
+        x = SetOf([1]).cross(NonDim, NonDim2, SetOf([0,1]))
+
+        self.assertEqual(len(x), 8)
+        try:
+            origFlattenCross = SetModule.FLATTEN_CROSS_PRODUCT
+
+            SetModule.FLATTEN_CROSS_PRODUCT = True
+            ref = [(1,2,4,0), (1,2,4,1), (1,2,3,4,0), (1,2,3,4,1),
+                   (1,2,3,4,0), (1,2,3,4,1), (1,2,3,3,4,0), (1,2,3,3,4,1)]
+            self.assertEqual(list(x), ref)
+            for i,v in enumerate(ref):
+                self.assertEqual(x[i+1], v)
+
+            SetModule.FLATTEN_CROSS_PRODUCT = False
+            ref = [(1,2,4,0), (1,2,4,1),
+                   (1,2,(3,4),0), (1,2,(3,4),1),
+                   (1,(2,3),4,0), (1,(2,3),4,1),
+                   (1,(2,3),(3,4),0), (1,(2,3),(3,4),1)]
+            self.assertEqual(list(x), ref)
+            for i,v in enumerate(ref):
+                self.assertEqual(x[i+1], v)
+        finally:
+            SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
+
+        self.assertIn((1,2,4,0), x)
+        self.assertNotIn((1,2,6), x)
+        self.assertIn((1,(2,3),4,0), x)
+        self.assertIn((1,2,(3,4),0), x)
+        self.assertIn((1,2,3,4,0), x)
+        self.assertNotIn((1,2,5,4,0), x)
+
+        self.assertEqual(x.ord((1, 2, 4, 0)), 1)
+        self.assertEqual(x.ord((1, (2, 3), 4, 0)), 5)
+        self.assertEqual(x.ord((1, 2, (3, 4), 0)), 3)
+        self.assertEqual(x.ord((1, 2, 3, 4, 0)), 3)
