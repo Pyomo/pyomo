@@ -318,17 +318,18 @@ You can silence this warning by one of three ways:
         try:
             obj = self._data.get(index, _NotFound)
         except TypeError:
-            new_index = self._processUnhashableIndex(index)
-            if new_index.__class__ is _IndexedComponent_slice:
-                return new_index
+            index = self._processUnhashableIndex(index)
+            if index.__class__ is _IndexedComponent_slice:
+                return index
             # The index could have contained constant but nonhashable
             # objects (e.g., scalar immutable Params).
             # _processUnhashableIndex will evaluate those constants, so
             # if it made any changes to the index, we need to re-check
             # the _data dict for membership.
-            if new_index is not index:
-                index = new_index
+            try:
                 obj = self._data.get(index, _NotFound)
+            except TypeError:
+                obj = _NotFound
 
         if obj is _NotFound:
             # Not good: we have to defer this import to now
