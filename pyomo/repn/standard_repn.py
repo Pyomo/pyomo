@@ -913,8 +913,6 @@ _repn_collectors = {
     _GeneralObjectiveData                       : _collect_identity,
     SimpleObjective                             : _collect_identity,
     objective                                   : _collect_identity,
-    float                                       : _collect_const,
-    int                                         : _collect_const,
     }
 
 
@@ -923,6 +921,12 @@ def _collect_standard_repn(exp, multiplier, idMap,
     fn = _repn_collectors.get(exp.__class__, None)
     if fn is not None:
         return fn(exp, multiplier, idMap, compute_values, verbose, quadratic)
+    #
+    # Catch any known numeric constants
+    #
+    if exp.__class__ in native_numeric_types:
+        return _collect_const(exp, multiplier, idMap, compute_values,
+                              verbose, quadratic)
     #
     # These are types that might be extended using duck typing.
     #
