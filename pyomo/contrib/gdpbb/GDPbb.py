@@ -133,7 +133,6 @@ class GDPbbSolver(object):
             root.GDPbb_utils.unenforced_disjunctions = list(
                 disjunction for disjunction in root.GDPbb_utils.disjunction_list if disjunction.active
             )
-            # TODO this might not work for nested disjunctions
 
             root.GDPbb_utils.deactivated_constraints = ComponentSet([
                 constr for disjunction in root.GDPbb_utils.unenforced_disjunctions
@@ -144,9 +143,51 @@ class GDPbbSolver(object):
             # Deactivate nonlinear constraints in unenforced disjunctions
             for constr in root.GDPbb_utils.deactivated_constraints:
                 constr.deactivate()
-            root.GDPbb_utils.branched_disjuncts = ComponentSet()
+
+            # Add the BigM suffix if it does not already exist. Used later during nonlinear constraint activation.
             if not hasattr(root, 'BigM'):
                 root.BigM = Suffix()
+
+            # Pre-screen that none of the disjunctions are already predetermined due to the disjuncts being fixed
+            # to True/False values.
+            # TODO this should also be done within the loop, but we aren't handling it right now.
+            # Should affect efficiency, but not correctness.
+            root.GDPbb_utils.disjuncts_fixed_True = ComponentSet()
+            # Only find top-level (non-nested) disjunctions
+            for disjunction in root.component_data_objects(Disjunction, active=True):
+                fixed_true_disjuncts = [disjunct for disjunct in disjunction.disjuncts
+                                        if disjunct.indicator_var.fixed
+                                        and disjunct.indicator_var.value == 1]
+                fixed_false_disjuncts = [disjunct for disjunct in disjunction.disjuncts
+                                         if disjunct.indicator_var.fixed
+                                         and disjunct.indicator_var.value == 0]
+                for disjunct in fixed_false_disjuncts:
+                    disjunct.deactivate()
+                if len(fixed_false_disjuncts) == len(disjunction.disjuncts) - 1:
+                    # all but one disjunct in the disjunction is fixed to False. Remaining one must be true.
+                    if not fixed_true_disjuncts:
+                        fixed_true_disjuncts = [disjunct for disjunct in disjunction.disjuncts
+                                                if disjunct not in fixed_false_disjuncts]
+                # Reactivate the fixed-true disjuncts
+                for disjunct in fixed_true_disjuncts:
+                    newly_activated = ComponentSet()
+                    for constr in disjunct.component_data_objects(Constraint):
+                        if constr in root.GDPbb_utils.deactivated_constraints:
+                            newly_activated.add(constr)
+                            constr.activate()
+                            # Set the big M value for the constraint
+                            root.BigM[constr] = 1
+                            # Note: we use a default big M value of 1
+                            # because all non-selected disjuncts should be deactivated.
+                            # Therefore, none of the big M transformed nonlinear constraints will need to be relaxed.
+                            # The default M value should therefore be irrelevant.
+                    root.GDPbb_utils.deactivated_constraints -= newly_activated
+                    root.GDPbb_utils.disjuncts_fixed_True.add(disjunct)
+
+                if fixed_true_disjuncts:
+                    assert disjunction.xor, "GDPbb only handles disjunctions in which one term can be selected. " \
+                        "%s violates this assumption." % (disjunction.name, )
+                    root.GDPbb_utils.unenforced_disjunctions.remove(disjunction)
 
             # Check satisfiability
             if config.check_sat and satisfiable(root, config.logger) is False:
@@ -173,16 +214,16 @@ class GDPbbSolver(object):
 
             # initialize minheap for Branch and Bound algorithm
             # Heap structure: (ordering tuple, model)
-            # Ordering tuple: (objective value, disjunctions_left, -counter)
+            # Ordering tuple: (objective value, disjunctions_left, -total_nodes_counter)
             #  - select solutions with lower objective value,
             #    then fewer disjunctions left to explore (depth first),
             #    then more recently encountered (tiebreaker)
             heap = []
-            counter = 0
+            total_nodes_counter = 0
             disjunctions_left = len(root.GDPbb_utils.unenforced_disjunctions)
             heapq.heappush(
                 heap, (
-                    (obj_sign * obj_value, disjunctions_left, -counter),
+                    (obj_sign * obj_value, disjunctions_left, -total_nodes_counter),
                     root, result, var_values))
 
             # loop to branch through the tree
@@ -207,7 +248,7 @@ class GDPbbSolver(object):
                     solve_data.results.problem.lower_bound = incumbent_results.problem.lower_bound
                     solve_data.results.problem.upper_bound = incumbent_results.problem.upper_bound
                     solve_data.results.solver.timing = solve_data.timing
-                    solve_data.results.solver.iterations = counter
+                    solve_data.results.solver.iterations = total_nodes_counter
                     solve_data.results.solver.termination_condition = incumbent_results.solver.termination_condition
                     return solve_data.results
 
@@ -217,12 +258,10 @@ class GDPbbSolver(object):
                 assert next_disjunction.xor, "GDPbb only handles disjunctions in which one term can be selected. " \
                     "%s violates this assumption." % (next_disjunction.name, )
 
-                new_node_counter = 0
+                new_nodes_counter = 0
 
                 for i, disjunct in enumerate(next_disjunction.disjuncts):
-                    # Create one branch for each of the disjuncts, if the disjunct is not already activated
-                    if disjunct in incumbent_model.GDPbb_utils.branched_disjuncts or disjunct.indicator_var.fixed:
-                        continue  # Disjunct is already fixed from a previous branching.
+                    # Create one branch for each of the disjuncts on the disjunction
 
                     if any(disj.indicator_var.fixed and disj.indicator_var.value == 1
                            for disj in next_disjunction.disjuncts if disj is not disjunct):
@@ -247,7 +286,7 @@ class GDPbbSolver(object):
                             'Final bound values: LB: {}  UB: {}'.
                             format(solve_data.results.problem.lower_bound, solve_data.results.problem.upper_bound))
                         solve_data.results.solver.timing = solve_data.timing
-                        solve_data.results.solver.iterations = counter
+                        solve_data.results.solver.iterations = total_nodes_counter
                         solve_data.results.solver.termination_condition = tc.maxTimeLimit
                         return solve_data.results
 
@@ -263,8 +302,10 @@ class GDPbbSolver(object):
                         if disj is not child_disjunct:
                             disj.deactivate()
                     # Activate nonlinear constraints on the newly fixed child disjunct
+                    newly_activated = ComponentSet()
                     for constr in child_disjunct.component_data_objects(Constraint):
                         if constr in child.GDPbb_utils.deactivated_constraints:
+                            newly_activated.add(constr)
                             constr.activate()
                             # Set the big M value for the constraint
                             child.BigM[constr] = 1
@@ -272,18 +313,30 @@ class GDPbbSolver(object):
                             # because all non-selected disjuncts should be deactivated.
                             # Therefore, none of the big M transformed nonlinear constraints will need to be relaxed.
                             # The default M value should therefore be irrelevant.
+                    child.GDPbb_utils.deactivated_constraints -= newly_activated
+                    child.GDPbb_utils.disjuncts_fixed_True.add(child_disjunct)
+
+                    if disjunct in incumbent_model.GDPbb_utils.disjuncts_fixed_True:
+                        # If the disjunct was already branched to True from a parent disjunct branching, just pass
+                        # through the incumbent value without resolving. The solution should be the same as the parent.
+                        total_nodes_counter += 1
+                        ordering_tuple = (obj_sign * incumbent_obj_value, disjunctions_left - 1, -total_nodes_counter)
+                        heapq.heappush(heap, (ordering_tuple, child, result, var_values))
+                        new_nodes_counter += 1
+                        continue
+
                     if config.check_sat and satisfiable(child, config.logger) is False:
                         # Problem is not satisfiable. Skip this disjunct.
                         continue
 
                     obj_value, result, var_values = self.subproblem_solve(child, config)
-                    counter += 1
-                    ordering_tuple = (obj_sign * obj_value, disjunctions_left - 1, -counter)
+                    total_nodes_counter += 1
+                    ordering_tuple = (obj_sign * obj_value, disjunctions_left - 1, -total_nodes_counter)
                     heapq.heappush(heap, (ordering_tuple, child, result, var_values))
-                    new_node_counter += 1
+                    new_nodes_counter += 1
 
                 config.logger.info("Added %s new nodes with %s relaxed disjunctions to the heap. Size now %s." % (
-                    new_node_counter, disjunctions_left - 1, len(heap)))
+                    new_nodes_counter, disjunctions_left - 1, len(heap)))
 
     @staticmethod
     def validate_model(model):
@@ -314,13 +367,14 @@ class GDPbbSolver(object):
         except RuntimeError as e:
             config.logger.warning(
                 "Solver encountered RuntimeError. Treating as infeasible. "
-                "Msg: %s\nTraceback: %s" % (str(e), traceback.format_exc()))
+                "Msg: %s\n%s" % (str(e), traceback.format_exc()))
             var_values = [v.value for v in subproblem.GDPbb_utils.variable_list]
             return obj_sign * float('inf'), SolverResults(), var_values
 
         var_values = [v.value for v in subproblem.GDPbb_utils.variable_list]
         term_cond = result.solver.termination_condition
-        if result.solver.status is SolverStatus.ok and term_cond == tc.optimal:
+        if result.solver.status is SolverStatus.ok and any(
+                term_cond == valid_cond for valid_cond in (tc.optimal, tc.locallyOptimal, tc.feasible)):
             return value(main_obj.expr), result, var_values
         elif term_cond == tc.unbounded:
             return obj_sign * float('-inf'), result, var_values
