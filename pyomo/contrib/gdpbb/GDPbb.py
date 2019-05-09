@@ -321,7 +321,7 @@ class GDPbbSolver(object):
                         # through the incumbent value without resolving. The solution should be the same as the parent.
                         total_nodes_counter += 1
                         ordering_tuple = (obj_sign * incumbent_obj_value, disjunctions_left - 1, -total_nodes_counter)
-                        heapq.heappush(heap, (ordering_tuple, child, result, var_values))
+                        heapq.heappush(heap, (ordering_tuple, child, result, incumbent_var_values))
                         new_nodes_counter += 1
                         continue
 
