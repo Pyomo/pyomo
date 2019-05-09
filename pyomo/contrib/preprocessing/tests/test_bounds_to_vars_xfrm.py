@@ -1,7 +1,7 @@
 """Tests explicit bound to variable bound transformation module."""
 import pyutilib.th as unittest
 from pyomo.environ import (ConcreteModel, Constraint, TransformationFactory,
-                           Var, value)
+                           Var, value, Integers)
 
 
 class TestConstraintToVarBoundTransform(unittest.TestCase):
@@ -16,12 +16,16 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
         m.v4 = Var(initialize=4)
         m.v5 = Var(initialize=5)
         m.v6 = Var()
+        m.v7 = Var(domain=Integers)
+        m.v8 = Var(domain=Integers)
         m.c1 = Constraint(expr=m.v1 == 2)
         m.c2 = Constraint(expr=m.v2 >= -2)
         m.c3 = Constraint(expr=m.v3 <= 5)
         m.c4 = Constraint(expr=m.v4 <= m.v5)
         m.v5.fix()
         m.c6 = Constraint(expr=m.v6 >= 2)
+        m.c7 = Constraint(expr=m.v7 + 2 >= 2.01)
+        m.c8 = Constraint(expr=m.v8 + 2 >= 2.0001)
 
         m2 = TransformationFactory(
             'contrib.constraints_to_var_bounds').create_using(m)
@@ -44,7 +48,7 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
 
         del m2  # to keep from accidentally using it below
 
-        TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
+        TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m, tolerance=1e-3)
         self.assertEqual(value(m.v1.lb), 2)
         self.assertEqual(value(m.v1.ub), 2)
         self.assertTrue(m.v1.fixed)
@@ -57,6 +61,9 @@ class TestConstraintToVarBoundTransform(unittest.TestCase):
 
         self.assertEqual(value(m.v4.ub), 5)
         self.assertFalse(m.v4.has_lb())
+
+        self.assertEqual(value(m.v7.lb), 1)
+        self.assertEqual(value(m.v8.lb), 0)
 
     def test_skip_trivial_constraints(self):
         """Tests handling of zero coefficients."""
