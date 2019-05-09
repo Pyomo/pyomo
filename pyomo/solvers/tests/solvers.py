@@ -82,7 +82,7 @@ def test_solver_cases(*args):
     if len(_test_solver_cases) == 0:
         logging.disable(logging.WARNING)
 
-	#
+        #
         # MOSEK
         #
 
