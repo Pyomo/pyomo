@@ -135,7 +135,7 @@ class TestMindtPy(unittest.TestCase):
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(abs(model.cost.expr() - (-5.512)) <= 1E-2)
+            self.assertAlmostEqual(model.cost.expr(), -5.512, places=2)
 
 
     def test_OA_Proposal(self):
