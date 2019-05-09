@@ -265,8 +265,8 @@ def create_linearized_objective_cuts(solve_data, config):
 
 
 def create_no_good_cut(target_model, value_model):
-    """Cut out current binary combination"""
-    target_model.MindtPy_utils. \
+    """cut out current binary combination"""
+    target_model.mindtpy_utils. \
         linear_cuts.no_good_combination_cuts.add(
             expr=(sum(target_var if value_var.value == 0 else (1-target_var)
                       for (target_var, value_var)

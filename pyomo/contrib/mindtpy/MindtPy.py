@@ -93,11 +93,11 @@ class MindtPySolver(object):
             "covering problem (max_binary), and fix the initial value for "
             "the integer variables (initial_binary)"
     ))
-    CONFIG.declare("integer_cuts", ConfigValue(
-        default=True,
+    CONFIG.declare("add_no_good_cuts", ConfigValue(
+        default=False,
         domain=bool,
-        description="Integer cuts",
-        doc="Add integer cuts after finding a feasible solution to the MINLP"
+        description="Whether to do integer cuts",
+        doc="After the NLP has ben solved, an integer cut will be done on the current binary variables"
     ))
     CONFIG.declare("max_slack", ConfigValue(
         default=1000.0,

@@ -3,7 +3,7 @@ from __future__ import division
 
 from math import sqrt
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
-        add_int_cut)
+        add_int_cut, add_no_good_cut)
 from pyomo.contrib.mindtpy.util import add_feas_slacks
 from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
@@ -105,6 +105,10 @@ def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
                 solve_data.LB > solve_data.LB_progress[-1]
             solve_data.LB_progress.append(solve_data.LB)
 
+        if config.add_no_good_cuts or config.strategy is 'feas_pump':
+            config.logger.info('Creating no-good cut')
+            add_no_good_cut(solve_data.mip, config)
+
     config.logger.info(
         'NLP {}: OBJ: {}  LB: {}  UB: {}'
         .format(solve_data.nlp_iter,
@@ -125,13 +129,14 @@ def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
     elif config.strategy == 'GBD':
         add_gbd_cut(solve_data, config)
 
-    # This adds an integer cut to the feasible_integer_cuts
-    # ConstraintList, which is not activated by default. However, it
-    # may be activated as needed in certain situations or for certain
-    # values of option flags.
-    var_values = list(v.value for v in sub_nlp.MindtPy_utils.variable_list)
-    if config.add_integer_cuts:
-        add_int_cut(var_values, solve_data, config, feasible=True)
+    # Changed this part to add_no_good_cut, TODO-romeo I think we can delete this block
+    # # This adds an integer cut to the feasible_integer_cuts
+    # # ConstraintList, which is not activated by default. However, it
+    # # may be activated as needed in certain situations or for certain
+    # # values of option flags.
+    # var_values = list(v.value for v in sub_nlp.MindtPy_utils.variable_list)
+    # if config.add_integer_cuts:
+    #     add_int_cut(var_values, solve_data, config, feasible=True)
 
     config.call_after_subproblem_feasible(sub_nlp, solve_data)
 

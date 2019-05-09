@@ -51,13 +51,20 @@ def MindtPy_iteration_loop(solve_data, config):
                                      solve_data.mip.MindtPy.variable_list,
                                      config)
                 # TODO-feas_pump fill this
+            elif feas_mip_results.solver.termination_condition is tc.infeasible:
+                # This basically means the incumbent is the optimal solution
+                if solve_data.best_solution_found is not None:
+                    config.logger.info('Problem became infeasible. This means the feasibility pump has converged.')
+                    solve_data.results.solver.termination_condition = tc.optimal
+                else:
+                    config.logger.info('No feasible solution has been found')
+                    solve_data.results.solver.termination_condition = tc.infeasible
+                break
             elif feas_mip_results.solver.termination_condition is tc.maxIterations:
                 # TODO-feas_pump handle this
-                pass
-            elif feas_mip_results.solver.termination_condition is tc.infeasible:
-                # TODO-feas_pump handle this
-                # This basically means the incumbent is the optimal solution
-                pass
+                config.logger.error('No feasible solution has been found')
+                solve_data.results.solver.termination_condition = tc.maxIterations
+                break
 
         else:
             raise NotImplementedError()

@@ -96,6 +96,16 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                 )
 
 
+def add_no_good_cut(target_model, config):
+    """Cut out current binary combination"""
+    target_model.MindtPy_utils. \
+        linear_cuts.integer_cuts.add(
+            expr=(sum(var if var.value == 0 else (1-var)
+                      for var in target_model.var_list
+                      if var.is_binary())
+                  >= 1))
+
+
 def add_oa_equality_relaxation(var_values, duals, solve_data, config, ignore_integrality=False):
     """More general case for outer approximation
 
