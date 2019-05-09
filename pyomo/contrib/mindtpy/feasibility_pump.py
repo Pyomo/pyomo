@@ -153,7 +153,7 @@ def execute_feasibility_pump(solve_data, config):
                 fixed_nlp.var_list,
                 solve_data.working_model.var_list,
                 config)
-            return  # TODO-romeo remove this DEBUG
+            return  # TODO-romeo currently just returns the first solution
 
             if objective_value < solve_data.incumbent_obj_val:
                 solve_data.incumbent_obj_val = objective_value

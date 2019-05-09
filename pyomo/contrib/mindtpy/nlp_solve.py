@@ -1,6 +1,7 @@
 """Solution of NLP subproblems."""
 from __future__ import division
 
+from math import sqrt
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
         add_int_cut)
 from pyomo.contrib.mindtpy.util import add_feas_slacks
@@ -11,46 +12,14 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
-
-def solve_fixed_NLP(solve_data, config):
-    f_nlp_model = solve_data.working_model.clone()
-    mp_utils = f_nlp_model.MindtPy_utils
-    solve_data.nlp_iter += 1
-    config.logger.info('NLP %s: Solve subproblem for fixed binaries.'
-                       % (solve_data.nlp_iter,))
-
-    TransformationFactory('core.fix_discrete'). \
-        apply_to(f_nlp_model)
-
-    copy_var_list_values(
-        solve_data.initial_var_values,
-        mp_utils.variable_list,
-        config)
-
-    mp_utils.MindtPy_linear_cuts.deactivate()
-    f_nlp_model.tmp_duals = ComponentMap()
-    # TODO can we make this more clear?
-    for c in f_nlp_model.component_data_objects(ctype=Constraint, active=True,
-                                      descend_into=True):
-        rhs = ((c.upper if c.has_ub() else 0)
-              +(c.lower if c.had_lb() else 0))
-        # TODO check sign_adjust
-        sign_adjust = -1 if c.has_ub() else 1
-        f_nlp_model.tmp_duals[c] = \
-            sign_adjust * max(0, sign_adjust * (rhs - value(c.body)))
-# Solve the NLP
-# f_nlp_model.pprint() # print nlp problem for debugging
-    with SuppressInfeasibleWarning():
-        solver_result = SolverFactory(config.nlp_solver).solve(
-            f_nlp_model, **config.nlp_solver_args)
-    return solver_result
+from pyomo.contrib.mindtpy.objective_generation import generate_L2_objective_function
 
 
 def solve_NLP_subproblem(solve_data, config):
-    """ Solves fixed NLP with fixed working model binaries
+    """ Solves either fixed NLP (OA type methods) or feas-pump NLP
 
-    Sets up local working model `fix_nlp`
-    Fixes binaries
+    Sets up local working model `sub_nlp`
+    Fixes binaries (OA) / Sets objective (feas-pump)
     Sets continuous variables to initial var values
     Precomputes dual values
     Deactivates trivial constraints
@@ -59,67 +28,82 @@ def solve_NLP_subproblem(solve_data, config):
     Returns the fixed-NLP model and the solver results
     """
 
-    fix_nlp = solve_data.working_model.clone()
-    MindtPy = fix_nlp.MindtPy_utils
-    main_objective = next(fix_nlp.component_data_objects(Objective, active=True))
+    sub_nlp = solve_data.working_model.clone()
+    MindtPy = sub_nlp.MindtPy_utils
     solve_data.nlp_iter += 1
-    config.logger.info('NLP %s: Solve subproblem for fixed binaries.'
-                       % (solve_data.nlp_iter,))
 
     # Set up NLP
-    TransformationFactory('core.fix_discrete').apply_to(fix_nlp)
+    if config.strategy in ['OA', 'LOA']:
+        config.logger.info('NLP %s: Solve subproblem for fixed discretes.'
+                           % (solve_data.nlp_iter,))
+        TransformationFactory('core.fix_discrete').apply_to(sub_nlp)
+    elif config.strategy is 'feas_pump':
+        main_objective = next(sub_nlp.component_data_objects(Objective, active=True))
+        main_objective.deactivate()
+        MindtPy.feas_pump_nlp_obj = generate_L2_objective_function(
+            sub_nlp,
+            solve_data.mip
+        )
 
     # restore original variable values
     # copy_var_list_values(
     #     solve_data.initial_var_values,
     #     MindtPy.variable_list,
     #     config)
-    for nlp_var, orig_val in zip(
-            MindtPy.variable_list,
-            solve_data.initial_var_values):
-        if not nlp_var.fixed and not nlp_var.is_binary():
-            nlp_var.value = orig_val
+    # TODO-romeo why is this neccesary?
+    # for nlp_var, orig_val in zip(
+    #         MindtPy.variable_list,
+    #         solve_data.initial_var_values):
+    #     if not nlp_var.fixed and not nlp_var.is_binary():
+    #         nlp_var.value = orig_val
 
     MindtPy.MindtPy_linear_cuts.deactivate()
-    fix_nlp.tmp_duals = ComponentMap()
-    for c in fix_nlp.component_data_objects(ctype=Constraint, active=True,
+    sub_nlp.tmp_duals = ComponentMap()
+    for c in sub_nlp.component_data_objects(ctype=Constraint, active=True,
                                             descend_into=True):
         rhs = ((0 if c.upper is None else c.upper)
                + (0 if c.lower is None else c.lower))
         sign_adjust = 1 if value(c.upper) is None else -1
-        fix_nlp.tmp_duals[c] = sign_adjust * max(0,
+        sub_nlp.tmp_duals[c] = sign_adjust * max(0,
                 sign_adjust * (rhs - value(c.body)))
         # TODO check sign_adjust
+        # TODO-romeo @bernalde why can we precompute the duals if the problem get's changed afterwards
     TransformationFactory('contrib.deactivate_trivial_constraints')\
-        .apply_to(fix_nlp, tmp=True, ignore_infeasible=True)
+        .apply_to(sub_nlp, tmp=True, ignore_infeasible=True)
     # Solve the NLP
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.nlp_solver).solve(
-            fix_nlp, **config.nlp_solver_args)
-    return fix_nlp, results
+            sub_nlp, **config.nlp_solver_args)
+    return sub_nlp, results
 
 
-def handle_NLP_subproblem_optimal(fix_nlp, solve_data, config):
+def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
     """Copies result to working model, updates bound, adds OA and integer cut,
     stores best solution if new one is best"""
     copy_var_list_values(
-        fix_nlp.MindtPy_utils.variable_list,
+        sub_nlp.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
         config)
-    for c in fix_nlp.tmp_duals:
-        if fix_nlp.dual.get(c, None) is None:
-            fix_nlp.dual[c] = fix_nlp.tmp_duals[c]
-    dual_values = list(fix_nlp.dual[c] for c in fix_nlp.MindtPy_utils.constraint_list)
+    for c in sub_nlp.tmp_duals:
+        if sub_nlp.dual.get(c, None) is None:
+            sub_nlp.dual[c] = sub_nlp.tmp_duals[c]
+    dual_values = list(sub_nlp.dual[c] for c in sub_nlp.MindtPy_utils.constraint_list)
 
-    main_objective = next(fix_nlp.component_data_objects(Objective, active=True))
-    if main_objective.sense == minimize:
-        solve_data.UB = min(value(main_objective.expr), solve_data.UB)
-        solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
-        solve_data.UB_progress.append(solve_data.UB)
-    else:
-        solve_data.LB = max(value(main_objective.expr), solve_data.LB)
-        solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
-        solve_data.LB_progress.append(solve_data.LB)
+    main_objective = next(sub_nlp.component_data_objects(Objective, active=True))
+    if config.strategy in ['OA', 'LOA'] or (
+        config.strategy is 'feas_pump'
+        and feas_pump_converged(solve_data, config)
+    ):
+        if main_objective.sense == minimize:
+            solve_data.UB = min(main_objective.expr(), solve_data.UB)
+            solve_data.solution_improved = \
+                solve_data.UB < solve_data.UB_progress[-1]
+            solve_data.UB_progress.append(solve_data.UB)
+        else:
+            solve_data.LB = max(main_objective.expr(), solve_data.LB)
+            solve_data.solution_improved = \
+                solve_data.LB > solve_data.LB_progress[-1]
+            solve_data.LB_progress.append(solve_data.LB)
 
     config.logger.info(
         'NLP {}: OBJ: {}  LB: {}  UB: {}'
@@ -128,11 +112,11 @@ def handle_NLP_subproblem_optimal(fix_nlp, solve_data, config):
                 solve_data.LB, solve_data.UB))
 
     if solve_data.solution_improved:
-        solve_data.best_solution_found = fix_nlp.clone()
+        solve_data.best_solution_found = sub_nlp.clone()
 
     # Add the linear cut
-    if config.strategy == 'OA':
-        copy_var_list_values(fix_nlp.MindtPy_utils.variable_list,
+    if config.strategy in ['OA', 'LOA', 'feas_pump']:
+        copy_var_list_values(sub_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
         add_oa_cuts(solve_data.mip, dual_values, solve_data, config)  # TODO-romeo @bernalde is it reasonalb to copy the NLP solution as the start point for the MIP model?
@@ -145,14 +129,14 @@ def handle_NLP_subproblem_optimal(fix_nlp, solve_data, config):
     # ConstraintList, which is not activated by default. However, it
     # may be activated as needed in certain situations or for certain
     # values of option flags.
-    var_values = list(v.value for v in fix_nlp.MindtPy_utils.variable_list)
+    var_values = list(v.value for v in sub_nlp.MindtPy_utils.variable_list)
     if config.add_integer_cuts:
         add_int_cut(var_values, solve_data, config, feasible=True)
 
-    config.call_after_subproblem_feasible(fix_nlp, solve_data)
+    config.call_after_subproblem_feasible(sub_nlp, solve_data)
 
 
-def handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config):
+def handle_NLP_subproblem_infeasible(sub_nlp, solve_data, config):
     """Solve feasibility problem, add cut according to strategy.
 
     The solution of the feasibility problem is copied to the working model.
@@ -160,27 +144,27 @@ def handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config):
     # TODO try something else? Reinitialize with different initial
     # value?
     config.logger.info('NLP subproblem was locally infeasible.')
-    for c in fix_nlp.component_data_objects(ctype=Constraint):
+    for c in sub_nlp.component_data_objects(ctype=Constraint):
         rhs = ((0 if c.upper is None else c.upper)
                + (0 if c.lower is None else c.lower))
         sign_adjust = 1 if value(c.upper) is None else -1
-        fix_nlp.dual[c] = (sign_adjust
+        sub_nlp.dual[c] = (sign_adjust
                 * max(0, sign_adjust * (rhs - value(c.body))))
-    dual_values = list(fix_nlp.dual[c] for c in fix_nlp.MindtPy_utils.constraint_list)
+    dual_values = list(sub_nlp.dual[c] for c in sub_nlp.MindtPy_utils.constraint_list)
 
     if config.strategy == 'PSC' or config.strategy == 'GBD':
-        for var in fix_nlp.component_data_objects(ctype=Var, descend_into=True):
-            fix_nlp.ipopt_zL_out[var] = 0
-            fix_nlp.ipopt_zU_out[var] = 0
+        for var in sub_nlp.component_data_objects(ctype=Var, descend_into=True):
+            sub_nlp.ipopt_zL_out[var] = 0
+            sub_nlp.ipopt_zU_out[var] = 0
             if var.ub is not None and abs(var.ub - value(var)) < config.bound_tolerance:
-                fix_nlp.ipopt_zL_out[var] = 1
+                sub_nlp.ipopt_zL_out[var] = 1
             elif var.lb is not None and abs(value(var) - var.lb) < config.bound_tolerance:
-                fix_nlp.ipopt_zU_out[var] = -1
+                sub_nlp.ipopt_zU_out[var] = -1
 
     elif config.strategy == 'OA':
         config.logger.info('Solving feasibility problem')
         if config.initial_feas:
-            # add_feas_slacks(fix_nlp, solve_data)
+            # add_feas_slacks(sub_nlp, solve_data)
             # config.initial_feas = False
             feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
             copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
@@ -188,19 +172,19 @@ def handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config):
                                  config)
             add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
     # Add an integer cut to exclude this discrete option
-    var_values = list(v.value for v in fix_nlp.MindtPy_utils.variable_list)
+    var_values = list(v.value for v in sub_nlp.MindtPy_utils.variable_list)
     if config.add_integer_cuts:
         add_int_cut(var_values, solve_data, config)  # excludes current discrete option
 
 
-def handle_NLP_subproblem_other_termination(fix_nlp, termination_condition,
+def handle_NLP_subproblem_other_termination(sub_nlp, termination_condition,
                                             solve_data, config):
     """Case that fix-NLP is neither optimal nor infeasible (i.e. max_iterations)"""
     if termination_condition is tc.maxIterations:
         # TODO try something else? Reinitialize with different initial value?
         config.logger.info(
             'NLP subproblem failed to converge within iteration limit.')
-        var_values = list(v.value for v in fix_nlp.MindtPy_utils.variable_list)
+        var_values = list(v.value for v in sub_nlp.MindtPy_utils.variable_list)
         if config.add_integer_cuts:
             add_int_cut(var_values, solve_data, config)  # excludes current discrete option
     else:
@@ -263,3 +247,15 @@ def solve_NLP_feas(solve_data, config):
             'Problem is not feasible, check NLP solver')
 
     return fix_nlp, feas_soln
+
+
+def feas_pump_converged(solve_data, config):
+    """Calculates the euclidean norm between the discretes in the mip and nlp models"""
+    distance = sqrt(
+        sum((nlp_var.value - milp_var.value)**2
+            for (nlp_var, milp_var) in
+            zip(solve_data.nlp.MindtPy_utils.variable_list, 
+                solve_data.mip.MindtPy_utils.variable_list)
+            if not milp_var.is_continuous()))
+
+    return distance < config.zero_tolerance

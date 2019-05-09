@@ -26,7 +26,7 @@ def solve_OA_master(solve_data, config):
     main_objective = next(master_mip.component_data_objects(Objective, active=True))
     main_objective.deactivate()
 
-    if config.solver in ['OA', 'LOA']:
+    if config.strategy in ['OA', 'LOA']:
         # TODO only for 'global' solver
         sign_adjust = 1 if main_objective.sense == minimize else -1
         MindtPy.MindtPy_penalty_expr = Expression(
@@ -36,7 +36,7 @@ def solve_OA_master(solve_data, config):
         MindtPy.MindtPy_oa_obj = Objective(
             expr=main_objective.expr + MindtPy.MindtPy_penalty_expr,
             sense=main_objective.sense)
-    elif config.solver is 'feas_pump':
+    elif config.strategy is 'feas_pump':
         MindtPy.feas_pump_mip_obj = generate_L1_objective_function(master_mip, solve_data.nlp)
 
     # Deactivate extraneous IMPORT/EXPORT suffixes

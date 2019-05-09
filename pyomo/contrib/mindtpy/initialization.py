@@ -3,7 +3,7 @@ from __future__ import division
 
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values
 from pyomo.contrib.mindtpy.cut_generation import (
-    add_oa_cut, add_objective_linearization,
+    add_oa_cuts, add_objective_linearization,
 )
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.contrib.mindtpy.util import (calc_jacobians)
@@ -27,6 +27,8 @@ def MindtPy_initialize_master(solve_data, config):
         calc_jacobians(solve_data, config)  # preload jacobians
         MindtPy.MindtPy_linear_cuts.oa_cuts = ConstraintList(
             doc='Outer approximation cuts')
+    else:
+        raise NotImplementedError(config.strategy)
 
     # elif config.strategy == 'ECP':
     #     calc_jacobians(solve_data, config)  # preload jacobians
@@ -58,9 +60,10 @@ def MindtPy_initialize_master(solve_data, config):
             # else:
             solve_NLP_subproblem(solve_data, config)
     elif config.strategy is 'feas_pump':
-        init_rNLP(solve_data, config)
+        init_rNLP(solve_data, config)  # solution is written to mip model
         copy_var_list_values(solve_data.mip.variable_list,
-                             solve_data.working_model.variable_list)
+                             solve_data.working_model.variable_list,
+                             config, ignore_integrality=True)
 
 
 def init_rNLP(solve_data, config):
