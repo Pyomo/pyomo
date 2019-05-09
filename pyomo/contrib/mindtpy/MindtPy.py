@@ -77,7 +77,7 @@ class MindtPySolver(object):
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="OA",
-        domain=In(["OA", "GBD", "ECP", "PSC"]),
+        domain=In(["OA", "GBD", "ECP", "PSC", "feas_pump"]),
         description="Decomposition strategy",
         doc="MINLP Decomposition strategy to be applied to the method. "
             "Currently available Outer Approximation (OA), Extended Cutting "
@@ -184,7 +184,7 @@ class MindtPySolver(object):
                     "smaller in absolute value than the following."
     ))
     CONFIG.declare("integer_tolerance", ConfigValue(
-        default=1E-5,
+        default=1E-3,
         description="Tolerance on integral values."
     ))
     CONFIG.declare("constraint_tolerance", ConfigValue(
@@ -268,7 +268,7 @@ class MindtPySolver(object):
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
-            process_objective(solve_data, config)
+            process_objective(solve_data, config, always_move_objective=True)
 
             # Save model initial values.
             solve_data.initial_var_values = list(

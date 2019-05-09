@@ -68,7 +68,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
 
         else:  # Inequality constraint (possibly two-sided)
             if constr.has_ub() \
-               and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
+               and (linearize_active and abs(constr.uslack()) < config.constraint_tolerance) \
                     or (linearize_violated and constr.uslack() < 0) \
                     or (linearize_inactive and constr.uslack() > 0):
                 if use_slack_var:
@@ -82,7 +82,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                 )
 
             if constr.has_lb() \
-               and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
+               and (linearize_active and abs(constr.lslack()) < config.constraint_tolerance) \
                     or (linearize_violated and constr.lslack() < 0) \
                     or (linearize_inactive and constr.lslack() > 0):
                 if use_slack_var:
@@ -99,9 +99,9 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
 def add_no_good_cut(target_model, config):
     """Cut out current binary combination"""
     target_model.MindtPy_utils. \
-        linear_cuts.integer_cuts.add(
+        MindtPy_linear_cuts.integer_cuts.add(
             expr=(sum(var if var.value == 0 else (1-var)
-                      for var in target_model.var_list
+                      for var in target_model.MindtPy_utils.variable_list
                       if var.is_binary())
                   >= 1))
 

@@ -7,7 +7,7 @@ from pyomo.contrib.mindtpy.cut_generation import (
 )
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.contrib.mindtpy.util import (calc_jacobians)
-from pyomo.core import (ConstraintList, Objective,
+from pyomo.core import (Constraint, ConstraintList, Objective,
                         TransformationFactory, maximize, minimize, value, Var)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
@@ -61,8 +61,9 @@ def MindtPy_initialize_master(solve_data, config):
             solve_NLP_subproblem(solve_data, config)
     elif config.strategy is 'feas_pump':
         init_rNLP(solve_data, config)  # solution is written to mip model
-        copy_var_list_values(solve_data.mip.variable_list,
-                             solve_data.working_model.variable_list,
+        MindtPy.MindtPy_linear_cuts.increasing_objective_cut = Constraint(expr=MindtPy.objective_value <= config.obj_bound)
+        copy_var_list_values(solve_data.mip.MindtPy_utils.variable_list,
+                             solve_data.working_model.MindtPy_utils.variable_list,
                              config, ignore_integrality=True)
 
 

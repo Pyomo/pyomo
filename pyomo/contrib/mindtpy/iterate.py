@@ -47,10 +47,7 @@ def MindtPy_iteration_loop(solve_data, config):
         elif config.strategy == 'feas_pump':
             feas_mip, feas_mip_results = solve_OA_master(solve_data, config)
             if feas_mip_results.solver.termination_condition is tc.optimal:
-                copy_var_list_values(feas_mip.MindtPy.variable_list,
-                                     solve_data.mip.MindtPy.variable_list,
-                                     config)
-                # TODO-feas_pump fill this
+                handle_master_mip_optimal(feas_mip, solve_data, config)
             elif feas_mip_results.solver.termination_condition is tc.infeasible:
                 # This basically means the incumbent is the optimal solution
                 if solve_data.best_solution_found is not None:

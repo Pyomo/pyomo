@@ -15,7 +15,7 @@ from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 from pyomo.contrib.mindtpy.objective_generation import generate_L2_objective_function
 
 
-def solve_NLP_subproblem(solve_data, config):
+def solve_NLP_subproblem(solve_data, config, always_solve_fix_nlp=False):
     """ Solves either fixed NLP (OA type methods) or feas-pump NLP
 
     Sets up local working model `sub_nlp`
@@ -33,7 +33,7 @@ def solve_NLP_subproblem(solve_data, config):
     solve_data.nlp_iter += 1
 
     # Set up NLP
-    if config.strategy in ['OA', 'LOA']:
+    if config.strategy in ['OA', 'LOA'] or always_solve_fix_nlp:
         config.logger.info('NLP %s: Solve subproblem for fixed discretes.'
                            % (solve_data.nlp_iter,))
         TransformationFactory('core.fix_discrete').apply_to(sub_nlp)
@@ -42,7 +42,8 @@ def solve_NLP_subproblem(solve_data, config):
         main_objective.deactivate()
         MindtPy.feas_pump_nlp_obj = generate_L2_objective_function(
             sub_nlp,
-            solve_data.mip
+            solve_data.mip,
+            discretes_only=True
         )
 
     # restore original variable values
@@ -78,65 +79,95 @@ def solve_NLP_subproblem(solve_data, config):
 
 
 def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
-    """Copies result to working model, updates bound, adds OA and integer cut,
-    stores best solution if new one is best"""
+    """Copies result to working model, updates bound, adds OA cut, no_good cut
+    and increasing objective cut and stores best solution if new one is best
+
+    Also calculates the duals
+    """
     copy_var_list_values(
         sub_nlp.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
-        config)
+        config,
+        ignore_integrality=config.strategy == 'feas_pump')
+
     for c in sub_nlp.tmp_duals:
         if sub_nlp.dual.get(c, None) is None:
             sub_nlp.dual[c] = sub_nlp.tmp_duals[c]
     dual_values = list(sub_nlp.dual[c] for c in sub_nlp.MindtPy_utils.constraint_list)
 
-    main_objective = next(sub_nlp.component_data_objects(Objective, active=True))
+    working_model_objective = next(
+        solve_data.working_model.component_data_objects(
+            Objective,
+            active=True))
+    current_main_objective = next(
+        sub_nlp.component_data_objects(
+            Objective,
+            active=True))  # this is different to original objective for feasibility pump
+
+    # if OA-like or feas_pump converged, update Upper bound,
+    # add no_good cuts and increasing objective cuts (feas_pump)
     if config.strategy in ['OA', 'LOA'] or (
         config.strategy is 'feas_pump'
         and feas_pump_converged(solve_data, config)
     ):
-        if main_objective.sense == minimize:
-            solve_data.UB = min(main_objective.expr(), solve_data.UB)
+        if config.strategy is 'feas_pump':
+            fix_nlp, fix_nlp_results = solve_NLP_subproblem(
+                solve_data, config,
+                always_solve_fix_nlp=True)
+            copy_var_list_values(fix_nlp.MindtPy_utils.variable_list,
+                                 solve_data.working_model.MindtPy_utils.variable_list,
+                                 config)
+        if working_model_objective.sense == minimize:
+            solve_data.UB = min(
+                working_model_objective.expr(),
+                solve_data.UB)
             solve_data.solution_improved = \
                 solve_data.UB < solve_data.UB_progress[-1]
             solve_data.UB_progress.append(solve_data.UB)
+
+            if solve_data.solution_improved and config.strategy == 'feas_pump':
+                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.\
+                    increasing_objective_cut.set_value(
+                        expr=solve_data.mip.MindtPy_utils.objective_value <= solve_data.UB)
         else:
-            solve_data.LB = max(main_objective.expr(), solve_data.LB)
+            solve_data.LB = max(
+                working_model_objective.expr(),
+                solve_data.LB)
             solve_data.solution_improved = \
                 solve_data.LB > solve_data.LB_progress[-1]
             solve_data.LB_progress.append(solve_data.LB)
 
+            if solve_data.solution_improved and config.strategy == 'feas_pump':
+                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.\
+                    increasing_objective_cut.set_value(
+                        expr=solve_data.mip.MindtPy_utils.objective_value >= solve_data.LB)
+
         if config.add_no_good_cuts or config.strategy is 'feas_pump':
             config.logger.info('Creating no-good cut')
             add_no_good_cut(solve_data.mip, config)
+    else:
+        solve_data.solution_improved = False
 
     config.logger.info(
         'NLP {}: OBJ: {}  LB: {}  UB: {}'
         .format(solve_data.nlp_iter,
-                value(main_objective.expr),
+                current_main_objective.expr(),
                 solve_data.LB, solve_data.UB))
 
     if solve_data.solution_improved:
-        solve_data.best_solution_found = sub_nlp.clone()
+        solve_data.best_solution_found = solve_data.working_model.clone()
 
-    # Add the linear cut
+
+    # Always add the oa cut
     if config.strategy in ['OA', 'LOA', 'feas_pump']:
         copy_var_list_values(sub_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
-                             config)
-        add_oa_cuts(solve_data.mip, dual_values, solve_data, config)  # TODO-romeo @bernalde is it reasonalb to copy the NLP solution as the start point for the MIP model?
+                             config, ignore_integrality=config.strategy=='feas_pump')
+        add_oa_cuts(solve_data.mip, dual_values, solve_data, config)  # TODO-romeo @bernalde is it reasonable to copy the NLP solution as the start point for the MIP model?
     elif config.strategy == 'PSC':
         add_psc_cut(solve_data, config)
     elif config.strategy == 'GBD':
         add_gbd_cut(solve_data, config)
-
-    # Changed this part to add_no_good_cut, TODO-romeo I think we can delete this block
-    # # This adds an integer cut to the feasible_integer_cuts
-    # # ConstraintList, which is not activated by default. However, it
-    # # may be activated as needed in certain situations or for certain
-    # # values of option flags.
-    # var_values = list(v.value for v in sub_nlp.MindtPy_utils.variable_list)
-    # if config.add_integer_cuts:
-    #     add_int_cut(var_values, solve_data, config, feasible=True)
 
     config.call_after_subproblem_feasible(sub_nlp, solve_data)
 
@@ -178,8 +209,8 @@ def handle_NLP_subproblem_infeasible(sub_nlp, solve_data, config):
             add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
     # Add an integer cut to exclude this discrete option
     var_values = list(v.value for v in sub_nlp.MindtPy_utils.variable_list)
-    if config.add_integer_cuts:
-        add_int_cut(var_values, solve_data, config)  # excludes current discrete option
+    if config.add_no_good_cuts:
+        add_no_good_cut(solve_data.mip, solve_data, config)  # excludes current discrete option
 
 
 def handle_NLP_subproblem_other_termination(sub_nlp, termination_condition,
@@ -256,11 +287,10 @@ def solve_NLP_feas(solve_data, config):
 
 def feas_pump_converged(solve_data, config):
     """Calculates the euclidean norm between the discretes in the mip and nlp models"""
-    distance = sqrt(
-        sum((nlp_var.value - milp_var.value)**2
-            for (nlp_var, milp_var) in
-            zip(solve_data.nlp.MindtPy_utils.variable_list, 
-                solve_data.mip.MindtPy_utils.variable_list)
-            if not milp_var.is_continuous()))
+    distance = (sum((nlp_var.value - milp_var.value)**2
+                    for (nlp_var, milp_var) in
+                    zip(solve_data.working_model.MindtPy_utils.variable_list,
+                        solve_data.mip.MindtPy_utils.variable_list)
+                    if milp_var.is_binary()))
 
-    return distance < config.zero_tolerance
+    return distance < config.integer_tolerance

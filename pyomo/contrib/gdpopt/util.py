@@ -109,7 +109,10 @@ def process_objective(solve_data, config, always_move_objective=False):
     # Move the objective to the constraints if it is nonlinear
     if main_obj.expr.polynomial_degree() not in (1, 0) \
             or always_move_objective:
-        config.logger.info("Objective is nonlinear. Moving it to constraint set.")
+        if always_move_objective:
+            config.logger.info("Moving objective to constraint set.")
+        else:
+            config.logger.info("Objective is nonlinear. Moving it to constraint set.")
 
         util_blk.objective_value = Var(domain=Reals, initialize=0)
         if mcpp_available():

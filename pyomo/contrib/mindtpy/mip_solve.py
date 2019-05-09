@@ -26,6 +26,7 @@ def solve_OA_master(solve_data, config):
     main_objective = next(master_mip.component_data_objects(Objective, active=True))
     main_objective.deactivate()
 
+    # setup objective function
     if config.strategy in ['OA', 'LOA']:
         # TODO only for 'global' solver
         sign_adjust = 1 if main_objective.sense == minimize else -1
@@ -37,7 +38,10 @@ def solve_OA_master(solve_data, config):
             expr=main_objective.expr + MindtPy.MindtPy_penalty_expr,
             sense=main_objective.sense)
     elif config.strategy is 'feas_pump':
-        MindtPy.feas_pump_mip_obj = generate_L1_objective_function(master_mip, solve_data.nlp)
+        MindtPy.feas_pump_mip_obj = generate_L1_objective_function(
+            master_mip,
+            solve_data.working_model,
+            discretes_only=True)
 
     # Deactivate extraneous IMPORT/EXPORT suffixes
     getattr(master_mip, 'ipopt_zL_out', _DoNothing()).deactivate()
@@ -59,24 +63,39 @@ def solve_OA_master(solve_data, config):
 def handle_master_mip_optimal(master_mip, solve_data, config):
     """Copy the result to working model and update upper or lower bound"""
     # proceed. Just need integer values
-    MindtPy = master_mip.MindtPy_utils
-    main_objective = next(master_mip.component_data_objects(Objective, active=True))
-    copy_var_list_values(
-        master_mip.MindtPy_utils.variable_list,
-        solve_data.working_model.MindtPy_utils.variable_list,
-        config)
+    original_main_objective = next(
+        solve_data.mip.component_data_objects(
+            Objective,
+            active=True))
+    current_main_objective = next(
+        master_mip.component_data_objects(
+            Objective,
+            active=True))  # this is different to original objective for feasibility pump
 
-    if main_objective.sense == minimize:
-        solve_data.LB = max(
-            value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
-        solve_data.LB_progress.append(solve_data.LB)
-    else:
-        solve_data.UB = min(
-            value(MindtPy.MindtPy_oa_obj.expr), solve_data.UB)
-        solve_data.UB_progress.append(solve_data.UB)
+    if config.strategy in ['OA', 'LOA']:
+        copy_var_list_values(
+            master_mip.MindtPy_utils.variable_list,
+            solve_data.working_model.MindtPy_utils.variable_list,
+            config)
+    elif config.strategy is 'feas_pump':
+        copy_var_list_values(
+            master_mip.MindtPy_utils.variable_list,
+            solve_data.mip.MindtPy_utils.variable_list,
+            config)
+
+    if config.strategy in ['OA', 'LOA']:
+        if original_main_objective.sense == minimize:
+            solve_data.LB = max(
+                value(original_main_objective.expr), solve_data.LB)
+            solve_data.LB_progress.append(solve_data.LB)
+        else:
+            solve_data.UB = min(
+                value(original_main_objective.expr), solve_data.UB)
+            solve_data.UB_progress.append(solve_data.UB)
+
     config.logger.info(
         'MIP %s: OBJ: %s  LB: %s  UB: %s'
-        % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr),
+        % (solve_data.mip_iter, current_main_objective.expr(),
            solve_data.LB, solve_data.UB))
 
 
