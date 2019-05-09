@@ -17,7 +17,8 @@ from pyomo.core import IPyomoScriptModifyInstance, TransformationFactory
 import pyomo.gdp.plugins.bigm
 
 @deprecated('The GDP Pyomo script plugins are deprecated.  '
-            'Use BuildActions or the --transform option.')
+            'Use BuildActions or the --transform option.',
+            version='5.4')
 class BigM_Transformation_PyomoScript_Plugin(Plugin):
 
     implements(IPyomoScriptModifyInstance, service=True)

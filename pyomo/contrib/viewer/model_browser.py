@@ -81,7 +81,7 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
             editable = []
             self.setWindowTitle("Expressions")
         else:
-            raise Exception("Not a valid view type")
+            raise ValueError("{} is not a valid view type".format(standard))
         # Create a data model.  This is what translates the Pyomo model into
         # a tree view.
         datmodel = ComponentDataModel(self, ui_setup=ui_setup,
@@ -99,12 +99,6 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
     def refresh(self):
         added = self.datmodel._update_tree()
         self.datmodel.layoutChanged.emit()
-
-    def toggle(self):
-        if self.isVisible():
-            self.hide()
-        else:
-            self.show()
 
     def update_model(self):
         self.datmodel.update_model()

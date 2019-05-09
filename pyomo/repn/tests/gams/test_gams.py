@@ -180,16 +180,16 @@ class Test(unittest.TestCase):
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
         self.assertEqual(expression_to_string(
-            m.x + m.y - m.z, tc, lbl, smap=smap), "x1 + x2 + (-1)*(-3)")
+            m.x + m.y - m.z, tc, lbl, smap=smap), "x1 + x2 - (-3)")
         m.z.fix(-400)
         self.assertEqual(expression_to_string(
-            m.z + m.y - m.z, tc, smap=smap), "(-400) + x2 + (-1)*(-400)")
+            m.z + m.y - m.z, tc, smap=smap), "(-400) + x2 - (-400)")
         m.z.fix(8.8)
         self.assertEqual(expression_to_string(
-            m.x + m.z - m.y, tc, smap=smap), "x1 + (8.8) + (-1)*x2")
+            m.x + m.z - m.y, tc, smap=smap), "x1 + 8.8 - x2")
         m.z.fix(-8.8)
         self.assertEqual(expression_to_string(
-            m.x * m.z - m.y, tc, smap=smap), "x1*(-8.8) + (-1)*x2")
+            m.x * m.z - m.y, tc, smap=smap), "x1*(-8.8) - x2")
 
     def test_gams_connector_in_active_constraint(self):
         m = ConcreteModel()
@@ -261,7 +261,7 @@ class Test(unittest.TestCase):
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
         self.assertEqual(expression_to_string(
-            m.c.body, tc, smap=smap), "(4)*(-7)*(-2)")
+            m.c.body, tc, smap=smap), "4*(-7)*(-2)")
         self.assertEqual(expression_to_string(
             m.c2.body, tc, smap=smap), "x1 ** (-1.5)")
 

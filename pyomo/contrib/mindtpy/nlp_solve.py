@@ -182,6 +182,6 @@ def solve_NLP_feas(solve_data, config):
 
     if value(MindtPy.MindtPy_feas_obj.expr) == 0:
         raise ValueError(
-            'Problem is not infeasible, check NLP solver')
+            'Problem is not feasible, check NLP solver')
 
     return var_values, duals

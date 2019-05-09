@@ -427,7 +427,7 @@ class WalkerTests2(unittest.TestCase):
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
         self.assertEqual("sin(x) + x*y + 3", str(e))
-        self.assertEqual("sin(2*w[1]) + 2*w[1]*2*w[2] + 3", str(f))
+        self.assertEqual("sin(2*w[1]) + 2*w[1]*(2*w[2]) + 3", str(f))
 
     def test_replacement_walker2(self):
         M = ConcreteModel()
@@ -450,7 +450,7 @@ class WalkerTests2(unittest.TestCase):
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
         self.assertEqual("sin(x) + x*y + 3  <=  0.0", str(e))
-        self.assertEqual("sin(2*w[1]) + 2*w[1]*2*w[2] + 3  <=  0.0", str(f))
+        self.assertEqual("sin(2*w[1]) + 2*w[1]*(2*w[2]) + 3  <=  0.0", str(f))
 
     def test_replacement_walker4(self):
         M = ConcreteModel()
@@ -462,7 +462,7 @@ class WalkerTests2(unittest.TestCase):
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
         self.assertEqual("0  <=  sin(x) + x*y + 3  <=  1", str(e))
-        self.assertEqual("0  <=  sin(2*w[1]) + 2*w[1]*2*w[2] + 3  <=  1", str(f))
+        self.assertEqual("0  <=  sin(2*w[1]) + 2*w[1]*(2*w[2]) + 3  <=  1", str(f))
 
     def test_replacement_walker5(self):
         M = ConcreteModel()
@@ -476,7 +476,7 @@ class WalkerTests2(unittest.TestCase):
         self.assertTrue(e.__class__ is MonomialTermExpression)
         self.assertTrue(f.__class__ is ProductExpression)
         self.assertEqual("z*x", str(e))
-        self.assertEqual("z*2*w[1]", str(f))
+        self.assertEqual("z*(2*w[1])", str(f))
 
     def test_replacement_walker0(self):
         M = ConcreteModel()
@@ -489,13 +489,13 @@ class WalkerTests2(unittest.TestCase):
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
         self.assertEqual("z[0]*x[0] + z[1]*x[1] + z[2]*x[2]", str(e))
-        self.assertEqual("z[0]*2*w[1] + z[1]*2*w[2] + z[2]*2*w[3]", str(f))
+        self.assertEqual("z[0]*(2*w[1]) + z[1]*(2*w[2]) + z[2]*(2*w[3])", str(f))
 
         e = 2*sum_product(M.z, M.x)
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
         self.assertEqual("2*(z[0]*x[0] + z[1]*x[1] + z[2]*x[2])", str(e))
-        self.assertEqual("2*(z[0]*2*w[4] + z[1]*2*w[5] + z[2]*2*w[6])", str(f))
+        self.assertEqual("2*(z[0]*(2*w[4]) + z[1]*(2*w[5]) + z[2]*(2*w[6]))", str(f))
 
 #
 # Replace all mutable parameters with variables
@@ -675,7 +675,7 @@ class WalkerTests_ReplaceInternal(unittest.TestCase):
         e = m.y[1]*m.y[2] + m.y[2]*m.y[3]  ==  0
         f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
         self.assertEqual("y[1]*y[2] + y[2]*y[3]  ==  0.0", str(e))
-        self.assertEqual("y[1] + y[2] + y[2] + y[3]  ==  0.0", str(f))
+        self.assertEqual("y[1] + y[2] + (y[2] + y[3])  ==  0.0", str(f))
         self.assertIs(type(f.arg(0)), SumExpression)
         self.assertEqual(f.arg(0).nargs(), 2)
         self.assertIs(type(f.arg(0).arg(0)), SumExpression)

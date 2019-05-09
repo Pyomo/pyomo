@@ -12,7 +12,7 @@ import logging
 import os
 import platform
 import sys
-from pyomo.common.fileutils import find_library
+from pyomo.common import Library
 from pyomo.common.download import FileDownloader
 
 logger = logging.getLogger('pyomo.common')
@@ -30,7 +30,7 @@ def find_GSL():
     # FIXME: the GSL interface is currently broken in PyPy:
     if platform.python_implementation().lower().startswith('pypy'):
         return None
-    return find_library('amplgsl.dll')
+    return Library('amplgsl.dll').path()
 
 def get_gsl(downloader):
     system, bits = downloader.get_sysinfo()

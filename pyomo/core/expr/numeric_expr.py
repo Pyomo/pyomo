@@ -263,6 +263,17 @@ class ExpressionBase(NumericValue):
     def _precedence(self):
         return ExpressionBase.PRECEDENCE
 
+    def _associativity(self):
+        """Return the associativity of this operator.
+
+        Returns 1 if this operator is left-to-right associative or -1 if
+        it is right-to-left associative.  Any other return value will be
+        interpreted as "not associative" (implying any arguments that
+        are at this operator's _precedence() will be enclosed in parens).
+        """
+        # Most operators in Python are left-to-right associative
+        return 1
+
     def _to_string(self, values, verbose, smap, compute_values):            #pragma: no cover
         """
         Construct a string representation for this node, using the string
@@ -679,6 +690,13 @@ class PowExpression(ExpressionBase):
     def _precedence(self):
         return PowExpression.PRECEDENCE
 
+    def _associativity(self):
+        # "**" is right-to-left associative in Python (so this should
+        # return -1), however, as this rule is not widely known and can
+        # confuse novice users, we will make our "**" operator
+        # non-associative (forcing parens)
+        return 0
+
     def _apply_operation(self, result):
         _l, _r = result
         return _l ** _r
@@ -743,11 +761,14 @@ class ProductExpression(ExpressionBase):
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
             return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
-        if values[0] == "1" or values[0] == "1.0":
+        if values[0] in self._to_string.one:
             return values[1]
-        if values[0] == "-1" or values[0] == "-1.0":
+        if values[0] in self._to_string.minus_one:
             return "- {0}".format(values[1])
         return "{0}*{1}".format(values[0],values[1])
+    # Store these reference sets on the function for quick lookup
+    _to_string.one = {"1", "1.0", "(1)", "(1.0)"}
+    _to_string.minus_one = {"-1", "-1.0", "(-1)", "(-1.0)"}
 
 
 class NPV_ProductExpression(ProductExpression):
@@ -760,6 +781,8 @@ class NPV_ProductExpression(ProductExpression):
 class MonomialTermExpression(ProductExpression):
     __slots__ = ()
 
+    def getname(self, *args, **kwds):
+        return 'mon'
 
 class ReciprocalExpression(ExpressionBase):
     """
@@ -768,13 +791,16 @@ class ReciprocalExpression(ExpressionBase):
         1/x
     """
     __slots__ = ()
-    PRECEDENCE = 3.5
+    PRECEDENCE = 4
 
     def nargs(self):
         return 1
 
     def _precedence(self):
         return ReciprocalExpression.PRECEDENCE
+
+    def _associativity(self):
+        return 0
 
     def _compute_polynomial_degree(self, result):
         if result[0] == 0:
@@ -787,7 +813,7 @@ class ReciprocalExpression(ExpressionBase):
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
             return "{0}({1})".format(self.getname(), values[0])
-        return "(1/{0})".format(values[0])
+        return "1/{0}".format(values[0])
 
     def _apply_operation(self, result):
         return 1 / result[0]
@@ -950,10 +976,11 @@ class SumExpression(SumExpressionBase):
         for i in range(1,len(values)):
             if values[i][0] == '-':
                 tmp.append(' - ')
-                j = 1
-                while values[i][j] == ' ':
-                    j += 1
-                tmp.append(values[i][j:])
+                tmp.append(values[i][1:].strip())
+            elif len(values[i]) > 3 and values[i][:2] == '(-' \
+                 and values[i][-1] == ')' and _balanced_parens(values[i][1:-1]):
+                tmp.append(' - ')
+                tmp.append(values[i][2:-1].strip())
             else:
                 tmp.append(' + ')
                 tmp.append(values[i])
@@ -1183,7 +1210,8 @@ class UnaryFunctionExpression(ExpressionBase):
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
             return "{0}({1})".format(self.getname(), values[0])
-        if values[0] and values[0][0] == '(' and values[0][-1] == ')':
+        if values[0] and values[0][0] == '(' and values[0][-1] == ')' \
+           and _balanced_parens(values[0][1:-1]):
             return '{0}{1}'.format(self._name, values[0])
         else:
             return '{0}({1})'.format(self._name, values[0])
@@ -1340,7 +1368,10 @@ class LinearExpression(ExpressionBase):
                 else:
                    tmp.append(" + %s*%s" % (str(c_), v_))
             else:
-                tmp.append(" + %s*%s" % (str(c), v_))
+                c_str = str(c)
+                if any(_ in c_str for _ in '+-*/'):
+                    c_str = '('+c_str+')'
+                tmp.append(" + %s*%s" % (c_str, v_))
         s = "".join(tmp)
         if len(s) == 0:                 #pragma: no cover
             return s
@@ -1923,6 +1954,32 @@ def _generate_intrinsic_function_expression(arg, name, fcn):
         return UnaryFunctionExpression(arg, name, fcn)
     else:
         return NPV_UnaryFunctionExpression(arg, name, fcn)
+
+def _balanced_parens(arg):
+    """Verify the string argument contains balanced parentheses.
+
+    This checks that every open paren is balanced by a closed paren.
+    That is, the infix string expression is likely to be valid.  This is
+    primarily used to determine if a string that starts and ends with
+    parens can have those parens removed.
+
+    Examples:
+        >>> a = "(( x + y ) * ( z - w ))"
+        >>> _balanced_parens(a[1:-1])
+        True
+        >>> a = "( x + y ) * ( z - w )"
+        >>> _balanced_parens(a[1:-1])
+        False
+    """
+    _parenCount = 0
+    for c in arg:
+        if c == '(':
+            _parenCount += 1
+        elif c == ')':
+            _parenCount -= 1
+            if _parenCount < 0:
+                return False
+    return _parenCount == 0
 
 
 NPV_expression_types = set(
