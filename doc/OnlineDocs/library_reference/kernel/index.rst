@@ -94,7 +94,7 @@ The transformer expressed using :python:`pyomo.kernel` components requires rough
 Direct Support For Conic Constraints with Mosek
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Pyomo 5.6.2 introduced support into :python:`pyomo.kernel`
+Pyomo 5.6.3 introduced support into :python:`pyomo.kernel`
 for six conic constraint forms that are directly recognized
 by the new Mosek solver interface. These are
 
@@ -141,17 +141,8 @@ Each conic constraint class supports two methods of
 instantiation. The first method is to directly instantiate
 a conic object, providing all necessary input variables:
 
-.. code-block:: python
-
-   import pyomo.kernel as pmo
-   model = pmo.block()
-   model.x1 = pmo.variable(lb=0)
-   model.x2 = pmo.variable()
-   model.r = pmo.variable(lb=0)
-   model.q = pmo.conic.primal_exponential(
-       x1=model.x1,
-       x2=model.x2,
-       r=model.r)
+.. literalinclude:: examples/conic_Class.spy
+   :language: python
 
 This method may be limiting if utilizing the Mosek solver as
 the user must ensure that additional conic constraints do
@@ -171,16 +162,8 @@ using automatically created auxiliary variables, which are
 linked to the input arguments using auxiliary
 constraints. Example:
 
-.. code-block:: python
-
-   import pyomo.kernel as pmo
-   model = pmo.block()
-   model.x = pmo.variable(lb=0)
-   model.y = pmo.variable(lb=0)
-   model.b = pmo.conic.primal_exponential.as_domain(
-       x1=math.sqrt(2)*model.x,
-       x2=2.0,
-       r=2*(model.x + model.y))
+.. literalinclude:: examples/conic_Domain.spy
+   :language: python
 
 Reference
 ---------
