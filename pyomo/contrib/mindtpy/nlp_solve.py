@@ -95,14 +95,10 @@ def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
             sub_nlp.dual[c] = sub_nlp.tmp_duals[c]
     dual_values = list(sub_nlp.dual[c] for c in sub_nlp.MindtPy_utils.constraint_list)
 
-    working_model_objective = next(
-        solve_data.working_model.component_data_objects(
-            Objective,
-            active=True))
-    current_main_objective = next(
-        sub_nlp.component_data_objects(
-            Objective,
-            active=True))  # this is different to original objective for feasibility pump
+    main_objective = next(
+            solve_data.working_model.component_data_objects(
+                Objective,
+                active=True))  # this is different to original objective for feasibility pump
 
     # if OA-like or feas_pump converged, update Upper bound,
     # add no_good cuts and increasing objective cuts (feas_pump)
@@ -117,9 +113,9 @@ def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
             copy_var_list_values(fix_nlp.MindtPy_utils.variable_list,
                                  solve_data.working_model.MindtPy_utils.variable_list,
                                  config)
-        if working_model_objective.sense == minimize:
+        if main_objective.sense == minimize:
             solve_data.UB = min(
-                working_model_objective.expr(),
+                main_objective.expr(),
                 solve_data.UB)
             solve_data.solution_improved = \
                 solve_data.UB < solve_data.UB_progress[-1]
@@ -131,7 +127,7 @@ def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
                         expr=solve_data.mip.MindtPy_utils.objective_value <= solve_data.UB)
         else:
             solve_data.LB = max(
-                working_model_objective.expr(),
+                main_objective.expr(),
                 solve_data.LB)
             solve_data.solution_improved = \
                 solve_data.LB > solve_data.LB_progress[-1]
@@ -151,7 +147,7 @@ def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
     config.logger.info(
         'NLP {}: OBJ: {}  LB: {}  UB: {}'
         .format(solve_data.nlp_iter,
-                current_main_objective.expr(),
+                main_objective.expr(),
                 solve_data.LB, solve_data.UB))
 
     if solve_data.solution_improved:

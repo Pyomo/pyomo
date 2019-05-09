@@ -38,7 +38,7 @@ class TestMindtPy(unittest.TestCase):
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertAlmostEqual(model.cost.expr(), 68, places=2)
+            self.assertAlmostEqual(model.cost.expr(), 68, places=1)
 
     def test_OA_8PP_init_max_binary(self):
         """Test the outer approximation decomposition algorithm."""
@@ -52,7 +52,7 @@ class TestMindtPy(unittest.TestCase):
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertAlmostEqual(model.cost.expr(), 68, places=2)
+            self.assertAlmostEqual(model.cost.expr(), 68, places=1)
 
     # def test_PSC(self):
     #     """Test the partial surrogate cuts decomposition algorithm."""

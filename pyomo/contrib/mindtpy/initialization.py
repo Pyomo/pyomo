@@ -51,7 +51,7 @@ def MindtPy_initialize_master(solve_data, config):
             else:
                 config.init_strategy = 'max_binary'
         # Do the initialization
-        elif config.init_strategy == 'rNLP':
+        if config.init_strategy == 'rNLP':
             init_rNLP(solve_data, config)
         elif config.init_strategy == 'max_binary':
             init_max_binaries(solve_data, config)

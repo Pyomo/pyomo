@@ -63,14 +63,10 @@ def solve_OA_master(solve_data, config):
 def handle_master_mip_optimal(master_mip, solve_data, config):
     """Copy the result to working model and update upper or lower bound"""
     # proceed. Just need integer values
-    original_main_objective = next(
-        solve_data.mip.component_data_objects(
-            Objective,
-            active=True))
-    current_main_objective = next(
-        master_mip.component_data_objects(
-            Objective,
-            active=True))  # this is different to original objective for feasibility pump
+    if config.strategy in ['OA', 'LOA']:
+        main_objective = next(master_mip.component_data_objects(Objective, active=True))
+    elif config.strategy == 'feas_pump':
+        main_objective = next(solve_data.mip.component_data_objects(Objective, active=True))
 
     if config.strategy in ['OA', 'LOA']:
         copy_var_list_values(
@@ -84,18 +80,18 @@ def handle_master_mip_optimal(master_mip, solve_data, config):
             config)
 
     if config.strategy in ['OA', 'LOA']:
-        if original_main_objective.sense == minimize:
+        if main_objective.sense == minimize:
             solve_data.LB = max(
-                value(original_main_objective.expr), solve_data.LB)
+                main_objective.expr(), solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
         else:
             solve_data.UB = min(
-                value(original_main_objective.expr), solve_data.UB)
+                main_objective.expr(), solve_data.UB)
             solve_data.UB_progress.append(solve_data.UB)
 
     config.logger.info(
         'MIP %s: OBJ: %s  LB: %s  UB: %s'
-        % (solve_data.mip_iter, current_main_objective.expr(),
+        % (solve_data.mip_iter, main_objective.expr(),
            solve_data.LB, solve_data.UB))
 
 
