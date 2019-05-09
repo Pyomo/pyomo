@@ -922,6 +922,12 @@ def _collect_standard_repn(exp, multiplier, idMap,
     if fn is not None:
         return fn(exp, multiplier, idMap, compute_values, verbose, quadratic)
     #
+    # Catch any known numeric constants
+    #
+    if exp.__class__ in native_numeric_types:
+        return _collect_const(exp, multiplier, idMap, compute_values,
+                              verbose, quadratic)
+    #
     # These are types that might be extended using duck typing.
     #
     try:
