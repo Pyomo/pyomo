@@ -38,7 +38,7 @@ class TestMindtPy(unittest.TestCase):
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=2)
 
     def test_OA_8PP_init_max_binary(self):
         """Test the outer approximation decomposition algorithm."""
@@ -52,7 +52,7 @@ class TestMindtPy(unittest.TestCase):
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=2)
 
     # def test_PSC(self):
     #     """Test the partial surrogate cuts decomposition algorithm."""
@@ -65,7 +65,7 @@ class TestMindtPy(unittest.TestCase):
     #
     #         # self.assertIs(results.solver.termination_condition,
     #         #               TerminationCondition.optimal)
-    #         self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
+    #         self.assertAlmostEqual(value(model.cost.expr), 68, places=2)
 
     # def test_GBD(self):
     #     """Test the generalized Benders Decomposition algorithm."""
@@ -78,7 +78,7 @@ class TestMindtPy(unittest.TestCase):
     #
     #         # self.assertIs(results.solver.termination_condition,
     #         #               TerminationCondition.optimal)
-    #         self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
+    #         self.assertAlmostEqual(value(model.cost.expr), 68, places=2)
     #
     # def test_ECP(self):
     #     """Test the Extended Cutting Planes algorithm."""
@@ -91,7 +91,7 @@ class TestMindtPy(unittest.TestCase):
     #
     #         # self.assertIs(results.solver.termination_condition,
     #         #               TerminationCondition.optimal)
-    #         self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
+    #         self.assertAlmostEqual(value(model.cost.expr), 68, places=2)
 
     def test_OA_MINLP_simple(self):
         """Test the outer approximation decomposition algorithm."""
@@ -105,7 +105,7 @@ class TestMindtPy(unittest.TestCase):
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
+            self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
 
 
     def test_OA_MINLP2_simple(self):
@@ -120,7 +120,7 @@ class TestMindtPy(unittest.TestCase):
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(abs(value(model.cost.expr) - 6.00976) <= 1E-2)
+            self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)
 
 
     def test_OA_MINLP3_simple(self):
@@ -149,7 +149,7 @@ class TestMindtPy(unittest.TestCase):
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(abs(value(model.obj.expr) - 0.66555) <= 1E-2)
+            self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
 
     def test_OA_Proposal_with_int_cuts(self):
@@ -165,7 +165,7 @@ class TestMindtPy(unittest.TestCase):
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(abs(value(model.obj.expr) - 0.66555) <= 1E-2)
+            self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     # def test_PSC(self):
     #     """Test the partial surrogate cuts decomposition algorithm."""
@@ -178,7 +178,7 @@ class TestMindtPy(unittest.TestCase):
     #
     #         # self.assertIs(results.solver.termination_condition,
     #         #               TerminationCondition.optimal)
-    #         self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
+    #         self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
     #
     # def test_GBD(self):
     #     """Test the generalized Benders Decomposition algorithm."""
@@ -191,7 +191,7 @@ class TestMindtPy(unittest.TestCase):
     #
     #         # self.assertIs(results.solver.termination_condition,
     #         #               TerminationCondition.optimal)
-    #         self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
+    #         self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
     #
     # def test_ECP(self):
     #     """Test the Extended Cutting Planes algorithm."""
@@ -205,7 +205,7 @@ class TestMindtPy(unittest.TestCase):
     #
     #         # self.assertIs(results.solver.termination_condition,
     #         #               TerminationCondition.optimal)
-    #         self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
+    #         self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
     #
 
 
