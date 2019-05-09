@@ -1256,12 +1256,22 @@ class _ToStringVisitor(ExpressionValueVisitor):
                 tmp.append(val)
             elif arg.__class__ in nonpyomo_leaf_types:
                 tmp.append("'{0}'".format(val))
-            elif arg.is_variable_type():
-                tmp.append(val)
-            elif not self.verbose and arg.is_expression_type() and node._precedence() < arg._precedence():
-                tmp.append("({0})".format(val))
             else:
-                tmp.append(val)
+                parens = False
+                if not self.verbose and arg.is_expression_type():
+                    if node._precedence() < arg._precedence():
+                        parens = True
+                    elif node._precedence() == arg._precedence():
+                        if i == 0:
+                            parens = node._associativity() != 1
+                        elif i == len(node._args_)-1:
+                            parens = node._associativity() != -1
+                        else:
+                            parens = True
+                if parens:
+                    tmp.append("({0})".format(val))
+                else:
+                    tmp.append(val)
 
         return node._to_string(tmp, self.verbose, self.smap, self.compute_values)
 

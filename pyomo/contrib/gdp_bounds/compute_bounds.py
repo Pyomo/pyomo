@@ -9,6 +9,7 @@ to variable bounds preprocessing transformation is recommended for NLP problems
 processed with this transformation.
 
 """
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt_block, BoundsManager
 from pyomo.core.base.block import Block, TraversalStrategy
 from pyomo.core.expr.current import identify_variables
@@ -132,6 +133,8 @@ def fbbt_disjunct(disj, parent_bounds):
     try:
         for var, var_bnds in disj._disj_var_bounds.items():
             scope_lb, scope_ub = var_bnds
+            scope_lb = -inf if scope_lb is None else scope_lb
+            scope_ub = inf if scope_ub is None else scope_ub
             parent_lb, parent_ub = parent_bounds.get(var, (-inf, inf))
             orig_bnds[var] = (max(scope_lb, parent_lb), min(scope_ub, parent_ub))
     except AttributeError:
@@ -139,7 +142,12 @@ def fbbt_disjunct(disj, parent_bounds):
         pass
     bnds_manager = BoundsManager(disj)
     bnds_manager.load_bounds(orig_bnds)
-    new_bnds = fbbt_block(disj)
+    try:
+        new_bnds = fbbt_block(disj)
+    except InfeasibleConstraintException as e:
+        if disj.type() == Disjunct:
+            disj.deactivate()  # simply prune the disjunct
+        new_bnds = parent_bounds
     bnds_manager.pop_bounds()
     disj._disj_var_bounds = new_bnds
     # Handle nested disjuncts
