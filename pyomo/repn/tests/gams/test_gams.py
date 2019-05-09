@@ -302,7 +302,10 @@ class Test(unittest.TestCase):
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
-        self.assertEqual(expression_to_string(m.c.body, tc, smap=smap), "1 + 1")
+        self.assertEqual("1 + 1", expression_to_string(m.c.body, tc, smap=smap))
+        m.x = Var()
+        m.c2 = Constraint(expr=quicksum([m.x, m.y], linear=True) == 1)
+        self.assertEqual("1 * x1 + 1", expression_to_string(m.c2.body, tc, smap=smap))
 
     def test_quicksum_integer_var_fixed(self):
         m = ConcreteModel()

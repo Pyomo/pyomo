@@ -78,6 +78,16 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
                 else:
                     tmp.append(val)
 
+        if node.__class__ is EXPR.LinearExpression:
+            argstr = []
+            for coef, var in zip(node.linear_coefs, node.linear_vars):
+                if var.fixed:
+                    argstr.append("{}".format(coef * var.value))
+                else:
+                    argstr.append("{} * {}".format(
+                        coef, var.to_string(verbose=False, smap=self.smap, compute_values=True)))
+            return " + ".join(argstr) + (" + {}".format(node.constant) if node.constant != 0 else "")
+
         if node.__class__ is EXPR.PowExpression:
             # If the exponent is a positive integer, use the power() function.
             # Otherwise, use the ** operator.
@@ -105,6 +115,7 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         if node.is_expression_type():
             # we will descend into this, so type checking will happen later
             if node.is_component_type():
+                # Checks to make sure that the component is on the tree.
                 self.treechecker(node)
             return False, None
 
