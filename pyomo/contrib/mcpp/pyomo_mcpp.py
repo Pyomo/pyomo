@@ -320,6 +320,11 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         """Registers a new variable."""
         var_idx = self.var_to_idx[var]
         inf = float('inf')
+
+        # Guard against errant None values in lb and ub
+        lb = -inf if lb is None else lb
+        ub = inf if ub is None else ub
+
         lb = max(var.lb if var.has_lb() else -inf, lb)
         ub = min(var.ub if var.has_ub() else inf, ub)
         var_val = value(var, exception=False)
