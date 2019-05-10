@@ -49,20 +49,12 @@ def solve_NLP_subproblem(solve_data, config, always_solve_fix_nlp=False):
             discretes_only=True
         )
 
-    # restore original variable values
-    # copy_var_list_values(
-    #     solve_data.initial_var_values,
-    #     MindtPy.variable_list,
-    #     config)
-    # TODO-romeo why is this neccesary?
-    # for nlp_var, orig_val in zip(
-    #         MindtPy.variable_list,
-    #         solve_data.initial_var_values):
-    #     if not nlp_var.fixed and not nlp_var.is_binary():
-    #         nlp_var.value = orig_val
-
     MindtPy.MindtPy_linear_cuts.deactivate()
     sub_nlp.tmp_duals = ComponentMap()
+    # For the current point, the duals are precalculated
+    # When we solve the problem afterwards, the solver will compute the duals
+    # for the constraints, but won't compute e.g. for fixed variables.
+    # This is where we can use the precomputed dual values
     for c in sub_nlp.component_data_objects(ctype=Constraint, active=True,
                                             descend_into=True):
         rhs = ((0 if c.upper is None else c.upper)
@@ -71,7 +63,6 @@ def solve_NLP_subproblem(solve_data, config, always_solve_fix_nlp=False):
         sub_nlp.tmp_duals[c] = sign_adjust * max(0,
                 sign_adjust * (rhs - value(c.body)))
         # TODO check sign_adjust
-        # TODO-romeo @bernalde why can we precompute the duals if the problem get's changed afterwards
     TransformationFactory('contrib.deactivate_trivial_constraints')\
         .apply_to(sub_nlp, tmp=True, ignore_infeasible=True)
     # Solve the NLP
@@ -169,7 +160,7 @@ def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
         copy_var_list_values(sub_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config, ignore_integrality=config.strategy=='feas_pump')
-        add_oa_cuts(solve_data.mip, dual_values, solve_data, config)  # TODO-romeo @bernalde is it reasonable to copy the NLP solution as the start point for the MIP model?
+        add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
     elif config.strategy == 'PSC':
         add_psc_cut(solve_data, config)
     elif config.strategy == 'GBD':

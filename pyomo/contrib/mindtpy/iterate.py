@@ -58,7 +58,6 @@ def MindtPy_iteration_loop(solve_data, config):
                     solve_data.results.solver.termination_condition = tc.infeasible
                 break
             elif feas_mip_results.solver.termination_condition is tc.maxIterations:
-                # TODO-feas_pump handle this
                 config.logger.error('No feasible solution has been found')
                 solve_data.results.solver.termination_condition = tc.maxIterations
                 break
