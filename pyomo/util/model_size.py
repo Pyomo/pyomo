@@ -71,7 +71,7 @@ def build_model_size_report(model):
         activated_constraints.update(new_activated_constraints)
 
     activated_vars.update(
-        var for constr in new_activated_constraints
+        var for constr in activated_constraints
         for var in EXPR.identify_variables(
             constr.body, include_fixed=False))
     activated_vars.update(

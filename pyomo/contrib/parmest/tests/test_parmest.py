@@ -20,6 +20,7 @@ import subprocess
 from itertools import product
 
 import pyomo.contrib.parmest.parmest as parmest
+import pyomo.contrib.parmest.graphics as graphics
 import pyomo.contrib.parmest as parmestbase
 import pyomo.environ as pyo
 
@@ -47,7 +48,8 @@ class Object_from_string_Tester(unittest.TestCase):
         self.assertEqual(fixstatus, False)
 
         
-@unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not parmest.parmest_available,
+                 "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class parmest_object_Tester_RB(unittest.TestCase):
     
@@ -71,7 +73,9 @@ class parmest_object_Tester_RB(unittest.TestCase):
         self.assertAlmostEqual(objval, 4.4675, places=2)
         self.assertAlmostEqual(thetavals['asymptote'], 19.2189, places=2) # 19.1426 from the paper
         self.assertAlmostEqual(thetavals['rate_constant'], 0.5312, places=2) # 0.5311 from the paper
-        
+
+    @unittest.skipIf(not graphics.imports_available,
+                     "parmest.graphics imports are unavailable")
     def test_bootstrap(self):
         objval, thetavals = self.pest.theta_est()
         
@@ -103,6 +107,8 @@ class parmest_object_Tester_RB(unittest.TestCase):
                                          filename=filename)
         #self.assertTrue(os.path.isfile(filename))
         
+    @unittest.skipIf(not graphics.imports_available,
+                     "parmest.graphics imports are unavailable")
     def test_likelihood_ratio(self):
         # tbd: write the plot file(s) to a temp dir and delete in cleanup
         objval, thetavals = self.pest.theta_est()

@@ -3,7 +3,7 @@
 
 .. warning::
 
-   The :python:`pyomo.kernel` API is still in the beta phase of devleopement. It is fully tested and functional; however, the interface may change as it becomes further integrated with the rest of Pyomo.
+   The :python:`pyomo.kernel` API is still in the beta phase of development. It is fully tested and functional; however, the interface may change as it becomes further integrated with the rest of Pyomo.
 
 .. warning::
 
@@ -91,6 +91,79 @@ A simplified version of this using :python:`pyomo.environ` components might look
 
 The transformer expressed using :python:`pyomo.kernel` components requires roughly 2 KB of memory, whereas the :python:`pyomo.environ` version requires roughly 8.4 KB of memory (an increase of more than 4x). Additionally, the :python:`pyomo.kernel` transformer is fully compatible with all existing :python:`pyomo.kernel` block containers.
 
+Direct Support For Conic Constraints with Mosek
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Pyomo 5.6.3 introduced support into :python:`pyomo.kernel`
+for six conic constraint forms that are directly recognized
+by the new Mosek solver interface. These are
+
+ - :python:`conic.quadratic`:
+
+     :math:`\;\;\sum_{i}x_i^2 \leq r^2,\;\;r\geq 0`
+
+ - :python:`conic.rotated_quadratic`:
+
+     :math:`\;\;\sum_{i}x_i^2 \leq 2 r_1 r_2,\;\;r_1,r_2\geq 0`
+
+ - :python:`conic.primal_exponential`:
+
+     :math:`\;\;x_1\exp(x_2/x_1) \leq r,\;\;x_1,r\geq 0`
+
+ - :python:`conic.primal_power` (:math:`\alpha` is a constant):
+
+     :math:`\;\;||x||_2 \leq r_1^{\alpha} r_2^{1-\alpha},\;\;r_1,r_2\geq 0,\;0 < \alpha < 1`
+
+ - :python:`conic.dual_exponential`:
+
+     :math:`\;\;-x_2\exp((x_1/x_2)-1) \leq r,\;\;x_2\leq0,\;r\geq 0`
+
+ - :python:`conic.dual_power` (:math:`\alpha` is a constant):
+
+     :math:`\;\;||x||_2 \leq (r_1/\alpha)^{\alpha} (r_2/(1-\alpha))^{1-\alpha},\;\;r_1,r_2\geq 0,\;0 < \alpha < 1`
+
+Other solver interfaces will treat these objects as general
+nonlinear or quadratic constraints, and may or may not have
+the ability to identify their convexity. For instance,
+Gurobi will recognize the expressions produced by the
+:python:`quadratic` and :python:`rotated_quadratic` objects
+as representing convex domains as long as the variables
+involved satisfy the convexity conditions. However, other
+solvers may not include this functionality.
+
+Each of these conic constraint classes are of the same
+category type as standard :python:`pyomo.kernel.constraint`
+object, and, thus, are directly supported by the standard
+constraint containers (:python:`constraint_tuple`,
+:python:`constraint_list`, :python:`constraint_dict`).
+
+Each conic constraint class supports two methods of
+instantiation. The first method is to directly instantiate
+a conic object, providing all necessary input variables:
+
+.. literalinclude:: examples/conic_Class.spy
+   :language: python
+
+This method may be limiting if utilizing the Mosek solver as
+the user must ensure that additional conic constraints do
+not use variables that are directly involved in any existing
+conic constraints (this is a limitation the Mosek solver
+itself).
+
+To overcome this limitation, and to provide a more general
+way of defining conic domains, each conic constraint class
+provides the :python:`as_domain` class method. This
+alternate constructor has the same argument signature as the
+class, but in place of variables, each argument can
+optionally be assigned a constant or expression. The
+:python:`as_domain` method will return a :python:`block`
+object that includes the core conic constraint expressed
+using automatically created auxiliary variables, which are
+linked to the input arguments using auxiliary
+constraints. Example:
+
+.. literalinclude:: examples/conic_Domain.spy
+   :language: python
 
 Reference
 ---------
@@ -112,6 +185,7 @@ Modeling Components:
    sos.rst
    suffix.rst
    piecewise/index.rst
+   conic.rst
 
 Base API:
 ^^^^^^^^^

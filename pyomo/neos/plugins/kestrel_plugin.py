@@ -16,6 +16,7 @@ import six
 from six.moves.xmlrpc_client import ProtocolError
 
 from pyomo.opt import SolverFactory, SolverManagerFactory, OptSolver
+from pyomo.opt.parallel.manager import ActionManagerError
 from pyomo.opt.parallel.async_solver import (
     AsynchronousSolverManager, ActionStatus
 )

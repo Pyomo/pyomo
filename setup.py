@@ -48,7 +48,7 @@ def get_version():
     return _verInfo['__version__']
 
 requires = [
-    'PyUtilib>=5.6.6.dev0',
+    'PyUtilib>=5.7.1.dev0',
     'appdirs',
     'ply',
     'six>=1.4',
@@ -87,8 +87,10 @@ if using_cython:
         #
         import shutil
         files = [
-            "pyomo/core/expr/expr_pyomo5.pyx",
             "pyomo/core/expr/numvalue.pyx",
+            "pyomo/core/expr/numeric_expr.pyx",
+            "pyomo/core/expr/logical_expr.pyx",
+            #"pyomo/core/expr/visitor.pyx",
             "pyomo/core/util.pyx",
             "pyomo/repn/standard_repn.pyx",
             "pyomo/repn/plugins/cpxlp.pyx",
@@ -98,7 +100,8 @@ if using_cython:
         ]
         for f in files:
             shutil.copyfile(f[:-1], f)
-        ext_modules = cythonize(files)
+        ext_modules = cythonize(files, compiler_directives={
+            "language_level": 3 if sys.version_info >= (3, ) else 2})
     except:
         if using_cython == CYTHON_REQUIRED:
             print("""
@@ -122,7 +125,7 @@ def run_setup():
       license='BSD',
       platforms=["any"],
       description='Pyomo: Python Optimization Modeling Objects',
-      long_description=read('README.txt'),
+      long_description=read('README.md'),
       classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: End Users/Desktop',
@@ -163,7 +166,7 @@ def run_setup():
         results_schema=pyomo.scripting.commands:results_schema
         pyro_mip_server = pyomo.scripting.pyro_mip_server:main
         test.pyomo = pyomo.scripting.runtests:runPyomoTests
-        pyomo = pyomo.scripting.pyomo_main:main
+        pyomo = pyomo.scripting.pyomo_main:main_console_script
         pyomo_ns = pyomo.scripting.commands:pyomo_ns
         pyomo_nsc = pyomo.scripting.commands:pyomo_nsc
         kill_pyro_mip_servers = pyomo.scripting.commands:kill_pyro_mip_servers
@@ -172,7 +175,6 @@ def run_setup():
         OSSolverService = pyomo.scripting.commands:OSSolverService
         pyomo_python = pyomo.scripting.commands:pyomo_python
         pyomo_old=pyomo.scripting.pyomo_command:main
-        get_pyomo_extras = scripts.get_pyomo_extras:main
 
         [pyomo.command]
         pyomo.runbenders=pyomo.pysp.benders

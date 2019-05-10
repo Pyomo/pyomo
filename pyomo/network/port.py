@@ -235,14 +235,14 @@ class _PortData(ComponentData):
             fixed: `bool`
                 Only include variables/expressions with this type of fixed
             names: `bool`
-                If True, yield (name, var/expr) pairs
+                If True, yield (name, index, var/expr) tuples
         """
         for name, mem in iteritems(self.vars):
             if not mem.is_indexed():
-                itr = (mem,)
+                itr = {None: mem}
             else:
-                itr = itervalues(mem)
-            for v in itr:
+                itr = mem
+            for idx, v in iteritems(itr):
                 if fixed is not None and v.is_fixed() != fixed:
                     continue
                 if expr_vars and v.is_expression_type():
@@ -250,12 +250,12 @@ class _PortData(ComponentData):
                         if fixed is not None and var.is_fixed() != fixed:
                             continue
                         if names:
-                            yield name, var
+                            yield name, idx, var
                         else:
                             yield var
                 else:
                     if names:
-                        yield name, v
+                        yield name, idx, v
                     else:
                         yield v
 
