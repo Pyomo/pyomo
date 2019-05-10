@@ -79,7 +79,7 @@ def init_rNLP(solve_data, config):
         results = SolverFactory(config.nlp_solver).solve(
             m, **config.nlp_solver_args)
     subprob_terminate_cond = results.solver.termination_condition
-    if subprob_terminate_cond is tc.optimal:
+    if subprob_terminate_cond == tc.optimal:
         main_objective = next(m.component_data_objects(Objective, active=True))
         nlp_solution_values = list(v.value for v in MindtPy.variable_list)
         dual_values = list(m.dual[c] for c in MindtPy.constraint_list)

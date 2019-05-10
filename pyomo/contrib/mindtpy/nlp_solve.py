@@ -14,6 +14,8 @@ from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 from pyomo.contrib.mindtpy.objective_generation import generate_L2_objective_function
 
+from pyomo.contrib.gdpopt.util import is_feasible
+
 
 def solve_NLP_subproblem(solve_data, config, always_solve_fix_nlp=False):
     """ Solves either fixed NLP (OA type methods) or feas-pump NLP
@@ -38,6 +40,7 @@ def solve_NLP_subproblem(solve_data, config, always_solve_fix_nlp=False):
                            % (solve_data.nlp_iter,))
         TransformationFactory('core.fix_discrete').apply_to(sub_nlp)
     elif config.strategy is 'feas_pump':
+        TransformationFactory('core.relax_integrality').apply_to(sub_nlp)
         main_objective = next(sub_nlp.component_data_objects(Objective, active=True))
         main_objective.deactivate()
         MindtPy.feas_pump_nlp_obj = generate_L2_objective_function(
@@ -107,9 +110,13 @@ def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
         and feas_pump_converged(solve_data, config)
     ):
         if config.strategy is 'feas_pump':
+            copy_var_list_values(solve_data.mip.MindtPy_utils.variable_list,
+                                 solve_data.working_model.MindtPy_utils.variable_list,
+                                 config)
             fix_nlp, fix_nlp_results = solve_NLP_subproblem(
                 solve_data, config,
                 always_solve_fix_nlp=True)
+            assert fix_nlp_results.solver.termination_condition is tc.optimal, 'Feasibility pump fix-nlp subproblem not optimal'
             copy_var_list_values(fix_nlp.MindtPy_utils.variable_list,
                                  solve_data.working_model.MindtPy_utils.variable_list,
                                  config)
@@ -152,6 +159,9 @@ def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
 
     if solve_data.solution_improved:
         solve_data.best_solution_found = solve_data.working_model.clone()
+        assert is_feasible(solve_data.best_solution_found, config), \
+               "Best found model infeasible! There might be a problem with the precisions - the feaspump seems to have converged (error**2 <= integer_tolerance). " \
+               "But the `is_feasible` check (error <= constraint_tolerance) doesn't work out"
 
 
     # Always add the oa cut

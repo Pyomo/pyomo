@@ -184,11 +184,11 @@ class MindtPySolver(object):
                     "smaller in absolute value than the following."
     ))
     CONFIG.declare("integer_tolerance", ConfigValue(
-        default=1E-3,
+        default=1E-6,
         description="Tolerance on integral values."
     ))
     CONFIG.declare("constraint_tolerance", ConfigValue(
-        default=1E-6,
+        default=1E-4,
         description="Tolerance on constraint satisfaction."
     ))
     CONFIG.declare("variable_tolerance", ConfigValue(
@@ -196,7 +196,7 @@ class MindtPySolver(object):
         description="Tolerance on variable bounds."
     ))
     CONFIG.declare("zero_tolerance", ConfigValue(
-        default=1E-15,
+        default=1E-12,
         description="Tolerance on variable equal to zero."
     ))
     CONFIG.declare("initial_feas", ConfigValue(

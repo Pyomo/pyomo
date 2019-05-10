@@ -10,10 +10,15 @@ def generate_L2_objective_function(model, setpoint_model, discretes_only=False):
 
     discretes_only -- only optimize on distance between the discrete variables
     """
-    var_filter = (lambda v: v.is_binary()) if discretes_only \
+    var_filter = (lambda v: v[1].is_binary()) if discretes_only \
                  else (lambda v: True)
-    model_vars = list(filter(var_filter, model.component_data_objects(Var)))
-    setpoint_vars = list(filter(var_filter, setpoint_model.component_data_objects(Var)))
+
+    model_vars, setpoint_vars = zip(*
+        filter(
+            var_filter,
+            zip(model.component_data_objects(Var),
+                setpoint_model.component_data_objects(Var))))
+
     assert len(model_vars) == len(setpoint_vars), "Trying to generate L1 objective function for models with different number of variables"
 
     return Objective(expr=(
