@@ -87,7 +87,7 @@ def model_is_valid(solve_data, config):
     return True
 
 
-def process_objective(solve_data, config, always_move_objective=False):
+def process_objective(solve_data, config, move_linear_objective=False):
     m = solve_data.working_model
     util_blk = getattr(m, solve_data.util_block_name)
     # Handle missing or multiple objectives
@@ -108,8 +108,11 @@ def process_objective(solve_data, config, always_move_objective=False):
 
     # Move the objective to the constraints if it is nonlinear
     if main_obj.expr.polynomial_degree() not in (1, 0) \
-            or always_move_objective:
-        config.logger.info("Objective is nonlinear. Moving it to constraint set.")
+            or move_linear_objective:
+        if move_linear_objective:
+            config.logger.info("Moving objective to constraint set.")
+        else:
+            config.logger.info("Objective is nonlinear. Moving it to constraint set.")
 
         util_blk.objective_value = Var(domain=Reals, initialize=0)
         if mcpp_available():
@@ -162,7 +165,7 @@ def copy_var_list_values(from_list, to_list, config,
         except ValueError as err:
             err_msg = getattr(err, 'message', str(err))
             var_val = value(v_from)
-            rounded_val = round(var_val) if six.PY3 else int(round(var_val))
+            rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
             if ignore_integrality \
                 and ('is not in domain Binary' in err_msg
