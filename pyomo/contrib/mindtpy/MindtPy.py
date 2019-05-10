@@ -122,6 +122,12 @@ class MindtPySolver(object):
             "the ECP method. As long as nonlinear constraint are violated for "
             "more than this tolerance, the method will keep iterating"
     ))
+    CONFIG.declare("feas_pump_delta", ConfigValue(
+        default=1E-1,
+        domain=PositiveFloat,
+        description="Objective increasing \delta",
+        doc="Will force each new feasible point to be '\delta * abs(UB)' better than the last one"
+    ))
     CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
         domain=In(["ipopt"]),

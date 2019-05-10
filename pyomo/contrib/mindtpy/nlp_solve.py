@@ -1,9 +1,7 @@
 """Solution of NLP subproblems."""
 from __future__ import division
 
-from math import sqrt
-from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
-        add_int_cut, add_no_good_cut)
+from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_no_good_cut)
 from pyomo.contrib.mindtpy.util import add_feas_slacks
 from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
@@ -122,7 +120,8 @@ def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
             if solve_data.solution_improved and config.strategy == 'feas_pump':
                 solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.\
                     increasing_objective_cut.set_value(
-                        expr=solve_data.mip.MindtPy_utils.objective_value <= solve_data.UB)
+                        expr=solve_data.mip.MindtPy_utils.objective_value 
+                             <= solve_data.UB - config.feas_pump_delta*min(1e-4, abs(solve_data.UB)))
         else:
             solve_data.LB = max(
                 main_objective.expr(),
@@ -134,7 +133,8 @@ def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
             if solve_data.solution_improved and config.strategy == 'feas_pump':
                 solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.\
                     increasing_objective_cut.set_value(
-                        expr=solve_data.mip.MindtPy_utils.objective_value >= solve_data.LB)
+                        expr=solve_data.mip.MindtPy_utils.objective_value
+                             >= solve_data.LB + config.feas_pump_delta*min(1e-4, abs(solve_data.LB)))
 
         if config.add_no_good_cuts or config.strategy is 'feas_pump':
             config.logger.info('Creating no-good cut')
