@@ -52,6 +52,45 @@ class Test(unittest.TestCase):
         model = AbstractModel()
         self.assertTrue(set(TransformationFactory) >= set(['core.relax_integrality']))
 
+    def test_fix_discrete(self):
+        # Coverage of the _clear_attribute method
+        self.model.A = RangeSet(1,4)
+        self.model.a = Var()
+        self.model.b = Var(within=self.model.A)
+        self.model.c = Var(within=NonNegativeIntegers)
+        self.model.d = Var(within=Integers, bounds=(-2,3))
+        self.model.e = Var(within=Boolean)
+        self.model.f = Var(domain=Boolean)
+        instance=self.model.create_instance()
+        xfrm = TransformationFactory('core.fix_discrete')
+        rinst = xfrm.create_using(instance)
+        self.assertFalse(rinst.a.is_fixed())
+        self.assertTrue(rinst.b.is_fixed())
+        self.assertTrue(rinst.c.is_fixed())
+        self.assertTrue(rinst.d.is_fixed())
+        self.assertTrue(rinst.e.is_fixed())
+        self.assertTrue(rinst.f.is_fixed())
+
+    def test_fix_discrete_clone(self):
+        # Coverage of the _clear_attribute method
+        self.model.A = RangeSet(1,4)
+        self.model.a = Var()
+        self.model.b = Var(within=self.model.A)
+        self.model.c = Var(within=NonNegativeIntegers)
+        self.model.d = Var(within=Integers, bounds=(-2,3))
+        self.model.e = Var(within=Boolean)
+        self.model.f = Var(domain=Boolean)
+        instance=self.model.create_instance()
+        instance_clone = instance.clone()
+        xfrm = TransformationFactory('core.fix_discrete')
+        rinst = xfrm.create_using(instance_clone)
+        self.assertFalse(rinst.a.is_fixed())
+        self.assertTrue(rinst.b.is_fixed())
+        self.assertTrue(rinst.c.is_fixed())
+        self.assertTrue(rinst.d.is_fixed())
+        self.assertTrue(rinst.e.is_fixed())
+        self.assertTrue(rinst.f.is_fixed())
+
     def test_relax_integrality1(self):
         # Coverage of the _clear_attribute method
         self.model.A = RangeSet(1,4)
@@ -101,6 +140,49 @@ class Test(unittest.TestCase):
         self.assertEqual(rinst.d[1].bounds, instance.d[1].bounds)
         self.assertEqual(rinst.e[1].bounds, instance.e[1].bounds)
         self.assertEqual(rinst.f[1].bounds, instance.f[1].bounds)
+
+    def test_relax_integrality_cloned(self):
+        # Coverage of the _clear_attribute method
+        self.model.A = RangeSet(1,4)
+        self.model.a = Var()
+        self.model.b = Var(within=self.model.A)
+        self.model.c = Var(within=NonNegativeIntegers)
+        self.model.d = Var(within=Integers, bounds=(-2,3))
+        self.model.e = Var(within=Boolean)
+        self.model.f = Var(domain=Boolean)
+        instance=self.model.create_instance()
+        instance_cloned = instance.clone()
+        xfrm = TransformationFactory('core.relax_integrality')
+        rinst = xfrm.create_using(instance_cloned)
+        self.assertEqual(type(rinst.a.domain), RealSet)
+        self.assertEqual(type(rinst.b.domain), RealSet)
+        self.assertEqual(type(rinst.c.domain), RealSet)
+        self.assertEqual(type(rinst.d.domain), RealSet)
+        self.assertEqual(type(rinst.e.domain), RealSet)
+        self.assertEqual(type(rinst.f.domain), RealSet)
+        self.assertEqual(rinst.a.bounds, instance_cloned.a.bounds)
+        self.assertEqual(rinst.b.bounds, instance_cloned.b.bounds)
+        self.assertEqual(rinst.c.bounds, instance_cloned.c.bounds)
+        self.assertEqual(rinst.d.bounds, instance_cloned.d.bounds)
+        self.assertEqual(rinst.e.bounds, instance_cloned.e.bounds)
+        self.assertEqual(rinst.f.bounds, instance_cloned.f.bounds)
+
+    def test_relax_integrality(self):
+        # Coverage of the _clear_attribute method
+        self.model.d = Var(within=Integers, bounds=(-2,3))
+        instance=self.model.create_instance()
+        instance_cloned = instance.clone()
+        xfrm = TransformationFactory('core.relax_integrality')
+        rinst = xfrm.create_using(instance_cloned)
+        self.assertEqual(type(rinst.d.domain), RealSet)
+
+    def test_relax_integrality_simple_cloned(self):
+        self.model.x = Var(within=Integers, bounds=(-2,3))
+        instance = self.model.create_instance()
+        instance_cloned = instance.clone()
+        xfrm = TransformationFactory('core.relax_discrete')
+        rinst = xfrm.create_using(instance_cloned)
+        self.assertNotEqual(type(rinst.x.domain), RealSet)
 
     def test_nonnegativity_transformation_1(self):
         self.model.a = Var()

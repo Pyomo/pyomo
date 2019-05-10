@@ -100,6 +100,7 @@ class TestIndexedComponent(unittest.TestCase):
         m.x = Var([1,2,3], initialize=lambda m,x: 2*x)
         self.assertEqual(m.x[2], 4)
         self.assertEqual(m.x[m.i], 4)
+        self.assertIs(m.x[2], m.x[m.i])
 
     def test_index_by_multiple_constant_simpleComponent(self):
         m = ConcreteModel()
@@ -110,6 +111,9 @@ class TestIndexedComponent(unittest.TestCase):
         self.assertEqual(m.x[m.i,3], 12)
         self.assertEqual(m.x[m.i,m.j], 12)
         self.assertEqual(m.x[2,m.j], 12)
+        self.assertIs(m.x[2,3], m.x[m.i,3])
+        self.assertIs(m.x[2,3], m.x[m.i,m.j])
+        self.assertIs(m.x[2,3], m.x[2,m.j])
 
     def test_index_by_fixed_simpleComponent(self):
         m = ConcreteModel()

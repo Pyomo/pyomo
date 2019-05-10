@@ -21,7 +21,7 @@ from pyomo.opt.base.solvers import UnknownSolver
 import pyomo.environ
 from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
 from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
-
+from pyomo.solvers.plugins.solvers.mosek_direct import MosekDirect
 
 # ----------------------------------------------------------------
 
@@ -52,6 +52,9 @@ def initialize(**kwds):
     elif (obj.name == "baron") and \
        (not BARONSHELL.license_is_valid()):
         obj.available = False
+    elif (obj.name == "mosek") and \
+       (not MosekDirect.license_is_valid()):
+        obj.available = False
     else:
         obj.available = \
             (opt.available(exception_flag=False)) and \
@@ -79,6 +82,20 @@ def test_solver_cases(*args):
     if len(_test_solver_cases) == 0:
         logging.disable(logging.WARNING)
 
+        #
+        # MOSEK
+        #
+
+        _mosek_capabilities = set(['linear',
+                                   'integer',
+                                   'quadratic_objective',
+                                   'quadratic_constraint'])
+
+        _test_solver_cases['mosek', 'python'] = initialize(
+            name='mosek',
+            io='python',
+            capabilities=_mosek_capabilities,
+            import_suffixes=['dual', 'rc', 'slack'])
         #
         # CPLEX
         #
