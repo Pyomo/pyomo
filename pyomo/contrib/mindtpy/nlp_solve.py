@@ -37,6 +37,16 @@ def solve_NLP_subproblem(solve_data, config, always_solve_fix_nlp=False):
         config.logger.info('NLP %s: Solve subproblem for fixed discretes.'
                            % (solve_data.nlp_iter,))
         TransformationFactory('core.fix_discrete').apply_to(sub_nlp)
+
+        main_objective = next(sub_nlp.component_data_objects(Objective, active=True))
+        if main_objective.sense == 'minimize':
+            sub_nlp.increasing_objective_cut = Constraint(
+                expr=sub_nlp.MindtPy_utils.objective_value
+                     <= solve_data.UB - config.feas_pump_delta*min(1e-4, abs(solve_data.UB)))
+        else:
+            sub_nlp.increasing_objective_cut = Constraint(
+                expr=sub_nlp.MindtPy_utils.objective_value
+                     >= solve_data.LB + config.feas_pump_delta*min(1e-4, abs(solve_data.LB)))
     elif config.strategy is 'feas_pump':
         TransformationFactory('core.relax_integrality').apply_to(sub_nlp)
         main_objective = next(sub_nlp.component_data_objects(Objective, active=True))
