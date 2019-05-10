@@ -216,7 +216,7 @@ class MindtPySolver(object):
         description="Bound applied to the linearization of the objective function if master MILP is unbounded."
     ))
     CONFIG.declare("integer_to_binary", ConfigValue(
-        default=False,
+        default=True,
         description="Convert integer variables to binaries (for integer cuts)",
         domain=bool
     ))
