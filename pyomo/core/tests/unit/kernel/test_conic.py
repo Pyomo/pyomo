@@ -869,6 +869,9 @@ class TestMisc(unittest.TestCase):
         c = _build_linking_constraints([],[])
         self.assertIs(type(c), constraint_tuple)
         self.assertEqual(len(c), 0)
+        c = _build_linking_constraints([None],[variable()])
+        self.assertIs(type(c), constraint_tuple)
+        self.assertEqual(len(c), 0)
         v = [1,
              data_expression(),
              variable(),

@@ -26,7 +26,9 @@ def _build_linking_constraints(v, v_aux):
     c_aux = []
     for vi, vi_aux in zip(v, v_aux):
         assert vi_aux.ctype is IVariable
-        if is_numeric_data(vi):
+        if vi is None:
+            continue
+        elif is_numeric_data(vi):
             c_aux.append(
                 linear_constraint(variables=(vi_aux,),
                                   coefficients=(1,),
@@ -167,7 +169,7 @@ class quadratic(_ConicBase):
         """Builds a conic domain. Input arguments take the
         same form as those of the conic constraint, but in
         place of each variable, one can optionally supply a
-        constant or linear expression.
+        constant, linear expression, or None.
 
         Returns
         -------
@@ -262,7 +264,7 @@ class rotated_quadratic(_ConicBase):
         """Builds a conic domain. Input arguments take the
         same form as those of the conic constraint, but in
         place of each variable, one can optionally supply a
-        constant or linear expression.
+        constant, linear expression, or None.
 
         Returns
         -------
@@ -365,7 +367,7 @@ class primal_exponential(_ConicBase):
         """Builds a conic domain. Input arguments take the
         same form as those of the conic constraint, but in
         place of each variable, one can optionally supply a
-        constant or linear expression.
+        constant, linear expression, or None.
 
         Returns
         -------
@@ -461,10 +463,10 @@ class primal_power(_ConicBase):
         self._r2 = r2
         self._x = tuple(x)
         self._alpha = alpha
-        assert all(isinstance(xi, IVariable)
-                   for xi in self._x)
         assert isinstance(self._r1, IVariable)
         assert isinstance(self._r2, IVariable)
+        assert all(isinstance(xi, IVariable)
+                   for xi in self._x)
         if not is_numeric_data(self._alpha):
             raise TypeError(
                 "The type of the alpha parameter of a conic "
@@ -476,7 +478,7 @@ class primal_power(_ConicBase):
         """Builds a conic domain. Input arguments take the
         same form as those of the conic constraint, but in
         place of each variable, one can optionally supply a
-        constant or linear expression.
+        constant, linear expression, or None.
 
         Returns
         -------
@@ -579,16 +581,16 @@ class dual_exponential(_ConicBase):
         self._r = r
         self._x1 = x1
         self._x2 = x2
+        assert isinstance(self._r, IVariable)
         assert isinstance(self._x1, IVariable)
         assert isinstance(self._x2, IVariable)
-        assert isinstance(self._r, IVariable)
 
     @classmethod
     def as_domain(cls, r, x1, x2):
         """Builds a conic domain. Input arguments take the
         same form as those of the conic constraint, but in
         place of each variable, one can optionally supply a
-        constant or linear expression.
+        constant, linear expression, or None.
 
         Returns
         -------
@@ -686,10 +688,10 @@ class dual_power(_ConicBase):
         self._r2 = r2
         self._x = tuple(x)
         self._alpha = alpha
-        assert all(isinstance(xi, IVariable)
-                   for xi in self._x)
         assert isinstance(self._r1, IVariable)
         assert isinstance(self._r2, IVariable)
+        assert all(isinstance(xi, IVariable)
+                   for xi in self._x)
         if not is_numeric_data(self._alpha):
             raise TypeError(
                 "The type of the alpha parameter of a conic "
@@ -701,7 +703,7 @@ class dual_power(_ConicBase):
         """Builds a conic domain. Input arguments take the
         same form as those of the conic constraint, but in
         place of each variable, one can optionally supply a
-        constant or linear expression.
+        constant, linear expression, or None.
 
         Returns
         -------

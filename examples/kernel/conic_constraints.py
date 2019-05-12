@@ -61,15 +61,17 @@ print(c.body)
 
 #
 # Alternative interface available for each, where inputs can
-# be variables, constants, or linear expressions. Return
+# be variables, constants, linear expressions, or None. Return
 # type is a block with the core conic constraint linked to
 # the inputs via auxiliary variables and constraints.
 #
 
 b = pmo.conic.quadratic.as_domain(
-    x=[pmo.variable() + 1, 1.5],
-    r=pmo.variable(lb=0) / 2)
+    r=0.5*pmo.variable(lb=0),
+    x=[pmo.variable() + 1, 1.5, None, None])
 assert type(b.q) is pmo.conic.quadratic
 assert type(b.c) is pmo.constraint_tuple
-assert type(b.x) is pmo.variable_tuple
+assert len(b.c) == 3
 assert type(b.r) is pmo.variable
+assert type(b.x) is pmo.variable_tuple
+assert len(b.x) == 4
