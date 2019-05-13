@@ -181,22 +181,29 @@ def add_integer_cut(var_values, target_model, solve_data, config, feasible=False
         GDPopt = m.GDPopt_utils
         var_value_is_one = ComponentSet()
         var_value_is_zero = ComponentSet()
+        indicator_vars = ComponentSet(disj.indicator_var for disj in GDPopt.disjunct_list)
         for var, val in zip(GDPopt.variable_list, var_values):
             if not var.is_binary():
                 continue
             if var.fixed:
-                if val is not None and var.value != val:
-                    # val needs to be None or match var.value. Otherwise, we have a
-                    # contradiction.
-                    raise ValueError(
-                        "Fixed variable %s has value %s != "
-                        "provided value of %s." % (var.name, var.value, val))
-                val = var.value
+                # if val is not None and var.value != val:
+                #     # val needs to be None or match var.value. Otherwise, we have a
+                #     # contradiction.
+                #     raise ValueError(
+                #         "Fixed variable %s has value %s != "
+                #         "provided value of %s." % (var.name, var.value, val))
+
+                # Note: FBBT may cause some disjuncts to be fathomed, which can cause
+                # a fixed variable to be different than the subproblem value.
+                # In this case, we simply construct the integer cut as usual with
+                # the subproblem value rather than its fixed value.
+                if val is None:
+                    val = var.value
 
             if not config.force_subproblem_nlp:
-                # Skip indicator variables
-                # TODO we should implement this as a check among Disjuncts instead
-                if not (var.local_name == 'indicator_var' and var.parent_block().type() == Disjunct):
+                # By default (config.force_subproblem_nlp = False), we only want
+                # the integer cuts to be over disjunct indicator vars.
+                if var not in indicator_vars:
                     continue
 
             if fabs(val - 1) <= config.integer_tolerance:
@@ -231,3 +238,10 @@ def add_integer_cut(var_values, target_model, solve_data, config, feasible=False
                 'Registering explored configuration. '
                 'Backtracking is currently %s.' % backtracking_enabled)
             GDPopt.no_backtracking.add(expr=int_cut)
+
+    if config.calc_disjunctive_bounds:
+        with time_code(solve_data.timing, "disjunctive variable bounding"):
+            TransformationFactory('contrib.compute_disj_var_bounds').apply_to(
+                m,
+                solver=config.mip_solver if config.obbt_disjunctive_bounds else None
+            )
