@@ -7,11 +7,12 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-
+import collections
+import inspect
 import itertools
 import logging
 import math
+import six
 
 try:
     from math import remainder
@@ -44,6 +45,120 @@ logger = logging.getLogger('pyomo.core')
 _prePython37 = sys.version_info[:2] < (3,7)
 
 FLATTEN_CROSS_PRODUCT = True
+
+
+def Initializer(obj, init, allow_generators=False,
+                treat_sequences_as_mappings=True):
+    if init.__class__ in native_types:
+        return _ScalarInitializer(init)
+    elif inspect.isgeneratorfunction(init):
+        if not allow_generators:
+            raise ValueError("Generator functions are not allowed")
+        if obj.is_indexed():
+            return _IndexedCallInitializer(init)
+        else:
+            return _ScalarCallInitializer(init)
+    elif inspect.isgenerator(init):
+        if not allow_generators:
+            raise ValueError("Generators are not allowed")
+        return _ScalarInitializer(init)
+    elif inspect.isfunction(init):
+        if obj.is_indexed():
+            return _IndexedCallInitializer(init)
+        else:
+            return _ScalarCallInitializer(init)
+    elif isinstance(init, collections.Mapping):
+        return _ItemInitializer(init)
+    elif isinstance(init, collections.Sequence) \
+            and not isinstance(init, six.string_types):
+        if treat_sequences_as_mappings:
+            return _ItemInitializer(init)
+        else:
+            return _ScalarInitializer(init)
+    else:
+        return _ScalarInitializer(init)
+
+class _InitializerBase(object):
+    __slots__ = ()
+
+    def __getstate__(self):
+        return dict((k, getattr(self,k)) for k in self.__slots__)
+
+    def __setstate__(self, state):
+        for key, val in interitems(state):
+            object.__setattr__(self, key, val)
+
+class _ScalarInitializer(_InitializerBase):
+    __slots__ = ('_val',)
+    def __init__(self, _val):
+        self._val = _val
+    def __call__(self, parent, idx):
+        return self._val
+
+class _ItemInitializer(_InitializerBase):
+    __slots__ = ('_dict',)
+    def __init__(self, _dict):
+        self._dict = _dict
+    def __call__(self, parent, idx):
+        return self._dict[idx]
+
+class _IndexedCallInitializer(_InitializerBase):
+    __slots__ = ('_fcn',)
+    def __init__(self, _fcn):
+        self._fcn = _fcn
+    def __call__(self, parent, idx):
+        return self._fcn(parent, *idx)
+
+class _ScalarCallInitializer(_InitializerBase):
+    __slots__ = ('_fcn',)
+    def __init__(self, _fcn):
+        self._fcn = _fcn
+    def __call__(self, parent, idx):
+        return self._fcn(parent)
+
+class SetInitializer(_InitializerBase):
+    __slots__ = ('_set',)
+    def __init__(self, obj, init, allow_generators=True):
+        if init is None:
+            self._set = None
+        else:
+            self._set = Initializer(
+                obj, init, allow_generators=allow_generators,
+                treat_sequences_as_mappings=False)
+
+    def intersect(self, other):
+        if self._set is None:
+            self._set = other
+        elif type(other) is SetInitializer:
+            if other._set is not None:
+                self._set = _SetIntersectInitializer(self._set, other._set)
+        else:
+            self._set = _SetIntersectInitializer(self._set, other)
+
+    def __call__(self, parent, idx):
+        if self._set is None:
+            return Any
+        else:
+            return self._set(parent, idx)
+
+class _SetIntersectInitializer(_InitializerBase):
+    __slots__ = ('_A','_B',)
+    def __init__(self, setA, setB):
+        self._A = setA
+        self._B = setB
+
+    def __call__(self, parent, idx):
+        return _SetIntersection(self._A(parent, idx), self._B(parent, idx))
+
+class RangeSetInitializer(_InitializerBase):
+    __slots__ = ('_init')
+    def __init__(self, obj, init):
+        self._init = Initializer(obj, init)
+
+    def __call__(self, parent, idx):
+        start, end = self._init(parent, idx)
+        return RangeSet(start, end, 0)
+
 
 def process_setarg(arg):
     """
@@ -1249,21 +1364,15 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
     """A general unordered iterable Set"""
     __slots__ = ('_values', '_domain', '_validate', '_dimen')
 
-    def __init__(self, component, domain, initialize, dimen):
+    def __init__(self, component):
         _SetData.__init__(self, component=component)
         # Derived classes (like _OrderedSetData) may want to change the
         # storage
         if not hasattr(self, '_values'):
             self._values = set()
-        if domain is None:
-            self._domain = Any
-        else:
-            self._domain = domain
-        self._dimen = dimen
+        self._domain = None
         self._validate = None
-        if initialize is not None:
-            for i in initialize:
-                self.add(i)
+        self._dimen = None
 
     def __getstate__(self):
         """
@@ -1494,21 +1603,10 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
 
     __slots__ = ('_ordered_values',)
 
-    _UnorderedInitializers = {set}
-    if _prePython37:
-        _UnorderedInitializers.add(dict)
-
-    def __init__(self, component, domain, initialize, dimen):
+    def __init__(self, component):
         self._values = {}
         self._ordered_values = []
-        _FiniteSetData.__init__(self, component=component, domain=domain,
-                                initialize=initialize, dimen=dimen)
-        if type(initialize) in self._UnorderedInitializers:
-            logger.warning(
-                "Initializing an Ordered set with a fundamentally unordered "
-                "'initialize' data source (type: %s).  This WILL potentially "
-                "lead to nondeterministic behaior in Pyomo"
-                % (type(initialize).__name__,))
+        _FiniteSetData.__init__(self, component=component)
 
     def __getstate__(self):
         """
@@ -1617,11 +1715,10 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
 
     __slots__ = ('_is_sorted',)
 
-    def __init__(self, component, domain, initialize):
+    def __init__(self, component):
         # An empty set is sorted...
         self._is_sorted = True
-        _OrderedSetData.__init__(self, component=component, domain=domain,
-                                 initialize=initialize)
+        _OrderedSetData.__init__(self, component=component)
 
     def __getstate__(self):
         """
@@ -1754,13 +1851,16 @@ class Set(IndexedComponent):
 
     class InsertionOrder(object): pass
     class SortedOrder(object): pass
-    _ValidOrderedAuguments = {None, False, InsertionOrder, SortedOrder}
+    _ValidOrderedAuguments = {True, False, InsertionOrder, SortedOrder}
+    _UnorderedInitializers = {set}
+    if _prePython37:
+        _UnorderedInitializers.add(dict)
 
     def __new__(cls, *args, **kwds):
         if cls != Set:
             return super(Set, cls).__new__(cls)
 
-        ordered = kwds.pop('ordered', True)
+        ordered = kwds.get('ordered', True)
         if ordered is True:
             ordered = Set.InsertionOrder
         if ordered not in Set._ValidOrderedAuguments:
@@ -1768,7 +1868,7 @@ class Set(IndexedComponent):
                 "Set 'ordered' argument is not valid (must be one of {%s})" % (
                     ', '.join(sorted(
                         'Set.'+x.__name__ if isinstance(x,type) else str(x)
-                        for x in Set._ValidOrderedAuguments))))
+                    ))))
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             if ordered is Set.InsertionOrder:
                 return OrderedSimpleSet.__new__(OrderedSimpleSet)
@@ -1780,7 +1880,7 @@ class Set(IndexedComponent):
             newObj = IndexedSet.__new__(IndexedSet)
             if ordered is Set.InsertionOrder:
                 newObj._ComponentDataClass = _OrderedSetData
-            elif ordered is Set.SortedOrder:
+            elif ordered is Set.SortedOrder or inspect.isfunction(ordered):
                 newObj._ComponentDataClass = _SortedSetData
             else:
                 newObj._ComponentDataClass = _FiniteSetData
@@ -1790,6 +1890,29 @@ class Set(IndexedComponent):
         kwds.setdefault('ctype', Set)
         # Drop the ordered flag: this was processed by __new__
         kwds.pop('ordered',None)
+        # 'domain', 'within', and 'bounds' are synonyms, in that they
+        # restrict the set of valid set values.  If more than one is
+        # specified, we will restrict the Set values to the intersection
+        # of the individual arguments
+        _domain = kwds.pop('domain', None)
+        _within = kwds.pop('within', None)
+        _bounds = kwds.pop('bounds', None)
+        self._init_domain = SetInitializer(self, None)
+        if _domain is not None:
+            self._init_domain.intersect(SetInitializer(self, _domain))
+        if _within is not None:
+            self._init_domain.intersect(SetInitializer(self, _within))
+        if _bounds is not None:
+            self._init_domain.intersect(RangeSetInitializer(self, _bounds))
+
+        self._init_dimen = Initializer(
+            self, kwds.pop('dimen', _UnknownSetDimen))
+        self._init_values = Initializer(
+            self, kwds.pop('initialize', ()), treat_sequences_as_mappings=False)
+        self._init_validate = Initializer(self, kwds.pop('validate', None))
+        self._init_filter = Initializer(self, kwds.pop('filter', None))
+        if 'virtual' in kwds:
+            deprecated()
         IndexedComponent.__init__(self, *args, **kwds)
 
     def construct(self, data=None):
@@ -1800,7 +1923,38 @@ class Set(IndexedComponent):
             return
         timer = ConstructionTimer(self)
         self._constructed=True
+        for index in self.index_set():
+            self._getitem_when_not_present(index)
         timer.report()
+
+    #
+    # This method must be defined on subclasses of
+    # IndexedComponent that support implicit definition
+    #
+    def _getitem_when_not_present(self, index):
+        """Returns the default component data value."""
+        if index is None and not self.is_indexed():
+            obj = self._data[index] = self
+        else:
+            obj = self._data[index] = self._ComponentDataClass(component=self)
+        obj._dimen = self._init_dimen(self, index)
+        obj._domain = self._init_domain(self, index)
+        obj._validate = self._init_validate(self, index)
+        _filter = self._init_filter(self, index)
+        _values = self._init_values(self, index)
+        if self.is_ordered() and type(_values) in self._UnorderedInitializers:
+            logger.warning(
+                "Initializing an Ordered set with a fundamentally unordered "
+                "'initialize' data source (type: %s).  This WILL potentially "
+                "lead to nondeterministic behaior in Pyomo"
+                % (type(initialize).__name__,))
+
+        for val in _values:
+            if _filter is not None:
+                if not _filter(self.parent(), val):
+                    continue
+            obj.add(val)
+        return obj
 
     def _pprint(self):
         """
@@ -1823,29 +1977,17 @@ class Set(IndexedComponent):
 
 class FiniteSimpleSet(_FiniteSetData, Set):
     def __init__(self, **kwds):
-        domain = kwds.pop('domain', None)
-        initialize = kwds.pop('initialize', None)
-        dimen = kwds.pop('dimen', _UnknownSetDimen)
-        _FiniteSetData.__init__(self, component=self, domain=domain,
-                                initialize=initialize, dimen=dimen)
+        _FiniteSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
 class OrderedSimpleSet(_OrderedSetData, Set):
     def __init__(self, **kwds):
-        domain = kwds.pop('domain', None)
-        initialize = kwds.pop('initialize', None)
-        dimen = kwds.pop('dimen', _UnknownSetDimen)
-        _OrderedSetData.__init__(self, component=self, domain=domain,
-                                 initialize=initialize, dimen=dimen)
+        _OrderedSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
 class SortedSimpleSet(_SortedSetData, Set):
     def __init__(self, **kwds):
-        domain = kwds.pop('domain', None)
-        initialize = kwds.pop('initialize', None)
-        dimen = kwds.pop('dimen', _UnknownSetDimen)
-        _SortedSetData.__init__(self, component=self, domain=domain,
-                                initialize=initialize, dimen=dimen)
+        _SortedSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
 class IndexedSet(Set):
@@ -2103,14 +2245,12 @@ class _FiniteRangeSetData( _SortedSetMixin,
             "Cannot identify position of %s in Set %s: item not in Set"
             % (item, self.name))
 
-    def ranges(self):
-        # We must redefine ranges() so that we get the
-        # _InfiniteRangeSetData version and not the one from
-        # _FiniteSetMixin.
-        return _InfiniteRangeSetData.ranges(self)
+    # We must redefine ranges() and bounds() so that we get the
+    # _InfiniteRangeSetData version and not the one from
+    # _FiniteSetMixin.
+    bounds = _InfiniteRangeSetData.bounds
+    ranges = _InfiniteRangeSetData.ranges
 
-    def bounds(self):
-        return _InfiniteRangeSetData.bounds(self)
 
 class RangeSet(Component):
     """
@@ -2235,8 +2375,12 @@ class _SetOperator(_SetData, Set):
                 if s.parent_block() is None:
                     implicit.append(s)
             else:
+                # TBD: should lists/tuples be copied into Sets, or
+                # should we preserve the reference using SetOf?
+                # Historical behavior is to *copy* into a Set.
                 ans.append(Set(initialize=s,
                                ordered=type(s) in {tuple, list}))
+                ans[-1].construct()
                 implicit.append(ans[-1])
         return tuple(ans), tuple(implicit)
 
@@ -2808,6 +2952,7 @@ class _SetProduct_OrderedSet(_OrderedSetMixin, _SetProduct_FiniteSet):
 class _AnySet(_SetData, Set):
     def __init__(self, **kwds):
         _SetData.__init__(self, component=self)
+        kwds.setdefault('domain', self)
         Set.__init__(self, **kwds)
 
     def __contains__(self, val):
@@ -2815,6 +2960,9 @@ class _AnySet(_SetData, Set):
 
     def ranges(self):
         yield _AnyRange()
+
+    def bounds(self):
+        return (None, None)
 
 Any = _AnySet(name='Any', doc="A global Pyomo Set that admits any value")
 
