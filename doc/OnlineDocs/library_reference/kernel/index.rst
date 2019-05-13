@@ -138,8 +138,9 @@ constraint containers (:python:`constraint_tuple`,
 :python:`constraint_list`, :python:`constraint_dict`).
 
 Each conic constraint class supports two methods of
-instantiation. The first method is to directly instantiate
-a conic object, providing all necessary input variables:
+instantiation. The first method is to directly instantiate a
+conic constraint object, providing all necessary input
+variables:
 
 .. literalinclude:: examples/conic_Class.spy
    :language: python
@@ -154,13 +155,14 @@ To overcome this limitation, and to provide a more general
 way of defining conic domains, each conic constraint class
 provides the :python:`as_domain` class method. This
 alternate constructor has the same argument signature as the
-class, but in place of variables, each argument can
-optionally be assigned a constant or expression. The
-:python:`as_domain` method will return a :python:`block`
-object that includes the core conic constraint expressed
-using automatically created auxiliary variables, which are
-linked to the input arguments using auxiliary
-constraints. Example:
+class, but in place of each variable, one can optionally
+provide a constant, a linear expression, or
+:python:`None`. The :python:`as_domain` class method returns
+a :python:`block` object that includes the core conic
+constraint, auxiliary variables used to express the conic
+constraint, as well as auxiliary constraints that link the
+inputs (that are not :python:`None`) to the auxiliary
+variables. Example:
 
 .. literalinclude:: examples/conic_Domain.spy
    :language: python

@@ -26,7 +26,9 @@ def _build_linking_constraints(v, v_aux):
     c_aux = []
     for vi, vi_aux in zip(v, v_aux):
         assert vi_aux.ctype is IVariable
-        if is_numeric_data(vi):
+        if vi is None:
+            continue
+        elif is_numeric_data(vi):
             c_aux.append(
                 linear_constraint(variables=(vi_aux,),
                                   coefficients=(1,),
@@ -142,63 +144,63 @@ class quadratic(_ConicBase):
 
     Parameters
     ----------
-    x : list[:class:`variable`]
-        An iterable of variables.
     r : :class:`variable`
         A variable.
+    x : list[:class:`variable`]
+        An iterable of variables.
     """
     __slots__ = ("_parent",
                  "_storage_key",
                  "_active",
                  "_body",
-                 "_x",
                  "_r",
+                 "_x",
                  "__weakref__")
-    def __init__(self, x, r):
+    def __init__(self, r, x):
         super(quadratic, self).__init__()
-        self._x = tuple(x)
         self._r = r
+        self._x = tuple(x)
+        assert isinstance(self._r, IVariable)
         assert all(isinstance(xi, IVariable)
                    for xi in self._x)
-        assert isinstance(self._r, IVariable)
 
     @classmethod
-    def as_domain(cls, x, r):
+    def as_domain(cls, r, x):
         """Builds a conic domain. Input arguments take the
         same form as those of the conic constraint, but in
         place of each variable, one can optionally supply a
-        constant or linear expression.
+        constant, linear expression, or None.
 
         Returns
         -------
         block
             A block object with the core conic constraint
             (block.q) expressed using auxiliary variables
-            (block.x, block.r) linked to the input arguments
+            (block.r, block.x) linked to the input arguments
             through auxiliary constraints (block.c).
         """
         b = block()
+        b.r = variable(lb=0)
         b.x = variable_tuple(
             [variable() for i in range(len(x))])
-        b.r = variable(lb=0)
-        b.c = _build_linking_constraints(list(x) + [r],
-                                         list(b.x) + [b.r])
-        b.q = cls(x=b.x, r=b.r)
+        b.c = _build_linking_constraints([r] + list(x),
+                                         [b.r] + list(b.x))
+        b.q = cls(r=b.r, x=b.x)
         return b
-
-    @property
-    def x(self):
-        return self._x
 
     @property
     def r(self):
         return self._r
 
+    @property
+    def x(self):
+        return self._x
+
     #
     # Define the _ConicBase abstract methods
     #
 
-    def _body_function(self, x, r):
+    def _body_function(self, r, x):
         """A function that defines the body expression"""
         return sum(xi**2 for xi in x) - r**2
 
@@ -208,9 +210,9 @@ class quadratic(_ConicBase):
         return the current value of each variable in place
         of the variables themselves."""
         if not values:
-            return self.x, self.r
+            return self.r, self.x
         else:
-            return tuple(xi.value for xi in self.x), self.r.value
+            return self.r.value, tuple(xi.value for xi in self.x)
 
     def check_convexity_conditions(self, relax=False):
         """Returns True if all convexity conditions for the
@@ -231,61 +233,57 @@ class rotated_quadratic(_ConicBase):
 
     Parameters
     ----------
-    x : list[:class:`variable`]
-        An iterable of variables.
     r1 : :class:`variable`
         A variable.
     r2 : :class:`variable`
         A variable.
+    x : list[:class:`variable`]
+        An iterable of variables.
     """
     __slots__ = ("_parent",
                  "_storage_key",
                  "_active",
                  "_body",
-                 "_x",
                  "_r1",
                  "_r2",
+                 "_x",
                  "__weakref__")
 
-    def __init__(self, x, r1, r2):
+    def __init__(self, r1, r2, x):
         super(rotated_quadratic, self).__init__()
-        self._x = tuple(x)
         self._r1 = r1
         self._r2 = r2
-        assert all(isinstance(xi, IVariable)
-                   for xi in self._x)
+        self._x = tuple(x)
         assert isinstance(self._r1, IVariable)
         assert isinstance(self._r2, IVariable)
+        assert all(isinstance(xi, IVariable)
+                   for xi in self._x)
 
     @classmethod
-    def as_domain(cls, x, r1, r2):
+    def as_domain(cls, r1, r2, x):
         """Builds a conic domain. Input arguments take the
         same form as those of the conic constraint, but in
         place of each variable, one can optionally supply a
-        constant or linear expression.
+        constant, linear expression, or None.
 
         Returns
         -------
         block
             A block object with the core conic constraint
             (block.q) expressed using auxiliary variables
-            (block.x, block.r1, block.r2) linked to the
+            (block.r1, block.r2, block.x) linked to the
             input arguments through auxiliary constraints
             (block.c).
         """
         b = block()
-        b.x = variable_tuple(
-            [variable() for i in range(len(x))])
         b.r1 = variable(lb=0)
         b.r2 = variable(lb=0)
-        b.c = _build_linking_constraints(list(x) + [r1,r2],
-                                         list(b.x) + [b.r1,b.r2])
-        b.q = cls(x=b.x, r1=b.r1, r2=b.r2)
+        b.x = variable_tuple(
+            [variable() for i in range(len(x))])
+        b.c = _build_linking_constraints([r1,r2] + list(x),
+                                         [b.r1,b.r2] + list(b.x))
+        b.q = cls(r1=b.r1, r2=b.r2, x=b.x)
         return b
-
-    @property
-    def x(self):
-        return self._x
 
     @property
     def r1(self):
@@ -295,11 +293,15 @@ class rotated_quadratic(_ConicBase):
     def r2(self):
         return self._r2
 
+    @property
+    def x(self):
+        return self._x
+
     #
     # Define the _ConicBase abstract methods
     #
 
-    def _body_function(self, x, r1, r2):
+    def _body_function(self, r1, r2, x):
         """A function that defines the body expression"""
         return sum(xi**2 for xi in x) - 2*r1*r2
 
@@ -309,10 +311,10 @@ class rotated_quadratic(_ConicBase):
         return the current value of each variable in place
         of the variables themselves."""
         if not values:
-            return self.x, self.r1, self.r2
+            return self.r1, self.r2, self.x
         else:
-            return tuple(xi.value for xi in self.x), \
-                self.r1.value, self.r2.value
+            return self.r1.value, self.r2.value, \
+                tuple(xi.value for xi in self.x)
 
     def check_convexity_conditions(self, relax=False):
         """Returns True if all convexity conditions for the
@@ -335,55 +337,59 @@ class primal_exponential(_ConicBase):
 
     Parameters
     ----------
+    r : :class:`variable`
+        A variable.
     x1 : :class:`variable`
         A variable.
     x2 : :class:`variable`
-        A variable.
-    r : :class:`variable`
         A variable.
     """
     __slots__ = ("_parent",
                  "_storage_key",
                  "_active",
                  "_body",
+                 "_r",
                  "_x1",
                  "_x2",
-                 "_r",
                  "__weakref__")
 
-    def __init__(self, x1, x2, r):
+    def __init__(self, r, x1, x2):
         super(primal_exponential, self).__init__()
+        self._r = r
         self._x1 = x1
         self._x2 = x2
-        self._r = r
+        assert isinstance(self._r, IVariable)
         assert isinstance(self._x1, IVariable)
         assert isinstance(self._x2, IVariable)
-        assert isinstance(self._r, IVariable)
 
     @classmethod
-    def as_domain(cls, x1, x2, r):
+    def as_domain(cls, r, x1, x2):
         """Builds a conic domain. Input arguments take the
         same form as those of the conic constraint, but in
         place of each variable, one can optionally supply a
-        constant or linear expression.
+        constant, linear expression, or None.
 
         Returns
         -------
         block
             A block object with the core conic constraint
             (block.q) expressed using auxiliary variables
-            (block.x1, block.x2, block.r) linked to the
+            (block.r, block.x1, block.x2) linked to the
             input arguments through auxiliary constraints
             (block.c).
         """
         b = block()
+        b.r = variable(lb=0)
         b.x1 = variable(lb=0)
         b.x2 = variable()
-        b.r = variable(lb=0)
-        b.c = _build_linking_constraints([x1,x2,r],
-                                         [b.x1,b.x2,b.r])
-        b.q = cls(x1=b.x1, x2=b.x2, r=b.r)
+        b.c = _build_linking_constraints([r,x1,x2],
+                                         [b.r,b.x1,b.x2])
+        b.q = cls(r=b.r, x1=b.x1, x2=b.x2)
         return b
+
+    @property
+    def r(self):
+        return self._r
 
     @property
     def x1(self):
@@ -393,15 +399,11 @@ class primal_exponential(_ConicBase):
     def x2(self):
         return self._x2
 
-    @property
-    def r(self):
-        return self._r
-
     #
     # Define the _ConicBase abstract methods
     #
 
-    def _body_function(self, x1, x2, r):
+    def _body_function(self, r, x1, x2):
         """A function that defines the body expression"""
         return x1*exp(x2/x1) - r
 
@@ -411,9 +413,9 @@ class primal_exponential(_ConicBase):
         return the current value of each variable in place
         of the variables themselves."""
         if not values:
-            return self.x1, self.x2, self.r
+            return self.r, self.x1, self.x2
         else:
-            return self.x1.value, self.x2.value, self.r.value
+            return self.r.value, self.x1.value, self.x2.value
 
     def check_convexity_conditions(self, relax=False):
         """Returns True if all convexity conditions for the
@@ -436,12 +438,12 @@ class primal_power(_ConicBase):
 
     Parameters
     ----------
-    x : list[:class:`variable`]
-        An iterable of variables.
     r1 : :class:`variable`
         A variable.
     r2 : :class:`variable`
         A variable.
+    x : list[:class:`variable`]
+        An iterable of variables.
     alpha : float, :class:`parameter`, etc.
         A constant term.
     """
@@ -449,22 +451,22 @@ class primal_power(_ConicBase):
                  "_storage_key",
                  "_active",
                  "_body",
-                 "_x",
                  "_r1",
                  "_r2",
+                 "_x",
                  "_alpha",
                  "__weakref__")
 
-    def __init__(self, x, r1, r2, alpha):
+    def __init__(self, r1, r2, x, alpha):
         super(primal_power, self).__init__()
-        self._x = tuple(x)
         self._r1 = r1
         self._r2 = r2
+        self._x = tuple(x)
         self._alpha = alpha
-        assert all(isinstance(xi, IVariable)
-                   for xi in self._x)
         assert isinstance(self._r1, IVariable)
         assert isinstance(self._r2, IVariable)
+        assert all(isinstance(xi, IVariable)
+                   for xi in self._x)
         if not is_numeric_data(self._alpha):
             raise TypeError(
                 "The type of the alpha parameter of a conic "
@@ -472,34 +474,30 @@ class primal_power(_ConicBase):
                 "objects that store numeric data.")
 
     @classmethod
-    def as_domain(cls, x, r1, r2, alpha):
+    def as_domain(cls, r1, r2, x, alpha):
         """Builds a conic domain. Input arguments take the
         same form as those of the conic constraint, but in
         place of each variable, one can optionally supply a
-        constant or linear expression.
+        constant, linear expression, or None.
 
         Returns
         -------
         block
             A block object with the core conic constraint
             (block.q) expressed using auxiliary variables
-            (block.x, block.r1, block.r2) linked to the
+            (block.r1, block.r2, block.x) linked to the
             input arguments through auxiliary constraints
             (block.c).
         """
         b = block()
-        b.x = variable_tuple(
-            [variable() for i in range(len(x))])
         b.r1 = variable(lb=0)
         b.r2 = variable(lb=0)
-        b.c = _build_linking_constraints(list(x) + [r1,r2],
-                                         list(b.x) + [b.r1,b.r2])
-        b.q = cls(x=b.x, r1=b.r1, r2=b.r2, alpha=alpha)
+        b.x = variable_tuple(
+            [variable() for i in range(len(x))])
+        b.c = _build_linking_constraints([r1,r2] + list(x),
+                                         [b.r1,b.r2] + list(b.x))
+        b.q = cls(r1=b.r1, r2=b.r2, x=b.x, alpha=alpha)
         return b
-
-    @property
-    def x(self):
-        return self._x
 
     @property
     def r1(self):
@@ -510,6 +508,10 @@ class primal_power(_ConicBase):
         return self._r2
 
     @property
+    def x(self):
+        return self._x
+
+    @property
     def alpha(self):
         return self._alpha
 
@@ -517,7 +519,7 @@ class primal_power(_ConicBase):
     # Define the _ConicBase abstract methods
     #
 
-    def _body_function(self, x, r1, r2):
+    def _body_function(self, r1, r2, x):
         """A function that defines the body expression"""
         alpha = self.alpha
         return (sum(xi**2 for xi in x)**0.5) - \
@@ -530,10 +532,10 @@ class primal_power(_ConicBase):
         return the current value of each variable in place
         of the variables themselves."""
         if not values:
-            return self.x, self.r1, self.r2
+            return self.r1, self.r2, self.x
         else:
-            return tuple(xi.value for xi in self.x), \
-                self.r1.value, self.r2.value
+            return self.r1.value, self.r2.value, \
+                tuple(xi.value for xi in self.x)
 
     def check_convexity_conditions(self, relax=False):
         """Returns True if all convexity conditions for the
@@ -558,55 +560,59 @@ class dual_exponential(_ConicBase):
 
     Parameters
     ----------
+    r : :class:`variable`
+        A variable.
     x1 : :class:`variable`
         A variable.
     x2 : :class:`variable`
-        A variable.
-    r : :class:`variable`
         A variable.
     """
     __slots__ = ("_parent",
                  "_storage_key",
                  "_active",
                  "_body",
+                 "_r",
                  "_x1",
                  "_x2",
-                 "_r",
                  "__weakref__")
 
-    def __init__(self, x1, x2, r):
+    def __init__(self, r, x1, x2):
         super(dual_exponential, self).__init__()
+        self._r = r
         self._x1 = x1
         self._x2 = x2
-        self._r = r
+        assert isinstance(self._r, IVariable)
         assert isinstance(self._x1, IVariable)
         assert isinstance(self._x2, IVariable)
-        assert isinstance(self._r, IVariable)
 
     @classmethod
-    def as_domain(cls, x1, x2, r):
+    def as_domain(cls, r, x1, x2):
         """Builds a conic domain. Input arguments take the
         same form as those of the conic constraint, but in
         place of each variable, one can optionally supply a
-        constant or linear expression.
+        constant, linear expression, or None.
 
         Returns
         -------
         block
             A block object with the core conic constraint
             (block.q) expressed using auxiliary variables
-            (block.x1, block.x2, block.r) linked to the
+            (block.r, block.x1, block.x2) linked to the
             input arguments through auxiliary constraints
             (block.c).
         """
         b = block()
+        b.r = variable(lb=0)
         b.x1 = variable()
         b.x2 = variable(ub=0)
-        b.r = variable(lb=0)
-        b.c = _build_linking_constraints([x1,x2,r],
-                                         [b.x1,b.x2,b.r])
-        b.q = cls(x1=b.x1, x2=b.x2, r=b.r)
+        b.c = _build_linking_constraints([r,x1,x2],
+                                         [b.r,b.x1,b.x2])
+        b.q = cls(r=b.r, x1=b.x1, x2=b.x2)
         return b
+
+    @property
+    def r(self):
+        return self._r
 
     @property
     def x1(self):
@@ -616,15 +622,11 @@ class dual_exponential(_ConicBase):
     def x2(self):
         return self._x2
 
-    @property
-    def r(self):
-        return self._r
-
     #
     # Define the _ConicBase abstract methods
     #
 
-    def _body_function(self, x1, x2, r):
+    def _body_function(self, r, x1, x2):
         """A function that defines the body expression"""
         return -x2*exp((x1/x2) - 1) - r
 
@@ -634,9 +636,9 @@ class dual_exponential(_ConicBase):
         return the current value of each variable in place
         of the variables themselves."""
         if not values:
-            return self.x1, self.x2, self.r
+            return self.r, self.x1, self.x2
         else:
-            return self.x1.value, self.x2.value, self.r.value
+            return self.r.value, self.x1.value, self.x2.value
 
     def check_convexity_conditions(self, relax=False):
         """Returns True if all convexity conditions for the
@@ -661,12 +663,12 @@ class dual_power(_ConicBase):
 
     Parameters
     ----------
-    x : list[:class:`variable`]
-        An iterable of variables.
     r1 : :class:`variable`
         A variable.
     r2 : :class:`variable`
         A variable.
+    x : list[:class:`variable`]
+        An iterable of variables.
     alpha : float, :class:`parameter`, etc.
         A constant term.
     """
@@ -674,22 +676,22 @@ class dual_power(_ConicBase):
                  "_storage_key",
                  "_active",
                  "_body",
-                 "_x",
                  "_r1",
                  "_r2",
+                 "_x",
                  "_alpha",
                  "__weakref__")
 
-    def __init__(self, x, r1, r2, alpha):
+    def __init__(self, r1, r2, x, alpha):
         super(dual_power, self).__init__()
-        self._x = tuple(x)
         self._r1 = r1
         self._r2 = r2
+        self._x = tuple(x)
         self._alpha = alpha
-        assert all(isinstance(xi, IVariable)
-                   for xi in self._x)
         assert isinstance(self._r1, IVariable)
         assert isinstance(self._r2, IVariable)
+        assert all(isinstance(xi, IVariable)
+                   for xi in self._x)
         if not is_numeric_data(self._alpha):
             raise TypeError(
                 "The type of the alpha parameter of a conic "
@@ -697,34 +699,30 @@ class dual_power(_ConicBase):
                 "objects that store numeric data.")
 
     @classmethod
-    def as_domain(cls, x, r1, r2, alpha):
+    def as_domain(cls, r1, r2, x, alpha):
         """Builds a conic domain. Input arguments take the
         same form as those of the conic constraint, but in
         place of each variable, one can optionally supply a
-        constant or linear expression.
+        constant, linear expression, or None.
 
         Returns
         -------
         block
             A block object with the core conic constraint
             (block.q) expressed using auxiliary variables
-            (block.x, block.r1, block.r2) linked to the
+            (block.r1, block.r2, block.x) linked to the
             input arguments through auxiliary constraints
             (block.c).
         """
         b = block()
-        b.x = variable_tuple(
-            [variable() for i in range(len(x))])
         b.r1 = variable(lb=0)
         b.r2 = variable(lb=0)
-        b.c = _build_linking_constraints(list(x) + [r1,r2],
-                                         list(b.x) + [b.r1,b.r2])
-        b.q = cls(x=b.x, r1=b.r1, r2=b.r2, alpha=alpha)
+        b.x = variable_tuple(
+            [variable() for i in range(len(x))])
+        b.c = _build_linking_constraints([r1,r2] + list(x),
+                                         [b.r1,b.r2] + list(b.x))
+        b.q = cls(r1=b.r1, r2=b.r2, x=b.x, alpha=alpha)
         return b
-
-    @property
-    def x(self):
-        return self._x
 
     @property
     def r1(self):
@@ -735,6 +733,10 @@ class dual_power(_ConicBase):
         return self._r2
 
     @property
+    def x(self):
+        return self._x
+
+    @property
     def alpha(self):
         return self._alpha
 
@@ -742,7 +744,7 @@ class dual_power(_ConicBase):
     # Define the _ConicBase abstract methods
     #
 
-    def _body_function(self, x, r1, r2):
+    def _body_function(self, r1, r2, x):
         """A function that defines the body expression"""
         alpha = self.alpha
         return (sum(xi**2 for xi in x)**0.5) - \
@@ -755,10 +757,10 @@ class dual_power(_ConicBase):
         return the current value of each variable in place
         of the variables themselves."""
         if not values:
-            return self.x, self.r1, self.r2
+            return self.r1, self.r2, self.x
         else:
-            return tuple(xi.value for xi in self.x),\
-                self.r1.value, self.r2.value
+            return self.r1.value, self.r2.value, \
+                tuple(xi.value for xi in self.x)
 
     def check_convexity_conditions(self, relax=False):
         """Returns True if all convexity conditions for the
