@@ -50,6 +50,8 @@ FLATTEN_CROSS_PRODUCT = True
 def Initializer(obj, init, allow_generators=False,
                 treat_sequences_as_mappings=True):
     if init.__class__ in native_types:
+        if init is None:
+            return None
         return _ScalarInitializer(init)
     elif inspect.isgeneratorfunction(init):
         if not allow_generators:
@@ -107,7 +109,10 @@ class _IndexedCallInitializer(_InitializerBase):
     def __init__(self, _fcn):
         self._fcn = _fcn
     def __call__(self, parent, idx):
-        return self._fcn(parent, *idx)
+        if idx.__class__ is tuple:
+            return self._fcn(parent, *idx)
+        else:
+            return self._fcn(parent, idx)
 
 class _ScalarCallInitializer(_InitializerBase):
     __slots__ = ('_fcn',)
@@ -1937,23 +1942,33 @@ class Set(IndexedComponent):
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
-        obj._dimen = self._init_dimen(self, index)
-        obj._domain = self._init_domain(self, index)
-        obj._validate = self._init_validate(self, index)
-        _filter = self._init_filter(self, index)
-        _values = self._init_values(self, index)
-        if self.is_ordered() and type(_values) in self._UnorderedInitializers:
-            logger.warning(
-                "Initializing an Ordered set with a fundamentally unordered "
-                "'initialize' data source (type: %s).  This WILL potentially "
-                "lead to nondeterministic behaior in Pyomo"
-                % (type(initialize).__name__,))
-
-        for val in _values:
-            if _filter is not None:
-                if not _filter(self.parent(), val):
-                    continue
-            obj.add(val)
+        if self._init_dimen is not None:
+            obj._dimen = self._init_dimen(self, index)
+        if self._init_domain is not None:
+            obj._domain = self._init_domain(self, index)
+        if self._init_validate is not None:
+            obj._validate = self._init_validate(self, index)
+        if self._init_filter is not None:
+            _filter = self._init_filter(self, index)
+        else:
+            _filter = None
+        if self._init_values is not None:
+            _values = self._init_values(self, index)
+            if self.is_ordered() \
+                   and type(_values) in self._UnorderedInitializers:
+                logger.warning(
+                    "Initializing an Ordered set with a fundamentally "
+                    "unordered data source (type: %s).  This WILL potentially "
+                    "lead to nondeterministic behavior in Pyomo"
+                    % (type(initialize).__name__,))
+            if _filter is None:
+                for val in _values:
+                    obj.add(val)
+            else:
+                for val in _values:
+                    if not _filter(self.parent(), val):
+                        continue
+                    obj.add(val)
         return obj
 
     def _pprint(self):
