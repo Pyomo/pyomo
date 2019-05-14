@@ -1717,6 +1717,24 @@ class TestSetIntersection(unittest.TestCase):
     def test_infinite_setintersection(self):
         self._verify_infinite_intersection(RangeSet(0,4,0), RangeSet(2,6,0))
 
+    def test_odd_intersections(self):
+        # Test the intersection of an infinite discrete range with a
+        # finite continuous one
+        a = RangeSet(0, None, 2)
+        b = RangeSet(5,10,0)
+        x = a & b
+        self.assertIs(type(x), _SetIntersection_OrderedSet)
+        self.assertEqual(list(x), [6,8,10])
+
+        self.assertEqual(x.ord(6), 1)
+        self.assertEqual(x.ord(8), 2)
+        self.assertEqual(x.ord(10), 3)
+
+        self.assertEqual(x[1], 6)
+        self.assertEqual(x[2], 8)
+        self.assertEqual(x[3], 10)
+
+
 
 class TestSetDifference(unittest.TestCase):
     def _verify_ordered_difference(self, a, b):

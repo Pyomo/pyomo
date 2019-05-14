@@ -2568,7 +2568,12 @@ class _SetIntersection(_SetOperator):
         elif set0[1] or set1[1]:
             cls = _SetIntersection_FiniteSet
         else:
-            cls = _SetIntersection_InfiniteSet
+            cls = _SetIntersection_OrderedSet
+            for r0 in args[0].ranges():
+                for r01 in r0.range_intersection(args[1].ranges()):
+                    if not r01.is_finite():
+                        cls = _SetIntersection_InfiniteSet
+                        return cls.__new__(cls)
         return cls.__new__(cls)
 
     def ranges(self):
@@ -2589,10 +2594,19 @@ class _SetIntersection_FiniteSet(_FiniteSetMixin, _SetIntersection_InfiniteSet):
 
     def __iter__(self):
         set0, set1 = self._sets
-        if set1.is_ordered() and not set0.is_ordered():
-            set0, set1 = set1, set0
-        elif set1.is_finite() and not set0.is_finite():
-            set0, set1 = set1, set0
+        if not set0.is_ordered():
+            if set1.is_ordered():
+                set0, set1 = set1, set0
+            elif not set0.is_finite():
+                if set1.is_finite():
+                    set0, set1 = set1, set0
+                else:
+                    # THe odd case of a finite continuous range
+                    # intersected with an infinite discrete range...
+                    ranges = []
+                    for r0 in set0.ranges():
+                        ranges.extend(r0.range_intersection(set1.ranges()))
+                    return iter(RangeSet(ranges=ranges))
         return (s for s in set0 if s in set1)
 
     def __len__(self):
