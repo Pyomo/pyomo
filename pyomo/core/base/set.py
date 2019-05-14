@@ -1958,7 +1958,8 @@ class Set(IndexedComponent):
         if _within is not None:
             self._init_domain.intersect(SetInitializer(self, _within))
         if _bounds is not None:
-            self._init_domain.intersect(RangeSetInitializer(self, _bounds))
+            self._init_domain.intersect(RangeSetInitializer(
+                self, _bounds, default_step=0))
 
         self._init_dimen = Initializer(
             self, kwds.pop('dimen', _UnknownSetDimen))
