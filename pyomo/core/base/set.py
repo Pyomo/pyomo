@@ -60,7 +60,8 @@ def Initializer(obj, init, allow_generators=False,
             return _IndexedCallInitializer(init)
         else:
             return _ScalarCallInitializer(init)
-    elif inspect.isgenerator(init):
+    elif inspect.isgenerator(init) or hasattr(init, 'next') \
+         or hasattr(init, '__next__'):
         if not allow_generators:
             raise ValueError("Generators are not allowed")
         return _ConstantInitializer(init)
@@ -89,7 +90,7 @@ class _InitializerBase(object):
         return dict((k, getattr(self,k)) for k in self.__slots__)
 
     def __setstate__(self, state):
-        for key, val in interitems(state):
+        for key, val in iteritems(state):
             object.__setattr__(self, key, val)
 
 class _ConstantInitializer(_InitializerBase):
@@ -193,19 +194,19 @@ class _SetIntersectInitializer(_InitializerBase):
     def constant(self):
         return self._A.constant() and self._B.constant()
 
-    def setdefault(self, val):
-        # This is an intersection of two real sets... there is no
-        # default to set
-        pass
-
 class RangeSetInitializer(_InitializerBase):
-    __slots__ = ('_init')
-    def __init__(self, obj, init):
-        self._init = Initializer(obj, init)
+    __slots__ = ('_init', 'default_step',)
+    def __init__(self, obj, init, default_step=1):
+        self._init = Initializer(obj, init, treat_sequences_as_mappings=False)
+        self.default_step = default_step
 
     def __call__(self, parent, idx):
-        start, end = self._init(parent, idx)
-        return RangeSet(start, end, 0)
+        val = self._init(parent, idx)
+        if not isinstance(val, collections.Sequence):
+            val = (1, val, self.default_step)
+        if len(val) < 3:
+            val = tuple(val) + (self.default_step,)
+        return RangeSet(*tuple(val))
 
     def constant(self):
         return self._init.constant()
