@@ -52,7 +52,7 @@ def Initializer(obj, init, allow_generators=False,
     if init.__class__ in native_types:
         if init is None:
             return None
-        return _ScalarInitializer(init)
+        return _ConstantInitializer(init)
     elif inspect.isgeneratorfunction(init):
         if not allow_generators:
             raise ValueError("Generator functions are not allowed")
@@ -63,7 +63,7 @@ def Initializer(obj, init, allow_generators=False,
     elif inspect.isgenerator(init):
         if not allow_generators:
             raise ValueError("Generators are not allowed")
-        return _ScalarInitializer(init)
+        return _ConstantInitializer(init)
     elif inspect.isfunction(init):
         if obj.is_indexed():
             return _IndexedCallInitializer(init)
@@ -76,12 +76,14 @@ def Initializer(obj, init, allow_generators=False,
         if treat_sequences_as_mappings:
             return _ItemInitializer(init)
         else:
-            return _ScalarInitializer(init)
+            return _ConstantInitializer(init)
     else:
-        return _ScalarInitializer(init)
+        return _ConstantInitializer(init)
 
 class _InitializerBase(object):
     __slots__ = ()
+
+    verified = False
 
     def __getstate__(self):
         return dict((k, getattr(self,k)) for k in self.__slots__)
@@ -90,40 +92,63 @@ class _InitializerBase(object):
         for key, val in interitems(state):
             object.__setattr__(self, key, val)
 
-class _ScalarInitializer(_InitializerBase):
-    __slots__ = ('_val',)
-    def __init__(self, _val):
-        self._val = _val
+class _ConstantInitializer(_InitializerBase):
+    __slots__ = ('val','verified')
+
+    def __init__(self, val):
+        self.val = val
+        self.verified = False
+
     def __call__(self, parent, idx):
-        return self._val
+        return self.val
+
+    def constant(self):
+        return True
 
 class _ItemInitializer(_InitializerBase):
     __slots__ = ('_dict',)
+
     def __init__(self, _dict):
         self._dict = _dict
+
     def __call__(self, parent, idx):
         return self._dict[idx]
 
+    def constant(self):
+        return False
+
 class _IndexedCallInitializer(_InitializerBase):
     __slots__ = ('_fcn',)
+
     def __init__(self, _fcn):
         self._fcn = _fcn
+
     def __call__(self, parent, idx):
         if idx.__class__ is tuple:
             return self._fcn(parent, *idx)
         else:
             return self._fcn(parent, idx)
 
+    def constant(self):
+        return False
+
 class _ScalarCallInitializer(_InitializerBase):
     __slots__ = ('_fcn',)
+
     def __init__(self, _fcn):
         self._fcn = _fcn
+
     def __call__(self, parent, idx):
         return self._fcn(parent)
 
+    def constant(self):
+        return False
+
 class SetInitializer(_InitializerBase):
-    __slots__ = ('_set',)
+    __slots__ = ('_set','verified')
+
     def __init__(self, obj, init, allow_generators=True):
+        self.verified = False
         if init is None:
             self._set = None
         else:
@@ -133,7 +158,10 @@ class SetInitializer(_InitializerBase):
 
     def intersect(self, other):
         if self._set is None:
-            self._set = other
+            if type(other) is SetInitializer:
+                self._set = other._set
+            else:
+                self._set = other
         elif type(other) is SetInitializer:
             if other._set is not None:
                 self._set = _SetIntersectInitializer(self._set, other._set)
@@ -146,6 +174,13 @@ class SetInitializer(_InitializerBase):
         else:
             return self._set(parent, idx)
 
+    def constant(self):
+        return self._set is None or self._set.constant()
+
+    def setdefault(self, val):
+        if self._set is None:
+            self._set = _ConstantInitializer(val)
+
 class _SetIntersectInitializer(_InitializerBase):
     __slots__ = ('_A','_B',)
     def __init__(self, setA, setB):
@@ -154,6 +189,14 @@ class _SetIntersectInitializer(_InitializerBase):
 
     def __call__(self, parent, idx):
         return _SetIntersection(self._A(parent, idx), self._B(parent, idx))
+
+    def constant(self):
+        return self._A.constant() and self._B.constant()
+
+    def setdefault(self, val):
+        # This is an intersection of two real sets... there is no
+        # default to set
+        pass
 
 class RangeSetInitializer(_InitializerBase):
     __slots__ = ('_init')
@@ -164,6 +207,12 @@ class RangeSetInitializer(_InitializerBase):
         start, end = self._init(parent, idx)
         return RangeSet(start, end, 0)
 
+    def constant(self):
+        return self._init.constant()
+
+    def setdefault(self, val):
+        # This is a real range set... there is no default to set
+        pass
 
 def process_setarg(arg):
     """
