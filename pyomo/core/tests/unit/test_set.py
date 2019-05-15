@@ -569,12 +569,12 @@ class TestNumericRange(unittest.TestCase):
             [NR(5,None,0)],
         )
 
-
     def test_pickle(self):
         a = NR(0,100,5)
         b = pickle.loads(pickle.dumps(a))
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
+
 
 class TestAnyRange(unittest.TestCase):
     def test_str(self):
@@ -1057,7 +1057,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(len(i), 3)
         self.assertEqual(len(list(i.ranges())), 1)
 
-        i = RangeSet(ranges={NR(1,3,1)})
+        i = RangeSet(ranges=[NR(1,3,1)])
         self.assertEqual(len(i), 3)
         self.assertEqual(list(i.ranges()), [NR(1,3,1)])
 
@@ -1861,7 +1861,7 @@ class TestSetDifference(unittest.TestCase):
 
         self.assertEqual(
             list(x.ranges()),
-            list(RangeSet(ranges={NR(0,2,0,(True,False))}).ranges()))
+            list(RangeSet(ranges=[NR(0,2,0,(True,False))]).ranges()))
 
 
 class TestSetSymmetricDifference(unittest.TestCase):
@@ -1983,9 +1983,9 @@ class TestSetSymmetricDifference(unittest.TestCase):
 
         self.assertEqual(
             sorted(str(_) for _ in x.ranges()),
-            sorted(str(_) for _ in {
+            sorted(str(_) for _ in [
                 NR(0,2,0,(True,False)), NR(4,6,0,(False, True))
-            }))
+            ]))
 
         x = SetOf([3,2,1,5,4]) ^ RangeSet(3,6,0)
         self.assertIs(type(x), _SetSymmetricDifference_InfiniteSet)
@@ -2004,13 +2004,13 @@ class TestSetSymmetricDifference(unittest.TestCase):
 
         self.assertEqual(
             sorted(str(_) for _ in x.ranges()),
-            sorted(str(_) for _ in {
+            sorted(str(_) for _ in [
                 NR(1,1,0),
                 NR(2,2,0),
                 NR(3,4,0,(False,False)),
                 NR(4,5,0,(False,False)),
                 NR(5,6,0,(False, True))
-            }))
+            ]))
 
         x = RangeSet(3,6,0) ^ SetOf([3,2,1,5,4])
         self.assertIs(type(x), _SetSymmetricDifference_InfiniteSet)
@@ -2029,13 +2029,13 @@ class TestSetSymmetricDifference(unittest.TestCase):
 
         self.assertEqual(
             sorted(str(_) for _ in x.ranges()),
-            sorted(str(_) for _ in {
+            sorted(str(_) for _ in [
                 NR(1,1,0),
                 NR(2,2,0),
                 NR(3,4,0,(False,False)),
                 NR(4,5,0,(False,False)),
                 NR(5,6,0,(False, True))
-            }))
+            ]))
 
 class TestSetProduct(unittest.TestCase):
     def test_cutPointGenerator(self):
@@ -2295,6 +2295,16 @@ class TestSetProduct(unittest.TestCase):
         self.assertEqual(x.ord((1, 2, (3, 4), 0)), 3)
         self.assertEqual(x.ord((1, 2, 3, 4, 0)), 3)
 
+
+def _init_scalar(m):
+    return 1
+
+def _init_indexed(m, *args):
+    i = 1
+    for arg in args:
+        i *= (arg+1)
+    return i
+
 class Test_Initializer(unittest.TestCase):
     def test_constant(self):
         m = ConcreteModel()
@@ -2419,45 +2429,33 @@ class Test_Initializer(unittest.TestCase):
         a = Initializer(m, 5)
         a.verified = True
         b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a, b)
         self.assertEqual(a.val, b.val)
         self.assertEqual(a.verified, b.verified)
 
         a = Initializer(m, {1:5})
         b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a, b)
         self.assertEqual(a._dict, b._dict)
         self.assertIsNot(a._dict, b._dict)
         self.assertEqual(a.verified, b.verified)
 
-        def a_init(m):
-            return 1
-        a = Initializer(m, a_init)
+        a = Initializer(m, _init_scalar)
         b = pickle.loads(pickle.dumps(a))
-        self.assertIsNot(a._fcn, b._fcn)
+        self.assertIsNot(a, b)
+        self.assertIs(a._fcn, b._fcn)
         self.assertEqual(a.verified, b.verified)
         self.assertEqual(a(None, None), 1)
         self.assertEqual(b(None, None), 1)
 
-        a = Initializer(m, lambda m: 2)
-        b = pickle.loads(pickle.dumps(a))
-        self.assertIsNot(a._fcn, b._fcn)
-        self.assertEqual(a(None, None), 2)
-        self.assertEqual(b(None, None), 2)
-
         m.x = Var([1,2,3])
-        def x_init(m, i):
-            return i+1
-        a = Initializer(m.x, x_init)
+        a = Initializer(m.x, _init_indexed)
         b = pickle.loads(pickle.dumps(a))
-        self.assertIsNot(a._fcn, b._fcn)
+        self.assertIsNot(a, b)
+        self.assertIs(a._fcn, b._fcn)
         self.assertEqual(a.verified, b.verified)
         self.assertEqual(a(None, 1), 2)
         self.assertEqual(b(None, 2), 3)
-
-        a = Initializer(m.x, lambda m, i: i+2)
-        b = pickle.loads(pickle.dumps(a))
-        self.assertIsNot(a._fcn, b._fcn)
-        self.assertEqual(a(None, 1), 3)
-        self.assertEqual(b(None, 2), 4)
 
 
 class Test_SetInitializer(unittest.TestCase):

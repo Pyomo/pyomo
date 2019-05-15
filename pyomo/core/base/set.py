@@ -2260,7 +2260,7 @@ class _FiniteRangeSetData( _SortedSetMixin,
                 nIters -= 1
                 pass
 
-        iters.sort(reverse=True)
+        iters.sort(reverse=True, key=lambda x: x[0])
         n = None
         while iters:
             if n != iters[-1][0]:
