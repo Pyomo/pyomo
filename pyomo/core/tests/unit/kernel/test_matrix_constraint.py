@@ -42,8 +42,10 @@ except:
 try:
     import scipy
     has_scipy = True
+    _scipy_ver = tuple(int(_) for _ in scipy.version.version.split('.')[:2])
 except:
     has_scipy = False
+    _scipy_ver = (0,0)
 
 def _create_variable_list(size, **kwds):
     assert size > 0
@@ -246,6 +248,39 @@ class Test_matrix_constraint(unittest.TestCase):
         ctuple = matrix_constraint(A)
         for i, c in enumerate(ctuple):
             self.assertEqual(c.index, i)
+
+    @unittest.skipIf(_scipy_ver < (1,1),
+                     "csr_matrix.reshape only available in scipy >= 1.1")
+    def test_A(self):
+        A = numpy.ones((4,5))
+
+        # sparse
+        c = matrix_constraint(A)
+        self.assertEqual(c.A.shape, A.shape)
+        self.assertTrue((c.A == A).all())
+        self.assertEqual(c.sparse, True)
+        with self.assertRaises(ValueError):
+            c.A.data[0] = 2
+        with self.assertRaises(ValueError):
+            c.A.indices[0] = 2
+        with self.assertRaises(ValueError):
+            c.A.indptr[0] = 2
+        cA = c.A
+        cA.shape = (5,4)
+        # the shape of c.A should not be changed
+        self.assertEqual(c.A.shape, (4,5))
+
+        # dense
+        c = matrix_constraint(A, sparse=False)
+        self.assertEqual(c.A.shape, A.shape)
+        self.assertTrue((c.A == A).all())
+        self.assertEqual(c.sparse, False)
+        with self.assertRaises(ValueError):
+            c.A[0,0] = 2
+        cA = c.A
+        cA.shape = (5,4)
+        # the shape of c.A should not be changed
+        self.assertEqual(c.A.shape, (4,5))
 
     def test_x(self):
         A = numpy.ones((4,5))
