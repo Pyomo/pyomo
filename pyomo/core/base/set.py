@@ -13,6 +13,7 @@ import itertools
 import logging
 import math
 import six
+import weakref
 
 try:
     from math import remainder
@@ -3044,44 +3045,111 @@ class _AnySet(_SetData, Set):
     def bounds(self):
         return (None, None)
 
-Any = _AnySet(name='Any', doc="A global Pyomo Set that admits any value")
 
-Reals = RangeSet(
+def DeclareGlobalSet(obj):
+    """Declare a copy of a set as a global set in the calling module
+
+    This takes a Set object and declares a duplicate of it as a
+    GlobalSet object in the global namespace of the caller's module
+    using the local name of the passed set.  GlobalSet objects are
+    pseudo-singletons, in that copy.deepcopy (and Model.clone()) will
+    not duplcicate them, and when you pickle and restore objects
+    containing GlobalSets will still refer to the same object.  The
+    declaed GlobalSet object will be an instance of the original Set
+    type.
+
+    """
+    class GlobalSet(obj.__class__):
+        __doc__ = """A "global" instance of a %s object.
+
+        References to this object will not be duplicated by deepcopy
+        and be maintained/restored by pickle.
+
+        """ % (obj.__class__.__name__,)
+        # Note: a simple docstring does not appear to be picked up (at
+        # least in Python 2.7, so we will explicitly set the __doc__
+        # attribute.
+
+        def __init__(self, _obj):
+            _obj.__class__.__setstate__(self, _obj.__getstate__())
+            self._component = weakref.ref(self)
+            self.construct()
+            assert _obj.parent_component() is _obj
+            assert _obj.parent_block() is None
+            caller_globals = inspect.stack()[1][0].f_globals
+            assert self.local_name not in caller_globals
+            caller_globals[self.local_name] = self
+
+        def __reduce__(self):
+            "Cause pickle to preserve references to this object"
+            return self.name
+
+        def __deepcopy__(self, memo):
+            "Prevent deepcopy from duplicating this object"
+            return self
+
+    return GlobalSet(obj)
+
+
+DeclareGlobalSet(_AnySet(
+    name='Any',
+    doc="A global Pyomo Set that admits any value",
+))
+
+DeclareGlobalSet(RangeSet(
     name='Reals',
     doc='A global Pyomo Set that admits any real (floating point) value',
-    ranges=(_NumericRange(None,None,0),))
-
-NonNegativeReals = RangeSet(
+    ranges=(_NumericRange(None,None,0),),
+))
+DeclareGlobalSet(RangeSet(
     name='NonNegativeReals',
-    doc='A global Pyomo Set admitting any real value in [0, +inf)',
-    ranges=(_NumericRange(0,None,0),))
-
-NonPositiveReals = RangeSet(
+    doc='A global Pyomo Set admitting any real value in [0, +inf]',
+    ranges=(_NumericRange(0,None,0),),
+))
+DeclareGlobalSet(RangeSet(
     name='NonPositiveReals',
-    doc='A global Pyomo Set admitting any real value in (-inf, 0]',
-    ranges=(_NumericRange(None,0,0),))
+    doc='A global Pyomo Set admitting any real value in [-inf, 0]',
+    ranges=(_NumericRange(None,0,0),),
+))
+DeclareGlobalSet(RangeSet(
+    name='NegativeReals',
+    doc='A global Pyomo Set admitting any real value in [-inf, 0)',
+    ranges=(_NumericRange(None,0,0,(True,False)),),
+))
+DeclareGlobalSet(RangeSet(
+    name='PositiveReals',
+    doc='A global Pyomo Set admitting any real value in (0, +inf]',
+    ranges=(_NumericRange(0,None,0,(False,True)),),
+))
 
-Integers = RangeSet(
+DeclareGlobalSet(RangeSet(
     name='Integers',
     doc='A global Pyomo Set admitting any integer value',
-    ranges=(_NumericRange(0,None,1), _NumericRange(0,None,-1)))
-
-NonNegativeIntegers = RangeSet(
+    ranges=(_NumericRange(0,None,1), _NumericRange(0,None,-1)),
+))
+DeclareGlobalSet(RangeSet(
     name='NonNegativeIntegers',
-    doc='A global Pyomo Set admitting any integer value in [0, +inf)',
-    ranges=(_NumericRange(0,None,1),))
-
-NonPositiveIntegers = RangeSet(
+    doc='A global Pyomo Set admitting any integer value in [0, +inf]',
+    ranges=(_NumericRange(0,None,1),),
+))
+DeclareGlobalSet(RangeSet(
     name='NonPositiveIntegers',
-    doc='A global Pyomo Set admitting any integer value in (-inf, 0]',
-    ranges=(_NumericRange(0,None,-1),))
-
-NegativeIntegers = RangeSet(
+    doc='A global Pyomo Set admitting any integer value in [-inf, 0]',
+    ranges=(_NumericRange(0,None,-1),),
+))
+DeclareGlobalSet(RangeSet(
     name='NegativeIntegers',
-    doc='A global Pyomo Set admitting any integer value in (-inf, -1]',
-    ranges=(_NumericRange(-1,None,-1),))
-
-PositiveIntegers = RangeSet(
+    doc='A global Pyomo Set admitting any integer value in [-inf, -1]',
+    ranges=(_NumericRange(-1,None,-1),),
+))
+DeclareGlobalSet(RangeSet(
     name='PositiveIntegers',
-    doc='A global Pyomo Set admitting any integer value in [1, +inf)',
-    ranges=(_NumericRange(1,None,1),))
+    doc='A global Pyomo Set admitting any integer value in [1, +inf]',
+    ranges=(_NumericRange(1,None,1),),
+))
+
+DeclareGlobalSet(RangeSet(
+    name='Binary',
+    doc='A global Pyomo Set admitting the integers {0, 1}',
+    ranges=(_NumericRange(0,1,1),),
+))

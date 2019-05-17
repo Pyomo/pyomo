@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import copy
 import pickle
 from six import StringIO
 
@@ -1068,7 +1069,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(len(list(i.ranges())), 1)
 
         with self.assertRaisesRegexp(
-                TypeError, ".*'InfiniteSimpleRangeSet' has no len()"):
+                TypeError, ".*'GlobalSet' has no len()"):
             len(Integers)
         self.assertEqual(len(list(Integers.ranges())), 2)
 
@@ -2658,3 +2659,17 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(type(a(None,None)), _SetIntersection_InfiniteSet)
         a.setdefault(RangeSet(5))
         self.assertIs(type(a(None,None)), _SetIntersection_InfiniteSet)
+
+
+class TestGlobalSets(unittest.TestCase):
+    def test_globals(self):
+        self.assertEqual(Reals.__class__.__name__, 'GlobalSet')
+        self.assertIsInstance(Reals, RangeSet)
+
+    def test_pickle(self):
+        a = pickle.loads(pickle.dumps(Reals))
+        self.assertIs(a, Reals)
+
+    def test_deepcopy(self):
+        a = copy.deepcopy(Reals)
+        self.assertIs(a, Reals)
