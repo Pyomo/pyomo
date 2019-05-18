@@ -336,6 +336,8 @@ class _UnknownSetDimen(object): pass
 #
 #   - Test index/ord for equivalence of 1 and (1,)
 #
+#   - SortedSet should take a custom sorting function
+#
 class _NumericRange(object):
     """A representation of a numeric range.
 
