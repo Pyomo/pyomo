@@ -1978,15 +1978,24 @@ class Set(IndexedComponent):
         IndexedComponent.__init__(self, *args, **kwds)
 
     def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
-                logger.debug("Constructing Set, name=%s, from data=%r"
-                             % (self.name, data))
         if self._constructed:
             return
         timer = ConstructionTimer(self)
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Constructing Set, name=%s, from data=%r"
+                             % (self.name, data))
         self._constructed=True
-        for index in self.index_set():
-            self._getitem_when_not_present(index)
+        if data is not None:
+            # Data supplied to construct() should override data provided
+            # to the constructor
+            tmp_init, self._init_values = self._init_values, Initializer(
+                    data, treat_sequences_as_mappings=False)
+        try:
+            for index in self.index_set():
+                self._getitem_when_not_present(index)
+        finally:
+            if data is not None:
+                self._init_values = tmp_init
         timer.report()
 
     #
@@ -2100,12 +2109,12 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
         return iter(self._ref)
 
     def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
-                logger.debug("Constructing SetOf, name=%s, from data=%r"
-                             % (self.name, data))
         if self._constructed:
             return
         timer = ConstructionTimer(self)
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Constructing SetOf, name=%s, from data=%r"
+                             % (self.name, data))
         self._constructed=True
         timer.report()
 
@@ -2375,12 +2384,12 @@ class RangeSet(Component):
 
 
     def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
-                logger.debug("Constructing RangeSet, name=%s, from data=%r"
-                             % (self.name, data))
         if self._constructed:
             return
         timer = ConstructionTimer(self)
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Constructing RangeSet, name=%s, from data=%r"
+                             % (self.name, data))
         # TODO: verify that the constructed ranges match finite
         self._constructed=True
         timer.report()

@@ -9,10 +9,13 @@
 #  ___________________________________________________________________________
 
 import copy
+import logging
 import pickle
 from six import StringIO
 
 import pyutilib.th as unittest
+
+from pyomo.common.log import LoggingIntercept
 
 import pyomo.core.base.set as SetModule
 from pyomo.core.base.set import (
@@ -1056,7 +1059,7 @@ class TestRangeOperations(unittest.TestCase):
 
 
 class Test_SetOf_and_RangeSet(unittest.TestCase):
-    def test_RangeSet_constructor(self):
+    def test_constructor(self):
         i = RangeSet(3)
         self.assertEqual(len(i), 3)
         self.assertEqual(len(list(i.ranges())), 1)
