@@ -18,6 +18,7 @@ import pyomo.core.base.set as SetModule
 from pyomo.core.base.set import (
     _NumericRange as NR, _NonNumericRange as NNR, _AnyRange, _AnySet,
     Any, Reals, NonNegativeReals, Integers, PositiveIntegers,
+    NegativeIntegers, PositiveReals,
     RangeSet, Set, SetOf,
     _FiniteRangeSetData, _InfiniteRangeSetData,
     _SetUnion_InfiniteSet, _SetUnion_FiniteSet, _SetUnion_OrderedSet,
@@ -855,6 +856,12 @@ class InfiniteSetTester(unittest.TestCase):
             ))
         )
 
+    def test_bounds(self):
+        self.assertEqual(Any.bounds(), (None,None))
+        self.assertEqual(Reals.bounds(), (None,None))
+        self.assertEqual(PositiveReals.bounds(), (0,None))
+        self.assertEqual(NegativeIntegers.bounds(), (None,-1))
+
 
 class TestRangeOperations(unittest.TestCase):
     def test_mixed_ranges_isdisjoint(self):
@@ -1292,14 +1299,14 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(i[2], 3)
         self.assertEqual(i[-1], 0)
         with self.assertRaisesRegexp(
-                IndexError, "Valid index values for sets are 1 .. len\(set\) "
-                "or -1 .. -len\(set\)"):
+                IndexError,"valid index values for Sets are "
+                "\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
             i[0]
         with self.assertRaisesRegexp(
-                IndexError, "Cannot index a Set past the last element"):
+                IndexError, "_OrderedSetOf index out of range"):
             i[5]
         with self.assertRaisesRegexp(
-                IndexError, "Cannot index a Set before the first element"):
+                IndexError, "_OrderedSetOf index out of range"):
             i[-5]
 
         self.assertEqual(i.ord(3), 2)
@@ -1334,6 +1341,32 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             i.prev(1,2)
         self.assertEqual(i.nextw(0,2), 3)
         self.assertEqual(i.prevw(1,2), 2)
+
+        i = SetOf((1,3,2,0))
+
+        self.assertTrue(i.is_finite())
+        self.assertTrue(i.is_ordered())
+
+        self.assertEqual(i.ordered(), (1,3,2,0))
+        self.assertEqual(i.sorted(), (0,1,2,3))
+        self.assertEqual(tuple(reversed(i)), (0,2,3,1))
+
+        self.assertEqual(i[2], 3)
+        self.assertEqual(i[-1], 0)
+        with self.assertRaisesRegexp(
+                IndexError,"valid index values for Sets are "
+                "\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
+            i[0]
+        with self.assertRaisesRegexp(
+                IndexError, "_OrderedSetOf index out of range"):
+            i[5]
+        with self.assertRaisesRegexp(
+                IndexError, "_OrderedSetOf index out of range"):
+            i[-5]
+
+        self.assertEqual(i.ord(3), 2)
+        with self.assertRaisesRegexp(ValueError, "x not in tuple"):
+            i.ord(5)
 
         i = SetOf([1, None, 'a'])
 
@@ -1430,6 +1463,37 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         i = RangeSet(ranges=(NR(0,0,0),NR(3,3,0),NR(2,2,0)))
         self.assertEqual(tuple(i), (0,2,3))
 
+    def test_finite_ord_index(self):
+        r = RangeSet(2,10,2)
+        for i,v in enumerate([2,4,6,8,10]):
+            self.assertEqual(r.ord(v), i+1)
+            self.assertEqual(r[i+1], v)
+        with self.assertRaisesRegexp(
+                IndexError,"valid index values for Sets are "
+                "\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
+            r[0]
+        with self.assertRaisesRegexp(
+                IndexError,"FiniteSimpleRangeSet index out of range"):
+            r[10]
+        with self.assertRaisesRegexp(
+                ValueError,"Cannot identify position of 5 in Set"):
+            r.ord(5)
+
+        r = RangeSet(ranges=(NR(2,10,2), NR(6,12,3)))
+        for i,v in enumerate([2,4,6,8,9,10,12]):
+            self.assertEqual(r.ord(v), i+1)
+            self.assertEqual(r[i+1], v)
+        with self.assertRaisesRegexp(
+                IndexError,"valid index values for Sets are "
+                "\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
+            r[0]
+        with self.assertRaisesRegexp(
+                IndexError,"FiniteSimpleRangeSet index out of range"):
+            r[10]
+        with self.assertRaisesRegexp(
+                ValueError,"Cannot identify position of 5 in Set"):
+            r.ord(5)
+
 
 class TestSetUnion(unittest.TestCase):
     def _verify_ordered_union(self, a, b):
@@ -1478,12 +1542,20 @@ class TestSetUnion(unittest.TestCase):
         self.assertEqual(x[3], 2)
         self.assertEqual(x[4], 5)
         self.assertEqual(x[5], 4)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "_SetUnion_OrderedSet index out of range"):
+            x[6]
 
         self.assertEqual(x[-1], 4)
         self.assertEqual(x[-2], 5)
         self.assertEqual(x[-3], 2)
         self.assertEqual(x[-4], 3)
         self.assertEqual(x[-5], 1)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "_SetUnion_OrderedSet index out of range"):
+            x[-6]
 
     def test_ordered_setunion(self):
         self._verify_ordered_union(SetOf([1,3,2]), SetOf([5,3,4]))
@@ -1627,10 +1699,18 @@ class TestSetIntersection(unittest.TestCase):
         self.assertEqual(x[1], ref[0])
         self.assertEqual(x[2], ref[1])
         self.assertEqual(x[3], 5)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "_SetIntersection_OrderedSet index out of range"):
+            x[4]
 
         self.assertEqual(x[-1], 5)
         self.assertEqual(x[-2], ref[-2])
         self.assertEqual(x[-3], ref[-3])
+        with self.assertRaisesRegexp(
+                IndexError,
+                "_SetIntersection_OrderedSet index out of range"):
+            x[-4]
 
     def test_ordered_setintersection(self):
         self._verify_ordered_intersection(SetOf([1,3,2,5]), SetOf([0,2,3,4,5]))
@@ -1738,6 +1818,18 @@ class TestSetIntersection(unittest.TestCase):
         self.assertEqual(x[1], 6)
         self.assertEqual(x[2], 8)
         self.assertEqual(x[3], 10)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "_SetIntersection_OrderedSet index out of range"):
+            x[4]
+
+        self.assertEqual(x[-3], 6)
+        self.assertEqual(x[-2], 8)
+        self.assertEqual(x[-1], 10)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "_SetIntersection_OrderedSet index out of range"):
+            x[-4]
 
 
 
@@ -1781,10 +1873,18 @@ class TestSetDifference(unittest.TestCase):
         self.assertEqual(x[1], 3)
         self.assertEqual(x[2], 2)
         self.assertEqual(x[3], 5)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "_SetDifference_OrderedSet index out of range"):
+            x[4]
 
         self.assertEqual(x[-1], 5)
         self.assertEqual(x[-2], 2)
         self.assertEqual(x[-3], 3)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "_SetDifference_OrderedSet index out of range"):
+            x[-4]
 
     def test_ordered_setdifference(self):
         self._verify_ordered_difference(SetOf([0,3,2,1,5,4]), SetOf([0,1,4]))
@@ -1907,11 +2007,19 @@ class TestSetSymmetricDifference(unittest.TestCase):
         self.assertEqual(x[2], 2)
         self.assertEqual(x[3], 5)
         self.assertEqual(x[4], 0)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "_SetSymmetricDifference_OrderedSet index out of range"):
+            x[5]
 
         self.assertEqual(x[-1], 0)
         self.assertEqual(x[-2], 5)
         self.assertEqual(x[-3], 2)
         self.assertEqual(x[-4], 3)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "_SetSymmetricDifference_OrderedSet index out of range"):
+            x[-5]
 
     def test_ordered_setsymmetricdifference(self):
         self._verify_ordered_symdifference(SetOf([3,2,1,5,4]), SetOf([0,1,4]))
@@ -2189,6 +2297,10 @@ class TestSetProduct(unittest.TestCase):
         self.assertEqual(x[4], (1,5))
         self.assertEqual(x[5], (2,6))
         self.assertEqual(x[6], (2,5))
+        with self.assertRaisesRegexp(
+                IndexError,
+                "_SetProduct_OrderedSet index out of range"):
+            x[7]
 
         self.assertEqual(x[-6], (3,6))
         self.assertEqual(x[-5], (3,5))
@@ -2196,6 +2308,10 @@ class TestSetProduct(unittest.TestCase):
         self.assertEqual(x[-3], (1,5))
         self.assertEqual(x[-2], (2,6))
         self.assertEqual(x[-1], (2,5))
+        with self.assertRaisesRegexp(
+                IndexError,
+                "_SetProduct_OrderedSet index out of range"):
+            x[-7]
 
     def test_ordered_setproduct(self):
         self._verify_ordered_product(SetOf([3,1,2]), SetOf([6,5]))

@@ -1614,30 +1614,31 @@ class _OrderedSetMixin(object):
         return self.nextw(item, -step)
 
     def _to_0_based_index(self, item):
+        # Efficiency note: unlike older Set implementations, this
+        # implementation does not guarantee that the index is valid (it
+        # could be outside of abs(i) <= len(self)).
         try:
             if item != int(item):
                 raise IndexError(
-                    "Ordered Set indices must be integers, not %s"
-                    % (type(item).__name__,))
+                    "%s indices must be integers, not %s"
+                    % (self.name, type(item).__name__,))
             item = int(item)
         except:
             raise IndexError(
-                "Ordered Set indices must be integers, not %s"
-                % (type(item).__name__,))
+                "%s indices must be integers, not %s"
+                % (self.name, type(item).__name__,))
 
         if item >= 1:
-            if item > len(self):
-                raise IndexError("Cannot index a Set past the last element")
             return item - 1
         elif item < 0:
             item += len(self)
             if item < 0:
-                raise IndexError("Cannot index a Set before the first element")
+                raise IndexError("%s index out of range" % (self.name,))
             return item
         else:
             raise IndexError(
-                "Valid index values for sets are 1 .. len(set) or "
-                "-1 .. -len(set)")
+                "Pyomo Sets are 1-indexed: valid index values for Sets are "
+                "[1 .. len(Set)] or [-1 .. -len(Set)]")
 
 
 class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
@@ -1716,7 +1717,11 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
         The public Set API is 1-based, even though the
         internal _lookup and _values are (pythonically) 0-based.
         """
-        return self._ordered_values[self._to_0_based_index(index)]
+        i = self._to_0_based_index(index)
+        try:
+            return self._ordered_values[i]
+        except IndexError:
+            raise IndexError("%s index out of range" % (self.name))
 
     def ord(self, item):
         """
@@ -2142,7 +2147,11 @@ class _UnorderedSetOf(SetOf):
 
 class _OrderedSetOf(_OrderedSetMixin, SetOf):
     def __getitem__(self, index):
-        return self._ref[self._to_0_based_index(index)]
+        i = self._to_0_based_index(index)
+        try:
+            return self._ref[i]
+        except IndexError:
+            raise IndexError("%s index out of range" % (self.name))
 
     def ord(self, item):
         # The bulk of single-value set members were stored as scalars.
@@ -2254,12 +2263,10 @@ class _FiniteRangeSetData( _SortedSetMixin,
         # lowest value.
         iters = []
         for r in self._ranges:
-            try:
-                i = _FiniteRangeSetData._range_gen(r)
-                iters.append([next(i), i])
-            except StopIteration:
-                nIters -= 1
-                pass
+            # Note: there should always be at least 1 member in each
+            # NumericRange
+            i = _FiniteRangeSetData._range_gen(r)
+            iters.append([next(i), i])
 
         iters.sort(reverse=True, key=lambda x: x[0])
         n = None
@@ -2291,24 +2298,26 @@ class _FiniteRangeSetData( _SortedSetMixin,
             if ans <= r.end:
                 return ans
         else:
-            try:
-                return self.data()[idx]
-            except IndexError:
-                pass
-        raise IndexError("sorted set index out of range")
+            for ans in self:
+                if not idx:
+                    return ans
+                idx -= 1
+        raise IndexError("%s index out of range" % (self.name,))
 
     def ord(self, item):
         if len(self._ranges) == 1:
             r = self._ranges[0]
             i = float(item - r.start) / r.step
-            if i - int(i+0.5) < EPS:
-                return int(i+0.5) + 1
+            if item >= r.start and item <= r.end and \
+                    abs(i - math.floor(i+0.5)) < r._EPS:
+                return int(math.floor(i+0.5)) + 1
         else:
-            try:
-                return self.data.index(item) + 1
-            except ValueError:
-                pass
-        raise IndexError(
+            ans = 1
+            for val in self:
+                if val == item:
+                    return ans
+                ans += 1
+        raise ValueError(
             "Cannot identify position of %s in Set %s: item not in Set"
             % (item, self.name))
 
@@ -2525,10 +2534,13 @@ class _SetUnion_OrderedSet(_OrderedSetMixin, _SetUnion_FiniteSet):
         else:
             idx -= set0_len - 1
             set1_iter = iter(self._sets[1])
-            while idx:
-                val = next(set1_iter)
-                if val not in self._sets[0]:
-                    idx -= 1
+            try:
+                while idx:
+                    val = next(set1_iter)
+                    if val not in self._sets[0]:
+                        idx -= 1
+            except StopIteration:
+                raise IndexError("%s index out of range" % (self.name,))
             return val
 
     def ord(self, item):
@@ -2625,10 +2637,13 @@ class _SetIntersection_OrderedSet(_OrderedSetMixin, _SetIntersection_FiniteSet):
     def __getitem__(self, index):
         idx = self._to_0_based_index(index)
         _iter = iter(self)
-        while idx:
-            next(_iter)
-            idx -= 1
-        return next(_iter)
+        try:
+            while idx:
+                next(_iter)
+                idx -= 1
+            return next(_iter)
+        except StopIteration:
+            raise IndexError("%s index out of range" % (self.name,))
 
     def ord(self, item):
         """
@@ -2699,10 +2714,13 @@ class _SetDifference_OrderedSet(_OrderedSetMixin, _SetDifference_FiniteSet):
     def __getitem__(self, index):
         idx = self._to_0_based_index(index)
         _iter = iter(self)
-        while idx:
-            next(_iter)
-            idx -= 1
-        return next(_iter)
+        try:
+            while idx:
+                next(_iter)
+                idx -= 1
+            return next(_iter)
+        except StopIteration:
+            raise IndexError("%s index out of range" % (self.name,))
 
     def ord(self, item):
         """
@@ -2781,10 +2799,13 @@ class _SetSymmetricDifference_OrderedSet(_OrderedSetMixin,
     def __getitem__(self, index):
         idx = self._to_0_based_index(index)
         _iter = iter(self)
-        while idx:
-            next(_iter)
-            idx -= 1
-        return next(_iter)
+        try:
+            while idx:
+                next(_iter)
+                idx -= 1
+            return next(_iter)
+        except StopIteration:
+            raise IndexError("%s index out of range" % (self.name,))
 
     def ord(self, item):
         """
@@ -2997,6 +3018,8 @@ class _SetProduct_OrderedSet(_OrderedSetMixin, _SetProduct_FiniteSet):
         while i:
             i -= 1
             _ord[i], _idx = _idx % _ord[i], _idx // _ord[i]
+        if _idx:
+            raise IndexError("%s index out of range" % (self.name,))
         ans = tuple(s[i+1] for s,i in zip(self._sets, _ord))
         if FLATTEN_CROSS_PRODUCT and self.dimen != len(ans):
             return flatten_tuple(ans)
@@ -3069,6 +3092,8 @@ def DeclareGlobalSet(obj):
         # Note: a simple docstring does not appear to be picked up (at
         # least in Python 2.7, so we will explicitly set the __doc__
         # attribute.
+
+        __slots__ = ()
 
         def __init__(self, _obj):
             _obj.__class__.__setstate__(self, _obj.__getstate__())
