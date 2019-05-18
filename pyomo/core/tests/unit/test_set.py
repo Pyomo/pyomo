@@ -1190,6 +1190,26 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 return len(self.data)
         self.assertEqual(SetOf({1,3,5}), _NonIterable())
 
+    def test_inequality(self):
+        self.assertTrue(SetOf([1,2,3]) <= SetOf({1,2,3}))
+        self.assertFalse(SetOf([1,2,3]) < SetOf({1,2,3}))
+
+        self.assertTrue(SetOf([1,2,3]) <= SetOf({1,2,3,4}))
+        self.assertTrue(SetOf([1,2,3]) < SetOf({1,2,3,4}))
+
+        self.assertFalse(SetOf([1,2,3]) <= SetOf({1,2}))
+        self.assertFalse(SetOf([1,2,3]) < SetOf({1,2}))
+
+        self.assertTrue(SetOf([1,2,3]) >= SetOf({1,2,3}))
+        self.assertFalse(SetOf([1,2,3]) > SetOf({1,2,3}))
+
+        self.assertFalse(SetOf([1,2,3]) >= SetOf({1,2,3,4}))
+        self.assertFalse(SetOf([1,2,3]) > SetOf({1,2,3,4}))
+
+        self.assertTrue(SetOf([1,2,3]) >= SetOf({1,2}))
+        self.assertTrue(SetOf([1,2,3]) > SetOf({1,2}))
+
+
     def test_is_functions(self):
         i = SetOf({1,2,3})
         self.assertTrue(i.is_finite())
@@ -1546,6 +1566,12 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(so.ord(1), 3)
 
 class TestSetUnion(unittest.TestCase):
+    def test_pickle(self):
+        a = SetOf([1,3,5]) | SetOf([2,3,4])
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a,b)
+        self.assertEqual(a,b)
+
     def _verify_ordered_union(self, a, b):
         # Note the placement of the second "3" in the middle of the set.
         # This helps catch edge cases where we need to ensure it doesn't
@@ -1706,6 +1732,12 @@ class TestSetUnion(unittest.TestCase):
 
 
 class TestSetIntersection(unittest.TestCase):
+    def test_pickle(self):
+        a = SetOf([1,3,5]) & SetOf([2,3,4])
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a,b)
+        self.assertEqual(a,b)
+
     def _verify_ordered_intersection(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
             a_ordered = a.is_ordered()
@@ -1884,6 +1916,12 @@ class TestSetIntersection(unittest.TestCase):
 
 
 class TestSetDifference(unittest.TestCase):
+    def test_pickle(self):
+        a = SetOf([1,3,5]) - SetOf([2,3,4])
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a,b)
+        self.assertEqual(a,b)
+
     def _verify_ordered_difference(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
             a_ordered = a.is_ordered()
@@ -2016,6 +2054,12 @@ class TestSetDifference(unittest.TestCase):
 
 
 class TestSetSymmetricDifference(unittest.TestCase):
+    def test_pickle(self):
+        a = SetOf([1,3,5]) ^ SetOf([2,3,4])
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a,b)
+        self.assertEqual(a,b)
+
     def _verify_ordered_symdifference(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
             a_ordered = a.is_ordered()
@@ -2197,6 +2241,12 @@ class TestSetSymmetricDifference(unittest.TestCase):
             ]))
 
 class TestSetProduct(unittest.TestCase):
+    def test_pickle(self):
+        a = SetOf([1,3,5]) * SetOf([2,3,4])
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a,b)
+        self.assertEqual(a,b)
+
     def test_cutPointGenerator(self):
         CG = _SetProduct_InfiniteSet._cutPointGenerator
         i = Any
