@@ -2163,14 +2163,17 @@ class _OrderedSetOf(_OrderedSetMixin, SetOf):
             raise IndexError("%s index out of range" % (self.name))
 
     def ord(self, item):
-        # The bulk of single-value set members were stored as scalars.
-        # Check that first.
-        if item.__class__ is tuple and len(item) == 1:
-            try:
-                return self._ref.index(item[0]) + 1
-            except ValueError:
-                pass
-        return self._ref.index(item) + 1
+        # The bulk of single-value set members are stored as scalars.
+        # However, we are now being more careful about matching tuples
+        # when they are actually put as Set members.  So, we will look
+        # for the exact thing that the user sent us and then fall back
+        # on the scalar.
+        try:
+            return self._ref.index(item) + 1
+        except ValueError:
+            if item.__class__ is not tuple or len(item) > 1:
+                raise
+        return self._ref.index(item[0]) + 1
 
 
 ############################################################################

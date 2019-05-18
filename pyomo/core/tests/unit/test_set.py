@@ -1088,6 +1088,50 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 "arguments \(received 4\)"):
             RangeSet(1,2,3,4)
 
+        with self.assertRaisesRegexp(
+                TypeError, "ranges argument must be an iterable of "
+                "_NumericRange objects"):
+            RangeSet(ranges=(NR(1,5,1), NNR('a')))
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            i = RangeSet(5)
+            self.assertEqual(output.getvalue(), "")
+            i.construct()
+            ref = 'Constructing RangeSet, name=FiniteSimpleRangeSet, '\
+                  'from data=None\n'
+            self.assertEqual(output.getvalue(), ref)
+            # Calling construct() twice bupasses construction the second
+            # time around
+            i.construct()
+            self.assertEqual(output.getvalue(), ref)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            i = SetOf([1,2,3])
+            self.assertEqual(output.getvalue(), "")
+            i.construct()
+            ref = 'Constructing SetOf, name=_OrderedSetOf, '\
+                  'from data=None\n'
+            self.assertEqual(output.getvalue(), ref)
+            # Calling construct() twice bupasses construction the second
+            # time around
+            i.construct()
+            self.assertEqual(output.getvalue(), ref)
+
+    def test_contains(self):
+        r = RangeSet(5)
+        self.assertIn(1, r)
+        self.assertIn((1,), r)
+        self.assertNotIn(6, r)
+        self.assertNotIn((6,), r)
+
+        r = SetOf([1, (2,)])
+        self.assertIn(1, r)
+        self.assertIn((1,), r)
+        self.assertNotIn(2, r)
+        self.assertIn((2,), r)
+
     def test_equality(self):
         m = ConcreteModel()
         m.I = RangeSet(3)
@@ -1466,7 +1510,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         i = RangeSet(ranges=(NR(0,0,0),NR(3,3,0),NR(2,2,0)))
         self.assertEqual(tuple(i), (0,2,3))
 
-    def test_finite_ord_index(self):
+    def test_ord_index(self):
         r = RangeSet(2,10,2)
         for i,v in enumerate([2,4,6,8,10]):
             self.assertEqual(r.ord(v), i+1)
@@ -1497,6 +1541,9 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 ValueError,"Cannot identify position of 5 in Set"):
             r.ord(5)
 
+        so = SetOf([0, (1,), 1])
+        self.assertEqual(so.ord((1,)), 2)
+        self.assertEqual(so.ord(1), 3)
 
 class TestSetUnion(unittest.TestCase):
     def _verify_ordered_union(self, a, b):
