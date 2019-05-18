@@ -190,7 +190,7 @@ class _SetIntersectInitializer(_InitializerBase):
         self._B = setB
 
     def __call__(self, parent, idx):
-        return _SetIntersection(self._A(parent, idx), self._B(parent, idx))
+        return SetIntersection(self._A(parent, idx), self._B(parent, idx))
 
     def constant(self):
         return self._A.constant() and self._B.constant()
@@ -338,7 +338,7 @@ class _UnknownSetDimen(object): pass
 #
 #   - SortedSet should take a custom sorting function
 #
-class _NumericRange(object):
+class NumericRange(object):
     """A representation of a numeric range.
 
     This class represents a contiguous range of numbers.  The class
@@ -362,21 +362,21 @@ class _NumericRange(object):
     def __init__(self, start, end, step, closed=(True,True)):
         if int(step) != step:
             raise ValueError(
-                "_NumericRange step must be int (got %s)" % (step,))
+                "NumericRange step must be int (got %s)" % (step,))
         step = int(step)
         if start is None:
             if step:
-                raise ValueError("_NumericRange: start must not be None "
+                raise ValueError("NumericRange: start must not be None "
                                  "for non-continuous steps")
         elif end is not None:
             if step == 0 and end < start:
                 raise ValueError(
-                    "_NumericRange: start must be <= end for "
+                    "NumericRange: start must be <= end for "
                     "continuous ranges (got %s..%s)" % (start,end)
                 )
             elif (end-start)*step < 0:
                 raise ValueError(
-                    "_NumericRange: start, end ordering incompatible "
+                    "NumericRange: start, end ordering incompatible "
                     "with step direction (got [%s:%s:%s])" % (start,end,step)
                 )
             if step:
@@ -401,7 +401,7 @@ class _NumericRange(object):
         self.closed = (self._closedMap[closed[0]], self._closedMap[closed[1]])
         if self.is_discrete() and self.closed != (True,True):
             raise ValueError(
-                "_NumericRange %s is discrete, but passed closed=%s."
+                "NumericRange %s is discrete, but passed closed=%s."
                 "  Discrete ranges must be closed." % (self, self.closed,))
 
     def __getstate__(self):
@@ -410,8 +410,8 @@ class _NumericRange(object):
 
         This method must be defined because this class uses slots.
         """
-        state = {} #super(_NumericRange, self).__getstate__()
-        for i in _NumericRange.__slots__:
+        state = {} #super(NumericRange, self).__getstate__()
+        for i in NumericRange.__slots__:
             state[i] = getattr(self, i)
         return state
 
@@ -444,7 +444,7 @@ class _NumericRange(object):
     __repr__ = __str__
 
     def __eq__(self, other):
-        if type(other) is not _NumericRange:
+        if type(other) is not NumericRange:
             return False
         return self.start == other.start \
             and self.end == other.end \
@@ -497,7 +497,7 @@ class _NumericRange(object):
                 d_ub is not None and cont.end >= d_ub):
             return False
 
-        EPS = _NumericRange._EPS
+        EPS = NumericRange._EPS
         if cont.end - cont.start - EPS > abs(disc.step):
             return False
         # At this point, the continuous set is shorter than the discrete
@@ -539,8 +539,8 @@ class _NumericRange(object):
             and self.is_discrete()
 
     def isdisjoint(self, other):
-        if not isinstance(other, _NumericRange):
-            # It is easier to just use _NonNumericRange/_AnyRange's
+        if not isinstance(other, NumericRange):
+            # It is easier to just use NonNumericRange/AnyRange's
             # implementation
             return other.isdisjoint(self)
 
@@ -558,10 +558,10 @@ class _NumericRange(object):
             # We now need to check a continuous set is a subset of a discrete
             # set and the continuous set sits between discrete points
             if self.step:
-                return _NumericRange._continuous_discrete_disjoint(
+                return NumericRange._continuous_discrete_disjoint(
                     other, self)
             elif other.step:
-                return _NumericRange._continuous_discrete_disjoint(
+                return NumericRange._continuous_discrete_disjoint(
                     self, other)
             else:
                 # 2 continuous sets, with overlapping end points: not disjoint
@@ -582,10 +582,10 @@ class _NumericRange(object):
                 and self.step*other.step > 0:
             return False
         # OK - just check all the members of one set against the other
-        end = _NumericRange._firstNonNull(
+        end = NumericRange._firstNonNull(
             self.step > 0,
             self.end,
-            _NumericRange._firstNonNull(
+            NumericRange._firstNonNull(
                 self.step < 0, other.start, other.end)
         )
         i = 0
@@ -598,12 +598,12 @@ class _NumericRange(object):
         return True
 
     def issubset(self, other):
-        if not isinstance(other, _NumericRange):
-            if type(other) is _AnyRange:
+        if not isinstance(other, NumericRange):
+            if type(other) is AnyRange:
                 return True
-            elif type(other) is _NonNumericRange:
+            elif type(other) is NonNumericRange:
                 return False
-            # Other non _NumericRange objects wil generate
+            # Other non NumericRange objects wil generate
             # AttributeError exceptions below
 
         # First, do a simple sanity check on the endpoints
@@ -636,17 +636,17 @@ class _NumericRange(object):
                 return False
         # At this point, both sets are discrete.  Self's period must be a
         # positive integer multiple of other's ...
-        EPS = _NumericRange._EPS
+        EPS = NumericRange._EPS
         if abs(remainder(self.step, other.step)) > EPS:
             return False
         # ...and they must shart a point in common
         return abs(remainder(other.start-self.start, other.step)) <= EPS
 
     def _normalize_bounds(self):
-        """Normalizes this _NumericRange.
+        """Normalizes this NumericRange.
 
         This returns a normalized range by reversing lb and ub if the
-        _NumericRange step is less than zero.  If lb and ub are
+        NumericRange step is less than zero.  If lb and ub are
         reversed, then closed is updated to reflect that change.
 
         Returns
@@ -696,7 +696,7 @@ class _NumericRange(object):
     def _min(*args):
         """Modified implementation of min() with special None handling
 
-        In _NumericRange objects, None can represent {positive,
+        In NumericRange objects, None can represent {positive,
         negative} infintiy.  In the context that this method is used,
         None will always be positive infinity, so None is greater than any
         non-None value.
@@ -716,7 +716,7 @@ class _NumericRange(object):
     def _max(*args):
         """Modified implementation of max() with special None handling
 
-        In _NumericRange objects, None can represent {positive,
+        In NumericRange objects, None can represent {positive,
         negative} infintiy.  In the context that this method is used,
         None will always be negative infinity, so None is less than
         any non-None value.
@@ -736,14 +736,14 @@ class _NumericRange(object):
     def _split_ranges(cnr, new_step):
         """Split a discrete range into a list of ranges using a new step.
 
-        This takes a single _NumericRange and splits it into a set
+        This takes a single NumericRange and splits it into a set
         of new ranges, all of which use a new step.  The new_step must
         be a multiple of the current step.  CNR objects with a step of 0
         are returned unchanged.
 
         Parameters
         ----------
-            cnr: `_NumericRange`
+            cnr: `NumericRange`
                 The range to split
             new_step: `int`
                 The new step to use for returned ranges
@@ -763,7 +763,7 @@ class _NumericRange(object):
                 # (all remaining offsets will be farther past the end)
                 break
 
-            _subranges.append(_NumericRange(
+            _subranges.append(NumericRange(
                 cnr.start + i*cnr.step, cnr.end, _dir*new_step
             ))
         return _subranges
@@ -815,11 +815,11 @@ class _NumericRange(object):
         """
         _cnr_other_ranges = []
         for r in other_ranges:
-            if isinstance(r, _NumericRange):
+            if isinstance(r, NumericRange):
                 _cnr_other_ranges.append(r)
-            elif type(r) is _AnyRange:
+            elif type(r) is AnyRange:
                 return []
-            elif type(r) is _NonNumericRange:
+            elif type(r) is NonNumericRange:
                 continue
             else:
                 # Note: important to check and raise an exception here;
@@ -835,11 +835,11 @@ class _NumericRange(object):
         lcm = self._lcm(other_ranges)
 
         # Split this range into subranges
-        _this = _NumericRange._split_ranges(self, lcm)
+        _this = NumericRange._split_ranges(self, lcm)
         # Split the other range(s) into subranges
         _other = []
         for s in other_ranges:
-            _other.extend(_NumericRange._split_ranges(s, lcm))
+            _other.extend(NumericRange._split_ranges(s, lcm))
         # For each rhs subrange, s
         for s in _other:
             _new_subranges = []
@@ -873,23 +873,23 @@ class _NumericRange(object):
                             "range %s" % (s,t))
 
                     # At least one of s_min amd t.start must be non-None
-                    start = _NumericRange._max(
+                    start = NumericRange._max(
                         s_min, t._push_to_discrete_boundary(t.start, s, True))
                     # At least one of s_max amd t.end must be non-None
-                    end = _NumericRange._min(
+                    end = NumericRange._min(
                         s_max, t._push_to_discrete_boundary(t.end, s, False))
 
-                    if _NumericRange._lt(t.start, start):
-                        _new_subranges.append(_NumericRange(
+                    if NumericRange._lt(t.start, start):
+                        _new_subranges.append(NumericRange(
                             t.start, start, 0, (t.closed[0], False)
                         ))
                     if s.step: # i.e., not a single point
                         for i in xrange(int(start//s.step), int(end//s.step)):
-                            _new_subranges.append(_NumericRange(
+                            _new_subranges.append(NumericRange(
                                 i*s.step, (i+1)*s.step, 0, '()'
                             ))
-                    if _NumericRange._gt(t.end, end):
-                        _new_subranges.append(_NumericRange(
+                    if NumericRange._gt(t.end, end):
+                        _new_subranges.append(NumericRange(
                             end, t.end, 0, (False,t.closed[1])
                         ))
                 else:
@@ -897,13 +897,13 @@ class _NumericRange(object):
                     # This handles discrete-discrete,
                     # continuous-continuous, and discrete-continuous
                     #
-                    if _NumericRange._lt(t_min, s_min):
+                    if NumericRange._lt(t_min, s_min):
                         # Note that s_min will never be None due to the
                         # _lt test
                         if t.step:
                             s_min -= lcm
                             closed1 = True
-                        _min = _NumericRange._min(t_max, s_min)
+                        _min = NumericRange._min(t_max, s_min)
                         if not t.step:
                             closed1 = not s_c[0] if _min is s_min else t_c[1]
                         _closed = ( t_c[0], closed1 )
@@ -914,18 +914,18 @@ class _NumericRange(object):
                             _rng = _rng[1], _rng[0]
                             _closed = _closed[1], _closed[0]
 
-                        _new_subranges.append(_NumericRange(
+                        _new_subranges.append(NumericRange(
                             _rng[0], _rng[1], _step, _closed))
 
-                    if _NumericRange._gt(t_max, s_max):
+                    if NumericRange._gt(t_max, s_max):
                         # Note that s_max will never be None due to the _gt test
                         if t.step:
                             s_max += lcm
                             closed0 = True
-                        _max = _NumericRange._max(t_min, s_max)
+                        _max = NumericRange._max(t_min, s_max)
                         if not t.step:
                             closed0 = not s_c[1] if _max is s_max else t_c[0]
-                        _new_subranges.append(_NumericRange(
+                        _new_subranges.append(NumericRange(
                             _max, t_max, abs(t.step), (closed0, t_c[1])
                         ))
                 _this = _new_subranges
@@ -942,11 +942,11 @@ class _NumericRange(object):
         """
         _cnr_other_ranges = []
         for r in other_ranges:
-            if isinstance(r, _NumericRange):
+            if isinstance(r, NumericRange):
                 _cnr_other_ranges.append(r)
-            elif type(r) is _AnyRange:
+            elif type(r) is AnyRange:
                 return [self]
-            elif type(r) is _NonNumericRange:
+            elif type(r) is NonNumericRange:
                 continue
             else:
                 # Note: important to check and raise an exception here;
@@ -962,11 +962,11 @@ class _NumericRange(object):
 
         ans = []
         # Split this range into subranges
-        _this = _NumericRange._split_ranges(self, lcm)
+        _this = NumericRange._split_ranges(self, lcm)
         # Split the other range(s) into subranges
         _other = []
         for s in other_ranges:
-            _other.extend(_NumericRange._split_ranges(s, lcm))
+            _other.extend(NumericRange._split_ranges(s, lcm))
         # For each lhs subrange, t
         for t in _this:
             # Compare it against each rhs range and only keep the
@@ -986,12 +986,12 @@ class _NumericRange(object):
                 s_min, s_max, s_c = s._normalize_bounds()
                 step = abs(t.step if t.step else s.step)
 
-                intersect_start = _NumericRange._max(
+                intersect_start = NumericRange._max(
                     s._push_to_discrete_boundary(s_min, t, True),
                     t._push_to_discrete_boundary(t_min, s, True),
                 )
 
-                intersect_end = _NumericRange._min(
+                intersect_end = NumericRange._min(
                     s._push_to_discrete_boundary(s_max, t, False),
                     t._push_to_discrete_boundary(t_max, s, False),
                 )
@@ -1005,22 +1005,22 @@ class _NumericRange(object):
                 if intersect_end == s_max:
                     c[1] &= s_c[1]
                 if step and intersect_start is None:
-                    ans.append(_NumericRange(
+                    ans.append(NumericRange(
                         intersect_end, intersect_start, -step, (c[1], c[0])
                     ))
                 else:
-                    ans.append(_NumericRange(
+                    ans.append(NumericRange(
                         intersect_start, intersect_end, step, c
                     ))
         return ans
 
 
-class _NonNumericRange(object):
+class NonNumericRange(object):
     """A range-like object for representing a single non-numeric value
 
     The class name is a bit of a misnomer, as this object does not
     represent a range but rather a single value.  However, as it
-    duplicates the Range API (as used by :py:class:`_NumericRange`), it
+    duplicates the Range API (as used by :py:class:`NumericRange`), it
     is called a "Range".
 
     """
@@ -1036,7 +1036,7 @@ class _NonNumericRange(object):
     __repr__ = __str__
 
     def __eq__(self, other):
-        return isinstance(other, _NonNumericRange) and other.value == self.value
+        return isinstance(other, NonNumericRange) and other.value == self.value
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -1050,8 +1050,8 @@ class _NonNumericRange(object):
 
         This method must be defined because this class uses slots.
         """
-        state = {} #super(_NonNumericRange, self).__getstate__()
-        for i in _NonNumericRange.__slots__:
+        state = {} #super(NonNumericRange, self).__getstate__()
+        for i in NonNumericRange.__slots__:
             state[i] = getattr(self, i)
         return state
 
@@ -1092,7 +1092,7 @@ class _NonNumericRange(object):
         return []
 
 
-class _AnyRange(object):
+class AnyRange(object):
     """A range object for representing Any sets"""
 
     __slots__ = ()
@@ -1106,7 +1106,7 @@ class _AnyRange(object):
     __repr__ = __str__
 
     def __eq__(self, other):
-        return isinstance(other, _AnyRange)
+        return isinstance(other, AnyRange)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -1124,11 +1124,11 @@ class _AnyRange(object):
         return False
 
     def issubset(self, other):
-        return isinstance(other, _AnyRange)
+        return isinstance(other, AnyRange)
 
     def range_difference(self, other_ranges):
         for r in other_ranges:
-            if isinstance(r, _AnyRange):
+            if isinstance(r, AnyRange):
                 return []
         else:
             return [self]
@@ -1279,7 +1279,7 @@ class _SetData(_SetDataBase):
         """
         tmp = self
         for arg in args:
-            tmp = _SetUnion(tmp, arg)
+            tmp = SetUnion(tmp, arg)
         return tmp
 
     def intersection(self, *args):
@@ -1288,7 +1288,7 @@ class _SetData(_SetDataBase):
         """
         tmp = self
         for arg in args:
-            tmp = _SetIntersection(tmp, arg)
+            tmp = SetIntersection(tmp, arg)
         return tmp
 
     def difference(self, *args):
@@ -1297,20 +1297,20 @@ class _SetData(_SetDataBase):
         """
         tmp = self
         for arg in args:
-            tmp = _SetDifference(tmp, arg)
+            tmp = SetDifference(tmp, arg)
         return tmp
 
     def symmetric_difference(self, other):
         """
         Return the symmetric difference of this set with another set
         """
-        return _SetSymmetricDifference(self, other)
+        return SetSymmetricDifference(self, other)
 
     def cross(self, *args):
         """
         Return the cross-product between this set and one or more sets
         """
-        return _SetProduct(self, *args)
+        return SetProduct(self, *args)
 
     # <= is equivalent to issubset
     # >= is equivalent to issuperset
@@ -1410,15 +1410,15 @@ class _FiniteSetMixin(object):
         # Finite set is the list of scalars
         for i in self:
             if i.__class__ in native_numeric_types:
-                yield _NumericRange(i,i,0)
+                yield NumericRange(i,i,0)
             elif i.__class__ in native_types:
-                yield _NonNumericRange(i)
+                yield NonNumericRange(i)
             else:
                 try:
                     as_numeric(i)
-                    yield _NumericRange(i,i,0)
+                    yield NumericRange(i,i,0)
                 except:
-                    yield _NonNumericRange(i)
+                    yield NonNumericRange(i)
 
 class _FiniteSetData(_FiniteSetMixin, _SetData):
     """A general unordered iterable Set"""
@@ -2086,9 +2086,9 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
         if cls is not SetOf:
             return super(SetOf, cls).__new__(cls)
         if isinstance(reference, (tuple, list)):
-            return _OrderedSetOf.__new__(_OrderedSetOf, reference)
+            return OrderedSetOf.__new__(OrderedSetOf, reference)
         else:
-            return _UnorderedSetOf.__new__(_UnorderedSetOf, reference)
+            return UnorderedSetOf.__new__(UnorderedSetOf, reference)
 
     def __init__(self, reference, **kwds):
         _SetData.__init__(self, component=self)
@@ -2155,10 +2155,10 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
                 str(v._ref),
             ])
 
-class _UnorderedSetOf(SetOf):
+class UnorderedSetOf(SetOf):
     pass
 
-class _OrderedSetOf(_OrderedSetMixin, SetOf):
+class OrderedSetOf(_OrderedSetMixin, SetOf):
     def __getitem__(self, index):
         i = self._to_0_based_index(index)
         try:
@@ -2186,7 +2186,7 @@ class _InfiniteRangeSetData(_SetData):
     """Data class for a infinite set.
 
     This Set implements an interface to an *infinite set* defined by one
-    or more _NumericRange objeccts.  As there are an infinite
+    or more NumericRange objects.  As there are an infinite
     number of members, Infinite Range Sets are not iterable.
 
     """
@@ -2196,10 +2196,10 @@ class _InfiniteRangeSetData(_SetData):
     def __init__(self, component, ranges=()):
         _SetData.__init__(self, component=component)
         for r in ranges:
-            if not isinstance(r, _NumericRange):
+            if not isinstance(r, NumericRange):
                 raise TypeError(
                     "_InfiniteRangeSetData ranges argument must be an "
-                    "iterable of _NumericRange objects")
+                    "iterable of NumericRange objects")
         self._ranges = ranges
 
     def __getstate__(self):
@@ -2379,11 +2379,11 @@ class RangeSet(Component):
         if type(ranges) is not tuple:
             ranges = tuple(ranges)
         if len(args) == 1:
-            ranges = ranges + (_NumericRange(1,args[0],1),)
+            ranges = ranges + (NumericRange(1,args[0],1),)
         elif len(args) == 2:
-            ranges = ranges + (_NumericRange(args[0],args[1],1),)
+            ranges = ranges + (NumericRange(args[0],args[1],1),)
         elif len(args) == 3:
-            ranges = ranges + (_NumericRange(*args),)
+            ranges = ranges + (NumericRange(*args),)
         elif args:
             raise ValueError("RangeSet expects 3 or fewer positional "
                              "arguments (received %s)" % (len(args),))
@@ -2490,34 +2490,34 @@ class _SetOperator(_SetData, Set):
 
 ############################################################################
 
-class _SetUnion(_SetOperator):
+class SetUnion(_SetOperator):
     __slots__ = tuple()
 
     def __new__(cls, *args):
-        if cls != _SetUnion:
-            return super(_SetUnion, cls).__new__(cls)
+        if cls != SetUnion:
+            return super(SetUnion, cls).__new__(cls)
 
         set0, set1 = _SetOperator._checkArgs(*args)
         if set0[0] and set1[0]:
-            cls = _SetUnion_OrderedSet
+            cls = SetUnion_OrderedSet
         elif set0[1] and set1[1]:
-            cls = _SetUnion_FiniteSet
+            cls = SetUnion_FiniteSet
         else:
-            cls = _SetUnion_InfiniteSet
+            cls = SetUnion_InfiniteSet
         return cls.__new__(cls)
 
     def ranges(self):
         return itertools.chain(*tuple(s.ranges() for s in self._sets))
 
 
-class _SetUnion_InfiniteSet(_SetUnion):
+class SetUnion_InfiniteSet(SetUnion):
     __slots__ = tuple()
 
     def __contains__(self, val):
         return any(val in s for s in self._sets)
 
 
-class _SetUnion_FiniteSet(_FiniteSetMixin, _SetUnion_InfiniteSet):
+class SetUnion_FiniteSet(_FiniteSetMixin, SetUnion_InfiniteSet):
     __slots__ = tuple()
 
     def __iter__(self):
@@ -2539,7 +2539,7 @@ class _SetUnion_FiniteSet(_FiniteSetMixin, _SetUnion_InfiniteSet):
         return len(set0) + sum(1 for s in set1 if s not in set0)
 
 
-class _SetUnion_OrderedSet(_OrderedSetMixin, _SetUnion_FiniteSet):
+class SetUnion_OrderedSet(_OrderedSetMixin, SetUnion_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
@@ -2586,24 +2586,24 @@ class _SetUnion_OrderedSet(_OrderedSetMixin, _SetUnion_FiniteSet):
 
 ############################################################################
 
-class _SetIntersection(_SetOperator):
+class SetIntersection(_SetOperator):
     __slots__ = tuple()
 
     def __new__(cls, *args):
-        if cls != _SetIntersection:
-            return super(_SetIntersection, cls).__new__(cls)
+        if cls != SetIntersection:
+            return super(SetIntersection, cls).__new__(cls)
 
         set0, set1 = _SetOperator._checkArgs(*args)
         if set0[0] or set1[0]:
-            cls = _SetIntersection_OrderedSet
+            cls = SetIntersection_OrderedSet
         elif set0[1] or set1[1]:
-            cls = _SetIntersection_FiniteSet
+            cls = SetIntersection_FiniteSet
         else:
-            cls = _SetIntersection_OrderedSet
+            cls = SetIntersection_OrderedSet
             for r0 in args[0].ranges():
                 for r01 in r0.range_intersection(args[1].ranges()):
                     if not r01.is_finite():
-                        cls = _SetIntersection_InfiniteSet
+                        cls = SetIntersection_InfiniteSet
                         return cls.__new__(cls)
         return cls.__new__(cls)
 
@@ -2613,14 +2613,14 @@ class _SetIntersection(_SetOperator):
                 yield r
 
 
-class _SetIntersection_InfiniteSet(_SetIntersection):
+class SetIntersection_InfiniteSet(SetIntersection):
     __slots__ = tuple()
 
     def __contains__(self, val):
         return all(val in s for s in self._sets)
 
 
-class _SetIntersection_FiniteSet(_FiniteSetMixin, _SetIntersection_InfiniteSet):
+class SetIntersection_FiniteSet(_FiniteSetMixin, SetIntersection_InfiniteSet):
     __slots__ = tuple()
 
     def __iter__(self):
@@ -2647,7 +2647,7 @@ class _SetIntersection_FiniteSet(_FiniteSetMixin, _SetIntersection_InfiniteSet):
         return sum(1 for _ in self)
 
 
-class _SetIntersection_OrderedSet(_OrderedSetMixin, _SetIntersection_FiniteSet):
+class SetIntersection_OrderedSet(_OrderedSetMixin, SetIntersection_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
@@ -2681,20 +2681,20 @@ class _SetIntersection_OrderedSet(_OrderedSetMixin, _SetIntersection_FiniteSet):
 
 ############################################################################
 
-class _SetDifference(_SetOperator):
+class SetDifference(_SetOperator):
     __slots__ = tuple()
 
     def __new__(cls, *args):
-        if cls != _SetDifference:
-            return super(_SetDifference, cls).__new__(cls)
+        if cls != SetDifference:
+            return super(SetDifference, cls).__new__(cls)
 
         set0, set1 = _SetOperator._checkArgs(*args)
         if set0[0]:
-            cls = _SetDifference_OrderedSet
+            cls = SetDifference_OrderedSet
         elif set0[1]:
-            cls = _SetDifference_FiniteSet
+            cls = SetDifference_FiniteSet
         else:
-            cls = _SetDifference_InfiniteSet
+            cls = SetDifference_InfiniteSet
         return cls.__new__(cls)
 
     def ranges(self):
@@ -2703,14 +2703,14 @@ class _SetDifference(_SetOperator):
                 yield r
 
 
-class _SetDifference_InfiniteSet(_SetDifference):
+class SetDifference_InfiniteSet(SetDifference):
     __slots__ = tuple()
 
     def __contains__(self, val):
         return val in self._sets[0] and not val in self._sets[1]
 
 
-class _SetDifference_FiniteSet(_FiniteSetMixin, _SetDifference_InfiniteSet):
+class SetDifference_FiniteSet(_FiniteSetMixin, SetDifference_InfiniteSet):
     __slots__ = tuple()
 
     def __iter__(self):
@@ -2724,7 +2724,7 @@ class _SetDifference_FiniteSet(_FiniteSetMixin, _SetDifference_InfiniteSet):
         return sum(1 for _ in self)
 
 
-class _SetDifference_OrderedSet(_OrderedSetMixin, _SetDifference_FiniteSet):
+class SetDifference_OrderedSet(_OrderedSetMixin, SetDifference_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
@@ -2759,20 +2759,20 @@ class _SetDifference_OrderedSet(_OrderedSetMixin, _SetDifference_FiniteSet):
 
 ############################################################################
 
-class _SetSymmetricDifference(_SetOperator):
+class SetSymmetricDifference(_SetOperator):
     __slots__ = tuple()
 
     def __new__(cls, *args):
-        if cls != _SetSymmetricDifference:
-            return super(_SetSymmetricDifference, cls).__new__(cls)
+        if cls != SetSymmetricDifference:
+            return super(SetSymmetricDifference, cls).__new__(cls)
 
         set0, set1 = _SetOperator._checkArgs(*args)
         if set0[0] and set1[0]:
-            cls = _SetSymmetricDifference_OrderedSet
+            cls = SetSymmetricDifference_OrderedSet
         elif set0[1] and set1[1]:
-            cls = _SetSymmetricDifference_FiniteSet
+            cls = SetSymmetricDifference_FiniteSet
         else:
-            cls = _SetSymmetricDifference_InfiniteSet
+            cls = SetSymmetricDifference_InfiniteSet
         return cls.__new__(cls)
 
     def ranges(self):
@@ -2783,15 +2783,15 @@ class _SetSymmetricDifference(_SetOperator):
                 for r in a_r.range_difference(set_b.ranges()):
                     yield r
 
-class _SetSymmetricDifference_InfiniteSet(_SetSymmetricDifference):
+class SetSymmetricDifference_InfiniteSet(SetSymmetricDifference):
     __slots__ = tuple()
 
     def __contains__(self, val):
         return (val in self._sets[0]) ^ (val in self._sets[1])
 
 
-class _SetSymmetricDifference_FiniteSet(_FiniteSetMixin,
-                                        _SetSymmetricDifference_InfiniteSet):
+class SetSymmetricDifference_FiniteSet(_FiniteSetMixin,
+                                        SetSymmetricDifference_InfiniteSet):
     __slots__ = tuple()
 
     def __iter__(self):
@@ -2808,8 +2808,8 @@ class _SetSymmetricDifference_FiniteSet(_FiniteSetMixin,
         return sum(1 for _ in self)
 
 
-class _SetSymmetricDifference_OrderedSet(_OrderedSetMixin,
-                                         _SetSymmetricDifference_FiniteSet):
+class SetSymmetricDifference_OrderedSet(_OrderedSetMixin,
+                                         SetSymmetricDifference_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
@@ -2844,33 +2844,33 @@ class _SetSymmetricDifference_OrderedSet(_OrderedSetMixin,
 
 ############################################################################
 
-class _SetProduct(_SetOperator):
+class SetProduct(_SetOperator):
     __slots__ = tuple()
 
     def __new__(cls, *args):
-        if cls != _SetProduct:
-            return super(_SetProduct, cls).__new__(cls)
+        if cls != SetProduct:
+            return super(SetProduct, cls).__new__(cls)
 
         _sets = _SetOperator._checkArgs(*args)
         if all(_[0] for _ in _sets):
-            cls = _SetProduct_OrderedSet
+            cls = SetProduct_OrderedSet
         elif all(_[1] for _ in _sets):
-            cls = _SetProduct_FiniteSet
+            cls = SetProduct_FiniteSet
         else:
-            cls = _SetProduct_InfiniteSet
+            cls = SetProduct_InfiniteSet
         return cls.__new__(cls)
 
     def flatten_cross_product(self):
         # This is recursive, but the chances of a deeply nested product
         # of Sets is exceptionally low.
         for s in self._sets:
-            if isinstance(s, _SetProduct):
+            if isinstance(s, SetProduct):
                 for ss in s.flatten_cross_product():
                     yield ss
             else:
                 yield s
 
-class _SetProduct_InfiniteSet(_SetProduct):
+class SetProduct_InfiniteSet(SetProduct):
     __slots__ = tuple()
 
     def __contains__(self, val):
@@ -2993,7 +2993,7 @@ class _SetProduct_InfiniteSet(_SetProduct):
 
 
 
-class _SetProduct_FiniteSet(_FiniteSetMixin, _SetProduct_InfiniteSet):
+class SetProduct_FiniteSet(_FiniteSetMixin, SetProduct_InfiniteSet):
     __slots__ = tuple()
 
     def __iter__(self):
@@ -3024,7 +3024,7 @@ class _SetProduct_FiniteSet(_FiniteSetMixin, _SetProduct_InfiniteSet):
         return ans
 
 
-class _SetProduct_OrderedSet(_OrderedSetMixin, _SetProduct_FiniteSet):
+class SetProduct_OrderedSet(_OrderedSetMixin, SetProduct_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
@@ -3079,7 +3079,7 @@ class _AnySet(_SetData, Set):
         return True
 
     def ranges(self):
-        yield _AnyRange()
+        yield AnyRange()
 
     def bounds(self):
         return (None, None)
@@ -3140,57 +3140,57 @@ DeclareGlobalSet(_AnySet(
 DeclareGlobalSet(RangeSet(
     name='Reals',
     doc='A global Pyomo Set that admits any real (floating point) value',
-    ranges=(_NumericRange(None,None,0),),
+    ranges=(NumericRange(None,None,0),),
 ))
 DeclareGlobalSet(RangeSet(
     name='NonNegativeReals',
     doc='A global Pyomo Set admitting any real value in [0, +inf]',
-    ranges=(_NumericRange(0,None,0),),
+    ranges=(NumericRange(0,None,0),),
 ))
 DeclareGlobalSet(RangeSet(
     name='NonPositiveReals',
     doc='A global Pyomo Set admitting any real value in [-inf, 0]',
-    ranges=(_NumericRange(None,0,0),),
+    ranges=(NumericRange(None,0,0),),
 ))
 DeclareGlobalSet(RangeSet(
     name='NegativeReals',
     doc='A global Pyomo Set admitting any real value in [-inf, 0)',
-    ranges=(_NumericRange(None,0,0,(True,False)),),
+    ranges=(NumericRange(None,0,0,(True,False)),),
 ))
 DeclareGlobalSet(RangeSet(
     name='PositiveReals',
     doc='A global Pyomo Set admitting any real value in (0, +inf]',
-    ranges=(_NumericRange(0,None,0,(False,True)),),
+    ranges=(NumericRange(0,None,0,(False,True)),),
 ))
 
 DeclareGlobalSet(RangeSet(
     name='Integers',
     doc='A global Pyomo Set admitting any integer value',
-    ranges=(_NumericRange(0,None,1), _NumericRange(0,None,-1)),
+    ranges=(NumericRange(0,None,1), NumericRange(0,None,-1)),
 ))
 DeclareGlobalSet(RangeSet(
     name='NonNegativeIntegers',
     doc='A global Pyomo Set admitting any integer value in [0, +inf]',
-    ranges=(_NumericRange(0,None,1),),
+    ranges=(NumericRange(0,None,1),),
 ))
 DeclareGlobalSet(RangeSet(
     name='NonPositiveIntegers',
     doc='A global Pyomo Set admitting any integer value in [-inf, 0]',
-    ranges=(_NumericRange(0,None,-1),),
+    ranges=(NumericRange(0,None,-1),),
 ))
 DeclareGlobalSet(RangeSet(
     name='NegativeIntegers',
     doc='A global Pyomo Set admitting any integer value in [-inf, -1]',
-    ranges=(_NumericRange(-1,None,-1),),
+    ranges=(NumericRange(-1,None,-1),),
 ))
 DeclareGlobalSet(RangeSet(
     name='PositiveIntegers',
     doc='A global Pyomo Set admitting any integer value in [1, +inf]',
-    ranges=(_NumericRange(1,None,1),),
+    ranges=(NumericRange(1,None,1),),
 ))
 
 DeclareGlobalSet(RangeSet(
     name='Binary',
     doc='A global Pyomo Set admitting the integers {0, 1}',
-    ranges=(_NumericRange(0,1,1),),
+    ranges=(NumericRange(0,1,1),),
 ))

@@ -19,20 +19,20 @@ from pyomo.common.log import LoggingIntercept
 
 import pyomo.core.base.set as SetModule
 from pyomo.core.base.set import (
-    _NumericRange as NR, _NonNumericRange as NNR, _AnyRange, _AnySet,
+    NumericRange as NR, NonNumericRange as NNR, AnyRange, _AnySet,
     Any, Reals, NonNegativeReals, Integers, PositiveIntegers,
     NegativeIntegers, PositiveReals,
     RangeSet, Set, SetOf,
     _FiniteRangeSetData, _InfiniteRangeSetData,
-    _SetUnion_InfiniteSet, _SetUnion_FiniteSet, _SetUnion_OrderedSet,
-    _SetIntersection_InfiniteSet, _SetIntersection_FiniteSet,
-    _SetIntersection_OrderedSet,
-    _SetDifference_InfiniteSet, _SetDifference_FiniteSet,
-    _SetDifference_OrderedSet,
-    _SetSymmetricDifference_InfiniteSet, _SetSymmetricDifference_FiniteSet,
-    _SetSymmetricDifference_OrderedSet,
-    _SetProduct_InfiniteSet, _SetProduct_FiniteSet,
-    _SetProduct_OrderedSet,
+    SetUnion_InfiniteSet, SetUnion_FiniteSet, SetUnion_OrderedSet,
+    SetIntersection_InfiniteSet, SetIntersection_FiniteSet,
+    SetIntersection_OrderedSet,
+    SetDifference_InfiniteSet, SetDifference_FiniteSet,
+    SetDifference_OrderedSet,
+    SetSymmetricDifference_InfiniteSet, SetSymmetricDifference_FiniteSet,
+    SetSymmetricDifference_OrderedSet,
+    SetProduct_InfiniteSet, SetProduct_FiniteSet,
+    SetProduct_OrderedSet,
     Initializer, _ConstantInitializer, _ItemInitializer, _ScalarCallInitializer,
     _IndexedCallInitializer,
     SetInitializer, _SetIntersectInitializer, RangeSetInitializer,
@@ -583,11 +583,11 @@ class TestNumericRange(unittest.TestCase):
 
 class TestAnyRange(unittest.TestCase):
     def test_str(self):
-        self.assertEqual(str(_AnyRange()), '[*]')
+        self.assertEqual(str(AnyRange()), '[*]')
 
     def test_range_relational(self):
-        a = _AnyRange()
-        b = _AnyRange()
+        a = AnyRange()
+        b = AnyRange()
         self.assertTrue(a.issubset(b))
         self.assertEqual(a, a)
         self.assertEqual(a, b)
@@ -599,42 +599,42 @@ class TestAnyRange(unittest.TestCase):
         self.assertNotEqual(c, a)
 
     def test_contains(self):
-        a = _AnyRange()
+        a = AnyRange()
         self.assertIn(None, a)
         self.assertIn(0, a)
         self.assertIn('a', a)
 
     def test_range_difference(self):
         self.assertEqual(
-            _AnyRange().range_difference([NR(0,None,1)]),
-            [_AnyRange()]
+            AnyRange().range_difference([NR(0,None,1)]),
+            [AnyRange()]
         )
         self.assertEqual(
-            NR(0,None,1).range_difference([_AnyRange()]),
+            NR(0,None,1).range_difference([AnyRange()]),
             []
         )
 
     def test_range_intersection(self):
         self.assertEqual(
-            _AnyRange().range_intersection([NR(0,None,1)]),
+            AnyRange().range_intersection([NR(0,None,1)]),
             [NR(0,None,1)]
         )
         self.assertEqual(
-            NR(0,None,1).range_intersection([_AnyRange()]),
+            NR(0,None,1).range_intersection([AnyRange()]),
             [NR(0,None,1)]
         )
         self.assertEqual(
-            NR(0,None,-1).range_intersection([_AnyRange()]),
+            NR(0,None,-1).range_intersection([AnyRange()]),
             [NR(0,None,-1)]
         )
 
     def test_info_methods(self):
-        a = _AnyRange()
+        a = AnyRange()
         self.assertFalse(a.is_discrete())
         self.assertFalse(a.is_finite())
 
     def test_pickle(self):
-        a = _AnyRange()
+        a = AnyRange()
         b = pickle.loads(pickle.dumps(a))
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
@@ -883,7 +883,7 @@ class TestRangeOperations(unittest.TestCase):
         jr0, jr1, jr2, jr3 = jr
 
         kr = list(k.ranges())
-        self.assertEqual(kr, [_AnyRange()])
+        self.assertEqual(kr, [AnyRange()])
         self.assertEqual(str(kr), "[[*]]")
         kr = kr[0]
 
@@ -1090,7 +1090,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         with self.assertRaisesRegexp(
                 TypeError, "ranges argument must be an iterable of "
-                "_NumericRange objects"):
+                "NumericRange objects"):
             RangeSet(ranges=(NR(1,5,1), NNR('a')))
 
         output = StringIO()
@@ -1111,7 +1111,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             i = SetOf([1,2,3])
             self.assertEqual(output.getvalue(), "")
             i.construct()
-            ref = 'Constructing SetOf, name=_OrderedSetOf, '\
+            ref = 'Constructing SetOf, name=OrderedSetOf, '\
                   'from data=None\n'
             self.assertEqual(output.getvalue(), ref)
             # Calling construct() twice bupasses construction the second
@@ -1370,10 +1370,10 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 "\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
             i[0]
         with self.assertRaisesRegexp(
-                IndexError, "_OrderedSetOf index out of range"):
+                IndexError, "OrderedSetOf index out of range"):
             i[5]
         with self.assertRaisesRegexp(
-                IndexError, "_OrderedSetOf index out of range"):
+                IndexError, "OrderedSetOf index out of range"):
             i[-5]
 
         self.assertEqual(i.ord(3), 2)
@@ -1425,10 +1425,10 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 "\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
             i[0]
         with self.assertRaisesRegexp(
-                IndexError, "_OrderedSetOf index out of range"):
+                IndexError, "OrderedSetOf index out of range"):
             i[5]
         with self.assertRaisesRegexp(
-                IndexError, "_OrderedSetOf index out of range"):
+                IndexError, "OrderedSetOf index out of range"):
             i[-5]
 
         self.assertEqual(i.ord(3), 2)
@@ -1588,7 +1588,7 @@ class TestSetUnion(unittest.TestCase):
             self.assertIs(type(b), list)
 
         x = a | b
-        self.assertIs(type(x), _SetUnion_OrderedSet)
+        self.assertIs(type(x), SetUnion_OrderedSet)
         self.assertTrue(x.is_finite())
         self.assertTrue(x.is_ordered())
         self.assertEqual(len(x), 5)
@@ -1610,7 +1610,7 @@ class TestSetUnion(unittest.TestCase):
         self.assertEqual(x.ord(5), 4)
         with self.assertRaisesRegexp(
                 IndexError,
-                "Cannot identify position of 6 in Set _SetUnion_OrderedSet"):
+                "Cannot identify position of 6 in Set SetUnion_OrderedSet"):
             x.ord(6)
 
         self.assertEqual(x[1], 1)
@@ -1620,7 +1620,7 @@ class TestSetUnion(unittest.TestCase):
         self.assertEqual(x[5], 4)
         with self.assertRaisesRegexp(
                 IndexError,
-                "_SetUnion_OrderedSet index out of range"):
+                "SetUnion_OrderedSet index out of range"):
             x[6]
 
         self.assertEqual(x[-1], 4)
@@ -1630,7 +1630,7 @@ class TestSetUnion(unittest.TestCase):
         self.assertEqual(x[-5], 1)
         with self.assertRaisesRegexp(
                 IndexError,
-                "_SetUnion_OrderedSet index out of range"):
+                "SetUnion_OrderedSet index out of range"):
             x[-6]
 
     def test_ordered_setunion(self):
@@ -1661,7 +1661,7 @@ class TestSetUnion(unittest.TestCase):
             self.assertIn(type(b), (list, set))
 
         x = a | b
-        self.assertIs(type(x), _SetUnion_FiniteSet)
+        self.assertIs(type(x), SetUnion_FiniteSet)
         self.assertTrue(x.is_finite())
         self.assertFalse(x.is_ordered())
         self.assertEqual(len(x), 5)
@@ -1709,7 +1709,7 @@ class TestSetUnion(unittest.TestCase):
             self.assertIn(type(b), (list, set))
 
         x = a | b
-        self.assertIs(type(x), _SetUnion_InfiniteSet)
+        self.assertIs(type(x), SetUnion_InfiniteSet)
         self.assertFalse(x.is_finite())
         self.assertFalse(x.is_ordered())
 
@@ -1755,7 +1755,7 @@ class TestSetIntersection(unittest.TestCase):
             ref = (2,3,5)
 
         x = a & b
-        self.assertIs(type(x), _SetIntersection_OrderedSet)
+        self.assertIs(type(x), SetIntersection_OrderedSet)
         self.assertTrue(x.is_finite())
         self.assertTrue(x.is_ordered())
         self.assertEqual(len(x), 3)
@@ -1775,7 +1775,7 @@ class TestSetIntersection(unittest.TestCase):
         self.assertEqual(x.ord(5), 3)
         with self.assertRaisesRegexp(
                 IndexError, "Cannot identify position of 6 in Set "
-                "_SetIntersection_OrderedSet"):
+                "SetIntersection_OrderedSet"):
             x.ord(6)
 
         self.assertEqual(x[1], ref[0])
@@ -1783,7 +1783,7 @@ class TestSetIntersection(unittest.TestCase):
         self.assertEqual(x[3], 5)
         with self.assertRaisesRegexp(
                 IndexError,
-                "_SetIntersection_OrderedSet index out of range"):
+                "SetIntersection_OrderedSet index out of range"):
             x[4]
 
         self.assertEqual(x[-1], 5)
@@ -1791,7 +1791,7 @@ class TestSetIntersection(unittest.TestCase):
         self.assertEqual(x[-3], ref[-3])
         with self.assertRaisesRegexp(
                 IndexError,
-                "_SetIntersection_OrderedSet index out of range"):
+                "SetIntersection_OrderedSet index out of range"):
             x[-4]
 
     def test_ordered_setintersection(self):
@@ -1819,7 +1819,7 @@ class TestSetIntersection(unittest.TestCase):
         self.assertTrue(a_finite or b_finite)
 
         x = a & b
-        self.assertIs(type(x), _SetIntersection_FiniteSet)
+        self.assertIs(type(x), SetIntersection_FiniteSet)
         self.assertTrue(x.is_finite())
         self.assertFalse(x.is_ordered())
         self.assertEqual(len(x), 3)
@@ -1867,7 +1867,7 @@ class TestSetIntersection(unittest.TestCase):
         self.assertEqual([a_finite, b_finite], [False,False])
 
         x = a & b
-        self.assertIs(type(x), _SetIntersection_InfiniteSet)
+        self.assertIs(type(x), SetIntersection_InfiniteSet)
         self.assertFalse(x.is_finite())
         self.assertFalse(x.is_ordered())
 
@@ -1890,7 +1890,7 @@ class TestSetIntersection(unittest.TestCase):
         a = RangeSet(0, None, 2)
         b = RangeSet(5,10,0)
         x = a & b
-        self.assertIs(type(x), _SetIntersection_OrderedSet)
+        self.assertIs(type(x), SetIntersection_OrderedSet)
         self.assertEqual(list(x), [6,8,10])
 
         self.assertEqual(x.ord(6), 1)
@@ -1902,7 +1902,7 @@ class TestSetIntersection(unittest.TestCase):
         self.assertEqual(x[3], 10)
         with self.assertRaisesRegexp(
                 IndexError,
-                "_SetIntersection_OrderedSet index out of range"):
+                "SetIntersection_OrderedSet index out of range"):
             x[4]
 
         self.assertEqual(x[-3], 6)
@@ -1910,7 +1910,7 @@ class TestSetIntersection(unittest.TestCase):
         self.assertEqual(x[-1], 10)
         with self.assertRaisesRegexp(
                 IndexError,
-                "_SetIntersection_OrderedSet index out of range"):
+                "SetIntersection_OrderedSet index out of range"):
             x[-4]
 
 
@@ -1934,7 +1934,7 @@ class TestSetDifference(unittest.TestCase):
         self.assertTrue(a_ordered)
 
         x = a - b
-        self.assertIs(type(x), _SetDifference_OrderedSet)
+        self.assertIs(type(x), SetDifference_OrderedSet)
         self.assertTrue(x.is_finite())
         self.assertTrue(x.is_ordered())
         self.assertEqual(len(x), 3)
@@ -1955,7 +1955,7 @@ class TestSetDifference(unittest.TestCase):
         self.assertEqual(x.ord(5), 3)
         with self.assertRaisesRegexp(
                 IndexError, "Cannot identify position of 6 in Set "
-                "_SetDifference_OrderedSet"):
+                "SetDifference_OrderedSet"):
             x.ord(6)
 
         self.assertEqual(x[1], 3)
@@ -1963,7 +1963,7 @@ class TestSetDifference(unittest.TestCase):
         self.assertEqual(x[3], 5)
         with self.assertRaisesRegexp(
                 IndexError,
-                "_SetDifference_OrderedSet index out of range"):
+                "SetDifference_OrderedSet index out of range"):
             x[4]
 
         self.assertEqual(x[-1], 5)
@@ -1971,7 +1971,7 @@ class TestSetDifference(unittest.TestCase):
         self.assertEqual(x[-3], 3)
         with self.assertRaisesRegexp(
                 IndexError,
-                "_SetDifference_OrderedSet index out of range"):
+                "SetDifference_OrderedSet index out of range"):
             x[-4]
 
     def test_ordered_setdifference(self):
@@ -2000,7 +2000,7 @@ class TestSetDifference(unittest.TestCase):
         self.assertTrue(a_finite or b_finite)
 
         x = a - b
-        self.assertIs(type(x), _SetDifference_FiniteSet)
+        self.assertIs(type(x), SetDifference_FiniteSet)
         self.assertTrue(x.is_finite())
         self.assertFalse(x.is_ordered())
         self.assertEqual(len(x), 3)
@@ -2036,7 +2036,7 @@ class TestSetDifference(unittest.TestCase):
 
     def test_infinite_setdifference(self):
         x = RangeSet(0,4,0) - RangeSet(2,6,0)
-        self.assertIs(type(x), _SetDifference_InfiniteSet)
+        self.assertIs(type(x), SetDifference_InfiniteSet)
         self.assertFalse(x.is_finite())
         self.assertFalse(x.is_ordered())
 
@@ -2072,7 +2072,7 @@ class TestSetSymmetricDifference(unittest.TestCase):
         self.assertTrue(a_ordered)
 
         x = a ^ b
-        self.assertIs(type(x), _SetSymmetricDifference_OrderedSet)
+        self.assertIs(type(x), SetSymmetricDifference_OrderedSet)
         self.assertTrue(x.is_finite())
         self.assertTrue(x.is_ordered())
         self.assertEqual(len(x), 4)
@@ -2094,7 +2094,7 @@ class TestSetSymmetricDifference(unittest.TestCase):
         self.assertEqual(x.ord(5), 3)
         with self.assertRaisesRegexp(
                 IndexError, "Cannot identify position of 6 in Set "
-                "_SetSymmetricDifference_OrderedSet"):
+                "SetSymmetricDifference_OrderedSet"):
             x.ord(6)
 
         self.assertEqual(x[1], 3)
@@ -2103,7 +2103,7 @@ class TestSetSymmetricDifference(unittest.TestCase):
         self.assertEqual(x[4], 0)
         with self.assertRaisesRegexp(
                 IndexError,
-                "_SetSymmetricDifference_OrderedSet index out of range"):
+                "SetSymmetricDifference_OrderedSet index out of range"):
             x[5]
 
         self.assertEqual(x[-1], 0)
@@ -2112,7 +2112,7 @@ class TestSetSymmetricDifference(unittest.TestCase):
         self.assertEqual(x[-4], 3)
         with self.assertRaisesRegexp(
                 IndexError,
-                "_SetSymmetricDifference_OrderedSet index out of range"):
+                "SetSymmetricDifference_OrderedSet index out of range"):
             x[-5]
 
     def test_ordered_setsymmetricdifference(self):
@@ -2135,7 +2135,7 @@ class TestSetSymmetricDifference(unittest.TestCase):
         self.assertTrue(a_finite or b_finite)
 
         x = a ^ b
-        self.assertIs(type(x), _SetSymmetricDifference_FiniteSet)
+        self.assertIs(type(x), SetSymmetricDifference_FiniteSet)
         self.assertTrue(x.is_finite())
         self.assertFalse(x.is_ordered())
         self.assertEqual(len(x), 4)
@@ -2171,7 +2171,7 @@ class TestSetSymmetricDifference(unittest.TestCase):
 
     def test_infinite_setdifference(self):
         x = RangeSet(0,4,0) ^ RangeSet(2,6,0)
-        self.assertIs(type(x), _SetSymmetricDifference_InfiniteSet)
+        self.assertIs(type(x), SetSymmetricDifference_InfiniteSet)
         self.assertFalse(x.is_finite())
         self.assertFalse(x.is_ordered())
 
@@ -2191,7 +2191,7 @@ class TestSetSymmetricDifference(unittest.TestCase):
             ]))
 
         x = SetOf([3,2,1,5,4]) ^ RangeSet(3,6,0)
-        self.assertIs(type(x), _SetSymmetricDifference_InfiniteSet)
+        self.assertIs(type(x), SetSymmetricDifference_InfiniteSet)
         self.assertFalse(x.is_finite())
         self.assertFalse(x.is_ordered())
 
@@ -2216,7 +2216,7 @@ class TestSetSymmetricDifference(unittest.TestCase):
             ]))
 
         x = RangeSet(3,6,0) ^ SetOf([3,2,1,5,4])
-        self.assertIs(type(x), _SetSymmetricDifference_InfiniteSet)
+        self.assertIs(type(x), SetSymmetricDifference_InfiniteSet)
         self.assertFalse(x.is_finite())
         self.assertFalse(x.is_ordered())
 
@@ -2248,7 +2248,7 @@ class TestSetProduct(unittest.TestCase):
         self.assertEqual(a,b)
 
     def test_cutPointGenerator(self):
-        CG = _SetProduct_InfiniteSet._cutPointGenerator
+        CG = SetProduct_InfiniteSet._cutPointGenerator
         i = Any
         j = SetOf([(1,1),(1,2),(2,1),(2,2)])
 
@@ -2328,7 +2328,7 @@ class TestSetProduct(unittest.TestCase):
 
         x = a * b
 
-        self.assertIs(type(x), _SetProduct_FiniteSet)
+        self.assertIs(type(x), SetProduct_FiniteSet)
         self.assertTrue(x.is_finite())
         self.assertFalse(x.is_ordered())
         self.assertEqual(len(x), 6)
@@ -2366,7 +2366,7 @@ class TestSetProduct(unittest.TestCase):
 
         x = a * b
 
-        self.assertIs(type(x), _SetProduct_OrderedSet)
+        self.assertIs(type(x), SetProduct_OrderedSet)
         self.assertTrue(x.is_finite())
         self.assertTrue(x.is_ordered())
         self.assertEqual(len(x), 6)
@@ -2388,7 +2388,7 @@ class TestSetProduct(unittest.TestCase):
         self.assertEqual(x.ord((2,5)), 6)
         with self.assertRaisesRegexp(
                 IndexError, "Cannot identify position of \(3, 4\) in Set "
-                "_SetProduct_OrderedSet"):
+                "SetProduct_OrderedSet"):
             x.ord((3,4))
 
         self.assertEqual(x[1], (3,6))
@@ -2399,7 +2399,7 @@ class TestSetProduct(unittest.TestCase):
         self.assertEqual(x[6], (2,5))
         with self.assertRaisesRegexp(
                 IndexError,
-                "_SetProduct_OrderedSet index out of range"):
+                "SetProduct_OrderedSet index out of range"):
             x[7]
 
         self.assertEqual(x[-6], (3,6))
@@ -2410,7 +2410,7 @@ class TestSetProduct(unittest.TestCase):
         self.assertEqual(x[-1], (2,5))
         with self.assertRaisesRegexp(
                 IndexError,
-                "_SetProduct_OrderedSet index out of range"):
+                "SetProduct_OrderedSet index out of range"):
             x[-7]
 
     def test_ordered_setproduct(self):
@@ -2745,7 +2745,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
-        self.assertIs(type(s), _SetIntersection_InfiniteSet)
+        self.assertIs(type(s), SetIntersection_InfiniteSet)
         self.assertIs(s._sets[0], Reals)
         self.assertIs(s._sets[1], Integers)
 
@@ -2761,8 +2761,8 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
-        self.assertIs(type(s), _SetIntersection_OrderedSet)
-        self.assertIs(type(s._sets[0]), _SetIntersection_InfiniteSet)
+        self.assertIs(type(s), SetIntersection_OrderedSet)
+        self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
         self.assertIsInstance(s._sets[1], RangeSet)
 
         a = SetInitializer(self, Reals)
@@ -2777,8 +2777,8 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
-        self.assertIs(type(s), _SetIntersection_OrderedSet)
-        self.assertIs(type(s._sets[0]), _SetIntersection_InfiniteSet)
+        self.assertIs(type(s), SetIntersection_OrderedSet)
+        self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
         self.assertIsInstance(s._sets[1], RangeSet)
         self.assertFalse(s._sets[0].is_finite())
         self.assertFalse(s._sets[1].is_finite())
@@ -2798,8 +2798,8 @@ class Test_SetInitializer(unittest.TestCase):
         with self.assertRaises(KeyError):
             a(None,None)
         s = a(None,1)
-        self.assertIs(type(s), _SetIntersection_OrderedSet)
-        self.assertIs(type(s._sets[0]), _SetIntersection_InfiniteSet)
+        self.assertIs(type(s), SetIntersection_OrderedSet)
+        self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
         self.assertIsInstance(s._sets[1], RangeSet)
         self.assertFalse(s._sets[0].is_finite())
         self.assertFalse(s._sets[1].is_finite())
@@ -2872,9 +2872,9 @@ class Test_SetInitializer(unittest.TestCase):
 
         a = SetInitializer(None, Reals)
         a.intersect(SetInitializer(None, Integers))
-        self.assertIs(type(a(None,None)), _SetIntersection_InfiniteSet)
+        self.assertIs(type(a(None,None)), SetIntersection_InfiniteSet)
         a.setdefault(RangeSet(5))
-        self.assertIs(type(a(None,None)), _SetIntersection_InfiniteSet)
+        self.assertIs(type(a(None,None)), SetIntersection_InfiniteSet)
 
 
 class TestGlobalSets(unittest.TestCase):
