@@ -337,16 +337,18 @@ class _UnknownSetDimen(object): pass
 #   - Test index/ord for equivalence of 1 and (1,)
 #
 class _NumericRange(object):
-    """A representation of a closed numeric range.
+    """A representation of a numeric range.
 
     This class represents a contiguous range of numbers.  The class
     mimics the Pyomo (*not* Python) `range` API, with a Start, End, and
     Step.  The Step is a signed int.  If the Step is 0, the range is
-    continuous.  The End *is* included in the range.
+    continuous.  The End *is* included in the range.  Ranges are closed,
+    unless a closed is spacified as a 2-tuple of bool values.  Only
+    continuous ranges may be open (or partially open)
 
-    While the class name implies that the range is always closed, it is
-    not strictly finite, as None is allowed for then End value (and the
-    Start value, for continuous ranges only).
+    Closed ranges are not necessarily strictly finite, as None is
+    allowed for then End value (as well as the Start value, for
+    continuous ranges only).
 
     """
     __slots__ = ('start','end','step','closed')
@@ -2194,8 +2196,8 @@ class _InfiniteRangeSetData(_SetData):
         for r in ranges:
             if not isinstance(r, _NumericRange):
                 raise TypeError(
-                    "_InfiniteRangeSetData range argument must be an "
-                    "interable of _NumericRange objects")
+                    "_InfiniteRangeSetData ranges argument must be an "
+                    "iterable of _NumericRange objects")
         self._ranges = ranges
 
     def __getstate__(self):
