@@ -752,7 +752,7 @@ class _NumericRange(object):
         assert new_step % cnr.step == 0
         _dir = math.copysign(1, cnr.step)
         _subranges = []
-        for i in range(abs(new_step // cnr.step)):
+        for i in xrange(abs(new_step // cnr.step)):
             if ( cnr.end is not None
                  and _dir*(cnr.start + i*cnr.step) > _dir*cnr.end ):
                 # Once we walk past the end of the range, we are done
@@ -880,7 +880,7 @@ class _NumericRange(object):
                             t.start, start, 0, (t.closed[0], False)
                         ))
                     if s.step: # i.e., not a single point
-                        for i in range(int(start//s.step), int(end//s.step)):
+                        for i in xrange(int(start//s.step), int(end//s.step)):
                             _new_subranges.append(_NumericRange(
                                 i*s.step, (i+1)*s.step, 0, '()'
                             ))
