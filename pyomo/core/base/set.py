@@ -13,6 +13,7 @@ import itertools
 import logging
 import math
 import six
+import sys
 import weakref
 
 try:
@@ -23,9 +24,16 @@ except ImportError:
         if ans > abs(b/2.):
             ans -= b
         return ans
+
+if six.PY2:
+    getargspec = inspect.getargspec
+else:
+    # For our needs, getfullargspec is a drop-in replacement for
+    # getargspec (which was removed in Python 3.x)
+    getargspec = inspect.getfullargspec
+
 from six import iteritems
 from six.moves import xrange
-import sys
 
 from pyutilib.misc.misc import flatten_tuple
 
@@ -58,7 +66,15 @@ def Initializer(obj, init, allow_generators=False,
         if not allow_generators and inspect.isgeneratorfunction(init):
             raise ValueError("Generator functions are not allowed")
         if obj.is_indexed():
-            return _IndexedCallInitializer(init)
+            # Historically pyomo.core.base.misc.apply_indexed_rule
+            # accepted rules that took only the parent block (even for
+            # indexed components).  We will preserve that functionality
+            # here.
+            _args = getargspec(init)
+            if len(_args.args) == 1 and _args.varargs is None:
+                return _ScalarCallInitializer(init)
+            else:
+                return _IndexedCallInitializer(init)
         else:
             return _ScalarCallInitializer(init)
     elif isinstance(init, collections.Mapping):
