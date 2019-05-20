@@ -54,19 +54,9 @@ def Initializer(obj, init, allow_generators=False,
         if init is None:
             return None
         return _ConstantInitializer(init)
-    elif inspect.isgeneratorfunction(init):
-        if not allow_generators:
-            raise ValueError("Generator functions are not allowed")
-        if obj.is_indexed():
-            return _IndexedCallInitializer(init)
-        else:
-            return _ScalarCallInitializer(init)
-    elif inspect.isgenerator(init) or hasattr(init, 'next') \
-         or hasattr(init, '__next__'):
-        if not allow_generators:
-            raise ValueError("Generators are not allowed")
-        return _ConstantInitializer(init)
     elif inspect.isfunction(init):
+        if not allow_generators and inspect.isgeneratorfunction(init):
+            raise ValueError("Generator functions are not allowed")
         if obj.is_indexed():
             return _IndexedCallInitializer(init)
         else:
@@ -79,6 +69,11 @@ def Initializer(obj, init, allow_generators=False,
             return _ItemInitializer(init)
         else:
             return _ConstantInitializer(init)
+    elif inspect.isgenerator(init) or hasattr(init, 'next') \
+         or hasattr(init, '__next__'):
+        if not allow_generators:
+            raise ValueError("Generators are not allowed")
+        return _ConstantInitializer(init)
     else:
         return _ConstantInitializer(init)
 
