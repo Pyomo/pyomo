@@ -2141,9 +2141,10 @@ class IndexedSet(Set):
 
 class SetOf(_FiniteSetMixin, _SetData, Component):
     """"""
-    def __new__(cls, reference, **kwds):
+    def __new__(cls, *args, **kwds):
         if cls is not SetOf:
             return super(SetOf, cls).__new__(cls)
+        reference, = args
         if isinstance(reference, (tuple, list)):
             return OrderedSetOf.__new__(OrderedSetOf, reference)
         else:
