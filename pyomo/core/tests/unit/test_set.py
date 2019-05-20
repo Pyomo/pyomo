@@ -37,7 +37,7 @@ from pyomo.core.base.set import (
     _IndexedCallInitializer,
     SetInitializer, _SetIntersectInitializer, RangeSetInitializer,
 )
-from pyomo.environ import ConcreteModel, Var
+from pyomo.environ import ConcreteModel, Var, Param
 
 try:
     import numpy as np
@@ -1276,6 +1276,21 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertTrue(RangeSet(4,6,0).isdisjoint(i))
         self.assertFalse(RangeSet(3,6,0).isdisjoint(i))
 
+        # It can even work for non-hashable objects (that can't be cast
+        # to set())
+        m = ConcreteModel()
+        m.p = Param(initialize=2)
+        m.q = Var(initialize=2)
+        _NonHashable = (1,3,5,m.p)
+        self.assertFalse(SetOf({2,4}).isdisjoint(_NonHashable))
+        self.assertTrue(SetOf({0,4}).isdisjoint(_NonHashable))
+        self.assertFalse(SetOf(_NonHashable).isdisjoint(_NonHashable))
+        self.assertFalse(SetOf((m.q,1,3,5,m.p)).isdisjoint(_NonHashable))
+        # Note: membership in tuples is done through
+        # __bool__(a.__eq__(b)), so Params/Vars with equivalent values will
+        # match
+        self.assertFalse(SetOf((m.q,)).isdisjoint(_NonHashable))
+
         # It can even work for non-iterable objects (that can't be cast
         # to set())
         class _NonIterable(object):
@@ -1302,6 +1317,21 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertTrue(RangeSet(1,3,0).issubset(RangeSet(0,100,0)))
         self.assertFalse(RangeSet(1,3,0).issubset(i))
         self.assertFalse(RangeSet(3,6,0).issubset(i))
+
+        # It can even work for non-hashable objects (that can't be cast
+        # to set())
+        m = ConcreteModel()
+        m.p = Param(initialize=2)
+        m.q = Var(initialize=2)
+        _NonHashable = (1,3,5,m.p)
+        self.assertFalse(SetOf({0,1,3,5}).issubset(_NonHashable))
+        self.assertTrue(SetOf({1,3,5}).issubset(_NonHashable))
+        self.assertTrue(SetOf(_NonHashable).issubset(_NonHashable))
+        self.assertTrue(SetOf((m.q,1,3,5,m.p)).issubset(_NonHashable))
+        # Note: membership in tuples is done through
+        # __bool__(a.__eq__(b)), so Params/Vars with equivalent values will
+        # match
+        self.assertTrue(SetOf((m.q,1,3,5)).issubset(_NonHashable))
 
         # It can even work for non-iterable objects (that can't be cast
         # to set())
@@ -1330,8 +1360,22 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertTrue(RangeSet(1,3,0).issuperset(i))
         self.assertFalse(RangeSet(3,6,0).issuperset(i))
 
-        # It can even work for non-iterable objects (that can't be cast
+        # It can even work for non-hashable objects (that can't be cast
         # to set())
+        m = ConcreteModel()
+        m.p = Param(initialize=2)
+        m.q = Var(initialize=2)
+        _NonHashable = (1,3,5,m.p)
+        self.assertFalse(SetOf({1,3,5}).issuperset(_NonHashable))
+        self.assertTrue(SetOf(_NonHashable).issuperset(_NonHashable))
+        self.assertTrue(SetOf((m.q,1,3,5,m.p)).issuperset(_NonHashable))
+        # Note: membership in tuples is done through
+        # __bool__(a.__eq__(b)), so Params/Vars with equivalent values will
+        # match
+        self.assertTrue(SetOf((m.q,1,3,5)).issuperset(_NonHashable))
+
+        # But NOT non-iterable objects: we assume that everything that
+        # does not implement is_finite() is a discrete set.
         class _NonIterable(object):
             def __init__(self):
                 self.data = set({1,3,5})
@@ -1339,8 +1383,10 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 return val in self.data
             def __len__(self):
                 return len(self.data)
-        # self.assertFalse(SetOf({1,5}).issuperset(_NonIterable()))
-        # self.assertTrue(SetOf({1,3,4,5}).issuperset(_NonIterable()))
+        with self.assertRaisesRegexp(TypeError, 'not iterable'):
+            SetOf({1,5}).issuperset(_NonIterable())
+        with self.assertRaisesRegexp(TypeError, 'not iterable'):
+            SetOf({1,3,4,5}).issuperset(_NonIterable())
 
     def test_unordered_setof(self):
         i = SetOf({1,3,2,0})

@@ -1166,6 +1166,8 @@ class _SetData(_SetDataBase):
         try:
             other_is_finite = other.is_finite()
         except:
+            # we assume that everything that does not implement
+            # is_finite() is a discrete set.
             other_is_finite = True
             try:
                 # For efficiency, if the other is not a Set, we will try
@@ -1197,6 +1199,8 @@ class _SetData(_SetDataBase):
         try:
             other_is_finite = other.is_finite()
         except:
+            # we assume that everything that does not implement
+            # is_finite() is a discrete set.
             other_is_finite = True
             try:
                 # For efficiency, if the other is not a Set, we will try
@@ -1221,6 +1225,8 @@ class _SetData(_SetDataBase):
         try:
             other_is_finite = other.is_finite()
         except:
+            # we assume that everything that does not implement
+            # is_finite() is a discrete set.
             other_is_finite = True
             try:
                 # For efficiency, if the other is not a Set, we will try
@@ -1248,19 +1254,27 @@ class _SetData(_SetDataBase):
             return True
 
     def issuperset(self, other):
-        # For efficiency, if the other is not a Set, we will try converting
-        # it to a Python set() for efficient lookup.
         try:
             other_is_finite = other.is_finite()
         except:
+            # we assume that everything that does not implement
+            # is_finite() is a discrete set.
             other_is_finite = True
             try:
+                # For efficiency, if the other is not a Set, we will try
+                # converting it to a Python set() for efficient lookup.
                 other = set(other)
             except:
                 pass
         if other_is_finite:
             for x in other:
-                if x not in self:
+                # Other may contain elements that are not representable
+                # in self.  Trap that error (a TypeError due to hashing)
+                # and return False
+                try:
+                    if x not in self:
+                        return False
+                except TypeError:
                     return False
             return True
         elif self.is_finite():
