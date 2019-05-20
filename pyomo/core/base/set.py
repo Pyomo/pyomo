@@ -1423,6 +1423,8 @@ class _FiniteSetMixin(object):
             elif i.__class__ in native_types:
                 yield NonNumericRange(i)
             else:
+                # Because of things like SetOf, self could contain types
+                # we have never seen before.
                 try:
                     as_numeric(i)
                     yield NumericRange(i,i,0)
@@ -1476,7 +1478,8 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         return len(self._values)
 
     def __reversed__(self):
-        return reversed(self._values)
+        # Python will not reverse() sets, so convert to a tuple and reverse
+        return reversed(tuple(self._values))
 
     def data(self):
         return tuple(self._values)
@@ -1661,7 +1664,7 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
     In older Pyomo terms, this defines a "concrete" ordered set - that is,
     a set that "owns" the list of set members.  While this class actually
     implements a set ordered by insertion order, we make the "official"
-    _IndertionOrderSetData an empty derivative class, so that
+    _InsertionOrderSetData an empty derivative class, so that
 
          issubclass(_SortedSetData, _InsertionOrderSetData) == False
 
@@ -1721,7 +1724,7 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
 
     def clear(self):
         self._values.clear()
-        self._ordered_values.clear()
+        self._ordered_values = []
 
     def __getitem__(self, index):
         """
@@ -1744,19 +1747,22 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
 
         If the search item is not in the Set, then an IndexError is raised.
         """
+        # The bulk of single-value set members are stored as scalars.
+        # However, we are now being more careful about matching tuples
+        # when they are actually put as Set members.  So, we will look
+        # for the exact thing that the user sent us and then fall back
+        # on the scalar.
         try:
-            # The bulk of single-value set members were stored as scalars.
-            # Check that first.
-            if item.__class__ is tuple and len(item) == 1:
-                try:
-                    return self._values[item[0]] + 1
-                except KeyError:
-                    pass
             return self._values[item] + 1
         except KeyError:
-            raise IndexError(
-                "Cannot identify position of %s in Set %s: item not in Set"
-                % (item, self.name))
+            if item.__class__ is not tuple or len(item) > 1:
+                raise ValueError(
+                    "%s.ord(x): x not in %s" % (self.name, self.name))
+        try:
+            return self._values[item[0]] + 1
+        except KeyError:
+            raise ValueError(
+                "%s.ord(x): x not in %s" % (self.name, self.name))
 
 
 class _InsertionOrderSetData(_OrderedSetData):
@@ -1866,7 +1872,8 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
         return self.data()
 
     def _sort(self):
-        self._ordered_values = sorted_robust(self._ordered_values)
+        self._ordered_values = list(self.parent_component()._sort_fcn(
+            self._ordered_values))
         self._values = dict(
             (j, i) for i, j in enumerate(self._ordered_values) )
         self._is_sorted = True
@@ -1934,14 +1941,38 @@ class Set(IndexedComponent):
         if cls != Set:
             return super(Set, cls).__new__(cls)
 
-        ordered = kwds.get('ordered', True)
+        # TBD: Should ordered be allowed to vary across an IndexedSet?
+        #
+        # Many things are easier by forcing it to be consistent across
+        # the set (namely, the _ComponentDataClass is constant).
+        # However, it is a bit off that 'ordered' it the only arg NOT
+        # processed by Initializer.  We can mock up a _SortedSetData
+        # sort function that preserves Insertion Order (lambda x: x), but
+        # the unsorted is harder (it would effectively be insertion
+        # order, but ordered() may not be deterministic based on how the
+        # set was populated - and we could not issue a warning?)
+        #
+        # JDS [5/2019]: Until someone demands otherwise, I think we
+        # should leave it constant across an IndexedSet
+        ordered = kwds.get('ordered', Set.InsertionOrder)
         if ordered is True:
             ordered = Set.InsertionOrder
         if ordered not in Set._ValidOrderedAuguments:
-            raise TypeError(
-                "Set 'ordered' argument is not valid (must be one of {%s})" % (
-                    ', '.join(sorted(
-                        'Set.'+x.__name__ if isinstance(x,type) else str(x)
+            if inspect.isfunction(ordered):
+                ordered = Set.SortedOrder
+            else:
+                # We want the list to be deterministic, but not
+                # alphabetical, so we first sort by type and then
+                # convert evetything to string.  Note that we have to
+                # convert *types* to string early, as the default
+                # ordering of types is random: so InsertionOrder and
+                # SortedOrder would occasionally swap places.
+                raise TypeError(
+                    "Set 'ordered' argument is not valid (must be one of {%s})"
+                    % ( ', '.join(str(_) for _ in sorted_robust(
+                        'Set.'+x.__name__ if isinstance(x,type) else x
+                        for x in Set._ValidOrderedAuguments.union(
+                                {'<function>',})
                     ))))
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             if ordered is Set.InsertionOrder:
@@ -1954,7 +1985,7 @@ class Set(IndexedComponent):
             newObj = IndexedSet.__new__(IndexedSet)
             if ordered is Set.InsertionOrder:
                 newObj._ComponentDataClass = _OrderedSetData
-            elif ordered is Set.SortedOrder or inspect.isfunction(ordered):
+            elif ordered is Set.SortedOrder:
                 newObj._ComponentDataClass = _SortedSetData
             else:
                 newObj._ComponentDataClass = _FiniteSetData
@@ -1962,20 +1993,28 @@ class Set(IndexedComponent):
 
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', Set)
-        # Drop the ordered flag: this was processed by __new__
-        kwds.pop('ordered',None)
+
+        # The ordered flag was processed by __new__, but if this is a
+        # sorted set, then we need to set the sorting function
+        _ordered = kwds.pop('ordered',None)
+        if _ordered and _ordered is not Set.InsertionOrder:
+            if inspect.isfunction(_ordered):
+                self._sort_fcn = _ordered
+            else:
+                self._sort_fcn = sorted_robust
+
         # 'domain', 'within', and 'bounds' are synonyms, in that they
         # restrict the set of valid set values.  If more than one is
         # specified, we will restrict the Set values to the intersection
         # of the individual arguments
-        _domain = kwds.pop('domain', None)
-        _within = kwds.pop('within', None)
-        _bounds = kwds.pop('bounds', None)
         self._init_domain = SetInitializer(self, None)
+        _domain = kwds.pop('domain', None)
         if _domain is not None:
             self._init_domain.intersect(SetInitializer(self, _domain))
+        _within = kwds.pop('within', None)
         if _within is not None:
             self._init_domain.intersect(SetInitializer(self, _within))
+        _bounds = kwds.pop('bounds', None)
         if _bounds is not None:
             self._init_domain.intersect(RangeSetInitializer(
                 self, _bounds, default_step=0))
@@ -1983,10 +2022,14 @@ class Set(IndexedComponent):
         self._init_dimen = Initializer(
             self, kwds.pop('dimen', _UnknownSetDimen))
         self._init_values = Initializer(
-            self, kwds.pop('initialize', ()), treat_sequences_as_mappings=False)
+            self, kwds.pop('initialize', ()),
+            treat_sequences_as_mappings=False,
+            allow_generators=True)
         self._init_validate = Initializer(self, kwds.pop('validate', None))
         self._init_filter = Initializer(self, kwds.pop('filter', None))
+
         if 'virtual' in kwds:
+            kwds.pop('virtual')
             deprecated()
         IndexedComponent.__init__(self, *args, **kwds)
 
@@ -2010,6 +2053,13 @@ class Set(IndexedComponent):
             if data is not None:
                 self._init_values = tmp_init
         timer.report()
+
+
+    def is_finite(self):
+        return True
+
+    def is_ordered(self):
+        return self._ComponentDataClass is not _FiniteSetData
 
     #
     # This method must be defined on subclasses of
@@ -2036,10 +2086,10 @@ class Set(IndexedComponent):
             if self.is_ordered() \
                    and type(_values) in self._UnorderedInitializers:
                 logger.warning(
-                    "Initializing an Ordered set with a fundamentally "
+                    "Initializing an ordered set with a fundamentally "
                     "unordered data source (type: %s).  This WILL potentially "
                     "lead to nondeterministic behavior in Pyomo"
-                    % (type(initialize).__name__,))
+                    % (type(_values).__name__,))
             if _filter is None:
                 for val in _values:
                     obj.add(val)

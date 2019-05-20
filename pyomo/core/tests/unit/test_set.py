@@ -36,6 +36,8 @@ from pyomo.core.base.set import (
     Initializer, _ConstantInitializer, _ItemInitializer, _ScalarCallInitializer,
     _IndexedCallInitializer,
     SetInitializer, _SetIntersectInitializer, RangeSetInitializer,
+    _FiniteSetData, _OrderedSetData, _SortedSetData,
+    _UnknownSetDimen,
 )
 from pyomo.environ import ConcreteModel, Var, Param
 
@@ -2935,3 +2937,328 @@ class TestGlobalSets(unittest.TestCase):
     def test_deepcopy(self):
         a = copy.deepcopy(Reals)
         self.assertIs(a, Reals)
+
+
+class TestSet(unittest.TestCase):
+    def test_scalar_set_initialize_and_iterate(self):
+        m = ConcreteModel()
+        m.I = Set()
+        self.assertEqual(list(m.I), [])
+        self.assertEqual(list(reversed(m.I)), [])
+        self.assertEqual(m.I.data(), ())
+        self.assertEqual(m.I.dimen, _UnknownSetDimen)
+
+        m = ConcreteModel()
+        with self.assertRaises(KeyError):
+            m.I = Set(initialize={1:(1,3,2,4)})
+
+        m = ConcreteModel()
+        m.I = Set(initialize=(1,3,2,4))
+        self.assertEqual(list(m.I), [1,3,2,4])
+        self.assertEqual(list(reversed(m.I)), [4,2,3,1])
+        self.assertEqual(m.I.data(), (1,3,2,4))
+        self.assertEqual(m.I.dimen, 1)
+
+        def I_init(m):
+            yield 1
+            yield 3
+            yield 2
+            yield 4
+        m = ConcreteModel()
+        m.I = Set(initialize=I_init)
+        self.assertEqual(list(m.I), [1,3,2,4])
+        self.assertEqual(list(reversed(m.I)), [4,2,3,1])
+        self.assertEqual(m.I.data(), (1,3,2,4))
+        self.assertEqual(m.I.dimen, 1)
+
+        m = ConcreteModel()
+        m.I = Set(initialize={None: (1,3,2,4)})
+        self.assertEqual(list(m.I), [1,3,2,4])
+        self.assertEqual(list(reversed(m.I)), [4,2,3,1])
+        self.assertEqual(m.I.data(), (1,3,2,4))
+        self.assertEqual(m.I.dimen, 1)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m = ConcreteModel()
+            m.I = Set(initialize={1,3,2,4})
+            ref = "Initializing an ordered set with a " \
+                  "fundamentally unordered data source (type: set)."
+            self.assertIn(ref, output.getvalue())
+        self.assertEqual(m.I.sorted(), (1,2,3,4))
+        # We can't directly compare the reversed to a reference list
+        # (because this is populated from an unordered set!) but we can
+        # compare it with the forward list.
+        self.assertEqual(list(reversed(list(m.I))), list(reversed(m.I)))
+        self.assertEqual(list(reversed(m.I.data())), list(reversed(m.I)))
+        self.assertEqual(m.I.dimen, 1)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m = ConcreteModel()
+            m.I = Set(initialize={1,3,2,4}, ordered=False)
+            self.assertEqual(output.getvalue(), "")
+        self.assertEqual(list(m.I), [1,2,3,4])
+        # We can't directly compare the reversed to a reference list
+        # (because ithis is an unordered set!) but we can compare it with
+        # the forward list.
+        self.assertEqual(list(reversed(list(m.I))), list(reversed(m.I)))
+        self.assertEqual(list(reversed(m.I.data())), list(reversed(m.I)))
+        self.assertEqual(m.I.dimen, 1)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,3,2,4], ordered=Set.SortedOrder)
+        self.assertEqual(list(m.I), [1,2,3,4])
+        self.assertEqual(list(reversed(m.I)), [4,3,2,1])
+        self.assertEqual(m.I.data(), (1,2,3,4))
+        self.assertEqual(m.I.dimen, 1)
+
+        with self.assertRaisesRegexp(
+                TypeError, "Set 'ordered' argument is not valid \(must "
+                "be one of {False, True, <function>, Set.InsertionOrder, "
+                "Set.SortedOrder}\)"):
+            m = ConcreteModel()
+            m.I = Set(initialize=[1,3,2,4], ordered=Set)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,3,2,4], ordered=lambda x: reversed(sorted(x)))
+        self.assertEqual(list(m.I), [4,3,2,1])
+        self.assertEqual(list(reversed(m.I)), [1,2,3,4])
+        self.assertEqual(m.I.data(), (4,3,2,1))
+        self.assertEqual(m.I.dimen, 1)
+
+    def test_insertion_deletion(self):
+        def _verify(_s, _l):
+            for i,v in enumerate(_l):
+                self.assertEqual(_s[i+1], v)
+            with self.assertRaisesRegexp(IndexError, "I index out of range"):
+                _s[len(_l)+1]
+            with self.assertRaisesRegexp(IndexError, "I index out of range"):
+                _s[len(_l)+2]
+
+            for i,v in enumerate(reversed(_l)):
+                self.assertEqual(_s[-(i+1)], v)
+            with self.assertRaisesRegexp(IndexError, "I index out of range"):
+                _s[-len(_l)-1]
+            with self.assertRaisesRegexp(IndexError, "I index out of range"):
+                _s[-len(_l)-2]
+
+            for i,v in enumerate(_l):
+                self.assertEqual(_s.ord(v), i+1)
+                self.assertEqual(_s.ord((v,)), i+1)
+
+            if _l:
+                _max = max(_l)
+                _min = min(_l)
+            else:
+                _max = 0
+                _min = 0
+            with self.assertRaisesRegexp(ValueError, "I.ord\(x\): x not in I"):
+                m.I.ord(_max+1)
+            with self.assertRaisesRegexp(ValueError, "I.ord\(x\): x not in I"):
+                m.I.ord(_min-1)
+            with self.assertRaisesRegexp(ValueError, "I.ord\(x\): x not in I"):
+                m.I.ord((_max+1,))
+
+        # Testing insertion order sets
+        m = ConcreteModel()
+        m.I = Set()
+        _verify(m.I, [])
+        m.I.add(1)
+        _verify(m.I, [1])
+        m.I.add(3)
+        _verify(m.I, [1,3])
+        m.I.add(2)
+        _verify(m.I, [1,3,2])
+        m.I.add(4)
+        _verify(m.I, [1,3,2,4])
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.I.add(3)
+        self.assertEqual(
+            output.getvalue(),
+            "Element 3 already exists in set I; no action taken\n")
+        _verify(m.I, [1,3,2,4])
+
+        m.I.remove(3)
+        _verify(m.I, [1,2,4])
+
+        with self.assertRaisesRegexp(KeyError, "^3$"):
+            m.I.remove(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.add(3)
+        _verify(m.I, [1,2,4,3])
+
+        m.I.discard(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.discard(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.clear()
+        _verify(m.I, [])
+
+        m.I.add(6)
+        m.I.add(5)
+        _verify(m.I, [6,5])
+
+        # Testing sorted sets
+        m = ConcreteModel()
+        m.I = Set(ordered=Set.SortedOrder)
+        _verify(m.I, [])
+        m.I.add(1)
+        _verify(m.I, [1])
+        m.I.add(3)
+        _verify(m.I, [1,3])
+        m.I.add(2)
+        _verify(m.I, [1,2,3])
+        m.I.add(4)
+        _verify(m.I, [1,2,3,4])
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.I.add(3)
+        self.assertEqual(
+            output.getvalue(),
+            "Element 3 already exists in set I; no action taken\n")
+        _verify(m.I, [1,2,3,4])
+
+        m.I.remove(3)
+        _verify(m.I, [1,2,4])
+
+        with self.assertRaisesRegexp(KeyError, "^3$"):
+            m.I.remove(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.add(3)
+        _verify(m.I, [1,2,3,4])
+
+        m.I.discard(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.discard(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.clear()
+        _verify(m.I, [])
+
+        m.I.add(6)
+        m.I.add(5)
+        _verify(m.I, [5,6])
+
+    def test_unordered_insertion_deletion(self):
+        def _verify(_s, _l):
+            self.assertEqual(sorted(_s), _l)
+            self.assertEqual(list(_s), list(reversed(list(reversed(_s)))))
+            for v in _l:
+                self.assertIn(v, _s)
+
+            if _l:
+                _max = max(_l)
+                _min = min(_l)
+            else:
+                _max = 0
+                _min = 0
+            self.assertNotIn(_max+1, _s)
+            self.assertNotIn(_min-1, _s)
+
+        # Testing unordered sets
+        m = ConcreteModel()
+        m.I = Set(ordered=False)
+        _verify(m.I, [])
+        m.I.add(1)
+        _verify(m.I, [1])
+        m.I.add(3)
+        _verify(m.I, [1,3])
+        m.I.add(2)
+        _verify(m.I, [1,2,3])
+        m.I.add(4)
+        _verify(m.I, [1,2,3,4])
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.I.add(3)
+        self.assertEqual(
+            output.getvalue(),
+            "Element 3 already exists in set I; no action taken\n")
+        _verify(m.I, [1,2,3,4])
+
+        m.I.remove(3)
+        _verify(m.I, [1,2,4])
+
+        with self.assertRaisesRegexp(KeyError, "^3$"):
+            m.I.remove(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.add(3)
+        _verify(m.I, [1,2,3,4])
+
+        m.I.discard(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.discard(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.clear()
+        _verify(m.I, [])
+
+        m.I.add(6)
+        m.I.add(5)
+        _verify(m.I, [5,6])
+
+    def test_indexed_set(self):
+        # Implicit construction
+        m = ConcreteModel()
+        m.I = Set([1,2,3], ordered=False)
+        self.assertEqual(len(m.I), 3)
+        m.I[1].add(1)
+        m.I[2].add(2)
+        m.I[3].add(4)
+        self.assertEqual(list(m.I[1]), [1])
+        self.assertEqual(list(m.I[2]), [2])
+        self.assertEqual(list(m.I[3]), [4])
+        self.assertIsNot(m.I[1], m.I[2])
+        self.assertIsNot(m.I[1], m.I[3])
+        self.assertIsNot(m.I[2], m.I[3])
+        self.assertFalse(m.I[1].is_ordered())
+        self.assertFalse(m.I[2].is_ordered())
+        self.assertFalse(m.I[3].is_ordered())
+        self.assertIs(type(m.I[1]), _FiniteSetData)
+        self.assertIs(type(m.I[2]), _FiniteSetData)
+        self.assertIs(type(m.I[3]), _FiniteSetData)
+
+        # Explicit (constant) construction
+        m = ConcreteModel()
+        m.I = Set([1,2,3], initialize=(4,2,5))
+        self.assertEqual(len(m.I), 3)
+        self.assertEqual(list(m.I[1]), [4,2,5])
+        self.assertEqual(list(m.I[2]), [4,2,5])
+        self.assertEqual(list(m.I[3]), [4,2,5])
+        self.assertIsNot(m.I[1], m.I[2])
+        self.assertIsNot(m.I[1], m.I[3])
+        self.assertIsNot(m.I[2], m.I[3])
+        self.assertTrue(m.I[1].is_ordered())
+        self.assertTrue(m.I[2].is_ordered())
+        self.assertTrue(m.I[3].is_ordered())
+        self.assertIs(type(m.I[1]), _OrderedSetData)
+        self.assertIs(type(m.I[2]), _OrderedSetData)
+        self.assertIs(type(m.I[3]), _OrderedSetData)
+
+        # Explicit (constant) construction
+        m = ConcreteModel()
+        m.I = Set([1,2,3], initialize=(4,2,5), ordered=Set.SortedOrder)
+        self.assertEqual(len(m.I), 3)
+        self.assertEqual(list(m.I[1]), [2,4,5])
+        self.assertEqual(list(m.I[2]), [2,4,5])
+        self.assertEqual(list(m.I[3]), [2,4,5])
+        self.assertIsNot(m.I[1], m.I[2])
+        self.assertIsNot(m.I[1], m.I[3])
+        self.assertIsNot(m.I[2], m.I[3])
+        self.assertTrue(m.I[1].is_ordered())
+        self.assertTrue(m.I[2].is_ordered())
+        self.assertTrue(m.I[3].is_ordered())
+        self.assertIs(type(m.I[1]), _SortedSetData)
+        self.assertIs(type(m.I[2]), _SortedSetData)
+        self.assertIs(type(m.I[3]), _SortedSetData)
