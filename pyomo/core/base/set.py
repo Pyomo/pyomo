@@ -318,7 +318,7 @@ class _UnknownSetDimen(object): pass
 #   __len__ (Note: Python len() requires __len__ to return non-negative int)
 #   __iter__, __reversed__
 #   add()
-#   sorted(), ordered()
+#   sorted(), ordered_data()
 #
 # ORDERED: FINITE +
 #   __getitem__
@@ -1404,11 +1404,11 @@ class _FiniteSetMixin(object):
     def data(self):
         return tuple(self)
 
-    def sorted(self):
+    def sorted_data(self):
         return tuple(sorted_robust(self.data()))
 
-    def ordered(self):
-        return self.sorted()
+    def ordered_data(self):
+        return self.sorted_data()
 
     def bounds(self):
         try:
@@ -1580,7 +1580,7 @@ class _OrderedSetMixin(object):
         """Returns True if this is an ordered finite discrete (iterable) Set"""
         return True
 
-    def ordered(self):
+    def ordered_data(self):
         return self.data()
 
     def first(self):
@@ -1884,7 +1884,7 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
             self._sort()
         return super(_SortedSetData, self).ord(item)
 
-    def sorted(self):
+    def sorted_data(self):
         return self.data()
 
     def _sort(self):

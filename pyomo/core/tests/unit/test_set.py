@@ -1396,8 +1396,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertTrue(i.is_finite())
         self.assertFalse(i.is_ordered())
 
-        self.assertEqual(i.ordered(), (0,1,2,3))
-        self.assertEqual(i.sorted(), (0,1,2,3))
+        self.assertEqual(i.ordered_data(), (0,1,2,3))
+        self.assertEqual(i.sorted_data(), (0,1,2,3))
         self.assertEqual( tuple(reversed(i)),
                           tuple(reversed(list(i))) )
 
@@ -1407,8 +1407,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertTrue(i.is_finite())
         self.assertTrue(i.is_ordered())
 
-        self.assertEqual(i.ordered(), (1,3,2,0))
-        self.assertEqual(i.sorted(), (0,1,2,3))
+        self.assertEqual(i.ordered_data(), (1,3,2,0))
+        self.assertEqual(i.sorted_data(), (0,1,2,3))
         self.assertEqual(tuple(reversed(i)), (0,2,3,1))
 
         self.assertEqual(i[2], 3)
@@ -1462,8 +1462,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertTrue(i.is_finite())
         self.assertTrue(i.is_ordered())
 
-        self.assertEqual(i.ordered(), (1,3,2,0))
-        self.assertEqual(i.sorted(), (0,1,2,3))
+        self.assertEqual(i.ordered_data(), (1,3,2,0))
+        self.assertEqual(i.sorted_data(), (0,1,2,3))
         self.assertEqual(tuple(reversed(i)), (0,2,3,1))
 
         self.assertEqual(i[2], 3)
@@ -1488,8 +1488,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertTrue(i.is_finite())
         self.assertTrue(i.is_ordered())
 
-        self.assertEqual(i.ordered(), (1,None,'a'))
-        self.assertEqual(i.sorted(), (None,1,'a'))
+        self.assertEqual(i.ordered_data(), (1,None,'a'))
+        self.assertEqual(i.sorted_data(), (None,1,'a'))
         self.assertEqual(tuple(reversed(i)), ('a',None,1))
 
 
@@ -1641,8 +1641,8 @@ class TestSetUnion(unittest.TestCase):
         self.assertTrue(x.is_ordered())
         self.assertEqual(len(x), 5)
         self.assertEqual(list(x), [1,3,2,5,4])
-        self.assertEqual(x.ordered(), (1,3,2,5,4))
-        self.assertEqual(x.sorted(), (1,2,3,4,5))
+        self.assertEqual(x.ordered_data(), (1,3,2,5,4))
+        self.assertEqual(x.sorted_data(), (1,2,3,4,5))
 
         self.assertIn(1, x)
         self.assertIn(2, x)
@@ -1718,8 +1718,8 @@ class TestSetUnion(unittest.TestCase):
         if x._sets[1].is_ordered():
             self.assertEqual(list(x)[-2:], [5,4])
         self.assertEqual(sorted(list(x)), [1,2,3,4,5])
-        self.assertEqual(x.ordered(), (1,2,3,4,5))
-        self.assertEqual(x.sorted(), (1,2,3,4,5))
+        self.assertEqual(x.ordered_data(), (1,2,3,4,5))
+        self.assertEqual(x.sorted_data(), (1,2,3,4,5))
 
         self.assertIn(1, x)
         self.assertIn(2, x)
@@ -1808,8 +1808,8 @@ class TestSetIntersection(unittest.TestCase):
         self.assertTrue(x.is_ordered())
         self.assertEqual(len(x), 3)
         self.assertEqual(list(x), list(ref))
-        self.assertEqual(x.ordered(), tuple(ref))
-        self.assertEqual(x.sorted(), (2,3,5))
+        self.assertEqual(x.ordered_data(), tuple(ref))
+        self.assertEqual(x.sorted_data(), (2,3,5))
 
         self.assertNotIn(1, x)
         self.assertIn(2, x)
@@ -1874,8 +1874,8 @@ class TestSetIntersection(unittest.TestCase):
         if x._sets[0].is_ordered():
             self.assertEqual(list(x)[:3], [3,2,5])
         self.assertEqual(sorted(list(x)), [2,3,5])
-        self.assertEqual(x.ordered(), (2,3,5))
-        self.assertEqual(x.sorted(), (2,3,5))
+        self.assertEqual(x.ordered_data(), (2,3,5))
+        self.assertEqual(x.sorted_data(), (2,3,5))
 
         self.assertNotIn(1, x)
         self.assertIn(2, x)
@@ -1987,8 +1987,8 @@ class TestSetDifference(unittest.TestCase):
         self.assertTrue(x.is_ordered())
         self.assertEqual(len(x), 3)
         self.assertEqual(list(x), [3,2,5])
-        self.assertEqual(x.ordered(), (3,2,5))
-        self.assertEqual(x.sorted(), (2,3,5))
+        self.assertEqual(x.ordered_data(), (3,2,5))
+        self.assertEqual(x.sorted_data(), (2,3,5))
 
         self.assertNotIn(0, x)
         self.assertNotIn(1, x)
@@ -2053,8 +2053,8 @@ class TestSetDifference(unittest.TestCase):
         self.assertFalse(x.is_ordered())
         self.assertEqual(len(x), 3)
         self.assertEqual(sorted(list(x)), [2,3,5])
-        self.assertEqual(x.ordered(), (2,3,5))
-        self.assertEqual(x.sorted(), (2,3,5))
+        self.assertEqual(x.ordered_data(), (2,3,5))
+        self.assertEqual(x.sorted_data(), (2,3,5))
 
         self.assertNotIn(0, x)
         self.assertNotIn(1, x)
@@ -2125,8 +2125,8 @@ class TestSetSymmetricDifference(unittest.TestCase):
         self.assertTrue(x.is_ordered())
         self.assertEqual(len(x), 4)
         self.assertEqual(list(x), [3,2,5,0])
-        self.assertEqual(x.ordered(), (3,2,5,0))
-        self.assertEqual(x.sorted(), (0,2,3,5))
+        self.assertEqual(x.ordered_data(), (3,2,5,0))
+        self.assertEqual(x.sorted_data(), (0,2,3,5))
 
         self.assertIn(0, x)
         self.assertNotIn(1, x)
@@ -2188,8 +2188,8 @@ class TestSetSymmetricDifference(unittest.TestCase):
         self.assertFalse(x.is_ordered())
         self.assertEqual(len(x), 4)
         self.assertEqual(sorted(list(x)), [0,2,3,5])
-        self.assertEqual(x.ordered(), (0,2,3,5))
-        self.assertEqual(x.sorted(), (0,2,3,5))
+        self.assertEqual(x.ordered_data(), (0,2,3,5))
+        self.assertEqual(x.sorted_data(), (0,2,3,5))
 
         self.assertIn(0, x)
         self.assertNotIn(1, x)
@@ -2382,8 +2382,10 @@ class TestSetProduct(unittest.TestCase):
         self.assertEqual(len(x), 6)
         self.assertEqual(
             sorted(list(x)), [(1,5),(1,6),(2,5),(2,6),(3,5),(3,6)])
-        self.assertEqual(x.ordered(), ((1,5),(1,6),(2,5),(2,6),(3,5),(3,6)))
-        self.assertEqual(x.sorted(), ((1,5),(1,6),(2,5),(2,6),(3,5),(3,6)))
+        self.assertEqual(
+            x.ordered_data(), ((1,5),(1,6),(2,5),(2,6),(3,5),(3,6)))
+        self.assertEqual(
+            x.sorted_data(), ((1,5),(1,6),(2,5),(2,6),(3,5),(3,6)))
 
         self.assertNotIn(1, x)
         self.assertIn((1,5), x)
@@ -2419,8 +2421,10 @@ class TestSetProduct(unittest.TestCase):
         self.assertTrue(x.is_ordered())
         self.assertEqual(len(x), 6)
         self.assertEqual(list(x), [(3,6),(3,5),(1,6),(1,5),(2,6),(2,5)])
-        self.assertEqual(x.ordered(), ((3,6),(3,5),(1,6),(1,5),(2,6),(2,5)))
-        self.assertEqual(x.sorted(), ((1,5),(1,6),(2,5),(2,6),(3,5),(3,6)))
+        self.assertEqual(
+            x.ordered_data(), ((3,6),(3,5),(1,6),(1,5),(2,6),(2,5)))
+        self.assertEqual(
+            x.sorted_data(), ((1,5),(1,6),(2,5),(2,6),(3,5),(3,6)))
 
         self.assertNotIn(1, x)
         self.assertIn((1,5), x)
@@ -2995,7 +2999,7 @@ class TestSet(unittest.TestCase):
             ref = "Initializing an ordered set with a " \
                   "fundamentally unordered data source (type: set)."
             self.assertIn(ref, output.getvalue())
-        self.assertEqual(m.I.sorted(), (1,2,3,4))
+        self.assertEqual(m.I.sorted_data(), (1,2,3,4))
         # We can't directly compare the reversed to a reference list
         # (because this is populated from an unordered set!) but we can
         # compare it with the forward list.
