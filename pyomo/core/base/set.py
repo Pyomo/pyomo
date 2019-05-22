@@ -1354,19 +1354,49 @@ class _SetData(_SetDataBase):
     __mul__ = cross
 
     def __ror__(self, other):
-        return SetOf(other) | self
+        # See the discussion of Set vs SetOf in _processArgs below
+        #
+        # return SetOf(other) | self
+        tmp = SetOf(other)
+        ans = Set(initialize=tmp, ordered=tmp.is_ordered())
+        ans.construct()
+        return ans | self
 
     def __rand__(self, other):
-        return SetOf(other) & self
+        # See the discussion of Set vs SetOf in _processArgs below
+        #
+        # return SetOf(other) & self
+        tmp = SetOf(other)
+        ans = Set(initialize=tmp, ordered=tmp.is_ordered())
+        ans.construct()
+        return ans & self
 
     def __rsub__(self, other):
-        return SetOf(other) - self
+        # See the discussion of Set vs SetOf in _processArgs below
+        #
+        # return SetOf(other) - self
+        tmp = SetOf(other)
+        ans = Set(initialize=tmp, ordered=tmp.is_ordered())
+        ans.construct()
+        return ans - self
 
     def __rxor__(self, other):
-        return SetOf(other) ^ self
+        # See the discussion of Set vs SetOf in _processArgs below
+        #
+        # return SetOf(other) ^ self
+        tmp = SetOf(other)
+        ans = Set(initialize=tmp, ordered=tmp.is_ordered())
+        ans.construct()
+        return ans ^ self
 
     def __rmul__(self, other):
-        return SetOf(other) * self
+        # See the discussion of Set vs SetOf in _processArgs below
+        #
+        # return SetOf(other) * self
+        tmp = SetOf(other)
+        ans = Set(initialize=tmp, ordered=tmp.is_ordered())
+        ans.construct()
+        return ans * self
 
     def __lt__(self,other):
         """
@@ -2545,13 +2575,39 @@ class _SetOperator(_SetData, Set):
                 ans.append(s)
                 if s.parent_block() is None:
                     implicit.append(s)
+            elif isinstance(s, IndexedComponent):
+                raise TypeError("Cannot apply a Set operator to an "
+                                "indexed Set component")
+            elif isinstance(s, Component):
+                raise TypeError("Cannot apply a Set operator to a "
+                                "non-Set component (%s)" % (type(s).__name__,))
             else:
                 # TBD: should lists/tuples be copied into Sets, or
                 # should we preserve the reference using SetOf?
                 # Historical behavior is to *copy* into a Set.
-                ans.append(Set(initialize=s,
-                               ordered=type(s) in {tuple, list}))
+                #
+                # ans.append(Set(initialize=s,
+                #               ordered=type(s) in {tuple, list}))
+                # ans[-1].construct()
+                #
+                # But this causes problems, especially because Set()'s
+                # constructor needs to know if the object is ordered
+                # (Set defaults to ordered, and will toss a warning if
+                # the underlying data is not ordered)).  While we could
+                # add checks where we create the Set (like here and in
+                # the __r*__ operators) and pass in a reasonable value
+                # for ordered, it is starting to make more sense to use
+                # SetOf (which has that logic).  Alternatively, we could
+                # use SetOf to create the Set:
+                #
+                tmp = SetOf(s)
+                ans.append(Set(initialize=tmp,
+                               ordered=tmp.is_ordered()))
                 ans[-1].construct()
+                #
+                # Or we can do the simple thing and just use SetOf:
+                #
+                # ans.append(SetOf(s))
                 implicit.append(ans[-1])
         return tuple(ans), tuple(implicit)
 
