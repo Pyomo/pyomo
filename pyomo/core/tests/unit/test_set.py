@@ -2940,6 +2940,16 @@ class TestGlobalSets(unittest.TestCase):
 
 
 class TestSet(unittest.TestCase):
+    def test_deprecated_args(self):
+        m = ConcreteModel()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.I = Set(virtual=True)
+            self.assertEqual(len(m.I), 0)
+        self.assertEqual(
+            output.getvalue(),
+            "DEPRECATED: Pyomo Sets ignore the 'virtual' keyword argument\n")
+
     def test_scalar_set_initialize_and_iterate(self):
         m = ConcreteModel()
         m.I = Set()

@@ -37,7 +37,7 @@ from six.moves import xrange
 
 from pyutilib.misc.misc import flatten_tuple
 
-from pyomo.common.deprecation import deprecated
+from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import DeveloperError
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import (
@@ -2045,8 +2045,11 @@ class Set(IndexedComponent):
         self._init_filter = Initializer(self, kwds.pop('filter', None))
 
         if 'virtual' in kwds:
+            deprecation_warning(
+                "Pyomo Sets ignore the 'virtual' keyword argument",
+                logger='pyomo.core.base')
             kwds.pop('virtual')
-            deprecated()
+
         IndexedComponent.__init__(self, *args, **kwds)
 
     def construct(self, data=None):
