@@ -31,7 +31,7 @@ from pyomo.core.base.set import (
     SetDifference_OrderedSet,
     SetSymmetricDifference_InfiniteSet, SetSymmetricDifference_FiniteSet,
     SetSymmetricDifference_OrderedSet,
-    SetProduct_InfiniteSet, SetProduct_FiniteSet,
+    SetProduct, SetProduct_InfiniteSet, SetProduct_FiniteSet,
     SetProduct_OrderedSet,
     Initializer, _ConstantInitializer, _ItemInitializer, _ScalarCallInitializer,
     _IndexedCallInitializer,
@@ -120,7 +120,7 @@ class TestNumericRange(unittest.TestCase):
             NR(0, 1, -2)
 
     def test_str(self):
-        self.assertEqual(str(NR(1, 10, 0)), "[1,10]")
+        self.assertEqual(str(NR(1, 10, 0)), "[1..10]")
         self.assertEqual(str(NR(1, 10, 1)), "[1:10]")
         self.assertEqual(str(NR(1, 10, 3)), "[1:10:3]")
         self.assertEqual(str(NR(1, 1, 1)), "[1]")
@@ -1255,7 +1255,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         None :   True :   [1:3]
     NotI : Dim=0, Dimen=1, Size=Inf, Bounds=(1, 3)
         Key  : Finite : Members
-        None :  False :   [1,3]
+        None :  False :  [1..3]
 
 1 SetOf Declarations
     J : Dim=0, Dimen=1, Size=3, Bounds=(1, 3)
@@ -1263,6 +1263,29 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         None :    True : [1, 2, 3]
 
 3 Declarations: I NotI J""".strip())
+
+    def test_naming(self):
+        m = ConcreteModel()
+
+        i = RangeSet(3)
+        self.assertEqual(str(i), "[1:3]")
+        m.I = i
+        self.assertEqual(str(i), "I")
+
+        j = RangeSet(ranges=(NR(1,3,0), NR(4,7,1)))
+        self.assertEqual(str(j), "([1..3] | [4:7])")
+        m.J = j
+        self.assertEqual(str(j), "J")
+
+        k = SetOf((1,3,5))
+        self.assertEqual(str(k), "(1, 3, 5)")
+        m.K = k
+        self.assertEqual(str(k), "K")
+
+        l = SetOf([1,3,5])
+        self.assertEqual(str(l), "[1, 3, 5]")
+        m.L = l
+        self.assertEqual(str(l), "L")
 
     def test_isdisjoint(self):
         i = SetOf({1,2,3})
@@ -1620,6 +1643,18 @@ class TestSetUnion(unittest.TestCase):
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
 
+    def test_naming(self):
+        m = ConcreteModel()
+
+        m.I = SetOf([1,2])
+        a = m.I | [3,4]
+        b = [-1,1] | a
+        self.assertEqual(str(a), "I | {3, 4}")
+        self.assertEqual(str(b), "{-1, 1} | (I | {3, 4})")
+        m.A = a
+        self.assertEqual(str(a), "A")
+        self.assertEqual(str(b), "{-1, 1} | (A)")
+
     def _verify_ordered_union(self, a, b):
         # Note the placement of the second "3" in the middle of the set.
         # This helps catch edge cases where we need to ensure it doesn't
@@ -1785,6 +1820,18 @@ class TestSetIntersection(unittest.TestCase):
         b = pickle.loads(pickle.dumps(a))
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
+
+    def test_naming(self):
+        m = ConcreteModel()
+
+        m.I = SetOf([1,2])
+        a = m.I & [3,4]
+        b = [-1,1] & a
+        self.assertEqual(str(a), "I & {3, 4}")
+        self.assertEqual(str(b), "{-1, 1} & (I & {3, 4})")
+        m.A = a
+        self.assertEqual(str(a), "A")
+        self.assertEqual(str(b), "{-1, 1} & (A)")
 
     def _verify_ordered_intersection(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
@@ -1970,6 +2017,18 @@ class TestSetDifference(unittest.TestCase):
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
 
+    def test_naming(self):
+        m = ConcreteModel()
+
+        m.I = SetOf([1,2])
+        a = m.I - [3,4]
+        b = [-1,1] - a
+        self.assertEqual(str(a), "I - {3, 4}")
+        self.assertEqual(str(b), "{-1, 1} - (I - {3, 4})")
+        m.A = a
+        self.assertEqual(str(a), "A")
+        self.assertEqual(str(b), "{-1, 1} - (A)")
+
     def _verify_ordered_difference(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
             a_ordered = a.is_ordered()
@@ -2107,6 +2166,18 @@ class TestSetSymmetricDifference(unittest.TestCase):
         b = pickle.loads(pickle.dumps(a))
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
+
+    def test_naming(self):
+        m = ConcreteModel()
+
+        m.I = SetOf([1,2])
+        a = m.I ^ [3,4]
+        b = [-1,1] ^ a
+        self.assertEqual(str(a), "I ^ {3, 4}")
+        self.assertEqual(str(b), "{-1, 1} ^ (I ^ {3, 4})")
+        m.A = a
+        self.assertEqual(str(a), "A")
+        self.assertEqual(str(b), "{-1, 1} ^ (A)")
 
     def _verify_ordered_symdifference(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
@@ -2294,6 +2365,21 @@ class TestSetProduct(unittest.TestCase):
         b = pickle.loads(pickle.dumps(a))
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
+
+    def test_naming(self):
+        m = ConcreteModel()
+
+        m.I = SetOf([1,2])
+        a = m.I * [3,4]
+        b = [-1,1] * a
+        self.assertEqual(str(a), "I*{3, 4}")
+        self.assertEqual(str(b), "{-1, 1}*(I*{3, 4})")
+        m.A = a
+        self.assertEqual(str(a), "A")
+        self.assertEqual(str(b), "{-1, 1}*(A)")
+
+        c = SetProduct(m.I, [1,2], m.I)
+        self.assertEqual(str(c), "I*{1, 2}*I")
 
     def test_cutPointGenerator(self):
         CG = SetProduct_InfiniteSet._cutPointGenerator
@@ -2942,6 +3028,10 @@ class TestGlobalSets(unittest.TestCase):
         a = copy.deepcopy(Reals)
         self.assertIs(a, Reals)
 
+    def test_name(self):
+        self.assertEqual(str(Reals), 'Reals')
+        self.assertEqual(str(Integers), 'Integers')
+
 
 class TestSet(unittest.TestCase):
     def test_deprecated_args(self):
@@ -3276,3 +3366,29 @@ class TestSet(unittest.TestCase):
         self.assertIs(type(m.I[1]), _SortedSetData)
         self.assertIs(type(m.I[2]), _SortedSetData)
         self.assertIs(type(m.I[3]), _SortedSetData)
+
+    def test_naming(self):
+        m = ConcreteModel()
+
+        i = Set()
+        self.assertEqual(str(i), "OrderedSimpleSet")
+        i.construct()
+        self.assertEqual(str(i), "{}")
+        m.I = i
+        self.assertEqual(str(i), "I")
+
+        j = Set(initialize=[1,2,3])
+        self.assertEqual(str(j), "OrderedSimpleSet")
+        j.construct()
+        self.assertEqual(str(j), "{1, 2, 3}")
+        m.J = j
+        self.assertEqual(str(j), "J")
+
+        k = Set([1,2,3])
+        self.assertEqual(str(k), "IndexedSet")
+        with self.assertRaisesRegexp(
+                ValueError, 'The component has not been constructed.'):
+            str(k[1])
+        m.K = k
+        self.assertEqual(str(k), "K")
+        self.assertEqual(str(k[1]), "K[1]")

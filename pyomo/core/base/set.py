@@ -440,7 +440,7 @@ class NumericRange(object):
 
     def __str__(self):
         if not self.is_discrete():
-            return "%s%s,%s%s" % (
+            return "%s%s..%s%s" % (
                 "[" if self.closed[0] else "(",
                 self.start, self.end,
                 "]" if self.closed[1] else ")",
@@ -1527,6 +1527,13 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         # Python will not reverse() sets, so convert to a tuple and reverse
         return reversed(tuple(self._values))
 
+    def __str__(self):
+        if self.parent_block() is not None:
+            return self.name
+        if not self._constructed:
+            return type(self).__name__
+        return "{" + (', '.join(str(_) for _ in self)) + "}"
+
     def data(self):
         return tuple(self._values)
 
@@ -2103,7 +2110,6 @@ class Set(IndexedComponent):
                 self._init_values = tmp_init
         timer.report()
 
-
     def is_finite(self):
         return True
 
@@ -2153,18 +2159,37 @@ class Set(IndexedComponent):
         """
         Return data that will be printed for this component.
         """
+        def members(x):
+            return '{' + str(x.ordered_data())[1:-1] + "}"
+        #
+        # Eventually, we might want to support a 'verbose' flag to
+        # pprint() that will suppress som of the very long (less
+        # informative) output
+        #
+        # if verbose:
+        #     def members(x):
+        #         return '{' + str(x.ordered_data())[1:-1] + "}"
+        # else:
+        #     MAX_MEMBERES=10
+        #     def members(x):
+        #         ans = x.ordered_data()
+        #         if len(x) > MAX_MEMBERES:
+        #             return '{' + str(ans[:MAX_MEMBERES])[1:-1] + ', ...}'
+        #         else:
+        #             return '{' + str(ans)[1:-1] + "}"
         return (
             [("Dim", self.dim()),
-             ("Size", len(self)),
-             ("Bounds", self.bounds())],
-            iteritems(self),
-            ("Finite","Ordered","Sorted","Domain","Members",),
+             ("Size", len(self._data)),
+             ("Ordered", self.is_ordered()),
+             ("Sorted", isinstance(getattr(self,'_ComponentDataClass',self),
+                                   _SortedSetMixin))],
+            iteritems(self._data),
+            ("Dimen","Domain","Size","Members",),
             lambda k, v: [
-                v.is_finite(),#isinstance(v, _FiniteSetMixin),
-                v.is_ordered(), #isinstance(v, _OrderedSetMixin),
-                isinstance(v, _SortedSetMixin),
+                v.dimen,
                 v._domain,
-                v.ordered(),
+                len(v),
+                members(v),
             ])
 
 
@@ -2220,6 +2245,11 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
 
     def __iter__(self):
         return iter(self._ref)
+
+    def __str__(self):
+        if self.parent_block() is not None:
+            return self.name
+        return str(self._ref)
 
     def construct(self, data=None):
         if self._constructed:
@@ -2484,6 +2514,15 @@ class RangeSet(Component):
         Component.__init__(self, **kwds)
 
 
+    def __str__(self):
+        if self.parent_block() is not None:
+            return self.name
+        ans = ' | '.join(str(_) for _ in self.ranges())
+        if ' | ' in ans:
+            return "(" + ans + ")"
+        return ans
+
+
     def _process_args(self, args, ranges):
         if type(ranges) is not tuple:
             ranges = tuple(ranges)
@@ -2534,12 +2573,17 @@ class InfiniteSimpleRangeSet(_InfiniteRangeSetData, RangeSet):
         _InfiniteRangeSetData.__init__(self, component=self, ranges=ranges)
         RangeSet.__init__(self, **kwds)
 
+    # We want the RangeSet.__str__ to override the one in _FiniteSetMixin
+    __str__ = RangeSet.__str__
 
 class FiniteSimpleRangeSet(_FiniteRangeSetData, RangeSet):
     def __init__(self, *args, **kwds):
         ranges = self._process_args(args, kwds.pop('ranges', []))
         _FiniteRangeSetData.__init__(self, component=self, ranges=ranges)
         RangeSet.__init__(self, **kwds)
+
+    # We want the RangeSet.__str__ to override the one in _FiniteSetMixin
+    __str__ = RangeSet.__str__
 
 
 ############################################################################
@@ -2565,6 +2609,13 @@ class _SetOperator(_SetData, Set):
 
     # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
+
+    def __str__(self):
+        if self.parent_block() is not None:
+            return self.name
+        return self._operator.join(
+            '(%s)' % arg if isinstance(arg, _SetOperator)
+            else str(arg) for arg in self._sets)
 
     @staticmethod
     def _processArgs(*sets):
@@ -2627,6 +2678,8 @@ class _SetOperator(_SetData, Set):
 
 class SetUnion(_SetOperator):
     __slots__ = tuple()
+
+    _operator = " | "
 
     def __new__(cls, *args):
         if cls != SetUnion:
@@ -2724,6 +2777,8 @@ class SetUnion_OrderedSet(_OrderedSetMixin, SetUnion_FiniteSet):
 class SetIntersection(_SetOperator):
     __slots__ = tuple()
 
+    _operator = " & "
+
     def __new__(cls, *args):
         if cls != SetIntersection:
             return super(SetIntersection, cls).__new__(cls)
@@ -2819,6 +2874,8 @@ class SetIntersection_OrderedSet(_OrderedSetMixin, SetIntersection_FiniteSet):
 class SetDifference(_SetOperator):
     __slots__ = tuple()
 
+    _operator = " - "
+
     def __new__(cls, *args):
         if cls != SetDifference:
             return super(SetDifference, cls).__new__(cls)
@@ -2897,6 +2954,8 @@ class SetDifference_OrderedSet(_OrderedSetMixin, SetDifference_FiniteSet):
 class SetSymmetricDifference(_SetOperator):
     __slots__ = tuple()
 
+    _operator = " ^ "
+
     def __new__(cls, *args):
         if cls != SetSymmetricDifference:
             return super(SetSymmetricDifference, cls).__new__(cls)
@@ -2917,6 +2976,7 @@ class SetSymmetricDifference(_SetOperator):
             for a_r in set_a.ranges():
                 for r in a_r.range_difference(set_b.ranges()):
                     yield r
+
 
 class SetSymmetricDifference_InfiniteSet(SetSymmetricDifference):
     __slots__ = tuple()
@@ -2981,6 +3041,8 @@ class SetSymmetricDifference_OrderedSet(_OrderedSetMixin,
 
 class SetProduct(_SetOperator):
     __slots__ = tuple()
+
+    _operator = "*"
 
     def __new__(cls, *args):
         if cls != SetProduct:
@@ -3263,6 +3325,10 @@ def DeclareGlobalSet(obj):
         def __deepcopy__(self, memo):
             "Prevent deepcopy from duplicating this object"
             return self
+
+        def __str__(self):
+            "Override str() to always print out the global set name"
+            return self.name
 
     return GlobalSet(obj)
 
