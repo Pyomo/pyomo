@@ -3208,6 +3208,9 @@ class TestSet(unittest.TestCase):
         m.I.add(5)
         _verify(m.I, [6,5])
 
+        m.I = [0,-1,1]
+        _verify(m.I, [0,-1,1])
+
         # Testing sorted sets
         m = ConcreteModel()
         m.I = Set(ordered=Set.SortedOrder)
@@ -3251,6 +3254,9 @@ class TestSet(unittest.TestCase):
         m.I.add(6)
         m.I.add(5)
         _verify(m.I, [5,6])
+
+        m.I = [0,-1,1]
+        _verify(m.I, [-1,0,1])
 
     def test_unordered_insertion_deletion(self):
         def _verify(_s, _l):
@@ -3311,6 +3317,9 @@ class TestSet(unittest.TestCase):
         m.I.add(6)
         m.I.add(5)
         _verify(m.I, [5,6])
+
+        m.I = [0,-1,1]
+        _verify(m.I, [-1,0,1])
 
     def test_indexed_set(self):
         # Implicit construction
