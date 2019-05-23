@@ -398,10 +398,11 @@ class WalkerTests(unittest.TestCase):
         m.x = Var()
         m.y = Var()
         m.e = Expression(expr=m.x*m.y)
+        m.f = Expression(expr=m.e)
 
-        e = m.x + m.e*m.y
-        self.assertEqual("x + (x*y)*y", str(e))
-        self.assertEqual("x + (x*y)*y", expression_to_string(e))
+        e = m.x + m.f*m.y
+        self.assertEqual("x + ((x*y))*y", str(e))
+        self.assertEqual("x + ((x*y))*y", expression_to_string(e))
 #
 # Replace all variables with a product expression
 #
