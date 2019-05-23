@@ -97,9 +97,9 @@ if test -z "$MODE" -o "$MODE" == setup; then
         # Clean up old coverage files
         rm -fv ${WORKSPACE}/pyomo/.coverage ${WORKSPACE}/pyomo/.coverage.*
         # Set up coverage for this build
-        export COVERAGE_PROCESS_START=${WORKSPACE}/coveragerc
+        export COVERAGE_PROCESS_START=${WORKSPACE}/pyomo/coveragerc
         cp ${WORKSPACE}/pyomo/.coveragerc ${COVERAGE_PROCESS_START}
-        echo "source=${WORKSPACE}/pyomo" >> ${COVERAGE_PROCESS_START}
+        #echo "source=${WORKSPACE}/pyomo" >> ${COVERAGE_PROCESS_START}
         echo "data_file=${WORKSPACE}/pyomo/.coverage" >> ${COVERAGE_PROCESS_START}
         echo 'import coverage; coverage.process_startup()' \
             > "${LOCAL_SITE_PACKAGES}/run_coverage_at_startup.pth"
@@ -170,8 +170,8 @@ if test -z "$MODE" -o "$MODE" == test; then
             while test $i -lt 3; do
                 i=$[$i+1]
                 echo "Uploading coverage to codecov (attempt $i)"
-                codecov -X gcovcodecov -X gcov --no-color \
-                    -t $CODECOV_TOKEN --root `pwd` -e OS,python \
+                codecov -X gcov --no-color \
+                    -t $CODECOV_TOKEN --env OS,python \
                     --name $CODECOV_JOB_NAME $CODECOV_ARGS \
                     | tee .cover.upload
                 if test $? == 0 -a `grep -i error .cover.upload | wc -l` -eq 0; then
