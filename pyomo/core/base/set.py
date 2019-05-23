@@ -32,7 +32,7 @@ else:
     # getargspec (which was removed in Python 3.x)
     getargspec = inspect.getfullargspec
 
-from six import iteritems
+from six import iteritems, iterkeys
 from six.moves import xrange
 
 from pyutilib.misc.misc import flatten_tuple
@@ -348,6 +348,9 @@ class _UnknownSetDimen(object): pass
 #   - Test index/ord for equivalence of 1 and (1,)
 #
 #   - SortedSet should take a custom sorting function
+#
+#   - Make sure that all classes implement the appropriate methods
+#     (e.g., bounds)
 #
 class NumericRange(object):
     """A representation of a numeric range.
@@ -2114,8 +2117,14 @@ class Set(IndexedComponent):
             tmp_init, self._init_values = self._init_values, Initializer(
                     data, treat_sequences_as_mappings=False)
         try:
-            for index in self.index_set():
-                self._getitem_when_not_present(index)
+            if type(self._init_values) is _ItemInitializer:
+                for index in iterkeys(self._init_values._dict):
+                    # The index is coming in externally; we need to
+                    # validate it
+                    IndexedComponent.__getitem__(self, index)
+            else:
+                for index in self.index_set():
+                    self._getitem_when_not_present(index)
         finally:
             if data is not None:
                 self._init_values = tmp_init
@@ -2145,17 +2154,23 @@ class Set(IndexedComponent):
             try:
                 obj._validate = Initializer(self._init_validate(self, index))
                 if obj._validate.constant():
-                    # The _init_filter was the actual filter function; use it.
+                    # _init_validate was the actual validate function; use it.
                     obj._validate = self._init_validate
-            except TypeError:
+            except:
+                # We will assume any exceptions raised when getting the
+                # validator for this index indicate that the function
+                # should have been passed directly to the underlying sets.
                 obj._validate = self._init_validate
         if self._init_filter is not None:
             try:
                 _filter = Initializer(self._init_filter(self, index))
                 if _filter.constant():
-                    # The _init_filter was the actual filter function; use it.
+                    # _init_filter was the actual filter function; use it.
                     _filter = self._init_filter
-            except TypeError:
+            except:
+                # We will assume any exceptions raised when getting the
+                # filter for this index indicate that the function
+                # should have been passed directly to the underlying sets.
                 _filter = self._init_filter
         else:
             _filter = None

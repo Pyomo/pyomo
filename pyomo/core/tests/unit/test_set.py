@@ -39,7 +39,7 @@ from pyomo.core.base.set import (
     _FiniteSetData, _OrderedSetData, _SortedSetData,
     _UnknownSetDimen,
 )
-from pyomo.environ import ConcreteModel, Var, Param
+from pyomo.environ import AbstractModel, ConcreteModel, Var, Param
 
 try:
     import numpy as np
@@ -1570,12 +1570,11 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(SetOf([(1,2),(2,3),(4,5)]).dimen, 2)
         self.assertEqual(SetOf([1,(2,3)]).dimen, None)
 
-        a = [1,2,3]
+        a = [1,2,3,'abc']
         SetOf_a = SetOf(a)
         self.assertEqual(SetOf_a.dimen, 1)
         a.append((1,2))
         self.assertEqual(SetOf_a.dimen, None)
-
 
     def test_rangeset_iter(self):
         i = RangeSet(0,10,2)
@@ -1636,6 +1635,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         so = SetOf([0, (1,), 1])
         self.assertEqual(so.ord((1,)), 2)
         self.assertEqual(so.ord(1), 3)
+
 
 class TestSetUnion(unittest.TestCase):
     def test_pickle(self):
@@ -2360,6 +2360,7 @@ class TestSetSymmetricDifference(unittest.TestCase):
                 NR(5,6,0,(False, True))
             ]))
 
+
 class TestSetProduct(unittest.TestCase):
     def test_pickle(self):
         a = SetOf([1,3,5]) * SetOf([2,3,4])
@@ -2660,6 +2661,7 @@ def _init_indexed(m, *args):
     for arg in args:
         i *= (arg+1)
     return i
+
 
 class Test_Initializer(unittest.TestCase):
     def test_constant(self):
@@ -3048,6 +3050,7 @@ def _init_set(m, *args):
         n *= i
     return xrange(n)
 
+
 class TestSet(unittest.TestCase):
     def test_deprecated_args(self):
         m = ConcreteModel()
@@ -3068,7 +3071,9 @@ class TestSet(unittest.TestCase):
         self.assertEqual(m.I.dimen, _UnknownSetDimen)
 
         m = ConcreteModel()
-        with self.assertRaises(KeyError):
+        with self.assertRaisesRegexp(
+                KeyError, "Cannot treat the scalar component 'I'"
+                "as an indexed component"):
             m.I = Set(initialize={1:(1,3,2,4)})
 
         m = ConcreteModel()
@@ -3518,6 +3523,26 @@ class TestSet(unittest.TestCase):
             output.getvalue(),
             "Exception raised while validating element '(2, 2)' for Set I\n")
 
+        # Note: one of these indices will trigger the exception in the
+        # validot when it is called for the index.
+        m.J = Set([(0,0), (2,2)], validate=_validate)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertTrue( m.J[2,2].add((0,1)) )
+            self.assertEqual(output.getvalue(), "")
+            with self.assertRaisesRegexp(
+                    ValueError,
+                    "The value=\(4, 1\) violates the validation rule of "
+                    "Set J\[0,0\]"):
+                m.J[0,0].add((4,1))
+            self.assertEqual(output.getvalue(), "")
+            with self.assertRaisesRegexp(RuntimeError, "Bogus value"):
+                m.J[2,2].add((2,2))
+        self.assertEqual(
+            output.getvalue(),
+            "Exception raised while validating element '(2, 2)' for "
+            "Set J[2,2]\n")
+
 
     def test_pprint(self):
         m = ConcreteModel()
@@ -3576,3 +3601,70 @@ class TestSet(unittest.TestCase):
         buf = StringIO()
         n.pprint(ostream=buf)
         self.assertEqual(ref, buf.getvalue())
+
+    def test_dimen(self):
+        m = ConcreteModel()
+        m.I = Set()
+        self.assertEqual(m.I.dimen, _UnknownSetDimen)
+        m.I.add((1,2))
+        self.assertEqual(m.I.dimen, 2)
+
+        m.J = Set(initialize=[1,2,3])
+        self.assertEqual(m.J.dimen, 1)
+
+        m.K = Set(initialize=[(1,2,3)])
+        self.assertEqual(m.K.dimen, 3)
+
+        with self.assertRaisesRegexp(
+                ValueError,
+                "The value=1 has dimension 1 and is not valid for Set K "
+                "which has dimen=3"):
+            m.K.add(1)
+
+        m.L = Set(dimen=None)
+        self.assertIsNone(m.L.dimen)
+        m.L.add(1)
+        self.assertIsNone(m.L.dimen)
+        m.L.add((2,3))
+        self.assertIsNone(m.L.dimen)
+        self.assertEqual(list(m.L), [1, (2,3)])
+
+    def test_construction(self):
+        m = AbstractModel()
+        m.I = Set(initialize=[1,2,3])
+        m.J = Set(initialize=[4,5,6])
+        m.II = Set([1,2,3], initialize={1:[0], 2:[1,2], 3: xrange(3)})
+        m.JJ = Set([1,2,3], initialize={1:[0], 2:[1,2], 3: xrange(3)})
+
+        i = m.create_instance(data={
+            None: {'I': [-1,0], 'II': {1: [10,11], 3:[30]}}
+        })
+
+        self.assertEqual(list(i.I), [-1,0])
+        self.assertEqual(list(i.J), [4,5,6])
+        self.assertEqual(list(i.II[1]), [10,11])
+        self.assertEqual(list(i.II[3]), [30])
+        self.assertEqual(list(i.JJ[1]), [0])
+        self.assertEqual(list(i.JJ[2]), [1,2])
+        self.assertEqual(list(i.JJ[3]), [0,1,2])
+
+        # Implicitly-constructed set should fall back on initialize!
+        self.assertEqual(list(i.II[2]), [1,2])
+
+        ref = """
+Constructing OrderedSimpleSet 'I' on [Model] from data=None
+Constructing Set, name=I, from data=None
+Constructed component ''[Model].I'':
+I : Dim=0, Size=1, Ordered=True, Sorted=False
+    Key  : Dimen : Domain : Size : Members
+    None :    -- :    Any :    0 :      {}
+""".strip()
+        m = ConcreteModel()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            m.I = Set()
+            print output.getvalue()
+            self.assertEqual(output.getvalue().strip(), ref)
+            # but re-constructing the set doesn't re-log the message
+            m.I.construct()
+            self.assertEqual(output.getvalue().strip(), ref)
