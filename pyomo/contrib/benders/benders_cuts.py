@@ -74,17 +74,6 @@ def _del_con(c):
         c.parent_block().del_component(c)
 
 
-def _init_var(v):
-    if v.has_lb() and v.has_ub():
-        v.value = 0.5*(v.lb + v.ub)
-    elif v.has_lb():
-        v.value = v.lb
-    elif v.has_ub():
-        v.value = v.ub
-    else:
-        v.value = 0
-
-
 def _setup_subproblem(b):
     # first get the objective and turn it into a constraint
 
