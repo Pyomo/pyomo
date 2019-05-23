@@ -56,7 +56,7 @@ _prePython37 = sys.version_info[:2] < (3,7)
 FLATTEN_CROSS_PRODUCT = True
 
 
-def Initializer(obj, init, allow_generators=False,
+def Initializer(init, allow_generators=False,
                 treat_sequences_as_mappings=True):
     if init.__class__ in native_types:
         if init is None:
@@ -65,18 +65,15 @@ def Initializer(obj, init, allow_generators=False,
     elif inspect.isfunction(init):
         if not allow_generators and inspect.isgeneratorfunction(init):
             raise ValueError("Generator functions are not allowed")
-        if obj.is_indexed():
-            # Historically pyomo.core.base.misc.apply_indexed_rule
-            # accepted rules that took only the parent block (even for
-            # indexed components).  We will preserve that functionality
-            # here.
-            _args = getargspec(init)
-            if len(_args.args) == 1 and _args.varargs is None:
-                return _ScalarCallInitializer(init)
-            else:
-                return _IndexedCallInitializer(init)
-        else:
+        # Historically pyomo.core.base.misc.apply_indexed_rule
+        # accepted rules that took only the parent block (even for
+        # indexed components).  We will preserve that functionality
+        # here.
+        _args = getargspec(init)
+        if len(_args.args) == 1 and _args.varargs is None:
             return _ScalarCallInitializer(init)
+        else:
+            return _IndexedCallInitializer(init)
     elif isinstance(init, collections.Mapping):
         return _ItemInitializer(init)
     elif isinstance(init, collections.Sequence) \
@@ -160,13 +157,13 @@ class _ScalarCallInitializer(_InitializerBase):
 class SetInitializer(_InitializerBase):
     __slots__ = ('_set','verified')
 
-    def __init__(self, obj, init, allow_generators=True):
+    def __init__(self, init, allow_generators=True):
         self.verified = False
         if init is None:
             self._set = None
         else:
             self._set = Initializer(
-                obj, init, allow_generators=allow_generators,
+                init, allow_generators=allow_generators,
                 treat_sequences_as_mappings=False)
 
     def intersect(self, other):
@@ -208,8 +205,8 @@ class _SetIntersectInitializer(_InitializerBase):
 
 class RangeSetInitializer(_InitializerBase):
     __slots__ = ('_init', 'default_step',)
-    def __init__(self, obj, init, default_step=1):
-        self._init = Initializer(obj, init, treat_sequences_as_mappings=False)
+    def __init__(self, init, default_step=1):
+        self._init = Initializer(init, treat_sequences_as_mappings=False)
         self.default_step = default_step
 
     def __call__(self, parent, idx):
@@ -2060,26 +2057,24 @@ class Set(IndexedComponent):
         # restrict the set of valid set values.  If more than one is
         # specified, we will restrict the Set values to the intersection
         # of the individual arguments
-        self._init_domain = SetInitializer(self, None)
+        self._init_domain = SetInitializer(None)
         _domain = kwds.pop('domain', None)
         if _domain is not None:
-            self._init_domain.intersect(SetInitializer(self, _domain))
+            self._init_domain.intersect(SetInitializer(_domain))
         _within = kwds.pop('within', None)
         if _within is not None:
-            self._init_domain.intersect(SetInitializer(self, _within))
+            self._init_domain.intersect(SetInitializer(_within))
         _bounds = kwds.pop('bounds', None)
         if _bounds is not None:
             self._init_domain.intersect(RangeSetInitializer(
-                self, _bounds, default_step=0))
+                _bounds, default_step=0))
 
-        self._init_dimen = Initializer(
-            self, kwds.pop('dimen', _UnknownSetDimen))
+        self._init_dimen = Initializer(kwds.pop('dimen', _UnknownSetDimen))
         self._init_values = Initializer(
-            self, kwds.pop('initialize', ()),
-            treat_sequences_as_mappings=False,
-            allow_generators=True)
-        self._init_validate = Initializer(self, kwds.pop('validate', None))
-        self._init_filter = Initializer(self, kwds.pop('filter', None))
+            kwds.pop('initialize', ()),
+            treat_sequences_as_mappings=False, allow_generators=True)
+        self._init_validate = Initializer(kwds.pop('validate', None))
+        self._init_filter = Initializer(kwds.pop('filter', None))
 
         if 'virtual' in kwds:
             deprecation_warning(

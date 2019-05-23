@@ -2663,7 +2663,7 @@ def _init_indexed(m, *args):
 class Test_Initializer(unittest.TestCase):
     def test_constant(self):
         m = ConcreteModel()
-        a = Initializer(m, 5)
+        a = Initializer(5)
         self.assertIs(type(a), _ConstantInitializer)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
@@ -2671,7 +2671,7 @@ class Test_Initializer(unittest.TestCase):
 
     def test_dict(self):
         m = ConcreteModel()
-        a = Initializer(m, {1:5})
+        a = Initializer({1:5})
         self.assertIs(type(a), _ItemInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
@@ -2679,13 +2679,13 @@ class Test_Initializer(unittest.TestCase):
 
     def test_sequence(self):
         m = ConcreteModel()
-        a = Initializer(m, [0,5])
+        a = Initializer([0,5])
         self.assertIs(type(a), _ItemInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
         self.assertEqual(a(None, 1), 5)
 
-        a = Initializer(m, [0,5], treat_sequences_as_mappings=False)
+        a = Initializer([0,5], treat_sequences_as_mappings=False)
         self.assertIs(type(a), _ConstantInitializer)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
@@ -2695,7 +2695,7 @@ class Test_Initializer(unittest.TestCase):
         m = ConcreteModel()
         def a_init(m):
             return 0
-        a = Initializer(m, a_init)
+        a = Initializer(a_init)
         self.assertIs(type(a), _ScalarCallInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
@@ -2704,16 +2704,24 @@ class Test_Initializer(unittest.TestCase):
         m.x = Var([1,2,3])
         def x_init(m, i):
             return i+1
-        a = Initializer(m.x, x_init)
+        a = Initializer(x_init)
         self.assertIs(type(a), _IndexedCallInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
         self.assertEqual(a(None, 1), 2)
 
+        def x2_init(m):
+            return 0
+        a = Initializer(x2_init)
+        self.assertIs(type(a), _ScalarCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(a(None, 1), 0)
+
         m.y = Var([1,2,3], [4,5,6])
         def y_init(m, i, j):
             return j*(i+1)
-        a = Initializer(m.y, y_init)
+        a = Initializer(y_init)
         self.assertIs(type(a), _IndexedCallInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
@@ -2726,9 +2734,9 @@ class Test_Initializer(unittest.TestCase):
             yield 3
         with self.assertRaisesRegexp(
                 ValueError, "Generator functions are not allowed"):
-            a = Initializer(m, a_init)
+            a = Initializer(a_init)
 
-        a = Initializer(m, a_init, allow_generators=True)
+        a = Initializer(a_init, allow_generators=True)
         self.assertIs(type(a), _ScalarCallInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
@@ -2738,7 +2746,7 @@ class Test_Initializer(unittest.TestCase):
         def x_init(m, i):
             yield i
             yield i+1
-        a = Initializer(m.x, x_init, allow_generators=True)
+        a = Initializer(x_init, allow_generators=True)
         self.assertIs(type(a), _IndexedCallInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
@@ -2748,7 +2756,7 @@ class Test_Initializer(unittest.TestCase):
         def y_init(m, i, j):
             yield j
             yield i+1
-        a = Initializer(m.y, y_init, allow_generators=True)
+        a = Initializer(y_init, allow_generators=True)
         self.assertIs(type(a), _IndexedCallInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
@@ -2758,9 +2766,9 @@ class Test_Initializer(unittest.TestCase):
         m = ConcreteModel()
         with self.assertRaisesRegexp(
                 ValueError, "Generators are not allowed"):
-            a = Initializer(m, iter([0,3]))
+            a = Initializer(iter([0,3]))
 
-        a = Initializer(m, iter([0,3]), allow_generators=True)
+        a = Initializer(iter([0,3]), allow_generators=True)
         self.assertIs(type(a), _ConstantInitializer)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
@@ -2771,9 +2779,9 @@ class Test_Initializer(unittest.TestCase):
             yield 3
         with self.assertRaisesRegexp(
                 ValueError, "Generators are not allowed"):
-            a = Initializer(m, x_init())
+            a = Initializer(x_init())
 
-        a = Initializer(m, x_init(), allow_generators=True)
+        a = Initializer(x_init(), allow_generators=True)
         self.assertIs(type(a), _ConstantInitializer)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
@@ -2781,21 +2789,21 @@ class Test_Initializer(unittest.TestCase):
 
     def test_pickle(self):
         m = ConcreteModel()
-        a = Initializer(m, 5)
+        a = Initializer(5)
         a.verified = True
         b = pickle.loads(pickle.dumps(a))
         self.assertIsNot(a, b)
         self.assertEqual(a.val, b.val)
         self.assertEqual(a.verified, b.verified)
 
-        a = Initializer(m, {1:5})
+        a = Initializer({1:5})
         b = pickle.loads(pickle.dumps(a))
         self.assertIsNot(a, b)
         self.assertEqual(a._dict, b._dict)
         self.assertIsNot(a._dict, b._dict)
         self.assertEqual(a.verified, b.verified)
 
-        a = Initializer(m, _init_scalar)
+        a = Initializer(_init_scalar)
         b = pickle.loads(pickle.dumps(a))
         self.assertIsNot(a, b)
         self.assertIs(a._fcn, b._fcn)
@@ -2804,7 +2812,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(b(None, None), 1)
 
         m.x = Var([1,2,3])
-        a = Initializer(m.x, _init_indexed)
+        a = Initializer(_init_indexed)
         b = pickle.loads(pickle.dumps(a))
         self.assertIsNot(a, b)
         self.assertIs(a._fcn, b._fcn)
@@ -2815,14 +2823,14 @@ class Test_Initializer(unittest.TestCase):
 
 class Test_SetInitializer(unittest.TestCase):
     def test_single_set(self):
-        a = SetInitializer(self, None)
+        a = SetInitializer(None)
         self.assertIs(type(a), SetInitializer)
         self.assertIsNone(a._set)
         self.assertIs(a(None,None), Any)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
 
-        a = SetInitializer(self, Reals)
+        a = SetInitializer(Reals)
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), _ConstantInitializer)
         self.assertIs(a(None,None), Reals)
@@ -2830,7 +2838,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
 
-        a = SetInitializer(self, {1:Reals})
+        a = SetInitializer({1:Reals})
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), _ItemInitializer)
         self.assertIs(a(None, 1), Reals)
@@ -2838,16 +2846,16 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertFalse(a.verified)
 
     def test_intersect(self):
-        a = SetInitializer(self, None)
-        a.intersect(SetInitializer(self, None))
+        a = SetInitializer(None)
+        a.intersect(SetInitializer(None))
         self.assertIs(type(a), SetInitializer)
         self.assertIsNone(a._set)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         self.assertIs(a(None,None), Any)
 
-        a = SetInitializer(self, None)
-        a.intersect(SetInitializer(self, Reals))
+        a = SetInitializer(None)
+        a.intersect(SetInitializer(Reals))
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), _ConstantInitializer)
         self.assertIs(a._set.val, Reals)
@@ -2855,16 +2863,16 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertFalse(a.verified)
         self.assertIs(a(None,None), Reals)
 
-        a = SetInitializer(self, None)
-        a.intersect(RangeSetInitializer(self, 5))
+        a = SetInitializer(None)
+        a.intersect(RangeSetInitializer(5))
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), RangeSetInitializer)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         self.assertEqual(a(None,None), RangeSet(5))
 
-        a = SetInitializer(self, Reals)
-        a.intersect(SetInitializer(self, None))
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(None))
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), _ConstantInitializer)
         self.assertIs(a._set.val, Reals)
@@ -2872,8 +2880,8 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertFalse(a.verified)
         self.assertIs(a(None,None), Reals)
 
-        a = SetInitializer(self, Reals)
-        a.intersect(SetInitializer(self, Integers))
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(Integers))
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), _SetIntersectInitializer)
         self.assertIs(type(a._set._A), _ConstantInitializer)
@@ -2887,9 +2895,9 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(s._sets[0], Reals)
         self.assertIs(s._sets[1], Integers)
 
-        a = SetInitializer(self, Reals)
-        a.intersect(SetInitializer(self, Integers))
-        a.intersect(RangeSetInitializer(self, 3))
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(Integers))
+        a.intersect(RangeSetInitializer(3))
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), _SetIntersectInitializer)
         self.assertIs(type(a._set._A), _SetIntersectInitializer)
@@ -2903,9 +2911,9 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
         self.assertIsInstance(s._sets[1], RangeSet)
 
-        a = SetInitializer(self, Reals)
-        a.intersect(SetInitializer(self, Integers))
-        a.intersect(RangeSetInitializer(self, 3, default_step=0))
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(Integers))
+        a.intersect(RangeSetInitializer(3, default_step=0))
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), _SetIntersectInitializer)
         self.assertIs(type(a._set._A), _SetIntersectInitializer)
@@ -2922,9 +2930,9 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertFalse(s._sets[1].is_finite())
         self.assertTrue(s.is_finite())
 
-        a = SetInitializer(self, Reals)
-        a.intersect(SetInitializer(self, {1:Integers}))
-        a.intersect(RangeSetInitializer(self, 3, default_step=0))
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer({1:Integers}))
+        a.intersect(RangeSetInitializer(3, default_step=0))
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), _SetIntersectInitializer)
         self.assertIs(type(a._set._A), _SetIntersectInitializer)
@@ -2944,72 +2952,72 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertTrue(s.is_finite())
 
     def test_rangeset(self):
-        a = RangeSetInitializer(None, 5)
+        a = RangeSetInitializer(5)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
         self.assertEqual(s, RangeSet(5))
 
-        a = RangeSetInitializer(None, (0,5))
+        a = RangeSetInitializer((0,5))
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
         self.assertEqual(s, RangeSet(0,5))
 
-        a = RangeSetInitializer(None, (0,5,2))
+        a = RangeSetInitializer((0,5,2))
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
         self.assertEqual(s, RangeSet(0,5,2))
 
-        a = RangeSetInitializer(None, 5, default_step=0)
+        a = RangeSetInitializer(5, default_step=0)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
         self.assertEqual(s, RangeSet(1,5,0))
 
-        a = RangeSetInitializer(None, (0,5), default_step=0)
+        a = RangeSetInitializer((0,5), default_step=0)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
         self.assertEqual(s, RangeSet(0,5,0))
 
-        a = RangeSetInitializer(None, (0,5,2), default_step=0)
+        a = RangeSetInitializer((0,5,2), default_step=0)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
         self.assertEqual(s, RangeSet(0,5,2))
 
-        a = RangeSetInitializer(None, {1:5})
+        a = RangeSetInitializer({1:5})
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
         s = a(None,1)
         self.assertEqual(s, RangeSet(5))
 
-        a = RangeSetInitializer(None, {1:(0,5)})
+        a = RangeSetInitializer({1:(0,5)})
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
         s = a(None,1)
         self.assertEqual(s, RangeSet(0,5))
 
     def test_setdefault(self):
-        a = SetInitializer(None, None)
+        a = SetInitializer(None)
         self.assertIs(a(None,None), Any)
         a.setdefault(Reals)
         self.assertIs(a(None,None), Reals)
 
-        a = SetInitializer(None, Integers)
+        a = SetInitializer(Integers)
         self.assertIs(a(None,None), Integers)
         a.setdefault(Reals)
         self.assertIs(a(None,None), Integers)
 
-        a = RangeSetInitializer(None, 5)
+        a = RangeSetInitializer(5)
         self.assertEqual(a(None,None), RangeSet(5))
         a.setdefault(Reals)
         self.assertEqual(a(None,None), RangeSet(5))
 
-        a = SetInitializer(None, Reals)
-        a.intersect(SetInitializer(None, Integers))
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(Integers))
         self.assertIs(type(a(None,None)), SetIntersection_InfiniteSet)
         a.setdefault(RangeSet(5))
         self.assertIs(type(a(None,None)), SetIntersection_InfiniteSet)
