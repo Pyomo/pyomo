@@ -1159,7 +1159,7 @@ class _SetData(_SetDataBase):
 
     Derived versions of this class can be used as the Index for any
     IndexedComponent (including IndexedSet)."""
-    __slots__ = tuple()
+    __slots__ = ()
 
     def __contains__(self, value):
         raise DeveloperError("Derived set class (%s) failed to "
@@ -1540,15 +1540,15 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
 
     def _verify(self, value):
         if value not in self._domain:
-            raise ValueError("Cannot add value %s to set %s.\n"
-                             "\tThe value is not in the Set's domain"
-                             % (value, self.name,))
+            raise ValueError("Cannot add value %s to Set %s.\n"
+                             "\tThe value is not in the domain %s"
+                             % (value, self.name, self._domain))
         if type(value) is tuple:
             value = flatten_tuple(value)
         # We wrap this check in a try-except because some values (like lists)
         #  are not hashable and can raise exceptions.
         try:
-            if value in self._values:
+            if value in self:
                 logger.warning(
                     "Element %s already exists in set %s; no action taken"
                     % (value, self.name))
