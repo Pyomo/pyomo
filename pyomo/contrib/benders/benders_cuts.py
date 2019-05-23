@@ -1,11 +1,9 @@
-from coramin.relaxations.custom_block import declare_custom_block
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import _BlockData, declare_custom_block
 import pyomo.environ as pe
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from mpi4py import MPI
 import numpy as np
 import logging
-import math
 
 
 logger = logging.getLogger(__name__)
@@ -35,7 +33,7 @@ Master problem must be of the form
 min h0(y) + eta
 s.t.
     h(y) <= 0
-    beta_k*f_k + transpose(alpha_k)*g_k - transpose(gamma_k)*(y - y_k) <= beta_k * eta
+    benders cuts
     
 where the last constraint will be generated automatically with BendersCutGenerators. The BendersCutGenerators
 must be handed a subproblem of the form
@@ -59,6 +57,10 @@ solver_dual_sign_convention = dict()
 solver_dual_sign_convention['ipopt'] = -1
 solver_dual_sign_convention['gurobi'] = -1
 solver_dual_sign_convention['gurobi_direct'] = -1
+solver_dual_sign_convention['gurobi_persistent'] = -1
+solver_dual_sign_convention['cplex'] = -1
+solver_dual_sign_convention['cplex_direct'] = -1
+solver_dual_sign_convention['cplex_persistent'] = -1
 solver_dual_sign_convention['glpk'] = -1
 solver_dual_sign_convention['cbc'] = -1
 
@@ -135,11 +137,11 @@ class BendersCutGeneratorData(_BlockData):
         self.master_vars_indices = pe.ComponentMap()
         self.master_etas = list()
         self.cuts = None
-        self.subproblem_solver = None
+        self.subproblem_solvers = list()
         self.tol = None
         self.all_master_etas = list()
 
-    def set_input(self, master_vars, subproblem_solver='glpk', tol=1e-6):
+    def set_input(self, master_vars, tol=1e-6):
         """
         It is very important for master_vars to be in the same order for every process.
 
@@ -147,7 +149,6 @@ class BendersCutGeneratorData(_BlockData):
         ----------
         master_vars
         master_eta
-        subproblem_solver
         tol
 
         Returns
@@ -165,13 +166,10 @@ class BendersCutGeneratorData(_BlockData):
         for i, v in enumerate(self.master_vars):
             self.master_vars_indices[v] = i
         self.tol = tol
-        if isinstance(subproblem_solver, str):
-            self.subproblem_solver = pe.SolverFactory(subproblem_solver)
-        else:
-            self.subproblem_solver = subproblem_solver
+        self.subproblem_solvers = list()
         self.all_master_etas = list()
 
-    def add_subproblem(self, subproblem_fn, subproblem_fn_kwargs, master_eta):
+    def add_subproblem(self, subproblem_fn, subproblem_fn_kwargs, master_eta, subproblem_solver='gurobi_persistent'):
         _rank = np.argmin(self.num_subproblems_by_rank)
         self.num_subproblems_by_rank[_rank] += 1
         self.all_master_etas.append(master_eta)
@@ -182,11 +180,13 @@ class BendersCutGeneratorData(_BlockData):
             self.complicating_vars_maps.append(complicating_vars_map)
             _setup_subproblem(subproblem)
 
-    def generate_cut(self):
-        if self.subproblem_solver.name not in solver_dual_sign_convention:
-            raise NotImplementedError('BendersCutGenerator is unaware of the dual sign convention of subproblem solver ' + self.subproblem_solver.name)
-        sign_convention = solver_dual_sign_convention[self.subproblem_solver.name]
+            if isinstance(subproblem_solver, str):
+                subproblem_solver = pe.SolverFactory(subproblem_solver)
+            self.subproblem_solvers.append(subproblem_solver)
+            if isinstance(subproblem_solver, PersistentSolver):
+                subproblem_solver.set_instance(subproblem)
 
+    def generate_cut(self):
         coefficients = np.zeros(len(self.subproblems)*len(self.master_vars), dtype='d')
         constants = np.zeros(len(self.subproblems), dtype='d')
         eta_coeffs = np.zeros(len(self.subproblems), dtype='d')
@@ -207,10 +207,25 @@ class BendersCutGeneratorData(_BlockData):
             subproblem.fix_eta = pe.Constraint(expr=subproblem._eta - master_eta.value == 0)
             subproblem._eta.value = master_eta.value
 
-            res = self.subproblem_solver.solve(subproblem, tee=False, load_solutions=False)
-            if res.solver.termination_condition != pe.TerminationCondition.optimal:
-                logger.warning('Unable to generate cut because subproblem failed to converge.')
-            subproblem.solutions.load_from(res)
+            subproblem_solver = self.subproblem_solvers[subproblem_ndx]
+            if subproblem_solver.name not in solver_dual_sign_convention:
+                raise NotImplementedError('BendersCutGenerator is unaware of the dual sign convention of subproblem solver ' + self.subproblem_solver.name)
+            sign_convention = solver_dual_sign_convention[subproblem_solver.name]
+
+            if isinstance(subproblem_solver, PersistentSolver):
+                for c in subproblem.fix_complicating_vars.values():
+                    subproblem_solver.add_constraint(c)
+                subproblem_solver.add_constraint(subproblem.fix_eta)
+                res = subproblem_solver.solve(tee=False, load_solutions=False, save_results=False)
+                if res.solver.termination_condition != pe.TerminationCondition.optimal:
+                    raise RuntimeError('Unable to generate cut because subproblem failed to converge.')
+                subproblem_solver.load_vars()
+                subproblem_solver.load_duals()
+            else:
+                res = subproblem_solver.solve(subproblem, tee=False, load_solutions=False)
+                if res.solver.termination_condition != pe.TerminationCondition.optimal:
+                    raise RuntimeError('Unable to generate cut because subproblem failed to converge.')
+                subproblem.solutions.load_from(res)
 
             constants[subproblem_ndx] = pe.value(subproblem._z)
             eta_coeffs[subproblem_ndx] = sign_convention * pe.value(subproblem.dual[subproblem.obj_con])
@@ -218,6 +233,10 @@ class BendersCutGeneratorData(_BlockData):
                 coefficients[coeff_ndx] = sign_convention * pe.value(subproblem.dual[c])
                 coeff_ndx += 1
 
+            if isinstance(subproblem_solver, PersistentSolver):
+                for c in subproblem.fix_complicating_vars.values():
+                    subproblem_solver.remove_constraint(c)
+                subproblem_solver.remove_constraint(subproblem.fix_eta)
             del subproblem.fix_complicating_vars
             del subproblem.fix_complicating_vars_index
             del subproblem.fix_eta
@@ -237,7 +256,7 @@ class BendersCutGeneratorData(_BlockData):
         global_eta_coeffs = [float(i) for i in global_eta_coeffs]
 
         coeff_ndx = 0
-        num_cuts_added = 0
+        cuts_added = list()
         for subproblem_ndx in range(total_num_subproblems):
             cut_expr = global_constants[subproblem_ndx]
             if cut_expr > self.tol:
@@ -247,8 +266,8 @@ class BendersCutGeneratorData(_BlockData):
                     coeff = global_coeffs[coeff_ndx]
                     cut_expr -= coeff * (master_var - master_var.value)
                     coeff_ndx += 1
-                self.cuts.add(cut_expr <= 0)
-                num_cuts_added += 1
+                new_cut = self.cuts.add(cut_expr <= 0)
+                cuts_added.append(new_cut)
             else:
                 coeff_ndx += len(self.master_vars)
-        return num_cuts_added
+        return cuts_added

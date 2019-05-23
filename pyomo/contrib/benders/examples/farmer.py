@@ -1,6 +1,16 @@
 from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
 import pyomo.environ as pe
-import math
+import time
+from mpi4py import MPI
+import sys
+import os
+
+
+"""
+To run this example:
+
+mpirun -np 3 python farmer.py
+"""
 
 
 class Farmer(object):
@@ -77,24 +87,40 @@ def create_subproblem(master, farmer, scenario):
 
 
 def main():
+    rank = MPI.COMM_WORLD.Get_rank()
+    if rank != 0:
+        sys.stdout = open(os.devnull, 'w')
+
+    t0 = time.time()
     farmer = Farmer()
     m = create_master(farmer=farmer)
     master_vars = list(m.devoted_acreage.values())
     m.benders = BendersCutGenerator()
-    m.benders.set_input(master_vars=master_vars, subproblem_solver='gurobi_direct', tol=1e-8)
+    m.benders.set_input(master_vars=master_vars, tol=1e-8)
     for s in farmer.scenarios:
         subproblem_fn_kwargs = dict()
         subproblem_fn_kwargs['master'] = m
         subproblem_fn_kwargs['farmer'] = farmer
         subproblem_fn_kwargs['scenario'] = s
-        m.benders.add_subproblem(subproblem_fn=create_subproblem, subproblem_fn_kwargs=subproblem_fn_kwargs, master_eta=m.eta[s])
-    opt = pe.SolverFactory('gurobi_direct')
+        m.benders.add_subproblem(subproblem_fn=create_subproblem,
+                                 subproblem_fn_kwargs=subproblem_fn_kwargs,
+                                 master_eta=m.eta[s],
+                                 subproblem_solver='gurobi_persistent')
+    opt = pe.SolverFactory('gurobi_persistent')
+    opt.set_instance(m)
 
+    print('{0:<15}{1:<15}{2:<15}{3:<15}{4:<15}'.format('# Cuts', 'Corn', 'Sugar Beets', 'Wheat', 'Time'))
     for i in range(30):
-        res = opt.solve(m, tee=False)
-        num_cuts_added = m.benders.generate_cut()
-        print(num_cuts_added, m.devoted_acreage['CORN'].value, m.devoted_acreage['SUGAR_BEETS'].value, m.devoted_acreage['WHEAT'].value)
-        if num_cuts_added == 0:
+        res = opt.solve(tee=False, save_results=False)
+        cuts_added = m.benders.generate_cut()
+        for c in cuts_added:
+            opt.add_constraint(c)
+        print('{0:<15}{1:<15.2f}{2:<15.2f}{3:<15.2f}{4:<15.2f}'.format(len(cuts_added),
+                                                                       m.devoted_acreage['CORN'].value,
+                                                                       m.devoted_acreage['SUGAR_BEETS'].value,
+                                                                       m.devoted_acreage['WHEAT'].value,
+                                                                       time.time()-t0))
+        if len(cuts_added) == 0:
             break
 
 

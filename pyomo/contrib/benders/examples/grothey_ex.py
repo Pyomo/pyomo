@@ -1,6 +1,5 @@
 from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
 import pyomo.environ as pe
-import math
 
 
 def create_master():
@@ -30,15 +29,18 @@ def main():
     m = create_master()
     master_vars = [m.y]
     m.benders = BendersCutGenerator()
-    m.benders.set_input(master_vars=master_vars, subproblem_solver='ipopt', tol=1e-8)
-    m.benders.add_subproblem(subproblem_fn=create_subproblem, subproblem_fn_kwargs={'master': m}, master_eta=m.eta)
+    m.benders.set_input(master_vars=master_vars, tol=1e-8)
+    m.benders.add_subproblem(subproblem_fn=create_subproblem,
+                             subproblem_fn_kwargs={'master': m},
+                             master_eta=m.eta,
+                             subproblem_solver='ipopt', )
     opt = pe.SolverFactory('gurobi_direct')
 
     for i in range(30):
         res = opt.solve(m, tee=False)
-        num_cuts_added = m.benders.generate_cut()
-        print(num_cuts_added, m.y.value, m.eta.value)
-        if num_cuts_added == 0:
+        cuts_added = m.benders.generate_cut()
+        print(len(cuts_added), m.y.value, m.eta.value)
+        if len(cuts_added) == 0:
             break
 
 
