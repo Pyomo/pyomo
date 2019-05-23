@@ -1,9 +1,15 @@
 import pyutilib.th as unittest
 from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
 import pyomo.environ as pe
+try:
+    import mpi4py
+    mpi4py_available = True
+except:
+    mpi4py_available = False
 
 
 class TestBenders(unittest.TestCase):
+    @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
     def test_grothey(self):
         def create_master():
             m = pe.ConcreteModel()
@@ -44,6 +50,7 @@ class TestBenders(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 2.721381, 4)
         self.assertAlmostEqual(m.eta.value, -0.0337568, 4)
 
+    @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
     def test_farmer(self):
         class Farmer(object):
             def __init__(self):

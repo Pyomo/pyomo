@@ -1,7 +1,11 @@
 from pyomo.core.base.block import _BlockData, declare_custom_block
 import pyomo.environ as pe
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from mpi4py import MPI
+try:
+    from mpi4py import MPI
+    mpi4py_available = True
+except:
+    mpi4py_available = False
 import numpy as np
 import logging
 
@@ -118,6 +122,8 @@ def _setup_subproblem(b):
 @declare_custom_block(name='BendersCutGenerator')
 class BendersCutGeneratorData(_BlockData):
     def __init__(self, component):
+        if not mpi4py_available:
+            raise ImportError('BendersCutGenerator requires mpi4py.')
         _BlockData.__init__(self, component)
         self.num_subproblems_by_rank = np.zeros(MPI.COMM_WORLD.Get_size())
         self.subproblems = list()
