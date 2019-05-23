@@ -1,0 +1,86 @@
+Solver command line: ['/Users/username/PycharmProjects/pyomo_cbc_return_handling/solvers/cbc/Darwin/cbc', '-randomCbcSeed', '42', '-randomSeed', '42', '-printingOptions', 'all', '-import', '/var/folders/17/g4zpz4f11h59hqtf94dlhhd80000gp/T/tmpo2dkgjoy.pyomo.lp', '-stat=1', '-solve', '-solu', '/var/folders/17/g4zpz4f11h59hqtf94dlhhd80000gp/T/tmpo2dkgjoy.pyomo.soln']
+
+Welcome to the CBC MILP Solver 
+Version: 2.9.9 
+Build Date: Aug 25 2017 
+
+command line - /Users/username/PycharmProjects/pyomo_cbc_return_handling/solvers/cbc/Darwin/cbc -randomCbcSeed 42 -randomSeed 42 -printingOptions all -import /var/folders/17/g4zpz4f11h59hqtf94dlhhd80000gp/T/tmpo2dkgjoy.pyomo.lp -stat=1 -solve -solu /var/folders/17/g4zpz4f11h59hqtf94dlhhd80000gp/T/tmpo2dkgjoy.pyomo.soln (default strategy 1)resources/solvers/cbc/cbc-osx/cbc -sec 900 -timeMode elapsed -randomCbcSeed 42 -randomSeed 42 -randomizedRounding off -threads 1 -maxSolutions 1 -printingOptions all -import /var/folders/17/g4zpz4f11h59hqtf94dlhhd80000gp/T/tmp2kpl8a93.pyomo.lp -stat=1 -solve -solu /var/folders/17/g4zpz4f11h59hqtf94dlhhd80000gp/T/tmp2kpl8a93.pyomo.soln (default strategy 1)
+seconds was changed from 1e+100 to 900
+Option for timeMode changed from cpu to elapsed
+randomCbcSeed was changed from -1 to 42
+randomSeed was changed from 1234567 to 42
+threads was changed from 0 to 1
+maxSolutions was changed from 9999999 to 1
+Option for printingOptions changed from normal to all
+ CoinLpIO::readLp(): Maximization problem reformulated as minimization
+Presolve 205 (-1) rows, 104 (-1) columns and 552 (-1) elements
+Statistics for presolved model
+Original problem has 40 integers (40 of which binary)
+Presolved problem has 40 integers (40 of which binary)
+==== 72 zero objective 2 different
+32 variables have objective of -1
+72 variables have objective of 0
+==== absolute objective values 2 different
+72 variables have objective of 0
+32 variables have objective of 1
+==== for integers 40 zero objective 1 different
+40 variables have objective of 0
+==== for integers absolute objective values 1 different
+40 variables have objective of 0
+===== end objective counts
+
+
+Problem has 205 rows, 104 columns (32 with objective) and 552 elements
+Column breakdown:
+0 of type 0.0->inf, 0 of type 0.0->up, 0 of type lo->inf, 
+0 of type lo->up, 0 of type free, 0 of type fixed, 
+0 of type -inf->0.0, 0 of type -inf->up, 104 of type 0.0->1.0 
+Row breakdown:
+0 of type E 0.0, 13 of type E 1.0, 0 of type E -1.0, 
+0 of type E other, 0 of type G 0.0, 0 of type G 1.0, 
+0 of type G other, 128 of type L 0.0, 64 of type L 1.0, 
+0 of type L other, 0 of type Range 0.0->1.0, 0 of type Range other, 
+0 of type Free 
+Continuous objective value is -4 - 0.00 seconds
+Cgl0003I 0 fixed, 0 tightened bounds, 85 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 0 tightened bounds, 88 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 0 tightened bounds, 74 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 0 tightened bounds, 72 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 0 tightened bounds, 79 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 0 tightened bounds, 73 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 0 tightened bounds, 51 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 0 tightened bounds, 40 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 0 tightened bounds, 17 strengthened rows, 0 substitutions
+Cgl0004I processed model has 158 rows, 104 columns (104 integer (104 of which binary)) and 990 elements
+Cutoff increment increased from 1e-05 to 0.9999
+Cbc0038I Initial state - 0 integers unsatisfied sum - 0
+Cbc0038I Solution found of -3
+Cbc0038I After 0.08 seconds - Feasibility pump exiting with objective of -3 (stopping after 1 solutions) - took 0.00 seconds
+Cbc0012I Integer solution of -3 found by feasibility pump after 0 iterations and 0 nodes (0.08 seconds)
+Cbc0030I Thread 0 used 0 times,  waiting to start 0.00030899048, 0 cpu time, 0 locks, 0 locked, 0 waiting for locks
+Cbc0030I Main thread 0 waiting for threads,  1 locks, 1.001358e-05 locked, 0 waiting for locks
+Cbc0019I Exiting on maximum solutions
+Cbc0005I Partial search - best objective -3 (best possible -3), took 0 iterations and 0 nodes (0.08 seconds)
+Cbc0035I Maximum depth 0, 0 variables fixed on reduced cost
+Cuts at root node changed objective from -3 to -3
+Probing was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+Gomory was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+Knapsack was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+Clique was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+MixedIntegerRounding2 was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+FlowCover was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+TwoMirCuts was tried 0 times and created 0 cuts of which 0 were active after adding rounds of cuts (0.000 seconds)
+
+Result - Stopped on solution limit
+
+Objective value:                -3.00000000
+Lower bound:                    -3.000
+Gap:                            0.00
+Enumerated nodes:               0
+Total iterations:               0
+Time (CPU seconds):             0.08
+Time (Wallclock seconds):       0.08
+
+Total time (CPU seconds):       0.08   (Wallclock seconds):       0.09
+
+
