@@ -1247,6 +1247,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         m.J = SetOf([1,2,3])
 
         buf = StringIO()
+        m.pprint()
         m.pprint(ostream=buf)
         self.assertEqual(buf.getvalue().strip(), """
 2 RangeSet Declarations
@@ -3041,6 +3042,12 @@ class TestGlobalSets(unittest.TestCase):
         self.assertEqual(str(Integers), 'Integers')
 
 
+def _init_set(m, *args):
+    n = 1
+    for i in args:
+        n *= i
+    return xrange(n)
+
 class TestSet(unittest.TestCase):
     def test_deprecated_args(self):
         m = ConcreteModel()
@@ -3094,7 +3101,7 @@ class TestSet(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core'):
             m = ConcreteModel()
             m.I = Set(initialize={1,3,2,4})
-            ref = "Initializing an ordered set with a " \
+            ref = "Initializing an ordered Set with a " \
                   "fundamentally unordered data source (type: set)."
             self.assertIn(ref, output.getvalue())
         self.assertEqual(m.I.sorted_data(), (1,2,3,4))
@@ -3190,7 +3197,7 @@ class TestSet(unittest.TestCase):
             m.I.add(3)
         self.assertEqual(
             output.getvalue(),
-            "Element 3 already exists in set I; no action taken\n")
+            "Element 3 already exists in Set I; no action taken\n")
         _verify(m.I, [1,3,2,4])
 
         m.I.remove(3)
@@ -3237,7 +3244,7 @@ class TestSet(unittest.TestCase):
             m.I.add(3)
         self.assertEqual(
             output.getvalue(),
-            "Element 3 already exists in set I; no action taken\n")
+            "Element 3 already exists in Set I; no action taken\n")
         _verify(m.I, [1,2,3,4])
 
         m.I.remove(3)
@@ -3300,7 +3307,7 @@ class TestSet(unittest.TestCase):
             m.I.add(3)
         self.assertEqual(
             output.getvalue(),
-            "Element 3 already exists in set I; no action taken\n")
+            "Element 3 already exists in Set I; no action taken\n")
         _verify(m.I, [1,2,3,4])
 
         m.I.remove(3)
@@ -3409,3 +3416,163 @@ class TestSet(unittest.TestCase):
         m.K = k
         self.assertEqual(str(k), "K")
         self.assertEqual(str(k[1]), "K[1]")
+
+    def test_add_filter_validate(self):
+        m = ConcreteModel()
+        m.I = Set(domain=Integers)
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Cannot add value 1.5 to Set I.\n"
+                "\tThe value is not in the domain Integers"):
+            m.I.add(1.5)
+
+        # Open question: should we cast the added value into the domain
+        # (if we do, how?)
+        self.assertTrue( m.I.add(1.0) )
+        self.assertIn(1, m.I)
+        self.assertIn(1., m.I)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertFalse( m.I.add(1) )
+        self.assertEquals(
+            output.getvalue(),
+            "Element 1 already exists in Set I; no action taken\n")
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertFalse( m.I.add((1,)) )
+        self.assertEquals(
+            output.getvalue(),
+            "Element (1,) already exists in Set I; no action taken\n")
+
+        m.J = Set()
+        with self.assertRaisesRegexp(
+                TypeError,
+                "Unable to insert '\[1\]' into Set J:\n"
+                "\tTypeError: unhashable type: 'list'"):
+            m.J.add([1])
+
+        self.assertTrue( m.J.add((1,)) )
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertFalse( m.J.add(1) )
+        self.assertEquals(
+            output.getvalue(),
+            "Element 1 already exists in Set J; no action taken\n")
+
+
+        def _l_tri(m, i, j):
+            return i >= j
+        m.K = Set(initialize=RangeSet(3)*RangeSet(3), filter=_l_tri)
+        self.assertEqual(
+            list(m.K), [(1,1), (2,1), (2,2), (3,1), (3,2), (3,3)])
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertTrue( m.K.add((0,0)) )
+            self.assertFalse( m.K.add((0,1)) )
+        self.assertEquals(output.getvalue(), "")
+        self.assertEqual(
+            list(m.K), [(1,1), (2,1), (2,2), (3,1), (3,2), (3,3), (0,0)])
+
+        # This tests a filter that matches the dimentionality of the
+        # component.  construct() needs to recognize that the filter is
+        # returning a constant in construct() and re-assign it to be the
+        # _filter for each _SetData
+        def _lt_3(m, i):
+            return i < 3
+        m.L = Set([1,2,3,4,5], initialize=RangeSet(10), filter=_lt_3)
+        self.assertEqual(len(m.L), 5)
+        self.assertEqual(list(m.L[1]), [1, 2])
+        self.assertEqual(list(m.L[5]), [1, 2])
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertTrue( m.L[2].add(0) )
+            self.assertFalse( m.L[2].add((100)) )
+        self.assertEquals(output.getvalue(), "")
+        self.assertEqual(list(m.L[2]), [1,2,0])
+
+
+        def _validate(m,i,j):
+            if i + j < 2:
+                return True
+            if i - j > 2:
+                return False
+            raise RuntimeError("Bogus value")
+        m = ConcreteModel()
+        m.I = Set(validate=_validate)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertTrue( m.I.add((0,1)) )
+            self.assertEqual(output.getvalue(), "")
+            with self.assertRaisesRegexp(
+                    ValueError,
+                    "The value=\(4, 1\) violates the validation rule of Set I"):
+                m.I.add((4,1))
+            self.assertEqual(output.getvalue(), "")
+            with self.assertRaisesRegexp(RuntimeError, "Bogus value"):
+                m.I.add((2,2))
+        self.assertEqual(
+            output.getvalue(),
+            "Exception raised while validating element '(2, 2)' for Set I\n")
+
+
+    def test_pprint(self):
+        m = ConcreteModel()
+        m.I = Set([1,2,3], initialize=lambda m,i: xrange(i+1), domain=Integers)
+        m.J = Set()
+        m.K = Set(initialize=[(1,2), (3,4)])
+
+        buf = StringIO()
+        m.pprint()
+        m.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue().strip(), """
+1 Set Declarations
+    I_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+
+3 Set Declarations
+    I : Dim=1, Size=3, Ordered=True, Sorted=False
+        Key : Dimen : Domain   : Size : Members
+          1 :     1 : Integers :    2 : {0, 1}
+          2 :     1 : Integers :    3 : {0, 1, 2}
+          3 :     1 : Integers :    4 : {0, 1, 2, 3}
+    J : Dim=0, Size=1, Ordered=True, Sorted=False
+        Key  : Dimen : Domain : Size : Members
+        None :    -- :    Any :    0 :      {}
+    K : Dim=0, Size=1, Ordered=True, Sorted=False
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    2 : {(1, 2), (3, 4)}
+
+4 Declarations: I_index I J K""".strip())
+
+    def test_pickle(self):
+        m = ConcreteModel()
+        m.I = Set(initialize={1, 2, 'a'}, ordered=False)
+        m.J = Set(initialize=(2,4,1))
+        m.K = Set(initialize=(2,4,1), ordered=Set.SortedOrder)
+        m.II = Set([1,2,3], m.J, initialize=_init_set)
+
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        ref = buf.getvalue()
+
+        n = pickle.loads(pickle.dumps(m))
+
+        self.assertIsNot(m, n)
+        self.assertIsNot(m.I, n.I)
+        self.assertIsNot(m.J, n.J)
+        self.assertIsNot(m.K, n.K)
+        self.assertIsNot(m.II, n.II)
+
+        self.assertEqual(m.I, n.I)
+        self.assertEqual(m.J, n.J)
+        self.assertEqual(m.K, n.K)
+        for i in m.II:
+            self.assertEqual(m.II[i], n.II[i])
+
+        buf = StringIO()
+        n.pprint(ostream=buf)
+        self.assertEqual(ref, buf.getvalue())

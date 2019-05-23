@@ -47,7 +47,7 @@ from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set
 )
-from pyomo.core.base.misc import sorted_robust, apply_indexed_rule
+from pyomo.core.base.misc import sorted_robust
 
 logger = logging.getLogger('pyomo.core')
 
@@ -236,6 +236,9 @@ def process_setarg(arg):
     elif isinstance(arg,IndexedSet):
         # Argument is an indexed Set instance
         raise TypeError("Cannot index a component with an indexed set")
+    elif isinstance(arg,IndexedComponent):
+        # Argument is an indexed Set instance
+        raise TypeError("Cannot index a component with an indexed component")
     elif isinstance(arg,Component):
         # Argument is some other component
         raise TypeError("Cannot index a component with a non-set "
@@ -1476,7 +1479,7 @@ class _FiniteSetMixin(object):
 
 class _FiniteSetData(_FiniteSetMixin, _SetData):
     """A general unordered iterable Set"""
-    __slots__ = ('_values', '_domain', '_validate', '_dimen')
+    __slots__ = ('_values', '_domain', '_validate', '_filter', '_dimen')
 
     def __init__(self, component):
         _SetData.__init__(self, component=component)
@@ -1486,6 +1489,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
             self._values = set()
         self._domain = None
         self._validate = None
+        self._filter = None
         self._dimen = None
 
     def __getstate__(self):
@@ -1538,30 +1542,43 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
     def dimen(self):
         return self._dimen
 
-    def _verify(self, value):
-        if value not in self._domain:
+    def add(self, value):
+        if type(value) is tuple:
+            _value = flatten_tuple(value)
+            if len(_value) == 1:
+                _value = _value[0]
+                _d = 1
+            else:
+                _d = len(_value)
+        else:
+            _value = value
+            _d = 1
+
+        if _value not in self._domain:
             raise ValueError("Cannot add value %s to Set %s.\n"
                              "\tThe value is not in the domain %s"
                              % (value, self.name, self._domain))
-        if type(value) is tuple:
-            value = flatten_tuple(value)
+
         # We wrap this check in a try-except because some values (like lists)
         #  are not hashable and can raise exceptions.
         try:
-            if value in self:
+            if _value in self:
                 logger.warning(
-                    "Element %s already exists in set %s; no action taken"
+                    "Element %s already exists in Set %s; no action taken"
                     % (value, self.name))
                 return False
         except:
             exc = sys.exc_info()
-            raise TypeError("Unable to insert '%s' into set %s:\n\t%s: %s"
+            raise TypeError("Unable to insert '%s' into Set %s:\n\t%s: %s"
                             % (value, self.name, exc[0].__name__, exc[1]))
+
+        if self._filter is not None:
+            if not self._filter(self, _value):
+                return False
+
         if self._validate is not None:
-            flag = False
             try:
-                flag = apply_indexed_rule(
-                    self, self._validate, self.parent(), value)
+                flag = self._validate(self, _value)
             except:
                 logger.error(
                     "Exception raised while validating element '%s' for Set %s"
@@ -1569,29 +1586,30 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
                 raise
             if not flag:
                 raise ValueError(
-                    "The value=%s violates the validation rule of set=%s"
+                    "The value=%s violates the validation rule of Set %s"
                     % (value, self.name))
+
         # If the Set has a fixed dimension, check that this element is
         # compatible.
         if self._dimen is not None:
-            if type(value) is tuple:
-                _d = len(value)
-            else:
-                _d = 1
-            if self._dimen is _UnknownSetDimen:
-                # The first thing added to a Set with unknown dimension sets
-                # its dimension
-                self._dimen = _d
-            elif _d != self._dimen:
-                raise ValueError(
-                    "The value=%s has dimension %s and is not valid for "
-                    "Set %s which has dimen=%s"
-                    % (value, _d, self.name, self._dimen))
+            if _d != self._dimen:
+                if self._dimen is _UnknownSetDimen:
+                    # The first thing added to a Set with unknown
+                    # dimension sets its dimension
+                    self._dimen = _d
+                else:
+                    raise ValueError(
+                        "The value=%s has dimension %s and is not valid for "
+                        "Set %s which has dimen=%s"
+                        % (value, _d, self.name, self._dimen))
+
+        # Add the value to this object (this last redirection allows
+        # derived classes to implement a different storage mmechanism)
+        self._add_impl(_value)
         return True
 
-    def add(self, value):
-        if self._verify(value):
-            self._values.add(value)
+    def _add_impl(self, value):
+        self._values.add(value)
 
     def remove(self, val):
         self._values.remove(val)
@@ -1755,10 +1773,9 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
     def data(self):
         return tuple(self._ordered_values)
 
-    def add(self, value):
-        if self._verify(value):
-            self._values[value] = len(self._values)
-            self._ordered_values.append(value)
+    def _add_impl(self, value):
+        self._values[value] = len(self._values)
+        self._ordered_values.append(value)
 
     def remove(self, val):
         idx = self._values.pop(val)
@@ -1880,13 +1897,12 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
             self._sort()
         return super(_SortedSetData, self).data()
 
-    def add(self, value):
+    def _add_impl(self, value):
         # Note that the sorted status has no bearing on insertion,
         # so there is no reason to check if the data is correctly sorted
-        if self._verify(value):
-            self._values[value] = len(self._values)
-            self._ordered_values.append(value)
-            self._is_sorted = False
+        self._values[value] = len(self._values)
+        self._ordered_values.append(value)
+        self._is_sorted = False
 
     # Note: removing data does not affect the sorted flag
     #def remove(self, val):
@@ -2126,9 +2142,21 @@ class Set(IndexedComponent):
         if self._init_domain is not None:
             obj._domain = self._init_domain(self, index)
         if self._init_validate is not None:
-            obj._validate = self._init_validate(self, index)
+            try:
+                obj._validate = Initializer(self._init_validate(self, index))
+                if obj._validate.constant():
+                    # The _init_filter was the actual filter function; use it.
+                    obj._validate = self._init_validate
+            except TypeError:
+                obj._validate = self._init_validate
         if self._init_filter is not None:
-            _filter = self._init_filter(self, index)
+            try:
+                _filter = Initializer(self._init_filter(self, index))
+                if _filter.constant():
+                    # The _init_filter was the actual filter function; use it.
+                    _filter = self._init_filter
+            except TypeError:
+                _filter = self._init_filter
         else:
             _filter = None
         if self._init_values is not None:
@@ -2136,7 +2164,7 @@ class Set(IndexedComponent):
             if self.is_ordered() \
                    and type(_values) in self._UnorderedInitializers:
                 logger.warning(
-                    "Initializing an ordered set with a fundamentally "
+                    "Initializing an ordered Set with a fundamentally "
                     "unordered data source (type: %s).  This WILL potentially "
                     "lead to nondeterministic behavior in Pyomo"
                     % (type(_values).__name__,))
@@ -2145,9 +2173,11 @@ class Set(IndexedComponent):
                     obj.add(val)
             else:
                 for val in _values:
-                    if not _filter(self.parent(), val):
-                        continue
-                    obj.add(val)
+                    if _filter(self, val):
+                        obj.add(val)
+        # We defer adding the filter until now so that _verify doesn't
+        # call it twice.
+        obj._filter = _filter
         return obj
 
     def _pprint(self):
@@ -2181,7 +2211,7 @@ class Set(IndexedComponent):
             iteritems(self._data),
             ("Dimen","Domain","Size","Members",),
             lambda k, v: [
-                v.dimen,
+                v.dimen if v.dimen is not _UnknownSetDimen else "--",
                 v._domain,
                 len(v),
                 members(v),
