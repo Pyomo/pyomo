@@ -14,11 +14,11 @@ Pyomo 5.6.3
   - Add a license check for Mosek (#1007)
   - Add a Cythonization test to Travis (#1012)
 - Core
-  - Bug fix in fix_discrete transformation for domain comparison (#996)
   - Bug fix in IndexedComponent using a nonhashable object as an index (#1006)
+  - Bug fix in fix_discrete transformation for domain comparison (#996)
   - Add read-only view of kernel matrix_constraint (#1011, #1013)
-  - Bug fix in standard repn when using a fixed variable as an exponent (#978)
   - Add specialized conic constraints to kernel (#980, #1018)
+  - Bug fix in standard repn when using a fixed variable as an exponent (#978)
   - Add _associativity to _ExpressionData (#1031)
 - Solver Interfaces
   - Bug fix in CBC plugin related to certain objective values (#1004)
