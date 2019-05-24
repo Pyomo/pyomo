@@ -165,17 +165,22 @@ if test -z "$MODE" -o "$MODE" == test; then
         if test -z "$CODECOV_TOKEN"; then
             coverage xml
         else
+            MAX_ATTEMPTS=3
             CODECOV_JOB_NAME=`echo ${JOB_NAME} | sed -r 's/^(.*autotest_)?Pyomo_([^\/]+).*/\2/'`.$BUILD_NUMBER.$python
             i=0
-            while test $i -lt 3; do
+            while test $i -lt $MAX_ATTEMPTS; do
                 i=$[$i+1]
                 echo "Uploading coverage to codecov (attempt $i)"
-                codecov -X gcov --no-color \
-                    -t $CODECOV_TOKEN --env OS,python \
+                codecov -X gcovcodecov -X gcov --no-color \
+                    -t $CODECOV_TOKEN --root `pwd` -e OS,python \
                     --name $CODECOV_JOB_NAME $CODECOV_ARGS \
                     | tee .cover.upload
                 if test $? == 0 -a `grep -i error .cover.upload | wc -l` -eq 0; then
                     break
+                fi
+                if test $i -eq $MAX_ATTEMPTS; then
+                    echo "All $i codecov upload attempts failed."
+                    exit 1
                 fi
                 echo "Pausing 30 seconds before re-appempting upload"
                 sleep 30
