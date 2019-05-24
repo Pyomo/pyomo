@@ -316,6 +316,7 @@ class TestCBCUsingMock(unittest.TestCase):
     def test_fix_parsing_bug(self):
         """
         The test wasn't generated using the method in the class docstring
+        See https://github.com/Pyomo/pyomo/issues/1001
         """
         lp_file = 'fix_parsing_bug.out.lp'
         results = self.opt.solve(os.path.join(data_dir, lp_file))
