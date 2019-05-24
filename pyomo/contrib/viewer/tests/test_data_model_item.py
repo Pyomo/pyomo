@@ -17,6 +17,18 @@ import pyutilib.th as unittest
 from pyomo.environ import *
 from pyomo.contrib.viewer.model_browser import ComponentDataItem
 
+try:
+    no_uisetup = False
+    from pyomo.contrib.viewer.ui import UISetup
+except:
+    # uisetup is a qt object since it emits signals so if no pyqt can't
+    # run tests that need it.
+    no_uisetup = True
+    class UISetup(object):
+        model = None
+        def __init__(*args, **kwargs):
+            pass
+
 class TestDataModelItem(unittest.TestCase):
     def setUp(self):
         # Borrowed this test model from the trust region tests
@@ -54,59 +66,80 @@ class TestDataModelItem(unittest.TestCase):
         m.p1 = 0
         self.m = m.clone()
 
+    @unittest.skipIf(no_uisetup, "PyQt needed to import UISetup")
     def test_expr_calc(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e1)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_setup=UISetup(model=self.m), o=self.m.b1.e1)
+        cdi.ui_setup.calculate_expressions()
         self.assertAlmostEqual(cdi.get("value"), 3)
 
+    @unittest.skipIf(no_uisetup, "PyQt needed to import UISetup")
     def test_expr_calc_div0(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e2)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_setup=UISetup(model=self.m), o=self.m.b1.e2)
+        cdi.ui_setup.calculate_expressions()
         self.assertEqual(cdi.get("value"), "Divide_by_0")
 
+    @unittest.skipIf(no_uisetup, "PyQt needed to import UISetup")
     def test_expr_calc_log0(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e4)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_setup=UISetup(model=self.m), o=self.m.b1.e4)
+        cdi.ui_setup.calculate_expressions()
         self.assertIsNone(cdi.get("value"))
 
+    @unittest.skipIf(no_uisetup, "PyQt needed to import UISetup")
     def test_expr_calc_log_neg(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e5)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_setup=UISetup(model=self.m), o=self.m.b1.e5)
+        cdi.ui_setup.calculate_expressions()
         self.assertIsNone(cdi.get("value"))
 
+    @unittest.skipIf(no_uisetup, "PyQt needed to import UISetup")
     def test_expr_calc_value_None(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e3)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_setup=UISetup(model=self.m), o=self.m.b1.e3)
+        cdi.ui_setup.calculate_expressions()
         self.assertIsNone(cdi.get("value"))
 
+    @unittest.skipIf(no_uisetup, "PyQt needed to import UISetup")
     def test_cons_calc(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c3)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_setup=UISetup(model=self.m), o=self.m.c3)
+        cdi.ui_setup.calculate_constraints()
         self.assertAlmostEqual(cdi.get("residual"), 2)
 
+    @unittest.skipIf(no_uisetup, "PyQt needed to import UISetup")
     def test_cons_calc_div0(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c4)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_setup=UISetup(model=self.m), o=self.m.c4)
+        cdi.ui_setup.calculate_constraints()
         self.assertEqual(cdi.get("value"), "Divide_by_0")
 
     def test_cons_calc_log0(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c5)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_setup=UISetup(model=self.m), o=self.m.c5)
+        cdi.ui_setup.calculate_constraints()
         self.assertIsNone(cdi.get("value"))
 
+    @unittest.skipIf(no_uisetup, "PyQt needed to import UISetup")
     def test_cons_calc_log_neg(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c6)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_setup=UISetup(model=self.m), o=self.m.c6)
+        cdi.ui_setup.calculate_constraints()
         self.assertIsNone(cdi.get("value"))
 
+    @unittest.skipIf(no_uisetup, "PyQt needed to import UISetup")
     def test_cons_calc_value_None(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c7)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_setup=UISetup(model=self.m), o=self.m.c7)
+        cdi.ui_setup.calculate_constraints()
         self.assertIsNone(cdi.get("value"))
 
+    @unittest.skipIf(no_uisetup, "PyQt needed to import UISetup")
     def test_cons_calc_upper_div0(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c8)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_setup=UISetup(model=self.m), o=self.m.c8)
+        cdi.ui_setup.calculate_constraints()
         # the ui lists the upper and lower attributes as ub and lb
         # this was originally so I could easily combine variables and
         # constarints in the same view, but I split them up, so may want

@@ -30,6 +30,7 @@ except ImportError:
         raise AttributeError("IPython not available")
 import pyomo.contrib.viewer.report as rpt
 import pyomo.environ as pe
+from pyomo.kernel import ComponentMap
 
 _log = logging.getLogger(__name__)
 
@@ -80,6 +81,7 @@ def get_mainwindow_nb(model=None, show=True, testing=False):
 
 class UISetup(QtCore.QObject):
     updated = QtCore.pyqtSignal()
+    exec_refresh = QtCore.pyqtSignal()
     def __init__(self, model=None):
 
         """
@@ -91,6 +93,7 @@ class UISetup(QtCore.QObject):
         super(UISetup, self).__init__()
         self._model = None
         self._begin_update = False
+        self.value_cache = ComponentMap()
         self.begin_update()
         self.model = model
         self.end_update()
@@ -114,6 +117,9 @@ class UISetup(QtCore.QObject):
     def emit_update(self):
         if not self._begin_update: self.updated.emit()
 
+    def emit_exec_refresh(self):
+        self.exec_refresh.emit()
+
     @property
     def model(self):
         return self._model
@@ -121,7 +127,24 @@ class UISetup(QtCore.QObject):
     @model.setter
     def model(self, value):
         self._model = value
+        self.value_cache = ComponentMap()
         self.emit_update()
+
+    def calculate_constraints(self):
+        for o in self.model.component_data_objects(pe.Constraint, active=True):
+            try:
+                self.value_cache[o] = pe.value(o.body, exception=False)
+            except ZeroDivisionError:
+                self.value_cache[o] = "Divide_by_0"
+        self.emit_exec_refresh()
+
+    def calculate_expressions(self):
+        for o in self.model.component_data_objects(pe.Expression, active=True):
+            try:
+                self.value_cache[o] = pe.value(o, exception=False)
+            except ZeroDivisionError:
+                self.value_cache[o] = "Divide_by_0"
+        self.emit_exec_refresh()
 
 
 class MainWindow(_MainWindow, _MainWindowUI):
@@ -154,6 +177,7 @@ class MainWindow(_MainWindow, _MainWindowUI):
         # Set menu actions (remember the menu items are defined in the ui file)
         # you can edit the menus in qt-designer
         self.action_Exit.triggered.connect(self.exit_action)
+        self.ui_setup.exec_refresh.connect(self.refresh_on_execute)
         self.actionRestart_Variable_View.triggered.connect(
             self.variables_restart)
         self.actionRestart_Constraint_View.triggered.connect(
@@ -164,9 +188,9 @@ class MainWindow(_MainWindow, _MainWindowUI):
             self.expressions_restart)
         self.actionInformation.triggered.connect(self.model_information)
         self.actionCalculateConstraints.triggered.connect(
-            self.calculate_constraints)
+            self.ui_setup.calculate_constraints)
         self.actionCalculateExpressions.triggered.connect(
-            self.calculate_expressions)
+            self.ui_setup.calculate_expressions)
         self.actionTile.triggered.connect(self.mdiArea.tileSubWindows)
         self.actionCascade.triggered.connect(self.mdiArea.cascadeSubWindows)
         self.actionTabs.triggered.connect(self.toggle_tabs)
@@ -210,14 +234,6 @@ class MainWindow(_MainWindow, _MainWindowUI):
 
     def constraints_restart(self):
         self.constraints = self._tree_restart(self.constraints, "Constraint")
-
-    def calculate_constraints(self):
-        self.constraints.calculate_all()
-        self.refresh_on_execute()
-
-    def calculate_expressions(self):
-        self.expressions.calculate_all()
-        self.refresh_on_execute()
 
     def set_model(self, model):
         self.ui_setup.model = model

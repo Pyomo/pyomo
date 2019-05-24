@@ -36,12 +36,24 @@ mypath = os.path.dirname(__file__)
 try:
     _ModelBrowserUI, _ModelBrowser = \
         uic.loadUiType(os.path.join(mypath, "model_browser.ui"))
+    _ResidualTableUI, _ResidualTable = \
+        uic.loadUiType(os.path.join(mypath, "residual_table.ui"))
 except:
     # This lets the file still be imported, but you won't be able to use it
     class _ModelBrowserUI(object):
         pass
     class _ModelBrowser(object):
         pass
+    class _ResidualTableUI(object):
+        pass
+    class _ResidualTable(object):
+        pass
+
+class ResidualTable(_ResidualTable, _ResidualTableUI):
+    def __init__(self, ui_setup, parent=None):
+        super(ModelBrowser, self).__init__(parent=parent)
+        self.setupUi(self)
+        self.ui_setup = ui_setup
 
 
 class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
@@ -67,7 +79,7 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
             self.setWindowTitle("Variables")
         elif standard == "Constraint":
             components = Constraint
-            columns = ["name", "value", "ub", "lb", "residual", "active", "expr"]
+            columns = ["name", "value", "ub", "lb", "residual", "active"]
             editable = ["active"]
             self.setWindowTitle("Constraints")
         elif standard == "Param":
@@ -90,9 +102,7 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
         self.datmodel = datmodel
         self.treeView.setModel(datmodel)
         self.treeView.setColumnWidth(0,400)
-        # Set selection behavior so you select a whole row, and can selection
-        # multiple rows.  At some point want to update calculate to add options
-        # to calculate selected rows
+        # Selection behavior: select a whole row, can select multiple rows.
         self.treeView.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.treeView.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
@@ -103,9 +113,6 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
     def update_model(self):
         self.datmodel.update_model()
 
-    def calculate_all(self):
-        for i in self.datmodel.rootItems:
-            i.calculate_children()
 
 class ComponentDataItem(object):
     """
@@ -123,7 +130,6 @@ class ComponentDataItem(object):
         self.parent = parent
         self.children = [] # child items
         self.ids = {}
-        self.clear_cache() # cache is for calculated items
         self.get_callback = {
             "value": self._get_value_callback,
             "lb": self._get_lb_callback,
@@ -137,6 +143,14 @@ class ComponentDataItem(object):
             "active":self._set_active_callback,
             "fixed":self._set_fixed_callback}
 
+    @property
+    def _cache_value(self):
+        return self.ui_setup.value_cache.get(self.data, None)
+
+    @_cache_value.setter
+    def _cache_value(self, v):
+        self.ui_setup.value_cache[self.data] = v
+
     def data_items():
         """Iterate through children data items and this one"""
         for i in self.children:
@@ -149,38 +163,6 @@ class ComponentDataItem(object):
         self.children.append(item)
         self.ids[id(o)] = item
         return item
-
-    def clear_cache(self):
-        """Clear chache for calcuated items"""
-        self._cache_value = None
-        self._cache_lb = None
-        self._cache_ub = None
-
-    def calculate_children(self):
-        self.calculate()
-        for i in self.children:
-            i.calculate_children()
-
-    def calculate(self):
-        """Calculate items, applies to expressions and constraints"""
-        if isinstance(self.data, _ExpressionData):
-            try:
-                self._cache_value = value(self.data, exception=False)
-            except ZeroDivisionError:
-                self._cache_value = "Divide_by_0"
-        if isinstance(self.data, _ConstraintData) and self.data.active:
-            try:
-                self._cache_value = value(self.data.body, exception=False)
-            except ZeroDivisionError:
-                self._cache_value = "Divide_by_0"
-            try:
-                self._cache_lb = value(self.data.lower, exception=False)
-            except ZeroDivisionError:
-                self._cache_lb = "Divide_by_0"
-            try:
-                self._cache_ub = value(self.data.upper, exception=False)
-            except ZeroDivisionError:
-                self._cache_ub = "Divide_by_0"
 
     def get(self, a):
         """Get an attribute"""
@@ -217,25 +199,37 @@ class ComponentDataItem(object):
     def _get_lb_callback(self):
         if isinstance(self.data, _VarData):
             return self.data.lb
+        elif hasattr(self.data, "lower"):
+            try:
+                return value(self.data.lower, exception=False)
+            except ZeroDivisionError:
+                return "Divide_by_0"
         else:
-            return self._cache_lb
+            return None
 
     def _get_ub_callback(self):
         if isinstance(self.data, _VarData):
             return self.data.ub
+        elif hasattr(self.data, "upper"):
+            try:
+                return value(self.data.upper, exception=False)
+            except ZeroDivisionError:
+                return "Divide_by_0"
         else:
-            return self._cache_ub
+            return None
 
     def _get_residual(self):
+        ub = self._get_ub_callback()
+        lb = self._get_lb_callback()
         v = self._cache_value
         if v is None:
             return
-        if self._cache_lb is not None and v < self._cache_lb:
-            r1 = self._cache_lb - v
+        if lb is not None and v < lb:
+            r1 = lb - v
         else:
             r1 = 0
-        if self._cache_ub is not None and v > self._cache_ub:
-            r2 = v - self._cache_ub
+        if ub is not None and v > ub:
+            r2 = v - ub
         else:
             r2 = 0
         return max(r1, r2)
@@ -484,3 +478,40 @@ class ComponentDataModel(QAbstractItemModel):
                    QtCore.Qt.ItemIsEditable)
         else:
             return(QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable)
+
+class ResidualDataModel(QAbstractItemModel):
+    def __init__(self, parent, ui_setup):
+        super(ComponentDataModel, self).__init__(parent)
+        self.column = ["name", "residual", "value", "ub", "lb"]
+        self.items = []
+        self.ui_setup = ui_setup
+        self.update_model()
+
+    def update_model(self):
+        self.items = []
+        m = self.ui_setup.model
+        for c in m.component_data_objects(Constraint, active=True):
+            self.item.append(ComponentDataItem(None, c, ui_setup=self.ui_setup))
+
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        return len(self.items)
+
+    def columnCount(self, parent=QtCore.QModelIndex()):
+        return len(self.column)
+
+    def data(self, index=QtCore.QModelIndex(), role=QtCore.Qt.DisplayRole):
+        row = index.row()
+        col = self.column[index.column()]
+        if  role == QtCore.Qt.DisplayRole:
+            return index.internalPointer().get(col)
+        else:
+            return None
+
+    def headerData(self, i, orientation, role=QtCore.Qt.DisplayRole):
+        '''
+            Return the column headings for the horizontal header and
+            index numbers for the vertical header.
+        '''
+        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+            return self.column[i]
+        return None

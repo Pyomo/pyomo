@@ -137,7 +137,7 @@ class TestDataModel(unittest.TestCase):
         children = data_model.rootItems[0].children
         assert(children[0].data == self.m.b1)
         assert(children[0].children[0].data == self.m.b1.e1)
-        children[0].children[0].calculate()
+        ui_setup.calculate_expressions()
         # Check the data display role The rows in the tree should be:
         #   0. Model
         #     0. b1,
