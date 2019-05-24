@@ -483,18 +483,11 @@ class ResidualDataModel(QAbstractItemModel):
     def __init__(self, parent, ui_setup):
         super(ComponentDataModel, self).__init__(parent)
         self.column = ["name", "residual", "value", "ub", "lb"]
-        self.items = []
         self.ui_setup = ui_setup
         self.update_model()
 
-    def update_model(self):
-        self.items = []
-        m = self.ui_setup.model
-        for c in m.component_data_objects(Constraint, active=True):
-            self.item.append(ComponentDataItem(None, c, ui_setup=self.ui_setup))
-
     def rowCount(self, parent=QtCore.QModelIndex()):
-        return len(self.items)
+        return len(self.ui_setup.value_cache)
 
     def columnCount(self, parent=QtCore.QModelIndex()):
         return len(self.column)
@@ -503,7 +496,24 @@ class ResidualDataModel(QAbstractItemModel):
         row = index.row()
         col = self.column[index.column()]
         if  role == QtCore.Qt.DisplayRole:
-            return index.internalPointer().get(col)
+            0 = self.ui_setup.value_cache.keys()[row]
+            if col=="name":
+                return str(o)
+            elif col=="residual"
+                v = self.ui_setup.value_cache[o]
+                lb = value(o.lower, exception=False)
+                ub = value(o.upper, exception=False)
+                if v is None:
+                    return
+                if lb is not None and v < lb:
+                    r1 = lb - v
+                else:
+                    r1 = 0
+                if ub is not None and v > ub:
+                    r2 = v - ub
+                else:
+                    r2 = 0
+                return max(r1, r2)
         else:
             return None
 
