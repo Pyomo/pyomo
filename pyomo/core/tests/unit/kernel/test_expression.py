@@ -99,6 +99,10 @@ class Test_noclone(unittest.TestCase):
         # tests compatibility with _ToStringVisitor
         pyomo.kernel.pprint(noclone(v)+1)
         pyomo.kernel.pprint(noclone(v+1))
+        x = variable()
+        y = variable()
+        pyomo.kernel.pprint(y + x*noclone(noclone(x*y)))
+        pyomo.kernel.pprint(y + noclone(noclone(x*y))*x)
 
     def test_pickle(self):
         v = variable()
@@ -550,6 +554,12 @@ class Test_expression(_Test_expression_base,
                       unittest.TestCase):
     _ctype_factory = expression
 
+    def test_associativity(self):
+        x = variable()
+        y = variable()
+        pyomo.kernel.pprint(y + x*expression(expression(x*y)))
+        pyomo.kernel.pprint(y + expression(expression(x*y))*x)
+
     def test_ctype(self):
         e = expression()
         self.assertIs(e.ctype, IExpression)
@@ -612,6 +622,14 @@ class Test_data_expression(_Test_expression_base,
                            unittest.TestCase):
 
     _ctype_factory = data_expression
+
+    def test_associativity(self):
+        x = parameter()
+        y = parameter()
+        pyomo.kernel.pprint(
+            y + x*data_expression(data_expression(x*y)))
+        pyomo.kernel.pprint(
+            y + data_expression(data_expression(x*y))*x)
 
     def test_ctype(self):
         e = data_expression()
