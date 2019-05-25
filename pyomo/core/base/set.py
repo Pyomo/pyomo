@@ -246,9 +246,8 @@ def process_setarg(arg):
         # it to initialize a set
         options = getattr(arg,'set_options')
         options['initialize'] = arg
-        return Set(**options)
     except:
-        pass
+        options = {}
 
     # TBD: should lists/tuples be copied into Sets, or
     # should we preserve the reference using SetOf?
@@ -269,7 +268,7 @@ def process_setarg(arg):
     # use SetOf to create the Set:
     #
     tmp = SetOf(arg)
-    ans = Set(initialize=tmp, ordered=tmp.is_ordered())
+    ans = Set(initialize=tmp, ordered=tmp.is_ordered(), **options)
     ans.construct()
     #
     # Or we can do the simple thing and just use SetOf:
