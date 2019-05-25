@@ -225,37 +225,57 @@ class RangeSetInitializer(_InitializerBase):
         pass
 
 def process_setarg(arg):
-    """
-    Process argument and return an associated set object.
-
-    This method is used by IndexedComponent
-    """
-    if isinstance(arg,_SetData):
-        # Argument is a non-indexed Set instance
+    if isinstance(arg, _SetDataBase):
         return arg
-    elif isinstance(arg,IndexedSet):
-        # Argument is an indexed Set instance
-        raise TypeError("Cannot index a component with an indexed set")
-    elif isinstance(arg,IndexedComponent):
-        # Argument is an indexed Set instance
-        raise TypeError("Cannot index a component with an indexed component")
-    elif isinstance(arg,Component):
-        # Argument is some other component
-        raise TypeError("Cannot index a component with a non-set "
-                        "component: %s" % (arg.name))
-    else:
-        try:
-            #
-            # If the argument has a set_options attribute, then use
-            # it to initialize a set
-            #
-            options = getattr(arg,'set_options')
-            options['initialize'] = arg
-            return Set(**options)
-        except:
-            pass
-    # Argument is assumed to be an initialization function
-    return Set(initialize=arg)
+    elif isinstance(arg, IndexedComponent):
+        raise TypeError("Cannot apply a Set operator to an "
+                        "indexed %s component (%s)"
+                        % (arg.type().__name__, arg.name,))
+    elif isinstance(arg, Component):
+        raise TypeError("Cannot apply a Set operator to a non-Set "
+                        "%s component (%s)"
+                        % (arg.__class__.__name__, arg.name,))
+    elif isinstance(arg, ComponentData):
+        raise TypeError("Cannot apply a Set operator to a non-Set "
+                        "component data (%s)" % (arg.name,))
+
+    # TODO: DEPRECETE this functionality? It has never been documented,
+    # and I don't know of a use of it in the wild.
+    try:
+        # If the argument has a set_options attribute, then use
+        # it to initialize a set
+        options = getattr(arg,'set_options')
+        options['initialize'] = arg
+        return Set(**options)
+    except:
+        pass
+
+    # TBD: should lists/tuples be copied into Sets, or
+    # should we preserve the reference using SetOf?
+    # Historical behavior is to *copy* into a Set.
+    #
+    # ans.append(Set(initialize=arg,
+    #               ordered=type(arg) in {tuple, list}))
+    # ans.construct()
+    #
+    # But this causes problems, especially because Set()'s
+    # constructor needs to know if the object is ordered
+    # (Set defaults to ordered, and will toss a warning if
+    # the underlying data is not ordered)).  While we could
+    # add checks where we create the Set (like here and in
+    # the __r*__ operators) and pass in a reasonable value
+    # for ordered, it is starting to make more sense to use
+    # SetOf (which has that logic).  Alternatively, we could
+    # use SetOf to create the Set:
+    #
+    tmp = SetOf(arg)
+    ans = Set(initialize=tmp, ordered=tmp.is_ordered())
+    ans.construct()
+    #
+    # Or we can do the simple thing and just use SetOf:
+    #
+    # ans = SetOf(arg)
+    return ans
 
 
 @deprecated('The set_options decorator seems nonessential and is deprecated')
@@ -2636,7 +2656,15 @@ class _SetOperator(_SetData, Set):
     def __init__(self, *args, **kwds):
         _SetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
-        self._sets, self._implicit_subsets = self._processArgs(*args)
+        implicit = []
+        sets = []
+        for _set in args:
+            _new_set = process_setarg(_set)
+            sets.append(_new_set)
+            if _new_set is not _set or _new_set.parent_block() is None:
+                implicit.append(_new_set)
+        self._sets = tuple(sets)
+        self._implicit_subsets = tuple(implicit)
 
     def __getstate__(self):
         """
@@ -2656,51 +2684,6 @@ class _SetOperator(_SetData, Set):
         return self._operator.join(
             '(%s)' % arg if isinstance(arg, _SetOperator)
             else str(arg) for arg in self._sets)
-
-    @staticmethod
-    def _processArgs(*sets):
-        implicit = []
-        ans = []
-        for s in sets:
-            if isinstance(s, _SetDataBase):
-                ans.append(s)
-                if s.parent_block() is None:
-                    implicit.append(s)
-            elif isinstance(s, IndexedComponent):
-                raise TypeError("Cannot apply a Set operator to an "
-                                "indexed Set component")
-            elif isinstance(s, Component):
-                raise TypeError("Cannot apply a Set operator to a "
-                                "non-Set component (%s)" % (type(s).__name__,))
-            else:
-                # TBD: should lists/tuples be copied into Sets, or
-                # should we preserve the reference using SetOf?
-                # Historical behavior is to *copy* into a Set.
-                #
-                # ans.append(Set(initialize=s,
-                #               ordered=type(s) in {tuple, list}))
-                # ans[-1].construct()
-                #
-                # But this causes problems, especially because Set()'s
-                # constructor needs to know if the object is ordered
-                # (Set defaults to ordered, and will toss a warning if
-                # the underlying data is not ordered)).  While we could
-                # add checks where we create the Set (like here and in
-                # the __r*__ operators) and pass in a reasonable value
-                # for ordered, it is starting to make more sense to use
-                # SetOf (which has that logic).  Alternatively, we could
-                # use SetOf to create the Set:
-                #
-                tmp = SetOf(s)
-                ans.append(Set(initialize=tmp,
-                               ordered=tmp.is_ordered()))
-                ans[-1].construct()
-                #
-                # Or we can do the simple thing and just use SetOf:
-                #
-                # ans.append(SetOf(s))
-                implicit.append(ans[-1])
-        return tuple(ans), tuple(implicit)
 
     @staticmethod
     def _checkArgs(*sets):
