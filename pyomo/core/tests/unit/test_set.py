@@ -39,7 +39,7 @@ from pyomo.core.base.set import (
     _FiniteSetData, _OrderedSetData, _SortedSetData,
     _UnknownSetDimen,
 )
-from pyomo.environ import AbstractModel, ConcreteModel, Var, Param
+from pyomo.environ import AbstractModel, ConcreteModel, Var, Param, Suffix
 
 try:
     import numpy as np
@@ -1814,6 +1814,28 @@ class TestSetUnion(unittest.TestCase):
         self._verify_infinite_union({1,3,2}, RangeSet(3,5,0))
         self._verify_infinite_union(RangeSet(1,3,0), {5,3,4})
 
+    def test_invalid_operators(self):
+        m = ConcreteModel()
+        m.I = RangeSet(5)
+        m.J = Set([1,2])
+        with self.assertRaisesRegexp(
+                TypeError, "Cannot apply a Set operator to an "
+                "indexed Set component \(J\)"):
+            m.I | m.J
+        m.x = Suffix()
+        with self.assertRaisesRegexp(
+                TypeError, "Cannot apply a Set operator to a "
+                "non-Set Suffix component \(x\)"):
+            m.I | m.x
+        m.y = Var([1,2])
+        with self.assertRaisesRegexp(
+                TypeError, "Cannot apply a Set operator to an "
+                "indexed Var component \(y\)"):
+            m.I | m.y
+        with self.assertRaisesRegexp(
+                TypeError, "Cannot apply a Set operator to a "
+                "non-Set component data \(y\[1\]\)"):
+            m.I | m.y[1]
 
 class TestSetIntersection(unittest.TestCase):
     def test_pickle(self):
@@ -3422,6 +3444,18 @@ class TestSet(unittest.TestCase):
         self.assertEqual(str(k), "K")
         self.assertEqual(str(k[1]), "K[1]")
 
+    def test_indexing(self):
+        m = ConcreteModel()
+        m.I = Set()
+        m.I = [1, 3, 2]
+        self.assertEqual(m.I[2], 3)
+        with self.assertRaisesRegexp(
+                IndexError, "I indices must be integers, not float"):
+            m.I[2.5]
+        with self.assertRaisesRegexp(
+                IndexError, "I indices must be integers, not str"):
+            m.I['a']
+
     def test_add_filter_validate(self):
         m = ConcreteModel()
         m.I = Set(domain=Integers)
@@ -3542,6 +3576,51 @@ class TestSet(unittest.TestCase):
             output.getvalue(),
             "Exception raised while validating element '(2, 2)' for "
             "Set J[2,2]\n")
+
+    def test_domain(self):
+        m = ConcreteModel()
+        m.I = Set(domain=Integers)
+        m.I.add(1)
+        m.I.add(2.)
+        self.assertEqual(list(m.I), [1, 2.])
+        with self.assertRaisesRegexp(
+                ValueError, 'The value is not in the domain Integers'):
+            m.I.add(1.5)
+
+        m = ConcreteModel()
+        m.I = Set(within=Integers)
+        m.I.add(1)
+        m.I.add(2.)
+        self.assertEqual(list(m.I), [1, 2.])
+        with self.assertRaisesRegexp(
+                ValueError, 'The value is not in the domain Integers'):
+            m.I.add(1.5)
+
+        m = ConcreteModel()
+        m.I = Set(bounds=(1,5))
+        m.I.add(1)
+        m.I.add(2.)
+        self.assertEqual(list(m.I), [1, 2.])
+        with self.assertRaisesRegexp(
+                ValueError, 'The value is not in the domain \[1..5\]'):
+            m.I.add(5.5)
+
+        m = ConcreteModel()
+        m.I = Set(domain=Integers, within=RangeSet(0, None, 2), bounds=(0,9))
+        m.I = [0,2.,4]
+        self.assertEqual(list(m.I), [0,2.,4])
+        with self.assertRaisesRegexp(
+                ValueError, 'The value is not in the domain '
+                '\(Integers & \[0:None:2\]\) & \[0..9\]'):
+            m.I.add(1.5)
+        with self.assertRaisesRegexp(
+                ValueError, 'The value is not in the domain '
+                '\(Integers & \[0:None:2\]\) & \[0..9\]'):
+            m.I.add(1)
+        with self.assertRaisesRegexp(
+                ValueError, 'The value is not in the domain '
+                '\(Integers & \[0:None:2\]\) & \[0..9\]'):
+            m.I.add(10)
 
 
     def test_pprint(self):
