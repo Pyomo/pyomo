@@ -6,10 +6,16 @@ try:
     mpi4py_available = True
 except:
     mpi4py_available = False
+try:
+    import numpy as np
+    numpy_available = True
+except:
+    numpy_available = False
 
 
 class TestBenders(unittest.TestCase):
     @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
+    @unittest.skipIf(not numpy_available, 'numpy is not available.')
     def test_grothey(self):
         def create_master():
             m = pe.ConcreteModel()
@@ -51,6 +57,7 @@ class TestBenders(unittest.TestCase):
         self.assertAlmostEqual(m.eta.value, -0.0337568, 4)
 
     @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
+    @unittest.skipIf(not numpy_available, 'numpy is not available.')
     def test_farmer(self):
         class Farmer(object):
             def __init__(self):

@@ -6,7 +6,11 @@ try:
     mpi4py_available = True
 except:
     mpi4py_available = False
-import numpy as np
+try:
+    import numpy as np
+    numpy_available = True
+except:
+    numpy_available = False
 import logging
 
 
@@ -124,6 +128,8 @@ class BendersCutGeneratorData(_BlockData):
     def __init__(self, component):
         if not mpi4py_available:
             raise ImportError('BendersCutGenerator requires mpi4py.')
+        if not numpy_available:
+            raise ImportError('BendersCutGenerator requires numpy.')
         _BlockData.__init__(self, component)
         self.num_subproblems_by_rank = np.zeros(MPI.COMM_WORLD.Get_size())
         self.subproblems = list()
