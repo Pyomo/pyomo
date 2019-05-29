@@ -10,6 +10,11 @@
 
 
 class PyomoException(Exception):
+    """
+    Exception class for other pyomo exceptions to inherit from,
+    allowing pyomo exceptions to be caught in a general way
+    (e.g., in other applications that use Pyomo).
+    """
     pass
 
 
