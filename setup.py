@@ -36,7 +36,16 @@ def _find_packages(path):
 
 
 def read(*rnames):
-    return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
+    with open(os.path.join(os.path.dirname(__file__), *rnames)) as README:
+        # Strip all leading badges up to, but not including the COIN-OR
+        # badge so that they do not appear in the PyPI description
+        while True:
+            line = README.readline()
+            if 'COIN-OR' in line:
+                break
+            if line.strip() and '[![' not in line:
+                break
+        return line + README.read()
 
 def get_version():
     # Source pyomo/version/info.py to get the version number
@@ -126,6 +135,7 @@ def run_setup():
       platforms=["any"],
       description='Pyomo: Python Optimization Modeling Objects',
       long_description=read('README.md'),
+      long_description_content_type='text/markdown',
       classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: End Users/Desktop',
