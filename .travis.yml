@@ -1,6 +1,7 @@
 branches:
   only:
   - master
+  - fbbt_fix3
 cache: false
 language: generic
 services:
