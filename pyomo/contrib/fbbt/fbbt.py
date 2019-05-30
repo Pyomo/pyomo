@@ -975,6 +975,7 @@ def _fbbt_block(m, config):
     var_to_con_map = ComponentMap()
     var_lbs = ComponentMap()
     var_ubs = ComponentMap()
+    n_cons = 0
     for c in m.component_data_objects(ctype=Constraint, active=True,
                                       descend_into=True, sort=True):
         for v in identify_variables(c.body):
@@ -989,6 +990,7 @@ def _fbbt_block(m, config):
             else:
                 var_ubs[v] = value(v.ub)
             var_to_con_map[v].append(c)
+            n_cons += 1
 
     for _v in m.component_data_objects(ctype=Var, active=True, descend_into=True, sort=True):
         if _v.is_fixed():
@@ -996,10 +998,13 @@ def _fbbt_block(m, config):
             _v.setub(_v.value)
             new_var_bounds[_v] = (_v.value, _v.value)
 
+    n_fbbt = 0
+
     improved_vars = ComponentSet()
     for c in m.component_data_objects(ctype=Constraint, active=True,
                                       descend_into=True, sort=True):
         _new_var_bounds = _fbbt_con(c, config)
+        n_fbbt += 1
         new_var_bounds.update(_new_var_bounds)
         for v, bnds in _new_var_bounds.items():
             vlb, vub = bnds
@@ -1013,9 +1018,12 @@ def _fbbt_block(m, config):
                     var_ubs[v] = vub
 
     while len(improved_vars) > 0:
+        if n_fbbt > n_cons * config.max_iter:
+            break
         v = improved_vars.pop()
         for c in var_to_con_map[v]:
             _new_var_bounds = _fbbt_con(c, config)
+            n_fbbt += 1
             new_var_bounds.update(_new_var_bounds)
             for _v, bnds in _new_var_bounds.items():
                 _vlb, _vub = bnds
