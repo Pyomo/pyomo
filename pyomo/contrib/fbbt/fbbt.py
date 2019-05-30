@@ -11,7 +11,7 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.gdp import Disjunct
 import logging
-from pyomo.common.errors import InfeasibleConstraintException
+from pyomo.common.errors import InfeasibleConstraintException, PyomoException
 from pyomo.common.config import ConfigBlock, ConfigValue, In, NonNegativeFloat, NonNegativeInt
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ if not hasattr(math, 'inf'):
 The purpose of this file is to perform feasibility based bounds 
 tightening. This is a very basic implementation, but it is done 
 directly with pyomo expressions. The only functions that are meant to 
-be used by users are fbbt, _fbbt_con, and _fbbt_block. The first set of 
+be used by users are fbbt and compute_bounds_on_expr. The first set of 
 functions in this file (those with names starting with 
 _prop_bnds_leaf_to_root) are used for propagating bounds from the  
 variables to each node in the expression tree (all the way to the  
@@ -54,7 +54,7 @@ improved on either x or y.
 """
 
 
-class FBBTException(Exception):
+class FBBTException(PyomoException):
     pass
 
 
@@ -418,7 +418,7 @@ def _prop_bnds_root_to_leaf_PowExpression(node, bnds_dict, feasibility_tol):
         ub1 = _ub1
     bnds_dict[arg1] = (lb1, ub1)
 
-    if is_fixed(arg2) and lb2 == ub2:
+    if is_fixed(arg2) and lb2 == ub2:  # No need to tighten the bounds on arg2 if arg2 is fixed
         pass
     else:
         _lb2, _ub2 = interval._inverse_power2(lb0, ub0, lb1, ub1, feasiblity_tol=feasibility_tol)

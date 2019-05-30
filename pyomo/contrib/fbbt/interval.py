@@ -24,6 +24,7 @@ def mul(xl, xu, yl, yu):
 
 def inv(xl, xu, feasibility_tol):
     if xl <= feasibility_tol and xu >= -feasibility_tol:
+        # if the denominator (x) can include 0, then 1/x is unbounded.
         lb = -math.inf
         ub = math.inf
     else:
@@ -34,6 +35,7 @@ def inv(xl, xu, feasibility_tol):
 
 def div(xl, xu, yl, yu, feasibility_tol):
     if yl <= feasibility_tol and yu >= -feasibility_tol:
+        # if the denominator (y) can include 0, then x/y is unbounded.
         lb = -math.inf
         ub = math.inf
     else:
