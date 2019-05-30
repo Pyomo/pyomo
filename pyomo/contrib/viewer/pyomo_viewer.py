@@ -36,20 +36,17 @@ if qtconsole_available:
             super().__init__()
             km = QtKernelManager(autorestart=False)
             km.start_kernel()
+            self.execution_state = "starting"
             kc = km.client()
             kc.start_channels()
+            kc.iopub_channel.message_received.connect(self.update_kernel_status)
             self.jupyter_widget = RichJupyterWidget()
             self.jupyter_widget.kernel_manager = km
             self.jupyter_widget.kernel_client = kc
             self.setCentralWidget(self.jupyter_widget)
-            kc.execute("%gui qt", silent=True)
-            time.sleep(3) # I need something better here, but I need to make sure
-                          # the QApplication in the kernel has started before
-                          # attempting to start the UI or it won't start
-            kc.execute(
-                "from pyomo.contrib.viewer.ui import get_mainwindow", silent=True)
-            kc.execute("import pyomo.environ as pyo", silent=True)
-            kc.execute("ui, model = get_mainwindow()", silent=True)
+
+        def update_kernel_status(self, msg):
+            pass
 
         def shutdown_kernel(self):
             print('Shutting down kernel...')
@@ -63,6 +60,14 @@ def main(*args):
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
+
+    kc = window.jupyter_widget.kernel_client
+    kc.execute("%gui qt", silent=True)
+    time.sleep(4.0) # can't find any other good to ensure qt finished startup
+    kc.execute("""
+from pyomo.contrib.viewer.ui import get_mainwindow
+import pyomo.environ as pyo
+ui, model = get_mainwindow()""", silent=True)
     app.aboutToQuit.connect(window.shutdown_kernel)
     app.exec_()
 

@@ -23,6 +23,7 @@ import re
 _log = logging.getLogger(__name__)
 
 from pyomo.contrib.viewer.pyqt_4or5 import *
+from pyomo.contrib.viewer.report import value_no_exception, get_residual
 
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import _VarData
@@ -36,41 +37,29 @@ mypath = os.path.dirname(__file__)
 try:
     _ModelBrowserUI, _ModelBrowser = \
         uic.loadUiType(os.path.join(mypath, "model_browser.ui"))
-    _ResidualTableUI, _ResidualTable = \
-        uic.loadUiType(os.path.join(mypath, "residual_table.ui"))
 except:
     # This lets the file still be imported, but you won't be able to use it
     class _ModelBrowserUI(object):
         pass
     class _ModelBrowser(object):
         pass
-    class _ResidualTableUI(object):
-        pass
-    class _ResidualTable(object):
-        pass
-
-class ResidualTable(_ResidualTable, _ResidualTableUI):
-    def __init__(self, ui_setup, parent=None):
-        super(ModelBrowser, self).__init__(parent=parent)
-        self.setupUi(self)
-        self.ui_setup = ui_setup
 
 
 class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
-    def __init__(self, ui_setup, parent=None, standard="Var"):
+    def __init__(self, ui_data, parent=None, standard="Var"):
         """
         Create a dock widdget with a QTreeView of a Pyomo model.
 
         Args:
             parent: parent widget
-            ui_setup: Contains model, and may containt more in future
+            ui_data: Contains model, and may containt more in future
             standard: A standard setup for differnt types of model components
                 {"Var", "Constraint", "Param", "Expression"}
         """
         super(ModelBrowser, self).__init__(parent=parent)
         self.setupUi(self)
-        self.ui_setup = ui_setup
-        self.ui_setup.updated.connect(self.update_model)
+        self.ui_data = ui_data
+        self.ui_data.updated.connect(self.update_model)
         if standard == "Var":
             # This if block sets up standard views
             components = Var
@@ -96,7 +85,7 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
             raise ValueError("{} is not a valid view type".format(standard))
         # Create a data model.  This is what translates the Pyomo model into
         # a tree view.
-        datmodel = ComponentDataModel(self, ui_setup=ui_setup,
+        datmodel = ComponentDataModel(self, ui_data=ui_data,
                                       columns=columns, components=components,
                                       editable=editable)
         self.datmodel = datmodel
@@ -122,10 +111,10 @@ class ComponentDataItem(object):
     Args:
         parent: parent data item
         o: pyomo component object
-        ui_setup: a container for data, as of now mainly just pyomo model
+        ui_data: a container for data, as of now mainly just pyomo model
     """
-    def __init__(self, parent, o, ui_setup):
-        self.ui_setup = ui_setup
+    def __init__(self, parent, o, ui_data):
+        self.ui_data = ui_data
         self.data = o
         self.parent = parent
         self.children = [] # child items
@@ -135,7 +124,7 @@ class ComponentDataItem(object):
             "lb": self._get_lb_callback,
             "ub": self._get_ub_callback,
             "expr": self._get_expr_callback,
-            "residual": self._get_residual}
+            "residual": self._get_residual_callback}
         self.set_callback = {
             "value":self._set_value_callback,
             "lb":self._set_lb_callback,
@@ -145,11 +134,11 @@ class ComponentDataItem(object):
 
     @property
     def _cache_value(self):
-        return self.ui_setup.value_cache.get(self.data, None)
+        return self.ui_data.value_cache.get(self.data, None)
 
     @_cache_value.setter
     def _cache_value(self, v):
-        self.ui_setup.value_cache[self.data] = v
+        self.ui_data.value_cache[self.data] = v
 
     def data_items():
         """Iterate through children data items and this one"""
@@ -159,7 +148,7 @@ class ComponentDataItem(object):
 
     def add_child(self, o):
         """Add a child data item"""
-        item = ComponentDataItem(self, o, ui_setup=self.ui_setup)
+        item = ComponentDataItem(self, o, ui_data=self.ui_data)
         self.children.append(item)
         self.ids[id(o)] = item
         return item
@@ -191,8 +180,20 @@ class ComponentDataItem(object):
             return None
 
     def _get_value_callback(self):
-        if isinstance(self.data, (_VarData, _ParamData, float, int)):
+        if isinstance(self.data, _ParamData):
+            v = value(self.data)
+            # Check the for numpy float and int, sometimes numpy values
+            # can sneak in especailly if you set parameters from data
+            # and for whatever reason numpy values don't display
+            if isinstance(v, float): # includes numpy float
+                v = float(v)
+            elif isinstance(v, int): # includes numpy int
+                v = int(v)
+            return v
+        elif isinstance(self.data, _VarData):
             return value(self.data, exception=False)
+        elif isinstance(self.data, (float, int)):
+            return self.data
         else:
             return self._cache_value
 
@@ -200,10 +201,7 @@ class ComponentDataItem(object):
         if isinstance(self.data, _VarData):
             return self.data.lb
         elif hasattr(self.data, "lower"):
-            try:
-                return value(self.data.lower, exception=False)
-            except ZeroDivisionError:
-                return "Divide_by_0"
+            return value_no_exception(self.data.lower, div0="Divide_by_0")
         else:
             return None
 
@@ -211,28 +209,15 @@ class ComponentDataItem(object):
         if isinstance(self.data, _VarData):
             return self.data.ub
         elif hasattr(self.data, "upper"):
-            try:
-                return value(self.data.upper, exception=False)
-            except ZeroDivisionError:
-                return "Divide_by_0"
+            return value_no_exception(self.data.upper, div0="Divide_by_0")
         else:
             return None
 
-    def _get_residual(self):
-        ub = self._get_ub_callback()
-        lb = self._get_lb_callback()
-        v = self._cache_value
-        if v is None:
-            return
-        if lb is not None and v < lb:
-            r1 = lb - v
+    def _get_residual_callback(self):
+        if isinstance(self.data, _ConstraintData):
+            return get_residual(self.ui_data, self.data)
         else:
-            r1 = 0
-        if ub is not None and v > ub:
-            r2 = v - ub
-        else:
-            r2 = 0
-        return max(r1, r2)
+            return None
 
     def _set_value_callback(self, val):
         if isinstance(self.data, _VarData):
@@ -303,18 +288,18 @@ class ComponentDataModel(QAbstractItemModel):
     This is a data model to provide the tree structure and information
     to the tree viewer
     """
-    def __init__(self, parent, ui_setup, columns=["name", "value"],
+    def __init__(self, parent, ui_data, columns=["name", "value"],
                  components=(Var,), editable=[]):
         super(ComponentDataModel, self).__init__(parent)
         self.column = columns
         self._col_editable = editable
-        self.ui_setup = ui_setup
+        self.ui_data = ui_data
         self.components = components
         self.update_model()
 
     def update_model(self):
         self.rootItems = []
-        self._create_tree(o=self.ui_setup.model)
+        self._create_tree(o=self.ui_data.model)
 
     def _update_tree(self, parent=None, o=None):
         """
@@ -412,7 +397,7 @@ class ComponentDataModel(QAbstractItemModel):
         """
         Add a root tree item
         """
-        item = ComponentDataItem(None, o, ui_setup=self.ui_setup)
+        item = ComponentDataItem(None, o, ui_data=self.ui_data)
         self.rootItems.append(item)
         return item
 
@@ -478,50 +463,3 @@ class ComponentDataModel(QAbstractItemModel):
                    QtCore.Qt.ItemIsEditable)
         else:
             return(QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable)
-
-class ResidualDataModel(QAbstractItemModel):
-    def __init__(self, parent, ui_setup):
-        super(ComponentDataModel, self).__init__(parent)
-        self.column = ["name", "residual", "value", "ub", "lb"]
-        self.ui_setup = ui_setup
-        self.update_model()
-
-    def rowCount(self, parent=QtCore.QModelIndex()):
-        return len(self.ui_setup.value_cache)
-
-    def columnCount(self, parent=QtCore.QModelIndex()):
-        return len(self.column)
-
-    def data(self, index=QtCore.QModelIndex(), role=QtCore.Qt.DisplayRole):
-        row = index.row()
-        col = self.column[index.column()]
-        if  role == QtCore.Qt.DisplayRole:
-            0 = self.ui_setup.value_cache.keys()[row]
-            if col=="name":
-                return str(o)
-            elif col=="residual"
-                v = self.ui_setup.value_cache[o]
-                lb = value(o.lower, exception=False)
-                ub = value(o.upper, exception=False)
-                if v is None:
-                    return
-                if lb is not None and v < lb:
-                    r1 = lb - v
-                else:
-                    r1 = 0
-                if ub is not None and v > ub:
-                    r2 = v - ub
-                else:
-                    r2 = 0
-                return max(r1, r2)
-        else:
-            return None
-
-    def headerData(self, i, orientation, role=QtCore.Qt.DisplayRole):
-        '''
-            Return the column headings for the horizontal header and
-            index numbers for the vertical header.
-        '''
-        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
-            return self.column[i]
-        return None

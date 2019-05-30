@@ -13,6 +13,48 @@ from pyomo.core.expr.current import identify_variables
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.network.port import _PortData, SimplePort
 
+def value_no_exception(c, div0=None):
+    """
+    Get value and ignore most exceptions (including division by 0).
+
+    Args:
+        c: a Pyomo component to get the value of
+    Returns:
+        A value, could be None
+    """
+    try:
+        return value(c, exception=False)
+    except ZeroDivisionError:
+        return div0
+
+def get_residual(ui_data, c):
+    """
+    Calculate the residual (constraint violation) of a constraint. This residual
+    is always positive.
+
+    Args:
+        ui_data (UIData): user interface data, includes the cache for calcuated
+            values of the constraint body. This function uses the cached values
+            and will not trigger recalculation. If variable values have changed,
+            this may not yield accurate results.
+        c(_ConstraintData): a constraint or constraint data
+    Returns:
+        (float) residual
+    """
+    ub = value_no_exception(c.upper)
+    lb = value_no_exception(c.lower)
+    try:
+        v = ui_data.value_cache[c]
+    except KeyError:
+        v = None
+    if v is None:
+        return
+    if lb is not None and v < lb:
+        return lb - v
+    if ub is not None and v > ub:
+        return v - ub
+    return 0.0
+
 def active_equalities(blk):
     """
     Generator returning active equality constraints in a model.

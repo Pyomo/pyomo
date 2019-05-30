@@ -33,6 +33,8 @@
     <property name="title">
      <string>&amp;File</string>
     </property>
+    <addaction name="actionModel_Selector"/>
+    <addaction name="separator"/>
     <addaction name="action_Exit"/>
    </widget>
    <widget class="QMenu" name="menu_View">
@@ -43,6 +45,7 @@
     <addaction name="actionRestart_Constraint_View"/>
     <addaction name="actionRestart_Parameter_View"/>
     <addaction name="actionRestart_Expression_View"/>
+    <addaction name="actionRestart_Residual_Table"/>
     <addaction name="separator"/>
     <addaction name="actionTile"/>
     <addaction name="actionCascade"/>
@@ -267,6 +270,16 @@
   <action name="actionTabs">
    <property name="text">
     <string>Toggle Ta&amp;bs</string>
+   </property>
+  </action>
+  <action name="actionModel_Selector">
+   <property name="text">
+    <string>Model &amp;Selector</string>
+   </property>
+  </action>
+  <action name="actionRestart_Residual_Table">
+   <property name="text">
+    <string>Restart Residual Table</string>
    </property>
   </action>
  </widget>
