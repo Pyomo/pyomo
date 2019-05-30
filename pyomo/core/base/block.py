@@ -1881,8 +1881,8 @@ class Block(ActiveIndexedComponent):
             b = self[key]
             ostream.write("%s%s : Active=%s\n" %
                           (prefix, b.name, b.active))
-            _BlockData.pprint(b, ostream=ostream, verbose=verbose,
-                              prefix=prefix + '    ' if subblock else prefix)
+            b.pprint(ostream=ostream, verbose=verbose,
+                     prefix=prefix + '    ' if subblock else prefix)
 
     def _pprint(self):
         return [("Size", len(self)),
