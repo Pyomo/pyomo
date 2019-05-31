@@ -27,6 +27,7 @@ from scipy.sparse import coo_matrix, csr_matrix
 from scipy.sparse import isspmatrix
 from pyomo.contrib.pynumero.sparse.utils import is_symmetric_sparse
 from pyomo.contrib.pynumero.sparse import empty_matrix
+from .base_block import BaseBlockMatrix
 from scipy.sparse.base import spmatrix
 import numpy as np
 import six
@@ -44,8 +45,7 @@ def assert_block_structure(mat):
     assert not mat.has_empty_cols(), msgc
 
 
-
-class BlockMatrix(object):
+class BlockMatrix(BaseBlockMatrix):
     """
     Structured Matrix interface
 
@@ -607,8 +607,8 @@ class BlockMatrix(object):
             if all_none_rows:
                 self._bcol_lengths[jdx] = 0
         else:
-            assert isinstance(value, BlockMatrix) or isspmatrix(value), \
-                'blocks need to be sparse matrices'
+            assert isinstance(value, BaseBlockMatrix) or isspmatrix(value), \
+                'blocks need to be sparse matrices or BlockMatrices'
             if self._brow_lengths[idx] == 0 and self._bcol_lengths[jdx] == 0:
                 self._blocks[idx, jdx] = value
                 self._brow_lengths[idx] = value.shape[0]
@@ -617,7 +617,7 @@ class BlockMatrix(object):
             elif self._brow_lengths[idx] != 0 and self._bcol_lengths[jdx] == 0:
                 assert self._brow_lengths[idx] == value.shape[0],\
                     'Incompatible row dimensions for block ({i},{j}) ' \
-                    'Got {got}, expected {exp}.'.format(i=idx,
+                    'got {got}, expected {exp}.'.format(i=idx,
                                                         j=jdx,
                                                         exp=self._brow_lengths[idx],
                                                         got=value.shape[0])
@@ -628,7 +628,7 @@ class BlockMatrix(object):
             elif self._brow_lengths[idx] == 0 and self._bcol_lengths[jdx] != 0:
                 assert self._bcol_lengths[jdx] == value.shape[1], \
                     'Incompatible col dimensions for block ({i},{j}) ' \
-                    'Got {got}, expected {exp}.'.format(i=idx,
+                    'got {got}, expected {exp}.'.format(i=idx,
                                                         j=jdx,
                                                         exp=self._bcol_lengths[jdx],
                                                         got=value.shape[1])
@@ -639,14 +639,14 @@ class BlockMatrix(object):
             else:
                 assert self._brow_lengths[idx] == value.shape[0], \
                     'Incompatible row dimensions for block ({i},{j}) ' \
-                    'Got {got}, expected {exp}.'.format(i=idx,
+                    'got {got}, expected {exp}.'.format(i=idx,
                                                         j=jdx,
                                                         exp=self._brow_lengths[idx],
                                                         got=value.shape[0])
 
                 assert self._bcol_lengths[jdx] == value.shape[1], \
                     'Incompatible col dimensions for block ({i},{j}) ' \
-                    'Got {got}, expected {exp}.'.format(i=idx,
+                    'got {got}, expected {exp}.'.format(i=idx,
                                                         j=jdx,
                                                         exp=self._bcol_lengths[jdx],
                                                         got=value.shape[1])

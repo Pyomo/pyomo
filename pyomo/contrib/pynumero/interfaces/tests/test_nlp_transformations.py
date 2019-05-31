@@ -12,7 +12,7 @@ from pyomo.common.plugin import alias
 import pyomo.environ as aml
 import os
 
-from .. import numpy_available, scipy_available
+from pyomo.contrib.pynumero import numpy_available, scipy_available
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
@@ -802,4 +802,3 @@ class TestAdmmNLP(unittest.TestCase):
         x = nlp.create_vector_x()
         x.fill(1.0)
         self.assertTrue(np.allclose(nlp.grad_objective(x), nl.grad_objective(x)))
-

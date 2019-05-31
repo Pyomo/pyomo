@@ -817,7 +817,10 @@ class NLP(object):
         """
         return
 
-
+# ToDo: need to add support for modifying bounds. 
+# modification of bounds requires rebuiding the maps.
+# support for variable bounds seems trivial.
+# support for constraint bounds would require more work. (this is not frequent tho)
 class AslNLP(NLP):
     """
     ASL nonlinear program interface
@@ -961,6 +964,7 @@ class AslNLP(NLP):
         abs_bounds_difference = np.absolute(bounds_difference)
         fixed_vars = np.any(abs_bounds_difference < tolerance_fixed_bounds)
         if fixed_vars:
+            print(np.where(abs_bounds_difference<tolerance_fixed_bounds))
             raise RuntimeError("Variables fixed from bounds not supported")
         inconsistent_bounds = np.any(bounds_difference < 0.0)
         if inconsistent_bounds:
@@ -1721,12 +1725,3 @@ class PyomoNLP(AslNLP):
         if constraint.is_indexed():
             raise RuntimeError("Constraint must be not indexed")
         return self._conToIndex[constraint]
-
-
-
-
-
-
-
-
-

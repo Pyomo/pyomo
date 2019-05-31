@@ -102,6 +102,7 @@ class FullKKTSolver(KKTSolver):
 
     def solve(self, kkt, rhs, nlp, *args, **kwargs):
         do_symbolic = kwargs.pop('do_symbolic', True)
+        do_numeric = kwargs.pop('do_numeric', True)
         max_iter_reg = kwargs.pop('max_iter_reg', 40)
         wr = kwargs.pop('regularize', True)
         max_iter_ref = kwargs.pop('max_iter_ref', 10)
@@ -124,12 +125,16 @@ class FullKKTSolver(KKTSolver):
             lsolver.do_symbolic_factorization(kkt, include_diagonal=wr)
 
         # do numeric factorization
-        status = lsolver.do_numeric_factorization(kkt,
-                                                  diagonal=diagonal,
-                                                  desired_num_neg_eval=num_eigvals)
+        if do_numeric:
+            status = lsolver.do_numeric_factorization(kkt,
+                                                      diagonal=diagonal,
+                                                      desired_num_neg_eval=num_eigvals)
+        else:
+            # ToDo: need to check for errors if this is done
+            status = 0
 
         # regularize problem if required
-        if wr:
+        if wr and do_numeric:
 
             done = self._inertia_params.ibr1(status)
             nx = nvars - num_eigvals
@@ -148,7 +153,8 @@ class FullKKTSolver(KKTSolver):
                 count_iter += 1
 
             if count_iter >= max_iter_reg:
-                raise RuntimeError('Could not regularized the problem')
+                #print("WARNING: could not regularized")
+                raise RuntimeError('Could not regularize the problem')
 
         info = {'status': status, 'delta_reg': val_reg, 'reg_iter': count_iter}
 

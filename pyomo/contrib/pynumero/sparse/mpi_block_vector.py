@@ -11,13 +11,14 @@
 
 from __future__ import division
 from pyomo.contrib.pynumero.sparse import BlockVector
+from .base_block import BaseBlockVector
 from mpi4py import MPI
 import numpy as np
 import copy as cp
 
 __all__ = ['MPIBlockVector']
 
-class MPIBlockVector(np.ndarray):
+class MPIBlockVector(np.ndarray, BaseBlockVector):
     """
     Parallel Structured Vector interface
 

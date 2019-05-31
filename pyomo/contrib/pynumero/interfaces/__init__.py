@@ -13,3 +13,4 @@ from pyomo.contrib.pynumero import numpy_available, scipy_available
 if numpy_available and scipy_available:
     from .nlp import AmplNLP, PyomoNLP
     from .nlp_compositions import TwoStageStochasticNLP
+    from .nlp_state import NLPState, IPNLPState

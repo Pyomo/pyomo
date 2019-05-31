@@ -24,7 +24,7 @@ def print_eval_count(iter):
     #print("\t\t Total CPU secs in NLP function evaluations............:  TODO")
 
 
-def print_nlp_info(nlp, header='Interior-Point', linearsolver='mumps'):
+def print_nlp_info(nlp, header='Interior-Point', linear_solver='mumps'):
 
     print("\n\n********************************************************************************************")
     print("********************************************************************************************")
@@ -38,7 +38,7 @@ def print_nlp_info(nlp, header='Interior-Point', linearsolver='mumps'):
     flat_hess = hess.tocoo()
     lower_hess = tril(flat_hess)
 
-    print("\n                       PyNumero {} Solver running with {}\n".format(header, linearsolver))
+    print("\n                       PyNumero {} Solver running with {}\n".format(header, linear_solver))
     print("\t\t Number of nonzeros in equality constraint Jacobian...:{:>9d}".format(nlp.nnz_jacobian_c))
     print("\t\t Number of nonzeros in inequality constraint Jacobian.:{:>9d}".format(nlp.nnz_jacobian_d))
     print("\t\t Number of nonzeros in Lagrangian Hessian.............:{:>9d}\n".format(lower_hess.nnz))

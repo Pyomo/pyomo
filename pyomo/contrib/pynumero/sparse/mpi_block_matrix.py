@@ -26,6 +26,7 @@ from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
 from pyomo.contrib.pynumero.sparse.utils import is_symmetric_sparse
 from pyomo.contrib.pynumero.sparse import empty_matrix
 from pyomo.contrib.pynumero.sparse.warnings import MPISpaceWarning
+from .base_block import BaseBlockMatrix
 from warnings import warn
 from mpi4py import MPI
 import numpy as np
@@ -38,7 +39,7 @@ ALL_OWN_IT=0
 
 # ALL_OWNED = -1
 
-class MPIBlockMatrix(object):
+class MPIBlockMatrix(BaseBlockMatrix):
     """
     Parallel Structured Matrix interface
 

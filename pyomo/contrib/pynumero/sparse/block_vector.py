@@ -21,13 +21,14 @@ where v_i are numpy arrays of dimension 1
 
 """
 from __future__ import division
+from .base_block import BaseBlockVector
 import numpy as np
 import copy as cp
 
 __all__ = ['BlockVector']
 
 
-class BlockVector(np.ndarray):
+class BlockVector(np.ndarray, BaseBlockVector):
     """
     Structured Vector interface
 
@@ -69,6 +70,9 @@ class BlockVector(np.ndarray):
             return obj
         else:
             raise RuntimeError('Vectors must be a list of an integer')
+
+    def __init__(self, vectors):
+        pass
 
     def __array_finalize__(self, obj):
 
@@ -244,20 +248,12 @@ class BlockVector(np.ndarray):
         """
         return np.sum(self._brow_lengths),
 
-    @shape.setter
-    def shape(self, new_shape):
-        raise NotImplementedError("BlockVector does not support reshaping")
-
     @property
     def size(self):
         """
         Returns total number of elements in the block vector
         """
         return np.sum(self._brow_lengths)
-
-    @size.setter
-    def size(self, new_size):
-        raise NotImplementedError("BlockVector does not support resizing")
 
     @property
     def ndim(self):
@@ -1364,7 +1360,7 @@ class BlockVector(np.ndarray):
         return msg
 
     def __repr__(self):
-        return '{}{}'.format(self.__class__.__name__, self.shape)
+        return '{}{}'.format(self.__class__.__name__, self.bshape)
 
     def __getitem__(self, item):
 
@@ -1388,7 +1384,7 @@ class BlockVector(np.ndarray):
             self._has_none = True
         else:
             assert isinstance(value, np.ndarray) or \
-                isinstance(value, BlockVector), \
+                isinstance(value, BaseBlockVector), \
                     'Blocks need to be numpy arrays or BlockVectors'
             assert value.ndim == 1, 'Blocks need to be 1D'
             super(BlockVector, self).__setitem__(key, value)

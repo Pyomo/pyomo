@@ -33,6 +33,7 @@ import logging
 import json
 
 from pyomo.contrib.pynumero.interfaces import PyomoNLP
+from pyomo.contrib.pynumero.interfaces.nlp_compositions import CompositeNLP
 from pyomo.contrib.pynumero.sparse import empty_matrix
 import pyomo.contrib.pynumero as pn
 from scipy.sparse import coo_matrix as scipy_coo_matrix
@@ -492,34 +493,76 @@ class _InteriorPointCalculator(object):
         alpha_u_s = 1.0
 
         if data.condensed_xl.size > 0:
+            # delta_xl = data.Pxl.transpose() * delta_x
+            # alphas = np.divide(delta_xl, -tau * self.slack_xl())
+            # alpha_l_x = alphas.max()
+            # if alpha_l_x > 0:
+            #     alpha_l_x = min(1.0/alpha_l_x, 1.0)
+            # else:
+            #     alpha_l_x = 1.0
+
             delta_xl = data.Pxl.transpose() * delta_x
-            alphas = np.divide(delta_xl, -tau * self.slack_xl())
-            alpha_l_x = alphas.max()
-            if alpha_l_x > 0:
+            mask = delta_xl < 0.0
+            if mask.any():
+                subset_delta_xl = delta_xl.compress(mask)
+                subset_sli = self.slack_xl().compress(mask)
+                alpha_l_x = np.divide(subset_delta_xl, -tau * subset_sli).max()
                 alpha_l_x = min(1.0/alpha_l_x, 1.0)
             else:
                 alpha_l_x = 1.0
 
         if data.condensed_xu.size > 0:
+            # delta_xu = data.Pxu.transpose() * delta_x
+            # alpha_u_x = np.divide(delta_xu, tau * self.slack_xu()).max()
+            # if alpha_u_x > 0:
+            #     alpha_u_x = min(1.0/alpha_u_x, 1.0)
+            # else:
+            #     alpha_u_x = 1.0
+
             delta_xu = data.Pxu.transpose() * delta_x
-            alpha_u_x = np.divide(delta_xu, tau * self.slack_xu()).max()
-            if alpha_u_x > 0:
+            mask = delta_xu > 0.0
+            if mask.any():
+                subset_delta_xu = delta_xu.compress(mask)
+                subset_sui = self.slack_xu().compress(mask)
+                alpha_u_x = np.divide(subset_delta_xu,
+                                      tau * subset_sui).max()
                 alpha_u_x = min(1.0/alpha_u_x, 1.0)
             else:
                 alpha_u_x = 1.0
 
         if data.condensed_dl.size > 0:
+            # delta_sl = data.Pdl.transpose() * delta_s
+            # alpha_l_s = np.divide(delta_sl, -tau * self.slack_sl()).max()
+            # if alpha_l_s > 0:
+            #     alpha_l_s = min(1.0/alpha_l_s, 1.0)
+            # else:
+            #     alpha_l_s = 1.0
+
             delta_sl = data.Pdl.transpose() * delta_s
-            alpha_l_s = np.divide(delta_sl, -tau * self.slack_sl()).max()
-            if alpha_l_s > 0:
+            mask = delta_sl < 0.0
+            if mask.any():
+                subset_delta_sl = delta_sl.compress(mask)
+                subset_sli = self.slack_sl().compress(mask)
+                alpha_l_s = np.divide(subset_delta_sl, -tau * subset_sli).max()
                 alpha_l_s = min(1.0/alpha_l_s, 1.0)
             else:
                 alpha_l_s = 1.0
 
         if data.condensed_du.size > 0:
+            # delta_su = data.Pdu.transpose() * delta_s
+            # alpha_u_s = np.divide(delta_su, tau * self.slack_su()).max()
+            # if alpha_u_s > 0:
+            #     alpha_u_s = min(1.0/alpha_u_s, 1.0)
+            # else:
+            #     alpha_u_s = 1.0
+
             delta_su = data.Pdu.transpose() * delta_s
-            alpha_u_s = np.divide(delta_su, tau * self.slack_su()).max()
-            if alpha_u_s > 0:
+            mask = delta_su > 0.0
+            if mask.any():
+                subset_delta_su = delta_su.compress(mask)
+                subset_sui = self.slack_su().compress(mask)
+                alpha_u_s = np.divide(subset_delta_su,
+                                      tau * subset_sui).max()
                 alpha_u_s = min(1.0/alpha_u_s, 1.0)
             else:
                 alpha_u_s = 1.0
@@ -536,34 +579,71 @@ class _InteriorPointCalculator(object):
         alpha_u_v = 1.0
 
         if data.zl.size > 0:
-            alphas = np.divide(delta_zl, -tau * data.zl)
-            alpha_l_z = alphas.max()
-            if alpha_l_z > 0:
+            # alphas = np.divide(delta_zl, -tau * data.zl)
+            # alpha_l_z = alphas.max()
+            # if alpha_l_z > 0:
+            #     alpha_l_z = min(1.0/alpha_l_z, 1.0)
+            # else:
+            #     alpha_l_z = 1.0
+
+            mask = delta_zl < 0.0
+            if mask.any():
+                subset_delta_l_z = delta_zl.compress(mask)
+                subset_zli = data.zl.compress(mask)
+                alpha_l_z = np.divide(subset_delta_l_z, -tau * subset_zli).max()
                 alpha_l_z = min(1.0/alpha_l_z, 1.0)
             else:
                 alpha_l_z = 1.0
 
         if data.zu.size > 0:
-            alphas = np.divide(delta_zu, tau * data.zu)
-            alpha_u_z = alphas.max()
-            if alpha_u_z > 0:
-                alpha_u_z = min(1.0 / alpha_u_z, 1.0)
+            # alphas = np.divide(delta_zu, tau * data.zu)
+            # alpha_u_z = alphas.max()
+            # if alpha_u_z > 0:
+            #     alpha_u_z = min(1.0 / alpha_u_z, 1.0)
+            # else:
+            #     alpha_u_z = 1.0
+
+            mask = delta_zu < 0.0
+            if mask.any():
+                subset_delta_u_z = delta_zu.compress(mask)
+                subset_zui = data.zu.compress(mask)
+                alpha_u_z = np.divide(subset_delta_u_z, -tau * subset_zui).max()
+                alpha_u_z = min(1.0/alpha_u_z, 1.0)
             else:
                 alpha_u_z = 1.0
 
 
         if data.vl.size > 0:
-            alphas = np.divide(delta_vl, -tau * data.vl)
-            alpha_l_v = alphas.max()
-            if alpha_l_v > 0:
-                alpha_l_v = min(1.0 / alpha_l_v, 1.0)
+            # alphas = np.divide(delta_vl, -tau * data.vl)
+            # alpha_l_v = alphas.max()
+            # if alpha_l_v > 0:
+            #     alpha_l_v = min(1.0 / alpha_l_v, 1.0)
+            # else:
+            #     alpha_l_v = 1.0
+
+            mask = delta_vl < 0.0
+            if mask.any():
+                subset_delta_l_v = delta_vl.compress(mask)
+                subset_vli = data.vl.compress(mask)
+                alpha_l_v = np.divide(subset_delta_l_v, -tau * subset_vli).max()
+                alpha_l_v = min(1.0/alpha_l_v, 1.0)
             else:
                 alpha_l_v = 1.0
+
         if data.vu.size > 0:
-            alphas = np.divide(delta_vu, tau * data.vu)
-            alpha_u_v = alphas.max()
-            if alpha_u_v > 0:
-                alpha_u_v = min(1.0 / alpha_u_v, 1.0)
+            # alphas = np.divide(delta_vu, tau * data.vu)
+            # alpha_u_v = alphas.max()
+            # if alpha_u_v > 0:
+            #     alpha_u_v = min(1.0 / alpha_u_v, 1.0)
+            # else:
+            #     alpha_u_v = 1.0
+
+            mask = delta_vu < 0.0
+            if mask.any():
+                subset_delta_u_v = delta_vu.compress(mask)
+                subset_vui = data.vu.compress(mask)
+                alpha_u_v = np.divide(subset_delta_u_v, -tau * subset_vui).max()
+                alpha_u_v = min(1.0/alpha_u_v, 1.0)
             else:
                 alpha_u_v = 1.0
 
@@ -867,7 +947,9 @@ class _InteriorPointWalker(object):
         self._calculator = calculator
         self._kkt = None
         self._rhs = None
-        if linear_solver == 'ma27' or linear_solver == 'mumps':
+        if linear_solver == 'ma27' or \
+            linear_solver == 'mumps' or \
+            linear_solver == 'ma57':
             self._lsolver = FullKKTSolver(linear_solver)
         else:
             assert isinstance(linear_solver, KKTSolver), 'Linear Solver must be subclass from KKTSolver'
@@ -891,9 +973,24 @@ class _InteriorPointWalker(object):
         self._kkt[2, 0] = calc.jacobian_c()
         self._kkt[3, 0] = calc.jacobian_d()
         if nlp.nd == 0:
-            self._kkt[3, 1] = empty_matrix(nlp.nd, nlp.nd)
+            if isinstance(nlp, CompositeNLP):
+                d_vec = nlp.create_vector_y(subset='d')
+                mat = BlockSymMatrix(d_vec.nblocks)
+                for j, v in enumerate(d_vec):
+                    mat[j, j] = diagonal_matrix(v)
+                self._kkt[3, 1] = mat
+            else:
+                self._kkt[3, 1] = empty_matrix(nlp.nd, nlp.nd)
         else:
-            self._kkt[3, 1] = - identity(nlp.nd)
+            if isinstance(nlp, CompositeNLP):
+                d_vec = nlp.create_vector_y(subset='d')
+                d_vec.fill(-1.0)
+                mat = BlockSymMatrix(d_vec.nblocks)
+                for j, v in enumerate(d_vec):
+                    mat[j, j] = diagonal_matrix(v)
+                self._kkt[3, 1] = mat
+            else:
+                self._kkt[3, 1] = - identity(nlp.nd)
 
         self._rhs = BlockVector([calc.grad_lag_bar_x(),
                                  calc.grad_lag_bar_s(),
@@ -1247,7 +1344,7 @@ class InteriorPointSolver(object):
                                       linear_solver=linear_solver)
 
         if tee:
-            print_nlp_info(nlp, linearsolver=linear_solver)
+            print_nlp_info(nlp, linear_solver=linear_solver)
 
         val_reg = 0.0
         counter_iter = 0
@@ -1393,3 +1490,21 @@ class InteriorPointSolver(object):
             store_walker.append(walker)
 
         return data.x.copy(), info
+
+import pyomo.environ as aml
+from pyomo.contrib.pynumero.interfaces import PyomoNLP
+if __name__ == "__main__":
+
+    m = aml.ConcreteModel()
+    m._name = 'model1'
+    m.x = aml.Var([1, 2, 3], initialize=4.0)
+    m.c = aml.Constraint(expr=m.x[3] ** 2 + m.x[1] == 25)
+    m.d = aml.Constraint(expr=m.x[2] ** 2 + m.x[1] <= 18.0)
+    # m.d = aml.Constraint(expr=aml.inequality(-18, m.x[2] ** 2 + m.x[1],  28))
+    m.o = aml.Objective(expr=m.x[1] ** 4 - 3 * m.x[1] * m.x[2] ** 3 + m.x[3] ** 2 - 8.0)
+    m.x[1].setlb(0.0)
+    m.x[2].setlb(0.0)
+
+    nlp = PyomoNLP(m)
+    solver = InteriorPointSolver(nlp)
+    solver.solve(tee=True)

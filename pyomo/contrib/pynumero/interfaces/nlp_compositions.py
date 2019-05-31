@@ -18,14 +18,23 @@ import pyomo.contrib.pynumero as pn
 import pyomo.environ as aml
 import pyomo.dae as dae
 import numpy as np
+import six
+import abc
 
+# ToDo: improve the design of the abstract class
+@six.add_metaclass(abc.ABCMeta)
+class CompositeNLP(object):
 
-# ToDo: Create another class on top for general composite nlps?
+    def __init__(self):
+        pass
+
+    def nblocks(self):
+        return 0
 
 __all__ = ['TwoStageStochasticNLP']
 
 
-class TwoStageStochasticNLP(NLP):
+class TwoStageStochasticNLP(NLP, CompositeNLP):
     """
     Nonlinear program interface for composite NLP that result from
     two-stage stochastic programming problems
@@ -959,7 +968,7 @@ class TwoStageStochasticNLP(NLP):
         return [self._sid_to_sname[i] for i in range(self.nblocks)]
 
 
-class DynoptNLP(NLP):
+class DynoptNLP(NLP, CompositeNLP):
     """
     Nonlinear program interface for composite NLP that result from
     two-stage stochastic programming problems
@@ -1231,6 +1240,11 @@ class DynoptNLP(NLP):
         Return number of complicated variables
         """
         return self._nz
+
+    def nlps(self):
+        """Creates generator scenario name to nlp """
+        for sid, block_nlp in enumerate(self._nlps):
+            yield "block {}".format(sid), block_nlp
 
     def create_vector_x(self, subset=None):
         """Returns ndarray of primal variables
