@@ -13,8 +13,10 @@ import os
 
 
 import pyomo.contrib.pynumero as pn
-if not (pn.sparse.numpy_available and pn.sparse.scipy_available):
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run InteriorPointSolver tests")
+
+from pyomo.contrib.pynumero import numpy_available, scipy_available
+if not (numpy_available and scipy_available):
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
 import scipy.sparse as spa
 import numpy as np
