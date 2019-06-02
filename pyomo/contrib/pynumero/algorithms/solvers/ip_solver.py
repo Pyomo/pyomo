@@ -1400,10 +1400,12 @@ class InteriorPointSolver(object):
                     data_d = getattr(data, dname)
                     if kk < 4:
                         data_d += steps[kk] * alpha_primal
+                        # update step vectors
+                        setattr(data, 'd{}'.format(dname), steps[kk] * alpha_primal)
                     else:
                         data_d += steps[kk] * alpha_dual
-                    # update step vectors
-                    setattr(data, 'd{}'.format(dname), steps[kk])
+                        # update step vectors
+                        setattr(data, 'd{}'.format(dname), steps[kk] * alpha_dual)
 
                 # evaluate nlp functions at new point
                 calc.cache()
@@ -1494,6 +1496,8 @@ class InteriorPointSolver(object):
 import pyomo.environ as aml
 from pyomo.contrib.pynumero.interfaces import PyomoNLP
 if __name__ == "__main__":
+
+    np.set_printoptions(linewidth=250, precision=3)
 
     m = aml.ConcreteModel()
     m._name = 'model1'

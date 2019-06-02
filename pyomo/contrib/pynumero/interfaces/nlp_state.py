@@ -222,7 +222,7 @@ class NLPState(object):
     def nlp(self):
         return self._nlp
 
-    def update_state(x=None, s=None, yc=None, yd=None, zl=None, zu=None, vl=None, vu=None):
+    def update_state(self, x=None, s=None, yc=None, yd=None, zl=None, zu=None, vl=None, vu=None):
         if x is not None:
             assert isinstance(x, np.ndarray)
             assert x.size == self.nlp.nx
@@ -238,7 +238,7 @@ class NLPState(object):
             # should we check is in the interior?
             self._ds = s-self._s
             self._s = s
-            self._need_recache_slack_vectors_x = True
+            self._need_recache_slack_vectors_s = True
 
         if yc is not None:
             assert isinstance(yc, np.ndarray)
@@ -596,6 +596,38 @@ class NLPState(object):
             r[3] = pynumero_norm(np.multiply(self.slack_su(), self.vu), ord=np.inf)
         return np.amax(r)
 
+    def scaling_factors_infeasibility(self, smax=100.0):
+
+        sc = 1.0
+        sd = 1.0
+
+        suma = 0.0
+        suma += np.absolute(self.zl).sum()
+        suma += np.absolute(self.zu).sum()
+        suma += np.absolute(self.vl).sum()
+        suma += np.absolute(self.vu).sum()
+
+        sc = suma
+        n = self.zl.size + self.zu.size + self.vl.size + self.vu.size
+        if n == 0:
+            sc = 1.0
+        else:
+            sc = sc / n
+            sc = max(smax, sc)/smax
+
+        suma += np.absolute(self.yc).sum()
+        suma += np.absolute(self.yd).sum()
+        n = self.zl.size + self.zu.size + self.vl.size + \
+            self.vu.size + self.yc.size + self.yd.size
+        sd = suma
+        if n == 0:
+            sd = 1.0
+        else:
+            sd = sd / n
+            sd = max(smax, sd) / smax
+
+        return sc, sd
+
     @staticmethod
     def push_variables_within_bounds(vars_l, vars, vars_u, bound_push):
 
@@ -619,63 +651,3 @@ class NLPState(object):
                                   vars)
         vars = upper_pushed_x
         return vars
-
-
-# state with interior point functions
-class IPNLPState(NLPState):
-
-    def __init__(self, nlp, miu, **kwargs):
-        self._miu = miu
-        super(IPNLPState, self).__init__(nlp, **kwargs)
-
-    @property
-    def miu(self):
-        return self._miu
-
-    @miu.setter
-    def miu(self, other):
-        self._miu = miu
-
-    def grad_lag_bar_x(self):
-        grad_x_lag_bar = self.grad_objective() + \
-                         self.jacobian_c().T * self.yc + \
-                         self.jacobian_d().T * self.yd + \
-                         self.Pxu * (self._miu / self.slack_xu()) - \
-                         self.Pxl * (self._miu / self.slack_xl())
-        return grad_x_lag_bar
-
-    def grad_lag_bar_s(self):
-        grad_s_lag_bar = self.Pdu * (self._miu / self.slack_su()) - \
-                         self.Pdl * (self._miu / self.slack_sl()) - \
-                         self.yd
-        return grad_s_lag_bar
-
-    def barrier_objective(self):
-        return self.objective() + self.barrier_term()
-
-    def barrier_term(self):
-        s_xl = self.slack_xl()
-        s_sl = self.slack_sl()
-        s_xu = self.slack_xu()
-        s_su = self.slack_su()
-        return self._miu * (np.sum(np.log(s_xl)) + \
-                           np.sum(np.log(s_xu)) + \
-                           np.sum(np.log(s_sl)) + \
-                           np.sum(np.log(s_su)))
-
-    def complementarity_infeasibility(self):
-
-        r = np.zeros(4)
-        if self.zl.size > 0:
-            r[0] = pynumero_norm(np.multiply(self.slack_xl(), self.zl) - \
-                                  self._miu, ord=np.inf)
-        if self.zu.size > 0:
-            r[1] = pynumero_norm(np.multiply(self.slack_xu(), self.zu) - \
-                                  self._miu, ord=np.inf)
-        if self.vl.size > 0:
-            r[2] = pynumero_norm(np.multiply(self.slack_sl(), self.vl) - \
-                                  self._miu, ord=np.inf)
-        if self.vu.size > 0:
-            r[3] = pynumero_norm(np.multiply(self.slack_su(), self.vu) - \
-                                  self._miu, ord=np.inf)
-        return np.amax(r)

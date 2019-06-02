@@ -30,8 +30,7 @@ from pyomo.contrib.pynumero.sparse import (BlockVector,
 
 from pyomo.contrib.pynumero.interfaces import (PyomoNLP,
                                                TwoStageStochasticNLP,
-                                               NLPState,
-                                               IPNLPState)
+                                               NLPState)
 
 import pyomo.contrib.pynumero as pn
 
