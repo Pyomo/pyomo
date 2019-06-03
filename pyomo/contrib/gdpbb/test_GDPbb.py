@@ -1,12 +1,18 @@
 """Tests for the GDPbb solver plugin."""
+import logging
+
 from math import fabs
 from os.path import abspath, dirname, join, normpath
 
 import pyutilib.th as unittest
 from pyutilib.misc import import_file
+from six import StringIO
 
+from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.satsolver.satsolver import _z3_available
-from pyomo.environ import SolverFactory, value
+from pyomo.environ import SolverFactory, value, ConcreteModel, Var, Objective
+from pyomo.gdp import Disjunction
+from pyomo.opt import TerminationCondition
 
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))
@@ -20,6 +26,21 @@ license_available = SolverFactory(minlp_solver).license_is_valid() if solver_ava
 @unittest.skipUnless(solver_available, "Required subsolver %s is not available" % (minlp_solver,))
 class TestGDPBB(unittest.TestCase):
     """Tests for logic-based branch and bound."""
+
+    def test_infeasible_GDP(self):
+        """Test for infeasible GDP."""
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 2))
+        m.d = Disjunction(expr=[
+            [m.x ** 2 >= 3, m.x >= 3],
+            [m.x ** 2 <= -1, m.x <= -1]])
+        m.o = Objective(expr=m.x)
+        result = SolverFactory('gdpbb').solve(
+            m, tee=False,
+            solver=minlp_solver,
+            solver_args=minlp_args,
+        )
+        self.assertEqual(result.solver.termination_condition, TerminationCondition.infeasible)
 
     @unittest.skipUnless(license_available, "Problem is too big for unlicensed BARON.")
     def test_LBB_8PP(self):
@@ -81,6 +102,21 @@ class TestGDPBB(unittest.TestCase):
 @unittest.skipUnless(_z3_available, "Z3 SAT solver is not available.")
 class TestGDPBB_Z3(unittest.TestCase):
     """Tests for logic-based branch and bound with Z3 SAT solver integration."""
+
+    def test_infeasible_GDP(self):
+        """Test for infeasible GDP."""
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 2))
+        m.d = Disjunction(expr=[
+            [m.x ** 2 >= 3, m.x >= 3],
+            [m.x ** 2 <= -1, m.x <= -1]])
+        m.o = Objective(expr=m.x)
+        result = SolverFactory('gdpbb').solve(
+            m, tee=False,
+            solver=minlp_solver,
+            solver_args=minlp_args,
+        )
+        self.assertEqual(result.solver.termination_condition, TerminationCondition.infeasible)
 
     @unittest.skipUnless(license_available, "Problem is too big for unlicensed BARON.")
     def test_LBB_8PP(self):

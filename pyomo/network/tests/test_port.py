@@ -446,10 +446,10 @@ class TestPort(unittest.TestCase):
 
         v = list(p.iter_vars(expr_vars=True, names=True))
         self.assertEqual(len(v), 10)
-        self.assertEqual(len(v[0]), 2)
+        self.assertEqual(len(v[0]), 3)
         for t in v:
             if t[0] == 'x':
-                self.assertIs(t[1], m.x)
+                self.assertIs(t[2], m.x)
                 break
 
     def test_pprint(self):
