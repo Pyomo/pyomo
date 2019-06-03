@@ -1231,7 +1231,8 @@ class _SetData(_SetDataBase):
 
     @property
     def dimen(self):
-        return None
+        raise DeveloperError("Derived finite set class (%s) failed to "
+                             "implement dimen" % (type(self).__name__,))
 
     def isdisjoint(self, other):
         try:
@@ -1969,6 +1970,14 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
 
 ############################################################################
 
+def _pprint_members(x):
+    return '{' + str(x.ordered_data())[1:-1] + "}"
+def _pprint_dimen(x):
+    d = x.dimen
+    if d is _UnknownSetDimen:
+        return "--"
+    return d
+
 class Set(IndexedComponent):
     """
     A set object that is used to index other Pyomo objects.
@@ -2212,8 +2221,6 @@ class Set(IndexedComponent):
         """
         Return data that will be printed for this component.
         """
-        def members(x):
-            return '{' + str(x.ordered_data())[1:-1] + "}"
         #
         # Eventually, we might want to support a 'verbose' flag to
         # pprint() that will suppress som of the very long (less
@@ -2247,10 +2254,10 @@ class Set(IndexedComponent):
             iteritems(self._data),
             ("Dimen","Domain","Size","Members",),
             lambda k, v: [
-                v.dimen if v.dimen is not _UnknownSetDimen else "--",
+                _pprint_dimen(v),
                 v._domain,
                 len(v),
-                members(v),
+                _pprint_members(v),
             ])
 
 
@@ -2332,7 +2339,7 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
             else:
                 ans = 1
         except:
-            return None
+            return 0
         for x in _iter:
             _this = len(x) if type(x) is tuple else 1
             if _this != ans:
@@ -2422,6 +2429,10 @@ class _InfiniteRangeSetData(_SetData):
             if any(v in r for r in self._ranges):
                 return True
         return any(value in r for r in self._ranges)
+
+    @property
+    def dimen(self):
+        return 1
 
     def ranges(self):
         return iter(self._ranges)
@@ -2721,6 +2732,14 @@ class SetUnion(_SetOperator):
     def ranges(self):
         return itertools.chain(*tuple(s.ranges() for s in self._sets))
 
+    @property
+    def dimen(self):
+        d1 = self._sets[0].dimen
+        if d1 == self._sets[1].dimen:
+            return d1
+        else:
+            return None
+
 
 class SetUnion_InfiniteSet(SetUnion):
     __slots__ = tuple()
@@ -2826,6 +2845,19 @@ class SetIntersection(_SetOperator):
             for r in a.range_intersection(self._sets[1].ranges()):
                 yield r
 
+    @property
+    def dimen(self):
+        d1 = self._sets[0].dimen
+        d2 = self._sets[1].dimen
+        if d1 is None:
+            return d2
+        elif d2 is None:
+            return d1
+        elif d1 == d2:
+            return d1
+        else:
+            return 0
+
 
 class SetIntersection_InfiniteSet(SetIntersection):
     __slots__ = tuple()
@@ -2918,6 +2950,9 @@ class SetDifference(_SetOperator):
             for r in a.range_difference(self._sets[1].ranges()):
                 yield r
 
+    @property
+    def dimen(self):
+        return self._sets[0].dimen
 
 class SetDifference_InfiniteSet(SetDifference):
     __slots__ = tuple()
@@ -3000,6 +3035,14 @@ class SetSymmetricDifference(_SetOperator):
             for a_r in set_a.ranges():
                 for r in a_r.range_difference(set_b.ranges()):
                     yield r
+
+    @property
+    def dimen(self):
+        d1 = self._sets[0].dimen
+        if d1 == self._sets[1].dimen:
+            return d1
+        else:
+            return None
 
 
 class SetSymmetricDifference_InfiniteSet(SetSymmetricDifference):
@@ -3304,6 +3347,10 @@ class _AnySet(_SetData, Set):
 
     def bounds(self):
         return (None, None)
+
+    @property
+    def dimen(self):
+        return None
 
 
 def DeclareGlobalSet(obj):

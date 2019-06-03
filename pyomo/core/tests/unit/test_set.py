@@ -1565,7 +1565,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         )
 
     def test_dimen(self):
-        self.assertEqual(SetOf([]).dimen, None)
+        self.assertEqual(SetOf([]).dimen, 0)
         self.assertEqual(SetOf([1,2,3]).dimen, 1)
         self.assertEqual(SetOf([(1,2),(2,3),(4,5)]).dimen, 2)
         self.assertEqual(SetOf([1,(2,3)]).dimen, None)
@@ -1655,6 +1655,20 @@ class TestSetUnion(unittest.TestCase):
         m.A = a
         self.assertEqual(str(a), "A")
         self.assertEqual(str(b), "{-1, 1} | (A)")
+
+    def test_dimen(self):
+        m = ConcreteModel()
+        m.I1 = SetOf([1,2,3,4])
+        m.I2 = SetOf([(1,2), (3,4)])
+        m.IN = SetOf([(1,2), (3,4), 1, 2])
+        self.assertEqual((m.I1 | m.I1).dimen, 1)
+        self.assertEqual((m.I2 | m.I2).dimen, 2)
+        self.assertEqual((m.IN | m.IN).dimen, None)
+        self.assertEqual((m.I1 | m.I2).dimen, None)
+        self.assertEqual((m.IN | m.I2).dimen, None)
+        self.assertEqual((m.I2 | m.IN).dimen, None)
+        self.assertEqual((m.IN | m.I1).dimen, None)
+        self.assertEqual((m.I1 | m.IN).dimen, None)
 
     def _verify_ordered_union(self, a, b):
         # Note the placement of the second "3" in the middle of the set.
@@ -1856,6 +1870,20 @@ class TestSetIntersection(unittest.TestCase):
         self.assertEqual(str(a), "A")
         self.assertEqual(str(b), "{-1, 1} & (A)")
 
+    def test_dimen(self):
+        m = ConcreteModel()
+        m.I1 = SetOf([1,2,3,4])
+        m.I2 = SetOf([(1,2), (3,4)])
+        m.IN = SetOf([(1,2), (3,4), 1, 2])
+        self.assertEqual((m.I1 & m.I1).dimen, 1)
+        self.assertEqual((m.I2 & m.I2).dimen, 2)
+        self.assertEqual((m.IN & m.IN).dimen, None)
+        self.assertEqual((m.I1 & m.I2).dimen, 0)
+        self.assertEqual((m.IN & m.I2).dimen, 2)
+        self.assertEqual((m.I2 & m.IN).dimen, 2)
+        self.assertEqual((m.IN & m.I1).dimen, 1)
+        self.assertEqual((m.I1 & m.IN).dimen, 1)
+
     def _verify_ordered_intersection(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
             a_ordered = a.is_ordered()
@@ -2052,6 +2080,21 @@ class TestSetDifference(unittest.TestCase):
         self.assertEqual(str(a), "A")
         self.assertEqual(str(b), "{-1, 1} - (A)")
 
+    def test_dimen(self):
+        m = ConcreteModel()
+        m.I1 = SetOf([1,2,3,4])
+        m.I2 = SetOf([(1,2), (3,4)])
+        m.IN = SetOf([(1,2), (3,4), 1, 2])
+        self.assertEqual((m.I1 - m.I1).dimen, 1)
+        self.assertEqual((m.I2 - m.I2).dimen, 2)
+        self.assertEqual((m.IN - m.IN).dimen, None)
+        self.assertEqual((m.I1 - m.I2).dimen, 1)
+        self.assertEqual((m.I2 - m.I1).dimen, 2)
+        self.assertEqual((m.IN - m.I2).dimen, None)
+        self.assertEqual((m.I2 - m.IN).dimen, 2)
+        self.assertEqual((m.IN - m.I1).dimen, None)
+        self.assertEqual((m.I1 - m.IN).dimen, 1)
+
     def _verify_ordered_difference(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
             a_ordered = a.is_ordered()
@@ -2201,6 +2244,21 @@ class TestSetSymmetricDifference(unittest.TestCase):
         m.A = a
         self.assertEqual(str(a), "A")
         self.assertEqual(str(b), "{-1, 1} ^ (A)")
+
+    def test_dimen(self):
+        m = ConcreteModel()
+        m.I1 = SetOf([1,2,3,4])
+        m.I2 = SetOf([(1,2), (3,4)])
+        m.IN = SetOf([(1,2), (3,4), 1, 2])
+        self.assertEqual((m.I1 ^ m.I1).dimen, 1)
+        self.assertEqual((m.I2 ^ m.I2).dimen, 2)
+        self.assertEqual((m.IN ^ m.IN).dimen, None)
+        self.assertEqual((m.I1 ^ m.I2).dimen, None)
+        self.assertEqual((m.I2 ^ m.I1).dimen, None)
+        self.assertEqual((m.IN ^ m.I2).dimen, None)
+        self.assertEqual((m.I2 ^ m.IN).dimen, None)
+        self.assertEqual((m.IN ^ m.I1).dimen, None)
+        self.assertEqual((m.I1 ^ m.IN).dimen, None)
 
     def _verify_ordered_symdifference(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
@@ -2404,6 +2462,21 @@ class TestSetProduct(unittest.TestCase):
 
         c = SetProduct(m.I, [1,2], m.I)
         self.assertEqual(str(c), "I*{1, 2}*I")
+
+    def test_dimen(self):
+        m = ConcreteModel()
+        m.I1 = SetOf([1,2,3,4])
+        m.I2 = SetOf([(1,2), (3,4)])
+        m.IN = SetOf([(1,2), (3,4), 1, 2])
+        self.assertEqual((m.I1 * m.I1).dimen, 2)
+        self.assertEqual((m.I2 * m.I2).dimen, 4)
+        self.assertEqual((m.IN * m.IN).dimen, None)
+        self.assertEqual((m.I1 * m.I2).dimen, 3)
+        self.assertEqual((m.I2 * m.I1).dimen, 3)
+        self.assertEqual((m.IN * m.I2).dimen, None)
+        self.assertEqual((m.I2 * m.IN).dimen, None)
+        self.assertEqual((m.IN * m.I1).dimen, None)
+        self.assertEqual((m.I1 * m.IN).dimen, None)
 
     def test_cutPointGenerator(self):
         CG = SetProduct_InfiniteSet._cutPointGenerator
