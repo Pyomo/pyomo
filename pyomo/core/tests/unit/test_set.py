@@ -36,7 +36,7 @@ from pyomo.core.base.set import (
     Initializer, _ConstantInitializer, _ItemInitializer, _ScalarCallInitializer,
     _IndexedCallInitializer,
     SetInitializer, _SetIntersectInitializer, RangeSetInitializer,
-    _FiniteSetData, _OrderedSetData, _SortedSetData,
+    _FiniteSetData, _InsertionOrderSetData, _SortedSetData,
     _UnknownSetDimen,
 )
 from pyomo.environ import AbstractModel, ConcreteModel, Var, Param, Suffix
@@ -1251,15 +1251,15 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         m.pprint(ostream=buf)
         self.assertEqual(buf.getvalue().strip(), """
 2 RangeSet Declarations
-    I : Dim=0, Dimen=1, Size=3, Bounds=(1, 3)
+    I : Dimen=1, Size=3, Bounds=(1, 3)
         Key  : Finite : Members
         None :   True :   [1:3]
-    NotI : Dim=0, Dimen=1, Size=Inf, Bounds=(1, 3)
+    NotI : Dimen=1, Size=Inf, Bounds=(1, 3)
         Key  : Finite : Members
         None :  False :  [1..3]
 
 1 SetOf Declarations
-    J : Dim=0, Dimen=1, Size=3, Bounds=(1, 3)
+    J : Dimen=1, Size=3, Bounds=(1, 3)
         Key  : Ordered : Members
         None :    True : [1, 2, 3]
 
@@ -3475,9 +3475,9 @@ class TestSet(unittest.TestCase):
         self.assertTrue(m.I[1].is_ordered())
         self.assertTrue(m.I[2].is_ordered())
         self.assertTrue(m.I[3].is_ordered())
-        self.assertIs(type(m.I[1]), _OrderedSetData)
-        self.assertIs(type(m.I[2]), _OrderedSetData)
-        self.assertIs(type(m.I[3]), _OrderedSetData)
+        self.assertIs(type(m.I[1]), _InsertionOrderSetData)
+        self.assertIs(type(m.I[2]), _InsertionOrderSetData)
+        self.assertIs(type(m.I[3]), _InsertionOrderSetData)
 
         # Explicit (constant) construction
         m = ConcreteModel()
@@ -3702,33 +3702,43 @@ class TestSet(unittest.TestCase):
 
 
     def test_pprint(self):
+        def myFcn(x):
+            return reversed(sorted(x))
+
         m = ConcreteModel()
-        m.I = Set([1,2,3], initialize=lambda m,i: xrange(i+1), domain=Integers)
-        m.J = Set()
-        m.K = Set(initialize=[(1,2), (3,4)])
+        m.I_index = RangeSet(3)
+        m.I = Set(m.I_index, initialize=lambda m,i: xrange(i+1),
+                  domain=Integers)
+        m.J = Set(ordered=False)
+        m.K = Set(initialize=[(1,2), (3,4)], ordered=Set.SortedOrder)
+        m.L = Set(initialize=[(1,2), (3,4)], ordered=myFcn)
 
         buf = StringIO()
         m.pprint()
         m.pprint(ostream=buf)
         self.assertEqual(buf.getvalue().strip(), """
-1 Set Declarations
-    I_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
-        [1, 2, 3]
+1 RangeSet Declarations
+    I_index : Dimen=1, Size=3, Bounds=(1, 3)
+        Key  : Finite : Members
+        None :   True :   [1:3]
 
-3 Set Declarations
-    I : Dim=1, Size=3, Ordered=True, Sorted=False
+4 Set Declarations
+    I : Size=3, Index=I_index, Ordered=Insertion
         Key : Dimen : Domain   : Size : Members
           1 :     1 : Integers :    2 : {0, 1}
           2 :     1 : Integers :    3 : {0, 1, 2}
           3 :     1 : Integers :    4 : {0, 1, 2, 3}
-    J : Dim=0, Size=1, Ordered=True, Sorted=False
+    J : Size=1, Index=None, Ordered=False
         Key  : Dimen : Domain : Size : Members
         None :    -- :    Any :    0 :      {}
-    K : Dim=0, Size=1, Ordered=True, Sorted=False
+    K : Size=1, Index=None, Ordered=Sorted
         Key  : Dimen : Domain : Size : Members
         None :     2 :    Any :    2 : {(1, 2), (3, 4)}
+    L : Size=1, Index=None, Ordered={user}
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    2 : {(3, 4), (1, 2)}
 
-4 Declarations: I_index I J K""".strip())
+5 Declarations: I_index I J K L""".strip())
 
     def test_pickle(self):
         m = ConcreteModel()
@@ -3812,7 +3822,7 @@ class TestSet(unittest.TestCase):
 Constructing OrderedSimpleSet 'I' on [Model] from data=None
 Constructing Set, name=I, from data=None
 Constructed component ''[Model].I'':
-I : Dim=0, Size=1, Ordered=True, Sorted=False
+I : Size=1, Index=None, Ordered=Insertion
     Key  : Dimen : Domain : Size : Members
     None :    -- :    Any :    0 :      {}
 """.strip()

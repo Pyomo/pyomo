@@ -2081,7 +2081,7 @@ class Set(IndexedComponent):
         else:
             newObj = IndexedSet.__new__(IndexedSet)
             if ordered is Set.InsertionOrder:
-                newObj._ComponentDataClass = _OrderedSetData
+                newObj._ComponentDataClass = _InsertionOrderSetData
             elif ordered is Set.SortedOrder:
                 newObj._ComponentDataClass = _SortedSetData
             else:
@@ -2094,7 +2094,8 @@ class Set(IndexedComponent):
         # The ordered flag was processed by __new__, but if this is a
         # sorted set, then we need to set the sorting function
         _ordered = kwds.pop('ordered',None)
-        if _ordered and _ordered is not Set.InsertionOrder:
+        if _ordered and _ordered is not Set.InsertionOrder \
+                and _ordered is not True:
             if inspect.isfunction(_ordered):
                 self._sort_fcn = _ordered
             else:
@@ -2243,14 +2244,27 @@ class Set(IndexedComponent):
         # print it once in the header.  Is this a good design?
         try:
             _ordered = self.is_ordered()
+            _refClass = type(self)
         except:
             _ordered = issubclass(self._ComponentDataClass, _OrderedSetMixin)
+            _refClass = self._ComponentDataClass
+        if _ordered:
+            # This is a bit of an anachronism.  Historically Pyomo
+            # reported "Insertion" for Set.InsertionOrder, "Sorted" for
+            # Set.SortedOrder, and "{user}" for everything else.
+            # However, we do not preserve that flag any more, so we
+            # will infer it from the class hierarchy
+            if issubclass(_refClass, _SortedSetMixin):
+                if self.parent_component()._sort_fcn is sorted_robust:
+                    _ordered =  "Sorted"
+                else:
+                    _ordered =  "{user}"
+            elif issubclass(_refClass, _InsertionOrderSetData):
+                _ordered = "Insertion"
         return (
-            [("Dim", self.dim()),
-             ("Size", len(self._data)),
-             ("Ordered", _ordered),
-             ("Sorted", isinstance(getattr(self,'_ComponentDataClass',self),
-                                   _SortedSetMixin))],
+            [("Size", len(self._data)),
+             ("Index", self._index if self.is_indexed() else None),
+             ("Ordered", _ordered),],
             iteritems(self._data),
             ("Dimen","Domain","Size","Members",),
             lambda k, v: [
@@ -2266,9 +2280,9 @@ class FiniteSimpleSet(_FiniteSetData, Set):
         _FiniteSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
-class OrderedSimpleSet(_OrderedSetData, Set):
+class OrderedSimpleSet(_InsertionOrderSetData, Set):
     def __init__(self, **kwds):
-        _OrderedSetData.__init__(self, component=self)
+        _InsertionOrderSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
 class SortedSimpleSet(_SortedSetData, Set):
@@ -2351,8 +2365,7 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
         Return data that will be printed for this component.
         """
         return (
-            [("Dim", 0),
-             ("Dimen", self.dimen),
+            [("Dimen", self.dimen),
              ("Size", len(self)),
              ("Bounds", self.bounds())],
             iteritems( {None: self} ),
@@ -2627,8 +2640,7 @@ class RangeSet(Component):
         Return data that will be printed for this component.
         """
         return (
-            [("Dim", 0),
-             ("Dimen", 1),
+            [("Dimen", self.dimen),
              ("Size", len(self) if self.is_finite() else 'Inf'),
              ("Bounds", self.bounds())],
             iteritems( {None: self} ),
