@@ -2149,12 +2149,6 @@ class Set(IndexedComponent):
                 self._init_values = tmp_init
         timer.report()
 
-    def is_finite(self):
-        return True
-
-    def is_ordered(self):
-        return self._ComponentDataClass is not _FiniteSetData
-
     #
     # This method must be defined on subclasses of
     # IndexedComponent that support implicit definition
@@ -2195,7 +2189,7 @@ class Set(IndexedComponent):
             _filter = None
         if self._init_values is not None:
             _values = self._init_values(self, index)
-            if self.is_ordered() \
+            if obj.is_ordered() \
                    and type(_values) in self._UnorderedInitializers:
                 logger.warning(
                     "Initializing an ordered Set with a fundamentally "
@@ -2236,10 +2230,18 @@ class Set(IndexedComponent):
         #             return '{' + str(ans[:MAX_MEMBERES])[1:-1] + ', ...}'
         #         else:
         #             return '{' + str(ans)[1:-1] + "}"
+
+        # TODO: In the current design, we force all _SetData witin an
+        # indexed Set to have the same is_ordered value, so we will only
+        # print it once in the header.  Is this a good design?
+        try:
+            _ordered = self.is_ordered()
+        except:
+            _ordered = issubclass(self._ComponentDataClass, _OrderedSetMixin)
         return (
             [("Dim", self.dim()),
              ("Size", len(self._data)),
-             ("Ordered", self.is_ordered()),
+             ("Ordered", _ordered),
              ("Sorted", isinstance(getattr(self,'_ComponentDataClass',self),
                                    _SortedSetMixin))],
             iteritems(self._data),

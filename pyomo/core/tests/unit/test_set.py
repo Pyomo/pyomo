@@ -3175,6 +3175,8 @@ class TestSet(unittest.TestCase):
 
     def test_insertion_deletion(self):
         def _verify(_s, _l):
+            self.assertTrue(_s.is_ordered())
+            self.assertTrue(_s.is_finite())
             for i,v in enumerate(_l):
                 self.assertEqual(_s[i+1], v)
             with self.assertRaisesRegexp(IndexError, "I index out of range"):
@@ -3302,6 +3304,9 @@ class TestSet(unittest.TestCase):
 
     def test_unordered_insertion_deletion(self):
         def _verify(_s, _l):
+            self.assertFalse(_s.is_ordered())
+            self.assertTrue(_s.is_finite())
+
             self.assertEqual(sorted(_s), _l)
             self.assertEqual(list(_s), list(reversed(list(reversed(_s)))))
             for v in _l:
