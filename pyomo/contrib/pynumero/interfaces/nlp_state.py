@@ -21,8 +21,7 @@ from pyomo.contrib.pynumero.linalg.intrinsics import norm as pynumero_norm
 # the state can potentially have the logger
 # decide if the state has also dx, ds, ...
 
-# ToDo: add base class?
-class NLPState(object):
+class BasicNLPState(object):
 
     def __init__(self, nlp, **kwargs):
 
@@ -52,20 +51,6 @@ class NLPState(object):
         # vector of inequality constraint multipliers
         self._yd = nlp.create_vector_y(subset='d')
 
-        # vector for the multipliers of lower bounds on x
-        self._zl = nlp.create_vector_x(subset='l')
-        self._zl.fill(1.0)
-        # vector for the multipliers of upper bounds on x
-        self._zu = nlp.create_vector_x(subset='u')
-        self._zu.fill(1.0)
-
-        # vector for the multipliers of lower bounds on s
-        self._vl = nlp.create_vector_s(subset='l')
-        self._vl.fill(1.0)
-        # vector for the multipliers of upper bounds on s
-        self._vu = nlp.create_vector_s(subset='u')
-        self._vu.fill(1.0)
-
         # step vector of primal variables
         self._dx = nlp.create_vector_x()
         self._dx.fill(0.0)
@@ -78,21 +63,6 @@ class NLPState(object):
         # step vector of inequality constraint multiplier variables
         self._dyd = nlp.create_vector_y('d')
         self._dyd.fill(0.0)
-
-        # step vector of multipliers of lower bounds on x
-        self._dzl = nlp.create_vector_x(subset='l')
-        self._dzl.fill(0.0)
-        # step vector of multipliers of upper bounds on x
-        self._dzu = nlp.create_vector_x(subset='u')
-        self._dzu.fill(0.0)
-
-        # step vector of multipliers of lower bounds on s
-        self._dvl = nlp.create_vector_s(subset='l')
-        self._dvl.fill(0.0)
-
-        # step vector of multipliers of upper bounds on s
-        self._dvu = nlp.create_vector_s(subset='u')
-        self._dvu.fill(0.0)
 
         # vector of lower bounds on x
         self.condensed_xl = nlp.xl(condensed=True)
@@ -171,22 +141,6 @@ class NLPState(object):
         return self._yd
 
     @property
-    def zl(self):
-        return self._zl
-
-    @property
-    def zu(self):
-        return self._zu
-
-    @property
-    def vl(self):
-        return self._vl
-
-    @property
-    def vu(self):
-        return self._vu
-
-    @property
     def dx(self):
         return self._dx
 
@@ -203,26 +157,16 @@ class NLPState(object):
         return self._dyd
 
     @property
-    def dzl(self):
-        return self._dzl
-
-    @property
-    def dzu(self):
-        return self._dzu
-
-    @property
-    def dvl(self):
-        return self._dvl
-
-    @property
-    def dvu(self):
-        return self._dvu
-
-    @property
     def nlp(self):
         return self._nlp
 
-    def update_state(self, x=None, s=None, yc=None, yd=None, zl=None, zu=None, vl=None, vu=None):
+    def update_state(self, **kwargs):
+
+        x = kwargs.pop('x', None)
+        s = kwargs.pop('s', None)
+        yc = kwargs.pop('yc', None)
+        yd = kwargs.pop('yd', None)
+
         if x is not None:
             assert isinstance(x, np.ndarray)
             assert x.size == self.nlp.nx
@@ -253,30 +197,6 @@ class NLPState(object):
             self._dyd = yd-self._yd
             self._yd = yd
             self._need_recache_nlp_functions_y = True
-
-        if zl is not None:
-            assert isinstance(zl, np.ndarray)
-            assert zl.size == self._zl.size
-            self._dzl = zl-self._zl
-            self._zl = zl
-
-        if zu is not None:
-            assert isinstance(zu, np.ndarray)
-            assert zu.size == self._zu.size
-            self._dzu = zu-self._zu
-            self._zu = zu
-
-        if vl is not None:
-            assert isinstance(vl, np.ndarray)
-            assert vl.size == self._vl.size
-            self._dvl = vl-self._vl
-            self._vl = vl
-
-        if vu is not None:
-            assert isinstance(vu, np.ndarray)
-            assert vu.size == self._vu.size
-            self._dvu = vu-self._vu
-            self._vu = vu
 
         self.cache()
 
@@ -377,63 +297,6 @@ class NLPState(object):
     def slack_su(self):
         return self._slack_su
 
-    def grad_lag_x(self):
-        grad_x_lag = self.grad_objective() + \
-                     self.jacobian_c().T * self.yc + \
-                     self.jacobian_d().T * self.yd + \
-                     self.Pxu * self.zu - \
-                     self.Pxl * self.zl
-
-        return grad_x_lag
-
-    def grad_lag_s(self):
-        grad_s_lag = self.Pdu * self.vu - \
-                     self.Pdl * self.vl - \
-                     self.yd
-        return grad_s_lag
-
-    def grad_lag_bar_x(self):
-        grad_x_lag_bar = self.grad_objective() + \
-                         self.jacobian_c().T * self.yc + \
-                         self.jacobian_d().T * self.yd
-        return grad_x_lag_bar
-
-    def grad_lag_bar_s(self):
-        grad_s_lag_bar = self.yd
-        return grad_s_lag_bar
-
-    def Dx_matrix(self):
-
-        d_vec = self.Pxl * np.divide(self.zl, self.slack_xl()) + \
-                self.Pxu * np.divide(self.zu, self.slack_xu())
-
-        if type(d_vec) == np.ndarray:
-            return diagonal_matrix(d_vec)
-
-        if isinstance(d_vec, BlockVector):
-            dx_m = BlockSymMatrix(d_vec.nblocks)
-            for j, v in enumerate(d_vec):
-                dx_m[j, j] = diagonal_matrix(v)
-            return dx_m
-
-        msg = '{} not supported yet'.format(type(d_vec))
-        raise NotImplementedError(msg)
-
-    def Ds_matrix(self):
-
-        d_vec = self.Pdl * np.divide(self.vl, self.slack_sl()) + \
-                self.Pdu * np.divide(self.vu, self.slack_su())
-
-        if type(d_vec) == np.ndarray:
-            return diagonal_matrix(d_vec)
-        if isinstance(d_vec, BlockVector):
-            dx_m = BlockSymMatrix(d_vec.nblocks)
-            for j, v in enumerate(d_vec):
-                dx_m[j, j] = diagonal_matrix(v)
-            return dx_m
-        msg = '{} not supported yet'.format(type(d_vec))
-        raise NotImplementedError(msg)
-
     def max_alpha_primal(self, delta_x, delta_s, tau):
 
         alpha_l_x = 1.0
@@ -495,6 +358,214 @@ class NLPState(object):
 
         return min([alpha_l_x, alpha_u_x, alpha_l_s, alpha_u_s])
 
+    def primal_infeasibility(self):
+        norm_c = 0.0
+        norm_d = 0.0
+        if self.yc.size > 0:
+            norm_c = pynumero_norm(self.evaluate_c(), ord=np.inf)
+        if self.yd.size > 0:
+            d_val = self.evaluate_d()
+            res_dl = self.condensed_dl - self.Pdl.T.dot(d_val)
+            res_du = self.Pdu.T.dot(d_val) - self.condensed_du
+            if res_dl.size > 0:
+                res_dl = res_dl.clip(min=0.0)
+                norm_d += pynumero_norm(res_dl, ord=np.inf)
+            if res_du.size > 0:
+                res_du = res_du.clip(min=0.0)
+                norm_d += pynumero_norm(res_du, ord=np.inf)
+        return max(norm_c, norm_d)
+
+    def norm_primal_step(self):
+        normx = pynumero_norm(self.dx, ord=np.inf)
+        norms = 0.0
+        if self.ds.size > 0:
+            norms = pynumero_norm(self.ds, ord=np.inf)
+        return max(normx, norms)
+
+    @staticmethod
+    def push_variables_within_bounds(vars_l, vars, vars_u, bound_push):
+
+        # push primal variables within lower bounds
+        xl = vars_l
+
+        max_one_xl = pn.where(np.absolute(xl) <= 1.0, 1.0, xl)
+        max_one_xl = pn.where(np.isinf(max_one_xl), 0.0, max_one_xl)
+
+        lower_pushed_x = pn.where(vars <= xl,
+                                  xl + bound_push * max_one_xl,
+                                  vars)
+        vars = lower_pushed_x
+
+        # push primal variables within upper bound
+        xu = vars_u
+        max_one_xu = pn.where(np.absolute(xu) <= 1.0, 1.0, xu)
+        max_one_xu = pn.where(np.isinf(max_one_xu), 0.0, max_one_xu)
+        upper_pushed_x = pn.where(vars >= xu,
+                                  xu - bound_push * max_one_xu,
+                                  vars)
+        vars = upper_pushed_x
+        return vars
+
+
+class NLPState(BasicNLPState):
+
+    def __init__(self, nlp, **kwargs):
+
+        super(NLPState, self).__init__(nlp, **kwargs)
+
+        # vector for the multipliers of lower bounds on x
+        self._zl = nlp.create_vector_x(subset='l')
+        self._zl.fill(1.0)
+        # vector for the multipliers of upper bounds on x
+        self._zu = nlp.create_vector_x(subset='u')
+        self._zu.fill(1.0)
+
+        # vector for the multipliers of lower bounds on s
+        self._vl = nlp.create_vector_s(subset='l')
+        self._vl.fill(1.0)
+        # vector for the multipliers of upper bounds on s
+        self._vu = nlp.create_vector_s(subset='u')
+        self._vu.fill(1.0)
+
+        # step vector of multipliers of lower bounds on x
+        self._dzl = nlp.create_vector_x(subset='l')
+        self._dzl.fill(0.0)
+        # step vector of multipliers of upper bounds on x
+        self._dzu = nlp.create_vector_x(subset='u')
+        self._dzu.fill(0.0)
+
+        # step vector of multipliers of lower bounds on s
+        self._dvl = nlp.create_vector_s(subset='l')
+        self._dvl.fill(0.0)
+        # step vector of multipliers of upper bounds on s
+        self._dvu = nlp.create_vector_s(subset='u')
+        self._dvu.fill(0.0)
+
+        self.cache()
+
+    @property
+    def zl(self):
+        return self._zl
+
+    @property
+    def zu(self):
+        return self._zu
+
+    @property
+    def vl(self):
+        return self._vl
+
+    @property
+    def vu(self):
+        return self._vu
+
+    @property
+    def dzl(self):
+        return self._dzl
+
+    @property
+    def dzu(self):
+        return self._dzu
+
+    @property
+    def dvl(self):
+        return self._dvl
+
+    @property
+    def dvu(self):
+        return self._dvu
+
+    def update_state(self, **kwargs):
+
+        # call parent class
+        super(NLPState, self).update_state(**kwargs)
+
+        zl = kwargs.pop('zl', None)
+        zu = kwargs.pop('zu', None)
+        vl = kwargs.pop('vl', None)
+        vu = kwargs.pop('vu', None)
+
+        if zl is not None:
+            assert isinstance(zl, np.ndarray)
+            assert zl.size == self._zl.size
+            self._dzl = zl-self._zl
+            self._zl = zl
+
+        if zu is not None:
+            assert isinstance(zu, np.ndarray)
+            assert zu.size == self._zu.size
+            self._dzu = zu-self._zu
+            self._zu = zu
+
+        if vl is not None:
+            assert isinstance(vl, np.ndarray)
+            assert vl.size == self._vl.size
+            self._dvl = vl-self._vl
+            self._vl = vl
+
+        if vu is not None:
+            assert isinstance(vu, np.ndarray)
+            assert vu.size == self._vu.size
+            self._dvu = vu-self._vu
+            self._vu = vu
+
+    def grad_lag_x(self):
+        grad_x_lag = self.grad_objective() + \
+                     self.jacobian_c().T * self.yc + \
+                     self.jacobian_d().T * self.yd + \
+                     self.Pxu * self.zu - \
+                     self.Pxl * self.zl
+
+        return grad_x_lag
+
+    def grad_lag_s(self):
+        grad_s_lag = self.Pdu * self.vu - \
+                     self.Pdl * self.vl - \
+                     self.yd
+        return grad_s_lag
+
+    def grad_lag_bar_x(self):
+        grad_x_lag_bar = self.grad_objective() + \
+                         self.jacobian_c().T * self.yc + \
+                         self.jacobian_d().T * self.yd
+        return grad_x_lag_bar
+
+    def grad_lag_bar_s(self):
+        grad_s_lag_bar = self.yd
+        return grad_s_lag_bar
+
+    def Dx_matrix(self):
+
+        d_vec = self.Pxl * np.divide(self.zl, self.slack_xl()) + \
+                self.Pxu * np.divide(self.zu, self.slack_xu())
+
+        if type(d_vec) == np.ndarray:
+            return diagonal_matrix(d_vec)
+
+        if isinstance(d_vec, BlockVector):
+            dx_m = BlockSymMatrix(d_vec.nblocks)
+            for j, v in enumerate(d_vec):
+                dx_m[j, j] = diagonal_matrix(v)
+            return dx_m
+
+        msg = '{} not supported yet'.format(type(d_vec))
+        raise NotImplementedError(msg)
+
+    def Ds_matrix(self):
+
+        d_vec = self.Pdl * np.divide(self.vl, self.slack_sl()) + \
+                self.Pdu * np.divide(self.vu, self.slack_su())
+
+        if type(d_vec) == np.ndarray:
+            return diagonal_matrix(d_vec)
+        if isinstance(d_vec, BlockVector):
+            dx_m = BlockSymMatrix(d_vec.nblocks)
+            for j, v in enumerate(d_vec):
+                dx_m[j, j] = diagonal_matrix(v)
+            return dx_m
+        msg = '{} not supported yet'.format(type(d_vec))
+        raise NotImplementedError(msg)
+
     def max_alpha_dual(self, delta_zl, delta_zu, delta_vl, delta_vu, tau):
 
         alpha_l_z = 1.0
@@ -552,36 +623,12 @@ class NLPState(object):
 
         return min([alpha_l_z, alpha_u_z, alpha_l_v, alpha_u_v])
 
-    def primal_infeasibility(self):
-        norm_c = 0.0
-        norm_d = 0.0
-        if self.yc.size > 0:
-            norm_c = pynumero_norm(self.evaluate_c(), ord=np.inf)
-        if self.yd.size > 0:
-            d_val = self.evaluate_d()
-            res_dl = self.condensed_dl - self.Pdl.T.dot(d_val)
-            res_du = self.Pdu.T.dot(d_val) - self.condensed_du
-            if res_dl.size > 0:
-                res_dl = res_dl.clip(min=0.0)
-                norm_d += pynumero_norm(res_dl, ord=np.inf)
-            if res_du.size > 0:
-                res_du = res_du.clip(min=0.0)
-                norm_d += pynumero_norm(res_du, ord=np.inf)
-        return max(norm_c, norm_d)
-
     def dual_infeasibility(self):
         norm_x = pynumero_norm(self.grad_lag_x(), ord=np.inf)
         norm_s = 0.0
         if self.s.size > 0:
             norm_s = pynumero_norm(self.grad_lag_s(), ord=np.inf)
         return max(norm_x, norm_s)
-
-    def norm_primal_step(self):
-        normx = pynumero_norm(self.dx, ord=np.inf)
-        norms = 0.0
-        if self.ds.size > 0:
-            norms = pynumero_norm(self.ds, ord=np.inf)
-        return max(normx, norms)
 
     def complementarity_infeasibility(self):
 
@@ -627,27 +674,3 @@ class NLPState(object):
             sd = max(smax, sd) / smax
 
         return sc, sd
-
-    @staticmethod
-    def push_variables_within_bounds(vars_l, vars, vars_u, bound_push):
-
-        # push primal variables within lower bounds
-        xl = vars_l
-
-        max_one_xl = pn.where(np.absolute(xl) <= 1.0, 1.0, xl)
-        max_one_xl = pn.where(np.isinf(max_one_xl), 0.0, max_one_xl)
-
-        lower_pushed_x = pn.where(vars <= xl,
-                                  xl + bound_push * max_one_xl,
-                                  vars)
-        vars = lower_pushed_x
-
-        # push primal variables within upper bound
-        xu = vars_u
-        max_one_xu = pn.where(np.absolute(xu) <= 1.0, 1.0, xu)
-        max_one_xu = pn.where(np.isinf(max_one_xu), 0.0, max_one_xu)
-        upper_pushed_x = pn.where(vars >= xu,
-                                  xu - bound_push * max_one_xu,
-                                  vars)
-        vars = upper_pushed_x
-        return vars
