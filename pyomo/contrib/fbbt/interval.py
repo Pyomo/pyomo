@@ -19,7 +19,13 @@ def sub(xl, xu, yl, yu):
 
 
 def mul(xl, xu, yl, yu):
-    return min(xl*yl, xl*yu, xu*yl, xu*yu), max(xl*yl, xl*yu, xu*yl, xu*yu)
+    lb = min(xl*yl, xl*yu, xu*yl, xu*yu)
+    ub = max(xl*yl, xl*yu, xu*yl, xu*yu)
+    if math.isnan(lb):
+        lb = -math.inf
+    if math.isnan(ub):
+        ub = math.inf
+    return lb, ub
 
 
 def inv(xl, xu, feasibility_tol):
