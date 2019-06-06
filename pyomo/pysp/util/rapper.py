@@ -77,9 +77,9 @@ class StochSolver:
       fsfile (str): is a path to the file that contains the scenario 
                     callback for concrete or the reference model for abstract.
       fsfct (str, or fct, or None): 
-         str   callback function name in the file
-         fct   callback function
-         None  it is a AbstractModel
+         |  str:   callback function name in the file
+         |  fct:   callback function (fsfile is ignored)
+         |  None:  it is a AbstractModel
       tree_model (concrete model, or networkx tree, or path): 
         gives the tree as a concrete model (which could be a fct)
         or a valid networkx scenario tree
