@@ -16,18 +16,7 @@ import pyutilib.th as unittest
 
 from pyomo.environ import *
 from pyomo.contrib.viewer.model_browser import ComponentDataItem
-
-try:
-    no_UIData = False
-    from pyomo.contrib.viewer.ui import UIData
-except:
-    # UIData is a qt object since it emits signals so if no pyqt can't
-    # run tests that need it.
-    no_UIData = True
-    class UIData(object):
-        model = None
-        def __init__(*args, **kwargs):
-            pass
+from pyomo.contrib.viewer.ui_data import UIData
 
 class TestDataModelItem(unittest.TestCase):
     def setUp(self):

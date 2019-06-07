@@ -22,7 +22,6 @@ test_file = os.path.join(os.path.dirname(__file__), "pytest_qt.py")
 try:
     skip_qt_tests=False
     import pytest
-    #type(qtbot)
     from pyomo.contrib.viewer.qt import qt_available
     assert(qt_available)
 except:
