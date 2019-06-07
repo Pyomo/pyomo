@@ -66,49 +66,42 @@ class TestDataModelItem(unittest.TestCase):
         m.p1 = 0
         self.m = m.clone()
 
-    @unittest.skipIf(no_UIData, "PyQt needed to import UIData")
     def test_expr_calc(self):
         cdi = ComponentDataItem(
             parent=None, ui_data=UIData(model=self.m), o=self.m.b1.e1)
         cdi.ui_data.calculate_expressions()
         self.assertAlmostEqual(cdi.get("value"), 3)
 
-    @unittest.skipIf(no_UIData, "PyQt needed to import UIData")
     def test_expr_calc_div0(self):
         cdi = ComponentDataItem(
             parent=None, ui_data=UIData(model=self.m), o=self.m.b1.e2)
         cdi.ui_data.calculate_expressions()
         self.assertEqual(cdi.get("value"), "Divide_by_0")
 
-    @unittest.skipIf(no_UIData, "PyQt needed to import UIData")
     def test_expr_calc_log0(self):
         cdi = ComponentDataItem(
             parent=None, ui_data=UIData(model=self.m), o=self.m.b1.e4)
         cdi.ui_data.calculate_expressions()
         self.assertIsNone(cdi.get("value"))
 
-    @unittest.skipIf(no_UIData, "PyQt needed to import UIData")
     def test_expr_calc_log_neg(self):
         cdi = ComponentDataItem(
             parent=None, ui_data=UIData(model=self.m), o=self.m.b1.e5)
         cdi.ui_data.calculate_expressions()
         self.assertIsNone(cdi.get("value"))
 
-    @unittest.skipIf(no_UIData, "PyQt needed to import UIData")
     def test_expr_calc_value_None(self):
         cdi = ComponentDataItem(
             parent=None, ui_data=UIData(model=self.m), o=self.m.b1.e3)
         cdi.ui_data.calculate_expressions()
         self.assertIsNone(cdi.get("value"))
 
-    @unittest.skipIf(no_UIData, "PyQt needed to import UIData")
     def test_cons_calc(self):
         cdi = ComponentDataItem(
             parent=None, ui_data=UIData(model=self.m), o=self.m.c3)
         cdi.ui_data.calculate_constraints()
         self.assertAlmostEqual(cdi.get("residual"), 2)
 
-    @unittest.skipIf(no_UIData, "PyQt needed to import UIData")
     def test_cons_calc_div0(self):
         cdi = ComponentDataItem(
             parent=None, ui_data=UIData(model=self.m), o=self.m.c4)
@@ -121,21 +114,18 @@ class TestDataModelItem(unittest.TestCase):
         cdi.ui_data.calculate_constraints()
         self.assertIsNone(cdi.get("value"))
 
-    @unittest.skipIf(no_UIData, "PyQt needed to import UIData")
     def test_cons_calc_log_neg(self):
         cdi = ComponentDataItem(
             parent=None, ui_data=UIData(model=self.m), o=self.m.c6)
         cdi.ui_data.calculate_constraints()
         self.assertIsNone(cdi.get("value"))
 
-    @unittest.skipIf(no_UIData, "PyQt needed to import UIData")
     def test_cons_calc_value_None(self):
         cdi = ComponentDataItem(
             parent=None, ui_data=UIData(model=self.m), o=self.m.c7)
         cdi.ui_data.calculate_constraints()
         self.assertIsNone(cdi.get("value"))
 
-    @unittest.skipIf(no_UIData, "PyQt needed to import UIData")
     def test_cons_calc_upper_div0(self):
         cdi = ComponentDataItem(
             parent=None, ui_data=UIData(model=self.m), o=self.m.c8)

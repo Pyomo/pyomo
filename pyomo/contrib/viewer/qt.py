@@ -56,7 +56,7 @@ except:
         try:
             from PyQt4.QtGui import (QAbstractItemView, QFileDialog, QMainWindow,
                                      QMessageBox, QMdiArea, QApplication,
-                                     QTableWidgetItem)
+                                     QTableWidgetItem, QColor)
             from PyQt4.QtCore import QAbstractItemModel, QAbstractTableModel
             import PyQt4.QtCore as QtCore
             from PyQt4 import uic
@@ -70,6 +70,7 @@ else:
         from PyQt5.QtWidgets import (QAbstractItemView, QFileDialog, QMainWindow,
                                      QMessageBox, QMdiArea, QApplication,
                                      QTableWidgetItem)
+        from PyQt5.QtGui import QColor
         from PyQt5.QtCore import QAbstractItemModel, QAbstractTableModel
         import PyQt5.QtCore as QtCore
         from PyQt5 import uic

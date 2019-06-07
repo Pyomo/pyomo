@@ -21,7 +21,7 @@ import os
 _log = logging.getLogger(__name__)
 
 import pyomo.environ as pyo
-from pyomo.contrib.viewer.pyqt_4or5 import *
+from pyomo.contrib.viewer.qt import *
 
 mypath = os.path.dirname(__file__)
 try:

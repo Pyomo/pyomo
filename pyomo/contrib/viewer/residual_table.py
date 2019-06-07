@@ -20,7 +20,7 @@ import logging
 
 _log = logging.getLogger(__name__)
 
-from pyomo.contrib.viewer.pyqt_4or5 import *
+from pyomo.contrib.viewer.qt import *
 from pyomo.contrib.viewer.report import value_no_exception, get_residual
 import pyomo.environ as pyo
 

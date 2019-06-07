@@ -71,6 +71,28 @@ def active_equalities(blk):
         except ZeroDivisionError:
             pass
 
+def active_constraint_set(blk):
+    """
+    Return a set of active constraints in a model.
+
+    Args:
+        blk: a Pyomo block in which to look for constraints.
+    Returns:
+        (ComponentSet): Active equality constraints
+    """
+    return ComponentSet(blk.component_data_objects(Constraint, active=True))
+
+def active_equality_set(blk):
+    """
+    Return a set of active equalities.
+
+    Args:
+        blk: a Pyomo block in which to look for variables.
+    Returns:
+        (ComponentSet): Active constraints
+    """
+    return ComponentSet(active_equalities(blk))
+
 def count_free_variables(blk):
     """
     Count free variables that are in active equality constraints.  Ignore
@@ -84,23 +106,22 @@ def count_equality_constraints(blk):
     """
     return len(active_equality_set(blk))
 
+def count_constraints(blk):
+    """
+    Count active constraints.
+    """
+    return len(active_constraint_set(blk))
+
 def degrees_of_freedom(blk):
     """
     Return the degrees of freedom.
-    """
-    return count_free_variables(blk) - count_equality_constraints(blk)
-
-def active_equality_set(blk):
-    """
-    Generator returning active equality constraints in a model.
 
     Args:
-        blk: a Pyomo block in which to look for variables.
+        blk (Block or _BlockData): Block to count degrees of freedom in
+    Returns:
+        (int): Number of degrees of freedom
     """
-    ac = ComponentSet()
-    for c in active_equalities(blk):
-        ac.add(c)
-    return ac
+    return count_free_variables(blk) - count_equality_constraints(blk)
 
 def free_variables_in_active_equalities_set(blk):
     """
@@ -109,5 +130,6 @@ def free_variables_in_active_equalities_set(blk):
     vin = ComponentSet()
     for c in active_equalities(blk):
         for v in identify_variables(c.body):
-            if not v.fixed: vin.add(v)
+            if not v.fixed:
+                vin.add(v)
     return vin

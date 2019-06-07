@@ -30,14 +30,14 @@ except ImportError:
         raise AttributeError("IPython not available")
 import pyomo.contrib.viewer.report as rpt
 import pyomo.environ as pe
-from pyomo.kernel import ComponentMap
 
 _log = logging.getLogger(__name__)
 
-from pyomo.contrib.viewer.pyqt_4or5 import *
+from pyomo.contrib.viewer.qt import *
 from pyomo.contrib.viewer.model_browser import ModelBrowser
 from pyomo.contrib.viewer.residual_table import ResidualTable
 from pyomo.contrib.viewer.model_select import ModelSelect
+from pyomo.contrib.viewer.ui_data import UIData
 
 _mypath = os.path.dirname(__file__)
 try:
@@ -81,74 +81,6 @@ def get_mainwindow_nb(model=None, show=True, testing=False):
     return get_mainwindow(model=model, show=show, testing=testing)
 
 
-class UIData(QtCore.QObject):
-    updated = QtCore.pyqtSignal()
-    exec_refresh = QtCore.pyqtSignal()
-    def __init__(self, model=None):
-
-        """
-        This class holds the basic UI setup
-
-        Args:
-            model: The Pyomo model to view
-        """
-        super(UIData, self).__init__()
-        self._model = None
-        self._begin_update = False
-        self.value_cache = ComponentMap()
-        self.begin_update()
-        self.model = model
-        self.end_update()
-
-    def begin_update(self):
-        """
-        Lets the model setup be changed without emitting the updated signal
-        until the end_update function is called.
-        """
-        self._begin_update = True
-
-    def end_update(self, emit=True):
-        """
-        Start automatically emitting update signal again when properties are
-        changed and emit update for changes made between begin_update and
-        end_update
-        """
-        self._begin_update = False
-        if emit: self.emit_update()
-
-    def emit_update(self):
-        if not self._begin_update: self.updated.emit()
-
-    def emit_exec_refresh(self):
-        self.exec_refresh.emit()
-
-    @property
-    def model(self):
-        return self._model
-
-    @model.setter
-    def model(self, value):
-        self._model = value
-        self.value_cache = ComponentMap()
-        self.emit_update()
-
-    def calculate_constraints(self):
-        for o in self.model.component_data_objects(pe.Constraint, active=True):
-            try:
-                self.value_cache[o] = pe.value(o.body, exception=False)
-            except ZeroDivisionError:
-                self.value_cache[o] = "Divide_by_0"
-        self.emit_exec_refresh()
-
-    def calculate_expressions(self):
-        for o in self.model.component_data_objects(pe.Expression, active=True):
-            try:
-                self.value_cache[o] = pe.value(o, exception=False)
-            except ZeroDivisionError:
-                self.value_cache[o] = "Divide_by_0"
-        self.emit_exec_refresh()
-
-
 class MainWindow(_MainWindow, _MainWindowUI):
     def __init__(self, *args, **kwargs):
         model = self.model = kwargs.pop("model", None)
@@ -167,16 +99,14 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self.parameters = None
         self.residuals = None
 
-        self.variables_restart()
-        self.expressions_restart()
-        self.constraints_restart()
-        self.parameters_restart()
+        self.update_model()
 
         self.ui_data.updated.connect(self.update_model)
         # Set menu actions (remember the menu items are defined in the ui file)
         # you can edit the menus in qt-designer
         self.action_Exit.triggered.connect(self.exit_action)
         self.actionModel_Selector.triggered.connect(self.show_model_select)
+        self.actionSet_Working_Directory.triggered.connect(self.wdir_select)
         self.ui_data.exec_refresh.connect(self.refresh_on_execute)
         self.actionRestart_Variable_View.triggered.connect(
             self.variables_restart)
@@ -199,6 +129,30 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self._dialog = None #dialog displayed so can access it easier for tests
         self._dialog_test_button = None # button clicked on dialog in test mode
         self.mdiArea.setViewMode(QMdiArea.TabbedView)
+
+    def wdir_select(self, checked=False, wdir=None):
+        """
+        Change the current working directory.
+
+        Args:
+            wdir (str): if None show a dialog to select, otherwise try to
+                change to this path
+            checked (bool): the triggered signal sends this, but it is not used
+        Returns:
+            (str): new working directory path
+        """
+        if wdir is None:
+            # Show a dialog box for user to selet working directory
+            wd = QFileDialog(self, 'Working Directory', os.getcwd())
+            wd.setFileMode(QFileDialog.DirectoryOnly)
+        if wd.exec_() == QFileDialog.Accepted:
+            wdir = wd.selectedFiles()[0]
+        else:
+            wdir = None
+        # Change directoy if one was selected
+        if wdir is not None:
+            os.chdir(wdir)
+        return wdir
 
     def toggle_tabs(self):
         # Could use not here, but this is a little more future proof
@@ -264,6 +218,9 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self.expressions_restart()
         self.constraints_restart()
         self.parameters_restart()
+        self.mdiArea.setActiveSubWindow(self.variables.parent())
+        self.toggle_tabs()
+        self.toggle_tabs()
 
     def model_information(self):
         """
@@ -286,19 +243,22 @@ class MainWindow(_MainWindow, _MainWindowUI):
         """
         active_eq = rpt.count_equality_constraints(self.ui_data.model)
         free_vars = rpt.count_free_variables(self.ui_data.model)
+        cons = rpt.count_constraints(self.ui_data.model)
         dof = free_vars - active_eq
         if dof == 1:
             doftext = "Degree"
         else:
             doftext = "Degrees"
         msg = QMessageBox()
+        msg.setStyleSheet("QLabel{min-width: 600px;}")
         self._dialog = msg
         #msg.setIcon(QMessageBox.Information)
         msg.setWindowTitle("Model Information")
         msg.setText(
-"""{}  -- Active equalities
-{}  -- Free variables in active equalities
-{}  -- {} of freedom""".format(active_eq, free_vars, dof, doftext))
+"""{} -- Active Constraints
+{} -- Active Equalities
+{} -- Free Variables
+{} -- {} of Freedom""".format(cons, active_eq, free_vars, dof, doftext))
         msg.setStandardButtons(QMessageBox.Ok)
         msg.setModal(False)
         msg.show()

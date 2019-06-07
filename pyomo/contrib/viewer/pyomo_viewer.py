@@ -18,35 +18,37 @@ import sys
 import time
 
 from pyomo.scripting.pyomo_parser import add_subparser
-from pyomo.contrib.viewer.pyqt_4or5 import *
+from pyomo.contrib.viewer.qt import *
 
 qtconsole_available = False
 if qt_available:
     try:
         from qtconsole.rich_jupyter_widget import RichJupyterWidget
+        import qtconsole.styles as styles
         from qtconsole.manager import QtKernelManager
         qtconsole_available = True
     except ImportError:
         pass
 
 if qtconsole_available:
+    def _start_kernel():
+        km = QtKernelManager(autorestart=False)
+        km.start_kernel()
+        kc = km.client()
+        kc.start_channels()
+        kc.execute("%gui qt", silent=True)
+        time.sleep(1.5)
+        return km, kc
+
     class MainWindow(QMainWindow):
         """A window that contains a single Qt console."""
-        def __init__(self):
+        def __init__(self, kernel_manager, kernel_client):
             super().__init__()
-            km = QtKernelManager(autorestart=False)
-            km.start_kernel()
-            self.execution_state = "starting"
-            kc = km.client()
-            kc.start_channels()
-            kc.iopub_channel.message_received.connect(self.update_kernel_status)
             self.jupyter_widget = RichJupyterWidget()
-            self.jupyter_widget.kernel_manager = km
-            self.jupyter_widget.kernel_client = kc
+            self.jupyter_widget.kernel_manager = kernel_manager
+            self.jupyter_widget.kernel_client = kernel_client
+            kernel_client.hb_channel.kernel_died.connect(self.close)
             self.setCentralWidget(self.jupyter_widget)
-
-        def update_kernel_status(self, msg):
-            pass
 
         def shutdown_kernel(self):
             print('Shutting down kernel...')
@@ -57,13 +59,16 @@ def main(*args):
     if not qtconsole_available:
         print("qtconsole not available")
         return
+    km, kc = _start_kernel()
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = MainWindow(kernel_manager=km, kernel_client=kc)
     window.show()
-
     kc = window.jupyter_widget.kernel_client
-    kc.execute("%gui qt", silent=True)
-    time.sleep(4.0) # can't find any other good to ensure qt finished startup
+    time.sleep(2.5) # can't find any other good to ensure qt finished startup
+                    # just making sure the execution finishes does not seems to
+                    # be enough.  4 seconds may be too long, but being careful
+                    # this is probably related to
+                    # https://github.com/ipython/ipython/issues/5629 in some way
     kc.execute("""
 from pyomo.contrib.viewer.ui import get_mainwindow
 import pyomo.environ as pyo

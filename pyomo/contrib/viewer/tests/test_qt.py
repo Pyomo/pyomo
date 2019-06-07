@@ -23,7 +23,7 @@ try:
     skip_qt_tests=False
     import pytest
     #type(qtbot)
-    from pyomo.contrib.viewer.pyqt_4or5 import qt_available
+    from pyomo.contrib.viewer.qt import qt_available
     assert(qt_available)
 except:
     skip_qt_tests=True

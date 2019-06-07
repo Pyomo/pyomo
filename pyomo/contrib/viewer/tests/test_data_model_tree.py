@@ -17,7 +17,7 @@ from pyomo.environ import *
 from pyomo.contrib.viewer.model_browser import ComponentDataModel
 try:
     no_pyqt = False
-    from pyomo.contrib.viewer.ui import UIData
+    from pyomo.contrib.viewer.ui_data import UIData
     import pyomo.contrib.viewer.ui as ui
 except:
     no_pyqt = True

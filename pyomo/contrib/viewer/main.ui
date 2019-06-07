@@ -33,6 +33,7 @@
     <property name="title">
      <string>&amp;File</string>
     </property>
+    <addaction name="actionSet_Working_Directory"/>
     <addaction name="actionModel_Selector"/>
     <addaction name="separator"/>
     <addaction name="action_Exit"/>
@@ -280,6 +281,11 @@
   <action name="actionRestart_Residual_Table">
    <property name="text">
     <string>Restart Residual Table</string>
+   </property>
+  </action>
+  <action name="actionSet_Working_Directory">
+   <property name="text">
+    <string>Set &amp;Working Directory</string>
    </property>
   </action>
  </widget>

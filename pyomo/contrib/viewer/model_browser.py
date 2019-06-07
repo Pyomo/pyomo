@@ -22,7 +22,7 @@ import re
 
 _log = logging.getLogger(__name__)
 
-from pyomo.contrib.viewer.pyqt_4or5 import *
+from pyomo.contrib.viewer.qt import *
 from pyomo.contrib.viewer.report import value_no_exception, get_residual
 
 from pyomo.core.base.block import _BlockData
@@ -438,6 +438,11 @@ class ComponentDataModel(QAbstractItemModel):
                     return o.get("expr")
                 else:
                     return o.get("doc")
+        elif role==QtCore.Qt.ForegroundRole:
+            if isinstance(index.internalPointer().data, (Block, _BlockData)):
+                return QtCore.QVariant(QColor(QtCore.Qt.black))
+            else:
+                return QtCore.QVariant(QColor(QtCore.Qt.blue));
         else:
             return
 
