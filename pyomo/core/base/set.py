@@ -142,6 +142,74 @@ class _IndexedCallInitializer(_InitializerBase):
     def constant(self):
         return False
 
+
+class _CountedCallGenerator(object):
+    def __init__(self, fcn, scalar, parent, idx):
+        self._count = 0
+        if scalar:
+            self._fcn = lambda c: fcn(parent, c)
+        elif idx.__class__ is tuple:
+            self._fcn = lambda c: fcn(parent, c, *idx)
+        else:
+            self._fcn = lambda c: fcn(parent, c, idx)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        self._count += 1
+        return self._fcn(self._count)
+
+    next = __next__
+
+
+class _CountedCallInitializer(_InitializerBase):
+    # Pyomo has a historical feature for some rules, where the number of
+    # times(*) the rule was called could be passed as an additional
+    # argument between the block and the index.  This was primarily
+    # supported by Set and ConstraintList.  There were many issues with
+    # the syntax, including inconsistent support for jagged (dimen=None)
+    # indexing sets, inconsistent support for *args rules, and a likely
+    # infinite loop if the rule returned Constraint.Skip.
+    #
+    # As a slight departure from previous implementations, we will ONLY
+    # allow the counted rule syntax when the rule does NOT use *args
+    #
+    # [JDS 6/2019] We will support a slightly restricted but more
+    # consistent form of the original implementation for backwards
+    # compatability, but I belee that we should deprecate teh syntax
+    # entirely.
+    __slots__ = ('_fcn','_is_counted_rule', '_scalar',)
+
+    def __init__(self, obj, _indexed_init):
+        self._fcn = _indexed_init._fcn
+        self._is_counted_rule = None
+        self._scalar = not obj.is_indexed()
+        if self._scalar:
+            self._is_counted_rule = True
+
+    def __call__(self, parent, idx):
+        if self._is_counted_rule == False:
+            if idx.__class__ is tuple:
+                return self._fcn(parent, *idx)
+            else:
+                return self._fcn(parent, idx)
+        if self._is_counted_rule == True:
+            return _CountedCallGenerator(self._fcn, self._scalar, parent, idx)
+
+        # Note that this code will only be called once, and only if
+        # the object is not a scalar.
+        _args = getargspec(self._fcn)
+        _len = len(idx) if idx.__class__ is tuple else 1
+        if _len + 2 == len(_args.args):
+            self._is_counted_rule = True
+        else:
+            self._is_counted_rule = False
+        return self.__call__(parent, idx)
+
+    def constant(self):
+        return False
+
 class _ScalarCallInitializer(_InitializerBase):
     __slots__ = ('_fcn',)
 
@@ -370,6 +438,8 @@ class _UnknownSetDimen(object): pass
 #
 #   - Make sure that all classes implement the appropriate methods
 #     (e.g., bounds)
+#
+#   - Sets created with Set.Skip should produce intelligible errors
 #
 class NumericRange(object):
     """A representation of a numeric range.
@@ -2027,6 +2097,8 @@ class Set(IndexedComponent):
                              dictionary
     """
 
+    class End(object): pass
+    class Skip(object): pass
     class InsertionOrder(object): pass
     class SortedOrder(object): pass
     _ValidOrderedAuguments = {True, False, InsertionOrder, SortedOrder}
@@ -2132,6 +2204,12 @@ class Set(IndexedComponent):
 
         IndexedComponent.__init__(self, *args, **kwds)
 
+        # HACK to make the "counted call" syntax work.  We wait until
+        # after the base class is set up so that is_indexed() is
+        # reliable.
+        if self._init_values.__class__ is _IndexedCallInitializer:
+            self._init_values = _CountedCallInitializer(self, self._init_values)
+
     def construct(self, data=None):
         if self._constructed:
             return
@@ -2165,6 +2243,13 @@ class Set(IndexedComponent):
     #
     def _getitem_when_not_present(self, index):
         """Returns the default component data value."""
+        if self._init_values is not None:
+            _values = self._init_values(self, index)
+            if _values is Set.Skip:
+                return
+            elif _values is None:
+                raise ValueError("Set rule returned None instead of Set.Skip")
+
         if index is None and not self.is_indexed():
             obj = self._data[index] = self
         else:
@@ -2198,7 +2283,7 @@ class Set(IndexedComponent):
         else:
             _filter = None
         if self._init_values is not None:
-            _values = self._init_values(self, index)
+            # _values was initialized above...
             if obj.is_ordered() \
                    and type(_values) in self._UnorderedInitializers:
                 logger.warning(
@@ -2206,15 +2291,13 @@ class Set(IndexedComponent):
                     "unordered data source (type: %s).  This WILL potentially "
                     "lead to nondeterministic behavior in Pyomo"
                     % (type(_values).__name__,))
-            if _filter is None:
-                for val in _values:
+            for val in _values:
+                if val is Set.End:
+                    break
+                if _filter is None or _filter(self, val):
                     obj.add(val)
-            else:
-                for val in _values:
-                    if _filter(self, val):
-                        obj.add(val)
-        # We defer adding the filter until now so that _verify doesn't
-        # call it twice.
+        # We defer adding the filter until now so that add() doesn't
+        # call it a second time.
         obj._filter = _filter
         return obj
 

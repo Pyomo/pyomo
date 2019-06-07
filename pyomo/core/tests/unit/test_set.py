@@ -34,7 +34,7 @@ from pyomo.core.base.set import (
     SetProduct, SetProduct_InfiniteSet, SetProduct_FiniteSet,
     SetProduct_OrderedSet,
     Initializer, _ConstantInitializer, _ItemInitializer, _ScalarCallInitializer,
-    _IndexedCallInitializer,
+    _IndexedCallInitializer, _CountedCallInitializer,
     SetInitializer, _SetIntersectInitializer, RangeSetInitializer,
     _FiniteSetData, _InsertionOrderSetData, _SortedSetData,
     _UnknownSetDimen,
@@ -3803,6 +3803,23 @@ class TestSet(unittest.TestCase):
         m.II = Set([1,2,3], initialize={1:[0], 2:[1,2], 3: xrange(3)})
         m.JJ = Set([1,2,3], initialize={1:[0], 2:[1,2], 3: xrange(3)})
 
+        output = StringIO()
+        m.pprint()
+        m.I.pprint(ostream=output)
+        m.II.pprint(ostream=output)
+        m.J.pprint(ostream=output)
+        m.JJ.pprint(ostream=output)
+        ref = """
+I : Size=0, Index=None, Ordered=Insertion
+    Not constructed
+II : Size=0, Index=II_index, Ordered=Insertion
+    Not constructed
+J : Size=0, Index=None, Ordered=Insertion
+    Not constructed
+JJ : Size=0, Index=JJ_index, Ordered=Insertion
+    Not constructed""".strip()
+        self.assertEqual(output.getvalue().strip(), ref)
+
         i = m.create_instance(data={
             None: {'I': [-1,0], 'II': {1: [10,11], 3:[30]}}
         })
@@ -3835,3 +3852,55 @@ I : Size=1, Index=None, Ordered=Insertion
             # but re-constructing the set doesn't re-log the message
             m.I.construct()
             self.assertEqual(output.getvalue().strip(), ref)
+
+        # Test generators and Set.End
+        m = ConcreteModel()
+        def _i_init(m):
+            yield 1
+            yield 3
+            yield 2
+        m.I = Set(initialize=_i_init)
+        self.assertEqual(list(m.I), [1,3,2])
+
+        m = ConcreteModel()
+        def _i_init(m):
+            yield 1
+            yield 3
+            yield Set.End
+            yield 2
+        m.I = Set(initialize=_i_init)
+        self.assertEqual(list(m.I), [1,3])
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,3,Set.End,2])
+        self.assertEqual(list(m.I), [1,3])
+
+        # Tested counted initialization
+        m = ConcreteModel()
+        def _i_init(m, i):
+            if i < 5:
+                return 2*i
+            return Set.End
+        m.I = Set(initialize=_i_init)
+        self.assertEqual(list(m.I), [2,4,6,8])
+
+        m = ConcreteModel()
+        def _i_init(m, i, j):
+            if i < j:
+                return 2*i
+            return Set.End
+        m.I = Set([1,2,3], initialize=_i_init)
+        self.assertEqual(list(m.I[1]), [])
+        self.assertEqual(list(m.I[2]), [2])
+        self.assertEqual(list(m.I[3]), [2,4])
+
+        m = ConcreteModel()
+        def _i_init(m, i, j, k):
+            if i < j+k:
+                return 2*i
+            return Set.End
+        m.I = Set([1,2], [2,3], initialize=_i_init)
+        self.assertEqual(list(m.I[1,2]), [2,4])
+        self.assertEqual(list(m.I[1,3]), [2,4,6])
+        self.assertEqual(list(m.I[2,2]), [2,4,6])
+        self.assertEqual(list(m.I[2,3]), [2,4,6,8])
