@@ -219,13 +219,11 @@ class BlockVector(np.ndarray, BaseBlockVector):
             return super(BlockVector, self).__array_ufunc__(ufunc, method,
                                                             *args, **kwargs)
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(x1, MPIBlockVector):
-                return x1.__array_ufunc__(ufunc, method, *args, **kwargs)
-            elif isinstance(x2, MPIBlockVector):
-                return x2.__array_ufunc__(ufunc, method, *args, **kwargs)
-            else:
-                raise NotImplementedError()
+            if x1.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
+            if x2.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
+            raise NotImplementedError()
 
     @property
     def nblocks(self):
@@ -301,6 +299,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             bv = self.flatten()
             return bv.dot(other)
         else:
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):
@@ -386,6 +386,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 accum += nelements
             return result
         else:
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def conj(self):
@@ -758,15 +760,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 result[idx] = blk + other
             return result
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
-                assert self.nblocks == other.nblocks, \
-                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                other.nblocks)
-                for i in other.owned_blocks:
-                    result[i] = self[i] + other[i]
-                return result
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def __radd__(self, other):  # other + self
@@ -803,16 +798,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 result[idx] = blk - other
             return result
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
-
-                assert self.nblocks == other.nblocks, \
-                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                other.nblocks)
-                for i in other.owned_blocks:
-                    result[i] = self[i] - other[i]
-                return result
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def __rsub__(self, other):  # other - self
@@ -848,16 +835,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 result[idx] = other - blk
             return result
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
-
-                assert self.nblocks == other.nblocks, \
-                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                other.nblocks)
-                for i in other.owned_blocks:
-                    result[i] = other[i] - self[i]
-                return result
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def __mul__(self, other):
@@ -892,17 +871,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 result[idx] = blk.__mul__(other)
             return result
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
-
-                assert self.nblocks == other.nblocks, \
-                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                other.nblocks)
-
-                for i in other.owned_blocks:
-                    result[i] = other[i].__mul__(self[i])
-                return result
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def __rmul__(self, other):  # other + self
@@ -939,17 +909,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 result[idx] = blk / other
             return result
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
-
-                assert self.nblocks == other.nblocks, \
-                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                other.nblocks)
-
-                for i in other.owned_blocks:
-                    result[i] = self[i] / other[i]
-                return result
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def __rtruediv__(self, other):
@@ -983,17 +944,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 result[idx] = other / blk
             return result
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
-
-                assert self.nblocks == other.nblocks, \
-                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                other.nblocks)
-
-                for i in other.owned_blocks:
-                    result[i] = other[i] / self[i]
-                return result
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def __floordiv__(self, other):
@@ -1027,17 +979,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 result[idx] = blk // other
             return result
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
-
-                assert self.nblocks == other.nblocks, \
-                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                other.nblocks)
-
-                for i in other.owned_blocks:
-                    result[i] = self[i] // other[i]
-                return result
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def __rfloordiv__(self, other):
@@ -1071,17 +1014,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 result[idx] = other // blk
             return result
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
-
-                assert self.nblocks == other.nblocks, \
-                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                other.nblocks)
-
-                for i in other.owned_blocks:
-                    result[i] =  other[i] // self[i]
-                return result
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def __iadd__(self, other):
@@ -1297,15 +1231,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             bv = BlockVector(flags)
             return bv
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
-                assert self.nblocks == other.nblocks, \
-                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                other.nblocks)
-                for i in other.owned_blocks:
-                    result[i] = self[i].__le__(other[i])
-                return result
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def __lt__(self, other):
@@ -1335,15 +1262,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             bv = BlockVector(flags)
             return bv
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
-                assert self.nblocks == other.nblocks, \
-                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                other.nblocks)
-                for i in other.owned_blocks:
-                    result[i] = self[i].__lt__(other[i])
-                return result
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def __ge__(self, other):
@@ -1373,15 +1293,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             bv = BlockVector(flags)
             return bv
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
-                assert self.nblocks == other.nblocks, \
-                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                other.nblocks)
-                for i in other.owned_blocks:
-                    result[i] = self[i].__ge__(other[i])
-                return result
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def __gt__(self, other):
@@ -1411,15 +1324,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             bv = BlockVector(flags)
             return bv
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
-                assert self.nblocks == other.nblocks, \
-                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                other.nblocks)
-                for i in other.owned_blocks:
-                    result[i] = self[i].__gt__(other[i])
-                return result
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def __eq__(self, other):
@@ -1449,15 +1355,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             bv = BlockVector(flags)
             return bv
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
-                assert self.nblocks == other.nblocks, \
-                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                other.nblocks)
-                for i in other.owned_blocks:
-                    result[i] = other[i].__eq__(self[i])
-                return result
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def __ne__(self, other):
@@ -1487,15 +1386,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             bv = BlockVector(flags)
             return bv
         else:
-            from .mpi_block_vector import MPIBlockVector
-            if isinstance(other, MPIBlockVector):
-                result = MPIBlockVector(other.nblocks, other.rank_ownership, other._mpiw)
-                assert self.nblocks == other.nblocks, \
-                    'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                                other.nblocks)
-                for i in other.owned_blocks:
-                    result[i] = other[i].__ne__(self[i])
-                return result
+            if other.__class__.__name__ == 'MPIBlockVector':
+                raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
     def __contains__(self, item):

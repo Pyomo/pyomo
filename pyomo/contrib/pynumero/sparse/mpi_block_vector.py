@@ -182,21 +182,9 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
             return res
         elif isinstance(x1, BlockVector) and isinstance(x2, MPIBlockVector):
-            assert x1.nblocks == x2.nblocks, 'Need to have same number of blocks'
-
-            res = MPIBlockVector(x2.nblocks, x2._rank_owner, self._mpiw)
-            for i in x2._owned_blocks:
-                _args = [x1[i]] + [x2[i]] + [args[j] for j in range(2, len(args))]
-                res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
-            return res
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(x1, MPIBlockVector) and isinstance(x2, BlockVector):
-            assert x1.nblocks == x2.nblocks, 'Need to have same number of blocks'
-
-            res = MPIBlockVector(x1.nblocks, x1._rank_owner, self._mpiw)
-            for i in x1._owned_blocks:
-                _args = [x1[i]] + [x2[i]] + [args[j] for j in range(2, len(args))]
-                res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
-            return res
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(x1, MPIBlockVector) and np.isscalar(x2):
             res = MPIBlockVector(x1.nblocks, x1._rank_owner, self._mpiw)
             for i in x1._owned_blocks:
@@ -517,12 +505,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] = self._block_vector[i].compress(condition[i])
             return result
         if isinstance(condition, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              condition.nblocks)
-            assert self.nblocks == condition.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] = self._block_vector[i].compress(condition[i])
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(condition, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         else:
@@ -715,15 +698,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         for i in self._owned_blocks:
             self[i] = blocks[i]
 
-    def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def cumprod(self, axis=None, dtype=None, out=None):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def cumsum(self, axis=None, dtype=None, out=None):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
     def clone(self, value=None, copy=True):
         """
         Returns a copy of the block vector
@@ -805,14 +779,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
             return self._mpiw.allreduce(local_dot_prod, op=MPI.SUM)
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-
-            local_dot_prod = 0.0
-            for i in indices:
-                local_dot_prod += self._block_vector[i].dot(other[i])
-            return self._mpiw.allreduce(local_dot_prod, op=MPI.SUM)
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         else:
@@ -831,12 +798,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] = self._block_vector[i] + other[i]
             return result
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] = self._block_vector[i] + other[i]
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif type(other)==np.ndarray:
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -862,12 +824,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] = self._block_vector[i] - other[i]
             return result
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] = self._block_vector[i] - other[i]
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif type(other)==np.ndarray:
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -890,12 +847,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] =  other[i] - self._block_vector[i]
             return result
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] =  other[i] - self._block_vector[i]
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif type(other)==np.ndarray:
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -918,12 +870,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] = self._block_vector[i].__mul__(other[i])
             return result
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__mul__(other[i])
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -949,12 +896,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] = self._block_vector[i] / other[i]
             return result
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] = self._block_vector[i] / other[i]
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -977,12 +919,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] = other[i] / self._block_vector[i]
             return result
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] = other[i] / self._block_vector[i]
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -1006,12 +943,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] = self._block_vector[i] // other[i]
             return result
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] = self._block_vector[i] // other[i]
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -1034,12 +966,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] = other[i] // self._block_vector[i]
             return result
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] = other[i] // self._block_vector[i]
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif type(other)==np.ndarray:
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -1061,12 +988,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 self._block_vector[i] += other[i]
             return self
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                self._block_vector[i] += other[i]
-            return self
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif type(other)==np.ndarray:
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -1088,12 +1010,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 self._block_vector[i] -= other[i]
             return self
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                self._block_vector[i] -= other[i]
-            return self
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -1115,12 +1032,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 self._block_vector[i] *= other[i]
             return self
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                self._block_vector[i] *= other[i]
-            return self
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -1142,12 +1054,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 self._block_vector[i] = self._block_vector[i] / other[i]
             return self
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                self._block_vector[i] = self._block_vector[i] / other[i]
-            return self
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -1170,12 +1077,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] = self._block_vector[i].__le__(other[i])
             return result
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__le__(other[i])
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -1198,12 +1100,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] = self._block_vector[i].__lt__(other[i])
             return result
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__lt__(other[i])
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -1226,12 +1123,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] = self._block_vector[i].__ge__(other[i])
             return result
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__ge__(other[i])
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -1254,12 +1146,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] = self._block_vector[i].__gt__(other[i])
             return result
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__gt__(other[i])
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -1282,12 +1169,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] = self._block_vector[i].__eq__(other[i])
             return result
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__eq__(other[i])
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -1310,12 +1192,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 result[i] = self._block_vector[i].__ne__(other[i])
             return result
         elif isinstance(other, BlockVector):
-            msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
-                                                              other.nblocks)
-            assert self.nblocks == other.nblocks, msg
-            for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__ne__(other[i])
-            return result
+            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
@@ -1360,9 +1237,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
         self._block_vector[key] = value
 
-    def __iter__(self):
-        raise NotImplementedError('Not supported by MPIBlockVector')
-
     def __str__(self):
         msg = '{}{}:\n'.format(self.__class__.__name__, self.bshape)
         for idx in range(self.nblocks):
@@ -1403,6 +1277,18 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def __len__(self):
         return self.nblocks
+
+    def __iter__(self):
+        raise NotImplementedError('Not supported by MPIBlockVector')
+
+    def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
+        raise RuntimeError('Operation not supported by MPIBlockVector')
+
+    def cumprod(self, axis=None, dtype=None, out=None):
+        raise RuntimeError('Operation not supported by MPIBlockVector')
+
+    def cumsum(self, axis=None, dtype=None, out=None):
+        raise RuntimeError('Operation not supported by MPIBlockVector')
 
     def tolist(self):
         raise RuntimeError('Operation not supported by MPIBlockVector')
