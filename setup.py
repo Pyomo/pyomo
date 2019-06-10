@@ -57,7 +57,7 @@ def get_version():
     return _verInfo['__version__']
 
 requires = [
-    'PyUtilib>=5.7.1.dev0',
+    'PyUtilib>=5.7.0',
     'appdirs',
     'ply',
     'six>=1.4',
