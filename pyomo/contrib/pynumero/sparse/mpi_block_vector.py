@@ -248,17 +248,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns total number of elements in the block vector
         """
-        if self._need_broadcast_sizes:
-            rank = self._mpiw.Get_rank()
-            indices = self._unique_owned_blocks if rank != 0 else self._owned_blocks
-            local_size = 0
-            for i in indices:
-                assert self._block_vector[i] is not None
-                local_size += self._block_vector[i].size
-            return self._mpiw.allreduce(local_size, op=MPI.SUM)
-        else:
-            self._assert_broadcasted_sizes()
-            return np.sum(self._brow_lengths)
+        self._assert_broadcasted_sizes()
+        return np.sum(self._brow_lengths)
 
     @property
     def ndim(self):
@@ -267,6 +258,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         return 1
 
+    # Note: this operation requires communication
     @property
     def has_none(self):
         """
@@ -312,6 +304,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             return self._brow_lengths.copy()
         return self._brow_lengths
 
+    # Note: this operation requires communication
     def broadcast_block_sizes(self):
         rank = self._mpiw.Get_rank()
         num_processors = self._mpiw.Get_size()
@@ -383,24 +376,23 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns True if all elements evaluate to True.
         """
-        assert out is None
+        assert out is None, 'Out keyword not supported'
+        assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         local = 1
         for i in self._owned_blocks:
-            if self._block_vector[i] is not None:
-                local *= self._block_vector[i].all()
-            else:
-                local = 0
+            local *= self._block_vector[i].all()
+
         return bool(self._mpiw.allreduce(local, op=MPI.PROD))
 
     def any(self, axis=None, out=None, keepdims=False):
         """
         Returns True if all elements evaluate to True.
         """
-        assert out is None
+        assert out is None, 'Out keyword not supported'
+        assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         local = 0
         for i in self._owned_blocks:
-            if self._block_vector[i] is not None:
-                local += self._block_vector[i].any()
+            local += self._block_vector[i].any()
 
         return bool(self._mpiw.allreduce(local, op=MPI.SUM))
 
@@ -408,10 +400,10 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the smallest value stored in the vector
         """
-        assert out is None
+        assert out is None, 'Out keyword not supported'
+        assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         local_min = np.inf
         for i in self._owned_blocks:
-            assert self._block_vector[i] is not None
             lmin = self._block_vector[i].min()
             if lmin <= local_min:
                 local_min = lmin
@@ -421,10 +413,10 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the largest value stored in the vector
         """
-        assert out is None
+        assert out is None, 'Out keyword not supported'
+        assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         local_max = -np.inf
         for i in self._owned_blocks:
-            assert self._block_vector[i] is not None
             lmax = self._block_vector[i].max()
             if lmax >= local_max:
                 local_max = lmax
@@ -434,13 +426,13 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the sum of all entries in the block vector
         """
-        assert out is None
+        assert out is None, 'Out keyword not supported'
+        assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         rank = self._mpiw.Get_rank()
         indices = self._unique_owned_blocks if rank != 0 else self._owned_blocks
 
         local_sum = 0.0
         for i in indices:
-            assert self._block_vector[i] is not None
             local_sum += self._block_vector[i].sum(axis=axis, dtype=dtype)
 
         return self._mpiw.allreduce(local_sum, op=MPI.SUM)
@@ -449,13 +441,13 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the product of all entries in the vector
         """
-        assert out is None
+        assert out is None, 'Out keyword not supported'
+        assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         rank = self._mpiw.Get_rank()
         indices = self._unique_owned_blocks if rank != 0 else self._owned_blocks
 
         local_prod = 1.0
         for i in indices:
-            assert self._block_vector[i] is not None
             local_prod *= self._block_vector[i].prod(axis=axis, dtype=dtype)
         return self._mpiw.allreduce(local_prod, op=MPI.PROD)
 
@@ -463,19 +455,17 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the average of all entries in the vector
         """
-        raise RuntimeError('Operation not supported by MPIBlockVector')
+        return self.sum(out=out)/self.size
 
     def conj(self):
         """
         Complex-conjugate all elements.
         """
+        assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         rank = self._mpiw.Get_rank()
         result = self.copy_structure()
         for i in self._owned_blocks:
-            if self._block_vector[i] is not None:
-                result[i] = self._block_vector[i].conj()
-            else:
-                result[i] = None
+            result[i] = self._block_vector[i].conj()
         return result
 
     def conjugate(self):
@@ -489,39 +479,33 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         Return the indices of the elements that are non-zero.
         """
         result = self.copy_structure()
-
+        assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         for i in self._owned_blocks:
-            if self._block_vector[i] is not None:
-                result[i] = self._block_vector[i].nonzero()[0]
-            else:
-                result[i] = None
+            result[i] = self._block_vector[i].nonzero()[0]
         return (result,)
 
     def round(self, decimals=0, out=None):
         """
         Return a vector with each element rounded to the given number of decimals
         """
-        assert out is None
+        assert out is None, 'Out keyword not supported'
+        assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         result = self.copy_structure()
         for i in self._owned_blocks:
-            if self._block_vector[i] is not None:
-                result[i] = self._block_vector[i].round(decimals=decimals)
-            else:
-                result[i] = None
+            result[i] = self._block_vector[i].round(decimals=decimals)
         return result
 
     def clip(self, min=None, max=None, out=None):
-        assert out is None
+        assert out is None, 'Out keyword not supported'
+        assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         result = self.copy_structure()
         for i in self._owned_blocks:
-            if self._block_vector[i] is not None:
-                result[i] = self._block_vector[i].clip(min=min, max=max)
-            else:
-                result[i] = None
+            result[i] = self._block_vector[i].clip(min=min, max=max)
         return result
 
     def compress(self, condition, axis=None, out=None):
-        assert out is None
+        assert out is None, 'Out keyword not supported'
+        assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         rank = self._mpiw.Get_rank()
         result = self.copy_structure()
         if isinstance(condition, MPIBlockVector):
@@ -734,48 +718,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
     def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
         raise RuntimeError('Operation not supported by MPIBlockVector')
 
-    def take(self, indices, axis=None, out=None, mode='raise'):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def ptp(self, axis=None, out=None, keepdims=False):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def diagonal(self, offset=0, axis1=0, axis2=1):
-        raise ValueError('diag requires an array of at least two dimensions')
-
-    def byteswap(self, inplace=False):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def choose(self, choices, out=None, mode='raise'):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def dump(self, file):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def dumps(self):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def getfield(self, dtype, offset=0):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def item(self, *args):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def itemset(self, *args):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def newbyteorder(self, new_order='S'):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def put(self, indices, values, mode='raise'):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def argmax(self, axis=None, out=None):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def argmin(self, axis=None, out=None):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
     def cumprod(self, axis=None, dtype=None, out=None):
         raise RuntimeError('Operation not supported by MPIBlockVector')
 
@@ -835,48 +777,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
         """
         self._block_vector.fill(value)
-
-    def searchsorted(self, v, side='left', sorter=None):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def setfield(self, val, dtype, offset=0):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def setflags(self, write=None, align=None, uic=None):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def sort(self, axis=-1, kind='quicksort', order=None):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def squeeze(self, axis=None):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def swapaxes(self, axis1, axis2):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def tobytes(self, order='C'):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def trace(self, offset=0, axis1=0, axis2=1, dtype=None, out=None):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def partition(self, kth, axis=-1, kind='introselect', order=None):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def argpartition(self, kth, axis=-1, kind='introselect', order=None):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def argsort(self, axis=-1, kind='quicksort', order=None):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def tolist(self):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def flatten(self, order='C'):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def ravel(self, order='C'):
-        raise RuntimeError('Operation not supported by MPIBlockVector')
 
     def dot(self, other, out=None):
         """
@@ -1461,8 +1361,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         self._block_vector[key] = value
 
     def __iter__(self):
-        for j in self._block_vector:
-            yield j
+        raise NotImplementedError('Not supported by MPIBlockVector')
 
     def __str__(self):
         msg = '{}{}:\n'.format(self.__class__.__name__, self.bshape)
@@ -1504,3 +1403,90 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def __len__(self):
         return self.nblocks
+
+    def tolist(self):
+        raise RuntimeError('Operation not supported by MPIBlockVector')
+
+    def flatten(self, order='C'):
+        raise RuntimeError('Operation not supported by MPIBlockVector')
+
+    def ravel(self, order='C'):
+        raise RuntimeError('Operation not supported by MPIBlockVector')
+
+    def argpartition(self, kth, axis=-1, kind='introselect', order=None):
+        BaseBlockVector.argpartition(self, kth, axis=axis, kind=kind, order=order)
+
+    def argsort(self, axis=-1, kind='quicksort', order=None):
+        BaseBlockVector.argsort(self, axis=axis, kind=kind, order=order)
+
+    def byteswap(self, inplace=False):
+        BaseBlockVector.byteswap(self, inplace=inplace)
+
+    def choose(self, choices, out=None, mode='raise'):
+        BaseBlockVector.choose(self, choices, out=out, mode=mode)
+
+    def diagonal(self, offset=0, axis1=0, axis2=1):
+        BaseBlockVector.diagonal(self, offset=offset, axis1=axis1, axis2=axis2)
+
+    def dump(self, file):
+        BaseBlockVector.dump(self, file)
+
+    def dumps(self):
+        BaseBlockVector.dumps(self)
+
+    def getfield(self, dtype, offset=0):
+        BaseBlockVector.getfield(self, dtype, offset=offset)
+
+    def item(self, *args):
+        BaseBlockVector.item(self, *args)
+
+    def itemset(self, *args):
+        BaseBlockVector.itemset(self, *args)
+
+    def newbyteorder(self, new_order='S'):
+        BaseBlockVector.newbyteorder(self, new_order=new_order)
+
+    def put(self, indices, values, mode='raise'):
+        BaseBlockVector.put(self, indices, values, mode=mode)
+
+    def partition(self, kth, axis=-1, kind='introselect', order=None):
+        BaseBlockVector.partition(self, kth, axis=axis, kind=kind, order=order)
+
+    def repeat(self, repeats, axis=None):
+        BaseBlockVector.repeat(self, repeats, axis=axis)
+
+    def reshape(self, shape, order='C'):
+        BaseBlockVector.reshape(self, shape, order=order)
+
+    def resize(self, new_shape, refcheck=True):
+        BaseBlockVector.resize(self, new_shape, refcheck=refcheck)
+
+    def searchsorted(self, v, side='left', sorter=None):
+        BaseBlockVector.searchsorted(self, v, side=side, sorter=sorter)
+
+    def setfield(self, val, dtype, offset=0):
+        BaseBlockVector.setfield(self, val, dtype, offset=offset)
+
+    def setflags(self, write=None, align=None, uic=None):
+        BaseBlockVector.setflags(self, write=write, align=align, uic=uic)
+
+    def sort(self, axis=-1, kind='quicksort', order=None):
+        BaseBlockVector.sort(self, axis=axis, kind=kind, order=order)
+
+    def squeeze(self, axis=None):
+        BaseBlockVector.squeeze(self, axis=axis)
+
+    def swapaxes(self, axis1, axis2):
+        BaseBlockVector.swapaxes(self, axis1, axis2)
+
+    def tobytes(self, order='C'):
+        BaseBlockVector.tobytes(self, order=order)
+
+    def argmax(self, axis=None, out=None):
+        BaseBlockVector.argmax(self, axis=axis, out=out)
+
+    def argmin(self, axis=None, out=None):
+        BaseBlockVector.argmax(self, axis=axis, out=out)
+
+    def take(self, indices, axis=None, out=None, mode='raise'):
+        BaseBlockVector.take(self, indices, axis=axis, out=out, mode=mode)

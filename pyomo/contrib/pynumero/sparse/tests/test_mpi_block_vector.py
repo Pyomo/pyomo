@@ -56,7 +56,7 @@ class TestMPIBlockVector(unittest.TestCase):
             v1[3] = np.ones(2)
 
         cls.v1 = v1
-
+        cls.v1.broadcast_block_sizes()
         v2 = MPIBlockVector(7, [0,0,1,1,2,2,-1], comm)
 
         rank = comm.Get_rank()
@@ -72,6 +72,7 @@ class TestMPIBlockVector(unittest.TestCase):
         v2[6] = np.ones(2) * 3
 
         cls.v2 = v2
+        cls.v2.broadcast_block_sizes()
 
     def test_nblocks(self):
         v1 = self.v1
@@ -117,10 +118,8 @@ class TestMPIBlockVector(unittest.TestCase):
             v[0] = np.ones(3)
         if rank == 1:
             v[1] = np.zeros(3)
+        v.broadcast_block_sizes()
         self.assertTrue(v.any())
-        if rank == 0:
-            v[0] = None
-        self.assertFalse(v.any())
         self.assertTrue(self.v1.any())
         self.assertTrue(self.v2.any())
 
@@ -131,13 +130,11 @@ class TestMPIBlockVector(unittest.TestCase):
             v[0] = np.ones(3)
         if rank == 1:
             v[1] = np.zeros(3)
+        v.broadcast_block_sizes()
         self.assertFalse(v.all())
         if rank == 1:
             v[1] = np.ones(3)
         self.assertTrue(v.all())
-        if rank == 1:
-            v[1] = None
-        self.assertFalse(v.all())
         self.assertFalse(self.v1.all())
         self.assertFalse(self.v2.all())
 
