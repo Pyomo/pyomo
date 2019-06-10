@@ -264,15 +264,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     @property
     def has_none(self):
-        if not self._has_none:
-            return False
-        if not np.all(self._block_mask):
-            return True
-
-        block_arr = np.array([blk.has_none for blk in self if isinstance(blk, BlockVector)], dtype=bool)
-        it_has = np.any(block_arr)
-        self._has_none = it_has
-        return it_has
+        # this flag is updated in __setattr__
+        return self._has_none
 
     def block_sizes(self, copy=True):
         """
@@ -295,13 +288,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         float
 
         """
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert not self.has_none, 'Operations not allowed with None blocks.'
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert not other.has_none, 'Operations not allowed with None blocks.'
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -318,39 +307,35 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the sum of all entries in the block vector
         """
-        return sum(self[i].sum(axis=axis, dtype=dtype, out=out, keepdims=keepdims)
-                   for i in range(self.nblocks) if self._block_mask[i])
+        assert not self.has_none, 'Operations not allowed with None blocks.'
+        results = np.array([self[i].sum() for i in range(self.nblocks)])
+        return results.sum(axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     def all(self, axis=None, out=None, keepdims=False):
         """
         Returns True if all elements evaluate to True.
         """
-        if self.has_none:
-            return False
-        d = tuple(v.flatten() for v in self)
-        arr = np.concatenate(d)
-        return arr.all(axis=axis, out=out, keepdims=keepdims)
+        assert not self.has_none, 'Operations not allowed with None blocks.'
+        results = np.array([self[i].all() for i in range(self.nblocks)],
+                            dtype=np.bool)
+        return results.all(axis=axis, out=out, keepdims=keepdims)
 
     def any(self, axis=None, out=None, keepdims=False):
         """
         Returns True if all elements evaluate to True.
         """
-        d = tuple(v for v in self if v is not None)
-        arr = np.concatenate(d)
-        return arr.any(axis=axis, out=out, keepdims=keepdims)
+        assert not self.has_none, 'Operations not allowed with None blocks.'
+        results = np.array([self[i].any() for i in range(self.nblocks)],
+                            dtype=np.bool)
+        return results.any(axis=axis, out=out, keepdims=keepdims)
 
     def max(self, axis=None, out=None, keepdims=False):
         """
         Returns the largest value stored in the vector
         """
-        return max([self[i].max(axis=axis, out=None, keepdims=keepdims)
-                   for i in range(self.nblocks) if self._block_mask[i] and self[i].size>0])
-
-    def argpartition(self, kth, axis=-1, kind='introselect', order=None):
-        raise NotImplementedError("argpartition not implemented for BlockVector")
-
-    def argsort(self, axis=-1, kind='quicksort', order=None):
-        raise NotImplementedError("argsort not implemented for BlockVector")
+        assert not self.has_none, 'Operations not allowed with None blocks.'
+        results = np.array([self[i].max() for i in range(self.nblocks) if self[i].size > 0])
+        return results.max(axis=axis, out=out, keepdims=keepdims)
 
     def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True):
 
@@ -364,52 +349,40 @@ class BlockVector(np.ndarray, BaseBlockVector):
             return bv
         raise NotImplementedError("astype not implemented for copy=False")
 
-    def byteswap(self, inplace=False):
-        raise NotImplementedError("byteswap not implemented for BlockVector")
-
-    def choose(self, choices, out=None, mode='raise'):
-        raise NotImplementedError("choose not implemented for BlockVector")
-
     def clip(self, min=None, max=None, out=None):
 
-        if out is not None:
-            raise NotImplementedError()
+        assert not self.has_none, 'Operations not allowed with None blocks.'
+        assert out is None, 'Out keyword not supported'
 
         bv = BlockVector(self.nblocks)
-        for bid, vv in enumerate(self):
-            if self._block_mask[bid]:
-                bv[bid] = vv.clip(min=min, max=max, out=None)
-            else:
-                bv[bid] = None
+        for bid in range(self.nblocks):
+            bv[bid] = self[bid].clip(min=min, max=max, out=None)
         return bv
 
     def compress(self, condition, axis=None, out=None):
-        if out is not None:
-            raise NotImplementedError('compress not supported with out')
+
+        assert not self._has_none, 'Operations not allowed with None blocks.'
+        assert out is None, 'Out keyword not supported'
         result = BlockVector(self.nblocks)
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+
         if isinstance(condition, BlockVector):
-            assert not condition.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert not condition.has_none, 'Operations not allowed with None blocks.'
             assert self.shape == condition.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, condition.shape)
             assert self.nblocks == condition.nblocks, \
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             condition.nblocks)
-            for idx, blk in enumerate(self):
-                result[idx] = blk.compress(condition[idx])
+            for idx in range(self.nblocks):
+                result[idx] = self[idx].compress(condition[idx])
             return result
         elif type(condition)==np.ndarray:
             assert self.shape == condition.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape,
                                                      condition.shape)
             accum = 0
-            for idx, blk in enumerate(self):
+            for idx in range(self.nblocks):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk.compress(condition[accum: accum + nelements])
+                result[idx] = self[idx].compress(condition[accum: accum + nelements])
                 accum += nelements
             return result
         else:
@@ -419,129 +392,56 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Complex-conjugate all elements.
         """
+        assert not self._has_none, 'Operations not allowed with None blocks.'
         result = BlockVector(self.nblocks)
-        for idx, blk in enumerate(self):
-            if self._block_mask[idx]:
-                result[idx] = blk.conj()
-            else:
-                result[idx] = None
+        for idx in range(self.nblocks):
+            result[idx] = self[idx].conj()
         return result
 
     def conjugate(self):
         """
         Complex-conjugate all elements.
         """
+        assert not self._has_none, 'Operations not allowed with None blocks.'
         result = BlockVector(self.nblocks)
-        for idx, blk in enumerate(self):
-            if self._block_mask[idx]:
-                result[idx] = blk.conjugate()
-            else:
-                result[idx] = None
+        for idx in range(self.nblocks):
+            result[idx] = self[idx].conjugate()
         return result
-
-    def diagonal(self, offset=0, axis1=0, axis2=1):
-        raise ValueError('diag requires an array of at least two dimensions')
-
-    def dump(self, file):
-        raise NotImplementedError('TODO')
-
-    def dumps(self):
-        raise NotImplementedError('TODO')
-
-    def getfield(self, dtype, offset=0):
-        raise NotImplementedError('getfield not implemented for BlockVector')
-
-    def item(self, *args):
-        raise NotImplementedError('item not implemented for BlockVector')
-
-    def itemset(self, *args):
-        raise NotImplementedError('itemset not implemented for BlockVector')
-
-    def newbyteorder(self, new_order='S'):
-        raise NotImplementedError('newbyteorder not implemented for BlockVector')
 
     def nonzero(self):
         """
         Return the indices of the elements that are non-zero.
         """
+        assert not self._has_none, 'Operations not allowed with None blocks.'
         result = BlockVector(self.nblocks)
-        for idx, blk in enumerate(self):
-            if self._block_mask[idx]:
-                result[idx] = blk.nonzero()[0]
-            else:
-                result[idx] = None
+        for idx in range(self.nblocks):
+            result[idx] = self[idx].nonzero()[0]
         return (result,)
 
     def ptp(self, axis=None, out=None, keepdims=False):
         """
         Peak to peak (maximum - minimum) value along a given axis.
         """
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
-        return self.flatten().ptp(axis=axis, out=out)
-
-    def put(self, indices, values, mode='raise'):
-        raise NotImplementedError('TODO')
-
-    def partition(self, kth, axis=-1, kind='introselect', order=None):
-        raise NotImplementedError('partition not implemented for BlockVector')
-
-    def repeat(self, repeats, axis=None):
-        raise NotImplementedError('repeat not implemented for BlockVector')
-
-    def reshape(self, shape, order='C'):
-        raise NotImplementedError('reshape not implemented for BlockVector')
-
-    def resize(self, new_shape, refcheck=True):
-        raise NotImplementedError('resize not implemented for BlockVector')
+        assert not self._has_none, 'Operations not allowed with None blocks.'
+        assert out is None, 'Out keyword not supported'
+        return self.max()-self.min()
 
     def round(self, decimals=0, out=None):
         """
         Return a with each element rounded to the given number of decimals
         """
-        if out is not None:
-            raise NotImplementedError('round not implemented with out input')
+        assert not self._has_none, 'Operations not allowed with None blocks.'
+        assert out is None, 'Out keyword not supported'
         result = BlockVector(self.nblocks)
-        for idx, blk in enumerate(self):
-            if self._block_mask[idx]:
-                result[idx] = blk.round(decimals=decimals, out=None)
-            else:
-                result[idx] = None
+        for idx in range(self.nblocks):
+            result[idx] = self[idx].round(decimals=decimals)
         return result
-
-    def searchsorted(self, v, side='left', sorter=None):
-        raise NotImplementedError('searchsorted not implemented for BlockVector')
-
-    def setfield(self, val, dtype, offset=0):
-        raise NotImplementedError('setfield not implemented for BlockVector')
-
-    def setflags(self, write=None, align=None, uic=None):
-        raise NotImplementedError('setflags not implemented for BlockVector')
-
-    def sort(self, axis=-1, kind='quicksort', order=None):
-        raise NotImplementedError('sort not implemented for BlockVector')
-
-    def squeeze(self, axis=None):
-        raise NotImplementedError('squeeze not implemented for BlockVector')
 
     def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
         """
         Returns the standard deviation of the array elements along given axis.
         """
         return self.flatten().std(axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
-
-    def swapaxes(self, axis1, axis2):
-        raise NotImplementedError('swapaxes not implemented for BlockVector')
-
-    def take(self, indices, axis=None, out=None, mode='raise'):
-        """
-        Return an array formed from the elements of a at the given indices.
-        """
-        return self.flatten().take(indices, axis=axis, out=out, mode=mode)
-
-    def tobytes(self, order='C'):
-        raise NotImplementedError('tobytes not implemented for BlockVector')
 
     def tofile(self, fid, sep="", format="%s"):
         """
@@ -556,8 +456,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the smallest value stored in the vector
         """
-        return min([self[i].min(axis=axis, out=None, keepdims=keepdims)
-                   for i in range(self.nblocks) if self._block_mask[i] and self[i].size > 0])
+        assert not self._has_none, 'Operations not allowed with None blocks.'
+        results = np.array([self[i].min() for i in range(self.nblocks)])
+        return results.min(axis=axis, out=out, keepdims=keepdims)
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):
         """
@@ -572,9 +473,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the product of all entries in the vector
         """
-        arr = [self[i].prod(axis=axis, dtype=dtype, out=None, keepdims=keepdims)
-               for i in range(self.nblocks) if self._block_mask[i]]
-        return np.prod(arr)
+        assert not self._has_none, 'Operations not allowed with None blocks.'
+        results = np.array([self[i].prod() for i in range(self.nblocks)])
+        return results.prod(axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     def fill(self, value):
         """
@@ -590,9 +491,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         None
 
         """
+        assert not self._has_none, 'Operations not allowed with None blocks.'
         for i in range(self.nblocks):
-            if self._block_mask[i]:
-                self[i].fill(value)
+            self[i].fill(value)
 
     def tolist(self):
         """
@@ -620,7 +521,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
         ndarray
 
         """
-        all_blocks = tuple(v.flatten(order=order) for v in self)
+        assert not self._has_none, 'Operations not allowed with None blocks.'
+        all_blocks = tuple(self[i].flatten(order=order) for i in range(self.nblocks))
         return np.concatenate(all_blocks)
 
     def ravel(self, order='C'):
@@ -638,34 +540,14 @@ class BlockVector(np.ndarray, BaseBlockVector):
         ndarray
 
         """
-        all_blocks = tuple(v.ravel(order=order) for v in self)
+        assert not self._has_none, 'Operations not allowed with None blocks.'
+        all_blocks = tuple(self[i].ravel(order=order) for i in range(self.nblocks))
         return np.concatenate(all_blocks)
-
-    def argmax(self, axis=None, out=None):
-        """
-        Returns the index of the largest element.
-        """
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
-        return self.flatten().argmax(axis=axis, out=out)
-
-    def argmin(self, axis=None, out=None):
-        """
-        Returns the index of the smallest element.
-        """
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
-        return self.flatten().argmin(axis=axis, out=out)
 
     def cumprod(self, axis=None, dtype=None, out=None):
         """
         Returns the cumulative product of the elements along the given axis.
         """
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
         flat = self.flatten().cumprod(axis=axis, dtype=dtype, out=out)
         v = self.clone()
         v.copyfrom(flat)
@@ -675,9 +557,6 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the cumulative sum of the elements along the given axis.
         """
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
         flat = self.flatten().cumsum(axis=axis, dtype=dtype, out=out)
         v = self.clone()
         v.copyfrom(flat)
@@ -699,11 +578,11 @@ class BlockVector(np.ndarray, BaseBlockVector):
         BlockVector
         """
         result = BlockVector(self.nblocks)
-        for idx, blk in enumerate(self):
+        for idx in range(self.nblocks):
             if copy:
-                result[idx] = cp.deepcopy(blk)
+                result[idx] = cp.deepcopy(self[idx])
             else:
-                result[idx] = blk
+                result[idx] = self[idx]
             result._block_mask[idx] = self._block_mask[idx]
             result._brow_lengths[idx] = self._brow_lengths[idx]
         if value is not None:
@@ -729,22 +608,22 @@ class BlockVector(np.ndarray, BaseBlockVector):
             assert self.nblocks == other.nblocks, \
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
-            for idx, blk in enumerate(other):
+            for idx in range(other.nblocks):
                 if isinstance(self[idx], BlockVector):
-                    self[idx].copyfrom(blk)
+                    self[idx].copyfrom(other[idx])
                 elif isinstance(self[idx], np.ndarray):
-                    if isinstance(blk, BlockVector):
-                        self[idx] = blk.copy()
-                    elif isinstance(blk, np.ndarray):
-                        np.copyto(self[idx], blk)
+                    if isinstance(other[idx], BlockVector):
+                        self[idx] = other[idx].copy()
+                    elif isinstance(other[idx], np.ndarray):
+                        np.copyto(self[idx], other[idx])
                     elif blk is None:
                         self[idx] = None
                     else:
                         raise RuntimeError('Input not recognized')
                 elif self[idx] is None:
-                    if isinstance(blk, np.ndarray):
+                    if isinstance(other[idx], np.ndarray):
                         # this inlcude block vectors too
-                        self[idx] = blk.copy()
+                        self[idx] = other[idx].copy()
                     elif blk is None:
                         self[idx] = None
                     else:
@@ -759,7 +638,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
 
             offset = 0
-            for idx, blk in enumerate(self):
+            for idx in range(self.nblocks):
                 subarray = other[offset: offset + self[idx].size]
                 if isinstance(self[idx], BlockVector):
                     self[idx].copyfrom(subarray)
@@ -786,17 +665,17 @@ class BlockVector(np.ndarray, BaseBlockVector):
             msgj = 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                                other.nblocks)
             assert self.nblocks == other.nblocks, msgj
-            for idx, blk in enumerate(self):
+            for idx in range(self.nblocks):
                 if isinstance(other[idx], BlockVector):
-                    other[idx].copyfrom(blk)
+                    other[idx].copyfrom(self[idx])
                 elif isinstance(other[idx], np.ndarray):
-                    if blk is not None:
-                        np.copyto(other[idx], blk.flatten())
+                    if self[idx] is not None:
+                        np.copyto(other[idx], self[idx].flatten())
                     else:
                         other[idx] = None
                 elif other[idx] is None:
-                    if blk is not None:
-                        other[idx] = blk.copy()
+                    if self[idx] is not None:
+                        other[idx] = self[idx].copy()
                     else:
                         other[idx] = None
                 else:
@@ -809,19 +688,19 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def copy(self, order='C'):
         bv = BlockVector(self.nblocks)
-        for bid, vv in enumerate(self):
+        for bid in range(self.nblocks):
             if self._block_mask[bid]:
-                bv[bid] = vv.copy(order=order)
+                bv[bid] = self[bid].copy(order=order)
         return bv
 
     def copy_structure(self):
         bv = BlockVector(self.nblocks)
-        for bid, vv in enumerate(self):
-            if vv is not None:
+        for bid in range(self.nblocks):
+            if self[bid] is not None:
                 if isinstance(self._block_mask[bid], BlockVector):
-                    bv[bid] = vv.copy_structure()
-                elif type(vv) == np.ndarray:
-                    bv[bid] = np.zeros(vv.size, dtype=vv.dtype)
+                    bv[bid] = self[bid].copy_structure()
+                elif type(self[bid]) == np.ndarray:
+                    bv[bid] = np.zeros(self[bid].size, dtype=self[bid].dtype)
                 else:
                     raise NotImplementedError('Should never get here')
         return bv
@@ -1364,15 +1243,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def __getitem__(self, item):
 
-        if isinstance(item, slice):
-            raise NotImplementedError()
+        assert not isinstance(item, slice), 'Slicing not supported for BlockVector'
         return super(BlockVector, self).__getitem__(item)
 
     def __setitem__(self, key, value):
 
-        if isinstance(key, slice):
-            raise NotImplementedError()
-
+        assert not isinstance(key, slice), 'Slicing not supported for BlockVector'
         assert -self.nblocks < key < self.nblocks, 'out of range'
         if value is None:
             super(BlockVector, self).__setitem__(key, None)
@@ -1387,6 +1263,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
             super(BlockVector, self).__setitem__(key, value)
             self._block_mask[key] = True
             self._brow_lengths[key] = value.size
+
+            # check if needs to update has none flag
+            if self._has_none:
+                # if there was a single none and after setting 'value'
+                # that none is gone the flag is updated to false.
+                self._has_none = not self._block_mask.all()
 
     def __le__(self, other):
 
@@ -1632,3 +1514,83 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def __len__(self):
         return self.nblocks
+
+    # the following methods are not supported by blockvector
+
+    def argpartition(self, kth, axis=-1, kind='introselect', order=None):
+        BaseBlockVector.argpartition(self, kth, axis=axis, kind=kind, order=order)
+
+    def argsort(self, axis=-1, kind='quicksort', order=None):
+        BaseBlockVector.argsort(self, axis=axis, kind=kind, order=order)
+
+    def byteswap(self, inplace=False):
+        BaseBlockVector.byteswap(self, inplace=inplace)
+
+    def choose(self, choices, out=None, mode='raise'):
+        BaseBlockVector.choose(self, choices, out=out, mode=mode)
+
+    def diagonal(self, offset=0, axis1=0, axis2=1):
+        BaseBlockVector.diagonal(self, offset=offset, axis1=axis1, axis2=axis2)
+
+    def dump(self, file):
+        BaseBlockVector.dump(self, file)
+
+    def dumps(self):
+        BaseBlockVector.dumps(self)
+
+    def getfield(self, dtype, offset=0):
+        BaseBlockVector.getfield(self, dtype, offset=offset)
+
+    def item(self, *args):
+        BaseBlockVector.item(self, *args)
+
+    def itemset(self, *args):
+        BaseBlockVector.itemset(self, *args)
+
+    def newbyteorder(self, new_order='S'):
+        BaseBlockVector.newbyteorder(self, new_order=new_order)
+
+    def put(self, indices, values, mode='raise'):
+        BaseBlockVector.put(self, indices, values, mode=mode)
+
+    def partition(self, kth, axis=-1, kind='introselect', order=None):
+        BaseBlockVector.partition(self, kth, axis=axis, kind=kind, order=order)
+
+    def repeat(self, repeats, axis=None):
+        BaseBlockVector.repeat(self, repeats, axis=axis)
+
+    def reshape(self, shape, order='C'):
+        BaseBlockVector.reshape(self, shape, order=order)
+
+    def resize(self, new_shape, refcheck=True):
+        BaseBlockVector.resize(self, new_shape, refcheck=refcheck)
+
+    def searchsorted(self, v, side='left', sorter=None):
+        BaseBlockVector.searchsorted(self, v, side=side, sorter=sorter)
+
+    def setfield(self, val, dtype, offset=0):
+        BaseBlockVector.setfield(self, val, dtype, offset=offset)
+
+    def setflags(self, write=None, align=None, uic=None):
+        BaseBlockVector.setflags(self, write=write, align=align, uic=uic)
+
+    def sort(self, axis=-1, kind='quicksort', order=None):
+        BaseBlockVector.sort(self, axis=axis, kind=kind, order=order)
+
+    def squeeze(self, axis=None):
+        BaseBlockVector.squeeze(self, axis=axis)
+
+    def swapaxes(self, axis1, axis2):
+        BaseBlockVector.swapaxes(self, axis1, axis2)
+
+    def tobytes(self, order='C'):
+        BaseBlockVector.tobytes(self, order=order)
+
+    def argmax(self, axis=None, out=None):
+        BaseBlockVector.argmax(self, axis=axis, out=out)
+
+    def argmin(self, axis=None, out=None):
+        BaseBlockVector.argmax(self, axis=axis, out=out)
+
+    def take(self, indices, axis=None, out=None, mode='raise'):
+        BaseBlockVector.take(self, indices, axis=axis, out=out, mode=mode)

@@ -154,13 +154,8 @@ class TestBlockVector(unittest.TestCase):
         for bid, blk in enumerate(vv):
             self.assertTrue(np.allclose(blk, v2[bid]))
 
-        with self.assertRaises(NotImplementedError) as ctx:
-            vv = v.clip(4.0, 9.0, out=v2)
-
     def test_compress(self):
         v = self.ones
-        with self.assertRaises(NotImplementedError) as ctx:
-            vv = v.compress(1, out=1)
 
         v = BlockVector(2)
         a = np.ones(5)
@@ -262,7 +257,7 @@ class TestBlockVector(unittest.TestCase):
 
     def test_diagonal(self):
         v = self.ones
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(NotImplementedError) as ctx:
             vv = v.diagonal()
 
     def test_getfield(self):
@@ -419,16 +414,14 @@ class TestBlockVector(unittest.TestCase):
         self.assertEqual(len(self.ones), self.ones.nblocks)
 
     def test_argmax(self):
-        v = BlockVector(2)
-        v[0] = np.arange(5)
-        v[1] = np.arange(10, 15)
-        self.assertEqual(v.argmax(), v.size-1)
+        v = self.ones
+        with self.assertRaises(NotImplementedError) as ctx:
+            vv = v.argmax()
 
     def test_argmin(self):
-        v = BlockVector(2)
-        v[0] = np.arange(5)
-        v[1] = np.arange(10, 15)
-        self.assertEqual(v.argmin(), 0)
+        v = self.ones
+        with self.assertRaises(NotImplementedError) as ctx:
+            vv = v.argmin()
 
     def test_cumprod(self):
 
@@ -1021,7 +1014,7 @@ class TestBlockVector(unittest.TestCase):
         for fun in reduce_funcs:
             self.assertAlmostEqual(fun(v), fun(v.flatten()))
 
-        other_funcs = [np.all, np.any, np.std, np.ptp, np.argmax, np.argmin]
+        other_funcs = [np.all, np.any, np.std, np.ptp]
         for fun in other_funcs:
             self.assertAlmostEqual(fun(v), fun(v.flatten()))
 
