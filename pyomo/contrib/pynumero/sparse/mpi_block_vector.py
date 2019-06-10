@@ -1502,7 +1502,5 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         if self._mpiw.Get_rank() == root:
             print(msg)
 
-
-
     def __len__(self):
-        return self.size
+        return self.nblocks

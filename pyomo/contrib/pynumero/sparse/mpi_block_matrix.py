@@ -314,19 +314,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
         """
         raise RuntimeError('Operation not supported by MPIBlockMatrix')
 
-    def todense(self):
-        """
-        Returns a dense matrix representation of this matrix.
-
-        Returns
-        -------
-        arr : ndarray, 2-dimensional
-            An array with the same shape and containing the same data
-            represented by the block matrix.
-
-        """
-        raise RuntimeError('Operation not supported by MPIBlockMatrix')
-
     def is_empty_block(self, idx, jdx):
         """
         Indicates if a block is empty

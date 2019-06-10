@@ -189,49 +189,41 @@ class TestPyomoNLP(unittest.TestCase):
         y_init = np.zeros(self.p2.nx)
         self.assertTrue(np.allclose(self.nlp2.y_init(), y_init))
 
-    def test_create_vector_x(self):
+    def test_create_vector(self):
         x = np.zeros(3)
-        self.assertTrue(np.allclose(x, self.nlp1.create_vector_x()))
+        self.assertTrue(np.allclose(x, self.nlp1.create_vector('x')))
         x = np.zeros(2)
-        self.assertTrue(np.allclose(x, self.nlp1.create_vector_x(subset='l')))
+        self.assertTrue(np.allclose(x, self.nlp1.create_vector('xl')))
         x = np.zeros(1)
-        self.assertTrue(np.allclose(x, self.nlp1.create_vector_x(subset='u')))
+        self.assertTrue(np.allclose(x, self.nlp1.create_vector('xu')))
         x = np.zeros(self.p2.nx)
-        self.assertTrue(np.allclose(x, self.nlp2.create_vector_x()))
-        self.assertTrue(np.allclose(x, self.nlp2.create_vector_x(subset='l')))
-        self.assertTrue(np.allclose(x, self.nlp2.create_vector_x(subset='u')))
+        self.assertTrue(np.allclose(x, self.nlp2.create_vector('x')))
+        self.assertTrue(np.allclose(x, self.nlp2.create_vector('xl')))
+        self.assertTrue(np.allclose(x, self.nlp2.create_vector('xu')))
 
-    def test_create_vector_y(self):
         g = np.zeros(5)
-        self.assertTrue(np.allclose(g, self.nlp1.create_vector_y()))
+        self.assertTrue(np.allclose(g, self.nlp1.create_vector('g')))
+        self.assertTrue(np.allclose(g, self.nlp1.create_vector('y')))
         c = np.zeros(2)
-        self.assertTrue(np.allclose(c, self.nlp1.create_vector_y(subset='c')))
+        self.assertTrue(np.allclose(c, self.nlp1.create_vector('c')))
+        self.assertTrue(np.allclose(c, self.nlp1.create_vector('yc')))
         d = np.zeros(3)
-        self.assertTrue(np.allclose(d, self.nlp1.create_vector_y(subset='d')))
+        self.assertTrue(np.allclose(d, self.nlp1.create_vector('d')))
+        self.assertTrue(np.allclose(d, self.nlp1.create_vector('yd')))
+        self.assertTrue(np.allclose(d, self.nlp1.create_vector('s')))
         dl = np.zeros(2)
-        self.assertTrue(np.allclose(dl, self.nlp1.create_vector_y(subset='dl')))
+        self.assertTrue(np.allclose(dl, self.nlp1.create_vector('dl')))
         du = np.zeros(1)
-        self.assertTrue(np.allclose(du, self.nlp1.create_vector_y(subset='du')))
+        self.assertTrue(np.allclose(du, self.nlp1.create_vector('du')))
         g = np.zeros(self.p2.nx)
-        self.assertTrue(np.allclose(g, self.nlp2.create_vector_y()))
+        self.assertTrue(np.allclose(g, self.nlp2.create_vector('g')))
+        self.assertTrue(np.allclose(g, self.nlp2.create_vector('y')))
         c = np.zeros(self.p2.nx)
-        self.assertTrue(np.allclose(c, self.nlp2.create_vector_y(subset='c')))
+        self.assertTrue(np.allclose(c, self.nlp2.create_vector('c')))
         d = np.zeros(0)
-        self.assertTrue(np.allclose(d, self.nlp2.create_vector_y(subset='d')))
-        self.assertTrue(np.allclose(d, self.nlp2.create_vector_y(subset='dl')))
-        self.assertTrue(np.allclose(d, self.nlp2.create_vector_y(subset='du')))
-
-    def test_create_vector_s(self):
-        g = np.zeros(3)
-        self.assertTrue(np.allclose(g, self.nlp1.create_vector_s()))
-        dl = np.zeros(2)
-        self.assertTrue(np.allclose(dl, self.nlp1.create_vector_s(subset='l')))
-        du = np.zeros(1)
-        self.assertTrue(np.allclose(du, self.nlp1.create_vector_s(subset='u')))
-        d = np.zeros(0)
-        self.assertTrue(np.allclose(d, self.nlp2.create_vector_s()))
-        self.assertTrue(np.allclose(d, self.nlp2.create_vector_s(subset='l')))
-        self.assertTrue(np.allclose(d, self.nlp2.create_vector_s(subset='u')))
+        self.assertTrue(np.allclose(d, self.nlp2.create_vector('d')))
+        self.assertTrue(np.allclose(d, self.nlp2.create_vector('dl')))
+        self.assertTrue(np.allclose(d, self.nlp2.create_vector('du')))
 
     def test_nnz_jacobian_g(self):
         self.assertEqual(self.nlp1.nnz_jacobian_g, 11)
@@ -274,30 +266,30 @@ class TestPyomoNLP(unittest.TestCase):
         self.assertTrue(np.allclose(self.nlp2._jcols_hess, jcols))
 
     def test_objective(self):
-        x = self.nlp1.create_vector_x()
+        x = self.nlp1.create_vector('x')
         x[1] = 5
         self.assertEqual(25.0, self.nlp1.objective(x))
-        x = self.nlp2.create_vector_x()
+        x = self.nlp2.create_vector('x')
         self.assertEqual(4 * self.nlp2.nx, self.nlp2.objective(x))
 
     def test_grad_objective(self):
-        x = self.nlp1.create_vector_x()
+        x = self.nlp1.create_vector('x')
         x[1] = 1
         df = np.zeros(3)
         df[1] = 2
         self.assertTrue(np.allclose(self.nlp1.grad_objective(x), df))
-        df_ = self.nlp1.create_vector_x()
+        df_ = self.nlp1.create_vector('x')
         self.nlp1.grad_objective(x, out=df_)
         self.assertTrue(np.allclose(df_, df))
 
-        x = self.nlp2.create_vector_x() + 3.0
+        x = self.nlp2.create_vector('x') + 3.0
         df = np.ones(self.nlp2.nx) * 2.0
         self.assertTrue(np.allclose(self.nlp2.grad_objective(x), df))
-        df_ = self.nlp2.create_vector_x()
+        df_ = self.nlp2.create_vector('x')
         self.nlp2.grad_objective(x, out=df_)
         self.assertTrue(np.allclose(df_, df))
 
-        x = self.nlp1.create_vector_x()
+        x = self.nlp1.create_vector('x')
         x.fill(1.0)
         sdf = np.array([0, 2], np.double)
         self.assertTrue(np.allclose(sdf, self.nlp1.grad_objective(x, subset_variables=[self.p1.x[1],
@@ -311,18 +303,18 @@ class TestPyomoNLP(unittest.TestCase):
         x = np.ones(self.nlp1.nx)
         res = np.array([-1.0, -0.5, 2, 2, 3])
         self.assertTrue(np.allclose(self.nlp1.evaluate_g(x), res))
-        res_ = self.nlp1.create_vector_y()
+        res_ = self.nlp1.create_vector('y')
         self.nlp1.evaluate_g(x, out=res_)
         self.assertTrue(np.allclose(res_, res))
 
-        x = self.nlp2.create_vector_x()
+        x = self.nlp2.create_vector('x')
         res = -np.ones(self.p2.nx)
         self.assertTrue(np.allclose(self.nlp2.evaluate_g(x), res))
-        res_ = self.nlp2.create_vector_y()
+        res_ = self.nlp2.create_vector('y')
         self.nlp2.evaluate_g(x, out=res_)
         self.assertTrue(np.allclose(res_, res))
 
-        x = self.nlp1.create_vector_x()
+        x = self.nlp1.create_vector('x')
         res = np.array([-1.0, 0.0, 0.0])
         subset_g = [self.p1.c1, self.p1.d1, self.p1.d3]
         self.assertTrue(np.allclose(self.nlp1.evaluate_g(x, subset_constraints=subset_g), res))
@@ -331,7 +323,7 @@ class TestPyomoNLP(unittest.TestCase):
         x = np.ones(self.nlp1.nx)
         res = np.array([-1.0, -0.5])
         self.assertTrue(np.allclose(self.nlp1.evaluate_c(x), res))
-        res_ = self.nlp1.create_vector_y(subset='c')
+        res_ = self.nlp1.create_vector('c')
         self.nlp1.evaluate_c(x, out=res_)
         self.assertTrue(np.allclose(res_, res))
 
@@ -340,14 +332,14 @@ class TestPyomoNLP(unittest.TestCase):
         g = self.nlp1.evaluate_g(x)
         res_eval = self.nlp1.evaluate_c(x, evaluated_g=g)
         self.assertTrue(np.allclose(res_eval, res))
-        res_ = self.nlp1.create_vector_y(subset='c')
+        res_ = self.nlp1.create_vector('c')
         self.nlp1.evaluate_c(x, out=res_, evaluated_g=g)
         self.assertTrue(np.allclose(res_, res))
 
-        x = self.nlp2.create_vector_x()
+        x = self.nlp2.create_vector('x')
         res = -np.ones(self.p2.nx)
         self.assertTrue(np.allclose(self.nlp2.evaluate_c(x), res))
-        res_ = self.nlp2.create_vector_y(subset='c')
+        res_ = self.nlp2.create_vector('c')
         self.nlp2.evaluate_c(x, out=res_)
         self.assertTrue(np.allclose(res_, res))
 
@@ -355,7 +347,7 @@ class TestPyomoNLP(unittest.TestCase):
         x = np.ones(self.nlp1.nx)
         res = np.array([2.0, 2.0, 3.0])
         self.assertTrue(np.allclose(self.nlp1.evaluate_d(x), res))
-        res_ = self.nlp1.create_vector_y(subset='d')
+        res_ = self.nlp1.create_vector('d')
         self.nlp1.evaluate_d(x, out=res_)
         self.assertTrue(np.allclose(res_, res))
 
@@ -364,20 +356,20 @@ class TestPyomoNLP(unittest.TestCase):
         g = self.nlp1.evaluate_g(x)
         res_eval = self.nlp1.evaluate_d(x, evaluated_g=g)
         self.assertTrue(np.allclose(res_eval, res))
-        res_ = self.nlp1.create_vector_y(subset='d')
+        res_ = self.nlp1.create_vector('d')
         self.nlp1.evaluate_d(x, out=res_, evaluated_g=g)
         self.assertTrue(np.allclose(res_, res))
 
-        x = self.nlp2.create_vector_x()
+        x = self.nlp2.create_vector('x')
         res = np.zeros(0)
         self.assertTrue(np.allclose(self.nlp2.evaluate_d(x), res))
-        res_ = self.nlp2.create_vector_y(subset='d')
+        res_ = self.nlp2.create_vector('d')
         self.nlp2.evaluate_d(x, out=res_)
         self.assertTrue(np.allclose(res_, res))
 
     def test_jacobian_g(self):
 
-        x = self.nlp1.create_vector_x()
+        x = self.nlp1.create_vector('x')
         x.fill(1.0)
         jac = self.nlp1.jacobian_g(x)
         self.assertEqual(3, jac.shape[1])
@@ -415,7 +407,7 @@ class TestPyomoNLP(unittest.TestCase):
 
 
         # tests rosenbrock jacobian
-        x = self.nlp2.create_vector_x() + 1.0
+        x = self.nlp2.create_vector('x') + 1.0
         jac = self.nlp2.jacobian_g(x)
         self.assertEqual(self.p2.nx, jac.shape[1])
         self.assertEqual(self.p2.nx, jac.shape[0])
@@ -424,7 +416,7 @@ class TestPyomoNLP(unittest.TestCase):
         self.assertTrue(np.allclose(values, jac.data))
 
     def test_jacobian_c(self):
-        x = self.nlp1.create_vector_x()
+        x = self.nlp1.create_vector('x')
         x.fill(1.0)
         jac = self.nlp1.jacobian_c(x)
         self.assertEqual(3, jac.shape[1])
@@ -448,7 +440,7 @@ class TestPyomoNLP(unittest.TestCase):
         self.assertTrue(np.allclose(values, new_jac.data))
 
         # tests rosenbrock jacobian
-        x = self.nlp2.create_vector_x() + 1.0
+        x = self.nlp2.create_vector('x') + 1.0
         jac = self.nlp2.jacobian_c(x)
         self.assertEqual(self.p2.nx, jac.shape[1])
         self.assertEqual(self.p2.nx, jac.shape[0])
@@ -471,7 +463,7 @@ class TestPyomoNLP(unittest.TestCase):
         self.assertTrue(np.allclose(values, new_jac.data))
 
     def test_jacobian_d(self):
-        x = self.nlp1.create_vector_x()
+        x = self.nlp1.create_vector('x')
         x.fill(1.0)
         jac = self.nlp1.jacobian_d(x)
         self.assertEqual(3, jac.shape[1])
@@ -494,7 +486,7 @@ class TestPyomoNLP(unittest.TestCase):
         self.nlp1.jacobian_d(x, out=new_jac, evaluated_jac_g=jac_g)
         self.assertTrue(np.allclose(values, new_jac.data))
 
-        x = self.nlp2.create_vector_x() + 1.0
+        x = self.nlp2.create_vector('x') + 1.0
         jac = self.nlp2.jacobian_d(x)
         self.assertEqual(self.p2.nx, jac.shape[1])
         self.assertEqual(0, jac.shape[0])
@@ -512,8 +504,8 @@ class TestPyomoNLP(unittest.TestCase):
         self.assertTrue(np.allclose(values, new_jac.data))
 
     def test_hessian_lag(self):
-        x = self.nlp1.create_vector_x()
-        l = self.nlp1.create_vector_y()
+        x = self.nlp1.create_vector('x')
+        l = self.nlp1.create_vector('y')
         l[0] = 1.0
         values = np.array([2.0, 2.0])
         hes = self.nlp1.hessian_lag(x, l)
@@ -529,8 +521,8 @@ class TestPyomoNLP(unittest.TestCase):
         self.nlp1.hessian_lag(x, l, out=hes)
         self.assertTrue(np.allclose(values, hes.data))
 
-        x = self.nlp1.create_vector_x()
-        l = self.nlp1.create_vector_y()
+        x = self.nlp1.create_vector('x')
+        l = self.nlp1.create_vector('y')
         l[0] = 1
         values = np.array([2.0, 2.0])
 
@@ -558,8 +550,8 @@ class TestPyomoNLP(unittest.TestCase):
         self.assertEqual(hes.shape[1], 2)
         self.assertTrue(np.allclose(np.ones(1) * 2.0, hes.data))
 
-        x = self.nlp2.create_vector_x()
-        l = self.nlp2.create_vector_y()
+        x = self.nlp2.create_vector('x')
+        l = self.nlp2.create_vector('y')
         hes = self.nlp2.hessian_lag(x, l)
         values = 2.0 * np.ones(self.p2.nx)
         self.assertEqual(hes.shape[0], self.p2.nx)
@@ -574,44 +566,44 @@ class TestPyomoNLP(unittest.TestCase):
         self.nlp2.hessian_lag(x, l, out=hes)
         self.assertTrue(np.allclose(values, hes.data))
 
-    def test_expansion_matrix_xl(self):
+    def test_projection_matrix_xl(self):
 
         xl = self.nlp1.xl(condensed=True)
-        Pxl = self.nlp1.expansion_matrix_xl()
+        Pxl = self.nlp1.projection_matrix_xl()
         all_xl = Pxl * xl
         xx = np.copy(self.nlp1.xl())
         xx[xx == -np.inf] = 0
         self.assertTrue(np.allclose(all_xl, xx))
 
-    def test_expansion_matrix_xu(self):
+    def test_projection_matrix_xu(self):
         xu = self.nlp1.xu(condensed=True)
-        Pxu = self.nlp1.expansion_matrix_xu()
+        Pxu = self.nlp1.projection_matrix_xu()
         all_xu = Pxu * xu
         xx = np.copy(self.nlp1.xu())
         xx[xx == np.inf] = 0
         self.assertTrue(np.allclose(all_xu, xx))
 
-    def test_expansion_matrix_dl(self):
+    def test_projection_matrix_dl(self):
         dl = self.nlp1.dl(condensed=True)
-        Pdl = self.nlp1.expansion_matrix_dl()
+        Pdl = self.nlp1.projection_matrix_dl()
         all_dl = Pdl * dl
         dd = np.copy(self.nlp1.dl())
         dd[dd == -np.inf] = 0
         self.assertTrue(np.allclose(all_dl, dd))
 
-    def test_expansion_matrix_du(self):
+    def test_projection_matrix_du(self):
         du = self.nlp1.du(condensed=True)
-        Pdu = self.nlp1.expansion_matrix_du()
+        Pdu = self.nlp1.projection_matrix_du()
         all_du = Pdu * du
         dd = np.copy(self.nlp1.du())
         dd[dd == np.inf] = 0
         self.assertTrue(np.allclose(all_du, dd))
 
-    def test_expansion_matrix_d(self):
+    def test_projection_matrix_d(self):
 
-        d = self.nlp1.create_vector_s()
+        d = self.nlp1.create_vector('s')
         d.fill(1.0)
-        Pd = self.nlp1.expansion_matrix_d()
+        Pd = self.nlp1.projection_matrix_d()
         g = Pd * d
         cnames = self.nlp1.constraint_order()
         dd = np.zeros(self.nlp1.ng)
@@ -620,11 +612,11 @@ class TestPyomoNLP(unittest.TestCase):
                 dd[i] = 1.0
         self.assertTrue(np.allclose(g, dd))
 
-    def test_expansion_matrix_c(self):
+    def test_projection_matrix_c(self):
 
-        c = self.nlp1.create_vector_y(subset='c')
+        c = self.nlp1.create_vector('c')
         c.fill(1.0)
-        Pc = self.nlp1.expansion_matrix_c()
+        Pc = self.nlp1.projection_matrix_c()
         g = Pc * c
         cnames = self.nlp1.constraint_order()
         cc = np.zeros(self.nlp1.ng)

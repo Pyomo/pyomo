@@ -189,10 +189,6 @@ class CyIpoptSolver(object):
             assert x0.size == self._nlp.nx
             xstart = x0
 
-        # this is needed until NLP hessian takes obj_factor as an input
-        if not self._nlp._future_libraries:
-            cyipopt_solver.addOption('nlp_scaling_method', 'none')
-
         # add options
         for k, v in self._options.items():
             cyipopt_solver.addOption(k, v)
@@ -205,7 +201,3 @@ class CyIpoptSolver(object):
             os.dup2(newstdout, 1)
 
         return x, info
-
-
-
-

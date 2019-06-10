@@ -63,8 +63,8 @@ class TestFullKKTSolver(unittest.TestCase):
     def test_solve(self):
 
         nlp = self.qp1
-        x = nlp.create_vector_x()
-        y = nlp.create_vector_y()
+        x = nlp.create_vector('x')
+        y = nlp.create_vector('y')
 
         # create KKT system
         kkt = BlockSymMatrix(4)
@@ -134,8 +134,8 @@ class TestTwoStageStochasticSchurKKTSolver(unittest.TestCase):
     def test_solve(self):
 
         nlp = self.qp1
-        x = nlp.create_vector_x()
-        y = nlp.create_vector_y()
+        x = nlp.create_vector('x')
+        y = nlp.create_vector('y')
 
         # create KKT system
         kkt = BlockSymMatrix(4)

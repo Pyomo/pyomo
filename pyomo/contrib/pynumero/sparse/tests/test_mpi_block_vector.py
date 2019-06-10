@@ -1903,7 +1903,7 @@ class TestMPIBlockVector(unittest.TestCase):
         if rank == 1:
             v[1] = np.zeros(2)
         v.broadcast_block_sizes()
-        self.assertEqual(len(v), 5)
+        self.assertEqual(len(v), 2)
 
     def test_copyfrom(self):
 

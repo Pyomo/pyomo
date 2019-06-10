@@ -18,7 +18,7 @@ except ImportError as e:
                       'Make sure libpynumero_ASL is installed and added to path.')
 
 from pyomo.contrib.pynumero.sparse import empty_matrix
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, csr_matrix
 from .nlp import NLP
 import numpy as np
 
@@ -119,7 +119,39 @@ class EqualityQP(NLP):
         """
         Sets writable flag of internal arrays (cached) to false
         """
-        super(EqualityQP, self)._make_unmutable_caches()
+        self._lower_x.flags.writeable = False
+        self._upper_x.flags.writeable = False
+        self._lower_g.flags.writeable = False
+        self._upper_g.flags.writeable = False
+        self._init_x.flags.writeable = False
+        self._init_y.flags.writeable = False
+
+        # make maps and masks not rewritable
+        self._c_mask.flags.writeable = False
+        self._c_map.flags.writeable = False
+        self._d_mask.flags.writeable = False
+        self._d_map.flags.writeable = False
+
+        self._lower_x_mask.flags.writeable = False
+        self._upper_x_mask.flags.writeable = False
+        self._lower_g_mask.flags.writeable = False
+        self._upper_g_mask.flags.writeable = False
+        self._lower_d_mask.flags.writeable = False
+        self._upper_d_mask.flags.writeable = False
+
+        self._lower_x_map.flags.writeable = False
+        self._upper_x_map.flags.writeable = False
+        self._lower_g_map.flags.writeable = False
+        self._upper_g_map.flags.writeable = False
+        self._lower_d_map.flags.writeable = False
+        self._upper_d_map.flags.writeable = False
+
+    @property
+    def model(self):
+        """
+        Return optimization model
+        """
+        return self._model
 
     def objective(self, x, **kwargs):
         """Returns value of objective function evaluated at x
@@ -382,3 +414,91 @@ class EqualityQP(NLP):
 
         return hess
 
+    def create_vector(self, vector_type):
+
+        if vector_type == 'x':
+            return np.zeros(self.nx, dtype=np.double)
+        elif vector_type == 'xl':
+            nx_l = len(self._lower_x_map)
+            return np.zeros(nx_l, dtype=np.double)
+        elif vector_type == 'xu':
+            nx_u = len(self._upper_x_map)
+            return np.zeros(nx_u, dtype=np.double)
+        elif vector_type == 'g' or vector_type == 'y':
+            return np.zeros(self.ng, dtype=np.double)
+        elif vector_type == 'c' or vector_type == 'yc':
+            return np.zeros(self.nc, dtype=np.double)
+        elif vector_type == 'd' or vector_type == 'yd' or vector_type == 's':
+            return np.zeros(self.nd, dtype=np.double)
+        elif vector_type == 'dl':
+            ndl = len(self._lower_d_map)
+            return np.zeros(ndl, dtype=np.double)
+        elif vector_type == 'du':
+            ndu = len(self._upper_d_map)
+            return np.zeros(ndu, dtype=np.double)
+        else:
+            raise RuntimeError('vector_type not recognized')
+
+    def projection_matrix_xl(self):
+        """
+        Returns expansion matrix for lower bounds on primal variables
+        """
+        row = self._lower_x_map
+        nnz = len(self._lower_x_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.nx, nnz))
+
+    def projection_matrix_xu(self):
+        """
+        Returns expansion matrix for upper bounds on primal variables
+        """
+        row = self._upper_x_map
+        nnz = len(self._upper_x_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.nx, nnz))
+
+    def projection_matrix_dl(self):
+        """
+        Returns expansion matrix lower bounds on inequality constraints
+        """
+
+        row = self._lower_d_map
+        nnz = len(self._lower_d_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.nd, nnz))
+
+    def projection_matrix_du(self):
+        """
+        Returns expansion matrix upper bounds on inequality constraints
+        """
+        row = self._upper_d_map
+        nnz = len(self._upper_d_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.nd, nnz))
+
+    def projection_matrix_d(self):
+        """
+        Returns expansion matrix inequality constraints
+        """
+        row = self._d_map
+        nnz = len(self._d_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.ng, nnz))
+
+    def projection_matrix_c(self):
+        """
+        Returns expansion matrix inequality constraints
+        """
+        row = self._c_map
+        nnz = len(self._c_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.ng, nnz))
+
+    def report_solver_status(self, status_num, status_msg, x, y):
+        raise NotImplementedError('EqualityQP does not support report_solver_status')

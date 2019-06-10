@@ -156,6 +156,13 @@ class AdmmNLP(NLP):
         self._d_map = self._base_nlp._d_map
 
     @property
+    def model(self):
+        """
+        Return optimization model
+        """
+        return self._model
+
+    @property
     def nz(self):
         return self._nz
 
@@ -206,6 +213,9 @@ class AdmmNLP(NLP):
         assert value >= 0, "Penalty parameter must be a positive number"
         self._rho = value
 
+    def create_vector(self, vector_type):
+        return self._base_nlp.create_vector(vector_type)
+
     def objective(self, x, **kwargs):
 
         z = self._z_values
@@ -233,7 +243,7 @@ class AdmmNLP(NLP):
         return df
 
     def rhs_addition_terms(self):
-        a = self.create_vector_x()
+        a = self.create_vector('x')
         z = self._z_values
         w = self._w_values
         for zid, xid in enumerate(self._zid_to_xid):
@@ -241,13 +251,13 @@ class AdmmNLP(NLP):
         return a
 
     def atw(self):
-        a = self.create_vector_x()
+        a = self.create_vector('x')
         for zid, xid in enumerate(self._zid_to_xid):
             a[xid] = self._w_values[zid]
         return a
 
     def ratbz(self):
-        a = self.create_vector_x()
+        a = self.create_vector('x')
         for zid, xid in enumerate(self._zid_to_xid):
             a[xid] = -self.rho * self._z_values[zid]
         return a
@@ -402,6 +412,27 @@ class AdmmNLP(NLP):
 
     def constraint_order(self):
         return self._base_nlp.constraint_order()
+
+    def projection_matrix_xl(self):
+        self._base_nlp.projection_matrix_xl()
+
+    def projection_matrix_xu(self):
+        self._base_nlp.projection_matrix_xu()
+
+    def projection_matrix_dl(self):
+        self._base_nlp.projection_matrix_dl()
+
+    def projection_matrix_du(self):
+        self._base_nlp.projection_matrix_du()
+
+    def projection_matrix_d(self):
+        self._base_nlp.projection_matrix_d()
+
+    def projection_matrix_c(self):
+        self._base_nlp.projection_matrix_c()
+
+    def report_solver_status(self, status_num, status_msg, x, y):
+        raise NotImplementedError('AdmmNLP does not support report_solver_status')
 
 
 def compose_two_stage_stochastic_model(models, complicating_vars):

@@ -355,50 +355,49 @@ class TestAdmmNLP(unittest.TestCase):
         du = [100.]
         self.assertTrue(np.allclose(du, self.nlp3.du(condensed=True)))
 
-    def test_create_vector_x(self):
-        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector_x(),
-                                    self.nlp.create_vector_x()))
-        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector_x(subset='l'),
-                                    self.nlp.create_vector_x(subset='l')))
-        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector_x(subset='u'),
-                                    self.nlp.create_vector_x(subset='u')))
+    def test_create_vector(self):
+        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector('x'),
+                                    self.nlp.create_vector('x')))
+        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector('xl'),
+                                    self.nlp.create_vector('xl')))
+        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector('xu'),
+                                    self.nlp.create_vector('xu')))
 
-        self.assertTrue(np.allclose(self.pyomo_nlp2.create_vector_x(),
-                                    self.nlp2.create_vector_x()))
-        self.assertTrue(np.allclose(self.pyomo_nlp2.create_vector_x(subset='l'),
-                                    self.nlp2.create_vector_x(subset='l')))
-        self.assertTrue(np.allclose(self.pyomo_nlp2.create_vector_x(subset='u'),
-                                    self.nlp2.create_vector_x(subset='u')))
+        self.assertTrue(np.allclose(self.pyomo_nlp2.create_vector('x'),
+                                    self.nlp2.create_vector('x')))
+        self.assertTrue(np.allclose(self.pyomo_nlp2.create_vector('xl'),
+                                    self.nlp2.create_vector('xl')))
+        self.assertTrue(np.allclose(self.pyomo_nlp2.create_vector('xu'),
+                                    self.nlp2.create_vector('xu')))
 
-        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector_x(),
-                                    self.nlp3.create_vector_x()))
-        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector_x(subset='l'),
-                                    self.nlp3.create_vector_x(subset='l')))
-        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector_x(subset='u'),
-                                    self.nlp3.create_vector_x(subset='u')))
+        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector('x'),
+                                    self.nlp3.create_vector('x')))
+        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector('xl'),
+                                    self.nlp3.create_vector('xl')))
+        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector('xu'),
+                                    self.nlp3.create_vector('xu')))
 
-    def test_create_vector_y(self):
-        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector_y(),
-                                    self.nlp.create_vector_y()))
-        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector_y(subset='c'),
-                                    self.nlp.create_vector_y(subset='c')))
-        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector_y(subset='d'),
-                                    self.nlp.create_vector_y(subset='d')))
-        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector_y(subset='dl'),
-                                    self.nlp.create_vector_y(subset='dl')))
-        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector_y(subset='du'),
-                                    self.nlp.create_vector_y(subset='du')))
+        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector('y'),
+                                    self.nlp.create_vector('y')))
+        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector('c'),
+                                    self.nlp.create_vector('c')))
+        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector('d'),
+                                    self.nlp.create_vector('d')))
+        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector('dl'),
+                                    self.nlp.create_vector('dl')))
+        self.assertTrue(np.allclose(self.pyomo_nlp.create_vector('du'),
+                                    self.nlp.create_vector('du')))
 
-        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector_y(),
-                                    self.nlp3.create_vector_y()))
-        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector_y(subset='c'),
-                                    self.nlp3.create_vector_y(subset='c')))
-        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector_y(subset='d'),
-                                    self.nlp3.create_vector_y(subset='d')))
-        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector_y(subset='dl'),
-                                    self.nlp3.create_vector_y(subset='dl')))
-        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector_y(subset='du'),
-                                    self.nlp3.create_vector_y(subset='du')))
+        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector('y'),
+                                    self.nlp3.create_vector('y')))
+        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector('c'),
+                                    self.nlp3.create_vector('c')))
+        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector('d'),
+                                    self.nlp3.create_vector('d')))
+        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector('dl'),
+                                    self.nlp3.create_vector('dl')))
+        self.assertTrue(np.allclose(self.pyomo_nlp3.create_vector('du'),
+                                    self.nlp3.create_vector('du')))
 
     def test_x_init(self):
         x_init = np.array(range(1, 4))
@@ -431,7 +430,7 @@ class TestAdmmNLP(unittest.TestCase):
         x = np.ones(self.nlp3.nx)
         res = np.array([-1.0, -0.5, 2, 2, 3])
         self.assertTrue(np.allclose(self.nlp3.evaluate_g(x), res))
-        res_ = self.nlp3.create_vector_y()
+        res_ = self.nlp3.create_vector('y')
         self.nlp3.evaluate_g(x, out=res_)
         self.assertTrue(np.allclose(res_, res))
 
@@ -439,7 +438,7 @@ class TestAdmmNLP(unittest.TestCase):
         x = np.ones(self.nlp3.nx)
         res = np.array([-1.0, -0.5])
         self.assertTrue(np.allclose(self.nlp3.evaluate_c(x), res))
-        res_ = self.nlp3.create_vector_y(subset='c')
+        res_ = self.nlp3.create_vector('c')
         self.nlp3.evaluate_c(x, out=res_)
         self.assertTrue(np.allclose(res_, res))
 
@@ -448,7 +447,7 @@ class TestAdmmNLP(unittest.TestCase):
         g = self.nlp3.evaluate_g(x)
         res_eval = self.nlp3.evaluate_c(x, evaluated_g=g)
         self.assertTrue(np.allclose(res_eval, res))
-        res_ = self.nlp3.create_vector_y(subset='c')
+        res_ = self.nlp3.create_vector('c')
         self.nlp3.evaluate_c(x, out=res_, evaluated_g=g)
         self.assertTrue(np.allclose(res_, res))
 
@@ -456,7 +455,7 @@ class TestAdmmNLP(unittest.TestCase):
         x = np.ones(self.nlp3.nx)
         res = np.array([2.0, 2.0, 3.0])
         self.assertTrue(np.allclose(self.nlp3.evaluate_d(x), res))
-        res_ = self.nlp3.create_vector_y(subset='d')
+        res_ = self.nlp3.create_vector('d')
         self.nlp3.evaluate_d(x, out=res_)
         self.assertTrue(np.allclose(res_, res))
 
@@ -465,17 +464,17 @@ class TestAdmmNLP(unittest.TestCase):
         g = self.nlp3.evaluate_g(x)
         res_eval = self.nlp3.evaluate_d(x, evaluated_g=g)
         self.assertTrue(np.allclose(res_eval, res))
-        res_ = self.nlp3.create_vector_y(subset='d')
+        res_ = self.nlp3.create_vector('d')
         self.nlp3.evaluate_d(x, out=res_, evaluated_g=g)
         self.assertTrue(np.allclose(res_, res))
 
     def test_jacobian_g(self):
         nlp = self.nlp
         jac_g = self.model.jacobian_c
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         self.assertTrue(np.allclose(nlp.jacobian_g(x).toarray(), jac_g))
 
-        x = self.nlp3.create_vector_x()
+        x = self.nlp3.create_vector('x')
         x.fill(1.0)
         jac = self.nlp3.jacobian_g(x)
         self.assertEqual(3, jac.shape[1])
@@ -511,10 +510,10 @@ class TestAdmmNLP(unittest.TestCase):
 
         nlp = self.nlp
         jac_c = self.model.jacobian_c
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         self.assertTrue(np.allclose(nlp.jacobian_c(x).toarray(), jac_c))
 
-        x = self.nlp3.create_vector_x()
+        x = self.nlp3.create_vector('x')
         x.fill(1.0)
         jac = self.nlp3.jacobian_c(x)
         self.assertEqual(3, jac.shape[1])
@@ -539,10 +538,10 @@ class TestAdmmNLP(unittest.TestCase):
     def test_jacobian_d(self):
 
         nlp = self.nlp
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         self.assertEqual(nlp.jacobian_d(x).shape, (0, 3))
 
-        x = self.nlp3.create_vector_x()
+        x = self.nlp3.create_vector('x')
         x.fill(1.0)
         jac = self.nlp3.jacobian_d(x)
         self.assertEqual(3, jac.shape[1])
@@ -615,8 +614,8 @@ class TestAdmmNLP(unittest.TestCase):
         ata = np.array([[1, 0, 0], [0, 0, 0], [0, 0, 1]], dtype=np.double)
         rho = self.nlp.rho
         admm_hessian = hessian_base + ata * rho
-        x = self.nlp.create_vector_x()
-        y = self.nlp.create_vector_y()
+        x = self.nlp.create_vector('x')
+        y = self.nlp.create_vector('y')
         hess_lag = self.nlp.hessian_lag(x, y)
         dense_hess_lag = hess_lag.toarray()
         self.assertTrue(np.allclose(dense_hess_lag, admm_hessian))
@@ -639,8 +638,8 @@ class TestAdmmNLP(unittest.TestCase):
                                            rho=7.0)
         nl = PyomoNLP(aug_model)
 
-        x = nlp.create_vector_x()
-        y = nlp.create_vector_y()
+        x = nlp.create_vector('x')
+        y = nlp.create_vector('y')
         hess_lag = nlp.hessian_lag(x, y)
         dense_hess_lag = hess_lag.toarray()
         hess_lagp = nl.hessian_lag(x, y)
@@ -664,8 +663,8 @@ class TestAdmmNLP(unittest.TestCase):
                                            w_estimates=w_estimates,
                                            rho=1.0)
         nl = PyomoNLP(aug_model)
-        x = nlp.create_vector_x()
-        y = nlp.create_vector_y()
+        x = nlp.create_vector('x')
+        y = nlp.create_vector('y')
         hess_lag = nlp.hessian_lag(x, y)
         dense_hess_lag = hess_lag.toarray()
         hess_lagp = nl.hessian_lag(x, y)
@@ -687,7 +686,7 @@ class TestAdmmNLP(unittest.TestCase):
         hessian_base = self.model.hessian_f
         c = self.model.grad_f
         A = np.array([[1, 0, 0], [0, 0, 1]], dtype=np.double)
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         x.fill(1.0)
         f = 0.5 * x.transpose().dot(hessian_base.dot(x)) + c.dot(x)
         difference = A.dot(x) - z_estimates
@@ -713,7 +712,7 @@ class TestAdmmNLP(unittest.TestCase):
                                            rho=5.0)
         nl = PyomoNLP(aug_model)
 
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         self.assertAlmostEqual(nlp.objective(x), nl.objective((x)))
 
         # third nlp
@@ -734,7 +733,7 @@ class TestAdmmNLP(unittest.TestCase):
                                            rho=7.0)
         nl = PyomoNLP(aug_model)
 
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         self.assertAlmostEqual(nlp.objective(x), nl.objective((x)))
 
     def test_grad_objective(self):
@@ -751,7 +750,7 @@ class TestAdmmNLP(unittest.TestCase):
         hessian_base = self.model.hessian_f
         c = self.model.grad_f
         A = np.array([[1, 0, 0], [0, 0, 1]], dtype=np.double)
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         x.fill(1.0)
 
         df = hessian_base.dot(x) + c
@@ -778,7 +777,7 @@ class TestAdmmNLP(unittest.TestCase):
                                            rho=3.0)
         nl = PyomoNLP(aug_model)
 
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         self.assertTrue(np.allclose(nlp.grad_objective(x), nl.grad_objective(x)))
 
         # third nlp
@@ -799,6 +798,6 @@ class TestAdmmNLP(unittest.TestCase):
                                            rho=8.0)
         nl = PyomoNLP(aug_model)
 
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         x.fill(1.0)
         self.assertTrue(np.allclose(nlp.grad_objective(x), nl.grad_objective(x)))

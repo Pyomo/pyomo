@@ -243,9 +243,6 @@ class NLP(object):
         self._c_map = None
         self._d_map = None
 
-        # ToDo: remove this after new libraries get merged in conda_forge
-        self._future_libraries = False
-
     @abc.abstractmethod
     def _initialize_nlp_components(self, *args, **kwargs):
         """
@@ -292,45 +289,6 @@ class NLP(object):
         Subclass attributes may be intialized here as well
         """
         return
-
-    def _make_unmutable_caches(self):
-        """
-        Sets writable flag of internal arrays (cached) to false
-        """
-        # make lower, upper init arrays inmutable
-        self._lower_x.flags.writeable = False
-        self._upper_x.flags.writeable = False
-        self._lower_g.flags.writeable = False
-        self._upper_g.flags.writeable = False
-        self._init_x.flags.writeable = False
-        self._init_y.flags.writeable = False
-
-        # make maps and masks not rewritable
-        self._c_mask.flags.writeable = False
-        self._c_map.flags.writeable = False
-        self._d_mask.flags.writeable = False
-        self._d_map.flags.writeable = False
-
-        self._lower_x_mask.flags.writeable = False
-        self._upper_x_mask.flags.writeable = False
-        self._lower_g_mask.flags.writeable = False
-        self._upper_g_mask.flags.writeable = False
-        self._lower_d_mask.flags.writeable = False
-        self._upper_d_mask.flags.writeable = False
-
-        self._lower_x_map.flags.writeable = False
-        self._upper_x_map.flags.writeable = False
-        self._lower_g_map.flags.writeable = False
-        self._upper_g_map.flags.writeable = False
-        self._lower_d_map.flags.writeable = False
-        self._upper_d_map.flags.writeable = False
-
-    @property
-    def model(self):
-        """
-        Return optimization model
-        """
-        return self._model
 
     @property
     def nx(self):
@@ -508,148 +466,9 @@ class NLP(object):
         """
         return self._init_y.copy()
 
-    def expansion_matrix_xl(self):
-        """
-        Returns expansion matrix for lower bounds on primal variables
-        """
-        row = self._lower_x_map
-        nnz = len(self._lower_x_map)
-        col = np.arange(nnz, dtype=np.int)
-        data = np.ones(nnz)
-        return csr_matrix((data, (row, col)), shape=(self.nx, nnz))
-
-    def expansion_matrix_xu(self):
-        """
-        Returns expansion matrix for upper bounds on primal variables
-        """
-        row = self._upper_x_map
-        nnz = len(self._upper_x_map)
-        col = np.arange(nnz, dtype=np.int)
-        data = np.ones(nnz)
-        return csr_matrix((data, (row, col)), shape=(self.nx, nnz))
-
-    def expansion_matrix_dl(self):
-        """
-        Returns expansion matrix lower bounds on inequality constraints
-        """
-
-        row = self._lower_d_map
-        nnz = len(self._lower_d_map)
-        col = np.arange(nnz, dtype=np.int)
-        data = np.ones(nnz)
-        return csr_matrix((data, (row, col)), shape=(self.nd, nnz))
-
-    def expansion_matrix_du(self):
-        """
-        Returns expansion matrix upper bounds on inequality constraints
-        """
-        row = self._upper_d_map
-        nnz = len(self._upper_d_map)
-        col = np.arange(nnz, dtype=np.int)
-        data = np.ones(nnz)
-        return csr_matrix((data, (row, col)), shape=(self.nd, nnz))
-
-    def expansion_matrix_d(self):
-        """
-        Returns expansion matrix inequality constraints
-        """
-        row = self._d_map
-        nnz = len(self._d_map)
-        col = np.arange(nnz, dtype=np.int)
-        data = np.ones(nnz)
-        return csr_matrix((data, (row, col)), shape=(self.ng, nnz))
-
-    def expansion_matrix_c(self):
-        """
-        Returns expansion matrix inequality constraints
-        """
-        row = self._c_map
-        nnz = len(self._c_map)
-        col = np.arange(nnz, dtype=np.int)
-        data = np.ones(nnz)
-        return csr_matrix((data, (row, col)), shape=(self.ng, nnz))
-
-    def create_vector_x(self, subset=None):
-        """Returns ndarray of primal variables
-
-        Parameters
-        ----------
-        subset : str, optional
-            determines size of vector.
-            `l`: only primal variables with lower bounds
-            `u`: only primal variables with upper bounds
-
-        Returns
-        -------
-        ndarray
-
-        """
-        if subset is None:
-            return np.zeros(self.nx, dtype=np.double)
-        elif subset == 'l':
-            nx_l = len(self._lower_x_map)
-            return np.zeros(nx_l, dtype=np.double)
-        elif subset == 'u':
-            nx_u = len(self._upper_x_map)
-            return np.zeros(nx_u, dtype=np.double)
-        else:
-            raise RuntimeError('Subset not recognized')
-
-    def create_vector_s(self, subset=None):
-        """Returns ndarray of slack variables
-
-        Parameters
-        ----------
-        subset : str, optional
-            determines size of vector.
-            `l`: only slack variables with lower bounds
-            `u`: only slack variables with upper bounds
-
-        Returns
-        -------
-        ndarray
-
-        """
-        if subset is None:
-            return self.create_vector_y(subset='d')
-        elif subset == 'l':
-            return self.create_vector_y(subset='dl')
-        elif subset == 'u':
-            return self.create_vector_y(subset='du')
-        else:
-            raise RuntimeError('Subset not recognized')
-
-    def create_vector_y(self, subset=None):
-        """Return ndarray of vector of constraints
-
-        Parameters
-        ----------
-        subset : str, optional
-            determines size of vector.
-            `c`: only equality constraints
-            `d`: only inequality constraints
-            `dl`: only inequality constraints with lower bound
-            `du`: only inequality constraints with upper bound
-
-        Returns
-        -------
-        ndarray
-
-        """
-        if subset is None:
-            return np.zeros(self.ng, dtype=np.double)
-        elif subset == 'c':
-            return np.zeros(self.nc, dtype=np.double)
-        elif subset == 'd':
-            return np.zeros(self.nd, dtype=np.double)
-        elif subset == 'dl':
-            ndl = len(self._lower_d_map)
-            return np.zeros(ndl, dtype=np.double)
-        elif subset == 'du':
-            ndu = len(self._upper_d_map)
-            return np.zeros(ndu, dtype=np.double)
-        else:
-            raise RuntimeError('Subset not recognized')
+    @abc.abstractmethod
+    def create_vector(self, vector_type):
+        pass
 
     @abc.abstractmethod
     def objective(self, x, **kwargs):
@@ -665,7 +484,7 @@ class NLP(object):
         float
 
         """
-        return
+        pass
 
     @abc.abstractmethod
     def grad_objective(self, x, out=None, **kwargs):
@@ -684,7 +503,7 @@ class NLP(object):
         array_like
 
         """
-        return
+        pass
 
     @abc.abstractmethod
     def evaluate_g(self, x, out=None, **kwargs):
@@ -703,7 +522,7 @@ class NLP(object):
         array_like
 
         """
-        return
+        pass
 
     @abc.abstractmethod
     def evaluate_c(self, x, out=None, **kwargs):
@@ -722,7 +541,7 @@ class NLP(object):
         array_like
 
         """
-        return
+        pass
 
     @abc.abstractmethod
     def evaluate_d(self, x, out=None, **kwargs):
@@ -741,7 +560,7 @@ class NLP(object):
         array_like
 
         """
-        return
+        pass
 
     @abc.abstractmethod
     def jacobian_g(self, x, out=None, **kwargs):
@@ -759,7 +578,7 @@ class NLP(object):
         coo_matrix
 
         """
-        return
+        pass
 
     @abc.abstractmethod
     def jacobian_c(self, x, out=None, **kwargs):
@@ -777,7 +596,7 @@ class NLP(object):
         coo_matrix
 
         """
-        return
+        pass
 
     @abc.abstractmethod
     def jacobian_d(self, x, out=None, **kwargs):
@@ -795,7 +614,7 @@ class NLP(object):
         coo_matrix
 
         """
-        return
+        pass
 
     @abc.abstractmethod
     def hessian_lag(self, x, y, out=None, **kwargs):
@@ -815,9 +634,37 @@ class NLP(object):
         coo_matrix
 
         """
-        return
+        pass
 
-# ToDo: need to add support for modifying bounds. 
+    @abc.abstractmethod
+    def projection_matrix_xl(self):
+        pass
+
+    @abc.abstractmethod
+    def projection_matrix_xu(self):
+        pass
+
+    @abc.abstractmethod
+    def projection_matrix_dl(self):
+        pass
+
+    @abc.abstractmethod
+    def projection_matrix_du(self):
+        pass
+
+    @abc.abstractmethod
+    def projection_matrix_d(self):
+        pass
+
+    @abc.abstractmethod
+    def projection_matrix_c(self):
+        pass
+
+    @abc.abstractmethod
+    def report_solver_status(self, status_num, status_msg, x, y):
+        pass
+
+# ToDo: need to add support for modifying bounds.
 # modification of bounds requires rebuiding the maps.
 # support for variable bounds seems trivial.
 # support for constraint bounds would require more work. (this is not frequent tho)
@@ -859,9 +706,6 @@ class AslNLP(NLP):
 
         # ampl interface
         self._asl = _asl.AmplInterface(self._model)
-
-        # ToDo: remove this after new pynumero libraries get merged in conda-forge
-        self._future_libraries = self._asl.future_libraries
 
         # initialize components
         self._initialize_nlp_components()
@@ -1007,7 +851,32 @@ class AslNLP(NLP):
         """
         Sets writable flag of internal arrays (cached) to false
         """
-        super(AslNLP, self)._make_unmutable_caches()
+        self._lower_x.flags.writeable = False
+        self._upper_x.flags.writeable = False
+        self._lower_g.flags.writeable = False
+        self._upper_g.flags.writeable = False
+        self._init_x.flags.writeable = False
+        self._init_y.flags.writeable = False
+
+        # make maps and masks not rewritable
+        self._c_mask.flags.writeable = False
+        self._c_map.flags.writeable = False
+        self._d_mask.flags.writeable = False
+        self._d_map.flags.writeable = False
+
+        self._lower_x_mask.flags.writeable = False
+        self._upper_x_mask.flags.writeable = False
+        self._lower_g_mask.flags.writeable = False
+        self._upper_g_mask.flags.writeable = False
+        self._lower_d_mask.flags.writeable = False
+        self._upper_d_mask.flags.writeable = False
+
+        self._lower_x_map.flags.writeable = False
+        self._upper_x_map.flags.writeable = False
+        self._lower_g_map.flags.writeable = False
+        self._upper_g_map.flags.writeable = False
+        self._lower_d_map.flags.writeable = False
+        self._upper_d_map.flags.writeable = False
 
         self._irows_jac_c.flags.writeable = False
         self._jcols_jac_c.flags.writeable = False
@@ -1018,6 +887,31 @@ class AslNLP(NLP):
 
         self._irows_hess.flags.writeable = False
         self._jcols_hess.flags.writeable = False
+
+    def create_vector(self, vector_type):
+
+        if vector_type == 'x':
+            return np.zeros(self.nx, dtype=np.double)
+        elif vector_type == 'xl':
+            nx_l = len(self._lower_x_map)
+            return np.zeros(nx_l, dtype=np.double)
+        elif vector_type == 'xu':
+            nx_u = len(self._upper_x_map)
+            return np.zeros(nx_u, dtype=np.double)
+        elif vector_type == 'g' or vector_type == 'y':
+            return np.zeros(self.ng, dtype=np.double)
+        elif vector_type == 'c' or vector_type == 'yc':
+            return np.zeros(self.nc, dtype=np.double)
+        elif vector_type == 'd' or vector_type == 'yd' or vector_type == 's':
+            return np.zeros(self.nd, dtype=np.double)
+        elif vector_type == 'dl':
+            ndl = len(self._lower_d_map)
+            return np.zeros(ndl, dtype=np.double)
+        elif vector_type == 'du':
+            ndu = len(self._upper_d_map)
+            return np.zeros(ndu, dtype=np.double)
+        else:
+            raise RuntimeError('vector_type not recognized')
 
     def objective(self, x, **kwargs):
         """Returns value of objective function evaluated at x
@@ -1051,7 +945,7 @@ class AslNLP(NLP):
 
         """
         if out is None:
-            df = self.create_vector_x()
+            df = self.create_vector('x')
         else:
             msg = "grad_objective takes a ndarray of size {}".format(self.nx)
             assert isinstance(out, np.ndarray) and out.size == self.nx, msg
@@ -1077,7 +971,7 @@ class AslNLP(NLP):
 
         """
         if out is None:
-            res = self.create_vector_y()
+            res = self.create_vector('y')
         else:
             msg = "evaluate_g takes a ndarray of size {}".format(self.ng)
             assert isinstance(out, np.ndarray) and out.size == self.ng, msg
@@ -1106,7 +1000,7 @@ class AslNLP(NLP):
         evaluated_g = kwargs.pop('evaluated_g', None)
 
         if evaluated_g is None:
-            res = self.create_vector_y()
+            res = self.create_vector('y')
             self._asl.eval_g(x, res)
             eval_g = res - self._g_rhs
         else:
@@ -1139,7 +1033,7 @@ class AslNLP(NLP):
         evaluated_g = kwargs.pop('evaluated_g', None)
 
         if evaluated_g is None:
-            res = self.create_vector_y()
+            res = self.create_vector('y')
             self._asl.eval_g(x, res)
             eval_g = res - self._g_rhs
         else:
@@ -1310,7 +1204,7 @@ class AslNLP(NLP):
         obj_factor = kwargs.pop('obj_factor', 1.0)
 
         if eval_f_c:
-            res = self.create_vector_y()
+            res = self.create_vector('y')
             self._asl.eval_g(x, res)
             self._asl.eval_f(x)
         if out is None:
@@ -1336,7 +1230,7 @@ class AslNLP(NLP):
 
         return hess
 
-    def finalize_solution(self, status_num, status_msg, x, y):
+    def report_solver_status(self, status_num, status_msg, x, y):
         """
         Write .sol file
 
@@ -1356,6 +1250,67 @@ class AslNLP(NLP):
         None
         """
         self._asl.finalize_solution(status_num, status_msg, x, y)
+
+    def projection_matrix_xl(self):
+        """
+        Returns expansion matrix for lower bounds on primal variables
+        """
+        row = self._lower_x_map
+        nnz = len(self._lower_x_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.nx, nnz))
+
+    def projection_matrix_xu(self):
+        """
+        Returns expansion matrix for upper bounds on primal variables
+        """
+        row = self._upper_x_map
+        nnz = len(self._upper_x_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.nx, nnz))
+
+    def projection_matrix_dl(self):
+        """
+        Returns expansion matrix lower bounds on inequality constraints
+        """
+
+        row = self._lower_d_map
+        nnz = len(self._lower_d_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.nd, nnz))
+
+    def projection_matrix_du(self):
+        """
+        Returns expansion matrix upper bounds on inequality constraints
+        """
+        row = self._upper_d_map
+        nnz = len(self._upper_d_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.nd, nnz))
+
+    def projection_matrix_d(self):
+        """
+        Returns expansion matrix inequality constraints
+        """
+        row = self._d_map
+        nnz = len(self._d_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.ng, nnz))
+
+    def projection_matrix_c(self):
+        """
+        Returns expansion matrix inequality constraints
+        """
+        row = self._c_map
+        nnz = len(self._c_map)
+        col = np.arange(nnz, dtype=np.int)
+        data = np.ones(nnz)
+        return csr_matrix((data, (row, col)), shape=(self.ng, nnz))
 
 
 class AmplNLP(AslNLP):
@@ -1419,6 +1374,13 @@ class AmplNLP(AslNLP):
             self._cid_to_name = all_names
             self._name_to_cid = {all_names[cid]: cid for cid in range(self.ng)}
 
+    @property
+    def model(self):
+        """
+        Return optimization model
+        """
+        return self._model
+
     def variable_order(self):
         return [name for name in self._vid_to_name]
 
@@ -1462,9 +1424,9 @@ class PyomoNLP(AslNLP):
         model : ConcreteModel
             Pyomo concrete model
         """
-        temporal_dir = tempfile.mkdtemp()
+        temp_dir = tempfile.mkdtemp()
         try:
-            filename = os.path.join(temporal_dir, "pynumero_pyomo")
+            filename = os.path.join(temp_dir, "pynumero_pyomo")
             objectives = model.component_map(aml.Objective, active=True)
             if len(objectives) == 0:
                 model._dummy_obj = aml.Objective(expr=0.0)
@@ -1489,7 +1451,14 @@ class PyomoNLP(AslNLP):
             self._model = model
 
         finally:
-            shutil.rmtree(temporal_dir)
+            shutil.rmtree(temp_dir)
+
+    @property
+    def model(self):
+        """
+        Return optimization model
+        """
+        return self._model
 
     def grad_objective(self, x, out=None, **kwargs):
 

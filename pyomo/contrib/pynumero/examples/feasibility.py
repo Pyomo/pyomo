@@ -46,8 +46,8 @@ xl = nlp.xl(condensed=True)
 xu = nlp.xu(condensed=True)
 
 # build expansion matrices
-Pxl = nlp.expansion_matrix_xl()
-Pxu = nlp.expansion_matrix_xu()
+Pxl = nlp.projection_matrix_xl()
+Pxu = nlp.projection_matrix_xu()
 
 # lower and upper bounds residual
 res_xl = Pxl.transpose() * x0 - xl
@@ -63,8 +63,8 @@ print("Residuals equality constraints c(x):", res_c)
 d = nlp.evaluate_d(x0)
 
 # compression matrices
-Pdl = nlp.expansion_matrix_dl()
-Pdu = nlp.expansion_matrix_du()
+Pdl = nlp.projection_matrix_dl()
+Pdu = nlp.projection_matrix_du()
 
 # vectors of finite lower and upper bounds
 dl = nlp.dl(condensed=True)

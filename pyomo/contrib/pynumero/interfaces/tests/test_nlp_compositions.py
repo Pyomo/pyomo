@@ -571,7 +571,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
             self.assertTrue(np.allclose(x_init[i], x_init_i))
         self.assertTrue(np.allclose(x_init[n_scenarios], np.zeros(nz)))
 
-    def test_create_vector_x(self):
+    def test_create_vector(self):
 
         x_ = BlockVector(self.n_scenarios + 1)
         nz = len(self.complicated_vars_ids)
@@ -579,17 +579,17 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         for i in range(self.n_scenarios):
             x_[i] = np.zeros(nx_i)
         x_[self.n_scenarios] = np.zeros(nz)
-        self.assertEqual(x_.shape, self.nlp.create_vector_x().shape)
+        self.assertEqual(x_.shape, self.nlp.create_vector('x').shape)
         self.assertEqual(x_.nblocks,
-                         self.nlp.create_vector_x().nblocks)
+                         self.nlp.create_vector('x').nblocks)
         self.assertTrue(np.allclose(x_.block_sizes(),
-                                    self.nlp.create_vector_x().block_sizes()))
+                                    self.nlp.create_vector('x').block_sizes()))
         self.assertListEqual(list(x_.flatten()),
-                             list(self.nlp.create_vector_x().flatten()))
+                             list(self.nlp.create_vector('x').flatten()))
 
         # check for subset
-        for s in ['l', 'u']:
-            xs = self.nlp.create_vector_x(subset=s)
+        for s in ['xl', 'xu']:
+            xs = self.nlp.create_vector(s)
             xs_ = BlockVector(self.n_scenarios + 1)
             for i in range(self.n_scenarios):
                 xs_[i] = np.zeros(1)
@@ -605,27 +605,27 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         xi = np.zeros(3)
         nz = len(self.complicated_vars_ids2)
         n_scenarios = len(self.scenarios2)
-        x = self.nlp2.create_vector_x()
+        x = self.nlp2.create_vector('x')
         self.assertIsInstance(x, BlockVector)
         self.assertEqual(x.nblocks, n_scenarios + 1)
         for i in range(n_scenarios):
             self.assertTrue(np.allclose(x[i], xi))
         self.assertTrue(np.allclose(x[n_scenarios], np.zeros(nz)))
 
-        for s in ['l', 'u']:
-            if s == 'l':
+        for s in ['xl', 'xu']:
+            if s == 'xl':
                 xi = np.zeros(2)
             else:
                 xi = np.zeros(1)
             n_scenarios = len(self.scenarios2)
-            x = self.nlp2.create_vector_x(subset=s)
+            x = self.nlp2.create_vector(s)
             self.assertIsInstance(x, BlockVector)
             self.assertEqual(x.nblocks, n_scenarios + 1)
             for i in range(n_scenarios):
                 self.assertTrue(np.allclose(x[i], xi))
             self.assertTrue(np.allclose(x[n_scenarios], np.zeros(0)))
 
-    def test_create_vector_y(self):
+        # check for constraint vectors
         nz = len(self.complicated_vars_ids)
         ng_i = self.A.shape[0] + nz
 
@@ -633,7 +633,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         for i in range(self.n_scenarios):
             y_[i] = np.zeros(ng_i)
             y_[self.n_scenarios + i] = np.zeros(nz)
-        y = self.nlp.create_vector_y()
+        y = self.nlp.create_vector('y')
 
         self.assertEqual(y_.shape, y.shape)
         self.assertEqual(y_.nblocks, y.nblocks)
@@ -647,7 +647,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         for i in range(self.n_scenarios):
             ys_[i] = np.zeros(ng_i)
             ys_[self.n_scenarios + i] = np.zeros(nz)
-        ys = self.nlp.create_vector_y(subset='c')
+        ys = self.nlp.create_vector('c')
         self.assertEqual(ys_.shape, ys.shape)
         self.assertEqual(ys_.nblocks, ys.nblocks)
         self.assertTrue(np.allclose(ys_.block_sizes(),
@@ -660,7 +660,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         for i in range(self.n_scenarios):
             ys_[i] = np.zeros(0)
             ys_[self.n_scenarios + i] = np.zeros(0)
-        ys = self.nlp.create_vector_y(subset='d')
+        ys = self.nlp.create_vector('d')
         self.assertEqual(ys_.shape, ys.shape)
         self.assertEqual(ys_.nblocks, ys.nblocks)
         self.assertTrue(np.allclose(ys_.block_sizes(),
@@ -673,7 +673,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         nz = len(self.complicated_vars_ids2)
         n_scenarios = len(self.scenarios2)
         gi = instance.ng
-        y = self.nlp2.create_vector_y()
+        y = self.nlp2.create_vector('y')
         self.assertIsInstance(y, BlockVector)
         self.assertEqual(y.nblocks, 2 * n_scenarios)
         for i in range(n_scenarios):
@@ -681,7 +681,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
             self.assertTrue(np.allclose(y[i + n_scenarios], np.zeros(nz)))
 
         for s in ['c', 'd', 'dl', 'du']:
-            y = self.nlp2.create_vector_y(subset=s)
+            y = self.nlp2.create_vector(s)
             self.assertIsInstance(y, BlockVector)
             if s == 'c':
                 gi = 2
@@ -721,7 +721,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         x_ = np.ones(G.shape[1])
         single_obj = 0.5 * x_.transpose().dot(G.dot(x_)) + x_.dot(c)
         obj_ = single_obj * self.n_scenarios
-        x = self.nlp.create_vector_x()
+        x = self.nlp.create_vector('x')
         x.fill(1.0)
         obj = self.nlp.objective(x)
         self.assertEqual(obj, obj_)
@@ -729,7 +729,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(obj, obj_)
 
         # test nlp2
-        x = self.nlp2.create_vector_x()
+        x = self.nlp2.create_vector('x')
         n_scenarios = len(self.scenarios2)
         for i in range(n_scenarios):
             x[i][1] = 5
@@ -743,7 +743,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         x_ = np.ones(G.shape[1])
         single_grad = G.dot(x_) + c
         single_grad = np.append(single_grad, np.zeros(nz))
-        x = self.nlp.create_vector_x()
+        x = self.nlp.create_vector('x')
         x.fill(1.0)
         grad_obj = self.nlp.grad_objective(x)
         for i in range(self.n_scenarios):
@@ -765,7 +765,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
                                     np.zeros(nz)))
 
         # test nlp2
-        x = self.nlp2.create_vector_x()
+        x = self.nlp2.create_vector('x')
         nz = len(self.complicated_vars_ids2)
         n_scenarios = len(self.scenarios2)
         for i in range(n_scenarios):
@@ -783,7 +783,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
     def test_evaluate_g(self):
 
         nz = len(self.complicated_vars_ids)
-        x = self.nlp.create_vector_x()
+        x = self.nlp.create_vector('x')
         x.fill(1.0)
         gi = np.array([-59, -38, -40, 12, 0, 0])
         g = self.nlp.evaluate_g(x)
@@ -840,7 +840,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
     def test_evaluate_c(self):
 
         nz = len(self.complicated_vars_ids)
-        x = self.nlp.create_vector_x()
+        x = self.nlp.create_vector('x')
         x.fill(1.0)
         ci = np.array([-59, -38, -40, 12, 0, 0])
         c = self.nlp.evaluate_c(x)
@@ -985,7 +985,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         Ji[1, 1] = coo_matrix(B2)
         dense_Ji = Ji.toarray()
 
-        x = self.nlp.create_vector_x()
+        x = self.nlp.create_vector('x')
         jac_g = self.nlp.jacobian_g(x)
 
         total_nx = nxi * self.n_scenarios + nz
@@ -1165,7 +1165,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         Ji[1, 1] = coo_matrix(B2)
         dense_Ji = Ji.toarray()
 
-        x = self.nlp.create_vector_x()
+        x = self.nlp.create_vector('x')
         jac_c = self.nlp.jacobian_c(x)
 
         total_nx = nxi * self.n_scenarios + nz
@@ -1400,8 +1400,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         Hi[1, 1] = empty_matrix(nz, nz) # this is because of the way the test problem was setup
 
         Hi = Hi.toarray()
-        x = self.nlp.create_vector_x()
-        y = self.nlp.create_vector_y()
+        x = self.nlp.create_vector('x')
+        y = self.nlp.create_vector('y')
         H = self.nlp.hessian_lag(x, y)
         for i in range(self.n_scenarios):
             self.assertTrue(np.allclose(H[i, i].toarray(), Hi))
@@ -1439,11 +1439,11 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].toarray(),
                                     empty_matrix(nz, nz).toarray()))
 
-    def test_expansion_matrix_xl(self):
+    def test_projection_matrix_xl(self):
 
         instance = self.scenarios2['s0']
         xli = instance.xl(condensed=True)
-        Pxli = instance.expansion_matrix_xl()
+        Pxli = instance.projection_matrix_xl()
         all_xli = Pxli * xli
         xxi = np.copy(instance.xl())
         xxi[xxi == -np.inf] = 0
@@ -1452,7 +1452,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         lower_x = self.nlp2.xl(condensed=True)
         n_scenarios = len(self.scenarios2)
         nz = len(self.complicated_vars_ids2)
-        Pxl = self.nlp2.expansion_matrix_xl()
+        Pxl = self.nlp2.projection_matrix_xl()
         self.assertIsInstance(Pxl, BlockMatrix)
         self.assertFalse(Pxl.has_empty_rows())
         self.assertFalse(Pxl.has_empty_cols())
@@ -1472,11 +1472,11 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
             self.assertTrue(np.allclose(xxi, all_xl[i]))
         self.assertTrue(np.allclose(np.zeros(nz), all_xl[n_scenarios]))
 
-    def test_expansion_matrix_xu(self):
+    def test_projection_matrix_xu(self):
 
         instance = self.scenarios2['s0']
         xui = instance.xu(condensed=True)
-        Pxui = instance.expansion_matrix_xu()
+        Pxui = instance.projection_matrix_xu()
         all_xui = Pxui * xui
         xxi = np.copy(instance.xu())
         xxi[xxi == np.inf] = 0
@@ -1484,7 +1484,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         upper_x = self.nlp2.xu(condensed=True)
         n_scenarios = len(self.scenarios2)
         nz = len(self.complicated_vars_ids2)
-        Pxu = self.nlp2.expansion_matrix_xu()
+        Pxu = self.nlp2.projection_matrix_xu()
         self.assertIsInstance(Pxu, BlockMatrix)
         self.assertFalse(Pxu.has_empty_rows())
         self.assertFalse(Pxu.has_empty_cols())
@@ -1496,11 +1496,11 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
             self.assertTrue(np.allclose(xxi, all_xu[i]))
         self.assertTrue(np.allclose(np.zeros(nz), all_xu[n_scenarios]))
 
-    def test_expansion_matrix_dl(self):
+    def test_projection_matrix_dl(self):
 
         instance = self.scenarios2['s0']
         dli = instance.dl(condensed=True)
-        Pdli = instance.expansion_matrix_dl()
+        Pdli = instance.projection_matrix_dl()
         all_dli = Pdli * dli
         ddi = np.copy(instance.dl())
         ddi[ddi == -np.inf] = 0
@@ -1509,7 +1509,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         lower_d = self.nlp2.dl(condensed=True)
         n_scenarios = len(self.scenarios2)
         nz = len(self.complicated_vars_ids2)
-        Pdl = self.nlp2.expansion_matrix_dl()
+        Pdl = self.nlp2.projection_matrix_dl()
         self.assertIsInstance(Pdl, BlockMatrix)
         self.assertFalse(Pdl.has_empty_rows())
         self.assertFalse(Pdl.has_empty_cols())
@@ -1520,11 +1520,11 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         for i in range(n_scenarios):
             self.assertTrue(np.allclose(ddi, all_dl[i]))
 
-    def test_expansion_matrix_du(self):
+    def test_projection_matrix_du(self):
 
         instance = self.scenarios2['s0']
         dui = instance.du(condensed=True)
-        Pdui = instance.expansion_matrix_du()
+        Pdui = instance.projection_matrix_du()
         all_dui = Pdui * dui
         ddi = np.copy(instance.du())
         ddi[ddi == np.inf] = 0
@@ -1533,7 +1533,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         upper_d = self.nlp2.du(condensed=True)
         n_scenarios = len(self.scenarios2)
         nz = len(self.complicated_vars_ids2)
-        Pdu = self.nlp2.expansion_matrix_du()
+        Pdu = self.nlp2.projection_matrix_du()
         self.assertIsInstance(Pdu, BlockMatrix)
         self.assertFalse(Pdu.has_empty_rows())
         self.assertFalse(Pdu.has_empty_cols())
@@ -1553,7 +1553,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertFalse(AB.has_empty_rows())
         self.assertFalse(AB.has_empty_cols())
         self.assertEqual(AB.bshape, (n_scenarios+1, n_scenarios+1))
-        x = self.nlp2.create_vector_x()
+        x = self.nlp2.create_vector('x')
         x.fill(1.0)
         zs = AB * x
         for i in range(n_scenarios):
@@ -2232,7 +2232,7 @@ class TestDynoptNLP(unittest.TestCase):
         self.assertTrue(np.allclose(y_init.block_sizes(), self.nlp2.y_init().block_sizes()))
         self.assertListEqual(list(y_init_flat), list(self.nlp2.y_init().flatten()))
 
-    def test_create_vector_x(self):
+    def test_create_vector(self):
 
         # first nlp
         nblocks = len(self.blocks1)
@@ -2240,24 +2240,24 @@ class TestDynoptNLP(unittest.TestCase):
 
         x_ = BlockVector(2 * nblocks - 1)
         for i in range(nblocks):
-            x_[i] = self.blocks1[0].create_vector_x()
+            x_[i] = self.blocks1[0].create_vector('x')
             if i < nblocks - 1:
                 x_[i + nblocks] = np.zeros(nstates)
 
-        self.assertEqual(x_.shape, self.nlp1.create_vector_x().shape)
+        self.assertEqual(x_.shape, self.nlp1.create_vector('x').shape)
         self.assertEqual(x_.nblocks,
-                         self.nlp1.create_vector_x().nblocks)
+                         self.nlp1.create_vector('x').nblocks)
         self.assertTrue(np.allclose(x_.block_sizes(),
-                                    self.nlp1.create_vector_x().block_sizes()))
+                                    self.nlp1.create_vector('x').block_sizes()))
         self.assertListEqual(list(x_.flatten()),
-                             list(self.nlp1.create_vector_x().flatten()))
+                             list(self.nlp1.create_vector('x').flatten()))
 
         # check for subset
-        for s in ['l', 'u']:
-            xs = self.nlp1.create_vector_x(subset=s)
+        for s in ['xl', 'xu']:
+            xs = self.nlp1.create_vector(s)
             xs_ = BlockVector(2 * nblocks - 1)
             for i in range(nblocks):
-                xs_[i] = self.blocks1[0].create_vector_x(subset=s)
+                xs_[i] = self.blocks1[0].create_vector(s)
                 if i < nblocks - 1:
                     xs_[i + nblocks] = np.zeros(0)
             self.assertEqual(xs_.shape, xs.shape)
@@ -2273,24 +2273,24 @@ class TestDynoptNLP(unittest.TestCase):
 
         x_ = BlockVector(2 * nblocks - 1)
         for i in range(nblocks):
-            x_[i] = self.blocks2[0].create_vector_x()
+            x_[i] = self.blocks2[0].create_vector('x')
             if i < nblocks - 1:
                 x_[i + nblocks] = np.zeros(nstates)
 
-        self.assertEqual(x_.shape, self.nlp2.create_vector_x().shape)
+        self.assertEqual(x_.shape, self.nlp2.create_vector('x').shape)
         self.assertEqual(x_.nblocks,
-                         self.nlp2.create_vector_x().nblocks)
+                         self.nlp2.create_vector('x').nblocks)
         self.assertTrue(np.allclose(x_.block_sizes(),
-                                    self.nlp2.create_vector_x().block_sizes()))
+                                    self.nlp2.create_vector('x').block_sizes()))
         self.assertListEqual(list(x_.flatten()),
-                             list(self.nlp2.create_vector_x().flatten()))
+                             list(self.nlp2.create_vector('x').flatten()))
 
         # check for subset
-        for s in ['l', 'u']:
-            xs = self.nlp2.create_vector_x(subset=s)
+        for s in ['xl', 'xu']:
+            xs = self.nlp2.create_vector(s)
             xs_ = BlockVector(2 * nblocks - 1)
             for i in range(nblocks):
-                xs_[i] = self.blocks2[0].create_vector_x(subset=s)
+                xs_[i] = self.blocks2[0].create_vector(s)
                 if i < nblocks - 1:
                     xs_[i + nblocks] = np.zeros(0)
             self.assertEqual(xs_.shape, xs.shape)
@@ -2300,13 +2300,11 @@ class TestDynoptNLP(unittest.TestCase):
             self.assertListEqual(list(xs_.flatten()),
                                  list(xs.flatten()))
 
-    def test_create_vector_y(self):
-
         # first nlp
         nblocks = len(self.blocks1)
         nstates = self.nstates1
 
-        y = self.nlp1.create_vector_y()
+        y = self.nlp1.create_vector('y')
         y_ = BlockVector(3 * nblocks - 1)
         for i in range(nblocks):
             y_[i] = self.blocks1[0].y_init()
@@ -2322,10 +2320,10 @@ class TestDynoptNLP(unittest.TestCase):
                              list(y.flatten()))
 
         for s in ['c', 'd', 'dl', 'du']:
-            y = self.nlp1.create_vector_y(subset=s)
+            y = self.nlp1.create_vector(s)
             y_ = BlockVector(3 * nblocks - 1)
             for i in range(nblocks):
-                y_[i] = self.blocks1[0].create_vector_y(subset=s)
+                y_[i] = self.blocks1[0].create_vector(s)
 
                 nsize = nstates if s == 'c' else 0
                 y_[i + nblocks] = np.zeros(nsize)
@@ -2343,10 +2341,10 @@ class TestDynoptNLP(unittest.TestCase):
         nblocks = len(self.blocks2)
         nstates = self.nstates2
 
-        y = self.nlp2.create_vector_y()
+        y = self.nlp2.create_vector('y')
         y_ = BlockVector(3 * nblocks - 1)
         for i in range(nblocks):
-            y_[i] = self.blocks2[0].create_vector_y()
+            y_[i] = self.blocks2[0].create_vector('y')
             y_[i + nblocks] = np.zeros(nstates)
             if i < nblocks - 1:
                 y_[i + 2 * nblocks] = np.zeros(nstates)
@@ -2359,10 +2357,10 @@ class TestDynoptNLP(unittest.TestCase):
                              list(y.flatten()))
 
         for s in ['c', 'd', 'dl', 'du']:
-            y = self.nlp2.create_vector_y(subset=s)
+            y = self.nlp2.create_vector(s)
             y_ = BlockVector(3 * nblocks - 1)
             for i in range(nblocks):
-                y_[i] = self.blocks2[0].create_vector_y(subset=s)
+                y_[i] = self.blocks2[0].create_vector(s)
 
                 nsize = nstates if s == 'c' else 0
                 y_[i + nblocks] = np.zeros(nsize)
@@ -2409,7 +2407,7 @@ class TestDynoptNLP(unittest.TestCase):
         # first nlp
         nblocks = len(self.blocks1)
 
-        df_ = self.nlp1.create_vector_x()
+        df_ = self.nlp1.create_vector('x')
         x_init = self.nlp1.x_init()
         df = self.nlp1.grad_objective(x_init)
         for bid in range(nblocks):
@@ -2425,7 +2423,7 @@ class TestDynoptNLP(unittest.TestCase):
         df2 = self.nlp1.grad_objective(x_init.flatten())
         self.assertTrue(np.allclose(df2.flatten(), df.flatten()))
 
-        df_out = self.nlp1.create_vector_x()
+        df_out = self.nlp1.create_vector('x')
         self.nlp1.grad_objective(x_init, out=df_out)
 
         self.assertEqual(df_.shape, df_out.shape)
@@ -2436,7 +2434,7 @@ class TestDynoptNLP(unittest.TestCase):
         # second nlp
         nblocks = len(self.blocks2)
 
-        df_ = self.nlp2.create_vector_x()
+        df_ = self.nlp2.create_vector('x')
         x_init = self.nlp2.x_init()
         df = self.nlp2.grad_objective(x_init)
         for bid in range(nblocks):
@@ -2451,7 +2449,7 @@ class TestDynoptNLP(unittest.TestCase):
 
         df2 = self.nlp2.grad_objective(x_init.flatten())
 
-        df_out = self.nlp2.create_vector_x()
+        df_out = self.nlp2.create_vector('x')
         self.nlp2.grad_objective(x_init, out=df_out)
         self.assertTrue(np.allclose(df2.flatten(), df.flatten()))
 
@@ -2495,7 +2493,7 @@ class TestDynoptNLP(unittest.TestCase):
         self.assertTrue(np.allclose(g_.block_sizes(), g.block_sizes()))
         self.assertTrue(np.allclose(g_.flatten(), g.flatten()))
 
-        g_out = self.nlp1.create_vector_y()
+        g_out = self.nlp1.create_vector('y')
         self.nlp1.evaluate_g(x_init, out=g_out)
         self.assertEqual(g_.shape, g_out.shape)
         self.assertEqual(g_.nblocks, g_out.nblocks)
@@ -2535,7 +2533,7 @@ class TestDynoptNLP(unittest.TestCase):
         self.assertTrue(np.allclose(g_.block_sizes(), g.block_sizes()))
         self.assertTrue(np.allclose(g_.flatten(), g.flatten()))
 
-        g_out = self.nlp2.create_vector_y()
+        g_out = self.nlp2.create_vector('y')
         self.nlp2.evaluate_g(x_init, out=g_out)
         self.assertEqual(g_.shape, g_out.shape)
         self.assertEqual(g_.nblocks, g_out.nblocks)
@@ -2577,7 +2575,7 @@ class TestDynoptNLP(unittest.TestCase):
         self.assertTrue(np.allclose(c_.block_sizes(), c.block_sizes()))
         self.assertTrue(np.allclose(c_.flatten(), c.flatten()))
 
-        c_out = self.nlp1.create_vector_y(subset='c')
+        c_out = self.nlp1.create_vector('c')
         self.nlp1.evaluate_c(x_init, out=c_out)
         self.assertEqual(c_.shape, c_out.shape)
         self.assertEqual(c_.nblocks, c_out.nblocks)
@@ -2617,7 +2615,7 @@ class TestDynoptNLP(unittest.TestCase):
         self.assertTrue(np.allclose(c_.block_sizes(), c.block_sizes()))
         self.assertTrue(np.allclose(c_.flatten(), c.flatten()))
 
-        c_out = self.nlp2.create_vector_y(subset='c')
+        c_out = self.nlp2.create_vector('c')
         self.nlp2.evaluate_c(x_init, out=c_out)
         self.assertEqual(c_.shape, c_out.shape)
         self.assertEqual(c_.nblocks, c_out.nblocks)
@@ -2651,7 +2649,7 @@ class TestDynoptNLP(unittest.TestCase):
         self.assertTrue(np.allclose(d_.block_sizes(), d.block_sizes()))
         self.assertTrue(np.allclose(d_.flatten(), d.flatten()))
 
-        d_out = self.nlp1.create_vector_y(subset='d')
+        d_out = self.nlp1.create_vector('d')
         self.nlp1.evaluate_d(x_init, out=d_out)
         self.assertEqual(d_.shape, d_out.shape)
         self.assertEqual(d_.nblocks, d_out.nblocks)
@@ -2683,7 +2681,7 @@ class TestDynoptNLP(unittest.TestCase):
         self.assertTrue(np.allclose(d_.block_sizes(), d.block_sizes()))
         self.assertTrue(np.allclose(d_.flatten(), d.flatten()))
 
-        d_out = self.nlp2.create_vector_y(subset='d')
+        d_out = self.nlp2.create_vector('d')
         self.nlp2.evaluate_d(x_init, out=d_out)
         self.assertEqual(d_.shape, d_out.shape)
         self.assertEqual(d_.nblocks, d_out.nblocks)
@@ -3074,12 +3072,12 @@ class TestDynoptNLP(unittest.TestCase):
         self.assertEqual(hess_lag.nnz, hess_lag_.nnz)
         self.assertTrue(np.allclose(hess_lag.toarray(), hess_lag_.toarray()))
 
-    def test_expansion_matrix_xl(self):
+    def test_projection_matrix_xl(self):
 
         # first nlp
         instance = self.blocks1[0]
         xli = instance.xl(condensed=True)
-        Pxli = instance.expansion_matrix_xl()
+        Pxli = instance.projection_matrix_xl()
         all_xli = Pxli * xli
         xxi = np.copy(instance.xl())
         xxi[xxi == -np.inf] = 0
@@ -3088,7 +3086,7 @@ class TestDynoptNLP(unittest.TestCase):
         lower_x = self.nlp1.xl(condensed=True)
         nblocks = len(self.blocks1)
         nstates = self.nstates1
-        Pxl = self.nlp1.expansion_matrix_xl()
+        Pxl = self.nlp1.projection_matrix_xl()
         self.assertIsInstance(Pxl, BlockMatrix)
         self.assertFalse(Pxl.has_empty_rows())
         self.assertFalse(Pxl.has_empty_cols())
@@ -3104,7 +3102,7 @@ class TestDynoptNLP(unittest.TestCase):
         # second nlp
         instance = self.blocks2[0]
         xli = instance.xl(condensed=True)
-        Pxli = instance.expansion_matrix_xl()
+        Pxli = instance.projection_matrix_xl()
         all_xli = Pxli * xli
         xxi = np.copy(instance.xl())
         xxi[xxi == -np.inf] = 0
@@ -3113,7 +3111,7 @@ class TestDynoptNLP(unittest.TestCase):
         lower_x = self.nlp2.xl(condensed=True)
         nblocks = len(self.blocks2)
         nstates = self.nstates2
-        Pxl = self.nlp2.expansion_matrix_xl()
+        Pxl = self.nlp2.projection_matrix_xl()
         self.assertIsInstance(Pxl, BlockMatrix)
         self.assertFalse(Pxl.has_empty_rows())
         self.assertFalse(Pxl.has_empty_cols())
@@ -3126,12 +3124,12 @@ class TestDynoptNLP(unittest.TestCase):
             if i < nblocks - 1:
                 self.assertTrue(np.allclose(np.zeros(nstates), all_xl[nblocks + i]))
 
-    def test_expansion_matrix_xu(self):
+    def test_projection_matrix_xu(self):
 
         # first nlp
         instance = self.blocks1[0]
         xli = instance.xl(condensed=True)
-        Pxli = instance.expansion_matrix_xu()
+        Pxli = instance.projection_matrix_xu()
         all_xli = Pxli * xli
         xxi = np.copy(instance.xu())
         xxi[xxi == np.inf] = 0
@@ -3140,7 +3138,7 @@ class TestDynoptNLP(unittest.TestCase):
         lower_x = self.nlp1.xu(condensed=True)
         nblocks = len(self.blocks1)
         nstates = self.nstates1
-        Pxl = self.nlp1.expansion_matrix_xu()
+        Pxl = self.nlp1.projection_matrix_xu()
         self.assertIsInstance(Pxl, BlockMatrix)
         self.assertFalse(Pxl.has_empty_rows())
         self.assertFalse(Pxl.has_empty_cols())
@@ -3156,7 +3154,7 @@ class TestDynoptNLP(unittest.TestCase):
         # second nlp
         instance = self.blocks2[0]
         xli = instance.xu(condensed=True)
-        Pxli = instance.expansion_matrix_xu()
+        Pxli = instance.projection_matrix_xu()
         all_xli = Pxli * xli
         xxi = np.copy(instance.xu())
         xxi[xxi == np.inf] = 0
@@ -3165,7 +3163,7 @@ class TestDynoptNLP(unittest.TestCase):
         lower_x = self.nlp2.xu(condensed=True)
         nblocks = len(self.blocks2)
         nstates = self.nstates2
-        Pxl = self.nlp2.expansion_matrix_xu()
+        Pxl = self.nlp2.projection_matrix_xu()
         self.assertIsInstance(Pxl, BlockMatrix)
         self.assertFalse(Pxl.has_empty_rows())
         self.assertFalse(Pxl.has_empty_cols())
@@ -3178,12 +3176,12 @@ class TestDynoptNLP(unittest.TestCase):
             if i < nblocks - 1:
                 self.assertTrue(np.allclose(np.zeros(nstates), all_xl[nblocks + i]))
 
-    def test_expansion_matrix_dl(self):
+    def test_projection_matrix_dl(self):
 
         # first nlp
         instance = self.blocks1[0]
         dli = instance.dl(condensed=True)
-        Pdli = instance.expansion_matrix_dl()
+        Pdli = instance.projection_matrix_dl()
         all_dli = Pdli * dli
         ddi = np.copy(instance.dl())
         ddi[ddi == -np.inf] = 0
@@ -3192,7 +3190,7 @@ class TestDynoptNLP(unittest.TestCase):
         lower_d = self.nlp1.dl(condensed=True)
         nblocks = len(self.blocks1)
         nstates = self.nstates1
-        Pdl = self.nlp1.expansion_matrix_dl()
+        Pdl = self.nlp1.projection_matrix_dl()
         self.assertIsInstance(Pdl, BlockMatrix)
         self.assertFalse(Pdl.has_empty_rows())
         self.assertFalse(Pdl.has_empty_cols())
@@ -3206,7 +3204,7 @@ class TestDynoptNLP(unittest.TestCase):
         # second nlp
         instance = self.blocks2[0]
         dli = instance.dl(condensed=True)
-        Pdli = instance.expansion_matrix_dl()
+        Pdli = instance.projection_matrix_dl()
         all_dli = Pdli * dli
         ddi = np.copy(instance.dl())
         ddi[ddi == -np.inf] = 0
@@ -3215,7 +3213,7 @@ class TestDynoptNLP(unittest.TestCase):
         lower_d = self.nlp2.dl(condensed=True)
         nblocks = len(self.blocks2)
         nstates = self.nstates2
-        Pdl = self.nlp2.expansion_matrix_dl()
+        Pdl = self.nlp2.projection_matrix_dl()
         self.assertIsInstance(Pdl, BlockMatrix)
         self.assertFalse(Pdl.has_empty_rows())
         self.assertFalse(Pdl.has_empty_cols())
@@ -3226,12 +3224,12 @@ class TestDynoptNLP(unittest.TestCase):
         for i in range(nblocks):
             self.assertTrue(np.allclose(ddi, all_dl[i]))
 
-    def test_expansion_matrix_du(self):
+    def test_projection_matrix_du(self):
 
         # first nlp
         instance = self.blocks1[0]
         dli = instance.du(condensed=True)
-        Pdli = instance.expansion_matrix_du()
+        Pdli = instance.projection_matrix_du()
         all_dli = Pdli * dli
         ddi = np.copy(instance.du())
         ddi[ddi == np.inf] = 0
@@ -3240,7 +3238,7 @@ class TestDynoptNLP(unittest.TestCase):
         lower_d = self.nlp1.du(condensed=True)
         nblocks = len(self.blocks1)
         nstates = self.nstates1
-        Pdl = self.nlp1.expansion_matrix_du()
+        Pdl = self.nlp1.projection_matrix_du()
         self.assertIsInstance(Pdl, BlockMatrix)
         self.assertFalse(Pdl.has_empty_rows())
         self.assertFalse(Pdl.has_empty_cols())
@@ -3254,7 +3252,7 @@ class TestDynoptNLP(unittest.TestCase):
         # second nlp
         instance = self.blocks2[0]
         dli = instance.du(condensed=True)
-        Pdli = instance.expansion_matrix_du()
+        Pdli = instance.projection_matrix_du()
         all_dli = Pdli * dli
         ddi = np.copy(instance.du())
         ddi[ddi == np.inf] = 0
@@ -3263,7 +3261,7 @@ class TestDynoptNLP(unittest.TestCase):
         lower_d = self.nlp2.du(condensed=True)
         nblocks = len(self.blocks2)
         nstates = self.nstates2
-        Pdl = self.nlp2.expansion_matrix_du()
+        Pdl = self.nlp2.projection_matrix_du()
         self.assertIsInstance(Pdl, BlockMatrix)
         self.assertFalse(Pdl.has_empty_rows())
         self.assertFalse(Pdl.has_empty_cols())

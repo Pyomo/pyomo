@@ -77,21 +77,21 @@ class TestNLPState(unittest.TestCase):
 
     def test_yc(self):
         state = NLPState(self.nlp1)
-        init_yc = self.nlp1.create_vector_y(subset='c')
+        init_yc = self.nlp1.create_vector('c')
         self.assertTrue(np.allclose(init_yc, state.yc))
 
         state2 = NLPState(self.nlp)
-        init_yc2 = self.nlp.create_vector_y(subset='c')
+        init_yc2 = self.nlp.create_vector('c')
         self.assertIsInstance(state2.yc, BlockVector)
         self.assertTrue(np.allclose(init_yc2.flatten(), state2.yc.flatten()))
 
     def test_yd(self):
         state = NLPState(self.nlp1)
-        init_yd = self.nlp1.create_vector_y(subset='d')
+        init_yd = self.nlp1.create_vector('d')
         self.assertTrue(np.allclose(init_yd, state.yd))
 
         state2 = NLPState(self.nlp)
-        init_yd2 = self.nlp.create_vector_y(subset='d')
+        init_yd2 = self.nlp.create_vector('d')
         self.assertIsInstance(state2.yd, BlockVector)
         self.assertTrue(np.allclose(init_yd2.flatten(), state2.yd.flatten()))
 
@@ -109,48 +109,48 @@ class TestNLPState(unittest.TestCase):
 
     def test_zl(self):
         state = NLPState(self.nlp1)
-        init_zl = self.nlp1.create_vector_x(subset='l')
+        init_zl = self.nlp1.create_vector('xl')
         init_zl.fill(1.0)
         self.assertTrue(np.allclose(init_zl, state.zl))
 
         state2 = NLPState(self.nlp)
-        init_zl = self.nlp.create_vector_x(subset='l')
+        init_zl = self.nlp.create_vector('xl')
         init_zl.fill(1.0)
         self.assertIsInstance(state2.zl, BlockVector)
         self.assertTrue(np.allclose(init_zl.flatten(), state2.zl.flatten()))
 
     def test_zu(self):
         state = NLPState(self.nlp1)
-        init_zu = self.nlp1.create_vector_x(subset='u')
+        init_zu = self.nlp1.create_vector('xu')
         init_zu.fill(1.0)
         self.assertTrue(np.allclose(init_zu, state.zu))
 
         state2 = NLPState(self.nlp)
-        init_zu = self.nlp.create_vector_x(subset='u')
+        init_zu = self.nlp.create_vector('xu')
         init_zu.fill(1.0)
         self.assertIsInstance(state2.zu, BlockVector)
         self.assertTrue(np.allclose(init_zu.flatten(), state2.zu.flatten()))
 
     def test_vl(self):
         state = NLPState(self.nlp1)
-        init_vl = self.nlp1.create_vector_s(subset='l')
+        init_vl = self.nlp1.create_vector('dl')
         init_vl.fill(1.0)
         self.assertTrue(np.allclose(init_vl, state.vl))
 
         state2 = NLPState(self.nlp)
-        init_vl = self.nlp.create_vector_s(subset='l')
+        init_vl = self.nlp.create_vector('dl')
         init_vl.fill(1.0)
         self.assertIsInstance(state2.vl, BlockVector)
         self.assertTrue(np.allclose(init_vl.flatten(), state2.vl.flatten()))
 
     def test_vu(self):
         state = NLPState(self.nlp1)
-        init_vu = self.nlp1.create_vector_s(subset='u')
+        init_vu = self.nlp1.create_vector('du')
         init_vu.fill(1.0)
         self.assertTrue(np.allclose(init_vu, state.vu))
 
         state2 = NLPState(self.nlp)
-        init_vu = self.nlp.create_vector_s(subset='u')
+        init_vu = self.nlp.create_vector('du')
         init_vu.fill(1.0)
         self.assertIsInstance(state2.vu, BlockVector)
         self.assertTrue(np.allclose(init_vu.flatten(), state2.vu.flatten()))
@@ -278,26 +278,26 @@ class TestNLPState(unittest.TestCase):
     def test_slack_xl(self):
         state = NLPState(self.nlp1)
         x_init = self.nlp1.x_init()
-        Pl = self.nlp1.expansion_matrix_xl()
+        Pl = self.nlp1.projection_matrix_xl()
         slack = Pl.T.dot(x_init) - self.nlp1.xl(condensed=True)
         self.assertTrue(np.allclose(slack, state.slack_xl()))
 
         state = NLPState(self.nlp)
         x_init = self.nlp.x_init()
-        Pl = self.nlp.expansion_matrix_xl()
+        Pl = self.nlp.projection_matrix_xl()
         slack = Pl.T.dot(x_init) - self.nlp.xl(condensed=True)
         self.assertTrue(np.allclose(slack, state.slack_xl()))
 
     def test_slack_xu(self):
         state = NLPState(self.nlp1)
         x_init = self.nlp1.x_init()
-        Pu = self.nlp1.expansion_matrix_xu()
+        Pu = self.nlp1.projection_matrix_xu()
         slack = self.nlp1.xu(condensed=True) - Pu.T.dot(x_init)
         self.assertTrue(np.allclose(slack, state.slack_xu()))
 
         state = NLPState(self.nlp)
         x_init = self.nlp.x_init()
-        Pu = self.nlp.expansion_matrix_xu()
+        Pu = self.nlp.projection_matrix_xu()
         slack = self.nlp.xu(condensed=True) - Pu.T.dot(x_init)
         self.assertTrue(np.allclose(slack, state.slack_xu()))
 
@@ -305,14 +305,14 @@ class TestNLPState(unittest.TestCase):
         state = NLPState(self.nlp1, disable_bound_push=True)
         x_init = self.nlp1.x_init()
         s_init = self.nlp1.evaluate_d(x_init)
-        Pl = self.nlp1.expansion_matrix_dl()
+        Pl = self.nlp1.projection_matrix_dl()
         slack = Pl.T.dot(s_init) - self.nlp1.dl(condensed=True)
         self.assertTrue(np.allclose(slack, state.slack_sl()))
 
         state = NLPState(self.nlp)
         x_init = self.nlp.x_init()
         s_init = self.nlp.evaluate_d(x_init)
-        Pl = self.nlp.expansion_matrix_dl()
+        Pl = self.nlp.projection_matrix_dl()
         slack = Pl.T.dot(s_init) - self.nlp.dl(condensed=True)
         self.assertTrue(np.allclose(slack, state.slack_sl()))
 
@@ -320,14 +320,14 @@ class TestNLPState(unittest.TestCase):
         state = NLPState(self.nlp1, disable_bound_push=True)
         x_init = self.nlp1.x_init()
         s_init = self.nlp1.evaluate_d(x_init)
-        Pu = self.nlp1.expansion_matrix_du()
+        Pu = self.nlp1.projection_matrix_du()
         slack = self.nlp1.du(condensed=True) - Pu.T.dot(s_init)
         self.assertTrue(np.allclose(slack, state.slack_su()))
 
         state = NLPState(self.nlp)
         x_init = self.nlp.x_init()
         s_init = self.nlp.evaluate_d(x_init)
-        Pu = self.nlp.expansion_matrix_du()
+        Pu = self.nlp.projection_matrix_du()
         slack = self.nlp.du(condensed=True) - Pu.T.dot(s_init)
         self.assertTrue(np.allclose(slack, state.slack_su()))
 
@@ -335,63 +335,63 @@ class TestNLPState(unittest.TestCase):
         state = NLPState(self.nlp1)
         x_init = self.nlp1.x_init()
         y_init = self.nlp1.y_init()
-        yc = self.nlp1.expansion_matrix_c().T.dot(y_init)
-        yd = self.nlp1.expansion_matrix_d().T.dot(y_init)
-        zl = self.nlp1.create_vector_x(subset='l')
+        yc = self.nlp1.projection_matrix_c().T.dot(y_init)
+        yd = self.nlp1.projection_matrix_d().T.dot(y_init)
+        zl = self.nlp1.create_vector('xl')
         zl.fill(1.0)
-        zu = self.nlp1.create_vector_x(subset='u')
+        zu = self.nlp1.create_vector('xu')
         zu.fill(1.0)
         nlp = self.nlp1
         grad_lag = nlp.grad_objective(x_init) + \
               nlp.jacobian_c(x_init).T.dot(yc) + \
               nlp.jacobian_d(x_init).T.dot(yd) + \
-              nlp.expansion_matrix_xu().dot(zu) - \
-              nlp.expansion_matrix_xl().dot(zl)
+              nlp.projection_matrix_xu().dot(zu) - \
+              nlp.projection_matrix_xl().dot(zl)
         self.assertTrue(np.allclose(grad_lag, state.grad_lag_x()))
 
         state = NLPState(self.nlp)
         x_init = self.nlp.x_init()
         y_init = self.nlp.y_init()
-        yc = self.nlp.expansion_matrix_c().T.dot(y_init)
-        yd = self.nlp.expansion_matrix_d().T.dot(y_init)
-        zl = self.nlp.create_vector_x(subset='l')
+        yc = self.nlp.projection_matrix_c().T.dot(y_init)
+        yd = self.nlp.projection_matrix_d().T.dot(y_init)
+        zl = self.nlp.create_vector('xl')
         zl.fill(1.0)
-        zu = self.nlp.create_vector_x(subset='u')
+        zu = self.nlp.create_vector('xu')
         zu.fill(1.0)
         nlp = self.nlp
         grad_lag = nlp.grad_objective(x_init) + \
               nlp.jacobian_c(x_init).T.dot(yc) + \
               nlp.jacobian_d(x_init).T.dot(yd) + \
-              nlp.expansion_matrix_xu().dot(zu) - \
-              nlp.expansion_matrix_xl().dot(zl)
+              nlp.projection_matrix_xu().dot(zu) - \
+              nlp.projection_matrix_xl().dot(zl)
         self.assertTrue(np.allclose(grad_lag.flatten(), state.grad_lag_x().flatten()))
 
     def test_grad_lag_s(self):
         state = NLPState(self.nlp1)
         x_init = self.nlp1.x_init()
         y_init = self.nlp1.y_init()
-        yd = self.nlp1.expansion_matrix_d().T.dot(y_init)
-        vl = self.nlp1.create_vector_s(subset='l')
+        yd = self.nlp1.projection_matrix_d().T.dot(y_init)
+        vl = self.nlp1.create_vector('dl')
         vl.fill(1.0)
-        vu = self.nlp1.create_vector_s(subset='u')
+        vu = self.nlp1.create_vector('du')
         vu.fill(1.0)
         nlp = self.nlp1
-        grad_lag = nlp.expansion_matrix_du().dot(vu) - \
-                   nlp.expansion_matrix_dl().dot(vl) - \
+        grad_lag = nlp.projection_matrix_du().dot(vu) - \
+                   nlp.projection_matrix_dl().dot(vl) - \
                    yd
         self.assertTrue(np.allclose(grad_lag, state.grad_lag_s()))
 
         state = NLPState(self.nlp)
         x_init = self.nlp.x_init()
         y_init = self.nlp.y_init()
-        yd = self.nlp.expansion_matrix_d().T.dot(y_init)
-        vl = self.nlp.create_vector_s(subset='l')
+        yd = self.nlp.projection_matrix_d().T.dot(y_init)
+        vl = self.nlp.create_vector('dl')
         vl.fill(1.0)
-        vu = self.nlp.create_vector_s(subset='u')
+        vu = self.nlp.create_vector('du')
         vu.fill(1.0)
         nlp = self.nlp
-        grad_lag = nlp.expansion_matrix_du().dot(vu) - \
-                   nlp.expansion_matrix_dl().dot(vl) - \
+        grad_lag = nlp.projection_matrix_du().dot(vu) - \
+                   nlp.projection_matrix_dl().dot(vl) - \
                    yd
         self.assertTrue(np.allclose(grad_lag, state.grad_lag_s()))
 
@@ -399,8 +399,8 @@ class TestNLPState(unittest.TestCase):
         state = NLPState(self.nlp1)
         x_init = self.nlp1.x_init()
         y_init = self.nlp1.y_init()
-        yc = self.nlp1.expansion_matrix_c().T.dot(y_init)
-        yd = self.nlp1.expansion_matrix_d().T.dot(y_init)
+        yc = self.nlp1.projection_matrix_c().T.dot(y_init)
+        yd = self.nlp1.projection_matrix_d().T.dot(y_init)
         nlp = self.nlp1
         grad_lag = nlp.grad_objective(x_init) + \
               nlp.jacobian_c(x_init).T.dot(yc) + \
@@ -410,8 +410,8 @@ class TestNLPState(unittest.TestCase):
         state = NLPState(self.nlp)
         x_init = self.nlp.x_init()
         y_init = self.nlp.y_init()
-        yc = self.nlp.expansion_matrix_c().T.dot(y_init)
-        yd = self.nlp.expansion_matrix_d().T.dot(y_init)
+        yc = self.nlp.projection_matrix_c().T.dot(y_init)
+        yd = self.nlp.projection_matrix_d().T.dot(y_init)
         nlp = self.nlp
         grad_lag = nlp.grad_objective(x_init) + \
               nlp.jacobian_c(x_init).T.dot(yc) + \
@@ -422,7 +422,7 @@ class TestNLPState(unittest.TestCase):
         state = NLPState(self.nlp1)
         x_init = self.nlp1.x_init()
         y_init = self.nlp1.y_init()
-        yd = self.nlp1.expansion_matrix_d().T.dot(y_init)
+        yd = self.nlp1.projection_matrix_d().T.dot(y_init)
         nlp = self.nlp1
         grad_lag = yd
         self.assertTrue(np.allclose(grad_lag, state.grad_lag_bar_s()))
@@ -430,7 +430,7 @@ class TestNLPState(unittest.TestCase):
         state = NLPState(self.nlp)
         x_init = self.nlp.x_init()
         y_init = self.nlp.y_init()
-        yd = self.nlp.expansion_matrix_d().T.dot(y_init)
+        yd = self.nlp.projection_matrix_d().T.dot(y_init)
         nlp = self.nlp
         grad_lag = yd
         self.assertTrue(np.allclose(grad_lag, state.grad_lag_bar_s()))
@@ -440,14 +440,14 @@ class TestNLPState(unittest.TestCase):
         state = NLPState(self.nlp1)
         x_init = self.nlp1.x_init()
         y_init = self.nlp1.y_init()
-        zl = self.nlp1.create_vector_x(subset='l')
+        zl = self.nlp1.create_vector('xl')
         zl.fill(1.0)
-        zu = self.nlp1.create_vector_x(subset='u')
+        zu = self.nlp1.create_vector('xu')
         zu.fill(1.0)
         nlp = self.nlp1
 
-        Pl = self.nlp1.expansion_matrix_xl()
-        Pu = self.nlp1.expansion_matrix_xu()
+        Pl = self.nlp1.projection_matrix_xl()
+        Pu = self.nlp1.projection_matrix_xu()
 
         slack_l = Pl.T.dot(x_init) - self.nlp1.xl(condensed=True)
         slack_u = self.nlp1.xu(condensed=True) - Pu.T.dot(x_init)
@@ -460,14 +460,14 @@ class TestNLPState(unittest.TestCase):
         state = NLPState(self.nlp)
         x_init = self.nlp.x_init()
         y_init = self.nlp.y_init()
-        zl = self.nlp.create_vector_x(subset='l')
+        zl = self.nlp.create_vector('xl')
         zl.fill(1.0)
-        zu = self.nlp.create_vector_x(subset='u')
+        zu = self.nlp.create_vector('xu')
         zu.fill(1.0)
         nlp = self.nlp
 
-        Pl = self.nlp.expansion_matrix_xl()
-        Pu = self.nlp.expansion_matrix_xu()
+        Pl = self.nlp.projection_matrix_xl()
+        Pu = self.nlp.projection_matrix_xu()
 
         slack_l = Pl.T.dot(x_init) - self.nlp.xl(condensed=True)
         slack_u = self.nlp.xu(condensed=True) - Pu.T.dot(x_init)
@@ -484,14 +484,14 @@ class TestNLPState(unittest.TestCase):
         state = NLPState(self.nlp1)
         x_init = self.nlp1.x_init()
         y_init = self.nlp1.y_init()
-        vl = self.nlp1.create_vector_s(subset='l')
+        vl = self.nlp1.create_vector('dl')
         vl.fill(1.0)
-        vu = self.nlp1.create_vector_s(subset='u')
+        vu = self.nlp1.create_vector('du')
         vu.fill(1.0)
         nlp = self.nlp1
 
-        Pl = self.nlp1.expansion_matrix_dl()
-        Pu = self.nlp1.expansion_matrix_du()
+        Pl = self.nlp1.projection_matrix_dl()
+        Pu = self.nlp1.projection_matrix_du()
 
         s_init = self.nlp1.evaluate_d(x_init)
         slack_l = Pl.T.dot(s_init) - self.nlp1.dl(condensed=True)
@@ -506,14 +506,14 @@ class TestNLPState(unittest.TestCase):
         state = NLPState(self.nlp)
         x_init = self.nlp.x_init()
         y_init = self.nlp.y_init()
-        vl = self.nlp.create_vector_s(subset='l')
+        vl = self.nlp.create_vector('dl')
         vl.fill(1.0)
-        vu = self.nlp.create_vector_s(subset='u')
+        vu = self.nlp.create_vector('du')
         vu.fill(1.0)
         nlp = self.nlp
 
-        Pl = self.nlp.expansion_matrix_dl()
-        Pu = self.nlp.expansion_matrix_du()
+        Pl = self.nlp.projection_matrix_dl()
+        Pu = self.nlp.projection_matrix_du()
 
         s_init = self.nlp.evaluate_d(x_init)
         slack_l = Pl.T.dot(s_init) - self.nlp.dl(condensed=True)
@@ -586,35 +586,35 @@ class TestNLPState(unittest.TestCase):
         x_init = self.nlp.x_init()
         y_init = self.nlp.y_init()
 
-        delta_x = self.nlp.create_vector_x()
-        delta_s = self.nlp.create_vector_s()
+        delta_x = self.nlp.create_vector('x')
+        delta_s = self.nlp.create_vector('s')
 
         alpha = state.max_alpha_primal(delta_x, delta_s, 1.0)
         self.assertAlmostEqual(alpha, 1.0) # no negative directions. full step
 
-        delta_x = self.nlp.create_vector_x()
-        delta_s = self.nlp.create_vector_s()
+        delta_x = self.nlp.create_vector('x')
+        delta_s = self.nlp.create_vector('s')
         delta_x[0][0] = -8.0
 
         alpha = state.max_alpha_primal(delta_x, delta_s, 1.0)
         self.assertAlmostEqual(alpha, 0.5) # went to far need to go back a half
 
-        delta_x = self.nlp.create_vector_x()
-        delta_s = self.nlp.create_vector_s()
+        delta_x = self.nlp.create_vector('x')
+        delta_s = self.nlp.create_vector('s')
         delta_x[0][1] = 8.0
 
         alpha = state.max_alpha_primal(delta_x, delta_s, 1.0)
         self.assertAlmostEqual(alpha, 0.75) # went to far need to go back a quarter
 
-        delta_x = self.nlp.create_vector_x()
-        delta_s = self.nlp.create_vector_s()
+        delta_x = self.nlp.create_vector('x')
+        delta_s = self.nlp.create_vector('s')
         delta_s[0][0] = 10.0
 
         alpha = state.max_alpha_primal(delta_x, delta_s, 1.0)
         self.assertAlmostEqual(alpha, 0.8) # the slack went to far
 
-        delta_x = self.nlp.create_vector_x()
-        delta_s = self.nlp.create_vector_s()
+        delta_x = self.nlp.create_vector('x')
+        delta_s = self.nlp.create_vector('s')
         delta_s[1][0] = 10.0
         delta_x[0][1] = 10.0
 
@@ -624,37 +624,37 @@ class TestNLPState(unittest.TestCase):
     def test_max_alpha_dual(self):
 
         state = NLPState(self.nlp1)
-        delta_zl = self.nlp1.create_vector_x(subset='l')
-        delta_zu = self.nlp1.create_vector_x(subset='u')
-        delta_vl = self.nlp1.create_vector_s(subset='l')
-        delta_vu = self.nlp1.create_vector_s(subset='u')
+        delta_zl = self.nlp1.create_vector('xl')
+        delta_zu = self.nlp1.create_vector('xu')
+        delta_vl = self.nlp1.create_vector('dl')
+        delta_vu = self.nlp1.create_vector('du')
 
         alpha = state.max_alpha_dual(delta_zl, delta_zu, delta_vl, delta_vu, 1.0)
         self.assertAlmostEqual(alpha, 1.0)
 
-        delta_zl = self.nlp1.create_vector_x(subset='l')
-        delta_zu = self.nlp1.create_vector_x(subset='u')
-        delta_vl = self.nlp1.create_vector_s(subset='l')
-        delta_vu = self.nlp1.create_vector_s(subset='u')
+        delta_zl = self.nlp1.create_vector('xl')
+        delta_zu = self.nlp1.create_vector('xu')
+        delta_vl = self.nlp1.create_vector('dl')
+        delta_vu = self.nlp1.create_vector('du')
         delta_zl[0] = -2.0
 
         alpha = state.max_alpha_dual(delta_zl, delta_zu, delta_vl, delta_vu, 1.0)
         self.assertAlmostEqual(alpha, 0.5)
 
-        delta_zl = self.nlp1.create_vector_x(subset='l')
-        delta_zu = self.nlp1.create_vector_x(subset='u')
-        delta_vl = self.nlp1.create_vector_s(subset='l')
-        delta_vu = self.nlp1.create_vector_s(subset='u')
+        delta_zl = self.nlp1.create_vector('xl')
+        delta_zu = self.nlp1.create_vector('xu')
+        delta_vl = self.nlp1.create_vector('dl')
+        delta_vu = self.nlp1.create_vector('du')
         delta_zl[0] = -2.0
         delta_zu[0] = -4.0
 
         alpha = state.max_alpha_dual(delta_zl, delta_zu, delta_vl, delta_vu, 1.0)
         self.assertAlmostEqual(alpha, 0.25)
 
-        delta_zl = self.nlp1.create_vector_x(subset='l')
-        delta_zu = self.nlp1.create_vector_x(subset='u')
-        delta_vl = self.nlp1.create_vector_s(subset='l')
-        delta_vu = self.nlp1.create_vector_s(subset='u')
+        delta_zl = self.nlp1.create_vector('xl')
+        delta_zu = self.nlp1.create_vector('xu')
+        delta_vl = self.nlp1.create_vector('dl')
+        delta_vu = self.nlp1.create_vector('du')
         delta_zl[0] = -2.0
         delta_zu[0] = -4.0
         delta_vu[0] = -10.0
@@ -662,10 +662,10 @@ class TestNLPState(unittest.TestCase):
         alpha = state.max_alpha_dual(delta_zl, delta_zu, delta_vl, delta_vu, 1.0)
         self.assertAlmostEqual(alpha, 0.1)
 
-        delta_zl = self.nlp1.create_vector_x(subset='l')
-        delta_zu = self.nlp1.create_vector_x(subset='u')
-        delta_vl = self.nlp1.create_vector_s(subset='l')
-        delta_vu = self.nlp1.create_vector_s(subset='u')
+        delta_zl = self.nlp1.create_vector('xl')
+        delta_zu = self.nlp1.create_vector('xu')
+        delta_vl = self.nlp1.create_vector('dl')
+        delta_vu = self.nlp1.create_vector('du')
         delta_zl[0] = 2.0
         delta_zu[0] = 4.0
         delta_vu[0] = 10.0
@@ -674,37 +674,37 @@ class TestNLPState(unittest.TestCase):
         self.assertAlmostEqual(alpha, 1.0)
 
         state = NLPState(self.nlp)
-        delta_zl = self.nlp.create_vector_x(subset='l')
-        delta_zu = self.nlp.create_vector_x(subset='u')
-        delta_vl = self.nlp.create_vector_s(subset='l')
-        delta_vu = self.nlp.create_vector_s(subset='u')
+        delta_zl = self.nlp.create_vector('xl')
+        delta_zu = self.nlp.create_vector('xu')
+        delta_vl = self.nlp.create_vector('dl')
+        delta_vu = self.nlp.create_vector('du')
 
         alpha = state.max_alpha_dual(delta_zl, delta_zu, delta_vl, delta_vu, 1.0)
         self.assertAlmostEqual(alpha, 1.0)
 
-        delta_zl = self.nlp.create_vector_x(subset='l')
-        delta_zu = self.nlp.create_vector_x(subset='u')
-        delta_vl = self.nlp.create_vector_s(subset='l')
-        delta_vu = self.nlp.create_vector_s(subset='u')
+        delta_zl = self.nlp.create_vector('xl')
+        delta_zu = self.nlp.create_vector('xu')
+        delta_vl = self.nlp.create_vector('dl')
+        delta_vu = self.nlp.create_vector('du')
         delta_zl[0][0] = -2.0
 
         alpha = state.max_alpha_dual(delta_zl, delta_zu, delta_vl, delta_vu, 1.0)
         self.assertAlmostEqual(alpha, 0.5)
 
-        delta_zl = self.nlp.create_vector_x(subset='l')
-        delta_zu = self.nlp.create_vector_x(subset='u')
-        delta_vl = self.nlp.create_vector_s(subset='l')
-        delta_vu = self.nlp.create_vector_s(subset='u')
+        delta_zl = self.nlp.create_vector('xl')
+        delta_zu = self.nlp.create_vector('xu')
+        delta_vl = self.nlp.create_vector('dl')
+        delta_vu = self.nlp.create_vector('du')
         delta_zl[0][0] = -2.0
         delta_zu[0][0] = -4.0
 
         alpha = state.max_alpha_dual(delta_zl, delta_zu, delta_vl, delta_vu, 1.0)
         self.assertAlmostEqual(alpha, 0.25)
 
-        delta_zl = self.nlp.create_vector_x(subset='l')
-        delta_zu = self.nlp.create_vector_x(subset='u')
-        delta_vl = self.nlp.create_vector_s(subset='l')
-        delta_vu = self.nlp.create_vector_s(subset='u')
+        delta_zl = self.nlp.create_vector('xl')
+        delta_zu = self.nlp.create_vector('xu')
+        delta_vl = self.nlp.create_vector('dl')
+        delta_vu = self.nlp.create_vector('du')
         delta_zl[1][0] = -2.0
         delta_zu[1][0] = -4.0
         delta_vu[1][0] = -10.0
@@ -712,10 +712,10 @@ class TestNLPState(unittest.TestCase):
         alpha = state.max_alpha_dual(delta_zl, delta_zu, delta_vl, delta_vu, 1.0)
         self.assertAlmostEqual(alpha, 0.1)
 
-        delta_zl = self.nlp.create_vector_x(subset='l')
-        delta_zu = self.nlp.create_vector_x(subset='u')
-        delta_vl = self.nlp.create_vector_s(subset='l')
-        delta_vu = self.nlp.create_vector_s(subset='u')
+        delta_zl = self.nlp.create_vector('xl')
+        delta_zu = self.nlp.create_vector('xu')
+        delta_vl = self.nlp.create_vector('dl')
+        delta_vu = self.nlp.create_vector('du')
         delta_zl[0][0] = 2.0
         delta_zu[0][0] = 4.0
         delta_vu[0][0] = 10.0
@@ -736,18 +736,18 @@ class TestNLPState(unittest.TestCase):
         state = NLPState(self.nlp1)
         x_init = self.nlp1.x_init()
         y_init = self.nlp1.y_init()
-        yc = self.nlp1.expansion_matrix_c().T.dot(y_init)
-        yd = self.nlp1.expansion_matrix_d().T.dot(y_init)
-        zl = self.nlp1.create_vector_x(subset='l')
+        yc = self.nlp1.projection_matrix_c().T.dot(y_init)
+        yd = self.nlp1.projection_matrix_d().T.dot(y_init)
+        zl = self.nlp1.create_vector('xl')
         zl.fill(1.0)
-        zu = self.nlp1.create_vector_x(subset='u')
+        zu = self.nlp1.create_vector('xu')
         zu.fill(1.0)
         nlp = self.nlp1
         grad_lag = nlp.grad_objective(x_init) + \
               nlp.jacobian_c(x_init).T.dot(yc) + \
               nlp.jacobian_d(x_init).T.dot(yd) + \
-              nlp.expansion_matrix_xu().dot(zu) - \
-              nlp.expansion_matrix_xl().dot(zl)
+              nlp.projection_matrix_xu().dot(zu) - \
+              nlp.projection_matrix_xl().dot(zl)
 
         n1 = pn.linalg.norm(grad_lag, ord=np.inf)
         n2 = state.dual_infeasibility()
@@ -756,18 +756,18 @@ class TestNLPState(unittest.TestCase):
         state = NLPState(self.nlp)
         x_init = self.nlp.x_init()
         y_init = self.nlp.y_init()
-        yc = self.nlp.expansion_matrix_c().T.dot(y_init)
-        yd = self.nlp.expansion_matrix_d().T.dot(y_init)
-        zl = self.nlp.create_vector_x(subset='l')
+        yc = self.nlp.projection_matrix_c().T.dot(y_init)
+        yd = self.nlp.projection_matrix_d().T.dot(y_init)
+        zl = self.nlp.create_vector('xl')
         zl.fill(1.0)
-        zu = self.nlp.create_vector_x(subset='u')
+        zu = self.nlp.create_vector('xu')
         zu.fill(1.0)
         nlp = self.nlp
         grad_lag = nlp.grad_objective(x_init) + \
               nlp.jacobian_c(x_init).T.dot(yc) + \
               nlp.jacobian_d(x_init).T.dot(yd) + \
-              nlp.expansion_matrix_xu().dot(zu) - \
-              nlp.expansion_matrix_xl().dot(zl)
+              nlp.projection_matrix_xu().dot(zu) - \
+              nlp.projection_matrix_xl().dot(zl)
 
         n1 = pn.linalg.norm(grad_lag, ord=np.inf)
         n2 = state.dual_infeasibility()

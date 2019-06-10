@@ -76,7 +76,6 @@ class BlockMatrix(BaseBlockMatrix):
 
         #super(BlockMatrix, self).__init__()
 
-
     @property
     def bshape(self):
         """
@@ -134,7 +133,7 @@ class BlockMatrix(BaseBlockMatrix):
 
         Returns
         -------
-        narray
+        ndarray
 
         """
         if copy:
@@ -289,17 +288,17 @@ class BlockMatrix(BaseBlockMatrix):
     def tolil(self, copy=False):
         """Convert matrix to LInked List format.
         """
-        return self.tocsr(copy=False).tolil(copy=copy)
+        raise NotImplementedError('Operation not supported by BlockMatrix')
 
     def todia(self, copy=False):
         """Convert this matrix to sparse DIAgonal format.
         """
-        return self.tocoo(copy=copy).todia(copy=False)
+        raise NotImplementedError('Operation not supported by BlockMatrix')
 
     def tobsr(self, blocksize=None, copy=False):
         """Convert matrix to Block Sparse Row format.
         """
-        return self.tocsr(copy=False).tobsr(blocksize=blocksize, copy=copy)
+        raise NotImplementedError('Operation not supported by BlockMatrix')
 
     def toarray(self):
         """
@@ -313,19 +312,6 @@ class BlockMatrix(BaseBlockMatrix):
 
         """
         return self.tocoo().toarray()
-
-    def todense(self):
-        """
-        Returns a dense matrix representation of this matrix.
-
-        Returns
-        -------
-        arr : ndarray, 2-dimensional
-            An array with the same shape and containing the same data
-            represented by the block matrix.
-
-        """
-        return np.asmatrix(self.toarray())
 
     def _mul_sparse_matrix(self, other):
 
@@ -394,7 +380,7 @@ class BlockMatrix(BaseBlockMatrix):
 
     def is_empty_block(self, idx, jdx):
         """
-        Indicates if a block is empty
+        Indicates if a block is None
 
         Parameters
         ----------

@@ -48,7 +48,7 @@ print("Number of nnz in Jacobian: {:>20d}".format(nlp.nnz_jacobian_g))
 print("Number of nnz in hessian of Lagrange: {:>8d}".format(nlp.nnz_hessian_lag))
 
 x = nlp.x_init()
-y = nlp.create_vector_y()
+y = nlp.create_vector('y')
 y.fill(1.0)
 
 # Evaluate jacobian of all constraints

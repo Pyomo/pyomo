@@ -169,7 +169,7 @@ class AugmentedSystem(object):
         self._kkt[3, 0] = nlp_state.jacobian_d()
         if nlp.nd == 0:
             if isinstance(nlp, CompositeNLP):
-                d_vec = nlp.create_vector_y(subset='d')
+                d_vec = nlp.create_vector('d')
                 mat = BlockSymMatrix(d_vec.nblocks)
                 for j, v in enumerate(d_vec):
                     mat[j, j] = diagonal_matrix(v)
@@ -179,7 +179,7 @@ class AugmentedSystem(object):
                 self._kkt[3, 1] = empty_matrix(nlp.nd, nlp.nd)
         else:
             if isinstance(nlp, CompositeNLP):
-                d_vec = nlp.create_vector_y(subset='d')
+                d_vec = nlp.create_vector('d')
                 d_vec.fill(-1.0)
                 mat = BlockSymMatrix(d_vec.nblocks)
                 for j, v in enumerate(d_vec):

@@ -338,7 +338,7 @@ if __name__ == "__main__":
     new_data = np.concatenate([data, data[off_diagonal_mask]])
     A = coo_matrix((data, (row, col)), shape=(3, 3))
     b = np.array([1, 1, 0], dtype='d')
-    print(A.todense())
+    print(A.toarray())
 
     linear_solver = MUMPSSymLinearSolver()
     A = coo_matrix((new_data, (new_row, new_col)), shape=(3, 3))

@@ -64,8 +64,8 @@ discretizer.reduce_collocation_points(instance, var=instance.u, ncp=1, contset=i
 
 # Interface pyomo model with nlp
 nlp = PyomoNLP(instance)
-x = nlp.create_vector_x()
-lam = nlp.create_vector_y()
+x = nlp.create_vector('x')
+lam = nlp.create_vector('y')
 
 # Evaluate jacobian
 jac_c = nlp.jacobian_g(x)

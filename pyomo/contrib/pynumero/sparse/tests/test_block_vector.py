@@ -416,7 +416,7 @@ class TestBlockVector(unittest.TestCase):
 
     def test_length(self):
         size = sum(self.list_sizes_ones)
-        self.assertEqual(len(self.ones), size)
+        self.assertEqual(len(self.ones), self.ones.nblocks)
 
     def test_argmax(self):
         v = BlockVector(2)

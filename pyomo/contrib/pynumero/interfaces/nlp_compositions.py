@@ -290,6 +290,13 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         # ToDo: decide if we cache _irows and _jcols pointers for composite nlp
 
     @property
+    def model(self):
+        """
+        Return optimization model
+        """
+        return self._model
+
+    @property
     def nblocks(self):
         """
         Returns number of blocks (nlps)
@@ -308,26 +315,13 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         for sid, name in enumerate(self._sid_to_sname):
             yield name, self._nlps[sid]
 
-    def create_vector_x(self, subset=None):
-        """Returns ndarray of primal variables
+    def create_vector(self, vector_type):
 
-        Parameters
-        ----------
-        subset : str, optional
-            determines size of vector.
-            `l`: only primal variables with lower bounds
-            `u`: only primal variables with upper bounds
-
-        Returns
-        -------
-        BlockVector
-
-        """
-        if subset is None:
+        if vector_type == 'x':
             subvectors = [np.zeros(nlp.nx, dtype=np.double) for nlp in self._nlps] + \
                          [np.zeros(self.nz, dtype=np.double)]
             return BlockVector(subvectors)
-        elif subset == 'l':
+        elif vector_type == 'xl':
             vectors = list()
             for nlp in self._nlps:
                 nx_l = len(nlp._lower_x_map)
@@ -336,7 +330,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             # complicated variables have no lower bounds
             vectors.append(np.zeros(0, dtype=np.double))
             return BlockVector(vectors)
-        elif subset == 'u':
+        elif vector_type == 'xu':
             vectors = list()
             for nlp in self._nlps:
                 nx_u = len(nlp._upper_x_map)
@@ -345,40 +339,20 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             # complicated variables have no upper bounds
             vectors.append(np.zeros(0, dtype=np.double))
             return BlockVector(vectors)
-        else:
-            raise RuntimeError('Subset not recognized')
-
-    def create_vector_y(self, subset=None):
-        """Return ndarray of vector of constraints
-
-        Parameters
-        ----------
-        subset : str, optional
-            determines size of vector.
-            `c`: only equality constraints
-            `d`: only inequality constraints
-            `dl`: only inequality constraints with lower bound
-            `du`: only inequality constraints with upper bound
-
-        Returns
-        -------
-        BlockVector
-
-        """
-        if subset is None:
+        elif vector_type == 'g' or vector_type == 'y':
             return BlockVector([np.zeros(nlp.ng, dtype=np.double) for nlp in self._nlps] +
                                [np.zeros(self.nz, dtype=np.double) for i in range(self.nblocks)])
-        elif subset == 'c':
+        elif vector_type == 'c' or vector_type == 'yc':
             return BlockVector([np.zeros(nlp.nc, dtype=np.double) for nlp in self._nlps] +
                                [np.zeros(self.nz, dtype=np.double) for i in range(self.nblocks)])
-        elif subset == 'd':
+        elif vector_type == 'd' or vector_type == 'yd' or vector_type == 's':
             return BlockVector([np.zeros(nlp.nd, dtype=np.double) for nlp in self._nlps] +
                                [np.zeros(0, dtype=np.double) for i in range(self.nblocks)])
-        elif subset == 'dl' or subset == 'du':
-            return BlockVector([nlp.create_vector_y(subset=subset) for nlp in self._nlps] +
+        elif vector_type == 'dl' or vector_type == 'du':
+            return BlockVector([nlp.create_vector(vector_type) for nlp in self._nlps] +
                                [np.zeros(0, dtype=np.double) for i in range(self.nblocks)])
         else:
-            raise RuntimeError('Subset not recognized')
+            raise RuntimeError('Vector_type not recognized')
 
     def objective(self, x, **kwargs):
         """Returns value of objective function evaluated at x
@@ -396,7 +370,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         if isinstance(x, BlockVector):
             return sum(self._nlps[i].objective(x[i]) for i in range(self.nblocks))
         elif isinstance(x, np.ndarray):
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
             return sum(self._nlps[i].objective(x_[i]) for i in range(self.nblocks))
@@ -420,7 +394,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
 
         """
         if out is None:
-            df = self.create_vector_x()
+            df = self.create_vector('x')
         else:
             assert isinstance(out, BlockVector), 'Composite NLP takes block vector to evaluate g'
             assert out.nblocks == self.nblocks + 1
@@ -435,7 +409,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             return df
         elif isinstance(x, np.ndarray):
             assert x.size == self.nx
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
             for i in range(self.nblocks):
@@ -461,7 +435,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
 
         """
         if out is None:
-            res = self.create_vector_y()
+            res = self.create_vector('y')
         else:
             assert isinstance(out, BlockVector), 'Composite NLP takes block vector to evaluate g'
             assert out.nblocks == 2 * self.nblocks
@@ -481,7 +455,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             return res
         elif isinstance(x, np.ndarray):
             assert x.size == self.nx
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)  # this is expensive
             x_ = block_x
             for sid in range(self.nblocks):
@@ -513,7 +487,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         evaluated_g = kwargs.pop('evaluated_g', None)
 
         if out is None:
-            res = self.create_vector_y(subset='c')
+            res = self.create_vector('c')
         else:
             assert isinstance(out, BlockVector), 'Composite NLP takes block vector to evaluate g'
             assert out.nblocks == 2 * self.nblocks
@@ -541,7 +515,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             return res
         elif isinstance(x, np.ndarray):
             assert x.size == self.nx
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
             for sid in range(self.nblocks):
@@ -571,7 +545,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         evaluated_g = kwargs.pop('evaluated_g', None)
 
         if out is None:
-            res = self.create_vector_y(subset='d')
+            res = self.create_vector('d')
         else:
             assert isinstance(out, BlockVector), 'Composite NLP takes block vector to evaluate g'
             assert out.nblocks == self.nblocks * 2
@@ -598,7 +572,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             return res
         elif isinstance(x, np.ndarray):
             assert x.size == self.nx
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
             for sid in range(self.nblocks):
@@ -629,7 +603,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             assert x.nblocks == self.nblocks + 1
             x_ = x
         elif isinstance(x, np.ndarray):
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
         else:
@@ -679,7 +653,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             assert x.nblocks == self.nblocks + 1
             x_ = x
         elif isinstance(x, np.ndarray):
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
         else:
@@ -729,7 +703,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             assert x.nblocks == self.nblocks + 1
             x_ = x
         elif isinstance(x, np.ndarray):
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
         else:
@@ -783,21 +757,21 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             y_ = y
         elif isinstance(x, np.ndarray) and isinstance(y, BlockVector):
             assert y.nblocks == 2 * self.nblocks
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
             y_ = y
         elif isinstance(x, BlockVector) and isinstance(y, np.ndarray):
             assert x.nblocks == self.nblocks + 1
             x_ = x
-            block_y = self.create_vector_y()
+            block_y = self.create_vector('y')
             block_y.copyfrom(y)
             y_ = block_y
         elif isinstance(x, np.ndarray) and isinstance(y, np.ndarray):
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
-            block_y = self.create_vector_y()
+            block_y = self.create_vector('y')
             block_y.copyfrom(y)
             y_ = block_y
         else:
@@ -905,51 +879,51 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             constraint_order.append(['linking_b{}_{}'.format(sid, i) for i in range(self.nz)])
         return constraint_order
 
-    def expansion_matrix_xl(self):
+    def projection_matrix_xl(self):
 
         Pxl = BlockMatrix(self.nblocks + 1, self.nblocks + 1)
         for sid, nlp in enumerate(self._nlps):
-            Pxl[sid, sid] = nlp.expansion_matrix_xl()
+            Pxl[sid, sid] = nlp.projection_matrix_xl()
         Pxl[self.nblocks, self.nblocks] = empty_matrix(self.nz, 0).tocsr()
         return Pxl
 
-    def expansion_matrix_xu(self):
+    def projection_matrix_xu(self):
 
         Pxu = BlockMatrix(self.nblocks + 1, self.nblocks + 1)
         for sid, nlp in enumerate(self._nlps):
-            Pxu[sid, sid] = nlp.expansion_matrix_xu()
+            Pxu[sid, sid] = nlp.projection_matrix_xu()
         Pxu[self.nblocks, self.nblocks] = empty_matrix(self.nz, 0).tocsr()
         return Pxu
 
-    def expansion_matrix_dl(self):
+    def projection_matrix_dl(self):
 
         Pdl = BlockMatrix(2 * self.nblocks, 2 * self.nblocks)
         for sid, nlp in enumerate(self._nlps):
-            Pdl[sid, sid] = nlp.expansion_matrix_dl()
+            Pdl[sid, sid] = nlp.projection_matrix_dl()
             Pdl[sid + self.nblocks, sid + self.nblocks] = empty_matrix(0, 0).tocsr()
         return Pdl
 
-    def expansion_matrix_du(self):
+    def projection_matrix_du(self):
 
         Pdu = BlockMatrix(2 * self.nblocks, 2 * self.nblocks)
         for sid, nlp in enumerate(self._nlps):
-            Pdu[sid, sid] = nlp.expansion_matrix_du()
+            Pdu[sid, sid] = nlp.projection_matrix_du()
             Pdu[sid + self.nblocks, sid + self.nblocks] = empty_matrix(0, 0).tocsr()
         return Pdu
 
-    def expansion_matrix_c(self):
+    def projection_matrix_c(self):
 
         Pc = BlockMatrix(2 * self.nblocks, 2 * self.nblocks)
         for sid, nlp in enumerate(self._nlps):
-            Pc[sid, sid] = nlp.expansion_matrix_c()
+            Pc[sid, sid] = nlp.projection_matrix_c()
             Pc[sid + self.nblocks, sid + self.nblocks] = identity(self.nz).tocsr()
         return Pc
 
-    def expansion_matrix_d(self):
+    def projection_matrix_d(self):
 
         Pd = BlockMatrix(2 * self.nblocks, 2 * self.nblocks)
         for sid, nlp in enumerate(self._nlps):
-            Pd[sid, sid] = nlp.expansion_matrix_d()
+            Pd[sid, sid] = nlp.projection_matrix_d()
             Pd[sid + self.nblocks, sid + self.nblocks] = empty_matrix(self.nz, 0).tocsr()
         return Pd
 
@@ -966,6 +940,9 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
 
     def scenarios_order(self):
         return [self._sid_to_sname[i] for i in range(self.nblocks)]
+
+    def report_solver_status(self, status_num, status_msg, x, y):
+        raise NotImplementedError('TwoStageStochasticNLP does not support report_solver_status')
 
 
 class DynoptNLP(NLP, CompositeNLP):
@@ -1221,6 +1198,13 @@ class DynoptNLP(NLP, CompositeNLP):
         self._nnz_hess_lag = flat_hess.nnz
 
     @property
+    def model(self):
+        """
+        Return optimization model
+        """
+        return self._model
+
+    @property
     def nblocks(self):
         """
         Returns number of blocks (nlps)
@@ -1246,26 +1230,12 @@ class DynoptNLP(NLP, CompositeNLP):
         for sid, block_nlp in enumerate(self._nlps):
             yield "block {}".format(sid), block_nlp
 
-    def create_vector_x(self, subset=None):
-        """Returns ndarray of primal variables
-
-        Parameters
-        ----------
-        subset : str, optional
-            determines size of vector.
-            `l`: only primal variables with lower bounds
-            `u`: only primal variables with upper bounds
-
-        Returns
-        -------
-        BlockVector
-
-        """
-        if subset is None:
+    def create_vector(self, vector_type):
+        if vector_type == 'x':
             x_vectors = [np.zeros(nlp.nx, dtype=np.double) for nlp in self._nlps]
             q_vectors = [np.zeros(self.nstates, dtype=np.double) for i in range(self.nblocks - 1)]
             return BlockVector(x_vectors + q_vectors)
-        elif subset == 'l':
+        elif vector_type == 'xl':
             vectors = list()
             for nlp in self._nlps:
                 nx_l = len(nlp._lower_x_map)
@@ -1275,7 +1245,7 @@ class DynoptNLP(NLP, CompositeNLP):
             q_vectors = [np.zeros(0, dtype=np.double) for i in range(self.nblocks - 1)]
             vectors += q_vectors
             return BlockVector(vectors)
-        elif subset == 'u':
+        elif vector_type == 'xu':
             vectors = list()
             for nlp in self._nlps:
                 nx_u = len(nlp._upper_x_map)
@@ -1284,48 +1254,28 @@ class DynoptNLP(NLP, CompositeNLP):
             q_vectors = [np.zeros(0, dtype=np.double) for i in range(self.nblocks - 1)]
             vectors += q_vectors
             return BlockVector(vectors)
-        else:
-            raise RuntimeError('Subset not recognized')
-
-    def create_vector_y(self, subset=None):
-        """Return ndarray of vector of constraints
-
-        Parameters
-        ----------
-        subset : str, optional
-            determines size of vector.
-            `c`: only equality constraints
-            `d`: only inequality constraints
-            `dl`: only inequality constraints with lower bound
-            `du`: only inequality constraints with upper bound
-
-        Returns
-        -------
-        BlockVector
-
-        """
-        if subset is None:
+        if vector_type == 'g' or vector_type == 'y':
             y_vectors = [np.zeros(nlp.ng, dtype=np.double) for nlp in self._nlps]
             q_vectors = [np.zeros(self.nstates, dtype=np.double)]  # for the initial conditions
             q_vectors += [np.zeros(self.nstates, dtype=np.double) for i in range(2 * (self.nblocks - 1))]
             return BlockVector(y_vectors + q_vectors)
-        elif subset == 'c':
+        elif vector_type == 'c' or vector_type == 'yc':
             y_vectors = [np.zeros(nlp.nc, dtype=np.double) for nlp in self._nlps]
             q_vectors = [np.zeros(self.nstates, dtype=np.double)]  # for the initial conditions
             q_vectors += [np.zeros(self.nstates, dtype=np.double) for i in range(2 * (self.nblocks - 1))]
             return BlockVector(y_vectors + q_vectors)
-        elif subset == 'd':
+        elif vector_type == 'd' or vector_type == 'd' or vector_type == 's':
             y_vectors = [np.zeros(nlp.nd, dtype=np.double) for nlp in self._nlps]
             q_vectors = [np.zeros(0, dtype=np.double)]  # for the initial conditions
             q_vectors += [np.zeros(0, dtype=np.double) for i in range(2 * (self.nblocks - 1))]
             return BlockVector(y_vectors + q_vectors)
-        elif subset == 'dl' or subset == 'du':
-            y_vectors = [nlp.create_vector_y(subset=subset) for nlp in self._nlps]
+        elif vector_type == 'dl' or vector_type == 'du':
+            y_vectors = [nlp.create_vector(vector_type) for nlp in self._nlps]
             q_vectors = [np.zeros(0, dtype=np.double)]  # for the initial conditions
             q_vectors += [np.zeros(0, dtype=np.double) for i in range(2 * (self.nblocks - 1))]
             return BlockVector(y_vectors + q_vectors)
         else:
-            raise RuntimeError('Subset not recognized')
+            raise RuntimeError('Vector_type not recognized')
 
     def objective(self, x, **kwargs):
         """Returns value of objective function evaluated at x
@@ -1343,7 +1293,7 @@ class DynoptNLP(NLP, CompositeNLP):
         if isinstance(x, BlockVector):
             return sum(self._nlps[i].objective(x[i]) for i in range(self.nblocks))
         elif isinstance(x, np.ndarray):
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
             return sum(self._nlps[i].objective(x_[i]) for i in range(self.nblocks))
@@ -1367,7 +1317,7 @@ class DynoptNLP(NLP, CompositeNLP):
 
         """
         if out is None:
-            df = self.create_vector_x()
+            df = self.create_vector('x')
         else:
             assert isinstance(out, BlockVector), 'Composite NLP takes block vector to evaluate g'
             assert out.nblocks == 2 * self.nblocks - 1
@@ -1382,7 +1332,7 @@ class DynoptNLP(NLP, CompositeNLP):
             return df
         elif isinstance(x, np.ndarray):
             assert x.size == self.nx
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
             for i in range(self.nblocks):
@@ -1408,7 +1358,7 @@ class DynoptNLP(NLP, CompositeNLP):
 
         """
         if out is None:
-            res = self.create_vector_y()
+            res = self.create_vector('y')
         else:
             assert isinstance(out, BlockVector), 'Composite NLP takes block vector to evaluate g'
             assert out.nblocks == 3 * self.nblocks - 1
@@ -1437,7 +1387,7 @@ class DynoptNLP(NLP, CompositeNLP):
             return res
         elif isinstance(x, np.ndarray):
             assert x.size == self.nx
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)  # this is expensive
             x_ = block_x
             for bid in range(self.nblocks):
@@ -1478,7 +1428,7 @@ class DynoptNLP(NLP, CompositeNLP):
         evaluated_g = kwargs.pop('evaluated_g', None)
 
         if out is None:
-            res = self.create_vector_y(subset='c')
+            res = self.create_vector('c')
         else:
             assert isinstance(out, BlockVector), 'Composite NLP takes block vector to evaluate g'
             assert out.nblocks == 3 * self.nblocks - 1
@@ -1515,7 +1465,7 @@ class DynoptNLP(NLP, CompositeNLP):
             return res
         elif isinstance(x, np.ndarray):
             assert x.size == self.nx
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
             for bid in range(self.nblocks):
@@ -1554,7 +1504,7 @@ class DynoptNLP(NLP, CompositeNLP):
         evaluated_g = kwargs.pop('evaluated_g', None)
 
         if out is None:
-            res = self.create_vector_y(subset='d')
+            res = self.create_vector('d')
         else:
             assert isinstance(out, BlockVector), 'Composite NLP takes block vector to evaluate g'
             assert out.nblocks == 3 * self.nblocks - 1
@@ -1587,7 +1537,7 @@ class DynoptNLP(NLP, CompositeNLP):
             return res
         elif isinstance(x, np.ndarray):
             assert x.size == self.nx
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
             for bid in range(self.nblocks):
@@ -1624,7 +1574,7 @@ class DynoptNLP(NLP, CompositeNLP):
             assert x.nblocks == 2 * self.nblocks - 1
             x_ = x
         elif isinstance(x, np.ndarray):
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
         else:
@@ -1684,7 +1634,7 @@ class DynoptNLP(NLP, CompositeNLP):
             assert x.nblocks == 2 * self.nblocks - 1
             x_ = x
         elif isinstance(x, np.ndarray):
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
         else:
@@ -1743,7 +1693,7 @@ class DynoptNLP(NLP, CompositeNLP):
             assert x.nblocks == 2 * self.nblocks - 1
             x_ = x
         elif isinstance(x, np.ndarray):
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
         else:
@@ -1805,21 +1755,21 @@ class DynoptNLP(NLP, CompositeNLP):
             y_ = y
         elif isinstance(x, np.ndarray) and isinstance(y, BlockVector):
             assert y.nblocks == 3 * self.nblocks - 1
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
             y_ = y
         elif isinstance(x, BlockVector) and isinstance(y, np.ndarray):
             assert x.nblocks == 2 * self.nblocks - 1
             x_ = x
-            block_y = self.create_vector_y()
+            block_y = self.create_vector('y')
             block_y.copyfrom(y)
             y_ = block_y
         elif isinstance(x, np.ndarray) and isinstance(y, np.ndarray):
-            block_x = self.create_vector_x()
+            block_x = self.create_vector('x')
             block_x.copyfrom(x)
             x_ = block_x
-            block_y = self.create_vector_y()
+            block_y = self.create_vector('y')
             block_y.copyfrom(y)
             y_ = block_y
         else:
@@ -1881,62 +1831,62 @@ class DynoptNLP(NLP, CompositeNLP):
 
         return A
 
-    def expansion_matrix_xl(self):
+    def projection_matrix_xl(self):
 
         Pxl = BlockMatrix(2 * self.nblocks - 1, 2 * self.nblocks - 1)
         for bid, nlp in enumerate(self._nlps):
-            Pxl[bid, bid] = nlp.expansion_matrix_xl()
+            Pxl[bid, bid] = nlp.projection_matrix_xl()
             if bid < self.nblocks - 1:
                 Pxl[self.nblocks + bid, self.nblocks + bid] = empty_matrix(self.nstates, 0)
         return Pxl
 
-    def expansion_matrix_xu(self):
+    def projection_matrix_xu(self):
 
         Pxu = BlockMatrix(2 * self.nblocks - 1, 2 * self.nblocks - 1)
         for bid, nlp in enumerate(self._nlps):
-            Pxu[bid, bid] = nlp.expansion_matrix_xu()
+            Pxu[bid, bid] = nlp.projection_matrix_xu()
             if bid < self.nblocks - 1:
                 Pxu[self.nblocks + bid, self.nblocks + bid] = empty_matrix(self.nstates, 0)
         return Pxu
 
-    def expansion_matrix_dl(self):
+    def projection_matrix_dl(self):
 
         Pdl = BlockMatrix(3 * self.nblocks - 1, 3 * self.nblocks - 1)
         for bid, nlp in enumerate(self._nlps):
-            Pdl[bid, bid] = nlp.expansion_matrix_dl()
+            Pdl[bid, bid] = nlp.projection_matrix_dl()
             Pdl[bid + self.nblocks, bid + self.nblocks] = empty_matrix(0, 0).tocsr()
             if bid < self.nblocks - 1:
                 Pdl[bid + 2 * self.nblocks, bid + 2 * self.nblocks] = empty_matrix(0, 0).tocsr()
                 Pdl[bid + 2 * self.nblocks, bid + 2 * self.nblocks] = empty_matrix(0, 0).tocsr()
         return Pdl
 
-    def expansion_matrix_du(self):
+    def projection_matrix_du(self):
 
         Pdu = BlockMatrix(3 * self.nblocks - 1, 3 * self.nblocks - 1)
         for bid, nlp in enumerate(self._nlps):
-            Pdu[bid, bid] = nlp.expansion_matrix_du()
+            Pdu[bid, bid] = nlp.projection_matrix_du()
             Pdu[bid + self.nblocks, bid + self.nblocks] = empty_matrix(0, 0).tocsr()
             if bid < self.nblocks - 1:
                 Pdu[bid + 2 * self.nblocks, bid + 2 * self.nblocks] = empty_matrix(0, 0).tocsr()
                 Pdu[bid + 2 * self.nblocks, bid + 2 * self.nblocks] = empty_matrix(0, 0).tocsr()
         return Pdu
 
-    def expansion_matrix_c(self):
+    def projection_matrix_c(self):
 
         Pc = BlockMatrix(3 * self.nblocks - 1, 3 * self.nblocks - 1)
         for bid, nlp in enumerate(self._nlps):
-            Pc[bid, bid] = nlp.expansion_matrix_c()
+            Pc[bid, bid] = nlp.projection_matrix_c()
             Pc[bid + self.nblocks, bid + self.nblocks] = identity(self.nstates).tocsr()
             if bid < self.nblocks - 1:
                 Pc[bid + 2 * self.nblocks, bid + 2 * self.nblocks] = identity(self.nstates).tocsr()
                 Pc[bid + 2 * self.nblocks, bid + 2 * self.nblocks] = identity(self.nstates).tocsr()
         return Pc
 
-    def expansion_matrix_d(self):
+    def projection_matrix_d(self):
 
         Pd = BlockMatrix(3 * self.nblocks - 1, 3 * self.nblocks - 1)
         for bid, nlp in enumerate(self._nlps):
-            Pd[bid, bid] = nlp.expansion_matrix_d()
+            Pd[bid, bid] = nlp.projection_matrix_d()
             Pd[bid + self.nblocks, bid + self.nblocks] = empty_matrix(self.nstates, 0).tocsr()
             if bid < self.nblocks - 1:
                 Pd[bid + 2 * self.nblocks, bid + 2 * self.nblocks] = empty_matrix(self.nstates, 0).tocsr()
@@ -1968,3 +1918,6 @@ class DynoptNLP(NLP, CompositeNLP):
 
     def initial_conditions(self):
         return np.array(self._init_conditions, dtype=np.double)
+
+    def report_solver_status(self, status_num, status_msg, x, y):
+        raise NotImplementedError('DynoptNLP does not support report_solver_status')

@@ -75,9 +75,9 @@ class TestQP(unittest.TestCase):
 
         cls.model1 = create_dense_qp()
         cls.nlp1 = PyomoNLP(cls.model1)
-        x = cls.nlp1.create_vector_x()
+        x = cls.nlp1.create_vector('x')
         x.fill(0.0)
-        y = cls.nlp1.create_vector_y()
+        y = cls.nlp1.create_vector('y')
         Q = cls.nlp1.hessian_lag(x, y)
         A = cls.nlp1.jacobian_g(x)
         c = cls.nlp1.grad_objective(x)
@@ -189,30 +189,30 @@ class TestQP(unittest.TestCase):
     def test_x_init(self):
         qp = self.qp1
         nlp = self.nlp1
-        x = nlp.create_vector_x()
-        x1 = qp.create_vector_x()
+        x = nlp.create_vector('x')
+        x1 = qp.create_vector('x')
         self.assertTrue(np.allclose(x1, x))
-        x = nlp.create_vector_x(subset='l')
-        x1 = qp.create_vector_x(subset='l')
+        x = nlp.create_vector('xl')
+        x1 = qp.create_vector('xl')
         self.assertTrue(np.allclose(x1, x))
-        x = nlp.create_vector_x(subset='u')
-        x1 = qp.create_vector_x(subset='u')
+        x = nlp.create_vector('xu')
+        x1 = qp.create_vector('xu')
         self.assertTrue(np.allclose(x1, x))
 
     def test_y_init(self):
         qp = self.qp1
         nlp = self.nlp1
-        x = nlp.create_vector_y()
-        x1 = qp.create_vector_y()
+        x = nlp.create_vector('y')
+        x1 = qp.create_vector('y')
         self.assertTrue(np.allclose(x1, x))
-        x = nlp.create_vector_y(subset='dl')
-        x1 = qp.create_vector_y(subset='dl')
+        x = nlp.create_vector('dl')
+        x1 = qp.create_vector('dl')
         self.assertTrue(np.allclose(x1, x))
-        x = nlp.create_vector_y(subset='du')
-        x1 = qp.create_vector_y(subset='du')
+        x = nlp.create_vector('du')
+        x1 = qp.create_vector('du')
         self.assertTrue(np.allclose(x1, x))
-        x = nlp.create_vector_y(subset='c')
-        x1 = qp.create_vector_y(subset='c')
+        x = nlp.create_vector('c')
+        x1 = qp.create_vector('c')
         self.assertTrue(np.allclose(x1, x))
 
     def test_nnz_jacobian_g(self):
@@ -238,18 +238,18 @@ class TestQP(unittest.TestCase):
     def test_objective(self):
         qp = self.qp1
         nlp = self.nlp1
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         x.fill(1.0)
         self.assertEqual(qp.objective(x), nlp.objective(x))
 
     def test_grad_objective(self):
         qp = self.qp1
         nlp = self.nlp1
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         x.fill(1.0)
         self.assertTrue(np.allclose(qp.grad_objective(x),
                                     nlp.grad_objective(x)))
-        res = nlp.create_vector_x()
+        res = nlp.create_vector('x')
         qp.grad_objective(x, out=res)
         self.assertTrue(np.allclose(res,
                                     nlp.grad_objective(x)))
@@ -257,11 +257,11 @@ class TestQP(unittest.TestCase):
     def test_evaluate_g(self):
         qp = self.qp1
         nlp = self.nlp1
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         x.fill(1.0)
         self.assertTrue(np.allclose(qp.evaluate_g(x),
                                     nlp.evaluate_g(x)))
-        res = nlp.create_vector_y()
+        res = nlp.create_vector('y')
         qp.evaluate_g(x, out=res)
         self.assertTrue(np.allclose(res,
                                     nlp.evaluate_g(x)))
@@ -269,11 +269,11 @@ class TestQP(unittest.TestCase):
     def test_evaluate_c(self):
         qp = self.qp1
         nlp = self.nlp1
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         x.fill(1.0)
         self.assertTrue(np.allclose(qp.evaluate_c(x),
                                     nlp.evaluate_c(x)))
-        res = nlp.create_vector_y()
+        res = nlp.create_vector('y')
         qp.evaluate_c(x, out=res)
         self.assertTrue(np.allclose(res,
                                     nlp.evaluate_c(x)))
@@ -281,11 +281,11 @@ class TestQP(unittest.TestCase):
     def test_evaluate_d(self):
         qp = self.qp1
         nlp = self.nlp1
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         x.fill(1.0)
         self.assertTrue(np.allclose(qp.evaluate_d(x),
                                     nlp.evaluate_d(x)))
-        res = nlp.create_vector_y('d')
+        res = nlp.create_vector('d')
         qp.evaluate_d(x, out=res)
         self.assertTrue(np.allclose(res,
                                     nlp.evaluate_d(x)))
@@ -293,7 +293,7 @@ class TestQP(unittest.TestCase):
     def test_jacobian_g(self):
         qp = self.qp1
         nlp = self.nlp1
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         jac = qp.jacobian_g(x)
         jac_nlp = nlp.jacobian_g(x)
         self.assertTrue(np.allclose(jac.toarray(),
@@ -306,7 +306,7 @@ class TestQP(unittest.TestCase):
     def test_jacobian_c(self):
         qp = self.qp1
         nlp = self.nlp1
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         jac = qp.jacobian_c(x)
         jac_nlp = nlp.jacobian_c(x)
         self.assertTrue(np.allclose(jac.toarray(),
@@ -319,7 +319,7 @@ class TestQP(unittest.TestCase):
     def test_jacobian_d(self):
         qp = self.qp1
         nlp = self.nlp1
-        x = nlp.create_vector_x()
+        x = nlp.create_vector('x')
         jac = qp.jacobian_d(x)
         jac_nlp = nlp.jacobian_d(x)
         self.assertTrue(np.allclose(jac.toarray(),
@@ -332,8 +332,8 @@ class TestQP(unittest.TestCase):
     def test_hessian_lag(self):
         qp = self.qp1
         nlp = self.nlp1
-        x = nlp.create_vector_x()
-        y = nlp.create_vector_y()
+        x = nlp.create_vector('x')
+        y = nlp.create_vector('y')
         hess = qp.hessian_lag(x, y)
         hess_nlp = nlp.hessian_lag(x, y)
         self.assertTrue(np.allclose(hess.toarray(),
@@ -344,50 +344,50 @@ class TestQP(unittest.TestCase):
         self.assertTrue(np.allclose(hess.toarray(),
                                     hess_nlp.toarray()))
 
-    def test_expansion_matrix_xl(self):
+    def test_projection_matrix_xl(self):
         qp = self.qp1
         nlp = self.nlp1
-        exp1 = qp.expansion_matrix_xl()
-        exp2 = nlp.expansion_matrix_xl()
+        exp1 = qp.projection_matrix_xl()
+        exp2 = nlp.projection_matrix_xl()
         self.assertTrue(np.allclose(exp1.toarray(),
                                     exp2.toarray()))
 
-    def test_expansion_matrix_xu(self):
+    def test_projection_matrix_xu(self):
         qp = self.qp1
         nlp = self.nlp1
-        exp1 = qp.expansion_matrix_xu()
-        exp2 = nlp.expansion_matrix_xu()
+        exp1 = qp.projection_matrix_xu()
+        exp2 = nlp.projection_matrix_xu()
         self.assertTrue(np.allclose(exp1.toarray(),
                                     exp2.toarray()))
 
-    def test_expansion_matrix_dl(self):
+    def test_projection_matrix_dl(self):
         qp = self.qp1
         nlp = self.nlp1
-        exp1 = qp.expansion_matrix_dl()
-        exp2 = nlp.expansion_matrix_dl()
+        exp1 = qp.projection_matrix_dl()
+        exp2 = nlp.projection_matrix_dl()
         self.assertTrue(np.allclose(exp1.toarray(),
                                     exp2.toarray()))
 
-    def test_expansion_matrix_du(self):
+    def test_projection_matrix_du(self):
         qp = self.qp1
         nlp = self.nlp1
-        exp1 = qp.expansion_matrix_du()
-        exp2 = nlp.expansion_matrix_du()
+        exp1 = qp.projection_matrix_du()
+        exp2 = nlp.projection_matrix_du()
         self.assertTrue(np.allclose(exp1.toarray(),
                                     exp2.toarray()))
 
-    def test_expansion_matrix_d(self):
+    def test_projection_matrix_d(self):
         qp = self.qp1
         nlp = self.nlp1
-        exp1 = qp.expansion_matrix_d()
-        exp2 = nlp.expansion_matrix_d()
+        exp1 = qp.projection_matrix_d()
+        exp2 = nlp.projection_matrix_d()
         self.assertTrue(np.allclose(exp1.toarray(),
                                     exp2.toarray()))
 
-    def test_expansion_matrix_c(self):
+    def test_projection_matrix_c(self):
         qp = self.qp1
         nlp = self.nlp1
-        exp1 = qp.expansion_matrix_c()
-        exp2 = nlp.expansion_matrix_c()
+        exp1 = qp.projection_matrix_c()
+        exp2 = nlp.projection_matrix_c()
         self.assertTrue(np.allclose(exp1.toarray(),
                                     exp2.toarray()))

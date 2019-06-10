@@ -505,7 +505,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         result = BlockVector(self.nblocks)
         for idx, blk in enumerate(self):
             if self._block_mask[idx]:
-                result[idx] = blk.round(decimals=0, out=None)
+                result[idx] = blk.round(decimals=decimals, out=None)
             else:
                 result[idx] = None
         return result
@@ -1364,12 +1364,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def __getitem__(self, item):
 
-        if np.isscalar(item):
-            return super(BlockVector, self).__getitem__(item)
-
-        # deal with slices
-        arr = self.flatten()
-        return arr[item]
+        if isinstance(item, slice):
+            raise NotImplementedError()
+        return super(BlockVector, self).__getitem__(item)
 
     def __setitem__(self, key, value):
 
@@ -1634,4 +1631,4 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __len__(self):
-        return self.size
+        return self.nblocks

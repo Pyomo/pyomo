@@ -47,21 +47,21 @@ class BasicNLPState(object):
                                                        nlp.du(),
                                                        bound_push)
         # vector of equality constraint multipliers
-        self._yc = nlp.create_vector_y(subset='c')
+        self._yc = nlp.create_vector('c')
         # vector of inequality constraint multipliers
-        self._yd = nlp.create_vector_y(subset='d')
+        self._yd = nlp.create_vector('d')
 
         # step vector of primal variables
-        self._dx = nlp.create_vector_x()
+        self._dx = nlp.create_vector('x')
         self._dx.fill(0.0)
         # step vector of slack variables
-        self._ds = nlp.create_vector_y('d')
+        self._ds = nlp.create_vector('d')
         self._ds.fill(0.0)
         # step vector of equality constraint multiplier variables
-        self._dyc = nlp.create_vector_y('c')
+        self._dyc = nlp.create_vector('c')
         self._dyc.fill(0.0)
         # step vector of inequality constraint multiplier variables
-        self._dyd = nlp.create_vector_y('d')
+        self._dyd = nlp.create_vector('d')
         self._dyd.fill(0.0)
 
         # vector of lower bounds on x
@@ -75,17 +75,17 @@ class BasicNLPState(object):
 
         # initialize expansion matrices
         # expansion matrix from condensed xl to x
-        self.Pxl = nlp.expansion_matrix_xl()
+        self.Pxl = nlp.projection_matrix_xl()
         # expansion matrix from condensed xu to x
-        self.Pxu = nlp.expansion_matrix_xu()
+        self.Pxu = nlp.projection_matrix_xu()
         # expansion matrix from condensed dl to d
-        self.Pdl = nlp.expansion_matrix_dl()
+        self.Pdl = nlp.projection_matrix_dl()
         # expansion matrix from condensed du to d
-        self.Pdu = nlp.expansion_matrix_du()
+        self.Pdu = nlp.projection_matrix_du()
         # expansion matrix from c to g
-        self.Pc = nlp.expansion_matrix_c()
+        self.Pc = nlp.projection_matrix_c()
         # expansion matrix from c to g
-        self.Pd = nlp.expansion_matrix_d()
+        self.Pd = nlp.projection_matrix_d()
 
         # objective function
         self._f = None
@@ -414,31 +414,31 @@ class NLPState(BasicNLPState):
         super(NLPState, self).__init__(nlp, **kwargs)
 
         # vector for the multipliers of lower bounds on x
-        self._zl = nlp.create_vector_x(subset='l')
+        self._zl = nlp.create_vector('xl')
         self._zl.fill(1.0)
         # vector for the multipliers of upper bounds on x
-        self._zu = nlp.create_vector_x(subset='u')
+        self._zu = nlp.create_vector('xu')
         self._zu.fill(1.0)
 
         # vector for the multipliers of lower bounds on s
-        self._vl = nlp.create_vector_s(subset='l')
+        self._vl = nlp.create_vector('dl')
         self._vl.fill(1.0)
         # vector for the multipliers of upper bounds on s
-        self._vu = nlp.create_vector_s(subset='u')
+        self._vu = nlp.create_vector('du')
         self._vu.fill(1.0)
 
         # step vector of multipliers of lower bounds on x
-        self._dzl = nlp.create_vector_x(subset='l')
+        self._dzl = nlp.create_vector('xl')
         self._dzl.fill(0.0)
         # step vector of multipliers of upper bounds on x
-        self._dzu = nlp.create_vector_x(subset='u')
+        self._dzu = nlp.create_vector('xu')
         self._dzu.fill(0.0)
 
         # step vector of multipliers of lower bounds on s
-        self._dvl = nlp.create_vector_s(subset='l')
+        self._dvl = nlp.create_vector('dl')
         self._dvl.fill(0.0)
         # step vector of multipliers of upper bounds on s
-        self._dvu = nlp.create_vector_s(subset='u')
+        self._dvu = nlp.create_vector('du')
         self._dvu.fill(0.0)
 
         self.cache()

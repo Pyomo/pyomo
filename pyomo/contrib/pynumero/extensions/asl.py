@@ -149,31 +149,19 @@ class AmplInterface(object):
         self.ASLib.EXTERNAL_AmplInterface_eval_jac_g.restype = ctypes.c_bool
 
         # temporary try/except block while changes get merged in pynumero_libraries
-        try:
-            self.ASLib.EXTERNAL_AmplInterface_dummy.argtypes = [ctypes.c_void_p]
-            self.ASLib.EXTERNAL_AmplInterface_dummy.restype = None
-            # evaluate hessian Lagrangian
-            self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag.argtypes = [ctypes.c_void_p,
-                                                                       array_1d_double,
-                                                                       ctypes.c_int,
-                                                                       array_1d_double,
-                                                                       ctypes.c_int,
-                                                                       array_1d_double,
-                                                                       ctypes.c_int,
-                                                                       ctypes.c_double]
-            self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag.restype = ctypes.c_bool
-            self.future_libraries = True
-        except Exception:
-            # evaluate hessian Lagrangian
-            self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag.argtypes = [ctypes.c_void_p,
-                                                                       array_1d_double,
-                                                                       ctypes.c_int,
-                                                                       array_1d_double,
-                                                                       ctypes.c_int,
-                                                                       array_1d_double,
-                                                                       ctypes.c_int]
-            self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag.restype = ctypes.c_bool
-            self.future_libraries = False
+        self.ASLib.EXTERNAL_AmplInterface_dummy.argtypes = [ctypes.c_void_p]
+        self.ASLib.EXTERNAL_AmplInterface_dummy.restype = None
+        # evaluate hessian Lagrangian
+        self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag.argtypes = [ctypes.c_void_p,
+                                                                   array_1d_double,
+                                                                   ctypes.c_int,
+                                                                   array_1d_double,
+                                                                   ctypes.c_int,
+                                                                   array_1d_double,
+                                                                   ctypes.c_int,
+                                                                   ctypes.c_double]
+        self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag.restype = ctypes.c_bool
+
 
         # finalize solution
         self.ASLib.EXTERNAL_AmplInterface_finalize_solution.argtypes = [ctypes.c_void_p,
@@ -324,23 +312,16 @@ class AmplInterface(object):
         assert x.dtype == np.double, "Error: array type. Function eval_hes_lag expects an array of type double"
         assert lam.dtype == np.double, "Error: array type. Function eval_hes_lag expects an array of type double"
         assert hes_lag.dtype == np.double, "Error: array type. Function eval_hes_lag expects an array of type double"
-        if self.future_libraries:
-            res = self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag(self._obj,
-                                                                 x,
-                                                                 self._nx,
-                                                                 lam,
-                                                                 self._ny,
-                                                                 hes_lag,
-                                                                 self._nnz_hess,
-                                                                 obj_factor)
-        else:
-            res = self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag(self._obj,
-                                                                 x,
-                                                                 self._nx,
-                                                                 lam,
-                                                                 self._ny,
-                                                                 hes_lag,
-                                                                 self._nnz_hess)
+
+        res = self.ASLib.EXTERNAL_AmplInterface_eval_hes_lag(self._obj,
+                                                             x,
+                                                             self._nx,
+                                                             lam,
+                                                             self._ny,
+                                                             hes_lag,
+                                                             self._nnz_hess,
+                                                             obj_factor)
+
         assert res, "Error in AMPL evaluation"
 
     def finalize_solution(self, ampl_solve_status_num, msg, x, lam):
@@ -352,6 +333,3 @@ class AmplInterface(object):
                                                             len(x),
                                                             lam,
                                                             len(lam))
-
-
-
