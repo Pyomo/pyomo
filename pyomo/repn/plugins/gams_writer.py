@@ -391,7 +391,14 @@ class ProblemWriter_gams(AbstractProblemWriter):
                              "I/O options is forbidden")
 
         if symbolic_solver_labels:
-            var_labeler = con_labeler = ShortNameLabeler(63, '_')
+            # Note that the Var and Constraint labelers must use the
+            # same labeler, so that we can correctly detect name
+            # collisions (which can arise when we truncate the labels to
+            # the max allowable length.  GAMS requires all identifiers
+            # to start with a letter.  We will (randomly) choose "s_"
+            # (for 'shortened')
+            var_labeler = con_labeler = ShortNameLabeler(
+                63, prefix='s_', suffix='_', caseInsensitive=True)
         elif labeler is None:
             var_labeler = NumericLabeler('x')
             con_labeler = NumericLabeler('c')
