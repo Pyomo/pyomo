@@ -154,7 +154,7 @@ class NameLabeler(object):
 
 class ShortNameLabeler(object):
     def __init__(self, limit, suffix, start=0, labeler=None,
-                 prefix="", caseInsensitive=True):
+                 prefix="", caseInsensitive=False):
         self.id = start
         self.prefix = prefix
         self.suffix = suffix
