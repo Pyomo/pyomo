@@ -17,6 +17,7 @@ import pyutilib.th as unittest
 
 from pyomo.common.log import LoggingIntercept
 
+from pyomo.core.expr import native_numeric_types, native_types
 import pyomo.core.base.set as SetModule
 from pyomo.core.base.set import (
     NumericRange as NR, NonNumericRange as NNR, AnyRange, _AnySet,
@@ -1519,7 +1520,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
 
     def test_ranges(self):
-        i = SetOf([1,3,2,0])
+        i_data = [1,3,2,0]
+        i = SetOf(i_data)
         r = list(i.ranges())
         self.assertEqual(len(r), 4)
         for idx, x in enumerate(r):
@@ -1528,6 +1530,41 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             self.assertEqual(x.start, i[idx+1])
             self.assertEqual(x.end, i[idx+1])
             self.assertEqual(x.step, 0)
+
+        # Test that apparent numeric types that are not in native_types
+        # are handled correctly
+        try:
+            self.assertIn(int, native_types)
+            self.assertIn(int, native_numeric_types)
+
+            native_types.remove(int)
+            native_numeric_types.remove(int)
+
+            r = list(i.ranges())
+            self.assertEqual(len(r), 4)
+            self.assertIn(int, native_types)
+            self.assertIn(int, native_numeric_types)
+        finally:
+            native_types.add(int)
+            native_numeric_types.add(int)
+
+        i_data.append('abc')
+        try:
+            self.assertIn(str, native_types)
+            self.assertNotIn(str, native_numeric_types)
+
+            native_types.remove(str)
+
+            r = list(i.ranges())
+
+            self.assertEqual(len(r), 5)
+            # Note: as_numeric() will NOT automatically add types to the
+            # native_types set
+            self.assertNotIn(str, native_types)
+            self.assertNotIn(str, native_numeric_types)
+            self.assertIs(type(r[-1]), NNR)
+        finally:
+            native_types.add(str)
 
     def test_bounds(self):
         self.assertEqual(SetOf([1,3,2,0]).bounds(), (0,3))
