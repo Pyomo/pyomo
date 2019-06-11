@@ -713,12 +713,10 @@ class TestBlockMatrix(unittest.TestCase):
     def test_nonzero(self):
 
         m = self.basic_m
-
         flat_mat = m.tocoo()
         flat_row, flat_col = flat_mat.nonzero()
-        block_row, block_col = m.nonzero()
-        self.assertTrue(np.allclose(flat_col, block_col))
-        self.assertTrue(np.allclose(flat_row, block_row))
+        with self.assertRaises(Exception) as context:
+            block_row, block_col = m.nonzero()
 
 class TestSymBlockMatrix(unittest.TestCase):
 

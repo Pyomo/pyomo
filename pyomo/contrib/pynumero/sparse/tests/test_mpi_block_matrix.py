@@ -392,29 +392,17 @@ class TestMPIBlockMatrix(unittest.TestCase):
             else:
                 self.assertIsNone(serial_res[i, j])
 
-        res = mat1 + serial_mat2
-        serial_res = serial_mat1 + serial_mat2
-        self.assertIsInstance(res, MPIBlockMatrix)
-        self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-        rows, columns = np.nonzero(res.ownership_mask)
-        for i, j in zip(rows, columns):
-            if res[i, j] is not None:
-                self.assertTrue(np.allclose(res[i, j].toarray(),
-                                            serial_res[i, j].toarray()))
-            else:
-                self.assertIsNone(serial_res[i, j])
+        with self.assertRaises(Exception) as context:
+            res = mat1 + serial_mat2
 
-        res = serial_mat2 + mat1
-        serial_res = serial_mat1 + serial_mat2
-        self.assertIsInstance(res, MPIBlockMatrix)
-        self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-        rows, columns = np.nonzero(res.ownership_mask)
-        for i, j in zip(rows, columns):
-            if res[i, j] is not None:
-                self.assertTrue(np.allclose(res[i, j].toarray(),
-                                            serial_res[i, j].toarray()))
-            else:
-                self.assertIsNone(serial_res[i, j])
+        with self.assertRaises(Exception) as context:
+            res = serial_mat2 + mat1
+
+        with self.assertRaises(Exception) as context:
+            res = mat1 + serial_mat2.tocoo()
+
+        with self.assertRaises(Exception) as context:
+            res = serial_mat2.tocoo() + mat1
 
     def test_sub(self):
 
@@ -447,27 +435,14 @@ class TestMPIBlockMatrix(unittest.TestCase):
             else:
                 self.assertIsNone(serial_res[i, j])
 
-        res = mat1 - serial_mat2
-        serial_res = serial_mat1 - serial_mat2
-        self.assertIsInstance(res, MPIBlockMatrix)
-        rows, columns = np.nonzero(res.ownership_mask)
-        for i, j in zip(rows, columns):
-            if res[i, j] is not None:
-                self.assertTrue(np.allclose(res[i, j].toarray(),
-                                            serial_res[i, j].toarray()))
-            else:
-                self.assertIsNone(serial_res[i, j])
-
-        res = serial_mat2 - mat1
-        serial_res = serial_mat2 - serial_mat1
-        self.assertIsInstance(res, MPIBlockMatrix)
-        rows, columns = np.nonzero(res.ownership_mask)
-        for i, j in zip(rows, columns):
-            if res[i, j] is not None:
-                self.assertTrue(np.allclose(res[i, j].toarray(),
-                                            serial_res[i, j].toarray()))
-            else:
-                self.assertIsNone(serial_res[i, j])
+        with self.assertRaises(Exception) as context:
+            res = mat1 - serial_mat2
+        with self.assertRaises(Exception) as context:
+            res = serial_mat2 - mat1
+        with self.assertRaises(Exception) as context:
+            res = mat1 - serial_mat2.tocoo()
+        with self.assertRaises(Exception) as context:
+            res = serial_mat2.tocoo() - mat1
 
     def test_mul(self):
 
@@ -690,28 +665,16 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 self.assertTrue(np.allclose(bm[i, j].toarray(),
                                             serial_bm[i, j].toarray()))
 
-        bm += serial_bm
-        serial_bm += serial_bm
-
-        rows, columns = np.nonzero(bm.ownership_mask)
-        for i, j in zip(rows, columns):
-            if bm[i, j] is not None:
-                self.assertTrue(np.allclose(bm[i, j].toarray(),
-                                            serial_bm[i, j].toarray()))
+        with self.assertRaises(Exception) as context:
+            bm += serial_bm
 
         serial_bm2 = BlockMatrix(2, 2)
         serial_bm2[0, 0] = m
         serial_bm2[0, 1] = m
         serial_bm2[1, 1] = m
 
-        bm += serial_bm2
-        serial_bm += serial_bm2
-
-        rows, columns = np.nonzero(bm.ownership_mask)
-        for i, j in zip(rows, columns):
-            if bm[i, j] is not None:
-                self.assertTrue(np.allclose(bm[i, j].toarray(),
-                                            serial_bm[i, j].toarray()))
+        with self.assertRaises(Exception) as context:
+            bm += serial_bm2
 
     def test_isub(self):
 
@@ -743,28 +706,11 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 self.assertTrue(np.allclose(bm[i, j].toarray(),
                                             serial_bm[i, j].toarray()))
 
-        bm -= serial_bm
-        serial_bm -= serial_bm
+        with self.assertRaises(Exception) as context:
+            bm -= serial_bm
 
-        rows, columns = np.nonzero(bm.ownership_mask)
-        for i, j in zip(rows, columns):
-            if bm[i, j] is not None:
-                self.assertTrue(np.allclose(bm[i, j].toarray(),
-                                            serial_bm[i, j].toarray()))
-
-        serial_bm2 = BlockMatrix(2, 2)
-        serial_bm2[0, 0] = m
-        serial_bm2[0, 1] = m
-        serial_bm2[1, 1] = m
-
-        bm -= serial_bm2
-        serial_bm -= serial_bm2
-
-        rows, columns = np.nonzero(bm.ownership_mask)
-        for i, j in zip(rows, columns):
-            if bm[i, j] is not None:
-                self.assertTrue(np.allclose(bm[i, j].toarray(),
-                                            serial_bm[i, j].toarray()))
+        with self.assertRaises(Exception) as context:
+            bm -= serial_bm2
 
     def test_imul(self):
 
@@ -909,20 +855,8 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 else:
                     self.assertIsNone(serial_res[i, j])
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = mat1 == serial_mat2
-            serial_res = serial_mat1 == serial_mat2
-
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
 
         mat1 = self.rectangular_mpi_mat
         serial_mat1 = self.rectangular_serial_mat
@@ -942,20 +876,9 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 else:
                     self.assertIsNone(serial_res[i, j])
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = mat1 == serial_mat1
-            serial_res = serial_mat1 == serial_mat1
 
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
 
     def test_ne(self):
 
@@ -980,20 +903,8 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 else:
                     self.assertIsNone(serial_res[i, j])
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = mat1 != serial_mat2
-            serial_res = serial_mat1 != serial_mat2
-
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
 
         mat1 = self.rectangular_mpi_mat
         serial_mat1 = self.rectangular_serial_mat
@@ -1013,35 +924,11 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 else:
                     self.assertIsNone(serial_res[i, j])
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = mat1 != serial_mat1
-            serial_res = serial_mat1 != serial_mat1
 
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = serial_mat1 != mat1
-            serial_res = serial_mat1 != serial_mat1
-
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -1081,8 +968,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 else:
                     self.assertIsNone(serial_res[i, j])
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = mat1 <= serial_mat2
             serial_res = serial_mat1 <= serial_mat2
 
@@ -1114,35 +1000,11 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 else:
                     self.assertIsNone(serial_res[i, j])
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = mat1 <= serial_mat1
-            serial_res = serial_mat1 <= serial_mat1
 
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = serial_mat1 <= mat1
-            serial_res = serial_mat1 <= serial_mat1
-
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -1182,20 +1044,8 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 else:
                     self.assertIsNone(serial_res[i, j])
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = mat1 < serial_mat2
-            serial_res = serial_mat1 < serial_mat2
-
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
 
         mat1 = self.rectangular_mpi_mat
         serial_mat1 = self.rectangular_serial_mat
@@ -1215,35 +1065,11 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 else:
                     self.assertIsNone(serial_res[i, j])
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = mat1 < serial_mat1
-            serial_res = serial_mat1 < serial_mat1
 
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = serial_mat1 < mat1
-            serial_res = serial_mat1 < serial_mat1
-
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
 
     def test_ge(self):
 
@@ -1268,20 +1094,8 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 else:
                     self.assertIsNone(serial_res[i, j])
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = mat1 >= serial_mat2
-            serial_res = serial_mat1 >= serial_mat2
-
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
 
         mat1 = self.rectangular_mpi_mat
         serial_mat1 = self.rectangular_serial_mat
@@ -1301,35 +1115,11 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 else:
                     self.assertIsNone(serial_res[i, j])
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = mat1 >= serial_mat1
-            serial_res = serial_mat1 >= serial_mat1
 
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = serial_mat1 >= mat1
-            serial_res = serial_mat1 >= serial_mat1
-
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
 
     def test_gt(self):
 
@@ -1354,20 +1144,8 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 else:
                     self.assertIsNone(serial_res[i, j])
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = mat1 > serial_mat2
-            serial_res = serial_mat1 > serial_mat2
-
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
 
         mat1 = self.rectangular_mpi_mat
         serial_mat1 = self.rectangular_serial_mat
@@ -1387,35 +1165,11 @@ class TestMPIBlockMatrix(unittest.TestCase):
                 else:
                     self.assertIsNone(serial_res[i, j])
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = mat1 > serial_mat1
-            serial_res = serial_mat1 > serial_mat1
 
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with self.assertRaises(Exception) as context:
             res = serial_mat1 > mat1
-            serial_res = serial_mat1 > serial_mat1
-
-            self.assertIsInstance(res, MPIBlockMatrix)
-            self.assertTrue(np.allclose(mat1.rank_ownership, res.rank_ownership))
-            rows, columns = np.nonzero(res.ownership_mask)
-            for i, j in zip(rows, columns):
-                if res[i, j] is not None:
-                    self.assertTrue(np.allclose(res[i, j].toarray(),
-                                                serial_res[i, j].toarray()))
-                else:
-                    self.assertIsNone(serial_res[i, j])
 
 @unittest.skipIf(comm.Get_size() < 3, "Need at least 3 processors to run tests")
 class TestMPIBlockSymMatrix(unittest.TestCase):
