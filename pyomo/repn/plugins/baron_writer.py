@@ -654,6 +654,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
         elif labeler is None:
             v_labeler = NumericLabeler('x')
             c_labeler = NumericLabeler('c')
+        else:
+            v_labeler = c_labeler = labeler
 
         symbol_map = SymbolMap()
         symbol_map.default_labeler = v_labeler
