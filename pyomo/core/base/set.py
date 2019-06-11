@@ -147,11 +147,11 @@ class _CountedCallGenerator(object):
     def __init__(self, fcn, scalar, parent, idx):
         self._count = 0
         if scalar:
-            self._fcn = lambda c: fcn(parent, c)
+            self._fcn = lambda c: self._filter(fcn(parent, c))
         elif idx.__class__ is tuple:
-            self._fcn = lambda c: fcn(parent, c, *idx)
+            self._fcn = lambda c: self._filter(fcn(parent, c, *idx))
         else:
-            self._fcn = lambda c: fcn(parent, c, idx)
+            self._fcn = lambda c: self._filter(fcn(parent, c, idx))
 
     def __iter__(self):
         return self
@@ -159,6 +159,18 @@ class _CountedCallGenerator(object):
     def __next__(self):
         self._count += 1
         return self._fcn(self._count)
+
+    @staticmethod
+    def _filter(x):
+        if x is None:
+            raise ValueError(
+                """Counted Set rule returned None instead of Set.End.
+    Counted Set rules of the form fcn(model, count, *idx) will be called
+    repeatedly with an increasing count parameter until the rule returns
+    Set.End.  None is not a valid Set member in this case due to the
+    likelihood that an error in the rule can incorrectly return None.""")
+        return x
+
 
     next = __next__
 
@@ -2248,7 +2260,8 @@ class Set(IndexedComponent):
             if _values is Set.Skip:
                 return
             elif _values is None:
-                raise ValueError("Set rule returned None instead of Set.Skip")
+                raise ValueError(
+                    "Set rule or initializer returned None instead of Set.Skip")
 
         if index is None and not self.is_indexed():
             obj = self._data[index] = self

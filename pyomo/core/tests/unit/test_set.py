@@ -38,6 +38,7 @@ from pyomo.core.base.set import (
     SetInitializer, _SetIntersectInitializer, RangeSetInitializer,
     _FiniteSetData, _InsertionOrderSetData, _SortedSetData,
     _UnknownSetDimen,
+    simple_set_rule,
 )
 from pyomo.environ import AbstractModel, ConcreteModel, Var, Param, Suffix
 
@@ -3853,7 +3854,7 @@ I : Size=1, Index=None, Ordered=Insertion
             m.I.construct()
             self.assertEqual(output.getvalue().strip(), ref)
 
-        # Test generators and Set.End
+        # Test generators
         m = ConcreteModel()
         def _i_init(m):
             yield 1
@@ -3875,6 +3876,7 @@ I : Size=1, Index=None, Ordered=Insertion
         m.I = Set(initialize=[1,3,Set.End,2])
         self.assertEqual(list(m.I), [1,3])
 
+    def test_set_end(self):
         # Tested counted initialization
         m = ConcreteModel()
         def _i_init(m, i):
@@ -3904,3 +3906,63 @@ I : Size=1, Index=None, Ordered=Insertion
         self.assertEqual(list(m.I[1,3]), [2,4,6])
         self.assertEqual(list(m.I[2,2]), [2,4,6])
         self.assertEqual(list(m.I[2,3]), [2,4,6,8])
+
+        m = ConcreteModel()
+        def _i_init(m, i):
+            if i > 3:
+                return None
+            return i
+        with self.assertRaisesRegexp(
+                ValueError, "Set rule returned None instead of Set.End"):
+            m.I1 = Set(initialize=_i_init)
+        @simple_set_rule
+        def _j_init(m, i):
+            if i > 3:
+                return None
+            return i
+        m.J = Set(initialize=_j_init)
+        self.assertEqual(list(m.J), [1,2,3])
+
+    def test_set_skip(self):
+        # Test Set.Skip
+        m = ConcreteModel()
+        def _i_init(m,i):
+            if i % 2:
+                return Set.Skip
+            return range(i)
+        m.I = Set([1,2,3,4,5], initialize=_i_init)
+        self.assertEqual(len(m.I), 2)
+        self.assertIn(2, m.I)
+        self.assertEqual(list(m.I[2]), [0,1])
+        self.assertIn(4, m.I)
+        self.assertEqual(list(m.I[4]), [0,1,2,3])
+        self.assertNotIn(1, m.I)
+        self.assertNotIn(3, m.I)
+        self.assertNotIn(5, m.I)
+        output = StringIO()
+        m.I.pprint(ostream=output)
+        print output.getvalue()
+        ref = """
+I : Size=2, Index=I_index, Ordered=Insertion
+    Key : Dimen : Domain : Size : Members
+      2 :     1 :    Any :    2 : {0, 1}
+      4 :     1 :    Any :    4 : {0, 1, 2, 3}
+""".strip()
+        self.assertEqual(output.getvalue().strip(), ref.strip())
+
+        m = ConcreteModel()
+        def _i_init(m,i):
+            if i % 2:
+                return None
+            return range(i)
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Set rule or initializer returned None instead of Set.Skip"):
+            m.I = Set([1,2,3,4,5], initialize=_i_init)
+
+        def _j_init(m):
+            return None
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Set rule or initializer returned None instead of Set.Skip"):
+            m.J = Set(initialize=_j_init)
