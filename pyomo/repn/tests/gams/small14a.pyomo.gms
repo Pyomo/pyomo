@@ -17,10 +17,7 @@ EQUATIONS
 	c14
 	c15
 	c16
-	c17
-	c18
-	c19
-	c20;
+	c17;
 
 VARIABLES
 	GAMS_OBJECTIVE
@@ -35,24 +32,21 @@ c5.. tan(x2) =e= 0.0 ;
 c6.. sinh(x2) =e= 0.0 ;
 c7.. cosh(x2) =e= 1.0 ;
 c8.. tanh(x2) =e= 0.0 ;
-c9.. asin(x2) =e= 0.0 ;
-c10.. acos(x2) =e= 1.5707963267948966 ;
-c11.. atan(x2) =e= 0.0 ;
-c12.. asinh(x2) =e= 0.0 ;
-c13.. acosh((7.3890560989306495 + x1)*0.18393972058572117) =e= 0.0 ;
-c14.. atanh(x2) =e= 0.0 ;
-c15.. exp(x2) =e= 1.0 ;
-c16.. sqrt(x1) =e= 1.0 ;
-c17.. ceil(x1) =e= 1.0 ;
-c18.. floor(x1) =e= 1.0 ;
-c19.. abs(x1) =e= 1.0 ;
-c20.. GAMS_OBJECTIVE =e= x1 + x2 ;
+c9.. arcsin(x2) =e= 0.0 ;
+c10.. arccos(x2) =e= 1.5707963267948966 ;
+c11.. arctan(x2) =e= 0.0 ;
+c12.. exp(x2) =e= 1.0 ;
+c13.. sqrt(x1) =e= 1.0 ;
+c14.. ceil(x1) =e= 1.0 ;
+c15.. floor(x1) =e= 1.0 ;
+c16.. abs(x1) =e= 1.0 ;
+c17.. GAMS_OBJECTIVE =e= x1 + x2 ;
 
 x1.l = 1;
 x2.l = 0;
 
 MODEL GAMS_MODEL /all/ ;
-SOLVE GAMS_MODEL USING nlp minimizing GAMS_OBJECTIVE;
+SOLVE GAMS_MODEL USING dnlp minimizing GAMS_OBJECTIVE;
 
 Scalars MODELSTAT 'model status', SOLVESTAT 'solve status';
 MODELSTAT = GAMS_MODEL.modelstat;
