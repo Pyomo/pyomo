@@ -12,6 +12,7 @@ __all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
            'AlphaNumericTextLabeler','NameLabeler', 'CuidLabeler',
            'ShortNameLabeler']
 
+import re
 import six
 if six.PY3:
     _translate = str.translate
@@ -154,7 +155,7 @@ class NameLabeler(object):
 
 class ShortNameLabeler(object):
     def __init__(self, limit, suffix, start=0, labeler=None,
-                 prefix="", caseInsensitive=False):
+                 prefix="", caseInsensitive=False, legalRegex=None):
         self.id = start
         self.prefix = prefix
         self.suffix = suffix
@@ -164,6 +165,10 @@ class ShortNameLabeler(object):
         else:
             self.labeler = AlphaNumericTextLabeler()
         self.known_labels = set() if caseInsensitive else None
+        if isinstance(legalRegex, six.string_types):
+            self.legalRegex = re.compile(legalRegex)
+        else:
+            self.legalRegex = legalRegex
 
     def __call__(self, obj=None):
         lbl = self.labeler(obj)
@@ -175,6 +180,8 @@ class ShortNameLabeler(object):
              and lbl.endswith(self.suffix):
             shorten = True
         elif self.known_labels is not None and lbl.upper() in self.known_labels:
+            shorten = True
+        elif self.legalRegex and not self.legalRegex.match(lbl):
             shorten = True
         if shorten:
             self.id += 1

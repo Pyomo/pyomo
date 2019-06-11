@@ -650,7 +650,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
             # to start with a letter.  We will (randomly) choose "s_"
             # (for 'shortened')
             v_labeler = c_labeler = ShortNameLabeler(
-                15, prefix='s_', suffix='_', caseInsensitive=True)
+                15, prefix='s_', suffix='_', caseInsensitive=True,
+                legalRegex='^[a-zA-Z]')
         elif labeler is None:
             v_labeler = NumericLabeler('x')
             c_labeler = NumericLabeler('c')
