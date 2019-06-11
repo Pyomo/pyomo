@@ -709,6 +709,7 @@ class TestBlockMatrix(unittest.TestCase):
         flat_row = flat_mat.getrow(2)
         block_row = m.getrow(2)
         self.assertTrue(np.allclose(flat_row.toarray(), block_row.toarray()))
+        
 
     def test_nonzero(self):
 

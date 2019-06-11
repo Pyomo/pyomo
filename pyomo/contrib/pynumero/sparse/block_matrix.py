@@ -1230,6 +1230,54 @@ class BlockMatrix(BaseBlockMatrix):
     def setdiag(self, values, k=0):
         BaseBlockMatrix.setdiag(self, value, k=k)
 
+    def get_block_column(index):
+
+        msgc = 'Operation not allowed with None columns. ' \
+               'Specify at least one block every column'
+        assert not mat.has_empty_cols(), msgc
+
+        bm, bn = self.bshape
+        # get cummulative sum of block sizes
+        cum = self._bcol_lengths.cumsum()
+        assert index >=0, 'index out of bounds'
+        assert index < cum[bn-1], 'index out of bounds'
+
+        # exits if only has one column
+        if bn <= 1:
+            return 0
+
+        ge = cum >= index
+        # find first entry that is greater or equal
+        block_index = np.argmax(ge)
+
+        if cum[block_index] == index:
+            return block_index + 1
+        return block_index
+
+    def get_block_row(index):
+
+        msgr = 'Operation not allowed with None rows. ' \
+               'Specify at least one block in every row'
+        assert not mat.has_empty_rows(), msgr
+
+        bm, bn = self.bshape
+        # get cummulative sum of block sizes
+        cum = self._brow_lengths.cumsum()
+        assert index >=0, 'index out of bounds'
+        assert index < cum[bm-1], 'index out of bounds'
+
+        # exits if only has one column
+        if bm <= 1:
+            return 0
+
+        ge = cum >= index
+        # find first entry that is greater or equal
+        block_index = np.argmax(ge)
+
+        if cum[block_index] == index:
+            return block_index + 1
+        return block_index
+
     def getcol(self, j):
         """Returns a copy of column j of the matrix, as an (m x 1) sparse
         matrix (column vector).
