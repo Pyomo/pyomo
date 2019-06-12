@@ -142,7 +142,7 @@ class MainWindow(_MainWindow, _MainWindowUI):
             (str): new working directory path
         """
         if wdir is None:
-            # Show a dialog box for user to selet working directory
+            # Show a dialog box for user to select working directory
             wd = QFileDialog(self, 'Working Directory', os.getcwd())
             wd.setFileMode(QFileDialog.DirectoryOnly)
         if wd.exec_() == QFileDialog.Accepted:

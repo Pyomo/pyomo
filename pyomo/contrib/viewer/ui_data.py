@@ -24,7 +24,7 @@ _log = logging.getLogger(__name__)
 
 class UIDataNoUi(object):
     """
-    This is the UIData object minus the singnals.  This is the base class for
+    This is the UIData object minus the signals.  This is the base class for
     UIData.  The class is split this way for testing when PyQt is not available.
     """
     def __init__(self, model=None):
@@ -53,7 +53,7 @@ class UIDataNoUi(object):
     def end_update(self, emit=True):
         """
         Sets the begin update flag to false.  Needs to be overloaded to also
-        emmit an update signal in the full UIData class
+        emit an update signal in the full UIData class
         """
         self._begin_update = False
 
@@ -66,8 +66,8 @@ class UIDataNoUi(object):
 
     def emit_exec_refresh(self):
         """
-        Don't forget the overloaded this, passing instead of NotImplementedError
-        so testing can co smoothly without Qt
+        Don't forget to overloaded this, not raising a NotImplementedError so
+        tests can run without Qt
         """
         pass
 
