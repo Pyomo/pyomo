@@ -149,7 +149,7 @@ class MainWindow(_MainWindow, _MainWindowUI):
             wdir = wd.selectedFiles()[0]
         else:
             wdir = None
-        # Change directoy if one was selected
+        # Change directory if one was selected
         if wdir is not None:
             os.chdir(wdir)
         return wdir
