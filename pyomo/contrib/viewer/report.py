@@ -33,7 +33,7 @@ def get_residual(ui_data, c):
     is always positive.
 
     Args:
-        ui_data (UIData): user interface data, includes the cache for calcuated
+        ui_data (UIData): user interface data, includes the cache for calculated
             values of the constraint body. This function uses the cached values
             and will not trigger recalculation. If variable values have changed,
             this may not yield accurate results.

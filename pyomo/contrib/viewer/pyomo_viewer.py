@@ -24,7 +24,6 @@ qtconsole_available = False
 if qt_available:
     try:
         from qtconsole.rich_jupyter_widget import RichJupyterWidget
-        import qtconsole.styles as styles
         from qtconsole.manager import QtKernelManager
         qtconsole_available = True
     except ImportError:
@@ -64,11 +63,16 @@ def main(*args):
     window = MainWindow(kernel_manager=km, kernel_client=kc)
     window.show()
     kc = window.jupyter_widget.kernel_client
-    time.sleep(2.5) # can't find any other good to ensure qt finished startup
-                    # just making sure the execution finishes does not seems to
-                    # be enough.  4 seconds may be too long, but being careful
-                    # this is probably related to
-                    # https://github.com/ipython/ipython/issues/5629 in some way
+    time.sleep(2.5) # can't find any other good way to ensure Qt finished
+                    # startup. Just making sure the cell execution finishes
+                    # does not seems to be enough, and trying to check
+                    # QtAppliction() != None before moving on also does not
+                    # seem to work. 4 seconds may be too long, but I'm being
+                    # careful. I split the time between waiting for the console
+                    # window to show and waiting to start the model viewer so it
+                    # may not seem to take so long to the user.
+                    # May be related to:
+                    # https://github.com/ipython/ipython/issues/5629
     kc.execute("""
 from pyomo.contrib.viewer.ui import get_mainwindow
 import pyomo.environ as pyo
