@@ -136,16 +136,6 @@ class ComponentDataItem(object):
     def _cache_value(self):
         return self.ui_data.value_cache.get(self.data, None)
 
-    @_cache_value.setter
-    def _cache_value(self, v):
-        self.ui_data.value_cache[self.data] = v
-
-    def data_items():
-        """Iterate through children data items and this one"""
-        for i in self.children:
-            i.data_items()
-        yield self
-
     def add_child(self, o):
         """Add a child data item"""
         item = ComponentDataItem(self, o, ui_data=self.ui_data)
@@ -171,6 +161,7 @@ class ComponentDataItem(object):
             try:
                 return setattr(self.data, a, val)
             except:
+                _log.exception("Can't set value of {}".format(a))
                 return None
 
     def _get_expr_callback(self):

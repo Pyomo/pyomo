@@ -148,3 +148,41 @@ class TestDataModel(unittest.TestCase):
         e1_index1 = data_model.index(0,1,parent=b1_index)
         assert(data_model.data(e1_index0)=="b1.e1")
         assert(abs(data_model.data(e1_index1) - 3.0) < 0.0001)
+
+    def test_update_tree_expr(self):
+        ui_data = UIData(model=self.m)
+        # Make a tree with constraints
+        data_model = ComponentDataModel(parent=None, ui_data=ui_data,
+                                        components=(Expression,),
+                                        columns=["name", "value"])
+
+        self.m.newe = Expression(expr=self.m.x[0] + self.m.x[1])
+
+        data_model._update_tree()
+
+        # There should be one root item
+        assert(len(data_model.rootItems)==1)
+        assert(data_model.rootItems[0].data==self.m)
+        # The children should be in the model construction order,
+        # and the indexes are sorted
+        children = data_model.rootItems[0].children
+        assert(children[0].data == self.m.b1)
+        assert(children[0].children[0].data == self.m.b1.e1)
+        ui_data.calculate_expressions()
+        # Check the data display role The rows in the tree should be:
+        #   0. Model
+        #     0. b1,
+        #       0. e1, value
+        root_index = data_model.index(0,0)
+        b1_index = data_model.index(0,0,parent=root_index)
+        e1_index0 = data_model.index(0,0,parent=b1_index)
+        e1_index1 = data_model.index(0,1,parent=b1_index)
+        assert(data_model.data(e1_index0)=="b1.e1")
+        assert(abs(data_model.data(e1_index1) - 3.0) < 0.0001)
+        # Check that in the update the new expression was added
+        found = False
+        for i in children:
+            if id(i.data) == id(self.m.newe):
+                found = True
+                break
+        assert(found)

@@ -60,6 +60,7 @@ class TestDataModelItem(unittest.TestCase):
             parent=None, ui_data=UIData(model=self.m), o=self.m.b1.e1)
         cdi.ui_data.calculate_expressions()
         self.assertAlmostEqual(cdi.get("value"), 3)
+        self.assertIsInstance(cdi.get("expr"), str) # test get expr str
 
     def test_expr_calc_div0(self):
         cdi = ComponentDataItem(
@@ -129,6 +130,7 @@ class TestDataModelItem(unittest.TestCase):
     def test_var_get_value(self):
         cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
         self.assertAlmostEqual(cdi.get("value"), 1)
+        self.assertIsNone(cdi.get(expr)) #test can't get expr
 
     def test_var_get_bounds(self):
         cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
@@ -150,6 +152,18 @@ class TestDataModelItem(unittest.TestCase):
         self.assertTrue(cdi.get("fixed"))
         cdi.set("fixed", False)
         self.assertFalse(cdi.get("fixed"))
+
+    def test_get_attr_that_does_not_exist(self):
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
+        self.assertIsNone(cdi.get("test_val"))
+
+    def test_set_func(self):
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
+        self.assertIsNone(cdi.set("test_val", 5))
+        self.assertIsNone(cdi.get("test_val")) # test can't set
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x)
+        self.assertIsNone(cdi.set("test_val", 5))
+        self.assertEqual(cdi.get("test_val"), 5) # test can set with no callback
 
     def test_degrees_of_freedom(self):
         import pyomo.contrib.viewer.report as rpt
