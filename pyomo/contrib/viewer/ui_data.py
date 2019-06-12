@@ -59,8 +59,8 @@ class UIDataNoUi(object):
 
     def emit_update(self):
         """
-        Don't forget the overloaded this, passing instead of NotImplementedError
-        so testing can co smoothly without Qt
+        Don't forget to overloaded this, not raising a NotImplementedError so
+        tests can run without Qt
         """
         pass
 
