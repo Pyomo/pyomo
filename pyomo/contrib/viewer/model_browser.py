@@ -52,7 +52,7 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
 
         Args:
             parent: parent widget
-            ui_data: Contains model, and may containt more in future
+            ui_data: Contains model and ui information
             standard: A standard setup for differnt types of model components
                 {"Var", "Constraint", "Param", "Expression"}
         """
@@ -182,8 +182,8 @@ class ComponentDataItem(object):
     def _get_value_callback(self):
         if isinstance(self.data, _ParamData):
             v = value(self.data)
-            # Check the for numpy float and int, sometimes numpy values
-            # can sneak in especailly if you set parameters from data
+            # Check the param value for numpy float and int, sometimes numpy
+            # values can sneak in especailly if you set parameters from data
             # and for whatever reason numpy values don't display
             if isinstance(v, float): # includes numpy float
                 v = float(v)
