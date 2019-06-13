@@ -56,7 +56,8 @@ except:
         try:
             from PyQt4.QtGui import (QAbstractItemView, QFileDialog, QMainWindow,
                                      QMessageBox, QMdiArea, QApplication)
-            from PyQt4.QtCore import QAbstractItemModel, QTimer
+            from PyQt4.QtCore import QAbstractItemModel
+            import PyQt4.QtCore as QtCore
             from PyQt4 import uic
             qt_available = True
         except:
@@ -67,7 +68,8 @@ else:
     try:
         from PyQt5.QtWidgets import (QAbstractItemView, QFileDialog, QMainWindow,
                                      QMessageBox, QMdiArea, QApplication)
-        from PyQt5.QtCore import QAbstractItemModel, QTimer
+        from PyQt5.QtCore import QAbstractItemModel
+        import PyQt5.QtCore as QtCore
         from PyQt5 import uic
         qt_available = True
     except:

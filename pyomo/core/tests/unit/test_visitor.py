@@ -393,6 +393,16 @@ class WalkerTests(unittest.TestCase):
         M.w.fixed = True
         self.assertEqual("sin(x) + x*2 + 3", expression_to_string(e, compute_values=True))
 
+    def test_expression_component_to_string(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.e = Expression(expr=m.x*m.y)
+        m.f = Expression(expr=m.e)
+
+        e = m.x + m.f*m.y
+        self.assertEqual("x + ((x*y))*y", str(e))
+        self.assertEqual("x + ((x*y))*y", expression_to_string(e))
 #
 # Replace all variables with a product expression
 #

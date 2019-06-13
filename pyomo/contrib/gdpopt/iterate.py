@@ -90,7 +90,7 @@ def algorithm_should_terminate(solve_data, config):
         return True
 
     # Check time limit
-    if get_main_elapsed_time(solve_data.timing) > config.time_limit:
+    if get_main_elapsed_time(solve_data.timing) >= config.time_limit:
         config.logger.info(
             'GDPopt unable to converge bounds '
             'before time limit of {} seconds. '

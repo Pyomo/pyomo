@@ -360,17 +360,21 @@ class ComponentDataModel(QAbstractItemModel):
         elif isinstance(o, Block): #indexed block, so need to add elements
             if item is None:
                 item = self._add_item(parent=parent, o=o)
-            for key in sorted(o.keys()):
-                self._update_tree(parent=item, o=o[key])
+            if hasattr(o.index_set(), "is_constructed") and \
+                o.index_set().is_constructed():
+                for key in sorted(o.keys()):
+                    self._update_tree(parent=item, o=o[key])
         elif isinstance(o, self.components): #anything else
             if item is None:
                 item = self._add_item(parent=parent, o=o)
-            for key in sorted(o.keys()):
-                if key == None: break # Single variable so skip
-                item2 = item.ids.get(id(o[key]), None)
-                if item2 is None:
-                    item2 = self._add_item(parent=item, o=o[key])
-                item2._visited = True
+            if hasattr(o.index_set(), "is_constructed") and \
+                o.index_set().is_constructed():
+                for key in sorted(o.keys()):
+                    if key == None: break # Single variable so skip
+                    item2 = item.ids.get(id(o[key]), None)
+                    if item2 is None:
+                        item2 = self._add_item(parent=item, o=o[key])
+                    item2._visited = True
         return
 
     def _create_tree(self, parent=None, o=None):
@@ -388,13 +392,17 @@ class ComponentDataModel(QAbstractItemModel):
                 self._create_tree(parent=item, o=no)
         elif isinstance(o, Block): #indexed block, so need to add elements
             item = self._add_item(parent=parent, o=o)
-            for key in sorted(o.keys()):
-                self._create_tree(parent=item, o=o[key])
+            if hasattr(o.index_set(), "is_constructed") and \
+                o.index_set().is_constructed():
+                for key in sorted(o.keys()):
+                    self._create_tree(parent=item, o=o[key])
         elif isinstance(o, self.components): #anything else
             item = self._add_item(parent=parent, o=o)
-            for key in sorted(o.keys()):
-                if key == None: break #Single variable so skip
-                self._add_item(parent=item, o=o[key])
+            if hasattr(o.index_set(), "is_constructed") and \
+                o.index_set().is_constructed():
+                for key in sorted(o.keys()):
+                    if key == None: break #Single variable so skip
+                    self._add_item(parent=item, o=o[key])
 
     def _add_item(self, parent, o):
         """

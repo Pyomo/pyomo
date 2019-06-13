@@ -12,11 +12,11 @@
 1 Objective Declarations
     MyObjective : Size=1, Index=None, Active=True
         Key  : Active : Sense    : Expression
-        None :   True : maximize : 4 * aVar
+        None :   True : maximize :     4*aVar
 
 1 Constraint Declarations
     MyConstraint : Size=1, Index=None, Active=True
-        Key  : Lower : Body        : Upper : Active
-        None :  -Inf : 0.25 * aVar :   0.8 :   True
+        Key  : Lower : Body      : Upper : Active
+        None :  -Inf : 0.25*aVar :   0.8 :   True
 
 5 Declarations: pParm wParm aVar MyConstraint MyObjective
