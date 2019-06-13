@@ -47,7 +47,9 @@ class XPRESS(OptSolver):
             opt.set_problem_format(ProblemFormat.mps)
             return opt
         elif mode == 'nl':
-            opt = SolverFactory('asl', **kwds)
+            opt = SolverFactory('_xpress_shell', **kwds)
+            opt.set_problem_format(ProblemFormat.nl)
+            return opt
         else:
             logging.getLogger('pyomo.solvers').error(
                 'Unknown IO type for solver xpress: %s'
@@ -74,10 +76,11 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         #
         # Define valid problem formats and associated results formats
         #
-        self._valid_problem_formats=[ProblemFormat.cpxlp, ProblemFormat.mps]
+        self._valid_problem_formats=[ProblemFormat.cpxlp, ProblemFormat.mps, ProblemFormat.nl]
         self._valid_result_formats={}
         self._valid_result_formats[ProblemFormat.cpxlp] = [ResultsFormat.soln]
         self._valid_result_formats[ProblemFormat.mps] = [ResultsFormat.soln]
+        self._valid_result_formats[ProblemFormat.nl] = [ResultsFormat.soln]
         self.set_problem_format(ProblemFormat.cpxlp)
 
         #
