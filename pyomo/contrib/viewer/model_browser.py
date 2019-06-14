@@ -174,7 +174,7 @@ class ComponentDataItem(object):
         if isinstance(self.data, _ParamData):
             v = value(self.data)
             # Check the param value for numpy float and int, sometimes numpy
-            # values can sneak in especailly if you set parameters from data
+            # values can sneak in especially if you set parameters from data
             # and for whatever reason numpy values don't display
             if isinstance(v, float): # includes numpy float
                 v = float(v)
