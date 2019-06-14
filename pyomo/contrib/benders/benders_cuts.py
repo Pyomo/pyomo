@@ -198,7 +198,7 @@ class BendersCutGeneratorData(_BlockData):
             subproblem, complicating_vars_map = subproblem_fn(**subproblem_fn_kwargs)
             self.subproblems.append(subproblem)
             self.complicating_vars_maps.append(complicating_vars_map)
-            _setup_subproblem(subproblem, master_vars=[complicating_vars_map[i] for i in self.master_vars], relax_subproblem_cons=relax_subproblem_cons)
+            _setup_subproblem(subproblem, master_vars=[complicating_vars_map[i] for i in self.master_vars if i in complicating_vars_map], relax_subproblem_cons=relax_subproblem_cons)
 
             if isinstance(subproblem_solver, str):
                 subproblem_solver = pe.SolverFactory(subproblem_solver)
@@ -220,10 +220,11 @@ class BendersCutGeneratorData(_BlockData):
             subproblem.fix_complicating_vars = pe.ConstraintList()
             var_to_con_map = pe.ComponentMap()
             for master_var in self.master_vars:
-                sub_var = complicating_vars_map[master_var]
-                sub_var.value = master_var.value
-                new_con = subproblem.fix_complicating_vars.add(sub_var - master_var.value == 0)
-                var_to_con_map[master_var] = new_con
+                if master_var in complicating_vars_map:
+                    sub_var = complicating_vars_map[master_var]
+                    sub_var.value = master_var.value
+                    new_con = subproblem.fix_complicating_vars.add(sub_var - master_var.value == 0)
+                    var_to_con_map[master_var] = new_con
             subproblem.fix_eta = pe.Constraint(expr=subproblem._eta - master_eta.value == 0)
             subproblem._eta.value = master_eta.value
 
@@ -249,8 +250,10 @@ class BendersCutGeneratorData(_BlockData):
 
             constants[subproblem_ndx] = pe.value(subproblem._z)
             eta_coeffs[subproblem_ndx] = sign_convention * pe.value(subproblem.dual[subproblem.obj_con])
-            for c in subproblem.fix_complicating_vars.values():
-                coefficients[coeff_ndx] = sign_convention * pe.value(subproblem.dual[c])
+            for master_var in self.master_vars:
+                if master_var in complicating_vars_map:
+                    c = var_to_con_map[master_var]
+                    coefficients[coeff_ndx] = sign_convention * pe.value(subproblem.dual[c])
                 coeff_ndx += 1
 
             if isinstance(subproblem_solver, PersistentSolver):
