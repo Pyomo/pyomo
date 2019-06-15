@@ -1,5 +1,5 @@
 import pyomo.environ as pe
-from pyomo.contrib.derivatives.differentiate import reverse_ad, reverse_sd
+from pyomo.core.expr.differentiation.diff_with_pyomo.differentiate import reverse_ad, reverse_sd
 
 m = pe.ConcreteModel()
 m.x = pe.Var(initialize=2)
