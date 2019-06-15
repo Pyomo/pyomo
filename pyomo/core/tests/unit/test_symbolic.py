@@ -13,7 +13,7 @@ import pyutilib.th as unittest
 import pyomo.environ
 from pyomo.common import DeveloperError
 from pyomo.core import *
-from pyomo.core.base.symbolic import (
+from pyomo.core.expr.differentiation.diff_with_sympy.symbolic import (
     differentiate, NondifferentiableError, PyomoSympyBimap,
     _sympy_available, sympy2pyomo_expression,
 )
