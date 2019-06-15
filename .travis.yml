@@ -1,6 +1,7 @@
 branches:
   only:
   - master
+  - taylor_series
 cache: false
 language: generic
 services:
