@@ -10,7 +10,7 @@
 
 from pyomo.common.deprecation import deprecated
 import pyomo.core.expr.differentiate.differentiate as diff_core
-from pyomo.core.expr.differentiate.diff_with_sympy import differentiate_available
+from pyomo.core.expr.differentiate.diff_with_sympy import differentiate_available, NondifferentiableError
 
 
 @deprecated(msg=('The differentiate function in pyomo.core.base.symbolic has been deprecated. Please use the ' +
