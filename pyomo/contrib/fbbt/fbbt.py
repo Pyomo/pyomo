@@ -66,6 +66,12 @@ def _prop_bnds_leaf_to_root_ProductExpression(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 2
     arg1, arg2 = node.args
@@ -81,6 +87,12 @@ def _prop_bnds_leaf_to_root_SumExpression(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.SumExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     arg0 = node.arg(0)
     lb, ub = bnds_dict[arg0]
@@ -98,6 +110,12 @@ def _prop_bnds_leaf_to_root_PowExpression(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.PowExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 2
     arg1, arg2 = node.args
@@ -113,6 +131,12 @@ def _prop_bnds_leaf_to_root_ReciprocalExpression(node, bnds_dict, feasibility_to
     ----------
     node: pyomo.core.expr.numeric_expr.ReciprocalExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -127,6 +151,12 @@ def _prop_bnds_leaf_to_root_NegationExpression(node, bnds_dict, feasibility_tol)
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -141,6 +171,12 @@ def _prop_bnds_leaf_to_root_exp(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -155,6 +191,12 @@ def _prop_bnds_leaf_to_root_log(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -169,6 +211,12 @@ def _prop_bnds_leaf_to_root_sin(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -183,6 +231,12 @@ def _prop_bnds_leaf_to_root_cos(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -197,6 +251,12 @@ def _prop_bnds_leaf_to_root_tan(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -211,6 +271,12 @@ def _prop_bnds_leaf_to_root_asin(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -225,6 +291,12 @@ def _prop_bnds_leaf_to_root_acos(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -239,6 +311,12 @@ def _prop_bnds_leaf_to_root_atan(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -253,6 +331,12 @@ def _prop_bnds_leaf_to_root_sqrt(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -279,6 +363,12 @@ def _prop_bnds_leaf_to_root_UnaryFunctionExpression(node, bnds_dict, feasibility
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     if node.getname() in _unary_leaf_to_root_map:
         _unary_leaf_to_root_map[node.getname()](node, bnds_dict, feasibility_tol)
@@ -286,7 +376,7 @@ def _prop_bnds_leaf_to_root_UnaryFunctionExpression(node, bnds_dict, feasibility
         bnds_dict[node] = (-math.inf, math.inf)
 
 
-def _prop_bnds_leaf_to_root_GeneralExpression(node, bnds_dict):
+def _prop_bnds_leaf_to_root_GeneralExpression(node, bnds_dict, feasibility_tol):
     """
     Propagate bounds from children to parent
 
@@ -294,6 +384,12 @@ def _prop_bnds_leaf_to_root_GeneralExpression(node, bnds_dict):
     ----------
     node: pyomo.core.base.expression._GeneralExpressionData
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     expr_lb, expr_ub = bnds_dict[node.expr]
     bnds_dict[node] = (expr_lb, expr_ub)
@@ -326,6 +422,12 @@ def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 2
     arg1, arg2 = node.args
@@ -376,6 +478,12 @@ def _prop_bnds_root_to_leaf_SumExpression(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     # first accumulate bounds
     accumulated_bounds = list()
@@ -422,6 +530,12 @@ def _prop_bnds_root_to_leaf_PowExpression(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 2
     arg1, arg2 = node.args
@@ -453,6 +567,12 @@ def _prop_bnds_root_to_leaf_sqrt(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg1 = node.args[0]
@@ -474,6 +594,12 @@ def _prop_bnds_root_to_leaf_ReciprocalExpression(node, bnds_dict, feasibility_to
     ----------
     node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -494,6 +620,12 @@ def _prop_bnds_root_to_leaf_NegationExpression(node, bnds_dict, feasibility_tol)
     ----------
     node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -514,6 +646,12 @@ def _prop_bnds_root_to_leaf_exp(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -534,6 +672,12 @@ def _prop_bnds_root_to_leaf_log(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.ProductExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -554,6 +698,12 @@ def _prop_bnds_root_to_leaf_sin(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -574,6 +724,12 @@ def _prop_bnds_root_to_leaf_cos(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -594,6 +750,12 @@ def _prop_bnds_root_to_leaf_tan(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -614,6 +776,12 @@ def _prop_bnds_root_to_leaf_asin(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -634,6 +802,12 @@ def _prop_bnds_root_to_leaf_acos(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -654,6 +828,12 @@ def _prop_bnds_root_to_leaf_atan(node, bnds_dict, feasibility_tol):
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     assert len(node.args) == 1
     arg = node.args[0]
@@ -686,6 +866,12 @@ def _prop_bnds_root_to_leaf_UnaryFunctionExpression(node, bnds_dict, feasibility
     ----------
     node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     if node.getname() in _unary_root_to_leaf_map:
         _unary_root_to_leaf_map[node.getname()](node, bnds_dict, feasibility_tol)
@@ -695,7 +881,7 @@ def _prop_bnds_root_to_leaf_UnaryFunctionExpression(node, bnds_dict, feasibility
                        ''.format(node.getname()))
 
 
-def _prop_bnds_root_to_leaf_GeneralExpression(node, bnds_dict):
+def _prop_bnds_root_to_leaf_GeneralExpression(node, bnds_dict, feasibility_tol):
     """
     Propagate bounds from parent to children.
 
@@ -703,6 +889,12 @@ def _prop_bnds_root_to_leaf_GeneralExpression(node, bnds_dict):
     ----------
     node: pyomo.core.base.expression._GeneralExpressionData
     bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     """
     expr_lb, expr_ub = bnds_dict[node]
     bnds_dict[node.expr] = (expr_lb, expr_ub)
@@ -740,6 +932,11 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
         bnds_dict: ComponentMap
         integer_tol: float
         feasibility_tol: float
+            If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+            feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+            is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+            region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+            is more conservative).
         """
         self.bnds_dict = bnds_dict
         self.integer_tol = integer_tol
@@ -795,6 +992,11 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         bnds_dict: ComponentMap
         integer_tol: float
         feasibility_tol: float
+            If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+            feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+            is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+            region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+            is more conservative).
         """
         self.bnds_dict = bnds_dict
         self.integer_tol = integer_tol
@@ -1059,7 +1261,10 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibi
         Otherwise the upper bound is decreased to 0.
     feasibility_tol: float
         If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised.
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
     max_iter: int
         Used for Blocks only (i.e., comp.type() == Block). When performing FBBT on a Block, we first perform FBBT on
         every constraint in the Block. We then attempt to identify which constraints to repeat FBBT on based on the
