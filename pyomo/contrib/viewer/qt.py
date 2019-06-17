@@ -55,8 +55,9 @@ except:
     else:
         try:
             from PyQt4.QtGui import (QAbstractItemView, QFileDialog, QMainWindow,
-                                     QMessageBox, QMdiArea, QApplication)
-            from PyQt4.QtCore import QAbstractItemModel
+                                     QMessageBox, QMdiArea, QApplication,
+                                     QTableWidgetItem, QColor)
+            from PyQt4.QtCore import QAbstractItemModel, QAbstractTableModel
             import PyQt4.QtCore as QtCore
             from PyQt4 import uic
             qt_available = True
@@ -67,8 +68,10 @@ except:
 else:
     try:
         from PyQt5.QtWidgets import (QAbstractItemView, QFileDialog, QMainWindow,
-                                     QMessageBox, QMdiArea, QApplication)
-        from PyQt5.QtCore import QAbstractItemModel
+                                     QMessageBox, QMdiArea, QApplication,
+                                     QTableWidgetItem)
+        from PyQt5.QtGui import QColor
+        from PyQt5.QtCore import QAbstractItemModel, QAbstractTableModel
         import PyQt5.QtCore as QtCore
         from PyQt5 import uic
         qt_available = True
