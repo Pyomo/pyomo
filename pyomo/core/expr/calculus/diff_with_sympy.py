@@ -151,7 +151,7 @@ def differentiate(expr, wrt=None, wrt_list=None):
     #
     # Convert the Pyomo expression to a sympy expression
     #
-    objectMap, sympy_expr = sympify_expression(expr)
+    objectMap, sympy_expr = sympyify_expression(expr)
     #
     # The partial_derivs dict holds intermediate sympy expressions that
     # we can re-use.  We will prepopulate it with None for all vars that
@@ -211,7 +211,7 @@ def differentiate(expr, wrt=None, wrt_list=None):
 
 
 # =====================================================
-# sympify_expression
+# sympyify_expression
 # =====================================================
 
 class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
@@ -277,7 +277,7 @@ class Sympy2PyomoVisitor(EXPR.StreamBasedExpressionVisitor):
             return False, item
         return True, None
 
-def sympify_expression(expr):
+def sympyify_expression(expr):
     """Convert a Pyomo expression to a Sympy expression"""
     #
     # Create the visitor and call it.
