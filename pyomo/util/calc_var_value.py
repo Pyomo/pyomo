@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr.numvalue import native_numeric_types, value
-from pyomo.core.expr.differentiate.differentiate import differentiate, DiffModes
+from pyomo.core.expr.calculus.derivatives import differentiate, DiffModes
 
 import logging
 logger = logging.getLogger(__name__)

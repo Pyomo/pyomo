@@ -32,3 +32,6 @@ from .current import (
     atanh, ceil, floor,
     Expr_if,
 )
+
+from .calculus.derivatives import differentiate, DiffModes
+from .taylor_series import get_taylor_series

@@ -26,7 +26,7 @@ def differentiate(expr, wrt=None, wrt_list=None, mode=DiffModes.reverse_numeric)
         If specified, this function will return the derivative with respect to each element in wrt_list.
         A list will be returned where the values are the derivatives with respect to the corresponding
         entry in wrt_list.
-    mode: pyomo.core.expr.differentiate.differentiate.DiffModes
+    mode: pyomo.core.expr.calculus.derivatives.DiffModes
         Specifies the method to use for differentiation. Should be one of the members of the
         DiffModes enum:
             DiffModes.sympy:
