@@ -106,5 +106,3 @@ from pyomo.opt import (
     TerminationCondition, SolverStatus,
     )
 from pyomo.core.base.units_container import units
-from pyomo.core.expr.calculus.derivatives import differentiate, DiffModes
-

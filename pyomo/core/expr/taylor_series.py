@@ -1,15 +1,15 @@
 from pyomo.core.expr.current import identify_variables, value
-from pyomo.core.expr.calculus.derivatives import differentiate, DiffModes
+from pyomo.core.expr.calculus.derivatives import differentiate
 
 
-def get_taylor_series(expr, diff_mode=DiffModes.reverse_numeric):
+def get_taylor_series(expr, diff_mode=differentiate.Modes.reverse_numeric):
     """
     Generate a taylor series approximation for expr.
 
     Parameters
     ----------
     expr: pyomo.core.expr.numeric_expr.ExpressionBase
-    diff_mode: pyomo.core.expr.calculus.derivatives.DiffModes
+    diff_mode: pyomo.core.expr.calculus.derivatives.Modes
         The method for differentiation.
 
     Returns

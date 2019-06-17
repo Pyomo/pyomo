@@ -33,4 +33,4 @@ def differentiate(expr, wrt=None, wrt_list=None):
         Expression or list of Expression objects
 
     """
-    return diff_core.differentiate(expr=expr, wrt=wrt, wrt_list=wrt_list, mode=diff_core.DiffModes.sympy)
+    return diff_core.differentiate(expr=expr, wrt=wrt, wrt_list=wrt_list, mode=diff_core.Modes.sympy)

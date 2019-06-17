@@ -33,5 +33,5 @@ from .current import (
     Expr_if,
 )
 
-from .calculus.derivatives import differentiate, DiffModes
+from .calculus.derivatives import differentiate
 from .taylor_series import get_taylor_series
