@@ -15,13 +15,13 @@ from pyomo.common import DeveloperError
 from pyomo.core import *
 from pyomo.core.expr.calculus.diff_with_sympy import (
     differentiate, NondifferentiableError, PyomoSympyBimap,
-    _sympy_available, sympy2pyomo_expression,
+    sympy_available, sympy2pyomo_expression,
 )
 
 def s(e):
     return str(e).replace(' ','').replace('1.0','1').replace('2.0','2')
 
-@unittest.skipIf( not _sympy_available,
+@unittest.skipIf( not sympy_available,
                   "Symbolic derivatives require the sympy package" )
 class SymbolicDerivatives(unittest.TestCase):
 
@@ -357,7 +357,7 @@ class SymbolicDerivatives(unittest.TestCase):
 
 class SymbolicDerivatives_importTest(unittest.TestCase):
     def test_sympy_avail_flag(self):
-        if _sympy_available:
+        if sympy_available:
             import sympy
         else:
             with self.assertRaises(ImportError):

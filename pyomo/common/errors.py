@@ -32,3 +32,8 @@ class InfeasibleConstraintException(Exception):
     the course of range reduction).
     """
     pass
+
+
+class NondifferentiableError(ValueError):
+    """A Pyomo-specific ValueError raised for non-differentiable expressions"""
+    pass
