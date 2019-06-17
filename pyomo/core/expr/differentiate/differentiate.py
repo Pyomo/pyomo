@@ -4,10 +4,10 @@ from pyutilib.enum import Enum
 from pyomo.core.kernel.component_map import ComponentMap
 
 
-diff_modes = Enum('sympy', 'reverse_symbolic', 'reverse_numeric')
+DiffModes = Enum('sympy', 'reverse_symbolic', 'reverse_numeric')
 
 
-def differentiate(expr, wrt=None, wrt_list=None, mode=diff_modes.reverse_numeric):
+def differentiate(expr, wrt=None, wrt_list=None, mode=DiffModes.reverse_numeric):
     """
     Return derivative of expression.
 
@@ -26,20 +26,20 @@ def differentiate(expr, wrt=None, wrt_list=None, mode=diff_modes.reverse_numeric
         If specified, this function will return the derivative with respect to each element in wrt_list.
         A list will be returned where the values are the derivatives with respect to the corresponding
         entry in wrt_list.
-    mode: pyomo.core.expr.differentiate.differentiate.diff_modes
+    mode: pyomo.core.expr.differentiate.differentiate.DiffModes
         Specifies the method to use for differentiation. Should be one of the members of the
-        diff_modes enum:
-            diff_modes.sympy:
+        DiffModes enum:
+            DiffModes.sympy:
                 The pyomo expression will be converted to a sympy expression. Differentiation will
                 then be done with sympy, and the result will be converted back to a pyomo expression.
                 The sympy mode only does symbolic differentiation. The sympy mode requires exactly one
                 of wrt and wrt_list to be specified.
-            diff_modes.reverse_symbolic:
+            DiffModes.reverse_symbolic:
                 Symbolic differentiation will be performed directly with the pyomo expression in reverse
                 mode. If neither wrt nor wrt_list are specified, then a ComponentMap is returned where
                 there will be a key for each node in the expression tree, and the values will be the
                 symbolic derivatives.
-            diff_modes.reverse_numeric:
+            DiffModes.reverse_numeric:
                 Numeric differentiation will be performed directly with the pyomo expression in reverse
                 mode. If neither wrt nor wrt_list are specified, then a ComponentMap is returned where
                 there will be a key for each node in the expression tree, and the values will be the
@@ -51,8 +51,8 @@ def differentiate(expr, wrt=None, wrt_list=None, mode=diff_modes.reverse_numeric
         The value or expression of the derivative(s)
     """
 
-    if mode == diff_modes.reverse_numeric or mode == diff_modes.reverse_symbolic:
-        if mode == diff_modes.reverse_numeric:
+    if mode == DiffModes.reverse_numeric or mode == DiffModes.reverse_symbolic:
+        if mode == DiffModes.reverse_numeric:
             res = reverse_ad(expr=expr)
         else:
             res = reverse_sd(expr=expr)
@@ -72,7 +72,7 @@ def differentiate(expr, wrt=None, wrt_list=None, mode=diff_modes.reverse_numeric
                 else:
                     _res.append(0)
             res = _res
-    elif mode is diff_modes.sympy:
+    elif mode is DiffModes.sympy:
         res = sympy_diff(expr=expr, wrt=wrt, wrt_list=wrt_list)
     else:
         raise ValueError('differentiate(): Unrecognized differentiation mode: {0}'.format(mode))
