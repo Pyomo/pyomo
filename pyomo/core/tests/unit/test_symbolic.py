@@ -14,7 +14,7 @@ import pyomo.environ
 from pyomo.common.errors import DeveloperError, NondifferentiableError
 from pyomo.core import *
 from pyomo.core.expr.calculus.diff_with_sympy import differentiate
-from pyomo.core.expr.sympy import PyomoSympyBimap, sympy_available, sympy2pyomo_expression
+from pyomo.core.expr.sympy_tools import PyomoSympyBimap, sympy_available, sympy2pyomo_expression
 
 
 def s(e):

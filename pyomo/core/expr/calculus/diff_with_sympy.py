@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.sympy import sympy_available, sympyify_expression, sympy2pyomo_expression
+from pyomo.core.expr.sympy_tools import sympy_available, sympyify_expression, sympy2pyomo_expression
 from pyomo.common.errors import NondifferentiableError
 
 # A "public" attribute indicating that differentiate() can be called
