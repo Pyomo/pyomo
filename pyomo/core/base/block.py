@@ -2071,3 +2071,82 @@ def components_data(block, ctype,
 #
 _BlockData._Block_reserved_words = set(dir(Block()))
 
+
+class _IndexedCustomBlockMeta(type):
+    """Metaclass for creating an indexed block with
+    a custom block data type."""
+
+    def __new__(meta, name, bases, dct):
+        def __init__(self, *args, **kwargs):
+            bases[0].__init__(self, *args, **kwargs)
+
+        dct["__init__"] = __init__
+        return type.__new__(meta, name, bases, dct)
+
+
+class _ScalarCustomBlockMeta(type):
+    '''Metaclass used to create a scalar block with a
+    custom block data type
+    '''
+
+    def __new__(meta, name, bases, dct):
+        def __init__(self, *args, **kwargs):
+            # bases[0] is the custom block data object
+            bases[0].__init__(self, component=self)
+            # bases[1] is the custom block object that
+            # is used for declaration
+            bases[1].__init__(self, *args, **kwargs)
+
+        dct["__init__"] = __init__
+        return type.__new__(meta, name, bases, dct)
+
+
+class CustomBlock(Block):
+    ''' This CustomBlock is the base class that allows
+    for easy creation of specialized derived blocks
+    '''
+
+    def __new__(cls, *args, **kwds):
+        if cls.__name__.startswith('_Indexed') or \
+                cls.__name__.startswith('_Scalar'):
+            # we are entering here the second time (recursive)
+            # therefore, we need to create what we have
+            return super(CustomBlock, cls).__new__(cls)
+        if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
+            bname = "_Scalar{}".format(cls.__name__)
+            n = _ScalarCustomBlockMeta(bname, (cls._ComponentDataClass, cls), {})
+            return n.__new__(n)
+        else:
+            bname = "_Indexed{}".format(cls.__name__)
+            n = _IndexedCustomBlockMeta(bname, (cls,), {})
+            return n.__new__(n)
+
+
+def declare_custom_block(name):
+    ''' Decorator to declare the custom component
+    that goes along with a custom block data
+
+    @declare_custom_block(name=FooBlock)
+    class FooBlockData(_BlockData):
+       # custom block data class
+    '''
+
+    def proc_dec(cls):
+        # this is the decorator function that
+        # creates the block component class
+        c = type(
+            name,
+            # name of new class
+            (CustomBlock,),
+            # base classes
+            {"__module__": cls.__module__,
+             "_ComponentDataClass": cls})  # magic to fix the module
+
+        # are these necessary?
+        setattr(sys.modules[cls.__module__], name, c)
+        setattr(cls, '_orig_name', name)
+        setattr(cls, '_orig_module', cls.__module__)
+        return cls
+
+    return proc_dec
+

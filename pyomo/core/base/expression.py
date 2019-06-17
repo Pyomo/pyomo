@@ -80,6 +80,9 @@ class _ExpressionData(NumericValue):
     def _precedence(self):
         return 0
 
+    def _associativity(self):
+        return 0
+
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
             return "%s{%s}" % (str(self), values[0])

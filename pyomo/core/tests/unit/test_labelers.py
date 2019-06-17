@@ -18,6 +18,7 @@ class LabelerTests(unittest.TestCase):
     def setUp(self):
         m = ConcreteModel()
         m.mycomp = Var()
+        m.MyComp = Var()
         m.that = Var()
         self.long1 = m.myverylongcomponentname = Var()
         self.long2 = m.myverylongcomponentnamerighthere = Var()
@@ -133,10 +134,9 @@ class LabelerTests(unittest.TestCase):
         self.assertEqual(lbl(m.ind[10]), ComponentUID(m.ind[10]))
         self.assertEqual(lbl(m.ind[1]), ComponentUID(m.ind[1]))
 
-    def test_shortnamelabeler(self):
+    def test_case_insensitive_shortnamelabeler(self):
         m = self.m
-        lbl = ShortNameLabeler(20, '_')
-        self.assertEqual(lbl(m.mycomp), 'mycomp')
+        lbl = ShortNameLabeler(20, '_', caseInsensitive=True)
         self.assertEqual(lbl(m.mycomp), 'mycomp')
         self.assertEqual(lbl(m.that), 'that')
         self.assertEqual(lbl(self.long1), 'longcomponentname_1_')
@@ -146,10 +146,75 @@ class LabelerTests(unittest.TestCase):
         self.assertEqual(lbl(self.long5), 'gcomponentname_1__5_')
         self.assertEqual(lbl(m.myblock), 'myblock')
         self.assertEqual(lbl(m.myblock.mystreet), 'myblock_mystreet')
-        self.assertEqual(lbl(self.thecopy), 'myblock_mystreet')
         self.assertEqual(lbl(m.ind[3]), 'ind_3_')
         self.assertEqual(lbl(m.ind[10]), 'ind_10_')
         self.assertEqual(lbl(m.ind[1]), 'ind_1_')
+
+        # Test name collision
+        self.assertEqual(lbl(m.mycomp), 'mycomp_6_')
+        self.assertEqual(lbl(self.thecopy), 'myblock_mystreet_7_')
+        self.assertEqual(lbl(m.MyComp), 'MyComp_8_')
+
+    def test_shortnamelabeler_prefix(self):
+        m = self.m
+        lbl = ShortNameLabeler(20, '_', prefix='s_', caseInsensitive=True)
+        self.assertEqual(lbl(m.mycomp), 'mycomp')
+        self.assertEqual(lbl(m.that), 'that')
+        self.assertEqual(lbl(self.long1), 's_ngcomponentname_1_')
+        self.assertEqual(lbl(self.long2), 's_ntnamerighthere_2_')
+        self.assertEqual(lbl(self.long3), 's_onebutdifferent_3_')
+        self.assertEqual(lbl(self.long4), 's_ngcomponentname_4_')
+        self.assertEqual(lbl(self.long5), 'longcomponentname_1_')
+        self.assertEqual(lbl(m.myblock), 'myblock')
+        self.assertEqual(lbl(m.myblock.mystreet), 'myblock_mystreet')
+        self.assertEqual(lbl(m.ind[3]), 'ind_3_')
+        self.assertEqual(lbl(m.ind[10]), 'ind_10_')
+        self.assertEqual(lbl(m.ind[1]), 'ind_1_')
+
+        # Test name collision
+        self.assertEqual(lbl(m.mycomp), 's_mycomp_5_')
+        self.assertEqual(lbl(self.thecopy), 's_yblock_mystreet_6_')
+        self.assertEqual(lbl(m.MyComp), 's_MyComp_7_')
+
+    def test_case_sensitive_shortnamelabeler(self):
+        m = self.m
+        lbl = ShortNameLabeler(20, '_')
+        self.assertEqual(lbl(m.mycomp), 'mycomp')
+        self.assertEqual(lbl(m.that), 'that')
+        self.assertEqual(lbl(self.long1), 'longcomponentname_1_')
+        self.assertEqual(lbl(self.long2), 'nentnamerighthere_2_')
+        self.assertEqual(lbl(self.long3), 'ngonebutdifferent_3_')
+        self.assertEqual(lbl(self.long4), 'longcomponentname_4_')
+        self.assertEqual(lbl(self.long5), 'gcomponentname_1__5_')
+        self.assertEqual(lbl(m.myblock), 'myblock')
+        self.assertEqual(lbl(m.myblock.mystreet), 'myblock_mystreet')
+        self.assertEqual(lbl(m.ind[3]), 'ind_3_')
+        self.assertEqual(lbl(m.ind[10]), 'ind_10_')
+        self.assertEqual(lbl(m.ind[1]), 'ind_1_')
+
+        # Test name collision
+        self.assertEqual(lbl(m.mycomp), 'mycomp')
+        self.assertEqual(lbl(self.thecopy), 'myblock_mystreet')
+        self.assertEqual(lbl(m.MyComp), 'MyComp')
+
+    def test_case_shortnamelabeler_overflow(self):
+        m = self.m
+        lbl = ShortNameLabeler(4, '_', caseInsensitive=True)
+        for i in range(9):
+            self.assertEqual(lbl(m.mycomp), 'p_%d_' % (i+1))
+        with self.assertRaisesRegexp(RuntimeError, "Too many identifiers"):
+            lbl(m.mycomp)
+
+    def test_shortnamelabeler_legal_regex(self):
+        m = ConcreteModel()
+        lbl = ShortNameLabeler(
+            60, suffix='_', prefix='s_', legalRegex='^[a-zA-Z]')
+
+        m.legal_var = Var()
+        self.assertEqual(lbl(m.legal_var), 'legal_var')
+
+        m._illegal_var = Var()
+        self.assertEqual(lbl(m._illegal_var), 's__illegal_var_1_')
 
 
 if __name__ == "__main__":

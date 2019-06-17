@@ -23,7 +23,11 @@ import threading
 import datetime
 import json
 import sys
-from IPython import get_ipython
+try:
+    from IPython import get_ipython
+except ImportError:
+    def get_ipython():
+        raise AttributeError("IPython not available")
 import pyomo.contrib.viewer.report as rpt
 import pyomo.environ as pe
 
@@ -49,7 +53,7 @@ if not qt_available:
     _log.error("Qt is not available. Cannot create UI classes.")
     raise ImportError("Could not import PyQt4 or PyQt5")
 
-def get_mainwindow(model=None, show=True):
+def get_mainwindow(model=None, show=True, testing=False):
     """
     Create a UI MainWindow.
 
@@ -62,13 +66,16 @@ def get_mainwindow(model=None, show=True):
     """
     if model is None:
         model = pe.ConcreteModel()
-    ui = MainWindow(model=model)
-    get_ipython().events.register('post_execute', ui.refresh_on_execute)
+    ui = MainWindow(model=model, testing=testing)
+    try:
+        get_ipython().events.register('post_execute', ui.refresh_on_execute)
+    except AttributeError:
+        pass # not in ipy kernel, so is fine to not register callback
     if show: ui.show()
     return ui, model
 
-def get_mainwindow_nb(model=None, show=True):
-    return get_mainwindow(model=model, show=show)
+def get_mainwindow_nb(model=None, show=True, testing=False):
+    return get_mainwindow(model=model, show=show, testing=testing)
 
 
 class UISetup(QtCore.QObject):
@@ -121,6 +128,7 @@ class MainWindow(_MainWindow, _MainWindowUI):
     def __init__(self, *args, **kwargs):
         model = self.model = kwargs.pop("model", None)
         main = self.model = kwargs.pop("main", None)
+        self.testing = kwargs.pop("testing", False)
         flags = kwargs.pop("flags", 0)
         if kwargs.pop("ontop", False):
             kwargs[flags] = flags | QtCore.Qt.WindowStaysOnTopHint
@@ -140,7 +148,6 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self.expressions_restart()
         self.constraints_restart()
         self.parameters_restart()
-
 
         self.mdiArea.tileSubWindows()
 
@@ -163,6 +170,8 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self.actionTile.triggered.connect(self.mdiArea.tileSubWindows)
         self.actionCascade.triggered.connect(self.mdiArea.cascadeSubWindows)
         self.actionTabs.triggered.connect(self.toggle_tabs)
+        self._dialog = None #dialog displayed so can access it easier for tests
+        self._dialog_test_button = None # button clicked on dialog in test mode
 
     def toggle_tabs(self):
         self.mdiArea.setViewMode(not self.mdiArea.viewMode())
@@ -248,13 +257,17 @@ class MainWindow(_MainWindow, _MainWindowUI):
             doftext = "Degree"
         else:
             doftext = "Degrees"
-        QMessageBox.information(
-            self,
-            "Model Information",
-            "{}  -- Active equalities\n"
-            "{}  -- Free variables in active equalities\n"
-            "{}  -- {} of freedom\n"\
-            .format(active_eq, free_vars, dof, doftext))
+        msg = QMessageBox()
+        self._dialog = msg
+        #msg.setIcon(QMessageBox.Information)
+        msg.setWindowTitle("Model Information")
+        msg.setText(
+"""{}  -- Active equalities
+{}  -- Free variables in active equalities
+{}  -- {} of freedom""".format(active_eq, free_vars, dof, doftext))
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.setModal(False)
+        msg.show()
 
     def refresh_on_execute(self):
         """
@@ -278,10 +291,16 @@ class MainWindow(_MainWindow, _MainWindowUI):
         """
         Handle the close event by asking for confirmation
         """
-        result = QMessageBox.question(self,
-            "Exit?",
-            "Are you sure you want to exit ?",
-            QMessageBox.Yes| QMessageBox.No)
+        msg = QMessageBox()
+        self._dialog = msg
+        msg.setIcon(QMessageBox.Question)
+        msg.setText("Are you sure you want to exit?")
+        msg.setWindowTitle("Exit?")
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        if self.testing: # don't even show dialog just pretend button clicked
+            result = self._dialog_test_button
+        else:
+            result = msg.exec_()
         if result == QMessageBox.Yes:
             event.accept()
         else:

@@ -53,35 +53,35 @@ class TestInterval(unittest.TestCase):
             self.assertTrue(np.all(zu >= _z))
 
     def test_inv(self):
-        lb, ub = interval.inv(0.1, 0.2)
+        lb, ub = interval.inv(0.1, 0.2, feasibility_tol=1e-8)
         self.assertAlmostEqual(lb, 5)
         self.assertAlmostEqual(ub, 10)
 
-        lb, ub = interval.inv(0, 0.1)
+        lb, ub = interval.inv(0, 0.1, feasibility_tol=1e-8)
         self.assertEqual(lb, -math.inf)
         self.assertEqual(ub, math.inf)
 
-        lb, ub = interval.inv(0, 0)
+        lb, ub = interval.inv(0, 0, feasibility_tol=1e-8)
         self.assertEqual(lb, -math.inf)
         self.assertEqual(ub, math.inf)
 
-        lb, ub = interval.inv(-0.1, 0)
+        lb, ub = interval.inv(-0.1, 0, feasibility_tol=1e-8)
         self.assertEqual(lb, -math.inf)
         self.assertEqual(ub, math.inf)
 
-        lb, ub = interval.inv(-0.2, -0.1)
+        lb, ub = interval.inv(-0.2, -0.1, feasibility_tol=1e-8)
         self.assertAlmostEqual(lb, -10)
         self.assertAlmostEqual(ub, -5)
 
-        lb, ub = interval.inv(0, -1e-16)
+        lb, ub = interval.inv(0, -1e-16, feasibility_tol=1e-8)
         self.assertEqual(lb, -math.inf)
         self.assertEqual(ub, math.inf)
 
-        lb, ub = interval.inv(1e-16, 0)
+        lb, ub = interval.inv(1e-16, 0, feasibility_tol=1e-8)
         self.assertEqual(lb, -math.inf)
         self.assertAlmostEqual(ub, math.inf)
 
-        lb, ub = interval.inv(-1, 1)
+        lb, ub = interval.inv(-1, 1, feasibility_tol=1e-8)
         self.assertAlmostEqual(lb, -math.inf)
         self.assertAlmostEqual(ub, math.inf)
 
@@ -95,7 +95,7 @@ class TestInterval(unittest.TestCase):
                     (np.random.uniform(-5, -2), np.random.uniform(-2, 0))]
         for xl, xu in x_bounds:
             for yl, yu in y_bounds:
-                zl, zu = interval.div(xl, xu, yl, yu)
+                zl, zu = interval.div(xl, xu, yl, yu, feasibility_tol=1e-8)
                 x = np.linspace(xl, xu, 100)
                 y = np.linspace(yl, yu, 100)
                 for _x in x:
@@ -268,6 +268,6 @@ class TestInterval(unittest.TestCase):
         self.assertAlmostEqual(yu, math.atan(0.5)+math.pi, 12)
 
     def test_encountered_bugs(self):
-        lb, ub = interval._inverse_power1(88893.4225, 88893.4225, 2, 2, 298.15, 298.15)
+        lb, ub = interval._inverse_power1(88893.4225, 88893.4225, 2, 2, 298.15, 298.15, feasibility_tol=1e-8)
         self.assertAlmostEqual(lb, 298.15)
         self.assertAlmostEqual(ub, 298.15)
