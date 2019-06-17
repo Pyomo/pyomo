@@ -11,12 +11,11 @@
 import pyutilib.th as unittest
 
 import pyomo.environ
-from pyomo.common import DeveloperError
+from pyomo.common.errors import DeveloperError, NondifferentiableError
 from pyomo.core import *
-from pyomo.core.expr.calculus.diff_with_sympy import (
-    differentiate, NondifferentiableError, PyomoSympyBimap,
-    sympy_available, sympy2pyomo_expression,
-)
+from pyomo.core.expr.calculus.diff_with_sympy import differentiate
+from pyomo.core.expr.sympy import PyomoSympyBimap, sympy_available, sympy2pyomo_expression
+
 
 def s(e):
     return str(e).replace(' ','').replace('1.0','1').replace('2.0','2')
