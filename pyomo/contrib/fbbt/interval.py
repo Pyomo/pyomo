@@ -1,9 +1,13 @@
 import math
 import warnings
 import logging
-from pyomo.common.errors import DeveloperError, InfeasibleConstraintException
+from pyomo.common.errors import DeveloperError, InfeasibleConstraintException, PyomoException
 
 logger = logging.getLogger(__name__)
+
+
+class IntervalException(PyomoException):
+    pass
 
 
 def add(xl, xu, yl, yu):
@@ -15,17 +19,34 @@ def sub(xl, xu, yl, yu):
 
 
 def mul(xl, xu, yl, yu):
-    return min(xl*yl, xl*yu, xu*yl, xu*yu), max(xl*yl, xl*yu, xu*yl, xu*yu)
+    lb = min(xl*yl, xl*yu, xu*yl, xu*yu)
+    ub = max(xl*yl, xl*yu, xu*yl, xu*yu)
+    if math.isnan(lb):
+        lb = -math.inf
+    if math.isnan(ub):
+        ub = math.inf
+    return lb, ub
 
 
-def inv(xl, xu):
-    if xl <= 0 and xu >= 0:
-        return -math.inf, math.inf
-    return 1.0/xu, 1.0/xl
+def inv(xl, xu, feasibility_tol):
+    if xl <= feasibility_tol and xu >= -feasibility_tol:
+        # if the denominator (x) can include 0, then 1/x is unbounded.
+        lb = -math.inf
+        ub = math.inf
+    else:
+        ub = 1.0 / xl
+        lb = 1.0 / xu
+    return lb, ub
 
 
-def div(xl, xu, yl, yu):
-    return mul(xl, xu, *inv(yl, yu))
+def div(xl, xu, yl, yu, feasibility_tol):
+    if yl <= feasibility_tol and yu >= -feasibility_tol:
+        # if the denominator (y) can include 0, then x/y is unbounded.
+        lb = -math.inf
+        ub = math.inf
+    else:
+        lb, ub = mul(xl, xu, *inv(yl, yu, feasibility_tol))
+    return lb, ub
 
 
 def power(xl, xu, yl, yu):
@@ -132,7 +153,7 @@ def power(xl, xu, yl, yu):
     return lb, ub
 
 
-def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu):
+def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
     """
     z = x**y => compute bounds on x.
 
@@ -143,7 +164,7 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu):
     However, if y is an integer, then x can be negative, so there are several special cases. See the docs below.
     """
     xl, xu = log(zl, zu)
-    xl, xu = div(xl, xu, yl, yu)
+    xl, xu = div(xl, xu, yl, yu, feasibility_tol)
     xl, xu = exp(xl, xu)
 
     # if y is an integer, then x can be negative
@@ -182,7 +203,7 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu):
                         _xl = -xu
                     else:
                         _xl = xl
-                    if orig_xu < xl:
+                    if orig_xu < xl - feasibility_tol:
                         _xu = -xl
                     else:
                         _xu = xu
@@ -199,7 +220,7 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu):
                         _xl = -xu
                     else:
                         _xl = xl
-                    if orig_xu < xl:
+                    if orig_xu < xl - feasibility_tol:
                         _xu = -xl
                     else:
                         _xu = xu
@@ -241,14 +262,21 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu):
     return xl, xu
 
 
-def _inverse_power2(zl, zu, xl, xu):
+def _inverse_power2(zl, zu, xl, xu, feasiblity_tol):
     """
     z = x**y => compute bounds on y
     y = ln(z) / ln(x)
+
+    This function assumes the exponent can be fractional, so x must be positive. This method should not be called
+    if the exponent is an integer.
     """
+    if xu <= 0:
+        raise IntervalException('Cannot raise a negative variable to a fractional power.')
+    if (xl > 0 and zu <= 0) or (xl >= 0 and zu < 0):
+        raise InfeasibleConstraintException('A positive variable raised to the power of anything must be positive.')
     lba, uba = log(zl, zu)
     lbb, ubb = log(xl, xu)
-    yl, yu = div(lba, uba, lbb, ubb)
+    yl, yu = div(lba, uba, lbb, ubb, feasiblity_tol)
     return yl, yu
 
 
@@ -258,14 +286,14 @@ def exp(xl, xu):
 
 def log(xl, xu):
     if xl > 0:
-        return math.log(xl), math.log(xu)
-    elif xl == 0:
-        if xu > 0:
-            return -math.inf, math.log(xu)
-        else:
-            return -math.inf, -math.inf
+        lb = math.log(xl)
     else:
-        return -math.inf, math.inf
+        lb = -math.inf
+    if xu > 0:
+        ub = math.log(xu)
+    else:
+        ub = -math.inf
+    return lb, ub
 
 
 def sin(xl, xu):
