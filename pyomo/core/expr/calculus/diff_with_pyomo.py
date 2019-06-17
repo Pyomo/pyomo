@@ -1,5 +1,5 @@
 from pyomo.core.kernel.component_map import ComponentMap
-import pyomo.core.expr.current as _expr
+from pyomo.core.expr import current as _expr
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.current import exp, log, sin, cos, tan, asin, acos, atan
