@@ -2,7 +2,7 @@ parmest
 =======
 
 parmest is a Python package built on the Pyomo optimization modeling
-language ([PyomoJournal]_, [PyomoBookII]_) to support parameter estimation from experiments along with
+language ([PyomoJournal]_, [PyomoBookII]_) to support parameter estimation using experimental data along with
 confidence regions and subsequent creation of scenarios for PySP.
 
 .. toctree::
@@ -11,12 +11,10 @@ confidence regions and subsequent creation of scenarios for PySP.
    overview.rst
    installation.rst
    driver.rst
-   callback.rst
    graphics.rst
    examples.rst
    parallel.rst
    api.rst
-   bibliography.rst
 
 Indices and Tables
 ------------------

@@ -3,81 +3,103 @@
 Parameter Estimation using parmest
 =======================================
 
-To use parmest, the user writes a Python code
-that creates a :class:`~pyomo.contrib.parmest.parmest.ParmEstimator` object and uses its methods for parameter
-estimation, confidence region estimation, and scenario creation. Once
-a parameter estimator object is created, one typically wants to call member
-function such as :class:`~pyomo.contrib.parmest.parmest.ParmEstimator.theta_est`, 
-:class:`~pyomo.contrib.parmest.parmest.ParmEstimator.bootstrap` and 
-:class:`~pyomo.contrib.parmest.parmest.ParmEstimator.likelihood_ratio`. Examples
-are provided in the :ref:`examplesection` Section.
+Parameter Estimation using parmest requires a Pyomo model, experimental data which defines 
+multiple scenarios, and a list of thetas to estimate. 
+parmest uses PySP [PyomoBookII]_ to solve a two-stage stochastic programming 
+problem, where the experimental data is used to create a scenario tree.
+The objective function needs to be written in PySP form with the 
+Pyomo Expression for first stage cost (named "FirstStateCost") set to zero and the 
+Pyomo Expression for second stage cost (named "SecondStageCost") defined as the 
+deviation between model and the observations (typically defined as
+the sum of squared deviation between
+model values and observed values).
 
-A :class:`~pyomo.contrib.parmest.parmest.ParmEstimator` object can be created using 
-the following code. A description of each argument is listed below.
+If the Pyomo model is not formatted as a two-stage stochastic programming 
+problem in this format, the user can supply a custom function to use as the second stage cost
+and the Pyomo model will be modified within parmest to match the specifications required by PySP.
+The PySP callback function is also defined within parmest.
+The callback function returns a populated 
+and initialized model for each scenario.
+
+To use parmest, the user creates a :class:`~pyomo.contrib.parmest.parmest.Estimator` object 
+and uses its methods for:
+
+* Parameter estimation, :class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est`
+* Bootstrap resampling for parameter estimation, :class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est_bootstrap`
+* Compute the objective at theta values, :class:`~pyomo.contrib.parmest.parmest.Estimator.objective_at_theta`
+* Compute likelihood ratio, :class:`~pyomo.contrib.parmest.parmest.Estimator.likelihood_ratio_test`
+
+A :class:`~pyomo.contrib.parmest.parmest.Estimator` object can be created using 
+the following code. A description of each argument is listed below.  Examples are provided in the :ref:`examplesection` Section.
 
 .. testsetup:: *
+    :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
 
-    theta_list = ['asymptote', 'rate_constant']
-    num_samples = 6
-    exp_numbers_list = range(self.num_samples)
-    model_file = \
-            "pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler"
-    callback = "instance_creation_callback"
-    cb_data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
-                                   [4,16.0],[5,15.6],[6,19.8]],
-                                   columns=['hour', 'y'])
+    import pandas as pd
+    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model as model_function
+    data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
+                              [4,16.0],[5,15.6],[6,19.8]],
+                        columns=['hour', 'y'])
+    theta_names = ['asymptote', 'rate_constant']
+    def objective_function(model, data):
+        expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
+        return expr
 
-
-..doctest::
+.. doctest::
+    :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
 
     >>> import pyomo.contrib.parmest.parmest as parmest
-    >>> pest = parmest.ParmEstimator(model_file, callback,
-    ...                              cost_expression, exp_numbers_list,
-    ...                              theta_list, cb_data=cb_data)
+    >>> pest = parmest.Estimator(model_function, data, theta_names, objective_function)
  
-.. _CallbackSpec:
 
-Callback
+Model function
+----------------
+The first argument is a function which uses data for a single scenario to return a 
+populated and initialized Pyomo model for that scenario.
+Parameters that the user would like to estimate must be defined as variables (Pyomo `Var`).
+The variables can be fixed (parmest unfixes variables that will be estimated). 
+The model does not have to be specifically written for parmest. That is, parmest can modify the objective for pySP, see :ref:`ObjFunction` below.
+
+Data
 -----------------------
 
-The first two arguments (`model_file` and `callback`) specify the model and location of the callback
-function. For more information about what the callback function 
-does, see :ref:`callbacksection`.
-The second argument can be either a string (a Python `str`)
-giving the function name, or the function name itself (not a Python
-`str`, but the name of the function, which has the Python type
-`func`). If the function is given as a string, then the first
-argument gives the module either as a string or as a module name (not
-a string).  If the second argument gives the callback function as a
-function (not as a string), then the first argument is ignored.
-For an example of the callback function given as a function name (not a string), see :ref:`AllInOne`.
+The second argument is the data which will be used to populate the Pyomo model.  
+Supported data formats include:
 
-Cost Expression
+* **Pandas Dataframe** where each row is a separate scenario and column names refer to observed quantities. 
+  Pandas DataFrames are easily stored and read in from csv, excel, or databases, or created directly in Python.
+* **List of dictionaries** where each entry in the list is a separate scenario and the keys (or nested keys) 
+  refer to observed quantities.  
+  Dictionaries are often preferred over DataFrames when using static and time series data.  
+  Dictionaries are easily stored and read in from json or yaml files, or created directly in Python.
+* **List of json file names** where each entry in the list contains a json file name for a separate scenario.
+  This format is recommended when using large datasets in parallel computing.
+
+The data must be compatible with the model function that returns a populated and initialized Pyomo model for a 
+single scenario.
+Data can include multiple entries per variable (time series and/or duplicate sensors).  
+This information can be included in custom objective functions, see :ref:`ObjFunction` below.
+
+Theta names
 -----------------------
 
-The third argument (`cost_expression`) of the constructor call is a string with the name of the `Expression` in the
-Pyomo model that has the least squares objective. This will often be given as "SecondStageCost"
-in the model. See :ref:`objective` for more information.
+The third argument is a list of variable names that the user wants to estimate. 
+The list contains strings with `Var` names from the Pyomo model.
 
-.. _NumbersList:
+.. _ObjFunction:
 
-Experiment Numbers
------------------------
+Objective function 
+-----------------------------
 
-The fourth argument (`exp_numbers_list`) is a
-list of experiment numbers in the form of a Python list. These numbers
-can be any set of unique, non-negative numbers. See :ref:`cb_data` for
-information about how these numbers can be used in the scenario creation
-callback.
-
-Theta
------------------------
-
-The fifth argument (`theta_list`) is a list of strings with `Var` names
-from the Pyomo model that are the parameters to be estimated.
-
-Callback Data
------------------------
-
-The sixth argument (`cb_data`) is an optional argument which supplies data to the callback.
-See :ref:`cb_data` for more information. 
+The forth argument is an optional argument which defines the optimization objective function to use in 
+parameter estimation.
+If no objective function is specified, the Pyomo model is used 
+"as is" and should be defined with a "FirstStateCost" and 
+"SecondStageCost" expression that are used to build an objective 
+for PySP.
+If the Pyomo model is not written as a two stage stochastic programming problem in this format, 
+and/or if the user wants to use an objective that is different than the original model, 
+a custom objective function can be defined for parameter estimation.
+The objective function arguments include `model` and `data` and the objective function returns 
+a Pyomo expression which are used to define "SecondStageCost".
+The objective function can be used to customize data points and weights that are used in parameter estimation.

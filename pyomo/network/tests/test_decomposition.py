@@ -250,7 +250,9 @@ class TestSequentialDecomposition(unittest.TestCase):
         # Splitter
         m.splitter = Block()
 
-        m.splitter.flow_in = Var(m.comps)
+        @m.splitter.Block(m.comps)
+        def flow_in(b, i):
+            b.flow = Var()
         m.splitter.temperature_in = Var()
         m.splitter.pressure_in = Var()
 
@@ -288,7 +290,7 @@ class TestSequentialDecomposition(unittest.TestCase):
 
         @m.splitter.Port()
         def inlet(b):
-            return dict(flow=b.flow_in,
+            return dict(flow=Reference(b.flow_in[:].flow),
                 temperature=b.temperature_in,
                 pressure=b.pressure_in,
                 expr_idx=b.expr_idx_in,
@@ -314,8 +316,10 @@ class TestSequentialDecomposition(unittest.TestCase):
             recycle = 0.1
             prod = 1 - recycle
             for i in self.flow_in:
-                self.flow_out_side_1[i].value = prod * value(self.flow_in[i])
-                self.flow_out_side_2[i].value = recycle * value(self.flow_in[i])
+                self.flow_out_side_1[i].value \
+                    = prod * value(self.flow_in[i].flow)
+                self.flow_out_side_2[i].value \
+                    = recycle * value(self.flow_in[i].flow)
             for i in self.expr_var_idx_in:
                 self.expr_var_idx_out_side_1[i].value = \
                     prod * value(self.expr_var_idx_in[i])

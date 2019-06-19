@@ -1,19 +1,25 @@
 #include"petsc.h"
 
-int ScaleEqs(EQSCALE_TYPE method, ASL *asl){
+int ScaleEqs(Solver_ctx *sol_ctx){
+    EQSCALE_TYPE method = sol_ctx->opt.eq_scale_method;
+    ASL *asl = sol_ctx->asl;
     if(method==EQ_SCALE_NONE) return 0;
-    else if(method==EQ_SCALE_MAX_GRAD) return ScaleEqs_Largest_Grad(asl);
+    else if(method==EQ_SCALE_MAX_GRAD) return ScaleEqs_Largest_Grad(sol_ctx);
+    else if(method==EQ_SCALE_USER) return ScaleEqsUser(sol_ctx);
     return 1;
 }
 
-int ScaleVars(VARSCALE_TYPE method, ASL *asl){
+int ScaleVars(Solver_ctx *sol_ctx){
+    VARSCALE_TYPE method = sol_ctx->opt.var_scale_method;
+    ASL *asl = sol_ctx->asl;
     if(method==VAR_SCALE_NONE) return 0;
-    else if(method==VAR_SCALE_GRAD) return ScaleVarsGrad(asl);
+    else if(method==VAR_SCALE_USER) return ScaleVarsUser(sol_ctx);
     return 1;
 }
 
-int ScaleEqs_Largest_Grad(ASL *asl){
-    real s[n_con];
+int ScaleEqs_Largest_Grad(Solver_ctx *sol_ctx){
+    ASL *asl = sol_ctx->asl;
+    real s;
     int i;
     int err;
     real A[nzc];
@@ -26,51 +32,57 @@ int ScaleEqs_Largest_Grad(ASL *asl){
     for(i=n_conjac[0];i<n_conjac[1]; ++i){ /*i is constraint index */
         cg = Cgrad[i];
         jv_max = 0.0;
-        jv_min = fabs(A[cg->goff]);
         while(cg!=NULL){
             jv = fabs(A[cg->goff]);
             if(jv > jv_max) jv_max = jv;
-            if(jv < jv_min) jv_min = jv;
             cg=cg->next;
         }
-        if(jv_max > 100.0) s[i] = 100.0/jv_max;
-        else s[i] = 1.0;
-        if(s[i] < 1e-6) s[i] = 1e-6;
-        conscale(i, s[i], &err);
+        if(jv_max > sol_ctx->opt.scale_eq_jac_max)
+          s = sol_ctx->opt.scale_eq_jac_max/jv_max;
+        else s = 1.0;
+        if(s < sol_ctx->opt.scale_eq_fac_min) s = sol_ctx->opt.scale_eq_fac_min;
+        conscale(i, s, &err);
     }
     return 0;
 }
 
-int ScaleVarsGrad(ASL *asl){
-    real s[n_var];
-    int i;
-    int err;
-    real A[nzc];
-    real jv, jv_min[n_var], jv_max[n_var];
-    cgrad *cg;
+int ScaleEqsUser(Solver_ctx *sol_ctx){
+    ASL *asl = sol_ctx->asl;
+    int i = 0, err=0;
+    real s;
 
-    jacval(X0,A,&err);
-    for(i=0;i<n_var;++i){
-        s[i] = 1.0;
-        jv_min[i] = 10000.0;
-        jv_max[i] = 0;
+    if (sol_ctx->scaling_factor_con->u.r == NULL) return 0; //no scaling factors provided
+    for(i=0;i<n_con;++i){ //n_con is asl vodoo incase you wonder where it came from
+      s = sol_ctx->scaling_factor_con->u.r[i];
+      conscale(i, s, &err); //if s is not provided, s is 0, conscale sets those to 1.0
     }
-    for(i=n_conjac[0];i<n_conjac[1]; ++i){ /*i is constraint index */
-        cg = Cgrad[i];
-        while(cg!=NULL){
-            jv = fabs(A[cg->goff]);
-            if(jv > jv_max[cg->varno]) jv_max[cg->varno] = jv;
-            if(jv < jv_min[cg->varno]) jv_min[cg->varno] = jv;
-            cg=cg->next;
+    return err;
+}
+
+int ScaleVarsUser(Solver_ctx *sol_ctx){
+    //Use scalling factors set in the scaling_factor suffix, for DAEs ignore
+    //scaling on the derivatives and use scaling from the differntial vars
+    //instead varaibles and there derivatives should be scaled the same
+    int i = 0, err=0;
+    real s;
+    ASL *asl = sol_ctx->asl;
+    if (sol_ctx->scaling_factor_var->u.r == NULL) return 0; //no scaling factors provided
+    if(sol_ctx->opt.dae_solve){ //dae so match scaling on derivatives
+      for(i=0;i<n_var;++i){ //n_var is asl vodoo incase you wonder where it came from
+        s = sol_ctx->scaling_factor_var->u.r[i];
+        if(sol_ctx->dae_suffix_var->u.i[i] == 2){
+          if(s == 0.0) s = 1.0;
+          else s = sol_ctx->scaling_factor_var->u.r[sol_ctx->dae_link[i]];
         }
+        else if(sol_ctx->dae_suffix_var->u.i[i] == 3) s = 0.0; //can't scale time
+        varscale(i, s, &err); //if s is not provided, s is 0, varscale sets those to 1.0
+      }
     }
-    /* Now want to scale so that jv_max <= 100 and jv_min is as close
-     * to 0.01 as possible without pushing jv_max too high.*/
-    for(i=0;i<n_var;++i) if(jv_max[i] > 100){
-      // Smallest jv is too small attempt to scale
-      s[i] = 100.0/jv_min[i];
-      if(s[i] < 1e-8) s[i] = 1e-8;
-      varscale(i, s[i], &err);
+    else{ // no dae so use scale factors given
+      for(i=0;i<n_var;++i){ //n_var is asl vodoo incase you wonder where it came from
+        s = sol_ctx->scaling_factor_var->u.r[i];
+        varscale(i, s, &err); //if s is not provided, s is 0, varscale sets those to 1.0
+      }
     }
-    return 0;
+    return err;
 }

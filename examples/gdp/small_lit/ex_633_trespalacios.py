@@ -8,7 +8,7 @@ Ref:
     CARNEGIE-MELLON UNIVERSITY , PITTSBURGH , PA.
 
 Solution is 4.46 with (Z, x1, x2) = (4.46, 1.467, 0.833),
-with the second and first disjuncts active in
+with the first and second disjuncts active in
 the first and second disjunctions, respectively.
 
 Pyomo model implementation by @bernalde and @qtothec.

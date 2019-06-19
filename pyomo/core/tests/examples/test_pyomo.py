@@ -65,12 +65,12 @@ class BaseTester(unittest.TestCase):
         setup_redirect(OUTPUT)
         os.chdir(currdir)
         if type(cmd) is list:
-            output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + cmd, get_return=True)
+            output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + cmd)
         elif cmd.endswith('json') or cmd.endswith('yaml'):
-            output = main.main(['solve', '--results-format=json', '--save-results=%s' % results] + [cmd], get_return=True)
+            output = main.main(['solve', '--results-format=json', '--save-results=%s' % results] + [cmd])
         else:
             args=re.split('[ ]+',cmd)
-            output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + list(args), get_return=True)
+            output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + list(args))
         reset_redirect()
         if not 'root' in kwds:
             return OUTPUT.getvalue()

@@ -1,5 +1,6 @@
 """Testing for deprecated function."""
 import pyutilib.th as unittest
+from pyomo.common import DeveloperError
 from pyomo.common.deprecation import deprecated
 from pyomo.common.log import LoggingIntercept
 
@@ -12,11 +13,17 @@ logger = logging.getLogger('pyomo.common')
 class TestDeprecated(unittest.TestCase):
     """Tests for deprecated function decorator."""
 
+    def test_no_version_exception(self):
+        with self.assertRaises(DeveloperError):
+            @deprecated()
+            def foo():
+                pass
+
     def test_no_doc_string(self):
         # Note: No docstring, else nose replaces the function name with
         # the docstring in output.
         #"""Test for deprecated function decorator."""
-        @deprecated()
+        @deprecated(version='')
         def foo(bar='yeah'):
             logger.warn(bar)
 
@@ -52,7 +59,7 @@ class TestDeprecated(unittest.TestCase):
 
 
     def test_with_doc_string(self):
-        @deprecated()
+        @deprecated(version='')
         def foo(bar='yeah'):
             """Show that I am a good person.
 
@@ -94,7 +101,7 @@ class TestDeprecated(unittest.TestCase):
 
 
     def test_with_custom_message(self):
-        @deprecated('This is a custom message, too.')
+        @deprecated('This is a custom message, too.', version='')
         def foo(bar='yeah'):
             """Show that I am a good person.
 
@@ -135,7 +142,8 @@ class TestDeprecated(unittest.TestCase):
                       DEP_OUT.getvalue())
 
     def test_with_custom_logger(self):
-        @deprecated('This is a custom message', logger='pyomo.common')
+        @deprecated('This is a custom message', logger='pyomo.common',
+                    version='')
         def foo(bar='yeah'):
             """Show that I am a good person.
 
@@ -177,7 +185,7 @@ class TestDeprecated(unittest.TestCase):
         self.assertNotIn('DEPRECATED:', DEP_OUT.getvalue())
 
     def test_with_class(self):
-        @deprecated()
+        @deprecated(version='')
         class foo(object):
             def __init__(self):
                 logger.warn('yeah')
@@ -203,7 +211,7 @@ class TestDeprecated(unittest.TestCase):
         class foo(object):
             def __init__(self):
                 pass
-            @deprecated()
+            @deprecated(version='')
             def bar(self):
                 logger.warn('yeah')
 

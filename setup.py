@@ -36,10 +36,28 @@ def _find_packages(path):
 
 
 def read(*rnames):
-    return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
+    with open(os.path.join(os.path.dirname(__file__), *rnames)) as README:
+        # Strip all leading badges up to, but not including the COIN-OR
+        # badge so that they do not appear in the PyPI description
+        while True:
+            line = README.readline()
+            if 'COIN-OR' in line:
+                break
+            if line.strip() and '[![' not in line:
+                break
+        return line + README.read()
+
+def get_version():
+    # Source pyomo/version/info.py to get the version number
+    _verInfo = dict(globals())
+    _verFile = os.path.join(os.path.dirname(__file__),
+                            'pyomo','version','info.py')
+    with open(_verFile) as _FILE:
+        exec(_FILE.read(), _verInfo)
+    return _verInfo['__version__']
 
 requires = [
-    'PyUtilib>=5.6.3',
+    'PyUtilib>=5.7.1.dev0',
     'appdirs',
     'ply',
     'six>=1.4',
@@ -52,53 +70,72 @@ if sys.version_info < (2, 7):
 from setuptools import setup
 import sys
 
+CYTHON_REQUIRED = "required"
 if 'develop' in sys.argv:
     using_cython = False
 else:
-    using_cython = True
+    using_cython = "automatic"
 if '--with-cython' in sys.argv:
-    using_cython = True
+    using_cython = CYTHON_REQUIRED
     sys.argv.remove('--with-cython')
+if '--without-cython' in sys.argv:
+    using_cython = False
+    sys.argv.remove('--without-cython')
 
 ext_modules = []
 if using_cython:
     try:
         import platform
-        if not platform.python_implementation() == "CPython":
-            raise RuntimeError()
+        if platform.python_implementation() != "CPython":
+            # break out of this try-except (disable Cython)
+            raise RuntimeError("Cython is only supported under CPython")
         from Cython.Build import cythonize
         #
         # Note: The Cython developers recommend that you destribute C source
         # files to users.  But this is fine for evaluating the utility of Cython
         #
         import shutil
-        files = ["pyomo/core/expr/expr_pyomo5.pyx", "pyomo/core/expr/numvalue.pyx", "pyomo/core/util.pyx", "pyomo/repn/standard_repn.pyx", "pyomo/repn/plugins/cpxlp.pyx", "pyomo/repn/plugins/gams_writer.pyx", "pyomo/repn/plugins/baron_writer.pyx", "pyomo/repn/plugins/ampl/ampl_.pyx"]
+        files = [
+            "pyomo/core/expr/numvalue.pyx",
+            "pyomo/core/expr/numeric_expr.pyx",
+            "pyomo/core/expr/logical_expr.pyx",
+            #"pyomo/core/expr/visitor.pyx",
+            "pyomo/core/util.pyx",
+            "pyomo/repn/standard_repn.pyx",
+            "pyomo/repn/plugins/cpxlp.pyx",
+            "pyomo/repn/plugins/gams_writer.pyx",
+            "pyomo/repn/plugins/baron_writer.pyx",
+            "pyomo/repn/plugins/ampl/ampl_.pyx",
+        ]
         for f in files:
             shutil.copyfile(f[:-1], f)
-        ext_modules = cythonize(files)
+        ext_modules = cythonize(files, compiler_directives={
+            "language_level": 3 if sys.version_info >= (3, ) else 2})
     except:
+        if using_cython == CYTHON_REQUIRED:
+            print("""
+ERROR: Cython was explicitly requested with --with-cython, but cythonization
+       of core Pyomo modules failed.
+""")
+            raise
         using_cython = False
 
 packages = _find_packages('pyomo')
 
-setup(name='Pyomo',
+def run_setup():
+   setup(name='Pyomo',
       #
-      # Note: trunk should have *next* major.minor
-      #     VOTD and Final releases will have major.minor.revnum
+      # Note: the release number is set in pyomo/version/info.py
       #
-      # When cutting a release, ALSO update _major/_minor/_revnum in
-      #
-      #     pyomo/pyomo/version/__init__.py
-      #     pyomo/RELEASE.txt
-      #
-      version='5.5.1',
+      version=get_version(),
       maintainer='William E. Hart',
       maintainer_email='wehart@sandia.gov',
       url='http://pyomo.org',
       license='BSD',
       platforms=["any"],
       description='Pyomo: Python Optimization Modeling Objects',
-      long_description=read('README.txt'),
+      long_description=read('README.md'),
+      long_description_content_type='text/markdown',
       classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: End Users/Desktop',
@@ -115,12 +152,14 @@ setup(name='Pyomo',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: Jython',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Software Development :: Libraries :: Python Modules' ],
       packages=packages,
+      package_data={"pyomo.contrib.viewer":["*.ui"]},
       keywords=['optimization'],
       install_requires=requires,
       ext_modules = ext_modules,
@@ -138,7 +177,7 @@ setup(name='Pyomo',
         results_schema=pyomo.scripting.commands:results_schema
         pyro_mip_server = pyomo.scripting.pyro_mip_server:main
         test.pyomo = pyomo.scripting.runtests:runPyomoTests
-        pyomo = pyomo.scripting.pyomo_main:main
+        pyomo = pyomo.scripting.pyomo_main:main_console_script
         pyomo_ns = pyomo.scripting.commands:pyomo_ns
         pyomo_nsc = pyomo.scripting.commands:pyomo_nsc
         kill_pyro_mip_servers = pyomo.scripting.commands:kill_pyro_mip_servers
@@ -147,7 +186,6 @@ setup(name='Pyomo',
         OSSolverService = pyomo.scripting.commands:OSSolverService
         pyomo_python = pyomo.scripting.commands:pyomo_python
         pyomo_old=pyomo.scripting.pyomo_command:main
-        get_pyomo_extras = scripts.get_pyomo_extras:main
 
         [pyomo.command]
         pyomo.runbenders=pyomo.pysp.benders
@@ -162,5 +200,37 @@ setup(name='Pyomo',
         pyomo.test.pyomo = pyomo.scripting.runtests
         pyomo.pyro_mip_server = pyomo.scripting.pyro_mip_server
         pyomo.results_schema=pyomo.scripting.commands
+        pyomo.viewer=pyomo.contrib.viewer.pyomo_viewer
       """
       )
+
+try:
+    run_setup()
+except SystemExit as e_info:
+    # Cython can generate a SystemExit exception on Windows if the
+    # environment is missing / has an incorrect Microsoft compiler.
+    # Since Cython is not strictly required, we will disable Cython and
+    # try re-running setup(), but only for this very specific situation.
+    if 'Microsoft Visual C++' not in str(e_info):
+        raise
+    elif using_cython == CYTHON_REQUIRED:
+        print("""
+ERROR: Cython was explicitly requested with --with-cython, but cythonization
+       of core Pyomo modules failed.
+""")
+        raise
+    else:
+        print("""
+ERROR: setup() failed:
+    %s
+Re-running setup() without the Cython modules
+""" % (e_info.message,))
+        ext_modules = []
+        run_setup()
+        print("""
+WARNING: Installation completed successfully, but the attempt to cythonize
+         core Pyomo modules failed.  Cython provides performance
+         optimizations and is not required for any Pyomo functionality.
+         Cython returned the following error:
+   "%s"
+""" % (e_info.message,))

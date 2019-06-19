@@ -25,7 +25,6 @@ def _h(*args):
     return 2 + sum(args)
 
 class TestPythonCallbackFunction(unittest.TestCase):
-
     def test_call_countArgs(self):
         m = ConcreteModel()
         m.f = ExternalFunction(_g)
@@ -59,6 +58,12 @@ class TestPythonCallbackFunction(unittest.TestCase):
         self.assertEqual(M.m.f.getname(True), "m.f")
 
 class TestAMPLExternalFunction(unittest.TestCase):
+    def assertListsAlmostEqual(self, first, second, places=7, msg=None):
+        self.assertEqual(len(first), len(second))
+        msg = "lists %s and %s differ at item " % (
+            first, second)
+        for i,a in enumerate(first):
+            self.assertAlmostEqual(a, second[i], places, msg + str(i))
 
     def test_getname(self):
         m = ConcreteModel()
@@ -103,13 +108,13 @@ class TestAMPLExternalFunction(unittest.TestCase):
             library=DLL, function="gsl_sf_bessel_Jnu")
         f,g,h = model.gamma.evaluate_fgh((2.0,))
         self.assertAlmostEqual(f, 1.0, 7)
-        self.assertAlmostEqual(g, [0.422784335098467], 7)
-        self.assertAlmostEqual(h, [0.8236806608528794], 7)
+        self.assertListsAlmostEqual(g, [0.422784335098467], 7)
+        self.assertListsAlmostEqual(h, [0.8236806608528794], 7)
 
         f,g,h = model.bessel.evaluate_fgh((2.5, 2.0,), fixed=[1,0])
         self.assertAlmostEqual(f, 0.223924531469, 7)
-        self.assertAlmostEqual(g, [0.0, 0.21138811435101745], 7)
-        self.assertAlmostEqual(h, [0.0, 0.0, 0.02026349177575621], 7)
+        self.assertListsAlmostEqual(g, [0.0, 0.21138811435101745], 7)
+        self.assertListsAlmostEqual(h, [0.0, 0.0, 0.02026349177575621], 7)
 
     @unittest.skipIf(not check_available_solvers('ipopt'),
                      "The 'ipopt' solver is not available")

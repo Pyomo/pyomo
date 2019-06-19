@@ -42,6 +42,7 @@ from pyomo.core.kernel.constraint import \
      constraint_dict)
 from pyomo.core.kernel.matrix_constraint import \
     matrix_constraint
+import pyomo.core.kernel.conic as conic
 from pyomo.core.kernel.parameter import \
     (parameter,
      functional_value,

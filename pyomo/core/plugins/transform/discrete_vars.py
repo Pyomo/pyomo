@@ -95,26 +95,29 @@ class RelaxDiscreteVars(Transformation):
 #
 # This transformation fixes known discrete domains to their current values
 #
-@TransformationFactory.register('core.fix_discrete', 
-           doc="Fix known discrete domains to continuous counterparts" )
+@TransformationFactory.register('core.fix_discrete',
+           doc="Fix known discrete domains to continuous counterparts")
 class FixDiscreteVars(Transformation):
 
     def __init__(self):
         super(FixDiscreteVars, self).__init__()
 
-    def _apply_to(self, model, **kwds): 
+    def _apply_to(self, model, **kwds):
         options = kwds.pop('options', {})
         if kwds.get('undo', options.get('undo', False)):
             for v in model._fixed_discrete_vars[None]:
                 v.unfix()
             model.del_component("_fixed_discrete_vars")
             return
-        
+
         fixed_vars = []
         _base_model_vars = model.component_data_objects(
-            Var, active=True, descend_into=True )
+            Var, active=True, descend_into=True)
         for var in _base_model_vars:
-            if var.domain in _discrete_relaxation_map and not var.is_fixed():
+            # Instead of checking against `_discrete_relaxation_map.keys()` 
+            # we just check the item properties to fix #995 
+            # When #326 has been resolved, we can check against the dict-keys again
+            if not var.is_continuous() and not var.is_fixed():
                 fixed_vars.append(var)
                 var.fix()
         model._fixed_discrete_vars = Suffix(direction=Suffix.LOCAL)

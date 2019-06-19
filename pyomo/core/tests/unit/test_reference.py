@@ -270,12 +270,89 @@ class TestReferenceDict(unittest.TestCase):
         self.assertFalse( hasattr(m.b[2,5], 'z') )
         self.assertEqual(len(list(x.value for x in itervalues(rd))), 2-1)
 
-    def test_reference_set_wrapper(self):
-        m = self.m
-        rs = _ReferenceSet(_ReferenceDict(m.b[:,5].z))
+class TestReferenceSet(unittest.TestCase):
+    def test_lookup_and_iter_dense_data(self):
+        m = ConcreteModel()
+        @m.Block([1,2], [4,5])
+        def b(b,i,j):
+            b.x = Var([7,8],[10,11], initialize=0)
+            b.y = Var([7,8], initialize=0)
+            b.z = Var()
+
+        rs = _ReferenceSet(m.b[:,5].z)
+        self.assertNotIn((0,), rs)
+        self.assertIn(1, rs)
         self.assertIn((1,), rs)
         self.assertEqual(len(rs), 2)
         self.assertEqual(list(rs), [1,2])
+
+        rs = _ReferenceSet(m.b[:,5].bad)
+        self.assertNotIn((0,), rs)
+        self.assertNotIn((1,), rs)
+        self.assertEqual(len(rs), 0)
+        self.assertEqual(list(rs), [])
+
+        @m.Block([1,2,3])
+        def d(b, i):
+            if i % 2:
+                b.x = Var(range(i))
+
+        rs = _ReferenceSet(m.d[:].x[:])
+        self.assertIn((1,0), rs)
+        self.assertIn((3,0), rs)
+        self.assertNotIn((2,0), rs)
+        self.assertEqual(len(rs), 4)
+        self.assertEqual(list(rs), [(1,0), (3,0), (3,1), (3,2)])
+
+        rs = _ReferenceSet(m.d[...].x[...])
+        self.assertIn((1,0), rs)
+        self.assertIn((3,0), rs)
+        self.assertNotIn((2,0), rs)
+        self.assertEqual(len(rs), 4)
+        self.assertEqual(list(rs), [(1,0), (3,0), (3,1), (3,2)])
+
+        # Test the SliceEllipsisError case (lookup into a jagged set
+        # with an ellipsis)
+
+        m.e_index = Set(initialize=[2,(2,3)], dimen=None)
+        @m.Block(m.e_index)
+        def e(b, *args):
+            b.x_index = Set(initialize=[1,(3,4)], dimen=None)
+            b.x = Var(b.x_index)
+        rs = _ReferenceSet(m.e[...].x[...])
+        self.assertIn((2,1), rs)
+        self.assertIn((2,3,1), rs)
+        self.assertIn((2,3,4), rs)
+        self.assertNotIn((2,3,5), rs)
+        self.assertEqual(len(rs), 4)
+        self.assertEqual(list(rs), [(2,1), (2,3,4), (2,3,1), (2,3,3,4)])
+
+        # Make sure scalars and tuples work for jagged sets
+        rs = _ReferenceSet(m.e[...])
+        self.assertIn(2, rs)
+        self.assertIn((2,), rs)
+        self.assertNotIn(0, rs)
+        self.assertNotIn((0,), rs)
+
+    def test_lookup_and_iter_sparse_data(self):
+        m = ConcreteModel()
+        m.I = RangeSet(3)
+        m.x = Var(m.I, m.I, dense=False)
+
+        rd = _ReferenceDict(m.x[...])
+        rs = _ReferenceSet(m.x[...])
+        self.assertEqual(len(rd), 0)
+        # Note: we will periodically re-check the dict to ensure
+        # iteration doesn't accidentally declare data
+        self.assertEqual(len(rd), 0)
+
+        self.assertEqual(len(rs), 9)
+        self.assertEqual(len(rd), 0)
+
+        self.assertIn((1,1), rs)
+        self.assertEqual(len(rd), 0)
+        self.assertEqual(len(rs), 9)
+
 
 
 class TestReference(unittest.TestCase):
@@ -533,7 +610,7 @@ class TestReference(unittest.TestCase):
         self.assertEqual(len(base_sets), 2)
         self.assertIs(type(base_sets[0]), SetOf)
         self.assertIs(type(base_sets[1]), SetOf)
-        
+
     def test_ctype_detection(self):
         m = ConcreteModel()
         m.js = Set(initialize=[1, (2,3)], dimen=None)
@@ -558,6 +635,87 @@ class TestReference(unittest.TestCase):
         m.z = Reference(m.b[:].z)
         self.assertIs(type(m.z), IndexedComponent)
         self.assertIs(m.z.type(), IndexedComponent)
+
+    def test_reference_to_sparse(self):
+        m = ConcreteModel()
+        m.I = RangeSet(3)
+        m.x = Var(m.I, m.I, dense=False)
+        m.xx = Reference(m.x[...], ctype=Var)
+
+        self.assertEqual(len(m.x), 0)
+        self.assertNotIn((1,1), m.x)
+        self.assertNotIn((1,1), m.xx)
+        self.assertIn((1,1), m.x.index_set())
+        self.assertIn((1,1), m.xx.index_set())
+        self.assertEqual(len(m.x), 0)
+
+        m.xx[1,2]
+        self.assertEqual(len(m.x), 1)
+        self.assertIs(m.xx[1,2], m.x[1,2])
+        self.assertEqual(len(m.x), 1)
+
+        m.xx[1,3] = 5
+        self.assertEqual(len(m.x), 2)
+        self.assertIs(m.xx[1,3], m.x[1,3])
+        self.assertEqual(len(m.x), 2)
+        self.assertEqual(value(m.x[1,3]), 5)
+
+        m.xx.add((1,1))
+        self.assertEqual(len(m.x), 3)
+        self.assertIs(m.xx[1,1], m.x[1,1])
+        self.assertEqual(len(m.x), 3)
+
+    def test_nested_reference_to_sparse(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1])
+        @m.Block(m.I)
+        def b(b, i):
+            b.x = Var(b.model().I, dense=False)
+        m.xx = Reference(m.b[:].x[:], ctype=Var)
+        m.I.add(2)
+        m.I.add(3)
+
+        self.assertEqual(len(m.b), 1)
+        self.assertEqual(len(m.b[1].x), 0)
+        self.assertIn(1, m.b)
+        self.assertNotIn((1,1), m.xx)
+        self.assertIn(1, m.b[1].x.index_set())
+        self.assertIn((1,1), m.xx.index_set())
+        self.assertEqual(len(m.b), 1)
+        self.assertEqual(len(m.b[1].x), 0)
+
+        m.xx[1,2]
+        self.assertEqual(len(m.b), 1)
+        self.assertEqual(len(m.b[1].x), 1)
+        self.assertIs(m.xx[1,2], m.b[1].x[2])
+        self.assertEqual(len(m.b), 1)
+        self.assertEqual(len(m.b[1].x), 1)
+
+        m.xx[1,3] = 5
+        self.assertEqual(len(m.b), 1)
+        self.assertEqual(len(m.b[1].x), 2)
+        self.assertIs(m.xx[1,3], m.b[1].x[3])
+        self.assertEqual(value(m.b[1].x[3]), 5)
+        self.assertEqual(len(m.b), 1)
+        self.assertEqual(len(m.b[1].x), 2)
+
+        m.xx.add((1,1))
+        self.assertEqual(len(m.b), 1)
+        self.assertEqual(len(m.b[1].x), 3)
+        self.assertIs(m.xx[1,1], m.b[1].x[1])
+        self.assertEqual(len(m.b), 1)
+        self.assertEqual(len(m.b[1].x), 3)
+
+        # While (2,1) appears to be a valid member of the slice, because 2
+        # was not in the Set when the Block rule fired, there is no
+        # m.b[2] block data.  Attempting to add m.xx[2,1] will correctly
+        # instantiate the block and then promptly fail because we don't
+        # automatically fire rules after construction.
+        with self.assertRaisesRegexp(
+                AttributeError, "'_BlockData' object has no attribute 'x'"):
+            m.xx.add((2,1))
+        self.assertEqual(len(m.b), 2)
+        self.assertEqual(len(list(m.b[2].component_objects())), 0)
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,6 +12,7 @@ import logging
 from six import iteritems
 
 import pyomo.common
+from pyomo.common.deprecation import deprecated
 from pyomo.core.base import (Transformation,
                              TransformationFactory,
                              Var,
@@ -26,6 +27,7 @@ from pyomo.core.base import (Transformation,
                              Model,
                              ConcreteModel)
 from pyomo.duality.collect import collect_linear_terms
+from pyomo.common.deprecation import deprecated
 
 def load():
     pass
@@ -42,7 +44,13 @@ logger = logging.getLogger('pyomo.core')
 @TransformationFactory.register('duality.linear_dual', doc="Dualize a linear model")
 class LinearDual_PyomoTransformation(Transformation):
 
-
+    @deprecated(
+        "Use of the pyomo.duality package is deprecated. There are known bugs "
+        "in pyomo.duality, and we do not recommend the use of this code. "
+        "Development of dualization capabilities has been shifted to "
+        "the Pyomo Adversarial Optimization (PAO) library. Please contact "
+        "William Hart for further details (wehart@sandia.gov).",
+        version='5.6.2')
     def __init__(self):
         super(LinearDual_PyomoTransformation, self).__init__()
 

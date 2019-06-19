@@ -1,5 +1,5 @@
 from pyomo.core import (Block, ConcreteModel, Constraint, Objective, Param,
-                        Set, Var, inequality, maximize)
+                        Set, Var, inequality, RangeSet, maximize)
 from pyomo.gdp import Disjunct, Disjunction
 
 
@@ -473,9 +473,20 @@ def makeDuplicatedNestedDisjunction():
                                       m.outerdisjunct[1]])
     return m
 
+   
+def makeDisjunctWithRangeSet():
+    m = ConcreteModel()
+    m.x = Var(bounds=(0, 1))
+    m.d1 = Disjunct()
+    m.d1.s = RangeSet(1)
+    m.d1.c = Constraint(rule=lambda _: m.x == 1)
+    m.d2 = Disjunct()
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
 
 ##########################
-# Grossman lecture models
+# Grossmann lecture models
 ##########################
 
 def grossmann_oneDisj():
@@ -584,5 +595,4 @@ def gdps_on_indexedBlock():
     @m.Block([1,2])
     def b(m, i):
         return gdp_on_block()
-    
     return m

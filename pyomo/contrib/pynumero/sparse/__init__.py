@@ -8,32 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-try:
-    import numpy as np
-    numpy_available = True
-except ImportError:
-    numpy_available = False
+from .. import numpy_available, scipy_available
 
-try:
-    import scipy 
-    scipy_available = True
-except ImportError:
-    scipy_available = False
-    
 if numpy_available and scipy_available:
-    from .base import SparseBase
-    from .coo import *
-    from .csc import *
-    from .csr import *
-    from .block_vector import *
-    from .block_matrix import *
-    from .extract import tril, triu
-else:
-    import logging
-    _logger = logging.getLogger('pyomo.contrib.pynumero.sparse')
-    if not numpy_available:
-        #raise ImportError("Install numpy")
-        _logger.warn("Install numpy to use pynumero")
-    if not scipy_available:
-        #raise ImportError("Install scipy")
-        _logger.warn("Install scipy to use pynumero")
+    from .coo import empty_matrix, diagonal_matrix
+    from .block_vector import BlockVector
+    from .block_matrix import BlockMatrix, BlockSymMatrix

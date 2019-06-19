@@ -1,26 +1,30 @@
 import re
+import importlib as im
+import types
+import json
 try:
     import numpy as np
     import pandas as pd
-except:
-    # some travis tests want to import, but not run much (dlw Oct 2018)
-    print ("WARNING: numpy and/or pandas could not be imported.")
-import importlib as im
-import itertools
-import types
+    from scipy import stats
+    parmest_available = True
+except ImportError:
+    parmest_available = False
+
 import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as st
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
 from pyomo.opt import SolverFactory
+
 import pyomo.contrib.parmest.mpi_utils as mpiu
-import pyomo.contrib.parmest.ipopt_solver_wrapper as Carl
+import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
+from pyomo.contrib.parmest.graphics import pairwise_plot
 
 __version__ = 0.1
 
 #=============================================
 def _object_from_string(instance, vstr):
     """
-    create a Pyomo object from a string; it is attached to instance
+    Create a Pyomo object from a string; it is attached to instance
     args:
         instance: a concrete pyomo model
         vstr: a particular Var or Param (e.g. "pp.Keq_a[2]")
@@ -102,14 +106,9 @@ def _ef_ROOT_node_Object_from_string(efinstance, vstr):
     
     return vardatalist, paramdatalist
     """    
-#=============================================
-"""
-  This is going to be called by PySP and it will call into
-  the user's model's callback.
-"""
+
 def _pysp_instance_creation_callback(scenario_tree_model,
-                                    scenario_name,
-                                    node_names):
+                                    scenario_name, node_names):
     """
     This is going to be called by PySP and it will call into
     the user's model's callback.
@@ -161,18 +160,18 @@ def _pysp_instance_creation_callback(scenario_tree_model,
         elif isinstance(modname, types.ModuleType):
             cb_module = modname
         else:
-            print ("Internal Error: bad CallbackModule")
+            print("Internal Error: bad CallbackModule")
             raise
 
         try:
             callback = getattr(cb_module, cb_name)
         except:
-            print ("Error getting function="+cb_name+" from module="+str(modname))
+            print("Error getting function="+cb_name+" from module="+str(modname))
             raise
     
     if hasattr(scenario_tree_model, "BootList"):
         bootlist = scenario_tree_model.BootList
-        #print ("debug in callback: using bootlist=",str(bootlist))
+        #print("debug in callback: using bootlist=",str(bootlist))
         # assuming bootlist itself is zero based
         exp_num = bootlist[scen_num]
     else:
@@ -192,7 +191,7 @@ def _pysp_instance_creation_callback(scenario_tree_model,
             try:
                 instance = callback(scen_name, node_names)
             except:
-                print ("Failed to create instance using callback; TypeError+")
+                print("Failed to create instance using callback; TypeError+")
                 raise
         except:
             print("Failed to create instance using callback.")
@@ -205,17 +204,18 @@ def _pysp_instance_creation_callback(scenario_tree_model,
         for vstr in thetavals:
             object = _object_from_string(instance, vstr)
             if thetavals[vstr] is not None:
-                #print ("Fixing",vstr,"at",str(thetavals[vstr]))
+                #print("Fixing",vstr,"at",str(thetavals[vstr]))
                 object.fix(thetavals[vstr])
             else:
-                #print ("Freeing",vstr)
+                #print("Freeing",vstr)
                 object.fixed = False
 
     return instance
 
 #=============================================
 def _treemaker(scenlist):
-    """Makes a scenario tree (avoids dependence on daps)
+    """
+    Makes a scenario tree (avoids dependence on daps)
     
     Parameters
     ---------- 
@@ -247,65 +247,153 @@ def _treemaker(scenlist):
 
     return m
 
-#=============================================
-class ParmEstimator(object):
+    
+def group_data(data, groupby_column_name, use_mean=None):
     """
-    Stores inputs to the parameter estimations process.
-    Provides API for getting the parameter estimates, distributions
-    and confidence intervals.
+    Group data by experiment/scenario
+    
+    Parameters
+    ----------
+    data: DataFrame
+        Data
+    groupby_column_name: strings
+        Name of data column which contains experiment/scenario numbers
+    use_mean: list of column names or None, optional
+        Name of data columns which should be reduced to a single value per 
+        experiment/scenario by taking the mean
+        
+    Returns
+    ----------
+    grouped_data: list of dictionaries
+        Grouped data
+    """
+    grouped_data = []
+    for exp_num, group in data.groupby(data[groupby_column_name]):
+        d = {}
+        for col in group.columns:
+            if col in use_mean:
+                d[col] = group[col].mean()
+            else:
+                d[col] = list(group[col])
+        grouped_data.append(d)
+
+    return grouped_data
+
+
+class _SecondStateCostExpr(object):
+    """
+    Class to pass objective expression into the Pyomo model
+    """
+    def __init__(self, ssc_function, data):
+        self._ssc_function = ssc_function
+        self._data = data
+    def __call__(self, model):
+        return self._ssc_function(model, self._data)
+
+
+class Estimator(object):
+    """
+    Parameter estimation class. Provides methods for parameter estimation, 
+    bootstrap resampling, and likelihood ratio test.
 
     Parameters
     ----------
-    gmodel_file : `string`
-        Name of py file that has the gmodel_maker function
-    gmodel_maker: `string` or `function`
-        Refers to the function that returns a concrete pyomo model 
-        (gmodel) that is solved for g for a given scenario.
-        If `string` then the name of a function in the file
-        given by `gmodel_file`.
-        If `function` then it is the function that is called
-        and `gmodel_file` is ignored.
-    qName: `string`
-        The name of the `Expression` (or) `Var` in gmodel that has q 
-        after optimization 
-    numbers_list: `list` of `int`: 
-        Numbers to specify the experiments (or Samples) 
-        (indexes based on this are 1-based)
-    thetalist: `list` of `string`
-        List of component names (Vars or mutable Params) in gmodel.
-    cb_data: `any` (optional)
-        Data to be passed through to the callback function, can be of any type.
-    tee: `bool` (optional)
-        Indicates that ef solver output should be teed (default False)
+    model_function: function
+        Function that generates an instance of the Pyomo model using 'data' 
+        as the input argument
+    data: pandas DataFrame, list of dictionaries, or list of json file names
+        Data that is used to build an instance of the Pyomo model and build 
+        the objective function
+    theta_names: list of strings
+        List of Vars to estimate
+    obj_function: function, optional
+        Function used to formulate parameter estimation objective, generally
+        sum of squared error between measurments and model variables.  
+        If no function is specified, the model is used 
+        "as is" and should be defined with a "FirstStateCost" and 
+        "SecondStageCost" expression that are used to build an objective 
+        for pysp.
+    tee: bool, optional
+        Indicates that ef solver output should be teed
+    diagnostic_mode: bool, optional
+        if True, print diagnostics from the solver
     """
-    def __init__(self, gmodel_file,
-                 gmodel_maker, qName, numbers_list, thetalist,
-                 cb_data = None,
-                 tee=False):
-        self.gmodel_file = gmodel_file # passed through to rapper
-        self.gmodel_maker = gmodel_maker  # passed through to rapper
-        self.qName = qName
-        self.numbers_list = numbers_list
-        self.thetalist = thetalist
-        self.cb_data = cb_data
-        self.tee = tee
-        self.diagnostic_mode = False
-
-    def _set_diagnostic_mode(self, value):
-        if type(value) != bool:
-            raise ValueError("diagnostic_mode must be True or False")
-        self._diagnostic_mode = value
-
-    def _get_diagnostic_mode(self):
-        return self._diagnostic_mode
-    
-    diagnostic_mode = property(_get_diagnostic_mode, _set_diagnostic_mode)
+    def __init__(self, model_function, data, theta_names, obj_function=None, 
+                 tee=False, diagnostic_mode=False):
         
-    #==========
-    def Q_opt(self, ThetaVals=None, solver="ef_ipopt", bootlist=None):
-        """
-        Mainly for internal use.
+        self.model_function = model_function
+        self.callback_data = data
+        self.theta_names = theta_names 
+        self.obj_function = obj_function 
+        self.tee = tee
+        self.diagnostic_mode = diagnostic_mode
+        
+        self._second_stage_cost_exp = "SecondStageCost"
+        self._numbers_list = list(range(len(data)))
+        
 
+    def _create_parmest_model(self, data):
+        """
+        Modify the Pyomo model for parameter estimation
+        """
+        from pyomo.core import Objective
+        
+        model = self.model_function(data)
+
+        for theta in self.theta_names:
+            try:
+                var_validate = eval('model.'+theta)
+                var_validate.fixed = False
+            except:
+                print(theta +'is not a variable')
+        
+        if self.obj_function:
+            for obj in model.component_objects(Objective):
+                obj.deactivate()
+        
+            def FirstStageCost_rule(model):
+                return 0
+            model.FirstStageCost = pyo.Expression(rule=FirstStageCost_rule)
+            model.SecondStageCost = pyo.Expression(rule=_SecondStateCostExpr(self.obj_function, data))
+            
+            def TotalCost_rule(model):
+                return model.FirstStageCost + model.SecondStageCost
+            model.Total_Cost_Objective = pyo.Objective(rule=TotalCost_rule, sense=pyo.minimize)
+        
+        self.parmest_model = model
+        
+        return model
+    
+    
+    def _instance_creation_callback(self, experiment_number=None, cb_data=None):
+        
+        # DataFrame
+        if isinstance(cb_data, pd.DataFrame):
+            # Keep single experiments in a Dataframe (not a Series)
+            exp_data = cb_data.loc[experiment_number,:].to_frame().transpose() 
+        
+        # List of dictionaries OR list of json file names
+        elif isinstance(cb_data, list):
+            exp_data = cb_data[experiment_number]
+            if isinstance(exp_data, dict):
+                pass
+            if isinstance(exp_data, str):
+                try:
+                    with open(exp_data,'r') as infile:
+                        exp_data = json.load(infile)
+                except:
+                    print('Unexpected data format')
+                    return
+        else:
+            print('Unexpected data format')
+            return
+        model = self._create_parmest_model(exp_data)
+        
+        return model
+    
+
+    def _Q_opt(self, ThetaVals=None, solver="ef_ipopt", bootlist=None):
+        """
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
 
@@ -314,58 +402,31 @@ class ParmEstimator(object):
         callback.  Side note (feb 2018, dlw): if you later decide to
         construct the tree just once and reuse it, then remember to
         remove thetavals from it when none is desired.
-
-        Parameters
-        ----------
-        ThetaVals: `dict` 
-            A dictionary of theta values to fix in the pysp callback 
-            (which has to grab them from the tree object and do the fixing)
-        solver: `string`
-            "ef_ipopt" or "k_aug". 
-            Only ef is supported if ThetaVals is not None.
-        bootlist: `list` of `int`
-            The list is of scenario numbers for indirection used internally
-            by bootstrap.
-            The default is None and that is what driver authors should use.
-
-        Returns
-        -------
-        objectiveval: `float`
-            The objective function value
-        thetavals: `dict`
-            A dictionary of all values for theta
-        Hessian: `dict`
-            A dictionary of dictionaries for the Hessian.
-            The Hessian is not returned if the solver is ef.
         """
         assert(solver != "k_aug" or ThetaVals == None)
         # Create a tree with dummy scenarios (callback will supply when needed).
         # Which names to use (i.e., numbers) depends on if it is for bootstrap.
         # (Bootstrap scenarios will use indirection through the bootlist)
         if bootlist is None:
-            tree_model = _treemaker(self.numbers_list)
+            tree_model = _treemaker(self._numbers_list)
         else:
-            tree_model = _treemaker(range(len(self.numbers_list)))
+            tree_model = _treemaker(range(len(self._numbers_list)))
         stage1 = tree_model.Stages[1]
         stage2 = tree_model.Stages[2]
-        tree_model.StageVariables[stage1] = self.thetalist
+        tree_model.StageVariables[stage1] = self.theta_names
         tree_model.StageVariables[stage2] = []
         tree_model.StageCost[stage1] = "FirstStageCost"
         tree_model.StageCost[stage2] = "SecondStageCost"
 
         # Now attach things to the tree_model to pass them to the callback
-        tree_model.CallbackModule = self.gmodel_file
-        tree_model.CallbackFunction = self.gmodel_maker
+        tree_model.CallbackModule = None
+        tree_model.CallbackFunction = self._instance_creation_callback
         if ThetaVals is not None:
             tree_model.ThetaVals = ThetaVals
         if bootlist is not None:
             tree_model.BootList = bootlist
-        tree_model.cb_data = self.cb_data  # None is OK
-        """
-        stsolver = st.StochSolver(fsfile = self.gmodel_file,
-                                  fsfct = self.gmodel_maker,
-                                  tree_model = tree_model)
-        """
+        tree_model.cb_data = self.callback_data  # None is OK
+
         stsolver = st.StochSolver(fsfile = "pyomo.contrib.parmest.parmest",
                                   fsfct = "_pysp_instance_creation_callback",
                                   tree_model = tree_model)
@@ -374,7 +435,7 @@ class ParmEstimator(object):
             sopts['max_iter'] = 6000
             ef_sol = stsolver.solve_ef('ipopt', sopts=sopts, tee=self.tee)
             if self.diagnostic_mode:
-                print('    solver termination condition=',
+                print('    Solver termination condition = ',
                        str(ef_sol.solver.termination_condition))
 
             # assume all first stage are thetas...
@@ -408,8 +469,8 @@ class ParmEstimator(object):
             model.dof_v = pyo.Suffix(direction=pyo.Suffix.EXPORT) 
             model.rh_name = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
-            for vstrindex in range(len(self.thetalist)):
-                vstr = self.thetalist[vstrindex]
+            for vstrindex in range(len(self.theta_names)):
+                vstr = self.theta_names[vstrindex]
                 varobject = _ef_ROOT_node_Object_from_string(model, vstr)
                 varobject.set_suffix_value(model.red_hessian, vstrindex+1)
                 varobject.set_suffix_value(model.dof_v, 1)
@@ -448,67 +509,39 @@ class ParmEstimator(object):
             # asseble the return values
             objval = model.MASTER_OBJECTIVE_EXPRESSION.expr()
             for i in range(len(lines)):
-                HessDict[self.thetalist[i]] = {}
+                HessDict[self.theta_names[i]] = {}
                 linein = lines[i]
                 print(linein)
                 parts = linein.split()
                 for j in range(len(parts)):
-                    HessDict[self.thetalist[i]][self.thetalist[j]] = \
+                    HessDict[self.theta_names[i]][self.theta_names[j]] = \
                         float(parts[j])
                 # Get theta value (there is probably a better way...)
-                vstr = self.thetalist[i]
+                vstr = self.theta_names[i]
                 varobject = _ef_ROOT_node_Object_from_string(model, vstr)
-                thetavals[self.thetalist[i]] = pyo.value(varobject)
+                thetavals[self.theta_names[i]] = pyo.value(varobject)
             return objval, thetavals, HessDict
 
         else:
             raise RuntimeError("Unknown solver in Q_Opt="+solver)
         
-    #==========
-    def theta_est(self, solver="ef_ipopt", bootlist=None):
-        """return a theta estimate
-        NOTE: To avoid risk, one should probably set all thetvals to None 
-        and pass in the dict to Q_opt rather than call this function.
 
-        Parameters
-        ----------
-        solver: `string`
-            As of April 2018: "ef_ipopt" or "k_aug". 
-            Default is "ef_ipopt".
-        bootlist: `list` of `int`
-            The list is of scenario numbers for indirection used by bootstrap.
-            The default is None and that is what you driver users should use.
-
-        Returns
-        -------
-        objectiveval: `float`
-            The objective function value
-        thetavals: `dict`
-            A dictionary of all values for theta
-        Hessian: `dict`
-            A dictionary of dictionaries for the Hessian.
-            The Hessian is not returned if the solver is ef.
-        """
-
-        return self.Q_opt(solver=solver, bootlist=bootlist)
-            
-    #==========
-    def Q_at_theta(self, thetavals):
+    def _Q_at_theta(self, thetavals):
         """
         Return the objective function value with fixed theta values.
         
         Parameters
         ----------
-        thetavals: `dict`
+        thetavals: dict
             A dictionary of theta values.
 
         Returns
         -------
-        objectiveval: `float`
+        objectiveval: float
             The objective function value.
-        thetavals: `dict`
+        thetavals: dict
             A dictionary of all values for theta that were input.
-        solvertermination: `Pyomo TerminationCondition`
+        solvertermination: Pyomo TerminationCondition
             Tries to return the "worst" solver status across the scenarios.
             pyo.TerminationCondition.optimal is the best and 
             pyo.TerminationCondition.infeasible is the worst.
@@ -516,13 +549,13 @@ class ParmEstimator(object):
 
         optimizer = pyo.SolverFactory('ipopt')
         dummy_tree = lambda: None # empty object (we don't need a tree)
-        dummy_tree.CallbackModule = self.gmodel_file
-        dummy_tree.CallbackFunction = self.gmodel_maker
+        dummy_tree.CallbackModule = None
+        dummy_tree.CallbackFunction = self._instance_creation_callback
         dummy_tree.ThetaVals = thetavals
-        dummy_tree.cb_data = self.cb_data
+        dummy_tree.cb_data = self.callback_data
         
         if self.diagnostic_mode:
-            print('    Compute Q_at_Theta=',str(thetavals))
+            print('    Compute objective at theta = ',str(thetavals))
 
         # start block of code to deal with models with no constraints
         # (ipopt will crash or complain on such problems without special care)
@@ -537,22 +570,22 @@ class ParmEstimator(object):
 
         WorstStatus = pyo.TerminationCondition.optimal
         totobj = 0
-        for snum in self.numbers_list:
+        for snum in self._numbers_list:
             sname = "scenario_NODE"+str(snum)
             instance = _pysp_instance_creation_callback(dummy_tree,
                                                         sname, None)
             if not sillylittle:
                 if self.diagnostic_mode:
-                    print('      Experiment=',snum)
-                    print ('     first solve with with special diagnostics wrapper')
+                    print('      Experiment = ',snum)
+                    print('     First solve with with special diagnostics wrapper')
                     status_obj, solved, iters, time, regu \
-                        = Carl.ipopt_solve_with_stats(instance, optimizer, max_iter=500, max_cpu_time=120)
-                    print ("   status_obj, solved, iters, time, regularization_stat=",
+                        = ipopt_solver_wrapper.ipopt_solve_with_stats(instance, optimizer, max_iter=500, max_cpu_time=120)
+                    print("   status_obj, solved, iters, time, regularization_stat = ",
                            str(status_obj), str(solved), str(iters), str(time), str(regu))
 
                 results = optimizer.solve(instance)
                 if self.diagnostic_mode:
-                    print ('standard solve solver termination condition=',
+                    print('standard solve solver termination condition=',
                             str(results.solver.termination_condition))
 
                 if results.solver.termination_condition \
@@ -561,31 +594,30 @@ class ParmEstimator(object):
                     if WorstStatus != pyo.TerminationCondition.infeasible:
                         WorstStatus = results.solver.termination_condition
                     
-            objobject = getattr(instance, self.qName)
+            objobject = getattr(instance, self._second_stage_cost_exp)
             objval = pyo.value(objobject)
             totobj += objval
-        retval = totobj / len(self.numbers_list) # -1??
+        retval = totobj / len(self._numbers_list) # -1??
         return retval, thetavals, WorstStatus
 
-    #==========
+
     def _Estimate_Hessian(self, thetavals, epsilon=1e-1):
         """
-        Unused as of August 2018
-        Crude estimate of the Hessian of Q at thetavals
+        Unused, Crude estimate of the Hessian of Q at thetavals
 
         Parameters
         ----------
-        thetavals: `dict`
+        thetavals: dict
             A dictionary of values for theta
 
         Return
         ------
-        FirstDeriv: `dict`
+        FirstDeriv: dict
             Dictionary of scaled first differences
-        HessianDict: `dict`
+        HessianDict: dict
             Matrix (in dicionary form) of Hessian values
         """
-        """
+        
         def firstdiffer(tvals, tstr):
             tvals[tstr] = tvals[tstr] - epsilon / 2
             lval, foo, w = self.Q_at_theta(tvals)
@@ -605,14 +637,14 @@ class ParmEstimator(object):
         firstdiffs = {}
         for tstr in tvals:
             # TBD, dlw jan 2018: check for bounds on theta
-            print ("debug firstdiffs for",tstr)
+            print("Debug firstdiffs for ",tstr)
             firstdiffs[tstr] = firstdiffer(tvals, tstr)
 
         # now get the second differences
         # as of Jan 2018, do not assume symmetry so it can be "checked."
         for firstdim in tvals:
             for seconddim in tvals:
-                print ("debug H for",firstdim,seconddim)
+                print("Debug H for ",firstdim,seconddim)
                 tvals[seconddim] = thetavals[seconddim] + epsilon
                 d2 = firstdiffer(tvals, firstdim)
                 Hessian[firstdim][seconddim] = \
@@ -624,34 +656,68 @@ class ParmEstimator(object):
             FirstDeriv[tstr] = firstdiffs[tstr] / epsilon
 
         return FirstDeriv, Hessian
-        """
     
-    def bootstrap(self, N):
+    
+    def theta_est(self, solver="ef_ipopt", bootlist=None): 
+        """
+        Run parameter estimation using all data
+
+        Parameters
+        ----------
+        solver: string, optional
+            "ef_ipopt" or "k_aug". Default is "ef_ipopt".
+
+        Returns
+        -------
+        objectiveval: float
+            The objective function value
+        thetavals: dict
+            A dictionary of all values for theta
+        Hessian: dict
+            A dictionary of dictionaries for the Hessian.
+            The Hessian is not returned if the solver is ef.
+        """
+        return self._Q_opt(solver=solver, bootlist=bootlist)
+    
+    
+    def theta_est_bootstrap(self, N, samplesize=None, replacement=True, seed=None, return_samples=False):
         """
         Run parameter estimation using N bootstap samples
 
         Parameters
         ----------
-        N: `int`
-            Number of bootstrap samples to draw
-
+        N: int
+            Number of bootstrap samples to draw from the data
+        samplesize: int or None, optional
+            Sample size, if None samplesize will be set to the number of experiments
+        replacement: bool, optional
+            Sample with or without replacement
+        seed: int or None, optional
+            Set the random seed
+        return_samples: bool, optional
+            Return a list of experiment numbers used in each bootstrap estimation
+        
         Returns
         -------
-        bootstrap_theta_list: `DataFrame`
-            Samples and theta values from the bootstrap
+        bootstrap_theta: DataFrame 
+            Theta values for each bootstrap sample and (if return_samples = True) 
+            the sample numbers used in each estimation
         """
-		
         bootstrap_theta = list()
-        samplesize = len(self.numbers_list)  
-
+        
+        if samplesize is None:
+            samplesize = len(self._numbers_list)  
+        if seed is not None:
+            np.random.seed(seed)
+            
         task_mgr = mpiu.ParallelTaskManager(N)
         global_bootlist = list()
         for i in range(N):
             j = unique_samples = 0
-            while unique_samples <= len(self.thetalist):
-                bootlist = np.random.choice(self.numbers_list,
+            while unique_samples <= len(self.theta_names):
+                bootlist = np.random.choice(self._numbers_list,
                                             samplesize,
-                                            replace=True)
+                                            replace=replacement)
                 unique_samples = len(np.unique(bootlist))
                 j += 1
                 if j > N: # arbitrary timeout limit
@@ -672,60 +738,84 @@ class ParmEstimator(object):
         bootstrap_theta = pd.DataFrame(global_bootstrap_theta)
         #bootstrap_theta.set_index('samples', inplace=True)        
 
+        if not return_samples:
+            del bootstrap_theta['samples']
+                    
         return bootstrap_theta
-        
     
-    def likelihood_ratio(self, search_ranges=None):
+    
+    def objective_at_theta(self, theta_values):
         """
-        Compute the likelihood ratio and return the entire mesh
+        Compute the objective over a range of theta values
 
         Parameters
         ----------
-        search_ranges: `dictionary` of lists indexed by theta.
-            Mesh points (might be optional in the future)
-
+        theta_values: DataFrame, columns=theta_names
+            Values of theta used to compute the objective
+            
         Returns
         -------
-        SSE: `DataFrame`
-            Sum of squared errors values for the entire mesh unless
-            some mesh points are infeasible, which are omitted.
+        obj_at_theta: DataFrame
+            Objective values for each theta value (infeasible solutions are 
+            omitted).
         """
-
-        ####
-        def mesh_generator(search_ranges):
-            # return the next theta point given by search_ranges
-            """ from the web:
-            def product_dict(**kwargs):
-                keys = kwargs.keys()
-                vals = kwargs.values()
-                for instance in itertools.product(*vals):
-                    yield dict(zip(keys, instance))
-            """
-            keys = search_ranges.keys()
-            vals = search_ranges.values()
-            for prod in itertools.product(*vals):
-                yield dict(zip(keys, prod))
-
         # for parallel code we need to use lists and dicts in the loop
-        all_SSE = list()
-        global_mesh = list()
-        MeshLen = 0
-        for Theta in mesh_generator(search_ranges):
-            MeshLen += 1
-            global_mesh.append(Theta)
-        task_mgr = mpiu.ParallelTaskManager(MeshLen)
-        local_mesh = task_mgr.global_to_local_data(global_mesh)
+        theta_names = theta_values.columns
+        all_thetas = theta_values.to_dict('records')
+        task_mgr = mpiu.ParallelTaskManager(len(all_thetas))
+        local_thetas = task_mgr.global_to_local_data(all_thetas)
         
-        # walk over the mesh, using the objective function to get squared error
-        for Theta in local_mesh:
-            SSE, thetvals, worststatus = self.Q_at_theta(Theta)
+        # walk over the mesh, return objective function
+        all_obj = list()
+        for Theta in local_thetas:
+            obj, thetvals, worststatus = self._Q_at_theta(Theta)
             if worststatus != pyo.TerminationCondition.infeasible:
-                 all_SSE.append(list(Theta.values()) + [SSE])
+                 all_obj.append(list(Theta.values()) + [obj])
             # DLW, Aug2018: should we also store the worst solver status?
             
-        global_all_SSE = task_mgr.allgather_global_data(all_SSE)
-        dfcols = list(search_ranges.keys())+["SSE"]
-        store_all_SSE = pd.DataFrame(data=global_all_SSE, columns=dfcols)
+        global_all_obj = task_mgr.allgather_global_data(all_obj)
+        dfcols = list(theta_names) + ['obj']
+        obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
 
-        return store_all_SSE
+        return obj_at_theta
+    
+    
+    def likelihood_ratio_test(self, obj_at_theta, obj_value, alpha, 
+                              return_thresholds=False):
+        """
+        Compute the likelihood ratio for each value of alpha
         
+        Parameters
+        ----------
+        obj_at_theta: DataFrame, columns = theta_names + 'obj'
+            Objective values for each theta value (returned by 
+            objective_at_theta)
+            
+        obj_value: float
+            Objective value from parameter estimation using all data
+        
+        alpha: list
+            List of alpha values to use in the chi2 test
+        
+        return_thresholds: bool, optional
+            Return the threshold value for each alpha
+            
+        Returns
+        -------
+        LR: DataFrame 
+            Objective values for each theta value along wit True or False for 
+        thresholds: dictionary
+            If return_threshold = True, the thresholds are also returned.
+        """
+        LR = obj_at_theta.copy()
+        S = len(self.callback_data)
+        thresholds = {}
+        for a in alpha:
+            chi2_val = stats.chi2.ppf(a, 2)
+            thresholds[a] = obj_value * ((chi2_val / (S - 2)) + 1)
+            LR[a] = LR['obj'] < thresholds[a]
+        
+        if return_thresholds:
+            return LR, thresholds
+        else:
+            return LR
