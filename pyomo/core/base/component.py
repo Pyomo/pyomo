@@ -311,8 +311,13 @@ context of the immediate parent container.""")
             ostream.write("\n")
 
         if not _constructed:
-            ostream.write("Not constructed\n")
-            return
+            # HACK: for backwards compatability, Abstract blocks will
+            # still print their assigned components.  Should we instead
+            # always pprint unconstructed components (possibly
+            # suppressing the table header if the table is empty)?
+            if self.parent_block() is not None:
+                ostream.write("Not constructed\n")
+                return
 
         if type(_fcn) is tuple:
             _fcn, _fcn2 = _fcn
