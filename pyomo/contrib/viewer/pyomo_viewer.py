@@ -18,7 +18,7 @@ import sys
 import time
 
 from pyomo.scripting.pyomo_parser import add_subparser
-from pyomo.contrib.viewer.pyqt_4or5 import *
+from pyomo.contrib.viewer.qt import *
 
 qtconsole_available = False
 if qt_available:
@@ -30,26 +30,24 @@ if qt_available:
         pass
 
 if qtconsole_available:
+    def _start_kernel():
+        km = QtKernelManager(autorestart=False)
+        km.start_kernel()
+        kc = km.client()
+        kc.start_channels()
+        kc.execute("%gui qt", silent=True)
+        time.sleep(1.5)
+        return km, kc
+
     class MainWindow(QMainWindow):
         """A window that contains a single Qt console."""
-        def __init__(self):
+        def __init__(self, kernel_manager, kernel_client):
             super().__init__()
-            km = QtKernelManager(autorestart=False)
-            km.start_kernel()
-            kc = km.client()
-            kc.start_channels()
             self.jupyter_widget = RichJupyterWidget()
-            self.jupyter_widget.kernel_manager = km
-            self.jupyter_widget.kernel_client = kc
+            self.jupyter_widget.kernel_manager = kernel_manager
+            self.jupyter_widget.kernel_client = kernel_client
+            kernel_client.hb_channel.kernel_died.connect(self.close)
             self.setCentralWidget(self.jupyter_widget)
-            kc.execute("%gui qt", silent=True)
-            time.sleep(3) # I need something better here, but I need to make sure
-                          # the QApplication in the kernel has started before
-                          # attempting to start the UI or it won't start
-            kc.execute(
-                "from pyomo.contrib.viewer.ui import get_mainwindow", silent=True)
-            kc.execute("import pyomo.environ as pyo", silent=True)
-            kc.execute("ui, model = get_mainwindow()", silent=True)
 
         def shutdown_kernel(self):
             print('Shutting down kernel...')
@@ -60,9 +58,25 @@ def main(*args):
     if not qtconsole_available:
         print("qtconsole not available")
         return
+    km, kc = _start_kernel()
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = MainWindow(kernel_manager=km, kernel_client=kc)
     window.show()
+    kc = window.jupyter_widget.kernel_client
+    time.sleep(2.5) # can't find any other good way to ensure Qt finished
+                    # startup. Just making sure the cell execution finishes
+                    # does not seems to be enough, and trying to check
+                    # QtAppliction() != None before moving on also does not
+                    # seem to work. 4 seconds may be too long, but I'm being
+                    # careful. I split the time between waiting for the console
+                    # window to show and waiting to start the model viewer so it
+                    # may not seem to take so long to the user.
+                    # May be related to:
+                    # https://github.com/ipython/ipython/issues/5629
+    kc.execute("""
+from pyomo.contrib.viewer.ui import get_mainwindow
+import pyomo.environ as pyo
+ui, model = get_mainwindow()""", silent=True)
     app.aboutToQuit.connect(window.shutdown_kernel)
     app.exec_()
 
