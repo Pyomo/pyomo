@@ -108,12 +108,13 @@ class CuttingPlane_Transformation(Transformation):
         self._config.set_value(kwds)
 
         (instance_rBigM, instance_rCHull, var_info, var_map,
-         disaggregated_var_info, transBlockName) = self._setup_subproblems(
+         disaggregated_var_info, rBigM_linear_constraints, 
+         transBlockName) = self._setup_subproblems(
              instance, bigM)
 
         self._generate_cuttingplanes( instance, instance_rBigM, instance_rCHull,
                                       var_info, var_map, disaggregated_var_info,
-                                      transBlockName)
+                                      rBigM_linear_constraints, transBlockName)
 
 
     def _setup_subproblems(self, instance, bigM):
@@ -164,6 +165,62 @@ class CuttingPlane_Transformation(Transformation):
         # Generate the continuous relaxation of the BigM transformation
         #
         instance_rBigM = relaxIntegrality.create_using(instance)
+
+        #
+        # Collect all of the linear constraints that are in the rBigM
+        # instance. We will need these so that we can compare what we get from
+        # FME to them and make sure we aren't adding redundant constraints to
+        # the model. For convenience, we will make sure they are all in the form
+        # lb <= expr (so we will break equality constraints)
+        #
+        rBigM_linear_constraints = []
+        for cons in instance_rBigM.component_data_objects(
+                Constraint,
+                descend_into=Block,
+                sort=SortComponents.deterministic,
+                active=True):
+            body = cons.body
+            if body.polynomial_degree() != 1:
+                # We will never get a nonlinear constraint out of FME, so we
+                # don't risk it being identical to this one.
+                continue
+            
+            std_repn = generate_standard_repn(body)
+            cons_dict = {'lower': cons.lower,
+                         'upper': cons.upper,
+                         'body': std_repn
+            }
+            constraints_to_add = [cons_dict]
+            if cons_dict['upper'] is not None:
+                # if it has both bounds
+                if cons_dict['lower'] is not None:
+                    # copy the constraint and flip
+                    leq_side = {'lower': -cons_dict['upper'],
+                                'upper': None,
+                                'body': generate_standard_repn(-1.0*body)}
+                    constraints_to_add.append(leq_side)
+                    cons_dict['upper'] = None
+
+                elif cons_dict['lower'] is None:
+                    # just flip the constraint
+                    cons_dict['lower'] = -cons_dict['upper']
+                    cons_dict['upper'] = None
+                    cons_dict['body'].linear_coefs = (-1.0*coef for coef in \
+                                                      cons_dict['body'].\
+                                                      linear_coefs)
+
+            # we will store the cut insuring that the constant in the body is
+            # 0--we move all constants to the bounds
+            for cons_dict in constraints_to_add:
+                constant = cons_dict['body'].constant
+                if constant != 0:
+                    if cons_dict['lower'] is not None:
+                        cons_dict['lower'] -= constant
+                    if cons_dict['upper'] is not None:
+                        cons_dict['upper'] -= constant
+                    cons_dict['body'].constant = 0
+
+            rBigM_linear_constraints.extend(constraints_to_add)            
 
         #
         # Add the xstar parameter for the CHull problem
@@ -224,7 +281,8 @@ class CuttingPlane_Transformation(Transformation):
         self._add_separation_objective(var_info, transBlock_rCHull)
 
         return (instance_rBigM, instance_rCHull, var_info, var_map,
-                disaggregated_var_info, transBlockName)
+                disaggregated_var_info, rBigM_linear_constraints,
+                transBlockName)
 
     def _get_disaggregated_var_map(self, chull, bigm, rBigm):
         disaggregatedVarMap = ComponentMap()
@@ -246,9 +304,10 @@ class CuttingPlane_Transformation(Transformation):
 
         return disaggregatedVarMap
 
-    def _generate_cuttingplanes(
-            self, instance, instance_rBigM, instance_rCHull,
-            var_info, var_map, disaggregated_var_info, transBlockName):
+    def _generate_cuttingplanes( self, instance, instance_rBigM,
+                                 instance_rCHull, var_info, var_map,
+                                 disaggregated_var_info,
+                                 rBigM_linear_constraints, transBlockName):
 
         opt = SolverFactory(self._config.solver)
         stream_solver = self._config.stream_solver
@@ -330,7 +389,8 @@ class CuttingPlane_Transformation(Transformation):
                 break
 
             cuts = self._create_cuts(var_info, var_map, disaggregated_var_info,
-                                     rCHull_vars, instance_rCHull, transBlock,
+                                     rCHull_vars, instance_rCHull,
+                                     rBigM_linear_constraints, transBlock,
                                      transBlock_rBigM, transBlock_rCHull)
            
             # We are done if the cut generator couldn't return a valid cut
@@ -377,9 +437,9 @@ class CuttingPlane_Transformation(Transformation):
         transBlock_rCHull.separation_objective = Objective(expr=obj_expr)
 
 
-    def _create_cuts(self, var_info, var_map, disaggregated_var_info, 
-                     rCHull_vars, instance_rCHull, transBlock, transBlock_rBigm,
-                     transBlock_rCHull):
+    def _create_cuts(self, var_info, var_map, disaggregated_var_info,
+                     rCHull_vars, instance_rCHull, rBigM_linear_constraints,
+                     transBlock, transBlock_rBigm, transBlock_rCHull):
         cut_number = len(transBlock.cuts)
         logger.warning("gdp.cuttingplane: Creating (but not yet adding) cut %s."
                        % (cut_number,))
@@ -491,29 +551,63 @@ class CuttingPlane_Transformation(Transformation):
             projected_constraints = [cut_cons]
 
         # DEBUG:
-        print("These are the constraints we got from FME:")
-        for cons in projected_constraints:
-            body = 0
-            # We make sure that this loop happens in a deterministic order so
-            # that the expression we produce is the same every time
-            for var in cons['key_order']:
-                val = cons['body'][var]
-                body += val*var if var is not None else val
-            print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
+        # print("These are the constraints we got from FME:")
+        # for cons in projected_constraints:
+        #     body = 0
+        #     # We make sure that this loop happens in a deterministic order so
+        #     # that the expression we produce is the same every time
+        #     for var in cons['key_order']:
+        #         val = cons['body'][var]
+        #         body += val*var if var is not None else val
+        #     print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
 
         # we created these constraints with the variables from rCHull. We
         # actually need constraints for BigM and rBigM now!
         cuts = self.get_constraint_exprs(projected_constraints, var_map)
 
         # We likely have some cuts that duplicate other constraints now. We will
-        # filter them to make sure that they do in fact cut off x*. If not then
-        # they are not what we were going for.
-        for i, cut in enumerate(cuts['rBigM']):
+        # filter them to make sure that they do in fact cut off x* and that they
+        # are not already in the BigM relaxation.
+        print("The length to start is %s" % len(cuts['rBigM']))
+        for i in sorted(range(len(cuts['rBigM'])), reverse=True):
+            cut = cuts['rBigM'][i]
             # x* is still in rBigM, so we can just remove this constraint if it
             # is satisfied at x*
             if value(cut):
                 del cuts['rBigM'][i]
                 del cuts['bigM'][i]
+                print("removed %s for being silly" % i)
+                continue
+            unique = True
+            print("checking:")
+            print(cut)
+            # check that we don't already have this constraint in the model: 
+            # I know that the constraints is LB <= expr, and we have put the
+            # constraints in rBigM_linear_constraints in that form too.
+            assert cut.nargs() == 2
+            lb = cut.arg(0)
+            cut_repn = generate_standard_repn(cut.arg(1))
+            if cut_repn.constant != 0:
+                lb -= cut_repn.constant
+                cut_repn.constant = 0
+            for cons in rBigM_linear_constraints:
+                if i == 5:
+                    set_trace()
+                if lb == cons['lower'] and self.standard_repn_equals(
+                        cut_repn, cons['body']):
+                    del cuts['rBigM'][i]
+                    del cuts['bigM'][i]
+                    unique = False
+                    print("removing %s because we already had it" % i)
+                    break
+            # if unique:
+            #     # we have found a constraint which cuts of x* and is not already
+            #     # in rBigM, this has to be out cut and we can stop.
+            #     cuts['rBigM'] = [cuts['rBigM'][i]]
+            #     cuts['bigM'] = [cuts['bigM'][i]]
+            #     break
+
+        assert len(cuts['rBigM']) == 1
 
         return(cuts)
 
@@ -671,6 +765,21 @@ class CuttingPlane_Transformation(Transformation):
                 #print("\t%s <= %s <= %s" % (cons['lower'], body, cons['upper']))
             #return self.fm_elimination(constraints, vars_that_appear)
         return(constraints)
+
+    # TODO: not sure this isn't already defined by == actually...
+    def standard_repn_equals(self, repn1, repn2):
+        if len(repn1.linear_coefs) != len(repn2.linear_coefs):
+            return False
+        dict1 = ComponentMap(zip(repn1.linear_vars, repn1.linear_coefs))
+        dict2 = ComponentMap(zip(repn2.linear_vars, repn2.linear_coefs))
+        for v, coef1 in dict1.items():
+            coef2 = dict2.get(v)
+            if coef2 is None:
+                return False
+            if coef1 != coef2:
+                return False
+        print("found equality!")
+        return True
             
     def constraint_tight(self, model, constraint):
         val = value(constraint.body)
