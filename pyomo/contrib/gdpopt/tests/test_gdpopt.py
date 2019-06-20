@@ -5,7 +5,6 @@ from os.path import abspath, dirname, join, normpath
 
 from six import StringIO
 
-import pyomo.environ
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
@@ -19,8 +18,8 @@ from pyutilib.misc import import_file
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.opt import TerminationCondition
 
-currdir = dirname(abspath(__file__))
-exdir = normpath(join(currdir, '..', '..', '..', '..', 'examples', 'gdp'))
+from pyomo.common.fileutils import PYOMO_ROOT_DIR
+exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
 mip_solver = 'glpk'
 nlp_solver = 'ipopt'
@@ -206,6 +205,20 @@ class TestGDPopt(unittest.TestCase):
             eight_process, strategy='LOA',
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
+            tee=False)
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+    @unittest.skipUnless(SolverFactory('gams').available(exception_flag=False), 'GAMS solver not available')
+    def test_LOA_8PP_gams_solver(self):
+        # Make sure that the duals are still correct
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        SolverFactory('gdpopt').solve(
+            eight_process, strategy='LOA',
+            mip_solver=mip_solver,
+            nlp_solver='gams',
+            max_slack=0,
             tee=False)
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 

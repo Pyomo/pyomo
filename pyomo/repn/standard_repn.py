@@ -674,10 +674,7 @@ def _collect_var(exp, multiplier, idMap, compute_values, verbose, quadratic):
             key = len(idMap) - 1
             idMap[None][id_] = key
             idMap[key] = exp
-        if key in ans.linear:
-            ans.linear[key] += multiplier       # TODO: coverage?
-        else:
-            ans.linear[key] = multiplier
+        ans.linear[key] = multiplier
 
     return ans
 
@@ -921,6 +918,12 @@ def _collect_standard_repn(exp, multiplier, idMap,
     fn = _repn_collectors.get(exp.__class__, None)
     if fn is not None:
         return fn(exp, multiplier, idMap, compute_values, verbose, quadratic)
+    #
+    # Catch any known numeric constants
+    #
+    if exp.__class__ in native_numeric_types:
+        return _collect_const(exp, multiplier, idMap, compute_values,
+                              verbose, quadratic)
     #
     # These are types that might be extended using duck typing.
     #
