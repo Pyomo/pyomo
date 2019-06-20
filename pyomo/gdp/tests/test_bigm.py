@@ -2212,5 +2212,316 @@ class RangeSetOnDisjunct(unittest.TestCase):
         self.assertIsInstance(m.d1.s, RangeSet)
 
 
+class TransformABlock(unittest.TestCase):
+    # If you transform a block as if it is a model, the transformation should
+    # only modify the block you passed it, else when you solve the block, you
+    # are missing the disjunction you thought was on there.
+    def test_transformation_simple_block(self):
+        m = models.makeTwoTermDisjOnBlock()
+        TransformationFactory('gdp.bigm').apply_to(m.b)
+
+        # transformation block not on m
+        self.assertIsNone(m.component("_pyomo_gdp_bigm_relaxation"))
+        
+        # transformation block on m.b
+        self.assertIsInstance(m.b.component("_pyomo_gdp_bigm_relaxation"), Block)
+
+    def test_transform_block_data(self):
+        m = models.makeDisjunctionsOnIndexedBlock()
+        TransformationFactory('gdp.bigm').apply_to(m.b[0])
+
+        self.assertIsNone(m.component("_pyomo_gdp_bigm_relaxation"))
+
+        self.assertIsInstance(m.b[0].component("_pyomo_gdp_bigm_relaxation"),
+                              Block)
+
+    # TODO: What is the desired behavior in the cases below? Same as above, or
+    # different?
+    def test_simple_block_target(self):
+        m = models.makeTwoTermDisjOnBlock()
+        TransformationFactory('gdp.bigm').apply_to(m, targets=[m.b])
+
+        # TODO--just making it fail so I'll remember
+        self.assertFalse(True)
+
+    def test_block_data_target(self):
+        m = models.makeDisjunctionsOnIndexedBlock()
+        TransformationFactory('gdp.bigm').apply_to(m, targets=[m.b[0]])
+
+        # TODO: again, what is the desired behavior?
+        self.assertFalse(True)
+
+    def test_indexed_block_target(self):
+        m = models.makeDisjunctionsOnIndexedBlock()
+        TransformationFactory('gdp.bigm').apply_to(m, targets=[m.b])
+
+        # TODO: Unless we want to put the transformation block on each of the
+        # BlockDatas... Then I think we expect it on the model proper? But this
+        # is funky, is transforming them all at once a tacit agreement to never
+        # solve them one-at-a-time? That might be a lot to ask of a user. I
+        # almost think we should be putting the transformation block on the
+        # parent block of the disjunction always.
+        self.assertFalse(True)
+
+class IndexedDisjunctions(unittest.TestCase):
+    def setUp(self):
+        # set seed so we can test name collisions predictably
+        random.seed(666)
+
+    def test_disjunction_data_target(self):
+        m = models.makeThreeTermIndexedDisj()
+        TransformationFactory('gdp.bigm').apply_to(m, targets=[m.disjunction[2]])
+
+        # we got a transformation block on the model
+        transBlock = m.component("_pyomo_gdp_bigm_relaxation")
+        self.assertIsInstance(transBlock, Block)
+        self.assertIsInstance(m.component(
+            "_gdp_bigm_relaxation_disjunction_xor"), Constraint)
+        self.assertIsInstance(m._gdp_bigm_relaxation_disjunction_xor[2],
+                              constraint._GeneralConstraintData)
+        self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
+        self.assertEqual(len(transBlock.relaxedDisjuncts), 3)
+
+        # suppose we transform the next one separately
+        TransformationFactory('gdp.bigm').apply_to(m, targets=[m.disjunction[1]])
+        transBlock2 = m.component("_pyomo_gdp_bigm_relaxation_4")
+        self.assertIsInstance(transBlock2, Block)
+        self.assertIsInstance(m._gdp_bigm_relaxation_disjunction_xor[1], 
+                              constraint._GeneralConstraintData)
+        self.assertIsInstance(transBlock2.component("relaxedDisjuncts"), Block)
+        self.assertEqual(len(transBlock2.relaxedDisjuncts), 3)
+
+    def check_relaxation_block(self, m, name):
+        transBlock = m.component(name)
+        self.assertIsInstance(transBlock, Block)
+        self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
+        self.assertEqual(len(transBlock.relaxedDisjuncts), 2)
+
+    def test_disjunction_data_target_any_index(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-100, 100))
+        m.disjunct3 = Disjunct(Any)
+        m.disjunct4 = Disjunct(Any)
+        m.disjunction2=Disjunction(Any)
+        for i in range(2):
+            print(i)
+            m.disjunct3[i].cons = Constraint(expr=m.x == 2)
+            m.disjunct4[i].cons = Constraint(expr=m.x <= 3)
+            m.disjunction2[i] = [m.disjunct3[i], m.disjunct4[i]]
+        
+            TransformationFactory('gdp.bigm').apply_to(
+                m, targets=[m.disjunction2[i]]) 
+
+            if i == 0:
+                self.check_relaxation_block(m, "_pyomo_gdp_bigm_relaxation")
+            if i == 2:
+                self.check_relaxation_block(m, "_pyomo_gdp_bigm_relaxation_4")
+
+    def check_trans_block_disjunctions_of_disjunct_datas(self, m):
+        transBlock = m.component("_pyomo_gdp_bigm_relaxation")
+        self.assertIsInstance(transBlock, Block)
+        self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
+        self.assertEqual(len(transBlock.relaxedDisjuncts), 4)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[0].component(
+            "firstTerm[1].cons"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[0].component(
+            "firstTerm[1].cons")), 2)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[1].component(
+            "secondTerm[1].cons"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[1].component(
+            "secondTerm[1].cons")), 1)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[2].component(
+            "firstTerm[2].cons"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[2].component(
+            "firstTerm[2].cons")), 2)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[3].component(
+            "secondTerm[2].cons"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[3].component(
+            "secondTerm[2].cons")), 1)
+
+    def test_simple_disjunction_of_disjunct_datas(self):
+        # This is actually a reasonable use case if you are generating
+        # disjunctions with the same structure. So you might have Disjuncts
+        # indexed by Any and disjunctions indexed by Any and be adding a
+        # disjunction of two of the DisjunctDatas in every iteration.
+        m = models.makeDisjunctionOfDisjunctDatas()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        self.check_trans_block_disjunctions_of_disjunct_datas(m)
+        self.assertIsInstance(
+            m.component("_gdp_bigm_relaxation_disjunction_xor"), Constraint)
+        self.assertIsInstance(
+            m.component("_gdp_bigm_relaxation_disjunction2_xor"), Constraint)
+
+    def test_any_indexed_disjunction_of_disjunct_datas(self):
+        m = models.makeAnyIndexedDisjunctionOfDisjunctDatas()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        self.check_trans_block_disjunctions_of_disjunct_datas(m)
+        self.assertIsInstance(
+            m.component("_gdp_bigm_relaxation_disjunction_xor"), Constraint)
+        self.assertEqual(
+            len(m.component("_gdp_bigm_relaxation_disjunction_xor")), 2)
+
+    def check_first_iteration(self, model):
+        transBlock = model.component("_pyomo_gdp_bigm_relaxation")
+        self.assertIsInstance(transBlock, Block)
+        self.assertIsInstance(
+            model.component("_gdp_bigm_relaxation_disjunctionList_xor"),
+            Constraint)
+        self.assertEqual(
+            len(model._gdp_bigm_relaxation_disjunctionList_xor), 1)
+        self.assertFalse(model.disjunctionList[0].active)
+
+    def check_second_iteration(self, model):
+        transBlock = model.component("_pyomo_gdp_bigm_relaxation_4")
+        self.assertIsInstance(transBlock, Block)
+        self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
+        self.assertEqual(len(transBlock.relaxedDisjuncts), 2)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[0].component(
+            "firstTerm1.cons"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[0].component(
+            "firstTerm1.cons")), 2)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[1].component(
+            "secondTerm1.cons"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[1].component(
+            "secondTerm1.cons")), 1)
+        self.assertEqual(
+            len(model._gdp_bigm_relaxation_disjunctionList_xor), 2)
+        self.assertFalse(model.disjunctionList[1].active)
+        self.assertFalse(model.disjunctionList[0].active)
+
+    def test_disjunction_and_disjuncts_indexed_by_any(self):
+        # TODO: This should behave like the models below, but it seems that
+        # indexing the Disjuncts by Any changes something??
+        model = ConcreteModel()
+        model.x = Var(bounds=(-100, 100))
+
+        model.firstTerm = Disjunct(Any)
+        model.secondTerm = Disjunct(Any)
+        model.disjunctionList = Disjunction(Any)
+
+        model.obj = Objective(expr=model.x)
+        
+        for i in range(2):
+            model.firstTerm[i].cons = Constraint(expr=model.x == 2*i)
+            model.secondTerm[i].cons = Constraint(expr=model.x >= i + 2)
+            # this is baffling, but you can't do this in the second iteration? I
+            # think this might be different than the above?
+            model.disjunctionList[i] = [model.firstTerm[i], model.secondTerm[i]]
+
+            TransformationFactory('gdp.bigm').apply_to(model)
+
+            if i == 1:
+                self.check_first_iteration(model)
+
+            if i == 2:
+                self.check_second_iteration(model)
+
+    def test_iteratively_adding_disjunctions_transform_container(self):
+        # If you are iteratively adding Disjunctions to an IndexedDisjunction,
+        # then if you are lazy about what you transform, you might shoot
+        # yourself in the foot because if the whole IndexedDisjunction gets
+        # deactivated by the first transformation, the new DisjunctionDatas
+        # don't get transformed. Interestingly, this isn't what happens. We
+        # deactivate the container and then still transform what's inside. I
+        # don't think we should deactivate the container at all, maybe?
+        model = ConcreteModel()
+        model.x = Var(bounds=(-100, 100))
+        model.disjunctionList = Disjunction(Any)
+        model.obj = Objective(expr=model.x)
+        for i in range(2):
+            firstTermName = "firstTerm%s" % i
+            model.add_component(firstTermName, Disjunct())
+            model.component(firstTermName).cons = Constraint(
+                expr=model.x == 2*i)
+            secondTermName = "secondTerm%s" % i
+            model.add_component(secondTermName, Disjunct())
+            model.component(secondTermName).cons = Constraint(
+                expr=model.x >= i + 2)
+            model.disjunctionList[i] = [model.component(firstTermName),
+                                        model.component(secondTermName)]
+
+            # we're lazy and we just transform the disjunctionList (and in
+            # theory we are transforming at every iteration because we are
+            # solving at every iteration)
+            TransformationFactory('gdp.bigm').apply_to(
+                model, targets=[model.disjunctionList])
+            if i == 0:
+                self.check_first_iteration(model)
+
+            if i == 1:
+                self.check_second_iteration(model)
+
+            # TODO: Do we want this? It's more consistent with what we are
+            # actually doing... Because I think arguably we shouldn't transform
+            # stuff in an active container...
+            #self.assertTrue(model.disjunctionList.active)
+
+    def test_iteratively_adding_disjunctions_transform_model(self):
+        # Same as above, but transforming whole model in every iteration
+        # TODO: Should this really behave differently than the above?
+        model = ConcreteModel()
+        model.x = Var(bounds=(-100, 100))
+        model.disjunctionList = Disjunction(Any)
+        model.obj = Objective(expr=model.x)
+        for i in range(2):
+            firstTermName = "firstTerm%s" % i
+            model.add_component(firstTermName, Disjunct())
+            model.component(firstTermName).cons = Constraint(
+                expr=model.x == 2*i)
+            secondTermName = "secondTerm%s" % i
+            model.add_component(secondTermName, Disjunct())
+            model.component(secondTermName).cons = Constraint(
+                expr=model.x >= i + 2)
+            model.disjunctionList[i] = [model.component(firstTermName),
+                                        model.component(secondTermName)]
+
+            # we're lazy and we just transform the disjunctionList (and in
+            # theory we are transforming at every iteration because we are
+            # solving at every iteration)
+            TransformationFactory('gdp.bigm').apply_to(model)
+            if i == 0:
+                self.check_first_iteration(model)
+
+            if i == 1:
+                self.check_second_iteration(model)
+
+            # TODO: Do we want this? It's more consistent with what we are
+            # actually doing... Because I think arguably we shouldn't transform
+            # stuff in an active container...
+            #self.assertTrue(model.disjunctionList.active)
+
+    # TODO: depending on the above, we should test that we either do or do not
+    # transform Disjunctions in deactivated containers.
+
+    def test_iteratively_adding_to_indexed_disjunction_on_block(self):
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.x = Var(bounds=(-100, 100))
+        m.b.firstTerm = Disjunct([1,2])
+        m.b.firstTerm[1].cons = Constraint(expr=m.b.x == 0)
+        m.b.firstTerm[2].cons = Constraint(expr=m.b.x == 2)
+        m.b.secondTerm = Disjunct([1,2])
+        m.b.secondTerm[1].cons = Constraint(expr=m.b.x >= 2)
+        m.b.secondTerm[2].cons = Constraint(expr=m.b.x >= 3)
+        m.b.disjunctionList = Disjunction(Any)
+
+        m.b.obj = Objective(expr=m.b.x)
+
+        for i in range(1,3):
+            m.b.disjunctionList[i] = [m.b.firstTerm[i], m.b.secondTerm[i]]
+
+            TransformationFactory('gdp.bigm').apply_to(m, targets=[m.b])
+
+            if i == 1:
+                # TODO: this is up for debate as to where the transformation
+                # block should be, but in any case we have a problem at the
+                # moment because the second transformation block is empty... I'm
+                # going to do it to highlight the current failure right now.
+                self.check_relaxation_block(m, "_pyomo_gdp_bigm_relaxation")
+            if i == 2:
+                self.check_relaxation_block(m, "_pyomo_gdp_bigm_relaxation_4")
+
 if __name__ == '__main__':
     unittest.main()

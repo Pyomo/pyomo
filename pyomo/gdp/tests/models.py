@@ -1,5 +1,5 @@
 from pyomo.core import (Block, ConcreteModel, Constraint, Objective, Param,
-                        Set, Var, inequality, RangeSet)
+                        Set, Var, inequality, RangeSet, Any)
 from pyomo.gdp import Disjunct, Disjunction
 
 
@@ -436,4 +436,41 @@ def makeDisjunctWithRangeSet():
     m.d1.c = Constraint(rule=lambda _: m.x == 1)
     m.d2 = Disjunct()
     m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+def makeDisjunctionOfDisjunctDatas():
+    m = ConcreteModel()
+    m.x = Var(bounds=(-100, 100))
+
+    m.obj = Objective(expr=m.x)
+
+    m.idx = Set(initialize=[1,2])
+    m.firstTerm = Disjunct(m.idx)
+    m.firstTerm[1].cons = Constraint(expr=m.x == 0)
+    m.firstTerm[2].cons = Constraint(expr=m.x == 2)
+    m.secondTerm = Disjunct(m.idx)
+    m.secondTerm[1].cons = Constraint(expr=m.x >= 2)
+    m.secondTerm[2].cons = Constraint(expr=m.x >= 3)
+    
+    m.disjunction = Disjunction(expr=[m.firstTerm[1], m.secondTerm[1]])
+    m.disjunction2 = Disjunction(expr=[m.firstTerm[2], m.secondTerm[2]])
+    return m
+
+def makeAnyIndexedDisjunctionOfDisjunctDatas():
+    m = ConcreteModel()
+    m.x = Var(bounds=(-100, 100))
+
+    m.obj = Objective(expr=m.x)
+
+    m.idx = Set(initialize=[1,2])
+    m.firstTerm = Disjunct(m.idx)
+    m.firstTerm[1].cons = Constraint(expr=m.x == 0)
+    m.firstTerm[2].cons = Constraint(expr=m.x == 2)
+    m.secondTerm = Disjunct(m.idx)
+    m.secondTerm[1].cons = Constraint(expr=m.x >= 2)
+    m.secondTerm[2].cons = Constraint(expr=m.x >= 3)
+    
+    m.disjunction = Disjunction(Any)
+    m.disjunction[1] = [m.firstTerm[1], m.secondTerm[1]]
+    m.disjunction[2] = [m.firstTerm[2], m.secondTerm[2]]
     return m
