@@ -208,7 +208,7 @@ class TestGDPopt(unittest.TestCase):
             tee=False)
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
-    @unittest.skipUnless(SolverFactory('gams').available(), 'GAMS solver not available')
+    @unittest.skipUnless(SolverFactory('gams').available(exception_flag=False), 'GAMS solver not available')
     def test_LOA_8PP_gams_solver(self):
         # Make sure that the duals are still correct
         exfile = import_file(
