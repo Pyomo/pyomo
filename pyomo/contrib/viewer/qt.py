@@ -40,18 +40,24 @@ class DummyQAbstractItemModel(object):
     def __init__(*args, **kwargs):
         pass
 
+class DummyQAbstractTableModel(object):
+    """
+    A dummy QAbstractTableModel class to allow some testing without PyQt
+    """
+    def __init__(*args, **kwargs):
+        pass
+
 qt_available = False
+qt_import_errors = []
 
 try:
     from PyQt5 import QtCore
 except:
-    _log.exception("Cannot import PyQt5.QtCore")
+    qt_import_errors.append("Cannot import PyQt5.QtCore")
     try:
         from PyQt4 import QtCore
     except:
-        _log.exception("Cannot import PyQt4.QtCore")
-        QAbstractItemModel = DummyQAbstractItemModel
-        QtCore = DummyQtCore
+        qt_import_errors.append("Cannot import PyQt4.QtCore")
     else:
         try:
             from PyQt4.QtGui import (QAbstractItemView, QFileDialog, QMainWindow,
@@ -62,9 +68,7 @@ except:
             from PyQt4 import uic
             qt_available = True
         except:
-            _log.exception("Cannot import PyQt4")
-            QAbstractItemModel = DummyQAbstractItemModel
-            QtCore = DummyQtCore
+            qt_import_errors.append("Cannot import PyQt4")
 else:
     try:
         from PyQt5.QtWidgets import (QAbstractItemView, QFileDialog, QMainWindow,
@@ -76,6 +80,9 @@ else:
         from PyQt5 import uic
         qt_available = True
     except:
-        _log.exception("Cannot import PyQt5")
-        QAbstractItemModel = DummyQAbstractItemModel
-        QtCore = DummyQtCore
+        qt_import_errors.append("Cannot import PyQt5")
+
+if not qt_available:
+    QAbstractItemModel = DummyQAbstractItemModel
+    QAbstractTableModel = DummyQAbstractTableModel
+    QtCore = DummyQtCore
