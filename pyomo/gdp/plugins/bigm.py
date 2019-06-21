@@ -19,6 +19,7 @@ from pyomo.core import (
     RangeSet)
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core.base.component import ComponentUID, ActiveComponent
+from pyomo.core.base.PyomoModel import ConcreteModel, AbstractModel
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
@@ -31,6 +32,8 @@ from six import iterkeys, iteritems
 
 logger = logging.getLogger('pyomo.gdp.bigm')
 
+# TODO: DEBUG
+from nose.tools import set_trace
 
 def _to_dict(val):
     if val is None:
@@ -162,24 +165,32 @@ class BigM_Transformation(Transformation):
         config.set_value(kwds)
         bigM = config.bigM
 
-        # make a transformation block to put transformed disjuncts on
-        transBlockName = unique_component_name(
-            instance,
-            '_pyomo_gdp_bigm_relaxation')
-        transBlock = Block()
-        instance.add_component(transBlockName, transBlock)
-        transBlock.relaxedDisjuncts = Block(Any)
-        transBlock.lbub = Set(initialize=['lb', 'ub'])
-        # this is a dictionary for keeping track of IndexedDisjuncts
+        # this is a list for keeping track of IndexedDisjuncts
         # and IndexedDisjunctions so that, at the end of the
         # transformation, we can check that the ones with no active
         # DisjstuffDatas are deactivated.
-        transBlock.disjContainers = ComponentSet()
+        disjContainers = ComponentSet()
 
         targets = config.targets
         if targets is None:
-            targets = (instance, )
-            _HACK_transform_whole_instance = True
+            # [ESJ 06/21/2019] This is a nonissue if the resolution of #1072 is
+            # to have blocks and models behave the same way. But for now, if
+            # instance is actually a block, and no targets were specified,
+            # find_component will return None below. We should just pretend the
+            # block is a model and proceed...
+            if instance.type() is Block and not isinstance(instance,
+                                                           (ConcreteModel,
+                                                            AbstractModel)):
+                if instance.parent_component() is instance:
+                    self._transformBlock(instance, bigM, disjContainers)
+                else:
+                    
+                    self._transformBlockData(instance, bigM, disjContainers)
+                targets = []
+                _HACK_transform_whole_instance = True
+            else:
+                targets = (instance, )
+                _HACK_transform_whole_instance = True
         else:
             _HACK_transform_whole_instance = False
         for _t in targets:
@@ -190,25 +201,29 @@ class BigM_Transformation(Transformation):
 
             if t.type() is Disjunction:
                 if t.parent_component() is t:
-                    self._transformDisjunction(t, transBlock, bigM)
+                    self._transformDisjunction(t, bigM, disjContainers)
                 else:
-                    self._transformDisjunctionData(
-                        t, transBlock, bigM, t.index())
+                    self._transformDisjunctionData( t, bigM, t.index(),
+                                                    disjContainers)
             elif t.type() in (Block, Disjunct):
                 if t.parent_component() is t:
-                    self._transformBlock(t, transBlock, bigM)
+                    self._transformBlock(t, bigM, disjContainers)
                 else:
-                    self._transformBlockData(t, transBlock, bigM)
+                    self._transformBlockData(t, bigM, disjContainers)
             else:
                 raise GDP_Error(
                     "Target %s was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed."
                     % (t.name, type(t)))
-        # Go through our dictionary of indexed things and deactivate
-        # the containers that don't have any active guys inside of
-        # them. So the invalid component logic will tell us if we
-        # missed something getting transformed.
-        for obj in transBlock.disjContainers:
+        # Go through our list of indexed things and deactivate the
+        # containers that don't have any active guys inside of them. So the
+        # invalid component logic will tell us if we missed something getting
+        # transformed.  
+        # [ESJ 06/21/2019]: OK, we don't have this here
+        # anymore... Going to have to collect it as things are transformed
+        # because the information is no longer guarunteed to be centrally
+        # located.
+        for obj in disjContainers:
             if not obj.active:
                 continue
             for i in obj:
@@ -242,12 +257,24 @@ class BigM_Transformation(Transformation):
         if _HACK_transform_whole_instance:
             HACK_GDP_Disjunct_Reclassifier().apply_to(instance)
 
+    def _add_transformation_block(self, instance):
+        # make a transformation block on instance to put transformed disjuncts
+        # on
+        transBlockName = unique_component_name(
+            instance,
+            '_pyomo_gdp_bigm_relaxation')
+        transBlock = Block()
+        instance.add_component(transBlockName, transBlock)
+        transBlock.relaxedDisjuncts = Block(Any)
+        transBlock.lbub = Set(initialize=['lb', 'ub'])
 
-    def _transformBlock(self, obj, transBlock, bigM):
+        return transBlock
+
+    def _transformBlock(self, obj, bigM, disjContainers):
         for i in sorted(iterkeys(obj)):
-            self._transformBlockData(obj[i], transBlock, bigM)
+            self._transformBlockData(obj[i], bigM, disjContainers)
 
-    def _transformBlockData(self, obj, transBlock, bigM):
+    def _transformBlockData(self, obj, bigM, disjContainers):
         # Transform every (active) disjunction in the block
         for disjunction in obj.component_objects(
                 Disjunction,
@@ -255,7 +282,7 @@ class BigM_Transformation(Transformation):
                 sort=SortComponents.deterministic,
                 descend_into=(Block, Disjunct),
                 descent_order=TraversalStrategy.PostfixDFS):
-            self._transformDisjunction(disjunction, transBlock, bigM)
+            self._transformDisjunction(disjunction, bigM, disjContainers)
 
     def _getXorConstraint(self, disjunction):
         # Put the disjunction constraint on its parent block and
@@ -305,19 +332,24 @@ class BigM_Transformation(Transformation):
         orConstraintMap[disjunction] = orC
         return orC
 
-    def _transformDisjunction(self, obj, transBlock, bigM):
+    def _transformDisjunction(self, obj, bigM, disjContainers):
+        transBlock = self._add_transformation_block(obj.parent_block())
         # relax each of the disjunctionDatas
         for i in sorted(iterkeys(obj)):
-            self._transformDisjunctionData(obj[i], transBlock, bigM, i)
+            self._transformDisjunctionData(obj[i], bigM, i, disjContainers,
+                                           transBlock)
 
         # deactivate so we know we relaxed
         obj.deactivate()
 
-    def _transformDisjunctionData(self, obj, transBlock, bigM, index):
+    def _transformDisjunctionData(self, obj, bigM, index, disjContainers,
+                                  transBlock=None):
         if not obj.active:
             return  # Do not process a deactivated disjunction
+        if transBlock is None:
+            transBlock = self._add_transformation_block(obj.parent_block())
         parent_component = obj.parent_component()
-        transBlock.disjContainers.add(parent_component)
+        disjContainers.add(parent_component)
         orConstraint = self._getXorConstraint(parent_component)
 
         xor = obj.xor
@@ -330,7 +362,8 @@ class BigM_Transformation(Transformation):
             # pass it down.
             suffix_list = self._get_bigm_suffix_list(disjunct)
             # relax the disjunct
-            self._bigM_relax_disjunct(disjunct, transBlock, bigM, suffix_list)
+            self._bigM_relax_disjunct(disjunct, transBlock, bigM, suffix_list,
+                                      disjContainers)
         # add or (or xor) constraint
         if xor:
             orConstraint.add(index, (or_expr, 1))
@@ -338,7 +371,8 @@ class BigM_Transformation(Transformation):
             orConstraint.add(index, (1, or_expr, None))
         obj.deactivate()
 
-    def _bigM_relax_disjunct(self, obj, transBlock, bigM, suffix_list):
+    def _bigM_relax_disjunct(self, obj, transBlock, bigM, suffix_list,
+                             disjContainers):
         if hasattr(obj, "_gdp_transformation_info"):
             infodict = obj._gdp_transformation_info
             # If the user has something with our name that is not a dict, we
@@ -396,9 +430,8 @@ class BigM_Transformation(Transformation):
         # deactivated if everything in it is. So we save it in our
         # dictionary of things to check if it isn't there already.
         disjParent = obj.parent_component()
-        if disjParent.is_indexed() and \
-           disjParent not in transBlock.disjContainers:
-            transBlock.disjContainers.add(disjParent)
+        if disjParent.is_indexed() and disjParent not in disjContainers:
+            disjContainers.add(disjParent)
 
         # This is crazy, but if the disjunction has been previously
         # relaxed, the disjunct *could* be deactivated.  This is a big

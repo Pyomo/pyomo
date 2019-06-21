@@ -26,6 +26,7 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
 
+
 logger = logging.getLogger('pyomo.gdp')
 
 _rule_returned_none_error = """Disjunction '%s': rule returned None.
@@ -213,8 +214,14 @@ class _DisjunctionData(ActiveComponentData):
 
     def set_value(self, expr):
         for e in expr:
-            # The user gave us a proper Disjunct block
-            if hasattr(e, 'type') and e.type() == Disjunct:
+            # The user gave us a proper Disjunct block 
+            # [ESJ 06/21/2019] This is really an issue with the reclassifier,
+            # but in the case where you are iteratively adding to an
+            # IndexedDisjunct indexed by Any which has already been transformed,
+            # the new Disjuncts are parading as Blocks already. This catches
+            # them for who they are anyway.
+            if isinstance(e, _DisjunctData) or isinstance(e, SimpleDisjunct):
+            #if hasattr(e, 'type') and e.type() == Disjunct:
                 self.disjuncts.append(e)
                 continue
             # The user was lazy and gave us a single constraint
