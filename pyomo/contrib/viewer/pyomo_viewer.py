@@ -42,7 +42,7 @@ if qtconsole_available:
     class MainWindow(QMainWindow):
         """A window that contains a single Qt console."""
         def __init__(self, kernel_manager, kernel_client):
-            super().__init__()
+            super(MainWindow, self).__init__()
             self.jupyter_widget = RichJupyterWidget()
             self.jupyter_widget.kernel_manager = kernel_manager
             self.jupyter_widget.kernel_client = kernel_client

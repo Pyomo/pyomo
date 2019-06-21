@@ -53,6 +53,8 @@ except:
         pass
 
 if not qt_available:
+    for _err in qt_import_errors:
+        _log.error(_err)
     _log.error("Qt is not available. Cannot create UI classes.")
     raise ImportError("Could not import PyQt4 or PyQt5")
 
