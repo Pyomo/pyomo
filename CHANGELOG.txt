@@ -17,7 +17,7 @@ Pyomo 5.6.6   21 Jun 2019
   - Benders improvements (#1061)
   - GDPopt updates (#922, #1065)
   - Model viewer improvements, add residual table, improved install/testing, 
-    support for AbstractModels (#955, #1054)
+    support for AbstractModels (#955, #1054, #1066)
 
 -------------------------------------------------------------------------------
 Pyomo 5.6.5   10 Jun 2019
