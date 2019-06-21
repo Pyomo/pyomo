@@ -11,7 +11,7 @@ Pyomo 5.6.6   21 Jun 2019
 - Solver Interfaces
   - Fix symbolic labels for BARON and GAMS (#1057)
   - Fix in cplex_direct to check for solution before extracting bounds (#1060)
-  - Fix in NL writer where single-term sum output a n-ary operator (#1067)
+  - Fix in NL writer where a single-term sum output a n-ary operator (#1067)
 - Contributed Packages
   - FBBT improvements (#1002)
   - Benders improvements (#1061)
