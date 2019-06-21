@@ -58,9 +58,11 @@ The viewer will start with an empty Pyomo ConcreteModel called ```model```. The
 advantage of the stand-alone viewer is that it will automatically set up the
 environment and start the UI, saving typing a few lines of code. In the kernel,
 ``pyomo.environ`` is imported as ```pyo```. An empty ConcreteModel is available
-as ```model``` and linked to the viewer. The main user interface window is
-available as ```ui```.  This provides a useful ability to script UI actions.
-You can link the model viewer to other models.
+as ```model``` and linked to the viewer. To launch the model viewer select
+"Show/Start Model Viewer" fro the "View" menu in the qtconsole window.
+After launching the model viewer it is available as ```ui```.  This provides
+a useful ability to script UI actions. You can link the model viewer to other
+models.
 
 ### Setting the Model
 

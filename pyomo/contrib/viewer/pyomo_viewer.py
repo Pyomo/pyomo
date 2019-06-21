@@ -41,6 +41,14 @@ if qtconsole_available:
         # make sure there is no possible way the user can start the model
         # viewer before the Qt Application in the kernel finishes starting
         time.sleep(1.0)
+        # Now just do the standard imports of things you want to be available
+        # and whatever we may want to do to set up the environment just create
+        # an empty model, so you can start the model viewer right away.  You
+        # can add to the model if you want to use it, or create a new one.
+        kc.execute("""
+from pyomo.contrib.viewer.ui import get_mainwindow
+import pyomo.environ as pyo
+model = pyo.ConcreteModel("Default Model")""", silent=True)
         return km, kc
 
     class MainWindow(QMainWindow):
@@ -141,10 +149,8 @@ if qtconsole_available:
                 kc.execute("ui.show()", silent=True)
             else:
                 self._ui_created = True
-                kc.execute("""
-from pyomo.contrib.viewer.ui import get_mainwindow
-import pyomo.environ as pyo
-ui, model = get_mainwindow()""", silent=True)
+                kc.execute("ui, model = get_mainwindow(model=model)",
+                           silent=True)
 
         def shutdown_kernel(self):
             print('Shutting down kernel...')
