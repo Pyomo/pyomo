@@ -80,7 +80,7 @@ class ResidualDataModel(QAbstractTableModel):
         self._items.sort(key=
             lambda o: (o is None, get_residual(self.ui_data, o)
                                   if get_residual(self.ui_data, o) is not None
-                                  else float("inf")), reverse=True)
+                                  else -float("inf")), reverse=True)
 
     def rowCount(self, parent=QtCore.QModelIndex()):
         return len(self._items)
