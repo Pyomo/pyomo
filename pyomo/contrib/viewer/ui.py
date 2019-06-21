@@ -297,9 +297,8 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self._dialog = msg
         msg.setIcon(QMessageBox.Question)
         msg.setText("Are you sure you want to close this window?"
-                    " You can reopen it with ui = get_mainwindow(model=model)"
-                    " function.")
-        msg.setWindowTitle("Exit?")
+                    " You can reopen it with ui.show().")
+        msg.setWindowTitle("Close?")
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         if self.testing: # don't even show dialog just pretend button clicked
             result = self._dialog_test_button
