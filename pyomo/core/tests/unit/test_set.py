@@ -4209,6 +4209,207 @@ I : Size=2, Index=I_index, Ordered=Insertion
                 "Set rule or initializer returned None instead of Set.Skip"):
             m.J = Set(initialize=_j_init)
 
+    def test_sorted_operations(self):
+        I = Set(ordered=Set.SortedOrder, initialize=[0])
+        I.construct()
+        i = 0
+        self.assertTrue(i in I)
+        self.assertFalse(I._is_sorted)
+        I._sort()
+        self.assertTrue(I._is_sorted)
+
+        # adding a value already in the set does not affect _is_sorted
+        self.assertTrue(I._is_sorted)
+        self.assertFalse(I.add(i))
+        self.assertTrue(I._is_sorted)
+
+        # adding a new value clears _is_sorted
+        self.assertTrue(I._is_sorted)
+        self.assertTrue(I.add(1))
+        self.assertFalse(I._is_sorted)
+
+        # __str__
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            str(I), "{%s}" % ', '.join(str(_) for _ in range(-i,i+1)))
+        self.assertTrue(I._is_sorted)
+
+        # ranges()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I.ranges()),
+            ','.join('[%s]' % _ for _ in range(-i,i+1))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # __iter__
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I),
+            ','.join(str(_) for _ in range(-i,i+1))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # __reversed__
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in reversed(I)),
+            ','.join(str(_) for _ in reversed(range(-i,i+1)))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # data()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I.data()),
+            ','.join(str(_) for _ in range(-i,i+1))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # ordered_data()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I.ordered_data()),
+            ','.join(str(_) for _ in range(-i,i+1))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # sorted_data()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I.sorted_data()),
+            ','.join(str(_) for _ in range(-i,i+1))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # bounds()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.bounds(), (-i,i))
+        self.assertTrue(I._is_sorted)
+
+        # remove()
+        I.remove(0)
+        self.assertTrue(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I),
+            ','.join(str(_) for _ in range(-i,i+1) if _ != 0)
+        )
+        self.assertTrue(I._is_sorted)
+
+        # add()
+        I.add(0)
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I),
+            ','.join(str(_) for _ in range(-i,i+1))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # discard()
+        I.discard(0)
+        self.assertTrue(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I),
+            ','.join(str(_) for _ in range(-i,i+1) if _ != 0)
+        )
+        self.assertTrue(I._is_sorted)
+
+        # clear()
+        I.clear()
+        self.assertTrue(I._is_sorted)
+        self.assertEqual(','.join(str(_) for _ in I), '')
+        self.assertTrue(I._is_sorted)
+
+        # set_value()
+        i = 1
+        I.set_value({-i,0,i})
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I),
+            ','.join(str(_) for _ in range(-i,i+1))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # pop()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.pop(), i)
+        self.assertTrue(I._is_sorted)
+
+        # first()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.first(), -i)
+        self.assertTrue(I._is_sorted)
+
+        # last()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.last(), i)
+        self.assertTrue(I._is_sorted)
+
+        # next()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.next(-i), -i+1)
+        self.assertTrue(I._is_sorted)
+
+        # nextw()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.nextw(i), -i)
+        self.assertTrue(I._is_sorted)
+
+        # prev()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.prev(i), i-1)
+        self.assertTrue(I._is_sorted)
+
+        # prevw()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.prevw(-i), i)
+        self.assertTrue(I._is_sorted)
+
+        # getitem()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I[i+1], 0)
+        self.assertTrue(I._is_sorted)
+
+        # ord()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.ord(0), i+1)
+        self.assertTrue(I._is_sorted)
+
+
 
 class TestAbstractSetAPI(unittest.TestCase):
     def test_SetData(self):
