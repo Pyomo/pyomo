@@ -1311,10 +1311,18 @@ class _SetData(_SetDataBase):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def __str__(self):
+        raise DeveloperError("Derived set class (%s) failed to "
+                             "implement __str__" % (type(self).__name__,))
+
     @property
     def dimen(self):
-        raise DeveloperError("Derived finite set class (%s) failed to "
+        raise DeveloperError("Derived set class (%s) failed to "
                              "implement dimen" % (type(self).__name__,))
+
+    def ranges(self):
+        raise DeveloperError("Derived set class (%s) failed to "
+                             "implement ranges" % (type(self).__name__,))
 
     def isdisjoint(self, other):
         try:
@@ -1525,12 +1533,16 @@ class _SetData(_SetDataBase):
 class _FiniteSetMixin(object):
     __slots__ = ()
 
-    def __reversed__(self):
-        return reversed(self.data())
-
     def __len__(self):
         raise DeveloperError("Derived finite set class (%s) failed to "
                              "implement __len__" % (type(self).__name__,))
+
+    def __iter__(self):
+        raise DeveloperError("Derived finite set class (%s) failed to "
+                             "implement __iter__" % (type(self).__name__,))
+
+    def __reversed__(self):
+        return reversed(self.data())
 
     def is_finite(self):
         """Returns True if this is a finite discrete (iterable) Set"""
@@ -1629,19 +1641,12 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         """
         return len(self._values)
 
-    def __reversed__(self):
-        # Python will not reverse() sets, so convert to a tuple and reverse
-        return reversed(tuple(self._values))
-
     def __str__(self):
         if self.parent_block() is not None:
             return self.name
         if not self._constructed:
             return type(self).__name__
         return "{" + (', '.join(str(_) for _ in self)) + "}"
-
-    def data(self):
-        return tuple(self._values)
 
     @property
     def dimen(self):
@@ -1741,6 +1746,14 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
 
 class _OrderedSetMixin(object):
     __slots__ = ()
+
+    def __getitem__(self):
+        raise DeveloperError("Derived ordered set class (%s) failed to "
+                             "implement __getitem__" % (type(self).__name__,))
+
+    def ord(self):
+        raise DeveloperError("Derived ordered set class (%s) failed to "
+                             "implement ord" % (type(self).__name__,))
 
     def is_ordered(self):
         """Returns True if this is an ordered finite discrete (iterable) Set"""
@@ -1883,9 +1896,6 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
 
     def __reversed__(self):
         return reversed(self._ordered_values)
-
-    def data(self):
-        return tuple(self._ordered_values)
 
     def _add_impl(self, value):
         self._values[value] = len(self._values)
@@ -2034,11 +2044,6 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
             self._sort()
         return super(_SortedSetData, self).__reversed__()
 
-    def data(self):
-        if not self._is_sorted:
-            self._sort()
-        return super(_SortedSetData, self).data()
-
     def _add_impl(self, value):
         # Note that the sorted status has no bearing on insertion,
         # so there is no reason to check if the data is correctly sorted
@@ -2048,6 +2053,7 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
 
     # Note: removing data does not affect the sorted flag
     #def remove(self, val):
+    #def discard(self, val):
 
     def clear(self):
         super(_SortedSetData, self).clear()
