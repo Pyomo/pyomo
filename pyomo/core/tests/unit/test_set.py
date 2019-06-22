@@ -35,7 +35,7 @@ from pyomo.core.base.set import (
     SetProduct, SetProduct_InfiniteSet, SetProduct_FiniteSet,
     SetProduct_OrderedSet,
     Initializer, _ConstantInitializer, _ItemInitializer, _ScalarCallInitializer,
-    _IndexedCallInitializer, _CountedCallInitializer,
+    _IndexedCallInitializer, _CountedCallInitializer, _CountedCallGenerator,
     SetInitializer, _SetIntersectInitializer, RangeSetInitializer,
     _FiniteSetData, _InsertionOrderSetData, _SortedSetData,
     _UnknownSetDimen,
@@ -2978,6 +2978,19 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
         self.assertEqual(a(None, (1, 4)), 8)
+
+        b = _CountedCallInitializer(m.x, a)
+        self.assertIs(type(b), _CountedCallInitializer)
+        self.assertFalse(b.constant())
+        self.assertFalse(b.verified)
+        self.assertFalse(b._scalar)
+        self.assertIs(a._fcn, b._fcn)
+        c = b(None, 1)
+        self.assertIs(type(c), _CountedCallGenerator)
+        self.assertEqual(next(c), 2)
+        self.assertEqual(next(c), 3)
+        self.assertEqual(next(c), 4)
+
 
     def test_generator_fcn(self):
         m = ConcreteModel()
