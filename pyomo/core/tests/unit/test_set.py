@@ -40,7 +40,7 @@ from pyomo.core.base.set import (
     _SetData, _FiniteSetData, _InsertionOrderSetData, _SortedSetData,
     _FiniteSetMixin, _OrderedSetMixin,
     _UnknownSetDimen,
-    simple_set_rule,
+    simple_set_rule, set_options,
 )
 from pyomo.environ import AbstractModel, ConcreteModel, Var, Param, Suffix
 
@@ -4409,6 +4409,26 @@ I : Size=2, Index=I_index, Ordered=Insertion
         self.assertEqual(I.ord(0), i+1)
         self.assertTrue(I._is_sorted)
 
+    def test_set_options(self):
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            @set_options(domain=Integers)
+            def Bindex(m):
+                return range(5)
+        self.assertIn(
+            "DEPRECATED: The set_options decorator seems nonessential",
+            output.getvalue())
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[8,9])
+        m.J = m.I.cross(Bindex)
+        self.assertIs(m.J._sets[1]._domain, Integers)
+
+        # TODO: Once this is merged into IndexedContainer, the following
+        # should work
+        #
+        #m.K = Set(Bindex)
+        #self.assertIs(m.K.index_set()._domain, Integers)
 
 
 class TestAbstractSetAPI(unittest.TestCase):

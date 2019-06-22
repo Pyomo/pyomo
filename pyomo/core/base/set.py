@@ -326,15 +326,19 @@ def process_setarg(arg):
         raise TypeError("Cannot apply a Set operator to a non-Set "
                         "component data (%s)" % (arg.name,))
 
-    # TODO: DEPRECETE this functionality? It has never been documented,
+    # TODO: DEPRECATE this functionality? It has never been documented,
     # and I don't know of a use of it in the wild.
     try:
         # If the argument has a set_options attribute, then use
         # it to initialize a set
-        options = getattr(arg,'set_options')
-        options['initialize'] = arg
-    except:
-        options = {}
+        args = getattr(arg,'set_options')
+        args.setdefault('initialize', arg)
+        args.setdefault('ordered', type(arg) not in Set._UnorderedInitializers)
+        ans = Set(**args)
+        ans.construct()
+        return ans
+    except AttributeError:
+        pass
 
     # TBD: should lists/tuples be copied into Sets, or
     # should we preserve the reference using SetOf?
@@ -355,7 +359,7 @@ def process_setarg(arg):
     # use SetOf to create the Set:
     #
     tmp = SetOf(arg)
-    ans = Set(initialize=tmp, ordered=tmp.is_ordered(), **options)
+    ans = Set(initialize=tmp, ordered=tmp.is_ordered())
     ans.construct()
     #
     # Or we can do the simple thing and just use SetOf:
