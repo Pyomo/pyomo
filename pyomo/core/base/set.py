@@ -1755,11 +1755,11 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
 class _OrderedSetMixin(object):
     __slots__ = ()
 
-    def __getitem__(self):
+    def __getitem__(self, index):
         raise DeveloperError("Derived ordered set class (%s) failed to "
                              "implement __getitem__" % (type(self).__name__,))
 
-    def ord(self):
+    def ord(self, val):
         raise DeveloperError("Derived ordered set class (%s) failed to "
                              "implement ord" % (type(self).__name__,))
 

@@ -16,7 +16,7 @@ from six import StringIO
 import pyutilib.th as unittest
 
 from pyomo.common.log import LoggingIntercept
-
+from pyomo.common import DeveloperError
 from pyomo.core.expr import native_numeric_types, native_types
 import pyomo.core.base.set as SetModule
 from pyomo.core.base.set import (
@@ -37,7 +37,8 @@ from pyomo.core.base.set import (
     Initializer, _ConstantInitializer, _ItemInitializer, _ScalarCallInitializer,
     _IndexedCallInitializer, _CountedCallInitializer, _CountedCallGenerator,
     SetInitializer, _SetIntersectInitializer, RangeSetInitializer,
-    _FiniteSetData, _InsertionOrderSetData, _SortedSetData,
+    _SetData, _FiniteSetData, _InsertionOrderSetData, _SortedSetData,
+    _FiniteSetMixin, _OrderedSetMixin,
     _UnknownSetDimen,
     simple_set_rule,
 )
@@ -4207,3 +4208,361 @@ I : Size=2, Index=I_index, Ordered=Insertion
                 ValueError,
                 "Set rule or initializer returned None instead of Set.Skip"):
             m.J = Set(initialize=_j_init)
+
+
+class TestAbstractSetAPI(unittest.TestCase):
+    def test_SetData(self):
+        # This tests an anstract non-finite set
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[1])
+        s = _SetData(m.I)
+
+        #
+        # _SetData API
+        #
+
+        with self.assertRaises(DeveloperError):
+            # __contains__
+            None in s
+
+        self.assertFalse(s == m.I)
+        self.assertFalse(m.I == s)
+        self.assertTrue(s != m.I)
+        self.assertTrue(m.I != s)
+
+        with self.assertRaises(DeveloperError):
+            str(s)
+        with self.assertRaises(DeveloperError):
+            s.dimen
+
+        self.assertFalse(s.is_finite())
+        self.assertFalse(s.is_ordered())
+
+        with self.assertRaises(DeveloperError):
+            s.ranges()
+
+        with self.assertRaises(DeveloperError):
+            s.isdisjoint(m.I)
+        with self.assertRaises(DeveloperError):
+            m.I.isdisjoint(s)
+
+        with self.assertRaises(DeveloperError):
+            s.issuperset(m.I)
+        self.assertFalse(m.I.issuperset(s))
+
+        self.assertFalse(s.issubset(m.I))
+        with self.assertRaises(DeveloperError):
+            m.I.issubset(s)
+
+        self.assertIs(type(s.union(m.I)), SetUnion_InfiniteSet)
+        self.assertIs(type(m.I.union(s)), SetUnion_InfiniteSet)
+
+        self.assertIs(type(s.intersection(m.I)), SetIntersection_OrderedSet)
+        self.assertIs(type(m.I.intersection(s)), SetIntersection_OrderedSet)
+
+        self.assertIs(type(s.difference(m.I)), SetDifference_InfiniteSet)
+        self.assertIs(type(m.I.difference(s)), SetDifference_OrderedSet)
+
+        self.assertIs(type(s.symmetric_difference(m.I)),
+                      SetSymmetricDifference_InfiniteSet)
+        self.assertIs(type(m.I.symmetric_difference(s)),
+                      SetSymmetricDifference_InfiniteSet)
+
+        self.assertIs(type(s.cross(m.I)), SetProduct_InfiniteSet)
+        self.assertIs(type(m.I.cross(s)), SetProduct_InfiniteSet)
+
+        self.assertIs(type(s | m.I), SetUnion_InfiniteSet)
+        self.assertIs(type(m.I | s), SetUnion_InfiniteSet)
+
+        self.assertIs(type(s & m.I), SetIntersection_OrderedSet)
+        self.assertIs(type(m.I & s), SetIntersection_OrderedSet)
+
+        self.assertIs(type(s - m.I), SetDifference_InfiniteSet)
+        self.assertIs(type(m.I - s), SetDifference_OrderedSet)
+
+        self.assertIs(type(s ^ m.I), SetSymmetricDifference_InfiniteSet)
+        self.assertIs(type(m.I ^ s), SetSymmetricDifference_InfiniteSet)
+
+        self.assertIs(type(s * m.I), SetProduct_InfiniteSet)
+        self.assertIs(type(m.I * s), SetProduct_InfiniteSet)
+
+        self.assertFalse(s < m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I < s)
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s > m.I)
+        self.assertFalse(m.I > s)
+
+    def test_FiniteMixin(self):
+        # This tests an anstract finite set
+        class FiniteMixin(_FiniteSetMixin, _SetData):
+            pass
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[1])
+        s = FiniteMixin(m.I)
+
+        #
+        # _SetData API
+        #
+
+        with self.assertRaises(DeveloperError):
+            # __contains__
+            None in s
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s == m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I == s)
+        with self.assertRaises(DeveloperError):
+            self.assertTrue(s != m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertTrue(m.I != s)
+
+        with self.assertRaises(DeveloperError):
+            str(s)
+        with self.assertRaises(DeveloperError):
+            s.dimen
+
+        self.assertTrue(s.is_finite())
+        self.assertFalse(s.is_ordered())
+
+        range_iter = s.ranges()
+        with self.assertRaises(DeveloperError):
+            list(range_iter)
+
+        with self.assertRaises(DeveloperError):
+            s.isdisjoint(m.I)
+        with self.assertRaises(DeveloperError):
+            m.I.isdisjoint(s)
+
+        with self.assertRaises(DeveloperError):
+            s.issuperset(m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I.issuperset(s))
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s.issubset(m.I))
+        with self.assertRaises(DeveloperError):
+            m.I.issubset(s)
+
+        self.assertIs(type(s.union(m.I)), SetUnion_FiniteSet)
+        self.assertIs(type(m.I.union(s)), SetUnion_FiniteSet)
+
+        self.assertIs(type(s.intersection(m.I)), SetIntersection_OrderedSet)
+        self.assertIs(type(m.I.intersection(s)), SetIntersection_OrderedSet)
+
+        self.assertIs(type(s.difference(m.I)), SetDifference_FiniteSet)
+        self.assertIs(type(m.I.difference(s)), SetDifference_OrderedSet)
+
+        self.assertIs(type(s.symmetric_difference(m.I)),
+                      SetSymmetricDifference_FiniteSet)
+        self.assertIs(type(m.I.symmetric_difference(s)),
+                      SetSymmetricDifference_FiniteSet)
+
+        self.assertIs(type(s.cross(m.I)), SetProduct_FiniteSet)
+        self.assertIs(type(m.I.cross(s)), SetProduct_FiniteSet)
+
+        self.assertIs(type(s | m.I), SetUnion_FiniteSet)
+        self.assertIs(type(m.I | s), SetUnion_FiniteSet)
+
+        self.assertIs(type(s & m.I), SetIntersection_OrderedSet)
+        self.assertIs(type(m.I & s), SetIntersection_OrderedSet)
+
+        self.assertIs(type(s - m.I), SetDifference_FiniteSet)
+        self.assertIs(type(m.I - s), SetDifference_OrderedSet)
+
+        self.assertIs(type(s ^ m.I), SetSymmetricDifference_FiniteSet)
+        self.assertIs(type(m.I ^ s), SetSymmetricDifference_FiniteSet)
+
+        self.assertIs(type(s * m.I), SetProduct_FiniteSet)
+        self.assertIs(type(m.I * s), SetProduct_FiniteSet)
+
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s < m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I < s)
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s > m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I > s)
+
+        #
+        # _FiniteSetMixin API
+        #
+
+        with self.assertRaises(DeveloperError):
+            len(s)
+
+        with self.assertRaises(DeveloperError):
+            # __iter__
+            iter(s)
+
+        with self.assertRaises(DeveloperError):
+            # __reversed__
+            reversed(s)
+
+        with self.assertRaises(DeveloperError):
+            s.data()
+
+        with self.assertRaises(DeveloperError):
+            s.ordered_data()
+
+        with self.assertRaises(DeveloperError):
+            s.sorted_data()
+
+        self.assertEqual(s.bounds(), (None,None))
+
+    def test_OrderedMixin(self):
+        # This tests an anstract finite set
+        class OrderedMixin(_OrderedSetMixin, _FiniteSetMixin, _SetData):
+            pass
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[1])
+        s = OrderedMixin(m.I)
+
+        #
+        # _SetData API
+        #
+
+        with self.assertRaises(DeveloperError):
+            # __contains__
+            None in s
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s == m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I == s)
+        with self.assertRaises(DeveloperError):
+            self.assertTrue(s != m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertTrue(m.I != s)
+
+        with self.assertRaises(DeveloperError):
+            str(s)
+        with self.assertRaises(DeveloperError):
+            s.dimen
+
+        self.assertTrue(s.is_finite())
+        self.assertTrue(s.is_ordered())
+
+        range_iter = s.ranges()
+        with self.assertRaises(DeveloperError):
+            list(range_iter)
+
+        with self.assertRaises(DeveloperError):
+            s.isdisjoint(m.I)
+        with self.assertRaises(DeveloperError):
+            m.I.isdisjoint(s)
+
+        with self.assertRaises(DeveloperError):
+            s.issuperset(m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I.issuperset(s))
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s.issubset(m.I))
+        with self.assertRaises(DeveloperError):
+            m.I.issubset(s)
+
+        self.assertIs(type(s.union(m.I)), SetUnion_OrderedSet)
+        self.assertIs(type(m.I.union(s)), SetUnion_OrderedSet)
+
+        self.assertIs(type(s.intersection(m.I)), SetIntersection_OrderedSet)
+        self.assertIs(type(m.I.intersection(s)), SetIntersection_OrderedSet)
+
+        self.assertIs(type(s.difference(m.I)), SetDifference_OrderedSet)
+        self.assertIs(type(m.I.difference(s)), SetDifference_OrderedSet)
+
+        self.assertIs(type(s.symmetric_difference(m.I)),
+                      SetSymmetricDifference_OrderedSet)
+        self.assertIs(type(m.I.symmetric_difference(s)),
+                      SetSymmetricDifference_OrderedSet)
+
+        self.assertIs(type(s.cross(m.I)), SetProduct_OrderedSet)
+        self.assertIs(type(m.I.cross(s)), SetProduct_OrderedSet)
+
+        self.assertIs(type(s | m.I), SetUnion_OrderedSet)
+        self.assertIs(type(m.I | s), SetUnion_OrderedSet)
+
+        self.assertIs(type(s & m.I), SetIntersection_OrderedSet)
+        self.assertIs(type(m.I & s), SetIntersection_OrderedSet)
+
+        self.assertIs(type(s - m.I), SetDifference_OrderedSet)
+        self.assertIs(type(m.I - s), SetDifference_OrderedSet)
+
+        self.assertIs(type(s ^ m.I), SetSymmetricDifference_OrderedSet)
+        self.assertIs(type(m.I ^ s), SetSymmetricDifference_OrderedSet)
+
+        self.assertIs(type(s * m.I), SetProduct_OrderedSet)
+        self.assertIs(type(m.I * s), SetProduct_OrderedSet)
+
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s < m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I < s)
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s > m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I > s)
+
+        #
+        # _FiniteSetMixin API
+        #
+
+        with self.assertRaises(DeveloperError):
+            len(s)
+
+        with self.assertRaises(DeveloperError):
+            # __iter__
+            iter(s)
+
+        with self.assertRaises(DeveloperError):
+            # __reversed__
+            reversed(s)
+
+        with self.assertRaises(DeveloperError):
+            s.data()
+
+        with self.assertRaises(DeveloperError):
+            s.ordered_data()
+
+        with self.assertRaises(DeveloperError):
+            s.sorted_data()
+
+        self.assertEqual(s.bounds(), (None,None))
+
+        #
+        # _OrderedSetMixin API
+        #
+
+        with self.assertRaises(DeveloperError):
+            s.first()
+
+        with self.assertRaises(DeveloperError):
+            s.last()
+
+        with self.assertRaises(DeveloperError):
+            s.next(0)
+
+        with self.assertRaises(DeveloperError):
+            s.nextw(0)
+
+        with self.assertRaises(DeveloperError):
+            s.prev(0)
+
+        with self.assertRaises(DeveloperError):
+            s.prevw(0)
+
+        with self.assertRaises(DeveloperError):
+            s[0]
+
+        with self.assertRaises(DeveloperError):
+            s.ord(0)
