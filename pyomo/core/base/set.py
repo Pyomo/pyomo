@@ -1730,6 +1730,15 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         for x in val:
             self.add(x)
 
+    def update(self, values):
+        for v in values:
+            if v not in self:
+                self.add(v)
+
+    def pop(self):
+        return self._values.pop()
+
+
 class _OrderedSetMixin(object):
     __slots__ = ()
 
@@ -1898,6 +1907,16 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
         self._values.clear()
         self._ordered_values = []
 
+    def pop(self):
+        try:
+            ans = self.last()
+        except IndexError:
+            # Map the index error to a KeyError for consistency with
+            # set().pop()
+            raise KeyError('pop from an empty set')
+        self.discard(ans)
+        return ans
+
     def __getitem__(self, index):
         """
         Return the specified member of the set.
@@ -1948,6 +1967,24 @@ class _InsertionOrderSetData(_OrderedSetData):
     Public Class Attributes:
     """
     __slots__ = ()
+
+    def set_value(self, val):
+        if type(val) in self._UnorderedInitializers:
+            logger.warning(
+                "Calling set_value() on an insertion order Set with "
+                "a fundamentally unordered data source (type: %s).  "
+                "This WILL potentially lead to nondeterministic behavior "
+                "in Pyomo" % (type(val).__name__,))
+        super(_InsertionOrderSetData, self).set_value(val)
+
+    def update(self, values):
+        if type(values) in self._UnorderedInitializers:
+            logger.warning(
+                "Calling update() on an insertion order Set with "
+                "a fundamentally unordered data source (type: %s).  "
+                "This WILL potentially lead to nondeterministic behavior "
+                "in Pyomo" % (type(values).__name__,))
+        super(_InsertionOrderSetData, self).update(values)
 
 
 class _SortedSetMixin(object):

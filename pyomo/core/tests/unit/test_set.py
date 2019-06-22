@@ -3479,8 +3479,43 @@ class TestSet(unittest.TestCase):
         m.I.add(5)
         _verify(m.I, [6,5])
 
-        m.I = [0,-1,1]
-        _verify(m.I, [0,-1,1])
+        tmp = set()
+        tmp.add(m.I.pop())
+        tmp.add(m.I.pop())
+        _verify(m.I, [])
+        self.assertEqual(tmp, {5,6})
+        with self.assertRaisesRegexp(KeyError, 'pop from an empty set'):
+            m.I.pop()
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.I.update([6])
+            _verify(m.I, [6])
+            m.I.update([6,5,6])
+            _verify(m.I, [6,5])
+
+            m.I = [0,-1,1]
+            _verify(m.I, [0,-1,1])
+
+            self.assertEqual(output.getvalue(), "")
+
+            # Assing unsorted data should generate warnings
+            m.I.update({3,4})
+            self.assertIn(
+                "Calling update() on an insertion order Set with a "
+                "fundamentally unordered data source (type: set)",
+                output.getvalue()
+            )
+            self.assertEqual(set(m.I), {0, -1, 1, 3, 4})
+            output.truncate(0)
+
+            m.I = {5,6}
+            self.assertIn(
+                "Calling set_value() on an insertion order Set with a "
+                "fundamentally unordered data source (type: set)",
+                output.getvalue()
+            )
+            self.assertEqual(set(m.I), {5,6})
 
         # Testing sorted sets
         m = ConcreteModel()
@@ -3526,8 +3561,35 @@ class TestSet(unittest.TestCase):
         m.I.add(5)
         _verify(m.I, [5,6])
 
-        m.I = [0,-1,1]
-        _verify(m.I, [-1,0,1])
+        tmp = set()
+        tmp.add(m.I.pop())
+        tmp.add(m.I.pop())
+        _verify(m.I, [])
+        self.assertEqual(tmp, {5,6})
+        with self.assertRaisesRegexp(KeyError, 'pop from an empty set'):
+            m.I.pop()
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.I.update([6])
+            _verify(m.I, [6])
+            m.I.update([6,5,6])
+            _verify(m.I, [5,6])
+
+            m.I = [0,-1,1]
+            _verify(m.I, [-1,0,1])
+
+            self.assertEqual(output.getvalue(), "")
+
+            # Assing unsorted data should not generate warnings (since
+            # we are sorting the Set!)
+            m.I.update({3,4})
+            self.assertEqual(output.getvalue(), "")
+            _verify(m.I, [-1,0,1,3,4])
+
+            m.I = {5,6}
+            self.assertEqual(output.getvalue(), "")
+            _verify(m.I, [5,6])
 
     def test_unordered_insertion_deletion(self):
         def _verify(_s, _l):
@@ -3590,6 +3652,19 @@ class TestSet(unittest.TestCase):
 
         m.I.add(6)
         m.I.add(5)
+        _verify(m.I, [5,6])
+
+        tmp = set()
+        tmp.add(m.I.pop())
+        tmp.add(m.I.pop())
+        _verify(m.I, [])
+        self.assertEqual(tmp, {5,6})
+        with self.assertRaisesRegexp(KeyError, 'pop from an empty set'):
+            m.I.pop()
+
+        m.I.update([5])
+        _verify(m.I, [5])
+        m.I.update([6,5])
         _verify(m.I, [5,6])
 
         m.I = [0,-1,1]
