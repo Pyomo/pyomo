@@ -2059,6 +2059,11 @@ def _pprint_dimen(x):
     if d is _UnknownSetDimen:
         return "--"
     return d
+def _pprint_domain(x):
+    if x._domain is x:
+        return x._expression_str()
+    else:
+        return x._domain
 
 class Set(IndexedComponent):
     """
@@ -2365,7 +2370,7 @@ class Set(IndexedComponent):
             ("Dimen","Domain","Size","Members",),
             lambda k, v: [
                 _pprint_dimen(v),
-                v._domain,
+                _pprint_domain(v),
                 len(v),
                 _pprint_members(v),
             ])
@@ -2801,9 +2806,29 @@ class _SetOperator(_SetData, Set):
     def __str__(self):
         if self.parent_block() is not None:
             return self.name
-        return self._operator.join(
-            '(%s)' % arg if isinstance(arg, _SetOperator)
-            else str(arg) for arg in self._sets)
+        return self._expression_str()
+
+    def _expression_str(self):
+        _args = []
+        for arg in self._sets:
+            arg_str = str(arg)
+            if ' ' in arg_str and isinstance(arg, _SetOperator):
+                arg_str = "(" + arg_str + ")"
+            _args.append(arg_str)
+        return self._operator.join(_args)
+
+    @property
+    def _domain(self):
+        # We hijack the _domain attribute of _SetOperator so that pprint
+        # prints out the expression as the Set's "domain".  Doing this
+        # as a property prevents the circular reference
+        return self
+
+    @_domain.setter
+    def _domain(self, val):
+        if val is not Any:
+            raise ValueError(
+                "Setting the domain of a Set Operator is not allowed: %s" % val)
 
     @staticmethod
     def _checkArgs(*sets):

@@ -1692,7 +1692,31 @@ class TestSetUnion(unittest.TestCase):
         self.assertEqual(str(b), "{-1, 1} | (I | {3, 4})")
         m.A = a
         self.assertEqual(str(a), "A")
-        self.assertEqual(str(b), "{-1, 1} | (A)")
+        self.assertEqual(str(b), "{-1, 1} | A")
+
+    def test_domain_and_pprint(self):
+        m = ConcreteModel()
+        m.I = SetOf([1,2])
+        m.A = m.I | [3,4]
+
+        self.assertIs(m.A._domain, m.A)
+        # You can always set the domain to "Any" (we will just ignore it)
+        m.A._domain = Any
+        self.assertIs(m.A._domain, m.A)
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Setting the domain of a Set Operator is not allowed"):
+            m.A._domain = None
+
+        output = StringIO()
+        m.A.pprint(ostream=output)
+        ref="""
+A : Size=1, Index=None, Ordered=True
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I | {3, 4} :    4 : {1, 2, 3, 4}
+""".strip()
+        self.assertEqual(output.getvalue().strip(), ref)
+
 
     def test_dimen(self):
         m = ConcreteModel()
@@ -1906,7 +1930,30 @@ class TestSetIntersection(unittest.TestCase):
         self.assertEqual(str(b), "{-1, 1} & (I & {3, 4})")
         m.A = a
         self.assertEqual(str(a), "A")
-        self.assertEqual(str(b), "{-1, 1} & (A)")
+        self.assertEqual(str(b), "{-1, 1} & A")
+
+    def test_domain_and_pprint(self):
+        m = ConcreteModel()
+        m.I = SetOf([1,2])
+        m.A = m.I & [3,4]
+
+        self.assertIs(m.A._domain, m.A)
+        # You can always set the domain to "Any" (we will just ignore it)
+        m.A._domain = Any
+        self.assertIs(m.A._domain, m.A)
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Setting the domain of a Set Operator is not allowed"):
+            m.A._domain = None
+
+        output = StringIO()
+        m.A.pprint(ostream=output)
+        ref="""
+A : Size=1, Index=None, Ordered=True
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I & {3, 4} :    0 :      {}
+""".strip()
+        self.assertEqual(output.getvalue().strip(), ref)
 
     def test_dimen(self):
         m = ConcreteModel()
@@ -2116,7 +2163,30 @@ class TestSetDifference(unittest.TestCase):
         self.assertEqual(str(b), "{-1, 1} - (I - {3, 4})")
         m.A = a
         self.assertEqual(str(a), "A")
-        self.assertEqual(str(b), "{-1, 1} - (A)")
+        self.assertEqual(str(b), "{-1, 1} - A")
+
+    def test_domain_and_pprint(self):
+        m = ConcreteModel()
+        m.I = SetOf([1,2])
+        m.A = m.I - [3,4]
+
+        self.assertIs(m.A._domain, m.A)
+        # You can always set the domain to "Any" (we will just ignore it)
+        m.A._domain = Any
+        self.assertIs(m.A._domain, m.A)
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Setting the domain of a Set Operator is not allowed"):
+            m.A._domain = None
+
+        output = StringIO()
+        m.A.pprint(ostream=output)
+        ref="""
+A : Size=1, Index=None, Ordered=True
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I - {3, 4} :    2 : {1, 2}
+""".strip()
+        self.assertEqual(output.getvalue().strip(), ref)
 
     def test_dimen(self):
         m = ConcreteModel()
@@ -2281,7 +2351,30 @@ class TestSetSymmetricDifference(unittest.TestCase):
         self.assertEqual(str(b), "{-1, 1} ^ (I ^ {3, 4})")
         m.A = a
         self.assertEqual(str(a), "A")
-        self.assertEqual(str(b), "{-1, 1} ^ (A)")
+        self.assertEqual(str(b), "{-1, 1} ^ A")
+
+    def test_domain_and_pprint(self):
+        m = ConcreteModel()
+        m.I = SetOf([1,2])
+        m.A = m.I ^ [3,4]
+
+        self.assertIs(m.A._domain, m.A)
+        # You can always set the domain to "Any" (we will just ignore it)
+        m.A._domain = Any
+        self.assertIs(m.A._domain, m.A)
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Setting the domain of a Set Operator is not allowed"):
+            m.A._domain = None
+
+        output = StringIO()
+        m.A.pprint(ostream=output)
+        ref="""
+A : Size=1, Index=None, Ordered=True
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I ^ {3, 4} :    4 : {1, 2, 3, 4}
+""".strip()
+        self.assertEqual(output.getvalue().strip(), ref)
 
     def test_dimen(self):
         m = ConcreteModel()
@@ -2496,10 +2589,33 @@ class TestSetProduct(unittest.TestCase):
         self.assertEqual(str(b), "{-1, 1}*(I*{3, 4})")
         m.A = a
         self.assertEqual(str(a), "A")
-        self.assertEqual(str(b), "{-1, 1}*(A)")
+        self.assertEqual(str(b), "{-1, 1}*A")
 
         c = SetProduct(m.I, [1,2], m.I)
         self.assertEqual(str(c), "I*{1, 2}*I")
+
+    def test_domain_and_pprint(self):
+        m = ConcreteModel()
+        m.I = SetOf([1,2])
+        m.A = m.I * [3,4]
+
+        self.assertIs(m.A._domain, m.A)
+        # You can always set the domain to "Any" (we will just ignore it)
+        m.A._domain = Any
+        self.assertIs(m.A._domain, m.A)
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Setting the domain of a Set Operator is not allowed"):
+            m.A._domain = None
+
+        output = StringIO()
+        m.A.pprint(ostream=output)
+        ref="""
+A : Size=1, Index=None, Ordered=True
+    Key  : Dimen : Domain   : Size : Members
+    None :     2 : I*{3, 4} :    4 : {(1, 3), (1, 4), (2, 3), (2, 4)}
+""".strip()
+        self.assertEqual(output.getvalue().strip(), ref)
 
     def test_dimen(self):
         m = ConcreteModel()
