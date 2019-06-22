@@ -177,7 +177,7 @@ class _CountedCallGenerator(object):
 
 class _CountedCallInitializer(_InitializerBase):
     # Pyomo has a historical feature for some rules, where the number of
-    # times(*) the rule was called could be passed as an additional
+    # times[*1] the rule was called could be passed as an additional
     # argument between the block and the index.  This was primarily
     # supported by Set and ConstraintList.  There were many issues with
     # the syntax, including inconsistent support for jagged (dimen=None)
@@ -187,9 +187,16 @@ class _CountedCallInitializer(_InitializerBase):
     # As a slight departure from previous implementations, we will ONLY
     # allow the counted rule syntax when the rule does NOT use *args
     #
+    # [*1] The extra argument was one-based, and was only incremented
+    #     when a valid value was returned by the rule and added to the
+    #     _data.  This was fragile, as returning something like
+    #     {Component}.Skip could result in an infinite loop.  This
+    #     implementation deviates from that behavior and increments the
+    #     counter every time the rule is called.
+    #
     # [JDS 6/2019] We will support a slightly restricted but more
     # consistent form of the original implementation for backwards
-    # compatability, but I belee that we should deprecate teh syntax
+    # compatability, but I believe that we should deprecate this syntax
     # entirely.
     __slots__ = ('_fcn','_is_counted_rule', '_scalar',)
 
@@ -1593,6 +1600,7 @@ class _FiniteSetMixin(object):
                     yield NumericRange(i,i,0)
                 except:
                     yield NonNumericRange(i)
+
 
 class _FiniteSetData(_FiniteSetMixin, _SetData):
     """A general unordered iterable Set"""
