@@ -19,6 +19,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common import DeveloperError
 from pyomo.core.expr import native_numeric_types, native_types
 import pyomo.core.base.set as SetModule
+from pyomo.core.base.indexed_component import normalize_index
 from pyomo.core.base.set import (
     NumericRange as NR, NonNumericRange as NNR, AnyRange, _AnySet,
     Any, Reals, NonNegativeReals, Integers, PositiveIntegers,
@@ -4430,6 +4431,29 @@ I : Size=2, Index=I_index, Ordered=Insertion
         #m.K = Set(Bindex)
         #self.assertIs(m.K.index_set()._domain, Integers)
 
+    def test_no_normalize_index(self):
+        try:
+            _oldFlatten = normalize_index.flatten
+
+            normalize_index.flatten = False
+            m = ConcreteModel()
+            m.I = Set()
+            self.assertIs(m.I._dimen, _UnknownSetDimen)
+            m.I.add((1,(2,3)))
+            self.assertIs(m.I._dimen, None)
+            self.assertIn((1,(2,3)), m.I)
+            self.assertNotIn((1,2,3), m.I)
+
+            normalize_index.flatten = True
+            m = ConcreteModel()
+            m.I = Set()
+            self.assertIs(m.I._dimen, _UnknownSetDimen)
+            m.I.add((1,(2,3)))
+            self.assertIs(m.I._dimen, 3)
+            self.assertNotIn((1,(2,3)), m.I)
+            self.assertIn((1,2,3), m.I)
+        finally:
+            normalize_index.flatten = _oldFlatten
 
 class TestAbstractSetAPI(unittest.TestCase):
     def test_SetData(self):
@@ -4789,7 +4813,7 @@ class TestAbstractSetAPI(unittest.TestCase):
             s.ord(0)
 
 class TestIssues(unittest.TestCase):
-    def test_issue43(self):
+    def test_issue_43(self):
         model = ConcreteModel()
         model.Jobs = Set(initialize=[0,1,2,3])
         model.Dummy = Set(model.Jobs, within=model.Jobs,
@@ -4807,3 +4831,13 @@ class TestIssues(unittest.TestCase):
         self.assertIn((0, 'b'), b)
         self.assertIn((1, 'a'), b)
         self.assertIn((1, 'b'), b)
+
+    def test_issue_116(self):
+        m = ConcreteModel()
+        m.s = Set(initialize=['one'])
+        m.t = Set([1], initialize=['one'])
+        m.x = Var(m.s)
+        self.assertFalse(m.s in m.s)
+        with self.assertRaisesRegexp(KeyError, "Index 's' is not valid"):
+            m.x[m.s].display()
+        self.assertEqual(list(m.x), ['one'])

@@ -18,7 +18,7 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 
 from pyomo.environ import *
-
+from pyomo.core.base.indexed_component import flatten, normalize_index
 
 class TestSimpleVar(unittest.TestCase):
 
@@ -94,6 +94,68 @@ class TestSimpleVar(unittest.TestCase):
 
 
 class TestIndexedComponent(unittest.TestCase):
+    def test_flatten(self):
+        # Test that flatten works correctly
+        self.assertEqual(("abc",), flatten("abc"))
+        self.assertEqual((1,), flatten(1))
+        self.assertEqual((1,), flatten([1]))
+        self.assertEqual((1, 2, 3), flatten((1, 2, 3)))
+        self.assertEqual((1, 2, 3), flatten([1, 2, 3]))
+        self.assertEqual((1, 2, 3, 4), flatten((1, 2, [3, 4])))
+        self.assertEqual((1, 2, 'abc'), flatten((1, 2, 'abc')))
+        self.assertEqual((1, 2, 'abc'), flatten((1, 2, ('abc',))))
+        a = [0, 9, 8]
+        self.assertEqual((1, 2, 0, 9, 8), flatten((1, 2, a)))
+        self.assertEqual((1, 2, 3, 4, 5), flatten(
+            [[], 1, [], 2, [[], 3, [[], 4, []], []], 5, []]))
+        self.assertEqual((), flatten([[[[], []], []], []]))
+        self.assertEqual((), flatten([[], [[], [[],]]]))
+
+        # Test that flatten doesn't expand component-like things
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var([1])
+        m.i = Set(initialize=[1])
+        m.j = Set([1], initialize=[1])
+        self.assertEqual((m,), flatten(m))
+        self.assertEqual((m.x,), flatten(m.x))
+        self.assertEqual((m.y,), flatten(m.y))
+        self.assertEqual((m.y[1],), flatten(m.y[1]))
+        self.assertEqual((m.i,), flatten(m.i))
+        self.assertEqual((m.j,), flatten(m.j))
+        self.assertEqual((m.j[1],), flatten(m.j[1]))
+
+    def test_normalize_index(self):
+        # Test that normalize_index works correctly
+        self.assertEqual("abc", normalize_index("abc"))
+        self.assertEqual(1, normalize_index(1))
+        self.assertEqual(1, normalize_index([1]))
+        self.assertEqual((1, 2, 3), normalize_index((1, 2, 3)))
+        self.assertEqual((1, 2, 3), normalize_index([1, 2, 3]))
+        self.assertEqual((1, 2, 3, 4), normalize_index((1, 2, [3, 4])))
+        self.assertEqual((1, 2, 'abc'), normalize_index((1, 2, 'abc')))
+        self.assertEqual((1, 2, 'abc'), normalize_index((1, 2, ('abc',))))
+        a = [0, 9, 8]
+        self.assertEqual((1, 2, 0, 9, 8), normalize_index((1, 2, a)))
+        self.assertEqual((1, 2, 3, 4, 5), normalize_index(
+            [[], 1, [], 2, [[], 3, [[], 4, []], []], 5, []]))
+        self.assertEqual((), normalize_index([[[[], []], []], []]))
+        self.assertEqual((), normalize_index([[], [[], [[],]]]))
+
+        # Test that normalize_index doesn't expand component-like things
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var([1])
+        m.i = Set(initialize=[1])
+        m.j = Set([1], initialize=[1])
+        self.assertIs(m, normalize_index(m))
+        self.assertIs(m.x, normalize_index(m.x))
+        self.assertIs(m.y, normalize_index(m.y))
+        self.assertIs(m.y[1], normalize_index(m.y[1]))
+        self.assertIs(m.i, normalize_index(m.i))
+        self.assertIs(m.j, normalize_index(m.j))
+        self.assertIs(m.j[1], normalize_index(m.j[1]))
+
     def test_index_by_constant_simpleComponent(self):
         m = ConcreteModel()
         m.i = Param(initialize=2)

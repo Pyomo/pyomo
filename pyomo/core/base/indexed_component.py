@@ -10,6 +10,8 @@
 
 __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
+from collections import Sequence
+
 import pyutilib.misc
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
@@ -18,9 +20,39 @@ from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.common import DeveloperError
 
-from six import PY3, itervalues, iteritems
+from six import PY3, itervalues, iteritems, string_types
 
 UnindexedComponent_set = set([None])
+
+def flatten(x):
+    """Flatten nested sequences into a single tuple
+
+    Returns
+    -------
+    tuple
+
+    """
+    def _flatten_generator(x):
+        for el in x:
+            # NB: isinstance can be SLOW if it is going to return
+            # false, so we will do one extra hasattr() check that
+            # catches the obviously non-sequence objects
+            if hasattr(el, "__iter__") and isinstance(el, Sequence) \
+               and not isinstance(el, string_types):
+                for _ in _flatten_generator(el):
+                    yield _
+            else:
+                yield el
+
+    # flatten() is really just a recursive routine; however, if we do a
+    # naive recursive call, we end up creating small temporary lists and
+    # throwing them away.  We could add an optional second argument but
+    # then we need to do an "if ans is None: ans = []" check.  This
+    # dual-function approach appears to be the most efficient.
+    if not hasattr(x, "__iter__") or not isinstance(x, Sequence) \
+       or isinstance(x, string_types):
+        return (x,)
+    return tuple(_flatten_generator(x))
 
 def normalize_index(index):
     """
@@ -28,13 +60,11 @@ def normalize_index(index):
     return just the element.  If it has length > 1, then
     return a tuple.
     """
-    idx = pyutilib.misc.flatten(index)
-    if type(idx) is list:
-        if len(idx) == 1:
-            idx = idx[0]
-        else:
-            idx = tuple(idx)
-    return idx
+    ans = flatten(index)
+    if len(ans) == 1:
+        return ans[0]
+    return ans
+
 normalize_index.flatten = True
 
 class _NotFound(object):
@@ -522,16 +552,7 @@ You can silence this warning by one of three ways:
         #
         # Setup the slice template (in fixed)
         #
-        if type(idx) is tuple:
-            # We would normally do "flatten()" here, but the current
-            # (10/2016) implementation of flatten() is too aggressive:
-            # it will attempt to expand *any* iterable, including
-            # SimpleParam.
-            idx = pyutilib.misc.flatten_tuple(idx)
-        elif type(idx) is list:
-            idx = pyutilib.misc.flatten_tuple(tuple(idx))
-        else:
-            idx = (idx,)
+        idx = flatten(idx)
 
         for i,val in enumerate(idx):
             if type(val) is slice:

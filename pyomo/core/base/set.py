@@ -45,7 +45,7 @@ from pyomo.core.expr.numvalue import (
 )
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
-    IndexedComponent, UnindexedComponent_set
+    IndexedComponent, UnindexedComponent_set, normalize_index
 )
 from pyomo.core.base.misc import sorted_robust
 
@@ -1666,16 +1666,20 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         return self._dimen
 
     def add(self, value):
-        if type(value) is tuple:
-            _value = flatten_tuple(value)
-            if len(_value) == 1:
-                _value = _value[0]
-                _d = 1
-            else:
+        if normalize_index.flatten:
+            if type(value) is tuple:
+                _value = flatten_tuple(value)
                 _d = len(_value)
+                if _d == 1:
+                    _value = _value[0]
+            else:
+                _value = value
+                _d = 1
         else:
+            # If we are not normalizing indices, then we cannot reliably
+            # infer the set dimen
             _value = value
-            _d = 1
+            _d = None
 
         if _value not in self._domain:
             raise ValueError("Cannot add value %s to Set %s.\n"
