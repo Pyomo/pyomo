@@ -4787,3 +4787,23 @@ class TestAbstractSetAPI(unittest.TestCase):
 
         with self.assertRaises(DeveloperError):
             s.ord(0)
+
+class TestIssues(unittest.TestCase):
+    def test_issue43(self):
+        model = ConcreteModel()
+        model.Jobs = Set(initialize=[0,1,2,3])
+        model.Dummy = Set(model.Jobs, within=model.Jobs,
+                          initialize=lambda m,i: range(i))
+        model.Cars = Set(initialize=['a','b'])
+
+        a = model.Cars * model.Dummy[1]
+        self.assertEqual(len(a), 2)
+        self.assertIn(('a', 0), a)
+        self.assertIn(('b', 0), a)
+
+        b = model.Dummy[2] * model.Cars
+        self.assertEqual(len(b), 4)
+        self.assertIn((0, 'a'), b)
+        self.assertIn((0, 'b'), b)
+        self.assertIn((1, 'a'), b)
+        self.assertIn((1, 'b'), b)
