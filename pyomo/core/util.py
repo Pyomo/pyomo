@@ -18,7 +18,7 @@ from six.moves import xrange
 from functools import reduce
 import operator
 from pyomo.core.expr.numvalue import native_numeric_types
-from pyomo.core.expr.expr_pyomo5 import decompose_term
+from pyomo.core.expr.numeric_expr import decompose_term
 from pyomo.core.expr import current as EXPR
 import pyomo.core.base.var
 

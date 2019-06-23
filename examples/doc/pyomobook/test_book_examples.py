@@ -123,6 +123,20 @@ def check_skip(tfname_, name):
                     'are' if len(_missing) > 1 else 'is',)
     return False
 
+_DEPRECATION_MESSAGES = """
+WARNING: DEPRECATED: Chained inequalities are deprecated. Use the inequality()
+    function to express ranged inequality expressions.
+WARNING: DEPRECATED: Use of the pyomo.bilevel package is deprecated. There are
+    known bugs in pyomo.bilevel, and we do not recommend the use of this code.
+    Development of bilevel optimization capabilities has been shifted to the
+    Pyomo Adversarial Optimization (PAO) library. Please contact William Hart
+    for further details (wehart@sandia.gov). (deprecated in 5.6.2)
+WARNING: DEPRECATED: Use of the pyomo.duality package is deprecated. There are
+    known bugs in pyomo.duality, and we do not recommend the use of this code.
+    Development of dualization capabilities has been shifted to the Pyomo
+    Adversarial Optimization (PAO) library. Please contact William Hart for
+    further details (wehart@sandia.gov).  (deprecated in 5.6.2)
+""".strip()
 
 def filter(line):
     # Ignore certain text when comparing output with baseline
@@ -138,7 +152,7 @@ def filter(line):
                    'Job ',
                    'Importing module',
                    'Function',
-                   'File',):
+                   'File', ):
         if line.startswith(field):
             return True
     for field in ( 'Total CPU',
@@ -152,6 +166,10 @@ def filter(line):
                    'execution time=',
                    'Solver results file:' ):
         if field in line:
+            return True
+    for field in _DEPRECATION_MESSAGES.splitlines():
+        strip_field = field.strip()
+        if strip_field and strip_field in line:
             return True
     return False
 

@@ -1,8 +1,18 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import logging
 
 from pyutilib.services import TempfileManager
-from pyutilib.services import register_executable
 
+from pyomo.common.download import DownloadFactory
 from pyomo.opt.base import SolverFactory, OptSolver
 from pyomo.solvers.plugins.solvers.ASL import ASL
 
@@ -13,6 +23,7 @@ from pyomo.core import Var, value
 
 from pyomo.contrib.trustregion.TRF import TRF
 from pyomo.contrib.trustregion.readgjh import readgjh
+import pyomo.contrib.trustregion.getGJH
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 #fh = logging.FileHandler('debug_vars.log')
@@ -21,6 +32,8 @@ logger = logging.getLogger('pyomo.contrib.trustregion')
 
 def load():
     pass
+
+DownloadFactory.register('gjh')(pyomo.contrib.trustregion.getGJH.get_gjh)
 
 @SolverFactory.register(
         'trustregion',

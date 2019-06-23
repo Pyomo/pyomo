@@ -14,19 +14,14 @@
 import logging
 from pyutilib.misc import LogHandler
 
-# __file__ fails if script is called in different ways on Windows
-# __file__ fails if someone does os.chdir() before
-# sys.argv[0] also fails because it doesn't not always contains the path
-from os.path import dirname as _dir, abspath as _abs
-import inspect
-_pyomo_base = _dir(_dir(_dir(_abs(inspect.getfile(inspect.currentframe())))))
+from pyomo.common.fileutils import PYOMO_ROOT_DIR
 
 #
 # Set up the root Pyomo namespace logger
 #
 _logger = logging.getLogger('pyomo')
 _logger.addHandler( LogHandler(
-    _pyomo_base, verbosity=lambda: _logger.isEnabledFor(logging.DEBUG) ))
+    PYOMO_ROOT_DIR, verbosity=lambda: _logger.isEnabledFor(logging.DEBUG) ))
 _logger.setLevel(logging.WARNING)
 
 

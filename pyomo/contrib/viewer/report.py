@@ -1,6 +1,6 @@
 ##############################################################################
 # Institute for the Design of Advanced Energy Systems Process Systems
-# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018, by the
+# Engineering Framework (IDAES PSE Framework) Copyright (c) 2018-2019, by the
 # software owners: The Regents of the University of California, through
 # Lawrence Berkeley National Laboratory,  National Technology & Engineering
 # Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
@@ -13,60 +13,47 @@ from pyomo.core.expr.current import identify_variables
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.network.port import _PortData, SimplePort
 
-def large_residuals(blk, tol=1e-5):
+def value_no_exception(c, div0=None):
     """
-    Generator return active Pyomo constraints with residuals greater than tol.
+    Get value and ignore most exceptions (including division by 0).
 
     Args:
-        blk: a Pyomo block in which to look for constraints
-        tol: show constraints with residuals greated than tol
+        c: a Pyomo component to get the value of
+    Returns:
+        A value, could be None
     """
-    for o in blk.component_objects(Constraint, descend_into=True):
-        for i, c in o.iteritems():
-            if c.active and value(c.lower - c.body()) > tol:
-                yield c
-            elif c.active and value(c.body() - c.upper) > tol:
-                yield c
+    try:
+        return value(c, exception=False)
+    except ZeroDivisionError:
+        return div0
 
-def fixed_variables(blk):
+def get_residual(ui_data, c):
     """
-    Generator returning fixed variables in a model.
-
-    Args:
-        blk: a Pyomo block in which to look for variables.
-    """
-    for o in blk.component_data_objects(Var):
-        if o.fixed: yield o
-
-def unfixed_variables(blk):
-    """
-    Generator returning free variables in a model.
+    Calculate the residual (constraint violation) of a constraint. This residual
+    is always positive.
 
     Args:
-        blk: a Pyomo block in which to look for variables.
+        ui_data (UIData): user interface data, includes the cache for calculated
+            values of the constraint body. This function uses the cached values
+            and will not trigger recalculation. If variable values have changed,
+            this may not yield accurate results.
+        c(_ConstraintData): a constraint or constraint data
+    Returns:
+        (float) residual
     """
-    for o in blk.component_data_objects(Var):
-        if not o.fixed: yield item
-
-def free_variables(blk):
-    """
-    Generator returning free variables in a model. same as unfixed
-
-    Args:
-        blk: a Pyomo block in which to look for variables.
-    """
-    for o in blk.component_data_objects(Var):
-        if not o.fixed: yield o
-
-def stale_variables(blk):
-    """
-    Generator returning stale variables in a model.
-
-    Args:
-        blk: a Pyomo block in which to look for variables.
-    """
-    for o in blk.component_data_objects(Var):
-        if not o.fixed and o.stale: yield o
+    ub = value_no_exception(c.upper)
+    lb = value_no_exception(c.lower)
+    try:
+        v = ui_data.value_cache[c]
+    except KeyError:
+        v = None
+    if v is None:
+        return
+    if lb is not None and v < lb:
+        return lb - v
+    if ub is not None and v > ub:
+        return v - ub
+    return 0.0
 
 def active_equalities(blk):
     """
@@ -76,7 +63,35 @@ def active_equalities(blk):
         blk: a Pyomo block in which to look for variables.
     """
     for o in blk.component_data_objects(Constraint, active=True):
-        if o.upper == o.lower: yield o
+        try:
+            u = value(o.upper, exception=False)
+            l = value(o.lower, exception=False)
+            if u == l and l is not None:
+                yield o
+        except ZeroDivisionError:
+            pass
+
+def active_constraint_set(blk):
+    """
+    Return a set of active constraints in a model.
+
+    Args:
+        blk: a Pyomo block in which to look for constraints.
+    Returns:
+        (ComponentSet): Active equality constraints
+    """
+    return ComponentSet(blk.component_data_objects(Constraint, active=True))
+
+def active_equality_set(blk):
+    """
+    Return a set of active equalities.
+
+    Args:
+        blk: a Pyomo block in which to look for variables.
+    Returns:
+        (ComponentSet): Active constraints
+    """
+    return ComponentSet(active_equalities(blk))
 
 def count_free_variables(blk):
     """
@@ -91,33 +106,22 @@ def count_equality_constraints(blk):
     """
     return len(active_equality_set(blk))
 
+def count_constraints(blk):
+    """
+    Count active constraints.
+    """
+    return len(active_constraint_set(blk))
+
 def degrees_of_freedom(blk):
     """
     Return the degrees of freedom.
-    """
-    return count_free_variables(blk) - count_equality_constraints(blk)
-
-def active_equality_set(blk):
-    """
-    Generator returning active equality constraints in a model.
 
     Args:
-        blk: a Pyomo block in which to look for variables.
+        blk (Block or _BlockData): Block to count degrees of freedom in
+    Returns:
+        (int): Number of degrees of freedom
     """
-    ac = ComponentSet()
-    for c in active_equalities(blk):
-        ac.add(c)
-    return ac
-
-def variables_in_active_equalities_set(blk):
-    """
-    Return a set of variables that are contined in active equalities.
-    """
-    vin = ComponentSet()
-    for c in active_equalities(blk):
-        for v in identify_variables(c.body):
-            vin.add(v)
-    return vin
+    return count_free_variables(blk) - count_equality_constraints(blk)
 
 def free_variables_in_active_equalities_set(blk):
     """
@@ -126,5 +130,6 @@ def free_variables_in_active_equalities_set(blk):
     vin = ComponentSet()
     for c in active_equalities(blk):
         for v in identify_variables(c.body):
-            if not v.fixed: vin.add(v)
+            if not v.fixed:
+                vin.add(v)
     return vin

@@ -57,7 +57,7 @@ class _BaseTestModel(object):
         self.results_file = None
         self.disable_suffix_tests = False
         self.test_suffixes = []
-        self.diff_tol = 1e-4
+        self.diff_tol = 1e-3
         self.solve_should_fail = False
 
     def add_results(self, filename):

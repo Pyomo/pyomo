@@ -15,15 +15,20 @@
 # that are used by general users, but pyomo.core.expr.current provides
 # symbols that are used by developers.
 # 
-__all__ = []
 
-from pyomo.core.expr import current
-__all__.extend(current._public)
-for obj in current._public:
-    globals()[obj] = getattr(current, obj)
+from . import numvalue, numeric_expr, logical_expr, current
 
-from pyomo.core.expr import numvalue
-__all__.extend(numvalue.__all__)
-for obj in numvalue.__all__:
-    globals()[obj] = getattr(numvalue, obj)
+from .numvalue import (
+    value, is_constant, is_fixed, is_variable_type,
+    is_potentially_variable, NumericValue, ZeroConstant,
+    native_numeric_types, native_types, polynomial_degree,
+)
 
+from .numeric_expr import linear_expression, nonlinear_expression
+from .logical_expr import inequality
+from .current import (
+    log, log10, sin, cos, tan, cosh, sinh, tanh,
+    asin, acos, atan, exp, sqrt, asinh, acosh,
+    atanh, ceil, floor,
+    Expr_if,
+)

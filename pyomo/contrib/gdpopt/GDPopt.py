@@ -1,12 +1,23 @@
 # -*- coding: utf-8 -*-
-"""Main driver module for GDPopt solver."""
+"""Main driver module for GDPopt solver.
+
+19.4.23 changes:
+- add support for linear subproblems
+- use automatic differentiation for large constraints
+- bugfixes on time limit support
+- treat fixed variables as constants in GLOA cut generation
+19.3.25 changes:
+- add rudimentary time limit support
+- start keeping basic changelog
+
+"""
 from __future__ import division
 
 import logging
 
 from pyomo.common.config import (
     ConfigBlock, ConfigList, ConfigValue, In, NonNegativeFloat, NonNegativeInt,
-    add_docstring_list
+    add_docstring_list, PositiveInt
 )
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
@@ -24,7 +35,7 @@ from pyomo.opt.base import SolverFactory
 from pyomo.opt.results import SolverResults
 from pyutilib.misc import Container
 
-__version__ = (19, 1, 16)  # Move to date-based versioning.
+__version__ = (19, 4, 23)  # Note: date-based version number
 
 
 @SolverFactory.register(
@@ -63,6 +74,14 @@ class GDPoptSolver(object):
     CONFIG.declare("iterlim", ConfigValue(
         default=30, domain=NonNegativeInt,
         description="Iteration limit."
+    ))
+    CONFIG.declare("time_limit", ConfigValue(
+        default=600,
+        domain=PositiveInt,
+        description="Time limit (seconds, default=600)",
+        doc="Seconds allowed until terminated. Note that the time limit can"
+            "currently only be enforced between subsolver invocations. You may"
+            "need to set subsolver time limits as well."
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="LOA", domain=In(["LOA", "GLOA"]),
@@ -157,6 +176,17 @@ class GDPoptSolver(object):
         description="The logger object or name to use for reporting.",
         domain=a_logger
     ))
+    CONFIG.declare("calc_disjunctive_bounds", ConfigValue(
+        default=False,
+        description="Calculate special disjunctive variable bounds for GLOA. False by default.",
+        domain=bool
+    ))
+    CONFIG.declare("obbt_disjunctive_bounds", ConfigValue(
+        default=False,
+        description="Use optimality-based bounds tightening rather than feasibility-based bounds tightening "
+        "to compute disjunctive variable bounds. False by default.",
+        domain=bool
+    ))
     CONFIG.declare("bound_tolerance", ConfigValue(
         default=1E-6, domain=NonNegativeFloat,
         description="Tolerance for bound convergence."
@@ -228,7 +258,7 @@ class GDPoptSolver(object):
         solve_data.timing = Container()
 
         old_logger_level = config.logger.getEffectiveLevel()
-        with time_code(solve_data.timing, 'total'), \
+        with time_code(solve_data.timing, 'total', is_main_timer=True), \
                 restore_logger_level(config.logger), \
                 create_utility_block(model, 'GDPopt_utils', solve_data):
             if config.tee and old_logger_level > logging.INFO:
@@ -336,6 +366,8 @@ If you use this software, you may cite the following:
         solve_data.results.solver.timing = solve_data.timing
         solve_data.results.solver.user_time = solve_data.timing.total
         solve_data.results.solver.wallclock_time = solve_data.timing.total
+
+        solve_data.results.solver.iterations = solve_data.master_iteration
 
         return solve_data.results
 
