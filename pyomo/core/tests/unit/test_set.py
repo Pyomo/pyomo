@@ -4841,3 +4841,10 @@ class TestIssues(unittest.TestCase):
         with self.assertRaisesRegexp(KeyError, "Index 's' is not valid"):
             m.x[m.s].display()
         self.assertEqual(list(m.x), ['one'])
+
+    def test_issue_121(self):
+        model = ConcreteModel()
+        model.s = Set(initialize=[1,2,3])
+        self.assertEqual(list(model.s), [1,2,3])
+        model.s = [3,9]
+        self.assertEqual(list(model.s), [3,9])
