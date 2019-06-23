@@ -368,7 +368,8 @@ def process_setarg(arg):
     return ans
 
 
-@deprecated('The set_options decorator seems nonessential and is deprecated')
+@deprecated('The set_options decorator seems nonessential and is deprecated',
+            version='TBD')
 def set_options(**kwds):
     """
     This is a decorator for set initializer functions.  This
