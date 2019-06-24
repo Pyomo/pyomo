@@ -55,7 +55,6 @@ _prePython37 = sys.version_info[:2] < (3,7)
 
 FLATTEN_CROSS_PRODUCT = True
 
-
 def Initializer(init, allow_generators=False,
                 treat_sequences_as_mappings=True):
     if init.__class__ in native_types:
@@ -2333,7 +2332,15 @@ class Set(IndexedComponent):
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
         if self._init_dimen is not None:
-            obj._dimen = self._init_dimen(self, index)
+            _d = self._init_dimen(self, index)
+            if _d is not _UnknownSetDimen and (not normalize_index.flatten) \
+               and _d is not None:
+                logger.warning(
+                    "Ignoring non-None dimen (%s) for set %s "
+                    "(normalize_index.flatten is False, so dimen "
+                    "verification is not available)." % (_d, obj.name))
+                _d = None
+            obj._dimen = _d
         if self._init_domain is not None:
             obj._domain = self._init_domain(self, index)
         if self._init_validate is not None:
@@ -3472,6 +3479,8 @@ class SetProduct_FiniteSet(_FiniteSetMixin, SetProduct_InfiniteSet):
 
     @property
     def dimen(self):
+        if not FLATTEN_CROSS_PRODUCT:
+            return None
         ans = 0
         for s in self._sets:
             s_dim = s.dimen

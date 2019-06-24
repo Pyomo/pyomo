@@ -28,22 +28,25 @@ def _name_index_generator(idx):
     """
     Return a string representation of an index.
     """
-    def _escape(x):
-        # We need to quote set members (because people put things like
-        # spaces - or worse commas - in their set names).  Our plan is to
-        # put the strings in single quotes... but that requires escaping
-        # any single quotes in the string... which in turn requires
-        # escaping the escape character.
-        x = x.replace("\\", "\\\\").replace("'", "\\'")
-        if ',' in x or "'" in x:
-            return "'"+x+"'"
+    def _escape(val):
+        if type(val) is tuple:
+            ans = "(" + ','.join(_escape(_) for _ in val) + ")"
         else:
-            return x
-
+            # We need to quote set members (because people put things
+            # like spaces - or worse commas - in their set names).  Our
+            # plan is to put the strings in single quotes... but that
+            # requires escaping any single quotes in the string... which
+            # in turn requires escaping the escape character.
+            ans = "%s" % (val,)
+            if isinstance(val, six.string_types):
+                ans = ans.replace("\\", "\\\\").replace("'", "\\'")
+                if ',' in ans or "'" in ans:
+                    ans = "'"+ans+"'"
+        return ans
     if idx.__class__ is tuple:
-        return "[" + ",".join(_escape(str(i)) for i in idx) + "]"
+        return "[" + ",".join(_escape(i) for i in idx) + "]"
     else:
-        return "[" + _escape(str(idx)) + "]"
+        return "[" + _escape(idx) + "]"
 
 
 def name(component, index=None, fully_qualified=False, relative_to=None):
