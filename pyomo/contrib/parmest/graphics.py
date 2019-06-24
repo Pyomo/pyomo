@@ -199,7 +199,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     alpha: float, optional
         Confidence interval value, if an alpha value is given and the 
         distributions list is empty, the data will be filtered by True/False 
-        values using the column name whos value equals alpha (see results from
+        values using the column name whose value equals alpha (see results from
         leaveNout_bootstrap_analysis, likelihood_ratio_test, or 
         confidence_region_test)
     distributions: list of strings, optional
@@ -414,3 +414,46 @@ def fit_kde_dist(theta_values, alpha):
     dist = stats.gaussian_kde(theta_values.transpose().values)
     
     return dist
+
+def grouped_boxplot(data1, data2, normalize=False, group_names=['data1', 'data2']):
+    """
+    Create a grouped boxplot that compares two datasets.  The datasets can be 
+    normalized by the median and standard deviation of data1.
+    
+    Parameters
+    ----------
+    data1: DataFrame, columns = variable names
+        Data set
+    data2: DataFrame, columns = variable names
+        Data set
+    normalize : bool (optional)
+        Normalize both datasets by the median and standard deviation of data1
+    group_names : list (optional)
+        Names used in the legend
+    """
+
+    if normalize:
+        data_median = data1.median()
+        data_std = data1.std()
+        data1 = (data1 - data_median)/data_std
+        data2 = (data2 - data_median)/data_std
+        
+    # Combine data1 and data2 to create a grouped histogram
+    df = pd.concat({group_names[0]: data1, 
+                    group_names[1]: data2})
+    df.reset_index(level=0, inplace=True)
+    df.rename(columns={'level_0': 'set'}, inplace=True)
+    
+    df_melt = df.melt(id_vars = 'set',
+                  value_vars = data1.columns,
+                  var_name = 'columns')
+    plt.figure()
+    sns.boxplot(data = df_melt,
+                       hue = 'set',
+                       y = 'value',
+                       x = 'columns',
+                       order = data1.columns)
+    
+    plt.gca().legend().set_title('')
+    plt.gca().set_xlabel('')
+    plt.gca().set_ylabel('')
