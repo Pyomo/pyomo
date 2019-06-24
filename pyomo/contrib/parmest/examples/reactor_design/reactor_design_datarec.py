@@ -49,19 +49,4 @@ def reactor_design_model(data):
                      + model.k3 * model.ca ** 2.0))
     
     return model
-
-if __name__ == "__main__":
-    
-    # For a range of sv values, return ca, cb, cc, and cd
-    results = []
-    sv_values = [1.0 + v * 0.05 for v in range(1, 20)]
-    caf = 10000
-    for sv in sv_values:
-        model = reactor_design_model({'sv': sv})
-        solver = SolverFactory('ipopt')
-        solver.solve(model)
-        results.append([sv, caf, model.ca(), model.cb(), model.cc(), model.cd()])
-    
-    results = pd.DataFrame(results, columns=['sv', 'caf', 'ca', 'cb', 'cc', 'cd'])
-    print(results)
-    
+ 

@@ -1,14 +1,14 @@
 import numpy as np
 import pandas as pd
-from itertools import product
 import matplotlib.pylab as plt
 import pyomo.contrib.parmest.parmest as parmest
 from reactor_design_datarec import reactor_design_model
-import scipy.stats as stats
 
 plt.close('all')
 
-# Generate data based on real theta values, sv, and caf
+np.random.seed(1234)
+
+### Generate data based on real sv, caf, ca, cb, cc, and cd
 theta_real = {'k1': 5.0/6.0,
               'k2': 5.0/3.0,
               'k3': 1.0/6000.0}
@@ -30,75 +30,56 @@ data['cc'] = np.random.lognormal(np.log(1600),0.25,ndata)
 # Triangular distribution between 1000 and 2000
 data['cd'] = np.random.triangular(1000,1800,3000,size=ndata)
 
-data['sv'] = 0.2 * np.random.randn(ndata) + 1 #sv_real
-data['caf'] = 500 * np.random.randn(ndata) + 10000 #caf_real
+data['sv'] = sv_real
+data['caf'] = caf_real
 
 plt.figure()
 data[['ca', 'cb', 'cc', 'cd']].boxplot()
-plt.ylim([0,5000])
+
+data_std = data.std()
+
+# Define sum of squared error objective function
+def SSE(model, data): 
+    expr = ((float(data['ca']) - model.ca)/float(data_std['ca']))**2 + \
+           ((float(data['cb']) - model.cb)/float(data_std['cb']))**2 + \
+           ((float(data['cc']) - model.cc)/float(data_std['cc']))**2 + \
+           ((float(data['cd']) - model.cd)/float(data_std['cd']))**2
+    return expr
 
 ### Data reconciliation
 
-# Vars to estimate
-theta_names = ['caf']
-
-# Sum of squared error function
-def SSE(model, data): 
-    expr = (float(data['ca']) - model.ca)**2 + \
-           (float(data['cb']) - model.cb)**2 + \
-           (float(data['cc']) - model.cc)**2 + \
-           (float(data['cd']) - model.cd)**2
-    return expr
+theta_names = [] # no variables to estimate, use initialized values
 
 pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE)
-obj, theta, model_vals = pest.theta_est(return_model_values=['ca', 'cb', 'cc', 'cd'])
+obj, theta, data_rec = pest.theta_est(return_values=['ca', 'cb', 'cc', 'cd'])
 print(obj)
 print(theta)
 
-data_rec = pd.DataFrame(model_vals)
-
-plt.figure()
-data_rec.boxplot()
-plt.ylim([0,5000])
-
-data_diff = data[['ca', 'cb', 'cc', 'cd']] - data_rec
-plt.figure()
-data_diff.boxplot()
+parmest.grouped_boxplot(data[['ca', 'cb', 'cc', 'cd']], data_rec, 
+                        group_names=['Data', 'Data Rec'])
 
 
-### Parameter estimation
+### Parameter estimation using reconciled data
 
 theta_names = ['k1', 'k2', 'k3']
 data_rec['sv'] = data['sv']
-data_rec['caf'] = theta['caf']
+data_rec['caf'] = data['caf']
 
 pest = parmest.Estimator(reactor_design_model, data_rec, theta_names, SSE)
-obj, theta, model_vals = pest.theta_est(return_model_values=['ca', 'cb', 'cc', 'cd'])
+obj, theta = pest.theta_est()
 print(obj)
 print(theta)
-
-data_rec2 = pd.DataFrame(model_vals)
-
-plt.figure()
-data_rec2.boxplot()
-plt.ylim([0,5000])
-
-data_diff = data_rec - data_rec2
-plt.figure()
-data_diff.boxplot()
+print(theta_real)
 
 
-### Data reconciliation with prameter estimation
+### Data reconciliation with parameter estimation
 
-theta_names = ['k1', 'k2', 'k3', 'caf']
+theta_names = ['k1', 'k2', 'k3']
 
 pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE)
-obj, theta, model_vals = pest.theta_est(return_model_values=['ca', 'cb', 'cc', 'cd'])
+obj, theta, data_rec2 = pest.theta_est(return_values=['ca', 'cb', 'cc', 'cd'])
 print(obj)
 print(theta)
 
-data_rec3 = pd.DataFrame(model_vals)
-
-plt.figure()
-data_rec3.boxplot()
-plt.ylim([0,5000])
+parmest.grouped_boxplot(data[['ca', 'cb', 'cc', 'cd']], data_rec2, 
+                        group_names=['Data', 'Data Rec'])
