@@ -57,7 +57,7 @@ def get_version():
     return _verInfo['__version__']
 
 requires = [
-    'PyUtilib>=5.7.1.dev0',
+    'PyUtilib>=5.7.2.dev0',
     'appdirs',
     'ply',
     'six>=1.4',
@@ -159,6 +159,7 @@ def run_setup():
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Software Development :: Libraries :: Python Modules' ],
       packages=packages,
+      package_data={"pyomo.contrib.viewer":["*.ui"]},
       keywords=['optimization'],
       install_requires=requires,
       ext_modules = ext_modules,
@@ -199,6 +200,7 @@ def run_setup():
         pyomo.test.pyomo = pyomo.scripting.runtests
         pyomo.pyro_mip_server = pyomo.scripting.pyro_mip_server
         pyomo.results_schema=pyomo.scripting.commands
+        pyomo.viewer=pyomo.contrib.viewer.pyomo_viewer
       """
       )
 
