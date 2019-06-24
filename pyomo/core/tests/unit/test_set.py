@@ -4940,3 +4940,11 @@ c : Size=3, Index=CHOICES, Active=True
             self.assertEqual(output.getvalue().strip(), ref)
         finally:
             normalize_index.flatten = _oldFlatten
+
+    def test_issue_148(self):
+        legal = set(['a','b','c'])
+        m = ConcreteModel()
+        m.s = Set(initialize=['a','b'], within=legal)
+        self.assertEqual(set(m.s), {'a','b'})
+        with self.assertRaisesRegexp(ValueError, 'Cannot add value d to Set s'):
+            m.s.add('d')
