@@ -15,10 +15,12 @@ import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as st
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
 from pyomo.opt import SolverFactory
+from pyomo.environ import Block
 
 import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
-from pyomo.contrib.parmest.graphics import pairwise_plot, fit_rect_dist, fit_mvn_dist, fit_kde_dist
+from pyomo.contrib.parmest.graphics import pairwise_plot, fit_rect_dist, fit_mvn_dist, \
+    fit_kde_dist, grouped_boxplot
 
 __version__ = 0.1
 
@@ -324,7 +326,12 @@ class Estimator(object):
         
         self.model_function = model_function
         self.callback_data = data
-        self.theta_names = theta_names 
+
+        if len(theta_names) == 0:
+            self.theta_names = ['parmest_dummy_var']
+        else:
+            self.theta_names = theta_names 
+            
         self.obj_function = obj_function 
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
@@ -340,7 +347,10 @@ class Estimator(object):
         from pyomo.core import Objective
         
         model = self.model_function(data)
-
+        
+        if (len(self.theta_names) == 1) and (self.theta_names[0] == 'parmest_dummy_var'):
+            model.parmest_dummy_var = pyo.Var(initialize = 1.0)
+            
         for theta in self.theta_names:
             try:
                 var_validate = eval('model.'+theta)
@@ -393,7 +403,7 @@ class Estimator(object):
         return model
     
 
-    def _Q_opt(self, ThetaVals=None, solver="ef_ipopt", bootlist=None, return_model_values=None):
+    def _Q_opt(self, ThetaVals=None, solver="ef_ipopt", return_values=[], bootlist=None):
         """
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
@@ -447,17 +457,20 @@ class Estimator(object):
 
             objval = stsolver.root_E_obj()
             
-            if return_model_values is not None:
-                modelvals = []
-                for exp_i in stsolver.ef_instance.block_data_objects():
-                    if exp_i.name == 'MASTER':
-                        continue
+            if len(return_values) > 0:
+                var_values = []
+                for exp_i in stsolver.ef_instance.component_objects(Block, descend_into=False):
                     vals = {}
-                    for var in return_model_values:
-                        vals[var] = exp_i.component(var).value
-                    modelvals.append(vals)
-                        
-                return objval, thetavals, modelvals
+                    for var in return_values:
+                        exp_i_var = eval('exp_i.'+ str(var))
+                        temp = [_.value for _ in exp_i_var.itervalues()]
+                        if len(temp) == 1:
+                            vals[var] = temp[0]
+                        else:
+                            vals[var] = temp                    
+                    var_values.append(vals)                    
+                var_values = pd.DataFrame(var_values)
+                return objval, thetavals, var_values
 
             return objval, thetavals
         
@@ -643,14 +656,11 @@ class Estimator(object):
                                            a sample, the dim of theta may be too 
                                            close to the samplesize""")
     
-                samplelist.append(sample)
+                samplelist.append((i, sample))
             
-            # Add the index
-            samplelist = [(i, l) for i, l in enumerate(samplelist)]
-        
         return samplelist
     
-    def theta_est(self, solver="ef_ipopt", bootlist=None, return_model_values=None): 
+    def theta_est(self, solver="ef_ipopt", return_values=[], bootlist=None): 
         """
         Run parameter estimation using all data
 
@@ -658,18 +668,23 @@ class Estimator(object):
         ----------
         solver: string, optional
             "ef_ipopt" or "k_aug". Default is "ef_ipopt".
-
+        return_values: list, optional
+            List of Variable names used to return values from the model
+            
         Returns
         -------
         objectiveval: float
             The objective function value
         thetavals: dict
             A dictionary of all values for theta
+        variable values: pd.DataFrame
+            Variable values for each variable name in return_values (only for ef_ipopt)
         Hessian: dict
             A dictionary of dictionaries for the Hessian.
-            The Hessian is not returned if the solver is ef.
+            The Hessian is not returned if the solver is ef_ipopt.
         """
-        return self._Q_opt(solver=solver, bootlist=bootlist, return_model_values=return_model_values)
+        return self._Q_opt(solver=solver, return_values=return_values,
+                           bootlist=bootlist)
     
     
     def theta_est_bootstrap(self, bootstrap_samples, samplesize=None, 
