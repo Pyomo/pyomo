@@ -5010,3 +5010,27 @@ c : Size=3, Index=CHOICES, Active=True
         m.IDX = Set(initialize=matrix_coefficients)
         m.Matrix = Param(m.IDX, default=0)
         self.assertEqual(len(m.Matrix), 2*5*3*5)
+
+    def test_issue_758(self):
+        m = ConcreteModel()
+        m.I = RangeSet(5)
+
+        self.assertEqual(m.I.next(1), 2)
+        self.assertEqual(m.I.next(4), 5)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot advance past the end of the Set"):
+            m.I.next(5)
+
+        self.assertEqual(m.I.prev(2), 1)
+        self.assertEqual(m.I.prev(5), 4)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot advance before the beginning of the Set"):
+            m.I.prev(1)
+
+        self.assertEqual(m.I.nextw(1), 2)
+        self.assertEqual(m.I.nextw(4), 5)
+        self.assertEqual(m.I.nextw(5), 1)
+
+        self.assertEqual(m.I.prevw(2), 1)
+        self.assertEqual(m.I.prevw(5), 4)
+        self.assertEqual(m.I.prevw(1), 5)
