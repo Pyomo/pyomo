@@ -296,6 +296,18 @@ def log(xl, xu):
     return lb, ub
 
 
+def log10(xl, xu):
+    if xl > 0:
+        lb = math.log10(xl)
+    else:
+        lb = -math.inf
+    if xu > 0:
+        ub = math.log10(xu)
+    else:
+        ub = -math.inf
+    return lb, ub
+
+
 def sin(xl, xu):
     """
 
