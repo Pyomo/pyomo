@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import copy
+import itertools
 import logging
 import pickle
 from six import StringIO
@@ -4996,3 +4997,16 @@ c : Size=3, Index=CHOICES, Active=True
         self.assertEqual(len(m.test), 1)
         m.test2 = Block(m.set_mult, m.s3, rule=_test)
         self.assertEqual(len(m.test2), 1)
+
+    def test_issue_637(self):
+        constraints = {
+            c for c in itertools.product(['constrA', 'constrB'], range(5))
+        }
+        vars = {
+            v for v in itertools.product(['var1', 'var2', 'var3'], range(5))
+        }
+        matrix_coefficients = {m for m in itertools.product(constraints, vars)}
+        m = ConcreteModel()
+        m.IDX = Set(initialize=matrix_coefficients)
+        m.Matrix = Param(m.IDX, default=0)
+        self.assertEqual(len(m.Matrix), 2*5*3*5)
