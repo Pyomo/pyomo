@@ -39,9 +39,5 @@ def run_subproc_pytest(test_file, test_func, freq=1, timeout=10.0):
     assert(p.poll()==0)
 
 @unittest.skipIf(skip_qt_tests, "Required packages not available")
-def test_get_mainwindow():
-    run_subproc_pytest(test_file, "test_get_mainwindow")
-
-@unittest.skipIf(skip_qt_tests, "Required packages not available")
 def test_model_information():
     run_subproc_pytest(test_file, "test_model_information")
