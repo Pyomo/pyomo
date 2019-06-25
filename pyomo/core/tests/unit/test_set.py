@@ -44,7 +44,7 @@ from pyomo.core.base.set import (
     simple_set_rule, set_options,
 )
 from pyomo.environ import (
-    AbstractModel, ConcreteModel, Var, Param, Suffix, Constraint,
+    AbstractModel, ConcreteModel, Block, Var, Param, Suffix, Constraint,
 )
 
 try:
@@ -4982,3 +4982,17 @@ c : Size=3, Index=CHOICES, Active=True
 
         m.v_1 = Var(m.s['s1'], m.s2, initialize=10)
         self.assertEqual(len(m.v_1), 9)
+
+    def test_issue_358(self):
+        m = ConcreteModel()
+        m.s = RangeSet(1)
+        m.s2 = RangeSet(1)
+        m.set_mult = m.s * m.s2
+        m.s3 = RangeSet(1)
+
+        def _test(b, x, y, z):
+            print(x, y, z)
+        m.test = Block(m.set_mult, m.s3, rule=_test)
+        self.assertEqual(len(m.test), 1)
+        m.test2 = Block(m.set_mult, m.s3, rule=_test)
+        self.assertEqual(len(m.test2), 1)
