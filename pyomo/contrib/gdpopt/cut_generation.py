@@ -2,7 +2,7 @@
 from __future__ import division
 
 from math import copysign, fabs
-from pyomo.contrib.derivatives.differentiate import reverse_ad
+from pyomo.core.expr.calculus.diff_with_pyomo import reverse_ad
 
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
