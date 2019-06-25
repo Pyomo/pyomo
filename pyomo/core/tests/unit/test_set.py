@@ -13,6 +13,7 @@ import itertools
 import logging
 import pickle
 from six import StringIO
+from typing import NamedTuple
 
 import pyutilib.th as unittest
 
@@ -46,6 +47,7 @@ from pyomo.core.base.set import (
 )
 from pyomo.environ import (
     AbstractModel, ConcreteModel, Block, Var, Param, Suffix, Constraint,
+    Objective,
 )
 
 try:
@@ -3813,9 +3815,9 @@ class TestSet(unittest.TestCase):
         m.J = Set()
         with self.assertRaisesRegexp(
                 TypeError,
-                "Unable to insert '\[1\]' into Set J:\n"
-                "\tTypeError: unhashable type: 'list'"):
-            m.J.add([1])
+                "Unable to insert '{}' into Set J:\n"
+                "\tTypeError: unhashable type: 'dict'"):
+            m.J.add({})
 
         self.assertTrue( m.J.add((1,)) )
         output = StringIO()
@@ -4442,10 +4444,22 @@ I : Size=2, Index=I_index, Ordered=Insertion
             m = ConcreteModel()
             m.I = Set()
             self.assertIs(m.I._dimen, _UnknownSetDimen)
-            m.I.add((1,(2,3)))
+            self.assertTrue(m.I.add((1,(2,3))))
             self.assertIs(m.I._dimen, None)
+            self.assertNotIn(((1,2),3), m.I)
             self.assertIn((1,(2,3)), m.I)
             self.assertNotIn((1,2,3), m.I)
+
+            m.J = Set()
+            self.assertTrue(m.J.add(1))
+            self.assertIn(1, m.J)
+            self.assertNotIn((1,), m.J)
+            self.assertTrue(m.J.add((1,)))
+            self.assertIn(1, m.J)
+            self.assertIn((1,), m.J)
+            self.assertTrue(m.J.add((2,)))
+            self.assertNotIn(2, m.J)
+            self.assertIn((2,), m.J)
 
             normalize_index.flatten = True
             m = ConcreteModel()
@@ -4453,8 +4467,20 @@ I : Size=2, Index=I_index, Ordered=Insertion
             self.assertIs(m.I._dimen, _UnknownSetDimen)
             m.I.add((1,(2,3)))
             self.assertIs(m.I._dimen, 3)
-            self.assertNotIn((1,(2,3)), m.I)
+            self.assertIn(((1,2),3), m.I)
+            self.assertIn((1,(2,3)), m.I)
             self.assertIn((1,2,3), m.I)
+
+            m.J = Set()
+            self.assertTrue(m.J.add(1))
+            self.assertIn(1, m.J)
+            self.assertIn((1,), m.J)
+            self.assertFalse(m.J.add((1,))) # Not added!
+            self.assertIn(1, m.J)
+            self.assertIn((1,), m.J)
+            self.assertTrue(m.J.add((2,)))
+            self.assertIn(2, m.J)
+            self.assertIn((2,), m.J)
         finally:
             normalize_index.flatten = _oldFlatten
 
@@ -5034,3 +5060,112 @@ c : Size=3, Index=CHOICES, Active=True
         self.assertEqual(m.I.prevw(2), 1)
         self.assertEqual(m.I.prevw(5), 4)
         self.assertEqual(m.I.prevw(1), 5)
+
+    def test_issue_835(self):
+        a = ["a", "x", "c", "b"]
+
+        model = ConcreteModel()
+        model.S = Set(initialize=a)
+        model.OS = Set(initialize=a, ordered=True)
+
+        self.assertEqual(list(model.S), a)
+        self.assertEqual(list(model.OS), a)
+
+        out1 = StringIO()
+        model.S.pprint(ostream=out1)
+        out2 = StringIO()
+        model.OS.pprint(ostream=out2)
+
+        self.assertEqual(
+            out1.getvalue().strip(),
+            out2.getvalue().strip()[1:],
+        )
+
+    def test_issue_938(self):
+        NodeKey = NamedTuple('NodeKey', [('id', int)])
+        ArcKey = NamedTuple('ArcKey',
+                            [('node_from', NodeKey), ('node_to', NodeKey)])
+        def build_model():
+            model = ConcreteModel()
+            model.node_keys = Set(doc='Set of nodes',
+                                  initialize=[NodeKey(0), NodeKey(1)])
+            model.arc_keys = Set(doc='Set of arcs',
+                                 within=model.node_keys * model.node_keys,
+                                 initialize=[
+                                     ArcKey(NodeKey(0), NodeKey(0)),
+                                     ArcKey(NodeKey(0), NodeKey(1)),
+                                 ])
+            model.arc_variables = Var(model.arc_keys,
+                                      within=Binary)
+
+            def objective_rule(model_arg):
+                return sum(var for var in model_arg.arc_variables.values())
+            model.obj = Objective(rule=objective_rule)
+            return model
+
+        try:
+            _oldFlatten = normalize_index.flatten
+
+            normalize_index.flatten = True
+            m = build_model()
+            output = StringIO()
+            m.pprint(ostream=output)
+            ref = """
+1 Var Declarations
+    arc_variables : Size=2, Index=arc_keys
+        Key    : Lower : Value : Upper : Fixed : Stale : Domain
+        (0, 0) :     0 :  None :     1 : False :  True : Binary
+        (0, 1) :     0 :  None :     1 : False :  True : Binary
+
+1 Objective Declarations
+    obj : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : arc_variables[0,0] + arc_variables[0,1]
+
+2 Set Declarations
+    arc_keys : Set of arcs
+        Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain              : Size : Members
+        None :     2 : node_keys*node_keys :    2 : {(0, 0), (0, 1)}
+    node_keys : Set of nodes
+        Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    2 : {0, 1}
+
+4 Declarations: node_keys arc_keys arc_variables obj
+""".strip()
+            self.assertEqual(output.getvalue().strip(), ref)
+
+            normalize_index.flatten = False
+            m = build_model()
+            output = StringIO()
+            m.pprint(ostream=output)
+            ref = """
+1 Var Declarations
+    arc_variables : Size=2, Index=arc_keys
+        Key                                                    : Lower : Value : Upper : Fixed : Stale : Domain
+        ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0)) :     0 :  None :     1 : False :  True : Binary
+        ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1)) :     0 :  None :     1 : False :  True : Binary
+
+1 Objective Declarations
+    obj : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : arc_variables[ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0))] + arc_variables[ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))]
+
+2 Set Declarations
+    arc_keys : Set of arcs
+        Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain              : Size : Members
+        None :  None : node_keys*node_keys :    2 : {ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0)), ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))}
+    node_keys : Set of nodes
+        Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :  None :    Any :    2 : {NodeKey(id=0), NodeKey(id=1)}
+
+4 Declarations: node_keys arc_keys arc_variables obj
+""".strip()
+            print output.getvalue()
+            self.assertEqual(output.getvalue().strip(), ref)
+
+        finally:
+            normalize_index.flatten = _oldFlatten

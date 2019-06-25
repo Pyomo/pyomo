@@ -45,7 +45,7 @@ from pyomo.core.expr.numvalue import (
 )
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
-    IndexedComponent, UnindexedComponent_set, normalize_index
+    IndexedComponent, UnindexedComponent_set, normalize_index,
 )
 from pyomo.core.base.misc import sorted_robust
 
@@ -133,6 +133,10 @@ class _IndexedCallInitializer(_InitializerBase):
         self._fcn = _fcn
 
     def __call__(self, parent, idx):
+        # Note: this is called by a component using data from a Set (so
+        # any tuple-like type should have already been checked and
+        # converted to a tuple; or flattening is turned off and it is
+        # the user's responsibility to sort things out.
         if idx.__class__ is tuple:
             return self._fcn(parent, *idx)
         else:
@@ -144,6 +148,10 @@ class _IndexedCallInitializer(_InitializerBase):
 
 class _CountedCallGenerator(object):
     def __init__(self, fcn, scalar, parent, idx):
+        # Note: this is called by a component using data from a Set (so
+        # any tuple-like type should have already been checked and
+        # converted to a tuple; or flattening is turned off and it is
+        # the user's responsibility to sort things out.
         self._count = 0
         if scalar:
             self._fcn = lambda c: self._filter(fcn(parent, c))
@@ -207,6 +215,10 @@ class _CountedCallInitializer(_InitializerBase):
             self._is_counted_rule = True
 
     def __call__(self, parent, idx):
+        # Note: this is called by a component using data from a Set (so
+        # any tuple-like type should have already been checked and
+        # converted to a tuple; or flattening is turned off and it is
+        # the user's responsibility to sort things out.
         if self._is_counted_rule == False:
             if idx.__class__ is tuple:
                 return self._fcn(parent, *idx)
@@ -1637,11 +1649,9 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         """
         Return True if the set contains a given value.
         """
-        # The bulk of single-value set members were stored as scalars.
-        # Check that first.
-        if value.__class__ is tuple and len(value) == 1:
-            if value[0] in self._values:
-                return True
+        if normalize_index.flatten:
+            value = normalize_index(value)
+
         return value in self._values
 
     def __iter__(self):
@@ -1666,13 +1676,10 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
 
     def add(self, value):
         if normalize_index.flatten:
-            if type(value) is tuple:
-                _value = flatten_tuple(value)
+            _value = normalize_index(value)
+            if _value.__class__ is tuple:
                 _d = len(_value)
-                if _d == 1:
-                    _value = _value[0]
             else:
-                _value = value
                 _d = 1
         else:
             # If we are not normalizing indices, then we cannot reliably
@@ -3346,18 +3353,26 @@ class SetProduct_InfiniteSet(SetProduct):
         return self._find_val(val) is not None
 
     def _find_val(self, val):
-        if type(val) is not tuple:
-            val = (val,)
-
         # Support for ambiguous cross products: if val matches the
         # number of subsets, we will start by checking each value
         # against the corresponding subset.  Failure is not sufficient
         # to determine the val is not in this set.
-        if len(val) == len(self._sets):
+        if hasattr(val, '__len__') and len(val) == len(self._sets):
             if all(v in self._sets[i] for i,v in enumerate(val)):
                 return val, None
 
-        val = flatten_tuple(val)
+        # If we are not normalizing indices, then if the above did not
+        # match, we will NOT attempt to guess how to split the indices
+        if not normalize_index.flatten:
+            return None
+
+        val = normalize_index(val)
+        if val.__class__ is tuple:
+            v_len = len(val)
+        else:
+            val = (val,)
+            v_len = 1
+
         # Get the dimentionality of all the component sets
         setDims = list(s.dimen for s in self._sets)
         # Find the starting index for each subset (based on dimentionality)
@@ -3371,12 +3386,12 @@ class SetProduct_InfiniteSet(SetProduct):
             lastIndex += dim
             # We can also check for this subset member immediately.
             # Non-membership is sufficient to return "not found"
-            if lastIndex > len(val):
+            if lastIndex > v_len:
                 return None
             elif val[index[i]:lastIndex] not in self._sets[i]:
                 return None
         # The end of the last subset is always the length of the val
-        index.append(len(val))
+        index.append(v_len)
 
         # If there were no non-dimentioned sets, then we have checked
         # each subset, found a match, and can reach a verdict:
@@ -3469,7 +3484,8 @@ class SetProduct_FiniteSet(_FiniteSetMixin, SetProduct_InfiniteSet):
         _iter = itertools.product(*self._sets)
         # Note: if all the member sets are simple 1-d sets, then there
         # is no need to call flatten_tuple.
-        if FLATTEN_CROSS_PRODUCT and self.dimen != len(self._sets):
+        if FLATTEN_CROSS_PRODUCT and normalize_index.flatten \
+           and self.dimen != len(self._sets):
             return (flatten_tuple(_) for _ in _iter)
         return _iter
 
@@ -3484,7 +3500,7 @@ class SetProduct_FiniteSet(_FiniteSetMixin, SetProduct_InfiniteSet):
 
     @property
     def dimen(self):
-        if not FLATTEN_CROSS_PRODUCT:
+        if not (FLATTEN_CROSS_PRODUCT and normalize_index.flatten):
             return None
         ans = 0
         for s in self._sets:
@@ -3508,7 +3524,8 @@ class SetProduct_OrderedSet(_OrderedSetMixin, SetProduct_FiniteSet):
         if _idx:
             raise IndexError("%s index out of range" % (self.name,))
         ans = tuple(s[i+1] for s,i in zip(self._sets, _ord))
-        if FLATTEN_CROSS_PRODUCT and self.dimen != len(ans):
+        if FLATTEN_CROSS_PRODUCT and normalize_index.flatten \
+           and self.dimen != len(ans):
             return flatten_tuple(ans)
         return ans
 
