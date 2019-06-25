@@ -4969,3 +4969,16 @@ c : Size=3, Index=CHOICES, Active=True
         ]
         self.assertEqual(len(m2_binaries), 1)
         self.assertIs(m2_binaries[0], m2.y)
+
+    def test_issue_191(self):
+        m = ConcreteModel()
+        m.s = Set(['s1','s2'], initialize=[1,2,3])
+        m.s2 = Set(initialize=['a','b','c'])
+
+        m.p = Param(m.s['s1'], initialize=10)
+        temp = m.s['s1'] * m.s2
+        m.v = Var(temp, initialize=5)
+        self.assertEqual(len(m.v), 9)
+
+        m.v_1 = Var(m.s['s1'], m.s2, initialize=10)
+        self.assertEqual(len(m.v_1), 9)
