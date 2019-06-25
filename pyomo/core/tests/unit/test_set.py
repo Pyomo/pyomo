@@ -23,7 +23,7 @@ from pyomo.core.base.indexed_component import normalize_index
 from pyomo.core.base.set import (
     NumericRange as NR, NonNumericRange as NNR, AnyRange, _AnySet,
     Any, Reals, NonNegativeReals, Integers, PositiveIntegers,
-    NegativeIntegers, PositiveReals,
+    NegativeIntegers, PositiveReals, Binary,
     RangeSet, Set, SetOf,
     _FiniteRangeSetData, _InfiniteRangeSetData,
     SetUnion_InfiniteSet, SetUnion_FiniteSet, SetUnion_OrderedSet,
@@ -4948,3 +4948,24 @@ c : Size=3, Index=CHOICES, Active=True
         self.assertEqual(set(m.s), {'a','b'})
         with self.assertRaisesRegexp(ValueError, 'Cannot add value d to Set s'):
             m.s.add('d')
+
+    def test_issue_165(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var(domain=Binary)
+        m_binaries = [
+            v for v in m.component_data_objects(
+                ctype=Var, descend_into=True)
+            if v.domain is Binary and not v.fixed
+        ]
+        self.assertEqual(len(m_binaries), 1)
+        self.assertIs(m_binaries[0], m.y)
+
+        m2 = m.clone()
+        m2_binaries = [
+            v for v in m2.component_data_objects(
+                ctype=Var, descend_into=True)
+            if v.domain is Binary and not v.fixed
+        ]
+        self.assertEqual(len(m2_binaries), 1)
+        self.assertIs(m2_binaries[0], m2.y)
