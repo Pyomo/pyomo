@@ -2692,8 +2692,13 @@ class _FiniteRangeSetData( _SortedSetMixin,
 
     def __len__(self):
         if len(self._ranges) == 1:
+            # If there is only one range, then this set's range is equal
+            # to the range's length
             r = self._ranges[0]
-            return (r.end - r.start) // r.step + 1
+            if r.start == r.end:
+                return 1
+            else:
+                return (r.end - r.start) // r.step + 1
         else:
             return sum(1 for _ in self)
 
