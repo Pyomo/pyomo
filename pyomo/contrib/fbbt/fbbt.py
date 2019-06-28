@@ -367,7 +367,7 @@ def _prop_bnds_leaf_to_root_sqrt(node, bnds_dict, feasibility_tol):
 _unary_leaf_to_root_map = dict()
 _unary_leaf_to_root_map['exp'] = _prop_bnds_leaf_to_root_exp
 _unary_leaf_to_root_map['log'] = _prop_bnds_leaf_to_root_log
-_unary_leaf_to_root_map['log10'] = _prop_bnds_leaf_to_root_log
+_unary_leaf_to_root_map['log10'] = _prop_bnds_leaf_to_root_log10
 _unary_leaf_to_root_map['sin'] = _prop_bnds_leaf_to_root_sin
 _unary_leaf_to_root_map['cos'] = _prop_bnds_leaf_to_root_cos
 _unary_leaf_to_root_map['tan'] = _prop_bnds_leaf_to_root_tan
@@ -897,7 +897,7 @@ def _prop_bnds_root_to_leaf_atan(node, bnds_dict, feasibility_tol):
 _unary_root_to_leaf_map = dict()
 _unary_root_to_leaf_map['exp'] = _prop_bnds_root_to_leaf_exp
 _unary_root_to_leaf_map['log'] = _prop_bnds_root_to_leaf_log
-_unary_root_to_leaf_map['log10'] = _prop_bnds_root_to_leaf_log
+_unary_root_to_leaf_map['log10'] = _prop_bnds_root_to_leaf_log10
 _unary_root_to_leaf_map['sin'] = _prop_bnds_root_to_leaf_sin
 _unary_root_to_leaf_map['cos'] = _prop_bnds_root_to_leaf_cos
 _unary_root_to_leaf_map['tan'] = _prop_bnds_root_to_leaf_tan
