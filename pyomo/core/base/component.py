@@ -230,7 +230,7 @@ context of the immediate parent container.""")
 
         Note that this method is generally only reachable through
         ComponentData objects in an IndexedComponent container.
-        Components, including unindexed Component dervatives and both
+        Components, including unindexed Component derivatives and both
         scalar and indexed IndexedComponent derivatives will see
         :py:meth:`Component.pprint()`
         """
