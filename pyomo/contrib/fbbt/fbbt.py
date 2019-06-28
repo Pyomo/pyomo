@@ -1085,7 +1085,7 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
 
             lb, ub = self.bnds_dict[node]
             if lb - self.feasibility_tol > ub:
-                raise InfeasibleConstraintException('Lower bound computed for variable {0} is larger than the computed upper bound.'.format(node))
+                raise InfeasibleConstraintException('Lower bound ({1}) computed for variable {0} is larger than the computed upper bound ({2}).'.format(node, lb, ub))
             if lb == math.inf:
                 raise InfeasibleConstraintException('Computed a lower bound of +inf for variable {0}'.format(node))
             if ub == -math.inf:
