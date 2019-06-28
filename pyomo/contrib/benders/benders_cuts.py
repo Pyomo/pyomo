@@ -1,6 +1,8 @@
 from pyomo.core.base.block import _BlockData, declare_custom_block
 import pyomo.environ as pe
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+from pyomo.core.expr.visitor import identify_variables
+from pyomo.core.kernel.component_set import ComponentSet
 try:
     from mpi4py import MPI
     mpi4py_available = True
@@ -82,8 +84,21 @@ def _del_con(c):
         c.parent_block().del_component(c)
 
 
-def _setup_subproblem(b):
+def _any_common_elements(a, b):
+    if len(a) < len(b):
+        for i in a:
+            if i in b:
+                return True
+    else:
+        for i in b:
+            if i in a:
+                return True
+    return False
+
+
+def _setup_subproblem(b, master_vars, relax_subproblem_cons):
     # first get the objective and turn it into a constraint
+    master_vars = ComponentSet(master_vars)
 
     objs = list(b.component_data_objects(pe.Objective, descend_into=False, active=True))
     if len(objs) != 1:
@@ -99,6 +114,10 @@ def _setup_subproblem(b):
 
     b.aux_cons = pe.ConstraintList()
     for c in list(b.component_data_objects(pe.Constraint, descend_into=True, active=True, sort=True)):
+        if not relax_subproblem_cons:
+            c_vars = ComponentSet(identify_variables(c.body, include_fixed=False))
+            if not _any_common_elements(master_vars, c_vars):
+                continue
         if c.equality:
             body = c.body
             rhs = pe.value(c.lower)
@@ -170,7 +189,7 @@ class BendersCutGeneratorData(_BlockData):
         self.subproblem_solvers = list()
         self.all_master_etas = list()
 
-    def add_subproblem(self, subproblem_fn, subproblem_fn_kwargs, master_eta, subproblem_solver='gurobi_persistent'):
+    def add_subproblem(self, subproblem_fn, subproblem_fn_kwargs, master_eta, subproblem_solver='gurobi_persistent', relax_subproblem_cons=False):
         _rank = np.argmin(self.num_subproblems_by_rank)
         self.num_subproblems_by_rank[_rank] += 1
         self.all_master_etas.append(master_eta)
@@ -179,7 +198,7 @@ class BendersCutGeneratorData(_BlockData):
             subproblem, complicating_vars_map = subproblem_fn(**subproblem_fn_kwargs)
             self.subproblems.append(subproblem)
             self.complicating_vars_maps.append(complicating_vars_map)
-            _setup_subproblem(subproblem)
+            _setup_subproblem(subproblem, master_vars=[complicating_vars_map[i] for i in self.master_vars if i in complicating_vars_map], relax_subproblem_cons=relax_subproblem_cons)
 
             if isinstance(subproblem_solver, str):
                 subproblem_solver = pe.SolverFactory(subproblem_solver)
@@ -201,10 +220,11 @@ class BendersCutGeneratorData(_BlockData):
             subproblem.fix_complicating_vars = pe.ConstraintList()
             var_to_con_map = pe.ComponentMap()
             for master_var in self.master_vars:
-                sub_var = complicating_vars_map[master_var]
-                sub_var.value = master_var.value
-                new_con = subproblem.fix_complicating_vars.add(sub_var - master_var.value == 0)
-                var_to_con_map[master_var] = new_con
+                if master_var in complicating_vars_map:
+                    sub_var = complicating_vars_map[master_var]
+                    sub_var.value = master_var.value
+                    new_con = subproblem.fix_complicating_vars.add(sub_var - master_var.value == 0)
+                    var_to_con_map[master_var] = new_con
             subproblem.fix_eta = pe.Constraint(expr=subproblem._eta - master_eta.value == 0)
             subproblem._eta.value = master_eta.value
 
@@ -230,8 +250,10 @@ class BendersCutGeneratorData(_BlockData):
 
             constants[subproblem_ndx] = pe.value(subproblem._z)
             eta_coeffs[subproblem_ndx] = sign_convention * pe.value(subproblem.dual[subproblem.obj_con])
-            for c in subproblem.fix_complicating_vars.values():
-                coefficients[coeff_ndx] = sign_convention * pe.value(subproblem.dual[c])
+            for master_var in self.master_vars:
+                if master_var in complicating_vars_map:
+                    c = var_to_con_map[master_var]
+                    coefficients[coeff_ndx] = sign_convention * pe.value(subproblem.dual[c])
                 coeff_ndx += 1
 
             if isinstance(subproblem_solver, PersistentSolver):

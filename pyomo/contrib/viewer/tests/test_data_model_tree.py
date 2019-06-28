@@ -17,11 +17,11 @@ from pyomo.environ import *
 from pyomo.contrib.viewer.model_browser import ComponentDataModel
 try:
     no_pyqt = False
-    from pyomo.contrib.viewer.ui import UISetup
+    from pyomo.contrib.viewer.ui_data import UIData
     import pyomo.contrib.viewer.ui as ui
 except:
     no_pyqt = True
-    class UISetup(object):
+    class UIData(object):
         model = None
         def __init__(*args, **kwargs):
             pass
@@ -53,9 +53,9 @@ class TestDataModel(unittest.TestCase):
         self.m = m.clone()
 
     def test_create_tree_var(self):
-        ui_setup = UISetup(model=self.m)
+        ui_data = UIData(model=self.m)
         # Defaults to variables and two columns name and value
-        data_model = ComponentDataModel(parent=None, ui_setup=ui_setup)
+        data_model = ComponentDataModel(parent=None, ui_data=ui_data)
         # There should be one root item
         assert(len(data_model.rootItems)==1)
         assert(data_model.rootItems[0].data==self.m)
@@ -93,9 +93,9 @@ class TestDataModel(unittest.TestCase):
         assert(abs(data_model.data(idx) - 2.0) < 0.0001)
 
     def test_create_tree_con(self):
-        ui_setup = UISetup(model=self.m)
+        ui_data = UIData(model=self.m)
         # Make a tree with constraints
-        data_model = ComponentDataModel(parent=None, ui_setup=ui_setup,
+        data_model = ComponentDataModel(parent=None, ui_data=ui_data,
                                         components=(Constraint,),
                                         columns=["name", "active"])
         # There should be one root item
@@ -124,9 +124,9 @@ class TestDataModel(unittest.TestCase):
         assert(data_model.data(idx)=="c2")
 
     def test_create_tree_expr(self):
-        ui_setup = UISetup(model=self.m)
+        ui_data = UIData(model=self.m)
         # Make a tree with constraints
-        data_model = ComponentDataModel(parent=None, ui_setup=ui_setup,
+        data_model = ComponentDataModel(parent=None, ui_data=ui_data,
                                         components=(Expression,),
                                         columns=["name", "value"])
         # There should be one root item
@@ -137,7 +137,7 @@ class TestDataModel(unittest.TestCase):
         children = data_model.rootItems[0].children
         assert(children[0].data == self.m.b1)
         assert(children[0].children[0].data == self.m.b1.e1)
-        children[0].children[0].calculate()
+        ui_data.calculate_expressions()
         # Check the data display role The rows in the tree should be:
         #   0. Model
         #     0. b1,
@@ -148,3 +148,41 @@ class TestDataModel(unittest.TestCase):
         e1_index1 = data_model.index(0,1,parent=b1_index)
         assert(data_model.data(e1_index0)=="b1.e1")
         assert(abs(data_model.data(e1_index1) - 3.0) < 0.0001)
+
+    def test_update_tree_expr(self):
+        ui_data = UIData(model=self.m)
+        # Make a tree with constraints
+        data_model = ComponentDataModel(parent=None, ui_data=ui_data,
+                                        components=(Expression,),
+                                        columns=["name", "value"])
+
+        self.m.newe = Expression(expr=self.m.x[0] + self.m.x[1])
+
+        data_model._update_tree()
+
+        # There should be one root item
+        assert(len(data_model.rootItems)==1)
+        assert(data_model.rootItems[0].data==self.m)
+        # The children should be in the model construction order,
+        # and the indexes are sorted
+        children = data_model.rootItems[0].children
+        assert(children[0].data == self.m.b1)
+        assert(children[0].children[0].data == self.m.b1.e1)
+        ui_data.calculate_expressions()
+        # Check the data display role The rows in the tree should be:
+        #   0. Model
+        #     0. b1,
+        #       0. e1, value
+        root_index = data_model.index(0,0)
+        b1_index = data_model.index(0,0,parent=root_index)
+        e1_index0 = data_model.index(0,0,parent=b1_index)
+        e1_index1 = data_model.index(0,1,parent=b1_index)
+        assert(data_model.data(e1_index0)=="b1.e1")
+        assert(abs(data_model.data(e1_index1) - 3.0) < 0.0001)
+        # Check that in the update the new expression was added
+        found = False
+        for i in children:
+            if id(i.data) == id(self.m.newe):
+                found = True
+                break
+        assert(found)

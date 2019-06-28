@@ -10,7 +10,7 @@ processed with this transformation.
 
 """
 from pyomo.common.errors import InfeasibleConstraintException
-from pyomo.contrib.fbbt.fbbt import fbbt_block, BoundsManager
+from pyomo.contrib.fbbt.fbbt import fbbt, BoundsManager
 from pyomo.core.base.block import Block, TraversalStrategy
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.kernel.component_set import ComponentSet
@@ -143,7 +143,7 @@ def fbbt_disjunct(disj, parent_bounds):
     bnds_manager = BoundsManager(disj)
     bnds_manager.load_bounds(orig_bnds)
     try:
-        new_bnds = fbbt_block(disj)
+        new_bnds = fbbt(disj)
     except InfeasibleConstraintException as e:
         if disj.type() == Disjunct:
             disj.deactivate()  # simply prune the disjunct
