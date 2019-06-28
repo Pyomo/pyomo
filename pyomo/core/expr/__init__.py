@@ -34,4 +34,4 @@ from .current import (
 )
 
 from .calculus.derivatives import differentiate
-from .taylor_series import get_taylor_series
+from .taylor_series import taylor_series_expansion

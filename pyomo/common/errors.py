@@ -43,6 +43,6 @@ class InfeasibleConstraintException(PyomoException):
     pass
 
 
-class NondifferentiableError(ValueError):
+class NondifferentiableError(PyomoException, ValueError):
     """A Pyomo-specific ValueError raised for non-differentiable expressions"""
     pass
