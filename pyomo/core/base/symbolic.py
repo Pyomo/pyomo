@@ -13,8 +13,8 @@ import pyomo.core.expr.calculus.derivatives as diff_core
 from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available, NondifferentiableError
 
 
-@deprecated(msg=('The calculus function in pyomo.core.base.symbolic has been deprecated. Please use the ' +
-                 'differentiate function in pyomo.core.expr (which is also in environ).'),
+@deprecated(msg=('The differentiat function in pyomo.core.base.symbolic has been deprecated. Please use the ' +
+                 'differentiate function in pyomo.core.expr.'),
             version='TBD',
             remove_in='5.7')
 def differentiate(expr, wrt=None, wrt_list=None):
