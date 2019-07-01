@@ -204,6 +204,26 @@ def _prop_bnds_leaf_to_root_log(node, bnds_dict, feasibility_tol):
     bnds_dict[node] = interval.log(lb1, ub1)
 
 
+def _prop_bnds_leaf_to_root_log10(node, bnds_dict, feasibility_tol):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
+    bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
+    """
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb1, ub1 = bnds_dict[arg]
+    bnds_dict[node] = interval.log10(lb1, ub1)
+
+
 def _prop_bnds_leaf_to_root_sin(node, bnds_dict, feasibility_tol):
     """
 
@@ -347,6 +367,7 @@ def _prop_bnds_leaf_to_root_sqrt(node, bnds_dict, feasibility_tol):
 _unary_leaf_to_root_map = dict()
 _unary_leaf_to_root_map['exp'] = _prop_bnds_leaf_to_root_exp
 _unary_leaf_to_root_map['log'] = _prop_bnds_leaf_to_root_log
+_unary_leaf_to_root_map['log10'] = _prop_bnds_leaf_to_root_log10
 _unary_leaf_to_root_map['sin'] = _prop_bnds_leaf_to_root_sin
 _unary_leaf_to_root_map['cos'] = _prop_bnds_leaf_to_root_cos
 _unary_leaf_to_root_map['tan'] = _prop_bnds_leaf_to_root_tan
@@ -691,6 +712,32 @@ def _prop_bnds_root_to_leaf_log(node, bnds_dict, feasibility_tol):
     bnds_dict[arg] = (lb1, ub1)
 
 
+def _prop_bnds_root_to_leaf_log10(node, bnds_dict, feasibility_tol):
+    """
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.numeric_expr.ProductExpression
+    bnds_dict: ComponentMap
+    feasibility_tol: float
+        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
+        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
+        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
+        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
+        is more conservative).
+    """
+    assert len(node.args) == 1
+    arg = node.args[0]
+    lb0, ub0 = bnds_dict[node]
+    lb1, ub1 = bnds_dict[arg]
+    _lb1, _ub1 = interval.power(10, 10, lb0, ub0)
+    if _lb1 > lb1:
+        lb1 = _lb1
+    if _ub1 < ub1:
+        ub1 = _ub1
+    bnds_dict[arg] = (lb1, ub1)
+
+
 def _prop_bnds_root_to_leaf_sin(node, bnds_dict, feasibility_tol):
     """
 
@@ -850,6 +897,7 @@ def _prop_bnds_root_to_leaf_atan(node, bnds_dict, feasibility_tol):
 _unary_root_to_leaf_map = dict()
 _unary_root_to_leaf_map['exp'] = _prop_bnds_root_to_leaf_exp
 _unary_root_to_leaf_map['log'] = _prop_bnds_root_to_leaf_log
+_unary_root_to_leaf_map['log10'] = _prop_bnds_root_to_leaf_log10
 _unary_root_to_leaf_map['sin'] = _prop_bnds_root_to_leaf_sin
 _unary_root_to_leaf_map['cos'] = _prop_bnds_root_to_leaf_cos
 _unary_root_to_leaf_map['tan'] = _prop_bnds_root_to_leaf_tan
@@ -1037,7 +1085,7 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
 
             lb, ub = self.bnds_dict[node]
             if lb - self.feasibility_tol > ub:
-                raise InfeasibleConstraintException('Lower bound computed for variable {0} is larger than the computed upper bound.'.format(node))
+                raise InfeasibleConstraintException('Lower bound ({1}) computed for variable {0} is larger than the computed upper bound ({2}).'.format(node, lb, ub))
             if lb == math.inf:
                 raise InfeasibleConstraintException('Computed a lower bound of +inf for variable {0}'.format(node))
             if ub == -math.inf:
