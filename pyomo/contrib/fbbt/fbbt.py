@@ -17,9 +17,6 @@ from pyomo.common.config import ConfigBlock, ConfigValue, In, NonNegativeFloat, 
 
 logger = logging.getLogger(__name__)
 
-if not hasattr(math, 'inf'):
-    math.inf = float('inf')
-
 
 """
 The purpose of this file is to perform feasibility based bounds 
@@ -301,7 +298,7 @@ def _prop_bnds_leaf_to_root_asin(node, bnds_dict, feasibility_tol):
     assert len(node.args) == 1
     arg = node.args[0]
     lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.asin(lb1, ub1, -math.inf, math.inf)
+    bnds_dict[node] = interval.asin(lb1, ub1, -interval.inf, interval.inf)
 
 
 def _prop_bnds_leaf_to_root_acos(node, bnds_dict, feasibility_tol):
@@ -321,7 +318,7 @@ def _prop_bnds_leaf_to_root_acos(node, bnds_dict, feasibility_tol):
     assert len(node.args) == 1
     arg = node.args[0]
     lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.acos(lb1, ub1, -math.inf, math.inf)
+    bnds_dict[node] = interval.acos(lb1, ub1, -interval.inf, interval.inf)
 
 
 def _prop_bnds_leaf_to_root_atan(node, bnds_dict, feasibility_tol):
@@ -341,7 +338,7 @@ def _prop_bnds_leaf_to_root_atan(node, bnds_dict, feasibility_tol):
     assert len(node.args) == 1
     arg = node.args[0]
     lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.atan(lb1, ub1, -math.inf, math.inf)
+    bnds_dict[node] = interval.atan(lb1, ub1, -interval.inf, interval.inf)
 
 
 def _prop_bnds_leaf_to_root_sqrt(node, bnds_dict, feasibility_tol):
@@ -394,7 +391,7 @@ def _prop_bnds_leaf_to_root_UnaryFunctionExpression(node, bnds_dict, feasibility
     if node.getname() in _unary_leaf_to_root_map:
         _unary_leaf_to_root_map[node.getname()](node, bnds_dict, feasibility_tol)
     else:
-        bnds_dict[node] = (-math.inf, math.inf)
+        bnds_dict[node] = (-interval.inf, interval.inf)
 
 
 def _prop_bnds_leaf_to_root_GeneralExpression(node, bnds_dict, feasibility_tol):
@@ -994,7 +991,7 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
         if node.__class__ in _prop_bnds_leaf_to_root_map:
             _prop_bnds_leaf_to_root_map[node.__class__](node, self.bnds_dict, self.feasibility_tol)
         else:
-            self.bnds_dict[node] = (-math.inf, math.inf)
+            self.bnds_dict[node] = (-interval.inf, interval.inf)
         return None
 
     def visiting_potential_leaf(self, node):
@@ -1010,9 +1007,9 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
                 lb = value(node.lb)
                 ub = value(node.ub)
                 if lb is None:
-                    lb = -math.inf
+                    lb = -interval.inf
                 if ub is None:
-                    ub = math.inf
+                    ub = interval.inf
                 if lb - self.feasibility_tol > ub:
                     raise InfeasibleConstraintException('Variable has a lower bound which is larger than its upper bound: {0}'.format(str(node)))
             self.bnds_dict[node] = (lb, ub)
@@ -1086,13 +1083,13 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
             lb, ub = self.bnds_dict[node]
             if lb - self.feasibility_tol > ub:
                 raise InfeasibleConstraintException('Lower bound ({1}) computed for variable {0} is larger than the computed upper bound ({2}).'.format(node, lb, ub))
-            if lb == math.inf:
+            if lb == interval.inf:
                 raise InfeasibleConstraintException('Computed a lower bound of +inf for variable {0}'.format(node))
-            if ub == -math.inf:
+            if ub == -interval.inf:
                 raise InfeasibleConstraintException('Computed an upper bound of -inf for variable {0}'.format(node))
-            if lb != -math.inf:
+            if lb != -interval.inf:
                 node.setlb(lb)
-            if ub != math.inf:
+            if ub != interval.inf:
                 node.setub(ub)
             return True, None
 
@@ -1159,9 +1156,9 @@ def _fbbt_con(con, config):
     _lb = value(con.lower)
     _ub = value(con.upper)
     if _lb is None:
-        _lb = -math.inf
+        _lb = -interval.inf
     if _ub is None:
-        _ub = math.inf
+        _ub = interval.inf
 
     lb, ub = bnds_dict[con.body]
 
@@ -1190,9 +1187,9 @@ def _fbbt_con(con, config):
             continue
         if _node.is_variable_type():
             lb, ub = bnds_dict[_node]
-            if lb == -math.inf:
+            if lb == -interval.inf:
                 lb = None
-            if ub == math.inf:
+            if ub == interval.inf:
                 ub = None
             new_var_bounds[_node] = (lb, ub)
     return new_var_bounds
@@ -1232,11 +1229,11 @@ def _fbbt_block(m, config):
             if v not in var_to_con_map:
                 var_to_con_map[v] = list()
             if v.lb is None:
-                var_lbs[v] = -math.inf
+                var_lbs[v] = -interval.inf
             else:
                 var_lbs[v] = value(v.lb)
             if v.ub is None:
-                var_ubs[v] = math.inf
+                var_ubs[v] = interval.inf
             else:
                 var_ubs[v] = value(v.ub)
             var_to_con_map[v].append(c)
