@@ -370,7 +370,14 @@ You can silence this warning by one of three ways:
         try:
             obj = self._data.get(index, _NotFound)
         except TypeError:
-            index = self._processUnhashableIndex(index)
+            try:
+                index = self._processUnhashableIndex(index)
+            except TypeError:
+                # This index is really unhashable.  Set a flag so that
+                # we can re-raise the original exception (not this one)
+                index = TypeError
+            if index is TypeError:
+                raise
             if index.__class__ is _IndexedComponent_slice:
                 return index
             # The index could have contained constant but nonhashable

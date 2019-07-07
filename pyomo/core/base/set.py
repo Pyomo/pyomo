@@ -1648,6 +1648,8 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
     def __contains__(self, value):
         """
         Return True if the set contains a given value.
+
+        This method will raise TypeError for unhashable types.
         """
         if normalize_index.flatten:
             value = normalize_index(value)

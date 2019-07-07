@@ -12,7 +12,8 @@ import copy
 import itertools
 import logging
 import pickle
-from six import StringIO
+from six import StringIO, PY2
+from six.moves import xrange
 from typing import NamedTuple
 
 import pyutilib.th as unittest
@@ -4096,7 +4097,6 @@ I : Size=1, Index=None, Ordered=Insertion
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             m.I = Set()
-            print output.getvalue()
             self.assertEqual(output.getvalue().strip(), ref)
             # but re-constructing the set doesn't re-log the message
             m.I.construct()
@@ -4189,7 +4189,6 @@ I : Size=1, Index=None, Ordered=Insertion
         self.assertNotIn(5, m.I)
         output = StringIO()
         m.I.pprint(ostream=output)
-        print output.getvalue()
         ref = """
 I : Size=2, Index=I_index, Ordered=Insertion
     Key : Dimen : Domain : Size : Members
@@ -4866,9 +4865,22 @@ class TestIssues(unittest.TestCase):
         m.s = Set(initialize=['one'])
         m.t = Set([1], initialize=['one'])
         m.x = Var(m.s)
-        self.assertFalse(m.s in m.s)
-        with self.assertRaisesRegexp(KeyError, "Index 's' is not valid"):
-            m.x[m.s].display()
+        if PY2:
+            self.assertFalse(m.s in m.s)
+            self.assertFalse(m.s in m.t)
+            with self.assertRaisesRegexp(KeyError, "Index 's' is not valid"):
+                m.x[m.s].display()
+        else:
+            with self.assertRaisesRegexp(
+                    TypeError, "unhashable type: 'OrderedSimpleSet'"):
+                self.assertFalse(m.s in m.s)
+            with self.assertRaisesRegexp(
+                    TypeError, "unhashable type: 'OrderedSimpleSet'"):
+                self.assertFalse(m.s in m.t)
+            with self.assertRaisesRegexp(
+                    TypeError, "unhashable type: 'OrderedSimpleSet'"):
+                m.x[m.s].display()
+
         self.assertEqual(list(m.x), ['one'])
 
     def test_issue_121(self):
@@ -4914,7 +4926,6 @@ class TestIssues(unittest.TestCase):
             m.CHOICES.pprint(ostream=output)
             m.x.pprint(ostream=output)
             m.c.pprint(ostream=output)
-            print output.getvalue()
             ref="""
 CHOICES : Size=1, Index=None, Ordered=Insertion
     Key  : Dimen : Domain : Size : Members
@@ -4948,7 +4959,6 @@ c : Size=3, Index=CHOICES, Active=True
             m.CHOICES.pprint(ostream=output)
             m.x.pprint(ostream=output)
             m.c.pprint(ostream=output)
-            print output.getvalue()
             ref="""
 CHOICES : Size=1, Index=None, Ordered=Insertion
     Key  : Dimen : Domain : Size : Members
@@ -5164,7 +5174,6 @@ c : Size=3, Index=CHOICES, Active=True
 
 4 Declarations: node_keys arc_keys arc_variables obj
 """.strip()
-            print output.getvalue()
             self.assertEqual(output.getvalue().strip(), ref)
 
         finally:
