@@ -3355,6 +3355,21 @@ class SetProduct_InfiniteSet(SetProduct):
         return self._find_val(val) is not None
 
     def _find_val(self, val):
+        """Locate a value in this SetProduct
+
+        Locate a value in this SetProduct.  Returns None if the value is
+        not found, otherwise returns a (value, cutpoints) tuple.  Value
+        is the value that was searched for, possibly normalized.
+        Cutpoints is the set of indices that specify how to split the
+        value into the corresponding subsets such that subset[i] =
+        cutpoints[i:i+1].  Cutpoints is None if the value is trivially
+        split with a single index for each subset.
+
+        Returns
+        -------
+        val: tuple
+        cutpoints: list
+        """
         # Support for ambiguous cross products: if val matches the
         # number of subsets, we will start by checking each value
         # against the corresponding subset.  Failure is not sufficient

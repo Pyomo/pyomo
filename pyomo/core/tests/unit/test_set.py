@@ -2680,6 +2680,29 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(len(x._sets), 2)
         self.assertEqual(list(x.flatten_cross_product()), [a,b,c,d])
 
+    def test_no_normalize_index(self):
+        try:
+            _oldFlatten = normalize_index.flatten
+            I = SetOf([1, (1,2)])
+            J = SetOf([3, (2,3)])
+            x = I * J
+
+            normalize_index.flatten = False
+            self.assertIs(x.dimen, None)
+            self.assertIn(((1,2),3), x)
+            self.assertIn((1,(2,3)), x)
+            # if we are not flattening, then lookup must match the
+            # subsets exactly.
+            self.assertNotIn((1,2,3), x)
+
+            normalize_index.flatten = True
+            self.assertIs(x.dimen, None)
+            self.assertIn(((1,2),3), x)
+            self.assertIn((1,(2,3)), x)
+            self.assertIn((1,2,3), x)
+        finally:
+            normalize_index.flatten = _oldFlatten
+
     def test_infinite_setproduct(self):
         x = PositiveIntegers * SetOf([2,3,5,7])
         self.assertFalse(x.is_finite())
@@ -2824,10 +2847,12 @@ A : Size=1, Index=None, Ordered=True
             SetModule.FLATTEN_CROSS_PRODUCT = True
             ref = [(1,2,5,6), (1,2,7,8), (3,4,5,6), (3,4,7,8)]
             self.assertEqual(list(x), ref)
+            self.assertEqual(x.dimen, 4)
 
             SetModule.FLATTEN_CROSS_PRODUCT = False
             ref = [((1,2),(5,6)), ((1,2),(7,8)), ((3,4),(5,6)), ((3,4),(7,8))]
             self.assertEqual(list(x), ref)
+            self.assertEqual(x.dimen, None)
         finally:
             SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
 
@@ -2853,11 +2878,13 @@ A : Size=1, Index=None, Ordered=True
             ref = [(1,2,3), (1,2,4), (1,2,5),
                    (1,2,3,3), (1,2,3,4), (1,2,3,5)]
             self.assertEqual(list(x), ref)
+            self.assertEqual(x.dimen, None)
 
             SetModule.FLATTEN_CROSS_PRODUCT = False
             ref = [(1,2,3), (1,2,4), (1,2,5),
                    (1,(2,3),3), (1,(2,3),4), (1,(2,3),5)]
             self.assertEqual(list(x), ref)
+            self.assertEqual(x.dimen, None)
         finally:
             SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
 
@@ -2885,6 +2912,7 @@ A : Size=1, Index=None, Ordered=True
             self.assertEqual(list(x), ref)
             for i,v in enumerate(ref):
                 self.assertEqual(x[i+1], v)
+            self.assertEqual(x.dimen, None)
 
             SetModule.FLATTEN_CROSS_PRODUCT = False
             ref = [(1,2,4,0), (1,2,4,1),
@@ -2894,6 +2922,7 @@ A : Size=1, Index=None, Ordered=True
             self.assertEqual(list(x), ref)
             for i,v in enumerate(ref):
                 self.assertEqual(x[i+1], v)
+            self.assertEqual(x.dimen, None)
         finally:
             SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
 
