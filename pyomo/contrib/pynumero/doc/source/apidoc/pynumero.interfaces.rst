@@ -12,5 +12,6 @@ Submodules
 .. toctree::
 
    pynumero.interfaces.nlp
+   pynumero.interfaces.amplnlp
    pynumero.interfaces.pyomonlp
    pynumero.interfaces.nlp_compositions

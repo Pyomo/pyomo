@@ -30,14 +30,30 @@ __all__ = ['BlockVector']
 
 class BlockVector(np.ndarray, BaseBlockVector):
     """
-    Structured Vector interface
+    Structured Vector interface. This interface can be used to
+    operate on vectors composed by vectors. For example bv = BlockVector([v1, v2, v3]),
+    where vi are numpy.ndarrays or BlockVectors.
+
+    Attributes
+    ----------
+    _nblocks: int
+        number of blocks
+    _brow_lengths: numpy.ndarray
+        array of size nblocks that specifies the length of each entry
+        in the block vector
+    _block_mask: numpy.ndarray bool
+        array of size nblocks that tells if entry is none. Operations with
+        BlockVectors require all entries to be different that none.
+    _has_none: bool
+        This attribute is used to assert all entries are not none.
 
     Parameters
-    -------------------
-    vectors: int or list of 1d-arrays
-    number of blocks contained in the block vector
-    if a list is passed the block vector is initialized from
-    the list of 1d-arrays
+    ----------
+    vectors: int or list of numpy.ndarray or BlockVectors
+        Blocks contained in the BlockVector.
+        If a list is passed the BlockVctor is initialized from
+        the list of 1d-arrays. Otherwise, if an integer is passed all
+        entries in the BlockVector are initialized as None.
 
     """
 
@@ -75,7 +91,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         pass
 
     def __array_finalize__(self, obj):
-
+        """This method is required to subclass from numpy array"""
         if obj is None:
             return
         self._brow_lengths = getattr(obj, '_brow_lengths', None)
@@ -83,13 +99,17 @@ class BlockVector(np.ndarray, BaseBlockVector):
         self._found_none = getattr(obj, '_has_none', True)
 
     def __array_prepare__(self, out_arr, context=None):
+        """This method is required to subclass from numpy array"""
         return super(BlockVector, self).__array_prepare__(self, out_arr, context)
 
     def __array_wrap__(self, out_arr, context=None):
+        """This method is required to subclass from numpy array"""
         return super(BlockVector, self).__array_wrap__(self, out_arr, context)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        """Runs ufuncs speciallizations to BlockVector"""
 
+        # functions that take one vector
         unary_funcs = [np.log10, np.sin, np.cos, np.exp, np.ceil,
                        np.floor, np.tan, np.arctan, np.arcsin,
                        np.arccos, np.sinh, np.cosh, np.abs,
@@ -101,6 +121,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                        np.rad2deg, np.deg2rad, np.conjugate, np.reciprocal,
                        ]
 
+        # functions that take two vectors
         binary_funcs = [np.add, np.multiply, np.divide, np.subtract,
                         np.greater, np.greater_equal, np.less, np.less_equal,
                         np.not_equal, np.maximum, np.minimum, np.fmax,
@@ -133,6 +154,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError(str(ufunc) + "not supported for BlockVector")
 
     def _unary_operation(self, ufunc, method, *args, **kwargs):
+        """Run recursion to perform unary_funcs on BlockVector"""
         # ToDo: deal with out
         x = args[0]
         if isinstance(x, BlockVector):
@@ -148,7 +170,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def _binary_operation(self, ufunc, method, *args, **kwargs):
-
+        """Run recursion to perform binary_funcs on BlockVector"""
         # ToDo: deal with out
         x1 = args[0]
         x2 = args[1]
@@ -235,7 +257,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
     @property
     def bshape(self):
         """
-        Returns the number of blocks.
+        Returns the number of blocks in tuple.
         """
         return self.nblocks,
 
@@ -262,6 +284,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     @property
     def has_none(self):
+        """
+        Indicate if BlockVector has none entry.
+        Note: this only checks if all entries at the BlockVector are
+        different than none. It does not check recursively for subvectors
+        to not have nones.
+        """
         # this flag is updated in __setattr__
         return self._has_none
 
@@ -286,6 +314,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         float
 
         """
+        assert out is None, 'Operation not supported with out keyword'
         assert not self.has_none, 'Operations not allowed with None blocks.'
         if isinstance(other, BlockVector):
             assert not other.has_none, 'Operations not allowed with None blocks.'
@@ -322,7 +351,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def any(self, axis=None, out=None, keepdims=False):
         """
-        Returns True if all elements evaluate to True.
+        Returns True if any element evaluate to True.
         """
         assert not self.has_none, 'Operations not allowed with None blocks.'
         results = np.array([self[i].any() for i in range(self.nblocks)],
@@ -338,19 +367,37 @@ class BlockVector(np.ndarray, BaseBlockVector):
         return results.max(axis=axis, out=out, keepdims=keepdims)
 
     def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True):
-
+        """Copy of the array, cast to a specified type"""
         if copy:
             bv = BlockVector(self.nblocks)
             for bid, vv in enumerate(self):
                 if self._block_mask[bid]:
-                    bv[bid] = vv.astype(dtype, order=order, casting=casting, subok=subok, copy=copy)
+                    bv[bid] = vv.astype(dtype,
+                                        order=order,
+                                        casting=casting,
+                                        subok=subok,
+                                        copy=copy)
                 else:
                     bv[bid] = None
             return bv
         raise NotImplementedError("astype not implemented for copy=False")
 
     def clip(self, min=None, max=None, out=None):
+        """
+        Return BlockVector whose values are limited to [min, max].
+        One of max or min must be given.
 
+        Parameters
+        ----------
+        min: scalar_like, optional
+            Minimum value. If None, clipping is not performed on lower interval edge.
+        max: scalar_like, optional
+            Maximum value. If None, clipping is not performed on upper interval edge.
+
+        Returns
+        -------
+        BlockVector
+        """
         assert not self.has_none, 'Operations not allowed with None blocks.'
         assert out is None, 'Out keyword not supported'
 
@@ -360,7 +407,18 @@ class BlockVector(np.ndarray, BaseBlockVector):
         return bv
 
     def compress(self, condition, axis=None, out=None):
+        """
+        Return selected slices of each subblock.
 
+        Parameters
+        ----------
+        condition: Array or BlockVector that selects which entries to return.
+            Determines to select (evaluate True in condition)
+
+        Returns
+        -------
+        BlockVector
+        """
         assert not self._has_none, 'Operations not allowed with None blocks.'
         assert out is None, 'Out keyword not supported'
         result = BlockVector(self.nblocks)
@@ -430,7 +488,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def round(self, decimals=0, out=None):
         """
-        Return a with each element rounded to the given number of decimals
+        Return BlockVector with each element rounded to the given number of decimals
         """
         assert not self._has_none, 'Operations not allowed with None blocks.'
         assert out is None, 'Out keyword not supported'
@@ -441,18 +499,21 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
         """
-        Returns the standard deviation of the array elements along given axis.
+        Returns the standard deviation of the BlockVector elements.
         """
         return self.flatten().std(axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
 
+    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
+        """
+        Returns the variance of the BlockVector elements.
+        """
+        return self.flatten().var(axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
+
     def tofile(self, fid, sep="", format="%s"):
         """
-        Write array to a file as text or binary (default).
+        Writes flat version of BlockVector to a file as text or binary (default).
         """
         self.flatten().tofile(fid, sep=sep, format=format)
-
-    def trace(self, offset=0, axis1=0, axis2=1, dtype=None, out=None):
-        raise NotImplementedError('trace not implemented for BlockVector')
 
     def min(self, axis=None, out=None, keepdims=False):
         """
@@ -520,7 +581,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
         Returns
         -------
-        ndarray
+        numpy.ndarray
 
         """
         assert not self._has_none, 'Operations not allowed with None blocks.'
@@ -539,7 +600,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
         Returns
         -------
-        ndarray
+        numpy.ndarray
 
         """
         assert not self._has_none, 'Operations not allowed with None blocks.'
@@ -566,23 +627,27 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def clone(self, value=None, copy=True):
         """
-        Returns a copy of the block vector
+        Returns a copy of this BlockVector
 
         Parameters
         ----------
         value: scalar (optional)
             all entries of the cloned vector are set to this value
         copy: bool (optinal)
-            if set to true makes a deepcopy of each block in this vector. default False
+            if True makes a deepcopy of each block in this vector. default False
 
         Returns
         -------
         BlockVector
+
         """
         result = BlockVector(self.nblocks)
         for idx in range(self.nblocks):
             if copy:
-                result[idx] = cp.deepcopy(self[idx])
+                if isinstance(self[idx], BaseBlockVector):
+                    result[idx] = self[idx].copy()
+                else:
+                    result[idx] = cp.deepcopy(self[idx])
             else:
                 result[idx] = self[idx]
             result._block_mask[idx] = self._block_mask[idx]
@@ -593,15 +658,17 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def copyfrom(self, other):
         """
-        Copies entries of other vector into this vector
+        Copy entries of other vector into this vector
 
         Parameters
         ----------
-        other: BlockVector or ndarray
+        other: BlockVector or numpy.ndarray
+            vector to be copied to this BlockVector
 
         Returns
         -------
         None
+
         """
 
         if isinstance(other, BlockVector):
@@ -652,15 +719,16 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def copyto(self, other):
         """
-        Copies entries of this vector into other
+        Copy entries of this vector into other
 
         Parameters
         ----------
-        other: BlockVector or ndarray
+        other: BlockVector or numpy.ndarray
 
         Returns
         -------
         None
+
         """
 
         if isinstance(other, BlockVector):
@@ -689,6 +757,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def copy(self, order='C'):
+        """
+        Returns a copy of the BlockVector
+        """
         bv = BlockVector(self.nblocks)
         for bid in range(self.nblocks):
             if self._block_mask[bid]:
@@ -696,10 +767,13 @@ class BlockVector(np.ndarray, BaseBlockVector):
         return bv
 
     def copy_structure(self):
+        """
+        Returns a copy of the BlockVector structure filled with zeros
+        """
         bv = BlockVector(self.nblocks)
         for bid in range(self.nblocks):
             if self[bid] is not None:
-                if isinstance(self._block_mask[bid], BlockVector):
+                if isinstance(self[bid], BlockVector):
                     bv[bid] = self[bid].copy_structure()
                 elif type(self[bid]) == np.ndarray:
                     bv[bid] = np.zeros(self[bid].size, dtype=self[bid].dtype)
@@ -714,11 +788,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
         Parameters
         ----------
         blocks: list
-            list of vectors
+            list of numpy.ndarrays and/or BlockVectors
 
         Returns
         -------
         None
+
         """
         assert isinstance(blocks, list), \
             'blocks should be passed in ordered list'
@@ -729,7 +804,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
             self[idx] = blk
 
     def __add__(self, other):
-
+        # add this BlockVector with other vector
+        # supports addition with scalar, numpy.ndarray and BlockVectors
+        # returns BlockVector
         result = BlockVector(self.nblocks)
         assert not self.has_none, \
             'Operation not allowed with None blocks.' \
@@ -768,6 +845,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         return self.__add__(other)
 
     def __sub__(self, other):
+        # substract this BlockVector with other vector
+        # supports substraction with scalar, numpy.ndarray and BlockVectors
+        # returns BlockVector
         result = BlockVector(self.nblocks)
         assert not self.has_none, \
             'Operation not allowed with None blocks. ' \
@@ -840,7 +920,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __mul__(self, other):
-
+        # elementwise multiply this BlockVector with other vector
+        # supports multiplication with scalar, numpy.ndarray and BlockVectors
+        # returns BlockVector
         assert not self.has_none, \
             'Operation not allowed with None blocks.' \
             ' Specify all blocks in BlockVector'
@@ -879,6 +961,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         return self.__mul__(other)
 
     def __truediv__(self, other):
+        # elementwise divide this BlockVector with other vector
+        # supports division with scalar, numpy.ndarray and BlockVectors
+        # returns BlockVector
         assert not self.has_none, \
             'Operation not allowed with None blocks.' \
             ' Specify all blocks in BlockVector'
@@ -1019,6 +1104,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __iadd__(self, other):
+        # elementwise inplace addition to this BlockVector with other vector
+        # supports addition with scalar, numpy.ndarray and BlockVectors
         assert not self.has_none, \
             'Operation not allowed with None blocks.' \
             ' Specify all blocks in BlockVector'
@@ -1051,6 +1138,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __isub__(self, other):
+        # elementwise inplace subtraction to this BlockVector with other vector
+        # supports subtraction with scalar, numpy.ndarray and BlockVectors
         assert not self.has_none, \
             'Operation not allowed with None blocks.' \
             ' Specify all blocks in BlockVector'
@@ -1083,6 +1172,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __imul__(self, other):
+        # elementwise inplace multiplication to this BlockVector with other vector
+        # supports multiplication with scalar, numpy.ndarray and BlockVectors
         assert not self.has_none, \
             'Operation not allowed with None blocks.' \
             ' Specify all blocks in BlockVector'
@@ -1115,6 +1206,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __itruediv__(self, other):
+        # elementwise inplace division to this BlockVector with other vector
+        # supports division with scalar, numpy.ndarray and BlockVectors
         assert not self.has_none, \
             'Operation not allowed with None blocks.' \
             ' Specify all blocks in BlockVector'
@@ -1198,14 +1291,21 @@ class BlockVector(np.ndarray, BaseBlockVector):
             self._block_mask[key] = True
             self._brow_lengths[key] = value.size
 
-            # check if needs to update has none flag
+            # ToDo: if value is BlockVector check if it has None?
+            # Only fully specified block vectors allowed?
+            # the drawback of this is that it will prevent us to create
+            # BlockVectors of BlockVectors upfront
+            # e.g. BlockVector([BlockVector(2), np.ones(3)]) would not work
+
+            # check if we need to update _has_none flag
             if self._has_none:
-                # if there was a single none and after setting 'value'
-                # that none is gone the flag is updated to false.
+                # check if all entries are not none
                 self._has_none = not self._block_mask.all()
 
     def __le__(self, other):
-
+        # elementwise less_equal this BlockVector with other vector
+        # supports less_equal with scalar, numpy.ndarray and BlockVectors
+        # returns BlockVector
         assert not self.has_none, \
             'Operation not allowed with None blocks.' \
             ' Specify all blocks in BlockVector'
@@ -1236,7 +1336,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __lt__(self, other):
-
+        # elementwise less_than this BlockVector with other vector
+        # supports less_than with scalar, numpy.ndarray and BlockVectors
+        # returns BlockVector
         assert not self.has_none, \
             'Operation not allowed with None blocks.' \
             ' Specify all blocks in BlockVector'
@@ -1267,7 +1369,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __ge__(self, other):
-
+        # elementwise greater_equal this BlockVector with other vector
+        # supports greater_equal with scalar, numpy.ndarray and BlockVectors
+        # returns BlockVector
         assert not self.has_none, \
             'Operation not allowed with None blocks.' \
             ' Specify all blocks in BlockVector'
@@ -1298,7 +1402,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __gt__(self, other):
-
+        # elementwise greater_than this BlockVector with other vector
+        # supports greater_than with scalar, numpy.ndarray and BlockVectors
+        # returns BlockVector
         assert not self.has_none, \
             'Operation not allowed with None blocks.' \
             ' Specify all blocks in BlockVector'
@@ -1329,7 +1435,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __eq__(self, other):
-
+        # elementwise equal_to this BlockVector with other vector
+        # supports equal_to with scalar, numpy.ndarray and BlockVectors
+        # returns BlockVector
         assert not self.has_none, \
             'Operation not allowed with None blocks.' \
             ' Specify all blocks in BlockVector'
@@ -1360,7 +1468,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __ne__(self, other):
-
+        # elementwise not_equal_to this BlockVector with other vector
+        # supports not_equal_to with scalar, numpy.ndarray and BlockVectors
+        # returns BlockVector
         assert not self.has_none, \
             'Operation not allowed with None blocks.' \
             ' Specify all blocks in BlockVector'
@@ -1390,6 +1500,16 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 raise RuntimeError('Operation not supported by BlockVector')
             raise NotImplementedError()
 
+    def __neg__(self):
+        # elementwise negate this BlockVector
+        assert not self.has_none, \
+            'Operation not allowed with None blocks.' \
+            ' Specify all blocks in BlockVector'
+        bv = BlockVector(self.nblocks)
+        for bid in range(self.nblocks):
+            bv[bid] = self[bid].__neg__()
+        return bv
+
     def __contains__(self, item):
         other = item
         assert not self.has_none, \
@@ -1406,6 +1526,13 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def __len__(self):
         return self.nblocks
+
+    def pprint(self):
+        """Prints BlockVector in pretty format"""
+        msg = self.__repr__()
+        msg += '\n'
+        msg += self.__str__()
+        print(msg)
 
     # the following methods are not supported by blockvector
 
@@ -1486,3 +1613,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def take(self, indices, axis=None, out=None, mode='raise'):
         BaseBlockVector.take(self, indices, axis=axis, out=out, mode=mode)
+
+    def trace(self, offset=0, axis1=0, axis2=1, dtype=None, out=None):
+        raise NotImplementedError('trace not implemented for BlockVector')
+
+    def transpose(*axes):
+        BaseBlockVector.transpose(*axes)
+
+    def tostring(order='C'):
+        BaseBlockVector.tostring(order=order)

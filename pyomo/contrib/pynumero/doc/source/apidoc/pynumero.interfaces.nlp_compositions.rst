@@ -5,4 +5,8 @@ pyomo.contrib.pynumero.interfaces.nlp_compositions module
    :members:
    :inherited-members:
    :show-inheritance:
-   
+
+.. autoclass:: pyomo.contrib.pynumero.interfaces.nlp_compositions.DynoptNLP
+   :members:
+   :inherited-members:
+   :show-inheritance:

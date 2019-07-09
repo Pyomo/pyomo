@@ -702,6 +702,11 @@ if __name__ == "__main__":
     m.x[1].setlb(0.0)
     m.x[2].setlb(0.0)
 
+    # m.x.pprint()
+    # solver = aml.SolverFactory('ipopt')
+    # solver.options['mu_init'] = 1e-2
+    # solver.solve(m, tee=True)
+    # m.x.pprint()
     nlp = PyomoNLP(m)
     solver = InteriorPointSolver(nlp)
-    solver.solve(tee=True, wls=True, max_iter=20)
+    solver.solve(tee=True, wls=False, max_iter=20)

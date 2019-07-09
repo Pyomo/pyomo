@@ -1230,11 +1230,11 @@ class BlockMatrix(BaseBlockMatrix):
     def setdiag(self, values, k=0):
         BaseBlockMatrix.setdiag(self, value, k=k)
 
-    def get_block_column(index):
+    def get_block_column_index(self, index):
 
         msgc = 'Operation not allowed with None columns. ' \
                'Specify at least one block every column'
-        assert not mat.has_empty_cols(), msgc
+        assert not self.has_empty_cols(), msgc
 
         bm, bn = self.bshape
         # get cummulative sum of block sizes
@@ -1254,11 +1254,11 @@ class BlockMatrix(BaseBlockMatrix):
             return block_index + 1
         return block_index
 
-    def get_block_row(index):
+    def get_block_row_index(self, index):
 
         msgr = 'Operation not allowed with None rows. ' \
                'Specify at least one block in every row'
-        assert not mat.has_empty_rows(), msgr
+        assert not self.has_empty_rows(), msgr
 
         bm, bn = self.bshape
         # get cummulative sum of block sizes
@@ -1279,20 +1279,66 @@ class BlockMatrix(BaseBlockMatrix):
         return block_index
 
     def getcol(self, j):
-        """Returns a copy of column j of the matrix, as an (m x 1) sparse
-        matrix (column vector).
-        """
-        # ToDo: this can be done more efficiently by copying structure
-        # and populating only the blocks that have col j
-        return self.tocsr().getcol(j)
+
+        # Note: this method is slightly different than the sparse_matrix
+        # from scipy. It returns an array always instead of returning
+        # an sparse matrix with a single column
+
+        # get block column index
+        bcol = self.get_block_column_index(j)
+        bm, bn = self.bshape
+
+        # compute offset columns
+        offset = 0
+        if bcol > 0:
+            cum_sum = self._bcol_lengths.cumsum()
+            offset = cum_sum[bcol-1]
+
+        # build block vector
+        result = BlockVector(bm)
+        for i in range(bm):
+            mat = self[i, bcol]
+            if self.is_empty_block(i, bcol):
+                v = np.zeros(self._brow_lengths[i])
+            elif isinstance(mat, BaseBlockMatrix):
+                # this will return a block vector
+                v = mat.getcol(j-offset)
+            else:
+                # if it is sparse matrix transform array to vector
+                v = mat.getcol(j-offset).toarray().flatten()
+            result[i] = v
+        return result
 
     def getrow(self, i):
-        """Returns a copy of row i of the matrix, as a (1 x n) sparse
-        matrix (row vector).
-        """
-        # ToDo: this can be done more efficiently by copying structure
-        # and populating only the blocks that have row i
-        return self.tocsr().getrow(i)
+
+        # Note: this method is slightly different than the sparse_matrix
+        # from scipy. It returns an array always instead of returning
+        # an sparse matrix with a single row
+
+        # get block column index
+        brow = self.get_block_row_index(i)
+        bm, bn = self.bshape
+
+        # compute offset columns
+        offset = 0
+        if brow > 0:
+            cum_sum = self._brow_lengths.cumsum()
+            offset = cum_sum[brow-1]
+
+        # build block vector
+        result = BlockVector(bn)
+        for j in range(bn):
+            mat = self[brow, j]
+            if self.is_empty_block(brow, j):
+                v = np.zeros(self._bcol_lengths[j])
+            elif isinstance(mat, BaseBlockMatrix):
+                # this will return a block vector
+                v = mat.getcol(i-offset)
+            else:
+                # if it is sparse matrix transform array to vector
+                v = mat.getcol(i-offset).toarray().flatten()
+            result[j] = v
+        return result
 
 class BlockSymMatrix(BlockMatrix):
 

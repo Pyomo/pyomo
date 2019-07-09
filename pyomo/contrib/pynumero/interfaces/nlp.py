@@ -72,136 +72,127 @@ class NLP(object):
 
     Attributes
     ----------
-    _model : optimization model
-        object containing an optimization model. Type of model depends
-        on subclass. PyomoNLP takes a pyomo ConcreteModel
 
-    _nx : int
+    _nx: int
         Number of primal variables
 
-    _ng : int
+    _ng: int
         Number of general inequalities g_l <= g(x) <= g_u
 
-    _nc : int
+    _nc: int
         Number of equalities c(x) = 0
 
-    _ng : int
+    _ng: int
         Number of inequalities d_l <= d(x) <= d_u
 
-    _nnz_jac_g : int
+    _nnz_jac_g: int
         Number of nonzeros in jacobian of general inequalities g(x)
 
-    _nnz_jac_c : int
+    _nnz_jac_c: int
         Number of nonzeros in jacobian of equalities c(x)
 
-    _nnz_jac_d : int
+    _nnz_jac_d: int
         Number of nonzeros in jacobian of inequalities d(x)
 
-    _nnz_hess_lag : int
+    _nnz_hess_lag: int
         Number of nonzeros in jacobian of inequalities d(x)
 
-    _init_x : array_like
+    _init_x: array_like
         1D array containing primal variables initial guesses
 
-    _init_y : array_like
+    _init_y: array_like
         1D array containing dual variable initial guesses
 
-    _lower_x : array_like
+    _lower_x: array_like
         1D array containing primal variables lower bounds.
         Variables without lower bound have -numpy.inf entries
 
-    _upper_x : array_like
+    _upper_x: array_like
         1D array containing primal variables upper bounds.
         Variables without upper bound have numpy.inf entries
 
-    _lower_g : array_like
+    _lower_g: array_like
         1D array containing general inequalities lower bounds.
         General inequalities without lower bound have -numpy.inf entries
 
-    _upper_g : array_like
+    _upper_g: array_like
         1D array containing general inequalities upper bounds.
         General inequalities without upper bound have numpy.inf entries
 
-    _lower_d : array_like
+    _lower_d: array_like
         1D array containing inequalities lower bounds.
         Inequalities without lower bound have -numpy.inf entries
 
-    _upper_d : array_like
+    _upper_d: array_like
         1D array containing inequalities upper bounds.
         Inequalities without upper bound have numpy.inf entries
 
-    _lower_x_mask : array_like
+    _lower_x_mask: array_like
         1D array containing booleans that indicate if primal variable
         has lower bound or not.
 
-    _upper_x_mask : array_like
+    _upper_x_mask: array_like
         1D array containing booleans that indicate if primal variable
         has upper bound or not.
 
-    _lower_g_mask : array_like
+    _lower_g_mask: array_like
         1D array containing booleans that indicate if general inequality
         has lower bound or not.
 
-    _upper_g_mask : array_like
+    _upper_g_mask: array_like
         1D array containing booleans that indicate if general inequality
         has upper bound or not.
 
-    _lower_d_mask : array_like
+    _lower_d_mask: array_like
         1D array containing booleans that indicate if inequality
         has lower bound or not.
 
-    _upper_d_mask : array_like
+    _upper_d_mask: array_like
         1D array containing booleans that indicate if inequality
         has upper bound or not.
 
-    _c_mask : array_like
+    _c_mask: array_like
         1D array containing booleans that indicate if general inequality g
         is an equality c(x)
 
-    _lower_x_map : array_like
+    _lower_x_map: array_like
         1D array containing indices of _lower_x that have lower bound
         different than -numpy.inf
 
-    _upper_x_map : array_like
+    _upper_x_map: array_like
         1D array containing indices of _upper_x that have upper bound
         different than numpy.inf
 
-    _lower_g_map : array_like
+    _lower_g_map: array_like
         1D array containing indices of _lower_g that have lower bound
         different than -numpy.inf
 
-    _upper_g_map : array_like
+    _upper_g_map: array_like
         1D array containing indices of _upper_g that have upper bound
         different than numpy.inf
 
-    _lower_d_map : array_like
+    _lower_d_map: array_like
         1D array containing indices of _lower_d that have lower bound
         different than -numpy.inf
 
-    _upper_d_map : array_like
+    _upper_d_map: array_like
         1D array containing indices of _upper_d that have upper bound
         different than numpy.inf
 
-    _c_map : array_like
+    _c_map: array_like
         1D array containing indices of g(x) that are equalities c(x)
 
-    _d_map : array_like
+    _d_map: array_like
         1D array containing indices of g(x) that are inequalities d(x)
+
+    Parameters
+    ----------
+    kwargs
+        Specialized keyword arguments that depend on subclass
     """
 
-    def __init__(self, model, **kwargs):
-        """
+    def __init__(self, **kwargs):
 
-        Parameters
-        ----------
-        model : optimization model
-            Type of model depends on subclass. PyomoNLP takes a
-            pyomo ConcreteModel
-        kwargs
-            Arbitrary keyword arguments
-        """
-
-        self._model = model
         self._nx = 0
         self._ng = 0
         self._nc = 0
@@ -250,8 +241,8 @@ class NLP(object):
 
         Note
         ----
-        This method must be called always in the subclasses constructor
-        The attributes that must be initialized are:
+        This method must be called in the subclasses constructor.
+        It takes care of initializing the following attributes:
             _nx
             _init_x
             _lower_x
@@ -352,8 +343,8 @@ class NLP(object):
 
         Parameters
         ----------
-        condensed :  bool, optional
-            Boolean flag to indicate if array excludes -numpy.inf values (default False)
+        condensed: bool, optional
+            True if array excludes -numpy.inf values (default False)
 
         Returns
         -------
@@ -370,8 +361,8 @@ class NLP(object):
 
         Parameters
         ----------
-        condensed :  bool, optional
-            Boolean flag to indicate if array excludes numpy.inf values (default False)
+        condensed: bool, optional
+            True if array excludes numpy.inf values (default False)
 
         Returns
         -------
@@ -384,16 +375,16 @@ class NLP(object):
 
     def gl(self, condensed=False):
         """
-        Returns array of general inequalities lower bounds
+        Returns array of lower bounds for general inequalities g(x)
 
         Parameters
         ----------
-        condensed :  bool, optional
-            Boolean flag to indicate if array excludes -numpy.inf values (default False)
+        condensed: bool, optional
+            True if array excludes -numpy.inf values (default False)
 
         Returns
         -------
-        ndarray
+        numpy.ndarray
 
         """
         if condensed:
@@ -402,16 +393,16 @@ class NLP(object):
 
     def gu(self, condensed=False):
         """
-        Returns array of general inequalities upper bounds
+        Returns array of upper bounds for general inequalities g(x)
 
         Parameters
         ----------
-        condensed :  bool, optional
-            Boolean flag to indicate if array excludes numpy.inf values (default False)
+        condensed: bool, optional
+            True if array excludes numpy.inf values (default False)
 
         Returns
         -------
-        ndarray
+        numpy.ndarray
 
         """
         if condensed:
@@ -420,16 +411,16 @@ class NLP(object):
 
     def dl(self, condensed=False):
         """
-        Returns array of inequalities lower bounds
+        Returns array of lower bounds for inequalities d(x)
 
         Parameters
         ----------
-        condensed :  bool, optional
-            Boolean flag to indicate if array excludes -numpy.inf values (default False)
+        condensed: bool, optional
+            True if array excludes -numpy.inf values (default False)
 
         Returns
         -------
-        ndarray
+        numpy.ndarray
 
         """
         if condensed:
@@ -438,16 +429,16 @@ class NLP(object):
 
     def du(self, condensed=False):
         """
-        Returns array of inequalities upper bounds
+        Returns array of upper bounds for inequalities d(x)
 
         Parameters
         ----------
-        condensed :  bool, optional
-            Boolean flag to indicate if array excludes numpy.inf values (default False)
+        condensed: bool, optional
+            True if array excludes numpy.inf values (default False)
 
         Returns
         -------
-        ndarray
+        numpy.ndarray
 
         """
         if condensed:
@@ -456,18 +447,53 @@ class NLP(object):
 
     def x_init(self):
         """
-        Returns initial guess of primal variables in a 1d-array.
+        Returns array with initial guess of primal variables
         """
         return self._init_x.copy()
 
     def y_init(self):
         """
-        Returns initial guess of dual variables in a 1d-array.
+        Returns array with initial guess of dual variables
         """
         return self._init_y.copy()
 
     @abc.abstractmethod
     def create_vector(self, vector_type):
+        """
+        Creates an NLP vector
+
+        Parameters
+        ----------
+        vector_type: {'x', 'xl', 'xu', 'y', 'yc', 'yd', 'g', 'gl', 'gu', 'c', 'd', 'dl', 'du'}
+            Name of variable vector to be created (e.g. 'x' array of primal variables)
+
+        Returns
+        -------
+        numpy.ndarray
+
+        """
+        pass
+
+    def init_vector(self, vector_type):
+        """
+        Return initial guess vector
+
+        Parameters
+        ----------
+        vector_type: {'x', 'y'}
+            Name of variable vector to be returned (e.g. 'x' array of primal variables)
+
+        Returns
+        -------
+        numpy.ndarray
+
+        """
+        if vector_type == 'x':
+            return self._init_x.copy()
+        elif vector_type == 'y':
+            return self._init_y.copy()
+        else:
+            raise RuntimeError('Vector type not supported')
         pass
 
     @abc.abstractmethod
@@ -476,8 +502,10 @@ class NLP(object):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
+        kwargs
+            Specialized keyword arguments that depend on subclass
 
         Returns
         -------
@@ -492,15 +520,17 @@ class NLP(object):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : array_like
+        out: array_like, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
+        kwargs
+            Specialized keyword arguments that depend on subclass
 
         Returns
         -------
-        array_like
+        numpy.ndarray
 
         """
         pass
@@ -511,15 +541,17 @@ class NLP(object):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : array_like
+        out: array_like, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
+        kwargs
+            Specialized keyword arguments that depend on subclass
 
         Returns
         -------
-        array_like
+        numpy.ndarray
 
         """
         pass
@@ -530,15 +562,17 @@ class NLP(object):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : array_like
+        out: array_like, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
+        kwargs
+            Specialized keyword arguments that depend on subclass
 
         Returns
         -------
-        array_like
+        numpy.ndarray
 
         """
         pass
@@ -551,13 +585,15 @@ class NLP(object):
         ----------
         x : array_like
             Array with values of primal variables.
-        out : array_like
+        out : array_like, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
+        kwargs
+            Specialized keyword arguments that depend on subclass
 
         Returns
         -------
-        array_like
+        numpy.ndarray
 
         """
         pass
@@ -572,10 +608,12 @@ class NLP(object):
             Array with values of primal variables.
         out : coo_matrix, optional
             Output matrix with the structure of the jacobian already defined.
+        kwargs
+            Specialized keyword arguments that depend on subclass
 
         Returns
         -------
-        coo_matrix
+        matrix_like
 
         """
         pass
@@ -590,10 +628,12 @@ class NLP(object):
             Array with values of primal variables.
         out : coo_matrix, optional
             Output matrix with the structure of the jacobian already defined.
+        kwargs
+            Specialized keyword arguments that depend on subclass
 
         Returns
         -------
-        coo_matrix
+        matrix_like
 
         """
         pass
@@ -608,10 +648,12 @@ class NLP(object):
             Array with values of primal variables.
         out : coo_matrix, optional
             Output matrix with the structure of the jacobian already defined.
+        kwargs
+            Specialized keyword arguments that depend on subclass
 
         Returns
         -------
-        coo_matrix
+        matrix_like
 
         """
         pass
@@ -628,40 +670,49 @@ class NLP(object):
             Array with values of dual variables.
         out : coo_matrix
             Output matrix with the structure of the hessian already defined. Optional
+        kwargs
+            Specialized keyword arguments that depend on subclass
 
         Returns
         -------
-        coo_matrix
+        matrix_like
 
         """
         pass
 
     @abc.abstractmethod
     def projection_matrix_xl(self):
+        """Returns rectangular matrix that projects condensed vector xl (without -np.inf) to x"""
         pass
 
     @abc.abstractmethod
     def projection_matrix_xu(self):
+        """Returns rectangular matrix that projects condensed vector xu (without np.inf) to x"""
         pass
 
     @abc.abstractmethod
     def projection_matrix_dl(self):
+        """Returns rectangular matrix that projects condensed vector dl (without -np.inf) to d"""
         pass
 
     @abc.abstractmethod
     def projection_matrix_du(self):
+        """Returns rectangular matrix that projects condensed vector du (without np.inf) to d"""
         pass
 
     @abc.abstractmethod
     def projection_matrix_d(self):
+        """Returns rectangular matrix that projects vector d to vector g"""
         pass
 
     @abc.abstractmethod
     def projection_matrix_c(self):
+        """Returns rectangular matrix that projects vector c to vector g"""
         pass
 
     @abc.abstractmethod
     def report_solver_status(self, status_num, status_msg, x, y):
+        """Generate solution report"""
         pass
 
 # ToDo: need to add support for modifying bounds.
@@ -688,21 +739,22 @@ class AslNLP(NLP):
         Array with column indices of nonzero elements in Jacobian of c(x)
     _jcols_jac_d: ndarray
         Array with column indices of nonzero elements in Jacobian of d(x)
+
+    Parameters
+    ----------
+    model : string
+        filename of the NL-file containing the model
+    kwargs
+        Specialized keyword arguments that depend on subclass
     """
 
     def __init__(self, model, **kwargs):
-        """
-
-        Parameters
-        ----------
-        model : string
-            filename of the NL-file containing the model
-        kwargs
-            Arbitrary keyword arguments
-        """
 
         # call parent class to set model
-        super(AslNLP, self).__init__(model)
+        super(AslNLP, self).__init__()
+
+        # nl file
+        self._model = model
 
         # ampl interface
         self._asl = _asl.AmplInterface(self._model)
@@ -714,6 +766,49 @@ class AslNLP(NLP):
         self._make_unmutable_caches()
 
     def _initialize_nlp_components(self, *args, **kwargs):
+        """
+        Initializes all attributes of the nlp
+
+        Note
+        ----
+        This method must be called in the subclasses constructor.
+        It takes care of initializing the following attributes:
+            _nx
+            _init_x
+            _lower_x
+            _upper_x
+            _lower_x_mask
+            _upper_x_mask
+            _lower_x_map
+            _upper_x_map
+
+            _ng
+            _nc
+            _nd
+            _nnz_jac_g
+            _nnz_jac_c
+            _nnz_jac_d
+            _init_y
+            _lower_g
+            _upper_g
+            _lower_g_mask
+            _upper_g_mask
+            _lower_g_map
+            _upper_g_map
+
+            _d_mask
+            _d_map
+            _lower_d
+            _upper_d
+            _lower_d_mask
+            _upper_d_mask
+            _lower_d_map
+            _upper_d_map
+
+            _c_mask
+            _c_map
+        Subclass attributes may be intialized here as well
+        """
 
         # dimensions
         self._nx = self._asl.get_n_vars()
@@ -801,7 +896,10 @@ class AslNLP(NLP):
         self._nnz_hess_lag = self._irows_hess.size
 
     def _build_x_maps(self):
+        """Creates internal maps and masks for primal variables.
+        These masks and maps help identify variables without lower and upper bounds
 
+        """
         # sanity check for unsupported bounds on x
         tolerance_fixed_bounds = 1e-6
         bounds_difference = self._upper_x - self._lower_x
@@ -822,7 +920,12 @@ class AslNLP(NLP):
         self._upper_x_map = self._upper_x_mask.nonzero()[0]
 
     def _build_gcd_maps(self):
+        """Creates internal maps and masks for constraints.
+        These masks and maps help classify constraints (equalities or
+        inequalities).They also help determine which constraints have
+        lower and upper bounds (different than infinity)
 
+        """
         # sanity check for unsupported bounds on g
         bounds_difference = self._upper_g - self._lower_g
         inconsistent_bounds = np.any(bounds_difference < 0.0)
@@ -889,7 +992,19 @@ class AslNLP(NLP):
         self._jcols_hess.flags.writeable = False
 
     def create_vector(self, vector_type):
+        """
+        Creates an NLP vector
 
+        Parameters
+        ----------
+        vector_type: {'x', 'xl', 'xu', 'y', 'yc', 'yd', 'g', 'gl', 'gu', 'c', 'd', 'dl', 'du'}
+            Name of variable vector to be created (e.g. 'x' array of primal variables)
+
+        Returns
+        -------
+        numpy.ndarray
+
+        """
         if vector_type == 'x':
             return np.zeros(self.nx, dtype=np.double)
         elif vector_type == 'xl':
@@ -914,12 +1029,16 @@ class AslNLP(NLP):
             raise RuntimeError('vector_type not recognized')
 
     def objective(self, x, **kwargs):
-        """Returns value of objective function evaluated at x
+        r"""Returns value of objective function evaluated at x
 
         Parameters
         ----------
-        x : array_like
+        x: numpy.ndarray
             Array with values of primal variables.
+
+        Other Parameters
+        ----------------
+        This method does not have kwargs
 
         Returns
         -------
@@ -933,15 +1052,19 @@ class AslNLP(NLP):
 
         Parameters
         ----------
-        x : array_like
+        x: numpy.ndarray
             Array with values of primal variables.
-        out : array_like
+        out: numpy.ndarray, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
 
+        Other Parameters
+        ----------------
+        This method does not have kwargs
+
         Returns
         -------
-        array_like
+        numpy.ndarray
 
         """
         if out is None:
@@ -959,15 +1082,19 @@ class AslNLP(NLP):
 
         Parameters
         ----------
-        x : array_like
+        x: numpy.ndarray
             Array with values of primal variables.
-        out : array_like
+        out: numpy.ndarray, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
 
+        Other Parameters
+        ----------------
+        This method does not have kwargs
+
         Returns
         -------
-        array_like
+        numpy.ndarray
 
         """
         if out is None:
@@ -986,15 +1113,21 @@ class AslNLP(NLP):
 
         Parameters
         ----------
-        x : array_like
+        x: numpy.ndarray
             Array with values of primal variables.
-        out : array_like
+        out: numpy.ndarray, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
 
+        Other Parameters
+        ----------------
+        evaluated_g: np.ndarray, optional
+            Vector with g(x) evaluated already. When this optional parameter
+            is passed, c(x) is extracted from evaluated_g
+
         Returns
         -------
-        array_like
+        numpy.ndarray
 
         """
         evaluated_g = kwargs.pop('evaluated_g', None)
@@ -1019,15 +1152,21 @@ class AslNLP(NLP):
 
         Parameters
         ----------
-        x : array_like
+        x: numpy.ndarray
             Array with values of primal variables.
-        out : array_like
+        out: numpy.ndarray, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
 
+        Other Parameters
+        ----------------
+        evaluated_g: numpy.ndarray, optional
+            Vector with g(x) evaluated already. When this optional parameter
+            is passed, d(x) is extracted from evaluated_g
+
         Returns
         -------
-        array_like
+        numpy.ndarray
 
         """
         evaluated_g = kwargs.pop('evaluated_g', None)
@@ -1052,14 +1191,18 @@ class AslNLP(NLP):
 
         Parameters
         ----------
-        x : array_like
+        x: numpy.ndarray
             Array with values of primal variables.
-        out : coo_matrix, optional
+        out: scipy.sparse.coo_matrix, optional
             Output matrix with the structure of the jacobian already defined.
+
+        Other Parameters
+        ----------------
+        This method does not have kwargs
 
         Returns
         -------
-        coo_matrix
+        scipy.sparse.coo_matrix
 
         """
         if out is None:
@@ -1084,14 +1227,21 @@ class AslNLP(NLP):
 
         Parameters
         ----------
-        x : array_like
+        x: numpy.ndarray
             Array with values of primal variables.
-        out : coo_matrix, optional
+        out: scipy.sparse.coo_matrix, optional
             Output matrix with the structure of the jacobian already defined.
+
+        Other Parameters
+        ----------------
+        evaluated_jac_g: scipy.sparse.coo_matrix, optional
+            coo_matrix with jacobian of g(x) evaluated already.
+            When this optional parameter is passed, jacobian of c(x) is
+            extracted from evaluated_jac_g
 
         Returns
         -------
-        coo_matrix
+        scipy.sparse.coo_matrix
 
         """
         evaluated_jac_g = kwargs.pop('evaluated_jac_g', None)
@@ -1136,17 +1286,23 @@ class AslNLP(NLP):
 
         Parameters
         ----------
-        x : array_like
+        x: numpy.ndarray
             Array with values of primal variables.
-        out : coo_matrix, optional
+        out: scipy.sparse.coo_matrix, optional
             Output matrix with the structure of the jacobian already defined.
+
+        Other Parameters
+        ----------------
+        evaluated_jac_g: scipy.sparse.coo_matrix, optional
+            coo_matrix with jacobian of g(x) evaluated already.
+            When this optional parameter is passed, jacobian of d(x) is
+            extracted from evaluated_jac_g
 
         Returns
         -------
-        coo_matrix
+        scipy.sparse.coo_matrix
 
         """
-
         evaluated_jac_g = kwargs.pop('evaluated_jac_g', None)
 
         if evaluated_jac_g is None:
@@ -1187,19 +1343,25 @@ class AslNLP(NLP):
 
         Parameters
         ----------
-        x : array_like
+        x: numpy.ndarray
             Array with values of primal variables.
-        y : array_like
+        y: numpy.ndarray
             Array with values of dual variables.
-        out : coo_matrix
-            Output matrix with the structure of the hessian already defined. Optional
+        out: scipy.sparse.coo_matrix, optional
+            Output matrix with the structure of the hessian already defined.
+
+        Other Parameters
+        ----------------
+        eval_f_c: bool, optional
+            True if objective and contraints need to be reevaluated (default True).
+        obj_factor: float64, optional
+            Factor used to scale objective function (default 1.0)
 
         Returns
         -------
-        coo_matrix
+        scipy.sparse.coo_matrix
 
         """
-
         eval_f_c = kwargs.pop('eval_f_c', True)
         obj_factor = kwargs.pop('obj_factor', 1.0)
 
@@ -1236,24 +1398,30 @@ class AslNLP(NLP):
 
         Parameters
         ----------
-        status_num : int
+        status_num: int
             exit status (as integer code)
         status_msg : str
             exit status message
-        x : ndarray
+        x: numpy.ndarray
             1D array with values of primal variables. Size nx
-        y : ndarray
+        y: numpy.ndarray
             1D array with values of dual variables. Size ng
 
         Returns
         -------
         None
+
         """
         self._asl.finalize_solution(status_num, status_msg, x, y)
 
     def projection_matrix_xl(self):
         """
-        Returns expansion matrix for lower bounds on primal variables
+        Returns rectangular matrix that projects condensed vector xl (without -np.inf) to x
+
+        Returns
+        -------
+        scipy.sparse.csr_matrix
+
         """
         row = self._lower_x_map
         nnz = len(self._lower_x_map)
@@ -1263,7 +1431,12 @@ class AslNLP(NLP):
 
     def projection_matrix_xu(self):
         """
-        Returns expansion matrix for upper bounds on primal variables
+        Returns rectangular matrix that projects condensed vector xu (without np.inf) to x
+
+        Returns
+        -------
+        scipy.sparse.csr_matrix
+
         """
         row = self._upper_x_map
         nnz = len(self._upper_x_map)
@@ -1273,9 +1446,13 @@ class AslNLP(NLP):
 
     def projection_matrix_dl(self):
         """
-        Returns expansion matrix lower bounds on inequality constraints
-        """
+        Returns rectangular matrix that projects condensed vector dl (without -np.inf) to d
 
+        Returns
+        -------
+        scipy.sparse.csr_matrix
+
+        """
         row = self._lower_d_map
         nnz = len(self._lower_d_map)
         col = np.arange(nnz, dtype=np.int)
@@ -1284,7 +1461,12 @@ class AslNLP(NLP):
 
     def projection_matrix_du(self):
         """
-        Returns expansion matrix upper bounds on inequality constraints
+        Returns rectangular matrix that projects condensed vector du (without np.inf) to d
+
+        Returns
+        -------
+        scipy.sparse.csr_matrix
+
         """
         row = self._upper_d_map
         nnz = len(self._upper_d_map)
@@ -1294,7 +1476,12 @@ class AslNLP(NLP):
 
     def projection_matrix_d(self):
         """
-        Returns expansion matrix inequality constraints
+        Returns rectangular matrix that projects vector d to vector g
+
+        Returns
+        -------
+        scipy.sparse.csr_matrix
+
         """
         row = self._d_map
         nnz = len(self._d_map)
@@ -1304,7 +1491,12 @@ class AslNLP(NLP):
 
     def projection_matrix_c(self):
         """
-        Returns expansion matrix inequality constraints
+        Returns rectangular matrix that projects vector c to vector g
+
+        Returns
+        -------
+        scipy.sparse.csr_matrix
+
         """
         row = self._c_map
         nnz = len(self._c_map)
@@ -1324,6 +1516,8 @@ class AmplNLP(AslNLP):
         Filename with names of constraints
     _colfile: str
         Filename with names of variables
+    _model: str
+        filename of the NL-file containing the model
     _vid_to_name: list
         Map from variable idx to variable name
     _name_to_vid: dict
@@ -1334,21 +1528,19 @@ class AmplNLP(AslNLP):
         Map from constraint name to constraint idx
     _obj_name: str
         Name of the objective function
+
+    Parameters
+    ----------
+    model: str
+        filename of the NL-file containing the model
+    row_filename: str, optional
+        filename of .row file with identity of constraints
+    col_filename: str, optional
+        filename of .col file with identity of variables
+
     """
 
     def __init__(self, model, row_filename=None, col_filename=None):
-        """
-
-        Parameters
-        ----------
-        model : string
-            filename of the NL-file containing the model
-            filename of the NL-file containing the model
-        row_filename: str, optional
-            filename of .row file with identity of constraints
-        col_filename: str, optional
-            filename of .col file with identity of variables
-        """
 
         # call parent class to set model
         super(AmplNLP, self).__init__(model)
@@ -1377,20 +1569,48 @@ class AmplNLP(AslNLP):
     @property
     def model(self):
         """
-        Return optimization model
+        Returns nl-file
         """
         return self._model
 
     def variable_order(self):
+        """Returns ordered list with names of primal variables"""
         return [name for name in self._vid_to_name]
 
     def constraint_order(self):
+        """Returns ordered list with names of constraints"""
         return [name for name in self._cid_to_name]
 
     def variable_idx(self, var_name):
+        """
+        Returns index of variable with given name
+
+        Parameters
+        ----------
+        var_name: str
+            Name of variable
+
+        Returns
+        -------
+        int
+
+        """
         return self._name_to_vid[var_name]
 
     def constraint_idx(self, con_name):
+        """
+        Returns index of constraint with given name
+
+        Parameters
+        ----------
+        con_name: str
+            Name of constraint
+
+        Returns
+        -------
+        int
+
+        """
         return self._name_to_cid[con_name]
 
     @staticmethod
@@ -1411,19 +1631,18 @@ class PyomoNLP(AslNLP):
     Attributes
     ----------
     _varToIndex: pyomo.core.kernel.ComponentMap
-        Map from variable name to variable idx
+        Map from variable to variable idx
     _conToIndex: pyomo.core.kernel.ComponentMap
-        Map from constraint name to constraint idx
+        Map from constraint to constraint idx
+
+    Parameters
+    ----------
+    model: pyomo.environ.ConcreteModel
+        Pyomo concrete model
+
     """
 
     def __init__(self, model):
-        """
-
-        Parameters
-        ----------
-        model : ConcreteModel
-            Pyomo concrete model
-        """
         temp_dir = tempfile.mkdtemp()
         try:
             filename = os.path.join(temp_dir, "pynumero_pyomo")
@@ -1448,6 +1667,8 @@ class PyomoNLP(AslNLP):
             nl_file = filename+".nl"
 
             super(PyomoNLP, self).__init__(nl_file)
+
+            # keep pyomo model in cache
             self._model = model
 
         finally:
@@ -1461,7 +1682,27 @@ class PyomoNLP(AslNLP):
         return self._model
 
     def grad_objective(self, x, out=None, **kwargs):
+        """Returns gradient of the objective function evaluated at x
 
+        Parameters
+        ----------
+        x: numpy.ndarray
+            Array with values of primal variables.
+        out: numpy.ndarray, optional
+            Output array. Its type is preserved and it
+            must be of the right shape to hold the output.
+
+        Other Parameters
+        ----------------
+        subset_variables: list, optional
+            List of pyomo variables to include in gradient (default None).
+            Default includes all variables
+
+        Returns
+        -------
+        numpy.ndarray
+
+        """
         subset_variables = kwargs.pop('subset_variables', None)
 
         if subset_variables is None:
@@ -1486,7 +1727,27 @@ class PyomoNLP(AslNLP):
         return df[var_indices]
 
     def evaluate_g(self, x, out=None, **kwargs):
+        """Return general inequality constraints evaluated at x
 
+        Parameters
+        ----------
+        x: numpy.ndarray
+            Array with values of primal variables.
+        out: numpy.ndarray, optional
+            Output array. Its type is preserved and it
+            must be of the right shape to hold the output.
+
+        Other Parameters
+        ----------------
+        subset_constraints: list, optional
+            List of pyomo constraints to include in evaluated vector (default None).
+            Default includes all constraints
+
+        Returns
+        -------
+        numpy.ndarray
+
+        """
         subset_constraints = kwargs.pop('subset_constraints', None)
 
         if subset_constraints is None:
@@ -1513,7 +1774,29 @@ class PyomoNLP(AslNLP):
         return res[con_indices]
 
     def jacobian_g(self, x, out=None, **kwargs):
+        """Returns the Jacobian of the general inequalities evaluated at x
 
+        Parameters
+        ----------
+        x: numpy.ndarray
+            Array with values of primal variables.
+        out: scipy.sparse.coo_matrix, optional
+            Output matrix with the structure of the jacobian already defined.
+
+        Other Parameters
+        ----------------
+        subset_variables: list, optional
+            List of pyomo variables to include in evaluated jacobian (default None).
+            Default includes all variables
+        subset_constraints: list, optional
+            List of pyomo constraints to include in evaluated jacobian (default None).
+            Default includes all constraints
+
+        Returns
+        -------
+        scipy.sparse.coo_matrix
+
+        """
         subset_variables = kwargs.pop('subset_variables', None)
         subset_constraints = kwargs.pop('subset_constraints', None)
 
@@ -1592,7 +1875,35 @@ class PyomoNLP(AslNLP):
                          shape=(nrows, ncols))
 
     def hessian_lag(self, x, y, out=None, **kwargs):
+        """Return the Hessian of the Lagrangian function evaluated at x and y
 
+        Parameters
+        ----------
+        x: numpy.ndarray
+            Array with values of primal variables.
+        y: numpy.ndarray
+            Array with values of dual variables.
+        out: scipy.sparse.coo_matrix, optional
+            Output matrix with the structure of the hessian already defined.
+
+        Other Parameters
+        ----------------
+        eval_f_c: bool, optional
+            True if objective and contraints need to be reevaluated (default True).
+        obj_factor: float64, optional
+            Factor used to scale objective function (default 1.0)
+        subset_variables_row: list, optional
+            List of pyomo variables to include in rows of evaluated hessian (default None).
+            Default includes all variables
+        subset_variables: list, optional
+            List of pyomo variables to include in columns of evaluated hessian (default None).
+            Default includes all variables
+
+        Returns
+        -------
+        scipy.sparse.coo_matrix
+
+        """
         subset_variables_row = kwargs.pop('subset_variables_row', None)
         subset_variables_col = kwargs.pop('subset_variables_col', None)
 
@@ -1672,25 +1983,51 @@ class PyomoNLP(AslNLP):
                          shape=(nrows, ncols))
 
     def variable_order(self):
-
+        """Returns ordered list with names of primal variables"""
         var_order = [None] * self.nx
         for v, idx in self._varToIndex.items():
             var_order[idx] = v.name
         return var_order
 
     def constraint_order(self):
-
+        """Returns ordered list with names of constraints"""
         con_order = [None] * self.ng
         for c, idx in self._conToIndex.items():
             con_order[idx] = c.name
         return con_order
 
     def variable_idx(self, var):
+        """
+        Returns index of variable in nlp.x
+
+        Parameters
+        ----------
+        var: pyomo.Var
+            Pyomo variable
+
+        Returns
+        -------
+        int
+
+        """
         if var.is_indexed():
-            raise RuntimeError("Var must be not indexed")
+            raise RuntimeError("Var must of type VarData (not indexed)")
         return self._varToIndex[var]
 
     def constraint_idx(self, constraint):
+        """
+        Returns index of constraint in nlp.g
+
+        Parameters
+        ----------
+        con_name: pyomo.Constraint
+            Pyomo Constraint
+
+        Returns
+        -------
+        int
+
+        """
         if constraint.is_indexed():
-            raise RuntimeError("Constraint must be not indexed")
+            raise RuntimeError("Constraint must be of type ConstraintData (not indexed)")
         return self._conToIndex[constraint]

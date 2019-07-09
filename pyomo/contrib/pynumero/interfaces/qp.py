@@ -47,7 +47,9 @@ class EqualityQP(NLP):
     def __init__(self, model, **kwargs):
 
         assert isinstance(model, EqualityQuadraticModel)
-        super(EqualityQP, self).__init__(model)
+        self._model = model
+        
+        super(EqualityQP, self).__init__()
 
         # initialize components
         self._initialize_nlp_components()

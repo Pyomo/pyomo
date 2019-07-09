@@ -18,7 +18,8 @@ import numpy as np
 
 from pyomo.contrib.pynumero.sparse import (BlockMatrix,
                                            BlockSymMatrix,
-                                           BlockVector)
+                                           BlockVector,
+                                           empty_matrix)
 import warnings
 
 
@@ -699,7 +700,18 @@ class TestBlockMatrix(unittest.TestCase):
         flat_mat = m.tocoo()
         flat_col = flat_mat.getcol(2)
         block_col = m.getcol(2)
-        self.assertTrue(np.allclose(flat_col.toarray(), block_col.toarray()))
+        self.assertTrue(np.allclose(flat_col.toarray().flatten(),
+                                    block_col.flatten()))
+
+        flat_col = flat_mat.getcol(4)
+        block_col = m.getcol(4)
+        self.assertTrue(np.allclose(flat_col.toarray().flatten(),
+                                    block_col.flatten()))
+
+        flat_col = flat_mat.getcol(6)
+        block_col = m.getcol(6)
+        self.assertTrue(np.allclose(flat_col.toarray().flatten(),
+                                    block_col.flatten()))
 
     def test_getrow(self):
 
@@ -708,8 +720,14 @@ class TestBlockMatrix(unittest.TestCase):
         flat_mat = m.tocoo()
         flat_row = flat_mat.getrow(2)
         block_row = m.getrow(2)
-        self.assertTrue(np.allclose(flat_row.toarray(), block_row.toarray()))
-        
+        self.assertTrue(np.allclose(flat_row.toarray().flatten(),
+                                    block_row.flatten()))
+
+        flat_row = flat_mat.getrow(7)
+        block_row = m.getrow(7)
+        self.assertTrue(np.allclose(flat_row.toarray().flatten(),
+                                    block_row.flatten()))
+
 
     def test_nonzero(self):
 
@@ -718,6 +736,36 @@ class TestBlockMatrix(unittest.TestCase):
         flat_row, flat_col = flat_mat.nonzero()
         with self.assertRaises(Exception) as context:
             block_row, block_col = m.nonzero()
+
+    def test_get_block_column_index(self):
+
+        m = BlockMatrix(2,4)
+        m[0, 0] = empty_matrix(3, 2)
+        m[0, 1] = empty_matrix(3, 4)
+        m[0, 2] = empty_matrix(3, 3)
+        m[0, 3] = empty_matrix(3, 6)
+        m[1, 3] = empty_matrix(5, 6)
+
+        bcol = m.get_block_column_index(8)
+        self.assertEqual(bcol, 2)
+        bcol = m.get_block_column_index(5)
+        self.assertEqual(bcol, 1)
+        bcol = m.get_block_column_index(14)
+        self.assertEqual(bcol, 3)
+
+    def test_get_block_row_index(self):
+
+        m = BlockMatrix(2,4)
+        m[0, 0] = empty_matrix(3, 2)
+        m[0, 1] = empty_matrix(3, 4)
+        m[0, 2] = empty_matrix(3, 3)
+        m[0, 3] = empty_matrix(3, 6)
+        m[1, 3] = empty_matrix(5, 6)
+
+        brow = m.get_block_row_index(0)
+        self.assertEqual(brow, 0)
+        brow = m.get_block_row_index(6)
+        self.assertEqual(brow, 1)
 
 class TestSymBlockMatrix(unittest.TestCase):
 

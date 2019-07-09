@@ -170,3 +170,11 @@ class BaseBlockMatrix(object):
     def setdiag(self, values, k=0):
         msg = "setdiag not implemented for {}".format(self.__class__.__name__)
         raise NotImplementedError(msg)
+
+    def transpose(*axes):
+        msg = "transpose not implemented for {}".format(self.__class__.__name__)
+        raise NotImplementedError(msg)
+
+    def tostring(order='C'):
+        msg = "tostring not implemented for {}".format(self.__class__.__name__)
+        raise NotImplementedError(msg)

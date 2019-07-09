@@ -38,21 +38,35 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
     """
     Nonlinear program interface for composite NLP that result from
     two-stage stochastic programming problems
+
+    Attributes
+    ----------
+    _model: dict
+        dictionary with scenarios to models
+    _sname_to_sid: dict
+        map from scenario name to scenario idx
+    _sid_to_sname: list
+        map from scenario idx to scenario name
+    _nz: int
+        number of coupling variables (first-stage)
+    _AB_coo: BlockMatrix
+        block matrix with linking matrices A_i in diagonal blocks
+        and B matrix in right lower block. All scenarios have the same
+        B_i matrices thus B=B_i
+
+    Parameters
+    ----------
+    nlps: dictionary with scenarios (scenario names to NLPs)
+    complicating_vars: dictionary with complicated variables
+        (scenario names to list of variable indices)
+
+
     """
 
     def __init__(self,
                  nlps,
                  complicating_vars):
 
-        """
-
-        Parameters
-        ----------
-        nlps: dictionary with scenarios (scenario names to NLPs)
-        complicating_vars: dictionary with complicated variables
-        (scenario names to list of variable indices)
-
-        """
         if not isinstance(nlps, dict):
             raise RuntimeError("Model must be a dictionary")
         if not isinstance(complicating_vars, dict):
@@ -61,7 +75,10 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             raise RuntimeError("Each scenario must have a list of complicated variables")
 
         # call parent class to set model
-        super(TwoStageStochasticNLP, self).__init__(None)
+        super(TwoStageStochasticNLP, self).__init__()
+
+        # model set in _initialize_nlp_components
+        self._model = None
 
         # initialize components
         self._initialize_nlp_components(nlps, complicating_vars)
@@ -152,7 +169,10 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         pass
 
     def _create_vectors(self):
-
+        """
+        Create BlockVectors composed from scenarios. It declares vectors
+        in base clase pyomo.contrib.pynumero.interfaces.NLP
+        """
         # Note: This method requires the complicated vars nz to be defined beforehand
 
         # init values
@@ -206,7 +226,10 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         self._upper_d = np.compress(self._d_mask, self._upper_g)
 
     def _create_jacobian_structures(self):
-
+        """
+        Create BlockMatrices composed with scenarios evaluations. It declares
+        jacobians of g, c and d.
+        """
         # Note: This method requires the complicated vars map to be
         # created beforehand
 
@@ -270,7 +293,10 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         self._nnz_jac_d = flat_jac_d.nnz
 
     def _create_hessian_structure(self):
-
+        """
+        Create BlockMatrix composed with scenarios evaluations. It declares
+        hessian of lagrangian.
+        """
         # Note: This method requires the complicated vars map to be
         # created beforehand
 
@@ -287,12 +313,10 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         self._jcols_hess = flat_hess.col
         self._nnz_hess_lag = flat_hess.nnz
 
-        # ToDo: decide if we cache _irows and _jcols pointers for composite nlp
-
     @property
     def model(self):
         """
-        Return optimization model
+        Returns dictionary with models of scenarios
         """
         return self._model
 
@@ -316,7 +340,19 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             yield name, self._nlps[sid]
 
     def create_vector(self, vector_type):
+        """
+        Creates an NLP vector
 
+        Parameters
+        ----------
+        vector_type: {'x', 'xl', 'xu', 'y', 'yc', 'yd', 'g', 'gl', 'gu', 'c', 'd', 'dl', 'du'}
+            Name of variable vector to be created (e.g. 'x' array of primal variables)
+
+        Returns
+        -------
+        pyomo.contrib.pynumero.sparse.BlockVector
+
+        """
         if vector_type == 'x':
             subvectors = [np.zeros(nlp.nx, dtype=np.double) for nlp in self._nlps] + \
                          [np.zeros(self.nz, dtype=np.double)]
@@ -359,8 +395,12 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
+
+        Other Parameters
+        ----------------
+        This method does not have kwargs
 
         Returns
         -------
@@ -382,15 +422,19 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : array_like
+        out: array_like, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
 
+        Other Parameters
+        ----------------
+        This method does not have kwargs
+
         Returns
         -------
-        array_like
+        pyomo.contrib.pynumero.sparse.BlockVector
 
         """
         if out is None:
@@ -419,19 +463,23 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             raise NotImplementedError("x must be a numpy array or a BlockVector")
 
     def evaluate_g(self, x, out=None, **kwargs):
-        """Returns general inequality constraints evaluated at x
+        """Return general inequality constraints evaluated at x
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : array_like
+        out: array_like, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
 
+        Other Parameters
+        ----------------
+        This method does not have kwargs
+
         Returns
         -------
-        array_like
+        pyomo.contrib.pynumero.sparse.BlockVector
 
         """
         if out is None:
@@ -472,18 +520,23 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : array_like
+        out: array_like, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
 
+        Other Parameters
+        ----------------
+        evaluated_g: pyomo.contrib.pynumero.sparse.BlockVector, optional
+            Vector with g(x) evaluated already. When this optional parameter
+            is passed, c(x) is extracted from evaluated_g
+
         Returns
         -------
-        array_like
+        pyomo.contrib.pynumero.sparse.BlockVector
 
         """
-
         evaluated_g = kwargs.pop('evaluated_g', None)
 
         if out is None:
@@ -531,15 +584,21 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : array_like
+        out: array_like, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
 
+        Other Parameters
+        ----------------
+        evaluated_g: pyomo.contrib.pynumero.sparse.BlockVector, optional
+            Vector with g(x) evaluated already. When this optional parameter
+            is passed, d(x) is extracted from evaluated_g
+
         Returns
         -------
-        array_like
+        pyomo.contrib.pynumero.sparse.BlockVector
 
         """
         evaluated_g = kwargs.pop('evaluated_g', None)
@@ -587,14 +646,18 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : BlockMatrix, optional
+        out: pyomo.contrib.pynumero.sparse.BlockMatrix, optional
             Output matrix with the structure of the jacobian already defined.
+
+        Other Parameters
+        ----------------
+        This method does not have kwargs
 
         Returns
         -------
-        BlockMatrix
+        pyomo.contrib.pynumero.sparse.BlockMatrix
 
         """
         assert x.size == self.nx, "Dimension mismatch"
@@ -637,16 +700,21 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : BlockMatrix, optional
+        out: pyomo.contrib.pynumero.sparse.BlockMatrix, optional
             Output matrix with the structure of the jacobian already defined.
+
+        Other Parameters
+        ----------------
+        This method does not have kwargs (ToDo: add evaluated_jac_g)
 
         Returns
         -------
-        BlockMatrix
+        pyomo.contrib.pynumero.sparse.BlockMatrix
 
         """
+        # ToDo: add option of evaluated_g
         assert x.size == self.nx, 'Dimension mismatch'
 
         if isinstance(x, BlockVector):
@@ -687,14 +755,18 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : coo_matrix, optional
+        out: pyomo.contrib.pynumero.sparse.BlockMatrix, optional
             Output matrix with the structure of the jacobian already defined.
+
+        Other Parameters
+        ----------------
+        This method does not have kwargs (ToDo: add evaluated_jac_g)
 
         Returns
         -------
-        BlockMatrix
+        pyomo.contrib.pynumero.sparse.BlockMatrix
 
         """
         assert x.size == self.nx, "Dimension mismatch"
@@ -733,22 +805,30 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        y : array_like
+        y: array_like
             Array with values of dual variables.
-        out : BlockMatrix
-            Output matrix with the structure of the hessian already defined. Optional
+        out: scipy.sparse.coo_matrix, optional
+            Output matrix with the structure of the hessian already defined.
+
+        Other Parameters
+        ----------------
+        eval_f_c: bool, optional
+            True if objective and contraints need to be reevaluated (default True).
+        obj_factor: float64, optional
+            Factor used to scale objective function (default 1.0)
 
         Returns
         -------
-        BlockMatrix
+        pyomo.contrib.pynumero.sparse.BlockSymMatrix
 
         """
         assert x.size == self.nx, 'Dimension mismatch'
         assert y.size == self.ng, 'Dimension mismatch'
 
         eval_f_c = kwargs.pop('eval_f_c', True)
+        obj_factor = kwargs.pop('obj_factor', 1.0)
 
         if isinstance(x, BlockVector) and isinstance(y, BlockVector):
             assert x.nblocks == self.nblocks + 1
@@ -782,7 +862,10 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
             for sid, nlp in enumerate(self._nlps):
                 xi = x_[sid]
                 yi = y_[sid]
-                hess_lag[sid, sid] = nlp.hessian_lag(xi, yi, eval_f_c=eval_f_c)
+                hess_lag[sid, sid] = nlp.hessian_lag(xi,
+                                                     yi,
+                                                     eval_f_c=eval_f_c,
+                                                     obj_factor=obj_factor)
 
             hess_lag[self.nblocks, self.nblocks] = empty_matrix(self.nz, self.nz)
             return hess_lag
@@ -798,7 +881,8 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
                 nlp.hessian_lag(xi,
                                 yi,
                                 out=hess_lag[sid, sid],
-                                eval_f_c=eval_f_c)
+                                eval_f_c=eval_f_c,
+                                obj_factor=obj_factor)
 
             Hz = hess_lag[self.nblocks, self.nblocks]
             nb = self.nblocks
@@ -860,10 +944,22 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         return self._nlps[bid]
 
     def complicated_vars_ids(self, scenario_name):
+        """
+        Return indices of complicated variables in scenario
+
+        Parameters
+        ----------
+        scenario_name: str
+            Name of scenario
+
+        Returns
+        -------
+        list
+        """
         return self._zid_to_vid[scenario_name]
 
     def variable_order(self):
-
+        """Returns ordered list with names of primal variables"""
         var_order = list()
         for sid, nlp in enumerate(self._nlps):
             var_order.append(nlp.variable_order())
@@ -871,7 +967,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         return var_order
 
     def constraint_order(self):
-
+        """Returns ordered list with names of constraints"""
         constraint_order = list()
         for sid, nlp in enumerate(self._nlps):
             constraint_order.append(nlp.constraint_order())
@@ -880,7 +976,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         return constraint_order
 
     def projection_matrix_xl(self):
-
+        """Returns BlockMatrix that projects condensed vector xl (without -np.inf) to x"""
         Pxl = BlockMatrix(self.nblocks + 1, self.nblocks + 1)
         for sid, nlp in enumerate(self._nlps):
             Pxl[sid, sid] = nlp.projection_matrix_xl()
@@ -888,7 +984,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         return Pxl
 
     def projection_matrix_xu(self):
-
+        """Returns BlockMatrix that projects condensed vector xu (without np.inf) to x"""
         Pxu = BlockMatrix(self.nblocks + 1, self.nblocks + 1)
         for sid, nlp in enumerate(self._nlps):
             Pxu[sid, sid] = nlp.projection_matrix_xu()
@@ -896,7 +992,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         return Pxu
 
     def projection_matrix_dl(self):
-
+        """Returns BlockMatrix that projects condensed vector dl (without -np.inf) to d"""
         Pdl = BlockMatrix(2 * self.nblocks, 2 * self.nblocks)
         for sid, nlp in enumerate(self._nlps):
             Pdl[sid, sid] = nlp.projection_matrix_dl()
@@ -904,7 +1000,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         return Pdl
 
     def projection_matrix_du(self):
-
+        """Returns BlockMatrix that projects condensed vector du (without np.inf) to d"""
         Pdu = BlockMatrix(2 * self.nblocks, 2 * self.nblocks)
         for sid, nlp in enumerate(self._nlps):
             Pdu[sid, sid] = nlp.projection_matrix_du()
@@ -912,7 +1008,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         return Pdu
 
     def projection_matrix_c(self):
-
+        """Returns BlockMatrix that projects vector c to vector g"""
         Pc = BlockMatrix(2 * self.nblocks, 2 * self.nblocks)
         for sid, nlp in enumerate(self._nlps):
             Pc[sid, sid] = nlp.projection_matrix_c()
@@ -920,7 +1016,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         return Pc
 
     def projection_matrix_d(self):
-
+        """Returns BlockMatrix that projects vector d to vector g"""
         Pd = BlockMatrix(2 * self.nblocks, 2 * self.nblocks)
         for sid, nlp in enumerate(self._nlps):
             Pd[sid, sid] = nlp.projection_matrix_d()
@@ -928,7 +1024,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         return Pd
 
     def coupling_matrix(self):
-
+        """Returns BlockMatrix with coupling matrices A_i and B"""
         AB = BlockMatrix(self.nblocks + 1, self.nblocks + 1)
         for sid, nlp in enumerate(self._nlps):
             col = self._zid_to_vid[sid]
@@ -939,6 +1035,7 @@ class TwoStageStochasticNLP(NLP, CompositeNLP):
         return AB
 
     def scenarios_order(self):
+        """Returns ordered list with scenario names"""
         return [self._sid_to_sname[i] for i in range(self.nblocks)]
 
     def report_solver_status(self, status_num, status_msg, x, y):
@@ -949,6 +1046,26 @@ class DynoptNLP(NLP, CompositeNLP):
     """
     Nonlinear program interface for composite NLP that result from
     two-stage stochastic programming problems
+
+    Attributes
+    ----------
+    _model: dict
+        dictionary with scenarios to models
+    _nstates: int
+        number of state variables
+    _nz : int
+        number of coupling variables (nblocks-1) * nstates
+
+    Parameters
+    ----------
+    nlps: ordered list with blocks
+    init_state_vars: list of lists [[vars_block1],[vars_block2]...]
+        list of state variables at beginning of block (t_i0)
+    end_state_vars: list of lists [[vars_block1],[vars_block2]...]
+        list of state variables at end of block (t_if)
+    initial_conditions: list
+        values for initial conditions of state variables. This values are
+        used at the beginning of the time horizon
     """
 
     def __init__(self,
@@ -957,16 +1074,11 @@ class DynoptNLP(NLP, CompositeNLP):
                  end_state_vars,
                  initial_conditions):
 
-        """
-
-        Parameters
-        ----------
-        model: dictionary with scenarios (scenario names to NLPs)
-
-        """
-
         # call parent class to set model
-        super(DynoptNLP, self).__init__(None)
+        super(DynoptNLP, self).__init__()
+
+        # model set in _initialize_nlp_components
+        self._model = None
 
         # initialize components
         self._initialize_nlp_components(nlps,
@@ -1063,6 +1175,10 @@ class DynoptNLP(NLP, CompositeNLP):
 
     def _create_vectors(self):
 
+        """
+        Create BlockVectors composed from time partition blocks. It declares vectors
+        in base clase pyomo.contrib.pynumero.interfaces.NLP
+        """
         # init values
         x_vectors = [nlp.x_init() for nlp in self._nlps]
         q_vectors = [np.zeros(self.nstates, dtype=np.double) for i in range(self.nblocks - 1)]
@@ -1124,7 +1240,10 @@ class DynoptNLP(NLP, CompositeNLP):
         self._upper_d = np.compress(self._d_mask, self._upper_g)
 
     def _create_jacobian_structures(self):
-
+        """
+        Create BlockMatrices composed with timed partition blocks evaluations. It declares
+        jacobians of g, c and d.
+        """
         # Note: This method requires the init_state_var and end_state_var map to be
         # created beforehand
         jac_g = BlockMatrix(3 * self.nblocks - 1, 2 * self.nblocks - 1)
@@ -1179,7 +1298,10 @@ class DynoptNLP(NLP, CompositeNLP):
         self._nnz_jac_d = flat_jac_d.nnz
 
     def _create_hessian_structure(self):
-
+        """
+        Create BlockMatrix composed with timed partition blocks evaluations. It declares
+        hessian of lagrangian.
+        """
         # Note: This method requires the init_state_var and end_state_var map to be
         # created beforehand
         hess_lag = BlockSymMatrix(2 * self.nblocks - 1)
@@ -1200,7 +1322,7 @@ class DynoptNLP(NLP, CompositeNLP):
     @property
     def model(self):
         """
-        Return optimization model
+        Returns dictionary with models of individual timed partition blocks
         """
         return self._model
 
@@ -1214,23 +1336,36 @@ class DynoptNLP(NLP, CompositeNLP):
     @property
     def nstates(self):
         """
-        Returns number of blocks (nlps)
+        Returns number of state variables
         """
         return self._nstates
 
     @property
     def nz(self):
         """
-        Return number of complicated variables
+        Return number of complicated variables nstates * (nblocks-1)
         """
         return self._nz
 
     def nlps(self):
-        """Creates generator scenario name to nlp """
+        """Creates generator block name to nlp """
         for sid, block_nlp in enumerate(self._nlps):
             yield "block {}".format(sid), block_nlp
 
     def create_vector(self, vector_type):
+        """
+        Creates an NLP vector
+
+        Parameters
+        ----------
+        vector_type: {'x', 'xl', 'xu', 'y', 'yc', 'yd', 'g', 'gl', 'gu', 'c', 'd', 'dl', 'du'}
+            Name of variable vector to be created (e.g. 'x' array of primal variables)
+
+        Returns
+        -------
+        pyomo.contrib.pynumero.sparse.BlockVector
+
+        """
         if vector_type == 'x':
             x_vectors = [np.zeros(nlp.nx, dtype=np.double) for nlp in self._nlps]
             q_vectors = [np.zeros(self.nstates, dtype=np.double) for i in range(self.nblocks - 1)]
@@ -1282,8 +1417,12 @@ class DynoptNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
+
+        Other Parameters
+        ----------------
+        This method does not have kwargs
 
         Returns
         -------
@@ -1305,15 +1444,19 @@ class DynoptNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : array_like
+        out: array_like, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
 
+        Other Parameters
+        ----------------
+        This method does not have kwargs
+
         Returns
         -------
-        array_like
+        pyomo.contrib.pynumero.sparse.BlockVector
 
         """
         if out is None:
@@ -1342,19 +1485,23 @@ class DynoptNLP(NLP, CompositeNLP):
             raise NotImplementedError("x must be a numpy array or a BlockVector")
 
     def evaluate_g(self, x, out=None, **kwargs):
-        """Returns general inequality constraints evaluated at x
+        """Return general inequality constraints evaluated at x
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : array_like
+        out: array_like, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
 
+        Other Parameters
+        ----------------
+        This method does not have kwargs
+
         Returns
         -------
-        array_like
+        pyomo.contrib.pynumero.sparse.BlockVector
 
         """
         if out is None:
@@ -1413,18 +1560,23 @@ class DynoptNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : array_like
+        out: array_like, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
 
+        Other Parameters
+        ----------------
+        evaluated_g: pyomo.contrib.pynumero.sparse.BlockVector, optional
+            Vector with g(x) evaluated already. When this optional parameter
+            is passed, c(x) is extracted from evaluated_g
+
         Returns
         -------
-        array_like
+        pyomo.contrib.pynumero.sparse.BlockVector
 
         """
-
         evaluated_g = kwargs.pop('evaluated_g', None)
 
         if out is None:
@@ -1490,15 +1642,21 @@ class DynoptNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : array_like
+        out: array_like, optional
             Output array. Its type is preserved and it
             must be of the right shape to hold the output.
 
+        Other Parameters
+        ----------------
+        evaluated_g: pyomo.contrib.pynumero.sparse.BlockVector, optional
+            Vector with g(x) evaluated already. When this optional parameter
+            is passed, d(x) is extracted from evaluated_g
+
         Returns
         -------
-        array_like
+        pyomo.contrib.pynumero.sparse.BlockVector
 
         """
         evaluated_g = kwargs.pop('evaluated_g', None)
@@ -1558,14 +1716,18 @@ class DynoptNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : BlockMatrix, optional
+        out: pyomo.contrib.pynumero.sparse.BlockMatrix, optional
             Output matrix with the structure of the jacobian already defined.
+
+        Other Parameters
+        ----------------
+        This method does not have kwargs
 
         Returns
         -------
-        BlockMatrix
+        pyomo.contrib.pynumero.sparse.BlockMatrix
 
         """
         assert x.size == self.nx, "Dimension mismatch"
@@ -1618,14 +1780,18 @@ class DynoptNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : BlockMatrix, optional
+        out: pyomo.contrib.pynumero.sparse.BlockMatrix, optional
             Output matrix with the structure of the jacobian already defined.
+
+        Other Parameters
+        ----------------
+        This method does not have kwargs (ToDo: add evaluated_jac_g)
 
         Returns
         -------
-        BlockMatrix
+        pyomo.contrib.pynumero.sparse.BlockMatrix
 
         """
         assert x.size == self.nx, "Dimension mismatch"
@@ -1677,14 +1843,18 @@ class DynoptNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        out : coo_matrix, optional
+        out: pyomo.contrib.pynumero.sparse.BlockMatrix, optional
             Output matrix with the structure of the jacobian already defined.
+
+        Other Parameters
+        ----------------
+        This method does not have kwargs (ToDo: add evaluated_jac_g)
 
         Returns
         -------
-        BlockMatrix
+        pyomo.contrib.pynumero.sparse.BlockMatrix
 
         """
         assert x.size == self.nx, "Dimension mismatch"
@@ -1731,22 +1901,30 @@ class DynoptNLP(NLP, CompositeNLP):
 
         Parameters
         ----------
-        x : array_like
+        x: array_like
             Array with values of primal variables.
-        y : array_like
+        y: array_like
             Array with values of dual variables.
-        out : BlockMatrix
-            Output matrix with the structure of the hessian already defined. Optional
+        out: scipy.sparse.coo_matrix, optional
+            Output matrix with the structure of the hessian already defined.
+
+        Other Parameters
+        ----------------
+        eval_f_c: bool, optional
+            True if objective and contraints need to be reevaluated (default True).
+        obj_factor: float64, optional
+            Factor used to scale objective function (default 1.0)
 
         Returns
         -------
-        BlockMatrix
+        pyomo.contrib.pynumero.sparse.BlockSymMatrix
 
         """
         assert x.size == self.nx, 'Dimension mismatch'
         assert y.size == self.ng, 'Dimension mismatch'
 
         eval_f_c = kwargs.pop('eval_f_c', True)
+        obj_factor = kwargs.pop('obj_factor', 1.0)
 
         if isinstance(x, BlockVector) and isinstance(y, BlockVector):
             assert x.nblocks == 2 * self.nblocks - 1
@@ -1781,7 +1959,10 @@ class DynoptNLP(NLP, CompositeNLP):
             for bid, nlp in enumerate(self._nlps):
                 xi = x_[bid]
                 yi = y_[bid]
-                hess_lag[bid, bid] = nlp.hessian_lag(xi, yi, eval_f_c=eval_f_c)
+                hess_lag[bid, bid] = nlp.hessian_lag(xi,
+                                                     yi,
+                                                     eval_f_c=eval_f_c,
+                                                     obj_factor=obj_factor)
                 if bid < self.nblocks - 1:
                     hess_lag[self.nblocks + bid, self.nblocks + bid] = empty_matrix(self.nstates,
                                                                                     self.nstates)
@@ -1798,7 +1979,8 @@ class DynoptNLP(NLP, CompositeNLP):
                 nlp.hessian_lag(xi,
                                 yi,
                                 out=hess_lag[bid, bid],
-                                eval_f_c=eval_f_c)
+                                eval_f_c=eval_f_c,
+                                obj_factor=obj_factor)
 
                 if bid < self.nblocks - 1:
                     hess_lag[self.nblocks + bid, self.nblocks + bid] = empty_matrix(self.nstates,
@@ -1806,7 +1988,11 @@ class DynoptNLP(NLP, CompositeNLP):
             return hess_lag
 
     def start_extraction_matrix(self):
-
+        """
+        Returns BlockMatrix that projects vector with primal variables
+        to smaller vector with only state variable at the beginning of each
+        time partition block.
+        """
         A = BlockMatrix(self.nblocks, self.nblocks)
 
         for bid in range(self.nblocks):
@@ -1819,7 +2005,11 @@ class DynoptNLP(NLP, CompositeNLP):
         return A
 
     def end_extraction_matrix(self):
-
+        """
+        Returns BlockMatrix that projects vector with primal variables
+        to smaller vector with only state variable at the end of each
+        time partition block.
+        """
         A = BlockMatrix(self.nblocks, self.nblocks)
 
         for bid in range(self.nblocks):
@@ -1832,7 +2022,7 @@ class DynoptNLP(NLP, CompositeNLP):
         return A
 
     def projection_matrix_xl(self):
-
+        """Returns BlockMatrix that projects condensed vector xl (without -np.inf) to x"""
         Pxl = BlockMatrix(2 * self.nblocks - 1, 2 * self.nblocks - 1)
         for bid, nlp in enumerate(self._nlps):
             Pxl[bid, bid] = nlp.projection_matrix_xl()
@@ -1841,7 +2031,7 @@ class DynoptNLP(NLP, CompositeNLP):
         return Pxl
 
     def projection_matrix_xu(self):
-
+        """Returns BlockMatrix that projects condensed vector xu (without np.inf) to x"""
         Pxu = BlockMatrix(2 * self.nblocks - 1, 2 * self.nblocks - 1)
         for bid, nlp in enumerate(self._nlps):
             Pxu[bid, bid] = nlp.projection_matrix_xu()
@@ -1850,7 +2040,7 @@ class DynoptNLP(NLP, CompositeNLP):
         return Pxu
 
     def projection_matrix_dl(self):
-
+        """Returns BlockMatrix that projects condensed vector dl (without -np.inf) to d"""
         Pdl = BlockMatrix(3 * self.nblocks - 1, 3 * self.nblocks - 1)
         for bid, nlp in enumerate(self._nlps):
             Pdl[bid, bid] = nlp.projection_matrix_dl()
@@ -1861,7 +2051,7 @@ class DynoptNLP(NLP, CompositeNLP):
         return Pdl
 
     def projection_matrix_du(self):
-
+        """Returns BlockMatrix that projects condensed vector du (without np.inf) to d"""
         Pdu = BlockMatrix(3 * self.nblocks - 1, 3 * self.nblocks - 1)
         for bid, nlp in enumerate(self._nlps):
             Pdu[bid, bid] = nlp.projection_matrix_du()
@@ -1872,7 +2062,7 @@ class DynoptNLP(NLP, CompositeNLP):
         return Pdu
 
     def projection_matrix_c(self):
-
+        """Returns BlockMatrix that projects vector c to vector g"""
         Pc = BlockMatrix(3 * self.nblocks - 1, 3 * self.nblocks - 1)
         for bid, nlp in enumerate(self._nlps):
             Pc[bid, bid] = nlp.projection_matrix_c()
@@ -1883,7 +2073,7 @@ class DynoptNLP(NLP, CompositeNLP):
         return Pc
 
     def projection_matrix_d(self):
-
+        """Returns BlockMatrix that projects vector d to vector g"""
         Pd = BlockMatrix(3 * self.nblocks - 1, 3 * self.nblocks - 1)
         for bid, nlp in enumerate(self._nlps):
             Pd[bid, bid] = nlp.projection_matrix_d()
@@ -1894,7 +2084,7 @@ class DynoptNLP(NLP, CompositeNLP):
         return Pd
 
     def variable_order(self):
-
+        """Returns ordered list with names of primal variables"""
         var_order = list()
         for bid, nlp in enumerate(self._nlps):
             var_order.append(nlp.variable_order())
@@ -1903,7 +2093,7 @@ class DynoptNLP(NLP, CompositeNLP):
         return var_order
 
     def constraint_order(self):
-
+        """Returns ordered list with names of constraints"""
         constraint_order = list()
         for bid, nlp in enumerate(self._nlps):
             constraint_order.append(nlp.constraint_order())
@@ -1917,6 +2107,7 @@ class DynoptNLP(NLP, CompositeNLP):
         return constraint_order
 
     def initial_conditions(self):
+        """Returns ordered list with initial condition values"""
         return np.array(self._init_conditions, dtype=np.double)
 
     def report_solver_status(self, status_num, status_msg, x, y):

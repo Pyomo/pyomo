@@ -152,7 +152,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
         self._rank_owner.flags.writeable = False # mutable only when needed
         self._owned_mask.flags.writeable = False # mutable only when needed
 
-
     @property
     def bshape(self):
         """
@@ -1335,6 +1334,50 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
     def setdiag(self, values, k=0):
         BaseBlockMatrix.setdiag(self, value, k=k)
+
+    def get_block_column_index(self, index):
+
+        self._assert_broadcasted_sizes()
+
+        bm, bn = self.bshape
+        # get cummulative sum of block sizes
+        cum = self._bcol_lengths.cumsum()
+        assert index >=0, 'index out of bounds'
+        assert index < cum[bn-1], 'index out of bounds'
+
+        # exits if only has one column
+        if bn <= 1:
+            return 0
+
+        ge = cum >= index
+        # find first entry that is greater or equal
+        block_index = np.argmax(ge)
+
+        if cum[block_index] == index:
+            return block_index + 1
+        return block_index
+
+    def get_block_row_index(self, index):
+
+        self._assert_broadcasted_sizes()
+
+        bm, bn = self.bshape
+        # get cummulative sum of block sizes
+        cum = self._brow_lengths.cumsum()
+        assert index >=0, 'index out of bounds'
+        assert index < cum[bm-1], 'index out of bounds'
+
+        # exits if only has one column
+        if bm <= 1:
+            return 0
+
+        ge = cum >= index
+        # find first entry that is greater or equal
+        block_index = np.argmax(ge)
+
+        if cum[block_index] == index:
+            return block_index + 1
+        return block_index
 
     def getcol(self, j):
         raise NotImplementedError('Operation not supported by MPIBlockMatrix. TODO')

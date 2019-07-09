@@ -36,7 +36,9 @@ class AdmmNLP(NLP):
 
         """
 
-        super(AdmmNLP, self).__init__(nlp.model)
+        super(AdmmNLP, self).__init__()
+
+        self._model = nlp.model
 
         # initialize components
         self._initialize_nlp_components(nlp,
