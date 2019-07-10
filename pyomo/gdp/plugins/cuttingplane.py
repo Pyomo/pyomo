@@ -591,23 +591,20 @@ class CuttingPlane_Transformation(Transformation):
                 lb -= cut_repn.constant
                 cut_repn.constant = 0
             for cons in rBigM_linear_constraints:
-                if i == 5:
-                    set_trace()
                 if lb == cons['lower'] and cut_repn == cons['body']:
                     del cuts['rBigM'][i]
                     del cuts['bigM'][i]
                     unique = False
                     print("removing %s because we already had it" % i)
                     break
-            # if unique:
-            #     # we have found a constraint which cuts of x* and is not already
-            #     # in rBigM, this has to be out cut and we can stop.
-            #     cuts['rBigM'] = [cuts['rBigM'][i]]
-            #     cuts['bigM'] = [cuts['bigM'][i]]
-            #     break
-        # import pdb
-        # pdb.set_trace()
-        assert len(cuts['rBigM']) == 1
+            if unique:
+                # we have found a constraint which cuts of x* and is not already
+                # in rBigM, this has to be out cut and we can stop.
+                cuts['rBigM'] = [cuts['rBigM'][i]]
+                cuts['bigM'] = [cuts['bigM'][i]]
+                break
+
+        assert len(cuts['rBigM']) <= 1
 
         return(cuts)
 
