@@ -1243,8 +1243,19 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
         m = models.makeTwoTermDisj_IndexedConstraints_BoundedVars()
         self.diff_apply_to_and_create_using(m)
 
+
 # TODO: We should actually generate an error for this now!
-# class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
+class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
+    def test_error_for_same_disjunct_in_multiple_disjunctions(self):
+        m = models.makeDisjunctInMultipleDisjunctions()
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "The disjunct disjunct1\[1\] has been transformed, "
+            "but a disjunction it appears in has not. Putting the same "
+            "disjunct in multiple disjunctions is not supported.",
+            TransformationFactory('gdp.bigm').apply_to,
+            m)
+
 #     def test_disjunction1_xor(self):
 #         # check the xor constraint for the first disjunction
 #         m = models.makeDisjunctInMultipleDisjunctions()
@@ -2485,6 +2496,24 @@ class IndexedDisjunctions(unittest.TestCase):
         self.assertFalse(model.disjunctionList[1].active)
         self.assertFalse(model.disjunctionList[0].active)
 
+    def check_second_iteration_any_index(self, model):
+        transBlock = model.component("_pyomo_gdp_bigm_relaxation_4")
+        self.assertIsInstance(transBlock, Block)
+        self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
+        self.assertEqual(len(transBlock.relaxedDisjuncts), 2)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[0].component(
+            "firstTerm[1].cons"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[0].component(
+            "firstTerm[1].cons")), 2)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[1].component(
+            "secondTerm[1].cons"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[1].component(
+            "secondTerm[1].cons")), 1)
+        self.assertEqual(
+            len(model._gdp_bigm_relaxation_disjunctionList_xor), 2)
+        self.assertFalse(model.disjunctionList[1].active)
+        self.assertFalse(model.disjunctionList[0].active)
+
     def test_disjunction_and_disjuncts_indexed_by_any(self):
         model = ConcreteModel()
         model.x = Var(bounds=(-100, 100))
@@ -2502,11 +2531,11 @@ class IndexedDisjunctions(unittest.TestCase):
 
             TransformationFactory('gdp.bigm').apply_to(model)
 
-            if i == 1:
+            if i == 0:
                 self.check_first_iteration(model)
 
-            if i == 2:
-                self.check_second_iteration(model)
+            if i == 1:
+                self.check_second_iteration_any_index(model)
 
     def test_iteratively_adding_disjunctions_transform_container(self):
         # If you are iteratively adding Disjunctions to an IndexedDisjunction,
@@ -2603,14 +2632,17 @@ class IndexedDisjunctions(unittest.TestCase):
             m.b.disjunctionList[i] = [m.b.firstTerm[i], m.b.secondTerm[i]]
 
             TransformationFactory('gdp.bigm').apply_to(m, targets=[m.b])
-            # [ESJ 06/21/2019] I'm not sure I agree with this, but we have to
-            # reactivate disjunctionList so that it will get transformed
-            # again...
-            m.b.disjunctionList.activate()
+            print(i)
+            m.b.disjunctionList.pprint()
+            m.b.disjunctionList[i] = [m.b.firstTerm[i], m.b.secondTerm[i]]
+
+            TransformationFactory('gdp.bigm').apply_to(m, targets=[m.b])
+            
             if i == 1:
                 self.check_relaxation_block(m.b, "_pyomo_gdp_bigm_relaxation")
             if i == 2:
                 self.check_relaxation_block(m.b, "_pyomo_gdp_bigm_relaxation_4")
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -151,6 +151,26 @@ class BigM_Transformation(Transformation):
             block = block.parent_block()
         return suffix_list
 
+    # [ESJ 07/09/2019 This should be a utility function elsewhere, I'm not sure
+    # where...
+    def _is_child_of(self, parent, child, knownParents=None):
+        if knownParents is None:
+            knownParents = set()
+        node = child
+        while True:
+            if node in knownParents:
+                break
+            if node is parent:
+                break
+            if node is None:
+                raise RuntimeError("%s is not a child of %s" % (child.name, 
+                                                                parent.name))
+            knownParents.add(node)
+            node = node.parent_block()
+
+            
+        return knownParents
+
     def _apply_to(self, instance, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
 
@@ -174,31 +194,19 @@ class BigM_Transformation(Transformation):
 
         targets = config.targets
         if targets is None:
-            # [ESJ 06/21/2019] This is a nonissue if the resolution of #1072 is
-            # to have blocks and models behave the same way. But for now, if
-            # instance is actually a block, and no targets were specified,
-            # find_component will return None below. We should just pretend the
-            # block is a model and proceed...
-            if instance.type() is Block and not isinstance(instance,
-                                                           (ConcreteModel,
-                                                            AbstractModel)):
-                if instance.parent_component() is instance:
-                    self._transformBlock(instance, bigM, disjContainers)
-                else:
-                    
-                    self._transformBlockData(instance, bigM, disjContainers)
-                targets = []
-                _HACK_transform_whole_instance = True
-            else:
-                targets = (instance, )
-                _HACK_transform_whole_instance = True
+            targets = (instance, )
+            _HACK_transform_whole_instance = True
         else:
             _HACK_transform_whole_instance = False
-        for _t in targets:
-            t = _t.find_component(instance)
-            if t is None:
-                raise GDP_Error(
-                    "Target %s is not a component on the instance!" % _t)
+        knownParents = set()
+        for t in targets:
+            # check that t is in fact a child of instance
+            knownParents = self._is_child_of(parent=instance, child=t,
+                                             knownParents=knownParents)
+            #t = _t.find_component(instance)
+            # if t is None:
+            #     raise GDP_Error(
+            #         "Target %s is not a component on the instance!" % _t)
 
             if t.type() is Disjunction:
                 if t.parent_component() is t:
@@ -216,34 +224,6 @@ class BigM_Transformation(Transformation):
                     "Target %s was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed."
                     % (t.name, type(t)))
-        # Go through our list of indexed things and deactivate the
-        # containers that don't have any active guys inside of them. So the
-        # invalid component logic will tell us if we missed something getting
-        # transformed.  
-        for obj in disjContainers:
-            if not obj.active:
-                continue
-            for i in obj:
-                if obj[i].active:
-                    break
-            else:
-                # HACK due to active flag implementation.
-                #
-                # Ideally we would not have to do any of this (an
-                # ActiveIndexedComponent would get its active status by
-                # querring the active status of all the contained Data
-                # objects).  As a fallback, we would like to call:
-                #
-                #    obj._deactivate_without_fixing_indicator()
-                #
-                # However, the straightforward implementation of that
-                # method would have unintended side effects (fixing the
-                # contained _DisjunctData's indicator_vars!) due to our
-                # class hierarchy.  Instead, we will directly call the
-                # relevant base class (safe-ish since we are verifying
-                # that all the contained _DisjunctionData are
-                # deactivated directly above).
-                ActiveComponent.deactivate(obj)
 
         # HACK for backwards compatibility with the older GDP transformations
         #
@@ -419,6 +399,12 @@ class BigM_Transformation(Transformation):
                     "indicator_var is not fixed and the disjunct does not "
                     "appear to have been relaxed. This makes no sense."
                     % ( obj.name, ))
+            if obj in infodict['relaxedDisjunctMap'] and \
+               infodict['relaxedDisjunctMap'][obj].get('relaxed', False):
+                raise GDP_Error(
+                    "The disjunct %s has been transformed, but a disjunction "
+                    "it appears in has not. Putting the same disjunct in "
+                    "multiple disjunctions is not supported." % obj.name)
 
         disjunctDict = infodict['relaxedDisjunctMap'].get(obj, False)
         if not disjunctDict:

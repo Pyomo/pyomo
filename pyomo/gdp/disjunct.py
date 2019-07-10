@@ -182,7 +182,19 @@ class SimpleDisjunct(_DisjunctData, Disjunct):
 
 
 class IndexedDisjunct(Disjunct):
-    pass
+
+    #
+    # HACK: this should be implemented on ActiveIndexedComponent, but
+    # that will take time and a PEP
+    #
+    @property
+    def active(self):
+        return any(d.active for d in itervalues(self._data))
+
+    @active.setter
+    def active(self, value):
+        for d in itervalues(self._data):
+            d.active = value
 
 
 
@@ -442,5 +454,15 @@ class SimpleDisjunction(_DisjunctionData, Disjunction):
         return super(SimpleDisjunction, self).set_value(expr)
 
 class IndexedDisjunction(Disjunction):
-    pass
+    #
+    # HACK: this should be implemented on ActiveIndexedComponent, but
+    # that will take time and a PEP
+    #
+    @property
+    def active(self):
+        return any(d.active for d in itervalues(self._data))
 
+    @active.setter
+    def active(self, value):
+        for d in itervalues(self._data):
+            d.active = value
