@@ -593,8 +593,7 @@ class CuttingPlane_Transformation(Transformation):
             for cons in rBigM_linear_constraints:
                 if i == 5:
                     set_trace()
-                if lb == cons['lower'] and self.standard_repn_equals(
-                        cut_repn, cons['body']):
+                if lb == cons['lower'] and cut_repn == cons['body']:
                     del cuts['rBigM'][i]
                     del cuts['bigM'][i]
                     unique = False
@@ -606,7 +605,8 @@ class CuttingPlane_Transformation(Transformation):
             #     cuts['rBigM'] = [cuts['rBigM'][i]]
             #     cuts['bigM'] = [cuts['bigM'][i]]
             #     break
-
+        # import pdb
+        # pdb.set_trace()
         assert len(cuts['rBigM']) == 1
 
         return(cuts)
@@ -767,19 +767,21 @@ class CuttingPlane_Transformation(Transformation):
         return(constraints)
 
     # TODO: not sure this isn't already defined by == actually...
-    def standard_repn_equals(self, repn1, repn2):
-        if len(repn1.linear_coefs) != len(repn2.linear_coefs):
-            return False
-        dict1 = ComponentMap(zip(repn1.linear_vars, repn1.linear_coefs))
-        dict2 = ComponentMap(zip(repn2.linear_vars, repn2.linear_coefs))
-        for v, coef1 in dict1.items():
-            coef2 = dict2.get(v)
-            if coef2 is None:
-                return False
-            if coef1 != coef2:
-                return False
-        print("found equality!")
-        return True
+    # def standard_repn_equals(self, repn1, repn2):
+    #     import pdb
+    #     pdb.set_trace()
+    #     if len(repn1.linear_coefs) != len(repn2.linear_coefs):
+    #         return False
+    #     dict1 = ComponentMap(zip(repn1.linear_vars, repn1.linear_coefs))
+    #     dict2 = ComponentMap(zip(repn2.linear_vars, repn2.linear_coefs))
+    #     for v, coef1 in dict1.items():
+    #         coef2 = dict2.get(v)
+    #         if coef2 is None:
+    #             return False
+    #         if coef1 != coef2:
+    #             return False
+    #     print("found equality!")
+    #     return True
             
     def constraint_tight(self, model, constraint):
         val = value(constraint.body)
