@@ -26,8 +26,6 @@ from pyomo.opt import ProblemFormat
 from pyomo.core import *
 from pyomo.mpec import Complementarity, complements, ComplementarityList
 from pyomo.gdp import Disjunct, Disjunction
-# TODO: DEBUG
-from nose.tools import set_trace
 
 class CCTests(object):
 
