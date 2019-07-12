@@ -401,23 +401,25 @@ class DescendIntoDisjunct(unittest.TestCase):
 
         return m
 
-    def test_simple_disjunction_descend_into_disjunct(self):
-        m = self.get_model()
-
-        TransformationFactory('mpec.simple_disjunction').apply_to(m)
-
+    def check_simple_disjunction(self, m):
         # check that we have what we expect on disjunct1
         compBlock = m.disjunct1.component('comp')
         self.assertIsInstance(compBlock, Block)
         self.assertIsInstance(compBlock.component('expr1'), Disjunct)
         self.assertIsInstance(compBlock.component('expr2'), Disjunct)
         self.assertIsInstance(compBlock.component('complements'), Disjunction)
-        
-    def test_simple_nonlinear_descend_into_disjunct(self):
+
+    def test_simple_disjunction_descend_into_disjunct(self):
         m = self.get_model()
+        TransformationFactory('mpec.simple_disjunction').apply_to(m)
+        self.check_simple_disjunction(m)
 
-        TransformationFactory('mpec.simple_nonlinear').apply_to(m)
-
+    def test_simple_disjunction_on_disjunct(self):
+        m = self.get_model()
+        TransformationFactory('mpec.simple_disjunction').apply_to(m.disjunct1)
+        self.check_simple_disjunction(m)
+    
+    def check_simple_nonlinear(self, m):
         # check that we have what we expect on disjunct1
         compBlock = m.disjunct1.component('comp')
         self.assertIsInstance(compBlock, Block)
@@ -426,11 +428,17 @@ class DescendIntoDisjunct(unittest.TestCase):
         self.assertIsInstance(compBlock.component('ccon'), Constraint)
         self.assertIsInstance(compBlock.component('ve'), Constraint)
 
-    def test_standard_form_descend_into_disjunct(self):
+    def test_simple_nonlinear_descend_into_disjunct(self):
         m = self.get_model()
+        TransformationFactory('mpec.simple_nonlinear').apply_to(m)
+        self.check_simple_nonlinear(m)
 
-        TransformationFactory('mpec.standard_form').apply_to(m)
+    def test_simple_nonlinear_on_disjunct(self):
+        m = self.get_model()
+        TransformationFactory('mpec.simple_nonlinear').apply_to(m.disjunct1)
+        self.check_simple_nonlinear(m)
 
+    def check_standard_form(self, m):
         # check that we have what we expect on disjunct1
         compBlock = m.disjunct1.component('comp')
         self.assertIsInstance(compBlock, Block)
@@ -438,20 +446,32 @@ class DescendIntoDisjunct(unittest.TestCase):
         self.assertIsInstance(compBlock.component('c'), Constraint)
         self.assertIsInstance(compBlock.component('ve'), Constraint)
 
-    def test_nl_descend_into_disjunct(self):
+    def test_standard_form_descend_into_disjunct(self):
         m = self.get_model()
+        TransformationFactory('mpec.standard_form').apply_to(m)
+        self.check_standard_form(m)
 
-        TransformationFactory('mpec.nl').apply_to(m)
+    def test_standard_form_on_disjunct(self):
+        m = self.get_model()
+        TransformationFactory('mpec.standard_form').apply_to(m.disjunct1)
+        self.check_standard_form(m)
 
-        # TODO: I'm not entirely sure what to expect here? What are the free
-        # variables?
+    def check_nl(self, m):
         compBlock = m.disjunct1.component('comp')
         self.assertIsInstance(compBlock, Block)
-        #self.assertIsInstance(compBlock.component('v'), Var)
         self.assertIsInstance(compBlock.component('bv'), Var)
         self.assertIsInstance(compBlock.component('c'), Constraint)
         self.assertIsInstance(compBlock.component('bc'), Constraint)
-        #self.assertIsInstance(compBlock.component('e'), Constraint)
+
+    def test_nl_descend_into_disjunct(self):
+        m = self.get_model()
+        TransformationFactory('mpec.nl').apply_to(m)
+        self.check_nl(m)
+
+    def test_nl_on_disjunct(self):
+        m = self.get_model()
+        TransformationFactory('mpec.nl').apply_to(m.disjunct1)
+        self.check_nl(m)
 
 if __name__ == "__main__":
     unittest.main()
