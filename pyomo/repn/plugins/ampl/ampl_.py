@@ -459,7 +459,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if coef != 1:
                         OUTPUT.write(coef_term_str % (coef))
                     self._print_nonlinear_terms_NL(child_exp)
-            else:
+            else: # n == 1 or 2
                 for i in xrange(0,n):
                     assert(exp[i].__class__ is tuple)
                     coef = exp[i][0]
@@ -502,6 +502,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     OUTPUT.write(binary_sum_str)
                     self._print_nonlinear_terms_NL(vargs[0])
                     self._print_nonlinear_terms_NL(vargs[1])
+                elif n == 1:
+                    self._print_nonlinear_terms_NL(vargs[0])
                 else:
                     OUTPUT.write(nary_sum_str % (n))
                     for child_exp in vargs:

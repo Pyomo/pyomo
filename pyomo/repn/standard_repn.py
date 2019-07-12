@@ -674,10 +674,7 @@ def _collect_var(exp, multiplier, idMap, compute_values, verbose, quadratic):
             key = len(idMap) - 1
             idMap[None][id_] = key
             idMap[key] = exp
-        if key in ans.linear:
-            ans.linear[key] += multiplier       # TODO: coverage?
-        else:
-            ans.linear[key] = multiplier
+        ans.linear[key] = multiplier
 
     return ans
 

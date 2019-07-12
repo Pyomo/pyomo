@@ -1,6 +1,6 @@
 import pyutilib.th as unittest
 import pyomo.environ as pe
-from pyomo.contrib.derivatives.differentiate import reverse_ad, reverse_sd
+from pyomo.core.expr.calculus.diff_with_pyomo import reverse_ad, reverse_sd
 
 
 tol = 6

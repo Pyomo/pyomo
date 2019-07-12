@@ -4,6 +4,7 @@ import logging
 from pyomo.common.errors import DeveloperError, InfeasibleConstraintException, PyomoException
 
 logger = logging.getLogger(__name__)
+inf = float('inf')
 
 
 class IntervalException(PyomoException):
@@ -22,17 +23,17 @@ def mul(xl, xu, yl, yu):
     lb = min(xl*yl, xl*yu, xu*yl, xu*yu)
     ub = max(xl*yl, xl*yu, xu*yl, xu*yu)
     if math.isnan(lb):
-        lb = -math.inf
+        lb = -inf
     if math.isnan(ub):
-        ub = math.inf
+        ub = inf
     return lb, ub
 
 
 def inv(xl, xu, feasibility_tol):
     if xl <= feasibility_tol and xu >= -feasibility_tol:
         # if the denominator (x) can include 0, then 1/x is unbounded.
-        lb = -math.inf
-        ub = math.inf
+        lb = -inf
+        ub = inf
     else:
         ub = 1.0 / xl
         lb = 1.0 / xu
@@ -42,8 +43,8 @@ def inv(xl, xu, feasibility_tol):
 def div(xl, xu, yl, yu, feasibility_tol):
     if yl <= feasibility_tol and yu >= -feasibility_tol:
         # if the denominator (y) can include 0, then x/y is unbounded.
-        lb = -math.inf
-        ub = math.inf
+        lb = -inf
+        ub = inf
     else:
         lb, ub = mul(xl, xu, *inv(yl, yu, feasibility_tol))
     return lb, ub
@@ -72,21 +73,21 @@ def power(xl, xu, yl, yu):
         # this section is only needed so we do not encounter math domain errors;
         # The logic is essentially the same as above (xl > 0)
         if xu == 0 and yl < 0:
-            _lba = math.inf
+            _lba = inf
         else:
             _lba = xu ** yl
         if yu < 0:
-            _lbb = math.inf
+            _lbb = inf
         else:
             _lbb = xl ** yu
         lb = min(_lba, _lbb)
 
         if yl < 0:
-            _uba = math.inf
+            _uba = inf
         else:
             _uba = xl ** yl
         if xu == 0 and yu < 0:
-            _ubb = math.inf
+            _ubb = inf
         else:
             _ubb = xu ** yu
         ub = max(_uba, _ubb)
@@ -106,12 +107,12 @@ def power(xl, xu, yl, yu):
                 if y % 2 == 0:
                     lb = xl ** y
                     if xu == 0:
-                        ub = math.inf
+                        ub = inf
                     else:
                         ub = xu ** y
                 else:
                     if xu == 0:
-                        lb = -math.inf
+                        lb = -inf
                     else:
                         lb = xu ** y
                     ub = xl ** y
@@ -126,10 +127,10 @@ def power(xl, xu, yl, yu):
             if y < 0:
                 if y % 2 == 0:
                     lb = min(xl ** y, xu ** y)
-                    ub = math.inf
+                    ub = inf
                 else:
-                    lb = - math.inf
-                    ub = math.inf
+                    lb = - inf
+                    ub = inf
             else:
                 if y % 2 == 0:
                     lb = 0
@@ -173,8 +174,8 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
         if y == 0:
             # Anything to the power of 0 is 1, so if y is 0, then x can be anything
             # (assuming zl <= 1 <= zu, which is enforced when traversing the tree in the other direction)
-            xl = -math.inf
-            xu = math.inf
+            xl = -inf
+            xu = inf
         elif y % 2 == 0:
             """
             if y is even, then there are two primary cases (note that it is much easier to walk through these
@@ -213,8 +214,8 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
                 if zu == 0:
                     raise InfeasibleConstraintException('Infeasible. Anything to the power of {0} must be positive.'.format(y))
                 elif zl <= 0:
-                    _xl = -math.inf
-                    _xu = math.inf
+                    _xl = -inf
+                    _xu = inf
                 else:
                     if orig_xl <= -xl:
                         _xl = -xu
@@ -248,16 +249,16 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
                     pass
                 elif zu <= 0:
                     if zu == 0:
-                        xl = -math.inf
+                        xl = -inf
                     else:
                         xl = -abs(zu)**(1.0/y)
                     if zl == 0:
-                        xu = -math.inf
+                        xu = -inf
                     else:
                         xu = -abs(zl)**(1.0/y)
                 else:
-                    xl = -math.inf
-                    xu = math.inf
+                    xl = -inf
+                    xu = inf
 
     return xl, xu
 
@@ -288,11 +289,23 @@ def log(xl, xu):
     if xl > 0:
         lb = math.log(xl)
     else:
-        lb = -math.inf
+        lb = -inf
     if xu > 0:
         ub = math.log(xu)
     else:
-        ub = -math.inf
+        ub = -inf
+    return lb, ub
+
+
+def log10(xl, xu):
+    if xl > 0:
+        lb = math.log10(xl)
+    else:
+        lb = -inf
+    if xu > 0:
+        ub = math.log10(xu)
+    else:
+        ub = -inf
     return lb, ub
 
 
@@ -314,7 +327,7 @@ def sin(xl, xu):
     # find the minimum value of i such that 2*pi*i - pi/2 >= xl. Then round i up. If 2*pi*i - pi/2 is still less
     # than or equal to xu, then there is a minimum between xl and xu. Thus the lb is -1. Otherwise, the minimum
     # occurs at either xl or xu
-    if xl <= -math.inf or xu >= math.inf:
+    if xl <= -inf or xu >= inf:
         return -1, 1
     pi = math.pi
     i = (xl + pi / 2) / (2 * pi)
@@ -355,7 +368,7 @@ def cos(xl, xu):
     # find the minimum value of i such that 2*pi*i - pi >= xl. Then round i up. If 2*pi*i - pi/2 is still less
     # than or equal to xu, then there is a minimum between xl and xu. Thus the lb is -1. Otherwise, the minimum
     # occurs at either xl or xu
-    if xl <= -math.inf or xu >= math.inf:
+    if xl <= -inf or xu >= inf:
         return -1, 1
     pi = math.pi
     i = (xl + pi) / (2 * pi)
@@ -396,15 +409,15 @@ def tan(xl, xu):
     # the lb is -inf and the ub is inf. Otherwise the minimum occurs at xl and the maximum occurs at xu.
     # find the minimum value of i such that pi*i + pi/2 >= xl. Then round i up. If pi*i + pi/2 is still less
     # than or equal to xu, then there is an undefined point between xl and xu.
-    if xl <= -math.inf or xu >= math.inf:
-        return -math.inf, math.inf
+    if xl <= -inf or xu >= inf:
+        return -inf, inf
     pi = math.pi
     i = (xl - pi / 2) / (pi)
     i = math.ceil(i)
     x_at_undefined = pi * i + pi / 2
     if x_at_undefined <= xu:
-        lb = -math.inf
-        ub = math.inf
+        lb = -inf
+        ub = inf
     else:
         lb = math.tan(xl)
         ub = math.tan(xu)
@@ -436,7 +449,7 @@ def asin(xl, xu, yl, yu):
 
     pi = math.pi
 
-    if yl <= -math.inf:
+    if yl <= -inf:
         lb = yl
     elif xl <= math.sin(yl) <= xu:
         # if sin(yl) >= xl then yl satisfies the bounds on x, and the lower bound of y cannot be improved
@@ -486,7 +499,7 @@ def asin(xl, xu, yl, yu):
             lb = lb2
 
     # use the same logic for the maximum
-    if yu >= math.inf:
+    if yu >= inf:
         ub = yu
     elif xl <= math.sin(yu) <= xu:
         ub = yu
@@ -547,7 +560,7 @@ def acos(xl, xu, yl, yu):
 
     pi = math.pi
 
-    if yl <= -math.inf:
+    if yl <= -inf:
         lb = yl
     elif xl <= math.cos(yl) <= xu:
         # if xl <= cos(yl) <= xu then yl satisfies the bounds on x, and the lower bound of y cannot be improved
@@ -598,7 +611,7 @@ def acos(xl, xu, yl, yu):
             lb = lb2
 
     # use the same logic for the maximum
-    if yu >= math.inf:
+    if yu >= inf:
         ub = yu
     elif xl <= math.cos(yu) <= xu:
         ub = yu
@@ -656,7 +669,7 @@ def atan(xl, xu, yl, yu):
     pi = math.pi
 
     # tan goes to -inf and inf at every pi*i + pi/2 (integer i).
-    if xl <= -math.inf or yl <= -math.inf:
+    if xl <= -inf or yl <= -inf:
         lb = yl
     else:
         i = (yl - pi / 2) / pi
@@ -666,7 +679,7 @@ def atan(xl, xu, yl, yu):
         dist = y_tmp - (-pi/2)
         lb = i + dist
 
-    if xu >= math.inf or yu >= math.inf:
+    if xu >= inf or yu >= inf:
         ub = yu
     else:
         i = (yu - pi / 2) / pi

@@ -1,6 +1,5 @@
-from pyomo.core.base.expression import SimpleExpression, _GeneralExpressionData
 from pyomo.core.kernel.component_map import ComponentMap
-import pyomo.core.expr.current as _expr
+from pyomo.core.expr import current as _expr
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.current import exp, log, sin, cos, tan, asin, acos, atan
@@ -248,11 +247,6 @@ def _diff_UnaryFunctionExpression(node, val_dict, der_dict):
         raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(node)))
 
 
-def _diff_SimpleExpression(node, val_dict, der_dict):
-    der = der_dict[node]
-    der_dict[node.expr] += der
-
-
 _diff_map = dict()
 _diff_map[_expr.ProductExpression] = _diff_ProductExpression
 _diff_map[_expr.ReciprocalExpression] = _diff_ReciprocalExpression
@@ -261,8 +255,6 @@ _diff_map[_expr.SumExpression] = _diff_SumExpression
 _diff_map[_expr.MonomialTermExpression] = _diff_ProductExpression
 _diff_map[_expr.NegationExpression] = _diff_NegationExpression
 _diff_map[_expr.UnaryFunctionExpression] = _diff_UnaryFunctionExpression
-_diff_map[SimpleExpression] = _diff_SimpleExpression
-_diff_map[_GeneralExpressionData] = _diff_SimpleExpression
 
 
 class _ReverseADVisitorLeafToRoot(ExpressionValueVisitor):
@@ -321,6 +313,9 @@ class _ReverseADVisitorRootToLeaf(ExpressionValueVisitor):
 
         if node.__class__ in _diff_map:
             _diff_map[node.__class__](node, self.val_dict, self.der_dict)
+        elif node.is_named_expression_type():
+            der = self.der_dict[node]
+            self.der_dict[node.expr] += der
         else:
             raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(node)))
 
@@ -410,6 +405,9 @@ class _ReverseSDVisitorRootToLeaf(ExpressionValueVisitor):
 
         if node.__class__ in _diff_map:
             _diff_map[node.__class__](node, self.val_dict, self.der_dict)
+        elif node.is_named_expression_type():
+            der = self.der_dict[node]
+            self.der_dict[node.expr] += der
         else:
             raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(node)))
 
