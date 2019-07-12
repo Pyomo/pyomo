@@ -42,9 +42,10 @@ class MPEC4_Transformation(Transformation):
         #
         free_vars = {}
         id_list = []
-        for vdata in instance.component_data_objects(Var, active=True,
-                                                     sort=SortComponents.deterministic,
-                                                     descend_into=(Block, Disjunct)):
+        # [ESJ 07/12/2019] Look on the whole model in case instance is a Block or a Disjunct
+        for vdata in instance.model().component_data_objects(Var, active=True,
+                                                             sort=SortComponents.deterministic,
+                                                             descend_into=(Block, Disjunct)):
             id_list.append( id(vdata) )
             free_vars[id(vdata)] = vdata
         #
