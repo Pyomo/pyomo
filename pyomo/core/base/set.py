@@ -2630,6 +2630,9 @@ class _InfiniteRangeSetData(_SetData):
     def bounds(self):
         _bnds = list((r.start, r.end) if r.step >= 0 else (r.end, r.start)
                      for r in self._ranges)
+        if not _bnds:
+            return None, None
+
         lb, ub = _bnds.pop()
         for _lb, _ub in _bnds:
             if lb is not None:
@@ -2787,16 +2790,29 @@ class RangeSet(Component):
         ans = ' | '.join(str(_) for _ in self.ranges())
         if ' | ' in ans:
             return "(" + ans + ")"
-        return ans
+        if ans:
+            return ans
+        else:
+            return "[]"
 
 
     def _process_args(self, args, ranges):
         if type(ranges) is not tuple:
             ranges = tuple(ranges)
         if len(args) == 1:
-            ranges = ranges + (NumericRange(1,args[0],1),)
+            # This is a bit of a hack for backwards compatability with
+            # the old RangeSet implementation, where we did less
+            # validation of the RangeSet arguments, and allowed the
+            # creation of 0-length RangeSets
+            if args[0] != 0:
+                ranges = ranges + (NumericRange(1,args[0],1),)
         elif len(args) == 2:
-            ranges = ranges + (NumericRange(args[0],args[1],1),)
+            # This is a bit of a hack for backwards compatability with
+            # the old RangeSet implementation, where we did less
+            # validation of the RangeSet arguments, and allowed the
+            # creation of 0-length RangeSets
+            if args[1] - args[0] != -1:
+                ranges = ranges + (NumericRange(args[0],args[1],1),)
         elif len(args) == 3:
             ranges = ranges + (NumericRange(*args),)
         elif args:
@@ -2829,7 +2845,7 @@ class RangeSet(Component):
             ("Finite","Members",),
             lambda k, v: [
                 v.is_finite(),#isinstance(v, _FiniteSetMixin),
-                ', '.join(str(r) for r in self.ranges()),
+                ', '.join(str(r) for r in self.ranges()) or '[]',
             ])
 
 

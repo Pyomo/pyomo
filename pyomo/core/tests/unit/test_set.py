@@ -1131,6 +1131,15 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             i.construct()
             self.assertEqual(output.getvalue(), ref)
 
+        i = RangeSet(0)
+        self.assertEqual(len(i), 0)
+        self.assertEqual(len(list(i.ranges())), 0)
+
+        i = RangeSet(0,-1)
+        self.assertEqual(len(i), 0)
+        self.assertEqual(len(list(i.ranges())), 0)
+
+
     def test_contains(self):
         r = RangeSet(5)
         self.assertIn(1, r)
@@ -1253,6 +1262,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
     def test_pprint(self):
         m = ConcreteModel()
         m.I = RangeSet(3)
+        m.K1 = RangeSet(0)
+        m.K2 = RangeSet(10, 9)
         m.NotI = RangeSet(1,3,0)
         m.J = SetOf([1,2,3])
 
@@ -1260,10 +1271,16 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         m.pprint()
         m.pprint(ostream=buf)
         self.assertEqual(buf.getvalue().strip(), """
-2 RangeSet Declarations
+4 RangeSet Declarations
     I : Dimen=1, Size=3, Bounds=(1, 3)
         Key  : Finite : Members
         None :   True :   [1:3]
+    K1 : Dimen=1, Size=0, Bounds=(None, None)
+        Key  : Finite : Members
+        None :   True :      []
+    K2 : Dimen=1, Size=0, Bounds=(None, None)
+        Key  : Finite : Members
+        None :   True :      []
     NotI : Dimen=1, Size=Inf, Bounds=(1, 3)
         Key  : Finite : Members
         None :  False :  [1..3]
@@ -1273,7 +1290,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         Key  : Ordered : Members
         None :    True : [1, 2, 3]
 
-3 Declarations: I NotI J""".strip())
+5 Declarations: I K1 K2 NotI J""".strip())
 
     def test_naming(self):
         m = ConcreteModel()
@@ -1297,6 +1314,11 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(str(l), "[1, 3, 5]")
         m.L = l
         self.assertEqual(str(l), "L")
+
+        n = RangeSet(0)
+        self.assertEqual(str(n), "[]")
+        m.N = n
+        self.assertEqual(str(n), "N")
 
     def test_isdisjoint(self):
         i = SetOf({1,2,3})
