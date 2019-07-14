@@ -2008,10 +2008,10 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual((m.I1 & m.IN).dimen, 1)
         self.assertEqual((m.I1 & m.J).dimen, UnknownSetDimen)
         self.assertEqual((m.I2 & m.J).dimen, UnknownSetDimen)
-        self.assertEqual((m.IN & m.J).dimen, None)
+        self.assertEqual((m.IN & m.J).dimen, UnknownSetDimen)
         self.assertEqual((m.J & m.I1).dimen, UnknownSetDimen)
         self.assertEqual((m.J & m.I2).dimen, UnknownSetDimen)
-        self.assertEqual((m.J & m.IN).dimen, None)
+        self.assertEqual((m.J & m.IN).dimen, UnknownSetDimen)
 
     def _verify_ordered_intersection(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):

@@ -1657,6 +1657,10 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         return value in self._values
 
     def __iter__(self):
+        if not self.parent_component()._constructed:
+            raise RuntimeError(
+                "Cannot iterate over abstract Set '%s' before it has been "
+                "constructed (initialized)." % (self.name))
         return iter(self._values)
 
     def __len__(self):
@@ -1668,7 +1672,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
     def __str__(self):
         if self.parent_block() is not None:
             return self.name
-        if not self._constructed:
+        if not self.parent_component()._constructed:
             return type(self).__name__
         return "{" + (', '.join(str(_) for _ in self)) + "}"
 
@@ -1917,6 +1921,10 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
         """
         Return an iterator for the set.
         """
+        if not self.parent_component()._constructed:
+            raise RuntimeError(
+                "Cannot iterate over abstract Set '%s' before it has been "
+                "constructed (initialized)." % (self.name))
         return iter(self._ordered_values)
 
     def __reversed__(self):
@@ -2302,7 +2310,7 @@ class Set(IndexedComponent):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 logger.debug("Constructing Set, name=%s, from data=%r"
                              % (self.name, data))
-        self._constructed=True
+        self._constructed = True
         if data is not None:
             # Data supplied to construct() should override data provided
             # to the constructor
@@ -2318,6 +2326,7 @@ class Set(IndexedComponent):
                 for index in self.index_set():
                     self._getitem_when_not_present(index)
         finally:
+            # Restore the original initializer (if overridden by data argument)
             if data is not None:
                 self._init_values = tmp_init
         timer.report()
@@ -2517,7 +2526,7 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 logger.debug("Constructing SetOf, name=%s, from data=%r"
                              % (self.name, data))
-        self._constructed=True
+        self._constructed = True
         timer.report()
 
     @property
@@ -2829,7 +2838,7 @@ class RangeSet(Component):
                 logger.debug("Constructing RangeSet, name=%s, from data=%r"
                              % (self.name, data))
         # TODO: verify that the constructed ranges match finite
-        self._constructed=True
+        self._constructed = True
         timer.report()
 
 
