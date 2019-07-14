@@ -2964,9 +2964,14 @@ class SetUnion(_SetOperator):
 
     @property
     def dimen(self):
-        d1 = self._sets[0].dimen
-        if d1 == self._sets[1].dimen:
-            return d1
+        d0 = self._sets[0].dimen
+        d1 = self._sets[1].dimen
+        if d0 is None or d1 is None:
+            return None
+        if d0 is UnknownSetDimen or d1 is UnknownSetDimen:
+            return UnknownSetDimen
+        if d0 == d1:
+            return d0
         else:
             return None
 
@@ -3085,6 +3090,8 @@ class SetIntersection(_SetOperator):
             return d1
         elif d1 == d2:
             return d1
+        elif d1 is UnknownSetDimen or d2 is UnknownSetDimen:
+            return UnknownSetDimen
         else:
             return 0
 
@@ -3268,9 +3275,14 @@ class SetSymmetricDifference(_SetOperator):
 
     @property
     def dimen(self):
-        d1 = self._sets[0].dimen
-        if d1 == self._sets[1].dimen:
-            return d1
+        d0 = self._sets[0].dimen
+        d1 = self._sets[1].dimen
+        if d0 is None or d1 is None:
+            return None
+        if d0 is UnknownSetDimen or d1 is UnknownSetDimen:
+            return UnknownSetDimen
+        if d0 == d1:
+            return d0
         else:
             return None
 
@@ -3363,6 +3375,26 @@ class SetProduct(_SetOperator):
                     yield ss
             else:
                 yield s
+
+    @property
+    def dimen(self):
+        if not (FLATTEN_CROSS_PRODUCT and normalize_index.flatten):
+            return None
+        # By convention, "None" trumps UnknownSetDimen.  That is, a set
+        # product is "non-dimentioned" if any term is non-dimentioned,
+        # even if we do not yet know the dimentionality of another term.
+        ans = 0
+        _unknown = False
+        for s in self._sets:
+            s_dim = s.dimen
+            if s_dim is None:
+                return None
+            elif s_dim is UnknownSetDimen:
+                _unknown = True
+            else:
+                ans += s_dim
+        return UnknownSetDimen if _unknown else ans
+
 
 class SetProduct_InfiniteSet(SetProduct):
     __slots__ = tuple()
@@ -3529,18 +3561,6 @@ class SetProduct_FiniteSet(_FiniteSetMixin, SetProduct_InfiniteSet):
         ans = 1
         for s in self._sets:
             ans *= max(1, len(s))
-        return ans
-
-    @property
-    def dimen(self):
-        if not (FLATTEN_CROSS_PRODUCT and normalize_index.flatten):
-            return None
-        ans = 0
-        for s in self._sets:
-            s_dim = s.dimen
-            if s_dim is None:
-                return None
-            ans += s_dim
         return ans
 
 
