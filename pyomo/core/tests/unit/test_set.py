@@ -43,7 +43,7 @@ from pyomo.core.base.set import (
     SetInitializer, _SetIntersectInitializer, RangeSetInitializer,
     _SetData, _FiniteSetData, _InsertionOrderSetData, _SortedSetData,
     _FiniteSetMixin, _OrderedSetMixin,
-    _UnknownSetDimen,
+    UnknownSetDimen,
     simple_set_rule, set_options,
 )
 from pyomo.environ import (
@@ -3367,7 +3367,7 @@ class TestSet(unittest.TestCase):
         self.assertEqual(list(m.I), [])
         self.assertEqual(list(reversed(m.I)), [])
         self.assertEqual(m.I.data(), ())
-        self.assertEqual(m.I.dimen, _UnknownSetDimen)
+        self.assertEqual(m.I.dimen, UnknownSetDimen)
 
         m = ConcreteModel()
         with self.assertRaisesRegexp(
@@ -4051,7 +4051,7 @@ class TestSet(unittest.TestCase):
     def test_dimen(self):
         m = ConcreteModel()
         m.I = Set()
-        self.assertEqual(m.I.dimen, _UnknownSetDimen)
+        self.assertEqual(m.I.dimen, UnknownSetDimen)
         m.I.add((1,2))
         self.assertEqual(m.I.dimen, 2)
 
@@ -4471,7 +4471,7 @@ I : Size=2, Index=I_index, Ordered=Insertion
             normalize_index.flatten = False
             m = ConcreteModel()
             m.I = Set()
-            self.assertIs(m.I._dimen, _UnknownSetDimen)
+            self.assertIs(m.I._dimen, UnknownSetDimen)
             self.assertTrue(m.I.add((1,(2,3))))
             self.assertIs(m.I._dimen, None)
             self.assertNotIn(((1,2),3), m.I)
@@ -4492,7 +4492,7 @@ I : Size=2, Index=I_index, Ordered=Insertion
             normalize_index.flatten = True
             m = ConcreteModel()
             m.I = Set()
-            self.assertIs(m.I._dimen, _UnknownSetDimen)
+            self.assertIs(m.I._dimen, UnknownSetDimen)
             m.I.add((1,(2,3)))
             self.assertIs(m.I._dimen, 3)
             self.assertIn(((1,2),3), m.I)

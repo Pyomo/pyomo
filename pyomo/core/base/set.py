@@ -424,7 +424,7 @@ def simple_set_rule( fn ):
 
 class RangeDifferenceError(ValueError): pass
 
-class _UnknownSetDimen(object): pass
+class UnknownSetDimen(object): pass
 
 #
 # DESIGN NOTES
@@ -1728,7 +1728,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         # compatible.
         if self._dimen is not None:
             if _d != self._dimen:
-                if self._dimen is _UnknownSetDimen:
+                if self._dimen is UnknownSetDimen:
                     # The first thing added to a Set with unknown
                     # dimension sets its dimension
                     self._dimen = _d
@@ -2124,7 +2124,7 @@ def _pprint_members(x):
     return '{' + str(x.ordered_data())[1:-1] + "}"
 def _pprint_dimen(x):
     d = x.dimen
-    if d is _UnknownSetDimen:
+    if d is UnknownSetDimen:
         return "--"
     return d
 def _pprint_domain(x):
@@ -2274,7 +2274,7 @@ class Set(IndexedComponent):
             self._init_domain.intersect(RangeSetInitializer(
                 _bounds, default_step=0))
 
-        self._init_dimen = Initializer(kwds.pop('dimen', _UnknownSetDimen))
+        self._init_dimen = Initializer(kwds.pop('dimen', UnknownSetDimen))
         self._init_values = Initializer(
             kwds.pop('initialize', ()),
             treat_sequences_as_mappings=False, allow_generators=True)
@@ -2342,7 +2342,7 @@ class Set(IndexedComponent):
             obj = self._data[index] = self._ComponentDataClass(component=self)
         if self._init_dimen is not None:
             _d = self._init_dimen(self, index)
-            if _d is not _UnknownSetDimen and (not normalize_index.flatten) \
+            if _d is not UnknownSetDimen and (not normalize_index.flatten) \
                and _d is not None:
                 logger.warning(
                     "Ignoring non-None dimen (%s) for set %s "
