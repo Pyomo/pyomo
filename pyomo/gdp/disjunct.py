@@ -78,12 +78,16 @@ class _DisjunctData(_BlockData):
     def __init__(self, component):
         _BlockData.__init__(self, component)
         self.indicator_var = Var(within=Binary)
+        # pointer to transformation block if this disjunct has been
+        # transformed. None indicates it hasn't been transformed.
+        self.transformation_block = None
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
         _BlockData.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
 
     def set_value(self, val):
         _indicator_var = self.indicator_var
+        _transformation_block = self.transformation_block
         # Remove everything
         for k in list(getattr(self, '_decl', {})):
             self.del_component(k)
@@ -96,10 +100,15 @@ class _DisjunctData(_BlockData):
         if val:
             if 'indicator_var' not in val:
                 self.add_component('indicator_var', _indicator_var)
+            # [ESJ 07/14/2019] TODO: This isn't tested and I don't actually know
+            # what it does!
+            if 'transformation_block' not in val:
+                self.transformation_block = _transformation_block
             for k in sorted(iterkeys(val)):
                 self.add_component(k,val[k])
         else:
             self.add_component('indicator_var', _indicator_var)
+            self.transformation_block = _transformation_block
 
     def activate(self):
         super(_DisjunctData, self).activate()
