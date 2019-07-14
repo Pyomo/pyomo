@@ -12,6 +12,7 @@ from six import string_types
 
 import pyomo.core.expr.current as EXPR
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types, native_numeric_types
+from pyomo.gdp import GDP_Error
 from copy import deepcopy
 
 from pyomo.core.base.component import _ComponentBase, ComponentUID
@@ -79,24 +80,39 @@ def clone_without_expression_components(expr, substitute=None):
 
 
 def target_list(x):
-    if isinstance(x, ComponentUID):
+    if isinstance(x, _ComponentBase):
         return [ x ]
-    elif isinstance(x, (_ComponentBase, string_types)):
-        return [ ComponentUID(x) ]
     elif hasattr(x, '__iter__'):
         ans = []
         for i in x:
-            if isinstance(i, ComponentUID):
+            if isinstance(i, _ComponentBase):
                 ans.append(i)
-            elif isinstance(i, (_ComponentBase, string_types)):
-                ans.append(ComponentUID(i))
             else:
                 raise ValueError(
-                    "Expected ComponentUID, Component, Component name, "
-                    "or list of these.\n\tReceived %s" % (type(i),))
+                    "Expected Component or list of Components."
+                    "\n\tReceived %s" % (type(i),))
 
         return ans
     else:
         raise ValueError(
-            "Expected ComponentUID, Component, Component name, "
-            "or list of these.\n\tReceived %s" % (type(x),))
+            "Expected Component or list of Components."
+            "\n\tReceived %s" % (type(x),))
+
+# [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
+#  putting it here for now so that all the gdp transformations can use it
+def is_child_of(parent, child, knownParents=None):
+    if knownParents is None:
+        knownParents = set()
+    node = child
+    while True:
+        if node in knownParents:
+            break
+        if node is parent:
+            break
+        if node is None:
+            raise GDP_Error("Target %s is not a component on instance %s!"
+                               % (child.name, parent.name))
+        knownParents.add(node)
+        node = node.parent_block()
+
+    return knownParents

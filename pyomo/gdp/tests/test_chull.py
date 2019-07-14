@@ -682,7 +682,7 @@ class TestSpecialCases(unittest.TestCase):
             "in disjunct disjunct1\[1,1\]!.*",
             TransformationFactory('gdp.chull').create_using,
             m,
-            targets=[ComponentUID(m.disjunction1[1])])
+            targets=[m.disjunction1[1]])
         #
         # we will make that disjunction come first now...
         #
@@ -695,7 +695,7 @@ class TestSpecialCases(unittest.TestCase):
             "innerdisjunction\[0\] in disjunct disjunct1\[1,1\]!.*",
             TransformationFactory('gdp.chull').create_using,
             m,
-            targets=[ComponentUID(m.disjunction1[1])])
+            targets=[m.disjunction1[1]])
         # Deactivating the disjunction will allow us to get past it back
         # to the Disjunct (after we realize there are no active
         # DisjunctionData within the active Disjunction)
@@ -706,7 +706,7 @@ class TestSpecialCases(unittest.TestCase):
             "in disjunct disjunct1\[1,1\]!.*",
             TransformationFactory('gdp.chull').create_using,
             m,
-            targets=[ComponentUID(m.disjunction1[1])])
+            targets=[m.disjunction1[1]])
 
     def test_local_vars(self):
         m = ConcreteModel()

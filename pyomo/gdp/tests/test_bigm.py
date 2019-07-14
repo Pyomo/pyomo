@@ -896,7 +896,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         m = self.add_disj_not_on_block(m)
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.b)])
+            targets=[m.b])
 
         self.assertFalse(m.b.disjunct[0].active)
         self.assertFalse(m.b.disjunct[1].active)
@@ -909,7 +909,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         m = self.add_disj_not_on_block(m)
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.b)])
+            targets=[m.b])
 
         disjBlock = m.b._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
         self.assertEqual(len(disjBlock), 2)
@@ -1469,7 +1469,7 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
         m = models.makeDisjunctInMultipleDisjunctions_no_deactivate()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.disjunction1)])
+            targets=[m.disjunction1])
 
         self.assertFalse(m.disjunction1.active)
         # disjunction2 still active
@@ -1489,7 +1489,7 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
         m = models.makeDisjunctInMultipleDisjunctions()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.disjunction1)])
+            targets=[m.disjunction1])
 
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
         # only two disjuncts relaxed
@@ -1523,11 +1523,23 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
         m = models.makeDisjunctInMultipleDisjunctions()
         self.assertRaisesRegexp(
             GDP_Error,
-            "Target %s is not a component on the instance!*"
-            % ComponentUID(decoy.block),
+            "Target block is not a component on instance unknown!",
             TransformationFactory('gdp.bigm').apply_to,
             m,
-            targets=[ComponentUID(decoy.block)])
+            targets=[decoy.block])
+
+    def test_targets_cannot_be_cuids(self):
+        m = models.makeTwoTermDisj()
+        self.assertRaisesRegexp(
+            ValueError,
+            "invalid value for configuration 'targets': \n"
+            "\tFailed casting [disjunction] \n"
+            "\tto target_list \n"
+            "\tError: Expected Component or list of Components."
+            "\n\tRecieved %s" % type(ComponentUID(m.disjunction)),
+            TransformationFactory('gdp.bigm').apply_to,
+            m,
+            targets=[ComponentUID(m.disjunction)])
 
 
 class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
@@ -1535,7 +1547,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
         m = models.makeDisjunctionsOnIndexedBlock()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.disjunction1)])
+            targets=[m.disjunction1])
 
         self.assertFalse(m.disjunction1.active)
         self.assertFalse(m.disjunction1[1].active)
@@ -1556,7 +1568,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
         m = models.makeDisjunctionsOnIndexedBlock()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.disjunction1)])
+            targets=[m.disjunction1])
 
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
         self.assertEqual(len(disjBlock), 4)
@@ -1610,7 +1622,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
             "in disjunct disjunct1\[1,1\]!.*",
             TransformationFactory('gdp.bigm').create_using,
             m,
-            targets=[ComponentUID(m.disjunction1[1])])
+            targets=[m.disjunction1[1]])
         #
         # we will make that disjunction come first now...
         #
@@ -1623,7 +1635,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
             "innerdisjunction\[0\] in disjunct disjunct1\[1,1\]!.*",
             TransformationFactory('gdp.bigm').create_using,
             m,
-            targets=[ComponentUID(m.disjunction1[1])])
+            targets=[m.disjunction1[1]])
         # Deactivating the disjunction will allow us to get past it back
         # to the Disjunct (after we realize there are no active
         # DisjunctionData within the active Disjunction)
@@ -1634,13 +1646,13 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
             "in disjunct disjunct1\[1,1\]!.*",
             TransformationFactory('gdp.bigm').create_using,
             m,
-            targets=[ComponentUID(m.disjunction1[1])])
+            targets=[m.disjunction1[1]])
 
     def test_disjData_targets_inactive(self):
         m = models.makeDisjunctionsOnIndexedBlock()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.disjunction1[2])])
+            targets=[m.disjunction1[2]])
 
         self.assertFalse(m.disjunction1[2].active)
 
@@ -1660,7 +1672,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
         m = models.makeDisjunctionsOnIndexedBlock()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.disjunction1[2])])
+            targets=[m.disjunction1[2]])
 
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
         self.assertEqual(len(disjBlock), 2)
@@ -1690,7 +1702,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
         m = models.makeDisjunctionsOnIndexedBlock()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.b)])
+            targets=[m.b])
 
         self.assertTrue(m.disjunct1.active)
         self.assertTrue(m.disjunct1[1,0].active)
@@ -1708,7 +1720,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
         m = models.makeDisjunctionsOnIndexedBlock()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.b)])
+            targets=[m.b])
 
         disjBlock1 = m.b[0]._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
         self.assertEqual(len(disjBlock1), 2)
@@ -1797,7 +1809,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
         m = models.makeDisjunctionsOnIndexedBlock()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.b[0])])
+            targets=[m.b[0]])
 
         self.checkb0TargetsInactive(m)
 
@@ -1805,7 +1817,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
         m = models.makeDisjunctionsOnIndexedBlock()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.b[0])])
+            targets=[m.b[0]])
         self.checkb0TargetsTransformed(m)
 
     def test_do_not_transform_deactivated_targets(self):
@@ -1813,7 +1825,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
         m.b[1].deactivate()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.b[0]), ComponentUID(m.b[1])])
+            targets=[m.b[0], m.b[1]])
 
         self.checkb0TargetsInactive(m)
         self.checkb0TargetsTransformed(m)
@@ -2015,7 +2027,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         m = models.makeNestedDisjunctions()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.simpledisjunct)])
+            targets=[m.simpledisjunct])
 
         self.assertTrue(m.disjunct.active)
         self.assertTrue(m.disjunct[0].active)
@@ -2035,7 +2047,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         m = models.makeNestedDisjunctions()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.simpledisjunct)])
+            targets=[m.simpledisjunct])
 
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
         self.assertEqual(len(disjBlock), 2)
@@ -2068,7 +2080,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         m = models.makeNestedDisjunctions()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.disjunct[1])])
+            targets=[m.disjunct[1]])
 
         self.assertTrue(m.disjunct[0].active)
         self.assertTrue(m.disjunct[1].active)
@@ -2085,7 +2097,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         m = models.makeNestedDisjunctions()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.disjunct[1])])
+            targets=[m.disjunct[1]])
 
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
         self.assertEqual(len(disjBlock), 2)
@@ -2122,7 +2134,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
             TransformationFactory('gdp.bigm').apply_to,
             m,
 
-            targets=[ComponentUID(m.disjunction)])
+            targets=[m.disjunction])
 
     def test_create_using(self):
         m = models.makeNestedDisjunctions()
@@ -2137,8 +2149,8 @@ class IndexedDisjunction(unittest.TestCase):
         m = models.makeTwoTermIndexedDisjunction_BoundedVars()
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            targets=[ComponentUID(m.disjunction[1]),
-                     ComponentUID(m.disjunction[3])])
+            targets=[m.disjunction[1],
+                     m.disjunction[3]])
 
         xorC = m._gdp_transformation_info['relaxedDisjunctionMap'][
             m.disjunction]['orConstraint']
@@ -2255,8 +2267,8 @@ class InnerDisjunctionSharedDisjuncts(unittest.TestCase):
             "before the disjunct in the list.*",
             TransformationFactory('gdp.bigm').apply_to,
             m,
-            targets=[ComponentUID(m.outerdisjunct[1].innerdisjunction),
-                     ComponentUID(m.disjunction)])
+            targets=[m.outerdisjunct[1].innerdisjunction,
+                     m.disjunction])
 
 
 class RangeSetOnDisjunct(unittest.TestCase):

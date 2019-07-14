@@ -23,7 +23,7 @@ from pyomo.core.base.PyomoModel import ConcreteModel, AbstractModel
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import target_list
+from pyomo.gdp.util import target_list, is_child_of
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from pyomo.repn import generate_standard_repn
 from pyomo.common.config import ConfigBlock, ConfigValue
@@ -106,10 +106,11 @@ class BigM_Transformation(Transformation):
         description="target or list of targets that will be relaxed",
         doc="""
 
-        This specifies the list of targets to relax as either a
-        component, ComponentUID, or string that can be passed to a
-        ComponentUID; or an iterable of these types.  If None (default),
-        the entire model is transformed."""
+        This specifies the list of components to relax. If None (default), the
+        entire model is transformed. Note that if the transformation is done out
+        of place, the list of targets should be attached to the model before it
+        is cloned, and the list will specify the targets on the cloned
+        instance."""
     ))
     CONFIG.declare('bigM', ConfigValue(
         default=None,
@@ -151,26 +152,6 @@ class BigM_Transformation(Transformation):
             block = block.parent_block()
         return suffix_list
 
-    # [ESJ 07/09/2019 This should be a utility function elsewhere, I'm not sure
-    # where...
-    def _is_child_of(self, parent, child, knownParents=None):
-        if knownParents is None:
-            knownParents = set()
-        node = child
-        while True:
-            if node in knownParents:
-                break
-            if node is parent:
-                break
-            if node is None:
-                raise RuntimeError("%s is not a child of %s" % (child.name, 
-                                                                parent.name))
-            knownParents.add(node)
-            node = node.parent_block()
-
-            
-        return knownParents
-
     def _apply_to(self, instance, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
 
@@ -201,7 +182,7 @@ class BigM_Transformation(Transformation):
         knownParents = set()
         for t in targets:
             # check that t is in fact a child of instance
-            knownParents = self._is_child_of(parent=instance, child=t,
+            knownParents = is_child_of(parent=instance, child=t,
                                              knownParents=knownParents)
             #t = _t.find_component(instance)
             # if t is None:
