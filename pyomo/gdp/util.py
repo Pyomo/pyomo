@@ -90,13 +90,13 @@ def target_list(x):
             else:
                 raise ValueError(
                     "Expected Component or list of Components."
-                    "\n\tReceived %s" % (type(i),))
+                    "\n\tRecieved %s" % (type(i),))
 
         return ans
     else:
         raise ValueError(
             "Expected Component or list of Components."
-            "\n\tReceived %s" % (type(x),))
+            "\n\tRecieved %s" % (type(x),))
 
 # [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
 #  putting it here for now so that all the gdp transformations can use it
