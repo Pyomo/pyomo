@@ -390,7 +390,7 @@ class BigM_Transformation(Transformation):
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
         infodict['srcDisjuncts'][relaxationBlock] = obj
-        obj.transformation_block = relaxationBlock#weakref_ref(relaxationBlock)
+        obj.transformation_block = weakref_ref(relaxationBlock)
 
         # This is crazy, but if the disjunction has been previously
         # relaxed, the disjunct *could* be deactivated.  This is a big
@@ -505,7 +505,10 @@ class BigM_Transformation(Transformation):
     def _xform_constraint(self, obj, disjunct, infodict,
                           bigMargs, suffix_list):
         # add constraint to the transformation block, we'll transform it there.
-        transBlock = disjunct.transformation_block
+        # [ESJ 07/15/2019] TODO: What happens when the reference is gone? That
+        # would mean something awful has happened, but I guess we should handle
+        # it here.
+        transBlock = disjunct.transformation_block()
         disjunctionRelaxationBlock = transBlock.parent_block()
         # Though rare, it is possible to get naming conflicts here
         # since constraints from all blocks are getting moved onto the

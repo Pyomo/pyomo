@@ -158,7 +158,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # we are counting on the fact that the disjuncts get relaxed in the
         # same order every time.
         for i in [0,1]:
-            self.assertIs(oldblock[i].transformation_block, disjBlock[i])
+            self.assertIs(oldblock[i].transformation_block(), disjBlock[i])
             self.assertIs(infodict['srcDisjuncts'][disjBlock[i]], oldblock[i])
             
         # check the constraint mappings
@@ -306,7 +306,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
         infodict = m._gdp_transformation_info
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
-        self.assertIs(disjBlock[0], m.d[1].transformation_block)
+        self.assertIs(disjBlock[0], m.d[1].transformation_block())
         self.assertIs(infodict['srcDisjuncts'][disjBlock[0]], m.d[1])
 
     # helper method to check the M values in all of the transformed
@@ -706,7 +706,8 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
             transformedDisjunct = disjBlock[dest]
             self.assertIs(infodict['srcDisjuncts'][transformedDisjunct],
                           srcDisjunct)
-            self.assertIs(transformedDisjunct, srcDisjunct.transformation_block)
+            self.assertIs(transformedDisjunct,
+                          srcDisjunct.transformation_block())
 
             self.assertIs(relaxedConstraints[srcDisjunct.c],
                           disjBlock[dest].component(srcDisjunct.c.name))
@@ -911,7 +912,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         infodict = getattr(m, "_gdp_transformation_info")
         self.assertIsInstance(infodict, dict)
         for i, j in pairs:
-            self.assertIs(m.b.disjunct[i].transformation_block, disjBlock[j])
+            self.assertIs(m.b.disjunct[i].transformation_block(), disjBlock[j])
             self.assertIs(infodict['srcDisjuncts'][disjBlock[j]], 
                           m.b.disjunct[i])
 
@@ -1575,7 +1576,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertIsInstance(infodict, dict)
         for i, j in pairs:
             self.assertIs(infodict['srcDisjuncts'][disjBlock[j]], m.disjunct1[i])
-            self.assertIs(disjBlock[j], m.disjunct1[i].transformation_block)
+            self.assertIs(disjBlock[j], m.disjunct1[i].transformation_block())
 
     def test_warn_for_untransformed(self):
         m = models.makeDisjunctionsOnIndexedBlock()
@@ -1669,7 +1670,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
         infodict = getattr(m, "_gdp_transformation_info")
         self.assertIsInstance(infodict, dict)
         for i, j in pairs:
-            self.assertIs(m.disjunct1[i].transformation_block, disjBlock[j])
+            self.assertIs(m.disjunct1[i].transformation_block(), disjBlock[j])
             self.assertIs(infodict['srcDisjuncts'][disjBlock[j]], m.disjunct1[i])
 
     def test_indexedBlock_targets_inactive(self):
@@ -1734,7 +1735,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
                     disjBlock = disjBlock1
                 if blocknum == 1:
                     disjBlock = disjBlock2
-                self.assertIs(original[i].transformation_block, disjBlock[j])
+                self.assertIs(original[i].transformation_block(), disjBlock[j])
                 self.assertIs(infodict['srcDisjuncts'][disjBlock[j]],
                               original[i])
 
@@ -1769,7 +1770,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
         infodict = getattr(m, "_gdp_transformation_info")
         self.assertIsInstance(infodict, dict)
         for i, j in pairs:
-            self.assertIs(m.b[0].disjunct[i].transformation_block,
+            self.assertIs(m.b[0].disjunct[i].transformation_block(),
                           disjBlock[j])
             self.assertIs(infodict['srcDisjuncts'][disjBlock[j]], 
                           m.b[0].disjunct[i])
