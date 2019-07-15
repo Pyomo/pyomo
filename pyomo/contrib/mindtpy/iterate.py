@@ -80,7 +80,7 @@ def MindtPy_iteration_loop(solve_data, config):
                     making_progress = True
                     break
             if not making_progress and (
-                    config.strategy == 'hPSC' and
+                    config.strategy == 'hPSC' or
                     config.strategy == 'PSC'):
                 config.logger.info(
                     'Not making enough progress for {} iterations. '
