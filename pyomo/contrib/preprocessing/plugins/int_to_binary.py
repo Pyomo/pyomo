@@ -37,6 +37,12 @@ class IntegerToBinary(IsomorphicTransformation):
         description="Ignore variables that do not appear in (potentially) active constraints. "
         "These variables are unlikely to be passed to the solver."
     ))
+    CONFIG.declare("relax_integrality", ConfigValue(
+        default=True,
+        domain=bool,
+        description="Relax the integrality of the integer variables "
+        "after adding in the binary variables and constraints."
+    ))
 
     def _apply_to(self, model, **kwds):
         """Apply the transformation to the given model."""
@@ -113,8 +119,8 @@ class IntegerToBinary(IsomorphicTransformation):
                     + int_var.lb)
 
             # Relax the original integer variable
-            # TODO-romeo @qtothec why do we need this?
-            #int_var.domain = NonNegativeReals
+            if config.relax_integrality:
+                int_var.domain = NonNegativeReals
 
         logger.info(
             "Reformulated %s integer variables using "
