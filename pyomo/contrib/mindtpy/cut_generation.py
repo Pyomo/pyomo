@@ -150,7 +150,9 @@ def add_int_cut(var_values, solve_data, config, feasible=False):
     if not config.integer_cuts:
         return
 
-    m = solve_data.working_model
+    config.logger.info("Adding integer cuts")
+
+    m = solve_data.mip
     MindtPy = m.MindtPy_utils
     int_tol = config.integer_tolerance
 
@@ -176,8 +178,11 @@ def add_int_cut(var_values, solve_data, config, feasible=False):
                sum(v for v in binary_vars
                    if value(abs(v)) <= int_tol) >= 1)
 
-    if not feasible:
-        # Add the integer cut
-        MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
-    else:
-        MindtPy.MindtPy_linear_cuts.feasible_integer_cuts.add(expr=int_cut)
+    MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
+
+    # TODO need to handle theoretical implications of backtracking
+    # if not feasible:
+    #     # Add the integer cut
+    #     MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
+    # else:
+    #     MindtPy.MindtPy_linear_cuts.feasible_integer_cuts.add(expr=int_cut)

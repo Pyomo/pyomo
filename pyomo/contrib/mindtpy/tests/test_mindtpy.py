@@ -165,7 +165,7 @@ class TestMindtPy(unittest.TestCase):
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(abs(value(model.obj.expr) - 0.66555) <= 1E-2)
+            self.assertAlmostEquals(value(model.obj.expr), 0.66555, places=2)
 
     # def test_PSC(self):
     #     """Test the partial surrogate cuts decomposition algorithm."""
