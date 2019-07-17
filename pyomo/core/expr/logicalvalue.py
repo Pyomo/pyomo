@@ -1,12 +1,4 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+#Below is copied from numvalue.py
 
 __all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type',
            'is_potentially_variable', 'NumericValue', 'ZeroConstant',
@@ -28,7 +20,7 @@ from pyomo.core.expr.expr_errors import TemplateExpressionError
 
 logger = logging.getLogger('pyomo.core')
 
-
+#keep it for now?
 def _generate_sum_expression(etype, _self, _other):
     raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
 def _generate_mul_expression(etype, _self, _other):
@@ -44,112 +36,15 @@ def _generate_relational_expression(etype, lhs, rhs):
 ##
 ##------------------------------------------------------------------------
 
-class NonNumericValue(object):
-    """An object that contains a non-numeric value
+#start
+native_logical_types = set([bool])
+native_logical_values = set([True, False, 1, 0])
+#0-0 is this a good idea
+#the problem here would be '(1.5) in native__types' gives True
 
-    Constructor Arguments:
-        value           The initial value.
-    """
-    __slots__ = ('value',)
+#tbc
 
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return str(self.value)
-
-    def __getstate__(self):
-        state = {}
-        state['value'] = getattr(self,'value')
-        return state
-
-    def __setstate__(self, state):
-        setattr(self, 'value', state['value'])
-
-
-#: Python set used to identify numeric constants, boolean values, strings
-#: and instances of
-#: :class:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>`,
-#: which is commonly used in code that walks Pyomo expression trees.
-#:
-#: :data:`nonpyomo_leaf_types` = :data:`native_types <pyomo.core.expr.numvalue.native_types>` + { :data:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>` }
-nonpyomo_leaf_types = set([NonNumericValue])
-
-
-# It is *significantly* faster to build the list of types we want to
-# test against as a "static" set, and not to regenerate it locally for
-# every call.  Plus, this allows us to dynamically augment the set
-# with new "native" types (e.g., from NumPy)
-#
-# Note: These type sets are used in set_types.py for domain validation
-#       For backward compatibility reasons, we include str in the set
-#       of valid types for bool. We also avoid updating the numeric
-#       and integer type sets when a new boolean type is registered
-#       because not all boolean types exhibit numeric properties
-#       (e.g., numpy.bool_)
-#
-
-#: Python set used to identify numeric constants.  This set includes
-#: native Python types as well as numeric types from Python packages
-#: like numpy, which may be registered by users.
-native_numeric_types = set([ int, float, bool ])
-native_integer_types = set([ int, bool ])
-native_boolean_types = set([ int, bool, str ])
-try:
-    native_numeric_types.add(long)
-    native_integer_types.add(long)
-    native_boolean_types.add(long)
-except:
-    pass
-
-#: Python set used to identify numeric constants and related native
-#: types.  This set includes
-#: native Python types as well as numeric types from Python packages
-#: like numpy.
-#:
-#: :data:`native_types` = :data:`native_numeric_types <pyomo.core.expr.numvalue.native_numeric_types>` + { str }
-native_types = set([ bool, str, type(None) ])
-if PY3:
-    native_types.add(bytes)
-    native_boolean_types.add(bytes)
-else:
-    native_types.add(unicode)
-    native_boolean_types.add(unicode)
-native_types.update( native_numeric_types )
-native_types.update( native_integer_types )
-native_types.update( native_boolean_types )
-nonpyomo_leaf_types.update( native_types )
-
-def RegisterNumericType(new_type):
-    """
-    A utility function for updating the set of types that are
-    recognized to handle numeric values.
-
-    The argument should be a class (e.g, numpy.float64).
-    """
-    global native_numeric_types
-    global native_types
-    native_numeric_types.add(new_type)
-    native_types.add(new_type)
-    nonpyomo_leaf_types.add(new_type)
-
-def RegisterIntegerType(new_type):
-    """
-    A utility function for updating the set of types that are
-    recognized to handle integer values. This also registers the type
-    as numeric but does not register it as boolean.
-
-    The argument should be a class (e.g., numpy.int64).
-    """
-    global native_numeric_types
-    global native_integer_types
-    global native_types
-    native_numeric_types.add(new_type)
-    native_integer_types.add(new_type)
-    native_types.add(new_type)
-    nonpyomo_leaf_types.add(new_type)
-
-def RegisterBooleanType(new_type):
+def RegisterLogicalType(new_type):
     """
     A utility function for updating the set of types that are
     recognized as handling boolean values. This function does not
@@ -157,44 +52,43 @@ def RegisterBooleanType(new_type):
 
     The argument should be a class (e.g., numpy.bool_).
     """
-    global native_boolean_types
+    global native_logical_types
     global native_types
-    native_boolean_types.add(new_type)
+    native_logical_types.add(new_type)
     native_types.add(new_type)
-    nonpyomo_leaf_types.add(new_type)
+    #nonpyomo_leaf_types.add(new_type)
 
 def value(obj, exception=True):
     """
     A utility function that returns the value of a Pyomo object or
     expression.
+    # 0-0 do we need to care about this
 
     Args:
         obj: The argument to evaluate. If it is None, a
             string, or any other primative numeric type,
             then this function simply returns the argument.
-            Otherwise, if the argument is a NumericValue
+            Otherwise, if the argument is a LogicalValue
             then the __call__ method is executed.
         exception (bool): If :const:`True`, then an exception should
             be raised when instances of NumericValue fail to
             evaluate due to one or more objects not being
             initialized to a numeric value (e.g, one or more
-            variables in an algebraic expression having the
+            variabvalue(les in an algebraic expression having the
             value None). If :const:`False`, then the function
             returns :const:`None` when an exception occurs.
             Default is True.
-
     Returns: A numeric value or None.
     """
     if obj.__class__ in native_types:
         return obj
-    if obj.__class__ is NumericConstant:
-        #
-        # I'm commenting this out for now, but I think we should never expect
-        # to see a numeric constant with value None.
+    if obj.__class__ is LogicalConstant:
+        #   
+        # do not expect LogicalConstant with value None.
         #
         #if exception and obj.value is None:
         #    raise ValueError(
-        #        "No value for uninitialized NumericConstant object %s"
+        #        "No value for uninitialized LogicalConstant object %s"
         #        % (obj.name,))
         return obj.value
     #
@@ -208,7 +102,7 @@ def value(obj, exception=True):
         # works, then return the object
         #
         try:
-            check_if_numeric_type_and_cache(obj)
+            check_if_logical_type_and_cache(obj)
             return obj
         except:
             raise TypeError(
@@ -226,7 +120,7 @@ def value(obj, exception=True):
             tmp = obj(exception=True)
             if tmp is None:
                 raise ValueError(
-                    "No value for uninitialized NumericValue object %s"
+                    "No value for uninitialized LogicalcValue object %s"
                     % (obj.name,))
             return tmp
         except TemplateExpressionError:
@@ -236,7 +130,7 @@ def value(obj, exception=True):
             raise
         except:
             logger.error(
-                "evaluating object as numeric value: %s\n    (object: %s)\n%s"
+                "evaluating object as logical value: %s\n    (object: %s)\n%s"
                 % (obj, type(obj), sys.exc_info()[1]))
             raise
     else:
@@ -244,6 +138,8 @@ def value(obj, exception=True):
         # Here, we do not try to catch the exception
         #
         return obj(exception=False)
+
+    #0-0 check the above later
 
 
 def is_constant(obj):
@@ -268,7 +164,7 @@ def is_constant(obj):
         pass
     try:
         # Now we need to confirm that we have an unknown numeric type
-        check_if_numeric_type_and_cache(obj)
+        check_if_logical_type_and_cache(obj)
         # As this branch is only hit for previously unknown (to Pyomo)
         # types that behave reasonably like numbers, we know they *must*
         # be constant.
@@ -295,7 +191,7 @@ def is_fixed(obj):
         pass
     try:
         # Now we need to confirm that we have an unknown numeric type
-        check_if_numeric_type_and_cache(obj)
+        check_if_logical_type_and_cache(obj)
         # As this branch is only hit for previously unknown (to Pyomo)
         # types that behave reasonably like numbers, we know they *must*
         # be fixed.
@@ -311,6 +207,9 @@ def is_variable_type(obj):
     whether the input object is a variable.
     """
     if obj.__class__ in native_types:
+        return False
+    #do we need this 0-0
+    if (obj.__class__ is 1 ) or (obj.__class is 0):
         return False
     try:
         return obj.is_variable_type()
@@ -329,16 +228,17 @@ def is_potentially_variable(obj):
     except AttributeError:
         return False
 
-def is_numeric_data(obj):
+#0-0 is_logical_data
+def is_logical_data(obj):
     """
     A utility function that returns a boolean indicating
-    whether the input object is numeric and not potentially
+    whether the input object is logical and not potentially
     variable.
     """
-    if obj.__class__ in native_numeric_types:
+    if obj.__class__ in native_logical_types:
         return True
     elif obj.__class__ in native_types:
-        # this likely means it is a string
+        # 0-0 what do we do about int?
         return False
     try:
         # Test if this is an expression object that 
@@ -347,95 +247,45 @@ def is_numeric_data(obj):
     except AttributeError:
         pass
     try:
-        # Now we need to confirm that we have an unknown numeric type
-        check_if_numeric_type_and_cache(obj)
-        # As this branch is only hit for previously unknown (to Pyomo)
-        # types that behave reasonably like numbers, we know they *must*
-        # be numeric data (unless an exception is raised).
+        # Now we need to confirm that we have an unknown logical type
+        check_if_logical_type_and_cache(obj)
+       #0-0 this function needs modifying
         return True
     except:
         pass
     return False
 
-def polynomial_degree(obj):
-    """
-    A utility function that returns an integer
-    that indicates the polynomial degree for an
-    object. boolean indicating
-    """
-    if obj.__class__ in native_numeric_types:
-        return 0
-    elif obj.__class__ in native_types:
-        raise TypeError(
-            "Cannot evaluate the polynomial degree of a non-numeric type: %s"
-            % (type(obj).__name__,))
-    try:
-        return obj.polynomial_degree()
-    except AttributeError:
-        pass
-    try:
-        # Now we need to confirm that we have an unknown numeric type
-        check_if_numeric_type_and_cache(obj)
-        # As this branch is only hit for previously unknown (to Pyomo)
-        # types that behave reasonably like numbers, we know they *must*
-        # be a numeric constant.
-        return 0
-    except:
-        raise TypeError(
-            "Cannot assess properties of object with unknown type: %s"
-            % (type(obj).__name__,))
 
-#
-# It is very common to have only a few constants in a model, but those
-# constants get repeated many times.  KnownConstants lets us re-use /
-# share constants we have seen before.
-#
-# Note:
-#   For now, all constants are coerced to floats.  This avoids integer
-#   division in Python 2.x.  (At least some of the time.)
-#
-#   When we eliminate support for Python 2.x, we will not need this
-#   coercion.  The main difference in the following code is that we will
-#   need to index KnownConstants by both the class type and value, since
-#   INT, FLOAT and LONG values sometimes hash the same.
-#
 _KnownConstants = {}
+#tbc
 
-def as_numeric(obj):
+def as_logical(obj):
+    # raise error for anything other than {0,1,True,False}
     """
-    A function that creates a NumericConstant object that
-    wraps Python numeric values.
-
-    This function also manages a cache of constants.
-
-    NOTE:  This function is only intended for use when
-        data is added to a component.
+    A function that creates a LogicalConstant object that
+    wraps Python logical values.
 
     Args:
-        obj: The numeric value that may be wrapped.
+        obj: The logical value that may be wrapped.
 
     Raises: TypeError if the object is in native_types and not in 
-        native_numeric_types
+        native_logical_types
 
-    Returns: A NumericConstant object or the original object.
+    Returns: A true or false LogicalConstant or the original object
     """
-    if obj.__class__ in native_numeric_types:
+    #0-0 concatanate int's?
+    #if obj.__class__ in native_logical_types or obj is 1 or obj is 0:
+    if obj in native_logical_values: 
         val = _KnownConstants.get(obj, None)
         if val is not None:
+
             return val 
         #
-        # Coerce the value to a float, if possible
-        #
-        try:
-            obj = float(obj)
-        except:
-            pass
-        #
-        # Create the numeric constant.  This really
+        # Create the logical constant.  This really
         # should be the only place in the code
         # where these objects are constructed.
         #
-        retval = NumericConstant(obj)
+        retval = LogicalConstant(obj)
         #
         # Cache the numeric constants.  We used a bounded cache size
         # to avoid unexpectedly large lists of constants.  There are
@@ -444,28 +294,24 @@ def as_numeric(obj):
         # NOTE:  A LFU policy might be more sensible here, but that
         # requires a more complex cache.  It's not clear that that
         # is worth the extra cost.
-        #
-        if len(_KnownConstants) < 1024:
-            _KnownConstants[obj] = retval
-            return retval
-        #
+         
         return retval
+        #the rest should be errors
     #
     # Ignore objects that are duck types to work with Pyomo expressions
     #
     try:
         obj.is_expression_type()
         return obj
+        #0-0 should be fine for now
     except AttributeError:
         pass
     #
-    # Test if the object looks like a number.  If so, register that type with a
-    # warning.
-    #
-    try:
-        return check_if_numeric_type_and_cache(obj)
-    except:
-        pass
+    #check later 0-0
+    #try:
+    #    return check_if_logical_type_and_cache(obj)
+    #except:
+    #    pass
     #
     # Generate errors
     #
@@ -475,104 +321,39 @@ def as_numeric(obj):
         "Cannot treat the value '%s' as a constant because it has unknown "
         "type '%s'" % (str(obj), type(obj).__name__))
 
-
-def check_if_numeric_type_and_cache(obj):
-    """Test if the argument is a numeric type by checking if we can add
-    zero to it.  If that works, then we cache the value and return a
-    NumericConstant object.
-
-    """
-    if obj.__class__ is (obj + 0).__class__:
-        #
-        # obj may (or may not) be hashable, so we need this try
-        # block so that things proceed normally for non-hashable
-        # "numeric" types
-        #
-        retval = NumericConstant(obj)
-        try:
-            #
-            # Create the numeric constant and add to the 
-            # list of known constants.
-            #
-            # Note: we don't worry about the size of the
-            # cache here, since we need to confirm that the
-            # object is hashable.
-            #
-            _KnownConstants[obj] = retval
-            #
-            # If we get here, this is a reasonably well-behaving
-            # numeric type: add it to the native numeric types
-            # so that future lookups will be faster.
-            #
-            native_numeric_types.add(obj.__class__)
-            native_types.add(obj.__class__)
-            nonpyomo_leaf_types.add(obj.__class__)
-            #
-            # Generate a warning, since Pyomo's management of third-party
-            # numeric types is more robust when registering explicitly.
-            #
-            logger.warning(
-                """Dynamically registering the following numeric type:
-    %s
-Dynamic registration is supported for convenience, but there are known
-limitations to this approach.  We recommend explicitly registering
-numeric types using the following functions:
-    RegisterNumericType(), RegisterIntegerType(), RegisterBooleanType()."""
-                % (type(obj).__name__,))
-        except:
-            pass
-        return retval
+#0-0 necessary?
+def check_if_logical_type_and_cache(obj):
+   pass
+#cut
 
 
-class NumericValue(object):
-    """
-    This is the base class for numeric values used in Pyomo.
-    """
+
+#the following is a logical version for Logical value
+
+class LogicalValue(object):
+    #an abstract class 
 
     __slots__ = ()
-
-    # This is required because we define __eq__
     __hash__ = None
-
     def __getstate__(self):
-        """
-        Prepare a picklable state of this instance for pickling.
-
-        Nominally, __getstate__() should execute the following::
-
-            state = super(Class, self).__getstate__()
-            for i in Class.__slots__:
-                state[i] = getattr(self,i)
-            return state
-
-        However, in this case, the (nominal) parent class is 'object',
-        and object does not implement __getstate__.  So, we will
-        check to make sure that there is a base __getstate__() to
-        call.  You might think that there is nothing to check, but
-        multiple inheritance could mean that another class got stuck
-        between this class and "object" in the MRO.
-
-        Further, since there are actually no slots defined here, the
-        real question is to either return an empty dict or the
-        parent's dict.
-        """
-        _base = super(NumericValue, self)
+    #delete the docs for an identation error
+    #0-0
+        _base = super(LogicalValue, self)
         if hasattr(_base, '__getstate__'):
             return _base.__getstate__()
         else:
             return {}
-        
+
     def __setstate__(self, state):
         """
         Restore a pickled state into this instance
-
         Our model for setstate is for derived classes to modify
         the state dictionary as control passes up the inheritance
         hierarchy (using super() calls).  All assignment of state ->
         object attributes is handled at the last class before 'object',
         which may -- or may not (thanks to MRO) -- be here.
         """
-        _base = super(NumericValue, self)
+        _base = super(LogicalValue, self)
         if hasattr(_base, '__setstate__'):
             return _base.__setstate__(state)
         else:
@@ -587,7 +368,7 @@ class NumericValue(object):
         If this is a component, return the component's name on the owning
         block; otherwise return the value converted to a string
         """
-        _base = super(NumericValue, self)
+        _base = super(LogicalValue, self)
         if hasattr(_base,'getname'):
             return _base.getname(fully_qualified, name_buffer)
         else:
@@ -607,7 +388,7 @@ class NumericValue(object):
         return self.getname(*args, **kwds)
 
     def is_constant(self):
-        """Return True if this numeric value is a constant value"""
+        """Return True if this Logical value is a constant value"""
         return False
 
     def is_fixed(self):
@@ -627,11 +408,12 @@ class NumericValue(object):
         return True
 
     def is_named_expression_type(self):
-        """Return True if this numeric value is a named expression"""
+        """Return True if this Logical value is a named expression"""
         return False
 
+    #what do we about this
     def is_expression_type(self):
-        """Return True if this numeric value is an expression"""
+        """Return True if this Logical value is an expression"""
         return False
 
     def is_component_type(self):
@@ -640,36 +422,14 @@ class NumericValue(object):
 
     def is_relational(self):
         """
-        Return True if this numeric value represents a relational expression.
+        Return True if this Logical value represents a relational expression.
         """
         return False
 
     def is_indexed(self):
-        """Return True if this numeric value is an indexed object"""
+        """Return True if this Logical value is an indexed object"""
         return False
 
-    def polynomial_degree(self):
-        """
-        Return the polynomial degree of the expression.
-
-        Returns:
-            :const:`None`
-        """
-        return self._compute_polynomial_degree(None)
-
-    def _compute_polynomial_degree(self, values):
-        """
-        Compute the polynomial degree of this expression given
-        the degree values of its children.
-
-        Args:
-            values (list): A list of values that indicate the degree
-                of the children expression.
-
-        Returns:
-            :const:`None`
-        """
-        return None
 
     def __float__(self):
         """
@@ -679,11 +439,11 @@ class NumericValue(object):
             TypeError
         """
         raise TypeError(
-"""Implicit conversion of Pyomo NumericValue type `%s' to a float is
-disabled. This error is often the result of using Pyomo components as
-arguments to one of the Python built-in math module functions when
-defining expressions. Avoid this error by using Pyomo-provided math
-functions.""" % (self.name,))
+        """Implicit conversion of Pyomo LogicalValue type `%s' to a float is
+        disabled. This error is often the result of using Pyomo components as
+        arguments to one of the Python built-in math module functions when
+        defining expressions. Avoid this error by using Pyomo-provided math
+        functions.""" % (self.name,))
 
     def __int__(self):
         """
@@ -693,75 +453,73 @@ functions.""" % (self.name,))
             TypeError
         """
         raise TypeError(
-"""Implicit conversion of Pyomo NumericValue type `%s' to an integer is
-disabled. This error is often the result of using Pyomo components as
-arguments to one of the Python built-in math module functions when
-defining expressions. Avoid this error by using Pyomo-provided math
-functions.""" % (self.name,))
+        """Implicit conversion of Pyomo LogicalValue type `%s' to an integer is
+        disabled. This error is often the result of using Pyomo components as
+        arguments to one of the Python built-in math module functions when
+        defining expressions. Avoid this error by using Pyomo-provided math
+        functions.""" % (self.name,))
 
+    #tbc    
     def __lt__(self,other):
         """
         Less than operator
 
-        This method is called when Python processes statements of the form::
-        
-            self < other
-            other > self
+        Should not be used for logical values
         """
-        return _generate_relational_expression(_lt, self, other)
+        return TypeError(
+        """Unable to do comparison between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __gt__(self,other):
         """
         Greater than operator
 
-        This method is called when Python processes statements of the form::
-        
-            self > other
-            other < self
+        Should not be used for logical values
         """
-        return _generate_relational_expression(_lt, other, self)
+        return TypeError(
+        """Unable to do comparison between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __le__(self,other):
         """
         Less than or equal operator
 
-        This method is called when Python processes statements of the form::
-        
-            self <= other
-            other >= self
+        Should not be used for logical values
         """
-        return _generate_relational_expression(_le, self, other)
+        return TypeError(
+        """Unable to do comparison between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __ge__(self,other):
         """
         Greater than or equal operator
 
-        This method is called when Python processes statements of the form::
-        
-            self >= other
-            other <= self
+        Should not be used for logical values
         """
-        return _generate_relational_expression(_le, other, self)
+        return TypeError(
+        """Unable to do comparison between logical values. Avoid this error by
+        using boolean variable.""")
 
+    #tbd
     def __eq__(self,other):
         """
-        Equal to operator
-
-        This method is called when Python processes the statement::
         
-            self == other
+        Keep it for now 0-0
         """
-        return _generate_relational_expression(_eq, self, other)
 
+
+        #return Equivalence_expression(self,other)
+        return True
+    
     def __add__(self,other):
         """
         Binary addition
 
-        This method is called when Python processes the statement::
-        
-            self + other
+        Should not be used for logical values
         """
-        return _generate_sum_expression(_add,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __sub__(self,other):
         """
@@ -771,7 +529,9 @@ functions.""" % (self.name,))
         
             self - other
         """
-        return _generate_sum_expression(_sub,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __mul__(self,other):
         """
@@ -781,7 +541,9 @@ functions.""" % (self.name,))
         
             self * other
         """
-        return _generate_mul_expression(_mul,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __div__(self,other):
         """
@@ -791,7 +553,9 @@ functions.""" % (self.name,))
         
             self / other
         """
-        return _generate_mul_expression(_div,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __truediv__(self,other):
         """
@@ -801,7 +565,9 @@ functions.""" % (self.name,))
         
             self / other
         """
-        return _generate_mul_expression(_div,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __pow__(self,other):
         """
@@ -811,7 +577,9 @@ functions.""" % (self.name,))
         
             self ** other
         """
-        return _generate_other_expression(_pow,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __radd__(self,other):
         """
@@ -821,7 +589,9 @@ functions.""" % (self.name,))
         
             other + self
         """
-        return _generate_sum_expression(_radd,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __rsub__(self,other):
         """
@@ -831,19 +601,18 @@ functions.""" % (self.name,))
         
             other - self
         """
-        return _generate_sum_expression(_rsub,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __rmul__(self,other):
         """
         Binary multiplication
 
-        This method is called when Python processes the statement::
-        
-            other * self
-
-        when other is not a :class:`NumericValue <pyomo.core.expr.numvalue.NumericValue>` object.
         """
-        return _generate_mul_expression(_rmul,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __rdiv__(self,other):
         """Binary division
@@ -852,7 +621,9 @@ functions.""" % (self.name,))
         
             other / self
         """
-        return _generate_mul_expression(_rdiv,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __rtruediv__(self,other):
         """
@@ -862,7 +633,9 @@ functions.""" % (self.name,))
         
             other / self
         """
-        return _generate_mul_expression(_rdiv,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __rpow__(self,other):
         """
@@ -872,7 +645,9 @@ functions.""" % (self.name,))
         
             other ** self
         """
-        return _generate_other_expression(_rpow,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __iadd__(self,other):
         """
@@ -882,7 +657,9 @@ functions.""" % (self.name,))
         
             self += other
         """
-        return _generate_sum_expression(_iadd,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __isub__(self,other):
         """
@@ -892,7 +669,9 @@ functions.""" % (self.name,))
 
             self -= other
         """
-        return _generate_sum_expression(_isub,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __imul__(self,other):
         """
@@ -902,7 +681,9 @@ functions.""" % (self.name,))
 
             self *= other
         """
-        return _generate_mul_expression(_imul,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __idiv__(self,other):
         """
@@ -912,7 +693,9 @@ functions.""" % (self.name,))
         
             self /= other
         """
-        return _generate_mul_expression(_idiv,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __itruediv__(self,other):
         """
@@ -922,7 +705,9 @@ functions.""" % (self.name,))
         
             self /= other
         """
-        return _generate_mul_expression(_idiv,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
     def __ipow__(self,other):
         """
@@ -932,8 +717,11 @@ functions.""" % (self.name,))
         
             self **= other
         """
-        return _generate_other_expression(_ipow,self,other)
+        return TypeError(
+        """Unable to perform arithmetic operations between logical values. Avoid this error by
+        using boolean variable.""")
 
+    #tbc   0-0 
     def __neg__(self):
         """
         Negation
@@ -941,9 +729,13 @@ functions.""" % (self.name,))
         This method is called when Python processes the statement::
         
             - self
-        """
-        return _generate_sum_expression(_neg, self, None)
 
+        Expected to be used as a LogicalExpression
+        """
+        return TypeError(
+        """Unable to take negative of a logical value. Please use the negation
+        Logical Expression instead""")# 0-0 add the exact expression after finished
+    #keep this one?
     def __pos__(self):
         """
         Positive expression
@@ -961,8 +753,11 @@ functions.""" % (self.name,))
         
             abs(self)
         """
-        return _generate_other_expression(_abs,self, None)
+        return TypeError(
+        """Unable to take absolute of a logical value. Avoid this error by
+        using boolean variable.""")
 
+    # 0-0
     def to_string(self, verbose=None, labeler=None, smap=None,
                   compute_values=False):
         """
@@ -992,8 +787,8 @@ functions.""" % (self.name,))
         return self.__str__()
 
 
-class NumericConstant(NumericValue):
-    """An object that contains a constant numeric value.
+class LogicalConstant(LogicalValue):
+    """An object that contains a constant Logical value.
 
     Constructor Arguments:
         value           The initial value.
@@ -1001,12 +796,16 @@ class NumericConstant(NumericValue):
 
     __slots__ = ('value',)
 
+    #0-0 impose restriction on initialization?
     def __init__(self, value):
+        #fine like this?
+        if value not in native_logical_values:
+            raise TypeError('Not a valid LogicalValue. Unable to create a logical constant')
         self.value = value
 
     def __getstate__(self):
-        state = super(NumericConstant, self).__getstate__()
-        for i in NumericConstant.__slots__:
+        state = super(LogicalConstant, self).__getstate__()
+        for i in LogicalConstant.__slots__:
             state[i] = getattr(self,i)
         return state
 
@@ -1016,22 +815,16 @@ class NumericConstant(NumericValue):
     def is_fixed(self):
         return True
 
-    def is_potentially_variable(self):
-        return False
-
-    def _compute_polynomial_degree(self, result):
-        return 0
+    #def is_potentially_variable(self):
+    #    return False
 
     def __str__(self):
         return str(self.value)
 
+    #RaiseTypeError ("value of x?")    
     def __nonzero__(self):
-        """Return True if the value is defined and non-zero"""
-        if self.value:
-            return True
-        if self.value is None:
-            raise ValueError("Numeric Constant: value is undefined")
-        return False
+        raise ValueError("Do you mean value of this logical constant : '%s'"
+            % (self.name,))
 
     __bool__ = __nonzero__
 
@@ -1045,5 +838,10 @@ class NumericConstant(NumericValue):
         ostream.write(str(self))
 
 
-# We use as_numeric() so that the constant is also in the cache
-ZeroConstant = as_numeric(0)
+# We use as_logical() so that the constant is also in the cache
+TrueConstant = as_logical(True)
+FalseConstant = as_logical(False)
+
+
+
+
