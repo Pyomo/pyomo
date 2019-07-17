@@ -1,4 +1,4 @@
-pynumero.interfaces.nlp.AmplNLP
+AmplNLP Class
 ===============================================
       
 .. autoclass:: pyomo.contrib.pynumero.interfaces.nlp.AmplNLP

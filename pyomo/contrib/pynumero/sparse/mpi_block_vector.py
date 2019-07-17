@@ -20,14 +20,69 @@ __all__ = ['MPIBlockVector']
 
 class MPIBlockVector(np.ndarray, BaseBlockVector):
     """
-    Parallel Structured Vector interface
+    Parallel structured vector interface. This interface can be used to
+    perform parallel operations on vectors composed by vectors. The main
+    idea is to allocate vectors in different processors and make the corresponding
+    parallel calls when necessary.
+
+    Attributes
+    ----------
+    _rank_owner: numpy.ndarray
+        1D-array with processor ownership of each block. A block can be own by a
+        single processor or by all processors. Blocks own by all processors have
+        ownership -1. Blocks own by a single processor have ownership rank. where
+        rank=MPI.COMM_WORLD.Get_rank()
+    _mpiw: MPI communicator
+        A communicator from the MPI space. Typically MPI.COMM_WORLD
+    _block_vector: BlockVector
+        Internal BlockVector. Blocks that belong to this processor are stored
+        in _block_vector. Blocks that do not belong to this proceesor are empty
+        and store as numpy.zeros(0)
+    _owned_mask: numpy.ndarray bool
+        1D-array that indicates if a block belongs to this processor. While
+        _rank_owner tells which processor(s) owns each block, _owned_mask tells
+        if a block is owned by this processor. Blocks that are owned by everyone
+        (i.e. ownership = -1) are True in _owned_mask
+    _owned_blocks: numpy.ndarray
+        1D-array with block indices owned by this processor. This includes blocks
+        with ownership -1.
+    _unique_owned_blocks: numpy.ndarray
+        1D-array with block indices owned only by this processor. This does not
+        include blocks with ownership -1.
+    _brow_lengths: numpy.ndarray
+        1D-Array of size nblocks that specifies the length of each entry
+        in the MPIBlockVector. This is the same accross all processors.
+    _need_broadcast_sizes: bool
+        True if length of any block changed. If true user will need to call
+        broadcast_block_sizes in the future before performing any operation.
+        Users will be notified if that is the case.
+    _done_first_broadcast_sizes: bool
+        True if broadcast_block_sizes has been called and the length of any
+        block changed since. If true user will need to call
+        broadcast_block_sizes in the future before performing any operation.
+        Users will be notified if that is the case.
+
+    Notes
+    ------
+    This is the parallel implementation of pyomo.contrib.pynumero.sparse.BlockVector
 
     Parameters
     -------------------
     nblocks: int
-    number of blocks contained in the block vector
-    rank_owner: list
-    list of ranks that own blocks. negative entries mean its own by all.
+        number of blocks contained in the block vector
+    rank_owner: array_like
+        Array_like of size nblocks. Each entry defines ownership of each block.
+        There are two types of ownership. Block that are owned by all processor,
+        and blocks owned by a single processor. If a block is owned by all
+        processors then its ownership is -1. Otherwise, if a block is owned by
+        a single processor, then its ownership is equal to the rank of the
+        processor.
+    mpi_com: MPI communicator
+        An MPI communicator. Tyically MPI.COMM_WORLD
+    block_sizes: array_like, optional
+        Array_like of size nblocks. This specifies the length of each entry in
+        the MPIBlockVector.
+
     """
 
     def __new__(cls, nblocks, rank_owner, mpi_comm, block_sizes=None):
@@ -47,12 +102,15 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         comm_size = obj._mpiw.Get_size()
         assert np.all(obj._rank_owner < comm_size)
 
-        # empty the blocks that are not owned by this processor
+        # Determine which blocks are owned by this processor
         obj._owned_blocks = list()
         obj._unique_owned_blocks = list()
         obj._owned_mask = np.zeros(nblocks, dtype=bool)
         for i, owner in enumerate(obj._rank_owner):
             if owner != rank and owner >= 0:
+                # empty the blocks that are not owned by this processor
+                # blocks that are not owned by this proceesor are set
+                # to numpy.zeros(0) in _block_vector
                 obj._block_vector[i] = np.zeros(0)
             else:
                 obj._owned_blocks.append(i)
@@ -64,7 +122,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         obj._owned_blocks = np.array(obj._owned_blocks)
         obj._unique_owned_blocks = np.array(obj._unique_owned_blocks)
 
-        # make some pointer unmutable
+        # make some pointers unmutable. These arrays don't change after
+        # MPIBlockVector has been created
         obj._rank_owner.flags.writeable = False
         obj._owned_blocks.flags.writeable = False
         obj._owned_mask.flags.writeable = False
@@ -99,7 +158,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         return super(MPIBlockVector, self).__array_wrap__(self, out_arr, context)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-
+        """Runs ufuncs speciallizations to MPIBlockVector"""
+        # functions that take one vector
         unary_funcs = [np.log10, np.sin, np.cos, np.exp, np.ceil,
                        np.floor, np.tan, np.arctan, np.arcsin,
                        np.arccos, np.sinh, np.cosh, np.abs,
@@ -110,7 +170,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                        np.rint, np.square, np.positive, np.negative,
                        np.rad2deg, np.deg2rad, np.conjugate, np.reciprocal,
                        ]
-
+        # functions that take two vectors
         binary_funcs = [np.add, np.multiply, np.divide, np.subtract,
                         np.greater, np.greater_equal, np.less, np.less_equal,
                         np.not_equal, np.maximum, np.minimum, np.fmax,
@@ -144,6 +204,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError(str(ufunc) + "not supported for MPIBlockVector")
 
     def _unary_operation(self, ufunc, method, *args, **kwargs):
+        """Run recursion to perform unary_funcs on MPIBlockVector"""
         # ToDo: deal with out
         x = args[0]
 
@@ -167,6 +228,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def _binary_operation(self, ufunc, method, *args, **kwargs):
+        """Run recursion to perform binary_funcs on MPIBlockVector"""
         # ToDo: deal with out
         x1 = args[0]
         x2 = args[1]
@@ -220,21 +282,21 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
     @property
     def bshape(self):
         """
-        Returns the number of blocks.
+        Returns the number of blocks in this MPIBlockVector in a tuple.
         """
         return self.nblocks,
 
     @property
     def shape(self):
         """
-        Returns total number of elements in the block vector
+        Returns total number of elements in the MPIBlockVector
         """
         return self.size,
 
     @property
     def size(self):
         """
-        Returns total number of elements in the block vector
+        Returns total number of elements in this MPIBlockVector
         """
         self._assert_broadcasted_sizes()
         return np.sum(self._brow_lengths)
@@ -242,7 +304,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
     @property
     def ndim(self):
         """
-        Returns dimension of the block vector
+        Returns dimension of this MPIBlockVector
         """
         return 1
 
@@ -251,42 +313,57 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
     def has_none(self):
         """
         Returns True if block vector has none entry
+
+        Notes
+        -----
+        This operation is expensive as it requires communication of all
+        processors. Mostly for debugging purposes.
+        Also, This only checks if all entries at the BlockVector are
+        different than none. It does not check recursively for subvectors
+        to not have nones.
+
         """
         return self._mpiw.allreduce(self._block_vector.has_none, op=MPI.SUM)
 
     @property
     def owned_blocks(self):
         """
-        Returns array of inidices of blocks owned by this processor
+        Returns list with inidices of blocks owned by this processor.
         """
         return self._owned_blocks
 
     @property
     def shared_blocks(self):
         """
-        Returns array of inidices blocks shared by all processors
+        Returns list with inidices of blocks shared by all processors
         """
         return np.array([i for i in range(self.nblocks) if self._rank_owner[i]<0])
 
     @property
     def rank_ownership(self):
         """
-        Returns array of processor rank that own blocks
+        Returns 1D-Array with processor ranks that own each block. The ownership
+        of blocks that are owned by all processors is -1.
         """
         return self._rank_owner
 
     @property
     def ownership_mask(self):
         """
-        Returns boolean array that indicates which blocks are owned by this process
+        Returns boolean 1D-Array that indicates which blocks are owned by
+        this processor
         """
         return self._owned_mask
 
     @property
     def mpi_comm(self):
+        """Returns MPI communicator"""
         return self._mpiw
 
     def block_sizes(self, copy=True):
+        """
+        Returns 1D-Array with sizes of individual blocks in this MPIBlockVector
+        """
         self._assert_broadcasted_sizes()
         if copy:
             return self._brow_lengths.copy()
@@ -294,6 +371,11 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     # Note: this operation requires communication
     def broadcast_block_sizes(self):
+        """
+        Send sizes of all blocks to all processors. After this method is called
+        this MPIBlockVector knows it's dimensions across all blocks. This method
+        must be called before running any operations with the MPIBlockVector.
+        """
         rank = self._mpiw.Get_rank()
         num_processors = self._mpiw.Get_size()
 
@@ -325,7 +407,10 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         self._done_first_broadcast_sizes = True
 
     def _assert_broadcasted_sizes(self):
-
+        """
+        Checks if this MPIBlockVector needs to boradcast sizes. This is needed if
+        there has been changes in sizes blocks
+        """
         if not self._done_first_broadcast_sizes:
             assert not self._need_broadcast_sizes, \
                 'First need to call broadcast_block_sizes()'
@@ -333,7 +418,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert not self._need_broadcast_sizes, \
                 'Structure changed. Need to recall broadcast_block_sizes()'
 
-    # Note: this requires communication
+    # Note: this requires communication but is only runned in __new__
     def _assert_correct_owners(self, root=0):
 
         rank = self._mpiw.Get_rank()
@@ -399,7 +484,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def max(self, axis=None, out=None, keepdims=False):
         """
-        Returns the largest value stored in the vector
+        Returns the largest value stored in this MPIBlockVector
         """
         assert out is None, 'Out keyword not supported'
         assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
@@ -412,7 +497,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):
         """
-        Returns the sum of all entries in the block vector
+        Returns the sum of all entries in this MPIBlockVector
         """
         assert out is None, 'Out keyword not supported'
         assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
@@ -427,7 +512,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def prod(self, axis=None, dtype=None, out=None, keepdims=False):
         """
-        Returns the product of all entries in the vector
+        Returns the product of all entries in this MPIBlockVector
         """
         assert out is None, 'Out keyword not supported'
         assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
@@ -441,7 +526,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):
         """
-        Returns the average of all entries in the vector
+        Returns the average of all entries in this MPIBlockVector
         """
         return self.sum(out=out)/self.size
 
@@ -464,7 +549,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def nonzero(self):
         """
-        Return the indices of the elements that are non-zero.
+        Returns the indices of the elements that are non-zero.
         """
         result = self.copy_structure()
         assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
@@ -474,7 +559,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def round(self, decimals=0, out=None):
         """
-        Return a vector with each element rounded to the given number of decimals
+        Return MPIBlockVector with each element rounded to the given number of decimals
         """
         assert out is None, 'Out keyword not supported'
         assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
@@ -484,6 +569,22 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         return result
 
     def clip(self, min=None, max=None, out=None):
+        """
+        Return MPIBlockVector whose values are limited to [min, max].
+        One of max or min must be given.
+
+        Parameters
+        ----------
+        min: scalar_like, optional
+            Minimum value. If None, clipping is not performed on lower interval edge.
+        max: scalar_like, optional
+            Maximum value. If None, clipping is not performed on upper interval edge.
+
+        Returns
+        -------
+        MPIBlockVector
+
+        """
         assert out is None, 'Out keyword not supported'
         assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         result = self.copy_structure()
@@ -492,6 +593,19 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         return result
 
     def compress(self, condition, axis=None, out=None):
+        """
+        Return selected slices of each subblock.
+
+        Parameters
+        ----------
+        condition: MPIBlockVector that selects which entries to return.
+            Determines to select (evaluate True in condition)
+
+        Returns
+        -------
+        MPIBlockVector
+
+        """
         assert out is None, 'Out keyword not supported'
         assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         rank = self._mpiw.Get_rank()
@@ -513,15 +627,16 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def copyfrom(self, other):
         """
-        Copies entries of other vector into this vector
+        Copy entries of other into this MPIBlockVector
 
         Parameters
         ----------
-        other: BlockVector or ndarray
+        other: MPIBlockVector or BlockVector
 
         Returns
         -------
         None
+
         """
         rank = self._mpiw.Get_rank()
         if isinstance(other, MPIBlockVector):
@@ -590,15 +705,16 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def copyto(self, other):
         """
-        Copies entries of this vector into other
+        Copy entries of this MPIBlockVector into other
 
         Parameters
         ----------
-        other: BlockVector or ndarray
+        other: MPIBlockVector or BlockVector
 
         Returns
         -------
         None
+
         """
         rank = self._mpiw.Get_rank()
         if isinstance(other, MPIBlockVector):
@@ -634,7 +750,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 # need to add warning here
                 self.broadcast_block_sizes()
 
-            # figure size sent by each processor
+            # determine size sent by each processor
             num_processors = self._mpiw.Get_size()
             nblocks = self.nblocks
             rank = self._mpiw.Get_rank()
@@ -700,18 +816,19 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def clone(self, value=None, copy=True):
         """
-        Returns a copy of the block vector
+        Returns a copy of this MPIBlockVector
 
         Parameters
         ----------
-        value: scalar (optional)
+        value: scalar, optional
             all entries of the cloned vector are set to this value
-        copy: bool (optinal)
+        copy: bool, optinal
             if set to true makes a deepcopy of each block in this vector. default False
 
         Returns
         -------
-        BlockVector
+        MPIBlockVector
+
         """
         result = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
         result._block_vector = self._block_vector.clone(value=value, copy=copy)
@@ -721,6 +838,9 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         return result
 
     def copy(self, order='C'):
+        """
+        Returns a copy of the MPIBlockVector
+        """
         v = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
         v._block_vector = self._block_vector.copy()
         v._need_broadcast_sizes = self._need_broadcast_sizes
@@ -729,6 +849,9 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         return v
 
     def copy_structure(self, order='C'):
+        """
+        Returns a copy of the MPIBlockVector structure filled with zeros
+        """
         v = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
         v._block_vector = self._block_vector.copy_structure()
         v._need_broadcast_sizes = self._need_broadcast_sizes
@@ -738,7 +861,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def fill(self, value):
         """
-        Fills the array with a scalar value.
+        Fills the MPIBLockVector with a scalar value.
 
         Parameters
         ----------
@@ -758,7 +881,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
         Parameters
         ----------
-        other : ndarray or BlockVector
+        other : MPIBlockVector
 
         Returns
         -------
@@ -784,6 +907,134 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         else:
             raise NotImplementedError()
+
+    def make_local_copy(self):
+        """
+        Creates copy of this MPIBlockVector but with all blocks owned by all
+        processors (i.e. rank_ownership= -np.ones(nblocks))
+
+        Returns
+        -------
+        MPIBLockVector
+
+        """
+        # TODO: This only works for MPIBLockVectors that have np.arrays in blocks
+        # but not with blocks with BlockVectors. Need to add support for this
+        self._assert_broadcasted_sizes()
+        new_ownership = -np.ones(self.nblocks, dtype=np.int64)
+        if np.array_equal(self.rank_ownership, new_ownership):
+            return self.copy()
+
+        new_MPIBlockVector = MPIBlockVector(self.nblocks,
+                                            new_ownership,
+                                            self._mpiw,
+                                            block_sizes=self.block_sizes())
+
+        # determine size sent by each processor
+        num_processors = self._mpiw.Get_size()
+        nblocks = self.nblocks
+        rank = self._mpiw.Get_rank()
+        chunk_size_per_processor = np.zeros(num_processors, dtype=np.int64)
+        sizes_within_processor = [np.zeros(nblocks, dtype=np.int64) for k in range(num_processors)]
+        for i in range(nblocks):
+            owner = self._rank_owner[i]
+            if owner >= 0:
+                chunk_size = self._brow_lengths[i]
+                sizes_within_processor[owner][i] = chunk_size
+                chunk_size_per_processor[owner] += chunk_size
+
+        receive_size = sum(chunk_size_per_processor)
+        send_data = np.concatenate([self._block_vector[bid] for bid in self._unique_owned_blocks])
+        receive_data = np.empty(receive_size, dtype=send_data.dtype)
+
+        # communicate data to all
+        self._mpiw.Allgatherv(send_data, (receive_data, chunk_size_per_processor))
+
+        # split data by processor
+        proc_dims = np.split(receive_data, chunk_size_per_processor.cumsum())
+
+        # split data within processor
+        splitted_data = []
+        for k in range(num_processors):
+            splitted_data.append(np.split(proc_dims[k],
+                                          sizes_within_processor[k].cumsum()))
+        # populate new vector
+        for bid in range(nblocks):
+            owner = self._rank_owner[bid]
+            if owner >= 0:
+                block_data = splitted_data[owner][bid]
+            else:
+                block_data = self._block_vector[bid]
+            new_MPIBlockVector[bid] = block_data
+
+        return new_MPIBlockVector
+
+    def make_new_MPIBlockVector(self, rank_ownership):
+        """
+        Creates copy of this MPIBlockVector in a different MPI space. If
+        rank_ownership is the same as in this MPIBlockVector a copy of this
+        MPIBlockVector is returned.
+
+        Parameters
+        ----------
+        rank_ownership: array_like
+            Array_like of size nblocks. Each entry defines ownership of each block.
+            There are two types of ownership. Block that are owned by all processor,
+            and blocks owned by a single processor. If a block is owned by all
+            processors then its ownership is -1. Otherwise, if a block is owned by
+            a single processor, then its ownership is equal to the rank of the
+            processor.
+
+        Returns
+        -------
+        MPIBLockVector
+
+        """
+        self._assert_broadcasted_sizes()
+        new_ownership = np.array(rank_ownership)
+        if np.array_equal(self.rank_ownership, new_ownership):
+            return self.copy()
+
+        new_MPIBlockVector = MPIBlockVector(self.nblocks,
+                                            new_ownership,
+                                            self._mpiw,
+                                            block_sizes=self.block_sizes())
+        rank = self._mpiw.Get_rank()
+        for bid in range(self.nblocks):
+            src_owner = self.rank_ownership[bid]
+            dest_owner = new_ownership[bid]
+
+            # first check if block is owned by everyone in source
+            if src_owner < 0:
+                if rank == dest_owner:
+                    new_MPIBlockVector[bid] = self[bid]
+            # then check if it is the same owner to just copy without any mpi call
+            elif src_owner == dest_owner:
+                if src_owner == rank:
+                    new_MPIBlockVector[bid] = self[bid]
+            else:
+                # if destination is in different space
+                if dest_owner >= 0:
+                    # point to point communication
+                    if rank == src_owner:
+                        data = self[bid]
+                        self._mpiw.Send([data, MPI.DOUBLE], dest=dest_owner)
+                    elif rank == dest_owner:
+                        data = np.empty(self._brow_lengths[bid], dtype=np.float64)
+                        self._mpiw.Recv([data, MPI.DOUBLE], source=src_owner)
+                        new_MPIBlockVector[bid] = data
+                # if destination is all processors
+                else:
+                    # broadcast from source to all
+                    if rank == src_owner:
+                        data = self[bid]
+                    else:
+                        data = np.empty(self._brow_lengths[bid], dtype=np.float64)
+
+                    self._mpiw.Bcast(data, root=src_owner)
+                    new_MPIBlockVector[bid] = data
+
+        return new_MPIBlockVector
 
     def __add__(self, other):
         rank = self._mpiw.Get_rank()
@@ -1248,6 +1499,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         return '{}{}'.format(self.__class__.__name__, self.bshape)
 
     def pprint(self, root=0):
+        """Prints BlockVector in pretty format"""
         self._assert_broadcasted_sizes()
         msg = self.__repr__() + '\n'
         num_processors = self._mpiw.Get_size()
@@ -1267,8 +1519,9 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 # checks only the mask of one of them since all must have the same
                 global_mask[bid] = processor_to_mask[0][bid]
 
+            disp_owner = self._rank_owner[bid] if self._rank_owner[bid] >= 0 else 'A'
             is_none = '' if global_mask[bid] else '*'
-            repn = 'Owned by {} Shape({},){}'.format(owner,
+            repn = 'Owned by {} Shape({},){}'.format(disp_owner,
                                                      self._brow_lengths[bid],
                                                      is_none)
             msg += '{}: {}\n'.format(bid, repn)
@@ -1282,6 +1535,9 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         raise NotImplementedError('Not supported by MPIBlockVector')
 
     def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
+        raise RuntimeError('Operation not supported by MPIBlockVector')
+
+    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
         raise RuntimeError('Operation not supported by MPIBlockVector')
 
     def cumprod(self, axis=None, dtype=None, out=None):

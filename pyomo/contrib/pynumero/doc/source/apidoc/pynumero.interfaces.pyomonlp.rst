@@ -1,4 +1,4 @@
-pynumero.interfaces.nlp.PyomoNLP
+PyomoNLP Class
 ===============================================
       
 .. autoclass:: pyomo.contrib.pynumero.interfaces.nlp.PyomoNLP

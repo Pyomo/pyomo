@@ -1,0 +1,4 @@
+Linear Solvers
+==============
+
+Efficient implementations of nonlinear optimization algorithms require fast and reliable linear solvers. PyNumero provides access to several libraries for the solution of the sparse linear systems that arise in nonlinear programming. Because PyNumero stores matrices in Numpy/Scipy objects, all subroutines available in the Numpy ecosystem can be used when writing algorithms in PyNumero. This includes the  Scipy direct and iterative solvers as well as any other Python package based on Numpy such as PyTrillinos, Petsc4py, Cysparse, and  Krypy. PyNumero also supports symmetric indefinite linear solvers that provide inertia information. Interfaces to PyMumps and the HSL linear solvers MA27 and MA57 are available within  PyNumero to solve sparse linear systems. These latter solvers are particularly important in constrained optimization as they provide critical information like the number of negative eigenvalues. 

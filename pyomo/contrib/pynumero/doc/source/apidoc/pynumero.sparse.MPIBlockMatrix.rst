@@ -1,7 +1,7 @@
-BlockMatrix Class
+MPIBlockMatrix Class
 =====================================
 
-.. autoclass:: pyomo.contrib.pynumero.sparse.block_matrix.BlockMatrix
+.. autoclass:: pyomo.contrib.pynumero.sparse.mpi_block_matrix.MPIBlockMatrix
     :members:
     :inherited-members:
     :no-undoc-members:

@@ -1,4 +1,4 @@
-pynumero.sparse.BlockVector
+BlockVector Class
 =====================================
 
 .. autoclass:: pyomo.contrib.pynumero.sparse.block_vector.BlockVector

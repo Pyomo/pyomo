@@ -19,13 +19,110 @@ from pyomo.contrib.pynumero.linalg.intrinsics import norm as pynumero_norm
 
 # ToDo: think of keeping previous state values in t-1
 # the state can potentially have the logger
-# decide if the state has also dx, ds, ...
 
 class BasicNLPState(object):
+    """
+    Helper class for implementing linear and nonlinear optimization algorithms.
+    The NLPState object provides a way for caching nlp evaluation functions. This
+    is often beneficial when writing iterative algorithms for solving optimization
+    problems
+
+    Attributes
+    ----------
+    _nlp: NLP
+        A subclass of the pyomo.contrib.pynumero.interfaces.nlp.NLP object
+    _x: array_like
+        Vector of primal variables. This is an instance of numpy.ndarray or a
+        subclass of it. For instance, for composite NLPs this is a BlockVector
+    _yc: array_like
+        Vector of dual variables for equality constraints. This is an instance
+        of numpy.ndarray or a subclass of it. For instance, for composite NLPs
+        this is a BlockVector
+    _yd: array_like
+        Vector of dual variables for inequality constraints. This is an instance
+        of numpy.ndarray or a subclass of it. For instance, for composite NLPs
+        this is a BlockVector
+    _s: array_like
+        Vector of slack variables for inequality constraints. This is an instance
+        of numpy.ndarray or a subclass of it. For instance, for composite NLPs
+        this is a BlockVector
+    _dx: array_like
+        Step vector of primal variables. This is an instance of numpy.ndarray or a
+        subclass of it. For instance, for composite NLPs this is a BlockVector
+    _dyc: array_like
+        Step vector of dual variables for equality constraints. This is an instance
+        of numpy.ndarray or a subclass of it. For instance, for composite NLPs
+        this is a BlockVector
+    _dyd: array_like
+        Step vector of dual variables for inequality constraints. This is an instance
+        of numpy.ndarray or a subclass of it. For instance, for composite NLPs
+        this is a BlockVector
+    _ds: array_like
+        Step vector of slack variables for inequality constraints. This is an instance
+        of numpy.ndarray or a subclass of it. For instance, for composite NLPs
+        this is a BlockVector
+    condensed_xl: array_like
+        Vector of lower bounds of primal variables (without -inf values). This is an instance
+        of numpy.ndarray or a subclass of it. For instance, for composite NLPs
+        this is a BlockVector
+    condensed_xu: array_like
+        Vector of upper bounds of primal variables (without inf values). This is an instance
+        of numpy.ndarray or a subclass of it. For instance, for composite NLPs
+        this is a BlockVector
+    condensed_dl: array_like
+        Vector of lower bounds for inequality constriants (without -inf values). This is an instance
+        of numpy.ndarray or a subclass of it. For instance, for composite NLPs
+        this is a BlockVector
+    condensed_du: array_like
+        Vector of upper bounds for inequality constriant (without inf values). This is an instance
+        of numpy.ndarray or a subclass of it. For instance, for composite NLPs
+        this is a BlockVector
+    Pxl: Matrix_like
+        projection matrix that brings a condensed vector from xl to x (Pxl.dot(xl))
+    Pxu: Matrix_like
+        projection matrix that brings a condensed vector from xu to x (Pxu.dot(xu))
+    Pdl: Matrix_like
+        projection matrix that brings a condensed vector from dl to s (Pdl.dot(s))
+    Pdu: Matrix_like
+        projection matrix that brings a condensed vector from du to s (Pdu.dot(s))
+    Pc: Matrix_like
+        projection matrix that brings a condensed vector from c to g (Pc.dot(c))
+    Pd: Matrix_like
+        projection matrix that brings a condensed vector from d to g (Pd.dot(d))
+    _f: float64
+        objective function evaluated at current state point
+    _df: array_like
+        gradient of objective function evaluated at current state point
+    _g: array_like
+        contraints evaluated at current state point
+    _res_c: array_like
+        equality contraints evaluated at current state point
+    _body_d: array_like
+        inequality contraints evaluated at current state point
+    _jac_g: matrix_like
+        jacobian of contraints evaluated at current state point
+    _jac_c: matrix_like
+        jacobian of equality contraints evaluated at current state point
+    _jac_d: matrix_like
+        jacobian of inequality contraints evaluated at current state point
+    _hess_lag: matrix_like
+        hessian of Lagrangian function evaluated at current state point
+    _slack_xl: array_like
+        vector with difference between current primals and lower bound xl
+    _slack_xu: array_like
+        vector with difference between current primals and upper bound xu
+    _slack_sl: array_like
+        vector with difference between current slacks and lower bound dl
+    _slack_su: array_like
+        vector with difference between current slacks and lower bound du
+
+    Parameters
+    ----------
+    nlp: NLP object
+        A subclass of the pyomo.contrib.pynumero.interfaces.nlp.NLP object
+    """
 
     def __init__(self, nlp, **kwargs):
-
-
         bound_push = kwargs.pop('bound_push', 1e-2)
         push_bounds = not kwargs.pop('disable_bound_push', False)
 
@@ -126,42 +223,65 @@ class BasicNLPState(object):
 
     @property
     def x(self):
+        """Returns current vector of primal variables"""
         return self._x
 
     @property
     def s(self):
+        """Returns current vector of slack variables"""
         return self._s
 
     @property
     def yc(self):
+        """Returns current vector of dual variables of equality constraints"""
         return self._yc
 
     @property
     def yd(self):
+        """Returns current vector of dual variables of inequality constraints"""
         return self._yd
 
     @property
     def dx(self):
+        """Returns last step vector of primal variables"""
         return self._dx
 
     @property
     def ds(self):
+        """Returns last step vector of slack variables"""
         return self._ds
 
     @property
     def dyc(self):
+        """Returns last step vector of dual variables of equality constriants"""
         return self._dyc
 
     @property
     def dyd(self):
+        """Returns last step vector of dual variables of equality constriants"""
         return self._dyd
 
     @property
     def nlp(self):
+        """Returns nlp object"""
         return self._nlp
 
     def update_state(self, **kwargs):
+        """
+        Update variables and function evaluations to a new state point
 
+        Other Parameters
+        ----------------
+        x: array_like
+            new vector of primal variables
+        s: array_like
+            new vector of primal variables
+        yc: array_like
+            new vector of dual variables of equality constraints
+        yd: array_like
+            new vector of dual variables of equality constraints
+
+        """
         x = kwargs.pop('x', None)
         s = kwargs.pop('s', None)
         yc = kwargs.pop('yc', None)
@@ -201,6 +321,7 @@ class BasicNLPState(object):
         self.cache()
 
     def cache(self):
+        """Evaluates and store all functions at current state point"""
         self._cache_nlp_functions()
         self._cache_slack_vectors()
 
@@ -256,49 +377,63 @@ class BasicNLPState(object):
         self._need_recache_slack_vectors_s = False
 
     def objective(self):
+        """Returns objective function at current state point"""
         return self._f
 
     def grad_objective(self):
+        """Returns vector with gradient of objective function at current state point"""
         return self._df
 
     def evaluate_g(self):
+        """Returns vector of constraints evaluated at current state point"""
         return self._g
 
     def evaluate_c(self):
+        """Returns vector of equality constraints evaluated at current state point"""
         return self._res_c
 
     def evaluate_d(self):
+        """Returns vector of inequality constraints evaluated at current state point"""
         return self._body_d
 
     def residual_d(self):
+        """Returns vector of residuals inequality constraints evaluated at current state point"""
         return self._body_d - self.s
 
     def jacobian_g(self):
+        """Returns jacobian matrix of constraints evaluated at current state point"""
         return self._jac_g
 
     def jacobian_c(self):
+        """Returns jacobian matrix of equality constraints evaluated at current state point"""
         return self._jac_c
 
     def jacobian_d(self):
+        """Returns jacobian matrix of inequality constraints evaluated at current state point"""
         return self._jac_d
 
     def hessian_lag(self):
+        """Returns hessian of lagrangian function evaluated at current state point"""
         return self._hess_lag
 
     def slack_xl(self):
+        """Returns vector with difference between current primal variables and lower bound xl"""
         return self._slack_xl
 
     def slack_xu(self):
+        """Returns vector with difference between current primal variables and upper bound xu"""
         return self._slack_xu
 
     def slack_sl(self):
+        """Returns vector with difference between current slack variables and lower bound dl"""
         return self._slack_sl
 
     def slack_su(self):
+        """Returns vector with difference between current slack variables and upper bound du"""
         return self._slack_su
 
     def max_alpha_primal(self, delta_x, delta_s, tau):
-
+        """Return primal step size from fraction to the boundary rule"""
         alpha_l_x = 1.0
         alpha_u_x = 1.0
         alpha_l_s = 1.0
@@ -359,6 +494,7 @@ class BasicNLPState(object):
         return min([alpha_l_x, alpha_u_x, alpha_l_s, alpha_u_s])
 
     def primal_infeasibility(self):
+        """Returns infinity norm of g(x)=0"""
         norm_c = 0.0
         norm_d = 0.0
         if self.yc.size > 0:
@@ -376,6 +512,7 @@ class BasicNLPState(object):
         return max(norm_c, norm_d)
 
     def norm_primal_step(self):
+        """Returns infinity norm of primal step vector (including slacks s)"""
         normx = pynumero_norm(self.dx, ord=np.inf)
         norms = 0.0
         if self.ds.size > 0:
@@ -384,7 +521,23 @@ class BasicNLPState(object):
 
     @staticmethod
     def push_variables_within_bounds(vars_l, vars, vars_u, bound_push):
+        """
+        Brings vector to interior of upper and lower bounds
 
+        Parameters
+        ----------
+        vars_l: array_like
+            vector of lower bounds
+        vars_u: array_like
+            vector of upper bounds
+        vars: array_like
+            vector of variables
+
+        Returns
+        -------
+        array_like
+
+        """
         # push primal variables within lower bounds
         xl = vars_l
 
@@ -408,7 +561,47 @@ class BasicNLPState(object):
 
 
 class NLPState(BasicNLPState):
+    """
+    Helper class for implementing linear and nonlinear optimization algorithms.
+    The NLPState object provides a way for caching nlp evaluation functions. This
+    is often beneficial when writing iterative algorithms for solving optimization
+    problems
 
+    Attributes
+    ----------
+    _zl: array_like
+        Vector of multiplier variables of lower bounds on x. This is an instance
+        of numpy.ndarray or a subclass of it. For instance, for composite NLPs
+        this is a BlockVector
+    _zu: array_like
+        Vector of multiplier variables of upper bounds on x. This is an instance
+        of numpy.ndarray or a subclass of it. For instance, for composite NLPs
+        this is a BlockVector
+    _vl: array_like
+        Vector of multiplier variables of lower bounds on s. This is an instance
+        of numpy.ndarray or a subclass of it. For instance, for composite NLPs
+        this is a BlockVector
+    _vu: array_like
+        Vector of multiplier variables of upper bounds on s. This is an instance
+        of numpy.ndarray or a subclass of it. For instance, for composite NLPs
+        this is a BlockVector
+    _dvl: array_like
+        Step vector of multiplier variables of lower bounds on x. This is an
+        instance of numpy.ndarray or a subclass of it. For instance, for
+        composite NLPs this is a BlockVector
+    _dsl: array_like
+        Step vector of multiplier variables of lower bounds on s. This is an
+        instance of numpy.ndarray or a subclass of it. For instance, for
+        composite NLPs this is a BlockVector
+    _dvu: array_like
+        Step vector of multiplier variables of upper bounds on x. This is an
+        instance of numpy.ndarray or a subclass of it. For instance, for
+        composite NLPs this is a BlockVector
+    _dsu: array_like
+        Step vector of multiplier variables of upper bounds on s. This is an
+        instance of numpy.ndarray or a subclass of it. For instance, for
+        composite NLPs this is a BlockVector
+    """
     def __init__(self, nlp, **kwargs):
 
         super(NLPState, self).__init__(nlp, **kwargs)
@@ -445,38 +638,67 @@ class NLPState(BasicNLPState):
 
     @property
     def zl(self):
+        """Returns current vector of multiplier variables of lower bounds on x"""
         return self._zl
 
     @property
     def zu(self):
+        """Returns current vector of multiplier variables of upper bounds on x"""
         return self._zu
 
     @property
     def vl(self):
+        """Returns current vector of multiplier variables of lower bounds on s"""
         return self._vl
 
     @property
     def vu(self):
+        """Returns current vector of multiplier variables of upper bounds on x"""
         return self._vu
 
     @property
     def dzl(self):
+        """Returns last step vector of multiplier variables of lower bounds on x"""
         return self._dzl
 
     @property
     def dzu(self):
+        """Returns last step vector of multiplier variables of upper bounds on x"""
         return self._dzu
 
     @property
     def dvl(self):
+        """Returns last step vector of multiplier variables of lower bounds on s"""
         return self._dvl
 
     @property
     def dvu(self):
+        """Returns last step vector of multiplier variables of upper bounds on s"""
         return self._dvu
 
     def update_state(self, **kwargs):
+        """
+        Update variables and function evaluations to a new state point
 
+        Other Parameters
+        ----------------
+        x: array_like
+            new vector of primal variables
+        s: array_like
+            new vector of primal variables
+        yc: array_like
+            new vector of dual variables of equality constraints
+        yd: array_like
+            new vector of dual variables of equality constraints
+        zl: array_like
+            new vector of dual variables of lower bounds on x
+        vl: array_like
+            new vector of dual variables of lower bounds on s
+        zu: array_like
+            new vector of dual variables of upper bounds on x
+        vu: array_like
+            new vector of dual variables of upper bounds on s
+        """
         # call parent class
         super(NLPState, self).update_state(**kwargs)
 
@@ -510,6 +732,8 @@ class NLPState(BasicNLPState):
             self._vu = vu
 
     def grad_lag_x(self):
+        """Returns gradient of the Lagrangian function with respect to x
+        evaluated at current state point"""
         grad_x_lag = self.grad_objective() + \
                      self.jacobian_c().T * self.yc + \
                      self.jacobian_d().T * self.yd + \
@@ -519,6 +743,8 @@ class NLPState(BasicNLPState):
         return grad_x_lag
 
     def grad_lag_s(self):
+        """Returns gradient of the Lagrangian function with respect to s
+        evaluated at current state point"""
         grad_s_lag = self.Pdu * self.vu - \
                      self.Pdl * self.vl - \
                      self.yd
@@ -567,7 +793,7 @@ class NLPState(BasicNLPState):
         raise NotImplementedError(msg)
 
     def max_alpha_dual(self, delta_zl, delta_zu, delta_vl, delta_vu, tau):
-
+        """Return dual step size from fraction to the boundary rule"""
         alpha_l_z = 1.0
         alpha_u_z = 1.0
         alpha_l_v = 1.0

@@ -1,4 +1,4 @@
-pynumero.sparse.empty_matrix
+EmptyMatrix Class
 ============================================
          
 .. autoclass:: pyomo.contrib.pynumero.sparse.coo.empty_matrix

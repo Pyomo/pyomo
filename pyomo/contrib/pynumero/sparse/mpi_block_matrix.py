@@ -43,6 +43,56 @@ class MPIBlockMatrix(BaseBlockMatrix):
     """
     Parallel Structured Matrix interface
 
+    Attributes
+    ----------
+    _rank_owner: numpy.ndarray
+        2D-array with processor ownership of each block. A block can be own by a
+        single processor or by all processors. Blocks own by all processors have
+        ownership -1. Blocks own by a single processor have ownership rank. where
+        rank=MPI.COMM_WORLD.Get_rank()
+    _mpiw: MPI communicator
+        A communicator from the MPI space. Typically MPI.COMM_WORLD
+    _block_matrix: BlockMatrix
+        Internal BlockMatrix. Blocks that belong to this processor are stored
+        in _block_matrix.
+    _owned_mask: numpy.ndarray bool
+        2D-array that indicates if a block belongs to this processor. While
+        _rank_owner tells which processor(s) owns each block, _owned_mask tells
+        if a block is owned by this processor. Blocks that are owned by everyone
+        (i.e. ownership = -1) are True in _owned_mask
+    _unique_owned_mask: numpy.ndarray bool
+        2D-array that indicates if a block belongs to this processor. While
+        _rank_owner tells which processor(s) owns each block, _unique_owned_mask tells
+        if a block is owned by this processor. Blocks that are owned by everyone
+        (i.e. ownership = -1) are False in _unique_owned_mask
+    _row_type: numpy.ndarray int
+        1D-Array that classify the type of row. Rows can be of three types. If
+        all the row blocks have the same owner, the row is said to be SINGLE_OWNER=1.
+        If all the blocks in the row have ownership equals -1, the row is said
+        to be ALL_OWN_IT=0. Finally if two or more blocks have different owner in
+        a row, the row is said to be MULTIPLE_OWNER=2. This information is useful
+        when performing matrix-vector and matrix-matrix products
+    _col_type: numpy.ndarray int
+        1D-Array that classify the type of column. Columns can be of three types. If
+        all the column blocks have the same owner, the column is said to be SINGLE_OWNER=1.
+        If all the blocks in the column have ownership equals -1, the column is said
+        to be ALL_OWN_IT=0. Finally if two or more blocks have different owner in
+        a column, the column is said to be MULTIPLE_OWNER=2. This information is useful
+        when performing matrix-vector and matrix-matrix products
+    _brow_lengths: numpy.ndarray
+        1D-array with sizes of block-rows
+    _bcol_lengths: numpy.ndarray
+        1D-array with sizes of block-columns
+    _need_broadcast_sizes: bool
+        True if length of any block changed. If true user will need to call
+        broadcast_block_sizes in the future before performing any operation.
+        Users will be notified if that is the case.
+    _done_first_broadcast_sizes: bool
+        True if broadcast_block_sizes has been called and the length of any
+        block changed since. If true user will need to call
+        broadcast_block_sizes in the future before performing any operation.
+        Users will be notified if that is the case.
+
     Parameters
     -------------------
     nbrows : int
@@ -54,7 +104,13 @@ class MPIBlockMatrix(BaseBlockMatrix):
                     owner of each block in the matrix. For blocks that are
                     owned by all processes the rank is -1. Blocks that are
                     None should be owned by all processes.
-    mpi_comm : communicator
+    mpi_comm : MPI communicator
+    row_block_sizes: array_like, optional
+        Array_like of size nbrows. This specifies the length of each row in
+        the MPIBlockMatrix.
+    col_block_sizes: array_like, optional
+        Array_like of size nbcols. This specifies the length of each column in
+        the MPIBlockMatrix.
     """
 
     def __init__(self,
@@ -149,13 +205,13 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 raise RuntimeError('Specify col_block_sizes')
 
         # make some of the pointers unmutable
-        self._rank_owner.flags.writeable = False # mutable only when needed
-        self._owned_mask.flags.writeable = False # mutable only when needed
+        self._rank_owner.flags.writeable = False
+        self._owned_mask.flags.writeable = False
 
     @property
     def bshape(self):
         """
-        Returns the block-shape of the matrix
+        Returns tuple with the block-shape of the matrix
         """
         return self._block_matrix.bshape
 
@@ -170,11 +226,13 @@ class MPIBlockMatrix(BaseBlockMatrix):
     @property
     def nnz(self):
         """
-        Returns total number of nonzero values in the matrix
+        Returns total number of nonzero values in this matrix
         """
         local_nnz = 0
         rank = self._mpiw.Get_rank()
         block_indices = self._unique_owned_mask if rank!=0 else self._owned_mask
+
+        # this is an easy and efficient way to loop though owned blocks
         ii, jj = np.nonzero(block_indices)
         for i, j in zip(ii, jj):
             if not self._block_matrix.is_empty_block(i, j):
@@ -183,21 +241,50 @@ class MPIBlockMatrix(BaseBlockMatrix):
         return self._mpiw.allreduce(local_nnz, op=MPI.SUM)
 
     @property
+    def owned_blocks(self):
+        """
+        Returns list with inidices of blocks owned by this processor.
+        """
+        bm, bn = self.bshape
+        owned_blocks = []
+        for i in range(bm):
+            for j in range(bn):
+                if self._owned_mask[i, j]:
+                    owned_blocks.append((i,j))
+        return owned_blocks
+
+    @property
+    def shared_blocks(self):
+        """
+        Returns list with inidices of blocks shared by all processors
+        """
+        bm, bn = self.bshape
+        owned_blocks = []
+        for i in range(bm):
+            for j in range(bn):
+                if self._owned_mask[i, j] and self._rank_owner[i, j]<0:
+                    owned_blocks.append((i,j))
+        return owned_blocks
+
+    @property
     def rank_ownership(self):
         """
-        Returns 2D array that specifies process rank that owns each blocks
+        Returns 2D array that specifies process rank that owns each blocks. If
+        a block is owned by all the ownership=-1.
         """
         return self._rank_owner
 
     @property
     def ownership_mask(self):
         """
-        Returns 2D boolean array that indicates which blocks are owned by this process
+        Returns boolean 2D-Array that indicates which blocks are owned by
+        this processor
         """
         return self._owned_mask
 
     @property
     def mpi_comm(self):
+        """Returns MPI communicator"""
         return self._mpiw
 
     @property
@@ -327,6 +414,11 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
     # Note: this requires communication
     def broadcast_block_sizes(self):
+        """
+        Send sizes of all blocks to all processors. After this method is called
+        this MPIBlockMatrix knows it's dimensions of all rows and columns. This method
+        must be called before running any operations with the MPIBlockVector.
+        """
         rank = self._mpiw.Get_rank()
         num_processors = self._mpiw.Get_size()
 
@@ -389,7 +481,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         Returns
         -------
-        ndarray
+        numpy.ndarray
 
         """
         self._assert_broadcasted_sizes()
@@ -403,7 +495,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         Returns
         -------
-        narray
+        numpy.narray
 
         """
         self._assert_broadcasted_sizes()
@@ -413,11 +505,17 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
     def block_shapes(self):
         """
-        Returns shapes of blocks in BlockMatrix
+        Returns list with shapes of blocks in this BlockMatrix
+
+        Notes
+        -----
+        For an MPIBlockMatrix with 2 block-rows and 2 block-cols
+        this method returns [[Block_00.shape, Block_01.shape],[Block_10.shape, Block_11.shape]]
 
         Returns
         -------
         list
+
         """
         self._assert_broadcasted_sizes()
         bm, bn = self.bshape
@@ -486,6 +584,14 @@ class MPIBlockMatrix(BaseBlockMatrix):
         self._brow_lengths[idx] = 0
 
     def copy(self):
+        """
+        Makes a copy of this MPIBlockMatrix
+
+        Returns
+        -------
+        MPIBlockMatrix
+
+        """
         m, n = self.bshape
         result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw)
         result._block_matrix = self._block_matrix.copy()
@@ -496,6 +602,17 @@ class MPIBlockMatrix(BaseBlockMatrix):
         return result
 
     def copy_structure(self):
+        """
+        Makes a copy of the structure of this MPIBlockMatrix. This proivides a
+        light-weighted copy of each block in this MPIBlockMatrix. The blocks in the
+        resulting matrix have the same shape as in the original matrices but not
+        the same number of nonzeros.
+
+        Returns
+        -------
+        MPIBlockMatrix
+
+        """
         m, n = self.bshape
         result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw)
         result._block_matrix = self._block_matrix.copy_structure()
@@ -554,6 +671,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         return msg
 
     def pprint(self, root=0):
+        """Prints MPIBlockMatrix in pretty format"""
         self._assert_broadcasted_sizes()
         msg = self.__repr__() + '\n'
         num_processors = self._mpiw.Get_size()
@@ -1336,7 +1454,19 @@ class MPIBlockMatrix(BaseBlockMatrix):
         BaseBlockMatrix.setdiag(self, value, k=k)
 
     def get_block_column_index(self, index):
+        """
+        Returns block-column idx from matrix column index.
 
+        Parameters
+        ----------
+        index: int
+            Column index
+
+        Returns
+        -------
+        int
+
+        """
         self._assert_broadcasted_sizes()
 
         bm, bn = self.bshape
@@ -1358,7 +1488,19 @@ class MPIBlockMatrix(BaseBlockMatrix):
         return block_index
 
     def get_block_row_index(self, index):
+        """
+        Returns block-row idx from matrix row index.
 
+        Parameters
+        ----------
+        index: int
+            Row index
+
+        Returns
+        -------
+        int
+
+        """
         self._assert_broadcasted_sizes()
 
         bm, bn = self.bshape
@@ -1380,10 +1522,104 @@ class MPIBlockMatrix(BaseBlockMatrix):
         return block_index
 
     def getcol(self, j):
-        raise NotImplementedError('Operation not supported by MPIBlockMatrix. TODO')
+        """
+        Returns MPIBlockVector of column j
+
+        Parameters
+        ----------
+        j: int
+            Column index
+
+        Returns
+        -------
+        pyomo.contrib.pynumero.sparse MPIBlockVector
+
+        """
+        # get size of the blocks to input in the vector
+        # this implicitly checks that sizes have been broadcasted beforehand
+        block_sizes = self.row_block_sizes()
+        # get block column index
+        bcol = self.get_block_column_index(j)
+        # get rank ownership
+        col_ownership = []
+        bm, bn = self.bshape
+        for i in range(bm):
+             col_ownership.append(self._rank_owner[i, bcol])
+        # create vector
+        bv = MPIBlockVector(bm,
+                           col_ownership,
+                           self._mpiw,
+                           block_sizes=block_sizes)
+
+        # compute offset columns
+        offset = 0
+        if bcol > 0:
+            cum_sum = self._bcol_lengths.cumsum()
+            offset = cum_sum[bcol-1]
+
+        # populate vector
+        rank = self._mpiw.Get_rank()
+        for row_bid, owner in enumerate(col_ownership):
+            if rank == owner or owner<0:
+                sub_matrix = self._block_matrix[row_bid, bcol]
+                if self._block_matrix.is_empty_block(row_bid, bcol):
+                    v = np.zeros(self._brow_lengths[row_bid])
+                elif isinstance(sub_matrix, BaseBlockMatrix):
+                    v = sub_matrix.getcol(j-offset)
+                else:
+                    # if it is sparse matrix transform array to vector
+                    v = sub_matrix.getcol(j-offset).toarray().flatten()
+                bv[row_bid] = v
+        return bv
 
     def getrow(self, i):
-        raise NotImplementedError('Operation not supported by MPIBlockMatrix. TODO')
+        """
+        Returns MPIBlockVector of column i
+
+        Parameters
+        ----------
+        i: int
+            Row index
+
+        Returns
+        -------
+        pyomo.contrib.pynumero.sparse MPIBlockVector
+
+        """
+        # get size of the blocks to input in the vector
+        # this implicitly checks that sizes have been broadcasted beforehand
+        block_sizes = self.col_block_sizes()
+        # get block column index
+        brow = self.get_block_row_index(i)
+        # get rank ownership
+        row_ownership = []
+        bm, bn = self.bshape
+        for j in range(bn):
+             row_ownership.append(self._rank_owner[brow, j])
+        # create vector
+        bv = MPIBlockVector(bn,
+                            row_ownership,
+                            self._mpiw,
+                            block_sizes=block_sizes)
+        # compute offset columns
+        offset = 0
+        if brow > 0:
+            cum_sum = self._brow_lengths.cumsum()
+            offset = cum_sum[brow-1]
+        # populate vector
+        rank = self._mpiw.Get_rank()
+        for col_bid, owner in enumerate(row_ownership):
+            if rank == owner or owner<0:
+                sub_matrix = self._block_matrix[brow, col_bid]
+                if self._block_matrix.is_empty_block(brow, col_bid):
+                    v = np.zeros(self._bcol_lengths[col_bid])
+                elif isinstance(sub_matrix, BaseBlockMatrix):
+                    v = sub_matrix.getrow(i-offset)
+                else:
+                    # if it is sparse matrix transform array to vector
+                    v = sub_matrix.getrow(i-offset).toarray().flatten()
+                bv[col_bid] = v
+        return bv
 
 class MPIBlockSymMatrix(MPIBlockMatrix):
     """

@@ -30,19 +30,19 @@ __all__ = ['BlockVector']
 
 class BlockVector(np.ndarray, BaseBlockVector):
     """
-    Structured Vector interface. This interface can be used to
-    operate on vectors composed by vectors. For example bv = BlockVector([v1, v2, v3]),
-    where vi are numpy.ndarrays or BlockVectors.
+    Structured vector interface. This interface can be used to
+    performe operations on vectors composed by vectors. For example
+    bv = BlockVector([v1, v2, v3]), where vi are numpy.ndarrays or BlockVectors.
 
     Attributes
     ----------
     _nblocks: int
         number of blocks
     _brow_lengths: numpy.ndarray
-        array of size nblocks that specifies the length of each entry
+        1D-Array of size nblocks that specifies the length of each entry
         in the block vector
     _block_mask: numpy.ndarray bool
-        array of size nblocks that tells if entry is none. Operations with
+        1D-Array of size nblocks that tells if entry is none. Operations with
         BlockVectors require all entries to be different that none.
     _has_none: bool
         This attribute is used to assert all entries are not none.
@@ -108,7 +108,6 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         """Runs ufuncs speciallizations to BlockVector"""
-
         # functions that take one vector
         unary_funcs = [np.log10, np.sin, np.cos, np.exp, np.ceil,
                        np.floor, np.tan, np.arctan, np.arcsin,
@@ -257,45 +256,49 @@ class BlockVector(np.ndarray, BaseBlockVector):
     @property
     def bshape(self):
         """
-        Returns the number of blocks in tuple.
+        Returns the number of blocks in this BlockVector in a tuple.
         """
         return self.nblocks,
 
     @property
     def shape(self):
         """
-        Returns total number of elements in the block vector
+        Returns total number of elements in this BlockVector
         """
         return np.sum(self._brow_lengths),
 
     @property
     def size(self):
         """
-        Returns total number of elements in the block vector
+        Returns total number of elements in this BlockVector
         """
         return np.sum(self._brow_lengths)
 
     @property
     def ndim(self):
         """
-        Returns dimension of the block vector
+        Returns dimension of this BlockVector
         """
         return 1
 
     @property
     def has_none(self):
         """
-        Indicate if BlockVector has none entry.
-        Note: this only checks if all entries at the BlockVector are
+        Indicate if thi BlockVector has none entry.
+
+        Notes
+        -----
+        this only checks if all entries at the BlockVector are
         different than none. It does not check recursively for subvectors
         to not have nones.
+
         """
         # this flag is updated in __setattr__
         return self._has_none
 
     def block_sizes(self, copy=True):
         """
-        Returns array with sizes of individual blocks
+        Returns 1D-Array with sizes of individual blocks in this BlockVector
         """
         if copy:
             return np.copy(self._brow_lengths)
@@ -334,7 +337,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):
         """
-        Returns the sum of all entries in the block vector
+        Returns the sum of all entries in this BlockVector
         """
         assert not self.has_none, 'Operations not allowed with None blocks.'
         results = np.array([self[i].sum() for i in range(self.nblocks)])
@@ -360,7 +363,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def max(self, axis=None, out=None, keepdims=False):
         """
-        Returns the largest value stored in the vector
+        Returns the largest value stored in this BlockVector
         """
         assert not self.has_none, 'Operations not allowed with None blocks.'
         results = np.array([self[i].max() for i in range(self.nblocks) if self[i].size > 0])
@@ -397,6 +400,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         Returns
         -------
         BlockVector
+
         """
         assert not self.has_none, 'Operations not allowed with None blocks.'
         assert out is None, 'Out keyword not supported'
@@ -418,6 +422,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         Returns
         -------
         BlockVector
+
         """
         assert not self._has_none, 'Operations not allowed with None blocks.'
         assert out is None, 'Out keyword not supported'
@@ -525,7 +530,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):
         """
-        Returns the average of all entries in the vector
+        Returns the average of all entries in this BlockVector
         """
         n = self.size
         if n == 0:
@@ -534,7 +539,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def prod(self, axis=None, dtype=None, out=None, keepdims=False):
         """
-        Returns the product of all entries in the vector
+        Returns the product of all entries in this BlockVector
         """
         assert not self._has_none, 'Operations not allowed with None blocks.'
         results = np.array([self[i].prod() for i in range(self.nblocks)])
@@ -542,7 +547,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def fill(self, value):
         """
-        Fills the array with a scalar value.
+        Fills the BlockVector with a scalar value.
 
         Parameters
         ----------
@@ -560,7 +565,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def tolist(self):
         """
-        Return the vector as a list.
+        Return the BlockVector flattened as a list.
 
         Returns
         -------
@@ -719,7 +724,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def copyto(self, other):
         """
-        Copy entries of this vector into other
+        Copy entries of this BlockVector into other
 
         Parameters
         ----------
@@ -1533,6 +1538,40 @@ class BlockVector(np.ndarray, BaseBlockVector):
         msg += '\n'
         msg += self.__str__()
         print(msg)
+
+    def toMPIBlockVector(self, rank_ownership, mpi_comm):
+        """
+        Creates a parallel MPIBlockVector from this BlockVector
+
+        Parameters
+        ----------
+        rank_ownership: array_like
+            Array_like of size nblocks. Each entry defines ownership of each block.
+            There are two types of ownership. Block that are owned by all processor,
+            and blocks owned by a single processor. If a block is owned by all
+            processors then its ownership is -1. Otherwise, if a block is owned by
+            a single processor, then its ownership is equal to the rank of the
+            processor.
+        mpi_com: MPI communicator
+            An MPI communicator. Tyically MPI.COMM_WORLD
+
+        """
+        from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBLockVector
+
+        assert not self.has_none, 'Operations not allowed with None blocks.'
+        assert len(rank_ownership) == self.nblocks, \
+            'rank_ownership must be of size {}'.format(self.nblocks)
+
+        mpi_bv = MPIBlockVector(self.nblocks,
+                                rank_ownership,
+                                mpi_comm,
+                                block_sizes=self.block_sizes())
+
+        # populate blocks in the right spaces
+        for bid in mpi_bv.owned_blocks:
+            mpi_bv[bid] = self[bid]
+
+        return mpi_bv
 
     # the following methods are not supported by blockvector
 

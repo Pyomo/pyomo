@@ -1,4 +1,4 @@
-pynumero.sparse.DiagonalMatrix
+DiagonalMatrix Class
 ============================================
       
 .. autoclass:: pyomo.contrib.pynumero.sparse.coo.diagonal_matrix
