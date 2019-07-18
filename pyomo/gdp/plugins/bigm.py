@@ -167,12 +167,6 @@ class BigM_Transformation(Transformation):
         config.set_value(kwds)
         bigM = config.bigM
 
-        # this is a list for keeping track of IndexedDisjuncts
-        # and IndexedDisjunctions so that, at the end of the
-        # transformation, we can check that the ones with no active
-        # DisjstuffDatas are deactivated.
-        disjContainers = ComponentSet()
-
         targets = config.targets
         if targets is None:
             targets = (instance, )
@@ -187,15 +181,14 @@ class BigM_Transformation(Transformation):
 
             if t.type() is Disjunction:
                 if t.parent_component() is t:
-                    self._transformDisjunction(t, bigM, disjContainers)
+                    self._transformDisjunction(t, bigM)
                 else:
-                    self._transformDisjunctionData( t, bigM, t.index(),
-                                                    disjContainers)
+                    self._transformDisjunctionData( t, bigM, t.index())
             elif t.type() in (Block, Disjunct):
                 if t.parent_component() is t:
-                    self._transformBlock(t, bigM, disjContainers)
+                    self._transformBlock(t, bigM)
                 else:
-                    self._transformBlockData(t, bigM, disjContainers)
+                    self._transformBlockData(t, bigM)
             else:
                 raise GDP_Error(
                     "Target %s was not a Block, Disjunct, or Disjunction. "
@@ -224,11 +217,11 @@ class BigM_Transformation(Transformation):
 
         return transBlock
 
-    def _transformBlock(self, obj, bigM, disjContainers):
+    def _transformBlock(self, obj, bigM):
         for i in sorted(iterkeys(obj)):
-            self._transformBlockData(obj[i], bigM, disjContainers)
+            self._transformBlockData(obj[i], bigM)
 
-    def _transformBlockData(self, obj, bigM, disjContainers):
+    def _transformBlockData(self, obj, bigM):
         # Transform every (active) disjunction in the block
         for disjunction in obj.component_objects(
                 Disjunction,
@@ -236,7 +229,7 @@ class BigM_Transformation(Transformation):
                 sort=SortComponents.deterministic,
                 descend_into=(Block, Disjunct),
                 descent_order=TraversalStrategy.PostfixDFS):
-            self._transformDisjunction(disjunction, bigM, disjContainers)
+            self._transformDisjunction(disjunction, bigM)
 
     def _getXorConstraint(self, disjunction):
         # Put the disjunction constraint on its parent block and
@@ -274,7 +267,7 @@ class BigM_Transformation(Transformation):
         info_dict['srcDisjunctionFromOr'][orC] = disjunction
         return orC
 
-    def _transformDisjunction(self, obj, bigM, disjContainers):
+    def _transformDisjunction(self, obj, bigM):
         parent_block = obj.parent_block()
         transBlock = self._add_transformation_block(parent_block)
 
@@ -287,14 +280,12 @@ class BigM_Transformation(Transformation):
 
         # relax each of the disjunctionDatas
         for i in sorted(iterkeys(obj)):
-            self._transformDisjunctionData(obj[i], bigM, i, disjContainers,
-                                           transBlock)
+            self._transformDisjunctionData(obj[i], bigM, i, transBlock)
 
         # deactivate so we know we relaxed
         obj.deactivate()
 
-    def _transformDisjunctionData(self, obj, bigM, index, disjContainers,
-                                  transBlock=None):
+    def _transformDisjunctionData(self, obj, bigM, index, transBlock=None):
         if not obj.active:
             return  # Do not process a deactivated disjunction
         if transBlock is None:
@@ -309,7 +300,6 @@ class BigM_Transformation(Transformation):
         infodict['srcDisjunctionFromRelaxationBlock'][transBlock] = obj
         
         parent_component = obj.parent_component()
-        disjContainers.add(parent_component)
         orConstraint = self._getXorConstraint(parent_component)
 
         xor = obj.xor
@@ -322,8 +312,8 @@ class BigM_Transformation(Transformation):
             # pass it down.
             suffix_list = self._get_bigm_suffix_list(disjunct)
             # relax the disjunct
-            self._bigM_relax_disjunct(disjunct, transBlock, bigM, suffix_list,
-                                      disjContainers)
+            self._bigM_relax_disjunct(disjunct, transBlock, bigM, suffix_list)
+
         # add or (or xor) constraint
         if xor:
             orConstraint.add(index, (or_expr, 1))
@@ -353,8 +343,7 @@ class BigM_Transformation(Transformation):
 
         return infodict
 
-    def _bigM_relax_disjunct(self, obj, transBlock, bigM, suffix_list,
-                             disjContainers):
+    def _bigM_relax_disjunct(self, obj, transBlock, bigM, suffix_list):
         infodict = self._get_info_dict(obj)
 
         # deactivated -> either we've already transformed or user deactivated
