@@ -1225,7 +1225,6 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
         self.diff_apply_to_and_create_using(m)
 
 
-# TODO: We should actually generate an error for this now!
 class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
     def test_error_for_same_disjunct_in_multiple_disjunctions(self):
         m = models.makeDisjunctInMultipleDisjunctions()
@@ -1237,217 +1236,10 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
             TransformationFactory('gdp.bigm').apply_to,
             m)
 
-#     def test_disjunction1_xor(self):
-#         # check the xor constraint for the first disjunction
-#         m = models.makeDisjunctInMultipleDisjunctions()
-#         TransformationFactory('gdp.bigm').apply_to(m)
-
-#         xor1 = m.component("_gdp_bigm_relaxation_disjunction1_xor")
-#         self.assertIsInstance(xor1, Constraint)
-#         self.assertTrue(xor1.active)
-#         self.assertEqual(xor1.lower, 1)
-#         self.assertEqual(xor1.upper, 1)
-
-#         repn = generate_standard_repn(xor1.body)
-#         self.assertTrue(repn.is_linear())
-#         self.assertEqual(len(repn.linear_vars), 2)
-#         self.assertEqual(repn.constant, 0)
-#         check_linear_coef(self, repn, m.disjunct1[0].indicator_var, 1)
-#         check_linear_coef(self, repn, m.disjunct1[1].indicator_var, 1)
-
-#     def test_disjunction2_xor(self):
-#         # check the xor constraint from the second disjunction
-#         m = models.makeDisjunctInMultipleDisjunctions()
-#         TransformationFactory('gdp.bigm').apply_to(m)
-
-#         xor2 = m.component("_gdp_bigm_relaxation_disjunction2_xor")
-#         self.assertIsInstance(xor2, Constraint)
-#         self.assertTrue(xor2.active)
-#         self.assertEqual(xor2.lower, 1)
-#         self.assertEqual(xor2.upper, 1)
-
-#         repn = generate_standard_repn(xor2.body)
-#         self.assertTrue(repn.is_linear())
-#         self.assertEqual(len(repn.linear_vars), 2)
-#         self.assertEqual(repn.constant, 0)
-#         check_linear_coef(self, repn, m.disjunct2[0].indicator_var, 1)
-#         check_linear_coef(self, repn, m.disjunct1[1].indicator_var, 1)
-
-#     def test_constraints_deactivated(self):
-#         # all the constraints that are on disjuncts we transformed should be
-#         # deactivated
-#         m = models.makeDisjunctInMultipleDisjunctions()
-#         TransformationFactory('gdp.bigm').apply_to(m)
-
-#         self.assertFalse(m.disjunct1[0].c.active)
-#         self.assertFalse(m.disjunct1[1].c.active)
-#         self.assertFalse(m.disjunct2[0].c.active)
-
-#     def test_transformed_disjuncts_deactivated(self):
-#         m = models.makeDisjunctInMultipleDisjunctions()
-#         TransformationFactory('gdp.bigm').apply_to(m, targets=(m,))
-
-#         self.assertFalse(m.disjunct1[0].active)
-#         self.assertFalse(m.disjunct1[1].active)
-#         self.assertFalse(m.disjunct2[0].active)
-#         self.assertFalse(m.disjunct1.active)
-
-#     def test_untransformed_disj_active(self):
-#         # We have an extra disjunct not in any of the disjunctions.
-#         # He doesn't get transformed, and so he should still be active
-#         # so the writers will scream. His constraint, also, is still active.
-#         m = models.makeDisjunctInMultipleDisjunctions_no_deactivate()
-#         TransformationFactory('gdp.bigm').apply_to(m, targets=(
-#             m.disjunction1, m.disjunction2))
-
-#         self.assertTrue(m.disjunct2[1].active)
-#         self.assertTrue(m.disjunct2[1].c.active)
-#         # and it means his container is active
-#         self.assertTrue(m.disjunct2.active)
-
-#     def test_untransformed_disj_error(self):
-#         # If we try to transform the whole model without deactivating the extra
-#         # disjunct, the reclassify transformation should complain.
-#         m = models.makeDisjunctInMultipleDisjunctions_no_deactivate()
-#         with self.assertRaises(GDP_Error):
-#             TransformationFactory('gdp.bigm').apply_to(m)
-
-#     def test_transformation_block_structure(self):
-#         m = models.makeDisjunctInMultipleDisjunctions()
-#         TransformationFactory('gdp.bigm').apply_to(m)
-
-#         transBlock = m.component("_pyomo_gdp_bigm_relaxation")
-#         self.assertIsInstance(transBlock, Block)
-#         disjBlock = transBlock.component("relaxedDisjuncts")
-#         self.assertIsInstance(disjBlock, Block)
-#         self.assertEqual(len(disjBlock), 3)
-#         self.assertIsInstance(
-#             disjBlock[0].component("disjunct1[0].c"), Constraint)
-#         self.assertIsInstance(
-#             disjBlock[1].component("disjunct1[1].c"), Constraint)
-#         self.assertIsInstance(
-#             disjBlock[2].component("disjunct2[0].c"), Constraint)
-
-    # def test_info_dicts(self):
-    #     m = models.makeDisjunctInMultipleDisjunctions()
-    #     TransformationFactory('gdp.bigm').apply_to(m)
-
-    #     disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
-    #     # this is another test that relies on the fact that the disjuncts
-    #     # are going to be transformed in the same order. These are the
-    #     # pairings of disjunct indices and disjBlock indices:
-    #     disj1pairs = [
-    #         (0, 0),
-    #         (1, 1),
-    #     ]
-    #     disj2pairs = [
-    #         (0, 2)
-    #     ]
-    #     # check dictionaries in both disjuncts
-    #     for k, disj in enumerate([m.disjunct1, m.disjunct2]):
-    #         pairs = disj1pairs
-    #         if k==1:
-    #             pairs = disj2pairs
-    #         for i, j in pairs:
-    #             infodict = getattr(disjBlock[j], "_gdp_transformation_info")
-    #             self.assertIsInstance(infodict, dict)
-    #             srcConsDict = infodict['srcConstraints']
-    #             self.assertIsInstance(srcConsDict, ComponentMap)
-    #             self.assertEqual(len(srcConsDict), 1)
-    #             self.assertIs(
-    #                 srcConsDict[disjBlock[j].component(disj[i].c.name)],
-    #                 disj[i].c)
-    #             self.assertEqual(len(infodict), 2)
-    #             self.assertIs(infodict['src'], disj[i])
-
-    #             infodict2 = getattr(disj[i], "_gdp_transformation_info")
-    #             self.assertIsInstance(infodict2, dict)
-    #             self.assertEqual(len(infodict2), 2)
-    #             self.assertEqual( sorted(infodict2.keys()),
-    #                               ['bigm','relaxed'] )
-    #             self.assertIs(
-    #                 infodict2['bigm']['relaxationBlock'], disjBlock[j])
-    #             self.assertTrue(infodict2['relaxed'])
-    #             constraintdict = infodict2['bigm']['relaxedConstraints']
-    #             self.assertIsInstance(constraintdict, ComponentMap)
-    #             self.assertEqual(len(constraintdict), 1)
-    #             # check the constraint mappings
-    #             self.assertIs(constraintdict[disj[i].c],
-    #                           disjBlock[j].component(disj[i].c.name))
-
-    # def test_xor_constraint_map(self):
-    #     m = models.makeDisjunctInMultipleDisjunctions()
-    #     TransformationFactory('gdp.bigm').apply_to(m)
-
-    #     infodict = m._gdp_transformation_info
-    #     self.assertIsInstance(infodict, dict)
-    #     self.assertEqual(len(infodict), 1)
-    #     orDict = infodict['disjunction_or_constraint']
-    #     self.assertIsInstance(orDict, ComponentMap)
-    #     self.assertIs(orDict[m.disjunction1],
-    #                   m._gdp_bigm_relaxation_disjunction1_xor)
-    #     self.assertIs(orDict[m.disjunction2],
-    #                   m._gdp_bigm_relaxation_disjunction2_xor)
-
-    # def test_transformed_constraints(self):
-    #     m = models.makeDisjunctInMultipleDisjunctions()
-    #     TransformationFactory('gdp.bigm').apply_to(m)
-
-    #     # we will gather the constraints and check the bounds here, then check
-    #     # bodies below.
-    #     # the real test is that disjunct1[1] only got transformed once
-    #     disj11 = m.disjunct1[1]._gdp_transformation_info['bigm'][
-    #         'relaxationBlock']
-    #     # check lb first
-    #     cons11lb = disj11.component("disjunct1[1].c")['lb']
-    #     self.assertEqual(cons11lb.lower, 0)
-    #     self.assertIsNone(cons11lb.upper)
-
-    #     # check ub
-    #     cons11ub = disj11.component("disjunct1[1].c")['ub']
-    #     self.assertEqual(cons11ub.upper, 0)
-    #     self.assertIsNone(cons11ub.lower)
-
-    #     # check disjunct1[0] for good measure
-    #     disj10 = m.disjunct1[0]._gdp_transformation_info['bigm'][
-    #         'relaxationBlock']
-    #     cons10 = disj10.component("disjunct1[0].c")['lb']
-    #     self.assertEqual(cons10.lower, 5)
-    #     self.assertIsNone(cons10.upper)
-
-    #     # check disjunct2[0] for even better measure
-    #     disj20 = m.disjunct2[0]._gdp_transformation_info['bigm'][
-    #         'relaxationBlock']
-    #     cons20 = disj20.component("disjunct2[0].c")['lb']
-    #     self.assertEqual(cons20.lower, 30)
-    #     self.assertIsNone(cons20.upper)
-
-    #     # these constraint bodies are all the same except for the indicator
-    #     # variables and the values of M. The mapping is below, and we check
-    #     # them in the loop.
-    #     consinfo = [
-    #         (cons11lb, -10, m.disjunct1[1].indicator_var),
-    #         (cons11ub, 50, m.disjunct1[1].indicator_var),
-    #         (cons10, -15, m.disjunct1[0].indicator_var),
-    #         (cons20, -40, m.disjunct2[0].indicator_var),
-    #     ]
-
-    #     for cons, M, ind_var in consinfo:
-    #         repn = generate_standard_repn(cons.body)
-    #         self.assertTrue(repn.is_linear())
-    #         self.assertEqual(len(repn.linear_vars), 2)
-    #         self.assertEqual(repn.constant, -M)
-    #         check_linear_coef(self, repn, m.a, 1)
-    #         check_linear_coef(self, repn, ind_var, M)
-
-    # def test_create_using(self):
-    #     m = models.makeDisjunctInMultipleDisjunctions()
-    #     self.diff_apply_to_and_create_using(m)
-
 
 class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
     def test_only_targets_inactive(self):
-        m = models.makeDisjunctInMultipleDisjunctions_no_deactivate()
+        m = models.makeTwoSimpleDisjunctions()
         TransformationFactory('gdp.bigm').apply_to(
             m,
             targets=[m.disjunction1])
@@ -1464,10 +1256,7 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
         self.assertTrue(m.disjunct2.active)
 
     def test_only_targets_transformed(self):
-        print("Same disjunct in multiple disjunctions")
-        self.assertFalse(True)
-        # TODO: This is no longer a legal test case:
-        m = models.makeDisjunctInMultipleDisjunctions()
+        m = models.makeTwoSimpleDisjunctions()
         TransformationFactory('gdp.bigm').apply_to(
             m,
             targets=[m.disjunction1])
@@ -1487,21 +1276,16 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
         infodict = getattr(m, "_gdp_transformation_info")
         self.assertIsInstance(infodict, dict)
         for i, j in pairs:
-            self.assertIs(infodict['srcDisjuncts'][disjBlock[i]], 
-                          m.disjunct1[j])
-            # TODO: stopped here...
-            dict2 = getattr(m.disjunct1[j], "_gdp_transformation_info")
-            self.assertIsInstance(dict2, dict)
-            self.assertIs(dict2['bigm']['relaxationBlock'], disjBlock[i])
-            self.assertTrue(dict2['relaxed'])
+            self.assertIs(disjBlock[i], m.disjunct1[j].transformation_block())
+            self.assertIs(infodict['srcDisjuncts'][disjBlock[i]], m.disjunct1[j])
 
-        self.assertFalse(hasattr(m.disjunct2[0], "_gdp_transformation_info"))
-        self.assertFalse(hasattr(m.disjunct2[1], "_gdp_transformation_info"))
+        self.assertIsNone(m.disjunct2[0].transformation_block)
+        self.assertIsNone(m.disjunct2[1].transformation_block)
 
     def test_target_not_a_component_err(self):
         decoy = ConcreteModel()
         decoy.block = Block()
-        m = models.makeDisjunctInMultipleDisjunctions()
+        m = models.makeTwoSimpleDisjunctions()
         self.assertRaisesRegexp(
             GDP_Error,
             "Target block is not a component on instance unknown!",
