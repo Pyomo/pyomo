@@ -86,11 +86,15 @@ class BigM_Transformation(Transformation):
             'orConstraint': <constraint>
             'relaxationBlock': <block>
         })
-        'relaxedConstraintMap': ComponentMap(constraint: relaxed_constraint)
+        'relaxedConstraintMap': ComponentMap(
+            <source constraint> : <relaxed_constraint>)
         'srcDisjuncts': ComponentMap(<relaxed disjunct block>: <source disjunct>)
         'srcConstraints': ComponentMap(<relaxed constraint>: <source constraint>)
         'srcDisjunctionFromOr': ComponentMap(<or constraint>: 
                                              <source disjunction>)
+        TODO: with current changes, this would actually map to a list. 
+        Do we need it at all??? You can find all of this from the disjuncts, 
+        maybe we should abandon this part...
         'srcDisjunctionFromRelaxationBlock': ComponentMap(<block>: 
                                                           <source disjunction>)
     """
@@ -180,10 +184,6 @@ class BigM_Transformation(Transformation):
             # check that t is in fact a child of instance
             knownParents = is_child_of(parent=instance, child=t,
                                              knownParents=knownParents)
-            #t = _t.find_component(instance)
-            # if t is None:
-            #     raise GDP_Error(
-            #         "Target %s is not a component on the instance!" % _t)
 
             if t.type() is Disjunction:
                 if t.parent_component() is t:
@@ -408,7 +408,36 @@ class BigM_Transformation(Transformation):
 
     def _transform_block_components(self, block, disjunct, infodict,
                                     bigM, suffix_list):
-        # Look through the component map of block and transform
+        # We first need to find any transformed disjunctions that might be here
+        # because we need to move their transformation blocks up onto the parent
+        # block before we transform anything else on this block 
+        destinationBlock = disjunct.transformation_block().parent_block()
+        for obj in block.component_data_objects(
+                Disjunction, 
+                sort=SortComponents.deterministic, 
+                descend_into=(Block)):
+            if not obj in infodict['relaxedDisjunctionMap']:
+                # This could be bad if it's active, but we'll wait to yell
+                # until the next loop
+                continue
+            disjParentBlock = disjunct.parent_block()
+            # get this disjunction's relaxation block.
+            transBlock = infodict['relaxedDisjunctionMap'][obj][
+                'relaxationBlock']
+            # move transBlock up to parent component
+            transBlock.parent_block().del_component(transBlock)
+            # moved_block_name = unique_component_name(disjParentBlock,
+            #                                          transBlock.name)
+            self._transfer_transBlock_data(transBlock, destinationBlock,
+                                           infodict)
+            #disjParentBlock.add_component(moved_block_name, transBlock)
+            # update the map
+            transBlock = destinationBlock
+            # TODO: If we really are maintaining a map of transformation blocks
+            # for disjunctions, then that needs updating here too.
+            # And the transformed constraint mapping ALSO needs updating
+
+        # Now look through the component map of block and transform
         # everything we have a handler for. Yell if we don't know how
         # to handle it.
         for name, obj in list(iteritems(block.component_map())):
@@ -429,24 +458,40 @@ class BigM_Transformation(Transformation):
             # variables down the line.
             handler(obj, disjunct, infodict, bigM, suffix_list)
 
-            # if obj is a disjunction, we need to move the relaxation block onto
-            # the parent block of disjunct. (It's possible that it got
-            # deactivated if it is a container and all it's data objects were
-            # deactivated, so we have to check.)
-            # [ESJ 07/14/2019] Is that still possible with the repaired
-            # container logic??
-            if obj.type() is Disjunction and obj.active:
-                disjParentBlock = disjunct.parent_block()
-                # get this disjunction's relaxation block.
-                transblock = infodict['relaxedDisjunctionMap'][obj][
-                    'relaxationBlock']
-                # move transBlock up to parent component
-                transBlock.parent_block().del_component(transBlock)
-                moved_block_name = unique_component_name(disjParentBlock,
-                                                         transBlock.name)
-                disjParentBlock.add_component(moved_block_name, transBlock)
-                # update the map
-                transBlock = disjParentBlock.component(moved_block_name)
+    def _transfer_transBlock_data(self, fromBlock, toBlock, infodict):
+        # We know that we have a list of transformed disjuncts on both. We need
+        # to move those over. Then there might be constraints on the block also
+        # (at this point only the diaggregation constraints from chull,
+        # but... I'll leave it general for now.
+        disjunctList = toBlock.relaxedDisjuncts
+        disjunctMapping = infodict['srcDisjuncts']
+        for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
+            # [ESJ 07/18/2019] John! I thought you said this would work?
+            #newblock = disjunctList[len(disjunctList)] = disjunctBlock.clone()
+            # I'm just hacking for now because I am confused:
+            newblock = disjunctList[len(disjunctList)]
+            self._copy_to_block(disjunctBlock, newblock)
+            # update the mappings
+            original = disjunctMapping[disjunctBlock]
+            original.transformation_block = weakref_ref(newblock)
+            disjunctMapping[disjunctBlock] = original
+
+        # move any constraints. I'm assuming they are all just on the
+        # transformation block right now, because that is in our control and I
+        # can't think why we would do anything messier at the moment. (And I
+        # don't want to descend into Blocks because we already handled the
+        # above).
+        for cons in fromBlock.component_data_objects(Constraint):
+            toBlock.add_component(unique_component_name(cons.name, toBlock),
+                                  cons)
+
+    def _copy_to_block(self, oldblock, newblock):
+        for obj in oldblock.component_objects(Constraint):
+            # [ESJ 07/18/2019] This shouldn't actually matter because we are
+            # deleting the whole old block anyway, but it is to keep pyomo from
+            # getting upset about the same component living on multiple blocks
+            oldblock.del_component(obj)
+            newblock.add_component(obj.name, obj)
 
     def _warn_for_active_disjunction(self, disjunction, disjunct, infodict,
                                      bigMargs, suffix_list):

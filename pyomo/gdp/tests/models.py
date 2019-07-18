@@ -274,8 +274,6 @@ def makeTwoTermDisj_BlockOnDisj():
 
 
 def makeNestedDisjunctions():
-    # DEBUG:
-    print("I'm nested, I will fail!")
     m = ConcreteModel()
     m.x = Var(bounds=(-9, 9))
     m.z = Var(bounds=(0, 10))
