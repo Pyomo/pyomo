@@ -55,7 +55,6 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(model.cost.expr(), 68, places=1)
 
-
     def test_OA_MINLP_simple(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:

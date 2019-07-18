@@ -96,16 +96,6 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                 )
 
 
-def add_no_good_cut(target_model, config):
-    """Cut out current binary combination"""
-    target_model.MindtPy_utils. \
-        MindtPy_linear_cuts.integer_cuts.add(
-            expr=(sum(var if var.value == 0 else (1-var)
-                      for var in target_model.MindtPy_utils.variable_list
-                      if var.is_binary())
-                  >= 1))
-
-
 def add_oa_equality_relaxation(var_values, duals, solve_data, config, ignore_integrality=False):
     """More general case for outer approximation
 
@@ -152,8 +142,50 @@ def add_oa_equality_relaxation(var_values, duals, solve_data, config, ignore_int
         rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
         slack_var = MindtPy.MindtPy_linear_cuts.slack_vars.add()
         MindtPy.MindtPy_linear_cuts.oa_cuts.add(
-            expr=(copysign(1, sign_adjust * dual_value)
-                  * (sum(value(jacs[constr][var]) * (var - value(var))
-                         for var in identify_variables(constr.body))
-                     + value(constr.body) - rhs)
-                  - slack_var <= 0))
+            expr=copysign(1, sign_adjust * dual_value)
+                 * (sum(value(jacs[constr][var]) * (var - value(var))
+                        for var in list(identify_variables(constr.body)))
+                    + value(constr.body) - rhs)
+                 - slack_var <= 0)
+
+
+def add_int_cut(var_values, solve_data, config, feasible=False):
+    if not config.integer_cuts:
+        return
+
+    config.logger.info("Adding integer cuts")
+
+    m = solve_data.mip
+    MindtPy = m.MindtPy_utils
+    int_tol = config.integer_tolerance
+
+    binary_vars = [v for v in MindtPy.variable_list if v.is_binary()]
+
+    # copy variable values over
+    for var, val in zip(MindtPy.variable_list, var_values):
+        if not var.is_binary():
+            continue
+        var.value = val
+
+    # check to make sure that binary variables are all 0 or 1
+    for v in binary_vars:
+        if value(abs(v - 1)) > int_tol and value(abs(v)) > int_tol:
+            raise ValueError('Binary {} = {} is not 0 or 1'.format(
+                v.name, value(v)))
+
+    if not binary_vars:  # if no binary variables, skip.
+        return
+
+    int_cut = (sum(1 - v for v in binary_vars
+                   if value(abs(v - 1)) <= int_tol) +
+               sum(v for v in binary_vars
+                   if value(abs(v)) <= int_tol) >= 1)
+
+    MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
+
+    # TODO need to handle theoretical implications of backtracking
+    # if not feasible:
+    #     # Add the integer cut
+    #     MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
+    # else:
+    #     MindtPy.MindtPy_linear_cuts.feasible_integer_cuts.add(expr=int_cut)

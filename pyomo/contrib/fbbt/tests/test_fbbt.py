@@ -188,21 +188,25 @@ class TestFBBT(unittest.TestCase):
                 m.x = pe.Var(bounds=(xl, xu))
                 m.y = pe.Var()
                 m.c = pe.Constraint(expr=pe.inequality(body=m.x**m.y, lower=cl, upper=cu))
-                fbbt(m)
-                x = np.linspace(pe.value(m.x.lb) + 1e-6, pe.value(m.x.ub), 100, endpoint=False)
-                z = np.linspace(pe.value(m.c.lower) + 1e-6, pe.value(m.c.upper), 100, endpoint=False)
-                if m.y.lb is None:
-                    yl = -np.inf
+                if xl > 0 and cu <= 0:
+                    with self.assertRaises(InfeasibleConstraintException):
+                        fbbt(m)
                 else:
-                    yl = m.y.lb
-                if m.y.ub is None:
-                    yu = np.inf
-                else:
-                    yu = m.y.ub
-                for _x in x:
-                    _y = np.log(abs(z)) / np.log(abs(_x))
-                    self.assertTrue(np.all(yl <= _y))
-                    self.assertTrue(np.all(yu >= _y))
+                    fbbt(m)
+                    x = np.linspace(pe.value(m.x.lb) + 1e-6, pe.value(m.x.ub), 100, endpoint=False)
+                    z = np.linspace(pe.value(m.c.lower) + 1e-6, pe.value(m.c.upper), 100, endpoint=False)
+                    if m.y.lb is None:
+                        yl = -np.inf
+                    else:
+                        yl = m.y.lb
+                    if m.y.ub is None:
+                        yu = np.inf
+                    else:
+                        yu = m.y.ub
+                    for _x in x:
+                        _y = np.log(abs(z)) / np.log(abs(_x))
+                        self.assertTrue(np.all(yl <= _y))
+                        self.assertTrue(np.all(yu >= _y))
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_pow2(self):
@@ -406,8 +410,8 @@ class TestFBBT(unittest.TestCase):
 
         m.x.setlb(None)
         m.x.setub(None)
-        m.y.setub(-1)
-        m.y.setlb(1)
+        m.y.setlb(-1)
+        m.y.setub(1)
         fbbt(m)
         self.assertEqual(m.x.lb, None)
         self.assertEqual(m.x.ub, None)
@@ -528,6 +532,29 @@ class TestFBBT(unittest.TestCase):
             else:
                 xu = pe.value(m.x.ub)
             x = np.exp(z)
+            self.assertTrue(np.all(xl <= x))
+            self.assertTrue(np.all(xu >= x))
+
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
+    def test_log10(self):
+        c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        for cl, cu in c_bounds:
+            m = pe.Block(concrete=True)
+            m.x = pe.Var()
+            m.c = pe.Constraint(expr=pe.inequality(body=pe.log10(m.x), lower=cl, upper=cu))
+            fbbt(m)
+            z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
+            if m.x.lb is None:
+                xl = -np.inf
+            else:
+                xl = pe.value(m.x.lb)
+            if m.x.ub is None:
+                xu = np.inf
+            else:
+                xu = pe.value(m.x.ub)
+            x = 10**z
+            print(xl, xu, cl, cu)
+            print(x)
             self.assertTrue(np.all(xl <= x))
             self.assertTrue(np.all(xu >= x))
 

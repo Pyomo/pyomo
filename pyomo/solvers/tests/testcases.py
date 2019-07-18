@@ -28,9 +28,10 @@ _trunk_version =  (float('inf'), float('inf'), float('inf'), float('inf'))
 # that means the solver has been fixed and that particular case should
 # no longer exist in the list of expected failures
 ExpectedFailures = {}
-#                                                                                                                                              
-# MOSEK                                                                                                                                        
-#                                                                                                                                              
+
+#
+# MOSEK
+#
 
 ExpectedFailures['mosek', 'python', 'QCP_simple'] = \
     (lambda v: True,

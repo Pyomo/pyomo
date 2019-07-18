@@ -25,6 +25,8 @@ def MindtPy_iteration_loop(solve_data, config):
     - repeat
     """
 
+    working_model = solve_data.working_model
+    main_objective = next(working_model.component_data_objects(Objective, active=True))
     while solve_data.mip_iter < config.iteration_limit:
         config.logger.info(
             '---MindtPy Master Iteration %s---'
@@ -114,7 +116,7 @@ def PSC_switch_to_OA_if_no_progress(solve_data, config):
             making_progress = True
             break
     if not making_progress and (
-            config.strategy == 'hPSC' and
+            config.strategy == 'hPSC' or
             config.strategy == 'PSC'):
         config.logger.info(
             'Not making enough progress for {} iterations. '
@@ -155,7 +157,7 @@ def algorithm_should_terminate(solve_data, config):
         return True
 
     # Check time limit
-    if get_main_elapsed_time(solve_data.timing) > config.time_limit:
+    if get_main_elapsed_time(solve_data.timing) >= config.time_limit:
         config.logger.info(
             'MindtPy unable to converge bounds '
             'before time limit of {} seconds. '

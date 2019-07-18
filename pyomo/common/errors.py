@@ -9,7 +9,16 @@
 #  ___________________________________________________________________________
 
 
-class DeveloperError(NotImplementedError):
+class PyomoException(Exception):
+    """
+    Exception class for other pyomo exceptions to inherit from,
+    allowing pyomo exceptions to be caught in a general way
+    (e.g., in other applications that use Pyomo).
+    """
+    pass
+
+
+class DeveloperError(PyomoException, NotImplementedError):
     """
     Exception class used to throw errors that result from Pyomo
     programming errors, rather than user modeling errors (e.g., a
@@ -25,10 +34,15 @@ class DeveloperError(NotImplementedError):
                  % ( repr(self.parameter), ) )
 
 
-class InfeasibleConstraintException(Exception):
+class InfeasibleConstraintException(PyomoException):
     """
     Exception class used by Pyomo transformations to indicate
     that an infeasible constraint has been identified (e.g. in
     the course of range reduction).
     """
+    pass
+
+
+class NondifferentiableError(PyomoException, ValueError):
+    """A Pyomo-specific ValueError raised for non-differentiable expressions"""
     pass

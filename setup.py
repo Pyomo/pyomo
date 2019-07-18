@@ -36,7 +36,16 @@ def _find_packages(path):
 
 
 def read(*rnames):
-    return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
+    with open(os.path.join(os.path.dirname(__file__), *rnames)) as README:
+        # Strip all leading badges up to, but not including the COIN-OR
+        # badge so that they do not appear in the PyPI description
+        while True:
+            line = README.readline()
+            if 'COIN-OR' in line:
+                break
+            if line.strip() and '[![' not in line:
+                break
+        return line + README.read()
 
 def get_version():
     # Source pyomo/version/info.py to get the version number
@@ -48,7 +57,7 @@ def get_version():
     return _verInfo['__version__']
 
 requires = [
-    'PyUtilib>=5.7.1.dev0',
+    'PyUtilib>=5.7.2.dev0',
     'appdirs',
     'ply',
     'six>=1.4',
@@ -126,6 +135,7 @@ def run_setup():
       platforms=["any"],
       description='Pyomo: Python Optimization Modeling Objects',
       long_description=read('README.md'),
+      long_description_content_type='text/markdown',
       classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: End Users/Desktop',
@@ -149,6 +159,7 @@ def run_setup():
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Software Development :: Libraries :: Python Modules' ],
       packages=packages,
+      package_data={"pyomo.contrib.viewer":["*.ui"]},
       keywords=['optimization'],
       install_requires=requires,
       ext_modules = ext_modules,
@@ -189,6 +200,7 @@ def run_setup():
         pyomo.test.pyomo = pyomo.scripting.runtests
         pyomo.pyro_mip_server = pyomo.scripting.pyro_mip_server
         pyomo.results_schema=pyomo.scripting.commands
+        pyomo.viewer=pyomo.contrib.viewer.pyomo_viewer
       """
       )
 

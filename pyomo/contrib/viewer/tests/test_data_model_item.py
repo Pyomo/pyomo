@@ -16,6 +16,7 @@ import pyutilib.th as unittest
 
 from pyomo.environ import *
 from pyomo.contrib.viewer.model_browser import ComponentDataItem
+from pyomo.contrib.viewer.ui_data import UIData
 
 class TestDataModelItem(unittest.TestCase):
     def setUp(self):
@@ -55,58 +56,70 @@ class TestDataModelItem(unittest.TestCase):
         self.m = m.clone()
 
     def test_expr_calc(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e1)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_data=UIData(model=self.m), o=self.m.b1.e1)
+        cdi.ui_data.calculate_expressions()
         self.assertAlmostEqual(cdi.get("value"), 3)
+        self.assertIsInstance(cdi.get("expr"), str) # test get expr str
 
     def test_expr_calc_div0(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e2)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_data=UIData(model=self.m), o=self.m.b1.e2)
+        cdi.ui_data.calculate_expressions()
         self.assertEqual(cdi.get("value"), "Divide_by_0")
 
     def test_expr_calc_log0(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e4)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_data=UIData(model=self.m), o=self.m.b1.e4)
+        cdi.ui_data.calculate_expressions()
         self.assertIsNone(cdi.get("value"))
 
     def test_expr_calc_log_neg(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e5)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_data=UIData(model=self.m), o=self.m.b1.e5)
+        cdi.ui_data.calculate_expressions()
         self.assertIsNone(cdi.get("value"))
 
     def test_expr_calc_value_None(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.b1.e3)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_data=UIData(model=self.m), o=self.m.b1.e3)
+        cdi.ui_data.calculate_expressions()
         self.assertIsNone(cdi.get("value"))
 
     def test_cons_calc(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c3)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_data=UIData(model=self.m), o=self.m.c3)
+        cdi.ui_data.calculate_constraints()
         self.assertAlmostEqual(cdi.get("residual"), 2)
 
     def test_cons_calc_div0(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c4)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_data=UIData(model=self.m), o=self.m.c4)
+        cdi.ui_data.calculate_constraints()
         self.assertEqual(cdi.get("value"), "Divide_by_0")
 
     def test_cons_calc_log0(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c5)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_data=UIData(model=self.m), o=self.m.c5)
+        cdi.ui_data.calculate_constraints()
         self.assertIsNone(cdi.get("value"))
 
     def test_cons_calc_log_neg(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c6)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_data=UIData(model=self.m), o=self.m.c6)
+        cdi.ui_data.calculate_constraints()
         self.assertIsNone(cdi.get("value"))
 
     def test_cons_calc_value_None(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c7)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_data=UIData(model=self.m), o=self.m.c7)
+        cdi.ui_data.calculate_constraints()
         self.assertIsNone(cdi.get("value"))
 
     def test_cons_calc_upper_div0(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.c8)
-        cdi.calculate()
+        cdi = ComponentDataItem(
+            parent=None, ui_data=UIData(model=self.m), o=self.m.c8)
+        cdi.ui_data.calculate_constraints()
         # the ui lists the upper and lower attributes as ub and lb
         # this was originally so I could easily combine variables and
         # constarints in the same view, but I split them up, so may want
@@ -115,29 +128,42 @@ class TestDataModelItem(unittest.TestCase):
         self.assertEqual(cdi.get("ub"), "Divide_by_0")
 
     def test_var_get_value(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.x[1])
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
         self.assertAlmostEqual(cdi.get("value"), 1)
+        self.assertIsNone(cdi.get(expr)) #test can't get expr
 
     def test_var_get_bounds(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.x[1])
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
         self.m.x[1].setlb(0)
         self.m.x[1].setub(10)
         self.assertAlmostEqual(cdi.get("lb"), 0)
         self.assertAlmostEqual(cdi.get("ub"), 10)
 
     def test_var_set_bounds(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.x[1])
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
         cdi.set("lb", 2)
         cdi.set("ub", 8)
         self.assertAlmostEqual(cdi.get("lb"), 2)
         self.assertAlmostEqual(cdi.get("ub"), 8)
 
     def test_var_fixed_bounds(self):
-        cdi = ComponentDataItem(parent=None, ui_setup=None, o=self.m.x[1])
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
         cdi.set("fixed", True)
         self.assertTrue(cdi.get("fixed"))
         cdi.set("fixed", False)
         self.assertFalse(cdi.get("fixed"))
+
+    def test_get_attr_that_does_not_exist(self):
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
+        self.assertIsNone(cdi.get("test_val"))
+
+    def test_set_func(self):
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x[1])
+        self.assertIsNone(cdi.set("test_val", 5))
+        self.assertIsNone(cdi.get("test_val")) # test can't set
+        cdi = ComponentDataItem(parent=None, ui_data=None, o=self.m.x)
+        self.assertIsNone(cdi.set("test_val", 5))
+        self.assertEqual(cdi.get("test_val"), 5) # test can set with no callback
 
     def test_degrees_of_freedom(self):
         import pyomo.contrib.viewer.report as rpt
