@@ -73,7 +73,7 @@ class TestDerivs(unittest.TestCase):
         m = pe.ConcreteModel()
         m.x = pe.Var(initialize=2.0)
         m.y = pe.Var(initialize=3.0)
-        e = m.x ** 0.5
+        e = pe.sqrt(m.x)
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
         self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
