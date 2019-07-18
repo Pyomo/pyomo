@@ -274,7 +274,7 @@ class MindtPySolver(object):
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
-            process_objective(solve_data, config, always_move_objective=True)
+            process_objective(solve_data, config, move_linear_objective=True)
 
             # Save model initial values.
             solve_data.initial_var_values = list(

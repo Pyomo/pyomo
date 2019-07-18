@@ -6,13 +6,10 @@ from math import fabs, floor, log
 
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
                         Objective, Reals, Suffix, Var, minimize, value)
-from pyomo.core.base.symbolic import differentiate
+from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt import SolverFactory
-from pyomo.opt.results import ProblemSense
 
 
 class MindtPySolveData(object):

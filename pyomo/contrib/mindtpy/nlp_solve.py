@@ -1,7 +1,7 @@
 """Solution of NLP subproblems."""
 from __future__ import division
 
-from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_no_good_cut)
+from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_int_cut)
 from pyomo.contrib.mindtpy.util import add_feas_slacks
 from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
@@ -148,7 +148,7 @@ def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
 
         if config.add_no_good_cuts or config.strategy is 'feas_pump':
             config.logger.info('Creating no-good cut')
-            add_no_good_cut(solve_data.mip, config)
+            add_int_cut(solve_data.mip, config)
     else:
         solve_data.solution_improved = False
 
@@ -171,10 +171,10 @@ def handle_NLP_subproblem_optimal(sub_nlp, solve_data, config):
                              solve_data.mip.MindtPy_utils.variable_list,
                              config, ignore_integrality=config.strategy=='feas_pump')
         add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
-    elif config.strategy == 'PSC':
-        add_psc_cut(solve_data, config)
-    elif config.strategy == 'GBD':
-        add_gbd_cut(solve_data, config)
+    # elif config.strategy == 'PSC':
+    #     add_psc_cut(solve_data, config)
+    # elif config.strategy == 'GBD':
+    #     add_gbd_cut(solve_data, config)
 
     config.call_after_subproblem_feasible(sub_nlp, solve_data)
 
@@ -217,7 +217,7 @@ def handle_NLP_subproblem_infeasible(sub_nlp, solve_data, config):
     # Add an integer cut to exclude this discrete option
     var_values = list(v.value for v in sub_nlp.MindtPy_utils.variable_list)
     if config.add_no_good_cuts:
-        add_no_good_cut(solve_data.mip, solve_data, config)  # excludes current discrete option
+        add_int_cut(solve_data.mip, solve_data, config)  # excludes current discrete option
 
 
 def handle_NLP_subproblem_other_termination(sub_nlp, termination_condition,
@@ -300,4 +300,4 @@ def feas_pump_converged(solve_data, config):
                         solve_data.mip.MindtPy_utils.variable_list)
                     if milp_var.is_binary()))
 
-    return distance < config.integer_tolerance
+    return distance <= config.integer_tolerance

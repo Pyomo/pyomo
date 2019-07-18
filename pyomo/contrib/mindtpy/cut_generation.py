@@ -3,11 +3,8 @@ from __future__ import division
 
 from math import copysign
 
-from pyomo.core import Constraint, Var, minimize, value
+from pyomo.core import minimize, value
 from pyomo.core.expr.current import identify_variables
-from pyomo.core.expr.current import ExpressionReplacementVisitor
-from pyomo.repn import generate_standard_repn
-from pyomo.core.kernel.component_set import ComponentSet
 
 
 def add_objective_linearization(solve_data, config):
