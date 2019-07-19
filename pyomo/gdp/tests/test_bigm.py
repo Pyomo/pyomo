@@ -2105,7 +2105,6 @@ class IndexedDisjunctions(unittest.TestCase):
         self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
         self.assertEqual(len(transBlock.relaxedDisjuncts), 2)
 
-    # TODO: This fails because of #1069
     def test_disjunction_data_target_any_index(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-100, 100))
@@ -2129,27 +2128,8 @@ class IndexedDisjunctions(unittest.TestCase):
         transBlock1 = m.component("_pyomo_gdp_bigm_relaxation")
         self.assertIsInstance(transBlock1, Block)
         self.assertIsInstance(transBlock1.component("relaxedDisjuncts"), Block)
-        # TODO: this failure is because there are multiple transformation blocks
-        # created... I think I'm fine with that... But maybe this is the right
-        # test, pending John's response.
-        # self.assertEqual(len(transBlock.relaxedDisjuncts), 4)
-        # self.assertIsInstance(transBlock.relaxedDisjuncts[0].component(
-        #     "firstTerm[1].cons"), Constraint)
-        # self.assertEqual(len(transBlock.relaxedDisjuncts[0].component(
-        #     "firstTerm[1].cons")), 2)
-        # self.assertIsInstance(transBlock.relaxedDisjuncts[1].component(
-        #     "secondTerm[1].cons"), Constraint)
-        # self.assertEqual(len(transBlock.relaxedDisjuncts[1].component(
-        #     "secondTerm[1].cons")), 1)
-        # self.assertIsInstance(transBlock.relaxedDisjuncts[2].component(
-        #     "firstTerm[2].cons"), Constraint)
-        # self.assertEqual(len(transBlock.relaxedDisjuncts[2].component(
-        #     "firstTerm[2].cons")), 2)
-        # self.assertIsInstance(transBlock.relaxedDisjuncts[3].component(
-        #     "secondTerm[2].cons"), Constraint)
-        # self.assertEqual(len(transBlock.relaxedDisjuncts[3].component(
-        #     "secondTerm[2].cons")), 1)
-        # If we don't care:
+        # We end up with a transformation block for every SimpleDisjunction or
+        # IndexedDisjunction.
         self.assertEqual(len(transBlock1.relaxedDisjuncts), 2)
         self.assertIsInstance(transBlock1.relaxedDisjuncts[0].component(
             "firstTerm[1].cons"), Constraint)
@@ -2172,7 +2152,6 @@ class IndexedDisjunctions(unittest.TestCase):
         self.assertEqual(len(transBlock2.relaxedDisjuncts[1].component(
             "secondTerm[2].cons")), 1)
                         
-
     def test_simple_disjunction_of_disjunct_datas(self):
         # This is actually a reasonable use case if you are generating
         # disjunctions with the same structure. So you might have Disjuncts
@@ -2191,8 +2170,6 @@ class IndexedDisjunctions(unittest.TestCase):
         m = models.makeAnyIndexedDisjunctionOfDisjunctDatas()
         TransformationFactory('gdp.bigm').apply_to(m)
 
-        # TODO: depends on above also
-        #self.check_trans_block_disjunctions_of_disjunct_datas(m)
         transBlock = m.component("_pyomo_gdp_bigm_relaxation")
         self.assertIsInstance(transBlock, Block)
         self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
@@ -2324,7 +2301,6 @@ class IndexedDisjunctions(unittest.TestCase):
 
     def test_iteratively_adding_disjunctions_transform_model(self):
         # Same as above, but transforming whole model in every iteration
-        # TODO: Should this really behave differently than the above?
         model = ConcreteModel()
         model.x = Var(bounds=(-100, 100))
         model.disjunctionList = Disjunction(Any)
@@ -2351,17 +2327,6 @@ class IndexedDisjunctions(unittest.TestCase):
 
             if i == 1:
                 self.check_second_iteration(model)
-
-            # [ESJ 06/21/2019] I'm not sure I agree with this, but we have to
-            # reactivate disjunctionList so that it will get transformed
-            # again... ALSO, NOTE THAT THIS IS REALLY FREAKY: This behaves
-            # differently than the above test because above, the reclassify
-            # transformation doesn't get called, so it miraculously works. Here,
-            # it get's called and that's why we have to do this dance. But the
-            # writers probably die on the version above...
-            model.disjunctionList.activate()
-            # and that activated this guy, who should be deactivated...
-            model.disjunctionList[0].deactivate()
             
 
     def test_iteratively_adding_to_indexed_disjunction_on_block(self):
