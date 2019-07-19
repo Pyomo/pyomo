@@ -100,7 +100,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.bigm').apply_to(m)
         infodict = m._gdp_transformation_info
         self.assertIsInstance(infodict, dict)
-        self.assertEqual(len(infodict), 6)
+        self.assertEqual(len(infodict), 5)
         orToDisjDict = infodict['srcDisjunctionFromOr']
         self.assertIsInstance(orToDisjDict, ComponentMap)
         self.assertEqual(len(orToDisjDict), 1)
@@ -120,7 +120,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.bigm').apply_to(m)
         infodict = m._gdp_transformation_info
         self.assertIsInstance(infodict, dict)
-        self.assertEqual(len(infodict), 6)
+        self.assertEqual(len(infodict), 5)
         orToDisjDict = infodict['srcDisjunctionFromOr']
         self.assertIsInstance(orToDisjDict, ComponentMap)
         self.assertEqual(len(orToDisjDict), 2)
@@ -149,11 +149,11 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
         infodict = getattr(m, "_gdp_transformation_info")
         self.assertIsInstance(infodict, dict)
-        self.assertEqual(len(infodict), 6)
+        self.assertEqual(len(infodict), 5)
         self.assertEqual(sorted(infodict.keys()), 
                          ['relaxedConstraintMap', 'relaxedDisjunctionMap', 
                           'srcConstraints', 'srcDisjunctionFromOr',
-                          'srcDisjunctionFromRelaxationBlock', 'srcDisjuncts'])
+                          'srcDisjuncts'])
 
         # we are counting on the fact that the disjuncts get relaxed in the
         # same order every time.
@@ -1642,6 +1642,40 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
                     disjBlock[i].component(nm),
                     Constraint)
 
+    def test_mappings_between_transformed_components(self):
+        m = models.makeNestedDisjunctions()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        transBlock = m._pyomo_gdp_bigm_relaxation
+        infodict = m._gdp_transformation_info
+        self.assertIsInstance(infodict, dict)
+        self.assertEqual(len(infodict), 5)
+
+        disjunctionPairs = [
+            (m.disjunction, m._gdp_bigm_relaxation_disjunction_xor),
+            (m.disjunct[1].innerdisjunction[0], 
+             m.disjunct[1].component(
+                 "_gdp_bigm_relaxation_disjunct[1].innerdisjunction_xor")),
+            (m.simpledisjunct.innerdisjunction, 
+             m.simpledisjunct.component(
+                 "_gdp_bigm_relaxation_simpledisjunct.innerdisjunction_xor"))
+         ]
+
+        # check disjunction mappings
+        relaxedDisjunctions = infodict['relaxedDisjunctionMap']
+        self.assertIsInstance(relaxedDisjunctions, ComponentMap)
+        srcDisjunctionsFromXOR = infodict['srcDisjunctionFromOr']
+        for disjunction, xor in disjunctionPairs:
+            print(disjunction.name)
+            self.assertIs(relaxedDisjunctions[disjunction]['relaxationBlock'],
+                          transBlock)
+            # TODO: Are you mapping Containers, ComponentDatas, or both, Emma??
+            # You need to decide, but when you are awake.
+            self.assertIs(relaxedDisjunctions[disjunction]['orConstraint'],
+                          xor)
+            self.assertIs(srcDisjunctionsFromXOR[xor], disjunction)
+
+
     # many of the transformed constraints look like this, so can call this
     # function to test them.
     def check_bigM_constraint(self, cons, variable, M, indicator_var):
@@ -2327,7 +2361,6 @@ class IndexedDisjunctions(unittest.TestCase):
 
             if i == 1:
                 self.check_second_iteration(model)
-            
 
     def test_iteratively_adding_to_indexed_disjunction_on_block(self):
         m = ConcreteModel()

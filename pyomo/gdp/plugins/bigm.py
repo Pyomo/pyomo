@@ -92,11 +92,9 @@ class BigM_Transformation(Transformation):
         'srcConstraints': ComponentMap(<relaxed constraint>: <source constraint>)
         'srcDisjunctionFromOr': ComponentMap(<or constraint>: 
                                              <source disjunction>)
-        TODO: with current changes, this would actually map to a list. 
-        Do we need it at all??? You can find all of this from the disjuncts, 
-        maybe we should abandon this part...
-        'srcDisjunctionFromRelaxationBlock': ComponentMap(<block>: 
-                                                          <source disjunction>)
+    Note that we don't map from the relaxation blocks back to the disjunctions.
+    It's not one-to-one and it is information you can get from the disjunct 
+    mappings.
     """
 
     CONFIG = ConfigBlock("gdp.bigm")
@@ -177,8 +175,7 @@ class BigM_Transformation(Transformation):
         for t in targets:
             # check that t is in fact a child of instance
             knownParents = is_child_of(parent=instance, child=t,
-                                             knownParents=knownParents)
-
+                                       knownParents=knownParents)
             if t.type() is Disjunction:
                 if t.parent_component() is t:
                     self._transformDisjunction(t, bigM)
@@ -263,6 +260,10 @@ class BigM_Transformation(Transformation):
         orCname = unique_component_name(parent, '_gdp_bigm_relaxation_' +
                                         disjunction.name + nm)
         parent.add_component(orCname, orC)
+        # [ESJ 07/18/2019] TODO: This is a mess right now--we are mapping
+        # containers, but we should definitely map the ComponentDatas
+        # too... This is why I don't really want this to be the source of truth
+        # as written...
         orConstraintMap['orConstraint'] = orC
         info_dict['srcDisjunctionFromOr'][orC] = disjunction
         return orC
@@ -276,7 +277,6 @@ class BigM_Transformation(Transformation):
         if not obj in disjunctionMap:
             disjunctionMap[obj] = {}
         disjunctionMap[obj]['relaxationBlock'] = transBlock
-        infodict['srcDisjunctionFromRelaxationBlock'][transBlock] = obj
 
         # relax each of the disjunctionDatas
         for i in sorted(iterkeys(obj)):
@@ -297,7 +297,6 @@ class BigM_Transformation(Transformation):
         if not obj in disjunctionMap:
             disjunctionMap[obj] = {}
         disjunctionMap[obj]['relaxationBlock'] = transBlock
-        infodict['srcDisjunctionFromRelaxationBlock'][transBlock] = obj
         
         parent_component = obj.parent_component()
         orConstraint = self._getXorConstraint(parent_component)
@@ -319,6 +318,12 @@ class BigM_Transformation(Transformation):
             orConstraint.add(index, (or_expr, 1))
         else:
             orConstraint.add(index, (1, or_expr, None))
+
+        # We do the or constraint mappings here because otherwise we are mapping
+        # the containers, not the componentDatas.
+        disjunctionMap[obj]['orConstraint'] = orConstraint[index]
+        infodict['srcDisjunctionFromOr'][orConstraint] = obj
+
         obj.deactivate()
 
     def _get_info_dict(self, obj):
@@ -338,7 +343,6 @@ class BigM_Transformation(Transformation):
                 'srcDisjuncts': ComponentMap(),
                 'srcConstraints': ComponentMap(),
                 'srcDisjunctionFromOr': ComponentMap(),
-                'srcDisjunctionFromRelaxationBlock': ComponentMap()
             }
 
         return infodict
@@ -415,16 +419,11 @@ class BigM_Transformation(Transformation):
                 'relaxationBlock']
             # move transBlock up to parent component
             transBlock.parent_block().del_component(transBlock)
-            # moved_block_name = unique_component_name(disjParentBlock,
-            #                                          transBlock.name)
             self._transfer_transBlock_data(transBlock, destinationBlock,
                                            infodict)
-            #disjParentBlock.add_component(moved_block_name, transBlock)
             # update the map
-            transBlock = destinationBlock
-            # TODO: If we really are maintaining a map of transformation blocks
-            # for disjunctions, then that needs updating here too.
-            # And the transformed constraint mapping ALSO needs updating
+            infodict['relaxedDisjunctionMap'][obj][
+                'relaxationBlock'] = destinationBlock
 
         # Now look through the component map of block and transform
         # everything we have a handler for. Yell if we don't know how
