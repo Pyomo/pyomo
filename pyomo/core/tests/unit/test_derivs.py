@@ -69,6 +69,16 @@ class TestDerivs(unittest.TestCase):
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
 
+    def test_sqrt(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var(initialize=2.0)
+        m.y = pe.Var(initialize=3.0)
+        e = pe.sqrt(m.x)
+        derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
+
     def test_exp(self):
         m = pe.ConcreteModel()
         m.x = pe.Var(initialize=2.0)
