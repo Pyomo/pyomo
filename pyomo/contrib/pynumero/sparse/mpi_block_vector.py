@@ -920,15 +920,13 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         # TODO: This only works for MPIBLockVectors that have np.arrays in blocks
         # but not with blocks with BlockVectors. Need to add support for this
-        self._assert_broadcasted_sizes()
         new_ownership = -np.ones(self.nblocks, dtype=np.int64)
         if np.array_equal(self.rank_ownership, new_ownership):
             return self.copy()
 
         new_MPIBlockVector = MPIBlockVector(self.nblocks,
                                             new_ownership,
-                                            self._mpiw,
-                                            block_sizes=self.block_sizes())
+                                            self._mpiw)
 
         # determine size sent by each processor
         num_processors = self._mpiw.Get_size()
@@ -966,6 +964,10 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             else:
                 block_data = self._block_vector[bid]
             new_MPIBlockVector[bid] = block_data
+
+        # no need to broadcast sizes coz all have the same 
+        new_MPIBlockVector._done_first_broadcast_sizes = True
+        new_MPIBlockVector._need_broadcast_sizes = False
 
         return new_MPIBlockVector
 

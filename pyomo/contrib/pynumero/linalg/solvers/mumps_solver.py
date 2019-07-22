@@ -21,9 +21,23 @@ from pyomo.contrib.pynumero.sparse import BlockMatrix, BlockVector
 
 
 class MUMPSSymLinearSolver(object):
+    """
+    Interface to MUltifrontal Massively Parallel sparse direct Solver (MUMPS)
 
+    Attributes
+    ----------
+    ctx: mumps context
+        pymumps wrapper
+
+    Parameters
+    ----------
+    pivot_tol: float64, optional
+        pivot tolerance used by mumps (default 1e-8)
+
+    """
     def __init__(self, pivotol=1e-8, **kwargs):
 
+        # this are parameters specific to mumps see mumps documentation
         pivtolmax = kwargs.pop('pivtolmax', 0.1)
         mumps_mem_percent = kwargs.pop('mumps_mem_percent', 1000)
         mumps_permuting_scaling = kwargs.pop('mumps_permuting_scaling', 7)
@@ -62,7 +76,19 @@ class MUMPSSymLinearSolver(object):
         return n_negevals
 
     def do_symbolic_factorization(self, matrix, include_diagonal=False, check_symmetry=True):
+        """
+        Identify pivots from the used for numerical factorization.
 
+        Parameters
+        ----------
+        matrix: spmatrix or BlockMatrix
+            matrix to be factorized
+        include_diagonal: boolean, optional
+            True if regularization is going to be used (default False)
+        check_symmetry: boolean, optional
+            True for checking symmetry in matrix (default True)
+
+        """
         if check_symmetry:
             assert is_symmetric_sparse(matrix), 'Matrix is not symmetric'
 
@@ -124,7 +150,19 @@ class MUMPSSymLinearSolver(object):
             raise RuntimeError("Matrix must be coo_matrix or a block_matrix")
 
     def do_numeric_factorization(self, matrix, diagonal=None, desired_num_neg_eval=-1):
+        """
+        Factorizes matrix
 
+        Parameters
+        ----------
+        matrix: spmatrix or BlockMatrix
+            matrix to be factorized
+        diagonal: array_like, optional
+            array with values to be added for regularization (default None)
+        desired_num_neg_eval: int, optinal
+            number of negative eigenvalues to check in regularization (default -1)
+
+        """
         if isinstance(matrix, BlockMatrix):
 
             assert self._dim != 0 and self._nnz != 0, \
@@ -245,7 +283,15 @@ class MUMPSSymLinearSolver(object):
             raise RuntimeError('Matrix must be coo_matrix or a block_matrix')
 
     def do_back_solve(self, rhs, **kwargs):
+        """
+        Computes solution
 
+        Parameters
+        ----------
+        rhs: array_like
+            right-hand-side vector
+
+        """
         flat_solution = kwargs.pop('flat_solution', False)
         matrix = kwargs.pop('matrix', None)
         max_iter_ref = kwargs.pop('max_iter_ref', 1)
@@ -300,7 +346,29 @@ class MUMPSSymLinearSolver(object):
               desired_num_neg_eval=-1,
               max_iter_ref=1,
               tol_iter_ref=1e-8):
+        """
+        Solve linear system with direct solver mumps
 
+        Parameters
+        ----------
+        matrix: spmatrix or BlockMatrix
+            matrix to be factorized
+        rhs: array_like
+            right-hand-side vector
+        diagonal: array_like, optional
+            array with values to be added for regularization (default None)
+        do_symbolic: boolean, optional
+            True if symbolic factorization needs to be run (default True).
+        check_symmetry: boolean, optional
+            True for checking symmetry in matrix (default True)
+        desired_num_neg_eval: int, optinal
+            number of negative eigenvalues to check in regularization (default -1)
+        max_iter_ref: int, optional
+            number of iterative refinement iterations
+        tol_iter_ref: float64, optional
+            tolerance for iterative refinement
+
+        """
         include_diagonal = False
         if diagonal is not None:
             include_diagonal = True

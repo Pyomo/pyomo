@@ -8,3 +8,4 @@ The development team includes:
 * Jose Santiago Rodriguez (Purdue)
 * Carl Laird (Purdue)
 * John Siirola (SNL)
+* Bethany Nicholson (SNL)

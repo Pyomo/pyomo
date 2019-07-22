@@ -460,20 +460,13 @@ class TestMPIBlockMatrix(unittest.TestCase):
             bv1[0] = np.arange(4, dtype=np.float64)
         if rank == 1:
             bv1[1] = np.arange(4, dtype=np.float64) + 4
+        bv1.broadcast_block_sizes()
 
         serial_bv1 = BlockVector(2)
         serial_bv1[0] = np.arange(4, dtype=np.float64)
         serial_bv1[1] = np.arange(4, dtype=np.float64) + 4
 
         res = mat1 * bv1
-        serial_res = serial_mat1 * serial_bv1
-        self.assertIsInstance(res, MPIBlockVector)
-        indices = np.nonzero(res.ownership_mask)[0]
-        for bid in indices:
-            self.assertTrue(np.allclose(res[bid],
-                                        serial_res[bid]))
-
-        res = mat1 * serial_bv1
         serial_res = serial_mat1 * serial_bv1
         self.assertIsInstance(res, MPIBlockVector)
         indices = np.nonzero(res.ownership_mask)[0]
@@ -489,19 +482,12 @@ class TestMPIBlockMatrix(unittest.TestCase):
             self.assertTrue(np.allclose(res[bid],
                                         serial_res[bid]))
 
-        res = mat2 * serial_bv1
-        serial_res = serial_mat2 * serial_bv1
-        self.assertIsInstance(res, MPIBlockVector)
-        indices = np.nonzero(res.ownership_mask)[0]
-        for bid in indices:
-            self.assertTrue(np.allclose(res[bid],
-                                        serial_res[bid]))
-
         bv1 = MPIBlockVector(2, [0, -1], comm)
 
         if rank == 0:
             bv1[0] = np.arange(4, dtype=np.float64)
         bv1[1] = np.arange(4, dtype=np.float64) + 4
+        bv1.broadcast_block_sizes()
 
         res = mat1 * bv1
         serial_res = serial_mat1 * serial_bv1
@@ -532,6 +518,8 @@ class TestMPIBlockMatrix(unittest.TestCase):
         if rank == 2:
             bv1[2] = np.arange(2, dtype=np.float64) + 8
 
+        bv1.broadcast_block_sizes()
+
         serial_bv1 = BlockVector(3)
         serial_bv1[0] = np.arange(4, dtype=np.float64)
         serial_bv1[1] = np.arange(4, dtype=np.float64) + 4
@@ -555,6 +543,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
             bv1[2] = np.arange(2, dtype=np.float64) + 8
         if rank == 1:
             bv1[1] = np.arange(4, dtype=np.float64) + 4
+        bv1.broadcast_block_sizes()
 
         res = mat1 * bv1
         serial_res = serial_mat1 * serial_bv1
@@ -622,6 +611,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
             bv1[0] = np.arange(4, dtype=np.float64)
         if rank == 1:
             bv1[1] = np.arange(4, dtype=np.float64) + 4
+        bv1.broadcast_block_sizes()
 
         serial_bv1 = BlockVector(2)
         serial_bv1[0] = np.arange(4, dtype=np.float64)

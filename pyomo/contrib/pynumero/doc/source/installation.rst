@@ -10,16 +10,23 @@ To build PyNumero from github::
 	python setup.py install
 	pip install scipy
 
-PyNumero relies on c++ libraries for fast evaluation of NLP functions.
-Future releases of PyNumero will distribute binaries via conda-forge and pip.
-However, the current release requires the user to compile the libraries.
+Alternatively one can use conda::
 
-There are two alternatives to compile the libraries. The first alternative,
-relies on conda the conda-forge channel to install pynumero libraries (PREFERRED)::
+        conda install -c conda-forge pyomo.extras
+
+Or pip::
+
+        pip install pyomo
+	pip install scipy
+	
+PyNumero relies on c++ libraries for fast evaluation of NLP functions.
+There are two alternatives to get/build the libraries. The first alternative,
+relies on the conda-forge channel to compile and install the libraries (PREFERRED)::
 
         conda install -c conda-forge pynumero_libraries
+	conda install -c conda-forge pymumps
 
-The second alternative compiles ASL and links it against the pynumero libraries::
+The second alternative compiles the libraries with the following instructions::
 
         cd pyomo/contrib/pynumero/cmake/third_party/ASL
         ./get.ASL.sh
@@ -64,17 +71,6 @@ Python(x,y) can be downloaded from http://python-xy.github.io/.
 
 Anaconda can be downloaded from https://store.continuum.io/cshop/anaconda/.
 
-Python distributions include several tools for code development (i.e. Spyder, SciTE), 
-numerical computations, data analysis and visualization. 
-Spyder is an interactive development environment that includes enhanced 
-editing and debug features along with a layout that is very similar 
-to using MATLAB. Debugging features are also available from the toolbar.  
-Code documentation is displayed in the object inspection 
-window, pop-up information on class structure and functions is displayed in the 
-editor and console windows.  
-SciTE is a cross platform text editor designed for 
-editing code.  SciTE recognizes many languages (including Python and YML) and 
-includes syntax highlighting, indentation, and function recognition. 
 
 Python packages
 ^^^^^^^^^^^^^^^^^
@@ -84,12 +80,6 @@ The following python packages are required for PyNumero:
   http://www.numpy.org/
 * Scipy [vanderWalt2011]_: used to support efficient routines for numerical integration, 
   http://www.scipy.org/
-* NetworkX [Hagberg2008]_: used to create and analyze complex networks, 
-  https://networkx.github.io/
-* Pandas [McKinney2013]_: used to analyze and store time series data, 
-  http://pandas.pydata.org/
-* Matplotlib [Hunter2007]_: used to produce figures, 
-  http://matplotlib.org/
 
 Packages can be installed using pip.
 

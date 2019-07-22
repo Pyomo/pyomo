@@ -21,7 +21,7 @@ where :math:`x\in\Re^{n}` are the primal variables with lower and upper bounds :
    &x_L\leq x\leq x_U \nonumber
    \end{eqnarray}
 
-The equality constraints are represented by :math:`c:\Re^{n}\rightarrow\Re^{m_c}` and :math:`d:\Re^{n}\rightarrow\Re^{m_d}` denotes the inequality constraints with bounds :math:`d_L\in\Re^{m_d}` and :math:`d_U\in\Re^{m_d}` and :math:`m=m_c + m_d`. The PyNumero **PyomoNLP** class takes a Pyomo model and maps it to the general forms defined in above. The following code of block demonstrate some basic features:
+The equality constraints are represented by :math:`c:\Re^{n}\rightarrow\Re^{m_c}` and :math:`d:\Re^{n}\rightarrow\Re^{m_d}` denotes the inequality constraints with bounds :math:`d_L\in\Re^{m_d}` and :math:`d_U\in\Re^{m_d}` and :math:`m=m_c + m_d`. The PyNumero **PyomoNLP** class takes a Pyomo model and maps it to the general forms defined above. The following code of block demonstrate some basic features:
 
 .. code-block:: python
 
@@ -76,4 +76,4 @@ Gradient-based optimization algorithms have been proven to be among the most eff
 	                                                      #       [   0.,   2.,    0.],
 		                                              #       [-144.,   0.,  192.]]))
 
-.. seealso:: NLPs can also be created directly from NL-Files using the **AmplNLP** interface
+.. seealso:: NLPs can also be created directly from NL-Files using the **AmplNLP** interface. Both, the **AmplNLP** and the **PyomoNLP** interfaces are based on ASL allowing users to write ampl solvers from Python. 

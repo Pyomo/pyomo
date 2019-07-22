@@ -8,25 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.pynumero.algorithms.solvers.print_utils import (print_nlp_info,
-                                                                   print_summary)
+from pyomo.contrib.pynumero.examples.algorithms.print_utils import (print_nlp_info,
+                                                                    print_summary)
 from pyomo.contrib.pynumero.sparse import (BlockVector,
                                            BlockSymMatrix,
                                            diagonal_matrix)
 
-try:
-    from pyomo.contrib.pynumero.linalg.solvers import ma27_solver
-    found_ma27 = True
-except ImportError as e:
-    found_ma27 = False
-
-try:
-    from pyomo.contrib.pynumero.linalg.solvers.mumps_solver import MUMPSSymLinearSolver
-    found_mumps = True
-except ImportError as e:
-    found_mumps = False
-
-from pyomo.contrib.pynumero.linalg.solvers.kkt_solver import FullKKTSolver
+from pyomo.contrib.pynumero.examples.algorithms.kkt_solver import FullKKTSolver
 
 import math as pymath
 import numpy as np
@@ -43,7 +31,7 @@ from scipy.sparse import identity
 import sys
 
 
-if not found_mumps and not found_ma27:
+if not pn.mumps_available and not pn.ma27_available:
     raise ImportError('Need MA27 or MUMPS to run pynumero interior-point')
 
 def optimality_error(nlp_state, scaled=True, smax=100.0, sc=1.0, sd=1.0):
@@ -55,12 +43,24 @@ def optimality_error(nlp_state, scaled=True, smax=100.0, sc=1.0, sd=1.0):
 
     return np.max(r)
 
-# state with interior point functions
-class IPNLPState(NLPState):
+def optimality_error_penalty(nlp_state, scaled=True, smax=100.0, sc=1.0, sd=1.0):
 
-    def __init__(self, nlp, miu, **kwargs):
+    r = np.zeros(4)
+    r[0] = pynumero_norm(nlp_state.grad_lag_bar_x(), ord=np.inf)
+    r[1] = pynumero_norm(nlp_state.grad_lag_bar_s(), ord=np.inf)
+    r[2] = pynumero_norm(nlp_state.evaluate_c() - nlp_state.correction_c(),
+                         ord=np.inf)
+    r[3] = pynumero_norm(nlp_state.residual_d() - nlp_state.correction_d(),
+                         ord=np.inf)
+    return np.max(r)
+
+# state with interior point functions
+class PIPNLPState(NLPState):
+
+    def __init__(self, nlp, miu, rho, **kwargs):
         self._miu = miu
-        super(IPNLPState, self).__init__(nlp, **kwargs)
+        self._rho = rho
+        super(PIPNLPState, self).__init__(nlp, **kwargs)
 
     @property
     def miu(self):
@@ -69,6 +69,14 @@ class IPNLPState(NLPState):
     @miu.setter
     def miu(self, other):
         self._miu = other
+
+    @property
+    def rho(self):
+        return self._rho
+
+    @rho.setter
+    def rho(self, other):
+        self._rho = other
 
     def grad_lag_bar_x(self):
         grad_x_lag_bar = self.grad_objective() + \
@@ -93,6 +101,17 @@ class IPNLPState(NLPState):
                            np.sum(np.log(self.slack_sl())) + \
                            np.sum(np.log(self.slack_su())))
 
+    def barrier_pentalty_objective(self):
+        return self.barrier_objective() + self.penalty_term()
+
+    def penalty_term(self):
+        return self.rho * cd_infeasibility
+
+    def cd_infeasibility(self):
+        sum_c_square = np.sum(np.square(self.evaluate_c()))
+        sum_d_square = np.sum(np.square(self.residual_d()))
+        return np.sqrt(sum_d_square + sum_c_square)
+
     def complementarity_infeasibility(self):
 
         r = np.zeros(4)
@@ -110,6 +129,24 @@ class IPNLPState(NLPState):
                                   self._miu, ord=np.inf)
         return np.amax(r)
 
+    def penalty_infeasibility(self):
+        r = np.zeros(2)
+        if self.yc.size > 0:
+            r[0] = pynumero_norm(self.evaluate_c() - self.correction_c(),
+                                 ord=np.inf)
+        if self.yd.size > 0:
+            r[0] = pynumero_norm(self.residual_d() - self.correction_d(),
+                                 ord=np.inf)
+        return np.amax(r)
+
+    def correction_c(self):
+        cd_inf = self.cd_infeasibility()
+        return -cd_inf/self.rho * self.yc
+
+    def correction_d(self):
+        cd_inf = self.cd_infeasibility()
+        return -cd_inf/self.rho * self.yd
+
     def grad_barrier_objective_x(self):
         df = self.grad_objective()
         xl_recip = np.reciprocal(self.slack_xl())
@@ -121,11 +158,28 @@ class IPNLPState(NLPState):
         su_recip = np.reciprocal(self.slack_su())
         return self._miu * (self.Pdu.dot(su_recip) - self.Pdl.dot(sl_recip))
 
+    def grad_barrier_penalty_objective_x(self):
+        grad_box = self.grad_barrier_objective_x()
+        cd_inf = self.cd_infeasibility()
+        if cd_inf <= 1e-8:
+            return grad_box
+        grad_penalty = (self.jacobian_c().T * self.evaluate_c() + \
+                        self.jacobian_d().T * self.residual_d) / cd_inf
+        return grad_box + grad_penalty
 
-class IPTrialNLPState(IPNLPState):
+    def grad_barrier_penalty_objective_s(self):
+        grad_bos = self.grad_barrier_objective_s()
+        cd_inf = self.cd_infeasibility()
+        if cd_inf <= 1e-8:
+            return grad_bos
+        grad_penalty = self.residual_d() / cd_inf
+        return grad_bos - grad_penalty
 
-    def __init__(self, nlp, miu, **kwargs):
-        super(IPTrialNLPState, self).__init__(nlp, miu, **kwargs)
+
+class PIPTrialNLPState(PIPNLPState):
+
+    def __init__(self, nlp, miu, rho, **kwargs):
+        super(PIPTrialNLPState, self).__init__(nlp, miu, rho, **kwargs)
 
         # free unnecessary caches
         self._jac_g = None
@@ -167,6 +221,12 @@ class AugmentedSystem(object):
         self._kkt[1, 1] = nlp_state.Ds_matrix()
         self._kkt[2, 0] = nlp_state.jacobian_c()
         self._kkt[3, 0] = nlp_state.jacobian_d()
+
+        cd_inf = nlp_state.cd_infeasibility()
+        if cd_inf >0:
+            self._kkt[2, 2] = -cd_inf * identity(nlp.nc) / nlp_state.rho
+            self._kkt[3, 3] = -cd_inf * identity(nlp.nd) / nlp_state.rho
+
         if nlp.nd == 0:
             if isinstance(nlp, CompositeNLP):
                 d_vec = nlp.create_vector('d')
@@ -190,8 +250,8 @@ class AugmentedSystem(object):
 
         self._rhs = BlockVector([nlp_state.grad_lag_bar_x(),
                                  nlp_state.grad_lag_bar_s(),
-                                 nlp_state.evaluate_c(),
-                                 nlp_state.residual_d()])
+                                 nlp_state.evaluate_c() - nlp_state.correction_c(),
+                                 nlp_state.residual_d() - nlp_state.correction_d()])
 
     @property
     def matrix(self):
@@ -208,14 +268,17 @@ class AugmentedSystem(object):
         self._kkt[1, 1] = nlp_state.Ds_matrix()
         self._kkt[2, 0] = nlp_state.jacobian_c()
         self._kkt[3, 0] = nlp_state.jacobian_d()
+        cd_inf = nlp_state.cd_infeasibility()
+        if cd_inf >0:
+            self._kkt[2, 2] = -cd_inf * identity(nlp.nc) / nlp_state.rho
+            self._kkt[3, 3] = -cd_inf * identity(nlp.nd) / nlp_state.rho
 
         self._rhs[0] = nlp_state.grad_lag_bar_x()
         self._rhs[1] = nlp_state.grad_lag_bar_s()
-        self._rhs[2] = nlp_state.evaluate_c()
-        self._rhs[3] = nlp_state.residual_d()
+        self._rhs[2] = nlp_state.evaluate_c() - nlp_state.correction_c()
+        self._rhs[3] = nlp_state.residual_d() - nlp_state.correction_d()
 
-
-class InteriorPointWalker(object):
+class PenaltyInteriorPointWalker(object):
 
     def __init__(self, nlp_state, linear_solver, **kwargs):
         """
@@ -239,8 +302,9 @@ class InteriorPointWalker(object):
 
         # states
         self._state = nlp_state
-        self._trial_state = IPTrialNLPState(nlp_state.nlp,
-                                            nlp_state.miu)
+        self._trial_state = PIPTrialNLPState(nlp_state.nlp,
+                                             nlp_state.miu,
+                                             nlp_state.rho)
 
         if linear_solver == 'ma27' or \
             linear_solver == 'mumps' or \
@@ -253,10 +317,6 @@ class InteriorPointWalker(object):
             self._lsolver.reset_inertia_parameters()
 
         nlp = self._state.nlp
-        self._filter = list()
-
-        self._theta_min = None
-
 
         self._linear_system = AugmentedSystem(self._state)
 
@@ -325,126 +385,18 @@ class InteriorPointWalker(object):
         alpha_primal = nlp_state.max_alpha_primal(dx, ds, tau)
         what_is_blocking = 'n'
         if wls:
-
-            # update trial to have same miu as current
-            trial_state = self._trial_state
-            trial_state.miu = nlp_state.miu
-
-            # compute current state metrics
-            grad_phi_dot_delta = nlp_state.grad_barrier_objective_x().dot(dx)
-            grad_phi_dot_delta += nlp_state.grad_barrier_objective_s().dot(ds)
-            feas_k = nlp_state.primal_infeasibility()
-            opt_k = nlp_state.barrier_objective()
-
-            # determine minimum alpha
-            alpha_min = self.minimum_alpha_primal(grad_phi_dot_delta, feas_k)
-
-            alpha = alpha_primal
-            for i in range(max_backtrack):
-                # compute trial point
-                trial_state.update_state(x=nlp_state.x + alpha * dx,
-                                         s=nlp_state.s + alpha * ds)
-                feas = trial_state.primal_infeasibility()
-                opt = trial_state.barrier_objective()
-
-                if alpha <= alpha_min:
-                    raise RuntimeError('Primal step too small. Need restoration')
-
-                # check if is larger than max infeasibility
-                if feas >= self._theta_max:
-                    what_is_blocking = 't'
-                    alpha *= rho
-                    continue
-
-                # check if it is acceptable by the filter
-                in_filter = self.is_in_filter(feas, opt)
-
-                if in_filter:
-                    # backtrack
-                    what_is_blocking = 'f'
-                    alpha *= 0.5
-                    continue
-
-                # check switchin condition (case 1)
-                switching_condition = False
-                first_condition = grad_phi_dot_delta < 0
-                if first_condition:
-                    second_condition = alpha * (-grad_phi_dot_delta) ** s_phi > kronecker * feas_k ** s_theta
-                    switching_condition = second_condition
-
-                if feas_k <= self._theta_min and switching_condition:
-
-                    # check armijo
-                    if opt <= opt_k + eta_phi * alpha * grad_phi_dot_delta:
-                        # accepted armijo
-                        break
-                else:
-                    if feas <= (1.0 - gamma_theta) * feas_k or \
-                        opt <= opt_k - gamma_phi * feas_k:
-                        # acceptable to filter
-                        break
-
-                # backtrack
-                alpha *= 0.5
-
-            num_backtracks = i + 1
-            alpha_primal = alpha
-
-            # augment the filter (if needed)
-            switching_condition = False
-            first_condition = grad_phi_dot_delta < 0
-            if first_condition:
-                second_condition = alpha_primal * (-grad_phi_dot_delta) ** s_phi > kronecker * feas_k ** s_theta
-                switching_condition = second_condition
-
-            feas = trial_state.primal_infeasibility()
-            opt = trial_state.barrier_objective()
-            if not switching_condition or (opt >= opt_k + eta_phi * alpha * grad_phi_dot_delta):
-                self._filter.append((feas, opt))
+            # update rho and miu
+            raise NotImplementedError("TODO")
         else:
             num_backtracks = 1
 
         alpha_dual = nlp_state.max_alpha_dual(dzl, dzu, dvl, dvu, tau)
-
         return alpha_primal, alpha_dual, num_backtracks
-
-    def minimum_alpha_primal(self, grad_phi_dot_delta, theta_xk):
-
-        theta_min = self._theta_min
-        gamma_phi = self._gamma_phi
-        gamma_theta = self._gamma_theta
-        kronecker = self._kronecker
-        s_theta = self._s_theta
-        s_phi = self._s_phi
-        gamma_alpha = self._gamma_alpha
-
-        if grad_phi_dot_delta < 0 and theta_xk <= theta_min:
-            term1 = min(-gamma_phi * theta_xk / grad_phi_dot_delta, gamma_theta)
-            term2 = kronecker * theta_xk ** s_theta / (-grad_phi_dot_delta) ** s_phi
-            return gamma_alpha * min(term1, term2)
-
-        if grad_phi_dot_delta < 0 and theta_xk > theta_min:
-            return gamma_alpha * min(-gamma_phi * theta_xk / grad_phi_dot_delta, gamma_theta)
-
-        return gamma_alpha * gamma_theta
 
     def update_linear_system(self):
         self._linear_system.update_system()
 
-    def initialize_filter(self, feasibility, optimality):
-        self._theta_min = self._theta_min_factor * max(1, feasibility)
-        self._filter.append((feasibility, optimality))
-
-    def clear_filter(self):
-        self._filter = list()
-
-    def is_in_filter(self, point_feas, point_obj):
-        for pair in self._filter:
-            if pair[0] < point_feas and pair[1] < point_obj:
-                return True
-        return False
-
-class InteriorPointSolver(object):
+class PenaltyInteriorPointSolver(object):
 
     def __init__(self, nlp, **kwargs):
 
@@ -457,6 +409,7 @@ class InteriorPointSolver(object):
         self.__wls = kwargs.pop('wls', True)
         self.__log_level = kwargs.pop('log_level', 0)
         self.__miu_init = kwargs.pop('miu_init', 0.1)
+        self.__rho_init = kwargs.pop('rho_init', 100.0)
         self.__tee = kwargs.pop('tee', True)
         self.__kappa_miu = kwargs.pop('kappa_miu', 0.2)
         self.__kappa_eps = kwargs.pop('kappa_eps', 10.0)
@@ -468,10 +421,11 @@ class InteriorPointSolver(object):
 
         bound_push = self.__bound_push
         disable_bound_push = self.__disable_bound_push
-        self._state = IPNLPState(nlp,
-                                 self.__miu_init,
-                                 bound_push=bound_push,
-                                 disable_bound_push=disable_bound_push)
+        self._state = PIPNLPState(nlp,
+                                  self.__miu_init,
+                                  self.__rho_init,
+                                  bound_push=bound_push,
+                                  disable_bound_push=disable_bound_push)
 
     @staticmethod
     def print_summary(iteration,
@@ -510,7 +464,6 @@ class InteriorPointSolver(object):
     def compute_new_miu(curr_miu, epsilon_tol, kappa_miu, theta_miu):
         return max(0.1 * epsilon_tol,min(kappa_miu * curr_miu, curr_miu ** theta_miu))
 
-
     def solve(self, **kwargs):
 
         tee = kwargs.pop('tee', self.__tee)
@@ -522,6 +475,7 @@ class InteriorPointSolver(object):
         wls = kwargs.pop('wls', self.__wls)
         log_level = kwargs.pop('log_level', self.__log_level)
         miu_init = kwargs.pop('miu_init', self.__miu_init)
+        rho_init = kwargs.pop('rho_init', self.__rho_init)
         kappa_miu = kwargs.pop('kappa_miu', self.__kappa_miu)
         kappa_eps = kwargs.pop('kappa_eps', self.__kappa_eps)
         theta_miu = kwargs.pop('theta_miu', self.__theta_miu)
@@ -529,7 +483,7 @@ class InteriorPointSolver(object):
         epsilon_tol = kwargs.pop('epsilon_tol', self.__epsilon_tol)
         tiny_threshold = kwargs.pop('tiny_step_threshold', 5e-6)
 
-        if found_ma27:
+        if pn.ma27_available:
             linear_solver = kwargs.pop('linear_solver', 'ma27')
         else:
             linear_solver = kwargs.pop('linear_solver', 'mumps')
@@ -539,13 +493,17 @@ class InteriorPointSolver(object):
             nlp_state.miu = miu_init
             nlp_state.cache()
 
+        if rho_init != self.__rho_init:
+            nlp_state.rho = rho_init
+            nlp_state.cache()
+
         # create walker object
-        walker = InteriorPointWalker(nlp_state,
-                                     linear_solver,
-                                     tau_min=tau_min)
+        walker = PenaltyInteriorPointWalker(nlp_state,
+                                            linear_solver,
+                                            tau_min=tau_min)
 
         if tee:
-            print_nlp_info(nlp_state.nlp, linear_solver=linear_solver)
+            print_nlp_info(nlp_state.nlp, header='Penalty Interior-Point ', linear_solver=linear_solver)
 
 
         val_reg = 0.0
@@ -556,11 +514,8 @@ class InteriorPointSolver(object):
         reached_limit = False
         n_ls = 0
 
+        old_E_rho = 10 * optimality_error_penalty(nlp_state)
         for oi in range(outer_max_iter):
-
-            if wls:
-                walker.initialize_filter(nlp_state.primal_infeasibility(),
-                                         nlp_state.barrier_objective())
 
             counter_tiny_steps = 0
             for ii in range(inner_max_iter):
@@ -615,8 +570,17 @@ class InteriorPointSolver(object):
 
                 # compute optimality error
                 E_miu = optimality_error(nlp_state)
+                E_rho = optimality_error_penalty(nlp_state)
                 counter_iter += 1
 
+                duals = BlockVector([nlp_state.yc, nlp_state.yd])
+                if (E_rho < old_E_rho):
+                    old_E_rho = E_rho
+                    if pynumero_norm(duals) > 1e-2 * nlp_state.rho:
+                        nlp_state.rho *= 10
+                # print(nlp_state.rho)
+                # ss = walker._linear_system.matrix.coo_data()
+                # print(ss)
                 if E_miu < kappa_eps * nlp_state.miu:
                     break
 
@@ -636,8 +600,6 @@ class InteriorPointSolver(object):
                                                  epsilon_tol,
                                                  kappa_miu,
                                                  theta_miu)
-            # reset filter
-            walker.clear_filter()
 
             # heuristic to try skip inner loops
             for kk in range(4):
@@ -708,5 +670,5 @@ if __name__ == "__main__":
     # solver.solve(m, tee=True)
     # m.x.pprint()
     nlp = PyomoNLP(m)
-    solver = InteriorPointSolver(nlp)
-    solver.solve(tee=True, wls=False, max_iter=20)
+    solver = PenaltyInteriorPointSolver(nlp)
+    solver.solve(tee=True, wls=False, rho_init=1000, max_iter=50)

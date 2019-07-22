@@ -147,13 +147,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.basic_m *= 5.0
         self.assertTrue(np.allclose(dense_mat, self.basic_m.toarray()))
 
-        flat_mat = self.basic_m.tocoo()
-        result = flat_mat * flat_mat
-        dense_result = result.toarray()
-        mat = self.basic_m * self.basic_m.tocoo()
-        dense_mat = mat.toarray()
-        self.assertTrue(np.allclose(dense_mat, dense_result))
-
     def test_mul_sparse_matrix(self):
         m = self.basic_m
 
@@ -163,28 +156,12 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertIsInstance(prod, BlockMatrix)
         self.assertTrue(np.allclose(flat_prod.toarray(), prod.toarray()))
 
-        prod = m * m.tocoo()
-        self.assertIsInstance(prod, BlockMatrix)
-        self.assertTrue(np.allclose(flat_prod.toarray(), prod.toarray()))
-
-        prod = m.tocoo() * m
-        self.assertIsInstance(prod, BlockMatrix)
-        self.assertTrue(np.allclose(flat_prod.toarray(), prod.toarray()))
-
         m2 = m.copy_structure()
         ones = np.ones(m.shape)
         m2.copyfrom(ones)
         flat_prod = m.tocoo() * m2.tocoo()
         prod = m * m2
 
-        self.assertIsInstance(prod, BlockMatrix)
-        self.assertTrue(np.allclose(flat_prod.toarray(), prod.toarray()))
-
-        prod = m * m2.tocoo()
-        self.assertIsInstance(prod, BlockMatrix)
-        self.assertTrue(np.allclose(flat_prod.toarray(), prod.toarray()))
-
-        prod = m.tocoo() * m2
         self.assertIsInstance(prod, BlockMatrix)
         self.assertTrue(np.allclose(flat_prod.toarray(), prod.toarray()))
 

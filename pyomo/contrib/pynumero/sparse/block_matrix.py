@@ -155,7 +155,7 @@ class BlockMatrix(BaseBlockMatrix):
         """
         if copy:
             return np.copy(self._bcol_lengths)
-        self._bcol_lengths
+        return self._bcol_lengths
 
     def block_shapes(self):
         """
@@ -388,30 +388,23 @@ class BlockMatrix(BaseBlockMatrix):
             assert other.bshape[0] == self.bshape[1], "Dimension mismatch"
             result = BlockMatrix(self.bshape[0], self.bshape[1])
             m, n = self.bshape
+
+            # get dimenions from the other matrix
+            other_col_sizes = other.col_block_sizes(copy=False)
+
+            # compute result
             for i in range(m):
                 for j in range(n):
                     accum = empty_matrix(self._brow_lengths[i],
-                                         self._bcol_lengths[j])
+                                         other_col_sizes[j])
                     for k in range(n):
-                        if self._blocks[i,k] is not None and other[k, j] is not None:
-                            accum = accum + self._blocks[i,k] * other[k, j]
+                        if self._block_mask[i, k] and not other.is_empty_block(k, j):
+                            prod = self._blocks[i,k] * other[k, j]
+                            accum = accum + prod
                     result[i, j] = accum
             return result
         elif isspmatrix(other):
-            assert other.shape[0] == self.shape[1], "Dimension mismatch"
-            result = BlockMatrix(self.bshape[0], self.bshape[1])
-            mat = self.copy_structure()
-            mat.copyfrom(other)
-            m, n = self.bshape
-            for i in range(m):
-                for j in range(n):
-                    accum = empty_matrix(self._brow_lengths[i],
-                                         self._bcol_lengths[j])
-                    for k in range(n):
-                        if self._blocks[i,k] is not None and mat[k, j] is not None:
-                            accum = accum + self._blocks[i,k] * mat[k, j]
-                    result[i, j] = accum
-            return result
+            raise NotImplementedError('BlockMatrix multiply with spmatrix not supported')
         else:
             raise NotImplementedError('Operation not supported by BlockMatrix')
 
@@ -1567,7 +1560,7 @@ class BlockMatrix(BaseBlockMatrix):
         rank = mpi_comm.Get_rank()
         for ij in mat.owned_blocks:
             mat[ij] = self[ij]
-        return mat        
+        return mat
 
     def sum(self, axis=None, dtype=None, out=None):
         BaseBlockMatrix.sum(self, axis=axis, dtype=dtype, out=out)

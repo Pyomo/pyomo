@@ -8,29 +8,22 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 from pyomo.contrib.pynumero.linalg.solvers.regularization import InertiaCorrectionParams
-try:
-    from pyomo.contrib.pynumero.linalg.solvers.ma27_solver import MA27LinearSolver
-    found_ma27 = True
-except ImportError as e:
-    found_ma27 = False
-
-try:
-    from pyomo.contrib.pynumero.linalg.solvers.ma57_solver import MA57LinearSolver
-    found_ma57 = True
-except ImportError as e:
-    found_ma57 = False
-
-try:
-    from pyomo.contrib.pynumero.linalg.solvers.mumps_solver import MUMPSSymLinearSolver
-    found_mumps = True
-except ImportError as e:
-    found_mumps = False
 
 import numpy as np
 from pyomo.contrib.pynumero.sparse import (BlockSymMatrix,
                                            BlockVector,
                                            BlockMatrix,
                                            empty_matrix)
+from pyomo.contrib.pynumero import (mumps_available,
+                                    ma27_available,
+                                    ma57_available)
+
+if ma57_available:
+    from pyomo.contrib.pynumero.linalg.solvers.ma57_solver import MA57LinearSolver
+if ma27_available:
+    from pyomo.contrib.pynumero.linalg.solvers.ma27_solver import MA27LinearSolver
+if mumps_available:
+    from pyomo.contrib.pynumero.linalg.solvers.mumps_solver import MUMPSSymLinearSolver
 
 from scipy.sparse.linalg.interface import LinearOperator
 from scipy.sparse.linalg import spsolve, inv, splu, cg
@@ -70,26 +63,26 @@ class FullKKTSolver(KKTSolver):
 
         # create linear solver
         if linear_solver == 'mumps':
-            if found_mumps:
+            if mumps_available:
                 lsolver = MUMPSSymLinearSolver(pivotol, **options)
             else:
-                if found_ma27:
+                if ma27_available:
                     print('WARNING: Running with ma27 linear solver. Mumps not available')
                     lsolver = MA27LinearSolver(pivotol, **options)
                 raise RuntimeError('Did not found MUMPS linear solver')
         elif linear_solver == 'ma27':
-            if found_ma27:
+            if ma27_available:
                 lsolver = MA27LinearSolver(pivotol, **options)
             else:
-                if found_mumps:
+                if mumps_available:
                     print('WARNING: Running with mumps linear solver. MA27 not available')
                     lsolver = MUMPSSymLinearSolver(pivotol, **options)
                 raise RuntimeError('Did not found MA27 linear solver')
         elif linear_solver == 'ma57':
-            if found_ma57:
+            if ma57_available:
                 lsolver = MA57LinearSolver(pivotol, **options)
             else:
-                if found_mumps:
+                if mumps_available:
                     print('WARNING: Running with mumps linear solver. MA57 not available')
                     lsolver = MUMPSSymLinearSolver(pivotol, **options)
                 raise RuntimeError('Did not found MA57 linear solver')
@@ -273,26 +266,26 @@ class TwoStageStochasticSchurKKTSolver(KKTSolver):
             raise RuntimeError(msg)
 
         if linear_solver == 'mumps':
-            if found_mumps:
+            if mumps_available:
                 lsolver = 'mumps'
             else:
-                if found_ma27:
+                if ma27_available:
                     print('WARNING: Mumps not available. Running ma27.')
                     lsolver = 'mumps'
                 raise RuntimeError('Did not found mumps linear solver')
         elif linear_solver == 'ma27':
-            if found_ma27:
+            if ma27_available:
                 lsolver = 'ma27'
             else:
-                if found_mumps:
+                if mumps_available:
                     print('WARNING: Ma27 not found. Running mumps.')
                     lsolver = 'mumps'
                 raise RuntimeError('Did not found ma27 linear solver')
         elif linear_solver == 'ma57':
-            if found_ma57:
+            if ma57_available:
                 lsolver = 'ma57'
             else:
-                if found_mumps:
+                if mumps_available:
                     print('WARNING: Ma57 not found. Running mumps.')
                     lsolver = 'mumps'
                 raise RuntimeError('Did not found ma57 linear solver')

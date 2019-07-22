@@ -35,7 +35,8 @@ except ImportError as e:
 if not found_mumps and not found_ma27:
     raise unittest.SkipTest("Pynumero needs pymumps or ma27 to run kkt solver tests")
 
-from pyomo.contrib.pynumero.linalg.solvers.kkt_solver import FullKKTSolver, TwoStageStochasticSchurKKTSolver
+from pyomo.contrib.pynumero.examples.algorithms.kkt_solver import (FullKKTSolver,
+                                                                   TwoStageStochasticSchurKKTSolver)
 
 from pyomo.contrib.pynumero.sparse import (BlockSymMatrix,
                                            BlockVector,

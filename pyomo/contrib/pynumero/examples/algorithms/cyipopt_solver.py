@@ -201,3 +201,23 @@ class CyIpoptSolver(object):
             os.dup2(newstdout, 1)
 
         return x, info
+
+import pyomo.environ as aml
+from pyomo.contrib.pynumero.interfaces import PyomoNLP
+if __name__ == "__main__":
+
+    np.set_printoptions(linewidth=250, precision=3)
+
+    m = aml.ConcreteModel()
+    m._name = 'model1'
+    m.x = aml.Var([1, 2, 3], initialize=4.0)
+    m.c = aml.Constraint(expr=m.x[3] ** 2 + m.x[1] == 25)
+    m.d = aml.Constraint(expr=m.x[2] ** 2 + m.x[1] <= 18.0)
+    # m.d = aml.Constraint(expr=aml.inequality(-18, m.x[2] ** 2 + m.x[1],  28))
+    m.o = aml.Objective(expr=m.x[1] ** 4 - 3 * m.x[1] * m.x[2] ** 3 + m.x[3] ** 2 - 8.0)
+    m.x[1].setlb(0.0)
+    m.x[2].setlb(0.0)
+
+    nlp = PyomoNLP(m)
+    solver = CyIpoptSolver(nlp)
+    x, info = solver.solve(tee=True)

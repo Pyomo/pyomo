@@ -1,6 +1,6 @@
 
 try:
-    from .ip_solver import InteriorPointSolver
+    from .interior_point_solver import InteriorPointSolver
 except ImportError:
     print("Need MA27 or MUMPS to run pynumero interior-point. "
           "conda install -c conda-forge pymumps")

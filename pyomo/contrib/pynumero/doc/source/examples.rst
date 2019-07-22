@@ -24,3 +24,7 @@ Evaluating NLP functions of Stochastic NLP
 Checking NLP feasibility
 -------------------------------------------------------
 .. literalinclude:: ../../examples/feasibility.py
+
+Newton Solver
+-------------------------------------------------------
+.. literalinclude:: ../../examples/algorithms/newton_solver.py

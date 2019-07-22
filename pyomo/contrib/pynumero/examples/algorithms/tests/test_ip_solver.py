@@ -27,12 +27,12 @@ if not AmplInterface.available():
         "Pynumero needs the ASL extension to run NLP tests")
 
 try:
-    from pyomo.contrib.pynumero.algorithms.solvers.ip_solver import InteriorPointSolver
+    from pyomo.contrib.pynumero.examples.algorithms import InteriorPointSolver
 except ImportError:
     raise unittest.SkipTest("Pynumero needs ma27 or mumps linear solver to run InteriorPointSolver tests")
 
 from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP
-from pyomo.contrib.pynumero.algorithms.solvers.tests import ip_test_models
+from pyomo.contrib.pynumero.examples.algorithms.tests import ip_test_models
 
 from inspect import getmembers, isfunction
 

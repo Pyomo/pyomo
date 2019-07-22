@@ -16,5 +16,5 @@ Subpackages
     
     pynumero.interfaces
     pynumero.sparse
-    
+    pynumero.linearsolvers
 
