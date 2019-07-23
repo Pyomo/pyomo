@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr.numvalue import native_numeric_types, value
-from pyomo.core.base.symbolic import differentiate
+from pyomo.core.expr.calculus.derivatives import differentiate
 
 import logging
 logger = logging.getLogger(__name__)
@@ -127,7 +127,7 @@ def calculate_variable_from_constraint(variable, constraint,
     # Variable appears nonlinearly; solve using Newton's method
     variable.set_value(orig_initial_value) # restore initial value
     expr = constraint.body - constraint.upper
-    expr_deriv = differentiate(expr, wrt=variable)
+    expr_deriv = differentiate(expr, wrt=variable, mode=differentiate.Modes.sympy)
 
     if type(expr_deriv) in native_numeric_types and expr_deriv == 0:
         raise ValueError("Variable derivative == 0, cannot solve for variable")
