@@ -71,7 +71,7 @@ if numpy_available:
         logging.getLogger('pyomo.contrib.pynumero').warn(
             "Pymumps not available. Install pymumps to use it with pynumero")
 else:
-    ma57_available = True
+    ma57_available = False
     ma27_available = False
     mumps_available = False
 
