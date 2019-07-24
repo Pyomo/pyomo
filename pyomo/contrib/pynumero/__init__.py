@@ -40,35 +40,36 @@ except ImportError:
     logging.getLogger('pyomo.contrib.pynumero').warn(
         "Mpi4py not available. Install Mpi4py before using pynumero")
 
-from pyomo.contrib.pynumero.extensions.hsl import _MA27_LinearSolver
-if not _MA27_LinearSolver.available():
-    ma27_available = False
-    import pyomo.common  # ...to set up the logger
-    import logging
-    logging.getLogger('pyomo.contrib.pynumero').warn(
-        "MA27 not available. Install MA27 library to use it with pynumero")
-else:
-    ma27_available = True
+if numpy_available:
+    from pyomo.contrib.pynumero.extensions.hsl import _MA27_LinearSolver
+    if not _MA27_LinearSolver.available():
+        ma27_available = False
+        import pyomo.common  # ...to set up the logger
+        import logging
+        logging.getLogger('pyomo.contrib.pynumero').warn(
+            "MA27 not available. Install MA27 library to use it with pynumero")
+    else:
+        ma27_available = True
 
-from pyomo.contrib.pynumero.extensions.hsl import _MA57_LinearSolver
-if not _MA57_LinearSolver.available():
-    ma57_available = False
-    import pyomo.common  # ...to set up the logger
-    import logging
-    logging.getLogger('pyomo.contrib.pynumero').warn(
-        "MA27 not available. Install MA57 library to use it with pynumero")
-else:
-    ma57_available = True
+    from pyomo.contrib.pynumero.extensions.hsl import _MA57_LinearSolver
+    if not _MA57_LinearSolver.available():
+        ma57_available = False
+        import pyomo.common  # ...to set up the logger
+        import logging
+        logging.getLogger('pyomo.contrib.pynumero').warn(
+            "MA27 not available. Install MA57 library to use it with pynumero")
+    else:
+        ma57_available = True
 
-try:
-    import mumps
-    mumps_available = True
-except ImportError:
-    mumps_available = False
-    import pyomo.common  # ...to set up the logger
-    import logging
-    logging.getLogger('pyomo.contrib.pynumero').warn(
-        "Pymumps not available. Install pymumps to use it with pynumero")
+    try:
+        import mumps
+        mumps_available = True
+    except ImportError:
+        mumps_available = False
+        import pyomo.common  # ...to set up the logger
+        import logging
+        logging.getLogger('pyomo.contrib.pynumero').warn(
+            "Pymumps not available. Install pymumps to use it with pynumero")
 
 
 
