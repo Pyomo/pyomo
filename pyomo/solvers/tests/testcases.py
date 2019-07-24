@@ -30,6 +30,21 @@ _trunk_version =  (float('inf'), float('inf'), float('inf'), float('inf'))
 ExpectedFailures = {}
 
 #
+# MOSEK
+#
+
+ExpectedFailures['mosek', 'python', 'QCP_simple'] = \
+    (lambda v: True,
+     "Conic constraints not yet handled by this interface")
+
+ExpectedFailures['mosek', 'python', 'QCP_simple_nosuffixes'] = \
+    (lambda v: True,
+     "Conic constraints not yet handled by this interface")
+
+ExpectedFailures['mosek', 'python', 'MIQCP_simple'] = \
+    (lambda v: True,
+     "Conic constraints not yet handled by this interface")
+#
 # CPLEX
 #
 

@@ -1,6 +1,5 @@
-from pyomo.core.base.expression import SimpleExpression, _GeneralExpressionData
 from pyomo.core.kernel.component_map import ComponentMap
-import pyomo.core.expr.current as _expr
+from pyomo.core.expr import current as _expr
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.current import exp, log, sin, cos, tan, asin, acos, atan
@@ -221,6 +220,21 @@ def _diff_atan(node, val_dict, der_dict):
     der = der_dict[node]
     der_dict[arg] += der / (1 + val_dict[arg]**2)
 
+def _diff_sqrt(node, val_dict, der_dict):
+    """
+    Reverse automatic differentiation on the square root function.
+    Implementation copied from power function, with fixed exponent.
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
+    val_dict: ComponentMap
+    der_dict: ComponentMap
+    """
+    assert len(node.args) == 1
+    arg = node.args[0]
+    der = der_dict[node]
+    der_dict[arg] += der * 0.5 * val_dict[arg]**(-0.5)
 
 _unary_map = dict()
 _unary_map['exp'] = _diff_exp
@@ -231,6 +245,7 @@ _unary_map['tan'] = _diff_tan
 _unary_map['asin'] = _diff_asin
 _unary_map['acos'] = _diff_acos
 _unary_map['atan'] = _diff_atan
+_unary_map['sqrt'] = _diff_sqrt
 
 
 def _diff_UnaryFunctionExpression(node, val_dict, der_dict):
@@ -248,11 +263,6 @@ def _diff_UnaryFunctionExpression(node, val_dict, der_dict):
         raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(node)))
 
 
-def _diff_SimpleExpression(node, val_dict, der_dict):
-    der = der_dict[node]
-    der_dict[node.expr] += der
-
-
 _diff_map = dict()
 _diff_map[_expr.ProductExpression] = _diff_ProductExpression
 _diff_map[_expr.ReciprocalExpression] = _diff_ReciprocalExpression
@@ -261,8 +271,6 @@ _diff_map[_expr.SumExpression] = _diff_SumExpression
 _diff_map[_expr.MonomialTermExpression] = _diff_ProductExpression
 _diff_map[_expr.NegationExpression] = _diff_NegationExpression
 _diff_map[_expr.UnaryFunctionExpression] = _diff_UnaryFunctionExpression
-_diff_map[SimpleExpression] = _diff_SimpleExpression
-_diff_map[_GeneralExpressionData] = _diff_SimpleExpression
 
 
 class _ReverseADVisitorLeafToRoot(ExpressionValueVisitor):
@@ -321,6 +329,9 @@ class _ReverseADVisitorRootToLeaf(ExpressionValueVisitor):
 
         if node.__class__ in _diff_map:
             _diff_map[node.__class__](node, self.val_dict, self.der_dict)
+        elif node.is_named_expression_type():
+            der = self.der_dict[node]
+            self.der_dict[node.expr] += der
         else:
             raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(node)))
 
@@ -410,6 +421,9 @@ class _ReverseSDVisitorRootToLeaf(ExpressionValueVisitor):
 
         if node.__class__ in _diff_map:
             _diff_map[node.__class__](node, self.val_dict, self.der_dict)
+        elif node.is_named_expression_type():
+            der = self.der_dict[node]
+            self.der_dict[node.expr] += der
         else:
             raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(node)))
 

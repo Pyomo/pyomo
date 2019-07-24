@@ -34,15 +34,6 @@ def model_is_valid(solve_data, config):
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
 
-    # Check for any integer variables
-    if any(True for v in m.component_data_objects(
-            ctype=Var, descend_into=True)
-            if v.is_integer() and not v.fixed):
-        raise ValueError('Model contains unfixed integer variables. '
-                         'MindtPy does not currently support solution of '
-                         'such problems.')
-        # TODO add in the reformulation using base 2
-
     # Handle LP/NLP being passed to the solver
     prob = solve_data.results.problem
     if (prob.number_of_binary_variables == 0 and
