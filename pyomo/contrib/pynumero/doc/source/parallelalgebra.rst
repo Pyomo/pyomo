@@ -7,6 +7,9 @@ We extended the **BlockVector** and **BlockMatrix** to perform operations in par
 
 .. code-block:: python
 
+  # This code is available in pyomo.contrib.pynumero.examples
+  # to run the code use the following command
+  # mpirun -n 2 python -m mpi4py mpi_block_vector_example.py
   from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
   from mpi4py import MPI
   import numpy as np
@@ -70,6 +73,9 @@ Some basic functionality of the **MPIBlockMatrix** is presented below:
 
 .. code-block:: python
 
+  # This code is available in pyomo.contrib.pynumero.examples
+  # to run the code use the following command
+  # mpirun -n 2 python -m mpi4py mpi_block_matrix_example.py
   from pyomo.contrib.pynumero.sparse.mpi_block_matrix import MPIBlockMatrix
   from scipy.sparse import coo_matrix
   from mpi4py import MPI

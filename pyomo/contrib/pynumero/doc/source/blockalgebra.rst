@@ -23,6 +23,9 @@ PyNumeros **BlockVector** behaves pretty much like a standard numpy array. In fa
 
 .. code-block:: python
 
+	# This code is available in pyomo.contrib.pynumero.examples
+	# to run the code go to the examples directory
+	# python block_vector_example.py
 	from pyomo.contrib.pynumero.sparse import BlockVector
 	import numpy as np
 
@@ -81,7 +84,10 @@ PyNumeros **BlockVector** behaves pretty much like a standard numpy array. In fa
 The **BlockMatrix** object behaves like **spmatrix** from Scipy. Similarly like the **BlockVector** follows the syntax of **numpy.ndarray**, the **BlockMatrix** uses the same syntax of **scipy.sparse**. Users can think of **BlockMatrix** as an object that stacks together submatrices. These submatrices can be objects from **scipy.sparse** (e.g. **coo_matrix**, **csr_matrix** and **csc_matrix**.) or other BlockMatrices. The following block of code demonstrates some functionality
 
 .. code-block:: python
-
+		
+	# This code is available in pyomo.contrib.pynumero.examples
+	# to run the code go to the examples directory
+	# python block_matrix_example.py
 	from pyomo.contrib.pynumero.sparse import BlockMatrix
 	from scipy.sparse import coo_matrix
 	import numpy as np
