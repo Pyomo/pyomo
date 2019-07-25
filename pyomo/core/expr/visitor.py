@@ -22,11 +22,31 @@ from pyutilib.math.util import isclose
 from .symbol_map import SymbolMap
 from . import expr_common as common
 from .expr_errors import TemplateExpressionError
+#
+"""
+#0-0
+The following import causes the function value() defined in numvalue to be called
+regardless of the class of the input.
+My proposed way of resolving this is to use "from import as" so we don't have
+to change things outside this file hopefully.
+Nonetheless we do need to change a lot of stuff here, and I'm not sure if things
+will mess up in the future when the assgin_value thing is resolved.
+
+An alternative is to make a logical version of this file, however I'm not entirely sure 
+about everything in this file. 
+"""
 from pyomo.core.expr.numvalue import (
     nonpyomo_leaf_types,
     native_numeric_types,
-    value,
-)
+    value,)
+
+'''
+from pyomo.core.expr.numvalue import value as num_value
+
+from pyomo.core.expr.logicalvalue import value as logical_value
+'''
+
+
 # NOTE: This module also has dependencies on numeric_expr; however, to
 # avoid circular dependencies, we will NOT import them here.  Instead,
 # until we can resolve the circular dependencies, they will be injected
@@ -893,7 +913,8 @@ class _EvaluationVisitor(ExpressionValueVisitor):
             return True, value(node)
 
         if not node.is_expression_type():
-            return True, value(node)
+            return True, value(node) 
+            #This line is where the error occurs if I skip assigning values
 
         return False, None
 

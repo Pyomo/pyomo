@@ -225,6 +225,7 @@ def value(obj, exception=True):
         try:
             tmp = obj(exception=True)
             if tmp is None:
+                #return 1 #0-0 change this later, debug only
                 raise ValueError(
                     "No value for uninitialized NumericValue object %s"
                     % (obj.name,))
@@ -561,7 +562,7 @@ class NumericValue(object):
             return _base.__getstate__()
         else:
             return {}
-
+        
     def __setstate__(self, state):
         """
         Restore a pickled state into this instance
