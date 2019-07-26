@@ -705,7 +705,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertTrue(np.allclose(flat_row.toarray().flatten(),
                                     block_row.flatten()))
 
-
     def test_nonzero(self):
 
         m = self.basic_m

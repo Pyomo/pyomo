@@ -1013,7 +1013,7 @@ class BlockMatrix(BaseBlockMatrix):
             for i in range(m):
                 for j in range(n):
                     if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
-                        self[i, j] = self._blocks[i, j] + other[i, j]
+                        self[i, j] += other[i, j]
                     elif not self.is_empty_block(i, j) and other.is_empty_block(i, j):
                         self[i, j] = self._blocks[i, j]
                     elif self.is_empty_block(i, j) and not other.is_empty_block(i, j):
@@ -1043,7 +1043,7 @@ class BlockMatrix(BaseBlockMatrix):
             for i in range(m):
                 for j in range(n):
                     if self._block_mask[i, j] and other._block_mask[i, j]:
-                        self[i, j] = self._blocks[i, j] - other[i, j]
+                        self[i, j] -= other[i, j]
                     elif self._block_mask[i, j] and not other._block_mask[i, j]:
                         self[i, j] = self._blocks[i, j]
                     elif not self._block_mask[i, j] and other._block_mask[i, j]:

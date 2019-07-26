@@ -589,16 +589,22 @@ class TestBlockVector(unittest.TestCase):
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
+        a_copy = a.copy()
+        b_copy = b.copy()
+
         v[0] = a
         v[1] = b
         v += 1.0
 
-        self.assertTrue(np.allclose(v[0], a + 1))
-        self.assertTrue(np.allclose(v[1], b + 1))
+        self.assertTrue(np.allclose(v[0], a_copy + 1))
+        self.assertTrue(np.allclose(v[1], b_copy + 1))
 
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
+        a_copy = a.copy()
+        b_copy = b.copy()
+
         v[0] = a
         v[1] = b
 
@@ -607,8 +613,8 @@ class TestBlockVector(unittest.TestCase):
         v2[1] = np.ones(9)
 
         v += v2
-        self.assertTrue(np.allclose(v[0], a + 1))
-        self.assertTrue(np.allclose(v[1], b + 1))
+        self.assertTrue(np.allclose(v[0], a_copy + 1))
+        self.assertTrue(np.allclose(v[1], b_copy + 1))
 
         self.assertTrue(np.allclose(v2[0], np.ones(5)))
         self.assertTrue(np.allclose(v2[1], np.ones(9)))
@@ -630,16 +636,20 @@ class TestBlockVector(unittest.TestCase):
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
+        a_copy = a.copy()
+        b_copy = b.copy()
         v[0] = a
         v[1] = b
         v -= 5.0
 
-        self.assertTrue(np.allclose(v[0], a - 5.0))
-        self.assertTrue(np.allclose(v[1], b - 5.0))
+        self.assertTrue(np.allclose(v[0], a_copy - 5.0))
+        self.assertTrue(np.allclose(v[1], b_copy - 5.0))
 
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
+        a_copy = a.copy()
+        b_copy = b.copy()
         v[0] = a
         v[1] = b
 
@@ -648,8 +658,8 @@ class TestBlockVector(unittest.TestCase):
         v2[1] = np.ones(9)
 
         v -= v2
-        self.assertTrue(np.allclose(v[0], a - 1))
-        self.assertTrue(np.allclose(v[1], b - 1))
+        self.assertTrue(np.allclose(v[0], a_copy - 1))
+        self.assertTrue(np.allclose(v[1], b_copy - 1))
 
         self.assertTrue(np.allclose(v2[0], np.ones(5)))
         self.assertTrue(np.allclose(v2[1], np.ones(9)))
@@ -670,17 +680,21 @@ class TestBlockVector(unittest.TestCase):
 
         v = BlockVector(2)
         a = np.ones(5)
-        b = np.arange(9)
+        b = np.arange(9, dtype=np.float64)
+        a_copy = a.copy()
+        b_copy = b.copy()
         v[0] = a
         v[1] = b
         v *= 2.0
 
-        self.assertTrue(np.allclose(v[0], a * 2.0))
-        self.assertTrue(np.allclose(v[1], b * 2.0))
+        self.assertTrue(np.allclose(v[0], a_copy * 2.0))
+        self.assertTrue(np.allclose(v[1], b_copy * 2.0))
 
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
+        a_copy = a.copy()
+        b_copy = b.copy()
         v[0] = a
         v[1] = b
 
@@ -689,8 +703,8 @@ class TestBlockVector(unittest.TestCase):
         v2[1] = np.ones(9) * 2
 
         v *= v2
-        self.assertTrue(np.allclose(v[0], a * 2))
-        self.assertTrue(np.allclose(v[1], b * 2))
+        self.assertTrue(np.allclose(v[0], a_copy * 2))
+        self.assertTrue(np.allclose(v[1], b_copy * 2))
 
         self.assertTrue(np.allclose(v2[0], np.ones(5) * 2))
         self.assertTrue(np.allclose(v2[1], np.ones(9) * 2))

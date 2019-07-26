@@ -1025,7 +1025,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 mat1 = self[i, j]
                 mat2 = other[i, j]
                 if mat1 is not None and mat2 is not None:
-                    self[i, j] = mat1 + mat2
+                    self[i, j] += mat2
                 elif mat1 is None and mat2 is not None:
                     self[i, j] = mat2
             return self
@@ -1058,7 +1058,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 mat1 = self[i, j]
                 mat2 = other[i, j]
                 if mat1 is not None and mat2 is not None:
-                    self[i, j] = mat1 - mat2
+                    self[i, j] -= mat2
                 elif mat1 is None and mat2 is not None:
                     self[i, j] = -mat2
             return self

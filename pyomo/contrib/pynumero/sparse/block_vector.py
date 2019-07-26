@@ -1116,7 +1116,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             ' Specify all blocks in BlockVector'
         if np.isscalar(other):
             for idx, blk in enumerate(self):
-                self[idx] = self[idx] + other # maybe it suffice with doing self[idx] = self[idf] + other
+                self[idx] += other # maybe it suffice with doing self[idx] = self[idf] + other
             return self
         elif isinstance(other, BlockVector):
             assert not other.has_none, \
@@ -1128,7 +1128,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                self[idx] = self[idx] + other[idx]
+                self[idx] += other[idx]
             return self
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -1136,7 +1136,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                self[idx] = blk + other[accum: accum + nelements]
+                self[idx] += other[accum: accum + nelements]
                 accum += nelements
             return self
         else:
@@ -1150,7 +1150,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             ' Specify all blocks in BlockVector'
         if np.isscalar(other):
             for idx, blk in enumerate(self):
-                self[idx] = self[idx] - other
+                self[idx] -= other
             return self
         elif isinstance(other, BlockVector):
             assert not other.has_none, \
@@ -1162,7 +1162,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                self[idx] = self[idx] - other[idx]
+                self[idx] -= other[idx]
             return self
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -1170,7 +1170,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                self[idx] = blk - other[accum: accum + nelements]
+                self[idx] -= other[accum: accum + nelements]
                 accum += nelements
             return self
         else:
@@ -1184,7 +1184,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             ' Specify all blocks in BlockVector'
         if np.isscalar(other):
             for idx, blk in enumerate(self):
-                self[idx] = self[idx] * other
+                self[idx] *= other
             return self
         elif isinstance(other, BlockVector):
             assert not other.has_none, \
@@ -1196,7 +1196,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                self[idx] = self[idx] * other[idx]
+                self[idx] *= other[idx]
             return self
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -1204,7 +1204,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                self[idx] = blk * other[accum: accum + nelements]
+                self[idx] *= other[accum: accum + nelements]
                 accum += nelements
             return self
         else:
@@ -1218,7 +1218,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             ' Specify all blocks in BlockVector'
         if np.isscalar(other):
             for idx, blk in enumerate(self):
-                self[idx] = self[idx] / other
+                self[idx] /= other
             return self
         elif isinstance(other, BlockVector):
             assert not other.has_none, \
@@ -1230,7 +1230,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                self[idx] = self[idx] / other[idx]
+                self[idx] /= other[idx]
             return self
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -1238,7 +1238,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                self[idx] = blk / other[accum: accum + nelements]
+                self[idx] /= other[accum: accum + nelements]
                 accum += nelements
             return self
         else:
