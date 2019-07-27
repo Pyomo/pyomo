@@ -2129,12 +2129,23 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
 ############################################################################
 
 def _pprint_members(x):
-    return '{' + str(x.ordered_data())[1:-1] + "}"
+    if x.is_finite():
+        return '{' + str(x.ordered_data())[1:-1] + "}"
+    else:
+        ans = ' | '.join(str(_) for _ in x.ranges())
+        if ' | ' in ans:
+            return "(" + ans + ")"
+        if ans:
+            return ans
+        else:
+            return "[]"
+
 def _pprint_dimen(x):
     d = x.dimen
     if d is UnknownSetDimen:
         return "--"
     return d
+
 def _pprint_domain(x):
     if x._domain is x:
         return x._expression_str()
@@ -2456,7 +2467,7 @@ class Set(IndexedComponent):
             lambda k, v: [
                 _pprint_dimen(v),
                 _pprint_domain(v),
-                len(v),
+                len(v) if v.is_finite() else 'Inf',
                 _pprint_members(v),
             ])
 
@@ -2908,6 +2919,26 @@ class _SetOperator(_SetData, Set):
 
     # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
+
+    def __len__(self):
+        """Return the length of this Set
+
+        Because Set objects (and therefore SetOperator objects) are a
+        subclass of IndexedComponent, we need to override the definition
+        of len() to return the length of the Set and not the Component.
+        Failing to do so would result in scalar infinite set operators
+        to return a length of "1".
+
+        Python requires len() to return a nonnegatie integer.  Instead
+        of returning `float('inf')` here and allowing Python to raise
+        the OverflowError, we will raise it directly here where we can
+        provide a more informative error message.
+
+        """
+        raise OverflowError(
+            "The length of a non-finite Set is Inf; however, Python "
+            "requires len() to return a non-negative integer value. Check "
+            "is_finite() before calling len() for possibly infinite Sets")
 
     def __str__(self):
         if self.parent_block() is not None:
