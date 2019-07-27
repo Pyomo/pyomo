@@ -1169,7 +1169,7 @@ class NonNumericRange(object):
         self.value = val
 
     def __str__(self):
-        return "{%s}" % self.value
+        return "{%s}" % (self.value,)
 
     __repr__ = __str__
 
