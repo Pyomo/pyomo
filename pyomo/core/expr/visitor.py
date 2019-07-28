@@ -35,16 +35,14 @@ will mess up in the future when the assgin_value thing is resolved.
 An alternative is to make a logical version of this file, however I'm not entirely sure 
 about everything in this file. 
 """
+from pyomo.core.expr.logicalvalue import (
+    LogicalValue, value_logical,)
+
+
 from pyomo.core.expr.numvalue import (
     nonpyomo_leaf_types,
     native_numeric_types,
     value,)
-
-'''
-from pyomo.core.expr.numvalue import value as num_value
-
-from pyomo.core.expr.logicalvalue import value as logical_value
-'''
 
 
 # NOTE: This module also has dependencies on numeric_expr; however, to
@@ -906,8 +904,12 @@ class _EvaluationVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
+
         if node.__class__ in nonpyomo_leaf_types:
             return True, node
+
+        if isinstance(node, LogicalValue):
+            return True, value_logical(node)
 
         if node.is_variable_type():
             return True, value(node)

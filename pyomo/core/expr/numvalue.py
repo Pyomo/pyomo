@@ -164,6 +164,7 @@ def RegisterBooleanType(new_type):
     nonpyomo_leaf_types.add(new_type)
 
 def value(obj, exception=True):
+    
     """
     A utility function that returns the value of a Pyomo object or
     expression.

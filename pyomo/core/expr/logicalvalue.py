@@ -1,15 +1,9 @@
 #Below is copied from numvalue.py
 
-__all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type',
-<<<<<<< HEAD
+__all__ = ('value_logical', 'value', 'is_constant', 'is_fixed', 'is_variable_type',
            'is_potentially_variable', 'LogicalValue', 'TrueConstant',
            'FalseConstant', 'native_logical_types', 'native_types',
            'native_logical_values')
-=======
-           'is_potentially_variable', 'NumericValue', 'ZeroConstant',
-           'native_numeric_types', 'native_types', 'nonpyomo_leaf_types',
-           'polynomial_degree')
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
 
 import sys
 import logging
@@ -41,9 +35,7 @@ def _generate_relational_expression(etype, lhs, rhs):
 ## Standard types of expressions
 ##
 ##------------------------------------------------------------------------
-
-<<<<<<< HEAD
-#0-0 check this
+'''
 class NonLogicalValue(object):
     """An object that contains a non-logical value
 
@@ -69,18 +61,12 @@ class NonLogicalValue(object):
 
 nonpyomo_leaf_types = set([NonLogicalValue])
 
-
+'''
 
 #start
+native_types = set([ bool, str, type(None) ])
 native_logical_types = set([bool])
-native_types = set([bool, int ,None]) #0-0 to be chekced
-=======
-#start
-native_logical_types = set([bool])
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
 native_logical_values = set([True, False, 1, 0])
-#0-0 is this a good idea
-#the problem here would be '(1.5) in native__types' gives True
 
 #tbc
 
@@ -99,40 +85,14 @@ def RegisterLogicalType(new_type):
     #nonpyomo_leaf_types.add(new_type)
 
 def value(obj, exception=True):
-<<<<<<< HEAD
-    #0-0 Also, not really sure how the exception work
-=======
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
+    #0-0 Thinkng about a way to make it work
     """
-    A utility function that returns the value of a Pyomo object or
-    expression.
-    # 0-0 do we need to care about this
 
-    Args:
-        obj: The argument to evaluate. If it is None, a
-            string, or any other primative numeric type,
-            then this function simply returns the argument.
-            Otherwise, if the argument is a LogicalValue
-            then the __call__ method is executed.
-        exception (bool): If :const:`True`, then an exception should
-            be raised when instances of NumericValue fail to
-            evaluate due to one or more objects not being
-            initialized to a numeric value (e.g, one or more
-            variabvalue(les in an algebraic expression having the
-            value None). If :const:`False`, then the function
-            returns :const:`None` when an exception occurs.
-            Default is True.
     Returns: A numeric value or None.
     """
-<<<<<<< HEAD
-    #0-0 what should native_types contain, a questions again?
-    # or should we even have it at all
-    if obj.__class__ in native_types:
+   
+    if obj.__class__ in native_logical_types:
         return bool(obj)
-=======
-    if obj.__class__ in native_types:
-        return obj
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
     if obj.__class__ is LogicalConstant:
         #   
         # do not expect LogicalConstant with value None.
@@ -142,18 +102,13 @@ def value(obj, exception=True):
         #        "No value for uninitialized LogicalConstant object %s"
         #        % (obj.name,))
         return obj.value
-    #
     # Test if we have a duck types for Pyomo expressions
     #
     try:
         obj.is_expression_type()
     except AttributeError:
         #
-<<<<<<< HEAD
         # If not, then try to coerce this into a logical constant.  If that
-=======
-        # If not, then try to coerce this into a numeric constant.  If that
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
         # works, then return the object
         #
         try:
@@ -193,8 +148,10 @@ def value(obj, exception=True):
         # Here, we do not try to catch the exception
         #
         return obj(exception=False)
+      
 
-    #0-0 check the above later
+value_logical = value  
+#assigning an alias to distinguish it from the numeric version 
 
 
 def is_constant(obj):
@@ -262,9 +219,10 @@ def is_variable_type(obj):
     whether the input object is a variable.
     """
     if obj.__class__ in native_types:
+        # change native_types
         return False
-    #do we need this 0-0
-    if (obj.__class__ is 1 ) or (obj.__class is 0):
+    if (obj is 1 ) or (obj is 0):
+        # 0-0 change later
         return False
     try:
         return obj.is_variable_type()
@@ -283,7 +241,7 @@ def is_potentially_variable(obj):
     except AttributeError:
         return False
 
-#0-0 is_logical_data
+
 def is_logical_data(obj):
     """
     A utility function that returns a boolean indicating
@@ -293,7 +251,7 @@ def is_logical_data(obj):
     if obj.__class__ in native_logical_types:
         return True
     elif obj.__class__ in native_types:
-        # 0-0 what do we do about int?
+       #change this 0-0
         return False
     try:
         # Test if this is an expression object that 
@@ -376,11 +334,7 @@ def as_logical(obj):
         "Cannot treat the value '%s' as a constant because it has unknown "
         "type '%s'" % (str(obj), type(obj).__name__))
 
-<<<<<<< HEAD
 #0-0 I think it's time to look at this one
-=======
-#0-0 necessary?
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
 def check_if_logical_type_and_cache(obj):
    pass
 #cut
@@ -391,12 +345,8 @@ def check_if_logical_type_and_cache(obj):
 
 class LogicalValue(object):
     #an abstract class 
-<<<<<<< HEAD
     #
     #__slots__ = ('value',)
-=======
-
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
     __slots__ = ()
     __hash__ = None
     def __getstate__(self):

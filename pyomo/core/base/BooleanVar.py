@@ -605,6 +605,18 @@ class SimpleBooleanVar(_GeneralBooleanVarData, BooleanVar):
             "is currently no value to return)."
             % (self.name))
 
+    @value.setter
+    def value(self, val):
+        """Return the value for this variable."""
+        if self._constructed:
+            return _GeneralBooleanVarData.value.fget(self)
+        raise ValueError(
+            "Accessing the value of variable '%s' "
+            "before the Var has been constructed (there "
+            "is currently no value to return)."
+            % (self.name))
+
+
     @property
     def domain(self):
         return _GeneralBooleanVarData.domain.fget(self)

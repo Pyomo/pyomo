@@ -28,18 +28,12 @@ from .numvalue import (
      as_numeric,
 )
 
-<<<<<<< HEAD
 from .logicalvalue import (
     LogicalValue,
     LogicalConstant,
     as_logical,
     value,
 )
-=======
-from logicalvalue import LogicalValue, native_logical_values
-
-#0-0
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
 
 from .expr_common import (
     _add, _sub, _mul, _div,
@@ -49,17 +43,13 @@ from .expr_common import (
     _imul, _idiv, _ipow, _lt, _le,
     _eq,
 )
-<<<<<<< HEAD
 
-from .logical_visitor import (
+from .visitor import (
     evaluate_expression, expression_to_string, polynomial_degree,
     clone_expression, sizeof_expression, _expression_is_fixed
 )
 
 from .numeric_expr import _LinearOperatorExpression, _process_arg
-=======
-from .numeric_expr import _LinearOperatorExpression, _process_args
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
 import operator
 
 if _using_chained_inequality:               #pragma: no cover
@@ -79,7 +69,7 @@ if _using_chained_inequality:               #pragma: no cover
             _chainedInequality.call_info = None
             _chainedInequality.prev = None
 
-            argss = ( str(msg).strip(), val.strip(), info[0], info[1],
+            args = ( str(msg).strip(), val.strip(), info[0], info[1],
                      ':\n    %s' % info[3] if info[3] is not None else '.' )
             return """%s
 
@@ -97,7 +87,7 @@ if _using_chained_inequality:               #pragma: no cover
             if value(expression) <= 5:
         or
             if value(expression <= 5):
-        """ % argss
+        """ % args
 
 else:                               #pragma: no cover
     _chainedInequality = None
@@ -117,28 +107,23 @@ class RangedExpression(_LinearOperatorExpression):
         x < y < z
         x <= y <= z
 
-<<<<<<< HEAD
     args:
         args (tuple): child nodes
-=======
-    argss:
-        argss (tuple): child nodes
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
         strict (tuple): flags that indicates whether the inequalities are strict
     """
 
     __slots__ = ('_strict',)
     PRECEDENCE = 9
 
-    def __init__(self, argss, strict):
-        super(RangedExpression,self).__init__(argss)
+    def __init__(self, args, strict):
+        super(RangedExpression,self).__init__(args)
         self._strict = strict
 
-    def nargss(self):
+    def nargs(self):
         return 3
 
-    def create_node_with_local_data(self, argss):
-        return self.__class__(argss, self._strict)
+    def create_node_with_local_data(self, args):
+        return self.__class__(args, self._strict)
 
     def __getstate__(self):
         state = super(RangedExpression, self).__getstate__()
@@ -173,17 +158,17 @@ class RangedExpression(_LinearOperatorExpression):
         return "{0}  {1}  {2}  {3}  {4}".format(values[0], '<' if self._strict[0] else '<=', values[1], '<' if self._strict[1] else '<=', values[2])
 
     def is_constant(self):
-        return (self._argss_[0].__class__ in native_numeric_types or self._argss_[0].is_constant()) and \
-               (self._argss_[1].__class__ in native_numeric_types or self._argss_[1].is_constant()) and \
-               (self._argss_[2].__class__ in native_numeric_types or self._argss_[2].is_constant())
+        return (self._args_[0].__class__ in native_numeric_types or self._args_[0].is_constant()) and \
+               (self._args_[1].__class__ in native_numeric_types or self._args_[1].is_constant()) and \
+               (self._args_[2].__class__ in native_numeric_types or self._args_[2].is_constant())
 
     def is_potentially_variable(self):
-        return (self._argss_[1].__class__ not in native_numeric_types and \
-                self._argss_[1].is_potentially_variable()) or \
-               (self._argss_[0].__class__ not in native_numeric_types and \
-                self._argss_[0].is_potentially_variable()) or \
-               (self._argss_[2].__class__ not in native_numeric_types and \
-                self._argss_[2].is_potentially_variable())
+        return (self._args_[1].__class__ not in native_numeric_types and \
+                self._args_[1].is_potentially_variable()) or \
+               (self._args_[0].__class__ not in native_numeric_types and \
+                self._args_[0].is_potentially_variable()) or \
+               (self._args_[2].__class__ not in native_numeric_types and \
+                self._args_[2].is_potentially_variable())
 
 
 class InequalityExpression(_LinearOperatorExpression):
@@ -194,28 +179,23 @@ class InequalityExpression(_LinearOperatorExpression):
         x < y
         x <= y
 
-<<<<<<< HEAD
     args:
         args (tuple): child nodes
-=======
-    argss:
-        argss (tuple): child nodes
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
         strict (bool): a flag that indicates whether the inequality is strict
     """
 
     __slots__ = ('_strict',)
     PRECEDENCE = 9
 
-    def __init__(self, argss, strict):
-        super(InequalityExpression,self).__init__(argss)
+    def __init__(self, args, strict):
+        super(InequalityExpression,self).__init__(args)
         self._strict = strict
 
-    def nargss(self):
+    def nargs(self):
         return 2
 
-    def create_node_with_local_data(self, argss):
-        return self.__class__(argss, self._strict)
+    def create_node_with_local_data(self, args):
+        return self.__class__(args, self._strict)
 
     def __getstate__(self):
         state = super(InequalityExpression, self).__getstate__()
@@ -254,14 +234,14 @@ class InequalityExpression(_LinearOperatorExpression):
             return "{0}  {1}  {2}".format(values[0], '<' if self._strict else '<=', values[1])
 
     def is_constant(self):
-        return (self._argss_[0].__class__ in native_numeric_types or self._argss_[0].is_constant()) and \
-               (self._argss_[1].__class__ in native_numeric_types or self._argss_[1].is_constant())
+        return (self._args_[0].__class__ in native_numeric_types or self._args_[0].is_constant()) and \
+               (self._args_[1].__class__ in native_numeric_types or self._args_[1].is_constant())
 
     def is_potentially_variable(self):
-        return (self._argss_[0].__class__ not in native_numeric_types and \
-                self._argss_[0].is_potentially_variable()) or \
-               (self._argss_[1].__class__ not in native_numeric_types and \
-                self._argss_[1].is_potentially_variable())
+        return (self._args_[0].__class__ not in native_numeric_types and \
+                self._args_[0].is_potentially_variable()) or \
+               (self._args_[1].__class__ not in native_numeric_types and \
+                self._args_[1].is_potentially_variable())
 
 
 def inequality(lower=None, body=None, upper=None, strict=False):
@@ -287,11 +267,7 @@ def inequality(lower=None, body=None, upper=None, strict=False):
         This function provides a mechanism for expressing
         ranged inequalities without chained inequalities.
 
-<<<<<<< HEAD
     args:
-=======
-    argss:
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
         lower: an expression defines a lower bound
         body: an expression defines the body of a ranged constraint
         upper: an expression defines an upper bound
@@ -326,7 +302,7 @@ class EqualityExpression(_LinearOperatorExpression):
     __slots__ = ()
     PRECEDENCE = 9
 
-    def nargss(self):
+    def nargs(self):
         return 2
 
     def __nonzero__(self):
@@ -348,10 +324,10 @@ class EqualityExpression(_LinearOperatorExpression):
         return "{0}  ==  {1}".format(values[0], values[1])
 
     def is_constant(self):
-        return self._argss_[0].is_constant() and self._argss_[1].is_constant()
+        return self._args_[0].is_constant() and self._args_[1].is_constant()
 
     def is_potentially_variable(self):
-        return self._argss_[0].is_potentially_variable() or self._argss_[1].is_potentially_variable()
+        return self._args_[0].is_potentially_variable() or self._args_[1].is_potentially_variable()
 
 
 
@@ -370,9 +346,9 @@ if _using_chained_inequality:
         lhs_is_relational = False
 
         if not (lhs.__class__ in native_types or lhs.is_expression_type()):
-            lhs = _process_args(lhs)
+            lhs = _process_arg(lhs)
         if not (rhs.__class__ in native_types or rhs.is_expression_type()):
-            rhs = _process_args(rhs)
+            rhs = _process_arg(rhs)
 
         if lhs.__class__ in native_numeric_types:
             lhs = as_numeric(lhs)
@@ -457,7 +433,7 @@ if _using_chained_inequality:
                               "where both sub-expressions are relational "\
                               "expressions.")
                     _chainedInequality.prev = None
-                    return RangedExpression(lhs._argss_ + (rhs,), (lhs._strict,strict))
+                    return RangedExpression(lhs._args_ + (rhs,), (lhs._strict,strict))
                 else:
                     raise TypeError("Cannot create an InequalityExpression "\
                           "where one of the sub-expressions is an equality "\
@@ -465,7 +441,7 @@ if _using_chained_inequality:
             elif rhs_is_relational:
                 if rhs.__class__ is InequalityExpression:
                     _chainedInequality.prev = None
-                    return RangedExpression((lhs,) + rhs._argss_, (strict, rhs._strict))
+                    return RangedExpression((lhs,) + rhs._args_, (strict, rhs._strict))
                 else:
                     raise TypeError("Cannot create an InequalityExpression "\
                           "where one of the sub-expressions is an equality "\
@@ -483,9 +459,9 @@ else:
         lhs_is_relational = False
 
         if not (lhs.__class__ in native_types or lhs.is_expression_type()):
-            lhs = _process_args(lhs)
+            lhs = _process_arg(lhs)
         if not (rhs.__class__ in native_types or rhs.is_expression_type()):
-            rhs = _process_args(rhs)
+            rhs = _process_arg(rhs)
 
         if lhs.__class__ in native_numeric_types:
             # TODO: Why do we need this?
@@ -522,14 +498,14 @@ else:
                         raise TypeError("Cannot create an InequalityExpression "\
                               "where both sub-expressions are relational "\
                               "expressions.")
-                    return RangedExpression(lhs._argss_ + (rhs,), (lhs._strict,strict))
+                    return RangedExpression(lhs._args_ + (rhs,), (lhs._strict,strict))
                 else:
                     raise TypeError("Cannot create an InequalityExpression "\
                           "where one of the sub-expressions is an equality "\
                           "or ranged expression:\n    " + lhs.to_string())
             elif rhs_is_relational:
                 if rhs.__class__ is InequalityExpression:
-                    return RangedExpression((lhs,) + rhs._argss_, (strict, rhs._strict))
+                    return RangedExpression((lhs,) + rhs._args_, (strict, rhs._strict))
                 else:
                     raise TypeError("Cannot create an InequalityExpression "\
                           "where one of the sub-expressions is an equality "\
@@ -538,10 +514,7 @@ else:
                 return InequalityExpression((lhs, rhs), strict)
 
 
-<<<<<<< HEAD
 
-=======
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
 class LogicalExpressionBase(LogicalValue):
     """
     Logical expressions base expression.
@@ -551,28 +524,19 @@ class LogicalExpressionBase(LogicalValue):
     
     Abstract
 
-<<<<<<< HEAD
     args:
         args (list or tuple): Children of this node.
-=======
-    argss:
-        argss (list or tuple): Children of this node.
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
     """
 
     # 0-0 do we need this and used this new base for the expressions above?
     __slots__ =  ('_args_',)
-    PRECEDENCE = 0
+    PRECEDENCE = 10
 
     def __init__(self, args):
         self._args_ = args
 
 
-<<<<<<< HEAD
     def nargs(self):
-=======
-    def nargss(self):
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
         """
         Returns the number of child nodes.
         By default, logical expression represents binary expression.
@@ -585,17 +549,12 @@ class LogicalExpressionBase(LogicalValue):
         """
         Return the i-th child node.
 
-<<<<<<< HEAD
         args:
-=======
-        argss:
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
             i (int): Nonnegative index of the child that is returned.
 
         Returns:
             The i-th child node.
         """
-<<<<<<< HEAD
         if i >= self.nargs():
             raise KeyError("Invalid index for expression argsument: %d" % i)
         if i < 0:
@@ -605,28 +564,13 @@ class LogicalExpressionBase(LogicalValue):
 
     @property
     def args(self):
-=======
-        if i >= self.nargss():
-            raise KeyError("Invalid index for expression argsument: %d" % i)
-        if i < 0:
-            return self._argss_[self.nargss()+i]
-            #0-0 send a warning?
-        return self._argss_[i]
-
-    @property
-    def argss(self):
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
         """
         Return the child nodes
 
         Returns: Either a list or tuple (depending on the node storage
             model) containing only the child nodes of this node
         """
-<<<<<<< HEAD
         return self._args_[:self.nargs()]
-=======
-        return self._argss_[:self.nargss()]
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
 
 
     def __getstate__(self):
@@ -645,11 +589,7 @@ class LogicalExpressionBase(LogicalValue):
         """
         Evaluate the value of the expression tree.
         #0-0 leave it for now
-<<<<<<< HEAD
         args:
-=======
-        argss:
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
             exception (bool): If :const:`False`, then
                 an exception raised while evaluating
                 is captured, and the value returned is
@@ -681,11 +621,7 @@ class LogicalExpressionBase(LogicalValue):
         """
         Return a string representation of the expression tree.
         #leave it for now
-<<<<<<< HEAD
         args:
-=======
-        argss:
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
             verbose (bool): If :const:`True`, then the the string
                 representation consists of nested functions.  Otherwise,
                 the string representation is an algebraic equation.
@@ -727,11 +663,7 @@ class LogicalExpressionBase(LogicalValue):
         <pyomo.core.expr.current._ToStringVisitor>` class.  It must
         must be defined in subclasses.
 
-<<<<<<< HEAD
         args:
-=======
-        argss:
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
             values (list): The string representations of the children of this
                 node.
             verbose (bool): If :const:`True`, then the the string
@@ -755,11 +687,7 @@ class LogicalExpressionBase(LogicalValue):
 
         In general, no argsuments are passed to this function.
 
-<<<<<<< HEAD
         args:
-=======
-        argss:
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
             *arg: a variable length list of argsuments
             **kwds: keyword argsuments
 
@@ -782,11 +710,7 @@ class LogicalExpressionBase(LogicalValue):
             However, named expressions are treated like
             leaves, and they are not cloned.
 
-<<<<<<< HEAD
         args:
-=======
-        argss:
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
             substitute (dict): a dictionary that maps object ids to clone
                 objects generated earlier during the cloning process.
 
@@ -795,11 +719,7 @@ class LogicalExpressionBase(LogicalValue):
         """
         return clone_expression(self, substitute=substitute)
 
-<<<<<<< HEAD
     def create_node_with_local_data(self, args):
-=======
-    def create_node_with_local_data(self, argss):
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
         """
         Construct a node using given argsuments.
 
@@ -807,22 +727,13 @@ class LogicalExpressionBase(LogicalValue):
         node, which is used in tree visitor scripts.  In the simplest
         case, this simply returns::
 
-<<<<<<< HEAD
             self.__class__(args)
-=======
-            self.__class__(argss)
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
 
         But in general this creates an expression object using local
         data as well as argsuments that represent the child nodes.
 
-<<<<<<< HEAD
         args:
             args (list): A list of child nodes for the new expression
-=======
-        argss:
-            argss (list): A list of child nodes for the new expression
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
                 object
             memo (dict): A dictionary that maps object ids to clone
                 objects generated earlier during a cloning process.
@@ -834,11 +745,7 @@ class LogicalExpressionBase(LogicalValue):
             A new expression object with the same type as the current
             class.
         """
-<<<<<<< HEAD
         return self.__class__(args)
-=======
-        return self.__class__(argss)
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
 
     def create_potentially_variable_object(self):
         """
@@ -895,11 +802,7 @@ class LogicalExpressionBase(LogicalValue):
         be over-written by expression classes to customize this
         logic.
 
-<<<<<<< HEAD
         args:
-=======
-        argss:
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
             values (list): A list of boolean values that indicate whether
                 the children of this expression are fixed
 
@@ -990,11 +893,7 @@ class LogicalExpressionBase(LogicalValue):
             encountered during the execution of this method is
             considered an error.
 
-<<<<<<< HEAD
         args:
-=======
-        argss:
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
             values (list): A list of values that indicate the value
                 of the children expressions.
 
@@ -1113,7 +1012,6 @@ def Not(self):
     return NotExpression(self)
 
 # static method for EquivalenceExpression creator 
-<<<<<<< HEAD
 def Equivalence(arg1, arg2):
     return EquivalenceExpression(arg1, arg2) 
 
@@ -1124,32 +1022,16 @@ def LogicalXor(arg1, arg2):
 # 0-0 add a static method for impies>
 def Implies(arg1, arg2):
     return Implication(arg1, arg2)
-=======
-def Equivalence(args1, args2):
-    return EquivalenceExpression(args1, args2) 
-
-# static method for XorExpression creator
-def Xor(args1, args2):
-    return XorExpression(args1, args2)
-
-#
-#def implies():
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
 
 # static method for AndExpression creator
 # create a new node iff neither node is an AndNode
 
 #combine 2 function and name it And()
-<<<<<<< HEAD
 def LogicalAnd(*argv):
-=======
-def Conjunct(argsList):
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
     # 0-0 Do we need to take care of the safety of this method?
     # argsList is a set of LogicalValues, RaiseError if not?
     # checking requires a full loop from my understanding
     # Do we need to take care of empty set of set with length 1?
-<<<<<<< HEAD
     argsList = list(argv)
     parent = argsList[0]
     for tmp in argsList:
@@ -1165,32 +1047,10 @@ def Conjunct(argsList):
     while (len(argsList) != 0):
         res._add(argsList.pop())
     return res
-=======
-    for tmp in argsList:
-        if (tmp.getname() == "AndExpression"):
-            parent = argsList.pop()
-            parent = AndExpression(list([parent]))
-            while(len(argsList) != 0):
-                parent._add(argsList.pop())
-            return parent
-        parent = tmp
-
-    parent = AndExpression(list([parent]))
-    argsList.pop()
-    while (len(argsList) != 0):
-        parent._add(argsList.pop())
-    return parent
-
-
-def And(*argv):
-    return Conjunct(list(argsv))
-
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
 
 # static method for OrExpression creator
 # create a new node iff neither node is an OrNode, same logic
 
-<<<<<<< HEAD
 def LogicalOr(*argv):
     argsList = list(argv)
     parent = argsList[0]
@@ -1212,28 +1072,6 @@ def LogicalOr(*argv):
 
 # static Method for ExactlyExpression, AtMostExpression and AtLeastExpression
 # make it support tuples?
-=======
-def Disjunct(argsList):
-
-    for tmp in argsList:
-        if (tmp.getname() == "OrExpression"):
-            parent = argsList.pop()
-            parent = OrExpression(list([parent]))
-            while(len(argsList) != 0):
-                parent._add(argsList.pop())
-            return parent
-        parent = tmp
-    parent = OrExpression(list([parent]))
-    argsList.pop()
-    while (len(argsList) != 0):
-        parent._add(argsList.pop())
-    return parent
-
-def Or(*argv):
-    return Disjunct(list(argsv))
-
-# static Method for ExactlyExpression, AtMostExpression and AtLeastExpression
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
 def Exactly(req, argsList):
     result = ExactlyExpression(list(argsList))
     result._args_.insert(0, req)
@@ -1277,23 +1115,15 @@ class UnaryExpression(LogicalExpressionBase):
         #for tracing purpose only, delete later.
         #0-0 
 
-    PRECEDENCE = 0
+    PRECEDENCE = 10
 
-<<<<<<< HEAD
     def nargs(self):
-=======
-    def nargss(self):
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
         return 1
 
     def getname(self, *arg, **kwd):
         return 'UnaryExpression'
 
-<<<<<<< HEAD
     def _precedence(self):
-=======
-    def _prededence(self):
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
         return UnaryExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
@@ -1316,7 +1146,7 @@ class NotExpression(UnaryExpression):
 
         __slots__ = ()
 
-        PRECEDENCE = 10
+        PRECEDENCE = 1
         #This operation should have the highest precedence among all, for now 
         #use 10 and adjust that later 0-0
 
@@ -1351,24 +1181,16 @@ class BinaryExpression(LogicalExpressionBase):
         #for tracing purpose only, delete later.
         #0-0 
 
-    PRECEDENCE = 0
+    PRECEDENCE = 10
     #As this class should never be used in practice.
 
-<<<<<<< HEAD
     def nargs(self):
-=======
-    def nargss(self):
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
         return 2
 
     def getname(self, *arg, **kwd):
         return 'BinaryExpression'
 
-<<<<<<< HEAD
     def _precedence(self):
-=======
-    def _prededence(self):
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
         return BinaryExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
@@ -1392,7 +1214,7 @@ class EquivalenceExpression(BinaryExpression):
 
         __slots__ = ()
 
-        PRECEDENCE = 9
+        PRECEDENCE = 7
         #0-0 not really sure... Is there a reference I can use?
 
         def getname(self, *arg, **kwd):
@@ -1406,11 +1228,11 @@ class EquivalenceExpression(BinaryExpression):
             pass
 
         #change it to (self, result):
-        def _apply_opeartion(self,res1, res2):
+        def _apply_opeartion(self, resList):
             """
-            #0-0 
+            #0-0 safety check?
             """
-            return (res1 == res2)
+            return (resList[0] == resList[1])
 
 
 class XorExpression(BinaryExpression):
@@ -1420,7 +1242,7 @@ class XorExpression(BinaryExpression):
 
         __slots__ = ()
 
-        PRECEDENCE = 9
+        PRECEDENCE = 6
         #0-0 same as above
 
         def getname(self, *arg, **kwd):
@@ -1433,12 +1255,12 @@ class XorExpression(BinaryExpression):
             #pass this one for now 0-0
             pass
 
-        def _apply_operation(self,res1, res2):
+        def _apply_operation(self,resList):
             """
             #0-0 
             """
             #return (res1 + res2 == 1)
-            return operator.xor(res1, res2)
+            return operator.xor(resList[0], resList[1])
 
 
 class Implication(BinaryExpression):
@@ -1448,7 +1270,7 @@ class Implication(BinaryExpression):
 
         __slots__ = ()
 
-        PRECEDENCE = 9
+        PRECEDENCE = 4
         #0-0 same as above
 
         def getname(self, *arg, **kwd):
@@ -1461,23 +1283,14 @@ class Implication(BinaryExpression):
             #pass this one for now 0-0
             pass
 
-        def _apply_opeartion(self,res1, res2):
-            """
-            # 0-0 Use Not(a) or B?
-            """
-            #we may need a get_args function for below 
-            #try OrExpression(Not(self._largs_), self._rargs_) 
-            return ((not res1) or (res2))
+        def _apply_opeartion(self,resList):
+            return ((not resList[0]) or (resList[1]))
 
 
-class MultiargsExpression(LogicalExpressionBase):
+class MultiArgsExpression(LogicalExpressionBase):
     """
     The abstract class for MultiargsExpression. This class should never be initialized.
-<<<<<<< HEAD
     with __init__ .  args is a tempting name.
-=======
-    with __init__ .  argss is a tempting name.
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
     """
 
     #args should be a set from Romeo's prototype
@@ -1485,42 +1298,25 @@ class MultiargsExpression(LogicalExpressionBase):
     __slots__ = ("_args_")
 
     def __init__(self, ChildList):
-<<<<<<< HEAD
         #self._args_ =  list([v for v in ChildList]) #if we want the set version
-=======
-        #self._argss_ =  list([v for v in ChildList]) #if we want the set version
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
         self._args_ =  list([v for v in ChildList])
-        #Not really sure
-        #print("The variable is initialized using MultiargsExpression")
-        #for tracing purpose only, delete later.
-        #0-0 
 
-    PRECEDENCE = 0
+    PRECEDENCE = 10
     #As this class should never be used in practice.
 
-<<<<<<< HEAD
     def nargs(self):
         return len(self._args_)
 
     def getname(self, *arg, **kwd):
-        return 'MultiNodeExpression'
-=======
-    def nargss(self):
-        return len(self._args_)
-
-    def getname(self, *arg, **kwd):
-        return 'MultNodeExpression'
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
+        return 'MultiArgsExpression'
 
     def _add(self, other):
-        #0-0 a private method that adds another logicalexpression into this node
+        #a private method that adds another logicalexpression into this node
         #add elements into the list,while not creating a node if they share the same type
         #Always use this safe_add to add elements into a multinode
         '''
         #set version
         if (other.getname() != self.getname()):
-<<<<<<< HEAD
             self._args_.add(other)
         else:
             self._args_.update(other._args_)
@@ -1528,24 +1324,11 @@ class MultiargsExpression(LogicalExpressionBase):
         '''
         #list version
         if (type(other) != type(self)):
-=======
-            self._argss_.add(other)
-        else:
-            self._argss_.update(other._argss_)
-            #should we remove other in some way here?
-        '''
-        #list version
-        if (other.getname() != self.getname()):
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
             self._args_.append(other)
         else:
             self._args_.extend(other._args_) 
 
-<<<<<<< HEAD
     def _precedence(self):
-=======
-    def _prededence(self):
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
         return MultiargsExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
@@ -1554,28 +1337,12 @@ class MultiargsExpression(LogicalExpressionBase):
         #fine to raise this error?
         raise NotImplementedError("Derived expression (%s) failed to "\
                 "implement _apply_operation()" % ( str(self.__class__), ))
-    #0-0 for debug currently
-    def __str__(self):
-        res = ""
-        for tmp in self._args_ :
-            res += (tmp.getname() + " ")
-        return res
 
     def _apply_operation(self):
         raise TypeError("Please use the approriate MultiargsExpression instead.")
-        #0-0 fine like this?
 
-<<<<<<< HEAD
-=======
-    #The following functions serve debug purpose only, delete later 0-0
-    #essentially the same functiom for function test
-    def essame(self,other):
-        assert(set(self._args_) == set(other._args_)) 
-        #0-0 There is an unhashable error raised
 
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
-
-class AndExpression(MultiargsExpression):
+class AndExpression(MultiArgsExpression):
     """
     This is the node for AndExpression.
     For coding only, given that AndExpression should have & as the
@@ -1584,8 +1351,7 @@ class AndExpression(MultiargsExpression):
 
     __slots__ = ()
 
-    PRECEDENCE = 9
-    #0-0 same as above
+    PRECEDENCE = 2
 
     def getname(self, *arg, **kwd):
         return 'AndExpression'
@@ -1598,23 +1364,16 @@ class AndExpression(MultiargsExpression):
         pass
 
     def _apply_opeartion(self, result):
-        """
-        #0-0 to be implemented
-        """
         if (len(self._args_) != len(res_list)):
             KeyError("Make sure number of truth values matches number"\
              "of children for this node")
         return all(result)
 
-<<<<<<< HEAD
 
-=======
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
-class OrExpression(MultiargsExpression):
+class OrExpression(MultiArgsExpression):
     __slots__ = ()
 
-    PRECEDENCE = 9
-    #0-0 same as above
+    PRECEDENCE = 3
 
     def getname(self, *arg, **kwd):
         return 'OrExpression'
@@ -1628,7 +1387,6 @@ class OrExpression(MultiargsExpression):
 
     def _apply_operation(self, result):
         """
-        #0-0 to be implemented
         """
         if (len(self._args_) != len(res_list)):
             raise KeyError("Make sure number of truth values matches number"\
@@ -1639,11 +1397,10 @@ class OrExpression(MultiargsExpression):
 
 '''for Exactly, ...
 '''
-class Exactly(MultiargsExpression):
+class Exactly(MultiArgsExpression):
     __slots__ = ()
 
-    PRECEDENCE = 9
-    #0-0 same as above
+    PRECEDENCE = 8
 
     def getname(self, *arg, **kwd):
         return 'ExactlyExpression'
@@ -1655,32 +1412,18 @@ class Exactly(MultiargsExpression):
         #pass this one for now 0-0
         pass
 
-    def _apply_operation(self,result):
-        """
-        #0-0 to be implemented
-        """
+    def _apply_operation(self, result):
         if (len(self._args_)-1 != len(res_list)):
             KeyError("Make sure number of truth values matches number"\
              "of children for this node")
-        '''
-        counter = 0
-        for tmp in res_list:
-            if(tmp == True):
-                counter += 1
-        return (counter == self._args_[0])
-        '''
-<<<<<<< HEAD
-        return sum(result) == self._args_[0]
-=======
-        return sum(result) == self._argss_[0]
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
+        #0-0 Had some logic error here, is this fine now
+        return sum(result) == 2*self._args_[0]
 
 
-class AtMostExpression(MultiargsExpression):
+class AtMostExpression(MultiArgsExpression):
     __slots__ = ()
 
-    PRECEDENCE = 9
-    #0-0 same as above
+    PRECEDENCE = 8
 
     def getname(self, *arg, **kwd):
         return 'AtMostExpression'
@@ -1697,18 +1440,17 @@ class AtMostExpression(MultiargsExpression):
             KeyError("Make sure number of truth values matches number"\
              "of children for this node")
         counter = 0
-        for tmp in res_list:
+        for tmp in res_list[1:]:
             if(tmp == True):
                 counter += 1
         return (counter >= self._args_[0])
 
         
 
-class AtLeastExpression(MultiargsExpression):
+class AtLeastExpression(MultiArgsExpression):
     __slots__ = ()
 
-    PRECEDENCE = 9
-    #0-0 same as above
+    PRECEDENCE = 8
 
     def getname(self, *arg, **kwd):
         return 'AtLeastExpression'
@@ -1725,7 +1467,7 @@ class AtLeastExpression(MultiargsExpression):
             KeyError("Make sure number of truth values matches number"\
              "of children for this node")
         counter = 0
-        for tmp in res_list:
+        for tmp in res_list[1:]:
             if(tmp == True):
                 counter += 1
         return (counter <= self._args_[0])
@@ -1735,9 +1477,3 @@ class AtLeastExpression(MultiargsExpression):
 
 
 
-<<<<<<< HEAD
-=======
-
-
-
->>>>>>> e5dcbbcdad3506d83513b0a7c8b31f8002f5d999
