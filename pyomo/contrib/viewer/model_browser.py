@@ -43,7 +43,10 @@ except:
         pass
     class _ModelBrowser(object):
         pass
-
+    class QItemEditorCreatorBase(object):
+        pass
+    class QItemDelegate(object):
+        pass
 
 class LineEditCreator(QItemEditorCreatorBase):
     """
