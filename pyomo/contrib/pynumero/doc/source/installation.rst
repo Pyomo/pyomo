@@ -42,7 +42,7 @@ if compiling from linux::
 	cd build
 	cmake .. 
 	make
-	cp lib/libpynumero_* ../../extensions/lib/Linux/
+	cp asl_interface/libpynumero_* ../../extensions/lib/Linux/
 	
 if compiling from mac::
 
@@ -53,7 +53,7 @@ if compiling from mac::
 	cd build
 	cmake .. 
 	make
-	cp lib/libpynumero_* ../../extensions/lib/Darwin/
+	cp asl_interface/libpynumero_* ../../extensions/lib/Darwin/
 
 
   
@@ -76,9 +76,9 @@ Python packages
 ^^^^^^^^^^^^^^^^^
 The following python packages are required for PyNumero:
 
-* Numpy [vanderWalt2011]_: used to support large, multi-dimensional arrays and matrices, 
+* Numpy: used to support large, multi-dimensional arrays and matrices, 
   http://www.numpy.org/
-* Scipy [vanderWalt2011]_: used to support efficient routines for numerical integration, 
+* Scipy: used to support efficient routines for numerical integration, 
   http://www.scipy.org/
 
 Packages can be installed using pip.
