@@ -1361,7 +1361,7 @@ class AndExpression(MultiArgsExpression):
 
     def _to_string(self, values, verbose, smap, compute_values):
         #pass this one for now 0-0
-        pass
+        return "1"
 
     def _apply_opeartion(self, result):
         if (len(self._args_) != len(res_list)):

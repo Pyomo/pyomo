@@ -125,7 +125,7 @@ def value(obj, exception=True):
         #
         # Here, we try to catch the exception
         #
-
+        print(type(obj))
         try:
             tmp = obj(exception=True)
             if tmp is None:

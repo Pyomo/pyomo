@@ -254,7 +254,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
     #
 
     # value is an attribute
-
+    # 0-0 A mark for debugging, access value
     @property
     def value(self):
         """Return the value for this variable."""
