@@ -30,8 +30,6 @@ class _BooleanVarData(ComponentData, LogicalValue):
         #   - LogicalValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
-        #0-0 For testing purpose, probably delete later
-        self.value = True
 
     #
     # Interface
@@ -240,7 +238,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
 
     def __getstate__(self):
         state = super(_GeneralBooleanVarData, self).__getstate__()
-        for i in _GeneralVarData.__slots__:
+        for i in _GeneralBooleanVarData.__slots__:
             state[i] = getattr(self, i)
         return state
 
@@ -607,13 +605,13 @@ class SimpleBooleanVar(_GeneralBooleanVarData, BooleanVar):
 
     @value.setter
     def value(self, val):
-        """Return the value for this variable."""
+        """Set the value for this variable."""
         if self._constructed:
-            return _GeneralBooleanVarData.value.fget(self)
+            return _GeneralBooleanVarData.value.fset(self, val)
         raise ValueError(
-            "Accessing the value of variable '%s' "
+            "Setting the value of variable '%s' "
             "before the Var has been constructed (there "
-            "is currently no value to return)."
+            "is currently nothing to set."
             % (self.name))
 
 
