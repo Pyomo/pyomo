@@ -1228,7 +1228,7 @@ class EquivalenceExpression(BinaryExpression):
             pass
 
         #change it to (self, result):
-        def _apply_opeartion(self, resList):
+        def _apply_operation(self, resList):
             """
             #0-0 safety check?
             """
@@ -1283,7 +1283,7 @@ class Implication(BinaryExpression):
             #pass this one for now 0-0
             pass
 
-        def _apply_opeartion(self,resList):
+        def _apply_operation(self,resList):
             return ((not resList[0]) or (resList[1]))
 
 
@@ -1363,8 +1363,8 @@ class AndExpression(MultiArgsExpression):
         #pass this one for now 0-0
         return "1"
 
-    def _apply_opeartion(self, result):
-        if (len(self._args_) != len(res_list)):
+    def _apply_operation(self, result):
+        if (len(self._args_) != len(result)):
             KeyError("Make sure number of truth values matches number"\
              "of children for this node")
         return all(result)
@@ -1388,7 +1388,7 @@ class OrExpression(MultiArgsExpression):
     def _apply_operation(self, result):
         """
         """
-        if (len(self._args_) != len(res_list)):
+        if (len(self._args_) != len(result)):
             raise KeyError("Make sure number of truth values matches number"\
              "of children for this node")
         return any(result)

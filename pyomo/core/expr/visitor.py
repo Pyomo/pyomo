@@ -909,7 +909,11 @@ class _EvaluationVisitor(ExpressionValueVisitor):
             return True, node
 
         if isinstance(node, LogicalValue):
-            return True, value_logical(node)
+            if node.is_variable_type():
+                return True, value_logical(node)
+            if not node.is_expression_type():
+                return True, value_logical(node)
+            return False, None
 
         if node.is_variable_type():
             return True, value(node)
