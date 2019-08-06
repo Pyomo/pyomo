@@ -208,7 +208,7 @@ class IndexedDisjunct(Disjunct):
 
 
 class _DisjunctionData(ActiveComponentData):
-    __slots__ = ('disjuncts','xor')
+    __slots__ = ('disjuncts','xor','xor_constraint')
     _NoArgument = (0,)
 
     def __init__(self, component=None):
@@ -223,6 +223,9 @@ class _DisjunctionData(ActiveComponentData):
         self._active = True
         self.disjuncts = []
         self.xor = True
+        # pointer to XOR (or OR) constraint if this disjunction has been
+        # transformed. None if it has not been transformed
+        self.xor_constraint = None
 
     def __getstate__(self):
         """

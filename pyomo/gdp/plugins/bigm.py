@@ -23,6 +23,7 @@ from pyomo.core.base.PyomoModel import ConcreteModel, AbstractModel
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.gdp.disjunct import _DisjunctData, SimpleDisjunct
 from pyomo.gdp.util import target_list, is_child_of
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from pyomo.repn import generate_standard_repn
@@ -78,23 +79,17 @@ class BigM_Transformation(Transformation):
     contain an indexed Block named "relaxedDisjuncts", which will hold
     the relaxed disjuncts.  This block is indexed by an integer
     indicating the order in which the disjuncts were relaxed.
+    Each block has a dictionary "_constraintMap":
+    
+        'srcConstraints': ComponentMap(<transformed constraint>:
+                                       <src constraint>)
+        'transformedConstraints': ComponentMap(<src constraint>:
+                                               <transformed constraint>)
 
-    After transformation, the parent model will have a
-    "_gdp_transformation_info" dict containing several maps:
+    All transformed Disjuncts will have a pointer the block their transformed
+    constraints are on, and all transformed Disjunctions will have a 
+    pointer to the corresponding OR or XOR constraint.
 
-        'relaxedDisjunctionMap': ComponentMap(<source disjunction>: {
-            'orConstraint': <constraint>
-            'relaxationBlock': <block>
-        })
-        'relaxedConstraintMap': ComponentMap(
-            <source constraint> : <relaxed_constraint>)
-        'srcDisjuncts': ComponentMap(<relaxed disjunct block>: <source disjunct>)
-        'srcConstraints': ComponentMap(<relaxed constraint>: <source constraint>)
-        'srcDisjunctionFromOr': ComponentMap(<or constraint>: 
-                                             <source disjunction>)
-    Note that we don't map from the relaxation blocks back to the disjunctions.
-    It's not one-to-one and it is information you can get from the disjunct 
-    mappings.
     """
 
     CONFIG = ConfigBlock("gdp.bigm")
@@ -228,7 +223,7 @@ class BigM_Transformation(Transformation):
                 descent_order=TraversalStrategy.PostfixDFS):
             self._transformDisjunction(disjunction, bigM)
 
-    def _getXorConstraint(self, disjunction):
+    def _getXorConstraint(self, disjunction, xor_map):
         # Put the disjunction constraint on its parent block and
         # determine whether it is an OR or XOR constraint.
 
@@ -237,16 +232,19 @@ class BigM_Transformation(Transformation):
         # we called this on a DisjunctionData, we did something wrong.
         assert isinstance(disjunction, Disjunction)
         parent = disjunction.parent_block()
-        info_dict = self._get_info_dict(disjunction)
 
-        disjunctionMap = info_dict['relaxedDisjunctionMap']
-        # If the Constraint already exists, return it
-        if disjunction in disjunctionMap:
-            orConstraintMap = disjunctionMap[disjunction]
-            if 'orConstraint' in orConstraintMap:
-                return orConstraintMap['orConstraint']
-        else:
-            orConstraintMap = disjunctionMap[disjunction] = {}
+        # If the Constraint already exists, return it. 
+        # We first check if it's in our map:
+        if disjunction in xor_map:
+            return xor_map[disjunction], xor_map
+        # It's still possible we have something if we transformed some
+        # DisjunctionDatas in a prior transformation...
+        if disjunction.is_indexed():
+            for disj in disjunction.values():
+                if disj.xor_constraint:
+                    xor = xor_map[disjunction] = disj.xor_constraint().\
+                          parent_component()
+                    return xor, xor_map
 
         # add the XOR (or OR) constraints to parent block (with unique name)
         # It's indexed if this is an IndexedDisjunction, not otherwise
@@ -260,46 +258,40 @@ class BigM_Transformation(Transformation):
         orCname = unique_component_name(parent, '_gdp_bigm_relaxation_' +
                                         disjunction.name + nm)
         parent.add_component(orCname, orC)
-        # [ESJ 07/18/2019] TODO: This is a mess right now--we are mapping
-        # containers, but we should definitely map the ComponentDatas
-        # too... This is why I don't really want this to be the source of truth
-        # as written...
-        orConstraintMap['orConstraint'] = orC
-        info_dict['srcDisjunctionFromOr'][orC] = disjunction
-        return orC
+        xor_map[disjunction] = parent.component(orCname)
+
+        return orC, xor_map
 
     def _transformDisjunction(self, obj, bigM):
         parent_block = obj.parent_block()
         transBlock = self._add_transformation_block(parent_block)
 
-        infodict = self._get_info_dict(parent_block)
-        disjunctionMap = infodict['relaxedDisjunctionMap']
-        if not obj in disjunctionMap:
-            disjunctionMap[obj] = {}
-        disjunctionMap[obj]['relaxationBlock'] = transBlock
+        xor_map = ComponentMap()
+
+        # If this is an IndexedDisjunction, create the XOR constraint here
+        # because we want its index to match the disjunction.
+        if obj.is_indexed():
+            xorConstraint, xor_map = self._getXorConstraint(obj, xor_map)
 
         # relax each of the disjunctionDatas
         for i in sorted(iterkeys(obj)):
-            self._transformDisjunctionData(obj[i], bigM, i, transBlock)
+            self._transformDisjunctionData(obj[i], bigM, i, transBlock, xor_map)
 
-        # deactivate so we know we relaxed
+        # deactivate so the writers don't scream
         obj.deactivate()
 
-    def _transformDisjunctionData(self, obj, bigM, index, transBlock=None):
+    def _transformDisjunctionData(self, obj, bigM, index, transBlock=None,
+                                  xor_map=None):
         if not obj.active:
             return  # Do not process a deactivated disjunction
         if transBlock is None:
             transBlock = self._add_transformation_block(obj.parent_block())
+
+        if not xor_map:
+            xor_map = ComponentMap()
         
-        parent_block = obj.parent_block()
-        infodict = self._get_info_dict(parent_block)
-        disjunctionMap = infodict['relaxedDisjunctionMap']
-        if not obj in disjunctionMap:
-            disjunctionMap[obj] = {}
-        disjunctionMap[obj]['relaxationBlock'] = transBlock
-        
-        parent_component = obj.parent_component()
-        orConstraint = self._getXorConstraint(parent_component)
+        xorConstraint, xor_map = self._getXorConstraint(obj.parent_component(),
+                                                        xor_map)
 
         xor = obj.xor
         or_expr = 0
@@ -308,48 +300,24 @@ class BigM_Transformation(Transformation):
             # make suffix list. (We don't need it until we are
             # transforming constraints, but it gets created at the
             # disjunct level, so more efficient to make it here and
-            # pass it down.
+            # pass it down.)
             suffix_list = self._get_bigm_suffix_list(disjunct)
             # relax the disjunct
             self._bigM_relax_disjunct(disjunct, transBlock, bigM, suffix_list)
 
         # add or (or xor) constraint
         if xor:
-            orConstraint.add(index, (or_expr, 1))
+            xorConstraint.add(index, (or_expr, 1))
         else:
-            orConstraint.add(index, (1, or_expr, None))
-
-        # We do the or constraint mappings here because otherwise we are mapping
-        # the containers, not the componentDatas.
-        disjunctionMap[obj]['orConstraint'] = orConstraint[index]
-        infodict['srcDisjunctionFromOr'][orConstraint] = obj
-
+            xorConstraint.add(index, (1, or_expr, None))
+        # Mark the DisjunctionData as transformed by mapping it to its XOR
+        # constraint.
+        obj.xor_constraint = weakref_ref(xorConstraint[index])
+        
+        # and deactivate for the writers
         obj.deactivate()
 
-    def _get_info_dict(self, obj):
-        parent_model = obj.model()
-        if hasattr(parent_model, "_gdp_transformation_info"):
-            infodict = parent_model._gdp_transformation_info
-            if type(infodict) is not dict:
-                raise GDP_Error(
-                    "Model %s contains an attribute named "
-                    "_gdp_transformation_info. The transformation requires "
-                    "that it can create this attribute on the parent model!" 
-                    % parent_model.name)
-        else:
-            infodict = parent_model._gdp_transformation_info = {
-                'relaxedDisjunctionMap': ComponentMap(),
-                'relaxedConstraintMap': ComponentMap(),
-                'srcDisjuncts': ComponentMap(),
-                'srcConstraints': ComponentMap(),
-                'srcDisjunctionFromOr': ComponentMap(),
-            }
-
-        return infodict
-
     def _bigM_relax_disjunct(self, obj, transBlock, bigM, suffix_list):
-        infodict = self._get_info_dict(obj)
-
         # deactivated -> either we've already transformed or user deactivated
         if not obj.active:
             if obj.indicator_var.is_fixed():
@@ -378,12 +346,11 @@ class BigM_Transformation(Transformation):
             # we've transformed it, so don't do it again.
             return
 
-        # add reference to original disjunct to info dict on transformation
-        # block
+        # add reference to original disjunct on transformation block
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
-        infodict['srcDisjuncts'][relaxationBlock] = obj
         obj.transformation_block = weakref_ref(relaxationBlock)
+        relaxationBlock._srcDisjunct = weakref_ref(obj)
 
         # This is crazy, but if the disjunction has been previously
         # relaxed, the disjunct *could* be deactivated.  This is a big
@@ -394,13 +361,12 @@ class BigM_Transformation(Transformation):
         # comparing the two relaxations.
         #
         # Transform each component within this disjunct
-        self._transform_block_components(obj, obj, infodict, bigM, suffix_list)
+        self._transform_block_components(obj, obj, bigM, suffix_list)
 
-        # deactivate disjunct so we know we've relaxed it
+        # deactivate disjunct to keep the writers happy
         obj._deactivate_without_fixing_indicator()
 
-    def _transform_block_components(self, block, disjunct, infodict,
-                                    bigM, suffix_list):
+    def _transform_block_components(self, block, disjunct, bigM, suffix_list):
         # We first need to find any transformed disjunctions that might be here
         # because we need to move their transformation blocks up onto the parent
         # block before we transform anything else on this block 
@@ -409,21 +375,25 @@ class BigM_Transformation(Transformation):
                 Disjunction, 
                 sort=SortComponents.deterministic, 
                 descend_into=(Block)):
-            if not obj in infodict['relaxedDisjunctionMap']:
+            if not obj.xor_constraint:
                 # This could be bad if it's active, but we'll wait to yell
                 # until the next loop
                 continue
             disjParentBlock = disjunct.parent_block()
             # get this disjunction's relaxation block.
-            transBlock = infodict['relaxedDisjunctionMap'][obj][
-                'relaxationBlock']
+            transBlock = None
+            for d in obj.disjuncts:
+                if d.transformation_block:
+                    transBlock = d.transformation_block().parent_block()
+            if transBlock is None:
+                raise GDP_Error(
+                    "Found transformed disjunction %s on disjunt %s, "
+                    "but none of its disjuncts have been transformed. "
+                    "This is very strange if not impossible" % (obj.name,
+                                                                disjunct.name))
             # move transBlock up to parent component
             transBlock.parent_block().del_component(transBlock)
-            self._transfer_transBlock_data(transBlock, destinationBlock,
-                                           infodict)
-            # update the map
-            infodict['relaxedDisjunctionMap'][obj][
-                'relaxationBlock'] = destinationBlock
+            self._transfer_transBlock_data(transBlock, destinationBlock)
 
         # Now look through the component map of block and transform
         # everything we have a handler for. Yell if we don't know how
@@ -444,25 +414,25 @@ class BigM_Transformation(Transformation):
             # obj is what we are transforming, we pass disjunct
             # through so that we will have access to the indicator
             # variables down the line.
-            handler(obj, disjunct, infodict, bigM, suffix_list)
+            handler(obj, disjunct, bigM, suffix_list)
 
-    def _transfer_transBlock_data(self, fromBlock, toBlock, infodict):
+    def _transfer_transBlock_data(self, fromBlock, toBlock):
         # We know that we have a list of transformed disjuncts on both. We need
         # to move those over. Then there might be constraints on the block also
         # (at this point only the diaggregation constraints from chull,
         # but... I'll leave it general for now.
         disjunctList = toBlock.relaxedDisjuncts
-        disjunctMapping = infodict['srcDisjuncts']
         for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
-            # [ESJ 07/18/2019] John! I thought you said this would work?
-            #newblock = disjunctList[len(disjunctList)] = disjunctBlock.clone()
+            # TODO [ESJ 07/18/2019] John! I thought you said something like this
+            # would work?
+            #newblock = disjunctList[len(disjunctList)] = disjunctBlock
             # I'm just hacking for now because I am confused:
             newblock = disjunctList[len(disjunctList)]
             self._copy_to_block(disjunctBlock, newblock)
             # update the mappings
-            original = disjunctMapping[disjunctBlock]
+            original = disjunctBlock._srcDisjunct()
             original.transformation_block = weakref_ref(newblock)
-            disjunctMapping[disjunctBlock] = original
+            newblock._srcDisjunct = weakref_ref(original)
 
         # move any constraints. I'm assuming they are all just on the
         # transformation block right now, because that is in our control and I
@@ -481,8 +451,8 @@ class BigM_Transformation(Transformation):
             oldblock.del_component(obj)
             newblock.add_component(obj.name, obj)
 
-    def _warn_for_active_disjunction(self, disjunction, disjunct, infodict,
-                                     bigMargs, suffix_list):
+    def _warn_for_active_disjunction(self, disjunction, disjunct, bigMargs,
+                                     suffix_list):
         # this should only have gotten called if the disjunction is active
         assert disjunction.active
         problemdisj = disjunction
@@ -496,16 +466,15 @@ class BigM_Transformation(Transformation):
 
         parentblock = problemdisj.parent_block()
         # the disjunction should only have been active if it wasn't transformed
-        assert (not hasattr(infodict, 'relaxedDisjunctionMap')) or \
-                (not problemdisj in infodict['relaxedDisjunctionMap'])
+        assert problemdisj.xor_constraint is None
         raise GDP_Error("Found untransformed disjunction %s in disjunct %s! "
                         "The disjunction must be transformed before the "
                         "disjunct. If you are using targets, put the "
                         "disjunction before the disjunct in the list."
                         % (problemdisj.name, disjunct.name))
 
-    def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct,
-                                  infodict, bigMargs, suffix_list):
+    def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, bigMargs,
+                                  suffix_list):
         assert innerdisjunct.active
         problemdisj = innerdisjunct
         if innerdisjunct.is_indexed():
@@ -524,24 +493,29 @@ class BigM_Transformation(Transformation):
                         "transformed.".format(problemdisj.name,
                                               outerdisjunct.name))
 
-    def _transform_block_on_disjunct(self, block, disjunct, infodict,
-                                     bigMargs, suffix_list):
+    def _transform_block_on_disjunct(self, block, disjunct, bigMargs,
+                                     suffix_list):
         # We look through everything on the component map of the block
         # and transform it just as we would if it was on the disjunct
         # directly.  (We are passing the disjunct through so that when
         # we find constraints, _xform_constraint will have access to
         # the correct indicator variable.)
         for i in sorted(iterkeys(block)):
-            self._transform_block_components(
-                block[i], disjunct, infodict, bigMargs, suffix_list)
+            self._transform_block_components( block[i], disjunct, bigMargs,
+                                              suffix_list)
 
-    def _xform_constraint(self, obj, disjunct, infodict,
-                          bigMargs, suffix_list):
+    def _get_constraint_map_dict(self, transBlock):
+        if not hasattr(transBlock, "_constraintMap"):
+            transBlock._constraintMap = {
+                'srcConstraints': ComponentMap(),
+                'transformedConstraints': ComponentMap()}
+        return transBlock._constraintMap
+
+    def _xform_constraint(self, obj, disjunct, bigMargs, suffix_list):
         # add constraint to the transformation block, we'll transform it there.
-        # [ESJ 07/15/2019] TODO: What happens when the reference is gone? That
-        # would mean something awful has happened, but I guess we should handle
-        # it here.
         transBlock = disjunct.transformation_block()
+        constraintMap = self._get_constraint_map_dict(transBlock)
+        
         disjunctionRelaxationBlock = transBlock.parent_block()
         # Though rare, it is possible to get naming conflicts here
         # since constraints from all blocks are getting moved onto the
@@ -561,12 +535,8 @@ class BigM_Transformation(Transformation):
             newConstraint = Constraint(disjunctionRelaxationBlock.lbub)
         transBlock.add_component(name, newConstraint)
         # add mapping of original constraint to transformed constraint
-        # in transformation info dictionary
-        infodict['relaxedConstraintMap'][obj] = newConstraint
-        # add mapping of transformed constraint back to original constraint (we
-        # know that the info dict is already created because this only got
-        # called if we were transforming a disjunct...)
-        infodict['srcConstraints'][newConstraint] = obj
+        constraintMap['srcConstraints'][newConstraint] = obj
+        constraintMap['transformedConstraints'][obj] = newConstraint
 
         for i in sorted(iterkeys(obj)):
             c = obj[i]
@@ -719,3 +689,56 @@ class BigM_Transformation(Transformation):
                             "constraint %s)" % name)
 
         return tuple(M)
+
+    # These are all functions to retrieve transformed components from original
+    # ones and vice versa.
+    def get_src_disjunct(self, transBlock):
+        if not hasattr(transBlock, '_srcDisjunct') or \
+           not type(transBlock._srcDisjunct) is weakref_ref:
+            raise GDP_Error("Block %s doesn't appear to be a transformation "
+                            "block for a disjunct. No source disjunct found." 
+                            % transBlock.name)
+        return transBlock._srcDisjunct()
+
+    def get_src_constraint(self, transformedConstraint):
+        transBlock = transformedConstraint.parent_block()
+        # This should be our block, so if it's not, the user messed up and gave
+        # us the wrong thing. If they happen to also have a _constraintMap then
+        # the world is really against us.
+        if not hasattr(transBlock, "_constraintMap"):
+            raise GDP_Error("Constraint %s is not a transformed constraint" 
+                            % transformedConstraint.name)
+        return transBlock._constraintMap['srcConstraints'][transformedConstraint]
+
+    def get_transformed_constraint(self, srcConstraint):
+        # We are going to have to traverse up until we find the disjunct this
+        # constraint lives on
+        parent = srcConstraint.parent_block()
+        # [ESJ 08/06/2019] I actually don't know how to do this prettily...
+        while not type(parent) in (_DisjunctData, SimpleDisjunct):
+            grandparent = parent.parent_block()
+            if grandparent is parent:
+                raise GDP_Error(
+                    "Constraint %s is not on a disjunct and so was not "
+                    "transformed" % srcConstraint.name)
+            parent = grandparent
+        transBlock = parent.transformation_block()
+        if transBlock is None:
+            raise GDP_Error("Constraint %s is on a disjunct which has not been"
+                            "transformed" % srcConstraint.name)
+        if hasattr(transBlock, "_constraintMap") and transBlock._constraintMap[
+                'transformedConstraints'].get(srcConstraint):
+            return transBlock._constraintMap['transformedConstraints'][
+                srcConstraint]
+        raise GDP_Error("Constraint %s has not been transformed." 
+                        % srcConstraint.name)
+
+    def get_src_disjunction(self, xor_constraint):
+        m = xor_constraint.model()
+        for disjunction in m.component_data_objects(Disjunction):
+            if disjunction.xor_constraint:
+                if disjunction.xor_constraint() is xor_constraint:
+                    return disjunction
+        raise GDP_Error("It appears that %s is not an and XOR or OR constraint"
+                        "resulting from transforming a Disjunction."
+                        % xor_constraint.name)
