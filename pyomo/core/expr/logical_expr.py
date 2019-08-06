@@ -52,6 +52,7 @@ from .visitor import (
 from .numeric_expr import _LinearOperatorExpression, _process_arg
 import operator
 
+
 if _using_chained_inequality:               #pragma: no cover
     class _chainedInequality(object):
 
@@ -928,6 +929,9 @@ class LogicalExpressionBase(LogicalValue):
     def Xor(self, other):
         return XorExpression(self, other)
 
+    def implies(self, other):
+        return Implication(self, other)
+
     #AndExpressionCreator
     #Create a new node iff neither node is an AndNode
     #If we have an "AndNode" already, safe_add new node to the exisiting one.
@@ -1171,11 +1175,11 @@ class BinaryExpression(LogicalExpressionBase):
     The abstract class for binary expression. This class should never be initialized.
     with __init__ .  largs and rargs are tempting names for its child nodes.
     """
-    __slots__ = ("_largs_", "_rargs_",)
+    #0-0 changed larg and rarg to args
+    __slots__ = ("_args_",)
 
-    def __init__(self, largs, rargs):
-        self._largs_ = largs
-        self._rargs_ = rargs
+    def __init__(self, larg, rarg):
+        self._args_ = list([larg, rarg])
         #
         #print("The variable is initialized using BinaryExpression")
         #for tracing purpose only, delete later.
@@ -1253,7 +1257,7 @@ class XorExpression(BinaryExpression):
 
         def _to_string(self, values, verbose, smap, compute_values):
             #pass this one for now 0-0
-            pass
+            return "XorExpression_toString_fornow"
 
         def _apply_operation(self,resList):
             """
@@ -1281,7 +1285,7 @@ class Implication(BinaryExpression):
 
         def _to_string(self, values, verbose, smap, compute_values):
             #pass this one for now 0-0
-            pass
+            return "Implication_toString_fornow"
 
         def _apply_operation(self,resList):
             return ((not resList[0]) or (resList[1]))
@@ -1361,7 +1365,7 @@ class AndExpression(MultiArgsExpression):
 
     def _to_string(self, values, verbose, smap, compute_values):
         #pass this one for now 0-0
-        return "1"
+        return "AndExpression_toString_fornow"
 
     def _apply_operation(self, result):
         if (len(self._args_) != len(result)):
@@ -1383,7 +1387,7 @@ class OrExpression(MultiArgsExpression):
 
     def _to_string(self, values, verbose, smap, compute_values):
         #pass this one for now 0-0
-        pass
+        return "OrExpression_toString_fornow"
 
     def _apply_operation(self, result):
         """
@@ -1397,7 +1401,7 @@ class OrExpression(MultiArgsExpression):
 
 '''for Exactly, ...
 '''
-class Exactly(MultiArgsExpression):
+class ExactlyExpression(MultiArgsExpression):
     __slots__ = ()
 
     PRECEDENCE = 8
@@ -1472,6 +1476,13 @@ class AtLeastExpression(MultiArgsExpression):
                 counter += 1
         return (counter <= self._args_[0])
 
+
+
+Expressions = (LogicalExpressionBase, NotExpression, AndExpression, OrExpression,
+    Implication, EquivalenceExpression, XorExpression, ExactlyExpression,
+    AtMostExpression, AtLeastExpression, Not, Equivalence, LogicalOr, Implies,
+    LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor
+    )
 
 
 
