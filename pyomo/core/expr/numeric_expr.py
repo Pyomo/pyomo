@@ -1271,7 +1271,18 @@ class LinearExpression(ExpressionBase):
 
     PRECEDENCE = 6
 
-    def __init__(self, args=None):
+    def __init__(self, args=None, constant=None, linear_coefs=None, linear_vars=None):
+        """ 
+        Build a linear expression object that stores the constant, as well as 
+        coefficients and variables to represent const + sum_i(c_i*x_i)
+        
+        You can specify args OR (constant, linear_coefs, and linear_vars)
+        If args is provided, it should be a list that contains the constant,
+        followed by the coefficients, followed by the variables.
+        
+        Alternatively, you can specify the constant, the list of linear_coeffs
+        and the list of linear_vars separately.
+        """
         # I am not sure why LinearExpression allows omitting args, but
         # it does.  If they are provided, they should be the constant
         # followed by the coefficients followed by the variables.
@@ -1282,8 +1293,15 @@ class LinearExpression(ExpressionBase):
             self.linear_vars = args[n+1:]
         else:
             self.constant = 0
+            if constant is not None:
+                self.constant = constant
             self.linear_coefs = []
+            if linear_coefs is not None:
+                self.linear_coefs = linear_coefs
             self.linear_vars = []
+            if linear_vars is not None:
+                self.linear_vars = linear_vars
+            
         self._args_ = tuple()
 
     def nargs(self):
