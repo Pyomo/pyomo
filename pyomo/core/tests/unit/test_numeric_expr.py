@@ -5201,11 +5201,11 @@ class TestDirect_LinearExpression(unittest.TestCase):
         N = 10
         S = list(range(1,N+1))
         m.x = Var(S, initialize=lambda m,i: 1.0/i)
-        m.P = Param(S, initialize=1.0, mutable=True)
+        m.P = Param(S, initialize=lambda m,i: i, mutable=True)
         m.obj = Objective(expr=LinearExpression(constant=1.0, linear_coefs=[i*m.P[i] for i in S], linear_vars=[m.x[i] for i in S]))
 
         # test that the expression evaluates correctly
-        self.assertAlmostEqual(value(m.obj), N+1)
+        self.assertAlmostEqual(value(m.obj), sum(i for i in S)+1)
 
         # test that the standard repn can be constructed
         repn = generate_standard_repn(m.obj.expr)
