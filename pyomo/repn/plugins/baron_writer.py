@@ -27,7 +27,7 @@ from pyomo.core.expr.numvalue import (
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base import (SortComponents,
                              SymbolMap,
-                             AlphaNumericTextLabeler,
+                             ShortNameLabeler,
                              NumericLabeler,
                              BooleanSet, Constraint,
                              IntegerSet, Objective,
@@ -643,11 +643,20 @@ class ProblemWriter_bar(AbstractProblemWriter):
         output_file.write("}\n\n")
 
         if symbolic_solver_labels:
-            v_labeler = AlphaNumericTextLabeler()
-            c_labeler = AlphaNumericTextLabeler()
+            # Note that the Var and Constraint labelers must use the
+            # same labeler, so that we can correctly detect name
+            # collisions (which can arise when we truncate the labels to
+            # the max allowable length.  BARON requires all identifiers
+            # to start with a letter.  We will (randomly) choose "s_"
+            # (for 'shortened')
+            v_labeler = c_labeler = ShortNameLabeler(
+                15, prefix='s_', suffix='_', caseInsensitive=True,
+                legalRegex='^[a-zA-Z]')
         elif labeler is None:
             v_labeler = NumericLabeler('x')
             c_labeler = NumericLabeler('c')
+        else:
+            v_labeler = c_labeler = labeler
 
         symbol_map = SymbolMap()
         symbol_map.default_labeler = v_labeler

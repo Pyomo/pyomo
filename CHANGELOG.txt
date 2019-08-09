@@ -7,7 +7,70 @@ Current Development
 -------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------
-Pyomo 5.6.2
+Pyomo 5.6.6   21 Jun 2019
+-------------------------------------------------------------------------------
+
+- Core
+  - Remove a line in standard_repn that was unreachable (#1063)
+- Solver Interfaces
+  - Fix symbolic labels for BARON and GAMS (#1057)
+  - Fix in cplex_direct to check for solution before extracting bounds (#1060)
+  - Fix in NL writer where a single-term sum output a n-ary operator (#1067)
+- Contributed Packages
+  - FBBT improvements (#1002)
+  - Benders improvements (#1061)
+  - GDPopt updates (#922, #1065)
+  - Model viewer improvements, add residual table, improved install/testing, 
+    support for AbstractModels (#955, #1054, #1066)
+
+-------------------------------------------------------------------------------
+Pyomo 5.6.5   10 Jun 2019
+-------------------------------------------------------------------------------
+
+- General
+  - Remove non-ascii character from README.md (#1045)
+- PySP
+  - Fix docstring formatting (#1042)
+- Testing
+  - Resolve book test failures (#1038)
+- Contributed Packages
+  - Benders cut generator component (#1028)
+
+-------------------------------------------------------------------------------
+Pyomo 5.6.4   24 May 2019 
+-------------------------------------------------------------------------------
+
+- General
+  - Resolve project description rendering on PyPI
+
+-------------------------------------------------------------------------------
+Pyomo 5.6.3   24 May 2019
+-------------------------------------------------------------------------------
+
+- General
+  - Update the README (#990, #991, #992)
+  - Fix compilation with Cython
+  - Change the default use_signal_handling from True to None (#1014)
+- Testing
+  - Add a license check for Mosek (#1007)
+  - Add a Cythonization test to Travis (#1012)
+- Core
+  - Bug fix in IndexedComponent using a nonhashable object as an index (#1006)
+  - Bug fix in fix_discrete transformation for domain comparison (#996)
+  - Add read-only view of kernel matrix_constraint (#1011, #1013)
+  - Add specialized conic constraints to kernel (#980, #1018)
+  - Bug fix in standard repn when using a fixed variable as an exponent (#978)
+  - Add _associativity to _ExpressionData (#1031)
+- Solver Interfaces
+  - Bug fix in CBC plugin related to certain objective values (#1004)
+- Contributed Packages
+  - FBBT improvements (#994)
+  - MC++ variable bound guards (#1015)
+  - Improvements to bounds_to_vars preprocessing transformation (#1016)
+  - GDPbb improvements and cleanup (#982)
+
+-------------------------------------------------------------------------------
+Pyomo 5.6.2   1 May 2019
 -------------------------------------------------------------------------------
 
 - General
@@ -92,7 +155,7 @@ Pyomo 5.6.2
   - Show how to activate/deactivate constraints (#932)
 
 -------------------------------------------------------------------------------
-Pyomo 5.6.1
+Pyomo 5.6.1   18 Jan 2019
 -------------------------------------------------------------------------------
 
 - General
@@ -108,7 +171,7 @@ Pyomo 5.6.1
   - Add support for RangeSet in GDP transformations (#803)
 
 -------------------------------------------------------------------------------
-Pyomo 5.6
+Pyomo 5.6     19 Dec 2018
 -------------------------------------------------------------------------------
 
 - General
@@ -232,9 +295,15 @@ Pyomo 5.6
   - Updated README.md to include link for performance plots (#534)
   - Update examples (#436)
 
+-------------------------------------------------------------------------------
+Pyomo 5.5.1   26 Oct 2018
+-------------------------------------------------------------------------------
+
+- General
+  - Adding support for Python 3.7
 
 -------------------------------------------------------------------------------
-Pyomo 5.5
+Pyomo 5.5     14 Apr 2018
 -------------------------------------------------------------------------------
 
 - Move preprocessing transformations to contrib (#426)
@@ -269,25 +338,25 @@ Pyomo 5.5
 - Documentation updates (#425)
 
 -------------------------------------------------------------------------------
-Pyomo 5.4.3
+Pyomo 5.4.3   2 Mar 2018
 -------------------------------------------------------------------------------
 
 - Another fix in the release process.
 
 -------------------------------------------------------------------------------
-Pyomo 5.4.2
+Pyomo 5.4.2   2 Mar 2018
 -------------------------------------------------------------------------------
 
 - Misc fix in the release process.
 
 -------------------------------------------------------------------------------
-Pyomo 5.4.1
+Pyomo 5.4.1   28 Feb 2018
 -------------------------------------------------------------------------------
 
 - Misc version increment to support pypi idiosyncrasies.
 
 -------------------------------------------------------------------------------
-Pyomo 5.4
+Pyomo 5.4     28 Feb 2018
 -------------------------------------------------------------------------------
 
 =======
@@ -333,7 +402,7 @@ Pyomo 5.4
 - Logging overhaul and support for timing concrete models (#245)
 
 -------------------------------------------------------------------------------
-Pyomo 5.3
+Pyomo 5.3     21 Oct 2017
 -------------------------------------------------------------------------------
 
 - Removed testing for Python 3.4
@@ -357,7 +426,7 @@ Pyomo 5.3
 - Tracking changes in pyutilib.th
 
 -------------------------------------------------------------------------------
-Pyomo 5.2
+Pyomo 5.2     14 May 2017
 -------------------------------------------------------------------------------
 
 - Resolved timeout issues running NEOS solvers
@@ -402,13 +471,13 @@ Pyomo 5.2
 - Updating the bilinear transform to avoid creating a Set `index`.
 
 -------------------------------------------------------------------------------
-Pyomo 5.1.1
+Pyomo 5.1.1   8 Jan 2017
 -------------------------------------------------------------------------------
 
 - Monkeypatch to resolve (#95)
 
 -------------------------------------------------------------------------------
-Pyomo 5.1
+Pyomo 5.1     4 Jan 2017
 -------------------------------------------------------------------------------
 
 - Added a CONOPT plugin to handle a custom SOL file output (#88)
@@ -432,13 +501,13 @@ Pyomo 5.1
 - Removed support for OpenOpt
 
 -------------------------------------------------------------------------------
-Pyomo 5.0.1
+Pyomo 5.0.1   16 Nov 2016
 -------------------------------------------------------------------------------
 
 - Updating PyUtilib dependency
 
 -------------------------------------------------------------------------------
-Pyomo 5.0
+Pyomo 5.0     15 Nov 2016
 -------------------------------------------------------------------------------
 
 - Added examples used in the Pyomo book to the Pyomo software repos

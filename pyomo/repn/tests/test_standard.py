@@ -2843,7 +2843,7 @@ class Test(unittest.TestCase):
 
         #       ^
         #      / \
-        #     a   m.r 
+        #     a   m.r
         e = m.a ** m.r
 
         rep = generate_standard_repn(e, quadratic=False)
@@ -3258,6 +3258,34 @@ class Test(unittest.TestCase):
         baseline = { None:8 }
         self.assertEqual(baseline, repn_to_dict(rep))
 
+    def test_fixed_exponent(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        e = m.y + 2**m.x
+
+        m.x.fix(1)
+        rep = generate_standard_repn(e)
+
+        self.assertFalse( rep.is_fixed() )
+        self.assertEqual( rep.polynomial_degree(), 1 )
+        self.assertFalse( rep.is_constant() )
+        self.assertTrue( rep.is_linear() )
+        self.assertFalse( rep.is_quadratic() )
+        self.assertFalse( rep.is_nonlinear() )
+
+        self.assertTrue(len(rep.linear_vars) == 1)
+        self.assertTrue(len(rep.linear_coefs) == 1)
+        self.assertTrue(len(rep.quadratic_vars) == 0)
+        self.assertTrue(len(rep.quadratic_coefs) == 0)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+        baseline = { id(m.y):1, None: 2 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        s = pickle.dumps(rep)
+        rep = pickle.loads(s)
+        baseline = { id(rep.linear_vars[0]):1, None: 2 }
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_abs(self):
         #      abs
@@ -4090,6 +4118,7 @@ class Test(unittest.TestCase):
 
         e = Foo()
         self.assertRaises(AttributeError, generate_standard_repn, e)
+
 
 if __name__ == "__main__":
     unittest.main()

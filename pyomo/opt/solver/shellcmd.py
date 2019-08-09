@@ -46,7 +46,7 @@ class SystemCallSolver(OptSolver):
         # broadly useful for reporting, and in cases where
         # a solver plugin may not report execution time.
         self._last_solve_time = None
-        self._define_signal_handlers = True
+        self._define_signal_handlers = None
 
         if executable is not None:
             self.set_executable(name=executable, validate=validate)
@@ -193,7 +193,7 @@ class SystemCallSolver(OptSolver):
         TempfileManager.push()
 
         self._keepfiles = kwds.pop("keepfiles", False)
-        self._define_signal_handlers = kwds.pop('use_signal_handling',True)
+        self._define_signal_handlers = kwds.pop('use_signal_handling',None)
 
         OptSolver._presolve(self, *args, **kwds)
 

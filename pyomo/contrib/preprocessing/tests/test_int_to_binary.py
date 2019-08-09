@@ -25,15 +25,21 @@ class TestIntToBinary(unittest.TestCase):
         m.x.value = 5
         self.assertEqual(value(reform_blk.integer_to_binary_constraint[0].body), 0)
 
+    def test_int_to_binary_negative(self):
+        m = ConcreteModel()
+        m.x = Var(domain=Integers, bounds=(-1, 1))
+        xfrm('contrib.integer_to_binary').apply_to(m)
+        reform_blk = m._int_to_binary_reform
+        self.assertEqual(len(reform_blk.int_var_set), 1)
+        reform_blk.new_binary_var[0, 0].value = 1
+        reform_blk.new_binary_var[0, 1].value = 0
+        m.x.value = 0
+        # Check that 0 == -1 + 1 * 2^0 + 0 * 2^1
+        self.assertEqual(value(reform_blk.integer_to_binary_constraint[0].body), 0)
+
     def test_integer_var_unbounded(self):
         m = ConcreteModel()
         m.x = Var(domain=Integers)
-        with self.assertRaises(ValueError):
-            xfrm('contrib.integer_to_binary').apply_to(m)
-
-    def test_negative_integer(self):
-        m = ConcreteModel()
-        m.x = Var(domain=Integers, bounds=(-1, 1))
         with self.assertRaises(ValueError):
             xfrm('contrib.integer_to_binary').apply_to(m)
 
