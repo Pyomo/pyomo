@@ -111,7 +111,6 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
                 if val and val[0] in '-+':
                     parens = True
                 elif arg.__class__ in native_numeric_types:
-                    #assert type(val) is str
                     pass
                 elif arg.__class__ in nonpyomo_leaf_types:
                     val = "'{0}'".format(val)
