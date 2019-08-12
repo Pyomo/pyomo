@@ -91,10 +91,6 @@ def _build_op_template():
     _op_comment[EXPR.DivisionExpression] = div_comment
     _op_template[EXPR.ReciprocalExpression] = div_template
     _op_comment[EXPR.ReciprocalExpression] = div_comment
-    #del prod_template
-    #del prod_comment
-    #del div_template
-    #del div_comment
 
     _op_template[EXPR.ExternalFunctionExpression] = ("f%d %d{C}\n", #function
                                                       "h%d:%s{C}\n") #string arg
