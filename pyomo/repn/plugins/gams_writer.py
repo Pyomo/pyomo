@@ -43,7 +43,7 @@ def _ftoa(val):
         if is_fixed(val):
             val = value(val)
         else:
-            raise ValueError("non-fixed bound or weight: " + str(exp))
+            raise ValueError("non-fixed bound or weight: " + str(val))
 
     a = _ftoa.precision_str % val
     i = len(a)
