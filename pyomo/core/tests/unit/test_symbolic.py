@@ -225,7 +225,7 @@ class SymbolicDerivatives(unittest.TestCase):
 
         e = differentiate(log10(m.x), wrt=m.x)
         self.assertTrue(e.is_expression_type())
-        self.assertEqual(s(e), s(m.x**-1.0 * 1.0/log(10)))
+        self.assertEqual(s(e), s(m.x**-1.0 * (1.0/log(10))))
 
     def test_intrinsic_functions5(self):
         m = ConcreteModel()
@@ -233,7 +233,7 @@ class SymbolicDerivatives(unittest.TestCase):
 
         e = differentiate(log10(log10(m.x)), wrt=m.x)
         self.assertTrue(e.is_expression_type())
-        self.assertEqual(s(e), s(m.x**-1.0 * 1.0/log(10) * log(m.x)**-1.0))
+        self.assertEqual(s(e), s(m.x**-1.0 * (1.0/log(10)) * log(m.x)**-1.0))
 
     def test_sqrt_function(self):
         m = ConcreteModel()
