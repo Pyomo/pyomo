@@ -13,12 +13,12 @@ VARIABLES
 	GAMS_OBJECTIVE
 	a;
 
-con1_lo.. 0.0 =l= a ;
-con2_hi.. a =l= 1.0 ;
-con3_lo.. 0.0 =l= a ;
-con3_hi.. a =l= 1.0 ;
-con4_1_.. a =e= 1.0 ;
-con4_2_.. a =e= 2.0 ;
+con1_lo.. 0 =l= a ;
+con2_hi.. a =l= 1 ;
+con3_lo.. 0 =l= a ;
+con3_hi.. a =l= 1 ;
+con4_1_.. a =e= 1 ;
+con4_2_.. a =e= 2 ;
 obj.. GAMS_OBJECTIVE =e= a ;
 
 

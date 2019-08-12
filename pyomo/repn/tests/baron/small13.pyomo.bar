@@ -11,7 +11,7 @@ EQUATIONS c_e_FIX_ONE_VAR_CONST__, c1, c2, c3;
 c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
 c1: x1 ^ 3 - x1 == 0;
 c2: 10 * (x1 ^ 3 - x1) == 0;
-c3: (x1 ^ 3 - x1) * 0.1 == 0;
+c3: (x1 ^ 3 - x1)/10 == 0;
 
 OBJ: maximize x1;
 
