@@ -584,9 +584,7 @@ def _prop_bnds_root_to_leaf_DivisionExpression(node, bnds_dict, feasibility_tol)
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
     _lb1, _ub1 = interval.mul(lb0, ub0, lb2, ub2)
-    _lb2, _ub2 = interval.inv(
-        *interval.div(lb0, ub0, lb1, ub1, feasibility_tol=feasibility_tol),
-        feasibility_tol=feasibility_tol)
+    _lb2, _ub2 = interval.div(lb1, ub1, lb0, ub0, feasibility_tol=feasibility_tol)
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
