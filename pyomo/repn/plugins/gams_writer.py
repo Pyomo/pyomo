@@ -36,6 +36,7 @@ import logging
 
 logger = logging.getLogger('pyomo.core')
 
+_ftoa_precision_str = '%.17g'
 def _ftoa(val):
     if val is None:
         return val
@@ -43,9 +44,9 @@ def _ftoa(val):
         if is_fixed(val):
             val = value(val)
         else:
-            raise ValueError("non-fixed bound or weight: " + str(exp))
+            raise ValueError("non-fixed bound or weight: " + str(val))
 
-    a = _ftoa.precision_str % val
+    a = _ftoa_precision_str % val
     i = len(a)
     while i > 1:
         try:
@@ -61,7 +62,6 @@ def _ftoa(val):
     #if a.startswith('1.57'):
     #    raise RuntimeError("wtf %s %s, %s" % ( val, a, i))
     return a[:i]
-_ftoa.precision_str = '%.17g'
 
 _legal_unary_functions = {
     'ceil','floor','exp','log','log10','sqrt',
