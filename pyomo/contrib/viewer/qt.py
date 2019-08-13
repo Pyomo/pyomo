@@ -63,8 +63,11 @@ except:
             from PyQt4.QtGui import (QAbstractItemView, QFileDialog, QMainWindow,
                                      QMessageBox, QMdiArea, QApplication,
                                      QTableWidgetItem, QColor, QAction,
-                                     QStatusBar)
-            from PyQt4.QtCore import QAbstractItemModel, QAbstractTableModel
+                                     QStatusBar, QLineEdit, QItemEditorFactory,
+                                     QItemEditorCreatorBase, QStyledItemDelegate,
+                                     QItemDelegate, QComboBox)
+            from PyQt4.QtCore import (QAbstractItemModel, QAbstractTableModel,
+                                      QVariant)
             import PyQt4.QtCore as QtCore
             from PyQt4 import uic
             qt_available = True
@@ -74,9 +77,13 @@ else:
     try:
         from PyQt5.QtWidgets import (QAbstractItemView, QFileDialog, QMainWindow,
                                      QMessageBox, QMdiArea, QApplication,
-                                     QTableWidgetItem, QAction, QStatusBar)
+                                     QTableWidgetItem, QAction, QStatusBar,
+                                     QLineEdit, QItemEditorFactory,
+                                     QItemEditorCreatorBase, QStyledItemDelegate,
+                                     QItemDelegate, QComboBox)
         from PyQt5.QtGui import QColor
-        from PyQt5.QtCore import QAbstractItemModel, QAbstractTableModel
+        from PyQt5.QtCore import (QAbstractItemModel, QAbstractTableModel,
+                                  QVariant)
         import PyQt5.QtCore as QtCore
         from PyQt5 import uic
         qt_available = True
