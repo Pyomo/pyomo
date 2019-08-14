@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import collections
+import functools
 import inspect
 import itertools
 import logging
@@ -1815,10 +1816,6 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         return value in self._values
 
     def __iter__(self):
-        if not self.parent_component()._constructed:
-            raise RuntimeError(
-                "Cannot iterate over abstract Set '%s' before it has been "
-                "constructed (initialized)." % (self.name))
         return iter(self._values)
 
     def __len__(self):
@@ -2079,10 +2076,6 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
         """
         Return an iterator for the set.
         """
-        if not self.parent_component()._constructed:
-            raise RuntimeError(
-                "Cannot iterate over abstract Set '%s' before it has been "
-                "constructed (initialized)." % (self.name))
         return iter(self._ordered_values)
 
     def __reversed__(self):
@@ -2407,13 +2400,13 @@ class Set(IndexedComponent):
                     ))))
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             if ordered is Set.InsertionOrder:
-                return OrderedSimpleSet.__new__(OrderedSimpleSet)
+                return Set.__new__(AbstractOrderedSimpleSet)
             elif ordered is Set.SortedOrder:
-                return SortedSimpleSet.__new__(SortedSimpleSet)
+                return Set.__new__(AbstractSortedSimpleSet)
             else:
-                return FiniteSimpleSet.__new__(FiniteSimpleSet)
+                return Set.__new__(AbstractFiniteSimpleSet)
         else:
-            newObj = IndexedSet.__new__(IndexedSet)
+            newObj = Set.__new__(IndexedSet)
             if ordered is Set.InsertionOrder:
                 newObj._ComponentDataClass = _InsertionOrderSetData
             elif ordered is Set.SortedOrder:
@@ -2630,6 +2623,9 @@ class Set(IndexedComponent):
             ])
 
 
+class IndexedSet(Set):
+    pass
+
 class FiniteSimpleSet(_FiniteSetData, Set):
     def __init__(self, **kwds):
         _FiniteSetData.__init__(self, component=self)
@@ -2645,8 +2641,100 @@ class SortedSimpleSet(_SortedSetData, Set):
         _SortedSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
-class IndexedSet(Set):
-    pass
+def _disable_method(fcn, msg=None):
+    if msg is None:
+        msg = 'access %s on' % (fcn.__func__.func_name,)
+    def impl(self, *args, **kwds):
+        raise RuntimeError(
+            "Cannot %s %s '%s' before it has been constructed (initialized)."
+            % (msg, type(self).__name__, self.name))
+
+    # functools.wraps doesn't preserve the function signature until
+    # Python 3.4.  For backwards compatability with Python 2.x, we will
+    # create a temporary (lambda) function using eval that matches the
+    # function signature passed in and calls the generic impl() function
+    args = inspect.formatargspec(*inspect.getargspec(fcn))
+    impl_args = eval('lambda %s: impl%s' % (args[1:-1], args), {'impl': impl})
+    return functools.wraps(fcn)(impl_args)
+
+def _wrap_construct(cls):
+    def construct(self, data=None):
+        self.__class__ = cls
+        return cls.construct(self, data)
+    construct.__doc__ = cls.__doc__
+    return construct
+
+class AbstractFiniteSimpleSet(FiniteSimpleSet):
+    # Override the construct method to revert the class and call the
+    # original construct
+    construct = _wrap_construct(FiniteSimpleSet)
+
+    # _FiniteSetData methods
+    __contains__ = _disable_method(
+        FiniteSimpleSet.__contains__, 'test membership in')
+    __iter__ = _disable_method(
+        FiniteSimpleSet.__iter__, 'iterate over')
+    __reversed__ = _disable_method(FiniteSimpleSet.__reversed__)
+    __len__ = _disable_method(FiniteSimpleSet.__len__)
+    data = _disable_method(FiniteSimpleSet.data)
+    add = _disable_method(FiniteSimpleSet.add)
+    remove = _disable_method(FiniteSimpleSet.remove)
+    discard = _disable_method(FiniteSimpleSet.discard)
+    clear = _disable_method(FiniteSimpleSet.clear)
+    set_value = _disable_method(FiniteSimpleSet.set_value)
+    update = _disable_method(FiniteSimpleSet.update)
+    pop = _disable_method(FiniteSimpleSet.pop)
+
+class AbstractOrderedSimpleSet(OrderedSimpleSet):
+    # Override the construct method to revert the class and call the
+    # original construct
+    construct = _wrap_construct(OrderedSimpleSet)
+
+    # _FiniteSetData methods
+    __contains__ = _disable_method(
+        OrderedSimpleSet.__contains__, 'test membership in')
+    __iter__ = _disable_method(
+        OrderedSimpleSet.__iter__, 'iterate over')
+    __reversed__ = _disable_method(OrderedSimpleSet.__reversed__)
+    __len__ = _disable_method(OrderedSimpleSet.__len__)
+    data = _disable_method(OrderedSimpleSet.data)
+    add = _disable_method(OrderedSimpleSet.add)
+    remove = _disable_method(OrderedSimpleSet.remove)
+    discard = _disable_method(OrderedSimpleSet.discard)
+    clear = _disable_method(OrderedSimpleSet.clear)
+    set_value = _disable_method(OrderedSimpleSet.set_value)
+    update = _disable_method(OrderedSimpleSet.update)
+    pop = _disable_method(OrderedSimpleSet.pop)
+
+    # _OrderedSetData
+    __getitem__ = _disable_method(OrderedSimpleSet.__getitem__)
+    ord = _disable_method(OrderedSimpleSet.ord)
+
+class AbstractSortedSimpleSet(SortedSimpleSet):
+    # Override the construct method to revert the class and call the
+    # original construct
+    construct = _wrap_construct(SortedSimpleSet)
+
+    # _FiniteSetData methods
+    __contains__ = _disable_method(
+        SortedSimpleSet.__contains__, 'test membership in')
+    __iter__ = _disable_method(
+        SortedSimpleSet.__iter__, 'iterate over')
+    __reversed__ = _disable_method(SortedSimpleSet.__reversed__)
+    __len__ = _disable_method(SortedSimpleSet.__len__)
+    data = _disable_method(SortedSimpleSet.data)
+    add = _disable_method(SortedSimpleSet.add)
+    remove = _disable_method(SortedSimpleSet.remove)
+    discard = _disable_method(SortedSimpleSet.discard)
+    clear = _disable_method(SortedSimpleSet.clear)
+    set_value = _disable_method(SortedSimpleSet.set_value)
+    update = _disable_method(SortedSimpleSet.update)
+    pop = _disable_method(SortedSimpleSet.pop)
+
+    # _OrderedSetData
+    __getitem__ = _disable_method(SortedSimpleSet.__getitem__)
+    ord = _disable_method(SortedSimpleSet.ord)
+
 
 ############################################################################
 

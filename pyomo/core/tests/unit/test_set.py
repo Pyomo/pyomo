@@ -3970,14 +3970,14 @@ class TestSet(unittest.TestCase):
         m = ConcreteModel()
 
         i = Set()
-        self.assertEqual(str(i), "OrderedSimpleSet")
+        self.assertEqual(str(i), "AbstractOrderedSimpleSet")
         i.construct()
         self.assertEqual(str(i), "{}")
         m.I = i
         self.assertEqual(str(i), "I")
 
         j = Set(initialize=[1,2,3])
-        self.assertEqual(str(j), "OrderedSimpleSet")
+        self.assertEqual(str(j), "AbstractOrderedSimpleSet")
         j.construct()
         self.assertEqual(str(j), "{1, 2, 3}")
         m.J = j
@@ -4306,7 +4306,7 @@ JJ : Size=0, Index=JJ_index, Ordered=Insertion
         self.assertEqual(list(i.II[2]), [1,2])
 
         ref = """
-Constructing OrderedSimpleSet 'I' on [Model] from data=None
+Constructing AbstractOrderedSimpleSet 'I' on [Model] from data=None
 Constructing Set, name=I, from data=None
 Constructed component ''[Model].I'':
 I : Size=1, Index=None, Ordered=Insertion
@@ -4343,6 +4343,69 @@ I : Size=1, Index=None, Ordered=Insertion
         m = ConcreteModel()
         m.I = Set(initialize=[1,3,Set.End,2])
         self.assertEqual(list(m.I), [1,3])
+
+    def test_unconstructed_api(self):
+        m = AbstractModel()
+        m.I = Set(ordered=False)
+        m.J = Set(ordered=Set.InsertionOrder)
+        m.K = Set(ordered=Set.SortedOrder)
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot iterate over AbstractFiniteSimpleSet 'I'"
+                " before it has been constructed \(initialized\)."):
+            for i in m.I:
+                pass
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot iterate over AbstractOrderedSimpleSet 'J'"
+                " before it has been constructed \(initialized\)."):
+            for i in m.J:
+                pass
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot iterate over AbstractSortedSimpleSet 'K'"
+                " before it has been constructed \(initialized\)."):
+            for i in m.K:
+                pass
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot test membership in AbstractFiniteSimpleSet 'I'"
+                " before it has been constructed \(initialized\)."):
+            1 in m.I
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot test membership in AbstractOrderedSimpleSet 'J'"
+                " before it has been constructed \(initialized\)."):
+            1 in m.J
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot test membership in AbstractSortedSimpleSet 'K'"
+                " before it has been constructed \(initialized\)."):
+            1 in m.K
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot access __len__ on AbstractFiniteSimpleSet 'I'"
+                " before it has been constructed \(initialized\)."):
+            len(m.I)
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot access __len__ on AbstractOrderedSimpleSet 'J'"
+                " before it has been constructed \(initialized\)."):
+            len(m.J)
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot access __len__ on AbstractSortedSimpleSet 'K'"
+                " before it has been constructed \(initialized\)."):
+            len(m.K)
 
     def test_set_end(self):
         # Tested counted initialization
@@ -4706,7 +4769,7 @@ I : Size=2, Index=I_index, Ordered=Insertion
 
 class TestAbstractSetAPI(unittest.TestCase):
     def test_SetData(self):
-        # This tests an anstract non-finite set
+        # This tests an anstract non-finite set API
 
         m = ConcreteModel()
         m.I = Set(initialize=[1])
@@ -4790,7 +4853,7 @@ class TestAbstractSetAPI(unittest.TestCase):
         self.assertFalse(m.I > s)
 
     def test_FiniteMixin(self):
-        # This tests an anstract finite set
+        # This tests an anstract finite set API
         class FiniteMixin(_FiniteSetMixin, _SetData):
             pass
 
@@ -4912,7 +4975,7 @@ class TestAbstractSetAPI(unittest.TestCase):
         self.assertEqual(s.bounds(), (None,None))
 
     def test_OrderedMixin(self):
-        # This tests an anstract finite set
+        # This tests an anstract ordered set API
         class OrderedMixin(_OrderedSetMixin, _FiniteSetMixin, _SetData):
             pass
 
