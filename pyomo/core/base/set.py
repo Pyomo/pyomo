@@ -1274,6 +1274,149 @@ class AnyRange(object):
         return list(other_ranges)
 
 
+class RangeProduct(object):
+    """A range-like object for representing the cross product of ranges
+    """
+
+    __slots__ = ('range_lists',)
+
+    def __init__(self, range_lists):
+        self.range_lists = range_lists
+        # Type checking.  Users should never create a RangeProduct, but
+        # just in case...
+        assert range_lists.__class__ is list
+        for subrange in range_lists:
+            assert subrange.__class__ is list
+
+    def __str__(self):
+        return "<" + ', '.join(
+            str(tuple(_)) if len(_) > 1 else str(_[0])
+            for _ in self.range_lists
+        )+">"
+
+    __repr__ = __str__
+
+    def __eq__(self, other):
+        return isinstance(other, RangeProduct) \
+            and self.range_difference([other]) == [] \
+            and other.range_difference([self]) == []
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __contains__(self, value):
+        if not isinstance(value, collections.Sequence):
+            return False
+        if len(value) != len(self.range_lists):
+            return False
+        return all(any(val in rng for rng in rng_list)
+                   for val, rng_list in zip(value, self.range_lists))
+
+    def __getstate__(self):
+        """
+        Retrieve the state of this object as a dictionary.
+
+        This method must be defined because this class uses slots.
+        """
+        state = {} #super(RangeProduct, self).__getstate__()
+        for i in RangeProduct.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    def __setstate__(self, state):
+        """
+        Set the state of this object using values from a state dictionary.
+
+        This method must be defined because this class uses slots.
+        """
+        for key, val in iteritems(state):
+            # Note: per the Python data model docs, we explicitly
+            # set the attribute using object.__setattr__() instead
+            # of setting self.__dict__[key] = val.
+            object.__setattr__(self, key, val)
+
+    def is_discrete(self):
+        return all(all(rng.is_discrete() for rng in rng_list)
+                   for rng_list in self.range_lists)
+
+    def is_finite(self):
+        return all(all(rng.is_finite() for rng in rng_list)
+                   for rng_list in self.range_lists)
+
+    def isdisjoint(self, other):
+        if type(other) is AnyRange:
+            return False
+        if type(other) is not RangeProduct:
+            return True
+        if len(other.range_lists) != len(self.range_lists):
+            return True
+        # Remember, range_lists is a list of lists of range objects.  As
+        # isdisjoint only accepts range objects, we need to unpack
+        # everything.  Non-disjoint range products require overlaps in
+        # all dimentions.
+        for s, o in zip(self.range_lists, other.range_lists):
+            if all(s_rng.isdisjoint(o_rng) for s_rng in s for o_rng in o):
+                return True
+        return False
+
+    def issubset(self, other):
+        if type(other) is AnyRange:
+            return True
+        return not any(_ for _ in self.range_difference([other]))
+
+    def range_difference(self, other_ranges):
+        # The goal is to start with a single range product and create a
+        # set of range products that, when combined, model the
+        # range_difference.  This will potentally create (redundant)
+        # overlapping regions, but that is OK.
+        ans = [self]
+        N = len(self.range_lists)
+        for other in other_ranges:
+            if type(other) is AnyRange:
+                return []
+            if type(other) is not RangeProduct or len(other.range_lists) != N:
+                continue
+
+            tmp = []
+            for rp in ans:
+                if rp.isdisjoint(other):
+                    tmp.append(rp)
+                    continue
+
+                for dim in xrange(N):
+                    remainder = []
+                    for r in rp.range_lists[dim]:
+                        remainder.extend(
+                            r.range_difference(other.range_lists[dim]))
+                    if remainder:
+                        tmp.append(RangeProduct(list(rp.range_lists)))
+                        tmp[-1].range_lists[dim] = remainder
+            ans = tmp
+        return ans
+
+    def range_intersection(self, other_ranges):
+        # The goal is to start with a single range product and create a
+        # set of range products that, when combined, model the
+        # range_difference.  This will potentally create (redundant)
+        # overlapping regions, but that is OK.
+        ans = list(self.range_lists)
+        N = len(self.range_lists)
+        for other in other_ranges:
+            if type(other) is AnyRange:
+                continue
+            if type(other) is not RangeProduct or len(other.range_lists) != N:
+                return []
+
+            for dim in xrange(N):
+                tmp = []
+                for r in ans[dim]:
+                    tmp.extend(r.range_intersection(other.range_lists[dim]))
+                if not tmp:
+                    return []
+                ans[dim] = tmp
+        return [RangeProduct(ans)]
+
+
 # A trivial class that we can use to test if an object is a "legitimate"
 # set (either SimpleSet, or a member of an IndexedSet)
 class _SetDataBase(ComponentData):
@@ -3414,6 +3557,11 @@ class SetProduct(_SetOperator):
                     yield ss
             else:
                 yield s
+
+    def ranges(self):
+        yield RangeProduct(list(
+            list(_.ranges()) for _ in self.flatten_cross_product()
+        ))
 
     @property
     def dimen(self):

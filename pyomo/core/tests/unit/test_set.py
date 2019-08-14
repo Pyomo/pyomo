@@ -24,9 +24,10 @@ from pyomo.core.expr import native_numeric_types, native_types
 import pyomo.core.base.set as SetModule
 from pyomo.core.base.indexed_component import normalize_index
 from pyomo.core.base.set import (
-    NumericRange as NR, NonNumericRange as NNR, AnyRange, _AnySet,
-    Any, Reals, NonNegativeReals, Integers, PositiveIntegers,
-    NegativeIntegers, PositiveReals, Binary,
+    NumericRange as NR, NonNumericRange as NNR, RangeProduct as RP,
+    AnyRange, _AnySet, Any, Binary,
+    Reals, NonNegativeReals, PositiveReals,
+    Integers, PositiveIntegers, NegativeIntegers,
     RangeSet, Set, SetOf,
     _FiniteRangeSetData, _InfiniteRangeSetData,
     SetUnion_InfiniteSet, SetUnion_FiniteSet, SetUnion_OrderedSet,
@@ -721,6 +722,127 @@ class TestNonNumericRange(unittest.TestCase):
         b = pickle.loads(pickle.dumps(a))
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
+
+
+class TestRangeProduct(unittest.TestCase):
+    def test_str(self):
+        a = RP([[NR(0,10,1)],[NR(0,10,0),NNR('a')]])
+        self.assertEqual(str(a), '<[0:10], ([0..10], {a})>')
+
+    def test_range_relational(self):
+        a = RP([[NR(0,10,1)],[NR(0,10,0),NNR('a')]])
+        aa = RP([[NR(0,10,1)],[NR(0,10,0),NNR('a')]])
+        b = RP([[NR(0,10,1)],[NR(0,10,0),NNR('a'),NNR('b')]])
+        c = RP([[NR(0,10,1)],[NR(0,10,0),NNR('b')]])
+        d = RP([[NR(0,10,0)],[NR(0,10,0),NNR('a')]])
+        d = RP([[NR(0,10,0)],[AnyRange()]])
+
+        self.assertTrue(a.issubset(aa))
+        self.assertTrue(a.issubset(b))
+        self.assertFalse(a.issubset(c))
+        self.assertTrue(a.issubset(d))
+
+        self.assertFalse(a.issubset(NNR('a')))
+        self.assertFalse(a.issubset(NR(None,None,0)))
+        self.assertTrue(a.issubset(AnyRange()))
+
+    def test_contains(self):
+        a = NNR('a')
+        b = NR(0,5,0)
+        c = NR(5,10,1)
+        x = RP([[a],[b,c]])
+        self.assertNotIn('a', x)
+        self.assertNotIn(0, x)
+        self.assertNotIn(None, x)
+        self.assertIn(('a',0), x)
+        self.assertIn(('a',6), x)
+        self.assertNotIn(('a',6.5), x)
+
+    def test_equality(self):
+        a = NNR('a')
+        b = NR(0,5,0)
+        c = NR(5,10,1)
+        x = RP([[a],[b,c]])
+        y = RP([[a],[c]])
+        self.assertEqual(x,x)
+        self.assertNotEqual(x,y)
+
+    def test_isdisjoint(self):
+        a = NNR('a')
+        b = NR(0,5,0)
+        c = NR(5,10,1)
+        x = RP([[a],[b,c]])
+        y = RP([[a],[c]])
+        z = RP([[a],[b],[c]])
+        w = RP([[AnyRange()], [b]])
+        self.assertFalse(x.isdisjoint(x))
+        self.assertFalse(x.isdisjoint(y))
+        self.assertTrue(x.isdisjoint(z))
+        self.assertFalse(x.isdisjoint(w))
+        self.assertTrue(x.isdisjoint(a))
+        self.assertFalse(y.isdisjoint(w))
+        self.assertFalse(x.isdisjoint(AnyRange()))
+        v = RP([[AnyRange()],[NR(0,5,0,(False,False))]])
+        self.assertTrue(y.isdisjoint(v))
+
+    def test_range_difference(self):
+        a = NNR('a')
+        b = NR(0,5,0)
+        c = NR(5,10,1)
+        x = RP([[a],[b,c]])
+        y = RP([[a],[c]])
+        z = RP([[a],[b],[c]])
+        w = RP([list(Any.ranges()), [b]])
+        self.assertEqual(x.range_difference([x]), [])
+        self.assertEqual(x.range_difference([y]), [RP([[a],[b]])])
+        self.assertEqual(x.range_difference([z]), [x])
+        self.assertEqual(x.range_difference(Any.ranges()), [])
+        self.assertEqual(x.range_difference([w]), [RP([[a],[NR(6,10,1)]])])
+        v = RP([[AnyRange()],[NR(0,5,0,(False,False))]])
+        self.assertEqual(y.range_difference([v]), [y])
+
+    def test_range_intersection(self):
+        a = NNR('a')
+        b = NR(0,5,0)
+        c = NR(5,10,1)
+        x = RP([[a],[b,c]])
+        y = RP([[a],[c]])
+        z = RP([[a],[b],[c]])
+        w = RP([list(Any.ranges()), [b]])
+        self.assertEqual(x.range_intersection([x]), [x])
+        self.assertEqual(x.range_intersection([y]), [y])
+        self.assertEqual(x.range_intersection([z]), [])
+        self.assertEqual(x.range_intersection(Any.ranges()), [x])
+        self.assertEqual(x.range_intersection([w]), [RP([[a],[b]])])
+        self.assertEqual(y.range_intersection([w]), [RP([[a],[NR(5,5,0)]])])
+        v = RP([[AnyRange()],[NR(0,5,0,(False,False))]])
+        self.assertEqual(y.range_intersection([v]), [])
+
+    def test_info_methods(self):
+        a = NNR('a')
+        b = NR(0,5,0)
+        c = NR(5,10,1)
+        x = RP([[a],[b,c]])
+        y = RP([[a],[c]])
+        self.assertFalse(x.is_discrete())
+        self.assertFalse(x.is_finite())
+        self.assertTrue(y.is_discrete())
+        self.assertTrue(y.is_finite())
+
+    def test_pickle(self):
+        a = NNR('a')
+        b = NR(0,5,0)
+        c = NR(5,10,1)
+        x = RP([[a],[b,c]])
+        y = RP([[a],[c]])
+
+        xx = pickle.loads(pickle.dumps(x))
+        self.assertIsNot(x,xx)
+        self.assertEqual(x,xx)
+
+        yy = pickle.loads(pickle.dumps(y))
+        self.assertIsNot(y,yy)
+        self.assertEqual(y,yy)
 
 
 class InfiniteSetTester(unittest.TestCase):
@@ -2672,6 +2794,18 @@ class TestSetProduct(unittest.TestCase):
 A : Size=1, Index=None, Ordered=True
     Key  : Dimen : Domain   : Size : Members
     None :     2 : I*{3, 4} :    4 : {(1, 3), (1, 4), (2, 3), (2, 4)}
+""".strip()
+        self.assertEqual(output.getvalue().strip(), ref)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2,3])
+        m.J = Reals * m.I
+        output = StringIO()
+        m.J.pprint(ostream=output)
+        ref="""
+J : Size=1, Index=None, Ordered=False
+    Key  : Dimen : Domain  : Size : Members
+    None :     2 : Reals*I :  Inf : <[None..None], ([1], [2], [3])>
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
