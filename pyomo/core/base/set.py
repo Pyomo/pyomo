@@ -2657,83 +2657,49 @@ def _disable_method(fcn, msg=None):
     impl_args = eval('lambda %s: impl%s' % (args[1:-1], args), {'impl': impl})
     return functools.wraps(fcn)(impl_args)
 
-def _wrap_construct(cls):
-    def construct(self, data=None):
-        self.__class__ = cls
-        return cls.construct(self, data)
-    construct.__doc__ = cls.__doc__
-    return construct
+def disable_methods(methods):
+    def class_decorator(cls):
+        assert(len(cls.__bases__) == 1)
+        base = cls.__bases__[0]
 
+        def construct(self, data=None):
+            self.__class__ = base
+            return base.construct(self, data)
+        construct.__doc__ = base.construct.__doc__
+        cls.construct = construct
+
+        for method in methods:
+            if type(method) is tuple:
+                method, msg = method
+            else:
+                msg = None
+            if not hasattr(base, method):
+                raise DeveloperError(
+                    "Cannot disable method %s on %s: not present on base class"
+                    % (method, cls))
+            setattr(cls, method, _disable_method(getattr(base, method), msg))
+        return cls
+
+    return class_decorator
+
+_SET_API = (
+    ('__contains__', 'test membership in'),
+    ('__iter__', 'iterate over'),
+    '__reversed__', '__len__', 'data', 'set_value',
+    'add', 'remove', 'discard', 'clear', 'update', 'pop',
+)
+
+@disable_methods(_SET_API)
 class AbstractFiniteSimpleSet(FiniteSimpleSet):
-    # Override the construct method to revert the class and call the
-    # original construct
-    construct = _wrap_construct(FiniteSimpleSet)
+    pass
 
-    # _FiniteSetData methods
-    __contains__ = _disable_method(
-        FiniteSimpleSet.__contains__, 'test membership in')
-    __iter__ = _disable_method(
-        FiniteSimpleSet.__iter__, 'iterate over')
-    __reversed__ = _disable_method(FiniteSimpleSet.__reversed__)
-    __len__ = _disable_method(FiniteSimpleSet.__len__)
-    data = _disable_method(FiniteSimpleSet.data)
-    add = _disable_method(FiniteSimpleSet.add)
-    remove = _disable_method(FiniteSimpleSet.remove)
-    discard = _disable_method(FiniteSimpleSet.discard)
-    clear = _disable_method(FiniteSimpleSet.clear)
-    set_value = _disable_method(FiniteSimpleSet.set_value)
-    update = _disable_method(FiniteSimpleSet.update)
-    pop = _disable_method(FiniteSimpleSet.pop)
-
+@disable_methods(_SET_API + ('__getitem__', 'ord'))
 class AbstractOrderedSimpleSet(OrderedSimpleSet):
-    # Override the construct method to revert the class and call the
-    # original construct
-    construct = _wrap_construct(OrderedSimpleSet)
+    pass
 
-    # _FiniteSetData methods
-    __contains__ = _disable_method(
-        OrderedSimpleSet.__contains__, 'test membership in')
-    __iter__ = _disable_method(
-        OrderedSimpleSet.__iter__, 'iterate over')
-    __reversed__ = _disable_method(OrderedSimpleSet.__reversed__)
-    __len__ = _disable_method(OrderedSimpleSet.__len__)
-    data = _disable_method(OrderedSimpleSet.data)
-    add = _disable_method(OrderedSimpleSet.add)
-    remove = _disable_method(OrderedSimpleSet.remove)
-    discard = _disable_method(OrderedSimpleSet.discard)
-    clear = _disable_method(OrderedSimpleSet.clear)
-    set_value = _disable_method(OrderedSimpleSet.set_value)
-    update = _disable_method(OrderedSimpleSet.update)
-    pop = _disable_method(OrderedSimpleSet.pop)
-
-    # _OrderedSetData
-    __getitem__ = _disable_method(OrderedSimpleSet.__getitem__)
-    ord = _disable_method(OrderedSimpleSet.ord)
-
+@disable_methods(_SET_API + ('__getitem__', 'ord'))
 class AbstractSortedSimpleSet(SortedSimpleSet):
-    # Override the construct method to revert the class and call the
-    # original construct
-    construct = _wrap_construct(SortedSimpleSet)
-
-    # _FiniteSetData methods
-    __contains__ = _disable_method(
-        SortedSimpleSet.__contains__, 'test membership in')
-    __iter__ = _disable_method(
-        SortedSimpleSet.__iter__, 'iterate over')
-    __reversed__ = _disable_method(SortedSimpleSet.__reversed__)
-    __len__ = _disable_method(SortedSimpleSet.__len__)
-    data = _disable_method(SortedSimpleSet.data)
-    add = _disable_method(SortedSimpleSet.add)
-    remove = _disable_method(SortedSimpleSet.remove)
-    discard = _disable_method(SortedSimpleSet.discard)
-    clear = _disable_method(SortedSimpleSet.clear)
-    set_value = _disable_method(SortedSimpleSet.set_value)
-    update = _disable_method(SortedSimpleSet.update)
-    pop = _disable_method(SortedSimpleSet.pop)
-
-    # _OrderedSetData
-    __getitem__ = _disable_method(SortedSimpleSet.__getitem__)
-    ord = _disable_method(SortedSimpleSet.ord)
+    pass
 
 
 ############################################################################
