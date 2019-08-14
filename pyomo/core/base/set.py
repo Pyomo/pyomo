@@ -476,6 +476,11 @@ class UnknownSetDimen(object): pass
 #
 #   - Sets created with Set.Skip should produce intelligible errors
 #
+#   - Resolve nonnumeric range operations on tuples of numeric ranges
+#
+#   - Ensure the range operators raise exeptions for unexpected
+#     (non-range/non list arguments.
+#
 class NumericRange(object):
     """A representation of a numeric range.
 
