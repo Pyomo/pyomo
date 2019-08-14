@@ -643,8 +643,8 @@ class TestAnyRange(unittest.TestCase):
 
     def test_info_methods(self):
         a = AnyRange()
-        self.assertFalse(a.is_discrete())
-        self.assertFalse(a.is_finite())
+        self.assertFalse(a.isdiscrete())
+        self.assertFalse(a.isfinite())
 
     def test_pickle(self):
         a = AnyRange()
@@ -714,8 +714,8 @@ class TestNonNumericRange(unittest.TestCase):
 
     def test_info_methods(self):
         a = NNR('a')
-        self.assertTrue(a.is_discrete())
-        self.assertTrue(a.is_finite())
+        self.assertTrue(a.isdiscrete())
+        self.assertTrue(a.isfinite())
 
     def test_pickle(self):
         a = NNR('a')
@@ -824,10 +824,10 @@ class TestRangeProduct(unittest.TestCase):
         c = NR(5,10,1)
         x = RP([[a],[b,c]])
         y = RP([[a],[c]])
-        self.assertFalse(x.is_discrete())
-        self.assertFalse(x.is_finite())
-        self.assertTrue(y.is_discrete())
-        self.assertTrue(y.is_finite())
+        self.assertFalse(x.isdiscrete())
+        self.assertFalse(x.isfinite())
+        self.assertTrue(y.isdiscrete())
+        self.assertTrue(y.isfinite())
 
     def test_pickle(self):
         a = NNR('a')
@@ -1355,30 +1355,30 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
     def test_is_functions(self):
         i = SetOf({1,2,3})
-        self.assertTrue(i.is_finite())
-        self.assertFalse(i.is_ordered())
+        self.assertTrue(i.isfinite())
+        self.assertFalse(i.isordered())
 
         i = SetOf([1,2,3])
-        self.assertTrue(i.is_finite())
-        self.assertTrue(i.is_ordered())
+        self.assertTrue(i.isfinite())
+        self.assertTrue(i.isordered())
 
         i = SetOf((1,2,3))
-        self.assertTrue(i.is_finite())
-        self.assertTrue(i.is_ordered())
+        self.assertTrue(i.isfinite())
+        self.assertTrue(i.isordered())
 
         i = RangeSet(3)
-        self.assertTrue(i.is_finite())
-        self.assertTrue(i.is_ordered())
+        self.assertTrue(i.isfinite())
+        self.assertTrue(i.isordered())
         self.assertIsInstance(i, _FiniteRangeSetData)
 
         i = RangeSet(1,3)
-        self.assertTrue(i.is_finite())
-        self.assertTrue(i.is_ordered())
+        self.assertTrue(i.isfinite())
+        self.assertTrue(i.isordered())
         self.assertIsInstance(i, _FiniteRangeSetData)
 
         i = RangeSet(1,3,0)
-        self.assertFalse(i.is_finite())
-        self.assertFalse(i.is_ordered())
+        self.assertFalse(i.isfinite())
+        self.assertFalse(i.isordered())
         self.assertIsInstance(i, _InfiniteRangeSetData)
 
     def test_pprint(self):
@@ -1555,7 +1555,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertTrue(SetOf((m.q,1,3,5)).issuperset(_NonHashable))
 
         # But NOT non-iterable objects: we assume that everything that
-        # does not implement is_finite() is a discrete set.
+        # does not implement isfinite() is a discrete set.
         class _NonIterable(object):
             def __init__(self):
                 self.data = set({1,3,5})
@@ -1571,8 +1571,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
     def test_unordered_setof(self):
         i = SetOf({1,3,2,0})
 
-        self.assertTrue(i.is_finite())
-        self.assertFalse(i.is_ordered())
+        self.assertTrue(i.isfinite())
+        self.assertFalse(i.isordered())
 
         self.assertEqual(i.ordered_data(), (0,1,2,3))
         self.assertEqual(i.sorted_data(), (0,1,2,3))
@@ -1582,8 +1582,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
     def test_ordered_setof(self):
         i = SetOf([1,3,2,0])
 
-        self.assertTrue(i.is_finite())
-        self.assertTrue(i.is_ordered())
+        self.assertTrue(i.isfinite())
+        self.assertTrue(i.isordered())
 
         self.assertEqual(i.ordered_data(), (1,3,2,0))
         self.assertEqual(i.sorted_data(), (0,1,2,3))
@@ -1637,8 +1637,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         i = SetOf((1,3,2,0))
 
-        self.assertTrue(i.is_finite())
-        self.assertTrue(i.is_ordered())
+        self.assertTrue(i.isfinite())
+        self.assertTrue(i.isordered())
 
         self.assertEqual(i.ordered_data(), (1,3,2,0))
         self.assertEqual(i.sorted_data(), (0,1,2,3))
@@ -1663,8 +1663,8 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         i = SetOf([1, None, 'a'])
 
-        self.assertTrue(i.is_finite())
-        self.assertTrue(i.is_ordered())
+        self.assertTrue(i.isfinite())
+        self.assertTrue(i.isordered())
 
         self.assertEqual(i.ordered_data(), (1,None,'a'))
         self.assertEqual(i.sorted_data(), (None,1,'a'))
@@ -1678,7 +1678,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(len(r), 4)
         for idx, x in enumerate(r):
             self.assertIsInstance(x, NR)
-            self.assertTrue(x.is_finite())
+            self.assertTrue(x.isfinite())
             self.assertEqual(x.start, i[idx+1])
             self.assertEqual(x.end, i[idx+1])
             self.assertEqual(x.step, 0)
@@ -1896,20 +1896,20 @@ A : Size=1, Index=None, Ordered=True
         # This helps catch edge cases where we need to ensure it doesn't
         # count as part of the set membership
         if isinstance(a, SetOf):
-            self.assertTrue(a.is_ordered())
-            self.assertTrue(a.is_finite())
+            self.assertTrue(a.isordered())
+            self.assertTrue(a.isfinite())
         else:
             self.assertIs(type(a), list)
         if isinstance(b, SetOf):
-            self.assertTrue(b.is_ordered())
-            self.assertTrue(b.is_finite())
+            self.assertTrue(b.isordered())
+            self.assertTrue(b.isfinite())
         else:
             self.assertIs(type(b), list)
 
         x = a | b
         self.assertIs(type(x), SetUnion_OrderedSet)
-        self.assertTrue(x.is_finite())
-        self.assertTrue(x.is_ordered())
+        self.assertTrue(x.isfinite())
+        self.assertTrue(x.isordered())
         self.assertEqual(len(x), 5)
         self.assertEqual(list(x), [1,3,2,5,4])
         self.assertEqual(x.ordered_data(), (1,3,2,5,4))
@@ -1964,29 +1964,29 @@ A : Size=1, Index=None, Ordered=True
         # count as part of the set membership
         if isinstance(a, SetOf):
             if type(a._ref) is list:
-                self.assertTrue(a.is_ordered())
+                self.assertTrue(a.isordered())
             else:
-                self.assertFalse(a.is_ordered())
-            self.assertTrue(a.is_finite())
+                self.assertFalse(a.isordered())
+            self.assertTrue(a.isfinite())
         else:
             self.assertIn(type(a), (list, set))
         if isinstance(b, SetOf):
             if type(b._ref) is list:
-                self.assertTrue(b.is_ordered())
+                self.assertTrue(b.isordered())
             else:
-                self.assertFalse(b.is_ordered())
-            self.assertTrue(b.is_finite())
+                self.assertFalse(b.isordered())
+            self.assertTrue(b.isfinite())
         else:
             self.assertIn(type(b), (list, set))
 
         x = a | b
         self.assertIs(type(x), SetUnion_FiniteSet)
-        self.assertTrue(x.is_finite())
-        self.assertFalse(x.is_ordered())
+        self.assertTrue(x.isfinite())
+        self.assertFalse(x.isordered())
         self.assertEqual(len(x), 5)
-        if x._sets[0].is_ordered():
+        if x._sets[0].isordered():
             self.assertEqual(list(x)[:3], [1,3,2])
-        if x._sets[1].is_ordered():
+        if x._sets[1].isordered():
             self.assertEqual(list(x)[-2:], [5,4])
         self.assertEqual(sorted(list(x)), [1,2,3,4,5])
         self.assertEqual(x.ordered_data(), (1,2,3,4,5))
@@ -2017,20 +2017,20 @@ A : Size=1, Index=None, Ordered=True
         # This helps catch edge cases where we need to ensure it doesn't
         # count as part of the set membership
         if isinstance(a, RangeSet):
-            self.assertFalse(a.is_ordered())
-            self.assertFalse(a.is_finite())
+            self.assertFalse(a.isordered())
+            self.assertFalse(a.isfinite())
         else:
             self.assertIn(type(a), (list, set))
         if isinstance(b, RangeSet):
-            self.assertFalse(b.is_ordered())
-            self.assertFalse(b.is_finite())
+            self.assertFalse(b.isordered())
+            self.assertFalse(b.isfinite())
         else:
             self.assertIn(type(b), (list, set))
 
         x = a | b
         self.assertIs(type(x), SetUnion_InfiniteSet)
-        self.assertFalse(x.is_finite())
-        self.assertFalse(x.is_ordered())
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
 
         self.assertIn(1, x)
         self.assertIn(2, x)
@@ -2137,11 +2137,11 @@ A : Size=1, Index=None, Ordered=True
 
     def _verify_ordered_intersection(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
-            a_ordered = a.is_ordered()
+            a_ordered = a.isordered()
         else:
             a_ordered = type(a) is list
         if isinstance(b, (Set, SetOf, RangeSet)):
-            b_ordered = b.is_ordered()
+            b_ordered = b.isordered()
         else:
             b_ordered = type(b) is list
         self.assertTrue(a_ordered or b_ordered)
@@ -2153,8 +2153,8 @@ A : Size=1, Index=None, Ordered=True
 
         x = a & b
         self.assertIs(type(x), SetIntersection_OrderedSet)
-        self.assertTrue(x.is_finite())
-        self.assertTrue(x.is_ordered())
+        self.assertTrue(x.isfinite())
+        self.assertTrue(x.isordered())
         self.assertEqual(len(x), 3)
         self.assertEqual(list(x), list(ref))
         self.assertEqual(x.ordered_data(), tuple(ref))
@@ -2206,21 +2206,21 @@ A : Size=1, Index=None, Ordered=True
         # This helps catch edge cases where we need to ensure it doesn't
         # count as part of the set membership
         if isinstance(a, (Set, SetOf, RangeSet)):
-            a_finite = a.is_finite()
+            a_finite = a.isfinite()
         else:
             a_finite = True
         if isinstance(b, (Set, SetOf, RangeSet)):
-            b_finite = b.is_finite()
+            b_finite = b.isfinite()
         else:
             b_finite = True
         self.assertTrue(a_finite or b_finite)
 
         x = a & b
         self.assertIs(type(x), SetIntersection_FiniteSet)
-        self.assertTrue(x.is_finite())
-        self.assertFalse(x.is_ordered())
+        self.assertTrue(x.isfinite())
+        self.assertFalse(x.isordered())
         self.assertEqual(len(x), 3)
-        if x._sets[0].is_ordered():
+        if x._sets[0].isordered():
             self.assertEqual(list(x)[:3], [3,2,5])
         self.assertEqual(sorted(list(x)), [2,3,5])
         self.assertEqual(x.ordered_data(), (2,3,5))
@@ -2254,19 +2254,19 @@ A : Size=1, Index=None, Ordered=True
 
     def _verify_infinite_intersection(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
-            a_finite = a.is_finite()
+            a_finite = a.isfinite()
         else:
             a_finite = True
         if isinstance(b, (Set, SetOf, RangeSet)):
-            b_finite = b.is_finite()
+            b_finite = b.isfinite()
         else:
             b_finite = True
         self.assertEqual([a_finite, b_finite], [False,False])
 
         x = a & b
         self.assertIs(type(x), SetIntersection_InfiniteSet)
-        self.assertFalse(x.is_finite())
-        self.assertFalse(x.is_ordered())
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
 
         self.assertNotIn(1, x)
         self.assertIn(2, x)
@@ -2378,19 +2378,19 @@ A : Size=1, Index=None, Ordered=True
 
     def _verify_ordered_difference(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
-            a_ordered = a.is_ordered()
+            a_ordered = a.isordered()
         else:
             a_ordered = type(a) is list
         if isinstance(b, (Set, SetOf, RangeSet)):
-            b_ordered = b.is_ordered()
+            b_ordered = b.isordered()
         else:
             b_ordered = type(b) is list
         self.assertTrue(a_ordered)
 
         x = a - b
         self.assertIs(type(x), SetDifference_OrderedSet)
-        self.assertTrue(x.is_finite())
-        self.assertTrue(x.is_ordered())
+        self.assertTrue(x.isfinite())
+        self.assertTrue(x.isordered())
         self.assertEqual(len(x), 3)
         self.assertEqual(list(x), [3,2,5])
         self.assertEqual(x.ordered_data(), (3,2,5))
@@ -2444,19 +2444,19 @@ A : Size=1, Index=None, Ordered=True
         # This helps catch edge cases where we need to ensure it doesn't
         # count as part of the set membership
         if isinstance(a, (Set, SetOf, RangeSet)):
-            a_finite = a.is_finite()
+            a_finite = a.isfinite()
         else:
             a_finite = True
         if isinstance(b, (Set, SetOf, RangeSet)):
-            b_finite = b.is_finite()
+            b_finite = b.isfinite()
         else:
             b_finite = True
         self.assertTrue(a_finite or b_finite)
 
         x = a - b
         self.assertIs(type(x), SetDifference_FiniteSet)
-        self.assertTrue(x.is_finite())
-        self.assertFalse(x.is_ordered())
+        self.assertTrue(x.isfinite())
+        self.assertFalse(x.isordered())
         self.assertEqual(len(x), 3)
         self.assertEqual(sorted(list(x)), [2,3,5])
         self.assertEqual(x.ordered_data(), (2,3,5))
@@ -2491,8 +2491,8 @@ A : Size=1, Index=None, Ordered=True
     def test_infinite_setdifference(self):
         x = RangeSet(0,4,0) - RangeSet(2,6,0)
         self.assertIs(type(x), SetDifference_InfiniteSet)
-        self.assertFalse(x.is_finite())
-        self.assertFalse(x.is_ordered())
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
 
         self.assertNotIn(-1, x)
         self.assertIn(0, x)
@@ -2573,19 +2573,19 @@ A : Size=1, Index=None, Ordered=True
 
     def _verify_ordered_symdifference(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
-            a_ordered = a.is_ordered()
+            a_ordered = a.isordered()
         else:
             a_ordered = type(a) is list
         if isinstance(b, (Set, SetOf, RangeSet)):
-            b_ordered = b.is_ordered()
+            b_ordered = b.isordered()
         else:
             b_ordered = type(b) is list
         self.assertTrue(a_ordered)
 
         x = a ^ b
         self.assertIs(type(x), SetSymmetricDifference_OrderedSet)
-        self.assertTrue(x.is_finite())
-        self.assertTrue(x.is_ordered())
+        self.assertTrue(x.isfinite())
+        self.assertTrue(x.isordered())
         self.assertEqual(len(x), 4)
         self.assertEqual(list(x), [3,2,5,0])
         self.assertEqual(x.ordered_data(), (3,2,5,0))
@@ -2636,19 +2636,19 @@ A : Size=1, Index=None, Ordered=True
         # This helps catch edge cases where we need to ensure it doesn't
         # count as part of the set membership
         if isinstance(a, (Set, SetOf, RangeSet)):
-            a_finite = a.is_finite()
+            a_finite = a.isfinite()
         else:
             a_finite = True
         if isinstance(b, (Set, SetOf, RangeSet)):
-            b_finite = b.is_finite()
+            b_finite = b.isfinite()
         else:
             b_finite = True
         self.assertTrue(a_finite or b_finite)
 
         x = a ^ b
         self.assertIs(type(x), SetSymmetricDifference_FiniteSet)
-        self.assertTrue(x.is_finite())
-        self.assertFalse(x.is_ordered())
+        self.assertTrue(x.isfinite())
+        self.assertFalse(x.isordered())
         self.assertEqual(len(x), 4)
         self.assertEqual(sorted(list(x)), [0,2,3,5])
         self.assertEqual(x.ordered_data(), (0,2,3,5))
@@ -2683,8 +2683,8 @@ A : Size=1, Index=None, Ordered=True
     def test_infinite_setdifference(self):
         x = RangeSet(0,4,0) ^ RangeSet(2,6,0)
         self.assertIs(type(x), SetSymmetricDifference_InfiniteSet)
-        self.assertFalse(x.is_finite())
-        self.assertFalse(x.is_ordered())
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
 
         self.assertNotIn(-1, x)
         self.assertIn(0, x)
@@ -2703,8 +2703,8 @@ A : Size=1, Index=None, Ordered=True
 
         x = SetOf([3,2,1,5,4]) ^ RangeSet(3,6,0)
         self.assertIs(type(x), SetSymmetricDifference_InfiniteSet)
-        self.assertFalse(x.is_finite())
-        self.assertFalse(x.is_ordered())
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
 
         self.assertNotIn(-1, x)
         self.assertIn(1, x)
@@ -2728,8 +2728,8 @@ A : Size=1, Index=None, Ordered=True
 
         x = RangeSet(3,6,0) ^ SetOf([3,2,1,5,4])
         self.assertIs(type(x), SetSymmetricDifference_InfiniteSet)
-        self.assertFalse(x.is_finite())
-        self.assertFalse(x.is_ordered())
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
 
         self.assertNotIn(-1, x)
         self.assertIn(1, x)
@@ -2896,8 +2896,8 @@ J : Size=1, Index=None, Ordered=False
 
     def test_infinite_setproduct(self):
         x = PositiveIntegers * SetOf([2,3,5,7])
-        self.assertFalse(x.is_finite())
-        self.assertFalse(x.is_ordered())
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
         self.assertIn((1,2), x)
         self.assertNotIn((0,2), x)
         self.assertNotIn((1,1), x)
@@ -2905,8 +2905,8 @@ J : Size=1, Index=None, Ordered=False
         self.assertNotIn((2,'a'), x)
 
         x = SetOf([2,3,5,7]) * PositiveIntegers
-        self.assertFalse(x.is_finite())
-        self.assertFalse(x.is_ordered())
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
         self.assertIn((3,2), x)
         self.assertNotIn((1,2), x)
         self.assertNotIn((2,0), x)
@@ -2914,8 +2914,8 @@ J : Size=1, Index=None, Ordered=False
         self.assertNotIn((2,'a'), x)
 
         x = PositiveIntegers * PositiveIntegers
-        self.assertFalse(x.is_finite())
-        self.assertFalse(x.is_ordered())
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
         self.assertIn((3,2), x)
         self.assertNotIn((0,2), x)
         self.assertNotIn((2,0), x)
@@ -2924,11 +2924,11 @@ J : Size=1, Index=None, Ordered=False
 
     def _verify_finite_product(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
-            a_ordered = a.is_ordered()
+            a_ordered = a.isordered()
         else:
             a_ordered = type(a) is list
         if isinstance(b, (Set, SetOf, RangeSet)):
-            b_ordered = b.is_ordered()
+            b_ordered = b.isordered()
         else:
             b_ordered = type(b) is list
         self.assertFalse(a_ordered and b_ordered)
@@ -2936,8 +2936,8 @@ J : Size=1, Index=None, Ordered=False
         x = a * b
 
         self.assertIs(type(x), SetProduct_FiniteSet)
-        self.assertTrue(x.is_finite())
-        self.assertFalse(x.is_ordered())
+        self.assertTrue(x.isfinite())
+        self.assertFalse(x.isordered())
         self.assertEqual(len(x), 6)
         self.assertEqual(
             sorted(list(x)), [(1,5),(1,6),(2,5),(2,6),(3,5),(3,6)])
@@ -2963,12 +2963,12 @@ J : Size=1, Index=None, Ordered=False
 
     def _verify_ordered_product(self, a, b):
         if isinstance(a, (Set, SetOf, RangeSet)):
-            a_ordered = a.is_ordered()
+            a_ordered = a.isordered()
         else:
             a_ordered = type(a) is list
         self.assertTrue(a_ordered)
         if isinstance(b, (Set, SetOf, RangeSet)):
-            b_ordered = b.is_ordered()
+            b_ordered = b.isordered()
         else:
             b_ordered = type(b) is list
         self.assertTrue(b_ordered)
@@ -2976,8 +2976,8 @@ J : Size=1, Index=None, Ordered=False
         x = a * b
 
         self.assertIs(type(x), SetProduct_OrderedSet)
-        self.assertTrue(x.is_finite())
-        self.assertTrue(x.is_ordered())
+        self.assertTrue(x.isfinite())
+        self.assertTrue(x.isordered())
         self.assertEqual(len(x), 6)
         self.assertEqual(list(x), [(3,6),(3,5),(1,6),(1,5),(2,6),(2,5)])
         self.assertEqual(
@@ -3419,9 +3419,9 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(type(s), SetIntersection_OrderedSet)
         self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
         self.assertIsInstance(s._sets[1], RangeSet)
-        self.assertFalse(s._sets[0].is_finite())
-        self.assertFalse(s._sets[1].is_finite())
-        self.assertTrue(s.is_finite())
+        self.assertFalse(s._sets[0].isfinite())
+        self.assertFalse(s._sets[1].isfinite())
+        self.assertTrue(s.isfinite())
 
         a = SetInitializer(Reals)
         a.intersect(SetInitializer({1:Integers}))
@@ -3440,9 +3440,9 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(type(s), SetIntersection_OrderedSet)
         self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
         self.assertIsInstance(s._sets[1], RangeSet)
-        self.assertFalse(s._sets[0].is_finite())
-        self.assertFalse(s._sets[1].is_finite())
-        self.assertTrue(s.is_finite())
+        self.assertFalse(s._sets[0].isfinite())
+        self.assertFalse(s._sets[1].isfinite())
+        self.assertTrue(s.isfinite())
 
     def test_rangeset(self):
         a = RangeSetInitializer(5)
@@ -3643,8 +3643,8 @@ class TestSet(unittest.TestCase):
 
     def test_insertion_deletion(self):
         def _verify(_s, _l):
-            self.assertTrue(_s.is_ordered())
-            self.assertTrue(_s.is_finite())
+            self.assertTrue(_s.isordered())
+            self.assertTrue(_s.isfinite())
             for i,v in enumerate(_l):
                 self.assertEqual(_s[i+1], v)
             with self.assertRaisesRegexp(IndexError, "I index out of range"):
@@ -3834,8 +3834,8 @@ class TestSet(unittest.TestCase):
 
     def test_unordered_insertion_deletion(self):
         def _verify(_s, _l):
-            self.assertFalse(_s.is_ordered())
-            self.assertTrue(_s.is_finite())
+            self.assertFalse(_s.isordered())
+            self.assertTrue(_s.isfinite())
 
             self.assertEqual(sorted(_s), _l)
             self.assertEqual(list(_s), list(reversed(list(reversed(_s)))))
@@ -3925,9 +3925,9 @@ class TestSet(unittest.TestCase):
         self.assertIsNot(m.I[1], m.I[2])
         self.assertIsNot(m.I[1], m.I[3])
         self.assertIsNot(m.I[2], m.I[3])
-        self.assertFalse(m.I[1].is_ordered())
-        self.assertFalse(m.I[2].is_ordered())
-        self.assertFalse(m.I[3].is_ordered())
+        self.assertFalse(m.I[1].isordered())
+        self.assertFalse(m.I[2].isordered())
+        self.assertFalse(m.I[3].isordered())
         self.assertIs(type(m.I[1]), _FiniteSetData)
         self.assertIs(type(m.I[2]), _FiniteSetData)
         self.assertIs(type(m.I[3]), _FiniteSetData)
@@ -3942,9 +3942,9 @@ class TestSet(unittest.TestCase):
         self.assertIsNot(m.I[1], m.I[2])
         self.assertIsNot(m.I[1], m.I[3])
         self.assertIsNot(m.I[2], m.I[3])
-        self.assertTrue(m.I[1].is_ordered())
-        self.assertTrue(m.I[2].is_ordered())
-        self.assertTrue(m.I[3].is_ordered())
+        self.assertTrue(m.I[1].isordered())
+        self.assertTrue(m.I[2].isordered())
+        self.assertTrue(m.I[3].isordered())
         self.assertIs(type(m.I[1]), _InsertionOrderSetData)
         self.assertIs(type(m.I[2]), _InsertionOrderSetData)
         self.assertIs(type(m.I[3]), _InsertionOrderSetData)
@@ -3959,9 +3959,9 @@ class TestSet(unittest.TestCase):
         self.assertIsNot(m.I[1], m.I[2])
         self.assertIsNot(m.I[1], m.I[3])
         self.assertIsNot(m.I[2], m.I[3])
-        self.assertTrue(m.I[1].is_ordered())
-        self.assertTrue(m.I[2].is_ordered())
-        self.assertTrue(m.I[3].is_ordered())
+        self.assertTrue(m.I[1].isordered())
+        self.assertTrue(m.I[2].isordered())
+        self.assertTrue(m.I[3].isordered())
         self.assertIs(type(m.I[1]), _SortedSetData)
         self.assertIs(type(m.I[2]), _SortedSetData)
         self.assertIs(type(m.I[3]), _SortedSetData)
@@ -4729,8 +4729,8 @@ class TestAbstractSetAPI(unittest.TestCase):
         with self.assertRaises(DeveloperError):
             s.dimen
 
-        self.assertFalse(s.is_finite())
-        self.assertFalse(s.is_ordered())
+        self.assertFalse(s.isfinite())
+        self.assertFalse(s.isordered())
 
         with self.assertRaises(DeveloperError):
             s.ranges()
@@ -4819,8 +4819,8 @@ class TestAbstractSetAPI(unittest.TestCase):
         with self.assertRaises(DeveloperError):
             s.dimen
 
-        self.assertTrue(s.is_finite())
-        self.assertFalse(s.is_ordered())
+        self.assertTrue(s.isfinite())
+        self.assertFalse(s.isordered())
 
         range_iter = s.ranges()
         with self.assertRaises(DeveloperError):
@@ -4941,8 +4941,8 @@ class TestAbstractSetAPI(unittest.TestCase):
         with self.assertRaises(DeveloperError):
             s.dimen
 
-        self.assertTrue(s.is_finite())
-        self.assertTrue(s.is_ordered())
+        self.assertTrue(s.isfinite())
+        self.assertTrue(s.isordered())
 
         range_iter = s.ranges()
         with self.assertRaises(DeveloperError):

@@ -370,7 +370,7 @@ def process_setarg(arg):
     # use SetOf to create the Set:
     #
     tmp = SetOf(arg)
-    ans = Set(initialize=tmp, ordered=tmp.is_ordered())
+    ans = Set(initialize=tmp, ordered=tmp.isordered())
     ans.construct()
     #
     # Or we can do the simple thing and just use SetOf:
@@ -449,12 +449,12 @@ class UnknownSetDimen(object): pass
 #
 # When we do math, the least specific set dictates the API of the resulting set.
 #
-# Note that is_finite and is_ordered must be resolvable when the class
+# Note that isfinite and isordered must be resolvable when the class
 # is instantiated (*before* construction).  We will key off these fields
 # when performing set operations to know what type of operation to
 # create, and we will allow set operations in Abstract before
 # construction.
-#   - TODO: verify that RangeSet checks its params match is_*
+#   - TODO: verify that RangeSet checks its params match is*
 
 
 #
@@ -542,7 +542,7 @@ class NumericRange(object):
         self.step = step
 
         self.closed = (self._closedMap[closed[0]], self._closedMap[closed[1]])
-        if self.is_discrete() and self.closed != (True,True):
+        if self.isdiscrete() and self.closed != (True,True):
             raise ValueError(
                 "NumericRange %s is discrete, but passed closed=%s."
                 "  Discrete ranges must be closed." % (self, self.closed,))
@@ -571,7 +571,7 @@ class NumericRange(object):
             object.__setattr__(self, key, val)
 
     def __str__(self):
-        if not self.is_discrete():
+        if not self.isdiscrete():
             return "%s%s..%s%s" % (
                 "[" if self.closed[0] else "(",
                 self.start, self.end,
@@ -673,13 +673,13 @@ class NumericRange(object):
                     ans = x
         return ans
 
-    def is_discrete(self):
+    def isdiscrete(self):
         return self.step != 0 or \
             (self.start == self.end and self.start is not None)
 
-    def is_finite(self):
+    def isfinite(self):
         return self.start is not None and self.end is not None \
-            and self.is_discrete()
+            and self.isdiscrete()
 
     def isdisjoint(self, other):
         if not isinstance(other, NumericRange):
@@ -914,10 +914,10 @@ class NumericRange(object):
     def _lcm(self,other_ranges):
         """This computes an approximate Least Common Multiple step"""
         steps = set()
-        if self.is_discrete():
+        if self.isdiscrete():
             steps.add(abs(self.step) or 1)
         for s in other_ranges:
-            if s.is_discrete():
+            if s.isdiscrete():
                 steps.add(abs(s.step) or 1)
         for step1 in sorted(steps):
             for step2 in sorted(steps):
@@ -992,10 +992,10 @@ class NumericRange(object):
                     _new_subranges.append(t)
                     continue
 
-                if t.is_discrete():
+                if t.isdiscrete():
                     # s and t are discrete ranges.  Note if there is a
                     # discrete range in the list of ranges, then lcm > 0
-                    if s.is_discrete() and (s.start-t.start) % lcm != 0:
+                    if s.isdiscrete() and (s.start-t.start) % lcm != 0:
                         # s is offset from t and cannot remove any
                         # elements
                         _new_subranges.append(t)
@@ -1004,7 +1004,7 @@ class NumericRange(object):
                 t_min, t_max, t_c = t._normalize_bounds()
                 s_min, s_max, s_c = s._normalize_bounds()
 
-                if s.is_discrete() and not t.is_discrete():
+                if s.isdiscrete() and not t.isdiscrete():
                     #
                     # This handles the special case of continuous-discrete
                     if ((s_min is None and t.start is None) or
@@ -1114,7 +1114,7 @@ class NumericRange(object):
             # Compare it against each rhs range and only keep the
             # subranges of this range that are inside the lhs range
             for s in _other:
-                if s.is_discrete() and t.is_discrete():
+                if s.isdiscrete() and t.isdiscrete():
                     # s and t are discrete ranges.  Note if there is a
                     # finite range in the list of ranges, then lcm > 0
                     if (s.start-t.start) % lcm != 0:
@@ -1209,10 +1209,10 @@ class NonNumericRange(object):
             # of setting self.__dict__[key] = val.
             object.__setattr__(self, key, val)
 
-    def is_discrete(self):
+    def isdiscrete(self):
         return True
 
-    def is_finite(self):
+    def isfinite(self):
         return True
 
     def isdisjoint(self, other):
@@ -1256,10 +1256,10 @@ class AnyRange(object):
     def __contains__(self, value):
         return True
 
-    def is_discrete(self):
+    def isdiscrete(self):
         return False
 
-    def is_finite(self):
+    def isfinite(self):
         return False
 
     def isdisjoint(self, other):
@@ -1340,12 +1340,12 @@ class RangeProduct(object):
             # of setting self.__dict__[key] = val.
             object.__setattr__(self, key, val)
 
-    def is_discrete(self):
-        return all(all(rng.is_discrete() for rng in rng_list)
+    def isdiscrete(self):
+        return all(all(rng.isdiscrete() for rng in rng_list)
                    for rng_list in self.range_lists)
 
-    def is_finite(self):
-        return all(all(rng.is_finite() for rng in rng_list)
+    def isfinite(self):
+        return all(all(rng.isfinite() for rng in rng_list)
                    for rng_list in self.range_lists)
 
     def isdisjoint(self, other):
@@ -1442,11 +1442,11 @@ class _SetData(_SetDataBase):
         raise DeveloperError("Derived set class (%s) failed to "
                              "implement __contains__" % (type(self).__name__,))
 
-    def is_finite(self):
+    def isfinite(self):
         """Returns True if this is a finite discrete (iterable) Set"""
         return False
 
-    def is_ordered(self):
+    def isordered(self):
         """Returns True if this is an ordered finite discrete (iterable) Set"""
         return False
 
@@ -1454,19 +1454,19 @@ class _SetData(_SetDataBase):
         if self is other:
             return True
         try:
-            other_is_finite = other.is_finite()
+            other_isfinite = other.isfinite()
         except:
             # we assume that everything that does not implement
-            # is_finite() is a discrete set.
-            other_is_finite = True
+            # isfinite() is a discrete set.
+            other_isfinite = True
             try:
                 # For efficiency, if the other is not a Set, we will try
                 # converting it to a Python set() for efficient lookup.
                 other = set(other)
             except:
                 pass
-        if self.is_finite():
-            if not other_is_finite:
+        if self.isfinite():
+            if not other_isfinite:
                 return False
             if len(self) != len(other):
                 return False
@@ -1474,7 +1474,7 @@ class _SetData(_SetDataBase):
                 if x not in other:
                     return False
             return True
-        elif other_is_finite:
+        elif other_isfinite:
             return False
         return self.issubset(other) and other.issubset(self)
 
@@ -1496,23 +1496,23 @@ class _SetData(_SetDataBase):
 
     def isdisjoint(self, other):
         try:
-            other_is_finite = other.is_finite()
+            other_isfinite = other.isfinite()
         except:
             # we assume that everything that does not implement
-            # is_finite() is a discrete set.
-            other_is_finite = True
+            # isfinite() is a discrete set.
+            other_isfinite = True
             try:
                 # For efficiency, if the other is not a Set, we will try
                 # converting it to a Python set() for efficient lookup.
                 other = set(other)
             except:
                 pass
-        if self.is_finite():
+        if self.isfinite():
             for x in self:
                 if x in other:
                     return False
             return True
-        elif other_is_finite:
+        elif other_isfinite:
             for x in other:
                 if x in self:
                     return False
@@ -1522,23 +1522,23 @@ class _SetData(_SetDataBase):
 
     def issubset(self, other):
         try:
-            other_is_finite = other.is_finite()
+            other_isfinite = other.isfinite()
         except:
             # we assume that everything that does not implement
-            # is_finite() is a discrete set.
-            other_is_finite = True
+            # isfinite() is a discrete set.
+            other_isfinite = True
             try:
                 # For efficiency, if the other is not a Set, we will try
                 # converting it to a Python set() for efficient lookup.
                 other = set(other)
             except:
                 pass
-        if self.is_finite():
+        if self.isfinite():
             for x in self:
                 if x not in other:
                     return False
             return True
-        elif other_is_finite:
+        elif other_isfinite:
             return False
         else:
             for r in self.ranges():
@@ -1554,18 +1554,18 @@ class _SetData(_SetDataBase):
 
     def issuperset(self, other):
         try:
-            other_is_finite = other.is_finite()
+            other_isfinite = other.isfinite()
         except:
             # we assume that everything that does not implement
-            # is_finite() is a discrete set.
-            other_is_finite = True
+            # isfinite() is a discrete set.
+            other_isfinite = True
             try:
                 # For efficiency, if the other is not a Set, we will try
                 # converting it to a Python set() for efficient lookup.
                 other = set(other)
             except:
                 pass
-        if other_is_finite:
+        if other_isfinite:
             for x in other:
                 # Other may contain elements that are not representable
                 # in self.  Trap that error (a TypeError due to hashing)
@@ -1576,7 +1576,7 @@ class _SetData(_SetDataBase):
                 except TypeError:
                     return False
             return True
-        elif self.is_finite():
+        elif self.isfinite():
             return False
         else:
             return other.issubset(self)
@@ -1641,7 +1641,7 @@ class _SetData(_SetDataBase):
         #
         # return SetOf(other) | self
         tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.is_ordered())
+        ans = Set(initialize=tmp, ordered=tmp.isordered())
         ans.construct()
         return ans | self
 
@@ -1650,7 +1650,7 @@ class _SetData(_SetDataBase):
         #
         # return SetOf(other) & self
         tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.is_ordered())
+        ans = Set(initialize=tmp, ordered=tmp.isordered())
         ans.construct()
         return ans & self
 
@@ -1659,7 +1659,7 @@ class _SetData(_SetDataBase):
         #
         # return SetOf(other) - self
         tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.is_ordered())
+        ans = Set(initialize=tmp, ordered=tmp.isordered())
         ans.construct()
         return ans - self
 
@@ -1668,7 +1668,7 @@ class _SetData(_SetDataBase):
         #
         # return SetOf(other) ^ self
         tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.is_ordered())
+        ans = Set(initialize=tmp, ordered=tmp.isordered())
         ans.construct()
         return ans ^ self
 
@@ -1677,7 +1677,7 @@ class _SetData(_SetDataBase):
         #
         # return SetOf(other) * self
         tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.is_ordered())
+        ans = Set(initialize=tmp, ordered=tmp.isordered())
         ans.construct()
         return ans * self
 
@@ -1714,7 +1714,7 @@ class _FiniteSetMixin(object):
     def __reversed__(self):
         return reversed(self.data())
 
-    def is_finite(self):
+    def isfinite(self):
         """Returns True if this is a finite discrete (iterable) Set"""
         return True
 
@@ -1931,7 +1931,7 @@ class _OrderedSetMixin(object):
         raise DeveloperError("Derived ordered set class (%s) failed to "
                              "implement ord" % (type(self).__name__,))
 
-    def is_ordered(self):
+    def isordered(self):
         """Returns True if this is an ordered finite discrete (iterable) Set"""
         return True
 
@@ -2276,7 +2276,7 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
 ############################################################################
 
 def _pprint_members(x):
-    if x.is_finite():
+    if x.isfinite():
         return '{' + str(x.ordered_data())[1:-1] + "}"
     else:
         ans = ' | '.join(str(_) for _ in x.ranges())
@@ -2545,7 +2545,7 @@ class Set(IndexedComponent):
             _filter = None
         if self._init_values is not None:
             # _values was initialized above...
-            if obj.is_ordered() \
+            if obj.isordered() \
                    and type(_values) in self._UnorderedInitializers:
                 logger.warning(
                     "Initializing an ordered Set with a fundamentally "
@@ -2584,10 +2584,10 @@ class Set(IndexedComponent):
         #             return '{' + str(ans)[1:-1] + "}"
 
         # TODO: In the current design, we force all _SetData witin an
-        # indexed Set to have the same is_ordered value, so we will only
+        # indexed Set to have the same isordered value, so we will only
         # print it once in the header.  Is this a good design?
         try:
-            _ordered = self.is_ordered()
+            _ordered = self.isordered()
             _refClass = type(self)
         except:
             _ordered = issubclass(self._ComponentDataClass, _OrderedSetMixin)
@@ -2614,7 +2614,7 @@ class Set(IndexedComponent):
             lambda k, v: [
                 _pprint_dimen(v),
                 _pprint_domain(v),
-                len(v) if v.is_finite() else 'Inf',
+                len(v) if v.isfinite() else 'Inf',
                 _pprint_members(v),
             ])
 
@@ -2715,7 +2715,7 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
             iteritems( {None: self} ),
             ("Ordered", "Members",),
             lambda k, v: [
-                v.is_ordered(),
+                v.isordered(),
                 str(v._ref),
             ])
 
@@ -2933,7 +2933,7 @@ class RangeSet(Component):
         finite = kwds.pop('finite', None)
         if finite is None:
             if 'ranges' in kwds:
-                if any(not r.is_finite() for r in kwds['ranges']):
+                if any(not r.isfinite() for r in kwds['ranges']):
                     finite = False
             if None in args or (len(args) > 2 and args[2] == 0):
                 finite = False
@@ -3006,12 +3006,12 @@ class RangeSet(Component):
         """
         return (
             [("Dimen", self.dimen),
-             ("Size", len(self) if self.is_finite() else 'Inf'),
+             ("Size", len(self) if self.isfinite() else 'Inf'),
              ("Bounds", self.bounds())],
             iteritems( {None: self} ),
             ("Finite","Members",),
             lambda k, v: [
-                v.is_finite(),#isinstance(v, _FiniteSetMixin),
+                v.isfinite(),#isinstance(v, _FiniteSetMixin),
                 ', '.join(str(r) for r in self.ranges()) or '[]',
             ])
 
@@ -3085,7 +3085,7 @@ class _SetOperator(_SetData, Set):
         raise OverflowError(
             "The length of a non-finite Set is Inf; however, Python "
             "requires len() to return a non-negative integer value. Check "
-            "is_finite() before calling len() for possibly infinite Sets")
+            "isfinite() before calling len() for possibly infinite Sets")
 
     def __str__(self):
         if self.parent_block() is not None:
@@ -3119,7 +3119,7 @@ class _SetOperator(_SetData, Set):
         ans = []
         for s in sets:
             if isinstance(s, _SetDataBase):
-                ans.append((s.is_ordered(), s.is_finite()))
+                ans.append((s.isordered(), s.isfinite()))
             elif type(s) in {tuple, list}:
                 ans.append((True, True))
             else:
@@ -3257,7 +3257,7 @@ class SetIntersection(_SetOperator):
             cls = SetIntersection_OrderedSet
             for r0 in args[0].ranges():
                 for r01 in r0.range_intersection(args[1].ranges()):
-                    if not r01.is_finite():
+                    if not r01.isfinite():
                         cls = SetIntersection_InfiniteSet
                         return cls.__new__(cls)
         return cls.__new__(cls)
@@ -3295,11 +3295,11 @@ class SetIntersection_FiniteSet(_FiniteSetMixin, SetIntersection_InfiniteSet):
 
     def __iter__(self):
         set0, set1 = self._sets
-        if not set0.is_ordered():
-            if set1.is_ordered():
+        if not set0.isordered():
+            if set1.isordered():
                 set0, set1 = set1, set0
-            elif not set0.is_finite():
-                if set1.is_finite():
+            elif not set0.isfinite():
+                if set1.isfinite():
                     set0, set1 = set1, set0
                 else:
                     # THe odd case of a finite continuous range
