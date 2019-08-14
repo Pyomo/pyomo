@@ -1494,6 +1494,17 @@ class _SetData(_SetDataBase):
         raise DeveloperError("Derived set class (%s) failed to "
                              "implement ranges" % (type(self).__name__,))
 
+    @property
+    @deprecated("The 'virtual' flag is no longer supported", version='TBD')
+    def virtual(self):
+        return False
+
+    @property
+    @deprecated("The 'concrete' flag is no longer supported.  "
+                "Use isdiscrete() or isfinite()", version='TBD')
+    def concrete(self):
+        return self.isfinite()
+
     def isdisjoint(self, other):
         try:
             other_isfinite = other.isfinite()
@@ -3113,6 +3124,11 @@ class _SetOperator(_SetData, Set):
         if val is not Any:
             raise ValueError(
                 "Setting the domain of a Set Operator is not allowed: %s" % val)
+
+    @property
+    @deprecated("The 'virtual' flag is no longer supported", version='TBD')
+    def virtual(self):
+        return True
 
     @staticmethod
     def _checkArgs(*sets):

@@ -4703,6 +4703,7 @@ I : Size=2, Index=I_index, Ordered=Insertion
         finally:
             normalize_index.flatten = _oldFlatten
 
+
 class TestAbstractSetAPI(unittest.TestCase):
     def test_SetData(self):
         # This tests an anstract non-finite set
@@ -5059,6 +5060,54 @@ class TestAbstractSetAPI(unittest.TestCase):
 
         with self.assertRaises(DeveloperError):
             s.ord(0)
+
+
+class TestDeprecation(unittest.TestCase):
+    def test_virtual(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2,3])
+        m.J = m.I*m.I
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            self.assertFalse(m.I.virtual)
+        self.assertIn(
+            "The 'virtual' flag is no longer supported",
+            output.getvalue())
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            self.assertTrue(m.J.virtual)
+        self.assertIn(
+            "The 'virtual' flag is no longer supported",
+            output.getvalue())
+
+    def test_concrete(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2,3])
+        m.J = m.I*m.I
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            self.assertTrue(m.I.concrete)
+        self.assertIn(
+            "The 'concrete' flag is no longer supported",
+            output.getvalue())
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            self.assertTrue(m.J.concrete)
+        self.assertIn(
+            "The 'concrete' flag is no longer supported",
+            output.getvalue())
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            self.assertFalse(Reals.concrete)
+        self.assertIn(
+            "The 'concrete' flag is no longer supported",
+            output.getvalue())
+
 
 class TestIssues(unittest.TestCase):
     def test_issue_43(self):
