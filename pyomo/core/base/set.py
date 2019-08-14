@@ -925,22 +925,21 @@ class NumericRange(object):
             lcm *= step
         return lcm
 
-    def _push_to_discrete_boundary(self, val, other, push_toward_end):
-        if self.step or val is None or not other.step:
-            # If S is discrete, then the code above guarantees
-            # it is aligned with T
+    def _push_to_discrete_element(self, val, push_to_next_larger_value):
+        if val is None or not self.step:
             return val
         else:
-            # S is continuous and T is diecrete.  Move s_min to
-            # the first aligned point
+            # self is discrete and val is a numeric value.  Move val to
+            # the first discrete point aligned with self's range
             #
             # Note that we need to push the value INTO the range defined
-            # by other, so floor/ceil depends on the sign of other.step
-            if push_toward_end:
-                _rndFcn = math.ceil if other.step > 0 else math.floor
+            # by this set, so floor/ceil depends on the sign of self.step
+            if push_to_next_larger_value:
+                _rndFcn = math.ceil if self.step > 0 else math.floor
             else:
-                _rndFcn = math.floor if other.step > 0 else math.ceil
-            return other.step*_rndFcn((val - other.start) / float(other.step))
+                _rndFcn = math.floor if self.step > 0 else math.ceil
+            return self.start + self.step*_rndFcn(
+                (val - self.start) / float(self.step) )
 
     def range_difference(self, other_ranges):
         """Return the difference between this range and a list of other ranges.
@@ -1012,10 +1011,10 @@ class NumericRange(object):
 
                     # At least one of s_min amd t.start must be non-None
                     start = NumericRange._max(
-                        s_min, t._push_to_discrete_boundary(t.start, s, True))
+                        s_min, s._push_to_discrete_element(t.start, True))
                     # At least one of s_max amd t.end must be non-None
                     end = NumericRange._min(
-                        s_max, t._push_to_discrete_boundary(t.end, s, False))
+                        s_max, s._push_to_discrete_element(t.end, False))
 
                     if NumericRange._lt(t.start, start):
                         _new_subranges.append(NumericRange(
@@ -1125,13 +1124,13 @@ class NumericRange(object):
                 step = abs(t.step if t.step else s.step)
 
                 intersect_start = NumericRange._max(
-                    s._push_to_discrete_boundary(s_min, t, True),
-                    t._push_to_discrete_boundary(t_min, s, True),
+                    t._push_to_discrete_element(s_min, True),
+                    s._push_to_discrete_element(t_min, True),
                 )
 
                 intersect_end = NumericRange._min(
-                    s._push_to_discrete_boundary(s_max, t, False),
-                    t._push_to_discrete_boundary(t_max, s, False),
+                    t._push_to_discrete_element(s_max, False),
+                    s._push_to_discrete_element(t_max, False),
                 )
                 c = [True,True]
                 if intersect_start == t_min:
