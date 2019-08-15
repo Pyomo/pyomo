@@ -511,7 +511,10 @@ class BigM_Transformation(Transformation):
 
         if obj.is_indexed():
             try:
-                newConstraint = Constraint(obj.index_set(), transBlock.lbub)
+                # The reason list(obj.index_set()) is used instead of just obj.index_set()
+                # is that the underlying index set for obj gets modified in this step
+                # if list() is not used. See PR #TBD
+                newConstraint = Constraint(list(obj.index_set()), transBlock.lbub)
             except TypeError:
                 # The original constraint may have been indexed by a
                 # non-concrete set (like an Any).  We will give up on
