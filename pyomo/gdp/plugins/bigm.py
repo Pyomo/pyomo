@@ -513,7 +513,7 @@ class BigM_Transformation(Transformation):
             try:
                 # The reason list(obj.index_set()) is used instead of just obj.index_set()
                 # is that the underlying index set for obj gets modified in this step
-                # if list() is not used. See PR #TBD
+                # if list() is not used. See PR #1101
                 newConstraint = Constraint(list(obj.index_set()), transBlock.lbub)
             except TypeError:
                 # The original constraint may have been indexed by a
