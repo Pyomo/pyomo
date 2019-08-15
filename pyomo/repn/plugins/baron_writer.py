@@ -46,6 +46,20 @@ from pyomo.repn.util import valid_expr_ctypes_minlp, \
 logger = logging.getLogger('pyomo.core')
 
 
+#Copied from cpxlp.py:
+# Keven Hunter made a nice point about using %.16g in his attachment
+# to ticket #4319. I am adjusting this to %.17g as this mocks the
+# behavior of using %r (i.e., float('%r'%<number>) == <number>) with
+# the added benefit of outputting (+/-). The only case where this
+# fails to mock the behavior of %r is for large (long) integers (L),
+# which is a rare case to run into and is probably indicative of
+# other issues with the model.
+# *** NOTE ***: If you use 'r' or 's' here, it will break code that
+#               relies on using '%+' before the formatting character
+#               and you will need to go add extra logic to output
+#               the number's sign.
+_ftoa_precision_str = '%.17g'
+
 def _ftoa(val):
     if val is None:
         return val
@@ -55,7 +69,7 @@ def _ftoa(val):
         else:
             raise ValueError("non-fixed bound or weight: " + str(exp))
 
-    a = _ftoa.precision_str % val
+    a = _ftoa_precision_str % val
     i = len(a)
     while i > 1:
         try:
@@ -71,20 +85,6 @@ def _ftoa(val):
     #if a.startswith('1.57'):
     #    raise RuntimeError("wtf %s %s, %s" % ( val, a, i))
     return a[:i]
-
-#Copied from cpxlp.py:
-# Keven Hunter made a nice point about using %.16g in his attachment
-# to ticket #4319. I am adjusting this to %.17g as this mocks the
-# behavior of using %r (i.e., float('%r'%<number>) == <number>) with
-# the added benefit of outputting (+/-). The only case where this
-# fails to mock the behavior of %r is for large (long) integers (L),
-# which is a rare case to run into and is probably indicative of
-# other issues with the model.
-# *** NOTE ***: If you use 'r' or 's' here, it will break code that
-#               relies on using '%+' before the formatting character
-#               and you will need to go add extra logic to output
-#               the number's sign.
-_ftoa.precision_str = '%.17g'
 
 
 #
