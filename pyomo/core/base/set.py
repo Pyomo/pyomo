@@ -56,6 +56,67 @@ _prePython37 = sys.version_info[:2] < (3,7)
 
 FLATTEN_CROSS_PRODUCT = True
 
+#
+# The following decorator is general and should probably be promoted to
+# component.py so that we can efficiently handle construction errors on
+# scalar components.
+#
+def _disable_method(fcn, msg=None):
+    if msg is None:
+        msg = 'access %s on' % (fcn.__func__.func_name,)
+    def impl(self, *args, **kwds):
+        raise RuntimeError(
+            "Cannot %s %s '%s' before it has been constructed (initialized)."
+            % (msg, type(self).__name__, self.name))
+
+    # functools.wraps doesn't preserve the function signature until
+    # Python 3.4.  For backwards compatability with Python 2.x, we will
+    # create a temporary (lambda) function using eval that matches the
+    # function signature passed in and calls the generic impl() function
+    args = inspect.formatargspec(*inspect.getargspec(fcn))
+    impl_args = eval('lambda %s: impl%s' % (args[1:-1], args), {'impl': impl})
+    return functools.wraps(fcn)(impl_args)
+
+def disable_methods(methods):
+    """Class decorator to disable methods before construct is called.
+
+    This decorator should be called to create "Abstract" scalar classes
+    that override key methods to raise exceptions.  When the construct()
+    method is called, the class instance changes type back to the
+    original scalar component and the full class functionality is
+    restored.  The prevents most class methods from having to begin with
+    "`if not self.parent_component()._constructed: raise RuntimeError`"
+    """
+    def class_decorator(cls):
+        assert(len(cls.__bases__) == 1)
+        base = cls.__bases__[0]
+
+        def construct(self, data=None):
+            self.__class__ = base
+            return base.construct(self, data)
+        construct.__doc__ = base.construct.__doc__
+        cls.construct = construct
+
+        for method in methods:
+            if type(method) is tuple:
+                method, msg = method
+            else:
+                msg = None
+            if not hasattr(base, method):
+                raise DeveloperError(
+                    "Cannot disable method %s on %s: not present on base class"
+                    % (method, cls))
+            setattr(cls, method, _disable_method(getattr(base, method), msg))
+        return cls
+
+    return class_decorator
+
+
+#
+# The following set of "Initializer" classes are a general functionality
+# and should be promoted to their own module so that we can use them on
+# all Components to standardize how we process component arguments.
+#
 def Initializer(init, allow_generators=False,
                 treat_sequences_as_mappings=True):
     if init.__class__ in native_types:
@@ -323,6 +384,7 @@ class RangeSetInitializer(_InitializerBase):
         # This is a real range set... there is no default to set
         pass
 
+
 def process_setarg(arg):
     if isinstance(arg, _SetDataBase):
         return arg
@@ -489,13 +551,27 @@ class NumericRange(object):
     mimics the Pyomo (*not* Python) `range` API, with a Start, End, and
     Step.  The Step is a signed int.  If the Step is 0, the range is
     continuous.  The End *is* included in the range.  Ranges are closed,
-    unless a closed is spacified as a 2-tuple of bool values.  Only
+    unless `closed` is specified as a 2-tuple of bool values.  Only
     continuous ranges may be open (or partially open)
 
     Closed ranges are not necessarily strictly finite, as None is
-    allowed for then End value (as well as the Start value, for
+    allowed for the End value (as well as the Start value, for
     continuous ranges only).
 
+    Parameters
+    ----------
+        start : int
+            The starting value for this NumericRange
+        end : int
+            The last value for this NumericRange
+        step : int
+            The interval between values in the range.  0 indicates a
+            continuous range.  Negative values indicate discrete ranges
+            walking backwards.
+        closed : tuple of bool, optional
+            A 2-tuple of bool values indicating if the beginning and end
+            of the range is closed.  Open ranges are only allowed for
+            continuous NumericRange objects.
     """
     __slots__ = ('start','end','step','closed')
     _EPS = 1e-15
@@ -2279,77 +2355,90 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
 
 ############################################################################
 
-def _pprint_members(x):
-    if x.isfinite():
-        return '{' + str(x.ordered_data())[1:-1] + "}"
-    else:
-        ans = ' | '.join(str(_) for _ in x.ranges())
-        if ' | ' in ans:
-            return "(" + ans + ")"
-        if ans:
-            return ans
-        else:
-            return "[]"
-
-def _pprint_dimen(x):
-    d = x.dimen
-    if d is UnknownSetDimen:
-        return "--"
-    return d
-
-def _pprint_domain(x):
-    if x._domain is x:
-        return x._expression_str()
-    else:
-        return x._domain
+_SET_API = (
+    ('__contains__', 'test membership in'),
+    'ranges', 'bounds',
+)
+_FINITESET_API = _SET_API + (
+    ('__iter__', 'iterate over'),
+    '__reversed__', '__len__', 'data', 'sorted_data', 'ordered_data',
+)
+_ORDEREDSET_API = _FINITESET_API + (
+    '__getitem__', 'ord',
+)
+_SETDATA_API = (
+    'set_value', 'add', 'remove', 'discard', 'clear', 'update', 'pop',
+)
 
 class Set(IndexedComponent):
     """
-    A set object that is used to index other Pyomo objects.
+    A component used to index other Pyomo components.
 
-    This class has a similar look-and-feel as a Python set class.
-    However, the set operations defined in this class return another
-    abstract Set object. This class contains a concrete set, which
-    can be initialized by the load() method.
+    This class provides a Pyomo component that is API-compatible with
+    Python `set` objects, with additional features, including:
+        1. Member validation and filtering.  The user can declare
+           domains and provide callback functions to validate set
+           members and to filter (ignore) potential members.
+        2. Set expressions.  Operations on Set objects (&,|,*,-,^)
+           produce Set expressions taht preserve their references to the
+           original Set objects so that updating the argument Sets
+           implicitly updates the Set operator instance.
+        3. Support for set operations with RangeSet instances (both
+           finite and non-finite ranges).
 
-    Constructor Arguments:
-        name            The name of the set
-        doc             A text string describing this component
-        within          A set that defines the type of values that can
-                            be contained in this set
-        domain          A set that defines the type of values that can
-                            be contained in this set
-        initialize      A dictionary or rule for setting up this set
-                            with existing model data
-        validate        A rule for validating membership in this set. This has
-                            the functional form:
-                                f: data -> bool
-                            and returns true if the data belongs in the set
-        dimen           Specify the set's arity, or None if no arity is enforced
-        virtual         If true, then this is a virtual set that does not
-                            store data using the class dictionary
-        bounds          A 2-tuple that specifies the range of possible set values.
-        ordered         Specifies whether the set is ordered. Possible values are:
-                            False           Unordered
-                            True            Ordered by insertion order
-                            InsertionOrder  Ordered by insertion order
-                            SortedOrder     Ordered by sort order
-                            <function>      Ordered with this comparison function
-        filter          A function that is used to filter set entries.
+    Parameters
+    ----------
+        name : str, optional
+            The name of the set
+        doc : str, optional
+            A text string describing this component
+        initialize : initializer(iterable), optional
+            The initial values to store in the Set when it is
+            constructed.  Values passed to `initialize` may be
+            overridden by `data` passed to the :py:meth:`construct`
+            method.
+        dimen : initializer(int)
+            Specify the Set's arity, or None if no arity is enforced
+        ordered : bool or Set.InsertionOrder or Set.SortedOrder or function
+            Specifies whether the set is ordered. Possible values are:
+                False               Unordered
+                True                Ordered by insertion order
+                Set.InsertionOrder  Ordered by insertion order [default]
+                Set.SortedOrder     Ordered by sort order
+                <function>          Ordered with this comparison function
+        within : initialiser(set), optional
+            A set that defines the valid values that can be contained
+            in this set
+        domain : initializer(set), optional
+            A set that defines the valid values that can be contained
+            in this set
+        bounds : initializer(tuple), optional
+            A 2-tuple that specifies the lower and upper bounds for
+            valid Set values
+        filter : initializer(rule), optional
+            A rule for determining membership in this set. This has the
+            functional form:
 
-    Public class attributes:
-        concrete        If True, then this set contains elements.(TODO)
-        dimen           The dimension of the data in this set.
-        doc             A text string describing this component
-        domain          A set that defines the type of values that can
-                            be contained in this set
-        filter          A function that is used to filter set entries.
-        initialize      A dictionary or rule for setting up this set
-                            with existing model data
-        ordered         Specifies whether the set is ordered.
-        validate        A rule for validating membership in this set.
-        virtual         If True, then this set does not store data using the class
-                             dictionary
+                ``f: Block, *data -> bool``
+
+            and returns True if the data belongs in the set.  Set will
+            quietly ignore any values where `filter` returns False.
+        validate : initializer(rule), optional
+            A rule for validating membership in this set. This has the
+            functional form:
+
+                ``f: Block, *data -> bool``
+
+            and returns True if the data belongs in the set.  Set will
+            raise a ``ValueError`` for any values where `validate`
+            returns False.
+
+    Notes
+    -----
+        `domain`, `within`, and `bounds` all provide restrictions on the
+        valid set values.  If more than one is specified, Set values
+        will be restricted to the intersection of `domain`, `within`,
+        and `bounds`.
     """
 
     class End(object): pass
@@ -2362,7 +2451,7 @@ class Set(IndexedComponent):
         _UnorderedInitializers.add(dict)
 
     def __new__(cls, *args, **kwds):
-        if cls != Set:
+        if cls is not Set:
             return super(Set, cls).__new__(cls)
 
         # TBD: Should ordered be allowed to vary across an IndexedSet?
@@ -2400,13 +2489,13 @@ class Set(IndexedComponent):
                     ))))
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             if ordered is Set.InsertionOrder:
-                return Set.__new__(AbstractOrderedSimpleSet)
+                return super(Set, cls).__new__(AbstractOrderedSimpleSet)
             elif ordered is Set.SortedOrder:
-                return Set.__new__(AbstractSortedSimpleSet)
+                return super(Set, cls).__new__(AbstractSortedSimpleSet)
             else:
-                return Set.__new__(AbstractFiniteSimpleSet)
+                return super(Set, cls).__new__(AbstractFiniteSimpleSet)
         else:
-            newObj = Set.__new__(IndexedSet)
+            newObj = super(Set, cls).__new__(IndexedSet)
             if ordered is Set.InsertionOrder:
                 newObj._ComponentDataClass = _InsertionOrderSetData
             elif ordered is Set.SortedOrder:
@@ -2566,6 +2655,33 @@ class Set(IndexedComponent):
         obj._filter = _filter
         return obj
 
+    @staticmethod
+    def _pprint_members(x):
+        if x.isfinite():
+            return '{' + str(x.ordered_data())[1:-1] + "}"
+        else:
+            ans = ' | '.join(str(_) for _ in x.ranges())
+            if ' | ' in ans:
+                return "(" + ans + ")"
+            if ans:
+                return ans
+            else:
+                return "[]"
+
+    @staticmethod
+    def _pprint_dimen(x):
+        d = x.dimen
+        if d is UnknownSetDimen:
+            return "--"
+        return d
+
+    @staticmethod
+    def _pprint_domain(x):
+        if x._domain is x:
+            return x._expression_str()
+        else:
+            return x._domain
+
     def _pprint(self):
         """
         Return data that will be printed for this component.
@@ -2616,10 +2732,10 @@ class Set(IndexedComponent):
             iteritems(self._data),
             ("Dimen","Domain","Size","Members",),
             lambda k, v: [
-                _pprint_dimen(v),
-                _pprint_domain(v),
+                Set._pprint_dimen(v),
+                Set._pprint_domain(v),
                 len(v) if v.isfinite() else 'Inf',
-                _pprint_members(v),
+                Set._pprint_members(v),
             ])
 
 
@@ -2641,63 +2757,15 @@ class SortedSimpleSet(_SortedSetData, Set):
         _SortedSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
-def _disable_method(fcn, msg=None):
-    if msg is None:
-        msg = 'access %s on' % (fcn.__func__.func_name,)
-    def impl(self, *args, **kwds):
-        raise RuntimeError(
-            "Cannot %s %s '%s' before it has been constructed (initialized)."
-            % (msg, type(self).__name__, self.name))
-
-    # functools.wraps doesn't preserve the function signature until
-    # Python 3.4.  For backwards compatability with Python 2.x, we will
-    # create a temporary (lambda) function using eval that matches the
-    # function signature passed in and calls the generic impl() function
-    args = inspect.formatargspec(*inspect.getargspec(fcn))
-    impl_args = eval('lambda %s: impl%s' % (args[1:-1], args), {'impl': impl})
-    return functools.wraps(fcn)(impl_args)
-
-def disable_methods(methods):
-    def class_decorator(cls):
-        assert(len(cls.__bases__) == 1)
-        base = cls.__bases__[0]
-
-        def construct(self, data=None):
-            self.__class__ = base
-            return base.construct(self, data)
-        construct.__doc__ = base.construct.__doc__
-        cls.construct = construct
-
-        for method in methods:
-            if type(method) is tuple:
-                method, msg = method
-            else:
-                msg = None
-            if not hasattr(base, method):
-                raise DeveloperError(
-                    "Cannot disable method %s on %s: not present on base class"
-                    % (method, cls))
-            setattr(cls, method, _disable_method(getattr(base, method), msg))
-        return cls
-
-    return class_decorator
-
-_SET_API = (
-    ('__contains__', 'test membership in'),
-    ('__iter__', 'iterate over'),
-    '__reversed__', '__len__', 'data', 'set_value',
-    'add', 'remove', 'discard', 'clear', 'update', 'pop',
-)
-
-@disable_methods(_SET_API)
+@disable_methods(_FINITESET_API + _SETDATA_API)
 class AbstractFiniteSimpleSet(FiniteSimpleSet):
     pass
 
-@disable_methods(_SET_API + ('__getitem__', 'ord'))
+@disable_methods(_ORDEREDSET_API + _SETDATA_API)
 class AbstractOrderedSimpleSet(OrderedSimpleSet):
     pass
 
-@disable_methods(_SET_API + ('__getitem__', 'ord'))
+@disable_methods(_ORDEREDSET_API + _SETDATA_API)
 class AbstractSortedSimpleSet(SortedSimpleSet):
     pass
 
@@ -3098,6 +3166,15 @@ class FiniteSimpleRangeSet(_FiniteRangeSetData, RangeSet):
 
     # We want the RangeSet.__str__ to override the one in _FiniteSetMixin
     __str__ = RangeSet.__str__
+
+
+@disable_methods(_SET_API)
+class AbstractInfiniteSimpleRangeSet(InfiniteSimpleRangeSet):
+    pass
+
+@disable_methods(_ORDEREDSET_API)
+class AbstractFiniteSimpleRangeSet(FiniteSimpleRangeSet):
+    pass
 
 
 ############################################################################
