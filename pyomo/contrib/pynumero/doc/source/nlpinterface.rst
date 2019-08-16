@@ -10,7 +10,15 @@ PyNumero considers general nonlinear programming problems of the form:
    &x_L\leq x\leq x_U \nonumber
    \end{eqnarray}
 
-where :math:`x\in\Re^{n}` are the primal variables with lower and upper bounds :math:`x_L\in\Re^{n}, x_U\in\Re^{n}`.The inequality constraints :math:`g:\Re^{n}\rightarrow\Re^{m}` are bounded by :math:`g_L\in\Re^{{m}}` and :math:`g_U\in\Re^{{m}}`. We denote the corresponding dual variables as :math:`y\in\Re^{m}`. PyNumero also provides explicit distinction between the equality (defined with :math:`g_L=g_U`) and inequality constraints (defined with :math:`g_L\neq g_U`) to facilitate the implementation of algorithms that require such distinction, 
+where :math:`x\in\Re^{n}` are the primal variables with lower and upper
+bounds :math:`x_L\in\Re^{n}, x_U\in\Re^{n}`.The inequality constraints
+:math:`g:\Re^{n}\rightarrow\Re^{m}` are bounded by
+:math:`g_L\in\Re^{{m}}` and :math:`g_U\in\Re^{{m}}`. We denote the
+corresponding dual variables as :math:`y\in\Re^{m}`. PyNumero also
+provides explicit distinction between the equality (defined with
+:math:`g_L=g_U`) and inequality constraints (defined with :math:`g_L\neq
+g_U`) to facilitate the implementation of algorithms that require such
+distinction,
 
 .. math::
 
@@ -21,7 +29,14 @@ where :math:`x\in\Re^{n}` are the primal variables with lower and upper bounds :
    &x_L\leq x\leq x_U \nonumber
    \end{eqnarray}
 
-The equality constraints are represented by :math:`c:\Re^{n}\rightarrow\Re^{m_c}` and :math:`d:\Re^{n}\rightarrow\Re^{m_d}` denotes the inequality constraints with bounds :math:`d_L\in\Re^{m_d}` and :math:`d_U\in\Re^{m_d}` and :math:`m=m_c + m_d`. The PyNumero **PyomoNLP** class takes a Pyomo model and maps it to the general forms defined above. The following code of block demonstrate some basic features:
+The equality constraints are represented by
+:math:`c:\Re^{n}\rightarrow\Re^{m_c}` and
+:math:`d:\Re^{n}\rightarrow\Re^{m_d}` denotes the inequality constraints
+with bounds :math:`d_L\in\Re^{m_d}` and :math:`d_U\in\Re^{m_d}` and
+:math:`m=m_c + m_d`. The PyNumero :py:class:`PyomoNLP
+<pyomo.contrib.pynumero.interfaces.nlp.PyomoNLP>` class takes a Pyomo
+model and maps it to the general forms defined above. The following
+block of code demonstrates some basic features:
 
 .. code-block:: python
 
@@ -57,7 +72,29 @@ The equality constraints are represented by :math:`c:\Re^{n}\rightarrow\Re^{m_c}
 Evaluation of First and Second-order Derivatives
 ************************************************
 
-Gradient-based optimization algorithms have been proven to be among the most efficient algorithms for solving nonlinear optimization problems. The recent development of fast automatic differentiation tools makes it easy to compute derivative information efficiently. State-of-the-art optimization algorithms typically use first and second-order derivatives along with numerical linear algebra subroutines to find descent directions that lead towards an optimal solution. PyNumero uses the Ampl Solver Library (ASL) to compute derivative information for optimization problems. The ASL is a collection of C subroutines that compute exact derivatives efficiently. The Ctypes Python package is used to call the ASL subroutines from Python. PyNumero stores derivative values from the ASL in Numpy arrays and Scipy sparse matrices. This leverages the capabilities within the Numpy ecosystem to avoid marshalling of data between the C and Python environments and enables performant Python implementations of gradient-based nonlinear optimization algorithms. It should be noted that even though the current version of {\tt PyNumero} only supports calculation of derivatives from the ASL, interfacing function evaluations of Pyomo models with Numpy arrays opens a number of possibilities for interfacing with other AD tools (e.g. PyAdolC). The following code shows how first and second derivatives can be obtained from a **PyomoNLP** instance.
+Gradient-based optimization algorithms have been proven to be among the
+most efficient algorithms for solving nonlinear optimization
+problems. The development of fast automatic differentiation tools makes
+it easy to compute derivative information efficiently. State-of-the-art
+optimization algorithms typically use first and second-order derivatives
+along with numerical linear algebra subroutines to find descent
+directions that lead towards an optimal solution. PyNumero uses the Ampl
+Solver Library (ASL) to compute derivative information for optimization
+problems. The ASL is a collection of C subroutines that compute exact
+derivatives efficiently. The `Ctypes
+<https://docs.python.org/3/library/ctypes.html>`_ Python package is used
+to call the ASL subroutines from Python. PyNumero stores derivative
+values from the ASL in Numpy arrays and Scipy sparse matrices. This
+leverages the capabilities within the Numpy ecosystem to avoid
+marshalling of data between the C and Python environments and enables
+performant Python implementations of gradient-based nonlinear
+optimization algorithms. It should be noted that even though the current
+version of PyNumero only supports calculation of derivatives from the
+ASL, interfacing function evaluations of Pyomo models with Numpy arrays
+opens a number of possibilities for interfacing with other AD tools
+(e.g. PyAdolC). The following code shows how first and second
+derivatives can be obtained from a :py:class:`PyomoNLP
+<pyomo.contrib.pynumero.interfaces.nlp.PyomoNLP>` instance.
 
 .. code-block:: python
 
@@ -76,4 +113,6 @@ Gradient-based optimization algorithms have been proven to be among the most eff
 	                                                      #       [   0.,   2.,    0.],
 		                                              #       [-144.,   0.,  192.]]))
 
-.. seealso:: NLPs can also be created directly from NL-Files using the **AmplNLP** interface. Both, the **AmplNLP** and the **PyomoNLP** interfaces are based on ASL allowing users to write ampl solvers from Python. 
+.. seealso:: NLPs can also be created directly from NL-Files using the
+             :py:class:`AmplNLP
+             <pyomo.contrib.pynumero.interfaces.nlp.AmplNLP>` interface.
