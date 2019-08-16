@@ -3906,12 +3906,12 @@ def DeclareGlobalSet(obj):
 
     """
     class GlobalSet(obj.__class__):
-        __doc__ = """A "global" instance of a %s object.
+        __doc__ = """%s
 
         References to this object will not be duplicated by deepcopy
         and be maintained/restored by pickle.
 
-        """ % (obj.__class__.__name__,)
+        """ % (obj.doc,)
         # Note: a simple docstring does not appear to be picked up (at
         # least in Python 2.7, so we will explicitly set the __doc__
         # attribute.
@@ -3929,15 +3929,15 @@ def DeclareGlobalSet(obj):
             caller_globals[self.local_name] = self
 
         def __reduce__(self):
-            "Cause pickle to preserve references to this object"
+            # Cause pickle to preserve references to this object
             return self.name
 
         def __deepcopy__(self, memo):
-            "Prevent deepcopy from duplicating this object"
+            # Prevent deepcopy from duplicating this object
             return self
 
         def __str__(self):
-            "Override str() to always print out the global set name"
+            # Override str() to always print out the global set name
             return self.name
 
     return GlobalSet(obj)
