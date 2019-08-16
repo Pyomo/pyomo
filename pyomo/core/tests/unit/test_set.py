@@ -1834,6 +1834,14 @@ class TestSetUnion(unittest.TestCase):
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
 
+    def test_len(self):
+        a = SetOf([1,2,3])
+        self.assertEqual(len(a), 3)
+        b = a | Reals
+        with self.assertRaisesRegexp(
+                OverflowError, 'The length of a non-finite Set is Inf'):
+            len(b)
+
     def test_naming(self):
         m = ConcreteModel()
 
@@ -4182,6 +4190,8 @@ class TestSet(unittest.TestCase):
         m.J = Set(ordered=False)
         m.K = Set(initialize=[(1,2), (3,4)], ordered=Set.SortedOrder)
         m.L = Set(initialize=[(1,2), (3,4)], ordered=myFcn)
+        m.M = Reals - SetOf([0])
+        m.N = Integers - Reals
 
         buf = StringIO()
         m.pprint()
@@ -4192,7 +4202,7 @@ class TestSet(unittest.TestCase):
         Key  : Finite : Members
         None :   True :   [1:3]
 
-4 Set Declarations
+6 Set Declarations
     I : Size=3, Index=I_index, Ordered=Insertion
         Key : Dimen : Domain   : Size : Members
           1 :     1 : Integers :    2 : {0, 1}
@@ -4207,8 +4217,14 @@ class TestSet(unittest.TestCase):
     L : Size=1, Index=None, Ordered={user}
         Key  : Dimen : Domain : Size : Members
         None :     2 :    Any :    2 : {(3, 4), (1, 2)}
+    M : Size=1, Index=None, Ordered=False
+        Key  : Dimen : Domain      : Size : Members
+        None :     1 : Reals - [0] :  Inf : ([None..0) | (0..None])
+    N : Size=1, Index=None, Ordered=False
+        Key  : Dimen : Domain           : Size : Members
+        None :     1 : Integers - Reals :  Inf :      []
 
-5 Declarations: I_index I J K L""".strip())
+7 Declarations: I_index I J K L M N""".strip())
 
     def test_pickle(self):
         m = ConcreteModel()
