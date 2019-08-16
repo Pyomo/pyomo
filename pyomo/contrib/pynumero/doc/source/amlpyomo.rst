@@ -17,7 +17,7 @@ flexible, consistent manner).
 
 PyNumero builds upon the algebraic modeling language `Pyomo
 <https://pyomo.readthedocs.io/en/latest/>`_ and allows optimization
-practitioners to both build and solve models in Python; providing a
+practitioners to build and solve models in Python; providing a
 unified modeling and solution platform.
 
 .. _fig-example1:
