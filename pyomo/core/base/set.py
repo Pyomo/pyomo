@@ -2779,9 +2779,9 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
             return super(SetOf, cls).__new__(cls)
         reference, = args
         if isinstance(reference, (tuple, list)):
-            return OrderedSetOf.__new__(OrderedSetOf, reference)
+            return super(SetOf, cls).__new__(OrderedSetOf, reference)
         else:
-            return UnorderedSetOf.__new__(UnorderedSetOf, reference)
+            return super(SetOf, cls).__new__(UnorderedSetOf, reference)
 
     def __init__(self, reference, **kwds):
         _SetData.__init__(self, component=self)
@@ -3074,9 +3074,9 @@ class RangeSet(Component):
                 finite = True
 
         if finite:
-            return FiniteSimpleRangeSet.__new__(FiniteSimpleRangeSet)
+            return super(RangeSet, cls).__new__(FiniteSimpleRangeSet)
         else:
-            return InfiniteSimpleRangeSet.__new__(InfiniteSimpleRangeSet)
+            return super(RangeSet, cls).__new__(InfiniteSimpleRangeSet)
 
 
     def __init__(self, *args, **kwds):

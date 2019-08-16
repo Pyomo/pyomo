@@ -28,8 +28,9 @@ from pyomo.core.base.set import (
     AnyRange, _AnySet, Any, Binary,
     Reals, NonNegativeReals, PositiveReals,
     Integers, PositiveIntegers, NegativeIntegers,
-    RangeSet, Set, SetOf,
-    _FiniteRangeSetData, _InfiniteRangeSetData,
+    Set,
+    SetOf, OrderedSetOf, UnorderedSetOf,
+    RangeSet, _FiniteRangeSetData, _InfiniteRangeSetData,
     SetUnion_InfiniteSet, SetUnion_FiniteSet, SetUnion_OrderedSet,
     SetIntersection_InfiniteSet, SetIntersection_FiniteSet,
     SetIntersection_OrderedSet,
@@ -1194,6 +1195,18 @@ class TestRangeOperations(unittest.TestCase):
 
 class Test_SetOf_and_RangeSet(unittest.TestCase):
     def test_constructor(self):
+        i = SetOf([1,2,3])
+        self.assertIs(type(i), OrderedSetOf)
+        j = OrderedSetOf([1,2,3])
+        self.assertIs(type(i), OrderedSetOf)
+        self.assertEqual(i, j)
+
+        i = SetOf({1,2,3})
+        self.assertIs(type(i), UnorderedSetOf)
+        j = UnorderedSetOf([1,2,3])
+        self.assertIs(type(i), UnorderedSetOf)
+        self.assertEqual(i, j)
+
         i = RangeSet(3)
         self.assertEqual(len(i), 3)
         self.assertEqual(len(list(i.ranges())), 1)
