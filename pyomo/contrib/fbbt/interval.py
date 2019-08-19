@@ -282,14 +282,14 @@ def _inverse_power2(zl, zu, xl, xu, feasiblity_tol):
 
 
 def exp(xl, xu):
-    if xl >= 100:
-        lb = math.inf
-    else:
+    try:
         lb = math.exp(xl)
-    if xu >= 100:
-        ub = math.inf
-    else:
+    except OverflowError:
+        lb = math.inf
+    try:
         ub = math.exp(xu)
+    except OverflowError:
+        ub = math.inf
     return lb, ub
 
 
