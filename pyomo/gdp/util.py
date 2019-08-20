@@ -101,18 +101,28 @@ def target_list(x):
 # [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
 #  putting it here for now so that all the gdp transformations can use it
 def is_child_of(parent, child, knownParents=None):
+    # Note: we can get away with set() and not ComponentSet because we will only
+    # store Blocks (or their ilk), and Blocks are hashable (only derivatives of
+    # NumericValue are not hashable)
     if knownParents is None:
         knownParents = set()
+    tmp = set()
     node = child
     while True:
         if node in knownParents:
-            break
+            knownParents.update(tmp)
+            return True
         if node is parent:
-            break
+            knownParents.update(tmp)
+            return True
         if node is None:
-            raise GDP_Error("Target %s is not a component on instance %s!"
-                               % (child.name, parent.name))
-        knownParents.add(node)
-        node = node.parent_block()
+            return False
+
+        tmp.add(node)
+        container = node.parent_component()
+        if container is node:
+            node = node.parent_block()
+        else:
+            node = container
 
     return knownParents
