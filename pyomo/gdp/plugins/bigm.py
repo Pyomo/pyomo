@@ -225,7 +225,7 @@ class BigM_Transformation(Transformation):
                 descent_order=TraversalStrategy.PostfixDFS):
             self._transformDisjunction(disjunction, bigM)
 
-    def _getXorConstraint(self, disjunction, xor_map):
+    def _getXorConstraint(self, disjunction):
         # Put the disjunction constraint on its parent block and
         # determine whether it is an OR or XOR constraint.
 
@@ -234,23 +234,11 @@ class BigM_Transformation(Transformation):
         # we called this on a DisjunctionData, we did something wrong.
         assert isinstance(disjunction, Disjunction)
 
+        # first check if the constraint already exists
         if not disjunction._algebraic_constraint is None:
-            return disjunction._algebraic_constraint(), xor_map
+            return disjunction._algebraic_constraint()
 
         parent = disjunction.parent_block()
-
-        # # If the Constraint already exists, return it. 
-        # # We first check if it's in our map:
-        # if disjunction in xor_map:
-        #     return xor_map[disjunction], xor_map
-        # # It's still possible we have something if we transformed some
-        # # DisjunctionDatas in a prior transformation...
-        # if disjunction.is_indexed():
-        #     for disj in disjunction.values():
-        #         if disj._algebraic_constraint:
-        #             xor = xor_map[disjunction] = disj.xor_constraint().\
-        #                   parent_component()
-        #             return xor, xor_map
 
         # add the XOR (or OR) constraints to parent block (with unique name)
         # It's indexed if this is an IndexedDisjunction, not otherwise
@@ -265,41 +253,32 @@ class BigM_Transformation(Transformation):
                                         disjunction.name + nm)
         parent.add_component(orCname, orC)
         disjunction._algebraic_constraint = weakref_ref(orC)
-        # TODO: this will go away!
-        xor_map[disjunction] = parent.component(orCname)
 
-        return orC, xor_map
+        return orC
 
     def _transformDisjunction(self, obj, bigM):
         parent_block = obj.parent_block()
         transBlock = self._add_transformation_block(parent_block)
 
-        xor_map = ComponentMap()
-
         # If this is an IndexedDisjunction, create the XOR constraint here
         # because we want its index to match the disjunction.
         if obj.is_indexed():
-            xorConstraint, xor_map = self._getXorConstraint(obj, xor_map)
+            xorConstraint = self._getXorConstraint(obj)
 
         # relax each of the disjunctionDatas
         for i in sorted(iterkeys(obj)):
-            self._transformDisjunctionData(obj[i], bigM, i, transBlock, xor_map)
+            self._transformDisjunctionData(obj[i], bigM, i, transBlock)
 
         # deactivate so the writers don't scream
         obj.deactivate()
 
-    def _transformDisjunctionData(self, obj, bigM, index, transBlock=None,
-                                  xor_map=None):
+    def _transformDisjunctionData(self, obj, bigM, index, transBlock=None):
         if not obj.active:
             return  # Do not process a deactivated disjunction
         if transBlock is None:
             transBlock = self._add_transformation_block(obj.parent_block())
-
-        if not xor_map:
-            xor_map = ComponentMap()
         
-        xorConstraint, xor_map = self._getXorConstraint(obj.parent_component(),
-                                                        xor_map)
+        xorConstraint = self._getXorConstraint(obj.parent_component())
 
         xor = obj.xor
         or_expr = 0
@@ -326,7 +305,7 @@ class BigM_Transformation(Transformation):
             xorConstraint.add(index, (1, or_expr, None))
         # Mark the DisjunctionData as transformed by mapping it to its XOR
         # constraint.
-        obj.xor_constraint = weakref_ref(xorConstraint[index])
+        obj._algebraic_constraint = weakref_ref(xorConstraint[index])
         
         # and deactivate for the writers
         obj.deactivate()
@@ -389,7 +368,8 @@ class BigM_Transformation(Transformation):
                 Disjunction, 
                 sort=SortComponents.deterministic, 
                 descend_into=(Block)):
-            if not obj.xor_constraint:
+            print(obj)
+            if not obj.algebraic_constraint:
                 # This could be bad if it's active, but we'll wait to yell
                 # until the next loop
                 continue
@@ -483,7 +463,7 @@ class BigM_Transformation(Transformation):
 
         parentblock = problemdisj.parent_block()
         # the disjunction should only have been active if it wasn't transformed
-        assert problemdisj.xor_constraint is None
+        assert problemdisj.algebraic_constraint is None
         raise GDP_Error("Found untransformed disjunction %s in disjunct %s! "
                         "The disjunction must be transformed before the "
                         "disjunct. If you are using targets, put the "

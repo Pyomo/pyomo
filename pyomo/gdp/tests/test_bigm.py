@@ -104,7 +104,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             bigm.get_src_disjunction(m._gdp_bigm_relaxation_disjunction_xor),
             m.disjunction)
         self.assertIs(
-            m.disjunction.xor_constraint(),
+            m.disjunction.algebraic_constraint(),
             m._gdp_bigm_relaxation_disjunction_xor)
 
     def test_xor_constraint_mapping_two_disjunctions(self):
@@ -120,10 +120,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             m.disjunction2)
 
         self.assertIs(
-            m.disjunction.xor_constraint(),
+            m.disjunction.algebraic_constraint(),
             m._gdp_bigm_relaxation_disjunction_xor)
         self.assertIs(
-            m.disjunction2.xor_constraint(),
+            m.disjunction2.algebraic_constraint(),
             m._gdp_bigm_relaxation_disjunction2_xor)
 
     def test_disjunct_and_constraint_maps(self):
@@ -1619,7 +1619,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
         # check disjunction mappings
         for disjunction, xor in disjunctionPairs:
-            self.assertIs(disjunction.xor_constraint(), xor)
+            self.assertIs(disjunction.algebraic_constraint(), xor)
             self.assertIs(bigm.get_src_disjunction(xor), disjunction)
 
     # many of the transformed constraints look like this, so can call this
@@ -1870,7 +1870,7 @@ class IndexedDisjunction(unittest.TestCase):
             targets=[m.disjunction[1],
                      m.disjunction[3]])
 
-        xorC = m.disjunction[1].xor_constraint().parent_component()
+        xorC = m.disjunction[1].algebraic_constraint().parent_component()
         self.assertIsInstance(xorC, Constraint)
         self.assertEqual(len(xorC), 2)
 
@@ -2332,6 +2332,18 @@ class IndexedDisjunctions(unittest.TestCase):
                 self.check_relaxation_block(m.b, "_pyomo_gdp_bigm_relaxation")
             if i == 2:
                 self.check_relaxation_block(m.b, "_pyomo_gdp_bigm_relaxation_4")
+
+class TestErrors(unittest.TestCase):
+    def test_transform_empty_disjunction(self):
+        m = ConcreteModel()
+        m.empty = Disjunction(expr=[])
+    
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Disjunction empty is empty. This is likely indicative of a "
+            "modeling error.*",
+            TransformationFactory('gdp.bigm').apply_to,
+            m)
 
 
 if __name__ == '__main__':

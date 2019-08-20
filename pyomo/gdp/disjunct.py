@@ -13,6 +13,7 @@ import sys
 from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
+from pyomo.common.errors import PyomoException
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
@@ -37,7 +38,7 @@ this error is forgetting to include the "return" statement at the end of
 your rule.
 """
 
-class GDP_Error(Exception):
+class GDP_Error(PyomoException):
     """Exception raised while processing GDP Models"""
 
 
@@ -75,40 +76,71 @@ class _Initializer(object):
 
 class _DisjunctData(_BlockData):
 
+    # [ESJ 08/16/2019] TODO: Is this a good idea? (If not, need to change back
+    # in DisjunctionData also)
+    @property
+    def transformation_block(self):
+        return self._transformation_block
+
     def __init__(self, component):
         _BlockData.__init__(self, component)
         self.indicator_var = Var(within=Binary)
         # pointer to transformation block if this disjunct has been
         # transformed. None indicates it hasn't been transformed.
-        self.transformation_block = None
+        self._transformation_block = None
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
         _BlockData.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
 
     def set_value(self, val):
         _indicator_var = self.indicator_var
-        _transformation_block = self.transformation_block
-        # Remove everything
-        for k in list(getattr(self, '_decl', {})):
-            self.del_component(k)
-        self._ctypes = {}
-        self._decl = {}
-        self._decl_order = []
-        # Now copy over everything from the other block.  If the other
-        # block has an indicator_var, it should override this block's.
-        # Otherwise restore this block's indicator_var.
+        # TODO
+        # if _transformation_block is not None we should yell. else call base
+        # class, check that you have indicator_var and transformation block.
+        _transformation_block = self._transformation_block
+        if not _transformation_block is None:
+            # the disjunct has been transformed, so the truth no longer lives
+            # here and this is a bad idea!
+            raise GDP_Error("Attempting to call set_value on an already-"
+                            "transformed disjunct! Since disjunct %s "
+                            "has been transformed, replacing it here will "
+                            "not effect the model." % self.name)
+
+        # Call the base class set_value. (Note we are changing decl_order by
+        # doing things this way: the indicator var will always be last rather
+        # than first)
+        super(_DisjunctData, self).set_value(val)
+
         if val:
             if 'indicator_var' not in val:
                 self.add_component('indicator_var', _indicator_var)
-            # [ESJ 07/14/2019] TODO: This isn't tested and I don't actually know
-            # what it does!
             if 'transformation_block' not in val:
-                self.transformation_block = _transformation_block
-            for k in sorted(iterkeys(val)):
-                self.add_component(k,val[k])
+                self._transformation_block = _transformation_block
         else:
             self.add_component('indicator_var', _indicator_var)
-            self.transformation_block = _transformation_block
+            self._transformation_block = _transformation_block 
+
+        # # Remove everything
+        # for k in list(getattr(self, '_decl', {})):
+        #     self.del_component(k)
+        # self._ctypes = {}
+        # self._decl = {}
+        # self._decl_order = []
+        # # Now copy over everything from the other block.  If the other
+        # # block has an indicator_var, it should override this block's.
+        # # Otherwise restore this block's indicator_var.
+        # if val:
+        #     if 'indicator_var' not in val:
+        #         self.add_component('indicator_var', _indicator_var)
+        #     # [ESJ 07/14/2019] TODO: This isn't tested and I don't actually know
+        #     # what it does!
+        #     if 'transformation_block' not in val:
+        #         self._transformation_block = _transformation_block
+        #     for k in sorted(iterkeys(val)):
+        #         self.add_component(k,val[k])
+        # else:
+        #     self.add_component('indicator_var', _indicator_var)
+        #     self._transformation_block = _transformation_block
 
     def activate(self):
         super(_DisjunctData, self).activate()
@@ -208,8 +240,12 @@ class IndexedDisjunct(Disjunct):
 
 
 class _DisjunctionData(ActiveComponentData):
-    __slots__ = ('disjuncts','xor','xor_constraint')
+    __slots__ = ('disjuncts','xor', '_algebraic_constraint')
     _NoArgument = (0,)
+
+    @property
+    def algebraic_constraint(self):
+        return self._algebraic_constraint
 
     def __init__(self, component=None):
         #
@@ -225,7 +261,7 @@ class _DisjunctionData(ActiveComponentData):
         self.xor = True
         # pointer to XOR (or OR) constraint if this disjunction has been
         # transformed. None if it has not been transformed
-        self.xor_constraint = None
+        self._algebraic_constraint = None
 
     def __getstate__(self):
         """
@@ -239,6 +275,7 @@ class _DisjunctionData(ActiveComponentData):
     def set_value(self, expr):
         for e in expr:
             # The user gave us a proper Disjunct block 
+            # TODO: this shouldn't be an issue anymore, check that
             # [ESJ 06/21/2019] This is really an issue with the reclassifier,
             # but in the case where you are iteratively adding to an
             # IndexedDisjunct indexed by Any which has already been transformed,
@@ -307,6 +344,7 @@ class Disjunction(ActiveIndexedComponent):
         self._init_expr = kwargs.pop('expr', None)
         self._init_xor = _Initializer.process(kwargs.pop('xor', True))
         self._autodisjuncts = None
+        self._algebraic_constraint = None
         kwargs.setdefault('ctype', Disjunction)
         super(Disjunction, self).__init__(*args, **kwargs)
 
