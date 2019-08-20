@@ -169,8 +169,10 @@ class BigM_Transformation(Transformation):
         knownParents = set()
         for t in targets:
             # check that t is in fact a child of instance
-            knownParents = is_child_of(parent=instance, child=t,
-                                       knownParents=knownParents)
+            if not is_child_of(parent=instance, child=t,
+                               knownParents=knownParents):
+                raise GDP_Error("Target %s is not a component on instance %s!"
+                                % (t.name, instance.name))
             if t.type() is Disjunction:
                 if t.parent_component() is t:
                     self._transformDisjunction(t, bigM)
@@ -231,20 +233,24 @@ class BigM_Transformation(Transformation):
         # to know about the index set of its parent component. So if
         # we called this on a DisjunctionData, we did something wrong.
         assert isinstance(disjunction, Disjunction)
+
+        if not disjunction._algebraic_constraint is None:
+            return disjunction._algebraic_constraint(), xor_map
+
         parent = disjunction.parent_block()
 
-        # If the Constraint already exists, return it. 
-        # We first check if it's in our map:
-        if disjunction in xor_map:
-            return xor_map[disjunction], xor_map
-        # It's still possible we have something if we transformed some
-        # DisjunctionDatas in a prior transformation...
-        if disjunction.is_indexed():
-            for disj in disjunction.values():
-                if disj.xor_constraint:
-                    xor = xor_map[disjunction] = disj.xor_constraint().\
-                          parent_component()
-                    return xor, xor_map
+        # # If the Constraint already exists, return it. 
+        # # We first check if it's in our map:
+        # if disjunction in xor_map:
+        #     return xor_map[disjunction], xor_map
+        # # It's still possible we have something if we transformed some
+        # # DisjunctionDatas in a prior transformation...
+        # if disjunction.is_indexed():
+        #     for disj in disjunction.values():
+        #         if disj._algebraic_constraint:
+        #             xor = xor_map[disjunction] = disj.xor_constraint().\
+        #                   parent_component()
+        #             return xor, xor_map
 
         # add the XOR (or OR) constraints to parent block (with unique name)
         # It's indexed if this is an IndexedDisjunction, not otherwise
@@ -258,6 +264,8 @@ class BigM_Transformation(Transformation):
         orCname = unique_component_name(parent, '_gdp_bigm_relaxation_' +
                                         disjunction.name + nm)
         parent.add_component(orCname, orC)
+        disjunction._algebraic_constraint = weakref_ref(orC)
+        # TODO: this will go away!
         xor_map[disjunction] = parent.component(orCname)
 
         return orC, xor_map
@@ -295,6 +303,12 @@ class BigM_Transformation(Transformation):
 
         xor = obj.xor
         or_expr = 0
+        # TODO: I don't think we should let this fail silently because it's
+        # weird, but I don't think this is in the right place yet
+        if len(obj.disjuncts) == 0:
+            raise GDP_Error("Disjunction %s is empty. This is "
+                            "likely indicative of a modeling error."
+                            % obj.name)
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var
             # make suffix list. (We don't need it until we are
@@ -303,7 +317,7 @@ class BigM_Transformation(Transformation):
             # pass it down.)
             suffix_list = self._get_bigm_suffix_list(disjunct)
             # relax the disjunct
-            self._bigM_relax_disjunct(disjunct, transBlock, bigM, suffix_list)
+            self._transformDisjunct(disjunct, transBlock, bigM, suffix_list)
 
         # add or (or xor) constraint
         if xor:
@@ -317,7 +331,7 @@ class BigM_Transformation(Transformation):
         # and deactivate for the writers
         obj.deactivate()
 
-    def _bigM_relax_disjunct(self, obj, transBlock, bigM, suffix_list):
+    def _transformDisjunct(self, obj, transBlock, bigM, suffix_list):
         # deactivated -> either we've already transformed or user deactivated
         if not obj.active:
             if obj.indicator_var.is_fixed():
@@ -330,7 +344,7 @@ class BigM_Transformation(Transformation):
                         "The disjunct %s is deactivated, but the "
                         "indicator_var is fixed to %s. This makes no sense."
                         % ( obj.name, value(obj.indicator_var) ))
-            if obj.transformation_block is None:
+            if obj._transformation_block is None:
                 raise GDP_Error(
                     "The disjunct %s is deactivated, but the "
                     "indicator_var is not fixed and the disjunct does not "
@@ -342,14 +356,14 @@ class BigM_Transformation(Transformation):
                     "it appears in has not. Putting the same disjunct in "
                     "multiple disjunctions is not supported." % obj.name)
 
-        if obj.transformation_block is not None:
+        if obj._transformation_block is not None:
             # we've transformed it, so don't do it again.
             return
 
         # add reference to original disjunct on transformation block
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
-        obj.transformation_block = weakref_ref(relaxationBlock)
+        obj._transformation_block = weakref_ref(relaxationBlock)
         relaxationBlock._srcDisjunct = weakref_ref(obj)
 
         # This is crazy, but if the disjunction has been previously
@@ -370,7 +384,7 @@ class BigM_Transformation(Transformation):
         # We first need to find any transformed disjunctions that might be here
         # because we need to move their transformation blocks up onto the parent
         # block before we transform anything else on this block 
-        destinationBlock = disjunct.transformation_block().parent_block()
+        destinationBlock = disjunct._transformation_block().parent_block()
         for obj in block.component_data_objects(
                 Disjunction, 
                 sort=SortComponents.deterministic, 
@@ -383,8 +397,8 @@ class BigM_Transformation(Transformation):
             # get this disjunction's relaxation block.
             transBlock = None
             for d in obj.disjuncts:
-                if d.transformation_block:
-                    transBlock = d.transformation_block().parent_block()
+                if d._transformation_block:
+                    transBlock = d._transformation_block().parent_block()
             if transBlock is None:
                 raise GDP_Error(
                     "Found transformed disjunction %s on disjunt %s, "
@@ -426,12 +440,15 @@ class BigM_Transformation(Transformation):
             # TODO [ESJ 07/18/2019] John! I thought you said something like this
             # would work?
             #newblock = disjunctList[len(disjunctList)] = disjunctBlock
+            # Try:
+            # disjunctList[len(disjunctList)] = disjunctBlock
+            # newblock = disjunctList[len(disjunctList)-1]
             # I'm just hacking for now because I am confused:
             newblock = disjunctList[len(disjunctList)]
             self._copy_to_block(disjunctBlock, newblock)
             # update the mappings
             original = disjunctBlock._srcDisjunct()
-            original.transformation_block = weakref_ref(newblock)
+            original._transformation_block = weakref_ref(newblock)
             newblock._srcDisjunct = weakref_ref(original)
 
         # move any constraints. I'm assuming they are all just on the
@@ -513,7 +530,7 @@ class BigM_Transformation(Transformation):
 
     def _xform_constraint(self, obj, disjunct, bigMargs, suffix_list):
         # add constraint to the transformation block, we'll transform it there.
-        transBlock = disjunct.transformation_block()
+        transBlock = disjunct._transformation_block()
         constraintMap = self._get_constraint_map_dict(transBlock)
         
         disjunctionRelaxationBlock = transBlock.parent_block()
@@ -722,7 +739,7 @@ class BigM_Transformation(Transformation):
                     "Constraint %s is not on a disjunct and so was not "
                     "transformed" % srcConstraint.name)
             parent = grandparent
-        transBlock = parent.transformation_block()
+        transBlock = parent._transformation_block()
         if transBlock is None:
             raise GDP_Error("Constraint %s is on a disjunct which has not been"
                             "transformed" % srcConstraint.name)
@@ -736,9 +753,9 @@ class BigM_Transformation(Transformation):
     def get_src_disjunction(self, xor_constraint):
         m = xor_constraint.model()
         for disjunction in m.component_data_objects(Disjunction):
-            if disjunction.xor_constraint:
-                if disjunction.xor_constraint() is xor_constraint:
+            if disjunction._algebraic_constraint:
+                if disjunction._algebraic_constraint() is xor_constraint:
                     return disjunction
-        raise GDP_Error("It appears that %s is not an and XOR or OR constraint"
+        raise GDP_Error("It appears that %s is not an and XOR or OR constraint "
                         "resulting from transforming a Disjunction."
                         % xor_constraint.name)
