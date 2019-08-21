@@ -1,9 +1,52 @@
 Parallel Block Algebra
 ======================
 
-Structure in optimization problems can be exploited through parallel algorithms. PyNumero provides parallel linear algebra features by extending the block algebra classes presented in the previous section. The **BlockVector** and **BlockMatrix** described earlier are efficient in the sense that most of it's operations are performed in C/C++. Users of PyNumero can then build efficient serial optimization algorithms without much effort using these classes. However, many operations in these block algebra classes can be further accelarated using parallelization. Indeed, that's the main goal of retaining structure in block algebra operations. The idea is then to allocate blocks in different processors and operate on them in parallel. These can be easily seen when summing all elements in a **BlockVector**. If each block is assigned to a different processor, all processors sum their own block and then communicate the result to the rest to add them up. A similar procedure can be done when performing a dot product, a matrix-vector, or a matrix-matrix product.
+Structure in optimization problems can be exploited through parallel
+algorithms. PyNumero supports parallel linear algebra by extending the
+block algebra classes presented in the previous section. The
+:py:class:`BlockVector
+<pyomo.contrib.pynumero.sparse.block_vector.BlockVector>` and
+:py:class:`BlockMatrix
+<pyomo.contrib.pynumero.sparse.block_matrix.BlockMatrix>` classes
+described earlier are computationally efficient in that most of their
+operations are performed in C/C++. Therefore, these classes can be used
+to build efficient serial optimization algorithms without significant
+coding effort. However, many operations in these block algebra classes
+can be further accelerated using parallelization. Indeed, that's the
+main goal of retaining structure in block algebra operations. The idea
+is then to allocate blocks to different processors and operate on them
+in parallel. A simple example of this would be summing all elements in a
+:py:class:`BlockVector
+<pyomo.contrib.pynumero.sparse.block_vector.BlockVector>`. If each block
+is assigned to a different processor, all processors sum their own block
+and then communicate the result to the rest to add them up. A similar
+procedure can be done when performing a dot product, a matrix-vector, or
+a matrix-matrix product.
 
-We extended the **BlockVector** and **BlockMatrix** to perform operations in parallel. To do this we relied on the package `MPI4py <https://mpi4py.readthedocs.io/en/stable/>`_ that allowed us to implement **MPIBlockVector** and **MPIBlockMatrix**. These two classes are very similar to their serial counter parts. They inherit from **numpy.ndarray** and **scipy.sparse.spmatrix** and they look almost as the **BlockVector** and the **BlockMatrix**. However, when building an **MPIBlockVector** or an **MPIBlockMatrix**, users must specify the processors where the blocks live. We demonstrate some of the features of the **MPIBLockVector** in the code below
+We extended the :py:class:`BlockVector
+<pyomo.contrib.pynumero.sparse.block_vector.BlockVector>` and
+:py:class:`BlockMatrix
+<pyomo.contrib.pynumero.sparse.block_matrix.BlockMatrix>` to perform
+operations in parallel. To do this we relied on the package `MPI4py
+<https://mpi4py.readthedocs.io/en/stable/>`_ that allowed us to
+implement :py:class:`MPIBlockVector
+<pyomo.contrib.pynumero.sparse.mpi_block_vector.MPIBlockVector>` and
+:py:class:`MPIBlockMatrix
+<pyomo.contrib.pynumero.sparse.mpi_block_matrix.MPIBlockMatrix>` . These
+two classes are very similar to their serial counter parts. They inherit
+from ``numpy.ndarray`` and ``scipy.sparse.spmatrix`` and they look
+almost as the :py:class:`BlockVector
+<pyomo.contrib.pynumero.sparse.block_vector.BlockVector>` and the
+:py:class:`BlockMatrix
+<pyomo.contrib.pynumero.sparse.block_matrix.BlockMatrix>`. However, when
+building an :py:class:`MPIBlockVector
+<pyomo.contrib.pynumero.sparse.mpi_block_vector.MPIBlockVector>` or an
+:py:class:`MPIBlockMatrix
+<pyomo.contrib.pynumero.sparse.mpi_block_matrix.MPIBlockMatrix>` , users
+must specify the processors where the blocks live. We demonstrate some
+of the features of the :py:class:`MPIBlockVector
+<pyomo.contrib.pynumero.sparse.mpi_block_vector.MPIBlockVector>` in the
+code below
 
 .. code-block:: python
 
@@ -69,7 +112,9 @@ We extended the **BlockVector** and **BlockMatrix** to perform operations in par
   v3 = v.make_new_MPIBlockVector([1,0,1,0])
   v3.pprint()
 
-Some basic functionality of the **MPIBlockMatrix** is presented below:
+Some basic functionality of the :py:class:`MPIBlockMatrix
+<pyomo.contrib.pynumero.sparse.mpi_block_matrix.MPIBlockMatrix>` is
+presented below:
 
 .. code-block:: python
 
@@ -143,17 +188,43 @@ Some basic functionality of the **MPIBlockMatrix** is presented below:
       else:
           print(rank, i, j, None)
 
-.. note::
-   We highlight that the interfaces of the block-algebra classes are very similar to the mpi-block-algebra classes. Hence, if algorithms are written properly it is possible to invoke the same algorithm implementation for the parallel or the serial code.
-   This is important for developing decomposition algorithms where often a serial implementation is developed for comparison purposes and profiling. With our mpi-block-algebra classes extending the serial implementation of optimization algorithms is intended to be straightforward.
+.. note:: We highlight that the interfaces of the block-algebra classes
+   are very similar to the mpi-block-algebra classes. Hence, if
+   algorithms are written properly it is possible to invoke the same
+   algorithm implementation for the parallel or the serial code.  This
+   is important for developing decomposition algorithms where often a
+   serial implementation is developed for comparison purposes and
+   profiling. With our mpi-block-algebra classes extending the serial
+   implementation of optimization algorithms is intended to be
+   straightforward.
 
-   Differently than **BlockVectors** and **BlockMatrix**, the mpi-block-classes require the user to specify the rank-ownership. That is the rank of the processor where each block lives. For blocks that live in all processors the rank-ownership is -1.
+   Differently than :py:class:`BlockVectors
+   <pyomo.contrib.pynumero.sparse.block_vector.BlockVector>` and
+   :py:class:`BlockMatrix
+   <pyomo.contrib.pynumero.sparse.block_matrix.BlockMatrix>`, the
+   mpi-block-classes require the user to specify the
+   rank-ownership. That is the rank of the processor where each block
+   lives. For blocks that live in all processors the rank-ownership is
+   -1.
    
-   To keep blocks within different processors, the mpi-block-classes do not support **flatten** or **tocoo**, **tocsc**, **tocsr** or **toarray** operations.
+   To keep blocks within different processors, the mpi-block-classes do
+   not support **flatten** or **tocoo**, **tocsc**, **tocsr** or
+   **toarray** operations.
 
-   The key for good scaling of parallel algorithms is to minimize communication between processors. When using the block-algebra-classes is very important to know in which processor are the blocks allocated. For example, when performing a dot product, blocks of both vectors must have the same rank_owenership. That means, if block 1 lives in processor 1 in the first vector, block 1 in the second vector must live in the same processor as well. This principle applies for any vector-vector and matrix-vector operations.
+   The key for good scaling of parallel algorithms is to minimize
+   communication between processors. When using the
+   block-algebra-classes is very important to know in which processor
+   are the blocks allocated. For example, when performing a dot product,
+   blocks of both vectors must have the same rank_owenership. That
+   means, if block 1 lives in processor 1 in the first vector, block 1
+   in the second vector must live in the same processor as well. This
+   principle applies for any vector-vector and matrix-vector operations.
 
-   The **MPIBlockVector** supports numpy **ufuncs** but differently than **BlockVector** it executes the operation in parallel using MPI functionality.
+   The :py:class:`MPIBlockVector
+   <pyomo.contrib.pynumero.sparse.mpi_block_vector.MPIBlockVector>`
+   supports numpy ``ufuncs`` but differently than :py:class:`BlockVector
+   <pyomo.contrib.pynumero.sparse.block_vector.BlockVector>` it executes
+   the operation in parallel using MPI functionality.
    
    
    
