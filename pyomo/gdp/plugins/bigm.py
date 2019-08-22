@@ -168,6 +168,15 @@ class BigM_Transformation(Transformation):
             _HACK_transform_whole_instance = False
         knownParents = set()
         for t in targets:
+            # [ESJ 08/22/2019] This can go away when we deprecate CUIDs. The
+            # warning is in util, but we have to deal with the consequences here
+            # because we need to have the instance in order to get the component.
+            if isinstance(t, ComponentUID):
+                t = t.find_component(instance)
+                if t is None:
+                    raise GDP_Error(
+                        "Target %s is not a component on the instance!" % _t)
+
             # check that t is in fact a child of instance
             if not is_child_of(parent=instance, child=t,
                                knownParents=knownParents):
