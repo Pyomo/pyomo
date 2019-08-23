@@ -919,6 +919,20 @@ class SimpleVar(_GeneralVarData, Var):
 class IndexedVar(Var):
     """An array of variables."""
 
+    def setlb(self, val):
+        """
+        Set the lower bound for this variable.
+        """
+        for vardata in itervalues(self):
+            vardata.setlb(val)
+
+    def setub(self, val):
+        """
+        Set the upper bound for this variable.
+        """
+        for vardata in itervalues(self):
+            vardata.setub(val)
+
     def fix(self, *val):
         """
         Set the fixed indicator to True. Value argument is optional,

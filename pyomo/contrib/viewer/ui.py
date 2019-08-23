@@ -53,6 +53,8 @@ except:
         pass
 
 if not qt_available:
+    for _err in qt_import_errors:
+        _log.error(_err)
     _log.error("Qt is not available. Cannot create UI classes.")
     raise ImportError("Could not import PyQt4 or PyQt5")
 
@@ -104,9 +106,7 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self.ui_data.updated.connect(self.update_model)
         # Set menu actions (remember the menu items are defined in the ui file)
         # you can edit the menus in qt-designer
-        self.action_Exit.triggered.connect(self.exit_action)
         self.actionModel_Selector.triggered.connect(self.show_model_select)
-        self.actionSet_Working_Directory.triggered.connect(self.wdir_select)
         self.ui_data.exec_refresh.connect(self.refresh_on_execute)
         self.actionRestart_Variable_View.triggered.connect(
             self.variables_restart)
@@ -129,30 +129,6 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self._dialog = None #dialog displayed so can access it easier for tests
         self._dialog_test_button = None # button clicked on dialog in test mode
         self.mdiArea.setViewMode(QMdiArea.TabbedView)
-
-    def wdir_select(self, checked=False, wdir=None):
-        """
-        Change the current working directory.
-
-        Args:
-            wdir (str): if None show a dialog to select, otherwise try to
-                change to this path
-            checked (bool): the triggered signal sends this, but it is not used
-        Returns:
-            (str): new working directory path
-        """
-        if wdir is None:
-            # Show a dialog box for user to select working directory
-            wd = QFileDialog(self, 'Working Directory', os.getcwd())
-            wd.setFileMode(QFileDialog.DirectoryOnly)
-        if wd.exec_() == QFileDialog.Accepted:
-            wdir = wd.selectedFiles()[0]
-        else:
-            wdir = None
-        # Change directory if one was selected
-        if wdir is not None:
-            os.chdir(wdir)
-        return wdir
 
     def toggle_tabs(self):
         # Could use not here, but this is a little more future proof
@@ -280,7 +256,6 @@ class MainWindow(_MainWindow, _MainWindowUI):
         model_select.update_models()
         model_select.show()
 
-
     def exit_action(self):
         """
         Selecting exit from the UI, triggers the close event on this mainwindow
@@ -295,9 +270,8 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self._dialog = msg
         msg.setIcon(QMessageBox.Question)
         msg.setText("Are you sure you want to close this window?"
-                    " You can reopen it with ui = get_mainwindow(model=model)"
-                    " function.")
-        msg.setWindowTitle("Exit?")
+                    " You can reopen it with ui.show().")
+        msg.setWindowTitle("Close?")
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         if self.testing: # don't even show dialog just pretend button clicked
             result = self._dialog_test_button

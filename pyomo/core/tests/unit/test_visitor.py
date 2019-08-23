@@ -32,9 +32,9 @@ from pyomo.core.expr.numvalue import (
 )
 from pyomo.core.expr.numeric_expr import (
     ExpressionBase, UnaryFunctionExpression, SumExpression, PowExpression,
-    ProductExpression, ReciprocalExpression, NegationExpression,
+    ProductExpression, DivisionExpression, NegationExpression,
     MonomialTermExpression, LinearExpression,
-    NPV_NegationExpression, NPV_ProductExpression, NPV_ReciprocalExpression,
+    NPV_NegationExpression, NPV_ProductExpression, NPV_DivisionExpression,
     NPV_PowExpression,
     decompose_term, clone_counter,
     _MutableLinearExpression, _MutableSumExpression, _decompose_linear_terms,
