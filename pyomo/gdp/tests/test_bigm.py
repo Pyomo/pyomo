@@ -458,9 +458,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.bigm').apply_to(
             m,
             bigM={None: 19,
-                  ComponentUID(m.d[0].c): 18,
-                  ComponentUID(m.d[1].c1): 17,
-                  ComponentUID(m.d[1].c2): 16})
+                  m.d[0].c: 18,
+                  m.d[1].c1: 17,
+                  m.d[1].c2: 16})
         self.checkMs(m, -18, -17, 17, 16)
 
     def test_tuple_M_arg(self):
@@ -1121,8 +1121,8 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
         # give an arg
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            bigM={None: 19, ComponentUID(m.disjunct[0].c[1]): 17,
-                  ComponentUID(m.disjunct[0].c[2]): 18})
+            bigM={None: 19, m.disjunct[0].c[1]: 17,
+                  m.disjunct[0].c[2]: 18})
 
         # check that m values are what we expect
         self.checkMs(m, -17, -18, -19, 19, -19, 19)
@@ -1138,7 +1138,7 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
         # give an arg
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            bigM={None: 19, ComponentUID(m.disjunct[0].c): 17})
+            bigM={None: 19, m.disjunct[0].c: 17})
         self.checkMs(m, -17, -17, -19, 19, -19, 19)
 
     def test_suffix_M_None_on_indexedConstraint(self):
@@ -1256,18 +1256,19 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
             m,
             targets=[decoy.block])
 
-    def test_targets_cannot_be_cuids(self):
-        m = models.makeTwoTermDisj()
-        self.assertRaisesRegexp(
-            ValueError,
-            "invalid value for configuration 'targets':\n"
-            "\tFailed casting \[disjunction\]\n"
-            "\tto target_list\n"
-            "\tError: Expected Component or list of Components."
-            "\n\tRecieved %s" % type(ComponentUID(m.disjunction)),
-            TransformationFactory('gdp.bigm').apply_to,
-            m,
-            targets=[ComponentUID(m.disjunction)])
+    # [ESJ 08/22/2019] This is a test for when targets can no longer be CUIDs
+    # def test_targets_cannot_be_cuids(self):
+    #     m = models.makeTwoTermDisj()
+    #     self.assertRaisesRegexp(
+    #         ValueError,
+    #         "invalid value for configuration 'targets':\n"
+    #         "\tFailed casting \[disjunction\]\n"
+    #         "\tto target_list\n"
+    #         "\tError: Expected Component or list of Components."
+    #         "\n\tRecieved %s" % type(ComponentUID(m.disjunction)),
+    #         TransformationFactory('gdp.bigm').apply_to,
+    #         m,
+    #         targets=[ComponentUID(m.disjunction)])
 
 
 class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):

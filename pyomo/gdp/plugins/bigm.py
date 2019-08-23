@@ -29,6 +29,7 @@ from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from pyomo.repn import generate_standard_repn
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
+from pyomo.common.deprecation import deprecation_warning
 from six import iterkeys, iteritems
 from weakref import ref as weakref_ref
 
@@ -39,6 +40,8 @@ from nose.tools import set_trace
 
 def _to_dict(val):
     if val is None:
+        return val
+    if isinstance(val, ComponentMap):
         return val
     if isinstance(val, dict):
         return val
@@ -111,7 +114,7 @@ class BigM_Transformation(Transformation):
         description="Big-M value used for constraint relaxation",
         doc="""
 
-        A user-specified value (or dict) of M values that override
+        A user-specified value, dict, or ComponentMap of M values that override
         M-values found through model Suffixes or that would otherwise be
         calculated using variable domains."""
     ))
@@ -627,12 +630,26 @@ class BigM_Transformation(Transformation):
         if bigMargs is None:
             return None
 
+        parent = constraint.parent_component()
+        if constraint in bigMargs:
+            return bigMargs[constraint]
+        elif parent in bigMargs:
+            return bigMargs[parent]
+
+        # [ESJ 08/22/2019] We apparently never actually check what is in
+        # bigMargs... So I'll just yell about CUIDs if we find them here.
+        deprecation_msg = ("In the future the bigM argument will no longer "
+                           "allow ComponentUIDs as keys. Keys should be "
+                           "constraints (in either a dict or ComponentMap)")
         cuid = ComponentUID(constraint)
         parentcuid = ComponentUID(constraint.parent_component())
         if cuid in bigMargs:
+            deprecation_warning(deprecation_msg)
             return bigMargs[cuid]
         elif parentcuid in bigMargs:
+            deprecation_warning(deprecation_msg)
             return bigMargs[parentcuid]
+
         elif None in bigMargs:
             return bigMargs[None]
         return None
