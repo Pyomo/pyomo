@@ -42,7 +42,7 @@ from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import DeveloperError
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import (
-    native_types, native_numeric_types, as_numeric
+    native_types, native_numeric_types, as_numeric, value,
 )
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
@@ -375,7 +375,9 @@ class RangeSetInitializer(_InitializerBase):
             val = (1, val, self.default_step)
         if len(val) < 3:
             val = tuple(val) + (self.default_step,)
-        return RangeSet(*tuple(val))
+        ans = RangeSet(*tuple(val))
+        ans.construct()
+        return ans
 
     def constant(self):
         return self._init.constant()
@@ -2612,6 +2614,8 @@ class Set(IndexedComponent):
             obj._dimen = _d
         if self._init_domain is not None:
             obj._domain = self._init_domain(self, index)
+            if isinstance(obj._domain, _SetOperator):
+                obj._domain.construct()
         if self._init_validate is not None:
             try:
                 obj._validate = Initializer(self._init_validate(self, index))
@@ -2645,6 +2649,10 @@ class Set(IndexedComponent):
                     "unordered data source (type: %s).  This WILL potentially "
                     "lead to nondeterministic behavior in Pyomo"
                     % (type(_values).__name__,))
+            # Special case: set operations that are not first attached
+            # to the model must be constructed.
+            if isinstance(_values, _SetOperator):
+                _values.construct()
             for val in _values:
                 if val is Set.End:
                     break
@@ -2890,14 +2898,9 @@ class _InfiniteRangeSetData(_SetData):
 
     __slots__ = ('_ranges',)
 
-    def __init__(self, component, ranges=()):
+    def __init__(self, component):
         _SetData.__init__(self, component=component)
-        for r in ranges:
-            if not isinstance(r, NumericRange):
-                raise TypeError(
-                    "_InfiniteRangeSetData ranges argument must be an "
-                    "iterable of NumericRange objects")
-        self._ranges = ranges
+        self._ranges = None
 
     def __getstate__(self):
         """
@@ -3068,25 +3071,46 @@ class RangeSet(Component):
             if 'ranges' in kwds:
                 if any(not r.isfinite() for r in kwds['ranges']):
                     finite = False
-            if None in args or (len(args) > 2 and args[2] == 0):
-                finite = False
+            if all(type(_) in native_types for _ in args):
+                if None in args or (len(args) > 2 and args[2] == 0):
+                    finite = False
             if finite is None:
                 finite = True
 
         if finite:
-            return super(RangeSet, cls).__new__(FiniteSimpleRangeSet)
+            return super(RangeSet, cls).__new__(AbstractFiniteSimpleRangeSet)
         else:
-            return super(RangeSet, cls).__new__(InfiniteSimpleRangeSet)
+            return super(RangeSet, cls).__new__(AbstractInfiniteSimpleRangeSet)
 
 
     def __init__(self, *args, **kwds):
+        # Finite was processed by __new__
         kwds.setdefault('ctype', RangeSet)
+        if len(args) > 3:
+            raise ValueError("RangeSet expects 3 or fewer positional "
+                             "arguments (received %s)" % (len(args),))
+        kwds.pop('finite', None)
+        self._init_data = (
+            args,
+            kwds.pop('ranges', ()),
+        )
         Component.__init__(self, **kwds)
+        # Shortcut: if all the relevant construction information is
+        # simple (hard-coded) values, then it is safe to go ahead and
+        # construct the set.
+        #
+        # NOTE: We will need to revisit this if we ever allow passing
+        # data into the construct method (which would override the
+        # hard-coded values here).
+        if all(type(_) in native_types for _ in args):
+            self.construct()
 
 
     def __str__(self):
         if self.parent_block() is not None:
             return self.name
+        if not self._constructed:
+            return type(self).__name__
         ans = ' | '.join(str(_) for _ in self.ranges())
         if ' | ' in ans:
             return "(" + ans + ")"
@@ -3096,7 +3120,21 @@ class RangeSet(Component):
             return "[]"
 
 
-    def _process_args(self, args, ranges):
+    def construct(self, data=None):
+        if self._constructed:
+            return
+        timer = ConstructionTimer(self)
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Constructing RangeSet, name=%s, from data=%r"
+                             % (self.name, data))
+        if data is not None:
+            raise ValueError(
+                "RangeSet.construct() does not support the data= argument.")
+        # TODO: verify that the constructed ranges match finite
+        self._constructed = True
+
+        args, ranges = self._init_data
+        args = tuple(value(_) for _ in args)
         if type(ranges) is not tuple:
             ranges = tuple(ranges)
         if len(args) == 1:
@@ -3115,21 +3153,21 @@ class RangeSet(Component):
                 ranges = ranges + (NumericRange(args[0],args[1],1),)
         elif len(args) == 3:
             ranges = ranges + (NumericRange(*args),)
-        elif args:
-            raise ValueError("RangeSet expects 3 or fewer positional "
-                             "arguments (received %s)" % (len(args),))
-        return ranges
 
+        for r in ranges:
+            if not isinstance(r, NumericRange):
+                raise TypeError(
+                    "RangeSet 'ranges' argument must be an "
+                    "iterable of NumericRange objects")
+            if not r.isfinite() and self.isfinite():
+                raise ValueError(
+                    "Constructing a finite RangeSet over a non-finite "
+                    "range (%s).  Either correct the range data or "
+                    "specify 'finite=False' when declaring the RangeSet"
+                    % (r,))
 
-    def construct(self, data=None):
-        if self._constructed:
-            return
-        timer = ConstructionTimer(self)
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
-                logger.debug("Constructing RangeSet, name=%s, from data=%r"
-                             % (self.name, data))
-        # TODO: verify that the constructed ranges match finite
-        self._constructed = True
+        self._ranges = ranges
+
         timer.report()
 
 
@@ -3151,18 +3189,16 @@ class RangeSet(Component):
 
 class InfiniteSimpleRangeSet(_InfiniteRangeSetData, RangeSet):
     def __init__(self, *args, **kwds):
-        ranges = self._process_args(args, kwds.pop('ranges', []))
-        _InfiniteRangeSetData.__init__(self, component=self, ranges=ranges)
-        RangeSet.__init__(self, **kwds)
+        _InfiniteRangeSetData.__init__(self, component=self)
+        RangeSet.__init__(self, *args, **kwds)
 
     # We want the RangeSet.__str__ to override the one in _FiniteSetMixin
     __str__ = RangeSet.__str__
 
 class FiniteSimpleRangeSet(_FiniteRangeSetData, RangeSet):
     def __init__(self, *args, **kwds):
-        ranges = self._process_args(args, kwds.pop('ranges', []))
-        _FiniteRangeSetData.__init__(self, component=self, ranges=ranges)
-        RangeSet.__init__(self, **kwds)
+        _FiniteRangeSetData.__init__(self, component=self)
+        RangeSet.__init__(self, *args, **kwds)
 
     # We want the RangeSet.__str__ to override the one in _FiniteSetMixin
     __str__ = RangeSet.__str__
@@ -3205,6 +3241,18 @@ class _SetOperator(_SetData, Set):
         for i in _SetOperator.__slots__:
             state[i] = getattr(self, i)
         return state
+
+    def construct(self, data=None):
+        if self._constructed:
+            return
+        timer = ConstructionTimer(self)
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Constructing SetOperator, name=%s, from data=%r"
+                             % (self.name, data))
+        for s in self._sets:
+            s.construct()
+        super(_SetOperator, self).construct(data)
+        timer.report()
 
     # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
@@ -3401,13 +3449,19 @@ class SetIntersection(_SetOperator):
         elif set0[1] or set1[1]:
             cls = SetIntersection_FiniteSet
         else:
-            cls = SetIntersection_OrderedSet
-            for r0 in args[0].ranges():
-                for r01 in r0.range_intersection(args[1].ranges()):
-                    if not r01.isfinite():
-                        cls = SetIntersection_InfiniteSet
-                        return cls.__new__(cls)
+            cls = SetIntersection_InfiniteSet
         return cls.__new__(cls)
+
+    def construct(self, data=None):
+        super(SetIntersection, self).construct(data)
+        if not self.isfinite():
+            _finite = True
+            for r in self.ranges():
+                if not r.isfinite():
+                    _finite = False
+                    break
+            if _finite:
+                self.__class__ = SetIntersection_OrderedSet
 
     def ranges(self):
         for a in self._sets[0].ranges():
@@ -3449,11 +3503,14 @@ class SetIntersection_FiniteSet(_FiniteSetMixin, SetIntersection_InfiniteSet):
                 if set1.isfinite():
                     set0, set1 = set1, set0
                 else:
-                    # THe odd case of a finite continuous range
+                    # The odd case of a finite continuous range
                     # intersected with an infinite discrete range...
                     ranges = []
                     for r0 in set0.ranges():
                         ranges.extend(r0.range_intersection(set1.ranges()))
+                    # Note that the RangeSet is automatically
+                    # constucted, as it has no non-native positional
+                    # parameters.
                     return iter(RangeSet(ranges=ranges))
         return (s for s in set0 if s in set1)
 
@@ -3982,6 +4039,7 @@ def DeclareGlobalSet(obj):
     type.
 
     """
+    obj.construct()
     class GlobalSet(obj.__class__):
         __doc__ = """%s
 

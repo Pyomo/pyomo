@@ -31,6 +31,8 @@ from pyomo.core.base.set import (
     Set,
     SetOf, OrderedSetOf, UnorderedSetOf,
     RangeSet, _FiniteRangeSetData, _InfiniteRangeSetData,
+    FiniteSimpleRangeSet, InfiniteSimpleRangeSet,
+    AbstractFiniteSimpleRangeSet, AbstractInfiniteSimpleRangeSet,
     SetUnion_InfiniteSet, SetUnion_FiniteSet, SetUnion_OrderedSet,
     SetIntersection_InfiniteSet, SetIntersection_FiniteSet,
     SetIntersection_OrderedSet,
@@ -1236,19 +1238,22 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             RangeSet(1,2,3,4)
 
         with self.assertRaisesRegexp(
-                TypeError, "ranges argument must be an iterable of "
+                TypeError, "'ranges' argument must be an iterable of "
                 "NumericRange objects"):
             RangeSet(ranges=(NR(1,5,1), NNR('a')))
 
         output = StringIO()
+        p = Param(initialize=5)
+        p.construct()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
-            i = RangeSet(5)
+            i = RangeSet(p)
+            self.assertIs(type(i), AbstractFiniteSimpleRangeSet)
             self.assertEqual(output.getvalue(), "")
             i.construct()
-            ref = 'Constructing RangeSet, name=FiniteSimpleRangeSet, '\
-                  'from data=None\n'
+            ref = 'Constructing RangeSet, '\
+                  'name=AbstractFiniteSimpleRangeSet, from data=None\n'
             self.assertEqual(output.getvalue(), ref)
-            # Calling construct() twice bupasses construction the second
+            # Calling construct() twice bypasses construction the second
             # time around
             i.construct()
             self.assertEqual(output.getvalue(), ref)
@@ -1261,7 +1266,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             ref = 'Constructing SetOf, name=OrderedSetOf, '\
                   'from data=None\n'
             self.assertEqual(output.getvalue(), ref)
-            # Calling construct() twice bupasses construction the second
+            # Calling construct() twice bypasses construction the second
             # time around
             i.construct()
             self.assertEqual(output.getvalue(), ref)
@@ -1274,6 +1279,30 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(len(i), 0)
         self.assertEqual(len(list(i.ranges())), 0)
 
+        # Test abstract RangeSets
+        m = AbstractModel()
+        m.p = Param()
+        m.q = Param()
+        m.s = Param()
+        m.i = RangeSet(m.p, m.q, m.s, finite=True)
+        self.assertIs(type(m.i), AbstractFiniteSimpleRangeSet)
+        i = m.create_instance(
+            data={None: {'p': {None: 1}, 'q': {None: 5}, 's': {None: 2}}})
+        self.assertIs(type(i.i), FiniteSimpleRangeSet)
+        self.assertEqual(list(i.i), [1,3,5])
+
+        with self.assertRaisesRegexp(
+                ValueError,
+                "finite RangeSet over a non-finite range \(\[1..5\]\)"):
+            i = m.create_instance(
+                data={None: {'p': {None: 1}, 'q': {None: 5}, 's': {None: 0}}})
+
+        with self.assertRaisesRegexp(
+                ValueError,
+                "RangeSet.construct\(\) does not support the data= argument."):
+            i = m.create_instance(
+                data={None: {'p': {None: 1}, 'q': {None: 5}, 's': {None: 1},
+                             'i': {None: [1,2,3]} }})
 
     def test_contains(self):
         r = RangeSet(5)
@@ -1454,6 +1483,17 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(str(n), "[]")
         m.N = n
         self.assertEqual(str(n), "N")
+
+        m.a = Param(initialize=3)
+        o = RangeSet(m.a)
+        self.assertEqual(str(o), "AbstractFiniteSimpleRangeSet")
+        m.O = o
+        self.assertEqual(str(o), "O")
+
+        p = RangeSet(m.a, finite=False)
+        self.assertEqual(str(p), "AbstractInfiniteSimpleRangeSet")
+        m.P = p
+        self.assertEqual(str(p), "P")
 
     def test_isdisjoint(self):
         i = SetOf({1,2,3})
@@ -1838,6 +1878,25 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         so = SetOf([0, (1,), 1])
         self.assertEqual(so.ord((1,)), 2)
         self.assertEqual(so.ord(1), 3)
+
+
+class Test_SetOperator(unittest.TestCase):
+    def test_construct(self):
+        a = RangeSet(3)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            i = a * a
+            self.assertEqual(output.getvalue(), "")
+            i.construct()
+            ref = 'Constructing SetOperator, name=SetProduct_OrderedSet, '\
+                  'from data=None\n' \
+                  'Constructing Set, name=SetProduct_OrderedSet, '\
+                  'from data=None\n'
+            self.assertEqual(output.getvalue(), ref)
+            # Calling construct() twice bypasses construction the second
+            # time around
+            i.construct()
+            self.assertEqual(output.getvalue(), ref)
 
 
 class TestSetUnion(unittest.TestCase):
@@ -2307,7 +2366,10 @@ A : Size=1, Index=None, Ordered=True
         # finite continuous one
         a = RangeSet(0, None, 2)
         b = RangeSet(5,10,0)
+        m = ConcreteModel()
         x = a & b
+        self.assertIs(type(x), SetIntersection_InfiniteSet)
+        m.X = x
         self.assertIs(type(x), SetIntersection_OrderedSet)
         self.assertEqual(list(x), [6,8,10])
 
@@ -2320,7 +2382,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x[3], 10)
         with self.assertRaisesRegexp(
                 IndexError,
-                "SetIntersection_OrderedSet index out of range"):
+                "X index out of range"):
             x[4]
 
         self.assertEqual(x[-3], 6)
@@ -2328,7 +2390,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x[-1], 10)
         with self.assertRaisesRegexp(
                 IndexError,
-                "SetIntersection_OrderedSet index out of range"):
+                "X index out of range"):
             x[-4]
 
 
@@ -3437,6 +3499,8 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
+        self.assertIs(type(s), SetIntersection_InfiniteSet)
+        s.construct()
         self.assertIs(type(s), SetIntersection_OrderedSet)
         self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
         self.assertIsInstance(s._sets[1], RangeSet)
@@ -3458,6 +3522,8 @@ class Test_SetInitializer(unittest.TestCase):
         with self.assertRaises(KeyError):
             a(None,None)
         s = a(None,1)
+        self.assertIs(type(s), SetIntersection_InfiniteSet)
+        s.construct()
         self.assertIs(type(s), SetIntersection_OrderedSet)
         self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
         self.assertIsInstance(s._sets[1], RangeSet)
