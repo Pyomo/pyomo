@@ -704,6 +704,17 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         m = models.makeTwoTermMultiIndexedDisjunction()
         self.diff_apply_to_and_create_using(m)
 
+    def test_targets_with_container_as_arg(self):
+        m = models.makeTwoTermIndexedDisjunction()
+        TransformationFactory('gdp.bigm').apply_to(m.disjunction,
+                                                   targets=(m.disjunction[2]))
+        self.assertIsNone(m.disjunction[1].algebraic_constraint)
+        self.assertIsNone(m.disjunction[3].algebraic_constraint)
+        self.assertIs(m.disjunction[2].algebraic_constraint(),
+                      m._gdp_bigm_relaxation_disjunction_xor[2])
+        self.assertIs(m.disjunction._algebraic_constraint(),
+                      m._gdp_bigm_relaxation_disjunction_xor)
+
 
 class DisjOnBlock(unittest.TestCase, CommonTests):
     # when the disjunction is on a block, we want the xor constraint
