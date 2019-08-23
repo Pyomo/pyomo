@@ -191,11 +191,11 @@ class ConvexHull_Transformation(Transformation):
             _HACK_transform_whole_instance = True
         else:
             _HACK_transform_whole_instance = False
-        knownParents = set()
+        knownBlocks = set()
         for t in targets:
             # check that t is in fact a child of instance
-            knownParents = is_child_of(parent=instance, child=t,
-                                       knownParents=knownParents)
+            knownBlocks = is_child_of(parent=instance, child=t,
+                                       knownBlocks=knownBlocks)
 
             if t.type() is Disjunction:
                 if t.parent_component() is t:

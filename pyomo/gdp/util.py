@@ -117,20 +117,20 @@ def target_list(x):
 
 # [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
 #  putting it here for now so that all the gdp transformations can use it
-def is_child_of(parent, child, knownParents=None):
+def is_child_of(parent, child, knownBlocks=None):
     # Note: we can get away with set() and not ComponentSet because we will only
     # store Blocks (or their ilk), and Blocks are hashable (only derivatives of
     # NumericValue are not hashable)
-    if knownParents is None:
-        knownParents = set()
+    if knownBlocks is None:
+        knownBlocks = set()
     tmp = set()
     node = child
     while True:
-        if node in knownParents:
-            knownParents.update(tmp)
+        if node in knownBlocks:
+            knownBlocks.update(tmp)
             return True
         if node is parent:
-            knownParents.update(tmp)
+            knownBlocks.update(tmp)
             return True
         if node is None:
             return False
@@ -142,4 +142,4 @@ def is_child_of(parent, child, knownParents=None):
         else:
             node = container
 
-    return knownParents
+    return knownBlocks

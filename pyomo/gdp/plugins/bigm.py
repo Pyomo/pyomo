@@ -169,7 +169,7 @@ class BigM_Transformation(Transformation):
             _HACK_transform_whole_instance = True
         else:
             _HACK_transform_whole_instance = False
-        knownParents = set()
+        knownBlocks = set()
         for t in targets:
             # [ESJ 08/22/2019] This can go away when we deprecate CUIDs. The
             # warning is in util, but we have to deal with the consequences here
@@ -182,7 +182,7 @@ class BigM_Transformation(Transformation):
 
             # check that t is in fact a child of instance
             if not is_child_of(parent=instance, child=t,
-                               knownParents=knownParents):
+                               knownBlocks=knownBlocks):
                 raise GDP_Error("Target %s is not a component on instance %s!"
                                 % (t.name, instance.name))
             if t.type() is Disjunction:
