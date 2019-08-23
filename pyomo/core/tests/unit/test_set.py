@@ -1970,6 +1970,13 @@ class TestSetUnion(unittest.TestCase):
                 OverflowError, 'The length of a non-finite Set is Inf'):
             len(b)
 
+    def test_bounds(self):
+        a = SetOf([-2,-1,0,1])
+        b = a | NonNegativeReals
+        self.assertEqual(b.bounds(), (-2, None))
+        c = a | RangeSet(3)
+        self.assertEqual(c.bounds(), (-2, 3))
+
     def test_naming(self):
         m = ConcreteModel()
 
@@ -2215,6 +2222,13 @@ class TestSetIntersection(unittest.TestCase):
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
 
+    def test_bounds(self):
+        a = SetOf([-2,-1,0,1])
+        b = a & NonNegativeReals
+        self.assertEqual(b.bounds(), (0, 1))
+        c = a & RangeSet(3)
+        self.assertEqual(c.bounds(), (1, 1))
+
     def test_naming(self):
         m = ConcreteModel()
 
@@ -2458,6 +2472,13 @@ class TestSetDifference(unittest.TestCase):
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
 
+    def test_bounds(self):
+        a = SetOf([-2,-1,0,1])
+        b = a - NonNegativeReals
+        self.assertEqual(b.bounds(), (-2, -1))
+        c = a - RangeSet(3)
+        self.assertEqual(c.bounds(), (-2, 0))
+
     def test_naming(self):
         m = ConcreteModel()
 
@@ -2652,6 +2673,13 @@ class TestSetSymmetricDifference(unittest.TestCase):
         b = pickle.loads(pickle.dumps(a))
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
+
+    def test_bounds(self):
+        a = SetOf([-2,-1,0,1])
+        b = a ^ NonNegativeReals
+        self.assertEqual(b.bounds(), (-2, None))
+        c = a ^ RangeSet(3)
+        self.assertEqual(c.bounds(), (-2, 3))
 
     def test_naming(self):
         m = ConcreteModel()
@@ -2897,6 +2925,13 @@ class TestSetProduct(unittest.TestCase):
         b = pickle.loads(pickle.dumps(a))
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
+
+    def test_bounds(self):
+        a = SetOf([-2,-1,0,1])
+        b = a * NonNegativeReals
+        self.assertEqual(b.bounds(), ((-2, 0), (1, None)))
+        c = a * RangeSet(3)
+        self.assertEqual(c.bounds(), ((-2, 1), (1, 3)))
 
     def test_naming(self):
         m = ConcreteModel()

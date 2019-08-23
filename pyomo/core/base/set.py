@@ -1590,6 +1590,30 @@ class _SetData(_SetDataBase):
         raise DeveloperError("Derived set class (%s) failed to "
                              "implement ranges" % (type(self).__name__,))
 
+    def bounds(self):
+        _bnds = list((r.start, r.end) if r.step >= 0 else (r.end, r.start)
+                     for r in self.ranges())
+        if not _bnds:
+            return None, None
+
+        lb, ub = _bnds.pop()
+        for _lb, _ub in _bnds:
+            if lb is not None:
+                if _lb is None:
+                    lb = None
+                    if ub is None:
+                        break
+                else:
+                    lb = min(lb, _lb)
+            if ub is not None:
+                if _ub is None:
+                    ub = None
+                    if lb is None:
+                        break
+                else:
+                    ub = max(ub, _ub)
+        return lb, ub
+
     @property
     @deprecated("The 'virtual' flag is no longer supported", version='TBD')
     def virtual(self):
@@ -2947,26 +2971,6 @@ class _InfiniteRangeSetData(_SetData):
     def ranges(self):
         return iter(self._ranges)
 
-    def bounds(self):
-        _bnds = list((r.start, r.end) if r.step >= 0 else (r.end, r.start)
-                     for r in self._ranges)
-        if not _bnds:
-            return None, None
-
-        lb, ub = _bnds.pop()
-        for _lb, _ub in _bnds:
-            if lb is not None:
-                if _lb is None:
-                    lb = None
-                else:
-                    lb = min(lb, _lb)
-            if ub is not None:
-                if _ub is None:
-                    ub = None
-                else:
-                    ub = max(ub, _ub)
-        return lb, ub
-
 
 class _FiniteRangeSetData( _SortedSetMixin,
                            _OrderedSetMixin,
@@ -3788,6 +3792,10 @@ class SetProduct(_SetOperator):
         yield RangeProduct(list(
             list(_.ranges()) for _ in self.flatten_cross_product()
         ))
+
+    def bounds(self):
+        return ( tuple(_.bounds()[0] for _ in self.flatten_cross_product()),
+                 tuple(_.bounds()[1] for _ in self.flatten_cross_product()) )
 
     @property
     def dimen(self):
