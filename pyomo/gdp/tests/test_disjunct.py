@@ -266,8 +266,8 @@ class TestDisjunct(unittest.TestCase):
         m.d.v = Var()
         m.d.c = Constraint(expr=m.d.v >= 8)
         
-        # [ESJ 08/16/2019]: Is this related to the Block set_value bugs? I don't
-        # know whether what I am doing below should be legal or not?
+        # [ESJ 08/16/2019]: I think this is becuase of #1106... This should be
+        # legal, right?
         new_d = m.new_d = Block()
         new_d.v = Var()
         new_d.c = Constraint(expr=m.y <= 89)

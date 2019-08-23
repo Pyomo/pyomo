@@ -380,7 +380,6 @@ class BigM_Transformation(Transformation):
                 Disjunction, 
                 sort=SortComponents.deterministic, 
                 descend_into=(Block)):
-            print(obj)
             if not obj.algebraic_constraint:
                 # This could be bad if it's active, but we'll wait to yell
                 # until the next loop
@@ -429,15 +428,14 @@ class BigM_Transformation(Transformation):
         # but... I'll leave it general for now.
         disjunctList = toBlock.relaxedDisjuncts
         for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
-            # TODO [ESJ 07/18/2019] John! I thought you said something like this
-            # would work?
-            #newblock = disjunctList[len(disjunctList)] = disjunctBlock
-            # Try:
+            # I think this should work when #1106 is resolved:
             # disjunctList[len(disjunctList)] = disjunctBlock
             # newblock = disjunctList[len(disjunctList)-1]
-            # I'm just hacking for now because I am confused:
+
+            # HACK in the meantime:
             newblock = disjunctList[len(disjunctList)]
             self._copy_to_block(disjunctBlock, newblock)
+
             # update the mappings
             original = disjunctBlock._srcDisjunct()
             original._transformation_block = weakref_ref(newblock)
