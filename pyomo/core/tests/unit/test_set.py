@@ -49,6 +49,7 @@ from pyomo.core.base.set import (
     _FiniteSetMixin, _OrderedSetMixin,
     UnknownSetDimen,
     simple_set_rule, set_options,
+    disable_methods,
 )
 from pyomo.environ import (
     AbstractModel, ConcreteModel, Block, Var, Param, Suffix, Constraint,
@@ -61,6 +62,57 @@ try:
 except ImportError:
     numpy_available = False
 
+
+class _simple(object):
+    def __init__(self, name):
+        self.name = name
+
+    def construct(self, data=None):
+        return 'construct'
+
+    def a(self):
+        return 'a'
+
+    def b(self):
+        return 'b'
+
+    def c(self):
+        return 'c'
+
+@disable_methods(('a',('b', 'custom_msg')))
+class _abstract_simple(_simple):
+    pass
+
+class TestDisableMethods(unittest.TestCase):
+    def test_disable(self):
+        x = _abstract_simple('foo')
+        self.assertIs(type(x), _abstract_simple)
+        self.assertIsInstance(x, _simple)
+        with self.assertRaisesRegexp(
+                RuntimeError, "Cannot access a on _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.a()
+        with self.assertRaisesRegexp(
+                RuntimeError, "Cannot custom_msg _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.b()
+        self.assertEqual(x.c(), 'c')
+
+        self.assertEqual(x.construct(), 'construct')
+        self.assertIs(type(x), _simple)
+        self.assertIsInstance(x, _simple)
+        self.assertEqual(x.a(), 'a')
+        self.assertEqual(x.b(), 'b')
+        self.assertEqual(x.c(), 'c')
+
+    def test_bad_api(self):
+        with self.assertRaisesRegexp(
+                DeveloperError, "Cannot disable method d on "
+                "<class 'pyomo.core.tests.unit.test_set.foo'>"):
+
+            @disable_methods(('a','d'))
+            class foo(_simple):
+                pass
 
 class TestNumericRange(unittest.TestCase):
     def test_init(self):
