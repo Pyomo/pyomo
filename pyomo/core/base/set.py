@@ -990,24 +990,41 @@ class NumericRange(object):
             ))
         return _subranges
 
-    def _lcm(self,other_ranges):
-        """This computes an approximate Least Common Multiple step"""
-        steps = set()
-        if self.isdiscrete():
-            steps.add(abs(self.step) or 1)
-        for s in other_ranges:
-            if s.isdiscrete():
-                steps.add(abs(s.step) or 1)
-        for step1 in sorted(steps):
-            for step2 in sorted(steps):
-                if step1 % step2 == 0 and step1 > step2:
-                    steps.remove(step2)
-        if not steps:
+    @staticmethod
+    def _gcd(a,b):
+        while b != 0:
+            a,b = b, a % b
+        return a
+
+    @staticmethod
+    def _lcm(a,b):
+        gcd = NumericRange._gcd(a,b)
+        if not gcd:
             return 0
-        lcm = steps.pop()
-        for step in steps:
-            lcm *= step
-        return lcm
+        return a * b / gcd
+
+    def _step_lcm(self,other_ranges):
+        """This computes an approximate Least Common Multiple step"""
+        # Note: scalars are discrete, but have a step of 0.  Pretend the
+        # step is 1 so that we can compute a realistic "step lcm"
+        if self.isdiscrete():
+            a = self.step or 1
+        else:
+            a = 0
+        for o in other_ranges:
+            if o.isdiscrete():
+                b = o.step or 1
+            else:
+                b = 0
+            lcm = NumericRange._lcm(a,b)
+            # This is a modified LCM.  LCM(n,0) == 0, but for step
+            # calculations, we want it to be n
+            if lcm:
+                a = lcm
+            else:
+                # one of the steps was 0: add to preserve the non-zero step
+                a += b
+        return abs(a)
 
     def _push_to_discrete_element(self, val, push_to_next_larger_value):
         if val is None or not self.step:
@@ -1053,7 +1070,7 @@ class NumericRange(object):
         # Find the Least Common Multiple of all the range steps.  We
         # will split discrete ranges into separate ranges with this step
         # so that we can more easily compare them.
-        lcm = self._lcm(other_ranges)
+        lcm = self._step_lcm(other_ranges)
 
         # Split this range into subranges
         _this = NumericRange._split_ranges(self, lcm)
@@ -1179,7 +1196,7 @@ class NumericRange(object):
         # Find the Least Common Multiple of all the range steps.  We
         # will split discrete ranges into separate ranges with this step
         # so that we can more easily compare them.
-        lcm = self._lcm(other_ranges)
+        lcm = self._step_lcm(other_ranges)
 
         ans = []
         # Split this range into subranges

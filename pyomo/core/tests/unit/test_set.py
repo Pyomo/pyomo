@@ -468,35 +468,39 @@ class TestNumericRange(unittest.TestCase):
 
     def test_lcm(self):
         self.assertEqual(
-            NR(None,None,0)._lcm((NR(0,1,0),)),
+            NR(None,None,0)._step_lcm((NR(0,1,0),)),
             0
         )
         self.assertEqual(
-            NR(None,None,0)._lcm((NR(0,0,0),)),
+            NR(None,None,0)._step_lcm((NR(0,0,0),)),
             1
         )
         self.assertEqual(
-            NR(0,None,3)._lcm((NR(0,None,1),)),
+            NR(0,None,3)._step_lcm((NR(0,None,1),)),
             3
         )
         self.assertEqual(
-            NR(0,None,3)._lcm((NR(0,None,0),)),
+            NR(0,None,3)._step_lcm((NR(0,None,0),)),
             3
         )
         self.assertEqual(
-            NR(0,None,0)._lcm((NR(0,None,1),)),
+            NR(0,None,0)._step_lcm((NR(0,None,1),)),
             1
         )
         self.assertEqual(
-            NR(0,None,3)._lcm((NR(0,None,2),)),
+            NR(0,None,3)._step_lcm((NR(0,None,2),)),
             6
         )
         self.assertEqual(
-            NR(0,None,3)._lcm((NR(0,None,2),NR(0,None,5))),
+            NR(0,None,18)._step_lcm((NR(0,None,12),)),
+            36
+        )
+        self.assertEqual(
+            NR(0,None,3)._step_lcm((NR(0,None,2),NR(0,None,5))),
             30
         )
         self.assertEqual(
-            NR(0,None,3)._lcm((NR(0,None,2),NR(0,None,10))),
+            NR(0,None,3)._step_lcm((NR(0,None,2),NR(0,None,10))),
             30
         )
 
