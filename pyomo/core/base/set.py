@@ -792,18 +792,26 @@ class NumericRange(object):
         if self.step == other.step:
             return abs(remainder(other.start-self.start, self.step)) \
                    > self._EPS
-        # Two infinite discrete sets will *eventually* have a common point.
-        # This is trivial for integer steps.  It is not true for float steps
-        # with infinite precision (think a step of PI).  However, for finite
-        # precision maths, the "float" times a sufficient power of two is an
-        # integer.  Is this a distinction we want to make?  Personally,
-        # anyone making a discrete set with a non-integer step is asking for
-        # trouble.  Maybe the better solution is to require that the step be
-        # integer.
+        # Two infinite discrete sets will *eventually* have a common
+        # point.  This is trivial for coprime integer steps.  For steps
+        # with gcd > 1, we need to ensure that the two ranges are
+        # aligned to the gcd period.
+        #
+        # Note that this all breaks down for for float steps with
+        # infinite precision (think a step of PI).  However, for finite
+        # precision maths, the "float" times a sufficient power of two
+        # is an integer.  Is this a distinction we want to make?
+        # Personally, anyone making a discrete set with a non-integer
+        # step is asking for trouble.  Maybe the better solution is to
+        # require that the step be integer (which is what we do).
         elif self.end is None and other.end is None \
                 and self.step*other.step > 0:
-            return False
-        # OK - just check all the members of one set against the other
+            gcd = NumericRange._gcd(self.step, other.step)
+            return abs(remainder(other.start-self.start, gcd)) \
+                   > self._EPS
+        # OK - at this point, there are a finite number of set members
+        # that can overlap.  Just check all the members of one set
+        # against the other
         end = NumericRange._firstNonNull(
             self.step > 0,
             self.end,

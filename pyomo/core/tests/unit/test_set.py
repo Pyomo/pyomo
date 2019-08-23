@@ -369,6 +369,12 @@ class TestNumericRange(unittest.TestCase):
         _isdisjoint(False, NR(5,50,5), NR(49,7,-7))
         _isdisjoint(True, NR(5,34,5), NR(28,7,-7))
 
+        _isdisjoint(True, NR(0.25, 10, 1), NR(0.5, 20, 1))
+        _isdisjoint(True, NR(0.25, 10, 1), NR(0.5, 20, 2))
+        _isdisjoint(True, NR(0, 100, 2), NR(1, 100, 4))
+        _isdisjoint(True, NR(0, None, 2), NR(1, None, 4))
+        _isdisjoint(True, NR(0.25, None, 1), NR(0.5, None, 1))
+
         # 1, 8, 15, 22, 29, 36
         _isdisjoint(False, NR(0, None, 5), NR(1, None, 7))
         _isdisjoint(False, NR(0, None, -5), NR(1, None, -7))
@@ -591,6 +597,20 @@ class TestNumericRange(unittest.TestCase):
             [NR(-3,0,0,'[)'), NR(0,3,0,'(]')],
         )
 
+        # Disjoint ranges...
+        a = NR(0.25, 10, 1)
+        self.assertEqual(a.range_difference([NR(0.5, 20, 1)]), [a])
+        self.assertEqual(a.range_difference([NR(0.5, 20, 2)]),
+                         [NR(0.25, 8.25, 2), NR(1.25, 9.25, 2)])
+        a = NR(0, 100, 2)
+        self.assertEqual(a.range_difference([NR(1, 100, 4)]),
+                         [NR(0, 100, 4), NR(2, 98, 4)])
+        a = NR(0, None, 2)
+        self.assertEqual(a.range_difference([NR(1, None, 4)]),
+                         [NR(0, None, 4), NR(2, None, 4)])
+        a = NR(0.25, None, 1)
+        self.assertEqual(a.range_difference([NR(0.5, None, 1)]), [a])
+
 
     def test_range_intersection(self):
         self.assertEqual(
@@ -645,6 +665,17 @@ class TestNumericRange(unittest.TestCase):
             NR(0,None,0).range_intersection([NR(5,None,0)]),
             [NR(5,None,0)],
         )
+
+        # Disjoint ranges...
+        a = NR(0.25, 10, 1)
+        self.assertEqual(a.range_intersection([NR(0.5, 20, 1)]), [])
+        self.assertEqual(a.range_intersection([NR(0.5, 20, 2)]), [])
+        a = NR(0, 100, 2)
+        self.assertEqual(a.range_intersection([NR(1, 100, 4)]), [])
+        a = NR(0, None, 2)
+        self.assertEqual(a.range_intersection([NR(1, None, 4)]), [])
+        a = NR(0.25, None, 1)
+        self.assertEqual(a.range_intersection([NR(0.5, None, 1)]), [])
 
     def test_pickle(self):
         a = NR(0,100,5)
