@@ -177,6 +177,16 @@ class TestNumericRange(unittest.TestCase):
         self.assertEqual(a.end, 0)
         self.assertEqual(a.step, 0)
 
+        a = NR(0, 5.5, 1)
+        self.assertEqual(a.start, 0)
+        self.assertEqual(a.end, 5)
+        self.assertEqual(a.step, 1)
+
+        a = NR(0.5, 5.5, 1)
+        self.assertEqual(a.start, 0.5)
+        self.assertEqual(a.end, 5.5)
+        self.assertEqual(a.step, 1)
+
         with self.assertRaisesRegexp(
                 ValueError, '.*start, end ordering incompatible with step'):
             NR(0, -1, 1)
@@ -227,6 +237,16 @@ class TestNumericRange(unittest.TestCase):
         self.assertNotIn(11, NR(0, 10, 0))
         self.assertNotIn(11, NR(None, 10, 0))
 
+        self.assertNotIn(0, NR(0.5, 10.5, 0))
+        self.assertIn(0, NR(None, 10.5, 0))
+        self.assertNotIn(0, NR(0.5, None, 0))
+        self.assertNotIn(11, NR(0.5, 10.5, 0))
+        self.assertNotIn(11, NR(None, 10.5, 0))
+        self.assertIn(11, NR(0.5, None, 0))
+        self.assertIn(1.5, NR(0.5, 10.5, 0))
+        self.assertIn(1.5, NR(None, 10.5, 0))
+        self.assertIn(1.5, NR(0.5, None, 0))
+
         # test discrete ranges (both increasing & decreasing)
         self.assertIn(0, NR(0, 10, 1))
         self.assertIn(0, NR(10, None, -1))
@@ -244,6 +264,16 @@ class TestNumericRange(unittest.TestCase):
         self.assertNotIn(1.1, NR(0, 10, 1))
         self.assertNotIn(1.1, NR(10, None, -1))
         self.assertNotIn(1.1, NR(0, None, 1))
+
+        self.assertNotIn(0, NR(0.5, 10.5, 1))
+        self.assertNotIn(0, NR(10.5, None, -1))
+        self.assertNotIn(0, NR(0.5, None, 1))
+        self.assertNotIn(11, NR(0.5, 10.5, 1))
+        self.assertNotIn(11, NR(10.5, None, -1))
+        self.assertNotIn(11, NR(0.5, None, 1))
+        self.assertIn(1.5, NR(0.5, 10.5, 1))
+        self.assertIn(1.5, NR(10.5, None, -1))
+        self.assertIn(1.5, NR(0.5, None, 1))
 
         # test discrete ranges (increasing/decreasing by 2)
         self.assertIn(0, NR(0, 10, 2))
