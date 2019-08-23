@@ -26,7 +26,7 @@ from pyomo.core.base.indexed_component import normalize_index
 from pyomo.core.base.set import (
     NumericRange as NR, NonNumericRange as NNR, RangeProduct as RP,
     AnyRange, _AnySet, Any, Binary,
-    Reals, NonNegativeReals, PositiveReals,
+    Reals, NonNegativeReals, PositiveReals, NonPositiveReals, NegativeReals,
     Integers, PositiveIntegers, NegativeIntegers,
     Set,
     SetOf, OrderedSetOf, UnorderedSetOf,
@@ -1996,6 +1996,15 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(so.ord((1,)), 2)
         self.assertEqual(so.ord(1), 3)
 
+    def test_float_steps(self):
+        a = RangeSet(0, 4, .5)
+        self.assertEqual(len(a), 9)
+        self.assertEqual(list(a - RangeSet(0,4,1)), [0.5, 1.5, 2.5, 3.5])
+
+        with self.assertRaisesRegexp(
+                ValueError, "RangeSet: start, end ordering incompatible with "
+                "step direction \(got \[0:4:-0.5\]\)"):
+            RangeSet(0,4,-.5)
 
 class Test_SetOperator(unittest.TestCase):
     def test_construct(self):
@@ -2035,8 +2044,12 @@ class TestSetUnion(unittest.TestCase):
         a = SetOf([-2,-1,0,1])
         b = a | NonNegativeReals
         self.assertEqual(b.bounds(), (-2, None))
-        c = a | RangeSet(3)
-        self.assertEqual(c.bounds(), (-2, 3))
+        b = NonNegativeReals | a
+        self.assertEqual(b.bounds(), (-2, None))
+        b = a | RangeSet(3)
+        self.assertEqual(b.bounds(), (-2, 3))
+        b = NegativeReals | NonNegativeReals
+        self.assertEqual(b.bounds(), (None, None))
 
     def test_naming(self):
         m = ConcreteModel()
@@ -2287,8 +2300,10 @@ class TestSetIntersection(unittest.TestCase):
         a = SetOf([-2,-1,0,1])
         b = a & NonNegativeReals
         self.assertEqual(b.bounds(), (0, 1))
-        c = a & RangeSet(3)
-        self.assertEqual(c.bounds(), (1, 1))
+        b = NonNegativeReals & a
+        self.assertEqual(b.bounds(), (0, 1))
+        b = a & RangeSet(3)
+        self.assertEqual(b.bounds(), (1, 1))
 
     def test_naming(self):
         m = ConcreteModel()
@@ -2537,8 +2552,8 @@ class TestSetDifference(unittest.TestCase):
         a = SetOf([-2,-1,0,1])
         b = a - NonNegativeReals
         self.assertEqual(b.bounds(), (-2, -1))
-        c = a - RangeSet(3)
-        self.assertEqual(c.bounds(), (-2, 0))
+        b = a - RangeSet(3)
+        self.assertEqual(b.bounds(), (-2, 0))
 
     def test_naming(self):
         m = ConcreteModel()

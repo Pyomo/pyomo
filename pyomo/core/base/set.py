@@ -3172,6 +3172,8 @@ class RangeSet(Component):
             # validation of the RangeSet arguments, and allowed the
             # creation of 0-length RangeSets
             if args[0] != 0:
+                # No need to check for floating point - it will
+                # automatically be truncated
                 ranges = ranges + (NumericRange(1,args[0],1),)
         elif len(args) == 2:
             # This is a bit of a hack for backwards compatability with
@@ -3179,9 +3181,27 @@ class RangeSet(Component):
             # validation of the RangeSet arguments, and allowed the
             # creation of 0-length RangeSets
             if args[1] - args[0] != -1:
-                ranges = ranges + (NumericRange(args[0],args[1],1),)
-        elif len(args) == 3:
-            ranges = ranges + (NumericRange(*args),)
+                args = (args[0],args[1],1)
+
+        if len(args) == 3:
+            # Discrete ranges anchored by a floating point value or
+            # incremented by a floating point value cannot be handled by
+            # the NumericRange object.  We will just discretize this
+            # range (mostly for backwards compatability)
+            start, end, step = args
+            if step and int(step) != step:
+                if (end >= start) ^ (step > 0):
+                    raise ValueError(
+                        "RangeSet: start, end ordering incompatible with "
+                        "step direction (got [%s:%s:%s])" % (start,end,step))
+                n = start
+                i = 0
+                while (step > 0 and n <= end) or (step < 0 and n >= end):
+                    ranges = ranges + (NumericRange(n,n,0),)
+                    i += 1
+                    n = start + step*i
+            else:
+                ranges = ranges + (NumericRange(*args),)
 
         for r in ranges:
             if not isinstance(r, NumericRange):
