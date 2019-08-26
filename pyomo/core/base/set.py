@@ -117,10 +117,12 @@ def disable_methods(methods):
 # and should be promoted to their own module so that we can use them on
 # all Components to standardize how we process component arguments.
 #
-def Initializer(init, allow_generators=False,
-                treat_sequences_as_mappings=True):
+def Initializer(init,
+                allow_generators=False,
+                treat_sequences_as_mappings=True,
+                arg_not_specified=None):
     if init.__class__ in native_types:
-        if init is None:
+        if init is arg_not_specified:
             return None
         return _ConstantInitializer(init)
     elif inspect.isfunction(init):
@@ -1917,7 +1919,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         self._domain = None
         self._validate = None
         self._filter = None
-        self._dimen = None
+        self._dimen = UnknownSetDimen
 
     def __getstate__(self):
         """
@@ -2584,7 +2586,9 @@ class Set(IndexedComponent):
             self._init_domain.intersect(RangeSetInitializer(
                 _bounds, default_step=0))
 
-        self._init_dimen = Initializer(kwds.pop('dimen', UnknownSetDimen))
+        self._init_dimen = Initializer(
+            kwds.pop('dimen', UnknownSetDimen),
+            arg_not_specified=UnknownSetDimen)
         self._init_values = Initializer(
             kwds.pop('initialize', ()),
             treat_sequences_as_mappings=False, allow_generators=True)
