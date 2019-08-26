@@ -546,22 +546,11 @@ class UnknownSetDimen(object): pass
 # when performing set operations to know what type of operation to
 # create, and we will allow set operations in Abstract before
 # construction.
-#   - TODO: verify that RangeSet checks its params match is*
-
 
 #
 # Set rewrite TODOs:
 #
-#   - Right now, many things implicitly only support concrete models.
-#     We need to go back and make sure that things all support Abstract
-#     models, and in particular that all Simple (scalar) API methods
-#     correctly check the _constructed flag.
-#
-#   - Set() constructs implicitly on declaration with initialize=
-#
 #   - Test index/ord for equivalence of 1 and (1,)
-#
-#   - SortedSet should take a custom sorting function
 #
 #   - Make sure that all classes implement the appropriate methods
 #     (e.g., bounds)
@@ -1661,6 +1650,17 @@ class _SetData(_SetDataBase):
         return self.isfinite()
 
     def isdisjoint(self, other):
+        """Test if this Set is disjoint from `other`
+
+        Parameters
+        ----------
+            other : ``Set`` or ``iterable``
+                The Set or iterable object to compare this Set against
+
+        Returns
+        -------
+        bool : True if this set is disjoint from `other`
+        """
         try:
             other_isfinite = other.isfinite()
         except:
@@ -1687,6 +1687,17 @@ class _SetData(_SetDataBase):
             all(r.isdisjoint(s) for r in self.ranges() for s in other.ranges())
 
     def issubset(self, other):
+        """Test if this Set is a subset of `other`
+
+        Parameters
+        ----------
+            other : ``Set`` or ``iterable``
+                The Set or iterable object to compare this Set against
+
+        Returns
+        -------
+        bool : True if this set is a subset of `other`
+        """
         try:
             other_isfinite = other.isfinite()
         except:
@@ -1850,18 +1861,12 @@ class _SetData(_SetDataBase):
     def __lt__(self,other):
         """
         Return True if the set is a strict subset of 'other'
-
-        TODO: verify that this is sufficiently efficient
-             (vs. an explicit implimentation).
         """
         return self <= other and not self == other
 
     def __gt__(self,other):
         """
         Return True if the set is a strict superset of 'other'
-
-        TODO: verify that this is sufficiently efficient
-             (vs. an explicit implimentation).
         """
         return self >= other and not self == other
 
@@ -2789,7 +2794,7 @@ class Set(IndexedComponent):
         #         else:
         #             return '{' + str(ans)[1:-1] + "}"
 
-        # TODO: In the current design, we force all _SetData witin an
+        # TBD: In the current design, we force all _SetData within an
         # indexed Set to have the same isordered value, so we will only
         # print it once in the header.  Is this a good design?
         try:
@@ -3188,7 +3193,6 @@ class RangeSet(Component):
         if data is not None:
             raise ValueError(
                 "RangeSet.construct() does not support the data= argument.")
-        # TODO: verify that the constructed ranges match finite
         self._constructed = True
 
         args, ranges = self._init_data
