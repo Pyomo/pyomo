@@ -77,6 +77,27 @@ def _disable_method(fcn, msg=None):
     impl_args = eval('lambda %s: impl%s' % (args[1:-1], args), {'impl': impl})
     return functools.wraps(fcn)(impl_args)
 
+def _disable_property(fcn, msg=None):
+    if msg is None:
+        _gmsg = 'access property %s on' % (fcn.fget.__name__,)
+    else:
+        _gmsg = msg
+    def getter(self, *args, **kwds):
+        raise RuntimeError(
+            "Cannot %s %s '%s' before it has been constructed (initialized)."
+            % (_gmsg, type(self).__name__, self.name))
+
+    if msg is None:
+        _smsg = 'set property %s on' % (fcn.fget.__name__,)
+    else:
+        _smsg = msg
+    def setter(self, *args, **kwds):
+        raise RuntimeError(
+            "Cannot %s %s '%s' before it has been constructed (initialized)."
+            % (_smsg, type(self).__name__, self.name))
+
+    return property(fget=getter, fset=setter, doc=fcn.__doc__)
+
 def disable_methods(methods):
     """Class decorator to disable methods before construct is called.
 
@@ -106,7 +127,11 @@ def disable_methods(methods):
                 raise DeveloperError(
                     "Cannot disable method %s on %s: not present on base class"
                     % (method, cls))
-            setattr(cls, method, _disable_method(getattr(base, method), msg))
+            base_method = getattr(base, method)
+            if type(base_method) is property:
+                setattr(cls, method, _disable_property(base_method, msg))
+            else:
+                setattr(cls, method, _disable_method(base_method, msg))
         return cls
 
     return class_decorator

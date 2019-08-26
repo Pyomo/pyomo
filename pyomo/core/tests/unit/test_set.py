@@ -79,7 +79,15 @@ class _simple(object):
     def c(self):
         return 'c'
 
-@disable_methods(('a',('b', 'custom_msg')))
+    @property
+    def d(self):
+        return 'd'
+
+    @property
+    def e(self):
+        return 'e'
+
+@disable_methods(('a',('b', 'custom_msg'),'d',('e', 'custom_pmsg')))
 class _abstract_simple(_simple):
     pass
 
@@ -97,6 +105,22 @@ class TestDisableMethods(unittest.TestCase):
                 "'foo' before it has been constructed"):
             x.b()
         self.assertEqual(x.c(), 'c')
+        with self.assertRaisesRegexp(
+                RuntimeError, "Cannot access property d on _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.d
+        with self.assertRaisesRegexp(
+                RuntimeError, "Cannot set property d on _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.d = 1
+        with self.assertRaisesRegexp(
+                RuntimeError, "Cannot custom_pmsg _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.e
+        with self.assertRaisesRegexp(
+                RuntimeError, "Cannot custom_pmsg _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.e = 1
 
         self.assertEqual(x.construct(), 'construct')
         self.assertIs(type(x), _simple)
@@ -104,13 +128,15 @@ class TestDisableMethods(unittest.TestCase):
         self.assertEqual(x.a(), 'a')
         self.assertEqual(x.b(), 'b')
         self.assertEqual(x.c(), 'c')
+        self.assertEqual(x.d, 'd')
+        self.assertEqual(x.e, 'e')
 
     def test_bad_api(self):
         with self.assertRaisesRegexp(
-                DeveloperError, "Cannot disable method d on "
+                DeveloperError, "Cannot disable method not_there on "
                 "<class 'pyomo.core.tests.unit.test_set.foo'>"):
 
-            @disable_methods(('a','d'))
+            @disable_methods(('a','not_there'))
             class foo(_simple):
                 pass
 
