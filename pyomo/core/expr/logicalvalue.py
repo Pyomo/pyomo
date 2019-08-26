@@ -515,13 +515,11 @@ class LogicalValue(object):
 
     #tbd
     def __eq__(self,other):
-        """
         
-        Keep it for now 0-0
-        """
-
 
         #return Equivalence_expression(self,other)
+        raise TypeError("""This function should not be called. Avoid this error by using
+            logical expressions intead of logical values""")
         return True
     
     def __add__(self,other):

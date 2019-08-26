@@ -2,6 +2,9 @@ import pyutilib.th as unittest
 from pyomo.environ import *
 from pyomo.core.expr.logical_expr import LogicalAnd, LogicalOr, LogicalXor, Implies
 
+'''
+First testing file.
+'''
 
 class TestLogicalClasses(unittest.TestCase):
 

@@ -12,7 +12,6 @@
 """
 Notes. Delete later
 """
-
 from __future__ import division
 
 _using_chained_inequality = True
@@ -929,6 +928,9 @@ class LogicalExpressionBase(LogicalValue):
     def Xor(self, other):
         return XorExpression(self, other)
 
+    def xor(self, other):
+        raise NameError("Please use Xor instead.")
+
     def implies(self, other):
         return Implication(self, other)
 
@@ -1414,14 +1416,15 @@ class ExactlyExpression(MultiArgsExpression):
 
     def _to_string(self, values, verbose, smap, compute_values):
         #pass this one for now 0-0
-        pass
+        return "Exactly_toString_fornow"
 
     def _apply_operation(self, result):
-        if (len(self._args_)-1 != len(res_list)):
+        if (len(self._args_)-1 != len(result)):
             KeyError("Make sure number of truth values matches number"\
              "of children for this node")
         #0-0 Had some logic error here, is this fine now
-        return sum(result) == 2*self._args_[0]
+
+        return sum(result) == 2 * self._args_[0]
 
 
 class AtMostExpression(MultiArgsExpression):
@@ -1437,7 +1440,7 @@ class AtMostExpression(MultiArgsExpression):
 
     def _to_string(self, values, verbose, smap, compute_values):
         #pass this one for now 0-0
-        pass
+        return "AtMostExpression_toString_fornow"
 
     def _apply_operation(self, res_list):
         if (len(self._args_)-1 != len(res_list)):
@@ -1464,7 +1467,7 @@ class AtLeastExpression(MultiArgsExpression):
 
     def _to_string(self, values, verbose, smap, compute_values):
         #pass this one for now 0-0
-        pass
+        return "AtLeastExpression_toString_fornow"
 
     def _apply_operation(self, res_list):
         if (len(self._args_)-1 != len(res_list)):
@@ -1476,13 +1479,13 @@ class AtLeastExpression(MultiArgsExpression):
                 counter += 1
         return (counter <= self._args_[0])
 
-
-
+'''        
 Expressions = (LogicalExpressionBase, NotExpression, AndExpression, OrExpression,
     Implication, EquivalenceExpression, XorExpression, ExactlyExpression,
     AtMostExpression, AtLeastExpression, Not, Equivalence, LogicalOr, Implies,
     LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor
     )
+'''
 
 
 

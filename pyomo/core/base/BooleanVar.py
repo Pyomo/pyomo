@@ -686,6 +686,7 @@ class IndexedBooleanVar(BooleanVar):
             boolean_vardata.domain = domain
 
     free=unfix
+    
 
 @ModelComponentFactory.register("List of decision variables.")
 class BooleanVarList(IndexedBooleanVar):
