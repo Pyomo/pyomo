@@ -7,7 +7,10 @@ def verify(obj, x, iv):
         assert iv[i,0] == (0 if x[i] else 1)
         assert iv[i,1] == (1 if x[i] else 0)
         assert sum(x.values()) >= 7
-    print("%s: OK: result validated" % (os.path.basename(__file__),))
+    fname = os.path.basename(__file__)
+    if fname.endswith('.pyc'):
+        fname = fname[:-1]
+    print("%s: OK: result validated" % (fname,))
 
 def verify_file(fname):
     import yaml

@@ -36,6 +36,40 @@ import logging
 
 logger = logging.getLogger('pyomo.core')
 
+_ftoa_precision_str = '%.17g'
+def _ftoa(val):
+    if val is None:
+        return val
+    if type(val) not in native_numeric_types:
+        if is_fixed(val):
+            val = value(val)
+        else:
+            raise ValueError("non-fixed bound or weight: " + str(val))
+
+    a = _ftoa_precision_str % val
+    i = len(a)
+    while i > 1:
+        try:
+            if float(a[:i-1]) == val:
+                i -= 1
+            else:
+                break
+        except:
+            break
+    if i == len(a):
+        logger.warning(
+            "converting %s to string resulted in loss of precision" % val)
+    #if a.startswith('1.57'):
+    #    raise RuntimeError("wtf %s %s, %s" % ( val, a, i))
+    return a[:i]
+
+_legal_unary_functions = {
+    'ceil','floor','exp','log','log10','sqrt',
+    'sin','cos','tan','asin','acos','atan','sinh','cosh','tanh',
+}
+_arc_functions = {'acos','asin','atan'}
+_dnlp_functions = {'ceil','floor','abs'}
+
 #
 # A visitor pattern that creates a string for an expression
 # that is compatible with the GAMS syntax.
@@ -46,6 +80,7 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         super(ToGamsVisitor, self).__init__()
         self.smap = smap
         self.treechecker = treechecker
+        self.is_discontinuous = False
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
@@ -87,6 +122,20 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
                 return "power({0}, {1})".format(tmp[0], tmp[1])
             else:
                 return "{0} ** {1}".format(tmp[0], tmp[1])
+        elif node.__class__ is EXPR.UnaryFunctionExpression:
+            if node.name not in _legal_unary_functions:
+                raise RuntimeError(
+                    "GAMS files cannot represent the unary function %s"
+                    % ( node.name, ))
+            if node.name in _dnlp_functions:
+                self.is_discontinuous = True
+            if node.name in _arc_functions:
+                return "arc{0}({1})".format(node.name[1:], tmp[0])
+            else:
+                return node._to_string(tmp, None, self.smap, True)
+        elif node.__class__ is EXPR.AbsExpression:
+            self.is_discontinuous = True
+            return node._to_string(tmp, None, self.smap, True)
         else:
             return node._to_string(tmp, None, self.smap, True)
 
@@ -100,7 +149,7 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             return True, None
 
         if node.__class__ in native_types:
-            return True, str(node)
+            return True, _ftoa(node)
 
         if node.is_expression_type():
             # we will descend into this, so type checking will happen later
@@ -124,14 +173,12 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
 
         if node.is_variable_type():
             if node.fixed:
-                return True, node.to_string(
-                    verbose=False, smap=self.smap, compute_values=True)
+                return True, _ftoa(value(node))
             else:
                 label = self.smap.getSymbol(node)
                 return True, label
 
-        return True, node.to_string(
-            verbose=False, smap=self.smap, compute_values=True)
+        return True, _ftoa(value(node))
 
     def ctype(self, comp):
         if isinstance(comp, ICategorizedObject):
@@ -146,7 +193,8 @@ def expression_to_string(expr, treechecker, labeler=None, smap=None):
             smap = SymbolMap()
         smap.default_labeler = labeler
     visitor = ToGamsVisitor(smap, treechecker)
-    return visitor.dfs_postorder_stack(expr)
+    expr_str = visitor.dfs_postorder_stack(expr)
+    return expr_str, visitor.is_discontinuous
 
 
 class Categorizer(object):
@@ -257,14 +305,6 @@ def split_long_line(line):
         line = line[i:]
     new_lines += line
     return new_lines
-
-
-def _get_bound(exp):
-    if exp is None:
-        return None
-    if is_fixed(exp):
-        return value(exp)
-    raise ValueError("non-fixed bound or weight: " + str(exp))
 
 
 @WriterFactory.register('gams', 'Generate the corresponding GAMS file')
@@ -391,7 +431,15 @@ class ProblemWriter_gams(AbstractProblemWriter):
                              "I/O options is forbidden")
 
         if symbolic_solver_labels:
-            var_labeler = con_labeler = ShortNameLabeler(63, '_')
+            # Note that the Var and Constraint labelers must use the
+            # same labeler, so that we can correctly detect name
+            # collisions (which can arise when we truncate the labels to
+            # the max allowable length.  GAMS requires all identifiers
+            # to start with a letter.  We will (randomly) choose "s_"
+            # (for 'shortened')
+            var_labeler = con_labeler = ShortNameLabeler(
+                63, prefix='s_', suffix='_', caseInsensitive=True,
+                legalRegex='^[a-zA-Z]')
         elif labeler is None:
             var_labeler = NumericLabeler('x')
             con_labeler = NumericLabeler('c')
@@ -471,6 +519,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         ConstraintIO = StringIO()
         linear = True
         linear_degree = set([0,1])
+        dnlp = False
 
         # Make sure there are no strange ActiveComponents. The expression
         # walker will handle strange things in constraints later.
@@ -508,27 +557,30 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     linear = False
 
             cName = symbolMap.getSymbol(con, con_labeler)
+            con_body_str, con_discontinuous = expression_to_string(
+                con_body, tc, smap=symbolMap)
+            dnlp |= con_discontinuous
             if con.equality:
                 constraint_names.append('%s' % cName)
                 ConstraintIO.write('%s.. %s =e= %s ;\n' % (
                     constraint_names[-1],
-                    expression_to_string(con_body, tc, smap=symbolMap),
-                    _get_bound(con.upper)
+                    con_body_str,
+                    _ftoa(con.upper)
                 ))
             else:
                 if con.has_lb():
                     constraint_names.append('%s_lo' % cName)
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
-                        _get_bound(con.lower),
-                        expression_to_string(con_body, tc, smap=symbolMap)
+                        _ftoa(con.lower),
+                        con_body_str,
                     ))
                 if con.has_ub():
                     constraint_names.append('%s_hi' % cName)
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
-                        expression_to_string(con_body, tc, smap=symbolMap),
-                        _get_bound(con.upper)
+                        con_body_str,
+                        _ftoa(con.upper)
                     ))
 
         obj = list(model.component_data_objects(Objective,
@@ -542,11 +594,14 @@ class ProblemWriter_gams(AbstractProblemWriter):
         if linear:
             if obj.expr.polynomial_degree() not in linear_degree:
                 linear = False
+        obj_expr_str, obj_discontinuous = expression_to_string(
+            obj.expr, tc, smap=symbolMap)
+        dnlp |= obj_discontinuous
         oName = symbolMap.getSymbol(obj, con_labeler)
         constraint_names.append(oName)
         ConstraintIO.write('%s.. GAMS_OBJECTIVE =e= %s ;\n' % (
             oName,
-            expression_to_string(obj.expr, tc, smap=symbolMap)
+            obj_expr_str,
         ))
 
         # Categorize the variables that we found
@@ -585,7 +640,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             if category == 'positive':
                 if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
-                                      (var_name, _get_bound(var.ub)))
+                                      (var_name, _ftoa(var.ub)))
             elif category == 'ints':
                 if not var.has_lb():
                     warn_int_bounds = True
@@ -595,7 +650,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     output_file.write("%s.lo = -1.0E+100;\n" % (var_name))
                 elif value(var.lb) != 0:
                     output_file.write("%s.lo = %s;\n" %
-                                      (var_name, _get_bound(var.lb)))
+                                      (var_name, _ftoa(var.lb)))
                 if not var.has_ub():
                     warn_int_bounds = True
                     # GAMS has an option value called IntVarUp that is the
@@ -607,25 +662,26 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     output_file.write("%s.up = +1.0E+100;\n" % (var_name))
                 else:
                     output_file.write("%s.up = %s;\n" %
-                                      (var_name, _get_bound(var.ub)))
+                                      (var_name, _ftoa(var.ub)))
             elif category == 'binary':
                 if var.has_lb() and value(var.lb) != 0:
                     output_file.write("%s.lo = %s;\n" %
-                                      (var_name, _get_bound(var.lb)))
+                                      (var_name, _ftoa(var.lb)))
                 if var.has_ub() and value(var.ub) != 1:
                     output_file.write("%s.up = %s;\n" %
-                                      (var_name, _get_bound(var.ub)))
+                                      (var_name, _ftoa(var.ub)))
             elif category == 'reals':
                 if var.has_lb():
                     output_file.write("%s.lo = %s;\n" %
-                                      (var_name, _get_bound(var.lb)))
+                                      (var_name, _ftoa(var.lb)))
                 if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
-                                      (var_name, _get_bound(var.ub)))
+                                      (var_name, _ftoa(var.ub)))
             else:
                 raise KeyError('Category %s not supported' % category)
             if warmstart and var.value is not None:
-                output_file.write("%s.l = %s;\n" % (var_name, var.value))
+                output_file.write("%s.l = %s;\n" %
+                                  (var_name, _ftoa(var.value)))
 
         if warn_int_bounds:
             logger.warning(
@@ -643,6 +699,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 (0 if linear else 1) +
                 (2 if (categorized_vars.binary or categorized_vars.ints)
                  else 0)]
+            if mtype == 'nlp' and dnlp:
+                mtype = 'dnlp'
 
         if solver is not None:
             if mtype.upper() not in valid_solvers[solver.upper()]:

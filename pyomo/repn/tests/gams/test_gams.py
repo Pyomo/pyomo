@@ -18,7 +18,8 @@ from six import StringIO
 import pyutilib.th as unittest
 from pyomo.core.base import NumericLabeler, SymbolMap
 from pyomo.environ import (Block, ConcreteModel, Connector, Constraint,
-                           Objective, TransformationFactory, Var, exp, log)
+                           Objective, TransformationFactory, Var, exp, log,
+                           ceil, floor, asin, acos, atan, asinh, acosh, atanh)
 from pyomo.repn.plugins.gams_writer import (StorageTreeChecker,
                                             expression_to_string,
                                             split_long_line)
@@ -129,32 +130,32 @@ class Test(unittest.TestCase):
         expr = M.abc**2.0
         self.assertEqual(str(expr), "abc**2.0")
         self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), "power(abc, 2.0)")
+            expr, tc, smap=smap), ("power(abc, 2)", False))
 
         expr = log(M.abc**2.0)
         self.assertEqual(str(expr), "log(abc**2.0)")
         self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), "log(power(abc, 2.0))")
+            expr, tc, smap=smap), ("log(power(abc, 2))", False))
 
         expr = log(M.abc**2.0) + 5
         self.assertEqual(str(expr), "log(abc**2.0) + 5")
         self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), "log(power(abc, 2.0)) + 5")
+            expr, tc, smap=smap), ("log(power(abc, 2)) + 5", False))
 
         expr = exp(M.abc**2.0) + 5
         self.assertEqual(str(expr), "exp(abc**2.0) + 5")
         self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), "exp(power(abc, 2.0)) + 5")
+            expr, tc, smap=smap), ("exp(power(abc, 2)) + 5", False))
 
         expr = log(M.abc**2.0)**4
         self.assertEqual(str(expr), "log(abc**2.0)**4")
         self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), "power(log(power(abc, 2.0)), 4)")
+            expr, tc, smap=smap), ("power(log(power(abc, 2)), 4)", False))
 
         expr = log(M.abc**2.0)**4.5
         self.assertEqual(str(expr), "log(abc**2.0)**4.5")
         self.assertEqual(expression_to_string(
-            expr, tc, smap=smap), "log(power(abc, 2.0)) ** 4.5")
+            expr, tc, smap=smap), ("log(power(abc, 2)) ** 4.5", False))
 
     def test_power_function_to_string(self):
         m = ConcreteModel()
@@ -163,11 +164,11 @@ class Test(unittest.TestCase):
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
         self.assertEqual(expression_to_string(
-            m.x ** -3, tc, lbl, smap=smap), "power(x1, (-3))")
+            m.x ** -3, tc, lbl, smap=smap), ("power(x1, (-3))", False))
         self.assertEqual(expression_to_string(
-            m.x ** 0.33, tc, smap=smap), "x1 ** 0.33")
+            m.x ** 0.33, tc, smap=smap), ("x1 ** 0.33", False))
         self.assertEqual(expression_to_string(
-            pow(m.x, 2), tc, smap=smap), "power(x1, 2)")
+            pow(m.x, 2), tc, smap=smap), ("power(x1, 2)", False))
 
     def test_fixed_var_to_string(self):
         m = ConcreteModel()
@@ -179,16 +180,56 @@ class Test(unittest.TestCase):
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
         self.assertEqual(expression_to_string(
-            m.x + m.y - m.z, tc, lbl, smap=smap), "x1 + x2 - (-3)")
+            m.x + m.y - m.z, tc, lbl, smap=smap), ("x1 + x2 - (-3)", False))
         m.z.fix(-400)
         self.assertEqual(expression_to_string(
-            m.z + m.y - m.z, tc, smap=smap), "(-400) + x2 - (-400)")
+            m.z + m.y - m.z, tc, smap=smap), ("(-400) + x2 - (-400)", False))
         m.z.fix(8.8)
         self.assertEqual(expression_to_string(
-            m.x + m.z - m.y, tc, smap=smap), "x1 + 8.8 - x2")
+            m.x + m.z - m.y, tc, smap=smap), ("x1 + 8.8 - x2", False))
         m.z.fix(-8.8)
         self.assertEqual(expression_to_string(
-            m.x * m.z - m.y, tc, smap=smap), "x1*(-8.8) - x2")
+            m.x * m.z - m.y, tc, smap=smap), ("x1*(-8.8) - x2", False))
+
+    def test_dnlp_to_string(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        lbl = NumericLabeler('x')
+        smap = SymbolMap(lbl)
+        tc = StorageTreeChecker(m)
+        self.assertEqual(expression_to_string(
+            ceil(m.x), tc, lbl, smap=smap), ("ceil(x1)", True))
+        self.assertEqual(expression_to_string(
+            floor(m.x), tc, lbl, smap=smap), ("floor(x1)", True))
+        self.assertEqual(expression_to_string(
+            abs(m.x), tc, lbl, smap=smap), ("abs(x1)", True))
+
+    def test_arcfcn_to_string(self):
+        m = ConcreteModel()
+        m.x = Var()
+        lbl = NumericLabeler('x')
+        smap = SymbolMap(lbl)
+        tc = StorageTreeChecker(m)
+        self.assertEqual(expression_to_string(
+            asin(m.x), tc, lbl, smap=smap), ("arcsin(x1)", False))
+        self.assertEqual(expression_to_string(
+            acos(m.x), tc, lbl, smap=smap), ("arccos(x1)", False))
+        self.assertEqual(expression_to_string(
+            atan(m.x), tc, lbl, smap=smap), ("arctan(x1)", False))
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "GAMS files cannot represent the unary function asinh"):
+            expression_to_string(asinh(m.x), tc, lbl, smap=smap)
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "GAMS files cannot represent the unary function acosh"):
+            expression_to_string(acosh(m.x), tc, lbl, smap=smap)
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "GAMS files cannot represent the unary function atanh"):
+            expression_to_string(atanh(m.x), tc, lbl, smap=smap)
 
     def test_gams_connector_in_active_constraint(self):
         m = ConcreteModel()
@@ -260,9 +301,9 @@ class Test(unittest.TestCase):
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
         self.assertEqual(expression_to_string(
-            m.c.body, tc, smap=smap), "4*(-7)*(-2)")
+            m.c.body, tc, smap=smap), ("4*(-7)*(-2)", False))
         self.assertEqual(expression_to_string(
-            m.c2.body, tc, smap=smap), "x1 ** (-1.5)")
+            m.c2.body, tc, smap=smap), ("x1 ** (-1.5)", False))
 
 
 class TestGams_writer(unittest.TestCase):

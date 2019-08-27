@@ -597,6 +597,40 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
 
         return (pyomo_unit, pint_unit)
 
+    def _get_unit_for_division(self, node, list_of_unit_tuples):
+        """
+        Return (and test) the units corresponding to a division expression node
+        in the expression tree.
+
+        Parameters
+        ----------
+        node : Pyomo expression node
+            The parent node of the children
+
+        list_of_unit_tuples : list
+           This is a list of tuples (one for each of the children) where each tuple
+           is a PyomoUnit, pint unit pair
+
+        Returns
+        -------
+        : tuple (PyomoUnit, pint unit)
+        """
+        assert len(list_of_unit_tuples) == 2
+
+        num_pyomo_unit, num_pint_unit = list_of_unit_tuples[0]
+        den_pyomo_unit, den_pint_unit = list_of_unit_tuples[1]
+        if den_pint_unit is None:
+            assert den_pyomo_unit is None
+            return (num_pyomo_unit, num_pint_unit)
+        # CDL using **(-1) since this returns a pint Unit and not a Quantity,
+        # CDL but we could also return the units from the Quantity
+        # CDL return (1.0/pyomo_unit, 1.0/pint_unit)
+        if num_pint_unit is None:
+            assert num_pyomo_unit is None
+            return (1.0/den_pyomo_unit, den_pint_unit**(-1))
+        else:
+            return (num_pyomo_unit/den_pyomo_unit, num_pint_unit/den_pint_unit)
+
     def _get_unit_for_reciprocal(self, node, list_of_unit_tuples):
         """
         Return (and test) the units corresponding to a reciprocal expression node
@@ -617,8 +651,7 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         """
         assert len(list_of_unit_tuples) == 1
 
-        pyomo_unit = list_of_unit_tuples[0][0]
-        pint_unit = list_of_unit_tuples[0][1]
+        pyomo_unit, pint_unit = list_of_unit_tuples[0]
         if pint_unit is None:
             assert pyomo_unit is None
             return (None, None)
@@ -932,6 +965,8 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         expr.ProductExpression: _get_unit_for_product,
         expr.MonomialTermExpression: _get_unit_for_product,
         expr.NPV_ProductExpression: _get_unit_for_product,
+        expr.DivisionExpression: _get_unit_for_division,
+        expr.NPV_DivisionExpression: _get_unit_for_division,
         expr.ReciprocalExpression: _get_unit_for_reciprocal,
         expr.NPV_ReciprocalExpression: _get_unit_for_reciprocal,
         expr.PowExpression: _get_unit_for_pow,

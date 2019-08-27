@@ -12,6 +12,7 @@ __all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
            'AlphaNumericTextLabeler','NameLabeler', 'CuidLabeler',
            'ShortNameLabeler']
 
+import re
 import six
 if six.PY3:
     _translate = str.translate
@@ -153,20 +154,45 @@ class NameLabeler(object):
         return obj.getname(True, self.name_buffer)
 
 class ShortNameLabeler(object):
-    def __init__(self, limit, prefix, start=0, labeler=None):
+    def __init__(self, limit, suffix, start=0, labeler=None,
+                 prefix="", caseInsensitive=False, legalRegex=None):
         self.id = start
         self.prefix = prefix
+        self.suffix = suffix
         self.limit = limit
         if labeler is not None:
             self.labeler = labeler
         else:
             self.labeler = AlphaNumericTextLabeler()
+        self.known_labels = set() if caseInsensitive else None
+        if isinstance(legalRegex, six.string_types):
+            self.legalRegex = re.compile(legalRegex)
+        else:
+            self.legalRegex = legalRegex
 
     def __call__(self, obj=None):
         lbl = self.labeler(obj)
-        if (len(lbl) < self.limit) or ((len(lbl) == self.limit) and (lbl[-len(self.prefix):] != self.prefix)):
-            return lbl
-        else:
+        lbl_len = len(lbl)
+        shorten = False
+        if lbl_len > self.limit:
+            shorten = True
+        elif lbl_len == self.limit and lbl.startswith(self.prefix) \
+             and lbl.endswith(self.suffix):
+            shorten = True
+        elif self.known_labels is not None and lbl.upper() in self.known_labels:
+            shorten = True
+        elif self.legalRegex and not self.legalRegex.match(lbl):
+            shorten = True
+        if shorten:
             self.id += 1
-            suffix = self.prefix + str(self.id) + self.prefix
-            return lbl[-self.limit + len(suffix):] + suffix
+            suffix = "%s%d%s" % (self.suffix, self.id, self.suffix)
+            tail = -self.limit + len(suffix) + len(self.prefix)
+            if tail >= 0:
+                raise RuntimeError(
+                    "Too many identifiers.\n\t"
+                    "The ShortNameLabeler cannot generate a guaranteed unique "
+                    "label limited to %d characters" % (self.limit,)) 
+            lbl = self.prefix + lbl[tail:] + suffix
+        if self.known_labels is not None:
+            self.known_labels.add(lbl.upper())
+        return lbl
