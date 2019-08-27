@@ -10,7 +10,7 @@ VARIABLES
 	b
 	c;
 
-con_hi.. a + b + c =l= 1.0 ;
+con_hi.. a + b + c =l= 1 ;
 obj.. GAMS_OBJECTIVE =e= a + b + c ;
 
 

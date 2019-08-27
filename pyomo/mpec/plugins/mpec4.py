@@ -20,9 +20,9 @@ from pyomo.core.base import (Transformation,
                              SortComponents,
                              value)
 from pyomo.mpec.complementarity import Complementarity
+from pyomo.gdp import Disjunct
 
 logger = logging.getLogger('pyomo.core')
-
 
 #
 # This transformation reworks each Complementarity block to 
@@ -42,33 +42,38 @@ class MPEC4_Transformation(Transformation):
         #
         free_vars = {}
         id_list = []
-        for vdata in instance.component_data_objects(Var, active=True, sort=SortComponents.deterministic):
+        # [ESJ 07/12/2019] Look on the whole model in case instance is a Block or a Disjunct
+        for vdata in instance.model().component_data_objects(Var, active=True,
+                                                             sort=SortComponents.deterministic,
+                                                             descend_into=(Block, Disjunct)):
             id_list.append( id(vdata) )
             free_vars[id(vdata)] = vdata
         #
         # Iterate over the Complementarity components
         #
         cobjs = []
-        for bdata in instance.block_data_objects(active=True, sort=SortComponents.deterministic):
-            for cobj in bdata.component_objects(Complementarity, active=True, descend_into=False):
-                cobjs.append(cobj)
-                for index in sorted(iterkeys(cobj)):
-                    _cdata = cobj[index]
-                    if not _cdata.active:
-                        continue
-                    #
-                    # Apply a variant of the standard form logic
-                    #
-                    self.to_common_form(_cdata, free_vars)
-        #
+        for cobj in instance.component_objects(Complementarity, active=True,
+                                               descend_into=(Block, Disjunct),
+                                               sort=SortComponents.deterministic):
+            bdata = cobj.parent_block()
+            cobjs.append(cobj)
+            for index in sorted(iterkeys(cobj)):
+                _cdata = cobj[index]
+                if not _cdata.active:
+                    continue
+                #
+                # Apply a variant of the standard form logic
+                #
+                self.to_common_form(_cdata, free_vars)
+                #
         tdata = instance._transformation_data['mpec.nl']
         tdata.compl_cuids = []
         for cobj in cobjs:
             tdata.compl_cuids.append( ComponentUID(cobj) )
             cobj.parent_block().reclassify_component_type(cobj, Block)
 
-        #instance.pprint()
-        #self.print_nl_form(instance)
+    #instance.pprint()
+    #self.print_nl_form(instance)
 
     def print_nl_form(self, instance):          #pragma:nocover
         """

@@ -41,6 +41,15 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertTrue(value(logical_expr.Implies(m.Y1, m.Y2)))
         self.assertFalse(value(logical_expr.LogicalXor(m.Y1, m.Y2)))
 
+    def test_to_string(self):
+        m = ConcreteModel()
+        m.Y1 = BooleanVar()
+        m.Y2 = BooleanVar()
+        m.Y3 = BooleanVar()
+
+        # and_str = str()
+        self.assertEqual(LogicalAnd(m.Y1, m.Y2, m.Y3), "Y1 AND Y3 AND Y2")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,7 +16,7 @@
 # symbols that are used by developers.
 # 
 
-from . import numvalue, numeric_expr,logicalvalue, logical_expr, current
+from . import numvalue, numeric_expr, logicalvalue, logical_expr, current
 
 from .numvalue import (
     value, is_constant, is_fixed, is_variable_type,
@@ -41,3 +41,5 @@ from .current import (
     Expr_if,
 )
 
+from .calculus.derivatives import differentiate
+from .taylor_series import taylor_series_expansion

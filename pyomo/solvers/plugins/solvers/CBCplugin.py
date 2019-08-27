@@ -476,7 +476,7 @@ class CBCSHELL(SystemCallSolver):
                 elif n_tokens > 15 and tokens[1:3] == ('Partial', 'search') \
                         and tokens[4:6] == ('best', 'objective') and tokens[7:9] == ('(best', 'possible') \
                         and tokens[12] == 'iterations' and tokens[15] == 'nodes':
-                    optim_value = float(tokens[6][:-1])
+                    optim_value = float(tokens[6])
                     lower_bound = float(tokens[9][:-2])
                     results.solver.statistics.black_box.number_of_iterations = int(tokens[11])
                     nodes = int(tokens[14])

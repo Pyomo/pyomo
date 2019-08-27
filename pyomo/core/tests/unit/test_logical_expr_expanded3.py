@@ -66,7 +66,7 @@ class TestLogicalClasses(unittest.TestCase):
         #self.assertFalse(value(eq_operator))
 
         xor_static = LogicalXor(m.Y1, m.Y2)
-        #xor_class = m.Y1.Xor(m.Y2)
+        xor_class = m.Y1.Xor(m.Y2)
         #xor_operator =  m.Y1 ^ m.Y2
         self.assertTrue(value(xor_static))
         #self.assertTrue(value(xor_class))
@@ -111,10 +111,10 @@ class TestLogicalClasses(unittest.TestCase):
         #self.assertTrue(value(eq_operator))
 
         xor_static = LogicalXor(m.Y1, m.Y2)
-        #xor_class = m.Y1.Xor(m.Y2)
+        xor_class = m.Y1.Xor(m.Y2)
         #xor_operator =  m.Y1 ^ m.Y2
         self.assertFalse(value(xor_static))
-        #self.assertFalse(value(xor_class))
+        self.assertFalse(value(xor_class))
         #self.assertFalse(value(xor_operator))
 
         implication_static = Implies(m.Y1, m.Y2)
