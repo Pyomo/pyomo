@@ -1,0 +1,344 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"Ar",
+				"ArgList"
+			],
+			[
+				"And",
+				"AndExpression"
+			],
+			[
+				"Not",
+				"NotExpression"
+			],
+			[
+				"Logi",
+				"LogialExpressionBase"
+			],
+			[
+				"test",
+				"testftn"
+			],
+			[
+				"log",
+				"LogicalConstant"
+			],
+			[
+				"Nume",
+				"NumericConstant"
+			],
+			[
+				"logical",
+				"LogicalValue"
+			]
+		]
+	},
+	"buffers":
+	[
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"git",
+				"Set Syntax: Git Commit"
+			],
+			[
+				"pack install",
+				"Package Control: Install Package"
+			],
+			[
+				"Package Control: ",
+				"Package Control: List Packages"
+			],
+			[
+				"Package Control: in",
+				"Package Control: Install Package"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
+				"package contro",
+				"Install Package Control"
+			]
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 137.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/Users/yuliuzhifei/Desktop/py/Pyomo/pyomo/pyomo/core/base/var.py",
+		"/Users/yuliuzhifei/Desktop/py/Pyomo/pyomo/pyomo/core/base/BooleanVar.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1563219910/olympus/home/zyuliu/pyomo/pyomo/core/expr/Testcase.py",
+		"/Users/yuliuzhifei/Desktop/py/Pyomo/pyomo/pyomo/core/expr/Testcase.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1563219865/olympus/home/zyuliu/pyomo/pyomo/core/base/BooleanVar.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1563216294/olympus/home/zyuliu/pyomo/pyomo/core/expr/Testcase.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1563216207/olympus/home/zyuliu/pyomo/pyomo/core/expr/logical_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1563216122/olympus/home/zyuliu/pyomo/pyomo/core/base/logicalvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1563215944/olympus/home/zyuliu/pyomo/pyomo/core/base/BooleanVar.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1563216269/olympus/home/zyuliu/pyomo/pyomo/core/expr/Mytest.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1563216237/olympus/home/zyuliu/pyomo/pyomo/core/expr/numvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1563216164/olympus/home/zyuliu/pyomo/pyomo/core/expr/logicalvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1563215887/olympus/home/zyuliu/pyomo/pyomo/core/base/BooleanVar.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1563214112/olympus/home/zyuliu/pyomo/pyomo/core/base/BooleanVar.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1563211500/olympus/home/zyuliu/pyomo/pyomo/core/base/set_types.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1563203939/olympus/home/zyuliu/pyomo/pyomo/core/base/indexed_component.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1563202547/olympus/home/zyuliu/pyomo/pyomo/core/base/var.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562944280/olympus/home/zyuliu/pyomo/pyomo/core/expr/logical_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562944029/olympus/home/zyuliu/pyomo/pyomo/core/expr/numvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562958395/olympus/home/zyuliu/pyomo/pyomo/core/base/BooleanVar.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562943123/olympus/home/zyuliu/pyomo/pyomo/core/expr/logicalvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562942403/olympus/home/zyuliu/pyomo/pyomo/core/base/var.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562943310/olympus/home/zyuliu/pyomo/pyomo/core/base/component.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562943162/olympus/home/zyuliu/pyomo/pyomo/core/base/set_types.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562942506/olympus/home/zyuliu/pyomo/pyomo/core/base/numvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562942539/olympus/home/zyuliu/pyomo/pyomo/core/base/logicalvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562942909/olympus/home/zyuliu/pyomo/pyomo/core/expr/logicalvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562942275/olympus/home/zyuliu/pyomo/pyomo/core/base/__init__.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562780920/olympus/home/zyuliu/pyomo/pyomo/core/expr/logicalvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562780951/olympus/home/zyuliu/pyomo/pyomo/core/expr/numeric_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562780907/olympus/home/zyuliu/pyomo/pyomo/core/expr/logical_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562780441/olympus/home/zyuliu/pyomo/pyomo/core/base/var.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562768734/olympus/home/zyuliu/pyomo/pyomo/core/expr/Testcase.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562780534/olympus/home/zyuliu/pyomo/pyomo/core/base/LogicalVar.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562768706/olympus/home/zyuliu/pyomo/pyomo/core/expr/logical_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562779555/olympus/home/zyuliu/pyomo/pyomo/core/expr/logicalvalue.py",
+		"/Users/yuliuzhifei/Desktop/CMU/pyomo/backup/logicalvalue.py",
+		"/Users/yuliuzhifei/Desktop/CMU/pyomo/backup/Testcase.py",
+		"/Users/yuliuzhifei/Desktop/CMU/pyomo/backup/logical_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562725123/olympus/home/zyuliu/pyomo/pyomo/core/expr/numeric_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562724236/olympus/home/zyuliu/pyomo/pyomo/core/expr/logical_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562598250/olympus/home/zyuliu/pyomo/pyomo/core/expr/Testcase.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562601602/olympus/home/zyuliu/pyomo/pyomo/core/base/var.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562598236/olympus/home/zyuliu/pyomo/pyomo/core/expr/logical_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562598206/olympus/home/zyuliu/pyomo/pyomo/core/expr/logicalvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562598358/olympus/home/zyuliu/pyomo/pyomo/core/expr/logical_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1562078032/olympus/home/zyuliu/pyomo/pyomo/core/expr/Testcase.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1561990964/olympus/home/zyuliu/pyomo/pyomo/contrib/logical_expression_system/nodes.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1561990743/olympus/home/zyuliu/pyomo/pyomo/core/expr/numeric_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1561990718/olympus/home/zyuliu/pyomo/pyomo/core/expr/numvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1561990690/olympus/home/zyuliu/pyomo/pyomo/core/expr/Testcase.py",
+		"/Users/yuliuzhifei/Library/Application Support/Sublime Text 3/Packages/User/sftp_servers/olympus",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1561663024/olympus/home/zyuliu/pyomo/pyomo/core/expr/expr_common.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1561662997/olympus/home/zyuliu/pyomo/pyomo/core/expr/numvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1561661592/olympus/home/zyuliu/pyomo/pyomo/core/expr/numeric_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1561663155/olympus/home/zyuliu/pyomo/pyomo/core/expr/ref.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1561421040/olympus/home/zyuliu/pyomo/pyomo/core/expr/Mytest.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1561128868/olympus/home/zyuliu/pyomo/pyomo/core/expr/Testcase.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1561128848/olympus/home/zyuliu/pyomo/pyomo/core/expr/logicalvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559954517/olympus/home/zyuliu/pyomo/pyomo/core/expr/numvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559954565/olympus/home/zyuliu/pyomo/pyomo/core/expr/Testcase.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559954506/olympus/home/zyuliu/pyomo/pyomo/core/expr/Mytest.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559960483/olympus/home/zyuliu/pyomo/pyomo/core/expr/logical_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559954420/olympus/home/zyuliu/pyomo/pyomo/core/expr/logicalvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559954488/olympus/home/zyuliu/pyomo/pyomo/core/expr/Testcase.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559669338/olympus/home/zyuliu/pyomo/pyomo/core/expr/Mytest.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559593413/olympus/home/zyuliu/pyomo/pyomo/core/expr/numvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559538202/olympus/home/zyuliu/pyomo/pyomo/core/expr/logicalvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559538152/olympus/home/zyuliu/pyomo/pyomo/core/expr/numvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559093811/olympus/home/zyuliu/pyomo/pyomo/core/expr/ptn.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559093407/olympus/home/zyuliu/pyomo/pyomo/core/expr/logical_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559173594/olympus/home/zyuliu/pyomo/pyomo/core/expr/expr_common.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559093395/olympus/home/zyuliu/pyomo/pyomo/core/expr/numvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559095289/olympus/home/zyuliu/pyomo/pyomo/contrib/logical_expression_system/nodes.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559096642/olympus/home/zyuliu/pyomo/pyomo/core/expr/logicalvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1559091910/olympus/home/zyuliu/pyomo/pyomo/core/expr/numeric_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558665055/olympus/home/zyuliu/pyomo/examples/gdp/simple1.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558664341/olympus/home/zyuliu/pyomo/pyomo/core/expr/numvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558665691/olympus/home/zyuliu/pyomo/pyomo/core/expr/logical_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558469270/olympus/home/zyuliu/pyomo/pyomo/core/expr/logical_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558633264/olympus/home/zyuliu/pyomo/pyomo/core/base/component.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558574765/olympus/home/zyuliu/pyomo/pyomo/core/expr/ptn.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558572225/olympus/home/zyuliu/pyomo/examples/gdp/eight_process/eight_proc_model.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558469540/olympus/home/zyuliu/pyomo/pyomo/core/expr/numeric_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558469530/olympus/home/zyuliu/pyomo/pyomo/core/expr/numvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558466742/olympus/home/zyuliu/tmp/sample.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558574701/olympus/home/zyuliu/pyomo/pyomo/core/expr/ptn",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558459856/olympus/home/zyuliu/pyomo/examples/gdp/eight_process/eight_proc_model.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558459790/olympus/home/zyuliu/pyomo/examples/gdp/simple1.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558137918/olympus/home/zyuliu/pyomo/pyomo/core/expr/expr_common.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558136672/olympus/home/zyuliu/pyomo/pyomo/core/expr/numvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558138710/olympus/home/zyuliu/pyomo/pyomo/core/expr/Mytest.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558239752/olympus/home/zyuliu/pyomo/examples/gdp/simple3.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558136585/olympus/home/zyuliu/pyomo/pyomo/core/expr/numeric_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558250443/olympus/home/zyuliu/pyomo/pyomo/core/expr/__init__.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558239676/olympus/home/zyuliu/pyomo/examples/gdp/simple1.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558239617/olympus/home/zyuliu/pyomo/pyomo/core/kernel/expression.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558239588/olympus/home/zyuliu/pyomo/pyomo/core/kernel/base.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558239546/olympus/home/zyuliu/pyomo/pyomo/core/kernel/component_map.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558239389/olympus/home/zyuliu/pyomo/pyomo/core/expr/current.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558143554/olympus/home/zyuliu/pyomo/pyomo/core/expr/symbol_map.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558144497/olympus/home/zyuliu/pyomo/examples/gdp/eight_process/eight_proc_model.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558234458/olympus/home/zyuliu/pyomo/examples/pyomo/tutorials/pyomo.txt",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558137730/olympus/home/zyuliu/pyomo/pyomo/core/tests/__init__.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558137999/olympus/home/zyuliu/pyomo/pyomo/core/expr/visitor.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1558136654/olympus/home/zyuliu/pyomo/pyomo/core/expr/numeric_expr.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1557850508/olympus/home/zyuliu/pyomo/pyomo/core/expr/numvalue.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1557850231/olympus/home/zyuliu/.ssh/authorized_keys",
+		"/Users/yuliuzhifei/Desktop/dtopfile/zy_untitled.py",
+		"/Users/yuliuzhifei/Desktop/dtopfile/temp.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1554003745/olympus/home/zyuliu/pyomo/sample.py",
+		"/Users/yuliuzhifei/Desktop/py/trials/task.py",
+		"/Users/yuliuzhifei/Desktop/py/trials/gdp_prob.py",
+		"/Users/yuliuzhifei/Desktop/py/trials/hammer.py",
+		"/Users/yuliuzhifei/Desktop/py/trials/esb.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1554001841/olympus/home/zyuliu/pyomo/sample.py",
+		"/Users/yuliuzhifei/Desktop/py/noob_guide/exercises_w_soln/GDP/exercises-1/stripPacking_soln.py",
+		"/var/folders/7t/gvhvhmmn467f4xhzh23c6r1w0000gn/T/sublime-sftp-browse-1554001865/olympus/home/zyuliu/pyomo/test.py",
+		"/Users/yuliuzhifei/Desktop/py/trials/hammer",
+		"/Users/yuliuzhifei/Desktop/dtopfile/zy_pyomohw.py"
+	],
+	"find":
+	{
+		"height": 24.0
+	},
+	"find_in_files":
+	{
+		"height": 102.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 24.0
+	},
+	"input":
+	{
+		"height": 37.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"output.sftp":
+	{
+		"height": 94.0
+	},
+	"pinned_build_system": "",
+	"project": "BooleanVar.sublime-project",
+	"replace":
+	{
+		"height": 44.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 380.0
+	},
+	"select_symbol":
+	{
+		"height": 392.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 592.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 150.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
