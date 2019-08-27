@@ -12,6 +12,7 @@ import collections
 import math
 
 from six import iteritems
+from six.moves import xrange
 
 try:
     from math import remainder
@@ -464,7 +465,7 @@ class NumericRange(object):
         assert new_step % cnr.step == 0
         _dir = math.copysign(1, cnr.step)
         _subranges = []
-        for i in xrange(abs(new_step // cnr.step)):
+        for i in xrange(int(abs(new_step // cnr.step))):
             if ( cnr.end is not None
                  and _dir*(cnr.start + i*cnr.step) > _dir*cnr.end ):
                 # Once we walk past the end of the range, we are done

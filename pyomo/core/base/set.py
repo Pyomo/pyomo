@@ -1597,9 +1597,9 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
             return super(SetOf, cls).__new__(cls)
         reference, = args
         if isinstance(reference, (tuple, list)):
-            return super(SetOf, cls).__new__(OrderedSetOf, reference)
+            return super(SetOf, cls).__new__(OrderedSetOf)
         else:
-            return super(SetOf, cls).__new__(UnorderedSetOf, reference)
+            return super(SetOf, cls).__new__(UnorderedSetOf)
 
     def __init__(self, reference, **kwds):
         _SetData.__init__(self, component=self)

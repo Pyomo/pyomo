@@ -44,7 +44,7 @@ def is_functor(obj):
 #
 def _disable_method(fcn, msg=None):
     if msg is None:
-        msg = 'access %s on' % (fcn.__func__.func_name,)
+        msg = 'access %s on' % (fcn.__name__,)
     def impl(self, *args, **kwds):
         raise RuntimeError(
             "Cannot %s %s '%s' before it has been constructed (initialized)."
