@@ -1,11 +1,15 @@
 from __future__ import division
 
 import logging
-import sys
 import time
 import timeit
-import traceback
-from pathos.pools import _ProcessPool as Pool
+
+_pathos_available = True
+try:
+    # Pathos is required because a dill-friendly multiprocessing alternative was necessary.
+    from pathos.pools import _ProcessPool as Pool
+except ImportError:
+    _pathos_available = False
 
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.util import create_utility_block, copy_var_list_values
@@ -24,7 +28,7 @@ logger = logging.getLogger('pyomo.contrib.multistart')
 class Multisolve(object):
     """Solver wrapper that spawns multiple parallel attempts at solution.
 
-    CAUTION: this is not very stable code because parallel processing gets tricky.
+    CAUTION: instability is possible because parallel processing gets tricky.
 
     Keyword arguments below are specified for the ``solve`` function.
 
@@ -53,15 +57,17 @@ class Multisolve(object):
     def available(self, exception_flag=True):
         """Check if solver is available.
 
-        TODO: For now, it is always available. However, sub-solvers may not
-        always be available, and so this should reflect that possibility.
+        TODO: Sub-solvers may not always be available, and so this should reflect that possibility.
 
         """
-        return True
+        return _pathos_available
 
     def solve(self, model, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
+
+        if not _pathos_available:
+            raise ImportError("Multisolve requires the `pathos` package.")
 
         solve_data = GDPoptSolveData()
         with create_utility_block(model, 'multisolve_utils', solve_data):
@@ -70,7 +76,7 @@ class Multisolve(object):
             with Pool(processes=2, maxtasksperchild=1) as pool:
                 for solver, solver_args in zip(config.solvers, config.solver_args):
                     results.append(pool.apply_async(
-                        solve_model, args=(model.clone(), solver, solver_args)))
+                        _solve_model, args=(model.clone(), solver, solver_args)))
                 pool.close()
                 start_time = timeit.default_timer()
                 solution_found = False
@@ -135,6 +141,6 @@ class Multisolve(object):
         pass
 
 
-def solve_model(m, solver, solver_args):
+def _solve_model(m, solver, solver_args):
     result = SolverFactory(solver).solve(m, **solver_args)
     return result, m

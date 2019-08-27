@@ -1,23 +1,20 @@
-import logging
-
-from six import StringIO
-from six.moves import range
+from os.path import join, normpath
 
 import pyutilib.th as unittest
-from pyomo.common.log import LoggingIntercept
-from pyomo.contrib.multistart.high_conf_stop import should_stop
+from pyutilib.misc import import_file
+
+from pyomo.common.fileutils import PYOMO_ROOT_DIR
 from pyomo.environ import (
-    ConcreteModel, Constraint, NonNegativeReals, Objective, SolverFactory, Var,
+    ConcreteModel, Objective, SolverFactory, Var,
     maximize, sin, value, TransformationFactory
 )
-from os.path import abspath, dirname, join, normpath
-from pyutilib.misc import import_file
-from pyomo.common.fileutils import PYOMO_ROOT_DIR
+
 expath = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
 
 @unittest.skipUnless(SolverFactory('gams').available(), "GAMS not available")
-@unittest.skipUnless(SolverFactory('ipopt').available(), "GAMS not available")
+@unittest.skipUnless(SolverFactory('ipopt').available(), "IPOPT is not available")
+@unittest.skipUnless(SolverFactory('multisolve').available(), "Multisolve is not available")
 class MultistartTests(unittest.TestCase):
     def test_ipopt_and_gams(self):
         m = ConcreteModel()
@@ -35,7 +32,6 @@ class MultistartTests(unittest.TestCase):
             time_limit=1000,
         )
 
-    @unittest.skipUnless(SolverFactory('gams').available(), "GAMS not available")
     def test_8PP(self):
         eight_process_file = import_file(join(expath, 'eight_process', 'eight_proc_model.py'))
         m = eight_process_file.build_eight_process_flowsheet()
