@@ -23,6 +23,9 @@ from pyomo.common import DeveloperError
 from pyomo.core.expr import native_numeric_types, native_types
 import pyomo.core.base.set as SetModule
 from pyomo.core.base.indexed_component import normalize_index
+from pyomo.core.base.util import (
+    ConstantInitializer, ItemInitializer,
+)
 from pyomo.core.base.set import (
     NumericRange as NR, NonNumericRange as NNR, RangeProduct as RP,
     AnyRange, _AnySet, Any, Binary,
@@ -42,15 +45,12 @@ from pyomo.core.base.set import (
     SetSymmetricDifference_OrderedSet,
     SetProduct, SetProduct_InfiniteSet, SetProduct_FiniteSet,
     SetProduct_OrderedSet,
-    Initializer, _ConstantInitializer, _ItemInitializer, _ScalarCallInitializer,
-    _IndexedCallInitializer, _CountedCallInitializer, _CountedCallGenerator,
-    SetInitializer, _SetIntersectInitializer, RangeSetInitializer,
     _SetData, _FiniteSetData, _InsertionOrderSetData, _SortedSetData,
     _FiniteSetMixin, _OrderedSetMixin,
+    SetInitializer, SetIntersectInitializer, RangeSetInitializer,
     UnknownSetDimen,
     simple_set_rule, set_options,
-    disable_methods,
-)
+ )
 from pyomo.environ import (
     AbstractModel, ConcreteModel, Block, Var, Param, Suffix, Constraint,
     Objective,
@@ -62,83 +62,211 @@ try:
 except ImportError:
     numpy_available = False
 
+class Test_SetInitializer(unittest.TestCase):
+    def test_single_set(self):
+        a = SetInitializer(None)
+        self.assertIs(type(a), SetInitializer)
+        self.assertIsNone(a._set)
+        self.assertIs(a(None,None), Any)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
 
-class _simple(object):
-    def __init__(self, name):
-        self.name = name
+        a = SetInitializer(Reals)
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), ConstantInitializer)
+        self.assertIs(a(None,None), Reals)
+        self.assertIs(a._set.val, Reals)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
 
-    def construct(self, data=None):
-        return 'construct'
+        a = SetInitializer({1:Reals})
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), ItemInitializer)
+        self.assertIs(a(None, 1), Reals)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
 
-    def a(self):
-        return 'a'
+    def test_intersect(self):
+        a = SetInitializer(None)
+        a.intersect(SetInitializer(None))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIsNone(a._set)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        self.assertIs(a(None,None), Any)
 
-    def b(self):
-        return 'b'
+        a = SetInitializer(None)
+        a.intersect(SetInitializer(Reals))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), ConstantInitializer)
+        self.assertIs(a._set.val, Reals)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        self.assertIs(a(None,None), Reals)
 
-    def c(self):
-        return 'c'
+        a = SetInitializer(None)
+        a.intersect(RangeSetInitializer(5))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), RangeSetInitializer)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(a(None,None), RangeSet(5))
 
-    @property
-    def d(self):
-        return 'd'
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(None))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), ConstantInitializer)
+        self.assertIs(a._set.val, Reals)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        self.assertIs(a(None,None), Reals)
 
-    @property
-    def e(self):
-        return 'e'
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(Integers))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), SetIntersectInitializer)
+        self.assertIs(type(a._set._A), ConstantInitializer)
+        self.assertIs(type(a._set._B), ConstantInitializer)
+        self.assertIs(a._set._A.val, Reals)
+        self.assertIs(a._set._B.val, Integers)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertIs(type(s), SetIntersection_InfiniteSet)
+        self.assertIs(s._sets[0], Reals)
+        self.assertIs(s._sets[1], Integers)
 
-@disable_methods(('a',('b', 'custom_msg'),'d',('e', 'custom_pmsg')))
-class _abstract_simple(_simple):
-    pass
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(Integers))
+        a.intersect(RangeSetInitializer(3))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), SetIntersectInitializer)
+        self.assertIs(type(a._set._A), SetIntersectInitializer)
+        self.assertIs(type(a._set._B), RangeSetInitializer)
+        self.assertIs(a._set._A._A.val, Reals)
+        self.assertIs(a._set._A._B.val, Integers)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertIs(type(s), SetIntersection_OrderedSet)
+        self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
+        self.assertIsInstance(s._sets[1], RangeSet)
 
-class TestDisableMethods(unittest.TestCase):
-    def test_disable(self):
-        x = _abstract_simple('foo')
-        self.assertIs(type(x), _abstract_simple)
-        self.assertIsInstance(x, _simple)
-        with self.assertRaisesRegexp(
-                RuntimeError, "Cannot access a on _abstract_simple "
-                "'foo' before it has been constructed"):
-            x.a()
-        with self.assertRaisesRegexp(
-                RuntimeError, "Cannot custom_msg _abstract_simple "
-                "'foo' before it has been constructed"):
-            x.b()
-        self.assertEqual(x.c(), 'c')
-        with self.assertRaisesRegexp(
-                RuntimeError, "Cannot access property d on _abstract_simple "
-                "'foo' before it has been constructed"):
-            x.d
-        with self.assertRaisesRegexp(
-                RuntimeError, "Cannot set property d on _abstract_simple "
-                "'foo' before it has been constructed"):
-            x.d = 1
-        with self.assertRaisesRegexp(
-                RuntimeError, "Cannot custom_pmsg _abstract_simple "
-                "'foo' before it has been constructed"):
-            x.e
-        with self.assertRaisesRegexp(
-                RuntimeError, "Cannot custom_pmsg _abstract_simple "
-                "'foo' before it has been constructed"):
-            x.e = 1
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(Integers))
+        a.intersect(RangeSetInitializer(3, default_step=0))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), SetIntersectInitializer)
+        self.assertIs(type(a._set._A), SetIntersectInitializer)
+        self.assertIs(type(a._set._B), RangeSetInitializer)
+        self.assertIs(a._set._A._A.val, Reals)
+        self.assertIs(a._set._A._B.val, Integers)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertIs(type(s), SetIntersection_InfiniteSet)
+        s.construct()
+        self.assertIs(type(s), SetIntersection_OrderedSet)
+        self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
+        self.assertIsInstance(s._sets[1], RangeSet)
+        self.assertFalse(s._sets[0].isfinite())
+        self.assertFalse(s._sets[1].isfinite())
+        self.assertTrue(s.isfinite())
 
-        self.assertEqual(x.construct(), 'construct')
-        self.assertIs(type(x), _simple)
-        self.assertIsInstance(x, _simple)
-        self.assertEqual(x.a(), 'a')
-        self.assertEqual(x.b(), 'b')
-        self.assertEqual(x.c(), 'c')
-        self.assertEqual(x.d, 'd')
-        self.assertEqual(x.e, 'e')
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer({1:Integers}))
+        a.intersect(RangeSetInitializer(3, default_step=0))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), SetIntersectInitializer)
+        self.assertIs(type(a._set._A), SetIntersectInitializer)
+        self.assertIs(type(a._set._B), RangeSetInitializer)
+        self.assertIs(a._set._A._A.val, Reals)
+        self.assertIs(type(a._set._A._B), ItemInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        with self.assertRaises(KeyError):
+            a(None,None)
+        s = a(None,1)
+        self.assertIs(type(s), SetIntersection_InfiniteSet)
+        s.construct()
+        self.assertIs(type(s), SetIntersection_OrderedSet)
+        self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
+        self.assertIsInstance(s._sets[1], RangeSet)
+        self.assertFalse(s._sets[0].isfinite())
+        self.assertFalse(s._sets[1].isfinite())
+        self.assertTrue(s.isfinite())
 
-    def test_bad_api(self):
-        with self.assertRaisesRegexp(
-                DeveloperError, "Cannot disable method not_there on "
-                "<class 'pyomo.core.tests.unit.test_set.foo'>"):
+    def test_rangeset(self):
+        a = RangeSetInitializer(5)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertEqual(s, RangeSet(5))
 
-            @disable_methods(('a','not_there'))
-            class foo(_simple):
-                pass
+        a = RangeSetInitializer((0,5))
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertEqual(s, RangeSet(0,5))
+
+        a = RangeSetInitializer((0,5,2))
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertEqual(s, RangeSet(0,5,2))
+
+        a = RangeSetInitializer(5, default_step=0)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertEqual(s, RangeSet(1,5,0))
+
+        a = RangeSetInitializer((0,5), default_step=0)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertEqual(s, RangeSet(0,5,0))
+
+        a = RangeSetInitializer((0,5,2), default_step=0)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertEqual(s, RangeSet(0,5,2))
+
+        a = RangeSetInitializer({1:5})
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,1)
+        self.assertEqual(s, RangeSet(5))
+
+        a = RangeSetInitializer({1:(0,5)})
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,1)
+        self.assertEqual(s, RangeSet(0,5))
+
+    def test_setdefault(self):
+        a = SetInitializer(None)
+        self.assertIs(a(None,None), Any)
+        a.setdefault(Reals)
+        self.assertIs(a(None,None), Reals)
+
+        a = SetInitializer(Integers)
+        self.assertIs(a(None,None), Integers)
+        a.setdefault(Reals)
+        self.assertIs(a(None,None), Integers)
+
+        a = RangeSetInitializer(5)
+        self.assertEqual(a(None,None), RangeSet(5))
+        a.setdefault(Reals)
+        self.assertEqual(a(None,None), RangeSet(5))
+
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(Integers))
+        self.assertIs(type(a(None,None)), SetIntersection_InfiniteSet)
+        a.setdefault(RangeSet(5))
+        self.assertIs(type(a(None,None)), SetIntersection_InfiniteSet)
+
 
 class TestNumericRange(unittest.TestCase):
     def test_init(self):
@@ -3404,396 +3532,6 @@ J : Size=1, Index=None, Ordered=False
         self.assertEqual(x.ord((1, (2, 3), 4, 0)), 5)
         self.assertEqual(x.ord((1, 2, (3, 4), 0)), 3)
         self.assertEqual(x.ord((1, 2, 3, 4, 0)), 3)
-
-
-def _init_scalar(m):
-    return 1
-
-def _init_indexed(m, *args):
-    i = 1
-    for arg in args:
-        i *= (arg+1)
-    return i
-
-
-class Test_Initializer(unittest.TestCase):
-    def test_constant(self):
-        m = ConcreteModel()
-        a = Initializer(5)
-        self.assertIs(type(a), _ConstantInitializer)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        self.assertEqual(a(None, 1), 5)
-
-    def test_dict(self):
-        m = ConcreteModel()
-        a = Initializer({1:5})
-        self.assertIs(type(a), _ItemInitializer)
-        self.assertFalse(a.constant())
-        self.assertFalse(a.verified)
-        self.assertEqual(a(None, 1), 5)
-
-    def test_sequence(self):
-        m = ConcreteModel()
-        a = Initializer([0,5])
-        self.assertIs(type(a), _ItemInitializer)
-        self.assertFalse(a.constant())
-        self.assertFalse(a.verified)
-        self.assertEqual(a(None, 1), 5)
-
-        a = Initializer([0,5], treat_sequences_as_mappings=False)
-        self.assertIs(type(a), _ConstantInitializer)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        self.assertEqual(a(None, 1), [0,5])
-
-    def test_function(self):
-        m = ConcreteModel()
-        def a_init(m):
-            return 0
-        a = Initializer(a_init)
-        self.assertIs(type(a), _ScalarCallInitializer)
-        self.assertFalse(a.constant())
-        self.assertFalse(a.verified)
-        self.assertEqual(a(None, 1), 0)
-
-        m.x = Var([1,2,3])
-        def x_init(m, i):
-            return i+1
-        a = Initializer(x_init)
-        self.assertIs(type(a), _IndexedCallInitializer)
-        self.assertFalse(a.constant())
-        self.assertFalse(a.verified)
-        self.assertEqual(a(None, 1), 2)
-
-        def x2_init(m):
-            return 0
-        a = Initializer(x2_init)
-        self.assertIs(type(a), _ScalarCallInitializer)
-        self.assertFalse(a.constant())
-        self.assertFalse(a.verified)
-        self.assertEqual(a(None, 1), 0)
-
-        m.y = Var([1,2,3], [4,5,6])
-        def y_init(m, i, j):
-            return j*(i+1)
-        a = Initializer(y_init)
-        self.assertIs(type(a), _IndexedCallInitializer)
-        self.assertFalse(a.constant())
-        self.assertFalse(a.verified)
-        self.assertEqual(a(None, (1, 4)), 8)
-
-        b = _CountedCallInitializer(m.x, a)
-        self.assertIs(type(b), _CountedCallInitializer)
-        self.assertFalse(b.constant())
-        self.assertFalse(b.verified)
-        self.assertFalse(b._scalar)
-        self.assertIs(a._fcn, b._fcn)
-        c = b(None, 1)
-        self.assertIs(type(c), _CountedCallGenerator)
-        self.assertEqual(next(c), 2)
-        self.assertEqual(next(c), 3)
-        self.assertEqual(next(c), 4)
-
-
-    def test_generator_fcn(self):
-        m = ConcreteModel()
-        def a_init(m):
-            yield 0
-            yield 3
-        with self.assertRaisesRegexp(
-                ValueError, "Generator functions are not allowed"):
-            a = Initializer(a_init)
-
-        a = Initializer(a_init, allow_generators=True)
-        self.assertIs(type(a), _ScalarCallInitializer)
-        self.assertFalse(a.constant())
-        self.assertFalse(a.verified)
-        self.assertEqual(list(a(None, 1)), [0,3])
-
-        m.x = Var([1,2,3])
-        def x_init(m, i):
-            yield i
-            yield i+1
-        a = Initializer(x_init, allow_generators=True)
-        self.assertIs(type(a), _IndexedCallInitializer)
-        self.assertFalse(a.constant())
-        self.assertFalse(a.verified)
-        self.assertEqual(list(a(None, 1)), [1,2])
-
-        m.y = Var([1,2,3], [4,5,6])
-        def y_init(m, i, j):
-            yield j
-            yield i+1
-        a = Initializer(y_init, allow_generators=True)
-        self.assertIs(type(a), _IndexedCallInitializer)
-        self.assertFalse(a.constant())
-        self.assertFalse(a.verified)
-        self.assertEqual(list(a(None, (1, 4))), [4,2])
-
-    def test_generators(self):
-        m = ConcreteModel()
-        with self.assertRaisesRegexp(
-                ValueError, "Generators are not allowed"):
-            a = Initializer(iter([0,3]))
-
-        a = Initializer(iter([0,3]), allow_generators=True)
-        self.assertIs(type(a), _ConstantInitializer)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        self.assertEqual(list(a(None, 1)), [0,3])
-
-        def x_init():
-            yield 0
-            yield 3
-        with self.assertRaisesRegexp(
-                ValueError, "Generators are not allowed"):
-            a = Initializer(x_init())
-
-        a = Initializer(x_init(), allow_generators=True)
-        self.assertIs(type(a), _ConstantInitializer)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        self.assertEqual(list(a(None, 1)), [0,3])
-
-    def test_pickle(self):
-        m = ConcreteModel()
-        a = Initializer(5)
-        a.verified = True
-        b = pickle.loads(pickle.dumps(a))
-        self.assertIsNot(a, b)
-        self.assertEqual(a.val, b.val)
-        self.assertEqual(a.verified, b.verified)
-
-        a = Initializer({1:5})
-        b = pickle.loads(pickle.dumps(a))
-        self.assertIsNot(a, b)
-        self.assertEqual(a._dict, b._dict)
-        self.assertIsNot(a._dict, b._dict)
-        self.assertEqual(a.verified, b.verified)
-
-        a = Initializer(_init_scalar)
-        b = pickle.loads(pickle.dumps(a))
-        self.assertIsNot(a, b)
-        self.assertIs(a._fcn, b._fcn)
-        self.assertEqual(a.verified, b.verified)
-        self.assertEqual(a(None, None), 1)
-        self.assertEqual(b(None, None), 1)
-
-        m.x = Var([1,2,3])
-        a = Initializer(_init_indexed)
-        b = pickle.loads(pickle.dumps(a))
-        self.assertIsNot(a, b)
-        self.assertIs(a._fcn, b._fcn)
-        self.assertEqual(a.verified, b.verified)
-        self.assertEqual(a(None, 1), 2)
-        self.assertEqual(b(None, 2), 3)
-
-
-class Test_SetInitializer(unittest.TestCase):
-    def test_single_set(self):
-        a = SetInitializer(None)
-        self.assertIs(type(a), SetInitializer)
-        self.assertIsNone(a._set)
-        self.assertIs(a(None,None), Any)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-
-        a = SetInitializer(Reals)
-        self.assertIs(type(a), SetInitializer)
-        self.assertIs(type(a._set), _ConstantInitializer)
-        self.assertIs(a(None,None), Reals)
-        self.assertIs(a._set.val, Reals)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-
-        a = SetInitializer({1:Reals})
-        self.assertIs(type(a), SetInitializer)
-        self.assertIs(type(a._set), _ItemInitializer)
-        self.assertIs(a(None, 1), Reals)
-        self.assertFalse(a.constant())
-        self.assertFalse(a.verified)
-
-    def test_intersect(self):
-        a = SetInitializer(None)
-        a.intersect(SetInitializer(None))
-        self.assertIs(type(a), SetInitializer)
-        self.assertIsNone(a._set)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        self.assertIs(a(None,None), Any)
-
-        a = SetInitializer(None)
-        a.intersect(SetInitializer(Reals))
-        self.assertIs(type(a), SetInitializer)
-        self.assertIs(type(a._set), _ConstantInitializer)
-        self.assertIs(a._set.val, Reals)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        self.assertIs(a(None,None), Reals)
-
-        a = SetInitializer(None)
-        a.intersect(RangeSetInitializer(5))
-        self.assertIs(type(a), SetInitializer)
-        self.assertIs(type(a._set), RangeSetInitializer)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        self.assertEqual(a(None,None), RangeSet(5))
-
-        a = SetInitializer(Reals)
-        a.intersect(SetInitializer(None))
-        self.assertIs(type(a), SetInitializer)
-        self.assertIs(type(a._set), _ConstantInitializer)
-        self.assertIs(a._set.val, Reals)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        self.assertIs(a(None,None), Reals)
-
-        a = SetInitializer(Reals)
-        a.intersect(SetInitializer(Integers))
-        self.assertIs(type(a), SetInitializer)
-        self.assertIs(type(a._set), _SetIntersectInitializer)
-        self.assertIs(type(a._set._A), _ConstantInitializer)
-        self.assertIs(type(a._set._B), _ConstantInitializer)
-        self.assertIs(a._set._A.val, Reals)
-        self.assertIs(a._set._B.val, Integers)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        s = a(None,None)
-        self.assertIs(type(s), SetIntersection_InfiniteSet)
-        self.assertIs(s._sets[0], Reals)
-        self.assertIs(s._sets[1], Integers)
-
-        a = SetInitializer(Reals)
-        a.intersect(SetInitializer(Integers))
-        a.intersect(RangeSetInitializer(3))
-        self.assertIs(type(a), SetInitializer)
-        self.assertIs(type(a._set), _SetIntersectInitializer)
-        self.assertIs(type(a._set._A), _SetIntersectInitializer)
-        self.assertIs(type(a._set._B), RangeSetInitializer)
-        self.assertIs(a._set._A._A.val, Reals)
-        self.assertIs(a._set._A._B.val, Integers)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        s = a(None,None)
-        self.assertIs(type(s), SetIntersection_OrderedSet)
-        self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
-        self.assertIsInstance(s._sets[1], RangeSet)
-
-        a = SetInitializer(Reals)
-        a.intersect(SetInitializer(Integers))
-        a.intersect(RangeSetInitializer(3, default_step=0))
-        self.assertIs(type(a), SetInitializer)
-        self.assertIs(type(a._set), _SetIntersectInitializer)
-        self.assertIs(type(a._set._A), _SetIntersectInitializer)
-        self.assertIs(type(a._set._B), RangeSetInitializer)
-        self.assertIs(a._set._A._A.val, Reals)
-        self.assertIs(a._set._A._B.val, Integers)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        s = a(None,None)
-        self.assertIs(type(s), SetIntersection_InfiniteSet)
-        s.construct()
-        self.assertIs(type(s), SetIntersection_OrderedSet)
-        self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
-        self.assertIsInstance(s._sets[1], RangeSet)
-        self.assertFalse(s._sets[0].isfinite())
-        self.assertFalse(s._sets[1].isfinite())
-        self.assertTrue(s.isfinite())
-
-        a = SetInitializer(Reals)
-        a.intersect(SetInitializer({1:Integers}))
-        a.intersect(RangeSetInitializer(3, default_step=0))
-        self.assertIs(type(a), SetInitializer)
-        self.assertIs(type(a._set), _SetIntersectInitializer)
-        self.assertIs(type(a._set._A), _SetIntersectInitializer)
-        self.assertIs(type(a._set._B), RangeSetInitializer)
-        self.assertIs(a._set._A._A.val, Reals)
-        self.assertIs(type(a._set._A._B), _ItemInitializer)
-        self.assertFalse(a.constant())
-        self.assertFalse(a.verified)
-        with self.assertRaises(KeyError):
-            a(None,None)
-        s = a(None,1)
-        self.assertIs(type(s), SetIntersection_InfiniteSet)
-        s.construct()
-        self.assertIs(type(s), SetIntersection_OrderedSet)
-        self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
-        self.assertIsInstance(s._sets[1], RangeSet)
-        self.assertFalse(s._sets[0].isfinite())
-        self.assertFalse(s._sets[1].isfinite())
-        self.assertTrue(s.isfinite())
-
-    def test_rangeset(self):
-        a = RangeSetInitializer(5)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        s = a(None,None)
-        self.assertEqual(s, RangeSet(5))
-
-        a = RangeSetInitializer((0,5))
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        s = a(None,None)
-        self.assertEqual(s, RangeSet(0,5))
-
-        a = RangeSetInitializer((0,5,2))
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        s = a(None,None)
-        self.assertEqual(s, RangeSet(0,5,2))
-
-        a = RangeSetInitializer(5, default_step=0)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        s = a(None,None)
-        self.assertEqual(s, RangeSet(1,5,0))
-
-        a = RangeSetInitializer((0,5), default_step=0)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        s = a(None,None)
-        self.assertEqual(s, RangeSet(0,5,0))
-
-        a = RangeSetInitializer((0,5,2), default_step=0)
-        self.assertTrue(a.constant())
-        self.assertFalse(a.verified)
-        s = a(None,None)
-        self.assertEqual(s, RangeSet(0,5,2))
-
-        a = RangeSetInitializer({1:5})
-        self.assertFalse(a.constant())
-        self.assertFalse(a.verified)
-        s = a(None,1)
-        self.assertEqual(s, RangeSet(5))
-
-        a = RangeSetInitializer({1:(0,5)})
-        self.assertFalse(a.constant())
-        self.assertFalse(a.verified)
-        s = a(None,1)
-        self.assertEqual(s, RangeSet(0,5))
-
-    def test_setdefault(self):
-        a = SetInitializer(None)
-        self.assertIs(a(None,None), Any)
-        a.setdefault(Reals)
-        self.assertIs(a(None,None), Reals)
-
-        a = SetInitializer(Integers)
-        self.assertIs(a(None,None), Integers)
-        a.setdefault(Reals)
-        self.assertIs(a(None,None), Integers)
-
-        a = RangeSetInitializer(5)
-        self.assertEqual(a(None,None), RangeSet(5))
-        a.setdefault(Reals)
-        self.assertEqual(a(None,None), RangeSet(5))
-
-        a = SetInitializer(Reals)
-        a.intersect(SetInitializer(Integers))
-        self.assertIs(type(a(None,None)), SetIntersection_InfiniteSet)
-        a.setdefault(RangeSet(5))
-        self.assertIs(type(a(None,None)), SetIntersection_InfiniteSet)
 
 
 class TestGlobalSets(unittest.TestCase):
