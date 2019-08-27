@@ -34,3 +34,4 @@ model.C = Constraint(expr=model.x+model.y <= 1)
 
 model.o = Objective(expr=2*model.x+3*model.y, sense=maximize)
 
+print("pass")

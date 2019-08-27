@@ -15,23 +15,23 @@ VARIABLES
 	x2
 	x3;
 
-c1.. 1/2.0*x1*(x2 - x3) =e= 2.0 ;
-c2.. x1*(1/2.0)*(x2 - x3) =e= 2.0 ;
-c3.. x1*(x2 - x3)*(1/2.0) =e= 2.0 ;
-c4.. x1*(x2*(1/2.0) - x3*(1/2.0)) =e= 2.0 ;
-c5.. x1*(x2 - x3)*(1/2.0) =e= 2.0 ;
-c6.. x1*(x2 - x3) + (-2.0)*2.0 =e= 0.0 ;
+c1.. 1/2*x1*(x2 - x3) =e= 2 ;
+c2.. x1/2*(x2 - x3) =e= 2 ;
+c3.. x1*(x2 - x3)/2 =e= 2 ;
+c4.. x1*(x2/2 - x3/2) =e= 2 ;
+c5.. x1*(x2 - x3)*(1/2) =e= 2 ;
+c6.. x1*(x2 - x3) + (-2)*2 =e= 0 ;
 c7.. GAMS_OBJECTIVE =e= x2 ;
 
-x1.lo = -1.0;
-x1.up = 1.0;
-x1.l = 3.0;
-x2.lo = -1.0;
-x2.up = 1.0;
-x2.l = 1.0;
-x3.lo = -1.0;
-x3.up = 1.0;
-x3.l = 2.0;
+x1.lo = -1;
+x1.up = 1;
+x1.l = 3;
+x2.lo = -1;
+x2.up = 1;
+x2.l = 1;
+x3.lo = -1;
+x3.up = 1;
+x3.l = 2;
 
 MODEL GAMS_MODEL /all/ ;
 SOLVE GAMS_MODEL USING nlp minimizing GAMS_OBJECTIVE;

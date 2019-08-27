@@ -79,10 +79,10 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create_instance()
         expr = sum_product(instance.x,instance.B,denom=instance.y, index=[1,3])
-        baseline = "B[1]*x[1]*(1/y[1]) + B[3]*x[3]*(1/y[3])"
+        baseline = "B[1]*x[1]/y[1] + B[3]*x[3]/y[3]"
         self.assertEqual( str(expr), baseline )
         expr = sum_product(instance.x,instance.C,denom=instance.y, index=[1,3])
-        self.assertEqual( str(expr), "100*x[1]*(1/y[1]) + 300*x[3]*(1/y[3])" )
+        self.assertEqual( str(expr), "100*x[1]/y[1] + 300*x[3]/y[3]" )
 
     def test_expr4(self):
         model = AbstractModel()

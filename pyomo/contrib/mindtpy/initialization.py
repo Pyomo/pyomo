@@ -3,7 +3,7 @@ from __future__ import division
 
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values
 from pyomo.contrib.mindtpy.cut_generation import (
-    add_oa_cut, add_objective_linearization,
+    add_oa_cuts, add_objective_linearization,
 )
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.contrib.mindtpy.util import (calc_jacobians)
@@ -82,7 +82,10 @@ def init_rNLP(solve_data, config):
             % (solve_data.nlp_iter, value(main_objective.expr),
                solve_data.LB, solve_data.UB))
         if config.strategy == 'OA':
-            add_oa_cut(nlp_solution_values, dual_values, solve_data, config)
+            copy_var_list_values(m.MindtPy_utils.variable_list, 
+                                 solve_data.mip.MindtPy_utils.variable_list,
+                                 config, ignore_integrality=True)
+            add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
     elif subprob_terminate_cond is tc.infeasible:
         # TODO fail? try something else?
         config.logger.info(

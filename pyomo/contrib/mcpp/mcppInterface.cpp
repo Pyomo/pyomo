@@ -38,6 +38,11 @@ extern "C"
         return (MC*) new MC( (*var1) * (*var2) );
     }
 
+    MC* divide(MC *var1, MC *var2)
+    {
+        return (MC*) new MC( (*var1) / (*var2) );
+    }
+
     MC* add(MC *var1, MC *var2)
     {
         return (MC*) new MC( (*var1) + (*var2) );

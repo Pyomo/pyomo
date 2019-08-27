@@ -1544,7 +1544,7 @@ class _SetProduct(_SetOperator):
         _SetOperator.__init__(self, *args, **kwd)
         # the individual index sets definining the product set.
         if isinstance(self._setA,_SetProduct):
-            self.set_tuple = self._setA.set_tuple
+            self.set_tuple = list(self._setA.set_tuple)
         else:
             self.set_tuple = [self._setA]
         if isinstance(self._setB,_SetProduct):

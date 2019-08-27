@@ -2,7 +2,6 @@
 from __future__ import division
 
 import logging
-
 import six
 from math import fabs, floor, log
 
@@ -14,7 +13,6 @@ from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory
 from pyomo.opt.results import ProblemSense
-from six import StringIO
 from pyomo.common.log import LoggingIntercept
 import timeit
 from contextlib import contextmanager
@@ -51,7 +49,7 @@ class SuppressInfeasibleWarning(LoggingIntercept):
 
     def __init__(self):
         super(SuppressInfeasibleWarning, self).__init__(
-            StringIO(), 'pyomo.core', logging.WARNING)
+            six.StringIO(), 'pyomo.core', logging.WARNING)
 
 
 def model_is_valid(solve_data, config):
@@ -89,29 +87,32 @@ def model_is_valid(solve_data, config):
     return True
 
 
-def process_objective(solve_data, config):
+def process_objective(solve_data, config, move_linear_objective=False):
     m = solve_data.working_model
     util_blk = getattr(m, solve_data.util_block_name)
     # Handle missing or multiple objectives
-    objs = list(m.component_data_objects(
+    active_objectives = list(m.component_data_objects(
         ctype=Objective, active=True, descend_into=True))
-    num_objs = len(objs)
-    solve_data.results.problem.number_of_objectives = num_objs
-    if num_objs == 0:
+    solve_data.results.problem.number_of_objectives = len(active_objectives)
+    if len(active_objectives) == 0:
         config.logger.warning(
             'Model has no active objectives. Adding dummy objective.')
         util_blk.dummy_objective = Objective(expr=1)
         main_obj = util_blk.dummy_objective
-    elif num_objs > 1:
+    elif len(active_objectives) > 1:
         raise ValueError('Model has multiple active objectives.')
     else:
-        main_obj = objs[0]
+        main_obj = active_objectives[0]
     solve_data.results.problem.sense = main_obj.sense
     solve_data.objective_sense = main_obj.sense
 
     # Move the objective to the constraints if it is nonlinear
-    if main_obj.expr.polynomial_degree() not in (1, 0):
-        config.logger.info("Objective is nonlinear. Moving it to constraint set.")
+    if main_obj.expr.polynomial_degree() not in (1, 0) \
+            or move_linear_objective:
+        if move_linear_objective:
+            config.logger.info("Moving objective to constraint set.")
+        else:
+            config.logger.info("Objective is nonlinear. Moving it to constraint set.")
 
         util_blk.objective_value = Var(domain=Reals, initialize=0)
         if mcpp_available():
@@ -144,11 +145,19 @@ def a_logger(str_or_logger):
         return logging.getLogger(str_or_logger)
 
 
-def copy_var_list_values(from_list, to_list, config, skip_stale=False):
-    """Copy variable values from one list to another."""
+def copy_var_list_values(from_list, to_list, config,
+                         skip_stale=False, skip_fixed=True,
+                         ignore_integrality=False):
+    """Copy variable values from one list to another.
+
+    Rounds to Binary/Integer if neccessary
+    Sets to zero for NonNegativeReals if neccessary
+    """
     for v_from, v_to in zip(from_list, to_list):
         if skip_stale and v_from.stale:
             continue  # Skip stale variable values.
+        if skip_fixed and v_to.is_fixed():
+            continue  # Skip fixed variables.
         try:
             v_to.set_value(value(v_from, exception=False))
             if skip_stale:
@@ -158,10 +167,15 @@ def copy_var_list_values(from_list, to_list, config, skip_stale=False):
             var_val = value(v_from)
             rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
-            if 'is not in domain Binary' in err_msg and (
+            if ignore_integrality \
+                and ('is not in domain Binary' in err_msg
+                or 'is not in domain Integers' in err_msg):
+               v_to.value = value(v_from, exception=False)
+            elif 'is not in domain Binary' in err_msg and (
                     fabs(var_val - 1) <= config.integer_tolerance or
                     fabs(var_val) <= config.integer_tolerance):
                 v_to.set_value(rounded_val)
+            # TODO What about PositiveIntegers etc?
             elif 'is not in domain Integers' in err_msg and (
                     fabs(var_val - rounded_val) <= config.integer_tolerance):
                 v_to.set_value(rounded_val)
