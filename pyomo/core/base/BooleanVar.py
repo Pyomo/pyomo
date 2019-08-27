@@ -1,4 +1,6 @@
 #Is this correct? #Take domain out
+from pyomo.core.expr.logical_expr import LogicalXor
+
 __all__ = ['BooleanVar', '_BooleanVarData', '_GeneralBooleanVarData', 'BooleanVarList', 'SimpleBooleanVar']
 
 #copied from var.py
@@ -203,6 +205,9 @@ class _BooleanVarData(ComponentData, LogicalValue):
         if smap:
             return smap.getSymbol(self, labeler)
         return self.name
+
+    def Xor(self, Y2):
+        return LogicalXor(self, Y2)
 
 
 class _GeneralBooleanVarData(_BooleanVarData):

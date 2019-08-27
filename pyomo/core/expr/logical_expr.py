@@ -1366,8 +1366,7 @@ class AndExpression(MultiArgsExpression):
         return AndExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        #pass this one for now 0-0
-        return "AndExpression_toString_fornow"
+        return " AND ".join(values)
 
     def _apply_operation(self, result):
         if (len(self._args_) != len(result)):
