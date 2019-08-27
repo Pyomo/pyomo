@@ -101,4 +101,5 @@ def build_mcpp():
 
 
 if __name__ == "__main__":
-    setup(**_generate_configuration())
+    build_mcpp()
+

@@ -1,0 +1,9 @@
+import pyomo.kernel as pmo
+m = pmo.block()
+m.x1 = pmo.variable(lb=0)
+m.x2 = pmo.variable()
+m.r = pmo.variable(lb=0)
+m.q = pmo.conic.primal_exponential(
+    x1=m.x1,
+    x2=m.x2,
+    r=m.r)

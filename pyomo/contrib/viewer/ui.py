@@ -23,14 +23,21 @@ import threading
 import datetime
 import json
 import sys
-from IPython import get_ipython
+try:
+    from IPython import get_ipython
+except ImportError:
+    def get_ipython():
+        raise AttributeError("IPython not available")
 import pyomo.contrib.viewer.report as rpt
 import pyomo.environ as pe
 
 _log = logging.getLogger(__name__)
 
-from pyomo.contrib.viewer.pyqt_4or5 import *
+from pyomo.contrib.viewer.qt import *
 from pyomo.contrib.viewer.model_browser import ModelBrowser
+from pyomo.contrib.viewer.residual_table import ResidualTable
+from pyomo.contrib.viewer.model_select import ModelSelect
+from pyomo.contrib.viewer.ui_data import UIData
 
 _mypath = os.path.dirname(__file__)
 try:
@@ -46,10 +53,12 @@ except:
         pass
 
 if not qt_available:
+    for _err in qt_import_errors:
+        _log.error(_err)
     _log.error("Qt is not available. Cannot create UI classes.")
     raise ImportError("Could not import PyQt4 or PyQt5")
 
-def get_mainwindow(model=None, show=True):
+def get_mainwindow(model=None, show=True, testing=False):
     """
     Create a UI MainWindow.
 
@@ -61,71 +70,26 @@ def get_mainwindow(model=None, show=True):
             model.  If no model is provided a new ConcreteModel is created
     """
     if model is None:
-        model = pe.ConcreteModel()
-    ui = MainWindow(model=model)
-    get_ipython().events.register('post_execute', ui.refresh_on_execute)
+        model = pe.ConcreteModel(name="Default")
+    ui = MainWindow(model=model, testing=testing)
+    try:
+        get_ipython().events.register('post_execute', ui.refresh_on_execute)
+    except AttributeError:
+        pass # not in ipy kernel, so is fine to not register callback
     if show: ui.show()
     return ui, model
 
-def get_mainwindow_nb(model=None, show=True):
-    return get_mainwindow(model=model, show=show)
-
-
-class UISetup(QtCore.QObject):
-    updated = QtCore.pyqtSignal()
-    def __init__(self, model=None):
-
-        """
-        This class holds the basic UI setup
-
-        Args:
-            model: The Pyomo model to view
-        """
-        super(UISetup, self).__init__()
-        self._model = None
-        self._begin_update = False
-        self.begin_update()
-        self.model = model
-        self.end_update()
-
-    def begin_update(self):
-        """
-        Lets the model setup be changed without emitting the updated signal
-        until the end_update function is called.
-        """
-        self._begin_update = True
-
-    def end_update(self, emit=True):
-        """
-        Start automatically emitting update signal again when properties are
-        changed and emit update for changes made between begin_update and
-        end_update
-        """
-        self._begin_update = False
-        if emit: self.emit_update()
-
-    def emit_update(self):
-        if not self._begin_update: self.updated.emit()
-
-    @property
-    def model(self):
-        return self._model
-
-    @model.setter
-    def model(self, value):
-        self._model = value
-        self.emit_update()
+def get_mainwindow_nb(model=None, show=True, testing=False):
+    return get_mainwindow(model=model, show=show, testing=testing)
 
 
 class MainWindow(_MainWindow, _MainWindowUI):
     def __init__(self, *args, **kwargs):
         model = self.model = kwargs.pop("model", None)
         main = self.model = kwargs.pop("main", None)
+        self.testing = kwargs.pop("testing", False)
         flags = kwargs.pop("flags", 0)
-        if kwargs.pop("ontop", False):
-            kwargs[flags] = flags | QtCore.Qt.WindowStaysOnTopHint
-        self.ui_setup = UISetup(model=model)
-        self.ui_setup.updated.connect(self.update_model)
+        self.ui_data = UIData(model=model)
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
         self.setCentralWidget(self.mdiArea)
@@ -135,18 +99,15 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self.constraints = None
         self.expressions = None
         self.parameters = None
+        self.residuals = None
 
-        self.variables_restart()
-        self.expressions_restart()
-        self.constraints_restart()
-        self.parameters_restart()
+        self.update_model()
 
-
-        self.mdiArea.tileSubWindows()
-
+        self.ui_data.updated.connect(self.update_model)
         # Set menu actions (remember the menu items are defined in the ui file)
         # you can edit the menus in qt-designer
-        self.action_Exit.triggered.connect(self.exit_action)
+        self.actionModel_Selector.triggered.connect(self.show_model_select)
+        self.ui_data.exec_refresh.connect(self.refresh_on_execute)
         self.actionRestart_Variable_View.triggered.connect(
             self.variables_restart)
         self.actionRestart_Constraint_View.triggered.connect(
@@ -155,19 +116,31 @@ class MainWindow(_MainWindow, _MainWindowUI):
             self.parameters_restart)
         self.actionRestart_Expression_View.triggered.connect(
             self.expressions_restart)
+        self.actionRestart_Residual_Table.triggered.connect(
+            self.residuals_restart)
         self.actionInformation.triggered.connect(self.model_information)
         self.actionCalculateConstraints.triggered.connect(
-            self.calculate_constraints)
+            self.ui_data.calculate_constraints)
         self.actionCalculateExpressions.triggered.connect(
-            self.calculate_expressions)
+            self.ui_data.calculate_expressions)
         self.actionTile.triggered.connect(self.mdiArea.tileSubWindows)
         self.actionCascade.triggered.connect(self.mdiArea.cascadeSubWindows)
         self.actionTabs.triggered.connect(self.toggle_tabs)
+        self._dialog = None #dialog displayed so can access it easier for tests
+        self._dialog_test_button = None # button clicked on dialog in test mode
+        self.mdiArea.setViewMode(QMdiArea.TabbedView)
 
     def toggle_tabs(self):
-        self.mdiArea.setViewMode(not self.mdiArea.viewMode())
+        # Could use not here, but this is a little more future proof
+        if self.mdiArea.viewMode() == QMdiArea.SubWindowView:
+            self.mdiArea.setViewMode(QMdiArea.TabbedView)
+        elif self.mdiArea.viewMode() == QMdiArea.TabbedView:
+            self.mdiArea.setViewMode(QMdiArea.SubWindowView)
+        else:
+            # There are no other modes unless there is a change in Qt so pass
+            pass
 
-    def _tree_restart(self, w, standard):
+    def _tree_restart(self, w, cls=ModelBrowser, **kwargs):
         """
         Start/Restart the variables window
         """
@@ -184,34 +157,34 @@ class MainWindow(_MainWindow, _MainWindowUI):
             w = None
         except AttributeError:
             pass
-        w = ModelBrowser(standard=standard, ui_setup=self.ui_setup)
+        w = cls(**kwargs)
         self.mdiArea.addSubWindow(w)
         w.parent().show() # parent is now a MdiAreaSubWindow
         self._refresh_list.append(w)
         return w
 
     def variables_restart(self):
-        self.variables = self._tree_restart(self.variables, "Var")
+        self.variables = self._tree_restart(
+            w=self.variables, standard="Var", ui_data=self.ui_data)
 
     def expressions_restart(self):
-        self.expressions = self._tree_restart(self.expressions, "Expression")
+        self.expressions = self._tree_restart(
+            w=self.expressions, standard="Expression", ui_data=self.ui_data)
 
     def parameters_restart(self):
-        self.parameters = self._tree_restart(self.parameters, "Param")
+        self.parameters = self._tree_restart(
+            w=self.parameters, standard="Param", ui_data=self.ui_data)
 
     def constraints_restart(self):
-        self.constraints = self._tree_restart(self.constraints, "Constraint")
+        self.constraints = self._tree_restart(
+            w=self.constraints, standard="Constraint", ui_data=self.ui_data)
 
-    def calculate_constraints(self):
-        self.constraints.calculate_all()
-        self.refresh_on_execute()
-
-    def calculate_expressions(self):
-        self.expressions.calculate_all()
-        self.refresh_on_execute()
+    def residuals_restart(self):
+        self.residuals = self._tree_restart(
+            w=self.residuals, cls=ResidualTable, ui_data=self.ui_data)
 
     def set_model(self, model):
-        self.ui_setup.model = model
+        self.ui_data.model = model
 
     def update_model(self):
         """
@@ -221,6 +194,9 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self.expressions_restart()
         self.constraints_restart()
         self.parameters_restart()
+        self.mdiArea.setActiveSubWindow(self.variables.parent())
+        self.toggle_tabs()
+        self.toggle_tabs()
 
     def model_information(self):
         """
@@ -241,20 +217,27 @@ class MainWindow(_MainWindow, _MainWindowUI):
         * number of fixed variables not appearing in any constraints
         * number of fixed variables appearing in constraints
         """
-        active_eq = rpt.count_equality_constraints(self.ui_setup.model)
-        free_vars = rpt.count_free_variables(self.ui_setup.model)
+        active_eq = rpt.count_equality_constraints(self.ui_data.model)
+        free_vars = rpt.count_free_variables(self.ui_data.model)
+        cons = rpt.count_constraints(self.ui_data.model)
         dof = free_vars - active_eq
         if dof == 1:
             doftext = "Degree"
         else:
             doftext = "Degrees"
-        QMessageBox.information(
-            self,
-            "Model Information",
-            "{}  -- Active equalities\n"
-            "{}  -- Free variables in active equalities\n"
-            "{}  -- {} of freedom\n"\
-            .format(active_eq, free_vars, dof, doftext))
+        msg = QMessageBox()
+        msg.setStyleSheet("QLabel{min-width: 600px;}")
+        self._dialog = msg
+        #msg.setIcon(QMessageBox.Information)
+        msg.setWindowTitle("Model Information")
+        msg.setText(
+"""{} -- Active Constraints
+{} -- Active Equalities
+{} -- Free Variables
+{} -- {} of Freedom""".format(cons, active_eq, free_vars, dof, doftext))
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.setModal(False)
+        msg.show()
 
     def refresh_on_execute(self):
         """
@@ -268,6 +251,11 @@ class MainWindow(_MainWindow, _MainWindowUI):
             except RuntimeError: # window closed by user pushing "X" button
                 pass
 
+    def show_model_select(self):
+        model_select = ModelSelect(parent=self, ui_data=self.ui_data)
+        model_select.update_models()
+        model_select.show()
+
     def exit_action(self):
         """
         Selecting exit from the UI, triggers the close event on this mainwindow
@@ -278,10 +266,17 @@ class MainWindow(_MainWindow, _MainWindowUI):
         """
         Handle the close event by asking for confirmation
         """
-        result = QMessageBox.question(self,
-            "Exit?",
-            "Are you sure you want to exit ?",
-            QMessageBox.Yes| QMessageBox.No)
+        msg = QMessageBox()
+        self._dialog = msg
+        msg.setIcon(QMessageBox.Question)
+        msg.setText("Are you sure you want to close this window?"
+                    " You can reopen it with ui.show().")
+        msg.setWindowTitle("Close?")
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        if self.testing: # don't even show dialog just pretend button clicked
+            result = self._dialog_test_button
+        else:
+            result = msg.exec_()
         if result == QMessageBox.Yes:
             event.accept()
         else:

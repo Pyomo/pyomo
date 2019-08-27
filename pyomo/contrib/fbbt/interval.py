@@ -1,4 +1,14 @@
 import math
+import warnings
+import logging
+from pyomo.common.errors import DeveloperError, InfeasibleConstraintException, PyomoException
+
+logger = logging.getLogger(__name__)
+inf = float('inf')
+
+
+class IntervalException(PyomoException):
+    pass
 
 
 def add(xl, xu, yl, yu):
@@ -10,21 +20,44 @@ def sub(xl, xu, yl, yu):
 
 
 def mul(xl, xu, yl, yu):
-    return min(xl*yl, xl*yu, xu*yl, xu*yu), max(xl*yl, xl*yu, xu*yl, xu*yu)
+    lb = min(xl*yl, xl*yu, xu*yl, xu*yu)
+    ub = max(xl*yl, xl*yu, xu*yl, xu*yu)
+    if math.isnan(lb):
+        lb = -inf
+    if math.isnan(ub):
+        ub = inf
+    return lb, ub
 
 
-def inv(xl, xu):
-    if xl <= 0 and xu >= 0:
-        return -math.inf, math.inf
-    return 1/xu, 1/xl
+def inv(xl, xu, feasibility_tol):
+    if xl <= feasibility_tol and xu >= -feasibility_tol:
+        # if the denominator (x) can include 0, then 1/x is unbounded.
+        lb = -inf
+        ub = inf
+    else:
+        ub = 1.0 / xl
+        lb = 1.0 / xu
+    return lb, ub
 
 
-def div(xl, xu, yl, yu):
-    return mul(xl, xu, *inv(yl, yu))
+def div(xl, xu, yl, yu, feasibility_tol):
+    if yl <= feasibility_tol and yu >= -feasibility_tol:
+        # if the denominator (y) can include 0, then x/y is unbounded.
+        lb = -inf
+        ub = inf
+    else:
+        lb, ub = mul(xl, xu, *inv(yl, yu, feasibility_tol))
+    return lb, ub
 
 
 def power(xl, xu, yl, yu):
+    """
+    Compute bounds on x**y.
+    """
     if xl > 0:
+        """
+        If x is always positive, things are simple. We only need to worry about the sign of y.
+        """
         if yl < 0 and yu > 0:
             lb = min(xu ** yl, xl ** yu)
             ub = max(xl ** yl, xu ** yu)
@@ -34,39 +67,52 @@ def power(xl, xu, yl, yu):
         elif yu <= 0:
             lb = xu ** yl
             ub = xl ** yu
+        else:
+            raise DeveloperError()
     elif xl == 0:
+        # this section is only needed so we do not encounter math domain errors;
+        # The logic is essentially the same as above (xl > 0)
         if xu == 0 and yl < 0:
-            _lba = math.inf
+            _lba = inf
         else:
             _lba = xu ** yl
         if yu < 0:
-            _lbb = math.inf
+            _lbb = inf
         else:
             _lbb = xl ** yu
         lb = min(_lba, _lbb)
 
         if yl < 0:
-            _uba = math.inf
+            _uba = inf
         else:
             _uba = xl ** yl
         if xu == 0 and yu < 0:
-            _ubb = math.inf
+            _ubb = inf
         else:
             _ubb = xu ** yu
         ub = max(_uba, _ubb)
     elif yl == yu and yl == round(yl):
+        # the exponent is an integer, so x can be negative
+        """
+        The logic here depends on several things:
+        1) The sign of x
+        2) The sign of y
+        3) Whether y is even or odd.
+        
+        There are also special cases to avoid math domain errors.
+        """
         y = yl
         if xu <= 0:
             if y < 0:
                 if y % 2 == 0:
                     lb = xl ** y
                     if xu == 0:
-                        ub = math.inf
+                        ub = inf
                     else:
                         ub = xu ** y
                 else:
                     if xu == 0:
-                        lb = -math.inf
+                        lb = -inf
                     else:
                         lb = xu ** y
                     ub = xl ** y
@@ -81,10 +127,10 @@ def power(xl, xu, yl, yu):
             if y < 0:
                 if y % 2 == 0:
                     lb = min(xl ** y, xu ** y)
-                    ub = math.inf
+                    ub = inf
                 else:
-                    lb = - math.inf
-                    ub = math.inf
+                    lb = - inf
+                    ub = inf
             else:
                 if y % 2 == 0:
                     lb = 0
@@ -92,27 +138,183 @@ def power(xl, xu, yl, yu):
                 else:
                     lb = xl ** y
                     ub = xu ** y
+    elif yl == yu:
+        # the exponent is allowed to be fractional, so x must be positive
+        xl = 0
+        lb, ub = power(xl, xu, yl, yu)
     else:
-        lb = -math.inf
-        ub = math.inf
+        msg = 'encountered an exponent where the base is allowed to be negative '
+        msg += 'and the exponent is allowed to be fractional and is not fixed. '
+        msg += 'Assuming the lower bound of the base to be 0.'
+        warnings.warn(msg)
+        logger.warning(msg)
+        xl = 0
+        lb, ub = power(xl, xu, yl, yu)
 
     return lb, ub
 
 
+def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
+    """
+    z = x**y => compute bounds on x.
+
+    First, start by computing bounds on x with
+
+        x = exp(ln(z) / y)
+
+    However, if y is an integer, then x can be negative, so there are several special cases. See the docs below.
+    """
+    xl, xu = log(zl, zu)
+    xl, xu = div(xl, xu, yl, yu, feasibility_tol)
+    xl, xu = exp(xl, xu)
+
+    # if y is an integer, then x can be negative
+    if yl == yu and yl == round(yl):  # y is a fixed integer
+        y = yl
+        if y == 0:
+            # Anything to the power of 0 is 1, so if y is 0, then x can be anything
+            # (assuming zl <= 1 <= zu, which is enforced when traversing the tree in the other direction)
+            xl = -inf
+            xu = inf
+        elif y % 2 == 0:
+            """
+            if y is even, then there are two primary cases (note that it is much easier to walk through these
+            while looking at plots):
+            case 1: y is positive
+                x**y is convex, positive, and symmetric. The bounds on x depend on the lower bound of z. If zl <= 0, 
+                then xl should simply be -xu. However, if zl > 0, then we may be able to say something better. For 
+                example, if the original lower bound on x is positive, then we can keep xl computed from 
+                x = exp(ln(z) / y). Furthermore, if the original lower bound on x is larger than -xl computed from 
+                x = exp(ln(z) / y), then we can still keep the xl computed from x = exp(ln(z) / y). Similar logic
+                applies to the upper bound of x.
+            case 2: y is negative
+                The ideas are similar to case 1.
+            """
+            if zu < 0:
+                raise InfeasibleConstraintException('Infeasible. Anything to the power of {0} must be positive.'.format(y))
+            if y > 0:
+                if zu == 0:
+                    _xl = 0
+                    _xu = 0
+                elif zl <= 0:
+                    _xl = -xu
+                    _xu = xu
+                else:
+                    if orig_xl <= -xl:
+                        _xl = -xu
+                    else:
+                        _xl = xl
+                    if orig_xu < xl - feasibility_tol:
+                        _xu = -xl
+                    else:
+                        _xu = xu
+                xl = _xl
+                xu = _xu
+            else:
+                if zu == 0:
+                    raise InfeasibleConstraintException('Infeasible. Anything to the power of {0} must be positive.'.format(y))
+                elif zl <= 0:
+                    _xl = -inf
+                    _xu = inf
+                else:
+                    if orig_xl <= -xl:
+                        _xl = -xu
+                    else:
+                        _xl = xl
+                    if orig_xu < xl - feasibility_tol:
+                        _xu = -xl
+                    else:
+                        _xu = xu
+                xl = _xl
+                xu = _xu
+        else:  # y % 2 == 1
+            """
+            y is odd. 
+            Case 1: y is positive
+                x**y is monotonically increasing. If y is positive, then we can can compute the bounds on x using
+                x = z**(1/y) and the signs on xl and xu depend on the signs of zl and zu.
+            Case 2: y is negative
+                Again, this is easier to visualize with a plot. x**y approaches zero when x approaches -inf or inf. 
+                Thus, if zl < 0 < zu, then no bounds can be inferred for x. If z is positive (zl >=0 ) then we can
+                use the bounds computed from x = exp(ln(z) / y). If z is negative (zu <= 0), then we live in the
+                bottom left quadrant, xl depends on zu, and xu depends on zl.
+            """
+            if y > 0:
+                xl = abs(zl)**(1.0/y)
+                xl = math.copysign(xl, zl)
+                xu = abs(zu)**(1.0/y)
+                xu = math.copysign(xu, zu)
+            else:
+                if zl >= 0:
+                    pass
+                elif zu <= 0:
+                    if zu == 0:
+                        xl = -inf
+                    else:
+                        xl = -abs(zu)**(1.0/y)
+                    if zl == 0:
+                        xu = -inf
+                    else:
+                        xu = -abs(zl)**(1.0/y)
+                else:
+                    xl = -inf
+                    xu = inf
+
+    return xl, xu
+
+
+def _inverse_power2(zl, zu, xl, xu, feasiblity_tol):
+    """
+    z = x**y => compute bounds on y
+    y = ln(z) / ln(x)
+
+    This function assumes the exponent can be fractional, so x must be positive. This method should not be called
+    if the exponent is an integer.
+    """
+    if xu <= 0:
+        raise IntervalException('Cannot raise a negative variable to a fractional power.')
+    if (xl > 0 and zu <= 0) or (xl >= 0 and zu < 0):
+        raise InfeasibleConstraintException('A positive variable raised to the power of anything must be positive.')
+    lba, uba = log(zl, zu)
+    lbb, ubb = log(xl, xu)
+    yl, yu = div(lba, uba, lbb, ubb, feasiblity_tol)
+    return yl, yu
+
+
 def exp(xl, xu):
-    return math.exp(xl), math.exp(xu)
+    try:
+        lb = math.exp(xl)
+    except OverflowError:
+        lb = math.inf
+    try:
+        ub = math.exp(xu)
+    except OverflowError:
+        ub = math.inf
+    return lb, ub
 
 
 def log(xl, xu):
     if xl > 0:
-        return math.log(xl), math.log(xu)
-    elif xl == 0:
-        if xu > 0:
-            return -math.inf, math.log(xu)
-        else:
-            return -math.inf, -math.inf
+        lb = math.log(xl)
     else:
-        return -math.inf, math.inf
+        lb = -inf
+    if xu > 0:
+        ub = math.log(xu)
+    else:
+        ub = -inf
+    return lb, ub
+
+
+def log10(xl, xu):
+    if xl > 0:
+        lb = math.log10(xl)
+    else:
+        lb = -inf
+    if xu > 0:
+        ub = math.log10(xu)
+    else:
+        ub = -inf
+    return lb, ub
 
 
 def sin(xl, xu):
@@ -133,7 +335,7 @@ def sin(xl, xu):
     # find the minimum value of i such that 2*pi*i - pi/2 >= xl. Then round i up. If 2*pi*i - pi/2 is still less
     # than or equal to xu, then there is a minimum between xl and xu. Thus the lb is -1. Otherwise, the minimum
     # occurs at either xl or xu
-    if xl <= -math.inf or xu >= math.inf:
+    if xl <= -inf or xu >= inf:
         return -1, 1
     pi = math.pi
     i = (xl + pi / 2) / (2 * pi)
@@ -174,7 +376,7 @@ def cos(xl, xu):
     # find the minimum value of i such that 2*pi*i - pi >= xl. Then round i up. If 2*pi*i - pi/2 is still less
     # than or equal to xu, then there is a minimum between xl and xu. Thus the lb is -1. Otherwise, the minimum
     # occurs at either xl or xu
-    if xl <= -math.inf or xu >= math.inf:
+    if xl <= -inf or xu >= inf:
         return -1, 1
     pi = math.pi
     i = (xl + pi) / (2 * pi)
@@ -215,15 +417,15 @@ def tan(xl, xu):
     # the lb is -inf and the ub is inf. Otherwise the minimum occurs at xl and the maximum occurs at xu.
     # find the minimum value of i such that pi*i + pi/2 >= xl. Then round i up. If pi*i + pi/2 is still less
     # than or equal to xu, then there is an undefined point between xl and xu.
-    if xl <= -math.inf or xu >= math.inf:
-        return -math.inf, math.inf
+    if xl <= -inf or xu >= inf:
+        return -inf, inf
     pi = math.pi
     i = (xl - pi / 2) / (pi)
     i = math.ceil(i)
     x_at_undefined = pi * i + pi / 2
     if x_at_undefined <= xu:
-        lb = -math.inf
-        ub = math.inf
+        lb = -inf
+        ub = inf
     else:
         lb = math.tan(xl)
         ub = math.tan(xu)
@@ -255,7 +457,7 @@ def asin(xl, xu, yl, yu):
 
     pi = math.pi
 
-    if yl <= -math.inf:
+    if yl <= -inf:
         lb = yl
     elif xl <= math.sin(yl) <= xu:
         # if sin(yl) >= xl then yl satisfies the bounds on x, and the lower bound of y cannot be improved
@@ -305,7 +507,7 @@ def asin(xl, xu, yl, yu):
             lb = lb2
 
     # use the same logic for the maximum
-    if yu >= math.inf:
+    if yu >= inf:
         ub = yu
     elif xl <= math.sin(yu) <= xu:
         ub = yu
@@ -366,7 +568,7 @@ def acos(xl, xu, yl, yu):
 
     pi = math.pi
 
-    if yl <= -math.inf:
+    if yl <= -inf:
         lb = yl
     elif xl <= math.cos(yl) <= xu:
         # if xl <= cos(yl) <= xu then yl satisfies the bounds on x, and the lower bound of y cannot be improved
@@ -417,7 +619,7 @@ def acos(xl, xu, yl, yu):
             lb = lb2
 
     # use the same logic for the maximum
-    if yu >= math.inf:
+    if yu >= inf:
         ub = yu
     elif xl <= math.cos(yu) <= xu:
         ub = yu
@@ -475,7 +677,7 @@ def atan(xl, xu, yl, yu):
     pi = math.pi
 
     # tan goes to -inf and inf at every pi*i + pi/2 (integer i).
-    if xl <= -math.inf or yl <= -math.inf:
+    if xl <= -inf or yl <= -inf:
         lb = yl
     else:
         i = (yl - pi / 2) / pi
@@ -485,7 +687,7 @@ def atan(xl, xu, yl, yu):
         dist = y_tmp - (-pi/2)
         lb = i + dist
 
-    if xu >= math.inf or yu >= math.inf:
+    if xu >= inf or yu >= inf:
         ub = yu
     else:
         i = (yu - pi / 2) / pi

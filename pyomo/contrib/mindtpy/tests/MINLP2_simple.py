@@ -4,7 +4,7 @@ Re-implementation of Duran example 1 as written by Westerlund
 MINLP test problem in Pyomo
 Author: David Bernal <https://github.com/bernalde>
 
-The expected optimal solution value is 6.0072.
+The expected optimal solution value is 6.00976.
 
 Ref:
     Duran, Marco A., and Ignacio E. Grossmann.
@@ -70,7 +70,7 @@ class SimpleMINLP(ConcreteModel):
         m.const7 = Constraint(expr=Y[1] + Y[2] <= 1)
 
         """Cost (objective) function definition"""
-        m.cost = Objective(expr=-5*Y[1] - 6*Y[2] - 8*Y[3] - X[4], sense=maximize)
+        m.cost = Objective(expr=+5*Y[1] + 6*Y[2] + 8*Y[3] + X[4], sense=minimize)
 
         """Bound definitions"""
         # x (continuous) upper bounds

@@ -18,6 +18,7 @@ from six import itervalues
 logger = logging.getLogger('pyomo.core')
 
 from pyutilib.math.util import isclose
+from pyomo.common.deprecation import deprecated
 
 from .expr_common import (
     _add, _sub, _mul, _div,
@@ -262,6 +263,17 @@ class ExpressionBase(NumericValue):
 
     def _precedence(self):
         return ExpressionBase.PRECEDENCE
+
+    def _associativity(self):
+        """Return the associativity of this operator.
+
+        Returns 1 if this operator is left-to-right associative or -1 if
+        it is right-to-left associative.  Any other return value will be
+        interpreted as "not associative" (implying any arguments that
+        are at this operator's _precedence() will be enclosed in parens).
+        """
+        # Most operators in Python are left-to-right associative
+        return 1
 
     def _to_string(self, values, verbose, smap, compute_values):            #pragma: no cover
         """
@@ -679,6 +691,13 @@ class PowExpression(ExpressionBase):
     def _precedence(self):
         return PowExpression.PRECEDENCE
 
+    def _associativity(self):
+        # "**" is right-to-left associative in Python (so this should
+        # return -1), however, as this rule is not widely known and can
+        # confuse novice users, we will make our "**" operator
+        # non-associative (forcing parens)
+        return 0
+
     def _apply_operation(self, result):
         _l, _r = result
         return _l ** _r
@@ -743,11 +762,14 @@ class ProductExpression(ExpressionBase):
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
             return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
-        if values[0] == "1" or values[0] == "1.0":
+        if values[0] in self._to_string.one:
             return values[1]
-        if values[0] == "-1" or values[0] == "-1.0":
+        if values[0] in self._to_string.minus_one:
             return "- {0}".format(values[1])
         return "{0}*{1}".format(values[0],values[1])
+    # Store these reference sets on the function for quick lookup
+    _to_string.one = {"1", "1.0", "(1)", "(1.0)"}
+    _to_string.minus_one = {"-1", "-1.0", "(-1)", "(-1.0)"}
 
 
 class NPV_ProductExpression(ProductExpression):
@@ -760,6 +782,47 @@ class NPV_ProductExpression(ProductExpression):
 class MonomialTermExpression(ProductExpression):
     __slots__ = ()
 
+    def getname(self, *args, **kwds):
+        return 'mon'
+
+class DivisionExpression(ExpressionBase):
+    """
+    Division expressions::
+
+        x/y
+    """
+    __slots__ = ()
+    PRECEDENCE = 4
+
+    def nargs(self):
+        return 2
+
+    def _precedence(self):
+        return DivisionExpression.PRECEDENCE
+
+    def _compute_polynomial_degree(self, result):
+        if result[1] == 0:
+            return result[0]
+        return None
+
+    def getname(self, *args, **kwds):
+        return 'div'
+
+    def _to_string(self, values, verbose, smap, compute_values):
+        if verbose:
+            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
+        return "{0}/{1}".format(values[0], values[1])
+
+    def _apply_operation(self, result):
+        return result[0] / result[1]
+
+
+class NPV_DivisionExpression(DivisionExpression):
+    __slots__ = ()
+
+    def is_potentially_variable(self):
+        return False
+
 
 class ReciprocalExpression(ExpressionBase):
     """
@@ -768,13 +831,21 @@ class ReciprocalExpression(ExpressionBase):
         1/x
     """
     __slots__ = ()
-    PRECEDENCE = 3.5
+    PRECEDENCE = 4
+
+    @deprecated("ReciprocalExpression is deprecated. Use DivisionExpression",
+                version='TBD')
+    def __init__(self, args):
+        super(ReciprocalExpression, self).__init__(args)
 
     def nargs(self):
         return 1
 
     def _precedence(self):
         return ReciprocalExpression.PRECEDENCE
+
+    def _associativity(self):
+        return 0
 
     def _compute_polynomial_degree(self, result):
         if result[0] == 0:
@@ -787,7 +858,7 @@ class ReciprocalExpression(ExpressionBase):
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
             return "{0}({1})".format(self.getname(), values[0])
-        return "(1/{0})".format(values[0])
+        return "1/{0}".format(values[0])
 
     def _apply_operation(self, result):
         return 1 / result[0]
@@ -950,10 +1021,11 @@ class SumExpression(SumExpressionBase):
         for i in range(1,len(values)):
             if values[i][0] == '-':
                 tmp.append(' - ')
-                j = 1
-                while values[i][j] == ' ':
-                    j += 1
-                tmp.append(values[i][j:])
+                tmp.append(values[i][1:].strip())
+            elif len(values[i]) > 3 and values[i][:2] == '(-' \
+                 and values[i][-1] == ')' and _balanced_parens(values[i][1:-1]):
+                tmp.append(' - ')
+                tmp.append(values[i][2:-1].strip())
             else:
                 tmp.append(' + ')
                 tmp.append(values[i])
@@ -1183,7 +1255,8 @@ class UnaryFunctionExpression(ExpressionBase):
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
             return "{0}({1})".format(self.getname(), values[0])
-        if values[0] and values[0][0] == '(' and values[0][-1] == ')':
+        if values[0] and values[0][0] == '(' and values[0][-1] == ')' \
+           and _balanced_parens(values[0][1:-1]):
             return '{0}{1}'.format(self._name, values[0])
         else:
             return '{0}({1})'.format(self._name, values[0])
@@ -1336,7 +1409,10 @@ class LinearExpression(ExpressionBase):
                 else:
                    tmp.append(" + %s*%s" % (str(c_), v_))
             else:
-                tmp.append(" + %s*%s" % (str(c), v_))
+                c_str = str(c)
+                if any(_ in c_str for _ in '+-*/'):
+                    c_str = '('+c_str+')'
+                tmp.append(" + %s*%s" % (c_str, v_))
         s = "".join(tmp)
         if len(s) == 0:                 #pragma: no cover
             return s
@@ -1531,6 +1607,12 @@ def _decompose_linear_terms(expr, multiplier=1):
                 yield term
         else:
             raise LinearDecompositionError("Quadratic terms exist in a product expression.")
+    elif expr.__class__ is DivisionExpression:
+        if expr._args_[1].__class__ in native_numeric_types or not expr._args_[1].is_potentially_variable():
+            for term in _decompose_linear_terms(expr._args_[0], multiplier/expr._args_[1]):
+                yield term
+        else:
+            raise LinearDecompositionError("Unexpected nonlinear term (division)")
     elif expr.__class__ is ReciprocalExpression:
         # The argument is potentially variable, so this represents a nonlinear term
         #
@@ -1826,26 +1908,22 @@ def _generate_mul_expression(etype, _self, _other):
             elif _self.__class__ is MonomialTermExpression:
                 return MonomialTermExpression((_self._args_[0]/_other, _self._args_[1]))
             elif _self.is_potentially_variable():
-                return ProductExpression((_self, 1/_other))
-            return NPV_ProductExpression((_self, 1/_other))
+                return DivisionExpression((_self, _other))
+            return NPV_DivisionExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:
                 return 0
-            elif _self == 1:
-                if _other.is_potentially_variable():
-                    return ReciprocalExpression((_other,))
-                return NPV_ReciprocalExpression((_other,))
             elif _other.is_potentially_variable():
-                return ProductExpression((_self, ReciprocalExpression((_other,))))
-            return NPV_ProductExpression((_self, ReciprocalExpression((_other,))))
+                return DivisionExpression((_self, _other))
+            return NPV_DivisionExpression((_self, _other))
         elif _other.is_potentially_variable():
-            return ProductExpression((_self, ReciprocalExpression((_other,))))
+            return DivisionExpression((_self, _other))
         elif _self.is_potentially_variable():
             if _self.is_variable_type():
-                return MonomialTermExpression((NPV_ReciprocalExpression((_other,)), _self))
-            return ProductExpression((_self, NPV_ReciprocalExpression((_other,))))
+                return MonomialTermExpression((NPV_DivisionExpression((1, _other)), _self))
+            return DivisionExpression((_self, _other))
         else:
-            return NPV_ProductExpression((_self, NPV_ReciprocalExpression((_other,))))
+            return NPV_DivisionExpression((_self, _other))
 
     raise RuntimeError("Unknown expression type '%s'" % etype)      #pragma: no cover
 
@@ -1920,12 +1998,39 @@ def _generate_intrinsic_function_expression(arg, name, fcn):
     else:
         return NPV_UnaryFunctionExpression(arg, name, fcn)
 
+def _balanced_parens(arg):
+    """Verify the string argument contains balanced parentheses.
+
+    This checks that every open paren is balanced by a closed paren.
+    That is, the infix string expression is likely to be valid.  This is
+    primarily used to determine if a string that starts and ends with
+    parens can have those parens removed.
+
+    Examples:
+        >>> a = "(( x + y ) * ( z - w ))"
+        >>> _balanced_parens(a[1:-1])
+        True
+        >>> a = "( x + y ) * ( z - w )"
+        >>> _balanced_parens(a[1:-1])
+        False
+    """
+    _parenCount = 0
+    for c in arg:
+        if c == '(':
+            _parenCount += 1
+        elif c == ')':
+            _parenCount -= 1
+            if _parenCount < 0:
+                return False
+    return _parenCount == 0
+
 
 NPV_expression_types = set(
    [NPV_NegationExpression,
     NPV_ExternalFunctionExpression,
     NPV_PowExpression,
     NPV_ProductExpression,
+    NPV_DivisionExpression,
     NPV_ReciprocalExpression,
     NPV_SumExpression,
     NPV_UnaryFunctionExpression,

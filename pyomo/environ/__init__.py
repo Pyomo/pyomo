@@ -107,4 +107,3 @@ from pyomo.opt import (
     TerminationCondition, SolverStatus,
     )
 from pyomo.core.base.units_container import units
-

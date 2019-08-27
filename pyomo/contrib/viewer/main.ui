@@ -29,22 +29,16 @@
      <height>38</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menu_File">
-    <property name="title">
-     <string>&amp;File</string>
-    </property>
-    <addaction name="separator"/>
-    <addaction name="separator"/>
-    <addaction name="action_Exit"/>
-   </widget>
    <widget class="QMenu" name="menu_View">
     <property name="title">
      <string>&amp;View</string>
     </property>
+    <addaction name="actionModel_Selector"/>
     <addaction name="actionRestart_Variable_View"/>
     <addaction name="actionRestart_Constraint_View"/>
     <addaction name="actionRestart_Parameter_View"/>
     <addaction name="actionRestart_Expression_View"/>
+    <addaction name="actionRestart_Residual_Table"/>
     <addaction name="separator"/>
     <addaction name="actionTile"/>
     <addaction name="actionCascade"/>
@@ -53,7 +47,7 @@
    </widget>
    <widget class="QMenu" name="menuCalculate">
     <property name="title">
-     <string>Ca&amp;lculate</string>
+     <string>&amp;Calculate</string>
     </property>
     <addaction name="actionCalculateConstraints"/>
     <addaction name="actionCalculateExpressions"/>
@@ -64,7 +58,6 @@
     </property>
     <addaction name="actionInformation"/>
    </widget>
-   <addaction name="menu_File"/>
    <addaction name="menu_View"/>
    <addaction name="menuCalculate"/>
    <addaction name="menuModel"/>
@@ -108,7 +101,7 @@
   </action>
   <action name="action_Exit">
    <property name="text">
-    <string>&amp;Exit</string>
+    <string>C&amp;lose Window</string>
    </property>
   </action>
   <action name="action_toggle_expressions">
@@ -118,12 +111,12 @@
   </action>
   <action name="actionCalculateConstraints">
    <property name="text">
-    <string>All Constraints</string>
+    <string>All &amp;Constraints</string>
    </property>
   </action>
   <action name="actionCalculateExpressions">
    <property name="text">
-    <string>All Expressions</string>
+    <string>All &amp;Expressions</string>
    </property>
   </action>
   <action name="action_toggle_streams">
@@ -201,7 +194,7 @@
   </action>
   <action name="actionInformation">
    <property name="text">
-    <string>Information</string>
+    <string>&amp;Information</string>
    </property>
   </action>
   <action name="actionSolve">
@@ -243,17 +236,17 @@
   </action>
   <action name="actionRestart_Constraint_View">
    <property name="text">
-    <string>Restart Constraint View</string>
+    <string>Restart &amp;Constraint View</string>
    </property>
   </action>
   <action name="actionRestart_Parameter_View">
    <property name="text">
-    <string>Restart Parameter View</string>
+    <string>Restart &amp;Parameter View</string>
    </property>
   </action>
   <action name="actionRestart_Expression_View">
    <property name="text">
-    <string>Restart Expression View</string>
+    <string>Restart &amp;Expression View</string>
    </property>
   </action>
   <action name="actionTile">
@@ -263,12 +256,32 @@
   </action>
   <action name="actionCascade">
    <property name="text">
-    <string>Cascade</string>
+    <string>C&amp;ascade</string>
    </property>
   </action>
   <action name="actionTabs">
    <property name="text">
-    <string>Toggle Tabs</string>
+    <string>Toggle Ta&amp;bs</string>
+   </property>
+  </action>
+  <action name="actionModel_Selector">
+   <property name="text">
+    <string>Model Sele&amp;ctor ...</string>
+   </property>
+  </action>
+  <action name="actionRestart_Residual_Table">
+   <property name="text">
+    <string>Restart Residual Table</string>
+   </property>
+  </action>
+  <action name="actionSet_Working_Directory">
+   <property name="text">
+    <string>Set &amp;Working Directory ...</string>
+   </property>
+  </action>
+  <action name="action_Run_Script">
+   <property name="text">
+    <string>&amp;Run Script ...</string>
    </property>
   </action>
  </widget>

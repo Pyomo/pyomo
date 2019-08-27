@@ -37,9 +37,10 @@ from pyomo.contrib.mindtpy.util import (
 )
 from pyomo.core import (
     Block, ConstraintList, NonNegativeReals, RangeSet, Set, Suffix, Var, value,
-    VarList)
+    VarList, TransformationFactory)
 from pyomo.opt import SolverFactory, SolverResults
 from pyutilib.misc import Container
+
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
@@ -65,6 +66,14 @@ class MindtPySolver(object):
         domain=PositiveInt,
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods"
+    ))
+    CONFIG.declare("time_limit", ConfigValue(
+        default=600,
+        domain=PositiveInt,
+        description="Time limit (seconds, default=600)",
+        doc="Seconds allowed until terminated. Note that the time limit can"
+            "currently only be enforced between subsolver invocations. You may"
+            "need to set subsolver time limits as well."
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="OA",
@@ -200,6 +209,17 @@ class MindtPySolver(object):
         domain=PositiveFloat,
         description="Bound applied to the linearization of the objective function if master MILP is unbounded."
     ))
+    CONFIG.declare("integer_to_binary", ConfigValue(
+        default=False,
+        description="Convert integer variables to binaries (for integer cuts)",
+        domain=bool
+    ))
+    CONFIG.declare("add_integer_cuts", ConfigValue(
+        default=False,
+        description="Add integer cuts (no-good cuts) to binary variables to disallow same integer solution again."
+                    "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
+        domain=bool
+    ))
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -230,17 +250,22 @@ class MindtPySolver(object):
         solve_data.results = SolverResults()
         solve_data.timing = Container()
 
+        solve_data.original_model = model
+        solve_data.working_model = model.clone()
+        if config.integer_to_binary:
+            TransformationFactory('contrib.integer_to_binary'). \
+                apply_to(solve_data.working_model)
+
+
         old_logger_level = config.logger.getEffectiveLevel()
-        with time_code(solve_data.timing, 'total'), \
+        with time_code(solve_data.timing, 'total', is_main_timer=True), \
              restore_logger_level(config.logger), \
-             create_utility_block(model, 'MindtPy_utils', solve_data):
+             create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
             if config.tee and old_logger_level > logging.INFO:
                 # If the logger does not already include INFO, include it.
                 config.logger.setLevel(logging.INFO)
             config.logger.info("---Starting MindtPy---")
 
-            solve_data.original_model = model
-            solve_data.working_model = model.clone()
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
             process_objective(solve_data, config)
@@ -357,11 +382,19 @@ class MindtPySolver(object):
                 #     value(solve_data.working_objective_expr, exception=False))
                 copy_var_list_values(
                     MindtPy.variable_list,
-                    solve_data.original_model.MindtPy_utils.variable_list,
+                    solve_data.original_model.component_data_objects(Var),
                     config)
 
             solve_data.results.problem.lower_bound = solve_data.LB
             solve_data.results.problem.upper_bound = solve_data.UB
+
+        solve_data.results.solver.timing = solve_data.timing
+        solve_data.results.solver.user_time = solve_data.timing.total
+        solve_data.results.solver.wallclock_time = solve_data.timing.total
+
+        solve_data.results.solver.iterations = solve_data.mip_iter
+
+        return solve_data.results
 
     #
     # Support "with" statements.

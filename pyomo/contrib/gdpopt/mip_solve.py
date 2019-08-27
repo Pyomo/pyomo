@@ -4,13 +4,15 @@ from __future__ import division
 
 from copy import deepcopy
 
+from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.data_class import MasterProblemResult
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
 from pyomo.core import (Block, Expression, Objective, TransformationFactory,
                         Var, minimize, value, Constraint)
 from pyomo.gdp import Disjunct
-from pyomo.opt import TerminationCondition as tc
+from pyomo.opt import TerminationCondition as tc, SolverResults
 from pyomo.opt import SolutionStatus, SolverFactory
+from pyomo.network import Port
 
 
 def solve_linear_GDP(linear_GDP_model, solve_data, config):
@@ -18,7 +20,9 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
     m = linear_GDP_model
     GDPopt = m.GDPopt_utils
     # Transform disjunctions
-    TransformationFactory('gdp.bigm').apply_to(m)
+    _bigm = TransformationFactory('gdp.bigm')
+    _bigm.handlers[Port] = False
+    _bigm.apply_to(m)
 
     preprocessing_transformations = [
         # Propagate variable bounds
@@ -41,6 +45,7 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
         'contrib.deactivate_trivial_constraints',
     ]
     if config.mip_presolve:
+        # fbbt(m, integer_tol=config.integer_tolerance)
         for xfrm in preprocessing_transformations:
             TransformationFactory(xfrm).apply_to(m)
 
@@ -56,9 +61,23 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
     # Callback immediately before solving MIP master problem
     config.call_before_master_solve(m, solve_data)
 
-    with SuppressInfeasibleWarning():
-        results = SolverFactory(config.mip_solver).solve(
-            m, **config.mip_solver_args)
+    try:
+        with SuppressInfeasibleWarning():
+            results = SolverFactory(config.mip_solver).solve(
+                m, **config.mip_solver_args)
+    except RuntimeError as e:
+        if 'GAMS encountered an error during solve.' in str(e):
+            config.logger.warning("GAMS encountered an error in solve. Treating as infeasible.")
+            mip_result = MasterProblemResult()
+            mip_result.feasible = False
+            mip_result.var_values = list(v.value for v in GDPopt.variable_list)
+            mip_result.pyomo_results = SolverResults()
+            mip_result.pyomo_results.solver.termination_condition = tc.error
+            mip_result.disjunct_values = list(
+                disj.indicator_var.value for disj in GDPopt.disjunct_list)
+            return mip_result
+        else:
+            raise
     terminate_cond = results.solver.termination_condition
     if terminate_cond is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it's infeasible or
