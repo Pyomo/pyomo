@@ -2797,9 +2797,9 @@ class TestSet(unittest.TestCase):
             m = ConcreteModel()
             m.I = Set(initialize={1,3,2,4}, ordered=False)
             self.assertEqual(output.getvalue(), "")
-        self.assertEqual(list(m.I), [1,2,3,4])
+        self.assertEqual(sorted(list(m.I)), [1,2,3,4])
         # We can't directly compare the reversed to a reference list
-        # (because ithis is an unordered set!) but we can compare it with
+        # (because this is an unordered set!) but we can compare it with
         # the forward list.
         self.assertEqual(list(reversed(list(m.I))), list(reversed(m.I)))
         self.assertEqual(list(reversed(m.I.data())), list(reversed(m.I)))
@@ -3219,10 +3219,10 @@ class TestSet(unittest.TestCase):
             "Element (1,) already exists in Set I; no action taken\n")
 
         m.J = Set()
-        with self.assertRaisesRegexp(
-                TypeError,
-                "Unable to insert '{}' into Set J:\n"
-                "\tTypeError: unhashable type: 'dict'"):
+        # Note that pypy raises a different exception from cpython
+        err = "Unable to insert '{}' into Set J:\n\tTypeError: "\
+            "((unhashable type: 'dict')|('dict' objects are unhashable))"
+        with self.assertRaisesRegexp(TypeError, err):
             m.J.add({})
 
         self.assertTrue( m.J.add((1,)) )
@@ -4396,14 +4396,14 @@ class TestIssues(unittest.TestCase):
             with self.assertRaisesRegexp(KeyError, "Index 's' is not valid"):
                 m.x[m.s].display()
         else:
-            with self.assertRaisesRegexp(
-                    TypeError, "unhashable type: 'OrderedSimpleSet'"):
+            # Note that pypy raises a different exception from cpython
+            err = "TypeError: ((unhashable type: 'OrderedSimpleSet')" \
+                "|('OrderedSimpleSet' objects are unhashable))"
+            with self.assertRaisesRegexp(TypeError, err):
                 self.assertFalse(m.s in m.s)
-            with self.assertRaisesRegexp(
-                    TypeError, "unhashable type: 'OrderedSimpleSet'"):
+            with self.assertRaisesRegexp(TypeError, err):
                 self.assertFalse(m.s in m.t)
-            with self.assertRaisesRegexp(
-                    TypeError, "unhashable type: 'OrderedSimpleSet'"):
+            with self.assertRaisesRegexp(TypeError, err):
                 m.x[m.s].display()
 
         self.assertEqual(list(m.x), ['one'])
