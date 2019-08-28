@@ -4545,6 +4545,20 @@ c : Size=3, Index=CHOICES, Active=True
         m.v_1 = Var(m.s['s1'], m.s2, initialize=10)
         self.assertEqual(len(m.v_1), 9)
 
+    def test_issue_325(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1, 2, 'a', 3], ordered=False)
+        self.assertEqual(set(m.I.data()), set([1, 2, 'a', 3]))
+        self.assertEqual(list(m.I.ordered_data()), [1, 2, 3, 'a'])
+        self.assertEqual(list(m.I.sorted_data()), [1, 2, 3, 'a'])
+
+        # Default sets are ordered by insertion order
+        m.I = Set(initialize=[1, 2, 'a', 3])
+        self.assertEqual(set(m.I.data()), set([1, 2, 'a', 3]))
+        self.assertEqual(list(m.I.data()), [1, 2, 'a', 3])
+        self.assertEqual(list(m.I.ordered_data()), [1, 2, 'a', 3])
+        self.assertEqual(list(m.I.sorted_data()), [1, 2, 3, 'a'])
+
     def test_issue_358(self):
         m = ConcreteModel()
         m.s = RangeSet(1)
