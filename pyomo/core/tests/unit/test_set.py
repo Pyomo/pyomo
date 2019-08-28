@@ -1167,6 +1167,13 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
             r = list(i.ranges())
             self.assertEqual(len(r), 4)
+            for idx, x in enumerate(r):
+                self.assertIsInstance(x, NR)
+                self.assertTrue(x.isfinite())
+                self.assertEqual(x.start, i[idx+1])
+                self.assertEqual(x.end, i[idx+1])
+                self.assertEqual(x.step, 0)
+
             self.assertIn(int, native_types)
             self.assertIn(int, native_numeric_types)
         finally:
@@ -1187,6 +1194,12 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             # native_types set
             self.assertNotIn(str, native_types)
             self.assertNotIn(str, native_numeric_types)
+            for idx, x in enumerate(r[:-1]):
+                self.assertIsInstance(x, NR)
+                self.assertTrue(x.isfinite())
+                self.assertEqual(x.start, i[idx+1])
+                self.assertEqual(x.end, i[idx+1])
+                self.assertEqual(x.step, 0)
             self.assertIs(type(r[-1]), NNR)
         finally:
             native_types.add(str)

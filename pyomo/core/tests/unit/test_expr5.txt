@@ -43,9 +43,9 @@
     c2 : con c2
         Size=3, Index=A, Active=True
         Key : Lower : Body      : Upper : Active
-          1 :  -Inf : B[1]*x[1] :     1 :   True
-          2 :  -Inf : B[2]*x[2] :     1 :   True
-          3 :  -Inf : B[3]*x[3] :     1 :   True
+          1 :  -Inf : B[1]*x[1] :   1.0 :   True
+          2 :  -Inf : B[2]*x[2] :   1.0 :   True
+          3 :  -Inf : B[3]*x[3] :   1.0 :   True
     c3 : con c3
         Size=1, Index=c3_index, Active=True
         Key : Lower : Body : Upper : Active
