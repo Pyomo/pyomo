@@ -14,7 +14,12 @@ import logging
 import pickle
 from six import StringIO, PY2
 from six.moves import xrange
-from typing import NamedTuple
+from collections import namedtuple as NamedTuple
+
+try:
+    from typing import NamedTuple
+except ImportError:
+    NamedTuple = None
 
 import pyutilib.th as unittest
 
@@ -4611,6 +4616,7 @@ c : Size=3, Index=CHOICES, Active=True
             out2.getvalue().strip()[1:],
         )
 
+    @unittest.skipIf(NamedTuple is None, "typing module not available")
     def test_issue_938(self):
         NodeKey = NamedTuple('NodeKey', [('id', int)])
         ArcKey = NamedTuple('ArcKey',
