@@ -4397,7 +4397,7 @@ class TestIssues(unittest.TestCase):
                 m.x[m.s].display()
         else:
             # Note that pypy raises a different exception from cpython
-            err = "TypeError: ((unhashable type: 'OrderedSimpleSet')" \
+            err = "((unhashable type: 'OrderedSimpleSet')" \
                 "|('OrderedSimpleSet' objects are unhashable))"
             with self.assertRaisesRegexp(TypeError, err):
                 self.assertFalse(m.s in m.s)
