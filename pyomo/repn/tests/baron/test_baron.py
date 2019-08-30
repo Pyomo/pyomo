@@ -150,6 +150,15 @@ class Test(unittest.TestCase):
             m.write(test_fname, format="bar")
         self._cleanup(test_fname)
 
+    def test_exponential_NPV(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.obj = Objective(expr=m.x**2)
+        m.p = Param(initialize=1, mutable=True)
+        m.c = Constraint(expr=m.x * m.p ** 1.2 == 0)
+        self._check_baseline(m)
+
+
 #class TestBaron_writer(unittest.TestCase):
 class XTestBaron_writer(object):
     """These tests verified that the BARON writer complained loudly for

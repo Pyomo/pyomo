@@ -140,7 +140,7 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
             if tmp[0] in node._to_string.one:
                 return tmp[1]
             return "{0} * {1}".format(tmp[0], tmp[1])
-        elif node.__class__ is EXPR.PowExpression:
+        elif isinstance(node, EXPR.PowExpression):
             x,y = node.args
             if type(x) not in native_types and not x.is_fixed() and \
                type(y) not in native_types and not y.is_fixed():
