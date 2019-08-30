@@ -16,7 +16,7 @@
 # symbols that are used by developers.
 # 
 
-from . import numvalue, numeric_expr, logical_expr, current
+from . import numvalue, numeric_expr, logicalvalue, logical_expr, current
 
 from .numvalue import (
     value, is_constant, is_fixed, is_variable_type,
@@ -24,8 +24,16 @@ from .numvalue import (
     native_numeric_types, native_types, polynomial_degree,
 )
 
+from .logicalvalue import (
+	value, is_constant, is_fixed, is_variable_type,
+    is_potentially_variable, LogicalValue, TrueConstant,
+    FalseConstant, native_logical_types,
+    native_logical_values
+)
+
 from .numeric_expr import linear_expression, nonlinear_expression
 from .logical_expr import inequality
+
 from .current import (
     log, log10, sin, cos, tan, cosh, sinh, tanh,
     asin, acos, atan, exp, sqrt, asinh, acosh,
