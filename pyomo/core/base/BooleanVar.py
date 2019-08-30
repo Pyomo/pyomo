@@ -1,5 +1,5 @@
 #Is this correct? #Take domain out
-from pyomo.core.expr.logical_expr import LogicalXor
+from pyomo.core.expr.logical_expr import LogicalXor, EquivalenceExpression, Implication
 
 __all__ = ['BooleanVar', '_BooleanVarData', '_GeneralBooleanVarData', 'BooleanVarList', 'SimpleBooleanVar']
 
@@ -208,6 +208,50 @@ class _BooleanVarData(ComponentData, LogicalValue):
 
     def Xor(self, Y2):
         return LogicalXor(self, Y2)
+
+    def xor(self, Y2):
+        raise NameError("Do you mean Xor?")
+
+    def equals(self, Y2):
+        return EquivalenceExpression(self, Y2)
+
+    def implies(self, Y2):
+        return Implication(self, Y2)
+
+    '''
+    #AndExpressionCreator
+    #Create a new node iff neither node is an AndNode
+    #If we have an "AndNode" already, safe_add new node to the exisiting one.
+    def __and__(self, other):
+        if (type(self) is AndExpression):  
+            if (type(other) is not AndExpression):
+                #return AndExpression(set([self, other])) #set version
+                return AndExpression(list([self, other]))
+            else :
+                other._add(self)
+                self = other
+                return self
+        else :
+            self._add(other)
+        return self
+    
+    #OrExpressionCreator
+    #Create a new node iff neither node is an OrNode
+    def __or__(self, other):
+        if (self.getname() != "OrExpression"):  
+            if (other.getname() != "OrExpression"):
+                #return OrExpression(set([self, other])) #set version
+                return OrExpression(list([self, other]))
+            else :
+                other._add(self)
+                self = other
+                return self
+        else :
+            self._add(other)
+        return self
+    '''
+
+        
 
 
 class _GeneralBooleanVarData(_BooleanVarData):
