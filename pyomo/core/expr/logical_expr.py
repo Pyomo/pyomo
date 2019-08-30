@@ -916,10 +916,10 @@ class LogicalExpressionBase(LogicalValue):
 
     #EquivalanceExpression Creator
     def __eq__(self, other):
-        return EquivalanceExpression(self, other)
+        return EquivalenceExpression(self, other)
 
     def equals(self, other):
-        return EquivalanceExpression(self, other)
+        return EquivalenceExpression(self, other)
 
     #XorExpression Creator
     def __xor__(self, other):
