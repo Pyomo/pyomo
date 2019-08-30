@@ -1,6 +1,11 @@
 import pyutilib.th as unittest
 from pyomo.environ import *
-from pyomo.core.expr.logical_expr import LogicalAnd, LogicalOr, LogicalXor, Implies
+from pyomo.core.expr.logical_expr import (LogicalExpressionBase, NotExpression, 
+    AndExpression, OrExpression, Implication, EquivalenceExpression, XorExpression, 
+    ExactlyExpression, AtMostExpression, AtLeastExpression, Not, Equivalence, 
+    LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor
+    )
+
 
 '''
 First testing file.
