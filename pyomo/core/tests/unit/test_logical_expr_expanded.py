@@ -63,26 +63,26 @@ class TestLogicalClasses(unittest.TestCase):
         #try alterbate way to set value
         #m.Y1.set_value(True)
         #m.Y2.set_value(True)
-        a = LogicalAnd(m.Y1, m.Y2, m.Y3)
-        b = LogicalOr(m.Y1, m.Y2, m.Y3)
-        c = m.Y1 and m.Y2 and m.Y3 
-        d = m.Y1 or m.Y2 or m.Y3    
-        self.assertTrue(value(a))
-        self.assertTrue(value(b))
-        self.assertTrue(value(a.implies(b)))
-        self.assertTrue(value(Implies(a,b)))
+        And_static = LogicalAnd(m.Y1, m.Y2, m.Y3)
+        Or_static = LogicalOr(m.Y1, m.Y2, m.Y3)
+        And_operator = m.Y1 & m.Y2 & m.Y3 
+        Or_operator = m.Y1 | m.Y2 | m.Y3    
+        self.assertTrue(value(And_static))
+        self.assertTrue(value(Or_static))
+        self.assertTrue(value(And_operator.implies(Or_operator)))
+        self.assertTrue(value(Implies(And_operator, Or_operator)))
 
 
 
         m.Y1.value, m.Y2.value, m.Y3.value, = False, True, True
-        a = LogicalAnd(m.Y1, m.Y2, m.Y3)
-        b = LogicalOr(m.Y1, m.Y2, m.Y3)
-        c = m.Y1 and m.Y2 and m.Y3 
-        d = m.Y1 or m.Y2 or m.Y3    
-        self.assertFalse(value(a))
-        self.assertTrue(value(b))
-        self.assertTrue(value(a.implies(b)))
-        self.assertTrue(value(Implies(a,b)))    
+        And_static = LogicalAnd(m.Y1, m.Y2, m.Y3)
+        Or_static = LogicalOr(m.Y1, m.Y2, m.Y3)
+        And_operator = m.Y1 & m.Y2 & m.Y3 
+        Or_operator = m.Y1 | m.Y2 | m.Y3    
+        self.assertFalse(value(And_static))
+        self.assertTrue(value(Or_static))
+        self.assertTrue(value(And_operator.implies(Or_operator)))
+        self.assertTrue(value(Implies(And_operator, Or_operator)))    
 
     def test_binary_nodes(self):
         m = ConcreteModel()
@@ -94,17 +94,17 @@ class TestLogicalClasses(unittest.TestCase):
 
         eq_static =  Equivalence(m.Y1, m.Y2)
         eq_class = m.Y1.equals(m.Y2)
-        #eq_operator = (m.Y1 == m.Y2)
+        eq_operator = (m.Y1 == m.Y2)
         self.assertTrue(value(eq_static))
         self.assertTrue(value(eq_class))
-        #self.assertTrue(value(eq_operator))
+        self.assertTrue(value(eq_operator))
 
         xor_static = LogicalXor(m.Y1, m.Y2)
         xor_class = m.Y1.Xor(m.Y2)
-        #xor_operator =  m.Y1 ^ m.Y2
+        xor_operator =  m.Y1 ^ m.Y2
         self.assertFalse(value(xor_static))
         self.assertFalse(value(xor_class))
-        #self.assertFalse(value(xor_operator))
+        self.assertFalse(value(xor_operator))
 
         implication_static = Implies(m.Y1, m.Y2)
         implication_class = m.Y1.implies(m.Y2)
@@ -116,17 +116,17 @@ class TestLogicalClasses(unittest.TestCase):
 
         eq_static =  Equivalence(m.Y1, m.Y2)
         eq_class = m.Y1.equals(m.Y2)
-        #eq_operator = (m.Y1 == m.Y2)
+        eq_operator = (m.Y1 == m.Y2)
         self.assertFalse(value(eq_static))
         self.assertFalse(value(eq_class))
-        #self.assertFalse(value(eq_operator))
+        self.assertFalse(value(eq_operator))
 
         xor_static = LogicalXor(m.Y1, m.Y2)
         xor_class = m.Y1.Xor(m.Y2)
-        #xor_operator =  m.Y1 ^ m.Y2
+        xor_operator =  m.Y1 ^ m.Y2
         self.assertTrue(value(xor_static))
         self.assertTrue(value(xor_class))
-        #self.assertTrue(value(xor_operator))
+        self.assertTrue(value(xor_operator))
 
         implication_static = Implies(m.Y1, m.Y2)
         implication_class = m.Y1.implies(m.Y2)
@@ -139,17 +139,17 @@ class TestLogicalClasses(unittest.TestCase):
 
         eq_static =  Equivalence(m.Y1, m.Y2)
         eq_class = m.Y1.equals(m.Y2)
-        #eq_operator = (m.Y1 == m.Y2)
+        eq_operator = (m.Y1 == m.Y2)
         self.assertFalse(value(eq_static))
         self.assertFalse(value(eq_class))
-        #self.assertFalse(value(eq_operator))
+        self.assertFalse(value(eq_operator))
 
         xor_static = LogicalXor(m.Y1, m.Y2)
         xor_class = m.Y1.Xor(m.Y2)
-        #xor_operator =  m.Y1 ^ m.Y2
+        xor_operator =  m.Y1 ^ m.Y2
         self.assertTrue(value(xor_static))
         self.assertTrue(value(xor_class))
-        #self.assertTrue(value(xor_operator))
+        self.assertTrue(value(xor_operator))
 
         implication_static = Implies(m.Y1, m.Y2)
         implication_class = m.Y1.implies(m.Y2)
@@ -161,17 +161,17 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y1.value, m.Y2.value = False, False
         eq_static =  Equivalence(m.Y1, m.Y2)
         eq_class = m.Y1.equals(m.Y2)
-        #eq_operator = (m.Y1 == m.Y2)
+        seq_operator = (m.Y1 == m.Y2)
         self.assertTrue(value(eq_static))
         self.assertTrue(value(eq_class))
-        #self.assertTrue(value(eq_operator))
+        self.assertTrue(value(eq_operator))
 
         xor_static = LogicalXor(m.Y1, m.Y2)
         xor_class = m.Y1.Xor(m.Y2)
-        #xor_operator =  m.Y1 ^ m.Y2
+        xor_operator =  m.Y1 ^ m.Y2
         self.assertFalse(value(xor_static))
         self.assertFalse(value(xor_class))
-        #self.assertFalse(value(xor_operator))
+        self.assertFalse(value(xor_operator))
 
         implication_static = Implies(m.Y1, m.Y2)
         implication_class = m.Y1.implies(m.Y2)
@@ -308,9 +308,29 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y1 = BooleanVar()
         m.Y2 = BooleanVar()
         m.Y3 = BooleanVar()
+        """
+        remember to add more about this
+        """
 
         # and_str = str()
         self.assertEqual(LogicalAnd(m.Y1, m.Y2, m.Y3), "Y1 AND Y3 AND Y2")
+
+    def test_node_level(self):
+        m = ConcreteModel()
+        m.Y1 = BooleanVar()
+        m.Y2 = BooleanVar()
+        m.Y3 = BooleanVar()
+        m.Y1.value, m.Y2.value, m.Y3.value = True, False, True
+
+        self.assertTrue(m.Y1.is_leaf())
+        self.assertTrue(m.Y2.is_leaf())
+        self.assertTrue(m.Y3.is_leaf())
+        #self.assertFalse(Not(m.Y1).is_leaf())
+        self.assertFalse(Equivalence(m.Y1, m.Y2).is_leaf())
+        self.assertFalse(AtMost(1, [m.Y1, m.Y2, m.Y3]).is_leaf())
+
+        
+
 
 
 if __name__ == "__main__":

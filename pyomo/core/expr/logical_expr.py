@@ -872,6 +872,10 @@ class LogicalExpressionBase(LogicalValue):
     #def _compute_polynomial_degree(self, values):                          #pragma: no cover
 
 
+    def if_leaf(self):
+        """by default, a node created here should not be a leaf node"""
+        return False
+
     def _apply_operation(self, result):     #pragma: no cover
         """
         Compute the values of this node given the values of its children.
@@ -938,8 +942,8 @@ class LogicalExpressionBase(LogicalValue):
     #Create a new node iff neither node is an AndNode
     #If we have an "AndNode" already, safe_add new node to the exisiting one.
     def __and__(self, other):
-        if (self.getname() != "AndExpression"):  
-            if (other.getname() != "AndExpression"):
+        if (type(self) != AndExpression):  
+            if (type(other) != AndExpression):
                 #return AndExpression(set([self, other])) #set version
                 return AndExpression(list([self, other]))
             else :
@@ -974,8 +978,8 @@ class LogicalExpressionBase(LogicalValue):
     #OrExpressionCreator
     #Create a new node iff neither node is an OrNode
     def __or__(self, other):
-        if (self.getname() != "OrExpression"):  
-            if (other.getname() != "OrExpression"):
+        if (type(self) != OrExpression):  
+            if (type(other) != OrExpression):
                 #return OrExpression(set([self, other])) #set version
                 return OrExpression(list([self, other]))
             else :
@@ -1163,8 +1167,12 @@ class NotExpression(UnaryExpression):
             return Notexpression.PRECEDENCE
 
         def _to_string(self, values, verbose, smap, compute_values):
-            #pass this one for now 0-0
-            pass
+            return "Not".join(values)
+            
+
+        def if_leaf(self):
+            """by default, a node created here should not be a leaf node"""
+            return False
 
         def _apply_operetion(self, result):
             """
@@ -1231,7 +1239,11 @@ class EquivalenceExpression(BinaryExpression):
 
         def _to_string(self, values, verbose, smap, compute_values):
             #pass this one for now 0-0
-            pass
+            pass 
+
+        def if_leaf(self):
+            """by default, a node created here should not be a leaf node"""
+            return False
 
         #change it to (self, result):
         def _apply_operation(self, resList):
@@ -1261,6 +1273,10 @@ class XorExpression(BinaryExpression):
             #pass this one for now 0-0
             return "XorExpression_toString_fornow"
 
+        def if_leaf(self):
+            """by default, a node created here should not be a leaf node"""
+            return False
+
         def _apply_operation(self,resList):
             """
             #0-0 
@@ -1287,7 +1303,11 @@ class Implication(BinaryExpression):
 
         def _to_string(self, values, verbose, smap, compute_values):
             #pass this one for now 0-0
-            return "Implication_toString_fornow"
+            return "Implication_toString_fornow"  
+
+        def if_leaf(self):
+            """by default, a node created here should not be a leaf node"""
+            return False
 
         def _apply_operation(self,resList):
             return ((not resList[0]) or (resList[1]))
@@ -1334,6 +1354,8 @@ class MultiArgsExpression(LogicalExpressionBase):
         else:
             self._args_.extend(other._args_) 
 
+    safe_add = _add
+
     def _precedence(self):
         return MultiargsExpression.PRECEDENCE
 
@@ -1346,6 +1368,11 @@ class MultiArgsExpression(LogicalExpressionBase):
 
     def _apply_operation(self):
         raise TypeError("Please use the approriate MultiargsExpression instead.")
+
+
+    def if_leaf(self):
+        """by default, a node created here should not be a leaf node"""
+        return False
 
 
 class AndExpression(MultiArgsExpression):
@@ -1368,6 +1395,10 @@ class AndExpression(MultiArgsExpression):
     def _to_string(self, values, verbose, smap, compute_values):
         return " AND ".join(values)
 
+    def if_leaf(self):
+        """by default, a node created here should not be a leaf node"""
+        return False    
+
     def _apply_operation(self, result):
         if (len(self._args_) != len(result)):
             KeyError("Make sure number of truth values matches number"\
@@ -1389,6 +1420,10 @@ class OrExpression(MultiArgsExpression):
     def _to_string(self, values, verbose, smap, compute_values):
         #pass this one for now 0-0
         return "OrExpression_toString_fornow"
+
+    def if_leaf(self):
+        """by default, a node created here should not be a leaf node"""
+        return False
 
     def _apply_operation(self, result):
         """
@@ -1417,6 +1452,10 @@ class ExactlyExpression(MultiArgsExpression):
         #pass this one for now 0-0
         return "Exactly_toString_fornow"
 
+    def if_leaf(self):
+        """by default, a node created here should not be a leaf node"""
+        return False
+
     def _apply_operation(self, result):
         if (len(self._args_)-1 != len(result)):
             KeyError("Make sure number of truth values matches number"\
@@ -1440,6 +1479,10 @@ class AtMostExpression(MultiArgsExpression):
     def _to_string(self, values, verbose, smap, compute_values):
         #pass this one for now 0-0
         return "AtMostExpression_toString_fornow"
+
+    def if_leaf(self):
+        """by default, a node created here should not be a leaf node"""
+        return False
 
     def _apply_operation(self, res_list):
         if (len(self._args_)-1 != len(res_list)):
@@ -1467,6 +1510,10 @@ class AtLeastExpression(MultiArgsExpression):
     def _to_string(self, values, verbose, smap, compute_values):
         #pass this one for now 0-0
         return "AtLeastExpression_toString_fornow"
+
+    def if_leaf(self):
+        """by default, a node created here should not be a leaf node"""
+        return False
 
     def _apply_operation(self, res_list):
         if (len(self._args_)-1 != len(res_list)):

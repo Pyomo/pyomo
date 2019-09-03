@@ -1,5 +1,7 @@
 #Is this correct? #Take domain out
-from pyomo.core.expr.logical_expr import LogicalXor, EquivalenceExpression, Implication
+from pyomo.core.expr.logical_expr import  (LogicalXor, EquivalenceExpression, Implication, AndExpression,
+OrExpression, MultiArgsExpression, NotExpression, XorExpression,)
+
 
 __all__ = ['BooleanVar', '_BooleanVarData', '_GeneralBooleanVarData', 'BooleanVarList', 'SimpleBooleanVar']
 
@@ -218,39 +220,46 @@ class _BooleanVarData(ComponentData, LogicalValue):
     def implies(self, Y2):
         return Implication(self, Y2)
 
-    '''
-    #AndExpressionCreator
-    #Create a new node iff neither node is an AndNode
-    #If we have an "AndNode" already, safe_add new node to the exisiting one.
+    def __invert__(self):
+        return NotExpression(self)
+
+
+    """THe following establishes nodes with operator"""
+    def __eq__(self, other):
+        return EquivalenceExpression(self, other)
+
+    #XorExpression Creator
+    def __xor__(self, other):
+        return XorExpression(self, other)
+
     def __and__(self, other):
-        if (type(self) is AndExpression):  
-            if (type(other) is not AndExpression):
-                #return AndExpression(set([self, other])) #set version
+        if (type(self) != AndExpression):  
+            if (type(other) != AndExpression):
                 return AndExpression(list([self, other]))
             else :
-                other._add(self)
+                other.safe_add(self)
                 self = other
                 return self
         else :
             self._add(other)
         return self
-    
-    #OrExpressionCreator
-    #Create a new node iff neither node is an OrNode
+
     def __or__(self, other):
-        if (self.getname() != "OrExpression"):  
-            if (other.getname() != "OrExpression"):
+        if (type(self) != OrExpression):  
+            if (type(other) != OrExpression):
                 #return OrExpression(set([self, other])) #set version
                 return OrExpression(list([self, other]))
             else :
-                other._add(self)
+                other.safe_add(self)
                 self = other
                 return self
         else :
             self._add(other)
         return self
-    '''
 
+    def is_leaf(self):
+        """By default, a node created here should be a leaf node"""
+        return True
         
 
 
