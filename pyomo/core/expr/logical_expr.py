@@ -1101,9 +1101,11 @@ def is_elementary_operation(node):
 def is_CNF(node):
     if not node.is_expression_type():
         return True
+    #The node is not a leaf node it gets here
     if type(node) is not is_elementary_operation(node):
         return False
-    return all(is_CNF(node._args_))
+    #The node could be a Not node nested, be careful, changes are expected
+    return all(is_CNF(node._args_[:]))
 
 
 
@@ -1240,12 +1242,8 @@ class EquivalenceExpression(BinaryExpression):
             return EquivalanceExpression.PRECEDENCE
 
         def _to_string(self, values, verbose, smap, compute_values):
-            #pass this one for now 0-0
-            pass 
-
-        def i_leaf(self):
-            """by default, a node created here should not be a leaf node"""
-            return False
+            return "equals".join(values)
+            
 
         #change it to (self, result):
         def _apply_operation(self, resList):
@@ -1273,7 +1271,7 @@ class XorExpression(BinaryExpression):
 
         def _to_string(self, values, verbose, smap, compute_values):
             #pass this one for now 0-0
-            return "XorExpression_toString_fornow"
+            return "xor".join(values)
 
         def _apply_operation(self,resList):
             """
@@ -1301,7 +1299,7 @@ class Implication(BinaryExpression):
 
         def _to_string(self, values, verbose, smap, compute_values):
             #pass this one for now 0-0
-            return "Implication_toString_fornow"  
+            return "implies".join(values)  
 
         def _apply_operation(self,resList):
             return ((not resList[0]) or (resList[1]))
@@ -1405,7 +1403,7 @@ class OrExpression(MultiArgsExpression):
 
     def _to_string(self, values, verbose, smap, compute_values):
         #pass this one for now 0-0
-        return "OrExpression_toString_fornow"
+        return "or".join(values)
 
     def _apply_operation(self, result):
         """
@@ -1431,7 +1429,7 @@ class ExactlyExpression(MultiArgsExpression):
         return ExactlyExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        #pass this one for now 0-0
+        #Change these
         return "Exactly_toString_fornow"
 
     def _apply_operation(self, result):

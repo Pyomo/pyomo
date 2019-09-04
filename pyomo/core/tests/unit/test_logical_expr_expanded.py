@@ -330,6 +330,10 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertTrue(AtMost(1, [m.Y1, m.Y2, m.Y3]).is_expression_type())
         
     def test_if_CNF(self):
+        """
+        A simple test for if_CNF with only and, or and not expression with no
+        nested node. Expect True
+        """
         m = ConcreteModel()
         m.Y1 = BooleanVar()
         m.Y2 = BooleanVar()
@@ -338,8 +342,21 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y1.value, m.Y2.value, m.Y3.value, m.Y4.value = True, True, True, False
         Or_node_1 = m.Y1 or m.Y2
         Or_node_2 = m.Y3 or Not(m.Y4)
-        root_node = Or_node_1 and Or_node_2
-        self.assertTrue(is_CNF(root_node))
+        root_node_and = Or_node_1 and Or_node_2
+        self.assertTrue(is_CNF(root_node_and))
+
+
+        """
+        A simple test for if_CNF with only and, or and not expression with no
+        nested node. Expect False
+        """
+
+        m.Y1.value, m.Y2.value, m.Y3.value, m.Y4.value = True, True, True, False
+        And_node = m.Y1 & m.Y2
+        Not_node = ~m.Y3
+        Leaf_node = m.Y4
+        root_node_or = And_node | Not_node | Leaf_node
+        self.assertFalse(is_CNF(root_node_or)) 
 
 
 if __name__ == "__main__":
