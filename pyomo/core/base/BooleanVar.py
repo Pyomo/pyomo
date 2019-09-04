@@ -208,11 +208,8 @@ class _BooleanVarData(ComponentData, LogicalValue):
             return smap.getSymbol(self, labeler)
         return self.name
 
-    def Xor(self, Y2):
-        return LogicalXor(self, Y2)
-
     def xor(self, Y2):
-        raise NameError("Do you mean Xor?")
+        return LogicalXor(self, Y2)
 
     def equals(self, Y2):
         return EquivalenceExpression(self, Y2)
@@ -241,7 +238,7 @@ class _BooleanVarData(ComponentData, LogicalValue):
                 self = other
                 return self
         else :
-            self._add(other)
+            self.safe_add(other)
         return self
 
     def __or__(self, other):
@@ -254,13 +251,8 @@ class _BooleanVarData(ComponentData, LogicalValue):
                 self = other
                 return self
         else :
-            self._add(other)
+            self.safe_add(other)
         return self
-
-    def is_leaf(self):
-        """By default, a node created here should be a leaf node"""
-        return True
-        
 
 
 class _GeneralBooleanVarData(_BooleanVarData):

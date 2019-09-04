@@ -3,7 +3,7 @@ from pyomo.environ import *
 from pyomo.core.expr.logical_expr import (LogicalExpressionBase, NotExpression, 
     AndExpression, OrExpression, Implication, EquivalenceExpression, XorExpression, 
     ExactlyExpression, AtMostExpression, AtLeastExpression, Not, Equivalence, 
-    LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor
+    LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor, is_CNF
     )
 
 
@@ -100,7 +100,7 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertTrue(value(eq_operator))
 
         xor_static = LogicalXor(m.Y1, m.Y2)
-        xor_class = m.Y1.Xor(m.Y2)
+        xor_class = m.Y1.xor(m.Y2)
         xor_operator =  m.Y1 ^ m.Y2
         self.assertFalse(value(xor_static))
         self.assertFalse(value(xor_class))
@@ -122,7 +122,7 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertFalse(value(eq_operator))
 
         xor_static = LogicalXor(m.Y1, m.Y2)
-        xor_class = m.Y1.Xor(m.Y2)
+        xor_class = m.Y1.xor(m.Y2)
         xor_operator =  m.Y1 ^ m.Y2
         self.assertTrue(value(xor_static))
         self.assertTrue(value(xor_class))
@@ -145,7 +145,7 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertFalse(value(eq_operator))
 
         xor_static = LogicalXor(m.Y1, m.Y2)
-        xor_class = m.Y1.Xor(m.Y2)
+        xor_class = m.Y1.xor(m.Y2)
         xor_operator =  m.Y1 ^ m.Y2
         self.assertTrue(value(xor_static))
         self.assertTrue(value(xor_class))
@@ -167,7 +167,7 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertTrue(value(eq_operator))
 
         xor_static = LogicalXor(m.Y1, m.Y2)
-        xor_class = m.Y1.Xor(m.Y2)
+        xor_class = m.Y1.xor(m.Y2)
         xor_operator =  m.Y1 ^ m.Y2
         self.assertFalse(value(xor_static))
         self.assertFalse(value(xor_class))
@@ -180,7 +180,7 @@ class TestLogicalClasses(unittest.TestCase):
 
         #######-----------------------------########
 
-    def test_elementary_nodes(self):
+    def test_MultiArgsExpression(self):
         m = ConcreteModel()
         m.Y1 = BooleanVar() 
         m.Y2 = BooleanVar()
@@ -322,15 +322,24 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y3 = BooleanVar()
         m.Y1.value, m.Y2.value, m.Y3.value = True, False, True
 
-        self.assertTrue(m.Y1.is_leaf())
-        self.assertTrue(m.Y2.is_leaf())
-        self.assertTrue(m.Y3.is_leaf())
-        #self.assertFalse(Not(m.Y1).is_leaf())
-        self.assertFalse(Equivalence(m.Y1, m.Y2).is_leaf())
-        self.assertFalse(AtMost(1, [m.Y1, m.Y2, m.Y3]).is_leaf())
-
+        self.assertFalse(m.Y1.is_expression_type())
+        self.assertFalse(m.Y2.is_expression_type())
+        self.assertFalse(m.Y3.is_expression_type())
+        self.assertTrue(Not(m.Y1).is_expression_type())
+        self.assertTrue(Equivalence(m.Y1, m.Y2).is_expression_type())
+        self.assertTrue(AtMost(1, [m.Y1, m.Y2, m.Y3]).is_expression_type())
         
-
+    def test_if_CNF(self):
+        m = ConcreteModel()
+        m.Y1 = BooleanVar()
+        m.Y2 = BooleanVar()
+        m.Y3 = BooleanVar()
+        m.Y4 = BooleanVar()
+        m.Y1.value, m.Y2.value, m.Y3.value, m.Y4.value = True, True, True, False
+        Or_node_1 = m.Y1 or m.Y2
+        Or_node_2 = m.Y3 or Not(m.Y4)
+        root_node = Or_node_1 and Or_node_2
+        self.assertTrue(is_CNF(root_node))
 
 
 if __name__ == "__main__":
