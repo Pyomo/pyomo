@@ -1092,22 +1092,83 @@ def AtLeast(req, argsList):
 
 #-------------------------*************------------------------------
 
+def is_literal(node):
+    if not node.is_expression_type():
+        return True
+    if (type(node) is NotExpression) and (not (node._args_[0]).is_expression_type()):
+        return True
+    return False 
 
-def is_elementary_operation(node):
-    if type(node) is (NotExpression or AndExpression or OrExpression or ExactlyExpression or AtMostExpression or AtLeastExpression):
+def is_nested(node):
+    for i in range(len(node._args_)):
+        if not is_literal(node._args_[i]):
+            return True
+    return False
+
+def is_CNF_child(node):
+    if is_literal(node):
+        return True
+    if (type(node) is OrExpression) and (not is_nested(node)):
         return True
     return False
 
+def is_CNF_root(node):
+    if type(node) is AndExpression:
+        return True
+    if (type(node) is OrExpression) and (not is_nested(node)):
+        return True
+    return False
+
+
+""" 
+def is_elementary_operation(node):
+    if type(node) is NotExpression:
+        return True
+    if type(node) is AndExpression:
+        return True
+    if type(node) is OrExpression:
+        return True
+    if type(node) is ExactlyExpression:
+        return True
+    if type(node) is AtMostExpression:
+        return True
+    if type(node) is AtLeastExpression:
+        return True
+    return False
+"""
+
 def is_CNF(node):
-    if not node.is_expression_type():
+    if is_literal(node):
         return True
     #The node is not a leaf node it gets here
-    if type(node) is not is_elementary_operation(node):
+    if not is_CNF_root(node):
         return False
-    #The node could be a Not node nested, be careful, changes are expected
-    return all(is_CNF(node._args_[:]))
+    for i in range(len(node._args_)):
+        if not is_CNF_child(node._args_[i]):
+            return False
+    return True
 
-
+"""
+def is_CNF(node):
+    if is_literal(node):
+        return True
+    #The node is not a leaf node it gets here
+    if type(node) is not AndExpression:
+        print("1")
+        return False
+    for i in node._args_:
+        if (not is_elementary_operation(i)) or (not is_literal(i)):
+            print(type(i))
+            print("2")
+            return False
+        if (not is_literal(i)):
+            for j in i._args_:
+                if not is_literal(j):
+                    print("3")
+                    return False        
+        #else the node has to be a lireral, this else is just for testing.
+    return True
+    """
 
 #-------------------------*************------------------------------
 
@@ -1129,7 +1190,7 @@ class UnaryExpression(LogicalExpressionBase):
     to zero for now.
     """
     def __init__(self, args):
-        self._args_ = args
+        self._args_ = list([args])
         #print("The variable is initialized using UnaryExpression")
         #for tracing purpose only, delete later.
         #0-0 

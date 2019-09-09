@@ -3,7 +3,7 @@ from pyomo.environ import *
 from pyomo.core.expr.logical_expr import (LogicalExpressionBase, NotExpression, 
     AndExpression, OrExpression, Implication, EquivalenceExpression, XorExpression, 
     ExactlyExpression, AtMostExpression, AtLeastExpression, Not, Equivalence, 
-    LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor, is_CNF
+    LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor, is_CNF, 
     )
 
 
@@ -196,34 +196,34 @@ class TestLogicalClasses(unittest.TestCase):
 
         m.Y1.value, m.Y2.value, m.Y3.value, m.Y4.value = True, True, True, True
         And_static = LogicalAnd(m.Y1, m.Y2, m.Y3, m.Y4)
-        And_operator = m.Y1 and m.Y2 and m.Y3 and m.Y4
+        And_operator = m.Y1 & m.Y2 & m.Y3 & m.Y4
         self.assertTrue(value(And_static)) 
         self.assertTrue(value(And_operator))
 
         Or_static = LogicalOr(m.Y1, m.Y2, m.Y3, m.Y4)
-        Or_operator = m.Y1 or m.Y2 or m.Y3 or m.Y4
+        Or_operator = m.Y1 | m.Y2 | m.Y3 | m.Y4
         self.assertTrue(value(Or_static))
         self.assertTrue(value(Or_operator))
 
         m.Y1.value, m.Y2.value, m.Y3.value, m.Y4.value = True, True, True, False
         And_static = LogicalAnd(m.Y1, m.Y2, m.Y3, m.Y4)
-        And_operator = m.Y1 and m.Y2 and m.Y3 and m.Y4
+        And_operator = m.Y1 & m.Y2 & m.Y3 & m.Y4
         self.assertFalse(value(And_static)) 
         self.assertFalse(value(And_operator))
 
         Or_static = LogicalOr(m.Y1, m.Y2, m.Y3, m.Y4)
-        Or_operator = m.Y1 or m.Y2 or m.Y3 or m.Y4
+        Or_operator = m.Y1 | m.Y2 | m.Y3 | m.Y4
         self.assertTrue(value(Or_static))
         self.assertTrue(value(Or_operator))
 
         m.Y1.value, m.Y2.value, m.Y3.value, m.Y4.value = False, False, False, False
 
         And_static = LogicalAnd(m.Y1, m.Y2, m.Y3, m.Y4)
-        And_operator = m.Y1 and m.Y2 and m.Y3 and m.Y4
+        And_operator = m.Y1 & m.Y2 & m.Y3 & m.Y4
         self.assertFalse(value(And_static)) 
         self.assertFalse(value(And_operator))
         Or_static = LogicalOr(m.Y1, m.Y2, m.Y3, m.Y4)
-        Or_operator = m.Y1 or m.Y2 or m.Y3 or m.Y4
+        Or_operator = m.Y1 | m.Y2 | m.Y3 | m.Y4
         self.assertFalse(value(Or_static))
         self.assertFalse(value(Or_operator))
 
@@ -330,19 +330,39 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertTrue(AtMost(1, [m.Y1, m.Y2, m.Y3]).is_expression_type())
         
     def test_if_CNF(self):
-        """
-        A simple test for if_CNF with only and, or and not expression with no
-        nested node. Expect True
-        """
+        
         m = ConcreteModel()
         m.Y1 = BooleanVar()
         m.Y2 = BooleanVar()
         m.Y3 = BooleanVar()
         m.Y4 = BooleanVar()
-        m.Y1.value, m.Y2.value, m.Y3.value, m.Y4.value = True, True, True, False
-        Or_node_1 = m.Y1 or m.Y2
-        Or_node_2 = m.Y3 or Not(m.Y4)
-        root_node_and = Or_node_1 and Or_node_2
+        
+        """
+        A single literal test for if_CNF
+        """
+
+        m.Y1.value = True
+        self.assertTrue(is_CNF(m.Y1))
+
+        """
+        A single literal with a NotExpression test for i_CNF
+        """
+        self.assertTrue(is_CNF(Not(m.Y1)))
+
+        """
+        A single non-nested OrExpression test for is_CNF
+        """
+        m.Y2.value = True
+        self.assertTrue(is_CNF(m.Y1 | m.Y2))
+
+        """
+        A simple test for if_CNF with only and, or and not expression with no
+        nested node. Expect True
+        """
+        m.Y3.value, m.Y4.value = True, False
+        Or_node_1 = LogicalOr(m.Y1, m.Y2)
+        Or_node_2 = LogicalOr(m.Y3, m.Y4)
+        root_node_and = LogicalAnd(Or_node_1, Or_node_2)
         self.assertTrue(is_CNF(root_node_and))
 
 
@@ -357,6 +377,11 @@ class TestLogicalClasses(unittest.TestCase):
         Leaf_node = m.Y4
         root_node_or = And_node | Not_node | Leaf_node
         self.assertFalse(is_CNF(root_node_or)) 
+
+        """
+        A more sophisticated test for if_CNF with only and, or and not expression with no
+        nested node. Expect False
+        """
 
 
 if __name__ == "__main__":
