@@ -1092,10 +1092,23 @@ def AtLeast(req, argsList):
 
 #-------------------------*************------------------------------
 
+def is_elementary_operation(node):
+    if (type(node) is ExactlyExpression) and (not is_nested(node)):
+        return True
+    if (type(node) is AtMostExpression) and (not is_nested(node)):
+        return True
+    if (type(node) is AtLeastExpression) and (not is_nested(node)):
+        return True
+    return False
+
+
+
 def is_literal(node):
     if not node.is_expression_type():
         return True
     if (type(node) is NotExpression) and (not (node._args_[0]).is_expression_type()):
+        return True
+    if is_elementary_operation(node):
         return True
     return False 
 
@@ -1120,23 +1133,6 @@ def is_CNF_root(node):
     return False
 
 
-""" 
-def is_elementary_operation(node):
-    if type(node) is NotExpression:
-        return True
-    if type(node) is AndExpression:
-        return True
-    if type(node) is OrExpression:
-        return True
-    if type(node) is ExactlyExpression:
-        return True
-    if type(node) is AtMostExpression:
-        return True
-    if type(node) is AtLeastExpression:
-        return True
-    return False
-"""
-
 def is_CNF(node):
     if is_literal(node):
         return True
@@ -1148,28 +1144,11 @@ def is_CNF(node):
             return False
     return True
 
-"""
-def is_CNF(node):
-    if is_literal(node):
-        return True
-    #The node is not a leaf node it gets here
-    if type(node) is not AndExpression:
-        print("1")
-        return False
-    for i in node._args_:
-        if (not is_elementary_operation(i)) or (not is_literal(i)):
-            print(type(i))
-            print("2")
-            return False
-        if (not is_literal(i)):
-            for j in i._args_:
-                if not is_literal(j):
-                    print("3")
-                    return False        
-        #else the node has to be a lireral, this else is just for testing.
-    return True
-    """
+#def bring_to_CNF(node):
 
+"""
+
+"""
 #-------------------------*************------------------------------
 
 class UnaryExpression(LogicalExpressionBase):
