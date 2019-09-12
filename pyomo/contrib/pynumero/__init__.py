@@ -57,7 +57,7 @@ if numpy_available:
         import pyomo.common  # ...to set up the logger
         import logging
         logging.getLogger('pyomo.contrib.pynumero').warn(
-            "MA27 not available. Install MA57 library to use it with pynumero")
+            "MA57 not available. Install MA57 library to use it with pynumero")
     else:
         ma57_available = True
 
