@@ -94,7 +94,6 @@ class _DisjunctData(_BlockData):
 
     def set_value(self, val):
         _indicator_var = self.indicator_var
-        # TODO
         # if _transformation_block is not None we should yell. else call base
         # class, check that you have indicator_var and transformation block.
         _transformation_block = self._transformation_block
@@ -119,28 +118,6 @@ class _DisjunctData(_BlockData):
         else:
             self.add_component('indicator_var', _indicator_var)
             self._transformation_block = _transformation_block 
-
-        # # Remove everything
-        # for k in list(getattr(self, '_decl', {})):
-        #     self.del_component(k)
-        # self._ctypes = {}
-        # self._decl = {}
-        # self._decl_order = []
-        # # Now copy over everything from the other block.  If the other
-        # # block has an indicator_var, it should override this block's.
-        # # Otherwise restore this block's indicator_var.
-        # if val:
-        #     if 'indicator_var' not in val:
-        #         self.add_component('indicator_var', _indicator_var)
-        #     # [ESJ 07/14/2019] TODO: This isn't tested and I don't actually know
-        #     # what it does!
-        #     if 'transformation_block' not in val:
-        #         self._transformation_block = _transformation_block
-        #     for k in sorted(iterkeys(val)):
-        #         self.add_component(k,val[k])
-        # else:
-        #     self.add_component('indicator_var', _indicator_var)
-        #     self._transformation_block = _transformation_block
 
     def activate(self):
         super(_DisjunctData, self).activate()
@@ -238,7 +215,6 @@ class IndexedDisjunct(Disjunct):
             d.active = value
 
 
-
 class _DisjunctionData(ActiveComponentData):
     __slots__ = ('disjuncts','xor', '_algebraic_constraint')
     _NoArgument = (0,)
@@ -275,12 +251,13 @@ class _DisjunctionData(ActiveComponentData):
     def set_value(self, expr):
         for e in expr:
             # The user gave us a proper Disjunct block 
-            # TODO: this shouldn't be an issue anymore, check that
             # [ESJ 06/21/2019] This is really an issue with the reclassifier,
             # but in the case where you are iteratively adding to an
             # IndexedDisjunct indexed by Any which has already been transformed,
             # the new Disjuncts are parading as Blocks already. This catches
             # them for who they are anyway.
+            # [ESJ 09/13/2019] We still need this. I didn't dig again, but I am
+            # tempted to trust my past self.
             if isinstance(e, _DisjunctData) or isinstance(e, SimpleDisjunct):
             #if hasattr(e, 'type') and e.type() == Disjunct:
                 self.disjuncts.append(e)

@@ -397,6 +397,8 @@ class BigM_Transformation(Transformation):
                     "This is very strange if not impossible" % (obj.name,
                                                                 disjunct.name))
             # move transBlock up to parent component
+            # TODO: use del here as in John's comment (or just delete the whole
+            # container at once... In this case that is fine.
             transBlock.parent_block().del_component(transBlock)
             self._transfer_transBlock_data(transBlock, destinationBlock)
 

@@ -10,8 +10,10 @@
 
 import pyutilib.th as unittest
 
-from pyomo.core import ConcreteModel, Var, Constraint, Block
-from pyomo.gdp import Disjunction, Disjunct
+from pyomo.core import ConcreteModel, Var, Constraint, Block, \
+    TransformationFactory
+from pyomo.gdp import Disjunction, Disjunct, GDP_Error
+import pyomo.gdp.plugins.bigm
 
 from six import iterkeys
 
@@ -230,6 +232,53 @@ class TestDisjunct(unittest.TestCase):
         self.assertFalse(m.d.disjuncts[1].indicator_var.is_fixed())
         self.assertFalse(m.d.disjuncts[2].indicator_var.is_fixed())
 
+    def test_indexed_disjunct_active_property(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 12))
+        @m.Disjunct([0, 1, 2])
+        def disjunct(d, i):
+            m = d.model()
+            if i == 0:
+                d.cons = Constraint(expr=m.x >= 3)
+            if i == 1:
+                d.cons = Constraint(expr=m.x >= 8)
+            else:
+                d.cons = Constraint(expr=m.x == 12)
+
+        self.assertTrue(m.disjunct.active)
+        m.disjunct[1].deactivate()
+        self.assertTrue(m.disjunct.active)
+        m.disjunct[0].deactivate()
+        m.disjunct[2].deactivate()
+        self.assertFalse(m.disjunct.active)
+        m.disjunct.activate()
+        self.assertTrue(m.disjunct.active)
+        m.disjunct.deactivate()
+        self.assertFalse(m.disjunct.active)
+        for i in range(3):
+            self.assertFalse(m.disjunct[i].active)
+        self.assertFalse(True)
+
+    def test_indexed_disjunction_active_property(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 12))
+        @m.Disjunction([0, 1, 2])
+        def disjunction(m, i):
+            return [m.x == i*5, m.x == i*5 + 1]
+        
+        self.assertTrue(m.disjunction.active)
+        m.disjunction[2].deactivate()
+        self.assertTrue(m.disjunction.active)
+        m.disjunction[0].deactivate()
+        m.disjunction[1].deactivate()
+        self.assertFalse(m.disjunction.active)
+        m.disjunction.activate()
+        self.assertTrue(m.disjunction.active)
+        m.disjunction.deactivate()
+        self.assertFalse(m.disjunction.active)
+        for i in range(3):
+            self.assertFalse(m.disjunction[i].active)
+
     def test_set_value_assign_disjunct(self):
         m = ConcreteModel()
         m.y = Var()
@@ -257,6 +306,39 @@ class TestDisjunct(unittest.TestCase):
         self.assertEqual(len(m.d.b.c), 2)
         self.assertIsInstance(m.d.v, Var)
         self.assertIsInstance(m.d.indicator_var, Var)
+
+    def test_do_not_overwrite_transformed_disjunct(self):
+        m = ConcreteModel()
+        m.y = Var()
+        m.d = Disjunct()
+        m.d.v = Var(bounds=(0,10))
+        m.d.c = Constraint(expr=m.d.v >= 8)
+
+        m.empty = Disjunct()
+        m.disjunction = Disjunction(expr=[m.empty, m.d])
+
+        TransformationFactory('gdp.bigm').apply_to(m)
+        
+        new_d = Disjunct()
+        new_d.v = Var()
+        new_d.c = Constraint(expr=m.y <= 89)
+        new_d.b = Block()
+        @new_d.b.Constraint([0,1])
+        def c(b, i):
+            m = b.model()
+            if i == 0:
+                return m.y >= 18
+            else:
+                return b.parent_block().v >= 20
+        
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Attempting to call set_value on an already-"
+            "transformed disjunct! Since disjunct %s "
+            "has been transformed, replacing it here will "
+            "not effect the model." % m.d.name,
+            m.d.set_value,
+            new_d)
 
     def test_set_value_assign_block(self):
         print("TODO: I don't actually know how to test this at the moment...")
