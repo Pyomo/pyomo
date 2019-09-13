@@ -706,9 +706,15 @@ class _BlockData(ActiveComponentData):
         self._ctypes = {}
         self._decl = {}
         self._decl_order = []
-        if val:
+        # [ESJ 08/23/2019]: Adding John's fix for now... 
+        if isinstance(val, dict):
             for k in sorted(iterkeys(val)):
-                self.add_component(k,val[k])
+                self.setattr(k,val[k])
+        elif isinstance(val, _BlockData):
+            for c,_ in val._decl_order:
+                name = c.local_name
+                val.del_component(c)
+                self.setattr(name,c)
 
     def _add_temporary_set(self, val):
         """TODO: This method has known issues (see tickets) and needs to be
