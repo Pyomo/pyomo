@@ -257,7 +257,6 @@ class TestDisjunct(unittest.TestCase):
         self.assertFalse(m.disjunct.active)
         for i in range(3):
             self.assertFalse(m.disjunct[i].active)
-        self.assertFalse(True)
 
     def test_indexed_disjunction_active_property(self):
         m = ConcreteModel()
