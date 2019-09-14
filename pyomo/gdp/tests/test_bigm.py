@@ -1146,10 +1146,10 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
         # specify a suffix on a component so we can be happy we overrode it
         m.BigM[m.disjunct[0].c] = 19
 
-        # give an arg
+        # give an arg. Doing this one as a ComponentMap, just to make sure.
         TransformationFactory('gdp.bigm').apply_to(
             m,
-            bigM={None: 19, m.disjunct[0].c: 17})
+            bigM=ComponentMap({None: 19, m.disjunct[0].c: 17}))
         self.checkMs(m, -17, -17, -19, 19, -19, 19)
 
     def test_suffix_M_None_on_indexedConstraint(self):
@@ -1194,6 +1194,25 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
 
         TransformationFactory('gdp.bigm').apply_to(m)
         self.checkMs(m, -18, -19, -20, 20, -20, 20)
+
+    # This should go away when we deprecate CUIDs, but just to make sure that we
+    # are in fact supporting them at the moment...
+    def test_m_value_cuids_still_work_for_now(self):
+        m = models.makeTwoTermDisj_IndexedConstraints_BoundedVars()
+        # specify a suffix on None so we can be happy we overrode it.
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 20
+        # specify a suffix on a componentdata so we can be happy we overrode it
+        m.BigM[m.disjunct[0].c[1]] = 19
+
+        # give an arg
+        TransformationFactory('gdp.bigm').apply_to(
+            m,
+            bigM={None: 19, ComponentUID(m.disjunct[0].c[1]): 17,
+                  ComponentUID(m.disjunct[0].c[2]): 18})
+
+        # check that m values are what we expect
+        self.checkMs(m, -17, -18, -19, 19, -19, 19)
 
     def test_create_using(self):
         m = models.makeTwoTermDisj_IndexedConstraints_BoundedVars()
@@ -1281,6 +1300,56 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
     #         m,
     #         targets=[ComponentUID(m.disjunction)])
 
+    # test that cuid targets still work for now. This and the next test should
+    # go away when the above comes in.
+    def test_cuid_targets_still_work_for_now(self):
+        m = models.makeTwoSimpleDisjunctions()
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(
+            m,
+            targets=[ComponentUID(m.disjunction1)])
+
+        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
+        # only two disjuncts relaxed
+        self.assertEqual(len(disjBlock), 2)
+        self.assertIsInstance(disjBlock[0].component("disjunct1[0].c"),
+                              Constraint)
+        self.assertIsInstance(disjBlock[1].component("disjunct1[1].c"),
+                              Constraint)
+
+        pairs = [
+            (0, 0),
+            (1, 1)
+        ]
+        for i, j in pairs:
+            self.assertIs(disjBlock[i], m.disjunct1[j].transformation_block())
+            self.assertIs(bigm.get_src_disjunct(disjBlock[i]), m.disjunct1[j])
+
+        self.assertIsNone(m.disjunct2[0].transformation_block)
+        self.assertIsNone(m.disjunct2[1].transformation_block)
+
+    def test_cuid_target_error_still_works_for_now(self):
+        m = models.makeTwoSimpleDisjunctions()
+        m2 = ConcreteModel()
+        m2.oops = Block()
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Target %s is not a component on the instance!" % 
+            ComponentUID(m2.oops),
+            TransformationFactory('gdp.bigm').apply_to,
+            m,
+            targets=ComponentUID(m2.oops))
+
+    # [ESJ 09/14/2019] See my rant in #1072, but I think this is why we cannot
+    # actually support this!
+    # def test_break_targets_with_cuids(self):
+    #     m = models.makeTwoSimpleDisjunctions()
+    #     b = Block() # so this guy has no parent, he's some mistake presumably
+    #     # But we specify *him* has the target with cuid
+    #     TransformationFactory('gdp.bigm').apply_to(m, targets=ComponentUID(b))
+
+    #     # No error, and we've transformed the whole model
+    #     m.pprint()
 
 class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
     def test_indexedDisj_targets_inactive(self):
@@ -1612,6 +1681,18 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
                     disjBlock[i].component(nm),
                     Constraint)
 
+    def test_transformation_block_not_on_disjunct_anymore(self):
+        m = models.makeNestedDisjunctions()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        # check that there is nothing in component map of the disjunct
+        # transformation blocks
+        for i in range(1):
+            self.assertEqual(len(m.disjunct[1]._pyomo_gdp_bigm_relaxation.\
+                                 relaxedDisjuncts[i].component_map()), 0)
+            self.assertEqual(len(m.simpledisjunct._pyomo_gdp_bigm_relaxation.\
+                                  relaxedDisjuncts[i].component_map()), 0)
+        
     def test_mappings_between_disjunctions_and_xors(self):
         m = models.makeNestedDisjunctions()
         bigm = TransformationFactory('gdp.bigm')
@@ -2354,6 +2435,63 @@ class TestErrors(unittest.TestCase):
             GDP_Error,
             "Disjunction empty is empty. This is likely indicative of a "
             "modeling error.*",
+            TransformationFactory('gdp.bigm').apply_to,
+            m)
+
+    def test_deactivated_disjunct_nonzero_indicator_var(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0,8))
+        m.disjunction = Disjunction(expr=[m.x == 0, m.x >= 4])
+
+        m.disjunction.disjuncts[0].deactivate()
+        m.disjunction.disjuncts[0].indicator_var.fix(1)
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "The disjunct disjunction_disjuncts\[0\] is deactivated, but the "
+            "indicator_var is fixed to 1. This makes no sense.",
+            TransformationFactory('gdp.bigm').apply_to,
+            m)
+
+    def test_deactivated_disjunct_unfixed_indicator_var(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0,8))
+        m.disjunction = Disjunction(expr=[m.x == 0, m.x >= 4])
+
+        m.disjunction.disjuncts[0].deactivate()
+        m.disjunction.disjuncts[0].indicator_var.fixed = False
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "The disjunct disjunction_disjuncts\[0\] is deactivated, but the "
+            "indicator_var is not fixed and the disjunct does not "
+            "appear to have been relaxed. This makes no sense. "
+            "\(If the intent is to deactivate the disjunct, fix its "
+            "indicator_var to 0.\)",
+            TransformationFactory('gdp.bigm').apply_to,
+            m)
+
+    def test_transformed_disjunction_all_disjuncts_deactivated(self):
+        # I'm not sure I like that I can make this happen...
+        m = ConcreteModel()
+        m.x = Var(bounds=(0,8))
+        m.y = Var(bounds=(0,7))
+        m.disjunction = Disjunction(expr=[m.x == 0, m.x >= 4])
+        m.disjunction_disjuncts[0].nestedDisjunction = Disjunction(
+            expr=[m.y == 6, m.y <= 1])
+        m.disjunction.disjuncts[0].nestedDisjunction.disjuncts[0].deactivate()
+        m.disjunction.disjuncts[0].nestedDisjunction.disjuncts[1].deactivate()
+        TransformationFactory('gdp.bigm').apply_to(
+            m, 
+            targets=m.disjunction.disjuncts[0].nestedDisjunction)
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Found transformed disjunction "
+            "disjunction_disjuncts\[0\].nestedDisjunction on disjunt "
+            "disjunction_disjuncts\[0\], "
+            "but none of its disjuncts have been transformed. "
+            "This is very strange.",
             TransformationFactory('gdp.bigm').apply_to,
             m)
 

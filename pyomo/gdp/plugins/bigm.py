@@ -39,8 +39,11 @@ logger = logging.getLogger('pyomo.gdp.bigm')
 from nose.tools import set_trace
 
 def _to_dict(val):
-    if val is None:
-        return val
+    # [ESJ 09/14/2019] It doesn't seem like this can happen. Even if you
+    # explicitly specify it, this doesn't get called because None is the default
+    # value maybe?
+    # if val is None:
+    #     return val
     if isinstance(val, ComponentMap):
         return val
     if isinstance(val, dict):
@@ -61,8 +64,8 @@ class BigM_Transformation(Transformation):
         targets: the targets to transform [default: the instance]
 
     M values are determined as follows:
-       1) if the constraint CUID appears in the bigM argument dict
-       2) if the constraint parent_component CUID appears in the bigM
+       1) if the constraint appears in the bigM argument dict
+       2) if the constraint parent_component appears in the bigM
           argument dict
        3) if 'None' is in the bigM argument dict
        4) if the constraint or the constraint parent_component appear in
@@ -89,7 +92,7 @@ class BigM_Transformation(Transformation):
         'transformedConstraints': ComponentMap(<src constraint>:
                                                <transformed constraint>)
 
-    All transformed Disjuncts will have a pointer the block their transformed
+    All transformed Disjuncts will have a pointer to the block their transformed
     constraints are on, and all transformed Disjunctions will have a 
     pointer to the corresponding OR or XOR constraint.
 
@@ -175,10 +178,11 @@ class BigM_Transformation(Transformation):
             # warning is in util, but we have to deal with the consequences here
             # because we need to have the instance in order to get the component.
             if isinstance(t, ComponentUID):
+                tmp = t
                 t = t.find_component(instance)
                 if t is None:
                     raise GDP_Error(
-                        "Target %s is not a component on the instance!" % _t)
+                        "Target %s is not a component on the instance!" % tmp)
 
             # check that t is in fact a child of instance
             if not is_child_of(parent=instance, child=t,
@@ -196,6 +200,8 @@ class BigM_Transformation(Transformation):
                 else:
                     self._transformBlockData(t, bigM)
             else:
+                # TODO: Question: So we actually only want to yell if target is
+                # an ActiveComponent?
                 raise GDP_Error(
                     "Target %s was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed."
@@ -269,8 +275,7 @@ class BigM_Transformation(Transformation):
         return orC
 
     def _transformDisjunction(self, obj, bigM):
-        parent_block = obj.parent_block()
-        transBlock = self._add_transformation_block(parent_block)
+        transBlock = self._add_transformation_block(obj.parent_block())
 
         # If this is an IndexedDisjunction, create the XOR constraint here
         # because we want its index to match the disjunction.
@@ -294,8 +299,7 @@ class BigM_Transformation(Transformation):
 
         xor = obj.xor
         or_expr = 0
-        # TODO: I don't think we should let this fail silently because it's
-        # weird, but I don't think this is in the right place yet
+        # Just because it's unlikely this is what someone meant to do...    
         if len(obj.disjuncts) == 0:
             raise GDP_Error("Disjunction %s is empty. This is "
                             "likely indicative of a modeling error."
@@ -339,17 +343,18 @@ class BigM_Transformation(Transformation):
                 raise GDP_Error(
                     "The disjunct %s is deactivated, but the "
                     "indicator_var is not fixed and the disjunct does not "
-                    "appear to have been relaxed. This makes no sense."
+                    "appear to have been relaxed. This makes no sense. "
+                    "(If the intent is to deactivate the disjunct, fix its "
+                    "indicator_var to 0.)"
                     % ( obj.name, ))
-            else:
-                raise GDP_Error(
+                
+        if obj._transformation_block is not None:
+            # we've transformed it, which means this is the second time it's
+            # appearing in a Disjunction
+            raise GDP_Error(
                     "The disjunct %s has been transformed, but a disjunction "
                     "it appears in has not. Putting the same disjunct in "
                     "multiple disjunctions is not supported." % obj.name)
-
-        if obj._transformation_block is not None:
-            # we've transformed it, so don't do it again.
-            return
 
         # add reference to original disjunct on transformation block
         relaxedDisjuncts = transBlock.relaxedDisjuncts
@@ -381,26 +386,25 @@ class BigM_Transformation(Transformation):
                 sort=SortComponents.deterministic, 
                 descend_into=(Block)):
             if not obj.algebraic_constraint:
-                # This could be bad if it's active, but we'll wait to yell
-                # until the next loop
+                # This could be bad if it's active since that means its
+                # untransformed, but we'll wait to yell until the next loop
                 continue
-            disjParentBlock = disjunct.parent_block()
             # get this disjunction's relaxation block.
             transBlock = None
             for d in obj.disjuncts:
                 if d._transformation_block:
                     transBlock = d._transformation_block().parent_block()
+                    # We found it, no need to keep looking
+                    break
             if transBlock is None:
                 raise GDP_Error(
                     "Found transformed disjunction %s on disjunt %s, "
                     "but none of its disjuncts have been transformed. "
-                    "This is very strange if not impossible" % (obj.name,
-                                                                disjunct.name))
+                    "This is very strange." % (obj.name, disjunct.name))
             # move transBlock up to parent component
-            # TODO: use del here as in John's comment (or just delete the whole
-            # container at once... In this case that is fine.
-            transBlock.parent_block().del_component(transBlock)
             self._transfer_transBlock_data(transBlock, destinationBlock)
+            # delete the entire transformed disjunct container:
+            del transBlock
 
         # Now look through the component map of block and transform
         # everything we have a handler for. Yell if we don't know how
