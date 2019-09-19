@@ -1281,7 +1281,8 @@ class LinearExpression(ExpressionBase):
         followed by the coefficients, followed by the variables.
         
         Alternatively, you can specify the constant, the list of linear_coeffs
-        and the list of linear_vars separately.
+        and the list of linear_vars separately. Note that these lists are NOT
+        copied.
         """
         # I am not sure why LinearExpression allows omitting args, but
         # it does.  If they are provided, they should be the constant
@@ -1292,15 +1293,9 @@ class LinearExpression(ExpressionBase):
             self.linear_coefs = args[1:n+1]
             self.linear_vars = args[n+1:]
         else:
-            self.constant = 0
-            if constant is not None:
-                self.constant = constant
-            self.linear_coefs = []
-            if linear_coefs is not None:
-                self.linear_coefs = linear_coefs
-            self.linear_vars = []
-            if linear_vars is not None:
-                self.linear_vars = linear_vars
+            self.constant = constant if constant is not None else 0
+            self.linear_coefs = linear_coefs if linear_coefs else []
+            self.linear_vars = linear_vars if linear_vars else []
             
         self._args_ = tuple()
 
