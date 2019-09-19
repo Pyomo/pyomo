@@ -64,16 +64,23 @@ class ResidualDataModel(QAbstractTableModel):
         super(ResidualDataModel, self).__init__(parent)
         self.column = ["name", "residual", "value", "ub", "lb", "active"]
         self.ui_data = ui_data
+        self.include_inactive = True
         self.update_model()
         self.sort()
 
     def update_model(self):
+        if self.include_inactive:
+            ac = None
+        else:
+            ac = True
         self._items = list(self.ui_data.model.component_data_objects(
-            pyo.Constraint, active=True))
+            pyo.Constraint, active=ac))
 
     def sort(self):
         self._items.sort(key=
-            lambda o: (o is None, get_residual(self.ui_data, o)), reverse=True)
+            lambda o: (o is None, get_residual(self.ui_data, o)
+                                  if get_residual(self.ui_data, o) is not None
+                                  else -float("inf")), reverse=True)
 
     def rowCount(self, parent=QtCore.QModelIndex()):
         return len(self._items)

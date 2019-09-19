@@ -36,6 +36,33 @@ import logging
 
 logger = logging.getLogger('pyomo.core')
 
+_ftoa_precision_str = '%.17g'
+def _ftoa(val):
+    if val is None:
+        return val
+    if type(val) not in native_numeric_types:
+        if is_fixed(val):
+            val = value(val)
+        else:
+            raise ValueError("non-fixed bound or weight: " + str(val))
+
+    a = _ftoa_precision_str % val
+    i = len(a)
+    while i > 1:
+        try:
+            if float(a[:i-1]) == val:
+                i -= 1
+            else:
+                break
+        except:
+            break
+    if i == len(a):
+        logger.warning(
+            "converting %s to string resulted in loss of precision" % val)
+    #if a.startswith('1.57'):
+    #    raise RuntimeError("wtf %s %s, %s" % ( val, a, i))
+    return a[:i]
+
 _legal_unary_functions = {
     'ceil','floor','exp','log','log10','sqrt',
     'sin','cos','tan','asin','acos','atan','sinh','cosh','tanh',
@@ -122,7 +149,7 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             return True, None
 
         if node.__class__ in native_types:
-            return True, str(node)
+            return True, _ftoa(node)
 
         if node.is_expression_type():
             # we will descend into this, so type checking will happen later
@@ -146,14 +173,12 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
 
         if node.is_variable_type():
             if node.fixed:
-                return True, node.to_string(
-                    verbose=False, smap=self.smap, compute_values=True)
+                return True, _ftoa(value(node))
             else:
                 label = self.smap.getSymbol(node)
                 return True, label
 
-        return True, node.to_string(
-            verbose=False, smap=self.smap, compute_values=True)
+        return True, _ftoa(value(node))
 
     def ctype(self, comp):
         if isinstance(comp, ICategorizedObject):
@@ -280,14 +305,6 @@ def split_long_line(line):
         line = line[i:]
     new_lines += line
     return new_lines
-
-
-def _get_bound(exp):
-    if exp is None:
-        return None
-    if is_fixed(exp):
-        return value(exp)
-    raise ValueError("non-fixed bound or weight: " + str(exp))
 
 
 @WriterFactory.register('gams', 'Generate the corresponding GAMS file')
@@ -548,14 +565,14 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 ConstraintIO.write('%s.. %s =e= %s ;\n' % (
                     constraint_names[-1],
                     con_body_str,
-                    _get_bound(con.upper)
+                    _ftoa(con.upper)
                 ))
             else:
                 if con.has_lb():
                     constraint_names.append('%s_lo' % cName)
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
-                        _get_bound(con.lower),
+                        _ftoa(con.lower),
                         con_body_str,
                     ))
                 if con.has_ub():
@@ -563,7 +580,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
                         con_body_str,
-                        _get_bound(con.upper)
+                        _ftoa(con.upper)
                     ))
 
         obj = list(model.component_data_objects(Objective,
@@ -623,7 +640,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             if category == 'positive':
                 if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
-                                      (var_name, _get_bound(var.ub)))
+                                      (var_name, _ftoa(var.ub)))
             elif category == 'ints':
                 if not var.has_lb():
                     warn_int_bounds = True
@@ -633,7 +650,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     output_file.write("%s.lo = -1.0E+100;\n" % (var_name))
                 elif value(var.lb) != 0:
                     output_file.write("%s.lo = %s;\n" %
-                                      (var_name, _get_bound(var.lb)))
+                                      (var_name, _ftoa(var.lb)))
                 if not var.has_ub():
                     warn_int_bounds = True
                     # GAMS has an option value called IntVarUp that is the
@@ -645,25 +662,26 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     output_file.write("%s.up = +1.0E+100;\n" % (var_name))
                 else:
                     output_file.write("%s.up = %s;\n" %
-                                      (var_name, _get_bound(var.ub)))
+                                      (var_name, _ftoa(var.ub)))
             elif category == 'binary':
                 if var.has_lb() and value(var.lb) != 0:
                     output_file.write("%s.lo = %s;\n" %
-                                      (var_name, _get_bound(var.lb)))
+                                      (var_name, _ftoa(var.lb)))
                 if var.has_ub() and value(var.ub) != 1:
                     output_file.write("%s.up = %s;\n" %
-                                      (var_name, _get_bound(var.ub)))
+                                      (var_name, _ftoa(var.ub)))
             elif category == 'reals':
                 if var.has_lb():
                     output_file.write("%s.lo = %s;\n" %
-                                      (var_name, _get_bound(var.lb)))
+                                      (var_name, _ftoa(var.lb)))
                 if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
-                                      (var_name, _get_bound(var.ub)))
+                                      (var_name, _ftoa(var.ub)))
             else:
                 raise KeyError('Category %s not supported' % category)
             if warmstart and var.value is not None:
-                output_file.write("%s.l = %s;\n" % (var_name, var.value))
+                output_file.write("%s.l = %s;\n" %
+                                  (var_name, _ftoa(var.value)))
 
         if warn_int_bounds:
             logger.warning(

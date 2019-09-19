@@ -43,6 +43,48 @@ except:
         pass
     class _ModelBrowser(object):
         pass
+    class QItemEditorCreatorBase(object):
+        pass
+    class QItemDelegate(object):
+        pass
+
+class LineEditCreator(QItemEditorCreatorBase):
+    """
+    Class to create editor widget for int and floats in a model view type object
+    """
+    def createWidget(self, parent):
+        return QLineEdit(parent=parent)
+
+
+class NumberDelegate(QItemDelegate):
+    """
+    Tree view item delegate. This is used here to change how items are edited.
+    """
+    def __init__(self, parent):
+        super(QItemDelegate, self).__init__(parent=parent)
+        factory = QItemEditorFactory()
+        factory.registerEditor(QtCore.QVariant.Int, LineEditCreator())
+        factory.registerEditor(QtCore.QVariant.Double, LineEditCreator())
+        self.setItemEditorFactory(factory)
+
+    def setModelData(self, editor, model, index):
+        if isinstance(editor, QComboBox):
+            value = editor.currentText()
+        else:
+            value = editor.text()
+        a = model.column[index.column()]
+        isinstance(index.internalPointer().get(a), bool)
+        try: # Recognize ints and floats.
+            if value == "False" or value == "false":
+                index.internalPointer().set(a, False)
+            elif value == "True" or value == "true":
+                index.internalPointer().set(a, True)
+            elif "." in value or "e" in value or "E" in value:
+                index.internalPointer().set(a, float(value))
+            else:
+                index.internalPointer().set(a, int(value))
+        except: # If not a valid number ignore
+            pass
 
 
 class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
@@ -58,8 +100,12 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
         """
         super(ModelBrowser, self).__init__(parent=parent)
         self.setupUi(self)
+        # The default int and double spin boxes are not good for this
+        # application.  So just use regular line edits.
+        number_delegate = NumberDelegate(self)
         self.ui_data = ui_data
         self.ui_data.updated.connect(self.update_model)
+        self.treeView.setItemDelegate(number_delegate)
         if standard == "Var":
             # This if block sets up standard views
             components = Var
@@ -213,27 +259,27 @@ class ComponentDataItem(object):
     def _set_value_callback(self, val):
         if isinstance(self.data, _VarData):
             try:
-                self.data.value = float(val)
+                self.data.value = val
             except:
                 return
         elif isinstance(self.data, _ParamData):
             if not self.data._mutable: return
             try:
-                self.data.value = float(val)
+                self.data.value = val
             except:
                 return
 
     def _set_lb_callback(self, val):
         if isinstance(self.data, _VarData):
             try:
-                self.data.setlb(float(val))
+                self.data.setlb(val)
             except:
                 return
 
     def _set_ub_callback(self, val):
         if isinstance(self.data, _VarData):
             try:
-                self.data.setub(float(val))
+                self.data.setub(val)
             except:
                 return
 
@@ -436,13 +482,6 @@ class ComponentDataModel(QAbstractItemModel):
                 return QtCore.QVariant(QColor(QtCore.Qt.blue));
         else:
             return
-
-    def setData(self, index, value, role=QtCore.Qt.EditRole):
-        if role==QtCore.Qt.EditRole:
-            a = self.column[index.column()]
-            if a in self._col_editable:
-                index.internalPointer().set(a, value)
-        return 1
 
     def headerData(self, i, orientation, role=QtCore.Qt.DisplayRole):
         """

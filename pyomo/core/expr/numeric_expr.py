@@ -18,6 +18,7 @@ from six import itervalues
 logger = logging.getLogger('pyomo.core')
 
 from pyutilib.math.util import isclose
+from pyomo.common.deprecation import deprecated
 
 from .expr_common import (
     _add, _sub, _mul, _div,
@@ -784,6 +785,45 @@ class MonomialTermExpression(ProductExpression):
     def getname(self, *args, **kwds):
         return 'mon'
 
+class DivisionExpression(ExpressionBase):
+    """
+    Division expressions::
+
+        x/y
+    """
+    __slots__ = ()
+    PRECEDENCE = 4
+
+    def nargs(self):
+        return 2
+
+    def _precedence(self):
+        return DivisionExpression.PRECEDENCE
+
+    def _compute_polynomial_degree(self, result):
+        if result[1] == 0:
+            return result[0]
+        return None
+
+    def getname(self, *args, **kwds):
+        return 'div'
+
+    def _to_string(self, values, verbose, smap, compute_values):
+        if verbose:
+            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
+        return "{0}/{1}".format(values[0], values[1])
+
+    def _apply_operation(self, result):
+        return result[0] / result[1]
+
+
+class NPV_DivisionExpression(DivisionExpression):
+    __slots__ = ()
+
+    def is_potentially_variable(self):
+        return False
+
+
 class ReciprocalExpression(ExpressionBase):
     """
     Reciprocal expressions::
@@ -792,6 +832,11 @@ class ReciprocalExpression(ExpressionBase):
     """
     __slots__ = ()
     PRECEDENCE = 4
+
+    @deprecated("ReciprocalExpression is deprecated. Use DivisionExpression",
+                version='TBD')
+    def __init__(self, args):
+        super(ReciprocalExpression, self).__init__(args)
 
     def nargs(self):
         return 1
@@ -1562,6 +1607,12 @@ def _decompose_linear_terms(expr, multiplier=1):
                 yield term
         else:
             raise LinearDecompositionError("Quadratic terms exist in a product expression.")
+    elif expr.__class__ is DivisionExpression:
+        if expr._args_[1].__class__ in native_numeric_types or not expr._args_[1].is_potentially_variable():
+            for term in _decompose_linear_terms(expr._args_[0], multiplier/expr._args_[1]):
+                yield term
+        else:
+            raise LinearDecompositionError("Unexpected nonlinear term (division)")
     elif expr.__class__ is ReciprocalExpression:
         # The argument is potentially variable, so this represents a nonlinear term
         #
@@ -1857,26 +1908,22 @@ def _generate_mul_expression(etype, _self, _other):
             elif _self.__class__ is MonomialTermExpression:
                 return MonomialTermExpression((_self._args_[0]/_other, _self._args_[1]))
             elif _self.is_potentially_variable():
-                return ProductExpression((_self, 1/_other))
-            return NPV_ProductExpression((_self, 1/_other))
+                return DivisionExpression((_self, _other))
+            return NPV_DivisionExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
             if _self == 0:
                 return 0
-            elif _self == 1:
-                if _other.is_potentially_variable():
-                    return ReciprocalExpression((_other,))
-                return NPV_ReciprocalExpression((_other,))
             elif _other.is_potentially_variable():
-                return ProductExpression((_self, ReciprocalExpression((_other,))))
-            return NPV_ProductExpression((_self, ReciprocalExpression((_other,))))
+                return DivisionExpression((_self, _other))
+            return NPV_DivisionExpression((_self, _other))
         elif _other.is_potentially_variable():
-            return ProductExpression((_self, ReciprocalExpression((_other,))))
+            return DivisionExpression((_self, _other))
         elif _self.is_potentially_variable():
             if _self.is_variable_type():
-                return MonomialTermExpression((NPV_ReciprocalExpression((_other,)), _self))
-            return ProductExpression((_self, NPV_ReciprocalExpression((_other,))))
+                return MonomialTermExpression((NPV_DivisionExpression((1, _other)), _self))
+            return DivisionExpression((_self, _other))
         else:
-            return NPV_ProductExpression((_self, NPV_ReciprocalExpression((_other,))))
+            return NPV_DivisionExpression((_self, _other))
 
     raise RuntimeError("Unknown expression type '%s'" % etype)      #pragma: no cover
 
@@ -1983,6 +2030,7 @@ NPV_expression_types = set(
     NPV_ExternalFunctionExpression,
     NPV_PowExpression,
     NPV_ProductExpression,
+    NPV_DivisionExpression,
     NPV_ReciprocalExpression,
     NPV_SumExpression,
     NPV_UnaryFunctionExpression,

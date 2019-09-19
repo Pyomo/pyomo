@@ -29,19 +29,11 @@
      <height>38</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menu_File">
-    <property name="title">
-     <string>&amp;File</string>
-    </property>
-    <addaction name="actionSet_Working_Directory"/>
-    <addaction name="actionModel_Selector"/>
-    <addaction name="separator"/>
-    <addaction name="action_Exit"/>
-   </widget>
    <widget class="QMenu" name="menu_View">
     <property name="title">
      <string>&amp;View</string>
     </property>
+    <addaction name="actionModel_Selector"/>
     <addaction name="actionRestart_Variable_View"/>
     <addaction name="actionRestart_Constraint_View"/>
     <addaction name="actionRestart_Parameter_View"/>
@@ -66,7 +58,6 @@
     </property>
     <addaction name="actionInformation"/>
    </widget>
-   <addaction name="menu_File"/>
    <addaction name="menu_View"/>
    <addaction name="menuCalculate"/>
    <addaction name="menuModel"/>
@@ -110,7 +101,7 @@
   </action>
   <action name="action_Exit">
    <property name="text">
-    <string>E&amp;xit</string>
+    <string>C&amp;lose Window</string>
    </property>
   </action>
   <action name="action_toggle_expressions">
@@ -275,7 +266,7 @@
   </action>
   <action name="actionModel_Selector">
    <property name="text">
-    <string>Model &amp;Selector</string>
+    <string>Model Sele&amp;ctor ...</string>
    </property>
   </action>
   <action name="actionRestart_Residual_Table">
@@ -285,7 +276,12 @@
   </action>
   <action name="actionSet_Working_Directory">
    <property name="text">
-    <string>Set &amp;Working Directory</string>
+    <string>Set &amp;Working Directory ...</string>
+   </property>
+  </action>
+  <action name="action_Run_Script">
+   <property name="text">
+    <string>&amp;Run Script ...</string>
    </property>
   </action>
  </widget>

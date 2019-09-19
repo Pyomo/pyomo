@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -44,6 +44,47 @@ from pyomo.repn.util import valid_expr_ctypes_minlp, \
     valid_active_ctypes_minlp
 
 logger = logging.getLogger('pyomo.core')
+
+
+#Copied from cpxlp.py:
+# Keven Hunter made a nice point about using %.16g in his attachment
+# to ticket #4319. I am adjusting this to %.17g as this mocks the
+# behavior of using %r (i.e., float('%r'%<number>) == <number>) with
+# the added benefit of outputting (+/-). The only case where this
+# fails to mock the behavior of %r is for large (long) integers (L),
+# which is a rare case to run into and is probably indicative of
+# other issues with the model.
+# *** NOTE ***: If you use 'r' or 's' here, it will break code that
+#               relies on using '%+' before the formatting character
+#               and you will need to go add extra logic to output
+#               the number's sign.
+_ftoa_precision_str = '%.17g'
+
+def _ftoa(val):
+    if val is None:
+        return val
+    if type(val) not in native_numeric_types:
+        if is_fixed(val):
+            val = value(val)
+        else:
+            raise ValueError("non-fixed bound or weight: " + str(exp))
+
+    a = _ftoa_precision_str % val
+    i = len(a)
+    while i > 1:
+        try:
+            if float(a[:i-1]) == val:
+                i -= 1
+            else:
+                break
+        except:
+            break
+    if i == len(a):
+        logger.warning(
+            "converting %s to string resulted in loss of precision" % val)
+    #if a.startswith('1.57'):
+    #    raise RuntimeError("wtf %s %s, %s" % ( val, a, i))
+    return a[:i]
 
 
 #
@@ -125,7 +166,7 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
             return node._to_string(tmp, None, self.smap, True)
 
     def visiting_potential_leaf(self, node):
-        """ 
+        """
         Visiting a potential leaf.
 
         Return True if the node is not expanded.
@@ -136,7 +177,7 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
             return True, None
 
         if node.__class__ in native_types:
-            return True, str(node)
+            return True, _ftoa(node)
 
         if node.is_expression_type():
             # we will descend into this, so type checking will happen later
@@ -160,15 +201,13 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
 
         if node.is_variable_type():
             if node.fixed:
-                return True, node.to_string(
-                    verbose=False, smap=self.smap, compute_values=True)
+                return True, _ftoa(value(node))
             else:
                 self.variables.add(id(node))
                 label = self.smap.getSymbol(node)
                 return True, label
 
-        return True, node.to_string(
-            verbose=False, smap=self.smap, compute_values=True)
+        return True, _ftoa(value(node))
 
 
 def expression_to_string(expr, variables, labeler=None, smap=None):
@@ -189,40 +228,12 @@ def expression_to_string(expr, variables, labeler=None, smap=None):
 #       function that takes a "labeler" or "symbol_map" for
 #       writing non-expression components.
 
-# TODO: Is the precision used by to_string for writing
-#       numeric values suitable for output to a solver?
-#       In the LP and NL writer we used %.17g for all
-#       numbers. This does get used in this writer
-#       but not for numbers appearing in the objective
-#       or constraints (which are written from to_string)
-
 @WriterFactory.register('bar', 'Generate the corresponding BARON BAR file.')
 class ProblemWriter_bar(AbstractProblemWriter):
 
     def __init__(self):
 
         AbstractProblemWriter.__init__(self, ProblemFormat.bar)
-
-        #Copied from cpxlp.py:
-        # Keven Hunter made a nice point about using %.16g in his attachment
-        # to ticket #4319. I am adjusting this to %.17g as this mocks the
-        # behavior of using %r (i.e., float('%r'%<number>) == <number>) with
-        # the added benefit of outputting (+/-). The only case where this
-        # fails to mock the behavior of %r is for large (long) integers (L),
-        # which is a rare case to run into and is probably indicative of
-        # other issues with the model.
-        # *** NOTE ***: If you use 'r' or 's' here, it will break code that
-        #               relies on using '%+' before the formatting character
-        #               and you will need to go add extra logic to output
-        #               the number's sign.
-        self._precision_string = '.17g'
-
-    def _get_bound(self, exp):
-        if exp is None:
-            return None
-        if is_fixed(exp):
-            return value(exp)
-        raise ValueError("non-fixed bound: " + str(exp))
 
     def _write_equations_section(self,
                                  model,
@@ -416,7 +427,6 @@ class ProblemWriter_bar(AbstractProblemWriter):
             vstring_to_var_dict = {}
             vstring_to_bar_dict = {}
             pstring_to_bar_dict = {}
-            _val_template = ' %'+self._precision_string+' '
             for block in all_blocks_list:
                 for var_data in active_components_data_var[id(block)]:
                     variable_stream = StringIO()
@@ -430,7 +440,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     else:
                         assert var_data.value is not None
                         vstring_to_bar_dict[variable_string] = \
-                            (_val_template % (var_data.value,))
+                            _ftoa(var_data.value)
 
                 for param_data in mutable_param_gen(block):
                     param_stream = StringIO()
@@ -438,11 +448,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     param_string = param_stream.getvalue()
 
                     param_string = ' '+param_string+' '
-                    pstring_to_bar_dict[param_string] = \
-                        (_val_template % (param_data(),))
+                    pstring_to_bar_dict[param_string] = _ftoa(param_data())
 
         # Equation Definition
-        string_template = '%'+self._precision_string
         output_file.write('c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;\n');
         for constraint_data in itertools.chain(eqns,
                                                r_o_eqns,
@@ -478,33 +486,24 @@ class ProblemWriter_bar(AbstractProblemWriter):
             # Equality constraint
             if constraint_data.equality:
                 eqn_lhs = ''
-                eqn_rhs = ' == ' + \
-                          str(string_template
-                              % self._get_bound(constraint_data.upper))
+                eqn_rhs = ' == ' + _ftoa(constraint_data.upper)
 
             # Greater than constraint
             elif not constraint_data.has_ub():
-                eqn_rhs = ' >= ' + \
-                          str(string_template
-                              % self._get_bound(constraint_data.lower))
+                eqn_rhs = ' >= ' + _ftoa(constraint_data.lower)
                 eqn_lhs = ''
 
             # Less than constraint
             elif not constraint_data.has_lb():
-                eqn_rhs = ' <= ' + \
-                          str(string_template
-                              % self._get_bound(constraint_data.upper))
+                eqn_rhs = ' <= ' + _ftoa(constraint_data.upper)
                 eqn_lhs = ''
 
             # Double-sided constraint
             elif constraint_data.has_lb() and \
                  constraint_data.has_ub():
-                eqn_lhs = str(string_template
-                              % self._get_bound(constraint_data.lower)) + \
+                eqn_lhs = _ftoa(constraint_data.lower) + \
                           ' <= '
-                eqn_rhs = ' <= ' + \
-                          str(string_template
-                              % self._get_bound(constraint_data.upper))
+                eqn_rhs = ' <= ' + _ftoa(constraint_data.upper)
 
             eqn_string = eqn_lhs + eqn_body + eqn_rhs + ';\n'
             output_file.write(eqn_string)
@@ -717,8 +716,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
             var_data = symbol_map.bySymbol[name]()
 
             if var_data.is_continuous():
-                if var_data.has_lb() and \
-                   (self._get_bound(var_data.lb) >= 0):
+                if var_data.has_lb() and (value(var_data.lb) >= 0):
                     TypeList = PosVars
                 else:
                     TypeList = Vars
@@ -765,18 +763,18 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
             if var_data.fixed:
                 if output_fixed_variable_bounds:
-                    var_data_lb = var_data.value
+                    var_data_lb = _ftoa(var_data.value)
                 else:
                     var_data_lb = None
             else:
                 var_data_lb = None
                 if var_data.has_lb():
-                    var_data_lb = self._get_bound(var_data.lb)
+                    var_data_lb = _ftoa(var_data.lb)
 
             if var_data_lb is not None:
                 name_to_output = symbol_map.getSymbol(var_data)
-                lb_string_template = '%s: %'+self._precision_string+';\n'
-                lbounds[name_to_output] = lb_string_template % (name_to_output, var_data_lb)
+                lbounds[name_to_output] = '%s: %s;\n' % (
+                    name_to_output, var_data_lb)
 
         if len(lbounds) > 0:
             output_file.write("LOWER_BOUNDS{\n")
@@ -795,18 +793,18 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
             if var_data.fixed:
                 if output_fixed_variable_bounds:
-                    var_data_ub = var_data.value
+                    var_data_ub = _ftoa(var_data.value)
                 else:
                     var_data_ub = None
             else:
                 var_data_ub = None
                 if var_data.has_ub():
-                    var_data_ub = self._get_bound(var_data.ub)
+                    var_data_ub = _ftoa(var_data.ub)
 
             if var_data_ub is not None:
                 name_to_output = symbol_map.getSymbol(var_data)
-                ub_string_template = '%s: %'+self._precision_string+';\n'
-                ubounds[name_to_output] = ub_string_template % (name_to_output, var_data_ub)
+                ubounds[name_to_output] = '%s: %s;\n' % (
+                    name_to_output, var_data_ub)
 
         if len(ubounds) > 0:
             output_file.write("UPPER_BOUNDS{\n")
@@ -846,7 +844,6 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #
         output_file.write('STARTING_POINT{\nONE_VAR_CONST__: 1;\n')
         tmp = {}
-        string_template = '%s: %'+self._precision_string+';\n'
         for vid in referenced_variable_ids:
             name = symbol_map.byObject[vid]
             var_data = symbol_map.bySymbol[name]()
@@ -854,7 +851,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
             starting_point = var_data.value
             if starting_point is not None:
                 var_name = symbol_map.getSymbol(var_data)
-                tmp[var_name] = string_template % (var_name, starting_point)
+                tmp[var_name] = "%s: %s;\n" % (
+                    var_name, _ftoa(starting_point))
 
         output_file.write("".join( tmp[key] for key in sorted(tmp.keys()) ))
         output_file.write('}\n\n')
