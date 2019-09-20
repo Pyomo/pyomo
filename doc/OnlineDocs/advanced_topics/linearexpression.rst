@@ -16,6 +16,7 @@ syntax. This example creates two constraints that are the same:
 .. doctest::
 
    >>> import pyomo.environ as pyo
+   >>> from pyomo.core.expr.numeric_expr import LinearExpression
    >>> model = pyo.ConcreteModel()
    >>> model.nVars = pyo.Param(initialize=4)
    >>> model.N = pyo.RangeSet(model.nVars)
