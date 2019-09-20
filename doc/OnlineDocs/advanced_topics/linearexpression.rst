@@ -1,7 +1,7 @@
 LinearExpression
 ================
 
-For models with dense linear expressions, signficant speed
+Signficant speed
 improvements can be obtained using the ``LinearExpression`` object
 when there are long, dense, linear expressions. The arguments are
 
