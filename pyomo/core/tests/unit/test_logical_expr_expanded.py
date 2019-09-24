@@ -1,10 +1,13 @@
 import pyutilib.th as unittest
 from pyomo.environ import *
-from pyomo.core.expr.logical_expr import (LogicalExpressionBase, NotExpression, 
+from pyomo.core.expr.logical_expr import (LogicalExpressionBase, UnaryExpression,
+    NotExpression, BinaryExpression, MultiArgsExpression,
     AndExpression, OrExpression, Implication, EquivalenceExpression, XorExpression, 
     ExactlyExpression, AtMostExpression, AtLeastExpression, Not, Equivalence, 
-    LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor, is_CNF, 
+    LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor, 
     )
+
+from pyomo.core.expr.CNF import (is_CNF,)
 
 
 '''
@@ -377,6 +380,8 @@ class TestLogicalClasses(unittest.TestCase):
         Leaf_node = m.Y4
         root_node_or = And_node | Not_node | Leaf_node
         self.assertFalse(is_CNF(root_node_or)) 
+        print(root_node_or)
+        #self.assertTrue(type(root_node_and) is MultiArgsExpression)
 
         """
         A more sophisticated test for if_CNF with only and, or and not expression with no

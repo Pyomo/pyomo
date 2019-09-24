@@ -1092,63 +1092,7 @@ def AtLeast(req, argsList):
 
 #-------------------------*************------------------------------
 
-def is_elementary_operation(node):
-    if (type(node) is ExactlyExpression) and (not is_nested(node)):
-        return True
-    if (type(node) is AtMostExpression) and (not is_nested(node)):
-        return True
-    if (type(node) is AtLeastExpression) and (not is_nested(node)):
-        return True
-    return False
 
-
-
-def is_literal(node):
-    if not node.is_expression_type():
-        return True
-    if (type(node) is NotExpression) and (not (node._args_[0]).is_expression_type()):
-        return True
-    if is_elementary_operation(node):
-        return True
-    return False 
-
-def is_nested(node):
-    for i in range(len(node._args_)):
-        if not is_literal(node._args_[i]):
-            return True
-    return False
-
-def is_CNF_child(node):
-    if is_literal(node):
-        return True
-    if (type(node) is OrExpression) and (not is_nested(node)):
-        return True
-    return False
-
-def is_CNF_root(node):
-    if type(node) is AndExpression:
-        return True
-    if (type(node) is OrExpression) and (not is_nested(node)):
-        return True
-    return False
-
-
-def is_CNF(node):
-    if is_literal(node):
-        return True
-    #The node is not a leaf node it gets here
-    if not is_CNF_root(node):
-        return False
-    for i in range(len(node._args_)):
-        if not is_CNF_child(node._args_[i]):
-            return False
-    return True
-
-#def bring_to_CNF(node):
-
-"""
-
-"""
 #-------------------------*************------------------------------
 
 class UnaryExpression(LogicalExpressionBase):
@@ -1216,7 +1160,7 @@ class NotExpression(UnaryExpression):
             return Notexpression.PRECEDENCE
 
         def _to_string(self, values, verbose, smap, compute_values):
-            return "Not".join(values)
+            return "Not ".join(values)
             
         def _apply_operetion(self, result):
             """
@@ -1389,7 +1333,7 @@ class MultiArgsExpression(LogicalExpressionBase):
     safe_add = _add
 
     def _precedence(self):
-        return MultiargsExpression.PRECEDENCE
+        return MultiArgsExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
         #question: how should this one work in general, though this function should not
@@ -1443,7 +1387,7 @@ class OrExpression(MultiArgsExpression):
 
     def _to_string(self, values, verbose, smap, compute_values):
         #pass this one for now 0-0
-        return "or".join(values)
+        return " Or ".join(values)
 
     def _apply_operation(self, result):
         """
