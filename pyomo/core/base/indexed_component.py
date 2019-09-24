@@ -10,32 +10,84 @@
 
 __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
+from collections import Sequence
+
 import pyutilib.misc
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
+from pyomo.core.expr.numvalue import native_types
 from pyomo.core.base.indexed_component_slice import _IndexedComponent_slice
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.common import DeveloperError
 
-from six import PY3, itervalues, iteritems
+from six import PY3, itervalues, iteritems, string_types
 
 UnindexedComponent_set = set([None])
 
-def normalize_index(index):
+sequence_types = {tuple, list}
+def normalize_index(x):
+    """Normalize a component index.
+
+    This flattens nested sequences into a single tuple.  There is a
+    "global" flag (normalize_index.flatten) that will turn off index
+    flattening across Pyomo.
+
+    Scalar values will be returned unchanged.  Tuples with a single
+    value will be unpacked and returned as a single value.
+
+    Returns
+    -------
+    scalar or tuple
+
     """
-    Flatten a component index.  If it has length 1, then
-    return just the element.  If it has length > 1, then
-    return a tuple.
-    """
-    idx = pyutilib.misc.flatten(index)
-    if type(idx) is list:
-        if len(idx) == 1:
-            idx = idx[0]
+    if x.__class__ in native_types:
+        return x
+    elif x.__class__ in sequence_types:
+        # Note that casting a tuple to a tuple is cheap (no copy, no
+        # new object)
+        x = tuple(x)
+    elif hasattr(x, '__iter__') and isinstance(x, Sequence):
+        if isinstance(x, string_types):
+            # This is very difficult to get to: it would require a user
+            # creating a custom derived string type
+            return x
+        sequence_types.add(x.__class__)
+        x = tuple(x)
+    else:
+        return x
+
+    x_len = len(x)
+    i = 0
+    while i < x_len:
+        _xi = x[i]
+        _xi_class = _xi.__class__
+        if _xi_class in native_types:
+            i += 1
+        elif _xi_class in sequence_types:
+            x_len += len(x[i]) - 1
+            # Note that casting a tuple to a tuple is cheap (no copy, no
+            # new object)
+            x = x[:i] + tuple(x[i]) + x[i + 1:]
+        elif _xi_class is not tuple and isinstance(_xi, Sequence):
+            if isinstance(_xi, string_types):
+                # This is very difficult to get to: it would require a
+                # user creating a custom derived string type
+                i += 1
+            else:
+                sequence_types.add(_xi_class)
+                x_len += len(x[i]) - 1
+                x = x[:i] + tuple(x[i]) + x[i + 1:]
         else:
-            idx = tuple(idx)
-    return idx
+            i += 1
+
+    if x_len == 1:
+        return x[0]
+    return x
+
+# Pyomo will normalize indices by default
 normalize_index.flatten = True
+
 
 class _NotFound(object):
     pass
@@ -318,7 +370,14 @@ You can silence this warning by one of three ways:
         try:
             obj = self._data.get(index, _NotFound)
         except TypeError:
-            index = self._processUnhashableIndex(index)
+            try:
+                index = self._processUnhashableIndex(index)
+            except TypeError:
+                # This index is really unhashable.  Set a flag so that
+                # we can re-raise the original exception (not this one)
+                index = TypeError
+            if index is TypeError:
+                raise
             if index.__class__ is _IndexedComponent_slice:
                 return index
             # The index could have contained constant but nonhashable
@@ -522,15 +581,9 @@ You can silence this warning by one of three ways:
         #
         # Setup the slice template (in fixed)
         #
-        if type(idx) is tuple:
-            # We would normally do "flatten()" here, but the current
-            # (10/2016) implementation of flatten() is too aggressive:
-            # it will attempt to expand *any* iterable, including
-            # SimpleParam.
-            idx = pyutilib.misc.flatten_tuple(idx)
-        elif type(idx) is list:
-            idx = pyutilib.misc.flatten_tuple(tuple(idx))
-        else:
+        if normalize_index.flatten:
+            idx = normalize_index(idx)
+        if idx.__class__ is not tuple:
             idx = (idx,)
 
         for i,val in enumerate(idx):
