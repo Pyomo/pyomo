@@ -373,6 +373,16 @@ class _SetData(_SetDataBase):
         return lb, ub
 
     def get_interval(self):
+        """Return the interval for this Set as (start, end, step)
+
+        Returns the effective interval for this Set as a (start, end,
+        step) tuple.  Start and End are the same as returned by
+        `bounds()`.  Step is 0 for continuous ranges, a positive value
+        for regular discrete sets (e.g., 1 for Integers), or `None` for
+        Sets that do not have a regular interval (e.g., semicontinuous
+        sets, mixed type sets, sets with dimen != 1, etc).
+
+        """
         if self.dimen != 1:
             return self.bounds() + (None,)
         if self.isdiscrete():
