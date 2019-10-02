@@ -289,6 +289,10 @@ class _SetData(_SetDataBase):
         raise DeveloperError("Derived set class (%s) failed to "
                              "implement __contains__" % (type(self).__name__,))
 
+    def isdiscrete(self):
+        """Returns True if this set admits only discrete members"""
+        return False
+
     def isfinite(self):
         """Returns True if this is a finite discrete (iterable) Set"""
         return False
@@ -364,6 +368,187 @@ class _SetData(_SetDataBase):
                 else:
                     ub = max(ub, _ub)
         return lb, ub
+
+    def get_interval(self):
+        if self.dimen != 1:
+            return None
+        if self.isdiscrete():
+            return self._get_discrete_interval()
+        else:
+            return self._get_continuous_interval()
+
+    def _get_discrete_interval(self):
+        #
+        # Note: I'd like to use set() for ranges, since we will be
+        # randomly removing elelments from the list; however, since we
+        # do it by enumerating over ranges, using set() would make this
+        # routine nondeterministic.  Not a hoge issue for the result,
+        # but problemmatic for code coverage.
+        ranges = list(self.ranges())
+        try:
+            step = min(abs(r.step) for r in ranges if r.step != 0)
+        except ValueError:
+            # If all the ranges are single points, we will just
+            # brute-force it: sort the values and ensure that the step
+            # is consistent.  Note that we know at this point ranges
+            # only contains NumericRange objects (or at least that they
+            # all have a `step` attribute).
+            vals = sorted(self)
+            if len(vals) < 2:
+                return (vals[0], vals[0], 0)
+            step = vals[1]-vals[0]
+            for i in xrange(2, len(vals)):
+                if step != vals[i] - vals[i-1]:
+                    return None
+            return (vals[0], vals[-1], step)
+        except AttributeError:
+            # Catching Any, NonNumericRange, RangeProduct, etc...
+            return None
+
+        nRanges = len(ranges)
+        r = ranges.pop()
+        _rlen = len(ranges)
+        ref = r.start
+        if r.step >= 0:
+            start, end = r.start, r.end
+        else:
+            end, start = r.start, r.end
+        if r.step % step:
+            return None
+        # Catch misaligned ranges
+        for r in ranges:
+            if ( r.start - ref ) % step:
+                return None
+            if r.step % step:
+                return None
+
+        # This loop terminates when we have a complete pass that doesn't
+        # remove any ranges from the ranges list.
+        while nRanges > _rlen:
+            nRanges = _rlen
+            for i,r in enumerate(ranges):
+                if r.step > 0:
+                    rstart, rend = r.start, r.end
+                else:
+                    rend, rstart = r.start, r.end
+                if not r.step or abs(r.step) == step:
+                    if ( start is None or rend is None or
+                         start <= rend+step ) and (
+                             end is None or rstart is None or
+                             rstart <= end+step ):
+                        ranges[i] = None
+                        if rstart is None:
+                            start = None
+                        elif start is not None and start > rstart:
+                            start = rstart
+                        if rend is None:
+                            end = None
+                        elif end is not None and end < rend:
+                            end = rend
+                else:
+                    # The range has a step bigger than the base
+                    # interval we are building.  For us to absorb
+                    # it, it has to be contained within the current
+                    # interval +/- step.
+                    if (start is None or ( rstart is not None and
+                                           start <= rstart + step ))\
+                        and (end is None or ( rend is not None and
+                                              end >= rend - step )):
+                        ranges[i] = None
+                        if start is not None and start > rstart:
+                            start = rstart
+                        if end is not None and end < rend:
+                            end = rend
+
+            ranges = list(_ for _ in ranges if _ is not None)
+            _rlen = len(ranges)
+        if ranges:
+            return None
+        return (start, end, step)
+
+
+    def _get_continuous_interval(self):
+        # Note: this method assumes that at least one range is continuous.
+        #
+        # Note: I'd like to use set() for ranges, since we will be
+        # randomly removing elelments from the list; however, since we
+        # do it by enumerating over ranges, using set() would make this
+        # routine nondeterministic.  Not a hoge issue for the result,
+        # but problemmatic for code coverage.
+        #
+        # Note: We do not need to trap non-NumericRange objects:
+        # RangeProduct and AnyRange will be caught by the dimen test in
+        # get_interval(), and NonNumericRange objects are cleanly
+        # handled as if they were regular discrete ranges.
+        ranges = []
+        discrete = []
+
+        # Pull out the discrete intervals (for checking later), and
+        # copy the continuous ranges (so we can later make them
+        # closed, if applicable)
+        for r in self.ranges():
+            if r.isdiscrete():
+                discrete.append(r)
+            else:
+                ranges.append(
+                    NumericRange(r.start, r.end, r.step, r.closed))
+
+        # There is a particular edge case where we could get 2 disjoint
+        # continuous ranges that are joined by a discrete range...  When
+        # we encounter an open range, check to see if the endpoint is
+        # in the discrete set, and if so, convert it to a closed range.
+        for r in ranges:
+            if not r.closed[0]:
+                for d in discrete:
+                    if r.start in d:
+                        r.closed = (True, r.closed[1])
+                        break
+            if not r.closed[1]:
+                for d in discrete:
+                    if r.end in d:
+                        r.closed = (r.closed[0], True)
+                        break
+
+        nRanges = len(ranges)
+        r = ranges.pop()
+        interval = NumericRange(r.start, r.end, r.step, r.closed)
+        _rlen = len(ranges)
+
+        # This loop terminates when we have a complete pass that doesn't
+        # remove any ranges from the ranges list.
+        while _rlen and nRanges > _rlen:
+            nRanges = _rlen
+            for i, r in enumerate(ranges):
+                if interval.isdisjoint(r):
+                    continue
+                # r and interval overlap: merge r into interval
+                ranges[i] = None
+                if r.start is None:
+                    interval.start = None
+                    interval.closed = (True, interval.closed[1])
+                elif interval.start is not None \
+                     and r.start < interval.start:
+                    interval.start = r.start
+                    interval.closed = (r.closed[0], interval.closed[1])
+
+                if r.end is None:
+                    interval.end = None
+                    interval.closed = (interval.closed[0], True)
+                elif interval.end is not None and r.end > interval.end:
+                    interval.end = r.end
+                    interval.closed = (interval.closed[0], r.closed[1])
+
+            ranges = list(_ for _ in ranges if _ is not None)
+            _rlen = len(ranges)
+        if ranges:
+            # The continuous ranges are disjoint
+            return None
+        for r in discrete:
+            if not r.issubset(interval):
+                # The discrete range extends outside the continuous
+                # interval
+                return None
+        return (interval.start, interval.end, interval.step)
 
     @property
     @deprecated("The 'virtual' flag is no longer supported", version='TBD')
@@ -611,6 +796,10 @@ class _FiniteSetMixin(object):
 
     def __reversed__(self):
         return reversed(self.data())
+
+    def isdiscrete(self):
+        """Returns True if this set admits only discrete members"""
+        return True
 
     def isfinite(self):
         """Returns True if this is a finite discrete (iterable) Set"""
@@ -1733,6 +1922,10 @@ class _InfiniteRangeSetData(_SetData):
                 return True
         return any(value in r for r in self._ranges)
 
+    def isdiscrete(self):
+        """Returns True if this set admits only discrete members"""
+        return all(r.isdiscrete() for r in self.ranges())
+
     @property
     def dimen(self):
         return 1
@@ -2099,6 +2292,10 @@ class _SetOperator(_SetData, Set):
                 arg_str = "(" + arg_str + ")"
             _args.append(arg_str)
         return self._operator.join(_args)
+
+    def isdiscrete(self):
+        """Returns True if this set admits only discrete members"""
+        return all(r.isdiscrete() for r in self.ranges())
 
     @property
     def _domain(self):
