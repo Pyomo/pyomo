@@ -346,8 +346,11 @@ class _SetData(_SetDataBase):
                              "implement ranges" % (type(self).__name__,))
 
     def bounds(self):
-        _bnds = list((r.start, r.end) if r.step >= 0 else (r.end, r.start)
-                     for r in self.ranges())
+        try:
+            _bnds = list((r.start, r.end) if r.step >= 0 else (r.end, r.start)
+                         for r in self.ranges())
+        except AttributeError:
+            return None, None
         if not _bnds:
             return None, None
 
@@ -371,7 +374,7 @@ class _SetData(_SetDataBase):
 
     def get_interval(self):
         if self.dimen != 1:
-            return None
+            return self.bounds() + (None,)
         if self.isdiscrete():
             return self._get_discrete_interval()
         else:
@@ -399,11 +402,11 @@ class _SetData(_SetDataBase):
             step = vals[1]-vals[0]
             for i in xrange(2, len(vals)):
                 if step != vals[i] - vals[i-1]:
-                    return None
+                    return self.bounds() + (None,)
             return (vals[0], vals[-1], step)
         except AttributeError:
             # Catching Any, NonNumericRange, RangeProduct, etc...
-            return None
+            return self.bounds() + (None,)
 
         nRanges = len(ranges)
         r = ranges.pop()
@@ -414,13 +417,13 @@ class _SetData(_SetDataBase):
         else:
             end, start = r.start, r.end
         if r.step % step:
-            return None
+            return self.bounds() + (None,)
         # Catch misaligned ranges
         for r in ranges:
             if ( r.start - ref ) % step:
-                return None
+                return self.bounds() + (None,)
             if r.step % step:
-                return None
+                return self.bounds() + (None,)
 
         # This loop terminates when we have a complete pass that doesn't
         # remove any ranges from the ranges list.
@@ -463,7 +466,7 @@ class _SetData(_SetDataBase):
             ranges = list(_ for _ in ranges if _ is not None)
             _rlen = len(ranges)
         if ranges:
-            return None
+            return self.bounds() + (None,)
         return (start, end, step)
 
 
@@ -542,12 +545,12 @@ class _SetData(_SetDataBase):
             _rlen = len(ranges)
         if ranges:
             # The continuous ranges are disjoint
-            return None
+            return self.bounds() + (None,)
         for r in discrete:
             if not r.issubset(interval):
                 # The discrete range extends outside the continuous
                 # interval
-                return None
+                return self.bounds() + (None,)
         return (interval.start, interval.end, interval.step)
 
     @property
