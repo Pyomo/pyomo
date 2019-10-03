@@ -1030,16 +1030,24 @@ def Implies(arg1, arg2):
 
 #combine 2 function and name it And()
 def LogicalAnd(*argv):
-    # 0-0 Do we need to take care of the safety of this method?
-    # argsList is a set of LogicalValues, RaiseError if not?
-    # checking requires a full loop from my understanding
-    # Do we need to take care of empty set of set with length 1?
     argsList = list(argv)
+    res = AndExpression(list([]))
+    l = len(argsList)
+    i = 0
+    while i < l:
+        if argsList[i] is AndExpression:
+            res._args_.extend(argsList[i])
+        else:
+            res._args_.append(argsList[i])
+        i = i + 1
+    return res
+
+    """
     parent = argsList[0]
     for tmp in argsList:
         if isinstance(tmp, AndExpression):
             parent = tmp
-            argList.remove(tmp)
+            argsList.remove(tmp)
             for target in argsList:
                 parent._add(target)
             return parent
@@ -1049,25 +1057,22 @@ def LogicalAnd(*argv):
     while (len(argsList) != 0):
         res._add(argsList.pop())
     return res
+    """
 
 # static method for OrExpression creator
 # create a new node iff neither node is an OrNode, same logic
 
 def LogicalOr(*argv):
     argsList = list(argv)
-    parent = argsList[0]
-    for tmp in argsList:
-        if isinstance(tmp, OrExpression):
-            parent = tmp
-            argList.remove(tmp)
-            for target in argsList:
-                parent._add(target)
-            return parent
-
-    res = OrExpression(list([parent]))
-    argsList.remove(parent)   
-    while (len(argsList) != 0):
-        res._add(argsList.pop())
+    res = OrExpression(list([]))
+    l = len(argsList)
+    i = 0
+    while i < l:
+        if argsList[i] is OrExpression:
+            res._args_.extend(argsList[i])
+        else:
+            res._args_.append(argsList[i])
+        i = i+1
     return res
 
 
@@ -1160,7 +1165,7 @@ class NotExpression(UnaryExpression):
             return Notexpression.PRECEDENCE
 
         def _to_string(self, values, verbose, smap, compute_values):
-            return "Not ".join(values)
+            return "Not_ "
             
         def _apply_operetion(self, result):
             """
@@ -1226,7 +1231,7 @@ class EquivalenceExpression(BinaryExpression):
             return EquivalanceExpression.PRECEDENCE
 
         def _to_string(self, values, verbose, smap, compute_values):
-            return "equals".join(values)
+            return " Equals ".join(values)
             
 
         #change it to (self, result):
@@ -1255,7 +1260,7 @@ class XorExpression(BinaryExpression):
 
         def _to_string(self, values, verbose, smap, compute_values):
             #pass this one for now 0-0
-            return "xor".join(values)
+            return " Xor ".join(values)
 
         def _apply_operation(self,resList):
             """
@@ -1283,7 +1288,7 @@ class Implication(BinaryExpression):
 
         def _to_string(self, values, verbose, smap, compute_values):
             #pass this one for now 0-0
-            return "implies".join(values)  
+            return " Implies ".join(values)  
 
         def _apply_operation(self,resList):
             return ((not resList[0]) or (resList[1]))
