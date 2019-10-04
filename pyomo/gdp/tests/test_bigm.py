@@ -2495,6 +2495,81 @@ class TestErrors(unittest.TestCase):
             TransformationFactory('gdp.bigm').apply_to,
             m)
 
+    def test_retrieving_nondisjunctive_components(self):
+        m = models.makeTwoTermDisj()
+        m.b = Block()
+        m.b.global_cons = Constraint(expr=m.a + m.x >= 8)
+        m.another_global_cons = Constraint(expr=m.a + m.x <= 11)
+
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Constraint b.global_cons is not on a disjunct and so was not "
+            "transformed",
+            bigm.get_transformed_constraint,
+            m.b.global_cons)
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Constraint b.global_cons is not a transformed constraint",
+            bigm.get_src_constraint,
+            m.b.global_cons)
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Constraint another_global_cons is not a transformed constraint",
+            bigm.get_src_constraint,
+            m.another_global_cons)
+        
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Block b doesn't appear to be a transformation block for a "
+            "disjunct. No source disjunct found.",
+            bigm.get_src_disjunct,
+            m.b)
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "It appears that another_global_cons is not an XOR or OR"
+            " constraint resulting from transforming a Disjunction.",
+            bigm.get_src_disjunction,
+            m.another_global_cons)
+
+    def test_ask_for_transformed_constraint_from_untransformed_disjunct(self):
+        m = models.makeTwoTermIndexedDisjunction()
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m, targets=m.disjunction[1])
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Constraint disjunct\[2,b\].cons_b is on a disjunct which has "
+            "not been transformed",
+            bigm.get_transformed_constraint,
+            m.disjunct[2, 'b'].cons_b)
+
+    def test_no_m_estimation_for_nonlinear(self):
+        m = models.makeTwoTermDisj_Nonlinear()
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Cannot estimate M for nonlinear "
+            "expressions.\n\t\(found while processing "
+            "constraint d\[0\].c\)",
+            TransformationFactory('gdp.bigm').apply_to,
+            m)
+
+    def test_silly_target(self):
+        m = models.makeTwoTermDisj()
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Target d\[1\].c1 was not a Block, Disjunct, or Disjunction. "
+            "It was of type "
+            "<class 'pyomo.core.base.constraint.SimpleConstraint'> and "
+            "can't be transformed.",
+            TransformationFactory('gdp.bigm').apply_to,
+            m,
+            targets=[m.d[1].c1])
 
 if __name__ == '__main__':
     unittest.main()

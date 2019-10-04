@@ -200,8 +200,6 @@ class BigM_Transformation(Transformation):
                 else:
                     self._transformBlockData(t, bigM)
             else:
-                # TODO: Question: So we actually only want to yell if target is
-                # an ActiveComponent?
                 raise GDP_Error(
                     "Target %s was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed."
@@ -247,9 +245,10 @@ class BigM_Transformation(Transformation):
         # Put the disjunction constraint on its parent block and
         # determine whether it is an OR or XOR constraint.
 
-        # We never do this for just a DisjunctionData because we need
-        # to know about the index set of its parent component. So if
-        # we called this on a DisjunctionData, we did something wrong.
+        # We never do this for just a DisjunctionData because we need to know
+        # about the index set of its parent component (so that we can make the
+        # index of this constraint match). So if we called this on a
+        # DisjunctionData, we did something wrong.
         assert isinstance(disjunction, Disjunction)
 
         # first check if the constraint already exists
@@ -277,25 +276,30 @@ class BigM_Transformation(Transformation):
     def _transformDisjunction(self, obj, bigM):
         transBlock = self._add_transformation_block(obj.parent_block())
 
-        # If this is an IndexedDisjunction, create the XOR constraint here
-        # because we want its index to match the disjunction.
-        if obj.is_indexed():
-            xorConstraint = self._getXorConstraint(obj)
+        # If this is an IndexedDisjunction, we have to create the XOR constraint
+        # here because we want its index to match the disjunction. In any case,
+        # we might as well.
+        xorConstraint = self._getXorConstraint(obj)
 
         # relax each of the disjunctionDatas
         for i in sorted(iterkeys(obj)):
-            self._transformDisjunctionData(obj[i], bigM, i, transBlock)
+            self._transformDisjunctionData(obj[i], bigM, i, xorConstraint,
+                                           transBlock)
 
         # deactivate so the writers don't scream
         obj.deactivate()
 
-    def _transformDisjunctionData(self, obj, bigM, index, transBlock=None):
+    def _transformDisjunctionData(self, obj, bigM, index, xorConstraint=None,
+                                  transBlock=None):
         if not obj.active:
-            return  # Do not process a deactivated disjunction
+            return  # Do not process a deactivated disjunction 
+        # We won't have these arguments if this got called straight from
+        # targets. But else, we created them earlier, and have just been passing
+        # them through.
         if transBlock is None:
             transBlock = self._add_transformation_block(obj.parent_block())
-        
-        xorConstraint = self._getXorConstraint(obj.parent_component())
+        if xorConstraint is None:
+            xorConstraint = self._getXorConstraint(obj.parent_component())
 
         xor = obj.xor
         or_expr = 0
@@ -415,6 +419,9 @@ class BigM_Transformation(Transformation):
             handler = self.handlers.get(obj.type(), None)
             if not handler:
                 if handler is None:
+                    # TODO: It is here that we need to make sure we are only
+                    # yelling of the offender is an ActiveComponent, right?
+                    # (Need to write a test for this when you understand it...)
                     raise GDP_Error(
                         "No BigM transformation handler registered "
                         "for modeling components of type %s. If your " 
@@ -431,7 +438,7 @@ class BigM_Transformation(Transformation):
         # We know that we have a list of transformed disjuncts on both. We need
         # to move those over. Then there might be constraints on the block also
         # (at this point only the diaggregation constraints from chull,
-        # but... I'll leave it general for now.
+        # but... I'll leave it general for now.)
         disjunctList = toBlock.relaxedDisjuncts
         for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
             # I think this should work when #1106 is resolved:
@@ -453,6 +460,8 @@ class BigM_Transformation(Transformation):
         # don't want to descend into Blocks because we already handled the
         # above).
         for cons in fromBlock.component_data_objects(Constraint):
+            # (This is not going to get tested until this same process is used
+            # in chull.)
             toBlock.add_component(unique_component_name(cons.name, toBlock),
                                   cons)
 
@@ -653,7 +662,6 @@ class BigM_Transformation(Transformation):
         elif parentcuid in bigMargs:
             deprecation_warning(deprecation_msg)
             return bigMargs[parentcuid]
-
         elif None in bigMargs:
             return bigMargs[None]
         return None
@@ -744,15 +752,17 @@ class BigM_Transformation(Transformation):
         # [ESJ 08/06/2019] I actually don't know how to do this prettily...
         while not type(parent) in (_DisjunctData, SimpleDisjunct):
             grandparent = parent.parent_block()
-            if grandparent is parent:
+            if grandparent is None:
                 raise GDP_Error(
                     "Constraint %s is not on a disjunct and so was not "
                     "transformed" % srcConstraint.name)
             parent = grandparent
-        transBlock = parent._transformation_block()
+        transBlock = parent._transformation_block
         if transBlock is None:
-            raise GDP_Error("Constraint %s is on a disjunct which has not been"
+            raise GDP_Error("Constraint %s is on a disjunct which has not been "
                             "transformed" % srcConstraint.name)
+        # if it's not None, it's the weakref we wanted.
+        transBlock = transBlock()
         if hasattr(transBlock, "_constraintMap") and transBlock._constraintMap[
                 'transformedConstraints'].get(srcConstraint):
             return transBlock._constraintMap['transformedConstraints'][
@@ -766,6 +776,6 @@ class BigM_Transformation(Transformation):
             if disjunction._algebraic_constraint:
                 if disjunction._algebraic_constraint() is xor_constraint:
                     return disjunction
-        raise GDP_Error("It appears that %s is not an and XOR or OR constraint "
+        raise GDP_Error("It appears that %s is not an XOR or OR constraint "
                         "resulting from transforming a Disjunction."
                         % xor_constraint.name)
