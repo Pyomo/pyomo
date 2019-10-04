@@ -126,7 +126,7 @@ class BigM_Transformation(Transformation):
         """Initialize transformation object."""
         super(BigM_Transformation, self).__init__()
         self.handlers = {
-            Constraint:  self._xform_constraint,
+            Constraint:  self._transform_constraint,
             Var:         False,
             Connector:   False,
             Expression:  False,
@@ -191,14 +191,14 @@ class BigM_Transformation(Transformation):
                                 % (t.name, instance.name))
             if t.type() is Disjunction:
                 if t.parent_component() is t:
-                    self._transformDisjunction(t, bigM)
+                    self._transform_disjunction(t, bigM)
                 else:
-                    self._transformDisjunctionData( t, bigM, t.index())
+                    self._transform_disjunctionData( t, bigM, t.index())
             elif t.type() in (Block, Disjunct):
                 if t.parent_component() is t:
-                    self._transformBlock(t, bigM)
+                    self._transform_block(t, bigM)
                 else:
-                    self._transformBlockData(t, bigM)
+                    self._transform_blockData(t, bigM)
             else:
                 raise GDP_Error(
                     "Target %s was not a Block, Disjunct, or Disjunction. "
@@ -227,11 +227,11 @@ class BigM_Transformation(Transformation):
 
         return transBlock
 
-    def _transformBlock(self, obj, bigM):
+    def _transform_block(self, obj, bigM):
         for i in sorted(iterkeys(obj)):
-            self._transformBlockData(obj[i], bigM)
+            self._transform_blockData(obj[i], bigM)
 
-    def _transformBlockData(self, obj, bigM):
+    def _transform_blockData(self, obj, bigM):
         # Transform every (active) disjunction in the block
         for disjunction in obj.component_objects(
                 Disjunction,
@@ -239,9 +239,9 @@ class BigM_Transformation(Transformation):
                 sort=SortComponents.deterministic,
                 descend_into=(Block, Disjunct),
                 descent_order=TraversalStrategy.PostfixDFS):
-            self._transformDisjunction(disjunction, bigM)
+            self._transform_disjunction(disjunction, bigM)
 
-    def _getXorConstraint(self, disjunction):
+    def _get_xor_constraint(self, disjunction):
         # Put the disjunction constraint on its parent block and
         # determine whether it is an OR or XOR constraint.
 
@@ -273,24 +273,24 @@ class BigM_Transformation(Transformation):
 
         return orC
 
-    def _transformDisjunction(self, obj, bigM):
+    def _transform_disjunction(self, obj, bigM):
         transBlock = self._add_transformation_block(obj.parent_block())
 
         # If this is an IndexedDisjunction, we have to create the XOR constraint
         # here because we want its index to match the disjunction. In any case,
         # we might as well.
-        xorConstraint = self._getXorConstraint(obj)
+        xorConstraint = self._get_xor_constraint(obj)
 
         # relax each of the disjunctionDatas
         for i in sorted(iterkeys(obj)):
-            self._transformDisjunctionData(obj[i], bigM, i, xorConstraint,
+            self._transform_disjunctionData(obj[i], bigM, i, xorConstraint,
                                            transBlock)
 
         # deactivate so the writers don't scream
         obj.deactivate()
 
-    def _transformDisjunctionData(self, obj, bigM, index, xorConstraint=None,
-                                  transBlock=None):
+    def _transform_disjunctionData(self, obj, bigM, index, xorConstraint=None,
+                                   transBlock=None):
         if not obj.active:
             return  # Do not process a deactivated disjunction 
         # We won't have these arguments if this got called straight from
@@ -299,7 +299,7 @@ class BigM_Transformation(Transformation):
         if transBlock is None:
             transBlock = self._add_transformation_block(obj.parent_block())
         if xorConstraint is None:
-            xorConstraint = self._getXorConstraint(obj.parent_component())
+            xorConstraint = self._get_xor_constraint(obj.parent_component())
 
         xor = obj.xor
         or_expr = 0
@@ -316,7 +316,7 @@ class BigM_Transformation(Transformation):
             # pass it down.)
             suffix_list = self._get_bigm_suffix_list(disjunct)
             # relax the disjunct
-            self._transformDisjunct(disjunct, transBlock, bigM, suffix_list)
+            self._transform_disjunct(disjunct, transBlock, bigM, suffix_list)
 
         # add or (or xor) constraint
         if xor:
@@ -330,7 +330,7 @@ class BigM_Transformation(Transformation):
         # and deactivate for the writers
         obj.deactivate()
 
-    def _transformDisjunct(self, obj, transBlock, bigM, suffix_list):
+    def _transform_disjunct(self, obj, transBlock, bigM, suffix_list):
         # deactivated -> either we've already transformed or user deactivated
         if not obj.active:
             if obj.indicator_var.is_fixed():
@@ -533,7 +533,7 @@ class BigM_Transformation(Transformation):
                 'transformedConstraints': ComponentMap()}
         return transBlock._constraintMap
 
-    def _xform_constraint(self, obj, disjunct, bigMargs, suffix_list):
+    def _transform_constraint(self, obj, disjunct, bigMargs, suffix_list):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
         constraintMap = self._get_constraint_map_dict(transBlock)
