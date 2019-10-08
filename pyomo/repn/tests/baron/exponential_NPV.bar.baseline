@@ -9,7 +9,7 @@ VARIABLES x;
 EQUATIONS c_e_FIX_ONE_VAR_CONST__, c;
 
 c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
-c: 1 ^ 1.2 * x == 0;
+c: x == 0;
 
 OBJ: minimize x ^ 2;
 
