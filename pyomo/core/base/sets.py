@@ -43,7 +43,8 @@ def process_setarg(arg):
 
     This method is used by IndexedComponent
     """
-    if isinstance(arg,_SetDataBase):
+    import pyomo.core.base.set as new_set
+    if isinstance(arg, (_SetDataBase, new_set._SetDataBase)):
         # Argument is a non-indexed Set instance
         return arg
     elif isinstance(arg,IndexedSet):
