@@ -113,6 +113,9 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
                 else:
                     tmp.append(val)
 
+        if node.__class__ in EXPR.NPV_expression_types:
+            return _ftoa(value(node))
+
         if node.__class__ is EXPR.PowExpression:
             # If the exponent is a positive integer, use the power() function.
             # Otherwise, use the ** operator.
