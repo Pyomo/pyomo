@@ -36,6 +36,7 @@ from pyomo.core.base.set import (
     AnyRange, _AnySet, Any, Binary,
     Reals, NonNegativeReals, PositiveReals, NonPositiveReals, NegativeReals,
     Integers, PositiveIntegers, NegativeIntegers,
+    NonPositiveIntegers, NonNegativeIntegers,
     Set,
     SetOf, OrderedSetOf, UnorderedSetOf,
     RangeSet, _FiniteRangeSetData, _InfiniteRangeSetData,
@@ -282,6 +283,9 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertNotIn('A', Reals)
         self.assertNotIn(None, Reals)
 
+        self.assertFalse(Reals.isdiscrete())
+        self.assertFalse(Reals.isfinite())
+
     def test_Integers(self):
         self.assertIn(0, Integers)
         self.assertNotIn(1.5, Integers)
@@ -290,6 +294,9 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertNotIn('A', Integers)
         self.assertNotIn(None, Integers)
 
+        self.assertTrue(Integers.isdiscrete())
+        self.assertFalse(Integers.isfinite())
+
     def test_Any(self):
         self.assertIn(0, Any)
         self.assertIn(1.5, Any)
@@ -297,6 +304,9 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertIn(-100, Any),
         self.assertIn('A', Any)
         self.assertIn(None, Any)
+
+        self.assertFalse(Any.isdiscrete())
+        self.assertFalse(Any.isfinite())
 
     @unittest.skipIf(not numpy_available, "NumPy required for these tests")
     def test_numpy_compatible(self):
@@ -822,28 +832,34 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
     def test_is_functions(self):
         i = SetOf({1,2,3})
+        self.assertTrue(i.isdiscrete())
         self.assertTrue(i.isfinite())
         self.assertFalse(i.isordered())
 
         i = SetOf([1,2,3])
+        self.assertTrue(i.isdiscrete())
         self.assertTrue(i.isfinite())
         self.assertTrue(i.isordered())
 
         i = SetOf((1,2,3))
+        self.assertTrue(i.isdiscrete())
         self.assertTrue(i.isfinite())
         self.assertTrue(i.isordered())
 
         i = RangeSet(3)
+        self.assertTrue(i.isdiscrete())
         self.assertTrue(i.isfinite())
         self.assertTrue(i.isordered())
         self.assertIsInstance(i, _FiniteRangeSetData)
 
         i = RangeSet(1,3)
+        self.assertTrue(i.isdiscrete())
         self.assertTrue(i.isfinite())
         self.assertTrue(i.isordered())
         self.assertIsInstance(i, _FiniteRangeSetData)
 
         i = RangeSet(1,3,0)
+        self.assertFalse(i.isdiscrete())
         self.assertFalse(i.isfinite())
         self.assertFalse(i.isordered())
         self.assertIsInstance(i, _InfiniteRangeSetData)
@@ -4316,6 +4332,115 @@ class TestAbstractSetAPI(unittest.TestCase):
 
         with self.assertRaises(DeveloperError):
             s.ord(0)
+
+
+class TestSetUtils(unittest.TestCase):
+    def test_get_continuous_interval(self):
+        self.assertEqual(Reals.get_interval(), (None,None,0))
+        self.assertEqual(PositiveReals.get_interval(), (0,None,0))
+        self.assertEqual(NonNegativeReals.get_interval(), (0,None,0))
+        self.assertEqual(NonPositiveReals.get_interval(), (None,0,0))
+        self.assertEqual(NegativeReals.get_interval(), (None,0,0))
+
+        a = NonNegativeReals | NonPositiveReals
+        self.assertEqual(a.get_interval(), (None, None, 0))
+        a = NonPositiveReals | NonNegativeReals
+        self.assertEqual(a.get_interval(), (None, None, 0))
+
+        a = NegativeReals | PositiveReals
+        self.assertEqual(a.get_interval(), (None, None, None))
+        a = NegativeReals | PositiveReals | [0]
+        self.assertEqual(a.get_interval(), (None, None, 0))
+        a = NegativeReals | PositiveReals | RangeSet(0,5)
+        self.assertEqual(a.get_interval(), (None, None, 0))
+
+        a = NegativeReals | RangeSet(-3, 3)
+        self.assertEqual(a.get_interval(), (None, 3, None))
+        a = NegativeReals | Binary
+        self.assertEqual(a.get_interval(), (None, 1, None))
+        a = PositiveReals | Binary
+        self.assertEqual(a.get_interval(), (0, None, 0))
+
+        a = RangeSet(1,10,0) | RangeSet(5,15,0)
+        self.assertEqual(a.get_interval(), (1,15,0))
+        a = RangeSet(5,15,0) | RangeSet(1,10,0)
+        self.assertEqual(a.get_interval(), (1,15,0))
+
+        a = RangeSet(5,15,0) | RangeSet(1,4,0)
+        self.assertEqual(a.get_interval(), (1, 15, None))
+        a = RangeSet(1,4,0) | RangeSet(5,15,0)
+        self.assertEqual(a.get_interval(), (1, 15, None))
+
+        a = NegativeReals | Any
+        self.assertEqual(a.get_interval(), (None, None, None))
+        a = Any | NegativeReals
+        self.assertEqual(a.get_interval(), (None, None, None))
+        a = SetOf('abc') | NegativeReals
+        self.assertEqual(a.get_interval(), (None, None, None))
+        a = NegativeReals | SetOf('abc')
+        self.assertEqual(a.get_interval(), (None, None, None))
+
+    def test_get_discrete_interval(self):
+        self.assertEqual(Integers.get_interval(), (None,None,1))
+        self.assertEqual(PositiveIntegers.get_interval(), (1,None,1))
+        self.assertEqual(NegativeIntegers.get_interval(), (None,-1,1))
+        self.assertEqual(Binary.get_interval(), (0,1,1))
+
+        a = PositiveIntegers | NegativeIntegers
+        self.assertEqual(a.get_interval(), (None, None, None))
+        a = NegativeIntegers | NonNegativeIntegers
+        self.assertEqual(a.get_interval(), (None, None, 1))
+
+        a = SetOf([1,3,5,6,4,2])
+        self.assertEqual(a.get_interval(), (1, 6, 1))
+        a = SetOf([1,3,5,6,2])
+        self.assertEqual(a.get_interval(), (1, 6, None))
+        a = SetOf([1,3,5,6,4,2,'a'])
+        self.assertEqual(a.get_interval(), (None, None, None))
+        a = SetOf([3])
+        self.assertEqual(a.get_interval(), (3,3,0))
+
+        a = RangeSet(ranges=(NR(0,5,1), NR(5,10,1)))
+        self.assertEqual(a.get_interval(), (0, 10, 1))
+        a = RangeSet(ranges=(NR(5,10,1), NR(0,5,1)))
+        self.assertEqual(a.get_interval(), (0, 10, 1))
+
+        a = RangeSet(ranges=(NR(0,4,1), NR(5,10,1)))
+        self.assertEqual(a.get_interval(), (0, 10, 1))
+        a = RangeSet(ranges=(NR(5,10,1), NR(0,4,1)))
+        self.assertEqual(a.get_interval(), (0, 10, 1))
+
+        a = RangeSet(ranges=(NR(0,3,1), NR(5,10,1)))
+        self.assertEqual(a.get_interval(), (0, 10, None))
+        a = RangeSet(ranges=(NR(5,10,1), NR(0,3,1)))
+        self.assertEqual(a.get_interval(), (0, 10, None))
+
+        a = RangeSet(ranges=(NR(0,4,2), NR(6,10,2)))
+        self.assertEqual(a.get_interval(), (0, 10, 2))
+        a = RangeSet(ranges=(NR(6,10,2), NR(0,4,2)))
+        self.assertEqual(a.get_interval(), (0, 10, 2))
+
+        a = RangeSet(ranges=(NR(0,4,2), NR(5,10,2)))
+        self.assertEqual(a.get_interval(), (0, 9, None))
+        a = RangeSet(ranges=(NR(5,10,2), NR(0,4,2)))
+        self.assertEqual(a.get_interval(), (0, 9, None))
+
+        a = RangeSet(ranges=(NR(0,10,2), NR(0,10,3)))
+        self.assertEqual(a.get_interval(), (0, 10, None))
+        a = RangeSet(ranges=(NR(0,10,3), NR(0,10,2)))
+        self.assertEqual(a.get_interval(), (0, 10, None))
+
+        a = RangeSet(ranges=(NR(2,10,2), NR(0,12,4)))
+        self.assertEqual(a.get_interval(), (0,12,2))
+        a = RangeSet(ranges=(NR(0,12,4), NR(2,10,2)))
+        self.assertEqual(a.get_interval(), (0,12,2))
+
+        # Even though the following are reasonable intervals, we
+        # currently don't support resolving it:
+        a = RangeSet(ranges=(NR(0,10,2), NR(1,10,2)))
+        self.assertEqual(a.get_interval(), (0, 10, None))
+        a = RangeSet(ranges=(NR(0,10,3), NR(1,10,3), NR(2,10,3)))
+        self.assertEqual(a.get_interval(), (0, 10, None))
 
 
 class TestDeprecation(unittest.TestCase):
