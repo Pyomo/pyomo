@@ -173,10 +173,12 @@ class BigM_Transformation(Transformation):
         else:
             _HACK_transform_whole_instance = False
         knownBlocks = set()
+        name_buffer = {}
         for t in targets:
             # [ESJ 08/22/2019] This can go away when we deprecate CUIDs. The
             # warning is in util, but we have to deal with the consequences here
-            # because we need to have the instance in order to get the component.
+            # because we need to have the instance in order to get the
+            # component.
             if isinstance(t, ComponentUID):
                 tmp = t
                 t = t.find_component(instance)
@@ -191,14 +193,15 @@ class BigM_Transformation(Transformation):
                                 % (t.name, instance.name))
             if t.type() is Disjunction:
                 if t.parent_component() is t:
-                    self._transform_disjunction(t, bigM)
+                    self._transform_disjunction(t, bigM, name_buffer)
                 else:
-                    self._transform_disjunctionData( t, bigM, t.index())
+                    self._transform_disjunctionData( t, bigM, t.index(),
+                                                     name_buffer)
             elif t.type() in (Block, Disjunct):
                 if t.parent_component() is t:
-                    self._transform_block(t, bigM)
+                    self._transform_block(t, bigM, name_buffer)
                 else:
-                    self._transform_blockData(t, bigM)
+                    self._transform_blockData(t, bigM, name_buffer)
             else:
                 raise GDP_Error(
                     "Target %s was not a Block, Disjunct, or Disjunction. "
@@ -227,11 +230,11 @@ class BigM_Transformation(Transformation):
 
         return transBlock
 
-    def _transform_block(self, obj, bigM):
+    def _transform_block(self, obj, bigM, name_buffer):
         for i in sorted(iterkeys(obj)):
-            self._transform_blockData(obj[i], bigM)
+            self._transform_blockData(obj[i], bigM, name_buffer)
 
-    def _transform_blockData(self, obj, bigM):
+    def _transform_blockData(self, obj, bigM, name_buffer):
         # Transform every (active) disjunction in the block
         for disjunction in obj.component_objects(
                 Disjunction,
@@ -239,9 +242,9 @@ class BigM_Transformation(Transformation):
                 sort=SortComponents.deterministic,
                 descend_into=(Block, Disjunct),
                 descent_order=TraversalStrategy.PostfixDFS):
-            self._transform_disjunction(disjunction, bigM)
+            self._transform_disjunction(disjunction, bigM, name_buffer)
 
-    def _get_xor_constraint(self, disjunction):
+    def _get_xor_constraint(self, disjunction, name_buffer):
         # Put the disjunction constraint on its parent block and
         # determine whether it is an OR or XOR constraint.
 
@@ -266,31 +269,33 @@ class BigM_Transformation(Transformation):
         # can no longer make that distinction in the name.
         #    nm = '_xor' if xor else '_or'
         nm = '_xor'
-        orCname = unique_component_name(parent, '_gdp_bigm_relaxation_' +
-                                        disjunction.name + nm)
+        orCname = unique_component_name(
+            parent, '_gdp_bigm_relaxation_' + 
+            disjunction.getname(fully_qualified=True,
+                                name_buffer=name_buffer) + nm)
         parent.add_component(orCname, orC)
         disjunction._algebraic_constraint = weakref_ref(orC)
 
         return orC
 
-    def _transform_disjunction(self, obj, bigM):
+    def _transform_disjunction(self, obj, bigM, name_buffer):
         transBlock = self._add_transformation_block(obj.parent_block())
 
         # If this is an IndexedDisjunction, we have to create the XOR constraint
         # here because we want its index to match the disjunction. In any case,
         # we might as well.
-        xorConstraint = self._get_xor_constraint(obj)
+        xorConstraint = self._get_xor_constraint(obj, name_buffer)
 
         # relax each of the disjunctionDatas
         for i in sorted(iterkeys(obj)):
-            self._transform_disjunctionData(obj[i], bigM, i, xorConstraint,
-                                           transBlock)
+            self._transform_disjunctionData(obj[i], bigM, i, name_buffer,
+                                            xorConstraint, transBlock)
 
         # deactivate so the writers don't scream
         obj.deactivate()
 
-    def _transform_disjunctionData(self, obj, bigM, index, xorConstraint=None,
-                                   transBlock=None):
+    def _transform_disjunctionData(self, obj, bigM, index, name_buffer,
+                                   xorConstraint=None, transBlock=None):
         if not obj.active:
             return  # Do not process a deactivated disjunction 
         # We won't have these arguments if this got called straight from
@@ -299,15 +304,17 @@ class BigM_Transformation(Transformation):
         if transBlock is None:
             transBlock = self._add_transformation_block(obj.parent_block())
         if xorConstraint is None:
-            xorConstraint = self._get_xor_constraint(obj.parent_component())
+            xorConstraint = self._get_xor_constraint(obj.parent_component(),
+                                                     name_buffer)
 
         xor = obj.xor
         or_expr = 0
         # Just because it's unlikely this is what someone meant to do...    
         if len(obj.disjuncts) == 0:
-            raise GDP_Error("Disjunction %s is empty. This is "
-                            "likely indicative of a modeling error."
-                            % obj.name)
+            raise GDP_Error("Disjunction %s is empty. This is " 
+                            "likely indicative of a modeling error."  %
+                            obj.getname(fully_qualified=True,
+                                        name_buffer=name_buffer))
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var
             # make suffix list. (We don't need it until we are
@@ -316,7 +323,8 @@ class BigM_Transformation(Transformation):
             # pass it down.)
             suffix_list = self._get_bigm_suffix_list(disjunct)
             # relax the disjunct
-            self._transform_disjunct(disjunct, transBlock, bigM, suffix_list)
+            self._transform_disjunct(disjunct, transBlock, bigM, suffix_list,
+                                     name_buffer)
 
         # add or (or xor) constraint
         if xor:
@@ -330,7 +338,8 @@ class BigM_Transformation(Transformation):
         # and deactivate for the writers
         obj.deactivate()
 
-    def _transform_disjunct(self, obj, transBlock, bigM, suffix_list):
+    def _transform_disjunct(self, obj, transBlock, bigM, suffix_list,
+                            name_buffer):
         # deactivated -> either we've already transformed or user deactivated
         if not obj.active:
             if obj.indicator_var.is_fixed():
@@ -375,12 +384,14 @@ class BigM_Transformation(Transformation):
         # comparing the two relaxations.
         #
         # Transform each component within this disjunct
-        self._transform_block_components(obj, obj, bigM, suffix_list)
+        self._transform_block_components(obj, obj, bigM, suffix_list,
+                                         name_buffer)
 
         # deactivate disjunct to keep the writers happy
         obj._deactivate_without_fixing_indicator()
 
-    def _transform_block_components(self, block, disjunct, bigM, suffix_list):
+    def _transform_block_components(self, block, disjunct, bigM, suffix_list,
+                                    name_buffer):
         # We first need to find any transformed disjunctions that might be here
         # because we need to move their transformation blocks up onto the parent
         # block before we transform anything else on this block 
@@ -406,7 +417,8 @@ class BigM_Transformation(Transformation):
                     "but none of its disjuncts have been transformed. "
                     "This is very strange." % (obj.name, disjunct.name))
             # move transBlock up to parent component
-            self._transfer_transBlock_data(transBlock, destinationBlock)
+            self._transfer_transBlock_data(transBlock, destinationBlock,
+                                           name_buffer)
             # delete the entire transformed disjunct container:
             del transBlock
 
@@ -435,7 +447,7 @@ class BigM_Transformation(Transformation):
             # variables down the line.
             handler(obj, disjunct, bigM, suffix_list, name_buffer)
 
-    def _transfer_transBlock_data(self, fromBlock, toBlock):
+    def _transfer_transBlock_data(self, fromBlock, toBlock, name_buffer):
         # We know that we have a list of transformed disjuncts on both. We need
         # to move those over. Then there might be constraints on the block also
         # (at this point only the diaggregation constraints from chull,
@@ -448,7 +460,7 @@ class BigM_Transformation(Transformation):
 
             # HACK in the meantime:
             newblock = disjunctList[len(disjunctList)]
-            self._copy_to_block(disjunctBlock, newblock)
+            self._copy_to_block(disjunctBlock, newblock, name_buffer)
 
             # update the mappings
             original = disjunctBlock._srcDisjunct()
@@ -463,19 +475,21 @@ class BigM_Transformation(Transformation):
         for cons in fromBlock.component_data_objects(Constraint):
             # (This is not going to get tested until this same process is used
             # in chull.)
-            toBlock.add_component(unique_component_name(cons.name, toBlock),
-                                  cons)
+            toBlock.add_component(unique_component_name(
+                cons.getname(fully_qualified=True, name_buffer=name_buffer), 
+                toBlock), cons)
 
-    def _copy_to_block(self, oldblock, newblock):
+    def _copy_to_block(self, oldblock, newblock, name_buffer):
         for obj in oldblock.component_objects(Constraint):
             # [ESJ 07/18/2019] This shouldn't actually matter because we are
             # deleting the whole old block anyway, but it is to keep pyomo from
             # getting upset about the same component living on multiple blocks
             oldblock.del_component(obj)
-            newblock.add_component(obj.name, obj)
+            newblock.add_component(obj.getname(fully_qualified=True,
+                                               name_buffer=name_buffer), obj)
 
     def _warn_for_active_disjunction(self, disjunction, disjunct, bigMargs,
-                                     suffix_list):
+                                     suffix_list, name_buffer):
         # this should only have gotten called if the disjunction is active
         assert disjunction.active
         problemdisj = disjunction
@@ -497,7 +511,7 @@ class BigM_Transformation(Transformation):
                         % (problemdisj.name, disjunct.name))
 
     def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, bigMargs,
-                                  suffix_list):
+                                  suffix_list, name_buffer):
         assert innerdisjunct.active
         problemdisj = innerdisjunct
         if innerdisjunct.is_indexed():
@@ -517,7 +531,7 @@ class BigM_Transformation(Transformation):
                                               outerdisjunct.name))
 
     def _transform_block_on_disjunct(self, block, disjunct, bigMargs,
-                                     suffix_list):
+                                     suffix_list, name_buffer):
         # We look through everything on the component map of the block
         # and transform it just as we would if it was on the disjunct
         # directly.  (We are passing the disjunct through so that when
@@ -525,7 +539,7 @@ class BigM_Transformation(Transformation):
         # the correct indicator variable.)
         for i in sorted(iterkeys(block)):
             self._transform_block_components( block[i], disjunct, bigMargs,
-                                              suffix_list)
+                                              suffix_list, name_buffer)
 
     def _get_constraint_map_dict(self, transBlock):
         if not hasattr(transBlock, "_constraintMap"):
@@ -535,7 +549,7 @@ class BigM_Transformation(Transformation):
         return transBlock._constraintMap
 
     def _transform_constraint(self, obj, disjunct, bigMargs,
-                              suffix_list):
+                              suffix_list, name_buffer):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
         constraintMap = self._get_constraint_map_dict(transBlock)
@@ -544,7 +558,8 @@ class BigM_Transformation(Transformation):
         # Though rare, it is possible to get naming conflicts here
         # since constraints from all blocks are getting moved onto the
         # same block. So we get a unique name
-        name = unique_component_name(transBlock, obj.name)
+        cons_name = obj.getname(fully_qualified=True, name_buffer=name_buffer)
+        name = unique_component_name(transBlock, cons_name)
 
         if obj.is_indexed():
             try:
@@ -573,7 +588,7 @@ class BigM_Transformation(Transformation):
 
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 logger.debug("GDP(BigM): The value for M for constraint %s "
-                             "from the BigM argument is %s." % (obj.name,
+                             "from the BigM argument is %s." % (cons_name,
                                                                 str(M)))
 
             # if we didn't get something from args, try suffixes:
@@ -582,7 +597,7 @@ class BigM_Transformation(Transformation):
 
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 logger.debug("GDP(BigM): The value for M for constraint %s "
-                             "after checking suffixes is %s." % (obj.name,
+                             "after checking suffixes is %s." % (cons_name,
                                                                  str(M)))
 
             if not isinstance(M, (tuple, list)):
@@ -611,7 +626,7 @@ class BigM_Transformation(Transformation):
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 logger.debug("GDP(BigM): The value for M for constraint %s "
                              "after estimating (if needed) is %s." %
-                             (obj.name, str(M)))
+                             (cons_name, str(M)))
 
             # Handle indices for both SimpleConstraint and IndexedConstraint
             if i.__class__ is tuple:
