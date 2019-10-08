@@ -414,7 +414,8 @@ class BigM_Transformation(Transformation):
         # everything we have a handler for. Yell if we don't know how
         # to handle it.
         for name, obj in list(iteritems(block.component_map())):
-            if hasattr(obj, 'active') and not obj.active:
+            # This means non-ActiveComponent types cannot have handlers
+            if not hasattr(obj, 'active') or not obj.active:
                 continue
             handler = self.handlers.get(obj.type(), None)
             if not handler:
@@ -432,7 +433,7 @@ class BigM_Transformation(Transformation):
             # obj is what we are transforming, we pass disjunct
             # through so that we will have access to the indicator
             # variables down the line.
-            handler(obj, disjunct, bigM, suffix_list)
+            handler(obj, disjunct, bigM, suffix_list, name_buffer)
 
     def _transfer_transBlock_data(self, fromBlock, toBlock):
         # We know that we have a list of transformed disjuncts on both. We need
@@ -533,7 +534,8 @@ class BigM_Transformation(Transformation):
                 'transformedConstraints': ComponentMap()}
         return transBlock._constraintMap
 
-    def _transform_constraint(self, obj, disjunct, bigMargs, suffix_list):
+    def _transform_constraint(self, obj, disjunct, bigMargs,
+                              suffix_list):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
         constraintMap = self._get_constraint_map_dict(transBlock)
@@ -751,12 +753,11 @@ class BigM_Transformation(Transformation):
         parent = srcConstraint.parent_block()
         # [ESJ 08/06/2019] I actually don't know how to do this prettily...
         while not type(parent) in (_DisjunctData, SimpleDisjunct):
-            grandparent = parent.parent_block()
-            if grandparent is None:
+            parent = parent.parent_block()
+            if parent is None:
                 raise GDP_Error(
                     "Constraint %s is not on a disjunct and so was not "
                     "transformed" % srcConstraint.name)
-            parent = grandparent
         transBlock = parent._transformation_block
         if transBlock is None:
             raise GDP_Error("Constraint %s is on a disjunct which has not been "
