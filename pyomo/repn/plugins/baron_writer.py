@@ -129,6 +129,9 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
                 else:
                     tmp.append(val)
 
+        if node.__class__ in EXPR.NPV_expression_types:
+            return _ftoa(value(node))
+
         if node.__class__ is EXPR.LinearExpression:
             for v in node.linear_vars:
                 self.variables.add(id(v))
