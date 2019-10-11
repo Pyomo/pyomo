@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Main driver module for GDPopt solver.
 
+19.10.11 changes:
+- bugfix on SolverStatus error message
 19.5.13 changes:
 - add handling to integer cuts for disjunct pruning during FBBT
 19.4.23 changes:
