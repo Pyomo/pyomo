@@ -114,6 +114,38 @@ class TestSimpleVar(PyomoModel):
         model.x.setub(model.p**2)
         model.x.setub(1.0)
 
+    def test_setlb_indexed(self):
+        """Test setlb variables method"""
+        self.model.B = RangeSet(4)
+        self.model.y = Var(self.model.B, dense=True)
+
+        self.instance = self.model.create_instance()
+        self.assertEqual(len(self.instance.y) > 0, True)
+        for a in self.instance.y:
+            self.assertEqual(self.instance.y[a].lb, None)
+        self.instance.y.setlb(1)
+        for a in self.instance.y:
+            self.assertEqual(self.instance.y[a].lb, 1)
+        self.instance.y.setlb(None)
+        for a in self.instance.y:
+            self.assertEqual(self.instance.y[a].lb, None)
+
+    def test_setub_indexed(self):
+        """Test setub variables method"""
+        self.model.B = RangeSet(4)
+        self.model.y = Var(self.model.B, dense=True)
+
+        self.instance = self.model.create_instance()
+        self.assertEqual(len(self.instance.y) > 0, True)
+        for a in self.instance.y:
+            self.assertEqual(self.instance.y[a].ub, None)
+        self.instance.y.setub(1)
+        for a in self.instance.y:
+            self.assertEqual(self.instance.y[a].ub, 1)
+        self.instance.y.setub(None)
+        for a in self.instance.y:
+            self.assertEqual(self.instance.y[a].ub, None)
+
     def test_fix_all(self):
         """Test fix all variables method"""
         self.model.B = RangeSet(4)

@@ -12,6 +12,7 @@ from pyomo.core import (Block, Expression, Objective, TransformationFactory,
 from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc, SolverResults
 from pyomo.opt import SolutionStatus, SolverFactory
+from pyomo.network import Port
 
 
 def solve_linear_GDP(linear_GDP_model, solve_data, config):
@@ -19,7 +20,9 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
     m = linear_GDP_model
     GDPopt = m.GDPopt_utils
     # Transform disjunctions
-    TransformationFactory('gdp.bigm').apply_to(m)
+    _bigm = TransformationFactory('gdp.bigm')
+    _bigm.handlers[Port] = False
+    _bigm.apply_to(m)
 
     preprocessing_transformations = [
         # Propagate variable bounds

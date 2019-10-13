@@ -55,6 +55,12 @@ Pyomo is currently tested with the following Python implementations:
 
     conda install -c conda-forge pyomo
 
+### Tutorials and Examples
+
+* [Pyomo Workshop Slides](https://software.sandia.gov/downloads/pub/pyomo/Pyomo-Workshop-Summer-2018.pdf)
+* [Prof. Jeffrey Kantor's Pyomo Cookbook](https://jckantor.github.io/ND-Pyomo-Cookbook/)
+* [Pyomo Gallery](https://github.com/Pyomo/PyomoGallery)
+
 ### Getting Help
 
 * [Ask a Pyomo Question on StackExchange](https://stackoverflow.com/questions/ask?tags=pyomo)
