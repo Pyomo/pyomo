@@ -1120,6 +1120,29 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
         if node.is_variable_type():
             lb, ub = self.bnds_dict[node]
 
+            lb, ub = self.bnds_dict[node]
+            if lb > ub:
+                if lb - self.feasibility_tol > ub:
+                    raise InfeasibleConstraintException('Lower bound ({1}) computed for variable {0} is larger than the computed upper bound ({2}).'.format(node, lb, ub))
+                else:
+                    lb -= self.feasibility_tol
+                    ub += self.feasibility_tol
+                    orig_lb = value(node.lb)
+                    orig_ub = value(node.ub)
+                    if orig_lb is None:
+                        orig_lb = -interval.inf
+                    if orig_ub is None:
+                        orig_ub = interval.inf
+                    if lb < orig_lb:
+                        lb = orig_lb
+                    if ub > orig_ub:
+                        ub = orig_ub
+                    self.bnds_dict[node] = (lb, ub)
+            if lb == interval.inf:
+                raise InfeasibleConstraintException('Computed a lower bound of +inf for variable {0}'.format(node))
+            if ub == -interval.inf:
+                raise InfeasibleConstraintException('Computed an upper bound of -inf for variable {0}'.format(node))
+
             if node.is_binary() or node.is_integer():
                 """
                 This bit of code has two purposes:
@@ -1130,21 +1153,22 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
                    and may give the wrong solution. Even if the correct solution is found, this could 
                    introduce numerical problems.
                 """
-                lb = max(math.floor(lb), math.ceil(lb - self.integer_tol))
-                ub = min(math.ceil(ub), math.floor(ub + self.integer_tol))
-                if lb < value(node.lb):
-                    lb = value(node.lb)  # don't make the bounds worse than the original bounds
-                if ub > value(node.ub):
-                    ub = value(node.ub)  # don't make the bounds worse than the original bounds
+                if lb > -interval.inf:
+                    lb = max(math.floor(lb), math.ceil(lb - self.integer_tol))
+                if ub < interval.inf:
+                    ub = min(math.ceil(ub), math.floor(ub + self.integer_tol))
+                orig_lb = value(node.lb)
+                orig_ub = value(node.ub)
+                if orig_lb is None:
+                    orig_lb = -interval.inf
+                if orig_ub is None:
+                    orig_ub = interval.inf
+                if lb < orig_lb:
+                    lb = orig_lb  # don't make the bounds worse than the original bounds
+                if ub > orig_ub:
+                    ub = orig_ub  # don't make the bounds worse than the original bounds
                 self.bnds_dict[node] = (lb, ub)
 
-            lb, ub = self.bnds_dict[node]
-            if lb - self.feasibility_tol > ub:
-                raise InfeasibleConstraintException('Lower bound ({1}) computed for variable {0} is larger than the computed upper bound ({2}).'.format(node, lb, ub))
-            if lb == interval.inf:
-                raise InfeasibleConstraintException('Computed a lower bound of +inf for variable {0}'.format(node))
-            if ub == -interval.inf:
-                raise InfeasibleConstraintException('Computed an upper bound of -inf for variable {0}'.format(node))
             if lb != -interval.inf:
                 node.setlb(lb)
             if ub != interval.inf:
