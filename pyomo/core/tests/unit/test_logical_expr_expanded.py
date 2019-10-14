@@ -15,15 +15,6 @@ First testing file.
 '''
 
 
-def testl():
-    l = tuple([1,(2,3),4])
-    first, rest = l[0], l[1:]
-    return first, rest
-
-def test():
-    return (1,),(2,3),(4,),
-
-
 def create_model1(y):
     #model 1 with 5 checkpoints, 11 literals
     c1 = (Implies(y[1], y[2])).equals(LogicalXor(y[3], y[4]))
@@ -35,18 +26,23 @@ def create_model1(y):
     return root_node  
 
 def create_model2(y):
-    #model 1 with 3 checkpoints, 11 literals
+    #model 2 with 3 checkpoints, 11 literals
     c1 = Not(y[1]).implies(y[2] ^ y[3])
     c2 = LogicalAnd(LogicalOr(y[4], y[5], y[6]))
     c3 = Equivalence(LogicalXor(y[8], y[9]), y[10])
-    """
-    print("C3 is ", end = '')
-    print(c3, end = '')
-    print(" !!! ") 
-    print(Not(y[10]))
-    """
-    root_node = LogicalOr(y[0], LogicalAnd(c1, c2), Not(y[9]), c3)
+    root_node = LogicalOr(y[0], LogicalAnd(c1, c2), Not(y[7]), c3)
     return root_node
+
+def create_model3(y):
+    #model3
+    a1 = LogicalAnd(y[0].implies(y[1]), Not(y[2]))
+    a3 = LogicalAnd(LogicalXor(y[4],y[5]))
+    root_node = a1 or LogicalAnd(y[3]) or a3
+    return root_node
+
+def create_model4(y):
+    #model4
+    return (y[0].implies(y[1]) and Not(y[2])) or y[3]
 
 
 class TestLogicalClasses(unittest.TestCase):
@@ -444,34 +440,30 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y10 = BooleanVar()
         Y = list([m.Y0, m.Y1, m.Y2, m.Y3, m.Y4, m.Y5, m.Y6, m.Y7, m.Y8, m.Y9, m.Y10])
         rn = create_model2(Y) #create a root node of model 2
-        #print(rn)
         cnf.prepare_to_distribute(rn)
-        #print(type(rn._args_[0]))
-        #print(type(rn._args_[1]))
-        #print(type(rn._args_[2]))
-        #print(type(rn._args_[3])) 
-        #print(type(rn._args_[4])) 
+        """
+        print(rn._args_[0])
+        print(rn._args_[1])
+        print(rn._args_[2])
+        print(rn._args_[3]) 
+        print(rn._args_[4])
+        """
         #print(rn)
-        
-        a = 1,
-        b = 2,3,
-        c = 4,
-        l = [1, (2,3), 4]
-        print(tuple(a),tuple(b),tuple(c))
-        print(*test())
-        print(*testl())
-        res1 = it.product(tuple(a),tuple(b),tuple(c))
-        res2 = it.product(*test())
-        res3 = it.product(testl())
-        print(list(res1))
-        print(list(res2))
-        print(list(res3))
-        
-
         #cnf.column 
 
-   #def test_distribute(self):
-
+    def test_distribute(self):
+        m = ConcreteModel()
+        m.Y0 = BooleanVar()
+        m.Y1 = BooleanVar()
+        m.Y2 = BooleanVar()
+        m.Y3 = BooleanVar()
+        m.Y4 = BooleanVar()
+        m.Y5 = BooleanVar()
+        Y = list([m.Y0, m.Y1, m.Y2, m.Y3, m.Y4, m.Y5])
+        rn = create_model3(Y)
+        tup = cnf.make_columns(rn)
+        print(len(list(tup)))
+        #cnf.distribute_and_in_or
 
 
 

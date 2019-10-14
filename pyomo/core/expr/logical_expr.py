@@ -1165,7 +1165,7 @@ class NotExpression(UnaryExpression):
             return Notexpression.PRECEDENCE
 
         def _to_string(self, values, verbose, smap, compute_values):
-            return "Not_ "
+            return "Not (%s)" % values[0]
             
         def _apply_operetion(self, result):
             """
@@ -1288,7 +1288,7 @@ class Implication(BinaryExpression):
 
         def _to_string(self, values, verbose, smap, compute_values):
             #pass this one for now 0-0
-            return " Implies ".join(values)  
+            return "[" + " Implies ".join(values) + "]" 
 
         def _apply_operation(self,resList):
             return ((not resList[0]) or (resList[1]))
@@ -1392,7 +1392,9 @@ class OrExpression(MultiArgsExpression):
 
     def _to_string(self, values, verbose, smap, compute_values):
         #pass this one for now 0-0
-        return " Or ".join(values)
+        return "[" + " Or ".join(values) + "]"
+        #tmp = "\n\t".join(values)
+        #return "Or [" + tmp + "]"
 
     def _apply_operation(self, result):
         """

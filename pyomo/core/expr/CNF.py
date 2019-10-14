@@ -192,14 +192,14 @@ def prepare_to_distribute(node):
     return 
 
 
-def make_columns(arr):
-    #make columns from prepared And/Or node
-    return tuple(arr)
+def make_columns(node):
+    return it.product(*[col._args_ for col in node._args_])
 
-def distribute_and_in_or(node): 
+def distribute(node): 
     prepare_to_distribute(node)
-    tups = make_columns(node._args_)
-    res_list = list(it.product(tups))
+    tups = list(make_columns(node._args_))
+    distribute
+
 
 
 
