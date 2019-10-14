@@ -22,8 +22,7 @@ test_file = os.path.join(os.path.dirname(__file__), "pytest_qt.py")
 try:
     skip_qt_tests=False
     import pytest
-    #type(qtbot)
-    from pyomo.contrib.viewer.pyqt_4or5 import qt_available
+    from pyomo.contrib.viewer.qt import qt_available
     assert(qt_available)
 except:
     skip_qt_tests=True
@@ -38,10 +37,6 @@ def run_subproc_pytest(test_file, test_func, freq=1, timeout=10.0):
             p.kill()
             raise Exception("Test took too long")
     assert(p.poll()==0)
-
-@unittest.skipIf(skip_qt_tests, "Required packages not available")
-def test_get_mainwindow():
-    run_subproc_pytest(test_file, "test_get_mainwindow")
 
 @unittest.skipIf(skip_qt_tests, "Required packages not available")
 def test_model_information():

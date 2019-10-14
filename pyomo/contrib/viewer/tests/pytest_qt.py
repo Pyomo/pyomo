@@ -16,8 +16,8 @@ import time
 import pytest
 
 from pyomo.environ import *
-from pyomo.contrib.viewer.pyqt_4or5 import qt_available
-from pyomo.contrib.viewer.pyqt_4or5 import QtCore, QMessageBox
+from pyomo.contrib.viewer.qt import qt_available
+from pyomo.contrib.viewer.qt import QtCore, QMessageBox
 from pyomo.contrib.viewer.ui import get_mainwindow, ModelBrowser
 
 def get_model():
@@ -67,14 +67,7 @@ def get_button(w, label):
 def test_get_mainwindow(qtbot):
     m = get_model()
     mw, m = get_mainwindow(model=m, testing=True)
-    qtbot.addWidget(mw)
-    mw._dialog_test_button = QMessageBox.No
-    assert(hasattr(mw, "menu_File"))
     assert(hasattr(mw, "menuBar"))
-    qtbot.keyClick(mw.menuBar(), "f", modifier=QtCore.Qt.AltModifier)
-    qtbot.keyClick(mw.menu_File, "x")
-    # should have actiavted exit dialog
-    assert(isinstance(mw._dialog, QMessageBox))
     assert(isinstance(mw.variables, ModelBrowser))
     assert(isinstance(mw.constraints, ModelBrowser))
     assert(isinstance(mw.expressions, ModelBrowser))
@@ -90,6 +83,13 @@ def test_model_information(qtbot):
     text = mw._dialog.text()
     mw._dialog.close()
     text = text.split("\n")
-    assert(text[0].startswith("7")) # Active equalities
-    assert(text[1].startswith("7")) # Free vars in active equalities
-    assert(text[2].startswith("0")) # degrees of feedom
+    assert(text[0].startswith("8")) # Active constraints
+    assert(text[1].startswith("7")) # Active equalities
+    assert(text[2].startswith("7")) # Free vars in active equalities
+    assert(text[3].startswith("0")) # degrees of feedom
+    # Main window has parts it is supposed to 
+    assert(hasattr(mw, "menuBar"))
+    assert(isinstance(mw.variables, ModelBrowser))
+    assert(isinstance(mw.constraints, ModelBrowser))
+    assert(isinstance(mw.expressions, ModelBrowser))
+    assert(isinstance(mw.parameters, ModelBrowser))

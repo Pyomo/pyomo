@@ -3931,7 +3931,7 @@ class Test(unittest.TestCase):
 
         e = m.p/sin(m.v)
         rep = generate_standard_repn(e, compute_values=False)
-        self.assertEqual(str(rep.to_expression()), "p*(1/sin(v))")
+        self.assertEqual(str(rep.to_expression()), "p/sin(v)")
 
         m.w.fixed=True
         e = m.v/m.w

@@ -28,22 +28,25 @@ def _name_index_generator(idx):
     """
     Return a string representation of an index.
     """
-    def _escape(x):
-        # We need to quote set members (because people put things like
-        # spaces - or worse commas - in their set names).  Our plan is to
-        # put the strings in single quotes... but that requires escaping
-        # any single quotes in the string... which in turn requires
-        # escaping the escape character.
-        x = x.replace("\\", "\\\\").replace("'", "\\'")
-        if ',' in x or "'" in x:
-            return "'"+x+"'"
+    def _escape(val):
+        if type(val) is tuple:
+            ans = "(" + ','.join(_escape(_) for _ in val) + ")"
         else:
-            return x
-
+            # We need to quote set members (because people put things
+            # like spaces - or worse commas - in their set names).  Our
+            # plan is to put the strings in single quotes... but that
+            # requires escaping any single quotes in the string... which
+            # in turn requires escaping the escape character.
+            ans = "%s" % (val,)
+            if isinstance(val, six.string_types):
+                ans = ans.replace("\\", "\\\\").replace("'", "\\'")
+                if ',' in ans or "'" in ans:
+                    ans = "'"+ans+"'"
+        return ans
     if idx.__class__ is tuple:
-        return "[" + ",".join(_escape(str(i)) for i in idx) + "]"
+        return "[" + ",".join(_escape(i) for i in idx) + "]"
     else:
-        return "[" + _escape(str(idx)) + "]"
+        return "[" + _escape(idx) + "]"
 
 
 def name(component, index=None, fully_qualified=False, relative_to=None):
@@ -458,9 +461,12 @@ class Component(_ComponentBase):
             if relative_to is None:
                 relative_to = self.model()
             if pb is not None and pb is not relative_to:
-                ans = pb.getname(fully_qualified, name_buffer, relative_to) + "." + self._name
+                ans = pb.getname(fully_qualified, name_buffer, relative_to) \
+                      + "." + self._name
             elif pb is None and relative_to != self.model():
-                raise RuntimeError("The relative_to argument was specified but not found in the block hierarchy: %s" % str(relative_to))
+                raise RuntimeError(
+                    "The relative_to argument was specified but not found "
+                    "in the block hierarchy: %s" % str(relative_to))
             else:
                 ans = self._name
         else:
@@ -756,14 +762,29 @@ class ComponentData(_ComponentBase):
 
         c = self.parent_component()
         if c is self:
-            # This is a scalar component, so call the Component.getname() method
-            return super(ComponentData, self).getname(fully_qualified, name_buffer, relative_to)
-        #
-        # Get the name of the component
-        #
-        base = c.getname(fully_qualified, name_buffer, relative_to)
+            #
+            # This is a scalar component, so call the
+            # Component.getname() method
+            #
+            return super(ComponentData, self).getname(
+                fully_qualified, name_buffer, relative_to)
+        elif c is not None:
+            #
+            # Get the name of the parent component
+            #
+            base = c.getname(fully_qualified, name_buffer, relative_to)
+        else:
+            #
+            # Defensive: this is a ComponentData without a valid
+            # parent_component.  As this usually occurs when handling
+            # exceptions during model construction, we need to ensure
+            # that this method doesn't itself raise another exception.
+            #
+            return '[Unattached %s]' % (type(self).__name__,)
+
         if name_buffer is not None:
-            # Iterate through the dictionary and generate all names in the buffer
+            # Iterate through the dictionary and generate all names in
+            # the buffer
             for idx, obj in iteritems(c):
                 name_buffer[id(obj)] = base + _name_index_generator(idx)
             if id(self) in name_buffer:

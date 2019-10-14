@@ -535,6 +535,29 @@ class TestFBBT(unittest.TestCase):
             self.assertTrue(np.all(xl <= x))
             self.assertTrue(np.all(xu >= x))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
+    def test_log10(self):
+        c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        for cl, cu in c_bounds:
+            m = pe.Block(concrete=True)
+            m.x = pe.Var()
+            m.c = pe.Constraint(expr=pe.inequality(body=pe.log10(m.x), lower=cl, upper=cu))
+            fbbt(m)
+            z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
+            if m.x.lb is None:
+                xl = -np.inf
+            else:
+                xl = pe.value(m.x.lb)
+            if m.x.ub is None:
+                xu = np.inf
+            else:
+                xu = pe.value(m.x.ub)
+            x = 10**z
+            print(xl, xu, cl, cu)
+            print(x)
+            self.assertTrue(np.all(xl <= x))
+            self.assertTrue(np.all(xu >= x))
+
     def test_sin(self):
         m = pe.Block(concrete=True)
         m.x = pe.Var(bounds=(-math.pi/2, math.pi/2))

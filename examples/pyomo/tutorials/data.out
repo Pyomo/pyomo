@@ -13,7 +13,7 @@
         [('A1', 1, 'A1'), ('A1', 1, 'A2'), ('A2', 2, 'A2'), ('A2', 2, 'A3'), ('A3', 3, 'A1'), ('A3', 3, 'A3')]
     E_domain : Dim=0, Dimen=3, Size=27, Domain=None, Ordered=False, Bounds=None
         Virtual
-    E_domain_index_0 : Dim=0, Dimen=2, Size=27, Domain=None, Ordered=False, Bounds=None
+    E_domain_index_0 : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
         Virtual
     F : Dim=1, Dimen=1, Size=9, Domain=None, ArraySize=3, Ordered=False, Bounds=None
         Key : Members

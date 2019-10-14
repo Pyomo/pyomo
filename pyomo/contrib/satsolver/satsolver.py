@@ -11,6 +11,7 @@ from pyomo.core.expr.numeric_expr import (
     PowExpression,
     NegationExpression,
     MonomialTermExpression,
+    DivisionExpression,
     ReciprocalExpression,
     AbsExpression,
     UnaryFunctionExpression,
@@ -250,6 +251,8 @@ class SMT_visitor(StreamBasedExpressionVisitor):
             ans = "(- 0 " + data[0] + ")"
         elif isinstance(node, MonomialTermExpression):
             ans = "(* " + data[0] + " " + data[1] + ")"
+        elif isinstance(node, DivisionExpression):
+            ans = "(/ " + data[0] + " " + data[1] + ")"
         elif isinstance(node, ReciprocalExpression):
             ans = "(/ 1 " + data[0] + ")"
         elif isinstance(node, AbsExpression):

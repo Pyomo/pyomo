@@ -24,22 +24,22 @@ VARIABLES
 	x1
 	x2;
 
-c1.. log(x1) =e= 0.0 ;
-c2.. log10(x1) =e= 0.0 ;
-c3.. sin(x2) =e= 0.0 ;
-c4.. cos(x2) =e= 1.0 ;
-c5.. tan(x2) =e= 0.0 ;
-c6.. sinh(x2) =e= 0.0 ;
-c7.. cosh(x2) =e= 1.0 ;
-c8.. tanh(x2) =e= 0.0 ;
-c9.. arcsin(x2) =e= 0.0 ;
+c1.. log(x1) =e= 0 ;
+c2.. log10(x1) =e= 0 ;
+c3.. sin(x2) =e= 0 ;
+c4.. cos(x2) =e= 1 ;
+c5.. tan(x2) =e= 0 ;
+c6.. sinh(x2) =e= 0 ;
+c7.. cosh(x2) =e= 1 ;
+c8.. tanh(x2) =e= 0 ;
+c9.. arcsin(x2) =e= 0 ;
 c10.. arccos(x2) =e= 1.5707963267948966 ;
-c11.. arctan(x2) =e= 0.0 ;
-c12.. exp(x2) =e= 1.0 ;
-c13.. sqrt(x1) =e= 1.0 ;
-c14.. ceil(x1) =e= 1.0 ;
-c15.. floor(x1) =e= 1.0 ;
-c16.. abs(x1) =e= 1.0 ;
+c11.. arctan(x2) =e= 0 ;
+c12.. exp(x2) =e= 1 ;
+c13.. sqrt(x1) =e= 1 ;
+c14.. ceil(x1) =e= 1 ;
+c15.. floor(x1) =e= 1 ;
+c16.. abs(x1) =e= 1 ;
 c17.. GAMS_OBJECTIVE =e= x1 + x2 ;
 
 x1.l = 1;

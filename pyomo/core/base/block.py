@@ -721,7 +721,7 @@ class _BlockData(ActiveComponentData):
         #
         if _component_sets is not None:
             for ctr, tset in enumerate(_component_sets):
-                if tset._name == "_unknown_":
+                if tset.parent_component()._name == "_unknown_":
                     self._construct_temporary_set(
                         tset,
                         val.local_name + "_index_" + str(ctr)

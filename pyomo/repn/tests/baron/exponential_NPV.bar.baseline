@@ -1,0 +1,19 @@
+OPTIONS {
+Summary: 0;
+}
+
+POSITIVE_VARIABLES ONE_VAR_CONST__;
+
+VARIABLES x;
+
+EQUATIONS c_e_FIX_ONE_VAR_CONST__, c;
+
+c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
+c: x == 0;
+
+OBJ: minimize x ^ 2;
+
+STARTING_POINT{
+ONE_VAR_CONST__: 1;
+}
+

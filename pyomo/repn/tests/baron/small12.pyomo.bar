@@ -23,18 +23,18 @@ c11: Expr_if( ( 0.0  <=  10.0*vP1 ), then=( vTrue ), else=( vFalse ) ) == 1;
 c12: Expr_if( ( 0.0  <  10.0*vN1 ), then=( vTrue ), else=( vFalse ) ) == -1;
 c13: Expr_if( ( 0.0  <  10.0*v0 ), then=( vTrue ), else=( vFalse ) ) == -1;
 c14: Expr_if( ( 0.0  <  10.0*vP1 ), then=( vTrue ), else=( vFalse ) ) == 1;
-c15: Expr_if( ( -1.0  <=  vN2  <=  1.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
-c16: Expr_if( ( - vP1  <=  vN1  <=  1.0 ), then=( vTrue ), else=( vFalse ) ) == 1;
-c17: Expr_if( ( - vP1**2  <=  v0  <=  1.0 ), then=( vTrue ), else=( vFalse ) ) == 1;
-c18: Expr_if( ( vN1  <=  vP1  <=  1.0 ), then=( vTrue ), else=( vFalse ) ) == 1;
-c19: Expr_if( ( -1.0  <=  vP2  <=  1.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
-c20: Expr_if( ( -1.0  <  vN2  <  1.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
-c21: Expr_if( ( -1.0  <  vN1  <  vP1 ), then=( vTrue ), else=( vFalse ) ) == -1;
-c22: Expr_if( ( -1.0  <  v0  <  vP1**2 ), then=( vTrue ), else=( vFalse ) ) == 1;
-c23: Expr_if( ( -1.0  <  vP1  <  vP1 ), then=( vTrue ), else=( vFalse ) ) == -1;
-c24: Expr_if( ( -1.0  <  vP2  <  1.0 ), then=( vTrue ), else=( vFalse ) ) == -1;
+c15: Expr_if( ( -1  <=  vN2  <=  1 ), then=( vTrue ), else=( vFalse ) ) == -1;
+c16: Expr_if( ( - vP1  <=  vN1  <=  1 ), then=( vTrue ), else=( vFalse ) ) == 1;
+c17: Expr_if( ( - vP1**2  <=  v0  <=  1 ), then=( vTrue ), else=( vFalse ) ) == 1;
+c18: Expr_if( ( vN1  <=  vP1  <=  1 ), then=( vTrue ), else=( vFalse ) ) == 1;
+c19: Expr_if( ( -1  <=  vP2  <=  1 ), then=( vTrue ), else=( vFalse ) ) == -1;
+c20: Expr_if( ( -1  <  vN2  <  1 ), then=( vTrue ), else=( vFalse ) ) == -1;
+c21: Expr_if( ( -1  <  vN1  <  vP1 ), then=( vTrue ), else=( vFalse ) ) == -1;
+c22: Expr_if( ( -1  <  v0  <  vP1**2 ), then=( vTrue ), else=( vFalse ) ) == 1;
+c23: Expr_if( ( -1  <  vP1  <  vP1 ), then=( vTrue ), else=( vFalse ) ) == -1;
+c24: Expr_if( ( -1  <  vP2  <  1 ), then=( vTrue ), else=( vFalse ) ) == -1;
 
-OBJ: minimize 10.0 * Expr_if( ( v0 ), then=( vTrue ), else=( vFalse ) );
+OBJ: minimize 10 * Expr_if( ( v0 ), then=( vTrue ), else=( vFalse ) );
 
 STARTING_POINT{
 ONE_VAR_CONST__: 1;

@@ -9,7 +9,7 @@ VARIABLES x1, x2, x3;
 EQUATIONS c_e_FIX_ONE_VAR_CONST__, c1, c2, c3;
 
 c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
-c1: -1 <= 1.0 + 0 * ONE_VAR_CONST__  <= 1;
+c1: -1 <= 1 + 0 * ONE_VAR_CONST__  <= 1;
 c2: -1 <= x1 <= 1;
 c3: -1 <= x2 <= 1;
 

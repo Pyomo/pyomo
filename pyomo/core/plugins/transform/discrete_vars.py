@@ -122,4 +122,3 @@ class FixDiscreteVars(Transformation):
                 var.fix()
         model._fixed_discrete_vars = Suffix(direction=Suffix.LOCAL)
         model._fixed_discrete_vars[None] = fixed_vars
-

@@ -2,14 +2,12 @@
 from __future__ import division
 
 from math import copysign, fabs
-from pyomo.contrib.derivatives.differentiate import reverse_ad
-
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,
                         minimize, value, TransformationFactory)
-from pyomo.core.base.symbolic import differentiate
+from pyomo.core.expr import differentiate
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
@@ -67,13 +65,14 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
             if jacobians is None:
                 constr_vars = list(identify_variables(constr.body, include_fixed=False))
                 if len(constr_vars) >= 1000:
-                    jac_map = reverse_ad(constr.body)
-                    jacobians = ComponentMap((v, jac_map[v]) for v in constr_vars)
-                    GDPopt.jacobians[constr] = jacobians
+                    mode = differentiate.Modes.reverse_numeric
                 else:
-                    jac_list = differentiate(constr.body, wrt_list=constr_vars)
-                    jacobians = ComponentMap(zip(constr_vars, jac_list))
-                    GDPopt.jacobians[constr] = jacobians
+                    mode = differentiate.Modes.sympy
+
+                jac_list = differentiate(
+                    constr.body, wrt_list=constr_vars, mode=mode)
+                jacobians = ComponentMap(zip(constr_vars, jac_list))
+                GDPopt.jacobians[constr] = jacobians
 
             # Create a block on which to put outer approximation cuts.
             oa_utils = parent_block.component('GDPopt_OA')
