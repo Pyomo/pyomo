@@ -21,6 +21,8 @@ from operator import itemgetter, attrgetter
 from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
+from pyutilib.misc.indent_io import StreamIndenter
+
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import *  # ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
@@ -1568,17 +1570,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 return False
         return True
 
-    def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
-        """
-        Print a summary of the block info
-        """
-        if filename is not None:
-            OUTPUT = open(filename, "w")
-            self.pprint(ostream=OUTPUT, verbose=verbose, prefix=prefix)
-            OUTPUT.close()
-            return
-        if ostream is None:
-            ostream = sys.stdout
+    def _pprint_blockdata_components(self, ostream):
         #
         # We hard-code the order of the core Pyomo modeling
         # components, to ensure that the output follows the logical order
@@ -1601,6 +1593,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         items.append(Block)
         items.extend(sorted(dynamic_items, key=lambda x: x.__name__))
 
+        indented_ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
         for item in items:
             keys = sorted(self.component_map(item))
             if not keys:
@@ -1608,18 +1601,17 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             #
             # NOTE: these conditional checks should not be hard-coded.
             #
-            ostream.write("%s%d %s Declarations\n"
-                          % (prefix, len(keys), item.__name__))
+            ostream.write("%d %s Declarations\n"
+                          % (len(keys), item.__name__))
             for key in keys:
-                self.component(key).pprint(
-                    ostream=ostream, verbose=verbose, prefix=prefix + '    ')
+                self.component(key).pprint(ostream=indented_ostream)
             ostream.write("\n")
         #
         # Model Order
         #
         decl_order_keys = list(self.component_map().keys())
-        ostream.write("%s%d Declarations: %s\n"
-                      % (prefix, len(decl_order_keys),
+        ostream.write("%d Declarations: %s\n"
+                      % (len(decl_order_keys),
                           ' '.join(str(x) for x in decl_order_keys)))
 
     def display(self, filename=None, ostream=None, prefix=""):
@@ -1849,46 +1841,25 @@ class Block(ActiveIndexedComponent):
             #   del self._data[idx]
         timer.report()
 
-    def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
-        """
-        Print block information
-        """
-        if filename is not None:
-            OUTPUT = open(filename, "w")
-            self.pprint(ostream=OUTPUT, verbose=verbose, prefix=prefix)
-            OUTPUT.close()
-            return
-        if ostream is None:
-            ostream = sys.stdout
-
-        subblock = self._parent is not None and self.parent_block() is not None
-        if subblock:
-            super(Block, self).pprint(ostream=ostream, verbose=verbose,
-                                      prefix=prefix)
-
-        if not len(self):
-            return
+    def _pprint_callback(self, ostream, idx, data):
         if not self.is_indexed():
-            _BlockData.pprint(self, ostream=ostream, verbose=verbose,
-                              prefix=prefix+'    ' if subblock else prefix)
-            return
-
-        # Note: all indexed blocks must be sub-blocks (if they aren't
-        # then you will run into problems constructing them as there is
-        # nowhere to put (or find) the indexing set!).
-        prefix += '    '
-        for key in sorted(self):
-            b = self[key]
-            ostream.write("%s%s : Active=%s\n" %
-                          (prefix, b.name, b.active))
-            _BlockData.pprint(b, ostream=ostream, verbose=verbose,
-                              prefix=prefix + '    ' if subblock else prefix)
+            data._pprint_blockdata_components(ostream)
+        else:
+            ostream.write("%s : Active=%s\n" % (data.name, data.active))
+            ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
+            data._pprint_blockdata_components(ostream)
 
     def _pprint(self):
-        return [("Size", len(self)),
-                ("Index", self._index if self.is_indexed() else None),
-                ('Active', self.active),
-                ], ().__iter__(), (), ()
+        _attrs = [
+            ("Size", len(self)),
+            ("Index", self._index if self.is_indexed() else None),
+            ('Active', self.active),
+        ]
+        # HACK: suppress the top-level block header (for historical reasons)
+        if self.parent_block() is None and not self.is_indexed():
+            return None, iteritems(self._data), None, self._pprint_callback
+        else:
+            return _attrs, iteritems(self._data), None, self._pprint_callback
 
     def display(self, filename=None, ostream=None, prefix=""):
         """
@@ -1912,12 +1883,6 @@ class SimpleBlock(_BlockData, Block):
         _BlockData.__init__(self, component=self)
         Block.__init__(self, *args, **kwds)
         self._data[None] = self
-
-    def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
-        """
-        Print block information
-        """
-        Block.pprint(self, filename, ostream, verbose, prefix)
 
     def display(self, filename=None, ostream=None, prefix=""):
         """

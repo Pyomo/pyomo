@@ -875,11 +875,12 @@ class SimpleSetBase(Set):
              ("Ordered", _ordered),
              ("Bounds", self._bounds)],
             iteritems( {None: self} ),
-            None, #("Members",),
-            lambda k, v: [
+            None, # ("Members",),
+            lambda os, k, v: os.write(str(
                 "Virtual" if not self.concrete or v.virtual \
                     else v.value_list if v.ordered \
-                    else sorted(v), ] )
+                    else sorted(v), )+"\n"),
+        )
 
     def _set_repn(self, other):
         """
