@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """Main driver module for GDPopt solver.
 
+19.10.11 changes:
+- bugfix on SolverStatus error message
+19.5.13 changes:
+- add handling to integer cuts for disjunct pruning during FBBT
 19.4.23 changes:
 - add support for linear subproblems
 - use automatic differentiation for large constraints
@@ -35,7 +39,7 @@ from pyomo.opt.base import SolverFactory
 from pyomo.opt.results import SolverResults
 from pyutilib.misc import Container
 
-__version__ = (19, 4, 23)  # Note: date-based version number
+__version__ = (19, 5, 13)  # Note: date-based version number
 
 
 @SolverFactory.register(
