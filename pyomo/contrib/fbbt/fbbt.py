@@ -1023,6 +1023,23 @@ _prop_bnds_root_to_leaf_map[_GeneralExpressionData] = _prop_bnds_root_to_leaf_Ge
 _prop_bnds_root_to_leaf_map[SimpleExpression] = _prop_bnds_root_to_leaf_GeneralExpression
 
 
+def _check_and_reset_bounds(var, lb, ub):
+    """
+    This function ensures that lb is not less than var.lb and that ub is not greater than var.ub.
+    """
+    orig_lb = value(var.lb)
+    orig_ub = value(var.ub)
+    if orig_lb is None:
+        orig_lb = -interval.inf
+    if orig_ub is None:
+        orig_ub = interval.inf
+    if lb < orig_lb:
+        lb = orig_lb
+    if ub > orig_ub:
+        ub = orig_ub
+    return lb, ub
+
+
 class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
     """
     This walker propagates bounds from the variables to each node in
@@ -1125,18 +1142,16 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
                 if lb - self.feasibility_tol > ub:
                     raise InfeasibleConstraintException('Lower bound ({1}) computed for variable {0} is larger than the computed upper bound ({2}).'.format(node, lb, ub))
                 else:
+                    """
+                    If we reach this code, then lb > ub, but not by more than feasibility_tol. 
+                    Now we want to decrease lb slightly and increase ub slightly so that lb <= ub.
+                    However, we also have to make sure we do not make lb lower than the original lower bound
+                    and make sure we do not make ub larger than the original upper bound. This is what 
+                    _check_and_reset_bounds is for.
+                    """
                     lb -= self.feasibility_tol
                     ub += self.feasibility_tol
-                    orig_lb = value(node.lb)
-                    orig_ub = value(node.ub)
-                    if orig_lb is None:
-                        orig_lb = -interval.inf
-                    if orig_ub is None:
-                        orig_ub = interval.inf
-                    if lb < orig_lb:
-                        lb = orig_lb
-                    if ub > orig_ub:
-                        ub = orig_ub
+                    lb, ub = _check_and_reset_bounds(node, lb, ub)
                     self.bnds_dict[node] = (lb, ub)
             if lb == interval.inf:
                 raise InfeasibleConstraintException('Computed a lower bound of +inf for variable {0}'.format(node))
@@ -1157,16 +1172,12 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
                     lb = max(math.floor(lb), math.ceil(lb - self.integer_tol))
                 if ub < interval.inf:
                     ub = min(math.ceil(ub), math.floor(ub + self.integer_tol))
-                orig_lb = value(node.lb)
-                orig_ub = value(node.ub)
-                if orig_lb is None:
-                    orig_lb = -interval.inf
-                if orig_ub is None:
-                    orig_ub = interval.inf
-                if lb < orig_lb:
-                    lb = orig_lb  # don't make the bounds worse than the original bounds
-                if ub > orig_ub:
-                    ub = orig_ub  # don't make the bounds worse than the original bounds
+                """
+                We have to make sure we do not make lb lower than the original lower bound
+                and make sure we do not make ub larger than the original upper bound. This is what 
+                _check_and_reset_bounds is for.
+                """
+                lb, ub = _check_and_reset_bounds(node, lb, ub)
                 self.bnds_dict[node] = (lb, ub)
 
             if lb != -interval.inf:
