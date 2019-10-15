@@ -11,8 +11,9 @@
 from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.solvers.plugins.solvers.gurobi_direct import GurobiDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.core.expr.numvalue import value
+from pyomo.core.expr.numvalue import value, is_fixed
 from pyomo.opt.base import SolverFactory
+import collections
 
 
 @SolverFactory.register('gurobi_persistent', doc='Persistent python interface to Gurobi')
@@ -139,3 +140,468 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             Name of the file to which the model should be written.
         """
         self._solver_model.write(filename)
+
+    def set_linear_constraint_attr(self, con, attr, val):
+        """
+        Set the value of an attribute on a gurobi linear constraint.
+
+        Paramaters
+        ----------
+        con: pyomo.core.base.constraint._GeneralConstraintData
+            The pyomo constraint for which the corresponding gurobi constraint attribute
+            should be modified.
+        attr: str
+            The attribute to be modified. Options are:
+                CBasis
+                DStart
+                Lazy
+        val: any
+            See gurobi documentation for acceptable values.
+        """
+        if attr in {'Sense', 'RHS', 'ConstrName'}:
+            raise ValueError('Linear constraint attr {0} cannot be set with' +
+                             ' the set_linear_constraint_attr method. Please use' +
+                             ' the remove_constraint and add_constraint methods.'.format(attr))
+        try:
+            self._pyomo_con_to_solver_con_map[con].setAttr(attr, val)
+        except (self._gurobipy.GurobiError, AttributeError):
+            self._solver_model.update()
+            self._pyomo_con_to_solver_con_map[con].setAttr(attr, val)
+
+    def set_var_attr(self, var, attr, val):
+        """
+        Set the value of an attribute on a gurobi variable.
+
+        Paramaters
+        ----------
+        con: pyomo.core.base.var._GeneralVarData
+            The pyomo var for which the corresponding gurobi var attribute
+            should be modified.
+        attr: str
+            The attribute to be modified. Options are:
+                Start
+                VarHintVal
+                VarHintPri
+                BranchPriority
+                VBasis
+                PStart
+        val: any
+            See gurobi documentation for acceptable values.
+        """
+        if attr in {'LB', 'UB', 'VType', 'VarName'}:
+            raise ValueError('Var attr {0} cannot be set with' +
+                             ' the set_var_attr method. Please use' +
+                             ' the update_var method.'.format(attr))
+        if attr == 'Obj':
+            raise ValueError('Var attr Obj cannot be set with' +
+                             ' the set_var_attr method. Please use' +
+                             ' the set_objective method.')
+        try:
+            self._pyomo_var_to_solver_var_map[var].setAttr(attr, val)
+        except (self._gurobipy.GurobiError, AttributeError):
+            self._solver_model.update()
+            self._pyomo_var_to_solver_var_map[var].setAttr(attr, val)
+
+    def get_model_attr(self, attr):
+        """
+        Get the value of an attribute on the Gurobi model.
+
+        Parameters
+        ----------
+        attr: str
+            The attribute to get. See Gurobi documentation for descriptions of the attributes.
+            Options are:
+                NumVars
+                NumConstrs
+                NumSOS
+                NumQConstrs
+                NumgGenConstrs
+                NumNZs
+                DNumNZs
+                NumQNZs
+                NumQCNZs
+                NumIntVars
+                NumBinVars
+                NumPWLObjVars
+                ModelName
+                ModelSense
+                ObjCon
+                ObjVal
+                ObjBound
+                ObjBoundC
+                PoolObjBound
+                PoolObjVal
+                MIPGap
+                Runtime
+                Status
+                SolCount
+                IterCount
+                BarIterCount
+                NodeCount
+                IsMIP
+                IsQP
+                IsQCP
+                IsMultiObj
+                IISMinimal
+                MaxCoeff
+                MinCoeff
+                MaxBound
+                MinBound
+                MaxObjCoeff
+                MinObjCoeff
+                MaxRHS
+                MinRHS
+                MaxQCCoeff
+                MinQCCoeff
+                MaxQCLCoeff
+                MinQCLCoeff
+                MaxQCRHS
+                MinQCRHS
+                MaxQObjCoeff
+                MinQObjCoeff
+                Kappa
+                KappaExact
+                FarkasProof
+                TuneResultCount
+                LicenseExpiration
+                BoundVio
+                BoundSVio
+                BoundVioIndex
+                BoundSVioIndex
+                BoundVioSum
+                BoundSVioSum
+                ConstrVio
+                ConstrSVio
+                ConstrVioIndex
+                ConstrSVioIndex
+                ConstrVioSum
+                ConstrSVioSum
+                ConstrResidual
+                ConstrSResidual
+                ConstrResidualIndex
+                ConstrSResidualIndex
+                ConstrResidualSum
+                ConstrSResidualSum
+                DualVio
+                DualSVio
+                DualVioIndex
+                DualSVioIndex
+                DualVioSum
+                DualSVioSum
+                DualResidual
+                DualSResidual
+                DualResidualIndex
+                DualSResidualIndex
+                DualResidualSum
+                DualSResidualSum
+                ComplVio
+                ComplVioIndex
+                ComplVioSum
+                IntVio
+                IntVioIndex
+                IntVioSum
+        """
+        try:
+            return self._solver_model.getAttr(attr)
+        except (self._gurobipy.GurobiError, AttributeError):
+            self._solver_model.update()
+            return self._solver_model.getAttr(attr)
+
+    def get_var_attr(self, var, attr):
+        """
+        Get the value of an attribute on a gurobi var.
+
+        Paramaters
+        ----------
+        var: pyomo.core.base.var._GeneralVarData
+            The pyomo var for which the corresponding gurobi var attribute
+            should be retrieved.
+        attr: str
+            The attribute to get. Options are:
+                LB
+                UB
+                Obj
+                VType
+                VarName
+                X
+                Xn
+                RC
+                BarX
+                Start
+                VarHintVal
+                VarHintPri
+                BranchPriority
+                VBasis
+                PStart
+                IISLB
+                IISUB
+                PWLObjCvx
+                SAObjLow
+                SAObjUp
+                SALBLow
+                SALBUp
+                SAUBLow
+                SAUBUp
+                UnbdRay
+        """
+        try:
+            return self._pyomo_var_to_solver_var_map[var].getAttr(attr)
+        except (self._gurobipy.GurobiError, AttributeError):
+            self._solver_model.update()
+            return self._pyomo_var_to_solver_var_map[var].getAttr(attr)
+
+    def get_linear_constraint_attr(self, con, attr):
+        """
+        Get the value of an attribute on a gurobi linear constraint.
+
+        Paramaters
+        ----------
+        con: pyomo.core.base.constraint._GeneralConstraintData
+            The pyomo constraint for which the corresponding gurobi constraint attribute
+            should be retrieved.
+        attr: str
+            The attribute to get. Options are:
+                Sense
+                RHS
+                ConstrName
+                Pi
+                Slack
+                CBasis
+                DStart
+                Lazy
+                IISConstr
+                SARHSLow
+                SARHSUp
+                FarkasDual
+        """
+        try:
+            return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
+        except (self._gurobipy.GurobiError, AttributeError):
+            self._solver_model.update()
+            return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
+
+    def get_sos_attr(self, con, attr):
+        """
+        Get the value of an attribute on a gurobi sos constraint.
+
+        Paramaters
+        ----------
+        con: pyomo.core.base.sos._SOSConstraintData
+            The pyomo SOS constraint for which the corresponding gurobi SOS constraint attribute
+            should be retrieved.
+        attr: str
+            The attribute to get. Options are:
+                IISSOS
+        """
+        try:
+            return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
+        except (self._gurobipy.GurobiError, AttributeError):
+            self._solver_model.update()
+            return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
+
+    def get_quadratic_constraint_attr(self, con, attr):
+        """
+        Get the value of an attribute on a gurobi quadratic constraint.
+
+        Paramaters
+        ----------
+        con: pyomo.core.base.constraint._GeneralConstraintData
+            The pyomo constraint for which the corresponding gurobi constraint attribute
+            should be retrieved.
+        attr: str
+            The attribute to get. Options are:
+                QCSense
+                QCRHS
+                QCName
+                QCPi
+                QCSlack
+                IISQConstr
+        """
+        try:
+            return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
+        except (self._gurobipy.GurobiError, AttributeError):
+            self._solver_model.update()
+            return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
+
+    def set_gurobi_param(self, param, val):
+        """
+        Set a gurobi parameter.
+
+        Parameters
+        ----------
+        param: str
+            The gurobi parameter to set. Options include any gurobi parameter.
+            Please see the Gurobi documentation for options.
+        val: any
+            The value to set the parameter to. See Gurobi documentation for possible values.
+        """
+        self._solver_model.setParam(param, val)
+
+    def get_gurobi_param_info(self, param):
+        """
+        Get information about a gurobi parameter.
+
+        Parameters
+        ----------
+        param: str
+            The gurobi parameter to get info for. See Gurobi documenation for possible options.
+
+        Returns
+        -------
+        six-tuple containing the parameter name, type, value, minimum value, maximum value, and default value.
+        """
+        return self._solver_model.getParamInfo(param)
+
+    def _intermediate_callback(self):
+        def f(gurobi_model, where):
+            self._callback_func(self._pyomo_model, self, where)
+        return f
+
+    def set_callback(self, func=None):
+        """
+        Specify a callback for gurobi to use.
+
+        Parameters
+        ----------
+        func: function
+            The function to call. The function should have three arguments. The first will be the pyomo model being
+            solved. The second will be the GurobiPersistent instance. The third will be an enum member of
+            gurobipy.GRB.Callback. This will indicate where in the branch and bound algorithm gurobi is at. For
+            example:
+
+            >>> from gurobipy import GRB
+            >>> import pyomo.environ as pe
+            >>> m = pe.ConcreteModel()
+            >>> m.x = pe.Var(within=pe.Binary)
+            >>> m.y = pe.Var(within=pe.Binary)
+            >>> m.obj = pe.Objective(expr=m.x + m.y)
+            >>> opt = pe.SolverFactory('gurobi_persistent')
+            >>> opt.set_instance(m)
+            >>> def my_callback(cb_m, cb_opt, cb_where):
+            ...     if cb_where == GRB.Callback.MIPNODE:
+            ...         status = cb_opt.cbGet(GRB.Callback.MIPNODE_STATUS)
+            ...         if status == GRB.OPTIMAL:
+            ...             cb_opt.cbGetNodeRel([cb_m.x, cb_m.y])
+            ...             if cb_m.x.value + cb_m.y.value > 1.1:
+            ...                 cb_opt.cbCut(pe.Constraint(expr=cb_m.x + cb_m.y <= 1))
+            >>> opt.set_callback(my_callback)
+            >>> opt.solve()
+        """
+        if func is not None:
+            self._callback_func = func
+            self._callback = self._intermediate_callback()
+        else:
+            self._callback = None
+            self._callback_func = None
+
+    def cbCut(self, con):
+        """
+        Add a cut within a callback.
+
+        Parameters
+        ----------
+        con: pyomo.core.base.constraint._GeneralConstraintData
+            The cut to add
+        """
+        if not con.active:
+            raise ValueError('cbCut expected an active constraint.')
+
+        if is_fixed(con.body):
+            raise ValueError('cbCut expected a non-trival constraint')
+
+        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(con.body, self._max_constraint_degree)
+
+        if con.has_lb():
+            if con.has_ub():
+                raise ValueError('Range constraints are not supported in cbCut.')
+            if not is_fixed(con.lower):
+                raise ValueError('Lower bound of constraint {0} is not constant.'.format(con))
+        if con.has_ub():
+            if not is_fixed(con.upper):
+                raise ValueError('Upper bound of constraint {0} is not constant.'.format(con))
+
+        if con.equality:
+            self._solver_model.cbCut(lhs=gurobi_expr, sense=self._gurobipy.GRB.EQUAL,
+                                     rhs=value(con.lower))
+        elif con.has_lb() and (value(con.lower) > -float('inf')):
+            self._solver_model.cbCut(lhs=gurobi_expr, sense=self._gurobipy.GRB.GREATER_EQUAL,
+                                     rhs=value(con.lower))
+        elif con.has_ub() and (value(con.upper) < float('inf')):
+            self._solver_model.cbCut(lhs=gurobi_expr, sense=self._gurobipy.GRB.LESS_EQUAL,
+                                     rhs=value(con.upper))
+        else:
+            raise ValueError('Constraint does not have a lower or an upper bound {0} \n'.format(con))
+
+    def cbGet(self, what):
+        return self._solver_model.cbGet(what)
+
+    def cbGetNodeRel(self, vars):
+        """
+        Parameters
+        ----------
+        vars: Var or iterable of Var
+        """
+        if not isinstance(vars, collections.Iterable):
+            vars = [vars]
+        gurobi_vars = [self._pyomo_var_to_solver_var_map[i] for i in vars]
+        var_values = self._solver_model.cbGetNodeRel(gurobi_vars)
+        for i, v in enumerate(vars):
+            v.value = var_values[i]
+
+    def cbGetSolution(self, vars):
+        """
+        Parameters
+        ----------
+        vars: iterable of vars
+        """
+        if not isinstance(vars, collections.Iterable):
+            vars = [vars]
+        gurobi_vars = [self._pyomo_var_to_solver_var_map[i] for i in vars]
+        var_values = self._solver_model.cbGetSolution(gurobi_vars)
+        for i, v in enumerate(vars):
+            v.value = var_values[i]
+
+    def cbLazy(self, con):
+        """
+        Parameters
+        ----------
+        con: pyomo.core.base.constraint._GeneralConstraintData
+            The lazy constraint to add
+        """
+        if not con.active:
+            raise ValueError('cbLazy expected an active constraint.')
+
+        if is_fixed(con.body):
+            raise ValueError('cbLazy expected a non-trival constraint')
+
+        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(con.body, self._max_constraint_degree)
+
+        if con.has_lb():
+            if con.has_ub():
+                raise ValueError('Range constraints are not supported in cbLazy.')
+            if not is_fixed(con.lower):
+                raise ValueError('Lower bound of constraint {0} is not constant.'.format(con))
+        if con.has_ub():
+            if not is_fixed(con.upper):
+                raise ValueError('Upper bound of constraint {0} is not constant.'.format(con))
+
+        if con.equality:
+            self._solver_model.cbLazy(lhs=gurobi_expr, sense=self._gurobipy.GRB.EQUAL,
+                                      rhs=value(con.lower))
+        elif con.has_lb() and (value(con.lower) > -float('inf')):
+            self._solver_model.cbLazy(lhs=gurobi_expr, sense=self._gurobipy.GRB.GREATER_EQUAL,
+                                      rhs=value(con.lower))
+        elif con.has_ub() and (value(con.upper) < float('inf')):
+            self._solver_model.cbLazy(lhs=gurobi_expr, sense=self._gurobipy.GRB.LESS_EQUAL,
+                                      rhs=value(con.upper))
+        else:
+            raise ValueError('Constraint does not have a lower or an upper bound {0} \n'.format(con))
+
+    def cbSetSolution(self, vars, solution):
+        if not isinstance(vars, collections.Iterable):
+            vars = [vars]
+        gurobi_vars = [self._pyomo_var_to_solver_var_map[i] for i in vars]
+        self._solver_model.cbSetSolution(gurobi_vars, solution)
+
+    def cbUseSolution(self):
+        return self._solver_model.cbUseSolution()
