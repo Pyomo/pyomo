@@ -78,9 +78,6 @@ class _DisjunctData(_BlockData):
         _BlockData.__init__(self, component)
         self.indicator_var = Var(within=Binary)
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
-        _BlockData.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
-
     def set_value(self, val):
         _indicator_var = self.indicator_var
         # Remove everything
@@ -175,9 +172,6 @@ class SimpleDisjunct(_DisjunctData, Disjunct):
         _DisjunctData.__init__(self, self)
         Disjunct.__init__(self, *args, **kwds)
         self._data[None] = self
-
-    def pprint(self, ostream=None, verbose=False, prefix=""):
-        Disjunct.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
 
 
 class IndexedDisjunct(Disjunct):

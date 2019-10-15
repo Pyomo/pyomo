@@ -200,7 +200,7 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
                     _xl = -xu
                     _xu = xu
                 else:
-                    if orig_xl <= -xl:
+                    if orig_xl <= -xl + feasibility_tol:
                         _xl = -xu
                     else:
                         _xl = xl
@@ -217,7 +217,7 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
                     _xl = -inf
                     _xu = inf
                 else:
-                    if orig_xl <= -xl:
+                    if orig_xl <= -xl + feasibility_tol:
                         _xl = -xu
                     else:
                         _xl = xl

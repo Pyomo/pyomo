@@ -271,3 +271,7 @@ class TestInterval(unittest.TestCase):
         lb, ub = interval._inverse_power1(88893.4225, 88893.4225, 2, 2, 298.15, 298.15, feasibility_tol=1e-8)
         self.assertAlmostEqual(lb, 298.15)
         self.assertAlmostEqual(ub, 298.15)
+
+        lb, ub = interval._inverse_power1(2.56e-6, 2.56e-6, 2, 2, -0.0016, -0.0016, 1e-12)
+        self.assertAlmostEqual(lb, -0.0016)
+        self.assertAlmostEqual(ub, -0.0016)

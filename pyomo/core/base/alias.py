@@ -95,9 +95,9 @@ class Alias(Component):
 
     def _pprint(self):
         if self.aliased_object is None:
-            return ([("Proxy","None")], (), (), ())
+            return [("Proxy","None")], None, None, None
         else:
-            return ([("Proxy", self.aliased_object.name)], (), (), ())
+            return [("Proxy", self.aliased_object.name)], None, None, None
 
     # Dereference so we can point to a constructed object
     # after model cloning / construction
