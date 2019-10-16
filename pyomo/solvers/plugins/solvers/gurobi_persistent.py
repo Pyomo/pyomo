@@ -41,55 +41,51 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
     def __init__(self, **kwds):
         kwds['type'] = 'gurobi_persistent'
-        PersistentSolver.__init__(self, **kwds)
-        GurobiDirect._init(self)
+        GurobiDirect.__init__(self, **kwds)
 
         self._pyomo_model = kwds.pop('model', None)
         if self._pyomo_model is not None:
             self.set_instance(self._pyomo_model, **kwds)
 
     def _remove_constraint(self, solver_con):
+        if isinstance(solver_con, self._gurobipy.Constr):
+            if self._solver_model.getAttr('NumConstrs') == 0:
+                self._update()
+            else:
+                name = self._symbol_map.getSymbol(self._solver_con_to_pyomo_con_map[solver_con])
+                if self._solver_model.getConstrByName(name) is None:
+                    self._update()
+        elif isinstance(solver_con, self._gurobipy.QConstr):
+            if self._solver_model.getAttr('NumQConstrs') == 0:
+                self._update()
+            else:
+                try:
+                    qc_row = self._solver_model.getQCRow(solver_con)
+                except self._gurobipy.GurobiError:
+                    self._update()
+        elif isinstance(solver_con, self._gurobipy.SOS):
+            if self._solver_model.getAttr('NumSOS') == 0:
+                self._update()
+            else:
+                try:
+                    sos = self._solver_model.getSOS(solver_con)
+                except self._gurobipy.GurobiError:
+                    self._update()
+        else:
+            raise ValueError('Unrecognized type for gurobi constraint: {0}'.format(type(solver_con)))
         self._solver_model.remove(solver_con)
 
     def _remove_sos_constraint(self, solver_sos_con):
-        self._solver_model.remove(solver_sos_con)
+        self._remove_constraint(solver_sos_con)
 
     def _remove_var(self, solver_var):
+        if self._solver_model.getAttr('NumVars') == 0:
+            self._update()
+        else:
+            name = self._symbol_map.getSymbol(self._solver_var_to_pyomo_var_map[solver_var])
+            if self._solver_model.getVarByName(name) is None:
+                self._update()
         self._solver_model.remove(solver_var)
-
-    def add_var(self, var):
-        """
-        Add a variable to the solver's model. This will keep any existing model components intact.
-
-        Parameters
-        ----------
-        var: Var
-            The variable to add to the solver's model.
-        """
-        PersistentSolver.add_var(self, var)
-        self._solver_model.update()
-
-    def add_constraint(self, con):
-        """
-        Add a constraint to the solver's model. This will keep any existing model components intact.
-
-        Parameters
-        ----------
-        con: Constraint
-        """
-        PersistentSolver.add_constraint(self, con)
-        self._solver_model.update()
-
-    def add_sos_constraint(self, con):
-        """
-        Add an SOS constraint to the solver's model (if supported). This will keep any existing model components intact.
-
-        Parameters
-        ----------
-        con: SOSConstraint
-        """
-        PersistentSolver.add_sos_constraint(self, con)
-        self._solver_model.update()
 
     def _warm_start(self):
         GurobiDirect._warm_start(self)
@@ -129,6 +125,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         gurobipy_var.setAttr('lb', lb)
         gurobipy_var.setAttr('ub', ub)
         gurobipy_var.setAttr('vtype', vtype)
+        self._needs_updated = True
 
     def write(self, filename):
         """
@@ -140,6 +137,10 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             Name of the file to which the model should be written.
         """
         self._solver_model.write(filename)
+        self._needs_updated = False
+
+    def update(self):
+        self._update()
 
     def set_linear_constraint_attr(self, con, attr, val):
         """
@@ -162,11 +163,12 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             raise ValueError('Linear constraint attr {0} cannot be set with' +
                              ' the set_linear_constraint_attr method. Please use' +
                              ' the remove_constraint and add_constraint methods.'.format(attr))
-        try:
-            self._pyomo_con_to_solver_con_map[con].setAttr(attr, val)
-        except (self._gurobipy.GurobiError, AttributeError):
-            self._solver_model.update()
-            self._pyomo_con_to_solver_con_map[con].setAttr(attr, val)
+        if self._version_major < 7:
+            if (self._solver_model.getAttr('NumConstrs') == 0 or
+                    self._solver_model.getConstrByName(self._symbol_map.getSymbol(con)) is None):
+                self._solver_model.update()
+        self._pyomo_con_to_solver_con_map[con].setAttr(attr, val)
+        self._needs_updated = True
 
     def set_var_attr(self, var, attr, val):
         """
@@ -196,11 +198,12 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             raise ValueError('Var attr Obj cannot be set with' +
                              ' the set_var_attr method. Please use' +
                              ' the set_objective method.')
-        try:
-            self._pyomo_var_to_solver_var_map[var].setAttr(attr, val)
-        except (self._gurobipy.GurobiError, AttributeError):
-            self._solver_model.update()
-            self._pyomo_var_to_solver_var_map[var].setAttr(attr, val)
+        if self._version_major < 7:
+            if (self._solver_model.getAttr('NumVars') == 0 or
+                    self._solver_model.getVarByName(self._symbol_map.getSymbol(var)) is None):
+                self._solver_model.update()
+        self._pyomo_var_to_solver_var_map[var].setAttr(attr, val)
+        self._needs_updated = True
 
     def get_model_attr(self, attr):
         """
@@ -301,11 +304,9 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
                 IntVioIndex
                 IntVioSum
         """
-        try:
-            return self._solver_model.getAttr(attr)
-        except (self._gurobipy.GurobiError, AttributeError):
-            self._solver_model.update()
-            return self._solver_model.getAttr(attr)
+        if self._needs_updated:
+            self._update()
+        return self._solver_model.getAttr(attr)
 
     def get_var_attr(self, var, attr):
         """
@@ -344,11 +345,9 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
                 SAUBUp
                 UnbdRay
         """
-        try:
-            return self._pyomo_var_to_solver_var_map[var].getAttr(attr)
-        except (self._gurobipy.GurobiError, AttributeError):
-            self._solver_model.update()
-            return self._pyomo_var_to_solver_var_map[var].getAttr(attr)
+        if self._needs_updated:
+            self._update()
+        return self._pyomo_var_to_solver_var_map[var].getAttr(attr)
 
     def get_linear_constraint_attr(self, con, attr):
         """
@@ -374,11 +373,9 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
                 SARHSUp
                 FarkasDual
         """
-        try:
-            return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
-        except (self._gurobipy.GurobiError, AttributeError):
-            self._solver_model.update()
-            return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
+        if self._needs_updated:
+            self._update()
+        return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
 
     def get_sos_attr(self, con, attr):
         """
@@ -393,11 +390,9 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             The attribute to get. Options are:
                 IISSOS
         """
-        try:
-            return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
-        except (self._gurobipy.GurobiError, AttributeError):
-            self._solver_model.update()
-            return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
+        if self._needs_updated:
+            self._update()
+        return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
 
     def get_quadratic_constraint_attr(self, con, attr):
         """
@@ -417,11 +412,9 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
                 QCSlack
                 IISQConstr
         """
-        try:
-            return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
-        except (self._gurobipy.GurobiError, AttributeError):
-            self._solver_model.update()
-            return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
+        if self._needs_updated:
+            self._update()
+        return self._pyomo_con_to_solver_con_map[con].getAttr(attr)
 
     def set_gurobi_param(self, param, val):
         """
@@ -605,3 +598,6 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
     def cbUseSolution(self):
         return self._solver_model.cbUseSolution()
+
+    def reset(self):
+        self._solver_model.reset()
