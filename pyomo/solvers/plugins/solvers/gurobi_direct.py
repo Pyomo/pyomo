@@ -49,7 +49,7 @@ class GurobiDirect(DirectSolver):
     def __init__(self, **kwds):
         if 'type' not in kwds:
             kwds['type'] = 'gurobi_direct'
-        super(GurobiDirect, self).__init__(self, **kwds)
+        super(GurobiDirect, self).__init__(**kwds)
         self._pyomo_var_to_solver_var_map = ComponentMap()
         self._solver_var_to_pyomo_var_map = ComponentMap()
         self._pyomo_con_to_solver_con_map = dict()
