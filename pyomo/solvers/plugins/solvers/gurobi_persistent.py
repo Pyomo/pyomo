@@ -74,9 +74,11 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         else:
             raise ValueError('Unrecognized type for gurobi constraint: {0}'.format(type(solver_con)))
         self._solver_model.remove(solver_con)
+        self._needs_updated = True
 
     def _remove_sos_constraint(self, solver_sos_con):
         self._remove_constraint(solver_sos_con)
+        self._needs_updated = True
 
     def _remove_var(self, solver_var):
         if self._solver_model.getAttr('NumVars') == 0:
@@ -86,6 +88,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             if self._solver_model.getVarByName(name) is None:
                 self._update()
         self._solver_model.remove(solver_var)
+        self._needs_updated = True
 
     def _warm_start(self):
         GurobiDirect._warm_start(self)
