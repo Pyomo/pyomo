@@ -463,25 +463,51 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             The function to call. The function should have three arguments. The first will be the pyomo model being
             solved. The second will be the GurobiPersistent instance. The third will be an enum member of
             gurobipy.GRB.Callback. This will indicate where in the branch and bound algorithm gurobi is at. For
-            example:
+            example, suppose we want to solve
+
+            min 2*x + y
+            s.t.
+                y >= (x-2)**2
+                0 <= x <= 4
+                y >= 0
+                y integer
+
+            as an MILP using exteneded cutting planes in callbacks.
 
             >>> from gurobipy import GRB
             >>> import pyomo.environ as pe
+            >>> from pyomo.core.expr.taylor_series import taylor_series_expansion
+            >>>
             >>> m = pe.ConcreteModel()
-            >>> m.x = pe.Var(within=pe.Binary)
-            >>> m.y = pe.Var(within=pe.Binary)
-            >>> m.obj = pe.Objective(expr=m.x + m.y)
+            >>> m.x = pe.Var(bounds=(0, 4))
+            >>> m.y = pe.Var(within=pe.Integers, bounds=(0, None))
+            >>> m.obj = pe.Objective(expr=2*m.x + m.y)
+            >>> m.cons = pe.ConstraintList()  # for the cutting planes
+            >>>
+            >>> def _add_cut(xval):
+            >>>     # a function to generate the cut
+            >>>     m.x.value = xval
+            >>>     return m.cons.add(m.y >= taylor_series_expansion((m.x - 2)**2))
+            >>>
+            >>> _add_cut(0)  # start with 2 cuts at the bounds of x
+            >>> _add_cut(4)  # this is an arbitrary choice
+            >>>
             >>> opt = pe.SolverFactory('gurobi_persistent')
             >>> opt.set_instance(m)
+            >>> opt.set_gurobi_param('PreCrush', 1)
+            >>> opt.set_gurobi_param('LazyConstraints', 1)
+            >>>
             >>> def my_callback(cb_m, cb_opt, cb_where):
-            ...     if cb_where == GRB.Callback.MIPNODE:
-            ...         status = cb_opt.cbGet(GRB.Callback.MIPNODE_STATUS)
-            ...         if status == GRB.OPTIMAL:
-            ...             cb_opt.cbGetNodeRel([cb_m.x, cb_m.y])
-            ...             if cb_m.x.value + cb_m.y.value > 1.1:
-            ...                 cb_opt.cbCut(pe.Constraint(expr=cb_m.x + cb_m.y <= 1))
+            >>>     if cb_where == GRB.Callback.MIPSOL:
+            >>>         cb_opt.cbGetSolution(vars=[m.x, m.y])
+            >>>         if m.y.value < (m.x.value - 2)**2 - 1e-6:
+            >>>             cb_opt.cbLazy(_add_cut(m.x.value))
+            >>>
             >>> opt.set_callback(my_callback)
             >>> opt.solve()
+            >>> assert abs(m.x.value - 1) <= 1e-6
+            >>> assert abs(m.y.value - 1) <= 1e-6
+
         """
         if func is not None:
             self._callback_func = func
