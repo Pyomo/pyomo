@@ -62,6 +62,7 @@ try:
         sympy.ceiling: lambda x: current.ceil(x),
         sympy.floor: lambda x: current.floor(x),
         sympy.sqrt: lambda x: current.sqrt(x),
+        sympy.Abs: lambda x: abs(x),
         sympy.Derivative: _nondifferentiable,
         sympy.Tuple: lambda *x: x,
     }
