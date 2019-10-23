@@ -384,9 +384,6 @@ class SimpleArc(_ArcData, Arc):
             del self._data[None]
             raise
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
-        Arc.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
-
 
 class IndexedArc(Arc):
     def __init__(self, *args, **kwds):

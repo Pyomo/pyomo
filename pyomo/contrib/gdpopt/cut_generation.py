@@ -2,13 +2,12 @@
 from __future__ import division
 
 from math import copysign, fabs
-
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
-from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc
+from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,
                         minimize, value, TransformationFactory)
-from pyomo.core.base.symbolic import differentiate
+from pyomo.core.expr import differentiate
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
@@ -64,8 +63,14 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
             # Cache jacobians
             jacobians = GDPopt.jacobians.get(constr, None)
             if jacobians is None:
-                constr_vars = list(identify_variables(constr.body))
-                jac_list = differentiate(constr.body, wrt_list=constr_vars)
+                constr_vars = list(identify_variables(constr.body, include_fixed=False))
+                if len(constr_vars) >= 1000:
+                    mode = differentiate.Modes.reverse_numeric
+                else:
+                    mode = differentiate.Modes.sympy
+
+                jac_list = differentiate(
+                    constr.body, wrt_list=constr_vars, mode=mode)
                 jacobians = ComponentMap(zip(constr_vars, jac_list))
                 GDPopt.jacobians[constr] = jacobians
 
@@ -83,12 +88,24 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
             oa_cuts = oa_utils.GDPopt_OA_cuts
             slack_var = oa_utils.GDPopt_OA_slacks.add()
             rhs = value(constr.lower) if constr.has_lb() else value(constr.upper)
-            oa_cuts.add(
-                expr=copysign(1, sign_adjust * dual_value) * (
-                    value(constr.body) - rhs + sum(
-                        value(jacobians[var]) * (var - value(var))
-                        for var in jacobians)) - slack_var <= 0)
-            counter += 1
+            try:
+                new_oa_cut = (
+                    copysign(1, sign_adjust * dual_value) * (
+                        value(constr.body) - rhs + sum(
+                            value(jacobians[var]) * (var - value(var))
+                            for var in jacobians)) - slack_var <= 0)
+                if new_oa_cut.polynomial_degree() not in (1, 0):
+                    for var in jacobians:
+                        print(var.name, value(jacobians[var]))
+                oa_cuts.add(expr=new_oa_cut)
+                counter += 1
+            except ZeroDivisionError:
+                config.logger.warning(
+                    "Zero division occured attempting to generate OA cut for constraint %s.\n"
+                    "Skipping OA cut generation for this constraint."
+                    % (constr.name,)
+                )
+                # Simply continue on to the next constraint.
 
         config.logger.info('Added %s OA cuts' % counter)
 
@@ -123,8 +140,11 @@ def add_affine_cuts(nlp_result, solve_data, config):
                 continue  # a variable has no values
 
             # mcpp stuff
-            mc_eqn = mc(constr.body, disjunctive_var_bounds)
-            # mc_eqn = mc(constr.body)
+            try:
+                mc_eqn = mc(constr.body, disjunctive_var_bounds)
+            except MCPP_Error as e:
+                config.logger.debug("Skipping constraint %s due to MCPP error %s" % (constr.name, str(e)))
+                continue  # skip to the next constraint
             ccSlope = mc_eqn.subcc()
             cvSlope = mc_eqn.subcv()
             ccStart = mc_eqn.concave()
@@ -142,10 +162,10 @@ def add_affine_cuts(nlp_result, solve_data, config):
             aff_cuts = aff_utils.GDPopt_aff_cons
             concave_cut = sum(ccSlope[var] * (var - var.value)
                               for var in vars_in_constr
-                              ) + ccStart >= lb_int
+                              if not var.fixed) + ccStart >= lb_int
             convex_cut = sum(cvSlope[var] * (var - var.value)
                              for var in vars_in_constr
-                             ) + cvStart <= ub_int
+                             if not var.fixed) + cvStart <= ub_int
             aff_cuts.add(expr=concave_cut)
             aff_cuts.add(expr=convex_cut)
             counter += 2
@@ -160,22 +180,29 @@ def add_integer_cut(var_values, target_model, solve_data, config, feasible=False
         GDPopt = m.GDPopt_utils
         var_value_is_one = ComponentSet()
         var_value_is_zero = ComponentSet()
+        indicator_vars = ComponentSet(disj.indicator_var for disj in GDPopt.disjunct_list)
         for var, val in zip(GDPopt.variable_list, var_values):
             if not var.is_binary():
                 continue
             if var.fixed:
-                if val is not None and var.value != val:
-                    # val needs to be None or match var.value. Otherwise, we have a
-                    # contradiction.
-                    raise ValueError(
-                        "Fixed variable %s has value %s != "
-                        "provided value of %s." % (var.name, var.value, val))
-                val = var.value
+                # if val is not None and var.value != val:
+                #     # val needs to be None or match var.value. Otherwise, we have a
+                #     # contradiction.
+                #     raise ValueError(
+                #         "Fixed variable %s has value %s != "
+                #         "provided value of %s." % (var.name, var.value, val))
+
+                # Note: FBBT may cause some disjuncts to be fathomed, which can cause
+                # a fixed variable to be different than the subproblem value.
+                # In this case, we simply construct the integer cut as usual with
+                # the subproblem value rather than its fixed value.
+                if val is None:
+                    val = var.value
 
             if not config.force_subproblem_nlp:
-                # Skip indicator variables
-                # TODO we should implement this as a check among Disjuncts instead
-                if not (var.local_name == 'indicator_var' and var.parent_block().type() == Disjunct):
+                # By default (config.force_subproblem_nlp = False), we only want
+                # the integer cuts to be over disjunct indicator vars.
+                if var not in indicator_vars:
                     continue
 
             if fabs(val - 1) <= config.integer_tolerance:
@@ -210,3 +237,10 @@ def add_integer_cut(var_values, target_model, solve_data, config, feasible=False
                 'Registering explored configuration. '
                 'Backtracking is currently %s.' % backtracking_enabled)
             GDPopt.no_backtracking.add(expr=int_cut)
+
+    if config.calc_disjunctive_bounds:
+        with time_code(solve_data.timing, "disjunctive variable bounding"):
+            TransformationFactory('contrib.compute_disj_var_bounds').apply_to(
+                m,
+                solver=config.mip_solver if config.obbt_disjunctive_bounds else None
+            )

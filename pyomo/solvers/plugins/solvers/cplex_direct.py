@@ -535,33 +535,17 @@ class CPLEXDirect(DirectSolver):
 
         self.results.problem.upper_bound = None
         self.results.problem.lower_bound = None
-        if (cpxprob.variables.get_num_binary() + cpxprob.variables.get_num_integer()) == 0:
-            try:
+        if cpxprob.solution.get_solution_type() != cpxprob.solution.type.none:
+            if (cpxprob.variables.get_num_binary() + cpxprob.variables.get_num_integer()) == 0:
                 self.results.problem.upper_bound = cpxprob.solution.get_objective_value()
                 self.results.problem.lower_bound = cpxprob.solution.get_objective_value()
-            except self._cplex.exceptions.CplexError:
-                pass
-        elif cpxprob.objective.get_sense() == cpxprob.objective.sense.minimize:
-            try:
+            elif cpxprob.objective.get_sense() == cpxprob.objective.sense.minimize:
                 self.results.problem.upper_bound = cpxprob.solution.get_objective_value()
-            except self._cplex.exceptions.CplexError:
-                pass
-            try:
                 self.results.problem.lower_bound = cpxprob.solution.MIP.get_best_objective()
-            except self._cplex.exceptions.CplexError:
-                pass
-        elif cpxprob.objective.get_sense() == cpxprob.objective.sense.maximize:
-            try:
+            else:
+                assert cpxprob.objective.get_sense() == cpxprob.objective.sense.maximize
                 self.results.problem.upper_bound = cpxprob.solution.MIP.get_best_objective()
-            except self._cplex.exceptions.CplexError:
-                pass
-            try:
                 self.results.problem.lower_bound = cpxprob.solution.get_objective_value()
-            except self._cplex.exceptions.CplexError:
-                pass
-        else:
-            raise RuntimeError('Unrecognized cplex objective sense: {0}'.\
-                               format(cpxprob.objective.get_sense()))
 
         try:
             soln.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
