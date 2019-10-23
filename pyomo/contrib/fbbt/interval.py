@@ -190,10 +190,10 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
             case 2: y is negative
                 The ideas are similar to case 1.
             """
-            if zu < 0:
+            if zu + feasibility_tol < 0:
                 raise InfeasibleConstraintException('Infeasible. Anything to the power of {0} must be positive.'.format(y))
             if y > 0:
-                if zu == 0:
+                if zu <= 0:
                     _xl = 0
                     _xu = 0
                 elif zl <= 0:
