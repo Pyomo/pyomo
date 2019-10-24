@@ -80,7 +80,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         self._valid_result_formats={}
         self._valid_result_formats[ProblemFormat.cpxlp] = [ResultsFormat.soln]
         self._valid_result_formats[ProblemFormat.mps] = [ResultsFormat.soln]
-        self._valid_result_formats[ProblemFormat.nl] = [ResultsFormat.soln]
+        self._valid_result_formats[ProblemFormat.nl] = [ResultsFormat.sol]
         self.set_problem_format(ProblemFormat.cpxlp)
 
         #
@@ -98,7 +98,10 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         self._capabilities.sos2 = True
 
     def _default_results_format(self, prob_format):
-        return ResultsFormat.soln
+        if self.problem_format() == ProblemFormat.nl:
+            return ResultsFormat.sol   # ampl format solution
+        else:
+            return ResultsFormat.soln  # xml formatted solution
 
     #
     # we haven't reached this point quite yet.
@@ -136,10 +139,18 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
 
         #
         # Define solution file
-        # As indicated above, contains (in XML) both the solution and solver status.
         #
-        self._soln_file = pyutilib.services.TempfileManager.\
-                          create_tempfile(suffix = '.xpress.wrtsol')
+        # As indicated above, contains (in XML) both the solution and
+        # solver status. If nonlinear, use the AMPL .sol format.
+        #
+
+        if self.problem_format() == ProblemFormat.nl:
+            self._soln_file = pyutilib.services.TempfileManager.\
+                create_tempfile(suffix = '.xpress.sol')
+            self._results_file = self._soln_file
+        else:
+            self._soln_file = pyutilib.services.TempfileManager.\
+                create_tempfile(suffix = '.xpress.wrtsol')
 
         #
         # Write the XPRESS execution script
@@ -164,6 +175,8 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         # solves
         if self.is_mip:
             script += "mipoptimize\n"
+        elif self.problem_format() == ProblemFormat.nl:
+            script += "nlpoptimize\n"
         else:
             script += "lpoptimize\n"
 
@@ -174,7 +187,10 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         # a: output the activity (value)
         # c: outputs the costs for variables, slacks for constraints.
         # d: outputs the reduced costs for columns, duals for constraints
-        script += "writesol %s -pnatcd\n" % (self._soln_file,)
+        if self.problem_format() == ProblemFormat.nl:
+            script += "writeamplsol %s\n" % (self._soln_file,)
+        else:
+            script += "writesol %s -pnatcd\n" % (self._soln_file,)
 
         script += "quit\n"
 
@@ -211,35 +227,56 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
             tokens = re.split('[ \t]+',line.strip())
 
             if len(tokens) > 3 and tokens[0] == "XPRESS" and tokens[1] == "Error":
-            # IMPT: See below - cplex can generate an error line and then terminate fine, e.g., in XPRESS 12.1.
+            # IMPT: See below - Xpress can generate an error line and then terminate fine, e.g., in XPRESS 12.1.
             #       To handle these cases, we should be specifying some kind of termination criterion always
             #       in the course of parsing a log file (we aren't doing so currently - just in some conditions).
                 results.solver.status=SolverStatus.error
                 results.solver.error = " ".join(tokens)
-            elif len(tokens) >= 3 and tokens[0] == "ILOG" and tokens[1] == "XPRESS":
-                cplex_version = tokens[2].rstrip(',')
-            elif len(tokens) >= 3 and tokens[0] == "Variables":
-                if results.problem.number_of_variables is None: # XPRESS 11.2 and subsequent versions have two Variables sections in the log file output.
-                    results.problem.number_of_variables = int(tokens[2])
-            # In XPRESS 11 (and presumably before), there was only a single line output to
-            # indicate the constriant count, e.g., "Linear constraints : 16 [Less: 7, Greater: 6, Equal: 3]".
-            # In XPRESS 11.2 (or somewhere in between 11 and 11.2 - I haven't bothered to track it down
-            # in that detail), there is another instance of this line prefix in the min/max problem statistics
-            # block - which we don't care about. In this case, the line looks like: "Linear constraints :" and
-            # that's all.
-            elif len(tokens) >= 4 and tokens[0] == "Linear" and tokens[1] == "constraints":
-                results.problem.number_of_constraints = int(tokens[3])
-            elif len(tokens) >= 3 and tokens[0] == "Nonzeros":
-                if results.problem.number_of_nonzeros is None: # XPRESS 11.2 and subsequent has two Nonzeros sections.
-                    results.problem.number_of_nonzeros = int(tokens[2])
-            elif len(tokens) >= 5 and tokens[4] == "MINIMIZE":
+
+            elif len(tokens) >= 3 and tokens[0] == "FICO" and tokens[1] == "Xpress":
+                xpress_version = tokens[2].rstrip(',')
+
+            elif len(tokens) >= 3 and \
+                 tokens[1] == "rows" and \
+                 tokens[3] == 'cols' and \
+                 results.problem.number_of_variables is None:
+                results.problem.number_of_constraints = int(tokens[1])
+                results.problem.number_of_variables = int(tokens[3])
+                results.problem.number_of_nonzeros = int(tokens[5])
+
+            # If it is SLP that's solving the problem we count rows
+            # and columns differently
+
+            elif len(tokens) == 5 and tokens[4] == 'rows':
+                results.problem.number_of_constraints = int(tokens[0])
+            elif len(tokens) == 6 and tokens[4] == 'structural' and tokens[5] == 'columns':
+                results.problem.number_of_variables = int(tokens[0])
+            elif len(tokens) == 6 and tokens[4] == 'non-zero' and tokens[5] == 'elements':
+                results.problem.number_of_nonzeros = int(tokens[0])
+
+            # Check optimization sense
+
+            elif len(tokens) >= 4 and tokens[0] == "Minimizing":
                 results.problem.sense = ProblemSense.minimize
-            elif len(tokens) >= 5 and tokens[4] == "MAXIMIZE":
+            elif len(tokens) >= 4 and tokens[0] == "Maximizing":
                 results.problem.sense = ProblemSense.maximize
-            elif len(tokens) >= 4 and tokens[0] == "Solution" and tokens[1] == "time" and tokens[2] == "=":
-                # technically, I'm not sure if this is XPRESS user time or user+system - XPRESS doesn't appear
-                # to differentiate, and I'm not sure we can always provide a break-down.
-                results.solver.user_time = float(tokens[3])
+
+            elif len(tokens) >= 3 and \
+                 tokens[0] == 'Optimal' and \
+                 tokens[1] == 'solution' and \
+                 tokens[2] == 'found':
+                results.solver.termination_condition = TerminationCondition.optimal
+
+            # Check infeasibility with different interfaces
+
+            elif (len(tokens) >= 3 and tokens[0] == "Problem" and tokens[1] == "is" and tokens[2] == "infeasible") or \
+                 (len(tokens) >= 4 and tokens[1] == "problem" and tokens[2] == "is" and tokens[3] == "infeasible") or \
+                 (len(tokens) >= 4 and tokens[0] == "NLP"     and tokens[1] == "solve" and tokens[2] == "locally" and tokens[3] == "infeasible"):
+                results.solver.termination_condition = TerminationCondition.infeasible
+                results.solver.termination_message = ' '.join(tokens)
+
+            elif len(tokens) >= 3 and tokens[0] == "Total" and tokens[1] == "time":
+                results.solver.user_time = tokens[3].rstrip('s')
             elif len(tokens) >= 4 and tokens[0] == "Dual" and tokens[1] == "simplex" and tokens[3] == "Optimal:":
                 results.solver.termination_condition = TerminationCondition.optimal
                 results.solver.termination_message = ' '.join(tokens)
@@ -304,6 +341,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         # reduced-costs. scan through the solver suffix list
         # and throw an exception if the user has specified
         # any others.
+
         extract_duals = False
         extract_slacks = False
         extract_reduced_costs = False
@@ -419,7 +457,7 @@ class MockXPRESS(XPRESS_shell,MockMIP):
             XPRESS_shell.__init__(self, **kwds)
         except pyutilib.common.ApplicationError: #pragma:nocover
             pass                                 #pragma:nocover
-        MockMIP.__init__(self,"cplex")
+        MockMIP.__init__(self,"xpress")
 
     def available(self, exception_flag=True):
         return XPRESS_shell.available(self,exception_flag)
