@@ -1,6 +1,7 @@
 import pyutilib.th as unittest
 import math
 import pyomo.contrib.fbbt.interval as interval
+from pyomo.common.errors import InfeasibleConstraintException
 try:
     import numpy as np
     numpy_available = True
@@ -136,6 +137,46 @@ class TestInterval(unittest.TestCase):
                 _z = x ** y
                 self.assertTrue(np.all(zl <= _z))
                 self.assertTrue(np.all(zu >= _z))
+
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
+    def test_pow2(self):
+        xl = np.linspace(-2, 2, 17)
+        xu = np.linspace(-2, 2, 17)
+        yl = np.linspace(-2, 2, 17)
+        yu = np.linspace(-2, 2, 17)
+        for _xl in xl:
+            for _xu in xu:
+                if _xl > _xu:
+                    continue
+                for _yl in yl:
+                    for _yu in yu:
+                        if _yl > _yu:
+                            continue
+                        if _yl == _yu and _yl != round(_yl) and _xu < 0:
+                            with self.assertRaises(InfeasibleConstraintException):
+                                lb, ub = interval.power(_xl, _xu, _yl, _yu)
+                        else:
+                            lb, ub = interval.power(_xl, _xu, _yl, _yu)
+                            if math.isfinite(lb) and math.isfinite(ub):
+                                nan_fill = 0.5*(lb + ub)
+                            elif math.isfinite(lb):
+                                nan_fill = lb + 1
+                            elif math.isfinite(ub):
+                                nan_fill = ub - 1
+                            else:
+                                nan_fill = 0
+                            x = np.linspace(_xl, _xu, 17)
+                            y = np.linspace(_yl, _yu, 17)
+                            all_values = list()
+                            for _x in x:
+                                z = _x**y
+                                np.nan_to_num(z, copy=False, nan=nan_fill, posinf=np.inf, neginf=-np.inf)
+                                all_values.append(z)
+                            all_values = np.array(all_values)
+                            estimated_lb = all_values.min()
+                            estimated_ub = all_values.max()
+                            self.assertTrue(lb - 1e-8 <= estimated_lb)
+                            self.assertTrue(ub + 1e-8 >= estimated_ub)
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_exp(self):
