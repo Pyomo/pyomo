@@ -16,7 +16,8 @@ import six
 
 try:
     import networkx
-    has_networkx = True
+    # The code below conforms to the networkx>=2.0 API
+    has_networkx = int(networkx.__version__.split('.')[0]) >= 2
 except ImportError:                               #pragma:nocover
     has_networkx = False
 
@@ -232,7 +233,7 @@ def ScenarioTreeModelFromNetworkX(
 
     if not has_networkx:                          #pragma:nocover
         raise ValueError(
-            "networkx module is not available")
+            "networkx>=2.0 module is not available")
 
     if not networkx.is_tree(tree):
         raise TypeError(
