@@ -243,6 +243,16 @@ class SymbolicDerivatives(unittest.TestCase):
         self.assertTrue(e.is_expression_type())
         self.assertEqual(s(e), s(0.5 * m.x**-0.5))
 
+    def test_abs_and_complex(self):
+        m = ConcreteModel()
+        m.x = Var()
+
+        # Unless we force sympy to know that X is real, it will return a
+        # complex expression.  This tests issue #1139.
+        e = differentiate(abs(m.x**2), wrt=m.x)
+        self.assertTrue(e.is_expression_type())
+        self.assertEqual(s(e), s(2 * m.x))
+
     def test_param(self):
         m = ConcreteModel()
         m.x = Var()
