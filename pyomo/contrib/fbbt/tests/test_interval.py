@@ -8,7 +8,12 @@ try:
     np.random.seed(0)
 except ImportError:
     numpy_available = False
-
+try:
+    isfinite = math.isfinite
+except AttributeError:
+    # isfinite() was added to math in Python 3.2
+    def isfinite(x):
+        return not (math.isnan(x) or math.isinf(x))
 
 class TestInterval(unittest.TestCase):
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
@@ -157,11 +162,11 @@ class TestInterval(unittest.TestCase):
                                 lb, ub = interval.power(_xl, _xu, _yl, _yu)
                         else:
                             lb, ub = interval.power(_xl, _xu, _yl, _yu)
-                            if math.isfinite(lb) and math.isfinite(ub):
+                            if isfinite(lb) and isfinite(ub):
                                 nan_fill = 0.5*(lb + ub)
-                            elif math.isfinite(lb):
+                            elif isfinite(lb):
                                 nan_fill = lb + 1
-                            elif math.isfinite(ub):
+                            elif isfinite(ub):
                                 nan_fill = ub - 1
                             else:
                                 nan_fill = 0
@@ -170,8 +175,14 @@ class TestInterval(unittest.TestCase):
                             all_values = list()
                             for _x in x:
                                 z = _x**y
-                                np.nan_to_num(z, copy=False, nan=nan_fill, posinf=np.inf, neginf=-np.inf)
-                                all_values.append(z)
+                                #np.nan_to_num(z, copy=False, nan=nan_fill, posinf=np.inf, neginf=-np.inf)
+                                tmp = []
+                                for _z in z:
+                                    if math.isnan(_z):
+                                        tmp.append(nan_fill)
+                                    else:
+                                        tmp.append(_z)
+                                all_values.append(np.array(tmp))
                             all_values = np.array(all_values)
                             estimated_lb = all_values.min()
                             estimated_ub = all_values.max()
