@@ -62,35 +62,20 @@ def power(xl, xu, yl, yu):
             lb = min(xu ** yl, xl ** yu)
             ub = max(xl ** yl, xu ** yu)
         elif yl >= 0:
-            lb = xl ** yl
-            ub = xu ** yu
+            lb = min(xl**yl, xl**yu)
+            ub = max(xu**yl, xu**yu)
         elif yu <= 0:
-            lb = xu ** yl
-            ub = xl ** yu
+            lb = min(xu**yl, xu**yu)
+            ub = max(xl**yl, xl**yu)
         else:
             raise DeveloperError()
     elif xl == 0:
-        # this section is only needed so we do not encounter math domain errors;
-        # The logic is essentially the same as above (xl > 0)
-        if xu == 0 and yl < 0:
-            _lba = inf
+        if yl >= 0:
+            lb = min(xl ** yl, xl ** yu)
+            ub = max(xu ** yl, xu ** yu)
         else:
-            _lba = xu ** yl
-        if yu < 0:
-            _lbb = inf
-        else:
-            _lbb = xl ** yu
-        lb = min(_lba, _lbb)
-
-        if yl < 0:
-            _uba = inf
-        else:
-            _uba = xl ** yl
-        if xu == 0 and yu < 0:
-            _ubb = inf
-        else:
-            _ubb = xu ** yu
-        ub = max(_uba, _ubb)
+            lb = -inf
+            ub = inf
     elif yl == yu and yl == round(yl):
         # the exponent is an integer, so x can be negative
         """
@@ -113,9 +98,10 @@ def power(xl, xu, yl, yu):
                 else:
                     if xu == 0:
                         lb = -inf
+                        ub = inf
                     else:
                         lb = xu ** y
-                    ub = xl ** y
+                        ub = xl ** y
             else:
                 if y % 2 == 0:
                     lb = xu ** y
@@ -139,17 +125,16 @@ def power(xl, xu, yl, yu):
                     lb = xl ** y
                     ub = xu ** y
     elif yl == yu:
-        # the exponent is allowed to be fractional, so x must be positive
+        # the exponent has to be fractional, so x must be positive
+        if xu < 0:
+            msg = 'Cannot raise a negative number to the power of {0}.\n'.format(yl)
+            msg += 'The upper bound of a variable raised to the power of {0} is {1}'.format(yl, xu)
+            raise InfeasibleConstraintException(msg)
         xl = 0
         lb, ub = power(xl, xu, yl, yu)
     else:
-        msg = 'encountered an exponent where the base is allowed to be negative '
-        msg += 'and the exponent is allowed to be fractional and is not fixed. '
-        msg += 'Assuming the lower bound of the base to be 0.'
-        warnings.warn(msg)
-        logger.warning(msg)
-        xl = 0
-        lb, ub = power(xl, xu, yl, yu)
+        lb = -inf
+        ub = inf
 
     return lb, ub
 
@@ -190,10 +175,10 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
             case 2: y is negative
                 The ideas are similar to case 1.
             """
-            if zu < 0:
+            if zu + feasibility_tol < 0:
                 raise InfeasibleConstraintException('Infeasible. Anything to the power of {0} must be positive.'.format(y))
             if y > 0:
-                if zu == 0:
+                if zu <= 0:
                     _xl = 0
                     _xu = 0
                 elif zl <= 0:
