@@ -1330,7 +1330,7 @@ def _fbbt_block(m, config):
             else:
                 var_ubs[v] = value(v.ub)
             var_to_con_map[v].append(c)
-            n_cons += 1
+        n_cons += 1
 
     for _v in m.component_data_objects(ctype=Var, active=True, descend_into=True, sort=True):
         if _v.is_fixed():
