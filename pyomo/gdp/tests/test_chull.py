@@ -77,19 +77,6 @@ class TwoTermDisj(unittest.TestCase):
         # we didn't add to the block that wasn't ours
         self.assertEqual(len(m._pyomo_gdp_chull_relaxation), 0)
 
-    def test_info_dict_name_collision(self):
-        m = models.makeTwoTermDisj_Nonlinear()
-        # we never have a way to know if the dictionary we made was ours. But we
-        # should yell if there is a non-dictionary component of the same name.
-        m._gdp_transformation_info = Block()
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Component unknown contains an attribute named "
-            "_gdp_transformation_info. The transformation requires that it can "
-            "create this attribute!*",
-            TransformationFactory('gdp.chull').apply_to,
-            m)
-
     def test_indicator_vars_still_active(self):
         m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
@@ -287,7 +274,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertRaisesRegexp(
             GDP_Error,
             "Cannot do convex hull transformation for disjunction disjunction "
-            "with or constraint. Must be an xor!*",
+            "with OR constraint. Must be an XOR!*",
             TransformationFactory('gdp.chull').apply_to,
             m)
 
@@ -323,24 +310,29 @@ class TwoTermDisj(unittest.TestCase):
         self.assertFalse(m.d.active)
         self.assertFalse(m.d[0].active)
         self.assertFalse(m.d[1].active)
-        # COnstraints aren't deactived: only disjuncts
+        # Constraints aren't deactived: only disjuncts
         self.assertTrue(m.d[0].c.active)
         self.assertTrue(m.d[1].c1.active)
         self.assertTrue(m.d[1].c2.active)
 
     def test_transformed_disjunct_mappings(self):
         m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.chull').apply_to(m)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
 
         # the disjuncts will always be transformed in the same order,
         # and d[0] goes first, so we can check in a loop.
         for i in [0,1]:
-            infodict = disjBlock[i]._gdp_transformation_info
-            self.assertIsInstance(infodict, dict)
-            self.assertEqual(len(infodict), 4)
-            self.assertIs(infodict['src'], m.d[i])
+            #infodict = disjBlock[i]._gdp_transformation_info
+            self.assertIs(disjBlock[i]._srcDisjunct(), m.d[i])
+            self.assertIs(chull.get_src_disjunct(disjBlock[i]), m.d[i])
+
+            # I'm not testing what's underneath for the moment, just want to
+            # make sure that the right stuff comes out
+            # TODO: you are here
+
             self.assertIsInstance(infodict['srcConstraints'], ComponentMap)
             self.assertIsInstance(infodict['srcVars'], ComponentMap)
             self.assertIsInstance(

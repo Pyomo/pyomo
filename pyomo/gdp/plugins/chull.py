@@ -13,7 +13,7 @@ import logging
 import pyomo.common.config as cfg
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
-from pyomo.core.base.component import ActiveComponent
+from pyomo.core.base.component import ActiveComponent, ComponentUID
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 import pyomo.core.expr.current as EXPR
@@ -29,13 +29,19 @@ from pyomo.gdp.util import clone_without_expression_components, target_list, \
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 
 from six import iteritems, iterkeys
+from weakref import ref as weakref_ref
 
+# TODO: DEBUG
+from nose.tools import set_trace
 
 logger = logging.getLogger('pyomo.gdp.chull')
 
 NAME_BUFFER = {}
 
-@TransformationFactory.register('gdp.chull', doc="Relax disjunctive model by forming the convex hull.")
+@TransformationFactory.register('gdp.chull', 
+                                doc="Relax disjunctive model by forming "
+                                "the convex hull.")
+
 class ConvexHull_Transformation(Transformation):
     """Relax disjunctive model by forming the convex hull.
 
@@ -158,7 +164,7 @@ class ConvexHull_Transformation(Transformation):
     def __init__(self):
         super(ConvexHull_Transformation, self).__init__()
         self.handlers = {
-            Constraint : self._xform_constraint,
+            Constraint : self._transform_constraint,
             Var :        False,
             Connector :  False,
             Expression : False,
@@ -170,7 +176,6 @@ class ConvexHull_Transformation(Transformation):
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
             }
-
 
     def _apply_to(self, instance, **kwds):
         assert not NAME_BUFFER
@@ -185,16 +190,6 @@ class ConvexHull_Transformation(Transformation):
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
 
-        # make a transformation block
-        transBlockName = unique_component_name(
-            instance,
-            '_pyomo_gdp_chull_relaxation')
-        transBlock = Block()
-        instance.add_component(transBlockName, transBlock)
-        transBlock.relaxedDisjuncts = Block(Any)
-        transBlock.lbub = Set(initialize = ['lb','ub','eq'])
-        transBlock.disjContainers = ComponentSet()
-
         targets = self._config.targets
         if targets is None:
             targets = ( instance, )
@@ -203,54 +198,36 @@ class ConvexHull_Transformation(Transformation):
             _HACK_transform_whole_instance = False
         knownBlocks = set()
         for t in targets:
-            # check that t is in fact a child of instance
-            knownBlocks = is_child_of(parent=instance, child=t,
-                                       knownBlocks=knownBlocks)
+            # [ESJ 10/18/2019] This can go away when we deprecate using CUIDs as
+            # targets. The warning is issued in util, but we need to make sure
+            # that we do the right thing here.
+            if isinstance(t, ComponentUID):
+                tmp = t
+                t = t.find_component(instance)
+                if t is None:
+                    raise GDP_Error(
+                        "Target %s is not a component on the instance!" % tmp)
 
+            # check that t is in fact a child of instance
+            if not is_child_of(parent=instance, child=t,
+                                       knownBlocks=knownBlocks):
+                raise GDP_Error("Target %s is not a component on instance %s!"
+                                % (t.name, instance.name))                
             if t.type() is Disjunction:
                 if t.parent_component() is t:
-                    self._transformDisjunction(t, transBlock)
+                    self._transform_disjunction(t)
                 else:
-                    self._transformDisjunctionData(t, transBlock, t.index())
+                    self._transform_disjunctionData(t, t.index())
             elif t.type() in (Block, Disjunct):
                 if t.parent_component() is t:
-                    self._transformBlock(t, transBlock)
+                    self._transform_block(t)
                 else:
-                    self._transformBlockData(t, transBlock)
+                    self._transform_blockData(t)
             else:
                 raise GDP_Error(
                     "Target %s was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed"
                     % (t.name, type(t)) )
-
-        # Go through our dictionary of indexed things and deactivate
-        # the containers that don't have any active guys inside of
-        # them. So the invalid component logic will tell us if we
-        # missed something getting transformed.
-        for obj in transBlock.disjContainers:
-            if not obj.active:
-                continue
-            for i in obj:
-                if obj[i].active:
-                    break
-            else:
-                # HACK due to active flag implementation.
-                #
-                # Ideally we would not have to do any of this (an
-                # ActiveIndexedComponent would get its active status by
-                # querring the active status of all the contained Data
-                # objects).  As a fallback, we would like to call:
-                #
-                #    obj._deactivate_without_fixing_indicator()
-                #
-                # However, the sreaightforward implementation of that
-                # method would have unintended side effects (fixing the
-                # contained _DisjunctData's indicator_vars!) due to our
-                # class hierarchy.  Instead, we will directly call the
-                # relevant base class (safe-ish since we are verifying
-                # that all the contained _DisjunctionData are
-                # deactivated directly above).
-                ActiveComponent.deactivate(obj)
 
         # HACK for backwards compatibility with the older GDP transformations
         #
@@ -261,6 +238,46 @@ class ConvexHull_Transformation(Transformation):
         if _HACK_transform_whole_instance:
             HACK_GDP_Disjunct_Reclassifier().apply_to(instance)
 
+    def _add_transformation_block(self, instance):
+         # make a transformation block on instance where we will store
+         # transformed components
+        transBlockName = unique_component_name(
+            instance,
+            '_pyomo_gdp_chull_relaxation')
+        transBlock = Block()
+        instance.add_component(transBlockName, transBlock)
+        transBlock.relaxedDisjuncts = Block(Any)
+        transBlock.lbub = Set(initialize = ['lb','ub','eq'])
+        # We will store all of the disaggregation constraints for any
+        # Disjunctions we transform onto this block here. Note that this
+        # (correctly) means that we will move them up off of the Disjunct in the
+        # case of nested disjunctions
+        transBlock.disaggregationConstraints = Constraint(Any)
+
+        # We'll store maps for disaggregated variables and constraints here 
+
+        # This will map each of the disjuncts to a dictionary of two maps: one
+        # from src to disaggregated and the other the other way
+        transBlock._disaggregatedVarMap = ComponentMap() # {
+            # 'srcVar': ComponentMap(),
+            # 'disaggregatedVar': ComponentMap(),
+            # }
+        transBlock._constraintMap = {
+            'srcConstraint': ComponentMap(),
+            'transformedConstraint': ComponentMap()
+        }
+        transBlock._bigMConstraintMap = {
+            'srcVar': ComponentMap(),
+            'bigmConstraint': ComponentMap(),
+        }
+            
+        # TODO: maybe?
+        transBlock._disaggregationConstraintMap = ComponentMap()
+        # ESJ: TODO: What is this for?? I think nothing--it was compensating for
+        # broken active status shtuffs
+        # transBlock.disjContainers = ComponentSet()
+
+        return transBlock
 
     def _contained_in(self, var, block):
         "Return True if a var is in the subtree rooted at block"
@@ -272,12 +289,11 @@ class ConvexHull_Transformation(Transformation):
                 return True
         return False
 
-    def _transformBlock(self, obj, transBlock):
+    def _transform_block(self, obj):
         for i in sorted(iterkeys(obj)):
-            self._transformBlockData(obj[i], transBlock)
+            self._transform_blockData(obj[i])
 
-
-    def _transformBlockData(self, obj, transBlock):
+    def _transform_blockData(self, obj):
         # Transform every (active) disjunction in the block
         for disjunction in obj.component_objects(
                 Disjunction,
@@ -285,102 +301,69 @@ class ConvexHull_Transformation(Transformation):
                 sort=SortComponents.deterministic,
                 descend_into=(Block,Disjunct),
                 descent_order=TraversalStrategy.PostfixDFS):
-            self._transformDisjunction(disjunction, transBlock)
+            self._transform_disjunction(disjunction)
 
-
-    def _getDisjunctionConstraints(self, disjunction):
-        # Put the disjunction constraint on its parent block
+    # TODO: I believe that this is now identical to its cousin in bigm. Should
+    # probably move the whole thing to util
+    def _get_xor_constraint(self, disjunction):
+        # Put the XOR (or OR) constraint on the parent block of the Disjunction
 
         # We never do this for just a DisjunctionData because we need
         # to know about the index set of its parent component. So if
         # we called this on a DisjunctionData, we did something wrong.
         assert isinstance(disjunction, Disjunction)
+
+        # check if the constraint already exists
+        if not disjunction._algebraic_constraint is None:
+            return disjunction._algebraic_constraint()
+
         parent = disjunction.parent_block()
-        if hasattr(parent, "_gdp_transformation_info"):
-            infodict = parent._gdp_transformation_info
-            if type(infodict) is not dict:
-                raise GDP_Error(
-                    "Component %s contains an attribute named "
-                    "_gdp_transformation_info. The transformation requires "
-                    "that it can create this attribute!" % parent.name)
-            try:
-                # On the off-chance that another GDP transformation went
-                # first, the infodict may exist, but the specific map we
-                # want will not be present
-                orConstraintMap = infodict['disjunction_or_constraint']
-            except KeyError:
-                orConstraintMap = infodict['disjunction_or_constraint'] \
-                                  = ComponentMap()
-            try:
-                disaggregationConstraintMap = infodict[
-                    'disjunction_disaggregation_constraints']
-            except KeyError:
-                disaggregationConstraintMap = infodict[
-                    'disjunction_disaggregation_constraints'] \
-                    = ComponentMap()
-        else:
-            infodict = parent._gdp_transformation_info = {}
-            orConstraintMap = infodict['disjunction_or_constraint'] \
-                              = ComponentMap()
-            disaggregationConstraintMap = infodict[
-                'disjunction_disaggregation_constraints'] \
-                = ComponentMap()
+        
+        # add the XOR (or OR) constraints to parent block (with
+        # unique name) It's indexed if this is an
+        # IndexedDisjunction, not otherwise
+        orC = Constraint(disjunction.index_set()) if \
+              disjunction.is_indexed() else Constraint()
+        parent.add_component(
+            unique_component_name(parent, '_gdp_chull_relaxation_' +
+                                  disjunction.name + '_xor'),
+            orC)
+        disjunction._algebraic_constraint = weakref_ref(orC)
 
-        if disjunction in disaggregationConstraintMap:
-            disaggregationConstraint = disaggregationConstraintMap[disjunction]
-        else:
-            # add the disaggregation constraint
-            disaggregationConstraint \
-                = disaggregationConstraintMap[disjunction] = Constraint(Any)
-            parent.add_component(
-                unique_component_name(
-                    parent, '_gdp_chull_relaxation_' + disjunction.getname(
-                        fully_qualified=True, name_buffer=NAME_BUFFER
-                    ) + '_disaggregation'),
-                disaggregationConstraint)
+        return orC
 
-        # If the Constraint already exists, return it
-        if disjunction in orConstraintMap:
-            orC = orConstraintMap[disjunction]
-        else:
-            # add the XOR (or OR) constraints to parent block (with
-            # unique name) It's indexed if this is an
-            # IndexedDisjunction, not otherwise
-            orC = Constraint(disjunction.index_set()) if \
-                  disjunction.is_indexed() else Constraint()
-            parent.add_component(
-                unique_component_name(
-                    parent, '_gdp_chull_relaxation_' + disjunction.getname(
-                        fully_qualified=True, name_buffer=NAME_BUFFER
-                    ) + '_xor'),
-                orC)
-            orConstraintMap[disjunction] = orC
+    def _transform_disjunction(self, obj):
+        # put the transformation block on the parent block of the Disjunction
+        transBlock = self._add_transformation_block(obj.parent_block())
+        # and create the xor constraint
+        xorConstraint = self._get_xor_constraint(obj)
 
-        return orC, disaggregationConstraint
-
-
-    def _transformDisjunction(self, obj, transBlock):
         # create the disjunction constraint and disaggregation
         # constraints and then relax each of the disjunctionDatas
         for i in sorted(iterkeys(obj)):
-            self._transformDisjunctionData(obj[i], transBlock, i)
+            self._transform_disjunctionData(obj[i], i, transBlock)
 
         # deactivate so we know we relaxed
         obj.deactivate()
 
-
-    def _transformDisjunctionData(self, obj, transBlock, index):
+    def _transform_disjunctionData(self, obj, index, transBlock=None):
+        # TODO: This should've been a bug, I think?? Make sure it's tested...
+        if not obj.active:
+            return
         # Convex hull doesn't work if this is an or constraint. So if
         # xor is false, give up
         if not obj.xor:
             raise GDP_Error("Cannot do convex hull transformation for "
-                            "disjunction %s with or constraint. Must be an xor!"
+                            "disjunction %s with OR constraint. Must be an XOR!"
                             % obj.name)
+        
+        if transBlock is None:
+            transBlock = self._add_transformation_block(obj.parent_block())
 
         parent_component = obj.parent_component()
-        transBlock.disjContainers.add(parent_component)
-        orConstraint, disaggregationConstraint \
-            = self._getDisjunctionConstraints(parent_component)
+        
+        orConstraint = self._get_xor_constraint(parent_component)
+        disaggregationConstraint = transBlock.disaggregationConstraints
 
         # We first go through and collect all the variables that we
         # are going to disaggregate.
@@ -388,38 +371,45 @@ class ConvexHull_Transformation(Transformation):
         varOrder = []
         varsByDisjunct = ComponentMap()
         for disjunct in obj.disjuncts:
-            # This is crazy, but if the disjunct has been previously
-            # relaxed, the disjunct *could* be deactivated.
-            not_active = not disjunct.active
-            if not_active:
-                disjunct._activate_without_unfixing_indicator()
-            try:
-                disjunctVars = varsByDisjunct[disjunct] = ComponentSet()
-                for cons in disjunct.component_data_objects(
-                        Constraint,
-                        active = True,
-                        sort=SortComponents.deterministic,
-                        descend_into=Block):
-                    # we aren't going to disaggregate fixed
-                    # variables. This means there is trouble if they are
-                    # unfixed later...
-                    for var in EXPR.identify_variables(
-                            cons.body, include_fixed=False):
-                        # Note the use of a list so that we will
-                        # eventually disaggregate the vars in a
-                        # deterministic order (the order that we found
-                        # them)
-                        disjunctVars.add(var)
-                        if var not in varOrder_set:
-                            varOrder.append(var)
-                            varOrder_set.add(var)
-            finally:
-                if not_active:
-                    disjunct._deactivate_without_fixing_indicator()
+            # # This is crazy, but if the disjunct has been previously
+            # # relaxed, the disjunct *could* be deactivated.
+            # not_active = not disjunct.active
+            # if not_active:
+            #     disjunct._activate_without_unfixing_indicator()
+
+            # [ESJ 10/18/2019] John, why was this in a try-finally structure? We
+            # can't have the ick case with it being already transformed now
+            # because the same disjunct can't be in multiple disjunctions... so
+            # are we safe?
+            #try:
+            disjunctVars = varsByDisjunct[disjunct] = ComponentSet()
+            for cons in disjunct.component_data_objects(
+                    Constraint,
+                    active = True,
+                    sort=SortComponents.deterministic,
+                    descend_into=Block):
+                # we aren't going to disaggregate fixed
+                # variables. This means there is trouble if they are
+                # unfixed later...
+                for var in EXPR.identify_variables(
+                        cons.body, include_fixed=False):
+                    # Note the use of a list so that we will
+                    # eventually disaggregate the vars in a
+                    # deterministic order (the order that we found
+                    # them)
+                    disjunctVars.add(var)
+                    if var not in varOrder_set:
+                        varOrder.append(var)
+                        varOrder_set.add(var)
+            # finally:
+            #     if not_active:
+            #         disjunct._deactivate_without_fixing_indicator()
 
         # We will only disaggregate variables that
         #  1) appear in multiple disjuncts, or
         #  2) are not contained in this disjunct, or
+        # [ESJ 10/18/2019]: I think this is going to happen implicitly 
+        # because we will just move them out of the danger zone:
         #  3) are not themselves disaggregated variables
         varSet = []
         localVars = ComponentMap((d,[]) for d in obj.disjuncts)
@@ -429,6 +419,9 @@ class ConvexHull_Transformation(Transformation):
                 varSet.append(var)
             elif self._contained_in(var, disjuncts[0]):
                 localVars[disjuncts[0]].append(var)
+            # [ESJ 10/18/2019] This is strange though because it means we
+            # shouldn't have a bug with double-disaggregating right now... And I
+            # thought we did. But this is also not my code.
             elif self._contained_in(var, transBlock):
                 # There is nothing to do here: these are already
                 # disaggregated vars that can/will be forced to 0 when
@@ -449,15 +442,16 @@ class ConvexHull_Transformation(Transformation):
         for i, var in enumerate(varSet):
             disaggregatedExpr = 0
             for disjunct in obj.disjuncts:
-                if 'chull' not in disjunct._gdp_transformation_info:
+                if disjunct._transformation_block is None:
                     if not disjunct.indicator_var.is_fixed() \
                             or value(disjunct.indicator_var) != 0:
                         raise RuntimeError(
                             "GDP chull: disjunct was not relaxed, but "
                             "does not appear to be correctly deactivated.")
                     continue
-                disaggregatedVar = disjunct._gdp_transformation_info['chull'][
-                    'disaggregatedVars'][var]
+
+                disaggregatedVar = transBlock._disaggregatedVarMap[disjunct][
+                    'disaggregatedVar'][var]
                 disaggregatedExpr += disaggregatedVar
             if type(index) is tuple:
                 consIdx = index + (i,)
@@ -470,20 +464,7 @@ class ConvexHull_Transformation(Transformation):
                 consIdx,
                 var == disaggregatedExpr)
 
-
     def _transform_disjunct(self, obj, transBlock, varSet, localVars):
-        if hasattr(obj, "_gdp_transformation_info"):
-            infodict = obj._gdp_transformation_info
-            # If the user has something with our name that is not a dict, we
-            # scream. If they have a dict with this name then we are just going
-            # to use it...
-            if type(infodict) is not dict:
-                raise GDP_Error(
-                    "Disjunct %s contains an attribute named "
-                    "_gdp_transformation_info. The transformation requires "
-                    "that it can create this attribute!" % obj.name)
-        else:
-            infodict = obj._gdp_transformation_info = {}
         # deactivated means either we've already transformed or user deactivated
         if not obj.active:
             if obj.indicator_var.is_fixed():
@@ -496,42 +477,35 @@ class ConvexHull_Transformation(Transformation):
                         "The disjunct %s is deactivated, but the "
                         "indicator_var is fixed to %s. This makes no sense."
                         % ( obj.name, value(obj.indicator_var) ))
-            if not infodict.get('relaxed', False):
+            if obj._transformation_block is None:
                 raise GDP_Error(
                     "The disjunct %s is deactivated, but the "
                     "indicator_var is not fixed and the disjunct does not "
-                    "appear to have been relaxed. This makes no sense."
+                    "appear to have been relaxed. This makes no sense. "
+                    "(If the intent is to deactivate the disjunct, fix its "
+                    "indicator_var to 0.)"
                     % ( obj.name, ))
 
-        if 'chull' in infodict:
-            # we've transformed it (with CHull), so don't do it again.
-            return
+        if not obj._transformation_block is None:
+            # we've transformed it, which means this is the second time it's
+            # appearing in a Disjunction
+            raise GDP_Error(
+                    "The disjunct %s has been transformed, but a disjunction "
+                    "it appears in has not. Putting the same disjunct in "
+                    "multiple disjunctions is not supported." % obj.name)
 
         # add reference to original disjunct to info dict on
         # transformation block
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
-        relaxationBlockInfo = relaxationBlock._gdp_transformation_info = {
-            'src': obj,
-            'srcVars': ComponentMap(),
-            'srcConstraints': ComponentMap(),
-            'boundConstraintToSrcVar': ComponentMap(),
+        # add mappings (so we'll know we've relaxed)
+        obj._transformation_block = weakref_ref(relaxationBlock)
+        relaxationBlock._srcDisjunct = weakref_ref(obj)
+        # add this disjunct to the mapping on transBlock
+        transBlock._disaggregatedVarMap[obj] = {
+            'srcVar': ComponentMap(),
+            'disaggregatedVar': ComponentMap(),
         }
-        infodict['chull'] = chull = {
-            'relaxationBlock': relaxationBlock,
-            'relaxedConstraints': ComponentMap(),
-            'disaggregatedVars': ComponentMap(),
-            'bigmConstraints': ComponentMap(),
-        }
-
-        # if this is a disjunctData from an indexed disjunct, we are
-        # going to want to check at the end that the container is
-        # deactivated if everything in it is. So we save it in our
-        # dictionary of things to check if it isn't there already.
-        disjParent = obj.parent_component()
-        if disjParent.is_indexed() and \
-           disjParent not in transBlock.disjContainers:
-            transBlock.disjContainers.add(disjParent)
 
         # add the disaggregated variables and their bigm constraints
         # to the relaxationBlock
@@ -554,10 +528,14 @@ class ConvexHull_Transformation(Transformation):
                 relaxationBlock, 
                 var.getname(fully_qualified=False, name_buffer=NAME_BUFFER),
             )
-            relaxationBlock.add_component(
-                disaggregatedVarName, disaggregatedVar)
-            chull['disaggregatedVars'][var] = disaggregatedVar
-            relaxationBlockInfo['srcVars'][disaggregatedVar] = var
+            relaxationBlock.add_component( disaggregatedVarName,
+                                           disaggregatedVar)
+            # store the mappings from variables to their disaggregated selves on
+            # the transformation block.
+            transBlock._disaggregatedVarMap[obj][
+                'disaggregatedVar'][var] = disaggregatedVar
+            transBlock._disaggregatedVarMap[obj][
+                'srcVar'][disaggregatedVar] = var
 
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(
@@ -568,9 +546,11 @@ class ConvexHull_Transformation(Transformation):
             if ub:
                 bigmConstraint.add(
                     'ub', disaggregatedVar <= obj.indicator_var*ub)
-            chull['bigmConstraints'][var] = bigmConstraint
-            relaxationBlockInfo['boundConstraintToSrcVar'][bigmConstraint] = var
 
+            transBlock._bigMConstraintMap[
+                'bigmConstraint'][var] = bigmConstraint
+            transBlock._bigMConstraintMap['srcVar'][bigmConstraint] = var
+            
         for var in localVars:
             lb = var.lb
             ub = var.ub
@@ -596,51 +576,121 @@ class ConvexHull_Transformation(Transformation):
             relaxationBlock.add_component(conName, bigmConstraint)
             bigmConstraint.add('lb', obj.indicator_var*lb <= var)
             bigmConstraint.add('ub', var <= obj.indicator_var*ub)
-            chull['bigmConstraints'][var] = bigmConstraint
-            relaxationBlockInfo['boundConstraintToSrcVar'][bigmConstraint] = var
 
+            transBlock._bigMConstraintMap[
+                'bigmConstraint'][var] = bigmConstraint
+            transBlock._bigMConstraintMap['srcVar'][bigmConstraint] = var
+            
         var_substitute_map = dict((id(v), newV) for v, newV in
-                                  iteritems(chull['disaggregatedVars']))
+                                  iteritems(transBlock._disaggregatedVarMap[
+                                      obj]['disaggregatedVar']))
         zero_substitute_map = dict((id(v), ZeroConstant) for v, newV in
-                                   iteritems(chull['disaggregatedVars']))
+                                   iteritems(transBlock._disaggregatedVarMap[
+                                       obj]['disaggregatedVar']))
         zero_substitute_map.update((id(v), ZeroConstant)
                                    for v in localVars)
 
         # Transform each component within this disjunct
-        self._transform_block_components(obj, obj, infodict, var_substitute_map,
+        self._transform_block_components(obj, obj, var_substitute_map,
                                          zero_substitute_map)
 
-        # deactivate disjunct so we know we've relaxed it
+        # deactivate disjunct so writers can be happy
         obj._deactivate_without_fixing_indicator()
-        infodict['relaxed'] = True
 
+    def _transform_block_components( self, block, disjunct, var_substitute_map,
+                                     zero_substitute_map):
+        # We first need to find any transformed disjunctions that might be here
+        # because we need to move their transformation blocks up onto the parent
+        # block before we transform anything else on this block 
+        # TODO: this is copied from BigM... This stuff should move to util!
+        destinationBlock = disjunct._transformation_block().parent_block()
+        for obj in block.component_data_objects(
+                Disjunction, 
+                sort=SortComponents.deterministic, 
+                descend_into=(Block)):
+            if not obj.algebraic_constraint:
+                # This could be bad if it's active since that means its
+                # untransformed, but we'll wait to yell until the next loop
+                continue
+            # get this disjunction's relaxation block.
+            transBlock = None
+            for d in obj.disjuncts:
+                if d._transformation_block:
+                    transBlock = d._transformation_block().parent_block()
+                    # We found it, no need to keep looking
+                    break
+            if transBlock is None:
+                raise GDP_Error(
+                    "Found transformed disjunction %s on disjunt %s, "
+                    "but none of its disjuncts have been transformed. "
+                    "This is very strange." % (obj.name, disjunct.name))
+            # move transBlock up to parent component
+            self._transfer_transBlock_data(transBlock, destinationBlock)
+            # delete the entire transformed disjunct container:
+            del transBlock
 
-    def _transform_block_components(
-            self, block, disjunct, infodict,
-            var_substitute_map, zero_substitute_map):
         # Look through the component map of block and transform
         # everything we have a handler for. Yell if we don't know how
         # to handle it.
         for name, obj in list(iteritems(block.component_map())):
-            if hasattr(obj, 'active') and not obj.active:
+            # Note: This means non-ActiveComponent types cannot have handlers
+            if not hasattr(obj, 'active') or not obj.active:
                 continue
             handler = self.handlers.get(obj.type(), None)
             if not handler:
                 if handler is None:
                     raise GDP_Error(
                         "No chull transformation handler registered "
-                        "for modeling components of type %s" % obj.type() )
+                        "for modeling components of type %s. If your " 
+                        "disjuncts contain non-GDP Pyomo components that "
+                        "require transformation, please transform them first."
+                        % obj.type() )
                 continue
             # obj is what we are transforming, we pass disjunct
             # through so that we will have access to the indicator
             # variables down the line.
-            handler(obj, disjunct, infodict, var_substitute_map,
-                    zero_substitute_map)
+            handler(obj, disjunct, var_substitute_map, zero_substitute_map)
 
+    def _transfer_transBlock_data(self, fromBlock, toBlock):
+        # We know that we have a list of transformed disjuncts on both. We need
+        # to move those over. Then there might be constraints on the block also
+        # (at this point only the diaggregation constraints from chull,
+        # but... I'll leave it general for now.)
+        disjunctList = toBlock.relaxedDisjuncts
+        for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
+            # I think this should work when #1106 is resolved:
+            # disjunctList[len(disjunctList)] = disjunctBlock
+            # newblock = disjunctList[len(disjunctList)-1]
 
-    def _warn_for_active_disjunction(
-            self, disjunction, disjunct, infodict, var_substitute_map,
-            zero_substitute_map):
+            # HACK in the meantime:
+            newblock = disjunctList[len(disjunctList)]
+            self._copy_to_block(disjunctBlock, newblock)
+
+            # update the mappings
+            original = disjunctBlock._srcDisjunct()
+            original._transformation_block = weakref_ref(newblock)
+            newblock._srcDisjunct = weakref_ref(original)
+
+        # move any constraints and variables. I'm assuming they are all just on
+        # the transformation block right now, because that is in our control and
+        # I can't think why we would do anything messier at the moment. (And I
+        # don't want to descend into Blocks because we already handled the
+        # above).
+        for cons in fromBlock.component_objects((Constraint, Var)):
+            fromBlock.del_component(cons)
+            toBlock.add_component(unique_component_name( toBlock, cons.name),
+                                  cons)
+
+    def _copy_to_block(self, oldblock, newblock):
+        for obj in oldblock.component_objects(Constraint):
+            # [ESJ 07/18/2019] This shouldn't actually matter because we are
+            # deleting the whole old block anyway, but it is to keep pyomo from
+            # getting upset about the same component living on multiple blocks
+            oldblock.del_component(obj)
+            newblock.add_component(obj.name, obj)
+
+    def _warn_for_active_disjunction( self, disjunction, disjunct,
+                                      var_substitute_map, zero_substitute_map):
         # this should only have gotten called if the disjunction is active
         assert disjunction.active
         problemdisj = disjunction
@@ -651,41 +701,31 @@ class ConvexHull_Transformation(Transformation):
                     # it specifically.
                     problemdisj = disjunction[i]
                     break
-            # None of the _DisjunctionDatas were actually active. We
-            # are OK and we can deactivate the container.
-            else:
-                disjunction.deactivate()
-                return
+            
         parentblock = problemdisj.parent_block()
         # the disjunction should only have been active if it wasn't transformed
         _probDisjName = problemdisj.getname(
             fully_qualified=True, name_buffer=NAME_BUFFER)
-        assert (not hasattr(parentblock, "_gdp_transformation_info")) or \
-            _probDisjName not in parentblock._gdp_transformation_info
+        
+        assert problemdisj.algebraic_constraint is None
         raise GDP_Error("Found untransformed disjunction %s in disjunct %s! "
                         "The disjunction must be transformed before the "
                         "disjunct. If you are using targets, put the "
                         "disjunction before the disjunct in the list." \
                         % (_probDisjName, disjunct.name))
 
-
-    def _warn_for_active_disjunct(
-            self, innerdisjunct, outerdisjunct, infodict, var_substitute_map,
-            zero_substitute_map):
+    def _warn_for_active_disjunct( self, innerdisjunct, outerdisjunct,
+                                   var_substitute_map, zero_substitute_map):
         assert innerdisjunct.active
         problemdisj = innerdisjunct
         if innerdisjunct.is_indexed():
+            # ESJ: This is different from bigm... Probably this one is right...
             for i in sorted(iterkeys(innerdisjunct)):
                 if innerdisjunct[i].active:
                     # This is shouldn't be true, we will complain about it.
                     problemdisj = innerdisjunct[i]
                     break
-            # None of the _DisjunctDatas were actually active, so we
-            # are fine and we can deactivate the container.
-            else:
-                # HACK: See above about _deactivate_without_fixing_indicator
-                ActiveComponent.deactivate(innerdisjunct)
-                return
+            
         raise GDP_Error("Found active disjunct {0} in disjunct {1}! Either {0} "
                         "is not in a disjunction or the disjunction it is in "
                         "has not been transformed. {0} needs to be deactivated "
@@ -693,25 +733,25 @@ class ConvexHull_Transformation(Transformation):
                         "transformed.".format(problemdisj.name,
                                               outerdisjunct.name))
 
-
-    def _transform_block_on_disjunct(
-            self, block, disjunct, infodict, var_substitute_map,
-            zero_substitute_map):
+    # ESJ: Why is this different from bigm??
+    def _transform_block_on_disjunct( self, block, disjunct, var_substitute_map,
+                                      zero_substitute_map):
         # We look through everything on the component map of the block
         # and transform it just as we would if it was on the disjunct
         # directly.  (We are passing the disjunct through so that when
-        # we find constraints, _xform_constraint will have access to
+        # we find constraints, _transform_constraint will have access to
         # the correct indicator variable.
-        self._transform_block_components(
-            block, disjunct, infodict, var_substitute_map, zero_substitute_map)
+        self._transform_block_components( block, disjunct, var_substitute_map,
+                                          zero_substitute_map)
 
 
-    def _xform_constraint(self, obj, disjunct, infodict, var_substitute_map,
+    def _transform_constraint(self, obj, disjunct, var_substitute_map,
                           zero_substitute_map):
         # we will put a new transformed constraint on the relaxation block.
-        relaxationBlock = infodict['chull']['relaxationBlock']
+        relaxationBlock = disjunct._transformation_block()
         transBlock = relaxationBlock.parent_block()
-        varMap = infodict['chull']['disaggregatedVars']
+        varMap = transBlock._disaggregatedVarMap[disjunct]['disaggregatedVar']
+        constraintMap = transBlock._constraintMap
 
         # Though rare, it is possible to get naming conflicts here
         # since constraints from all blocks are getting moved onto the
@@ -731,13 +771,9 @@ class ConvexHull_Transformation(Transformation):
             newConstraint = Constraint(transBlock.lbub)
         relaxationBlock.add_component(name, newConstraint)
         # add mapping of original constraint to transformed constraint
-        # in transformation info dictionary
-        infodict['chull']['relaxedConstraints'][obj] = newConstraint
-        # add mapping of transformed constraint back to original constraint (we
-        # know that the info dict is already created because this only got
-        # called if we were transforming a disjunct...)
-        relaxationBlock._gdp_transformation_info['srcConstraints'][
-            newConstraint] = obj
+        constraintMap['transformedConstraint'][obj] = newConstraint
+        # add mapping of transformed constraint back to original constraint
+        constraintMap['srcConstraint'][newConstraint] = obj
 
         for i in sorted(iterkeys(obj)):
             c = obj[i]
@@ -841,3 +877,93 @@ class ConvexHull_Transformation(Transformation):
                     newConstraint.add((i, 'ub'), newConsExpr)
                 else:
                     newConstraint.add('ub', newConsExpr)
+
+    # TODO: Oh... I think these methods should be in util, some of them. They
+    # are the same as bigm
+    def get_src_disjunct(self, transBlock):
+        if not hasattr(transBlock, '_srcDisjunct') or \
+           not type(transBlock._srcDisjunct) is weakref_ref:
+            raise GDP_Error("Block %s doesn't appear to be a transformation "
+                            "block for a disjunct. No source disjunct found." 
+                            % transBlock.name)
+        return transBlock._srcDisjunct()
+
+    def get_src_disjunction(self, xor_constraint):
+        m = xor_constraint.model()
+        for disjunction in m.component_data_objects(Disjunction):
+            if disjunction._algebraic_constraint:
+                if disjunction._algebraic_constraint() is xor_constraint:
+                    return disjunction
+        raise GDP_Error("It appears that %s is not an XOR or OR constraint "
+                        "resulting from transforming a Disjunction."
+                        % xor_constraint.name)
+
+    # TODO: Let's make sure that we map constraints the same way that we do in
+    # bigm because it would be kind of insane not to (but I don't think that I
+    # have done it yet)
+    def get_src_constraint(self, transformedConstraint):
+        transBlock = transformedConstraint.parent_block()
+        # This should be our block, so if it's not, the user messed up and gave
+        # us the wrong thing. If they happen to also have a _constraintMap then
+        # the world is really against us.
+        if not hasattr(transBlock, "_constraintMap"):
+            raise GDP_Error("Constraint %s is not a transformed constraint" 
+                            % transformedConstraint.name)
+        return transBlock._constraintMap['srcConstraints'][transformedConstraint]
+
+    def get_transformed_constraint(self, srcConstraint):
+        # We are going to have to traverse up until we find the disjunct this
+        # constraint lives on
+        parent = srcConstraint.parent_block()
+        # [ESJ 08/06/2019] I actually don't know how to do this prettily...
+        while not type(parent) in (_DisjunctData, SimpleDisjunct):
+            parent = parent.parent_block()
+            if parent is None:
+                raise GDP_Error(
+                    "Constraint %s is not on a disjunct and so was not "
+                    "transformed" % srcConstraint.name)
+        transBlock = parent._transformation_block
+        if transBlock is None:
+            raise GDP_Error("Constraint %s is on a disjunct which has not been "
+                            "transformed" % srcConstraint.name)
+        # if it's not None, it's the weakref we wanted.
+        transBlock = transBlock()
+        if hasattr(transBlock, "_constraintMap") and transBlock._constraintMap[
+                'transformedConstraints'].get(srcConstraint):
+            return transBlock._constraintMap['transformedConstraints'][
+                srcConstraint]
+        raise GDP_Error("Constraint %s has not been transformed." 
+                        % srcConstraint.name)
+
+    ## Beginning here, these are unique to chull
+
+    def get_disaggregated_vars(self, v, disjunct):
+        # Retrieve the disaggregated var corresponding for the specified disjunct
+        if disjunct._transformation_block is None:
+            raise GDP_Error("Disjunct %s has not been transformed" 
+                            % disjunct.name)
+        transBlock = disjunct._transformation_block()
+        try:
+            return transBlock._disaggregatedVarMap[disjunct][
+                'disaggregatedVar'][v]
+        # ESJ TODO: This won't run as written, I don't remember how to keep the
+        # message, so this is just a guess
+        except KeyError as err:
+            raise GDP_Error("Cannot find disaggregated variable corresponding "
+                            "to %s on disjunct %s.\n%s" % (v.name, disjunct.name,
+                                                           err.message))
+
+    def get_src_var(self, disaggregated_var):
+        transBlock = disaggregated_var.parent_block()
+        try:
+            src_disjunct = transBlock._srcDisjunct()
+        except:
+            raise GDP_Error("%s does not appear to be a disaggregated variable"
+                            % disaggregated_var.name)
+        try:
+            return transBlock._disaggregatedVarMap[src_disjunct]['srcVar'][
+                disaggregated_var]
+        except KeyError as err:
+            raise GDP_Error("Cannot find source variable corresponding to "
+                            "disaggregated variable %s.\n%s" 
+                            % (disaggregated_var.name, err.message))

@@ -364,7 +364,7 @@ class BigM_Transformation(Transformation):
                     "indicator_var to 0.)"
                     % ( obj.name, ))
                 
-        if obj._transformation_block is not None:
+        if not obj._transformation_block is None:
             # we've transformed it, which means this is the second time it's
             # appearing in a Disjunction
             raise GDP_Error(
@@ -432,9 +432,6 @@ class BigM_Transformation(Transformation):
             handler = self.handlers.get(obj.type(), None)
             if not handler:
                 if handler is None:
-                    # TODO: It is here that we need to make sure we are only
-                    # yelling of the offender is an ActiveComponent, right?
-                    # (Need to write a test for this when you understand it...)
                     raise GDP_Error(
                         "No BigM transformation handler registered "
                         "for modeling components of type %s. If your " 
@@ -472,7 +469,7 @@ class BigM_Transformation(Transformation):
         # can't think why we would do anything messier at the moment. (And I
         # don't want to descend into Blocks because we already handled the
         # above).
-        for cons in fromBlock.component_data_objects(Constraint):
+        for cons in fromBlock.component_objects(Constraint):
             # (This is not going to get tested until this same process is used
             # in chull.)
             toBlock.add_component(unique_component_name(
