@@ -89,9 +89,6 @@ class _DisjunctData(_BlockData):
         # transformed. None indicates it hasn't been transformed.
         self._transformation_block = None
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
-        _BlockData.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
-
     def set_value(self, val):
         _indicator_var = self.indicator_var
         # if _transformation_block is not None we should yell. else call base
@@ -194,9 +191,6 @@ class SimpleDisjunct(_DisjunctData, Disjunct):
         _DisjunctData.__init__(self, self)
         Disjunct.__init__(self, *args, **kwds)
         self._data[None] = self
-
-    def pprint(self, ostream=None, verbose=False, prefix=""):
-        Disjunct.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
 
 
 class IndexedDisjunct(Disjunct):

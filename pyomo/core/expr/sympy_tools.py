@@ -62,6 +62,7 @@ try:
         sympy.ceiling: lambda x: current.ceil(x),
         sympy.floor: lambda x: current.floor(x),
         sympy.sqrt: lambda x: current.sqrt(x),
+        sympy.Abs: lambda x: abs(x),
         sympy.Derivative: _nondifferentiable,
         sympy.Tuple: lambda *x: x,
     }
@@ -108,7 +109,10 @@ class PyomoSympyBimap(object):
     def getSympySymbol(self, pyomo_object):
         if pyomo_object in self.pyomo2sympy:
             return self.pyomo2sympy[pyomo_object]
-        sympy_obj = sympy.Symbol("x%d" % self.i)
+        # Pyomo currently ONLY supports Real variables (not complex
+        # variables).  If that ever changes, then we will need to
+        # revisit hard-coding the symbol type here
+        sympy_obj = sympy.Symbol("x%d" % self.i, real=True)
         self.i += 1
         self.pyomo2sympy[pyomo_object] = sympy_obj
         self.sympy2pyomo[sympy_obj] = pyomo_object

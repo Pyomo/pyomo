@@ -12,15 +12,16 @@ __all__ = ['Component', 'ComponentUID', 'name']
 
 import logging
 import six
-from weakref import ref as weakref_ref
 import sys
 from copy import deepcopy
 from pickle import PickleError
+from six import iteritems, string_types
+from weakref import ref as weakref_ref
+
+from pyutilib.misc.indent_io import StreamIndenter
 
 import pyomo.common
-from pyomo.core.base.misc import tabular_writer
-
-from six import iteritems, string_types
+from pyomo.core.base.misc import tabular_writer, sorted_robust
 
 logger = logging.getLogger('pyomo.core')
 
@@ -70,13 +71,15 @@ def cname(*args, **kwds):
 
 
 class _ComponentBase(object):
-    """An abstract base class for Component and ComponentData
+    """A base class for Component and ComponentData
 
     This class defines some fundamental methods and properties that are
     expected for all Component-like objects.  They are centralized here
     to avoid repeated code in the Component and ComponentData classes.
     """
     __slots__ = ()
+
+    _PPRINT_INDENT = "    "
 
     def __deepcopy__(self, memo):
         # The problem we are addressing is when we want to clone a
@@ -225,6 +228,30 @@ property, which returns the fully qualified component name.  The
 context of the immediate parent container.""")
         return self.getname(*args, **kwds)
 
+    def pprint(self, ostream=None, verbose=False, prefix=""):
+        """Print component information
+
+        Note that this method is generally only reachable through
+        ComponentData objects in an IndexedComponent container.
+        Components, including unindexed Component derivatives and both
+        scalar and indexed IndexedComponent derivatives will see
+        :py:meth:`Component.pprint()`
+        """
+        comp = self.parent_component()
+        _attr, _data, _header, _fcn = comp._pprint()
+        if isinstance(type(_data), six.string_types):
+            # If the component _pprint only returned a pre-formatted
+            # result, then we have no way to only emit the information
+            # for this _data object.
+            _name = comp.local_name
+        else:
+            # restrict output to only this data object
+            _data = iter( ((self.index(), self),) )
+            _name = "{Member of %s}" % (comp.local_name,)
+        self._pprint_base_impl(
+            ostream, verbose, prefix, _name, comp.doc,
+            comp.is_constructed(), _attr, _data, _header, _fcn)
+
     @property
     def name(self):
         """Get the fully qualifed component name."""
@@ -259,6 +286,61 @@ context of the immediate parent container.""")
             "Setting the 'active' flag on a component that does not "
             "support deactivation is not allowed.")
 
+    def _pprint_base_impl(self, ostream, verbose, prefix, _name, _doc,
+                          _constructed, _attr, _data, _header, _fcn):
+        if ostream is None:
+            ostream = sys.stdout
+        if prefix:
+            ostream = StreamIndenter(ostream, prefix)
+
+        # FIXME: HACK for backwards compatability with suppressing the
+        # header for the top block
+        if not _attr and self.parent_block() is None:
+            _name = ''
+
+        # We only indent everything if we printed the header
+        if _attr or _name or _doc:
+            ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
+            # The first line should be a hanging indent (i.e., not indented)
+            ostream.newline = False
+
+        if _name:
+            ostream.write(_name+" : ")
+        if _doc:
+            ostream.write(_doc+'\n')
+        if _attr:
+            ostream.write(", ".join("%s=%s" % (k,v) for k,v in _attr))
+        if _attr or _name or _doc:
+            ostream.write("\n")
+
+        if not _constructed:
+            # HACK: for backwards compatability, Abstract blocks will
+            # still print their assigned components.  Should we instead
+            # always pprint unconstructed components (possibly
+            # suppressing the table header if the table is empty)?
+            if self.parent_block() is not None:
+                ostream.write("Not constructed\n")
+                return
+
+        if type(_fcn) is tuple:
+            _fcn, _fcn2 = _fcn
+        else:
+            _fcn2 = None
+
+        if _header is not None:
+            if _fcn2 is not None:
+                _data_dict = dict(_data)
+                _data = iteritems(_data_dict)
+            tabular_writer( ostream, '', _data, _header, _fcn )
+            if _fcn2 is not None:
+                for _key in sorted_robust(_data_dict):
+                    _fcn2(ostream, _key, _data_dict[_key])
+        elif _fcn is not None:
+            _data_dict = dict(_data)
+            for _key in sorted_robust(_data_dict):
+                _fcn(ostream, _key, _data_dict[_key])
+        elif _data is not None:
+            ostream.write(_data)
 
 
 class Component(_ComponentBase):
@@ -379,23 +461,10 @@ class Component(_ComponentBase):
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
         """Print component information"""
-        if ostream is None:
-            ostream = sys.stdout
-        tab="    "
-        ostream.write(prefix+self.local_name+" : ")
-        if self.doc is not None:
-            ostream.write(self.doc+'\n'+prefix+tab)
-
-        _attr, _data, _header, _fcn = self._pprint()
-
-        ostream.write(", ".join("%s=%s" % (k,v) for k,v in _attr))
-        ostream.write("\n")
-        if not self._constructed:
-            ostream.write(prefix+tab+"Not constructed\n")
-            return
-
-        if _data is not None:
-            tabular_writer( ostream, prefix+tab, _data, _header, _fcn )
+        self._pprint_base_impl(
+            ostream, verbose, prefix, self.local_name, self.doc,
+            self.is_constructed(), *self._pprint()
+        )
 
     def display(self, ostream=None, verbose=False, prefix=""):
         self.pprint(ostream=ostream, prefix=prefix)

@@ -17,6 +17,10 @@ from pyomo.common import DeveloperError
 import pyomo.core.base._pyomo
 from pyomo.core.base.block import generate_cuid_names
 from pyomo.environ import *
+try:
+    from StringIO import StringIO  # python 2
+except ImportError:
+    from io import StringIO  # python 3
 
 
 class TestComponent(unittest.TestCase):
@@ -83,6 +87,17 @@ class TestComponent(unittest.TestCase):
         self.assertEqual(
             m.b[2].c[1,3].getname(fully_qualified=True, name_buffer=cache),
             "b[2].c[1,3]")
+
+    def test_component_data_pprint(self):
+        m = ConcreteModel()
+        m.a = Set(initialize=[1, 2, 3], ordered=True)
+        m.x = Var(m.a)
+        stream = StringIO()
+        m.x[2].pprint(ostream=stream)
+        correct_s = '{Member of x} : Size=3, Index=a\n    ' \
+                    'Key : Lower : Value : Upper : Fixed : Stale : Domain\n      ' \
+                    '2 :  None :  None :  None : False :  True :  Reals\n'
+        self.assertEqual(correct_s, stream.getvalue())
 
 
 class TestComponentUID(unittest.TestCase):

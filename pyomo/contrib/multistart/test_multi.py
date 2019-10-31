@@ -1,4 +1,5 @@
 import logging
+from itertools import product
 
 from six import StringIO
 from six.moves import range
@@ -6,6 +7,7 @@ from six.moves import range
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.multistart.high_conf_stop import should_stop
+from pyomo.contrib.multistart.reinit import strategies
 from pyomo.environ import (
     ConcreteModel, Constraint, NonNegativeReals, Objective, SolverFactory, Var,
     maximize, sin, value
@@ -21,64 +23,19 @@ class MultistartTests(unittest.TestCase):
     asserts are inequalities.
     """
 
-    # test standard random restarts
-    def test_as_good_with_iteration_rand(self):
-        # initialize model with data
-        m = build_model()
+    def test_as_good_as_standard(self):
+        standard_model = build_model()
+        SolverFactory('ipopt').solve(standard_model)
+        standard_objective_value = value(next(standard_model.component_data_objects(Objective, active=True)))
 
-        # create ipopt solver
-        optsolver = SolverFactory('ipopt')
-        optsolver.solve(m)
-        for i in range(10):
-            m2 = build_model()
-            SolverFactory('multistart').solve(m2, iterations=10)
-            m_objectives = m.component_data_objects(Objective, active=True)
-            m_obj = next(m_objectives, None)
-            m2_objectives = m2.component_data_objects(Objective, active=True)
-            m2_obj = next(m2_objectives,None)
-            self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
-            del m2
-
-    def test_as_good_with_iteration_other_strategies(self):
-        """Test that other strategies do no worse"""
-        # initialize model with data
-        m = build_model()
-
-        # create ipopt solver
-        SolverFactory('ipopt').solve(m)
-        for i in range(10):
-            m2 = build_model()
-            SolverFactory('multistart').solve(
-                m2, iterations=10, strategy='rand_distributed')
-            m_objectives = m.component_data_objects(Objective, active=True)
-            m_obj = next(m_objectives, None)
-            m2_objectives = m2.component_data_objects(Objective, active=True)
-            m2_obj = next(m2_objectives,None)
-            #Assert that multistart solver does no worse than standard solver
-            self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
-            del m2
-        for i in range(10):
-            m2 = build_model()
-            SolverFactory('multistart').solve(
-                m2, iterations=10, strategy='midpoint_guess_and_bound')
-            m_objectives = m.component_data_objects(Objective, active=True)
-            m_obj = next(m_objectives, None)
-            m2_objectives = m2.component_data_objects(Objective, active=True)
-            m2_obj = next(m2_objectives,None)
-            #Assert that multistart solver does no worse than standard solver
-            self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
-            del m2
-        for i in range(10):
-            m2 = build_model()
-            SolverFactory('multistart').solve(
-                m2, iterations=10, strategy='rand_guess_and_bound')
-            m_objectives = m.component_data_objects(Objective, active=True)
-            m_obj = next(m_objectives, None)
-            m2_objectives = m2.component_data_objects(Objective, active=True)
-            m2_obj = next(m2_objectives,None)
-            #Assert that multistart solver does no worse than standard solver
-            self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
-            del m2
+        fresh_model = build_model()
+        multistart_iterations = 10
+        test_trials = 10
+        for strategy, _ in product(strategies.keys(), range(test_trials)):
+            m2 = fresh_model.clone()
+            SolverFactory('multistart').solve(m2, iterations=multistart_iterations, strategy=strategy)
+            clone_objective_value = value(next(m2.component_data_objects(Objective, active=True)))
+            self.assertGreaterEqual(clone_objective_value, standard_objective_value)  # assumes maximization
 
     def test_as_good_with_HCS_rule(self):
         """test that the high confidence stopping rule with very lenient
@@ -97,7 +54,7 @@ class MultistartTests(unittest.TestCase):
             m_obj = next(m_objectives, None)
             m2_objectives = m2.component_data_objects(Objective, active=True)
             m2_obj = next(m2_objectives,None)
-            #Assert that multistart solver does no worse than standard solver
+            # Assert that multistart solver does no worse than standard solver
             self.assertTrue((value(m2_obj.expr)) >= (value(m_obj.expr) - .001))
             del m2
 
@@ -108,7 +65,7 @@ class MultistartTests(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
             SolverFactory('multistart').solve(m)
-            self.assertIn("Unable to reinitialize value of unbounded "
+            self.assertIn("Skipping reinitialization of unbounded "
                           "variable x with bounds (0, None).",
                           output.getvalue().strip())
 
@@ -162,6 +119,7 @@ class MultistartTests(unittest.TestCase):
         m.o = Objective(expr = 5)
         with self.assertRaisesRegexp(RuntimeError, "constant objective"):
             SolverFactory('multistart').solve(m)
+
 
 def build_model():
     """Simple non-convex model with many local minima"""

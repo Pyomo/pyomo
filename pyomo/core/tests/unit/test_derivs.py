@@ -97,6 +97,15 @@ class TestDerivs(unittest.TestCase):
         self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
+    def test_log10(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var(initialize=2.0)
+        e = pe.log10(m.x)
+        derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
+
     def test_sin(self):
         m = pe.ConcreteModel()
         m.x = pe.Var(initialize=2.0)
