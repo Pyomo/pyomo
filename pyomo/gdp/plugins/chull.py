@@ -24,6 +24,7 @@ from pyomo.core import (
     Any, RangeSet, Reals, value
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.gdp.disjunct import _DisjunctData, SimpleDisjunct
 from pyomo.gdp.util import clone_without_expression_components, target_list, \
     is_child_of
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
@@ -62,35 +63,21 @@ class ConvexHull_Transformation(Transformation):
         The targets to transform. This can be a block, disjunction, or a
         list of blocks and Disjunctions [default: the instance]
 
-    After transformation, every transformed disjunct will have a
-    "_gdp_transformation_info" dict containing 2 entries:
-
-        'relaxed': True,
-        'chull': {
-            'relaxationBlock': <block>,
-            'relaxedConstraints': ComponentMap(constraint: relaxed_constraint)
-            'disaggregatedVars': ComponentMap(var: list of disaggregated vars),
-            'bigmConstraints': ComponentMap(disaggregated var: bigM constraint),
-        }
-
-    In addition, any block or disjunct containing a relaxed disjunction
-    will have a "_gdp_transformation_info" dict with the following
-    entry:
-
-        'disjunction_or_constraint': <constraint>
-
-    Finally, the transformation will create a new Block with a unique
+    The transformation will create a new Block with a unique
     name beginning "_pyomo_gdp_chull_relaxation".  That Block will
     contain an indexed Block named "relaxedDisjuncts", which will hold
     the relaxed disjuncts.  This block is indexed by an integer
-    indicating the order in which the disjuncts were relaxed.  Each
-    block will have a "_gdp_transformation_info" dict with the following
-    entries:
+    indicating the order in which the disjuncts were relaxed.
+    Each block has a dictionary "_constraintMap":
+    
+        'srcConstraints': ComponentMap(<transformed constraint>:
+                                       <src constraint>)
+        'transformedConstraints': ComponentMap(<src constraint>:
+                                               <transformed constraint>)
 
-        'src': <source disjunct>
-        'srcVars': ComponentMap(disaggregated var: original var),
-        'srcConstraints': ComponentMap(relaxed_constraint: constraint)
-        'boundConstraintToSrcVar': ComponentMap(bigm_constraint: orig_var),
+    All transformed Disjuncts will have a pointer to the block their transformed
+    constraints are on, and all transformed Disjunctions will have a 
+    pointer to the corresponding OR or XOR constraint.
 
     """
 
@@ -256,16 +243,7 @@ class ConvexHull_Transformation(Transformation):
 
         # We'll store maps for disaggregated variables and constraints here 
 
-        # This will map each of the disjuncts to a dictionary of two maps: one
-        # from src to disaggregated and the other the other way
-        transBlock._disaggregatedVarMap = ComponentMap() # {
-            # 'srcVar': ComponentMap(),
-            # 'disaggregatedVar': ComponentMap(),
-            # }
-        transBlock._constraintMap = {
-            'srcConstraint': ComponentMap(),
-            'transformedConstraint': ComponentMap()
-        }
+        
         transBlock._bigMConstraintMap = {
             'srcVar': ComponentMap(),
             'bigmConstraint': ComponentMap(),
@@ -450,8 +428,8 @@ class ConvexHull_Transformation(Transformation):
                             "does not appear to be correctly deactivated.")
                     continue
 
-                disaggregatedVar = transBlock._disaggregatedVarMap[disjunct][
-                    'disaggregatedVar'][var]
+                disaggregatedVar = disjunct._transformation_block().\
+                                   _disaggregatedVarMap['disaggregatedVar'][var]
                 disaggregatedExpr += disaggregatedVar
             if type(index) is tuple:
                 consIdx = index + (i,)
@@ -498,14 +476,21 @@ class ConvexHull_Transformation(Transformation):
         # transformation block
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
-        # add mappings (so we'll know we've relaxed)
-        obj._transformation_block = weakref_ref(relaxationBlock)
-        relaxationBlock._srcDisjunct = weakref_ref(obj)
-        # add this disjunct to the mapping on transBlock
-        transBlock._disaggregatedVarMap[obj] = {
+        # add the map that will link back and forth between transformed
+        # constraints and their originals.
+        relaxationBlock._constraintMap = {
+            'srcConstraints': ComponentMap(),
+            'transformedConstraints': ComponentMap()
+        }
+        # Map between disaggregated variables for this disjunct and their
+        # originals
+        relaxationBlock._disaggregatedVarMap = {
             'srcVar': ComponentMap(),
             'disaggregatedVar': ComponentMap(),
         }
+        # add mappings (so we'll know we've relaxed)
+        obj._transformation_block = weakref_ref(relaxationBlock)
+        relaxationBlock._srcDisjunct = weakref_ref(obj)
 
         # add the disaggregated variables and their bigm constraints
         # to the relaxationBlock
@@ -532,10 +517,10 @@ class ConvexHull_Transformation(Transformation):
                                            disaggregatedVar)
             # store the mappings from variables to their disaggregated selves on
             # the transformation block.
-            transBlock._disaggregatedVarMap[obj][
-                'disaggregatedVar'][var] = disaggregatedVar
-            transBlock._disaggregatedVarMap[obj][
-                'srcVar'][disaggregatedVar] = var
+            relaxationBlock._disaggregatedVarMap['disaggregatedVar'][
+                var] = disaggregatedVar
+            relaxationBlock._disaggregatedVarMap['srcVar'][
+                disaggregatedVar] = var
 
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(
@@ -581,12 +566,12 @@ class ConvexHull_Transformation(Transformation):
                 'bigmConstraint'][var] = bigmConstraint
             transBlock._bigMConstraintMap['srcVar'][bigmConstraint] = var
             
-        var_substitute_map = dict((id(v), newV) for v, newV in
-                                  iteritems(transBlock._disaggregatedVarMap[
-                                      obj]['disaggregatedVar']))
-        zero_substitute_map = dict((id(v), ZeroConstant) for v, newV in
-                                   iteritems(transBlock._disaggregatedVarMap[
-                                       obj]['disaggregatedVar']))
+        var_substitute_map = dict((id(v), newV) for v, newV in iteritems(
+            relaxationBlock._disaggregatedVarMap['disaggregatedVar']))
+        zero_substitute_map = dict((id(v), ZeroConstant) for v, newV in \
+                                   iteritems(
+                                       relaxationBlock._disaggregatedVarMap[
+                                           'disaggregatedVar']))
         zero_substitute_map.update((id(v), ZeroConstant)
                                    for v in localVars)
 
@@ -750,8 +735,8 @@ class ConvexHull_Transformation(Transformation):
         # we will put a new transformed constraint on the relaxation block.
         relaxationBlock = disjunct._transformation_block()
         transBlock = relaxationBlock.parent_block()
-        varMap = transBlock._disaggregatedVarMap[disjunct]['disaggregatedVar']
-        constraintMap = transBlock._constraintMap
+        varMap = relaxationBlock._disaggregatedVarMap['disaggregatedVar']
+        constraintMap = relaxationBlock._constraintMap
 
         # Though rare, it is possible to get naming conflicts here
         # since constraints from all blocks are getting moved onto the
@@ -771,9 +756,9 @@ class ConvexHull_Transformation(Transformation):
             newConstraint = Constraint(transBlock.lbub)
         relaxationBlock.add_component(name, newConstraint)
         # add mapping of original constraint to transformed constraint
-        constraintMap['transformedConstraint'][obj] = newConstraint
+        constraintMap['transformedConstraints'][obj] = newConstraint
         # add mapping of transformed constraint back to original constraint
-        constraintMap['srcConstraint'][newConstraint] = obj
+        constraintMap['srcConstraints'][newConstraint] = obj
 
         for i in sorted(iterkeys(obj)):
             c = obj[i]
@@ -898,9 +883,6 @@ class ConvexHull_Transformation(Transformation):
                         "resulting from transforming a Disjunction."
                         % xor_constraint.name)
 
-    # TODO: Let's make sure that we map constraints the same way that we do in
-    # bigm because it would be kind of insane not to (but I don't think that I
-    # have done it yet)
     def get_src_constraint(self, transformedConstraint):
         transBlock = transformedConstraint.parent_block()
         # This should be our block, so if it's not, the user messed up and gave
@@ -937,22 +919,14 @@ class ConvexHull_Transformation(Transformation):
 
     ## Beginning here, these are unique to chull
 
-    def get_disaggregated_vars(self, v, disjunct):
-        # Retrieve the disaggregated var corresponding for the specified disjunct
+    def get_disaggregated_var(self, v, disjunct):
+        # Retrieve the disaggregated var corresponding to the specified disjunct
         if disjunct._transformation_block is None:
             raise GDP_Error("Disjunct %s has not been transformed" 
                             % disjunct.name)
         transBlock = disjunct._transformation_block()
-        try:
-            return transBlock._disaggregatedVarMap[disjunct][
-                'disaggregatedVar'][v]
-        # ESJ TODO: This won't run as written, I don't remember how to keep the
-        # message, so this is just a guess
-        except KeyError as err:
-            raise GDP_Error("Cannot find disaggregated variable corresponding "
-                            "to %s on disjunct %s.\n%s" % (v.name, disjunct.name,
-                                                           err.message))
-
+        return transBlock._disaggregatedVarMap['disaggregatedVar'][v]
+        
     def get_src_var(self, disaggregated_var):
         transBlock = disaggregated_var.parent_block()
         try:
@@ -960,10 +934,4 @@ class ConvexHull_Transformation(Transformation):
         except:
             raise GDP_Error("%s does not appear to be a disaggregated variable"
                             % disaggregated_var.name)
-        try:
-            return transBlock._disaggregatedVarMap[src_disjunct]['srcVar'][
-                disaggregated_var]
-        except KeyError as err:
-            raise GDP_Error("Cannot find source variable corresponding to "
-                            "disaggregated variable %s.\n%s" 
-                            % (disaggregated_var.name, err.message))
+        return transBlock._disaggregatedVarMap['srcVar'][disaggregated_var]

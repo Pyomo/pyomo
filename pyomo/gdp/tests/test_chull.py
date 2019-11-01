@@ -325,92 +325,58 @@ class TwoTermDisj(unittest.TestCase):
         # the disjuncts will always be transformed in the same order,
         # and d[0] goes first, so we can check in a loop.
         for i in [0,1]:
-            #infodict = disjBlock[i]._gdp_transformation_info
             self.assertIs(disjBlock[i]._srcDisjunct(), m.d[i])
             self.assertIs(chull.get_src_disjunct(disjBlock[i]), m.d[i])
 
-            # I'm not testing what's underneath for the moment, just want to
-            # make sure that the right stuff comes out
-            # TODO: you are here
-
-            self.assertIsInstance(infodict['srcConstraints'], ComponentMap)
-            self.assertIsInstance(infodict['srcVars'], ComponentMap)
-            self.assertIsInstance(
-                infodict['boundConstraintToSrcVar'], ComponentMap)
-
-            disjDict = m.d[i]._gdp_transformation_info
-            self.assertIsInstance(disjDict, dict)
-            self.assertEqual(sorted(iterkeys(disjDict)), ['chull','relaxed'])
-            self.assertTrue(disjDict['relaxed'])
-            self.assertIs(disjDict['chull']['relaxationBlock'], disjBlock[i])
-            disaggregatedVars = disjDict['chull']['disaggregatedVars']
-            self.assertIsInstance(disaggregatedVars, ComponentMap)
-            bigmConstraints = disjDict['chull']['bigmConstraints']
-            self.assertIsInstance(bigmConstraints, ComponentMap)
-            relaxedConstraints = disjDict['chull']['relaxedConstraints']
-            self.assertIsInstance(relaxedConstraints, ComponentMap)
-
     def test_transformed_constraint_mappings(self):
         m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.chull').apply_to(m)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
 
         # first disjunct
-        srcConsdict = disjBlock[0]._gdp_transformation_info['srcConstraints']
-        transConsdict = m.d[0]._gdp_transformation_info['chull'][
-            'relaxedConstraints']
-
-        self.assertEqual(len(srcConsdict), 1)
-        self.assertEqual(len(transConsdict), 1)
         orig1 = m.d[0].c
         trans1 = disjBlock[0].component("d[0].c")
-        self.assertIs(srcConsdict[trans1], orig1)
-        self.assertIs(transConsdict[orig1], trans1)
+        self.assertIs(chull.get_src_constraint(trans1), orig1)
+        self.assertIs(chull.get_transformed_constraint(orig1), trans1)
 
         # second disjunct
-        srcConsdict = disjBlock[1]._gdp_transformation_info['srcConstraints']
-        transConsdict = m.d[1]._gdp_transformation_info['chull'][
-            'relaxedConstraints']
-
-        self.assertEqual(len(srcConsdict), 3)
-        self.assertEqual(len(transConsdict), 3)
+        
         # first constraint
         orig1 = m.d[1].c1
         trans1 = disjBlock[1].component("d[1].c1")
-        self.assertIs(srcConsdict[trans1], orig1)
-        self.assertIs(transConsdict[orig1], trans1)
+        self.assertIs(chull.get_src_constraint(trans1), orig1)
+        self.assertIs(chull.get_transformed_constraint(orig1), trans1)
+        
         # second constraint
         orig2 = m.d[1].c2
         trans2 = disjBlock[1].component("d[1].c2")
-        self.assertIs(srcConsdict[trans2], orig2)
-        self.assertIs(transConsdict[orig2], trans2)
+        self.assertIs(chull.get_src_constraint(trans2), orig2)
+        self.assertIs(chull.get_transformed_constraint(orig2), trans2)
+        
         # third constraint
         orig3 = m.d[1].c3
         trans3 = disjBlock[1].component("d[1].c3")
-        self.assertIs(srcConsdict[trans3], orig3)
-        self.assertIs(transConsdict[orig3], trans3)
+        self.assertIs(chull.get_src_constraint(trans3), orig3)
+        self.assertIs(chull.get_transformed_constraint(orig3), trans3)
 
     def test_disaggregatedVar_mappings(self):
         m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.chull').apply_to(m)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
 
         for i in [0,1]:
-            srcVars = disjBlock[i]._gdp_transformation_info['srcVars']
-            disVars = m.d[i]._gdp_transformation_info['chull'][
-                'disaggregatedVars']
-            self.assertEqual(len(srcVars), 3)
-            self.assertEqual(len(disVars), 3)
-            # TODO: there has got to be better syntax for this??
             mappings = ComponentMap()
             mappings[m.w] = disjBlock[i].w
             mappings[m.y] = disjBlock[i].y
             mappings[m.x] = disjBlock[i].x
+
             for orig, disagg in iteritems(mappings):
-                self.assertIs(srcVars[disagg], orig)
-                self.assertIs(disVars[orig], disagg)
+                self.assertIs(chull.get_src_var(disagg), orig)
+                self.assertIs(chull.get_disaggregated_var(orig, m.d[i]), disagg)
 
     def test_bigMConstraint_mappings(self):
         m = models.makeTwoTermDisj_Nonlinear()
