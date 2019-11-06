@@ -282,6 +282,13 @@ class OptSolver(object):
         _raise_ephemeral_error('soln_file')
 
     @property
+    def temp_dir(self):
+        _raise_ephemeral_error('temp_dir')
+    @temp_dir.setter
+    def temp_dir(self, val):
+        _raise_ephemeral_error('temp_dir')
+
+    @property
     def log_file(self):
         _raise_ephemeral_error('log_file')
     @log_file.setter
@@ -361,6 +368,7 @@ class OptSolver(object):
         self._report_timing = False
         self._suffixes = []
         self._log_file = None
+        self._temp_dir = None
         self._soln_file = None
 
         # overridden by a solver plugin when it returns sparse results
@@ -653,6 +661,7 @@ class OptSolver(object):
     def _presolve(self, *args, **kwds):
 
         self._log_file                = kwds.pop("logfile", None)
+        self._temp_dir                = kwds.pop("tempdir", None)
         self._soln_file               = kwds.pop("solnfile", None)
         self._select_index            = kwds.pop("select", 0)
         self._load_solutions          = kwds.pop("load_solutions", True)
@@ -670,6 +679,7 @@ class OptSolver(object):
                 self._convert_problem(args,
                                       self._problem_format,
                                       self._valid_problem_formats,
+                                      temp_dir=self._temp_dir,
                                       **kwds)
             total_time = time.time() - write_start_time
             if self._report_timing:

@@ -232,7 +232,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             if self._warm_start_file_name is None:
                 assert not user_warmstart
                 self._warm_start_file_name = pyutilib.services.TempfileManager.\
-                                             create_tempfile(suffix = '.cplex.mst')
+                                             create_tempfile(suffix='.cplex.mst',
+                                                             dir=self._temp_dir)
 
         # let the base class handle any remaining keywords/actions.
         ILMLicensedSystemCallSolver._presolve(self, *args, **kwds)
@@ -287,7 +288,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         #
         if self._log_file is None:
             self._log_file = pyutilib.services.TempfileManager.\
-                            create_tempfile(suffix = '.cplex.log')
+                            create_tempfile(suffix = '.cplex.log',
+                                            dir=self._temp_dir)
         self._log_file = _validate_file_name(self, self._log_file, "log")
 
         #
@@ -296,7 +298,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         #
         if self._soln_file is None:
             self._soln_file = pyutilib.services.TempfileManager.\
-                              create_tempfile(suffix = '.cplex.sol')
+                              create_tempfile(suffix = '.cplex.sol',
+                                              dir=self._temp_dir)
         self._soln_file = _validate_file_name(self, self._soln_file, "solution")
 
         #
@@ -340,7 +343,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # user if we're keeping files around.
         if self._keepfiles:
             script_fname = pyutilib.services.TempfileManager.\
-                           create_tempfile(suffix = '.cplex.script')
+                           create_tempfile(suffix = '.cplex.script',
+                                           dir=self._temp_dir)
             tmp = open(script_fname,'w')
             tmp.write(script)
             tmp.close()

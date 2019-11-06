@@ -10,6 +10,7 @@
 
 
 import os
+from functools import partial
 from six import iteritems, PY3
 
 import pyutilib.services
@@ -49,6 +50,9 @@ class PyomoMIPConverter(object):
         import pyomo.scripting.convert
 
         capabilities = kwds.pop("capabilities", None)
+        temp_dir = kwds.pop("temp_dir", None)
+        create_tempfile = partial((pyutilib.services.TempfileManager
+                                           .create_tempfile), dir=temp_dir)
 
         # all non-consumed keywords are assumed to be options
         # that should be passed to the writer.
@@ -69,8 +73,8 @@ class PyomoMIPConverter(object):
             instance = args[2]
 
         if args[1] == ProblemFormat.cpxlp:
-            problem_filename = pyutilib.services.TempfileManager.\
-                               create_tempfile(suffix = '.pyomo.lp')
+            problem_filename = create_tempfile(suffix='.pyomo.lp')
+
             if instance is not None:
                 if isinstance(instance, IBlock):
                     symbol_map_id = instance.write(
@@ -115,8 +119,8 @@ class PyomoMIPConverter(object):
                 return (problem_filename,),symbol_map
 
         elif args[1] == ProblemFormat.bar:
-            problem_filename = pyutilib.services.TempfileManager.\
-                               create_tempfile(suffix = '.pyomo.bar')
+            problem_filename = create_tempfile(suffix='.pyomo.bar')
+
             if instance is not None:
                 if isinstance(instance, IBlock):
                     symbol_map_id = instance.write(
@@ -161,8 +165,8 @@ class PyomoMIPConverter(object):
 
         elif args[1] in [ProblemFormat.mps, ProblemFormat.nl]:
             if args[1] == ProblemFormat.nl:
-                problem_filename = pyutilib.services.TempfileManager.\
-                                   create_tempfile(suffix = '.pyomo.nl')
+                problem_filename = create_tempfile(suffix = '.pyomo.nl')
+
                 if io_options.get("symbolic_solver_labels", False):
                     pyutilib.services.TempfileManager.add_tempfile(
                         problem_filename[:-3]+".row",
@@ -172,8 +176,8 @@ class PyomoMIPConverter(object):
                         exists=False)
             else:
                 assert args[1] == ProblemFormat.mps
-                problem_filename = pyutilib.services.TempfileManager.\
-                                   create_tempfile(suffix = '.pyomo.mps')
+                problem_filename = create_tempfile(suffix = '.pyomo.mps')
+
             if instance is not None:
                 if isinstance(instance, IBlock):
                     symbol_map_id = instance.write(
@@ -235,8 +239,8 @@ class PyomoMIPConverter(object):
 
         elif args[1] == ProblemFormat.osil:
             if False:
-                problem_filename = pyutilib.services.TempfileManager.\
-                               create_tempfile(suffix='pyomo.osil')
+                problem_filename = create_tempfile(suffix='pyomo.osil')
+
                 if instance:
                     if isinstance(instance, IBlock):
                         symbol_map_id = instance.write(
