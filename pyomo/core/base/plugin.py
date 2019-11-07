@@ -280,7 +280,7 @@ TransformationFactory = Factory('transformation type')
 
 @deprecated(version='4.3.11323')
 def apply_transformation(*args, **kwds):
-    if len(args) is 0:
+    if len(args) == 0:
         return list(TransformationFactory)
     xfrm = TransformationFactory(args[0])
     if len(args) == 1 or xfrm is None:

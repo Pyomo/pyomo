@@ -590,7 +590,7 @@ class Simulator:
                         "DerivativeVar %s" % str(dvkey))
             
                 derivlist.append(dvkey)
-                if self._intpackage is 'casadi':
+                if self._intpackage == 'casadi':
                     rhsdict[dvkey] = substitute_pyomo2casadi(RHS, templatemap)
                 else:
                     rhsdict[dvkey] = convert_pyomo2scipy(RHS, templatemap)
@@ -759,7 +759,7 @@ class Simulator:
             valid_integrators = ['vode', 'zvode', 'lsoda', 'dopri5', 'dop853']
             if integrator is None:
                 integrator = 'lsoda'
-            elif integrator is 'odeint':
+            elif integrator == 'odeint':
                 integrator = 'lsoda'
         else:
             # Specify the casadi integrator to use for simulation.
@@ -823,7 +823,7 @@ class Simulator:
                 else:
                     self._simalgvars.append(alg)
 
-            if self._intpackage is 'scipy' and len(self._simalgvars) != 0:
+            if self._intpackage == 'scipy' and len(self._simalgvars) != 0:
                 raise DAE_Error("When simulating with Scipy you must "
                                 "provide values for all parameters "
                                 "and algebraic variables that are indexed "
@@ -876,7 +876,7 @@ class Simulator:
                 initcon.append(value(v._base[vidx]))
 
         # Call the integrator
-        if self._intpackage is 'scipy':
+        if self._intpackage == 'scipy':
             if not scipy_available:
                 raise ValueError("The scipy module is not available. "
                                   "Cannot simulate the model.")
