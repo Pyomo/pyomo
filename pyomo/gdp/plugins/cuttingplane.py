@@ -40,7 +40,7 @@ from pyomo.gdp.util import (
     verify_successful_solve, NORMAL, INFEASIBLE, NONOPTIMAL
 )
 
-from six import iterkeys, itervalues
+from six import iterkeys, itervalues, iteritems
 from numpy import isclose
 
 import math
@@ -292,7 +292,7 @@ class CuttingPlane_Transformation(Transformation):
         for disjunct in chull._pyomo_gdp_chull_relaxation.relaxedDisjuncts.\
             values():
             for disaggregated_var, original in \
-            disjunct._gdp_transformation_info['srcVars'].iteritems():
+            iteritems(disjunct._gdp_transformation_info['srcVars']):
                 orig_vars = disaggregatedVarMap.get(disaggregated_var)
                 if orig_vars is None:
                     # TODO: this is probably expensive, but I don't have another
@@ -587,11 +587,16 @@ class CuttingPlane_Transformation(Transformation):
             assert cut.nargs() == 2
             lb = cut.arg(0)
             cut_repn = generate_standard_repn(cut.arg(1))
-            if cut_repn.constant != 0:
+            if value(cut_repn.constant) != 0:
                 lb -= cut_repn.constant
                 cut_repn.constant = 0
             for cons in rBigM_linear_constraints:
-                if lb == cons['lower'] and cut_repn == cons['body']:
+                # [ESJ 11/06/2019] I think that the repn equality must not be
+                # what you think it is, Emma, because this if statement does not
+                # work. In addition, you don't have a test that catches that!!
+                # (But DCOTS on the 6-bus case does (with m = 1e6), so you could
+                # use that, it's a nice test for not needing cuts, I think.
+                if value(lb == cons['lower']) and cut_repn == cons['body']:
                     del cuts['rBigM'][i]
                     del cuts['bigM'][i]
                     unique = False
@@ -599,12 +604,18 @@ class CuttingPlane_Transformation(Transformation):
                     break
             if unique:
                 # we have found a constraint which cuts of x* and is not already
-                # in rBigM, this has to be out cut and we can stop.
-                cuts['rBigM'] = [cuts['rBigM'][i]]
-                cuts['bigM'] = [cuts['bigM'][i]]
-                break
+                # in rBigM, this has to be our cut and we can stop.
+                # cuts['rBigM'] = [cuts['rBigM'][i]]
+                # cuts['bigM'] = [cuts['bigM'][i]]
+                # break
+                
+                # For science:
+                print("keeping...")
+                # cuts['rBigM'].append(cuts['rBigM'][i])
+                # cuts['bigM'].append(cuts['bigM'][i])
 
-        assert len(cuts['rBigM']) <= 1
+        # Yeah, this is just still not true...
+        #assert len(cuts['rBigM']) <= 1
 
         return(cuts)
 
