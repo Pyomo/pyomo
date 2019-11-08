@@ -33,6 +33,8 @@ _ftoa_precision_str = '%.17g'
 def ftoa(val):
     if val is None:
         return val
+    #
+    # Basic checking, including conversion of *fixed* Pyomo types to floats
     if type(val) in native_numeric_types:
         _val = val
     else:
@@ -41,18 +43,29 @@ def ftoa(val):
         else:
             raise ValueError(
                 "Converting non-fixed bound or value to string: %s" (val,))
-
+    #
+    # Convert to string
     a = _ftoa_precision_str % _val
+    #
+    # Remove unnecessary least significant digits.  While not strictly
+    # necessary, this helps keep the emitted string consistent between
+    # python versions by simplifying things like "1.0000000000001" to
+    # "1".
     i = len(a)
-    while i > 1:
-        try:
+    try:
+        while i > 1:
             if float(a[:i-1]) == _val:
                 i -= 1
             else:
                 break
-        except:
-            break
+    except:
+        pass
+    #
+    # It is important to issue a warning if the conversion loses
+    # precision (as the emitted model is not exactly what the user
+    # specified)
     if i == len(a) and float(a) != _val:
         logger.warning(
             "Converting %s to string resulted in loss of precision" % val)
+    #
     return a[:i]
