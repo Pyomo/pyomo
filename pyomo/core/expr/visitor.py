@@ -50,7 +50,7 @@ class StreamBasedExpressionVisitor(object):
     in the tree:
 
       enterNode(N1) -> args, data
-      {for N2 in N1.args:}
+      {for N2 in args:}
         beforeChild(N1, N2) -> descend, child_result
           enterNode(N2) -> N2_args, N2_data
           [...]
