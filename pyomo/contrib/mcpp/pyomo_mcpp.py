@@ -39,6 +39,8 @@ logger = logging.getLogger('pyomo.contrib.mcpp')
 
 path = os.path.dirname(__file__)
 
+__version__ = "19.11.12"
+
 
 def mcpp_available():
     """True if the MC++ shared object file exists. False otherwise."""
@@ -59,6 +61,14 @@ def _MCPP_lib():
         return _MCPP_lib._mcpp
 
     _MCPP_lib._mcpp = mcpp = ctypes.CDLL(Library('mcppInterface').path())
+
+    # Version number
+    mcpp.get_version.restype = ctypes.c_char_p
+    if not mcpp.get_version() == __version__:
+        raise MCPP_Error(
+            "Shared object file version %s is out of date with MC++ interface version %s. "
+            "Please rebuild the library." % (mcpp.get_version(), __version__)
+        )
 
     mcpp.toString.argtypes = [ctypes.c_void_p]
     mcpp.toString.restype = ctypes.c_char_p
