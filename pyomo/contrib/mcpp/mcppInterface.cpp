@@ -17,11 +17,12 @@ typedef mc::McCormick<I> MC;
 // Module-level variables as utilities to pass information back to Python
 std::string lastException;
 std::string lastDisplay;
+std::string version = "19.11.12";
 
 extern "C"
 {
     // Version number
-    const char* get_version() {return "19.11.12";}
+    const char* get_version() {return version.c_str();}
 
     // Functions to build up an MC object
     void* newVar(double lb, double pt, double ub, int count, int index)
