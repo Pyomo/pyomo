@@ -548,7 +548,7 @@ class MosekDirect(DirectSolver):
             msk.prosta.dual_feas: 'd_feas',
             msk.prosta.prim_infeas: 'p_infeas',
             msk.prosta.dual_infeas: 'd_infeas',
-            msk.prosta.prim_and_dual_feas: 'pd_infeas',
+            msk.prosta.prim_and_dual_infeas: 'pd_infeas',
             msk.prosta.ill_posed: 'illposed',
             msk.prosta.prim_infeas_or_unbounded: 'p_inf_unb'
         }
