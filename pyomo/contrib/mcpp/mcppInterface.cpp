@@ -11,18 +11,25 @@
 #include "interval.hpp"
 #include "mccormick.hpp"
 #include <sstream>
+#include <string>
 typedef mc::Interval I;
 typedef mc::McCormick<I> MC;
 
 // Module-level variables as utilities to pass information back to Python
 std::string lastException;
 std::string lastDisplay;
-std::string version = "19.11.12";
+std::string version;
 
 extern "C"
 {
+
     // Version number
-    const char* get_version() {return version.c_str();}
+    const char* get_version() {
+        std::ostringstream vStream;
+        vStream << "19.11.12" << std::flush;
+        version = vStream.str();
+        return version.c_str();
+    }
 
     // Functions to build up an MC object
     void* newVar(double lb, double pt, double ub, int count, int index)
