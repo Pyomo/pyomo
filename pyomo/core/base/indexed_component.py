@@ -10,8 +10,6 @@
 
 __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
-from collections import Sequence
-
 import pyutilib.misc
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
@@ -22,6 +20,12 @@ from pyomo.core.base.config import PyomoOptions
 from pyomo.common import DeveloperError
 
 from six import PY3, itervalues, iteritems, string_types
+
+if PY3:
+    from collections.abc import Sequence as collections_Sequence
+else:
+    from collections import Sequence as collections_Sequence
+
 
 UnindexedComponent_set = set([None])
 
@@ -47,7 +51,7 @@ def normalize_index(x):
         # Note that casting a tuple to a tuple is cheap (no copy, no
         # new object)
         x = tuple(x)
-    elif hasattr(x, '__iter__') and isinstance(x, Sequence):
+    elif hasattr(x, '__iter__') and isinstance(x, collections_Sequence):
         if isinstance(x, string_types):
             # This is very difficult to get to: it would require a user
             # creating a custom derived string type
@@ -69,7 +73,7 @@ def normalize_index(x):
             # Note that casting a tuple to a tuple is cheap (no copy, no
             # new object)
             x = x[:i] + tuple(x[i]) + x[i + 1:]
-        elif _xi_class is not tuple and isinstance(_xi, Sequence):
+        elif _xi_class is not tuple and isinstance(_xi, collections_Sequence):
             if isinstance(_xi, string_types):
                 # This is very difficult to get to: it would require a
                 # user creating a custom derived string type
