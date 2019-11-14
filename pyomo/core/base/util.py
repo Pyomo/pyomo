@@ -54,9 +54,13 @@ def _disable_method(fcn, msg=None):
     # Python 3.4.  For backwards compatability with Python 2.x, we will
     # create a temporary (lambda) function using eval that matches the
     # function signature passed in and calls the generic impl() function
-    args = inspect.formatargspec(*getargspec(fcn))
-    impl_args = eval('lambda %s: impl%s' % (args[1:-1], args), {'impl': impl})
-    return functools.wraps(fcn)(impl_args)
+    if six.PY2:
+        args = inspect.formatargspec(*getargspec(fcn))
+        impl_args = eval(
+            'lambda %s: impl%s' % (args[1:-1], args), {'impl': impl})
+        return functools.wraps(fcn)(impl_args)
+    return functools.wraps(fcn)(impl)
+
 
 def _disable_property(fcn, msg=None):
     if msg is None:
