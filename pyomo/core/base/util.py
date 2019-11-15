@@ -20,10 +20,15 @@ from six import iteritems
 
 if six.PY2:
     getargspec = inspect.getargspec
+    from collections import Sequence as collections_Sequence
+    from collections import Mapping as collections_Mapping
 else:
     # For our needs, getfullargspec is a drop-in replacement for
     # getargspec (which was removed in Python 3.x)
     getargspec = inspect.getfullargspec
+    from collections.abc import Sequence as collections_Sequence
+    from collections.abc import Mapping as collections_Mapping
+
 
 from pyomo.common import DeveloperError
 from pyomo.core.expr.numvalue import (
@@ -143,9 +148,9 @@ def Initializer(init,
             return ScalarCallInitializer(init)
         else:
             return IndexedCallInitializer(init)
-    elif isinstance(init, collections.Mapping):
+    elif isinstance(init, collections_Mapping):
         return ItemInitializer(init)
-    elif isinstance(init, collections.Sequence) \
+    elif isinstance(init, collections_Sequence) \
             and not isinstance(init, six.string_types):
         if treat_sequences_as_mappings:
             return ItemInitializer(init)
