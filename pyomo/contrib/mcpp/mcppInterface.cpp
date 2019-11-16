@@ -18,17 +18,14 @@ typedef mc::McCormick<I> MC;
 // Module-level variables as utilities to pass information back to Python
 std::string lastException;
 std::string lastDisplay;
-std::string version;
 
 extern "C"
 {
+    const char* version_string = "19.11.12";
 
     // Version number
     const char* get_version() {
-        std::ostringstream vStream;
-        vStream << "19.11.12" << std::flush;
-        version = vStream.str();
-        return version.c_str();
+        return version_string;
     }
 
     // Functions to build up an MC object
