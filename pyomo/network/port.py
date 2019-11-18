@@ -510,12 +510,8 @@ class Port(IndexedComponent):
         be conserved without fixing a split for inlets or fixing combinations
         for outlet.
 
-        :param port:
-        :param name:
-        :param index_set:
-        :param include_splitfrac:
-        :param write_var_sum:
-        :return:
+        It acts like Extensive but does not introduces a split variable
+        nor a split constraint.
         """
 
         port_parent = port.parent_block()
