@@ -47,21 +47,41 @@ def is_functor(obj):
 # component.py so that we can efficiently handle construction errors on
 # scalar components.
 #
+# TODO: quantify the memory overhead here.  We create (and preserve) a
+# locals() dict for *each* method that we wrap.  If that becomes
+# significant, we might consider using a single global private
+# environment (which would require some thought when managing any
+# potential name collisions)
+#
 def _disable_method(fcn, msg=None):
+    _name = fcn.__name__
     if msg is None:
-        msg = 'access %s on' % (fcn.__name__,)
-    def impl(self, *args, **kwds):
-        raise RuntimeError(
-            "Cannot %s %s '%s' before it has been constructed (initialized)."
-            % (msg, type(self).__name__, self.name))
+        msg = 'access %s on' % (_name,)
 
     # functools.wraps doesn't preserve the function signature until
-    # Python 3.4.  For backwards compatability with Python 2.x, we will
-    # create a temporary (lambda) function using eval that matches the
-    # function signature passed in and calls the generic impl() function
-    args = inspect.formatargspec(*getargspec(fcn))
-    impl_args = eval('lambda %s: impl%s' % (args[1:-1], args), {'impl': impl})
-    return functools.wraps(fcn)(impl_args)
+    # Python 3.4, and even then, does not preserve it accurately (e.g.,
+    # calling with the incorreect number of arguments does not generate
+    # an error).  For backwards compatability with Python 2.x, we will
+    # create a temporary (local) function using exec that matches the
+    # function signature passed in and raises an exception
+    if six.PY2:
+        args = str(inspect.formatargspec(*getargspec(fcn)))
+    else:
+        args = str(inspect.signature(fcn))
+    assert args == '(self)' or args.startswith('(self,')
+
+    # lambda comes through with a function name "<lambda>".  We will
+    # use exec here to create a function (in a private namespace)
+    # that will have the correct name.
+    _env = {}
+    _funcdef = """def %s%s:
+        raise RuntimeError(
+            "Cannot %s %%s '%%s' before it has been constructed (initialized)."
+            %% (type(self).__name__, self.name))
+""" % (_name, args, msg,)
+    exec(_funcdef, _env)
+    return functools.wraps(fcn)(_env[_name])
+
 
 def _disable_property(fcn, msg=None):
     if msg is None:
