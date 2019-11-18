@@ -25,14 +25,14 @@ def replicate_var(comp, name, block, index_set=None):
             index_set = UnindexedComponent_set
 
     var_args = {}
-    try:
-        var_args['domain'] = comp.domain
-    except AttributeError:
-        pass
-    try:
-        var_args['bounds'] = comp.bounds
-    except AttributeError:
-        pass
+    # try:
+    #     var_args['domain'] = comp.domain
+    # except AttributeError:
+    #     pass
+    # try:
+    #     var_args['bounds'] = comp.bounds
+    # except AttributeError:
+    #     pass
 
     new_var = Var(index_set, **var_args)
     block.add_component(name, new_var)
@@ -40,9 +40,10 @@ def replicate_var(comp, name, block, index_set=None):
         for i in index_set:
             try:
                 # set bounds for every member in case they differ
-                new_var[i].domain = comp[i].domain
-                new_var[i].setlb(comp[i].lb)
-                new_var[i].setub(comp[i].ub)
+                pass
+                # new_var[i].domain = comp[i].domain
+                # new_var[i].setlb(comp[i].lb)
+                # new_var[i].setub(comp[i].ub)
             except AttributeError:
                 break
 

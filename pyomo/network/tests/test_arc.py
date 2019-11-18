@@ -984,6 +984,81 @@ class TestArc(unittest.TestCase):
     1 Declarations: v_equality
 """)
 
+    def test_conservative_single_var(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        m.p1 = Port(initialize={'v': (m.x, Port.Conservative)})
+        m.p2 = Port(initialize={'v': (m.y, Port.Conservative)})
+        m.p3 = Port(initialize={'v': (m.z, Port.Conservative)})
+        m.a1 = Arc(source=m.p1, destination=m.p2)
+        m.a2 = Arc(source=m.p1, destination=m.p3)
+
+        TransformationFactory('network.expand_arcs').apply_to(m)
+
+        os = StringIO()
+        m.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""3 Var Declarations
+    x : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+    y : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+    z : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+
+3 Constraint Declarations
+    p1_v_outsum : Size=1, Index=None, Active=True
+        Key  : Lower : Body                              : Upper : Active
+        None :   0.0 : a1_expanded.v + a2_expanded.v - x :   0.0 :   True
+    p2_v_insum : Size=1, Index=None, Active=True
+        Key  : Lower : Body              : Upper : Active
+        None :   0.0 : a1_expanded.v - y :   0.0 :   True
+    p3_v_insum : Size=1, Index=None, Active=True
+        Key  : Lower : Body              : Upper : Active
+        None :   0.0 : a2_expanded.v - z :   0.0 :   True
+
+2 Block Declarations
+    a1_expanded : Size=1, Index=None, Active=True
+        1 Var Declarations
+            v : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        1 Declarations: v
+    a2_expanded : Size=1, Index=None, Active=True
+        1 Var Declarations
+            v : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        1 Declarations: v
+
+2 Arc Declarations
+    a1 : Size=1, Index=None, Active=False
+        Key  : Ports    : Directed : Active
+        None : (p1, p2) :     True :  False
+    a2 : Size=1, Index=None, Active=False
+        Key  : Ports    : Directed : Active
+        None : (p1, p3) :     True :  False
+
+3 Port Declarations
+    p1 : Size=1, Index=None
+        Key  : Name : Size : Variable
+        None :    v :    1 :        x
+    p2 : Size=1, Index=None
+        Key  : Name : Size : Variable
+        None :    v :    1 :        y
+    p3 : Size=1, Index=None
+        Key  : Name : Size : Variable
+        None :    v :    1 :        z
+
+13 Declarations: x y z p1 p2 p3 a1 a2 a1_expanded a2_expanded p1_v_outsum p2_v_insum p3_v_insum
+""")
 
     def test_extensive_single_var(self):
         m = ConcreteModel()
@@ -1061,6 +1136,129 @@ class TestArc(unittest.TestCase):
 13 Declarations: x y z p1 p2 p3 a1 a2 a1_expanded a2_expanded p1_v_outsum p2_v_insum p3_v_insum
 """)
 
+    def test_conservative_expansion(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[1, 2, 3])
+
+        m.source = Block()
+        m.load1 = Block()
+        m.load2 = Block()
+
+        def source_block(b):
+            b.t = Set(initialize=[1, 2, 3])
+            b.p_out = Var(b.t)
+            b.outlet = Port(initialize={'p': (b.p_out, Port.Conservative)})
+
+        def load_block(b):
+            b.t = Set(initialize=[1, 2, 3])
+            b.p_in = Var(b.t)
+            b.inlet = Port(initialize={'p': (b.p_in, Port.Conservative)})
+
+        source_block(m.source)
+        load_block(m.load1)
+        load_block(m.load2)
+
+        m.cs1 = Arc(source=m.source.outlet, destination=m.load1.inlet)
+        m.cs2 = Arc(source=m.source.outlet, destination=m.load2.inlet)
+
+        TransformationFactory("network.expand_arcs").apply_to(m)
+
+        os = StringIO()
+        m.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+                         '1 Set Declarations\n'
+                         '    time : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)\n'
+                         '        [1, 2, 3]\n\n5 Block Declarations\n'
+                         '    cs1_expanded : Size=1, Index=None, Active=True\n'
+                         '        1 Var Declarations\n'
+                         '            p : Size=3, Index=source.t\n'
+                         '                Key : Lower : Value : Upper : Fixed : Stale : Domain\n'
+                         '                  1 :  None :  None :  None : False :  True :  Reals\n'
+                         '                  2 :  None :  None :  None : False :  True :  Reals\n'
+                         '                  3 :  None :  None :  None : False :  True :  Reals\n\n'
+                         '        1 Declarations: p\n'
+                         '    cs2_expanded : Size=1, Index=None, Active=True\n'
+                         '        1 Var Declarations\n'
+                         '            p : Size=3, Index=source.t\n'
+                         '                Key : Lower : Value : Upper : Fixed : Stale : Domain\n'
+                         '                  1 :  None :  None :  None : False :  True :  Reals\n'
+                         '                  2 :  None :  None :  None : False :  True :  Reals\n'
+                         '                  3 :  None :  None :  None : False :  True :  Reals\n\n'
+                         '        1 Declarations: p\n'
+                         '    load1 : Size=1, Index=None, Active=True\n'
+                         '        1 Set Declarations\n'
+                         '            t : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)\n'
+                         '                [1, 2, 3]\n\n'
+                         '        1 Var Declarations\n            p_in : Size=3, Index=load1.t\n'
+                         '                Key : Lower : Value : Upper : Fixed : Stale : Domain\n'
+                         '                  1 :  None :  None :  None : False :  True :  Reals\n'
+                         '                  2 :  None :  None :  None : False :  True :  Reals\n'
+                         '                  3 :  None :  None :  None : False :  True :  Reals\n\n'
+                         '        1 Constraint Declarations\n'
+                         '            inlet_p_insum : Size=3, Index=source.t, Active=True\n'
+                         '                Key : Lower : Body                              : Upper : Active\n'
+                         '                  1 :   0.0 : cs1_expanded.p[1] - load1.p_in[1] :   0.0 :   True\n'
+                         '                  2 :   0.0 : cs1_expanded.p[2] - load1.p_in[2] :   0.0 :   True\n'
+                         '                  3 :   0.0 : cs1_expanded.p[3] - load1.p_in[3] :   0.0 :   True\n\n'
+                         '        1 Port Declarations\n'
+                         '            inlet : Size=1, Index=None\n'
+                         '                Key  : Name : Size : Variable\n'
+                         '                None :    p :    3 : load1.p_in\n\n'
+                         '        4 Declarations: t p_in inlet inlet_p_insum\n'
+                         '    load2 : Size=1, Index=None, Active=True\n'
+                         '        1 Set Declarations\n'
+                         '            t : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)\n'
+                         '                [1, 2, 3]\n\n'
+                         '        1 Var Declarations\n'
+                         '            p_in : Size=3, Index=load2.t\n'
+                         '                Key : Lower : Value : Upper : Fixed : Stale : Domain\n'
+                         '                  1 :  None :  None :  None : False :  True :  Reals\n'
+                         '                  2 :  None :  None :  None : False :  True :  Reals\n'
+                         '                  3 :  None :  None :  None : False :  True :  Reals\n\n'
+                         '        1 Constraint Declarations\n'
+                         '            inlet_p_insum : Size=3, Index=source.t, Active=True\n'
+                         '                Key : Lower : Body                              : Upper : Active\n'
+                         '                  1 :   0.0 : cs2_expanded.p[1] - load2.p_in[1] :   0.0 :   True\n'
+                         '                  2 :   0.0 : cs2_expanded.p[2] - load2.p_in[2] :   0.0 :   True\n'
+                         '                  3 :   0.0 : cs2_expanded.p[3] - load2.p_in[3] :   0.0 :   True\n\n'
+                         '        1 Port Declarations\n'
+                         '            inlet : Size=1, Index=None\n'
+                         '                Key  : Name : Size : Variable\n'
+                         '                None :    p :    3 : load2.p_in\n\n'
+                         '        4 Declarations: t p_in inlet inlet_p_insum\n'
+                         '    source : Size=1, Index=None, Active=True\n'
+                         '        1 Set Declarations\n'
+                         '            t : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)\n'
+                         '                [1, 2, 3]\n\n'
+                         '        1 Var Declarations\n'
+                         '            p_out : Size=3, Index=source.t\n'
+                         '                Key : Lower : Value : Upper : Fixed : Stale : Domain\n'
+                         '                  1 :  None :  None :  None : False :  True :  Reals\n'
+                         '                  2 :  None :  None :  None : False :  True :  Reals\n'
+                         '                  3 :  None :  None :  None : False :  True :  Reals\n\n'
+                         '        1 Constraint Declarations\n'
+                         '            outlet_p_outsum : Size=3, Index=source.t, Active=True\n'
+                         '                Key : Lower : Body'
+                         '                                                    : Upper : Active\n'
+                         '                  1 :   0.0 : cs1_expanded.p[1]'
+                         ' + cs2_expanded.p[1] - source.p_out[1] :   0.0 :   True\n'
+                         '                  2 :   0.0 : cs1_expanded.p[2]'
+                         ' + cs2_expanded.p[2] - source.p_out[2] :   0.0 :   True\n'
+                         '                  3 :   0.0 : cs1_expanded.p[3]'
+                         ' + cs2_expanded.p[3] - source.p_out[3] :   0.0 :   True\n\n'
+                         '        1 Port Declarations\n'
+                         '            outlet : Size=1, Index=None\n'
+                         '                Key  : Name : Size : Variable\n'
+                         '                None :    p :    3 : source.p_out\n\n'
+                         '        4 Declarations: t p_out outlet outlet_p_outsum\n\n'
+                         '2 Arc Declarations\n'
+                         '    cs1 : Size=1, Index=None, Active=False\n'
+                         '        Key  : Ports                        : Directed : Active\n'
+                         '        None : (source.outlet, load1.inlet) :     True :  False\n'
+                         '    cs2 : Size=1, Index=None, Active=False\n'
+                         '        Key  : Ports                        : Directed : Active\n'
+                         '        None : (source.outlet, load2.inlet) :     True :  False\n\n'
+                         '8 Declarations: time source load1 load2 cs1 cs2 cs1_expanded cs2_expanded\n')
 
     def test_extensive_expansion(self):
         m = ConcreteModel()
