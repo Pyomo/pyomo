@@ -735,32 +735,6 @@ arguments (which have been ignored):"""
                        profile_memory=profile_memory )
 
         #
-        # Preprocess the new model
-        #
-
-        if False and preprocess is True:
-
-            if report_timing is True:
-                start_time = time.time()
-
-            instance.preprocess()
-
-            if report_timing is True:
-                total_time = time.time() - start_time
-                print("      %6.2f seconds required for preprocessing" % total_time)
-
-            if (pympler_available is True) and (profile_memory >= 2):
-                mem_used = muppy.get_size(muppy.get_objects())
-                print("      Total memory = %d bytes following instance preprocessing" % mem_used)
-                print("")
-
-            if (pympler_available is True) and (profile_memory >= 2):
-                print("")
-                print("      Summary of objects following instance preprocessing")
-                post_preprocessing_summary = summary.summarize(muppy.get_objects())
-                summary.print_(post_preprocessing_summary, limit=100)
-
-        #
         # Indicate that the model is concrete/constructed
         #
         instance._constructed = True
