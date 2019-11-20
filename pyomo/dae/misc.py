@@ -482,7 +482,7 @@ def get_index_information(var, ds):
         indCount = 0
         for index in var._implicit_subsets:
             if isinstance(index, ContinuousSet):
-                if index == ds:
+                if index is ds:
                     dsindex = indCount
                 else:
                     # If var is indexed by multiple ContinuousSets treat
