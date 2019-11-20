@@ -996,6 +996,7 @@ class TestDaeMisc(unittest.TestCase):
         self.assertEqual(len(nts), 33)
         self.assertTrue(m.x in nts._implicit_subsets)
         self.assertTrue(m.s in nts._implicit_subsets)
+        self.assertEqual(index_getter((8.0,'a'),1,0),(2.0,8.0,'a'))
 
         info = get_index_information(m.v2, m.t)
         nts = info['non_ds']
@@ -1003,6 +1004,7 @@ class TestDaeMisc(unittest.TestCase):
         
         self.assertEqual(len(nts), 3)
         self.assertTrue(m.s is nts)
+        self.assertEqual(index_getter('a',1,0),(2.0,'a'))
 
 
     
