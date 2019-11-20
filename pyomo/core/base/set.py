@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import collections
 import inspect
 import itertools
 import logging
@@ -41,6 +40,12 @@ from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, normalize_index,
 )
 from pyomo.core.base.misc import sorted_robust
+
+if six.PY3:
+    from collections.abc import Sequence as collections_Sequence
+else:
+    from collections import Sequence as collections_Sequence
+
 
 logger = logging.getLogger('pyomo.core')
 
@@ -208,7 +213,7 @@ class RangeSetInitializer(InitializerBase):
 
     def __call__(self, parent, idx):
         val = self._init(parent, idx)
-        if not isinstance(val, collections.Sequence):
+        if not isinstance(val, collections_Sequence):
             val = (1, val, self.default_step)
         if len(val) < 3:
             val = tuple(val) + (self.default_step,)
