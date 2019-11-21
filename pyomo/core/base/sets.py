@@ -43,7 +43,8 @@ def process_setarg(arg):
 
     This method is used by IndexedComponent
     """
-    if isinstance(arg,_SetDataBase):
+    import pyomo.core.base.set as new_set
+    if isinstance(arg, (_SetDataBase, new_set._SetDataBase)):
         # Argument is a non-indexed Set instance
         return arg
     elif isinstance(arg,IndexedSet):
@@ -874,11 +875,12 @@ class SimpleSetBase(Set):
              ("Ordered", _ordered),
              ("Bounds", self._bounds)],
             iteritems( {None: self} ),
-            None, #("Members",),
-            lambda k, v: [
+            None, # ("Members",),
+            lambda os, k, v: os.write(str(
                 "Virtual" if not self.concrete or v.virtual \
                     else v.value_list if v.ordered \
-                    else sorted(v), ] )
+                    else sorted(v), )+"\n"),
+        )
 
     def _set_repn(self, other):
         """
@@ -1544,7 +1546,7 @@ class _SetProduct(_SetOperator):
         _SetOperator.__init__(self, *args, **kwd)
         # the individual index sets definining the product set.
         if isinstance(self._setA,_SetProduct):
-            self.set_tuple = self._setA.set_tuple
+            self.set_tuple = list(self._setA.set_tuple)
         else:
             self.set_tuple = [self._setA]
         if isinstance(self._setB,_SetProduct):

@@ -86,7 +86,7 @@ to keep it simple.  Constraints could be present in the base model.
 Even though it is an abstract model, the base model is fully specified
 by these commands because it requires no external data:
 
-.. literalinclude:: script_spy_files/iterative1_Call_SolverFactory_with_argument.spy
+.. literalinclude:: script_spy_files/iterative1_Create_base_model.spy
    :language: python
 
 The next line is not part of the base model specification. It creates an

@@ -47,15 +47,17 @@ def _is_numeric(x):
 class GurobiDirect(DirectSolver):
 
     def __init__(self, **kwds):
-        kwds['type'] = 'gurobi_direct'
-        DirectSolver.__init__(self, **kwds)
+        if 'type' not in kwds:
+            kwds['type'] = 'gurobi_direct'
+        super(GurobiDirect, self).__init__(**kwds)
         self._pyomo_var_to_solver_var_map = ComponentMap()
         self._solver_var_to_pyomo_var_map = ComponentMap()
         self._pyomo_con_to_solver_con_map = dict()
         self._solver_con_to_pyomo_con_map = ComponentMap()
-        self._init()
+        self._needs_updated = True  # flag that indicates if solver_model.update() needs called before getting variable and constraint attributes
+        self._callback = None
+        self._callback_func = None
 
-    def _init(self):
         self._name = None
         try:
             import gurobipy
@@ -155,7 +157,8 @@ class GurobiDirect(DirectSolver):
                 if re.match(suffix, "dual"):
                     self._solver_model.setParam(self._gurobipy.GRB.Param.QCPDual, 1)
 
-        self._solver_model.optimize()
+        self._solver_model.optimize(self._callback)
+        self._needs_updated = False
 
         self._solver_model.setParam('LogFile', 'default')
 
@@ -211,6 +214,9 @@ class GurobiDirect(DirectSolver):
             ub = value(var.ub)
         else:
             ub = self._gurobipy.GRB.INFINITY
+        if var.is_fixed():
+            lb = value(var.value)
+            ub = value(var.value)
 
         gurobipy_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype, name=varname)
 
@@ -218,9 +224,7 @@ class GurobiDirect(DirectSolver):
         self._solver_var_to_pyomo_var_map[gurobipy_var] = var
         self._referenced_variables[var] = 0
 
-        if var.is_fixed():
-            gurobipy_var.setAttr('lb', var.value)
-            gurobipy_var.setAttr('ub', var.value)
+        self._needs_updated = True
 
     def _set_instance(self, model, kwds={}):
         self._range_constraints = set()
@@ -260,7 +264,6 @@ class GurobiDirect(DirectSolver):
 
     def _add_block(self, block):
         DirectOrPersistentSolver._add_block(self, block)
-        self._solver_model.update()
 
     def _add_constraint(self, con):
         if not con.active:
@@ -325,6 +328,8 @@ class GurobiDirect(DirectSolver):
         self._pyomo_con_to_solver_con_map[con] = gurobipy_con
         self._solver_con_to_pyomo_con_map[gurobipy_con] = con
 
+        self._needs_updated = True
+
     def _add_sos_constraint(self, con):
         if not con.active:
             return None
@@ -360,6 +365,8 @@ class GurobiDirect(DirectSolver):
         gurobipy_con = self._solver_model.addSOS(sos_type, gurobi_vars, weights)
         self._pyomo_con_to_solver_con_map[con] = gurobipy_con
         self._solver_con_to_pyomo_con_map[gurobipy_con] = con
+
+        self._needs_updated = True
 
     def _gurobi_vtype_from_var(self, var):
         """
@@ -402,6 +409,8 @@ class GurobiDirect(DirectSolver):
         self._solver_model.setObjective(gurobi_expr, sense=sense)
         self._objective = obj
         self._vars_referenced_by_obj = referenced_vars
+
+        self._needs_updated = True
 
     def _postsolve(self):
         # the only suffixes that we extract from GUROBI are
@@ -691,6 +700,7 @@ class GurobiDirect(DirectSolver):
         for pyomo_var, gurobipy_var in self._pyomo_var_to_solver_var_map.items():
             if pyomo_var.value is not None:
                 gurobipy_var.setAttr(self._gurobipy.GRB.Attr.Start, value(pyomo_var))
+        self._needs_updated = True
 
     def _load_vars(self, vars_to_load=None):
         var_map = self._pyomo_var_to_solver_var_map
@@ -823,3 +833,7 @@ class GurobiDirect(DirectSolver):
         cons_to_load: list of Constraint
         """
         self._load_slacks(cons_to_load)
+
+    def _update(self):
+        self._solver_model.update()
+        self._needs_updated = False

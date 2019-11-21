@@ -18,6 +18,7 @@ from pyomo.core.base import (Transformation,
                              SortComponents,
                              ComponentUID)
 from pyomo.mpec.complementarity import Complementarity
+from pyomo.gdp import Disjunct
 
 from six import iterkeys
 
@@ -61,31 +62,33 @@ class MPEC1_Transformation(Transformation):
         #
         # Iterate over the model finding Complementarity components
         #
-        for block in instance.block_data_objects(active=True, sort=SortComponents.deterministic):
-            for complementarity in block.component_objects(Complementarity, active=True, descend_into=False):
-                for index in sorted(iterkeys(complementarity)):
-                    _data = complementarity[index]
-                    if not _data.active:
-                        continue
-                    _data.to_standard_form()
+        for complementarity in instance.component_objects(Complementarity, active=True,
+                                                          descend_into=(Block, Disjunct),
+                                                          sort=SortComponents.deterministic):
+            block = complementarity.parent_block()
+            for index in sorted(iterkeys(complementarity)):
+                _data = complementarity[index]
+                if not _data.active:
+                    continue
+                _data.to_standard_form()
+                #
+                _type = getattr(_data.c, "_type", 0)
+                if _type == 1:
                     #
-                    _type = getattr(_data.c, "_type", 0)
-                    if _type == 1:
-                        #
-                        # Constraint expression is bounded below, so we can replace 
-                        # constraint c with a constraint that ensures that either
-                        # constraint c is active or variable v is at its lower bound.
-                        #
-                        _data.ccon = Constraint(expr=(_data.c.body - _data.c.lower)*_data.v <= instance.mpec_bound)
-                        del _data.c._type
-                    elif _type == 3:
-                        #
-                        # Variable v is bounded above and below.  We can define
-                        #
-                        _data.ccon_l = Constraint(expr=(_data.v - _data.v.bounds[0])*_data.c.body <= instance.mpec_bound)
-                        _data.ccon_u = Constraint(expr=(_data.v - _data.v.bounds[1])*_data.c.body <= instance.mpec_bound)
-                        del _data.c._type
-                    elif _type == 2:        #pragma:nocover
-                        raise ValueError("to_standard_form does not generate _type 2 expressions")
-                tdata.compl_cuids.append( ComponentUID(complementarity) )
-                block.reclassify_component_type(complementarity, Block)
+                    # Constraint expression is bounded below, so we can replace 
+                    # constraint c with a constraint that ensures that either
+                    # constraint c is active or variable v is at its lower bound.
+                    #
+                    _data.ccon = Constraint(expr=(_data.c.body - _data.c.lower)*_data.v <= instance.mpec_bound)
+                    del _data.c._type
+                elif _type == 3:
+                    #
+                    # Variable v is bounded above and below.  We can define
+                    #
+                    _data.ccon_l = Constraint(expr=(_data.v - _data.v.bounds[0])*_data.c.body <= instance.mpec_bound)
+                    _data.ccon_u = Constraint(expr=(_data.v - _data.v.bounds[1])*_data.c.body <= instance.mpec_bound)
+                    del _data.c._type
+                elif _type == 2:        #pragma:nocover
+                    raise ValueError("to_standard_form does not generate _type 2 expressions")
+            tdata.compl_cuids.append( ComponentUID(complementarity) )
+            block.reclassify_component_type(complementarity, Block)

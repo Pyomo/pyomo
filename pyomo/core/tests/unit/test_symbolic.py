@@ -225,7 +225,7 @@ class SymbolicDerivatives(unittest.TestCase):
 
         e = differentiate(log10(m.x), wrt=m.x)
         self.assertTrue(e.is_expression_type())
-        self.assertEqual(s(e), s(m.x**-1.0 * 1.0/log(10)))
+        self.assertEqual(s(e), s(m.x**-1.0 * (1.0/log(10))))
 
     def test_intrinsic_functions5(self):
         m = ConcreteModel()
@@ -233,7 +233,7 @@ class SymbolicDerivatives(unittest.TestCase):
 
         e = differentiate(log10(log10(m.x)), wrt=m.x)
         self.assertTrue(e.is_expression_type())
-        self.assertEqual(s(e), s(m.x**-1.0 * 1.0/log(10) * log(m.x)**-1.0))
+        self.assertEqual(s(e), s(m.x**-1.0 * (1.0/log(10)) * log(m.x)**-1.0))
 
     def test_sqrt_function(self):
         m = ConcreteModel()
@@ -242,6 +242,16 @@ class SymbolicDerivatives(unittest.TestCase):
         e = differentiate(sqrt(m.x), wrt=m.x)
         self.assertTrue(e.is_expression_type())
         self.assertEqual(s(e), s(0.5 * m.x**-0.5))
+
+    def test_abs_and_complex(self):
+        m = ConcreteModel()
+        m.x = Var()
+
+        # Unless we force sympy to know that X is real, it will return a
+        # complex expression.  This tests issue #1139.
+        e = differentiate(abs(m.x**2), wrt=m.x)
+        self.assertTrue(e.is_expression_type())
+        self.assertEqual(s(e), s(2 * m.x))
 
     def test_param(self):
         m = ConcreteModel()

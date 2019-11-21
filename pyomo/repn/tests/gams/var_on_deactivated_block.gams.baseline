@@ -9,7 +9,7 @@ VARIABLES
 	other_a
 	x;
 
-c_hi.. other_a + 2*x =l= 0.0 ;
+c_hi.. other_a + 2*x =l= 0 ;
 obj.. GAMS_OBJECTIVE =e= x ;
 
 
