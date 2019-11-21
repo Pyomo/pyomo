@@ -994,8 +994,8 @@ class TestDaeMisc(unittest.TestCase):
         index_getter = info['index function']
         
         self.assertEqual(len(nts), 33)
-        self.assertTrue(m.x in nts._implicit_subsets)
-        self.assertTrue(m.s in nts._implicit_subsets)
+        self.assertTrue(m.x in nts.set_tuple)
+        self.assertTrue(m.s in nts.set_tuple)
         self.assertEqual(index_getter((8.0,'a'),1,0),(2.0,8.0,'a'))
 
         info = get_index_information(m.v2, m.t)
