@@ -405,12 +405,8 @@ def add_discretization_equations(block, d):
         except IndexError:
             return Constraint.Skip
 
-    if d.dim() == 1:
-        block.add_component(d.local_name + '_disc_eq',
-                            Constraint(d.index_set(), rule=_disc_eq))
-    else:
-        block.add_component(d.local_name + '_disc_eq',
-                            Constraint(*d.index_set().set_tuple, rule=_disc_eq))
+    block.add_component(d.local_name + '_disc_eq',
+                        Constraint(d.index_set(), rule=_disc_eq))
 
 
 def add_continuity_equations(block, d, i, loc):
@@ -446,11 +442,8 @@ def add_continuity_equations(block, d, i, loc):
         except IndexError:
             return Constraint.Skip
 
-    if d.dim() == 1:
-        block.add_component(nme, Constraint(d.index_set(), rule=_cont_eq))
-    else:
-        block.add_component(nme, Constraint(*d.index_set().set_tuple,
-                                            rule=_cont_eq))
+    block.add_component(nme, Constraint(d.index_set(),
+                                        rule=_cont_eq))
 
 
 def block_fully_discretized(b):
