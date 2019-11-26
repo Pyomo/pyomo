@@ -103,10 +103,6 @@ Emulate some aspects of `runef`
    
    >>> csvw.write_csv_soln(stsolver.scenario_tree, "testcref") # doctest: +SKIP
 
-.. testoutput::
-   :hide:
-   :options: +ELLIPSIS
-
 Again, but with mip gap reported
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    
