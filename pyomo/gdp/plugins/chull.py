@@ -251,6 +251,7 @@ class ConvexHull_Transformation(Transformation):
             
         # TODO: maybe?
         transBlock._disaggregationConstraintMap = ComponentMap()
+
         # ESJ: TODO: What is this for?? I think nothing--it was compensating for
         # broken active status shtuffs
         # transBlock.disjContainers = ComponentSet()
@@ -342,6 +343,7 @@ class ConvexHull_Transformation(Transformation):
         
         orConstraint = self._get_xor_constraint(parent_component)
         disaggregationConstraint = transBlock.disaggregationConstraints
+        disaggregationConstraintMap = transBlock._disaggregationConstraintMap
 
         # We first go through and collect all the variables that we
         # are going to disaggregate.
@@ -441,6 +443,13 @@ class ConvexHull_Transformation(Transformation):
             disaggregationConstraint.add(
                 consIdx,
                 var == disaggregatedExpr)
+            # and update the map so that we can find this later. We index by
+            # variable and the particular disjunction because there is a
+            # different one for each disjunction
+            disaggregationConstraintMap[
+                (var, obj)] = disaggregationConstraint[consIdx]
+            # TODO: We need to make sure this map gets updated when we move
+            # things off the disjunct for nested disjunctions
 
     def _transform_disjunct(self, obj, transBlock, varSet, localVars):
         # deactivated means either we've already transformed or user deactivated
@@ -935,3 +944,20 @@ class ConvexHull_Transformation(Transformation):
             raise GDP_Error("%s does not appear to be a disaggregated variable"
                             % disaggregated_var.name)
         return transBlock._disaggregatedVarMap['srcVar'][disaggregated_var]
+
+    def get_disaggregation_constraint(self, original_var, disjunction):
+        for disjunct in disjunction.disjuncts:
+            transBlock = disjunct._transformation_block
+            if not transBlock is None:
+                break
+        if transBlock is None:
+            raise GDP_Error("Disjunction %s has not been properly transformed: "
+                            "None of its disjuncts are transformed." 
+                            % disjunction.name)
+        try:
+            return transBlock().parent_block().disaggregationConstraintMap[
+                (original_var, disjunction)]
+        except:
+            raise GDP_Error("It doesn't appear that %s is a variable that was "
+                            "disaggregated by %s" % (original_var.name,
+                                                     disjunction.name))

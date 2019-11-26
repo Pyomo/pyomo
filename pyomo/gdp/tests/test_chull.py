@@ -532,11 +532,21 @@ class DisaggregatedVarNamingConflict(unittest.TestCase):
 
     def test_disaggregation_constraints(self):
         m = self.makeModel()
-        TransformationFactory('gdp.chull').apply_to(m)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
 
-        disCons = m._gdp_chull_relaxation_disjunction_disaggregation
-        self.assertIsInstance(disCons, Constraint)
-        self.assertEqual(len(disCons), 2)
+        disaggregationConstraints = m._pyomo_gdp_chull_relaxation.\
+                                    disaggregationConstraints
+
+        consmap = [
+            (m.component("b.x"), disaggregationConstraints[0]),
+            (m.b.x, disaggregationConstraints[1]) 
+        ]
+
+        for v, cons in consmap:
+            disCons = chull.get_disaggregation_constraint(v, m.disjunction)
+            self.assertIsInstance(disCons, Constraint)
+            self.assertIs(disCons, cons)
         # TODO: the above thing fails because the index gets overwritten. I
         # don't know how to keep them unique at the moment. When I do, I also
         # need to test that the indices are actually what we expect.
