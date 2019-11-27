@@ -32,8 +32,20 @@ def log_infeasible_constraints(
     if log_variables:
         log_template += "\n{var_printout}"
     vars_template = "  VAR {name}: {value}"
+
+    # Iterate through all constraints on the model
     for constr in m.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
+        constr_body_value = value(constr.body, exception=False)
+        if constr_body_value is None:
+            # Undefined constraint body value due to missing variable value
+            log_output = 'CONSTR {name}: missing variable value.'.format(name=constr.name)
+            if log_variables:
+                constraint_vars = identify_variables(constr.body, include_fixed=True)
+                log_output += "\n" + '\n'.join(
+                    vars_template.format(name=v.name, value=v.value) for v in constraint_vars)
+            logger.info(log_output)
+            continue
         # if constraint is an equality, handle differently
         if constr.equality and fabs(value(constr.lower - constr.body)) >= tol:
             output_dict = dict(
@@ -85,6 +97,10 @@ def log_infeasible_bounds(m, tol=1E-6, logger=logger):
     """
     for var in m.component_data_objects(
             ctype=Var, descend_into=True):
+        var_value = var.value
+        if var_value is None:
+            logger.debug("Skipping VAR {} with no assigned value.")
+            continue
         if var.has_lb() and value(var.lb - var) >= tol:
             logger.info('VAR {}: {} < LB {}'.format(
                 var.name, value(var), value(var.lb)))
@@ -106,6 +122,10 @@ def log_close_to_bounds(m, tol=1E-6, logger=logger):
             ctype=Var, descend_into=True):
         if var.fixed:
             continue
+        var_value = var.value
+        if var_value is None:
+            logger.debug("Skipping VAR {} with no assigned value.")
+            continue
         if (var.has_lb() and var.has_ub() and
                 fabs(value(var.ub - var.lb)) <= 2 * tol):
             continue  # if the bounds are too close, skip.
@@ -117,11 +137,17 @@ def log_close_to_bounds(m, tol=1E-6, logger=logger):
     for constr in m.component_data_objects(
             ctype=Constraint, descend_into=True, active=True):
         if not constr.equality:
+            # skip equality constraints, because they should always be close to
+            # bounds if enforced.
+            body_value = value(constr.body, exception=False)
+            if body_value is None:
+                logger.info("Skipping CONSTR {}: missing variable value.".format(constr.name))
+                continue
             if (constr.has_ub() and
-                    fabs(value(constr.body - constr.upper)) <= tol):
+                    fabs(value(body_value - constr.upper)) <= tol):
                 logger.info('{} near UB'.format(constr.name))
             if (constr.has_lb() and
-                    fabs(value(constr.body - constr.lower)) <= tol):
+                    fabs(value(body_value - constr.lower)) <= tol):
                 logger.info('{} near LB'.format(constr.name))
 
 
