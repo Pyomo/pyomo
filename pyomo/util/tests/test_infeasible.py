@@ -32,9 +32,9 @@ class TestInfeasible(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.util.infeasible', logging.INFO):
             log_infeasible_constraints(m)
         expected_output = [
-            "CONSTR c: 1 < 2.0",
-            "CONSTR c2: 1 != 4.0",
-            "CONSTR c3: 1 > 0.0"]
+            "CONSTR c: 2.0 </= 1",
+            "CONSTR c2: 1 =/= 4.0",
+            "CONSTR c3: 1 </= 0.0"]
         self.assertEqual(output.getvalue().splitlines(), expected_output)
 
     def test_log_infeasible_bounds(self):
@@ -69,6 +69,30 @@ class TestInfeasible(unittest.TestCase):
             log_close_to_bounds(m)
         expected_output = ["y near UB of 2",
                            "c4 near LB"]
+        self.assertEqual(output.getvalue().splitlines(), expected_output)
+
+    def test_log_infeasible_constraints_verbose_expressions(self):
+        """Test for logging of infeasible constraints."""
+        m = self.build_model()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.util.infeasible', logging.INFO):
+            log_infeasible_constraints(m, log_expression=True)
+        expected_output = [
+            "CONSTR c: 2.0 </= 1", "  2.0 </= x",
+            "CONSTR c2: 1 =/= 4.0", "  x =/= 4.0",
+            "CONSTR c3: 1 </= 0.0", "  x </= 0.0"]
+        self.assertEqual(output.getvalue().splitlines(), expected_output)
+
+    def test_log_infeasible_constraints_verbose_variables(self):
+        """Test for logging of infeasible constraints."""
+        m = self.build_model()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.util.infeasible', logging.INFO):
+            log_infeasible_constraints(m, log_variables=True)
+        expected_output = [
+            "CONSTR c: 2.0 </= 1", "  VAR x: 1",
+            "CONSTR c2: 1 =/= 4.0", "  VAR x: 1",
+            "CONSTR c3: 1 </= 0.0", "  VAR x: 1"]
         self.assertEqual(output.getvalue().splitlines(), expected_output)
 
 

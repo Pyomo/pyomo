@@ -4,11 +4,16 @@ from pyomo.core import Constraint, Var, value, TraversalStrategy
 from math import fabs
 import logging
 
+from pyomo.core.expr.visitor import identify_variables
+
 logger = logging.getLogger('pyomo.util.infeasible')
 logger.setLevel(logging.INFO)
 
 
-def log_infeasible_constraints(m, tol=1E-6, logger=logger):
+def log_infeasible_constraints(
+        m, tol=1E-6, logger=logger,
+        log_expression=False, log_variables=False
+):
     """Print the infeasible constraints in the model.
 
     Uses the current model state. Uses pyomo.util.infeasible logger unless one
@@ -17,22 +22,57 @@ def log_infeasible_constraints(m, tol=1E-6, logger=logger):
     Args:
         m (Block): Pyomo block or model to check
         tol (float): feasibility tolerance
+        log_expression (bool): If true, prints the constraint expression
+        log_variables (bool): If true, prints the constraint variable names and values
 
     """
+    log_template = "CONSTR {name}: {lhs_value} {operation} {rhs_value}"
+    if log_expression:
+        log_template += "\n  {lhs_expr} {operation} {rhs_expr}"
+    if log_variables:
+        log_template += "\n{var_printout}"
+    vars_template = "  VAR {name}: {value}"
     for constr in m.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
         # if constraint is an equality, handle differently
         if constr.equality and fabs(value(constr.lower - constr.body)) >= tol:
-            logger.info('CONSTR {}: {} != {}'.format(
-                constr.name, value(constr.body), value(constr.lower)))
+            output_dict = dict(
+                name=constr.name, lhs_value=value(constr.body),
+                operation="=/=", rhs_value=value(constr.lower))
+            if log_expression:
+                output_dict['lhs_expr'] = constr.body
+                output_dict['rhs_expr'] = constr.lower
+            if log_variables:
+                constraint_vars = identify_variables(constr.body, include_fixed=True)
+                output_dict['var_printout'] = '\n'.join(
+                    vars_template.format(name=v.name, value=v.value) for v in constraint_vars)
+            logger.info(log_template.format(**output_dict))
             continue
         # otherwise, check LB and UB, if they exist
         if constr.has_lb() and value(constr.lower - constr.body) >= tol:
-            logger.info('CONSTR {}: {} < {}'.format(
-                constr.name, value(constr.body), value(constr.lower)))
+            output_dict = dict(
+                name=constr.name, lhs_value=value(constr.lower),
+                operation="</=", rhs_value=value(constr.body))
+            if log_expression:
+                output_dict['lhs_expr'] = constr.lower
+                output_dict['rhs_expr'] = constr.body
+            if log_variables:
+                constraint_vars = identify_variables(constr.body, include_fixed=True)
+                output_dict['var_printout'] = '\n'.join(
+                    vars_template.format(name=v.name, value=v.value) for v in constraint_vars)
+            logger.info(log_template.format(**output_dict))
         if constr.has_ub() and value(constr.body - constr.upper) >= tol:
-            logger.info('CONSTR {}: {} > {}'.format(
-                constr.name, value(constr.body), value(constr.upper)))
+            output_dict = dict(
+                name=constr.name, lhs_value=value(constr.body),
+                operation="</=", rhs_value=value(constr.upper))
+            if log_expression:
+                output_dict['lhs_expr'] = constr.body
+                output_dict['rhs_expr'] = constr.upper
+            if log_variables:
+                constraint_vars = identify_variables(constr.body, include_fixed=True)
+                output_dict['var_printout'] = '\n'.join(
+                    vars_template.format(name=v.name, value=v.value) for v in constraint_vars)
+            logger.info(log_template.format(**output_dict))
 
 
 def log_infeasible_bounds(m, tol=1E-6, logger=logger):
