@@ -82,8 +82,8 @@ else: # Python 3.x
     # ProxiedTransport from Python 3.x documentation
     # (https://docs.python.org/3/library/xmlrpc.client.html)
     class ProxiedTransport(xmlrpclib.Transport):
-        def set_proxy(self, host):
-            self.proxy = urlparse(host)
+        def set_proxy(self, proxy):
+            self.proxy = urlparse(proxy)
             if not self.proxy.hostname:
                 # User omitted scheme from the proxy; assume http
                 self.proxy = urlparse('http://'+proxy)
