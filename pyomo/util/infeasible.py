@@ -26,13 +26,6 @@ def log_infeasible_constraints(
         log_variables (bool): If true, prints the constraint variable names and values
 
     """
-    log_template = "CONSTR {name}: {lhs_value} {operation} {rhs_value}"
-    if log_expression:
-        log_template += "\n  {lhs_expr} {operation} {rhs_expr}"
-    if log_variables:
-        log_template += "\n{var_printout}"
-    vars_template = "  VAR {name}: {value}"
-
     # Iterate through all active constraints on the model
     for constr in m.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
