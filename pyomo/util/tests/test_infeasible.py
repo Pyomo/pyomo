@@ -37,7 +37,7 @@ class TestInfeasible(unittest.TestCase):
             "CONSTR c: 2.0 </= 1",
             "CONSTR c2: 1 =/= 4.0",
             "CONSTR c3: 1 </= 0.0",
-            "CONSTR c5: missing variable value."]
+            "CONSTR c5: 5.0 <?= missing variable value"]
         self.assertEqual(expected_output, output.getvalue().splitlines())
 
     def test_log_infeasible_bounds(self):
@@ -86,7 +86,7 @@ class TestInfeasible(unittest.TestCase):
             "CONSTR c: 2.0 </= 1", "  2.0 </= x",
             "CONSTR c2: 1 =/= 4.0", "  x =/= 4.0",
             "CONSTR c3: 1 </= 0.0", "  x </= 0.0",
-            "CONSTR c5: missing variable value."]
+            "CONSTR c5: 5.0 <?= missing variable value", "  5.0 <?= z"]
         self.assertEqual(expected_output, output.getvalue().splitlines())
 
     def test_log_infeasible_constraints_verbose_variables(self):
@@ -99,7 +99,7 @@ class TestInfeasible(unittest.TestCase):
             "CONSTR c: 2.0 </= 1", "  VAR x: 1",
             "CONSTR c2: 1 =/= 4.0", "  VAR x: 1",
             "CONSTR c3: 1 </= 0.0", "  VAR x: 1",
-            "CONSTR c5: missing variable value.", "  VAR z: None"]
+            "CONSTR c5: 5.0 <?= missing variable value", "  VAR z: None"]
         self.assertEqual(expected_output, output.getvalue().splitlines())
 
 

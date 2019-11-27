@@ -33,58 +33,85 @@ def log_infeasible_constraints(
         log_template += "\n{var_printout}"
     vars_template = "  VAR {name}: {value}"
 
-    # Iterate through all constraints on the model
+    # Iterate through all active constraints on the model
     for constr in m.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
         constr_body_value = value(constr.body, exception=False)
+        constr_lb_value = value(constr.lower, exception=False)
+        constr_ub_value = value(constr.upper, exception=False)
+
+        constr_undefined = False
+        equality_violated = False
+        lb_violated = False
+        ub_violated = False
+
         if constr_body_value is None:
             # Undefined constraint body value due to missing variable value
-            log_output = 'CONSTR {name}: missing variable value.'.format(name=constr.name)
-            if log_variables:
-                constraint_vars = identify_variables(constr.body, include_fixed=True)
-                log_output += "\n" + '\n'.join(
-                    vars_template.format(name=v.name, value=v.value) for v in constraint_vars)
-            logger.info(log_output)
+            constr_undefined = True
+            pass
+        else:
+            # Check for infeasibilities
+            if constr.equality:
+                if fabs(constr_lb_value - constr_body_value) >= tol:
+                    equality_violated = True
+            else:
+                if constr.has_lb() and fabs(constr_lb_value - constr_body_value) >= tol:
+                    lb_violated = True
+                if constr.has_ub() and fabs(constr_body_value - constr_ub_value) >= tol:
+                    ub_violated = True
+
+        if not any((constr_undefined, equality_violated, lb_violated, ub_violated)):
+            # constraint is fine. skip to next constraint
             continue
-        # if constraint is an equality, handle differently
-        if constr.equality and fabs(value(constr.lower - constr.body)) >= tol:
-            output_dict = dict(
-                name=constr.name, lhs_value=value(constr.body),
-                operation="=/=", rhs_value=value(constr.lower))
-            if log_expression:
-                output_dict['lhs_expr'] = constr.body
-                output_dict['rhs_expr'] = constr.lower
-            if log_variables:
-                constraint_vars = identify_variables(constr.body, include_fixed=True)
-                output_dict['var_printout'] = '\n'.join(
-                    vars_template.format(name=v.name, value=v.value) for v in constraint_vars)
-            logger.info(log_template.format(**output_dict))
-            continue
-        # otherwise, check LB and UB, if they exist
-        if constr.has_lb() and value(constr.lower - constr.body) >= tol:
-            output_dict = dict(
-                name=constr.name, lhs_value=value(constr.lower),
-                operation="</=", rhs_value=value(constr.body))
-            if log_expression:
-                output_dict['lhs_expr'] = constr.lower
-                output_dict['rhs_expr'] = constr.body
-            if log_variables:
-                constraint_vars = identify_variables(constr.body, include_fixed=True)
-                output_dict['var_printout'] = '\n'.join(
-                    vars_template.format(name=v.name, value=v.value) for v in constraint_vars)
-            logger.info(log_template.format(**output_dict))
-        if constr.has_ub() and value(constr.body - constr.upper) >= tol:
-            output_dict = dict(
-                name=constr.name, lhs_value=value(constr.body),
-                operation="</=", rhs_value=value(constr.upper))
-            if log_expression:
-                output_dict['lhs_expr'] = constr.body
-                output_dict['rhs_expr'] = constr.upper
-            if log_variables:
-                constraint_vars = identify_variables(constr.body, include_fixed=True)
-                output_dict['var_printout'] = '\n'.join(
-                    vars_template.format(name=v.name, value=v.value) for v in constraint_vars)
-            logger.info(log_template.format(**output_dict))
+
+        output_dict = dict(name=constr.name)
+
+        log_template = "CONSTR {name}: {lb_value}{lb_operator}{body_value}{ub_operator}{ub_value}"
+        if log_expression:
+            log_template += "\n  {lb_expr}{lb_operator}{body_expr}{ub_operator}{ub_expr}"
+        if log_variables:
+            vars_template = "  VAR {name}: {value}"
+            log_template += "\n{var_printout}"
+            constraint_vars = identify_variables(constr.body, include_fixed=True)
+            output_dict['var_printout'] = '\n'.join(
+                vars_template.format(name=v.name, value=v.value) for v in constraint_vars)
+
+        output_dict['body_value'] = "missing variable value" if constr_undefined else constr_body_value
+        output_dict['body_expr'] = constr.body
+        if constr.equality:
+            output_dict['lb_value'] = output_dict['lb_expr'] = output_dict['lb_operator'] = ""
+            output_dict['ub_value'] = constr_ub_value
+            output_dict['ub_expr'] = constr.upper
+            if equality_violated:
+                output_dict['ub_operator'] = " =/= "
+            elif constr_undefined:
+                output_dict['ub_operator'] = " =?= "
+        else:
+            if constr.has_lb():
+                output_dict['lb_value'] = constr_lb_value
+                output_dict['lb_expr'] = constr.lower
+                if lb_violated:
+                    output_dict['lb_operator'] = " </= "
+                elif constr_undefined:
+                    output_dict['lb_operator'] = " <?= "
+                else:
+                    output_dict['lb_operator'] = " <= "
+            else:
+                output_dict['lb_value'] = output_dict['lb_expr'] = output_dict['lb_operator'] = ""
+
+            if constr.has_ub():
+                output_dict['ub_value'] = constr_ub_value
+                output_dict['ub_expr'] = constr.upper
+                if ub_violated:
+                    output_dict['ub_operator'] = " </= "
+                elif constr_undefined:
+                    output_dict['ub_operator'] = " <?= "
+                else:
+                    output_dict['ub_operator'] = " <= "
+            else:
+                output_dict['ub_value'] = output_dict['ub_expr'] = output_dict['ub_operator'] = ""
+
+        logger.info(log_template.format(**output_dict))
 
 
 def log_infeasible_bounds(m, tol=1E-6, logger=logger):
