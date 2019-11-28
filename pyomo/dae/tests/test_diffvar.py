@@ -62,8 +62,8 @@ class TestDerivativeVar(unittest.TestCase):
         self.assertTrue(m.dv._sVar is m.v)
         self.assertTrue(m.v._derivative[('t',)]() is m.dv)
         self.assertTrue(m.dv.type() is DerivativeVar)
-        self.assertTrue(m.t in m.dv._implicit_subsets)
-        self.assertTrue(m.s in m.dv._implicit_subsets)
+        self.assertTrue(m.t in m.dv.index_set().set_tuple)
+        self.assertTrue(m.s in m.dv.index_set().set_tuple)
         self.assertTrue(m.dv2._wrt[0] is m.t)
         self.assertTrue(m.dv2._wrt[1] is m.t)
         self.assertTrue(m.v._derivative[('t', 't')]() is m.dv2)
@@ -71,8 +71,6 @@ class TestDerivativeVar(unittest.TestCase):
         del m.dv2
         del m.v
         del m.v_index
-        del m.dv_index
-        del m.dv2_index
 
         m.v = Var(m.x, m.t)
         m.dv = DerivativeVar(m.v, wrt=m.x)
@@ -88,8 +86,8 @@ class TestDerivativeVar(unittest.TestCase):
         self.assertTrue(m.v._derivative[('t', 'x')]() is m.dv3)
         self.assertTrue(m.v._derivative[('t', 't')]() is m.dv4)
         self.assertTrue(m.dv.type() is DerivativeVar)
-        self.assertTrue(m.x in m.dv._implicit_subsets)
-        self.assertTrue(m.t in m.dv._implicit_subsets)
+        self.assertTrue(m.x in m.dv.index_set().set_tuple)
+        self.assertTrue(m.t in m.dv.index_set().set_tuple)
         self.assertTrue(m.dv3._wrt[0] is m.t)
         self.assertTrue(m.dv3._wrt[1] is m.x)
         self.assertTrue(m.dv4._wrt[0] is m.t)
