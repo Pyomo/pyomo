@@ -12,6 +12,9 @@ from pyutilib.misc import flatten_tuple
 from pyomo.common import DeveloperError
 from pyomo.core.base.sets import SetOf, _SetProduct, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
+from pyomo.core.base.var import SimpleVar, _GeneralVarData
+from pyomo.core.base.constraint import SimpleConstraint, _GeneralConstraintData
+from pyomo.core.base.block import SimpleBlock, _BlockData
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set
 )
@@ -518,10 +521,26 @@ def Reference(reference, ctype=_NotSpecified):
         pass
     elif isinstance(reference, Component):
         reference = reference[...]
+    elif isinstance(reference, _GeneralVarData):
+        obj = SimpleVar()
+        obj._costructed = True
+        obj.domain = reference.domain
+        obj._data = {None: reference}
+        return obj
+    elif isinstance(reference, _GeneralConstraintData):
+        obj = SimpleConstraint()
+        obj._costructed = True
+        obj._data = {None: reference}
+        return obj
+    elif isinstance(reference, _BlockData):
+        obj = SimpleBlock()
+        obj._costructed = True
+        obj._data = {None: reference}
+        return obj
     else:
         raise TypeError(
             "First argument to Reference constructors must be a "
-            "component or component slice (received %s)"
+            "component, component slice, or component data (received %s)"
             % (type(reference).__name__,))
 
     _data = _ReferenceDict(reference)
