@@ -462,15 +462,17 @@ class Simulator:
             # determine its order in the indexing sets
             if con.dim() == 0:
                 continue
-            elif con._implicit_subsets is None:
+                
+            conindex = con.index_set()
+            if not hasattr(conindex, 'set_tuple'):
                 # Check if the continuous set is the indexing set
-                if con._index is not contset:
+                if conindex is not contset:
                     continue
                 else:
                     csidx = 0
                     noncsidx = (None,)
             else:
-                temp = con._implicit_subsets
+                temp = conindex.set_tuple
                 dimsum = 0
                 csidx = -1
                 noncsidx = None
