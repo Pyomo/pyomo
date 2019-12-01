@@ -523,18 +523,18 @@ def Reference(reference, ctype=_NotSpecified):
         reference = reference[...]
     elif isinstance(reference, _GeneralVarData):
         obj = SimpleVar()
-        obj._costructed = True
+        obj._constructed = True
         obj.domain = reference.domain
         obj._data = {None: reference}
         return obj
     elif isinstance(reference, _GeneralConstraintData):
         obj = SimpleConstraint()
-        obj._costructed = True
+        obj._constructed = True
         obj._data = {None: reference}
         return obj
     elif isinstance(reference, _BlockData):
         obj = SimpleBlock()
-        obj._costructed = True
+        obj._constructed = True
         obj._data = {None: reference}
         return obj
     else:
