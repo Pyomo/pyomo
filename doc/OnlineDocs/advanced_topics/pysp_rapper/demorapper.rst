@@ -103,6 +103,9 @@ Emulate some aspects of `runef`
    
    >>> csvw.write_csv_soln(stsolver.scenario_tree, "testcref") # doctest: +SKIP
 
+   It is also possible to add arguments for chance constraints and CVaR; see :ref:`rapperAPI`
+   for details.
+
 Again, but with mip gap reported
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    
