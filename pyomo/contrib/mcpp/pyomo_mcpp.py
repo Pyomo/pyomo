@@ -39,6 +39,8 @@ logger = logging.getLogger('pyomo.contrib.mcpp')
 
 path = os.path.dirname(__file__)
 
+__version__ = "19.11.12"
+
 
 def mcpp_available():
     """True if the MC++ shared object file exists. False otherwise."""
@@ -60,6 +62,9 @@ def _MCPP_lib():
 
     _MCPP_lib._mcpp = mcpp = ctypes.CDLL(Library('mcppInterface').path())
 
+    # Version number
+    mcpp.get_version.restype = ctypes.c_char_p
+    
     mcpp.toString.argtypes = [ctypes.c_void_p]
     mcpp.toString.restype = ctypes.c_char_p
 
@@ -198,6 +203,14 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
     def __init__(self, expression, improved_var_bounds=None):
         super(MCPP_visitor, self).__init__()
         self.mcpp = _MCPP_lib()
+        so_file_version = self.mcpp.get_version()
+        if six.PY3:
+            so_file_version = so_file_version.decode("utf-8")
+        if not so_file_version == __version__:
+            raise MCPP_Error(
+                "Shared object file version %s is out of date with MC++ interface version %s. "
+                "Please rebuild the library." % (so_file_version, __version__)
+            )
         self.missing_value_warnings = []
         self.expr = expression
         vars = list(identify_variables(expression, include_fixed=False))
