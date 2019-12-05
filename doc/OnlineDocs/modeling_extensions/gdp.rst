@@ -82,8 +82,8 @@ If you are using a Python script, ``TransformationFactory`` accomplishes the sam
       have a variable “indicator_var” defined and attached to it.
       After that, it is just a Var like any other Var.
 
-    - The hull reformulation is an exact reformulation even for nonconvex models,
-      but the resulting MINLP will also be nonconvex.
+    - The hull reformulation is an exact reformulation at the solution points
+      even for nonconvex models, but the resulting MINLP will also be nonconvex.
 
 Direct GDP solvers
 ------------------
