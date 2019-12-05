@@ -70,10 +70,10 @@ If you are using a Python script, ``TransformationFactory`` accomplishes the sam
 
 .. note::
 
-    - all variables that appear in disjuncts need upper and lower bounds
+    - all variables that appear in disjuncts need upper and lower bounds for chull
 
     - for linear models, the BigM transform can estimate reasonably tight M
-      values for you
+      values for you if variables are bounded
 
     - for all other models, you will need to provide the M values through a
       “BigM” Suffix.
@@ -81,6 +81,9 @@ If you are using a Python script, ``TransformationFactory`` accomplishes the sam
     - When you declare a Disjunct, it (at declaration time) will automatically
       have a variable “indicator_var” defined and attached to it.
       After that, it is just a Var like any other Var.
+
+    - The hull reformulation is an exact reformulation even for nonconvex models,
+      but the resulting MINLP will also be nonconvex.
 
 Direct GDP solvers
 ------------------
