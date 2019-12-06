@@ -28,7 +28,6 @@ from pyomo.core.base.reference import (
     _ReferenceDict, _ReferenceSet, Reference, _get_base_sets
 )
 
-import pdb
 
 
 class TestReferenceDict(unittest.TestCase):
