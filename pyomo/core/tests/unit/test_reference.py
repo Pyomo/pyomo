@@ -28,6 +28,8 @@ from pyomo.core.base.reference import (
     _ReferenceDict, _ReferenceSet, Reference, _get_base_sets
 )
 
+import pdb
+
 
 class TestReferenceDict(unittest.TestCase):
     def setUp(self):
@@ -716,6 +718,27 @@ class TestReference(unittest.TestCase):
             m.xx.add((2,1))
         self.assertEqual(len(m.b), 2)
         self.assertEqual(len(list(m.b[2].component_objects())), 0)
+
+    def test_reference_to_data(self):
+        m = ConcreteModel()
+        m.s = Set(initialize=['a', 'b', 'c'])
+        m.t = Set(initialize=[1, 2, 3])
+        m.v = Var(m.s, initialize=1)
+
+        @m.Block(m.t)
+        def b(b, i):
+            b.v1 = Var(b.model().s, initialize=2)
+            return b
+
+        m.r1 = Reference(m.b[1].v1['a'])
+        m.r2 = Reference(m.v['b'])
+        self.assertEqual(len(m.r1), 1)
+        self.assertEqual(len(m.r2), 1)
+
+        m.r1['a'].set_value(5)
+        m.r2['b'].set_value(10)
+        self.assertEqual(m.r1['a'].value, m.b[1].v1['a'].value)
+        self.assertEqual(m.r2['b'].value, m.v['b'].value)
 
 if __name__ == "__main__":
     unittest.main()

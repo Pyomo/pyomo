@@ -24,6 +24,7 @@ from pyomo.core.base.indexed_component_slice import (
 
 import six
 from six import iteritems, advance_iterator
+import pdb
 
 if six.PY3:
     from collections.abc import MutableMapping as collections_MutableMapping
@@ -517,33 +518,34 @@ def Reference(reference, ctype=_NotSpecified):
               4 :     1 :    10 :  None : False : False :  Reals
 
     """
+    is_compdata = False
     if isinstance(reference, _IndexedComponent_slice):
         pass
     elif isinstance(reference, Component):
         reference = reference[...]
-    elif isinstance(reference, _GeneralVarData):
-        obj = SimpleVar()
-        obj._constructed = True
-        obj.domain = reference.domain
-        obj._data = {None: reference}
-        return obj
-    elif isinstance(reference, _GeneralConstraintData):
-        obj = SimpleConstraint()
-        obj._constructed = True
-        obj._data = {None: reference}
-        return obj
-    elif isinstance(reference, _BlockData):
-        obj = SimpleBlock()
-        obj._constructed = True
-        obj._data = {None: reference}
-        return obj
+    elif isinstance(reference, ComponentData):
+        index = reference.index()
+        parent = reference.parent_component()
+        if not isinstance(index, tuple):
+            index = (index,)
+        fixed = {i: val for i, val in enumerate(index)}
+        sliced = {}
+        ellipsis = None
+        reference = _IndexedComponent_slice(parent, fixed, sliced, ellipsis)
+        is_compdata = True
     else:
         raise TypeError(
             "First argument to Reference constructors must be a "
             "component, component slice, or component data (received %s)"
             % (type(reference).__name__,))
 
-    _data = _ReferenceDict(reference)
+    if is_compdata:
+        # reference is a singleton slice referencing a ComponentData.
+        # This should be well-defined:
+        _data = {v.index(): v for v in reference}
+    else:
+        _data = _ReferenceDict(reference)
+
     _iter = iter(reference)
     if ctype is _NotSpecified:
         ctypes = set()
@@ -571,7 +573,11 @@ def Reference(reference, ctype=_NotSpecified):
         # more than one ctype.
         elif len(ctypes) > 1:
             break
-    if not index:
+    if is_compdata:
+        # In this case, at this point, index will be [{}], the result of trying
+        # to identify wildcard sets for a singleton slice
+        index = SetOf([v.index() for v in reference])
+    elif not index:
         index = SetOf(_ReferenceSet(reference))
     else:
         wildcards = sum((sorted(iteritems(lvl)) for lvl in index
