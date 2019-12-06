@@ -24,7 +24,6 @@ from pyomo.core.base.indexed_component_slice import (
 
 import six
 from six import iteritems, advance_iterator
-import pdb
 
 if six.PY3:
     from collections.abc import MutableMapping as collections_MutableMapping
