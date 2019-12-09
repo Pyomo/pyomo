@@ -25,6 +25,9 @@
 #
 # DISABLE_COVERAGE: if nonempty, then coverage analysis is disabled
 #
+# PYOMO_DOWNLOAD_ARGS: passed to the 'pyomo download-extensions" commamd
+#     (e.g., to set up local SSL certificate authorities)
+#
 if test -z "$WORKSPACE"; then
     export WORKSPACE=`pwd`
 fi
@@ -115,7 +118,7 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo ""
 
     # Use Pyomo to download & compile binary extensions
-    pyomo download-extensions || exit 1
+    pyomo download-extensions $PYOMO_DOWNLOAD_ARGS || exit 1
     pyomo build-extensions || exit 1
 
     # Print useful version information
@@ -177,7 +180,7 @@ if test -z "$MODE" -o "$MODE" == test; then
                 if test $? == 0 -a `grep -i error .cover.upload | wc -l` -eq 0; then
                     break
                 fi
-                echo "Pausing 30 seconds before re-appempting upload"
+                echo "Pausing 30 seconds before re-attempting upload"
                 sleep 30
             done
         fi
