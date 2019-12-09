@@ -25,7 +25,7 @@
 #
 # DISABLE_COVERAGE: if nonempty, then coverage analysis is disabled
 #
-# PYOMO_DOWNLOAD_ARGS: passed to the 'pyomo download-extensions" commamd
+# PYOMO_DOWNLOAD_ARGS: passed to the 'pyomo download-extensions" command
 #     (e.g., to set up local SSL certificate authorities)
 #
 if test -z "$WORKSPACE"; then
