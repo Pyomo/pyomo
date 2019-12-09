@@ -118,7 +118,17 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo ""
 
     # Use Pyomo to download & compile binary extensions
-    pyomo download-extensions $PYOMO_DOWNLOAD_ARGS || exit 1
+    i=0
+    while test $i -lt 3; do
+        i=$[$i+1]
+        echo "Downloading pyomo extensions (attempt $i)"
+        pyomo download-extensions $PYOMO_DOWNLOAD_ARGS
+        if test $? == 0; then
+            break
+        fi
+        echo "Pausing 30 seconds before re-attempting download"
+        sleep 30
+    done
     pyomo build-extensions || exit 1
 
     # Print useful version information
