@@ -86,6 +86,13 @@ class FileDownloader(object):
             help="Use CACERT as the file of certificate authorities "
             "to verify peers.",
         )
+        parser.add_argument(
+            '-v','--verbose',
+            action='store_true',
+            dest='verbose',
+            default=False,
+            help="Verbose output when download fails",
+        )
         return parser
 
     def parse_args(self, argv):
