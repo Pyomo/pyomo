@@ -734,10 +734,10 @@ class TestReference(unittest.TestCase):
         self.assertEqual(len(m.r1), 1)
         self.assertEqual(len(m.r2), 1)
 
-        m.r1['a'].set_value(5)
-        m.r2['b'].set_value(10)
-        self.assertEqual(m.r1['a'].value, m.b[1].v1['a'].value)
-        self.assertEqual(m.r2['b'].value, m.v['b'].value)
+        m.r1[None].set_value(5)
+        m.r2[None].set_value(10)
+        self.assertEqual(m.r1[None].value, m.b[1].v1['a'].value)
+        self.assertEqual(m.r2[None].value, m.v['b'].value)
 
 if __name__ == "__main__":
     unittest.main()

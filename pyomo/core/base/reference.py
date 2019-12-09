@@ -517,33 +517,22 @@ def Reference(reference, ctype=_NotSpecified):
               4 :     1 :    10 :  None : False : False :  Reals
 
     """
-    is_compdata = False
     if isinstance(reference, _IndexedComponent_slice):
         pass
     elif isinstance(reference, Component):
         reference = reference[...]
     elif isinstance(reference, ComponentData):
-        index = reference.index()
-        parent = reference.parent_component()
-        if not isinstance(index, tuple):
-            index = (index,)
-        fixed = {i: val for i, val in enumerate(index)}
-        sliced = {}
-        ellipsis = None
-        reference = _IndexedComponent_slice(parent, fixed, sliced, ellipsis)
-        is_compdata = True
+        obj = reference.type()()
+        obj.construct()
+        obj._data = {None: reference}
+        return obj
     else:
         raise TypeError(
             "First argument to Reference constructors must be a "
             "component, component slice, or component data (received %s)"
             % (type(reference).__name__,))
 
-    if is_compdata:
-        # reference is a singleton slice referencing a ComponentData.
-        # This should be well-defined:
-        _data = {v.index(): v for v in reference}
-    else:
-        _data = _ReferenceDict(reference)
+    _data = _ReferenceDict(reference)
 
     _iter = iter(reference)
     if ctype is _NotSpecified:
@@ -572,11 +561,7 @@ def Reference(reference, ctype=_NotSpecified):
         # more than one ctype.
         elif len(ctypes) > 1:
             break
-    if is_compdata:
-        # In this case, at this point, index will be [{}], the result of trying
-        # to identify wildcard sets for a singleton slice
-        index = SetOf([v.index() for v in reference])
-    elif not index:
+    if not index:
         index = SetOf(_ReferenceSet(reference))
     else:
         wildcards = sum((sorted(iteritems(lvl)) for lvl in index
