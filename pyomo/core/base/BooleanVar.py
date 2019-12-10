@@ -1,19 +1,19 @@
 #Is this correct? #Take domain out
+from six import itervalues, iteritems
+
 from pyomo.core.expr.logical_expr import  (LogicalXor, EquivalenceExpression, Implication, AndExpression,
 OrExpression, MultiArgsExpression, NotExpression, XorExpression,)
 
 
 __all__ = ['BooleanVar', '_BooleanVarData', '_GeneralBooleanVarData', 'BooleanVarList', 'SimpleBooleanVar']
 
-#copied from var.py
 
 import logging
 from weakref import ref as weakref_ref
 
-#0-0 what do the fowlling imports do?
 from pyomo.common.timing import ConstructionTimer 
 from pyomo.core.base.logicalvalue import LogicalValue, value, is_fixed
-from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals # needed?
+from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals, Boolean  # needed?
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
@@ -21,52 +21,21 @@ from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.sets import Set
 from pyomo.core.base.util import is_functor
 
-#what exactly does logger do?
 logger = logging.getLogger('pyomo.core')
 
+
 class _BooleanVarData(ComponentData, LogicalValue):
-    __slots__ = () #0-0 this is the analogous version, following for test only
+    __slots__ = ()
+
     def __init__(self, component=None):
-        # 0-0 kinda confused, is it like a logicalvalue alone can creates _BooleanVarData
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - ComponentData
-        #   - LogicalValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
 
     #
     # Interface
     #
-    '''
-    the following functions are deleted
-    def has_lb(self):
-    def has_ub(self):
-    @property
-    def bounds(self):
-        """Returns the tuple (lower bound, upper bound)."""
-        return (self.lb, self.ub)
-    @bounds.setter
-    def bounds(self, val):
-       
-    def is_integer(self):
-	'''
-
     def is_binary(self):
         return True
-        '''
-        if self.domain.__class__ is BooleanSet:
-            return True
-        return isinstance(self.domain, BooleanSet)
-
-		'''
-
-    '''
-    The following function is deleted
-    def is_continuous(self):
-    '''
-
-	#The follwing functions are copied from var.py
 
     def is_fixed(self):
         """Returns True if this variable is fixed, otherwise returns False."""
@@ -92,12 +61,6 @@ class _BooleanVarData(ComponentData, LogicalValue):
         """Returns True because this is a variable."""
         return True
 
-    '''
-    #This function is deleted
-    def _compute_polynomial_degree(self, result):
-	'''
-
-	#0-0 what about the functions that do not have the attribute value
     def set_value(self, val, valid=False):
         """
         Set the value of this numeric object, after
@@ -107,26 +70,21 @@ class _BooleanVarData(ComponentData, LogicalValue):
         if valid or self._valid_value(val):
             self.value = val
             self.stale = False
-    #0-0 Not really sure what this do
+
     def _valid_value(self, val, use_exception=True):
         """
         Validate the value.  If use_exception is True, then raise an
         exception.
         """
-        ans = val is None or val in self.domain
+        ans = val is None or val in (True, False)
         if not ans and use_exception:
-            raise ValueError("Numeric value `%s` (%s) is not in "
-                             "domain %s" % (val, type(val), self.domain))
+            raise ValueError(
+                "Logical value `%s` (%s) is not True, False, or None"
+                % (val, type(val)))
         return ans
 
     def clear(self):
         self.value = None
-
-    ''' 
-    #The following function is deleted 
-    def __nonzero__(self)
-    __bool__ = __nonzero__
-    '''
 
     def __call__(self, exception=True):
         """Compute the value of this variable."""
@@ -142,18 +100,6 @@ class _BooleanVarData(ComponentData, LogicalValue):
     def domain(self):
         """Return the domain for this variable."""
         raise NotImplementedError
-    '''
-    The following functions are deleted
-    @property
-    def lb(self):
-        """Return the lower bound for this variable."""
-        raise NotImplementedError
-
-    @property
-    def ub(self):
-        """Return the upper bound for this variable."""
-        raise NotImplementedError
-	'''
 
     @property
     def fixed(self):
@@ -164,25 +110,7 @@ class _BooleanVarData(ComponentData, LogicalValue):
     def stale(self):
         """Return the stale indicator for this variable."""
         raise NotImplementedError
-   
-    '''
-    The following functions are deleted
-    def setlb(self, val):
-        """
-        Set the lower bound for this variable after validating that
-        the value is fixed (or None).
-        """
-        raise NotImplementedError
 
-    def setub(self, val):
-        """
-        Set the upper bound for this variable after validating that
-        the value is fixed (or None).
-        """
-        raise NotImplementedError
-    '''
-
-   	#0-0 why do we need this?
     def fix(self, *val):
         """
         Set the fixed indicator to True. Value argument is optional,
@@ -194,7 +122,6 @@ class _BooleanVarData(ComponentData, LogicalValue):
         """Sets the fixed indicator to False."""
         raise NotImplementedError
 
-    #copied from var.py
     free=unfix
 
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
@@ -220,45 +147,50 @@ class _BooleanVarData(ComponentData, LogicalValue):
     def __invert__(self):
         return NotExpression(self)
 
-
     """THe following establishes nodes with operator"""
     def __eq__(self, other):
         return EquivalenceExpression(self, other)
 
-    #XorExpression Creator
     def __xor__(self, other):
         return XorExpression(self, other)
 
     def __and__(self, other):
-        if (type(self) != AndExpression):  
-            if (type(other) != AndExpression):
-                return AndExpression(list([self, other]))
-            else :
-                other.safe_add(self)
-                self = other
-                return self
-        else :
-            self.safe_add(other)
-        return self
+        if isinstance(other, AndExpression):
+            return other.add(self)
+        else:
+            return AndExpression([self, other])
 
     def __or__(self, other):
-        if (type(self) != OrExpression):  
-            if (type(other) != OrExpression):
-                #return OrExpression(set([self, other])) #set version
-                return OrExpression(list([self, other]))
-            else :
-                other.safe_add(self)
-                self = other
-                return self
-        else :
-            self.safe_add(other)
-        return self
-
+        if isinstance(other, OrExpression):
+            return other.add(self)
+        else:
+            return OrExpression([self, other])
 
 class _GeneralBooleanVarData(_BooleanVarData):
+    """
+        This class defines the data for a single Boolean variable.
+
+        Constructor Arguments:
+            component   The BooleanVar object that owns this data.
+
+        Public Class Attributes:
+            domain      The domain of this variable.
+            fixed       If True, then this variable is treated as a
+                            fixed constant in the model.
+            stale       A Boolean indicating whether the value of this variable is
+                            legitimiate.  This value is true if the value should
+                            be considered legitimate for purposes of reporting or
+                            other interrogation.
+            value       The numeric value of this variable.
+
+        The domain attribute is a property because it is
+        too widely accessed directly to enforce explicit getter/setter
+        methods and we need to deter directly modifying or accessing
+        these attributes in certain cases.
+        """
     __slots__ = ('_value', '_domain', 'fixed', 'stale')
 
-    def __init__(self, domain=Reals, component=None):
+    def __init__(self, domain=Boolean, component=None):
         #
         # These lines represent in-lining of the
         # following constructors:
@@ -271,20 +203,9 @@ class _GeneralBooleanVarData(_BooleanVarData):
         #
         # Basically, they can be anything that passes an "is_fixed" test.
         # 
-        self._domain = None
+        self._domain = Boolean
         self.fixed = False
         self.stale = True
-        #0-0 don't know what this mean yet.
-        # don't call the property setter here because
-        # the SimplBooleanVar constructor will fail
-        if hasattr(domain, 'bounds'):
-            self._domain = domain
-        elif domain is not None:
-            raise ValueError(
-                "%s is not a valid domain. Variable domains must be an "
-                "instance of one of %s, or an object that declares a method "
-                "for bounds (like a Pyomo Set). Examples: NonNegativeReals, "
-                "Integers, Binary" % (domain, (RealSet, IntegerSet, BooleanSet)))
 
     def __getstate__(self):
         state = super(_GeneralBooleanVarData, self).__getstate__()
@@ -302,7 +223,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
     #
 
     # value is an attribute
-    # 0-0 A mark for debugging, access value
+
     @property
     def value(self):
         """Return the value for this variable."""
@@ -316,17 +237,6 @@ class _GeneralBooleanVarData(_BooleanVarData):
     def domain(self):
         """Return the domain for this variable."""
         return self._domain
-    @domain.setter
-    def domain(self, domain):
-        """Set the domain for this variable."""
-        if hasattr(domain, 'bounds'):
-            self._domain = domain
-        else:
-            raise ValueError(
-                "%s is not a valid domain. Variable domains must be an "
-                "instance of one of %s, or an object that declares a method "
-                "for bounds (like a Pyomo Set). Examples: NonNegativeReals, "
-                "Integers, Binary" % (domain, (RealSet, IntegerSet, BooleanSet)))
 
     # fixed is an attribute
 
@@ -347,15 +257,24 @@ class _GeneralBooleanVarData(_BooleanVarData):
         """Sets the fixed indicator to False."""
         self.fixed = False
 
-    #0-0 Is it just an alias of the function?
     free = unfix
 
 
 
-@ModelComponentFactory.register("Decision variables.")
+@ModelComponentFactory.register("Logical decision variables.")
 class BooleanVar(IndexedComponent):
+    """A numeric variable, which may be defined over an index.
+
+    Args:
+        initialize (float or function, optional): The initial value for
+            the variable, or a rule that returns initial values.
+        rule (float or function, optional): An alias for `initialize`.
+        dense (bool, optional): Instantiate all elements from
+            `index_set()` when constructing the Var (True) or just the
+            variables returned by `initialize`/`rule` (False).  Defaults
+            to True.
+    """
     _ComponentDataClass = _GeneralBooleanVarData
-    #The following part is rewrite because of indetation error
 
     def __new__(cls, *args, **kwds):
         if cls != BooleanVar:
@@ -366,33 +285,21 @@ class BooleanVar(IndexedComponent):
             return IndexedBooleanVar.__new__(IndexedBooleanVar) 
 
     def __init__(self, *args, **kwd):
-    	#0-0 Is this popping from a dict, also should we keep bounds?
         initialize = kwd.pop('initialize', None)
         initialize = kwd.pop('rule', initialize)
-        domain = kwd.pop('within', Reals)
-        domain = kwd.pop('domain', domain)
-        #bounds = kwd.pop('bounds', None)
         self._dense = kwd.pop('dense', True)
 
 
         kwd.setdefault('ctype', BooleanVar)
         IndexedComponent.__init__(self, *args, **kwd)
-        # Determine if the domain argument is a functor or other object
-        self._domain_init_value = None
-        self._domain_init_rule = None
-        if is_functor(domain):
-            self._domain_init_rule = domain
-        else:
-            self._domain_init_value = domain
-        #copied form var.py
+
         # Allow for functions or functors for value initialization,
         # without confusing with Params, etc (which have a __call__ method).
         #
         self._value_init_value = None
         self._value_init_rule = None
-        #0-0 Does _value_init_rule work with LogicalValue?
-        #Also O deleted the bound part from line 530-537 in var.py
-        if  is_functor(initialize) and (not isinstance(initialize,LogicalValue)):
+
+        if is_functor(initialize) and (not isinstance(initialize, LogicalValue)):
             self._value_init_rule = initialize
         else:
             self._value_init_value = initialize
@@ -414,18 +321,16 @@ class BooleanVar(IndexedComponent):
         """
         if include_fixed_values:
             return dict((idx, vardata.value)
-                            for idx, vardata in iteritems(self._data))
+                        for idx, vardata in iteritems(self._data))
         return dict((idx, vardata.value)
-                            for idx, vardata in iteritems(self._data)
-                                                if not vardata.fixed)
+                    for idx, vardata in iteritems(self._data)
+                    if not vardata.fixed)
 
-    #0-0 Again, is this just the python way of aliasing functions
     extract_values = get_values
 
     def set_values(self, new_values, valid=False):
         """
-        copied from var.py
-        Set the values of a dictionary.
+        Set data values from a dictionary.
 
         The default behavior is to validate the values in the
         dictionary.
@@ -433,15 +338,13 @@ class BooleanVar(IndexedComponent):
         for index, new_value in iteritems(new_values):
             self[index].set_value(new_value, valid)
 
-    #0-0 Really confused. What does this do?
-    #Almost a complete copy
     def construct(self, data=None):
         """Construct this component."""
         if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
             try:
                 name = str(self.name)
             except:
-                # Some Var components don't have a name yet, so just use
+                # Some BooleanVar components don't have a name yet, so just use
                 # the type
                 name = type(self)
             if logger.isEnabledFor(logging.DEBUG):
@@ -452,10 +355,10 @@ class BooleanVar(IndexedComponent):
         if self._constructed:
             return
         timer = ConstructionTimer(self)
-        self._constructed=True
+        self._constructed = True
 
         #
-        # Construct _VarData objects for all index values
+        # Construct _BooleanVarData objects for all index values
         #
         if not self.is_indexed():
             self._data[None] = self
@@ -470,11 +373,9 @@ class BooleanVar(IndexedComponent):
                     domain=self._domain_init_value, component=None)
                 cdata._component = self_weakref
                 self._data[ndx] = cdata
-                #self._initialize_members((ndx,))
             self._initialize_members(self._index)
         timer.report()
 
-    #Do we care about rewriting what's in there already?
     def add(self, index):
         """Add a variable with a particular index."""
         return self[index]
@@ -482,7 +383,7 @@ class BooleanVar(IndexedComponent):
     #
     # This method must be defined on subclasses of
     # IndexedComponent that support implicit definition
-    # 0-0 Not really sure in what way this function is useful
+    #
     def _getitem_when_not_present(self, index):
         """Returns the default component data value."""
         if index is None and not self.is_indexed():
@@ -506,45 +407,11 @@ class BooleanVar(IndexedComponent):
             del self._data[index]
             raise
 
-    #Also not really 
     def _initialize_members(self, init_set):
         """Initialize variable data for all indices in a set."""
-        # TODO: determine if there is any advantage to supporting init_set.
-        # Preliminary tests indicate that there isn't a significant speed
-        # difference to using the set form (used in dense vector
-        # construction).  Getting rid of it could simplify _setitem and
-        # this method.
-        # #0-0 Do I need to care about the above?
         # Initialize domains
         #
-        if self._domain_init_rule is not None:
-            #
-            # Initialize domains with a rule
-            #
-            if self.is_indexed():
-                for ndx in init_set:
-                    self._data[ndx].domain = \
-                        apply_indexed_rule(self,
-                                           self._domain_init_rule,
-                                           self._parent(),
-                                           ndx)
-            else:
-                self.domain = self._domain_init_rule(self._parent())
-        else:
-            if self.is_indexed():
-                # Copied
-                # Optimization: It is assumed self._domain_init_value
-                #               is used when the _GeneralVarData objects
-                #               are created. This avoids an unnecessary
-                #               loop over init_set, which can significantly
-                #               speed up construction of variables with large
-                #               index sets.
-                pass
-            else:
-                # the above optimization does not apply for
-                # singleton objects (trying to do so breaks
-                # some of the pickle tests)
-                self.domain = self._domain_init_value
+        self.domain = BooleanSet
 
         #
         # Initialize values
