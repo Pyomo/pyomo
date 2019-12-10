@@ -12,9 +12,6 @@ from pyutilib.misc import flatten_tuple
 from pyomo.common import DeveloperError
 from pyomo.core.base.sets import SetOf, _SetProduct, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
-from pyomo.core.base.var import SimpleVar, _GeneralVarData
-from pyomo.core.base.constraint import SimpleConstraint, _GeneralConstraintData
-from pyomo.core.base.block import SimpleBlock, _BlockData
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set
 )
@@ -533,7 +530,6 @@ def Reference(reference, ctype=_NotSpecified):
             % (type(reference).__name__,))
 
     _data = _ReferenceDict(reference)
-
     _iter = iter(reference)
     if ctype is _NotSpecified:
         ctypes = set()
