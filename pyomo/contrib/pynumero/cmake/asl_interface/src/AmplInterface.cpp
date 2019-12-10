@@ -12,7 +12,6 @@
 #include "AmplInterface.hpp"
 #include "AssertUtils.hpp"
 #include "asl_pfgh.h"
-//#include "als.h"
 #include "getstub.h"
 
 #include <vector>
