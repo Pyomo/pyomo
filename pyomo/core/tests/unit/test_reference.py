@@ -29,7 +29,6 @@ from pyomo.core.base.reference import (
 )
 
 
-
 class TestReferenceDict(unittest.TestCase):
     def setUp(self):
         self.m = m = ConcreteModel()
