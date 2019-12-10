@@ -27,9 +27,13 @@ import pyutilib.services
 
 from pyomo.environ import *
 from pyomo.common.log import LoggingIntercept
-from pyomo.core.base.block import SimpleBlock, SubclassOf
+from pyomo.core.base.block import SimpleBlock, SubclassOf, _BlockData, declare_custom_block
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import *
+try:
+    from StringIO import StringIO  # python 2
+except ImportError:
+    from io import StringIO  # python 3
 
 from pyomo.gdp import Disjunct
 
@@ -2260,6 +2264,18 @@ class TestBlock(unittest.TestCase):
         with self.assertRaisesRegexp(
                 ValueError, ".*Cannot write model in format"):
             m.write(format="bogus")
+
+    def test_override_pprint(self):
+        @declare_custom_block('TempBlock')
+        class TempBlockData(_BlockData):
+            def pprint(self, ostream=None, verbose=False, prefix=""):
+                ostream.write('Testing pprint of a custom block.')
+
+        correct_s = 'Testing pprint of a custom block.'
+        b = TempBlock(concrete=True)
+        stream = StringIO()
+        b.pprint(ostream=stream)
+        self.assertEqual(correct_s, stream.getvalue())
 
 
 

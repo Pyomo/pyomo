@@ -276,7 +276,7 @@ def pyomo_api(fn=None, implements=None, outputs=None, namespace=None):
                 kwargs['fn'] = fn
                 PyomoTask.__init__(self, *args, **kwargs)
                 if fn is not None:
-                    if len(argspec.args) is 0:
+                    if len(argspec.args) == 0:
                         nargs = 0
                     elif argspec.defaults is None:
                         nargs = len(argspec.args)

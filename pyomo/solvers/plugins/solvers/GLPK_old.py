@@ -960,7 +960,7 @@ class GLPKSHELL_old(SystemCallSolver):
         elif soln.status is SolutionStatus.stoppedByLimit:
             soln.gap = "Infinity"  # until proven otherwise
             if "lower_bound" in dir(results.problem):
-                if results.problem.lower_bound is "-Infinity":
+                if results.problem.lower_bound == "-Infinity":
                     soln.gap = "Infinity"
                 elif not results.problem.lower_bound is None:
                     if "upper_bound" not in dir(results.problem):
@@ -971,7 +971,7 @@ class GLPKSHELL_old(SystemCallSolver):
                         soln.gap = eval(soln.objective(0)) - \
                                    eval(results.problem.lower_bound)
             elif "upper_bound" in dir(results.problem):
-                if results.problem.upper_bound is "Infinity":
+                if results.problem.upper_bound == "Infinity":
                     soln.gap = "Infinity"
                 elif not results.problem.upper_bound is None:
                     soln.gap = eval(results.problem.upper_bound) - \

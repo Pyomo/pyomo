@@ -58,6 +58,7 @@ from pyomo.core.base.label import *
 from pyomo.core.base.template_expr import IndexTemplate
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 
+from pyomo.repn import generate_standard_repn
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
 
@@ -5142,6 +5143,74 @@ class TestNumValueDuckTyping(unittest.TestCase):
         x = pyomo.kernel.variable()
         self.check_api(x)
 
+class TestDirect_LinearExpression(unittest.TestCase):
+
+    def test_LinearExpression_Param(self):
+        m = ConcreteModel()
+        N = 10
+        S = list(range(1,N+1))
+        m.x = Var(S, initialize=lambda m,i: 1.0/i)
+        m.P = Param(S, initialize=lambda m,i: i)
+        m.obj = Objective(expr=LinearExpression(constant=1.0, linear_coefs=[m.P[i] for i in S], linear_vars=[m.x[i] for i in S]))
+
+        # test that the expression evaluates correctly
+        self.assertAlmostEqual(value(m.obj), N+1)
+
+        # test that the standard repn can be constructed
+        repn = generate_standard_repn(m.obj.expr)
+        self.assertAlmostEqual(repn.constant, 1.0)
+        self.assertTrue(len(repn.linear_coefs) == N)
+        self.assertTrue(len(repn.linear_vars) == N)
+
+    def test_LinearExpression_Number(self):
+        m = ConcreteModel()
+        N = 10
+        S = list(range(1,N+1))
+        m.x = Var(S, initialize=lambda m,i: 1.0/i)
+        m.obj = Objective(expr=LinearExpression(constant=1.0, linear_coefs=[i for i in S], linear_vars=[m.x[i] for i in S]))
+
+        # test that the expression evaluates correctly
+        self.assertAlmostEqual(value(m.obj), N+1)
+
+        # test that the standard repn can be constructed
+        repn = generate_standard_repn(m.obj.expr)
+        self.assertAlmostEqual(repn.constant, 1.0)
+        self.assertTrue(len(repn.linear_coefs) == N)
+        self.assertTrue(len(repn.linear_vars) == N)
+
+    def test_LinearExpression_MutableParam(self):
+        m = ConcreteModel()
+        N = 10
+        S = list(range(1,N+1))
+        m.x = Var(S, initialize=lambda m,i: 1.0/i)
+        m.P = Param(S, initialize=lambda m,i: i, mutable=True)
+        m.obj = Objective(expr=LinearExpression(constant=1.0, linear_coefs=[m.P[i] for i in S], linear_vars=[m.x[i] for i in S]))
+
+        # test that the expression evaluates correctly
+        self.assertAlmostEqual(value(m.obj), N+1)
+
+        # test that the standard repn can be constructed
+        repn = generate_standard_repn(m.obj.expr)
+        self.assertAlmostEqual(repn.constant, 1.0)
+        self.assertTrue(len(repn.linear_coefs) == N)
+        self.assertTrue(len(repn.linear_vars) == N)
+
+    def test_LinearExpression_expression(self):
+        m = ConcreteModel()
+        N = 10
+        S = list(range(1,N+1))
+        m.x = Var(S, initialize=lambda m,i: 1.0/i)
+        m.P = Param(S, initialize=lambda m,i: i, mutable=True)
+        m.obj = Objective(expr=LinearExpression(constant=1.0, linear_coefs=[i*m.P[i] for i in S], linear_vars=[m.x[i] for i in S]))
+
+        # test that the expression evaluates correctly
+        self.assertAlmostEqual(value(m.obj), sum(i for i in S)+1)
+
+        # test that the standard repn can be constructed
+        repn = generate_standard_repn(m.obj.expr)
+        self.assertAlmostEqual(repn.constant, 1.0)
+        self.assertTrue(len(repn.linear_coefs) == N)
+        self.assertTrue(len(repn.linear_vars) == N)
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,198 +2,297 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-#
-# Unit Tests for Utility Functions
-#
 
-import os
-from os.path import abspath, dirname
-currdir = dirname(abspath(__file__))+os.sep
+import pickle
 
-import pyomo.core.expr.current as EXPR
 import pyutilib.th as unittest
 
-from pyomo.environ import *
+from pyomo.common import DeveloperError
+from pyomo.core.base.util import (
+    Initializer, ConstantInitializer, ItemInitializer, ScalarCallInitializer,
+    IndexedCallInitializer, CountedCallInitializer, CountedCallGenerator,
+    disable_methods,
+)
+from pyomo.environ import (
+    ConcreteModel, Var,
+)
 
-def obj_rule(model):
-    return sum(model.x[a] + model.y[a] for a in model.A)
-def constr_rule(model,a):
-    return model.x[a] >= model.y[a]
+class _simple(object):
+    def __init__(self, name):
+        self.name = name
+
+    def construct(self, data=None):
+        return 'construct'
+
+    def a(self):
+        return 'a'
+
+    def b(self):
+        return 'b'
+
+    def c(self):
+        return 'c'
+
+    @property
+    def d(self):
+        return 'd'
+
+    @property
+    def e(self):
+        return 'e'
+
+    def f(self, arg1, arg2=1):
+        return "f%s%s" % (arg1, arg2)
+
+@disable_methods(('a',('b', 'custom_msg'),'d',('e', 'custom_pmsg'),'f'))
+class _abstract_simple(_simple):
+    pass
+
+class TestDisableMethods(unittest.TestCase):
+    def test_disable(self):
+        x = _abstract_simple('foo')
+        self.assertIs(type(x), _abstract_simple)
+        self.assertIsInstance(x, _simple)
+        with self.assertRaisesRegexp(
+                RuntimeError, "Cannot access a on _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.a()
+        with self.assertRaisesRegexp(
+                RuntimeError, "Cannot custom_msg _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.b()
+        self.assertEqual(x.c(), 'c')
+        with self.assertRaisesRegexp(
+                RuntimeError, "Cannot access property d on _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.d
+        with self.assertRaisesRegexp(
+                RuntimeError, "Cannot set property d on _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.d = 1
+        with self.assertRaisesRegexp(
+                RuntimeError, "Cannot custom_pmsg _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.e
+        with self.assertRaisesRegexp(
+                RuntimeError, "Cannot custom_pmsg _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.e = 1
+
+        # Verify that the wrapper function enforces the same API as the
+        # wrapped function
+        with self.assertRaisesRegexp(
+                TypeError, "f\(\) takes "):
+            x.f(1,2,3)
+        with self.assertRaisesRegexp(
+                RuntimeError, "Cannot access f on _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.f(1,2)
 
 
-class Test(unittest.TestCase):
+        self.assertEqual(x.construct(), 'construct')
+        self.assertIs(type(x), _simple)
+        self.assertIsInstance(x, _simple)
+        self.assertEqual(x.a(), 'a')
+        self.assertEqual(x.b(), 'b')
+        self.assertEqual(x.c(), 'c')
+        self.assertEqual(x.d, 'd')
+        self.assertEqual(x.e, 'e')
+        self.assertEqual(x.f(1,2), 'f12')
 
-    def test_expr0(self):
-        model = AbstractModel()
-        model.A = Set(initialize=[1,2,3])
-        model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
-        model.C = Param(model.A,initialize={1:100,2:200,3:300}, mutable=False)
-        model.x = Var(model.A)
-        model.y = Var(model.A)
-        instance=model.create_instance()
-        expr = sum_product(instance.B,instance.y)
-        baseline = "B[1]*y[1] + B[2]*y[2] + B[3]*y[3]"
-        self.assertEqual( str(expr), baseline )
-        expr = sum_product(instance.C,instance.y)
-        self.assertEqual( str(expr), "100*y[1] + 200*y[2] + 300*y[3]" )
+    def test_bad_api(self):
+        with self.assertRaisesRegexp(
+                DeveloperError, "Cannot disable method not_there on "
+                "<class '.*\.foo'>"):
 
-    def test_expr1(self):
-        model = AbstractModel()
-        model.A = Set(initialize=[1,2,3])
-        model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
-        model.C = Param(model.A,initialize={1:100,2:200,3:300}, mutable=False)
-        model.x = Var(model.A)
-        model.y = Var(model.A)
-        instance=model.create_instance()
-        expr = sum_product(instance.x,instance.B,instance.y)
-        baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
-        self.assertEqual( str(expr), baseline )
-        expr = sum_product(instance.x,instance.C,instance.y)
-        self.assertEqual( str(expr), "100*x[1]*y[1] + 200*x[2]*y[2] + 300*x[3]*y[3]" )
+            @disable_methods(('a','not_there'))
+            class foo(_simple):
+                pass
 
-    def test_expr2(self):
-        model = AbstractModel()
-        model.A = Set(initialize=[1,2,3])
-        model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
-        model.C = Param(model.A,initialize={1:100,2:200,3:300}, mutable=False)
-        model.x = Var(model.A)
-        model.y = Var(model.A)
-        instance=model.create_instance()
-        expr = sum_product(instance.x,instance.B,instance.y, index=[1,3])
-        baseline = "B[1]*x[1]*y[1] + B[3]*x[3]*y[3]"
-        self.assertEqual( str(expr), baseline )
-        expr = sum_product(instance.x,instance.C,instance.y, index=[1,3])
-        self.assertEqual( str(expr), "100*x[1]*y[1] + 300*x[3]*y[3]" )
 
-    def test_expr3(self):
-        model = AbstractModel()
-        model.A = Set(initialize=[1,2,3])
-        model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
-        model.C = Param(model.A,initialize={1:100,2:200,3:300}, mutable=False)
-        model.x = Var(model.A)
-        model.y = Var(model.A)
-        instance=model.create_instance()
-        expr = sum_product(instance.x,instance.B,denom=instance.y, index=[1,3])
-        baseline = "B[1]*x[1]/y[1] + B[3]*x[3]/y[3]"
-        self.assertEqual( str(expr), baseline )
-        expr = sum_product(instance.x,instance.C,denom=instance.y, index=[1,3])
-        self.assertEqual( str(expr), "100*x[1]/y[1] + 300*x[3]/y[3]" )
+def _init_scalar(m):
+    return 1
 
-    def test_expr4(self):
-        model = AbstractModel()
-        model.A = Set(initialize=[1,2,3])
-        model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
-        model.x = Var(model.A)
-        model.y = Var(model.A)
-        instance=model.create_instance()
-        expr = sum_product(denom=[instance.y,instance.x])
-        baseline = "1/(y[1]*x[1]) + 1/(y[2]*x[2]) + 1/(y[3]*x[3])"
-        self.assertEqual( str(expr), baseline )
+def _init_indexed(m, *args):
+    i = 1
+    for arg in args:
+        i *= (arg+1)
+    return i
 
-    def test_expr5(self):
-        model = ConcreteModel()
-        model.A = Set(initialize=[1,2,3], doc='set A')
-        model.B = Param(model.A, initialize={1:100,2:200,3:300}, doc='param B', mutable=True)
-        model.C = Param(initialize=3, doc='param C', mutable=True)
-        model.x = Var(model.A, doc='var x')
-        model.y = Var(doc='var y')
-        model.o = Objective(expr=model.y, doc='obj o')
-        model.c1 = Constraint(expr=model.x[1] >= 0, doc='con c1')
-        def c2_rule(model, a):
-            return model.B[a] * model.x[a] <= 1
-        model.c2 = Constraint(model.A, doc='con c2', rule=c2_rule)
-        model.c3 = ConstraintList(doc='con c3')
-        model.c3.add(model.y <= 0)
-        #
-        OUTPUT=open(currdir+"test_expr5.out","w")
-        model.pprint(ostream=OUTPUT)
-        OUTPUT.close()
-        self.assertFileEqualsBaseline(currdir+"test_expr5.out",currdir+"test_expr5.txt")
+class Test_Initializer(unittest.TestCase):
+    def test_constant(self):
+        m = ConcreteModel()
+        a = Initializer(5)
+        self.assertIs(type(a), ConstantInitializer)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(a(None, 1), 5)
 
-    def test_prod1(self):
-        self.assertEqual(prod([1,2,3,5]),30)
-
-    def test_prod2(self):
-        model = ConcreteModel()
-        model.A = Set(initialize=[1,2,3], doc='set A')
-        model.x = Var(model.A)
-        expr = prod(model.x[i] for i in model.x)
-        baseline = "x[1]*x[2]*x[3]"
-        self.assertEqual( str(expr), baseline )
-        expr = prod(model.x)
-        self.assertEqual( expr, 6)
-
-    def test_sum1(self):
-        self.assertEqual(quicksum([1,2,3,5]),11)
-
-    def test_sum2(self):
-        model = ConcreteModel()
-        model.A = Set(initialize=[1,2,3], doc='set A')
-        model.x = Var(model.A)
-        expr = quicksum(model.x[i] for i in model.x)
-        baseline = "x[1] + x[2] + x[3]"
-        self.assertEqual( str(expr), baseline )
-
-    def test_sum3(self):
-        model = ConcreteModel()
-        model.A = Set(initialize=[1,2,3], doc='set A')
-        model.x = Var(model.A)
-        expr = quicksum(model.x)
-        self.assertEqual( expr, 6)
-
-    def test_summation_error1(self):
-        try:
-            sum_product()
-            self.fail("Expected ValueError")
-        except ValueError:
-            pass
-
-    def test_summation_error2(self):
-        model = AbstractModel()
-        model.A = Set(initialize=[1,2,3])
-        model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
-        model.x = Var(model.A)
-        instance=model.create_instance()
-        try:
-            expr = sum_product(instance.x,instance.B)
-            self.fail("Expected ValueError")
-        except ValueError:
-            pass
-
-    def test_summation_error3(self):
-        model = AbstractModel()
-        model.A = Set(initialize=[1,2,3])
-        model.B = Param(model.A,initialize={1:100,2:200,3:300}, mutable=True)
-        model.x = Var(model.A)
-        instance=model.create_instance()
-        try:
-            expr = sum_product(denom=(instance.x,instance.B))
-            self.fail("Expected ValueError")
-        except ValueError:
-            pass
-
-    def test_sequence_error1(self):
-        try:
-            sequence()
-            self.fail("Expected ValueError")
-        except ValueError:
-            pass
-        try:
-            sequence(1,2,3,4)
-            self.fail("Expected ValueError")
-        except ValueError:
-            pass
+    def test_dict(self):
+        m = ConcreteModel()
+        a = Initializer({1:5})
+        self.assertIs(type(a), ItemInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(a(None, 1), 5)
 
     def test_sequence(self):
-        self.assertEqual(list(sequence(10)), list(range(1,11)))
-        self.assertEqual(list(sequence(8,10)), [8,9,10])
-        self.assertEqual(list(sequence(1,10,3)), [1,4,7,10])
+        m = ConcreteModel()
+        a = Initializer([0,5])
+        self.assertIs(type(a), ItemInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(a(None, 1), 5)
+
+        a = Initializer([0,5], treat_sequences_as_mappings=False)
+        self.assertIs(type(a), ConstantInitializer)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(a(None, 1), [0,5])
+
+    def test_function(self):
+        m = ConcreteModel()
+        def a_init(m):
+            return 0
+        a = Initializer(a_init)
+        self.assertIs(type(a), ScalarCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(a(None, 1), 0)
+
+        m.x = Var([1,2,3])
+        def x_init(m, i):
+            return i+1
+        a = Initializer(x_init)
+        self.assertIs(type(a), IndexedCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(a(None, 1), 2)
+
+        def x2_init(m):
+            return 0
+        a = Initializer(x2_init)
+        self.assertIs(type(a), ScalarCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(a(None, 1), 0)
+
+        m.y = Var([1,2,3], [4,5,6])
+        def y_init(m, i, j):
+            return j*(i+1)
+        a = Initializer(y_init)
+        self.assertIs(type(a), IndexedCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(a(None, (1, 4)), 8)
+
+        b = CountedCallInitializer(m.x, a)
+        self.assertIs(type(b), CountedCallInitializer)
+        self.assertFalse(b.constant())
+        self.assertFalse(b.verified)
+        self.assertFalse(b._scalar)
+        self.assertIs(a._fcn, b._fcn)
+        c = b(None, 1)
+        self.assertIs(type(c), CountedCallGenerator)
+        self.assertEqual(next(c), 2)
+        self.assertEqual(next(c), 3)
+        self.assertEqual(next(c), 4)
 
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_generator_fcn(self):
+        m = ConcreteModel()
+        def a_init(m):
+            yield 0
+            yield 3
+        with self.assertRaisesRegexp(
+                ValueError, "Generator functions are not allowed"):
+            a = Initializer(a_init)
+
+        a = Initializer(a_init, allow_generators=True)
+        self.assertIs(type(a), ScalarCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(list(a(None, 1)), [0,3])
+
+        m.x = Var([1,2,3])
+        def x_init(m, i):
+            yield i
+            yield i+1
+        a = Initializer(x_init, allow_generators=True)
+        self.assertIs(type(a), IndexedCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(list(a(None, 1)), [1,2])
+
+        m.y = Var([1,2,3], [4,5,6])
+        def y_init(m, i, j):
+            yield j
+            yield i+1
+        a = Initializer(y_init, allow_generators=True)
+        self.assertIs(type(a), IndexedCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(list(a(None, (1, 4))), [4,2])
+
+    def test_generators(self):
+        m = ConcreteModel()
+        with self.assertRaisesRegexp(
+                ValueError, "Generators are not allowed"):
+            a = Initializer(iter([0,3]))
+
+        a = Initializer(iter([0,3]), allow_generators=True)
+        self.assertIs(type(a), ConstantInitializer)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(list(a(None, 1)), [0,3])
+
+        def x_init():
+            yield 0
+            yield 3
+        with self.assertRaisesRegexp(
+                ValueError, "Generators are not allowed"):
+            a = Initializer(x_init())
+
+        a = Initializer(x_init(), allow_generators=True)
+        self.assertIs(type(a), ConstantInitializer)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(list(a(None, 1)), [0,3])
+
+    def test_pickle(self):
+        m = ConcreteModel()
+        a = Initializer(5)
+        a.verified = True
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a, b)
+        self.assertEqual(a.val, b.val)
+        self.assertEqual(a.verified, b.verified)
+
+        a = Initializer({1:5})
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a, b)
+        self.assertEqual(a._dict, b._dict)
+        self.assertIsNot(a._dict, b._dict)
+        self.assertEqual(a.verified, b.verified)
+
+        a = Initializer(_init_scalar)
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a, b)
+        self.assertIs(a._fcn, b._fcn)
+        self.assertEqual(a.verified, b.verified)
+        self.assertEqual(a(None, None), 1)
+        self.assertEqual(b(None, None), 1)
+
+        m.x = Var([1,2,3])
+        a = Initializer(_init_indexed)
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a, b)
+        self.assertIs(a._fcn, b._fcn)
+        self.assertEqual(a.verified, b.verified)
+        self.assertEqual(a(None, 1), 2)
+        self.assertEqual(b(None, 2), 3)
