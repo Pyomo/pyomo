@@ -1,4 +1,4 @@
-name: [WIP] MacOS Pyomo Workflow
+name: WIP MacOS Pyomo Workflow
 
 on:
   pull_request:

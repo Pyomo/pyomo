@@ -1,4 +1,4 @@
-name: [WIP] Windows Pyomo Workflow
+name: WIP Windows Pyomo Workflow
 
 on:
   pull_request:
