@@ -44,7 +44,6 @@ jobs:
     - name: Test with nosetests
       run: |
         pip install nose
-#        nosetests pyomo
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
         
         
