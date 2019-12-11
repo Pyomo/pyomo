@@ -46,7 +46,10 @@ class _simple(object):
     def e(self):
         return 'e'
 
-@disable_methods(('a',('b', 'custom_msg'),'d',('e', 'custom_pmsg')))
+    def f(self, arg1, arg2=1):
+        return "f%s%s" % (arg1, arg2)
+
+@disable_methods(('a',('b', 'custom_msg'),'d',('e', 'custom_pmsg'),'f'))
 class _abstract_simple(_simple):
     pass
 
@@ -81,6 +84,17 @@ class TestDisableMethods(unittest.TestCase):
                 "'foo' before it has been constructed"):
             x.e = 1
 
+        # Verify that the wrapper function enforces the same API as the
+        # wrapped function
+        with self.assertRaisesRegexp(
+                TypeError, "f\(\) takes "):
+            x.f(1,2,3)
+        with self.assertRaisesRegexp(
+                RuntimeError, "Cannot access f on _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.f(1,2)
+
+
         self.assertEqual(x.construct(), 'construct')
         self.assertIs(type(x), _simple)
         self.assertIsInstance(x, _simple)
@@ -89,6 +103,7 @@ class TestDisableMethods(unittest.TestCase):
         self.assertEqual(x.c(), 'c')
         self.assertEqual(x.d, 'd')
         self.assertEqual(x.e, 'e')
+        self.assertEqual(x.f(1,2), 'f12')
 
     def test_bad_api(self):
         with self.assertRaisesRegexp(

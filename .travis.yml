@@ -14,6 +14,7 @@ env:
   - COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/coveragerc
   - DOCKERENV="-e TAG -e COVERAGE_PROCESS_START -e PYOMO_CONFIG_DIR"
   matrix:
+  - TAG=python_3.8    CATEGORY="nightly"
   - TAG=python_3.7    CATEGORY="nightly"
   - TAG=python_3.7    CATEGORY="nightly" SLIM=1
   - TAG=python_3.7    CATEGORY="smoke"   SETUP_OPTIONS="--with-cython"

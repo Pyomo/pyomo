@@ -49,14 +49,15 @@ class StreamBasedExpressionVisitor(object):
     through callback functions as the traversal enters and leaves nodes
     in the tree:
 
-      enterNode(N1)
-      {for N2 in N1.args:}
-        beforeChild(N1, N2)
-          enterNode(N2)
-          exitNode(N2, data)
-        acceptChildResult(N1, data, child_result)
-        afterChild(N1, N2)
-      exitNode(N1)
+      enterNode(N1) -> args, data
+      {for N2 in args:}
+        beforeChild(N1, N2) -> descend, child_result
+          enterNode(N2) -> N2_args, N2_data
+          [...]
+          exitNode(N2, n2_data) -> child_result
+        acceptChildResult(N1, data, child_result) -> data
+        afterChild(N1, N2) -> None
+      exitNode(N1, data) -> N1_result
 
     Individual event callbacks match the following signatures:
 

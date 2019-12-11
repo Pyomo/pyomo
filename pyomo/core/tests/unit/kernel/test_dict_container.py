@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import pickle
-import collections
 
 import pyutilib.th as unittest
 import pyomo.kernel as pmo
@@ -26,6 +25,13 @@ from pyomo.core.kernel.block import (IBlock,
 
 import six
 from six import StringIO
+
+if six.PY3:
+    from collections.abc import Mapping as collections_Mapping
+    from collections.abc import MutableMapping as collections_MutableMapping
+else:
+    from collections import Mapping as collections_Mapping
+    from collections import MutableMapping as collections_MutableMapping
 
 #
 # There are no fully implemented test suites in this
@@ -132,10 +138,10 @@ class _TestDictContainerBase(object):
         self.assertTrue(isinstance(cdict, ICategorizedObjectContainer))
         self.assertTrue(isinstance(cdict, IHomogeneousContainer))
         self.assertTrue(isinstance(cdict, DictContainer))
-        self.assertTrue(isinstance(cdict, collections.Mapping))
-        self.assertTrue(isinstance(cdict, collections.MutableMapping))
-        self.assertTrue(issubclass(type(cdict), collections.Mapping))
-        self.assertTrue(issubclass(type(cdict), collections.MutableMapping))
+        self.assertTrue(isinstance(cdict, collections_Mapping))
+        self.assertTrue(isinstance(cdict, collections_MutableMapping))
+        self.assertTrue(issubclass(type(cdict), collections_Mapping))
+        self.assertTrue(issubclass(type(cdict), collections_MutableMapping))
 
     def test_len1(self):
         cdict = self._container_type()
@@ -602,8 +608,8 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         self.assertTrue(isinstance(cdict, ICategorizedObjectContainer))
         self.assertTrue(isinstance(cdict, IHomogeneousContainer))
         self.assertTrue(isinstance(cdict, DictContainer))
-        self.assertTrue(isinstance(cdict, collections.Mapping))
-        self.assertTrue(isinstance(cdict, collections.MutableMapping))
+        self.assertTrue(isinstance(cdict, collections_Mapping))
+        self.assertTrue(isinstance(cdict, collections_MutableMapping))
 
     def test_active(self):
         children = {}
