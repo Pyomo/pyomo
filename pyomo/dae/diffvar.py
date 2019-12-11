@@ -99,7 +99,7 @@ class DerivativeVar(Var):
                 if sidx_sets.type() is ContinuousSet:
                     sVar._contset[sidx_sets] = 0
             else:
-                sidx_sets = sVar._implicit_subsets
+                sidx_sets = sVar.index_set().set_tuple
                 loc = 0
                 for i, s in enumerate(sidx_sets):
                     if s.type() is ContinuousSet:
@@ -161,12 +161,8 @@ class DerivativeVar(Var):
 
         kwds.setdefault('ctype', DerivativeVar)
 
-        if sVar._implicit_subsets is None:
-            arg = (sVar.index_set(),)
-        else:
-            arg = tuple(sVar._implicit_subsets)
+        Var.__init__(self,sVar.index_set(),**kwds)
 
-        Var.__init__(self,*arg,**kwds)
 
     def get_continuousset_list(self):
         """ Return the a list of :py:class:`ContinuousSet` components the

@@ -16,9 +16,8 @@ then they are Generalized Disjunctive Programming (GDP) models
 Disjunctions
 ============
 
-A disjunction is a set of collections of variables, parameters, and
-constraints that are linked by an OR (really exclusive or)
-constraint. The simplest case is a 2-term disjunction:
+A disjunction is a set of constraint groupings that are linked by a logical OR relationship.
+The simplest case is a 2-term disjunction:
 
 .. math::
 
@@ -27,7 +26,7 @@ constraint. The simplest case is a 2-term disjunction:
 That is, either the constraints in the collection D\ :sub:`1` are
 enforced, OR the constraints in the collection D\ :sub:`2` are enforced.
 
-In pyomo, we model each collection using a special type of block called
+In Pyomo, we model each collection using a special type of block called
 a ``Disjunct``. Each ``Disjunct`` is a block that contains an implicitly
 declared binary variable, "indicator_var" that is 1 when the constraints
 in that ``Disjunct`` is enforced and 0 otherwise.
@@ -61,32 +60,39 @@ the example returns.
 Transformation
 --------------
 
-In order to use the solvers currently available, one must convert the
-disjunctive model to a standard MIP/MINLP model.  The easiest way to do
-that is using the (included) BigM or Convex Hull transformations.  From
-the Pyomo command line, include the option ``--transform
-pyomo.gdp.bigm`` or ``--transform pyomo.gdp.chull``
+To use standard commercial solvers, you must convert the disjunctive model to a standard MIP/MINLP model.
+The two classical strategies for doing so are the (included) Big-M and Hull reformulations.
+From the Pyomo command line,  include the option ``--transform pyomo.gdp.bigm`` or ``--transform pyomo.gdp.chull``.
+If you are using a Python script, ``TransformationFactory`` accomplishes the same functionality:
 
-Notes
+- ``TransformationFactory('gdp.bigm').apply_to(model)``
+- ``TransformationFactory('gdp.chull').apply_to(model)``
+
+.. note::
+
+    - all variables that appear in disjuncts need upper and lower bounds for chull
+
+    - for linear models, the BigM transform can estimate reasonably tight M
+      values for you if variables are bounded
+
+    - for all other models, you will need to provide the M values through a
+      “BigM” Suffix.
+
+    - When you declare a Disjunct, it (at declaration time) will automatically
+      have a variable “indicator_var” defined and attached to it.
+      After that, it is just a Var like any other Var.
+
+    - The hull reformulation is an exact reformulation at the solution points
+      even for nonconvex models, but the resulting MINLP will also be nonconvex.
+
+Direct GDP solvers
+------------------
+
+Pyomo includes the contributed GDPopt solver, which can direct solve GDP models.
+Its documentation and usage is described at :doc:`/contributed_packages/gdpopt`.
+
+Examples
 -----
-
-Some notes:
-
-- all variables that appear in disjuncts need upper and lower bounds
-
-- for linear models, the BigM transform can estimate reasonably tight M
-  values for you
-
-- for all other models, you will need to provide the M values through a
-  “BigM” Suffix.
-
-- the convex hull reformulation is only valid for linear and convex
-  nonlinear problems.  Nonconvex problems are not supported (and are not
-  checked for).
-
-When you declare a Disjunct, it (at declaration time) will
-automatically have a variable “indicator_var” defined and attached to
-it.  After that, it is just a Var like any other Var.
 
 The following models all work and are equivalent:
 

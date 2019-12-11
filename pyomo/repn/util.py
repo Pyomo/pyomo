@@ -42,7 +42,7 @@ def ftoa(val):
             _val = value(val)
         else:
             raise ValueError(
-                "Converting non-fixed bound or value to string: %s" (val,))
+                "Converting non-fixed bound or value to string: %s" % (val,))
     #
     # Convert to string
     a = _ftoa_precision_str % _val
