@@ -136,7 +136,7 @@ class kestrelAMPL:
         try:
             result = self.neos.ping()
             logger.info("OK.")
-        except socket.error:
+        except (socket.error, xmlrpclib.ProtocolError):
             e = sys.exc_info()[1]
             self.neos = None
             logger.info("Fail.")
