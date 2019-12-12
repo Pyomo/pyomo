@@ -938,7 +938,7 @@ class IndexedVar(Var):
         indicating the variable should be fixed at its current value.
         """
         for vardata in itervalues(self):
-            vardata.fix(value=NoArgumentGiven)
+            vardata.fix(value=value)
 
     def unfix(self):
         """Sets the fixed indicator to False."""
