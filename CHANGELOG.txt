@@ -3,9 +3,38 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Current Development
+Pyomo 5.6.8   13 Dec 2019
 -------------------------------------------------------------------------------
 
+- General
+  - Fix collections imports for Python 3.x
+  - Add verbose logging options for infeasibility testing (#1207)
+- Core
+  - Remove deprecated call to formatargspec in Python 3.x (#1174)
+  - Remove old, unreachable code in PyomoModel.py (#1189)
+- Solver Interfaces
+  - Fix incorrect precision warnings in the GAMS and BARON writers (#1166)
+  - Fix typo in MOSEK problem status handling (#1170)
+  - Fix bug in NEOS interface for Python 3.x (#1206)
+- DAE updates
+  - Fix bug in get_index_information (#1195)
+  - Remove use of _implicit_subsets (#1197)
+- PySP updates
+  - Expose options for CC and CVaR in the rapper interface (#1211)
+- Testing
+  - Disable extras on Appveyor Python 3.7 build (#1180)
+  - Add Python 3.8 to Travis test suite
+  - Updates to Jenkins build infrastructure (#1216)
+- Documentation
+  - Docstring update for stream-based walkers
+  - Minor update to PySP rapper documentation (#1204)
+  - Minor updates to installation documentation (#1191)
+  - Minor updates to Pyomo.GDP documentation
+- Contributed Packages
+  - Add MC++ version checking (#1172)
+  - Fix minor type mismatch in PyNumero (#1214)
+  - Fix deprecation warning in Mindtpy (#1188)
+  - Add test skipping to trust region tests requiring IPOPT (#1220)
 
 -------------------------------------------------------------------------------
 Pyomo 5.6.7    7 Nov 2019
