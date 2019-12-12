@@ -632,7 +632,7 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
         x = m.x = Var(bounds=(-4, 4))
         y = m.y = Var(bounds=(-10, 10))
         m.disj = Disjunction(expr=[
-            [x**2 + y**2 <= 2, x**3 + y**2 + x * y >= 1/2],
+            [x**2 + y**2 <= 2, x**3 + y**2 + x * y >= 1.0/2.0],
             [(x - 3)**2 + (y - 3)**2 <= 1]
         ])
         TransformationFactory('gdp.bigm').apply_to(m)
