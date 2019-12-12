@@ -597,6 +597,26 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
 
 
+class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
+    def test_nonlinear_bigM(self):
+        m = models.makeTwoTermDisj_Nonlinear()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
+
+        # first constraint
+        c = disjBlock[0].component("d[0].c")
+        self.assertEqual(len(c), 1)
+        self.assertTrue(c['ub'].active)
+        repn = generate_standard_repn(c['ub'].body)
+        self.assertFalse(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 2)
+        check_linear_coef(self, repn, m.x, 1)
+        check_linear_coef(self, repn, m.d[0].indicator_var, 94)
+        self.assertEqual(repn.constant, -94)
+        self.assertEqual(c['ub'].upper, m.d[0].c.upper)
+        self.assertIsNone(c['ub'].lower)
+
+
 class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
     def setUp(self):
         # set seed so we can test name collisions predictably
