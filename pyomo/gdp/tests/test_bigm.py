@@ -627,6 +627,50 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
             TransformationFactory('gdp.bigm').apply_to,
             m)
 
+    def test_nonlinear_disjoint(self):
+        m = ConcreteModel()
+        x = m.x = Var(bounds=(-4, 4))
+        y = m.y = Var(bounds=(-10, 10))
+        m.disj = Disjunction(expr=[
+            [x**2 + y**2 <= 2, x**3 + y**2 + x * y >= 1/2],
+            [(x - 3)**2 + (y - 3)**2 <= 1]
+        ])
+        TransformationFactory('gdp.bigm').apply_to(m)
+        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
+
+        # first disjunct, first constraint
+        c = disjBlock[0].component("disj_disjuncts[0].constraint")
+        self.assertEqual(len(c), 2)
+        repn = generate_standard_repn(c[1, 'ub'].body)
+        self.assertFalse(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 1)
+        # check_linear_coef(self, repn, m.x, 1)
+        check_linear_coef(self, repn, m.disj_disjuncts[0].indicator_var, 114)
+        self.assertEqual(repn.constant, -114)
+        self.assertEqual(c[1, 'ub'].upper, m.disj_disjuncts[0].constraint[1].upper)
+        self.assertIsNone(c[1, 'ub'].lower)
+        # first disjunct, second constraint
+        repn = generate_standard_repn(c[2, 'lb'].body)
+        self.assertFalse(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 1)
+        # check_linear_coef(self, repn, m.x, 1)
+        check_linear_coef(self, repn, m.disj_disjuncts[0].indicator_var, -104.5)
+        self.assertEqual(repn.constant, 104.5)
+        self.assertEqual(c[2, 'lb'].lower, m.disj_disjuncts[0].constraint[2].lower)
+        self.assertIsNone(c[2, 'lb'].upper)
+        # second disjunct, first constraint
+        c = disjBlock[1].component("disj_disjuncts[1].constraint")
+        self.assertEqual(len(c), 1)
+        repn = generate_standard_repn(c[1, 'ub'].body)
+        self.assertFalse(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 3)
+        check_linear_coef(self, repn, m.x, -6)
+        check_linear_coef(self, repn, m.y, -6)
+        check_linear_coef(self, repn, m.disj_disjuncts[1].indicator_var, 217)
+        self.assertEqual(repn.constant, -199)
+        self.assertEqual(c[1, 'ub'].upper, m.disj_disjuncts[1].constraint[1].upper)
+        self.assertIsNone(c[1, 'ub'].lower)
+
 
 class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
     def setUp(self):
