@@ -57,7 +57,7 @@ def get_version():
     return _verInfo['__version__']
 
 requires = [
-    'PyUtilib>=5.7.2.dev0',
+    'PyUtilib>=5.7.3.dev0',
     'appdirs',
     'ply',
     'six>=1.4',
@@ -153,6 +153,7 @@ def run_setup():
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: Jython',
         'Programming Language :: Python :: Implementation :: PyPy',

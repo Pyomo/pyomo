@@ -151,7 +151,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
         rbpath = parmestpath + os.sep + "examples" + os.sep + \
                    "rooney_biegler" + os.sep + "rooney_biegler.py"
         rbpath = os.path.abspath(rbpath) # paranoia strikes deep...
-        if sys.version_info >= (3,0):
+        if sys.version_info >= (3,5):
             ret = subprocess.run(["python", rbpath])
             retcode = ret.returncode
         else:
@@ -169,7 +169,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
                    "rooney_biegler" + os.sep + "rooney_biegler_parmest.py"
         rbpath = os.path.abspath(rbpath) # paranoia strikes deep...
         rlist = ["mpiexec", "--allow-run-as-root", "-n", "2", "python", rbpath]
-        if sys.version_info >= (3,0):
+        if sys.version_info >= (3,5):
             ret = subprocess.run(rlist)
             retcode = ret.returncode
         else:

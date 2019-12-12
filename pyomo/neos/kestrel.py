@@ -86,7 +86,7 @@ else: # Python 3.x
             self.proxy = urlparse(host)
             if not self.proxy.hostname:
                 # User omitted scheme from the proxy; assume http
-                self.proxy = urlparse('http://'+proxy)
+                self.proxy = urlparse('http://'+host)
 
         def make_connection(self, host):
             scheme = urlparse(host).scheme
@@ -136,7 +136,7 @@ class kestrelAMPL:
         try:
             result = self.neos.ping()
             logger.info("OK.")
-        except socket.error:
+        except (socket.error, xmlrpclib.ProtocolError):
             e = sys.exc_info()[1]
             self.neos = None
             logger.info("Fail.")
