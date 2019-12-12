@@ -616,6 +616,17 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
         self.assertEqual(c['ub'].upper, m.d[0].c.upper)
         self.assertIsNone(c['ub'].lower)
 
+    def test_nonlinear_bigM_missing_var_bounds(self):
+        m = models.makeTwoTermDisj_Nonlinear()
+        m.y.setlb(None)
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Cannot estimate M for unbounded nonlinear "
+            "expressions.\n\t\(found while processing "
+            "constraint d\[0\].c\)",
+            TransformationFactory('gdp.bigm').apply_to,
+            m)
+
 
 class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
     def setUp(self):
