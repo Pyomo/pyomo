@@ -12,6 +12,7 @@ Pyomo 5.6.8   13 Dec 2019
 - Core
   - Remove deprecated call to formatargspec in Python 3.x (#1174)
   - Remove old, unreachable code in PyomoModel.py (#1189)
+  - Clean up default argument for variable fix method (#1221)
 - Solver Interfaces
   - Fix incorrect precision warnings in the GAMS and BARON writers (#1166)
   - Fix typo in MOSEK problem status handling (#1170)
