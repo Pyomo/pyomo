@@ -17,7 +17,7 @@ global data as well as data passed in, including the model object.
 Operations on model elements results in expressions, which seems natural
 in expressions like the constraints we have seen so far. It is also
 possible to build up expressions. The following example illustrates
-this, along with a reference to global Pyton data in the form of a
+this, along with a reference to global Python data in the form of a
 Python variable called ``switch``:
 
 .. literalinclude:: ../script_spy_files/spy4Expressions_Buildup_expression_switch.spy
