@@ -42,8 +42,14 @@ def create_model3(y):
 
 def create_model4(y):
     #model4
-    return (y[0].implies(y[1]) and Not(y[2])) or y[3]
+    return (y[0].implies(y[1]) and Not(y[2])) or y[3])
 
+def create_model5(y):
+    #model 5, for cnf walker
+    a2 = LogicalAnd(y[0], y[1])
+    o1 = LogicalOr(a1, y[3])
+    a1 = LogicalAnd(01, y[4])
+    return a1
 
 class TestLogicalClasses(unittest.TestCase):
 
@@ -462,10 +468,20 @@ class TestLogicalClasses(unittest.TestCase):
         Y = list([m.Y0, m.Y1, m.Y2, m.Y3, m.Y4, m.Y5])
         rn = create_model3(Y)
         tup = cnf.make_columns(rn)
-        print(len(list(tup)))
+        LogicalOr(list(tup))
         #cnf.distribute_and_in_or
 
 
+    def test_cnf_walker(self):
+        m = ConcreteModel()
+        m.Y0 = BooleanVar()
+        m.Y1 = BooleanVar()
+        m.Y2 = BooleanVar()
+        m.Y3 = BooleanVar()
+        m.Y4 = BooleanVar()
+        Y = list([m.Y0, m.Y1, m.Y2, m.Y3, m.Y4])
+        rn = create_model4(Y)
+        
 
 
 if __name__ == "__main__":
