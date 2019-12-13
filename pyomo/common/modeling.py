@@ -10,6 +10,7 @@
 
 from random import random
 
+
 def randint(a,b):
     """Our implementation of random.randint.
 
@@ -19,6 +20,7 @@ def randint(a,b):
     expecting the same sequence), we will implement a simple, but stable
     version of randint()."""
     return int((b-a+1)*random())
+
 
 def unique_component_name(instance, name):
     # test if this name already exists in model. If not, we're good. 
@@ -31,3 +33,14 @@ def unique_component_name(instance, name):
             return name
         else:
             name += str(randint(0,9))
+
+
+"""
+Object to be used to indicate that an optional argument
+was not specified, if `None` may be ambiguous. Usage:
+
+  >>> def foo(value=NoArgumentGiven):
+  >>>     if value is NoArgumentGiven:
+  >>>         pass  # no argument was provided to `value`
+"""
+NoArgumentGiven = object()
