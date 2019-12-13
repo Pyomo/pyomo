@@ -23,6 +23,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        which pico
         python -m pip install --upgrade pip
         # pip install -r requirements.txt
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
