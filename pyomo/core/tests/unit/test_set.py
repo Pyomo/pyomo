@@ -2,3434 +2,4844 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-#
-# Unit Tests for Set() Objects
-#
-# PyomoModel            Base test class
-# SimpleSetA            Testing simple set of integers
-# SimpleSetAordered     Testing simple set of ordered integers
-# TestRangeSet          Testing the RangeSet class
-# TestRangeSet1         More testing of the RangeSet class
-# SimpleSetB            Testing simple set of string values
-# SimpleSetC            Testing simple set of tuples
-# ArraySet              Testing arrays of sets
-# RealSetTests          Testing the RealSet class
-# IntegerSetTests       Testing the IntegerSet class
-# SetArgs1              Testing arguments for simple set
-# SetArgs2              Testing arguments for arrays of sets
-# Misc                  Misc tests
-# SetIO                 Testing Set IO formats
-#
 
 import copy
 import itertools
-import os
-from os.path import abspath, dirname
-from six import StringIO, iterkeys
+import logging
+import pickle
+from six import StringIO, PY2
+from six.moves import xrange
+from collections import namedtuple as NamedTuple
 
-currdir = dirname(abspath(__file__))+os.sep
+try:
+    from typing import NamedTuple
+except ImportError:
+    NamedTuple = None
 
-from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 import pyutilib.th as unittest
 
-import pyomo.core.base
-from pyomo.core.base.set_types import _AnySet
-from pyomo.environ import *
-from pyomo.core.kernel.set_types import _VirtualSet
+from pyomo.common.log import LoggingIntercept
+from pyomo.common import DeveloperError
+from pyomo.core.expr import native_numeric_types, native_types
+import pyomo.core.base.set as SetModule
+from pyomo.core.base.indexed_component import normalize_index
+from pyomo.core.base.util import (
+    ConstantInitializer, ItemInitializer,
+)
+from pyomo.core.base.set import (
+    NumericRange as NR, NonNumericRange as NNR,
+    AnyRange, _AnySet, Any, Binary,
+    Reals, NonNegativeReals, PositiveReals, NonPositiveReals, NegativeReals,
+    Integers, PositiveIntegers, NegativeIntegers,
+    NonPositiveIntegers, NonNegativeIntegers,
+    Set,
+    SetOf, OrderedSetOf, UnorderedSetOf,
+    RangeSet, _FiniteRangeSetData, _InfiniteRangeSetData,
+    FiniteSimpleRangeSet, InfiniteSimpleRangeSet,
+    AbstractFiniteSimpleRangeSet, AbstractInfiniteSimpleRangeSet,
+    SetUnion_InfiniteSet, SetUnion_FiniteSet, SetUnion_OrderedSet,
+    SetIntersection_InfiniteSet, SetIntersection_FiniteSet,
+    SetIntersection_OrderedSet,
+    SetDifference_InfiniteSet, SetDifference_FiniteSet,
+    SetDifference_OrderedSet,
+    SetSymmetricDifference_InfiniteSet, SetSymmetricDifference_FiniteSet,
+    SetSymmetricDifference_OrderedSet,
+    SetProduct, SetProduct_InfiniteSet, SetProduct_FiniteSet,
+    SetProduct_OrderedSet,
+    _SetData, _FiniteSetData, _InsertionOrderSetData, _SortedSetData,
+    _FiniteSetMixin, _OrderedSetMixin,
+    SetInitializer, SetIntersectInitializer, RangeSetInitializer,
+    UnknownSetDimen,
+    simple_set_rule, set_options,
+ )
+from pyomo.environ import (
+    AbstractModel, ConcreteModel, Block, Var, Param, Suffix, Constraint,
+    Objective,
+)
 
-_has_numpy = False
 try:
-    import numpy
-    _has_numpy = True
-except:
-    pass
+    import numpy as np
+    numpy_available = True
+except ImportError:
+    numpy_available = False
 
-class PyomoModel(unittest.TestCase):
+class Test_SetInitializer(unittest.TestCase):
+    def test_single_set(self):
+        a = SetInitializer(None)
+        self.assertIs(type(a), SetInitializer)
+        self.assertIsNone(a._set)
+        self.assertIs(a(None,None), Any)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
 
-    def setUp(self):
-        self.model = AbstractModel()
+        a = SetInitializer(Reals)
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), ConstantInitializer)
+        self.assertIs(a(None,None), Reals)
+        self.assertIs(a._set.val, Reals)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
 
-    def tearDown(self):
-        self.model = None
-        self.instance = None
+        a = SetInitializer({1:Reals})
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), ItemInitializer)
+        self.assertIs(a(None, 1), Reals)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
 
-    def construct(self,filename):
-        self.instance = self.model.create_instance(filename)
+    def test_intersect(self):
+        a = SetInitializer(None)
+        a.intersect(SetInitializer(None))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIsNone(a._set)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        self.assertIs(a(None,None), Any)
+
+        a = SetInitializer(None)
+        a.intersect(SetInitializer(Reals))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), ConstantInitializer)
+        self.assertIs(a._set.val, Reals)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        self.assertIs(a(None,None), Reals)
+
+        a = SetInitializer(None)
+        a.intersect(RangeSetInitializer(5))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), RangeSetInitializer)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(a(None,None), RangeSet(5))
+
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(None))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), ConstantInitializer)
+        self.assertIs(a._set.val, Reals)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        self.assertIs(a(None,None), Reals)
+
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(Integers))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), SetIntersectInitializer)
+        self.assertIs(type(a._set._A), ConstantInitializer)
+        self.assertIs(type(a._set._B), ConstantInitializer)
+        self.assertIs(a._set._A.val, Reals)
+        self.assertIs(a._set._B.val, Integers)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertIs(type(s), SetIntersection_InfiniteSet)
+        self.assertIs(s._sets[0], Reals)
+        self.assertIs(s._sets[1], Integers)
+
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(Integers))
+        a.intersect(RangeSetInitializer(3))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), SetIntersectInitializer)
+        self.assertIs(type(a._set._A), SetIntersectInitializer)
+        self.assertIs(type(a._set._B), RangeSetInitializer)
+        self.assertIs(a._set._A._A.val, Reals)
+        self.assertIs(a._set._A._B.val, Integers)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertIs(type(s), SetIntersection_OrderedSet)
+        self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
+        self.assertIsInstance(s._sets[1], RangeSet)
+
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(Integers))
+        a.intersect(RangeSetInitializer(3, default_step=0))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), SetIntersectInitializer)
+        self.assertIs(type(a._set._A), SetIntersectInitializer)
+        self.assertIs(type(a._set._B), RangeSetInitializer)
+        self.assertIs(a._set._A._A.val, Reals)
+        self.assertIs(a._set._A._B.val, Integers)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertIs(type(s), SetIntersection_InfiniteSet)
+        s.construct()
+        self.assertIs(type(s), SetIntersection_OrderedSet)
+        self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
+        self.assertIsInstance(s._sets[1], RangeSet)
+        self.assertFalse(s._sets[0].isfinite())
+        self.assertFalse(s._sets[1].isfinite())
+        self.assertTrue(s.isfinite())
+
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer({1:Integers}))
+        a.intersect(RangeSetInitializer(3, default_step=0))
+        self.assertIs(type(a), SetInitializer)
+        self.assertIs(type(a._set), SetIntersectInitializer)
+        self.assertIs(type(a._set._A), SetIntersectInitializer)
+        self.assertIs(type(a._set._B), RangeSetInitializer)
+        self.assertIs(a._set._A._A.val, Reals)
+        self.assertIs(type(a._set._A._B), ItemInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        with self.assertRaises(KeyError):
+            a(None,None)
+        s = a(None,1)
+        self.assertIs(type(s), SetIntersection_InfiniteSet)
+        s.construct()
+        self.assertIs(type(s), SetIntersection_OrderedSet)
+        self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
+        self.assertIsInstance(s._sets[1], RangeSet)
+        self.assertFalse(s._sets[0].isfinite())
+        self.assertFalse(s._sets[1].isfinite())
+        self.assertTrue(s.isfinite())
+
+    def test_rangeset(self):
+        a = RangeSetInitializer(5)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertEqual(s, RangeSet(5))
+
+        a = RangeSetInitializer((0,5))
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertEqual(s, RangeSet(0,5))
+
+        a = RangeSetInitializer((0,5,2))
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertEqual(s, RangeSet(0,5,2))
+
+        a = RangeSetInitializer(5, default_step=0)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertEqual(s, RangeSet(1,5,0))
+
+        a = RangeSetInitializer((0,5), default_step=0)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertEqual(s, RangeSet(0,5,0))
+
+        a = RangeSetInitializer((0,5,2), default_step=0)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertEqual(s, RangeSet(0,5,2))
+
+        a = RangeSetInitializer({1:5})
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,1)
+        self.assertEqual(s, RangeSet(5))
+
+        a = RangeSetInitializer({1:(0,5)})
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,1)
+        self.assertEqual(s, RangeSet(0,5))
+
+    def test_setdefault(self):
+        a = SetInitializer(None)
+        self.assertIs(a(None,None), Any)
+        a.setdefault(Reals)
+        self.assertIs(a(None,None), Reals)
+
+        a = SetInitializer(Integers)
+        self.assertIs(a(None,None), Integers)
+        a.setdefault(Reals)
+        self.assertIs(a(None,None), Integers)
+
+        a = RangeSetInitializer(5)
+        self.assertEqual(a(None,None), RangeSet(5))
+        a.setdefault(Reals)
+        self.assertEqual(a(None,None), RangeSet(5))
+
+        a = SetInitializer(Reals)
+        a.intersect(SetInitializer(Integers))
+        self.assertIs(type(a(None,None)), SetIntersection_InfiniteSet)
+        a.setdefault(RangeSet(5))
+        self.assertIs(type(a(None,None)), SetIntersection_InfiniteSet)
 
 
-class SimpleSetA(PyomoModel):
+class InfiniteSetTester(unittest.TestCase):
+    def test_Reals(self):
+        self.assertIn(0, Reals)
+        self.assertIn(1.5, Reals)
+        self.assertIn(100, Reals),
+        self.assertIn(-100, Reals),
+        self.assertNotIn('A', Reals)
+        self.assertNotIn(None, Reals)
 
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write( "data; set A := 1 3 5 7; end;\n" )
-        OUTPUT.close()
-        #
-        # Create model instance
-        #
-        self.model.A = Set()
-        #
-        # Misc datasets
-        #
-        self.model.tmpset1 = Set(initialize=[1,3,5,7])
-        self.model.tmpset2 = Set(initialize=[1,2,3,5,7])
-        self.model.tmpset3 = Set(initialize=[2,3,5,7,9])
+        self.assertFalse(Reals.isdiscrete())
+        self.assertFalse(Reals.isfinite())
 
-        self.model.setunion = Set(initialize=[1,2,3,5,7,9])
-        self.model.setintersection = Set(initialize=[3,5,7])
-        self.model.setxor = Set(initialize=[1,2,9])
-        self.model.setdiff = Set(initialize=[1])
-        self.model.setmul = Set(initialize=[(1,2), (1,3), (1,5), (1,7), (1,9),
-                                      (3,2), (3,3), (3,5), (3,7), (3,9),
-                                      (5,2), (5,3), (5,5), (5,7), (5,9),
-                                      (7,2), (7,3), (7,5), (7,7), (7,9)])
+    def test_Integers(self):
+        self.assertIn(0, Integers)
+        self.assertNotIn(1.5, Integers)
+        self.assertIn(100, Integers),
+        self.assertIn(-100, Integers),
+        self.assertNotIn('A', Integers)
+        self.assertNotIn(None, Integers)
 
-        self.instance = self.model.create_instance(currdir+"setA.dat")
+        self.assertTrue(Integers.isdiscrete())
+        self.assertFalse(Integers.isfinite())
 
-        self.e1=1
-        self.e2=2
-        self.e3=3
-        self.e4=4
-        self.e5=5
-        self.e6=6
+    def test_Any(self):
+        self.assertIn(0, Any)
+        self.assertIn(1.5, Any)
+        self.assertIn(100, Any),
+        self.assertIn(-100, Any),
+        self.assertIn('A', Any)
+        self.assertIn(None, Any)
 
-    def tearDown(self):
-        #
-        # Remove Set 'A' data file
-        #
-        if os.path.exists(currdir+"setA.dat"):
-            os.remove(currdir+"setA.dat")
-        PyomoModel.tearDown(self)
+        self.assertFalse(Any.isdiscrete())
+        self.assertFalse(Any.isfinite())
 
-    def test_len(self):
-        """Check that a simple set of numeric elements has the right size"""
-        self.assertEqual( len(self.instance.A), 4)
+    @unittest.skipIf(not numpy_available, "NumPy required for these tests")
+    def test_numpy_compatible(self):
+        self.assertIn(np.intc(1), Reals)
+        self.assertIn(np.float64(1), Reals)
+        self.assertIn(np.float64(1.5), Reals)
 
-    def test_data(self):
-        """Check that we can access the underlying set data"""
-        self.assertEqual( len(self.instance.A.data()), 4)
+        self.assertIn(np.intc(1), Integers)
+        self.assertIn(np.float64(1), Integers)
+        self.assertNotIn(np.float64(1.5), Integers)
 
-    def test_dim(self):
-        """Check that a simple set has dimension zero for its indexing"""
-        self.assertEqual( self.instance.A.dim(), 0)
+    def test_relational_operators(self):
+        Any2 = _AnySet()
+        self.assertTrue(Any.issubset(Any2))
+        self.assertTrue(Any.issuperset(Any2))
+        self.assertFalse(Any.isdisjoint(Any2))
 
-    def test_clear(self):
-        """Check the clear() method empties the set"""
-        self.instance.A.clear()
-        self.assertEqual( len(self.instance.A), 0)
+        Reals2 = RangeSet(ranges=(NR(None,None,0),))
+        self.assertTrue(Reals.issubset(Reals2))
+        self.assertTrue(Reals.issuperset(Reals2))
+        self.assertFalse(Reals.isdisjoint(Reals2))
 
-    def test_virtual(self):
-        """Check if this is not a virtual set"""
-        self.assertEqual( self.instance.A.virtual, False)
+        Integers2 = RangeSet(ranges=(NR(0,None,-1), NR(0,None,1)))
+        self.assertTrue(Integers.issubset(Integers2))
+        self.assertTrue(Integers.issuperset(Integers2))
+        self.assertFalse(Integers.isdisjoint(Integers2))
+
+        # Reals / Integers
+        self.assertTrue(Integers.issubset(Reals))
+        self.assertFalse(Integers.issuperset(Reals))
+        self.assertFalse(Integers.isdisjoint(Reals))
+
+        self.assertFalse(Reals.issubset(Integers))
+        self.assertTrue(Reals.issuperset(Integers))
+        self.assertFalse(Reals.isdisjoint(Integers))
+
+        # Any / Reals
+        self.assertTrue(Reals.issubset(Any))
+        self.assertFalse(Reals.issuperset(Any))
+        self.assertFalse(Reals.isdisjoint(Any))
+
+        self.assertFalse(Any.issubset(Reals))
+        self.assertTrue(Any.issuperset(Reals))
+        self.assertFalse(Any.isdisjoint(Reals))
+
+        # Integers / Positive Integers
+        self.assertFalse(Integers.issubset(PositiveIntegers))
+        self.assertTrue(Integers.issuperset(PositiveIntegers))
+        self.assertFalse(Integers.isdisjoint(PositiveIntegers))
+
+        self.assertTrue(PositiveIntegers.issubset(Integers))
+        self.assertFalse(PositiveIntegers.issuperset(Integers))
+        self.assertFalse(PositiveIntegers.isdisjoint(Integers))
+
+
+    def test_equality(self):
+        self.assertEqual(Any, Any)
+        self.assertEqual(Reals, Reals)
+        self.assertEqual(PositiveIntegers, PositiveIntegers)
+
+        self.assertEqual(Any, _AnySet())
+        self.assertEqual(
+            Reals,
+            RangeSet(ranges=(NR(None,None,0),))
+        )
+        self.assertEqual(
+            Integers,
+            RangeSet(ranges=(NR(0,None,-1), NR(0,None,1)))
+        )
+
+        self.assertNotEqual(Integers, Reals)
+        self.assertNotEqual(Reals, Integers)
+        self.assertNotEqual(Reals, Any)
+        self.assertNotEqual(Any, Reals)
+
+        # For equality, ensure that the ranges can be in any order
+        self.assertEqual(
+            RangeSet(ranges=(NR(0,None,-1), NR(0,None,1))),
+            RangeSet(ranges=(NR(0,None,1), NR(0,None,-1)))
+        )
+
+        # And integer ranges can be grounded at different points
+        self.assertEqual(
+            RangeSet(ranges=(NR(10,None,-1), NR(10,None,1))),
+            RangeSet(ranges=(NR(0,None,1), NR(0,None,-1)))
+        )
+        self.assertEqual(
+            RangeSet(ranges=(NR(0,None,-1), NR(0,None,1))),
+            RangeSet(ranges=(NR(10,None,1), NR(10,None,-1)))
+        )
+
+        # Odd positive integers and even positive integers are positive
+        # integers
+        self.assertEqual(
+            PositiveIntegers,
+            RangeSet(ranges=(NR(1,None,2), NR(2,None,2)))
+        )
+
+        # Nututally prime sets of ranges
+        self.assertEqual(
+            RangeSet(ranges=(NR(1,None,2), NR(2,None,2))),
+            RangeSet(ranges=(
+                NR(1,None,3), NR(2,None,3), NR(3,None,3)
+            ))
+        )
+
+        # Nututally prime sets of ranges
+        #  ...omitting one of the subranges breaks equality
+        self.assertNotEqual(
+            RangeSet(ranges=(NR(1,None,2), NR(2,None,2))),
+            RangeSet(ranges=(
+                NR(1,None,3), NR(2,None,3)
+            ))
+        )
+
+        # Mututally prime sets of ranges
+        #  ...changing a reference point (so redundant NR) breaks equality
+        self.assertNotEqual(
+            RangeSet(ranges=(NR(0,None,2), NR(0,None,2))),
+            RangeSet(ranges=(
+                NR(1,None,3), NR(2,None,3), NR(3,None,3)
+            ))
+        )
 
     def test_bounds(self):
-        """Verify the bounds on this set"""
-        self.assertEqual( self.instance.A.bounds(), (1,7))
+        self.assertEqual(Any.bounds(), (None,None))
+        self.assertEqual(Reals.bounds(), (None,None))
+        self.assertEqual(PositiveReals.bounds(), (0,None))
+        self.assertEqual(NegativeIntegers.bounds(), (None,-1))
 
-    def test_check_values(self):
-        """Check if the values added to this set are valid"""
-        #
-        # This should not throw an exception here
-        #
-        self.instance.A.check_values()
 
-    def test_addValid(self):
-        """Check that we can add valid set elements"""
-        self.instance.A.add(self.e2,self.e4)
-        self.assertEqual( len(self.instance.A), 6)
-        self.assertFalse( self.e2 not in self.instance.A, "Cannot find new element in A")
-        self.assertFalse( self.e4 not in self.instance.A, "Cannot find new element in A")
+class TestRangeOperations(unittest.TestCase):
+    def test_mixed_ranges_isdisjoint(self):
+        i = RangeSet(0,10,2)
+        j = SetOf([0,1,2,'a'])
+        k = Any
 
-    def test_addInvalid(self):
-        """Check that we get an error when adding invalid set elements"""
-        #
-        # This verifies that by default, all set elements are valid.  That
-        # is, the default within is None
-        #
-        self.assertEqual( self.instance.A.domain, None)
-        self.instance.A.add('2','3','4')
-        self.assertFalse( '2' not in self.instance.A, "Found invalid new element in A")
+        ir = list(i.ranges())
+        self.assertEqual(ir, [NR(0,10,2)])
+        self.assertEqual(str(ir), "[[0:10:2]]")
+        ir = ir[0]
 
-    def test_removeValid(self):
-        """Check that we can remove a valid set element"""
-        self.instance.A.remove(self.e3)
-        self.assertEqual( len(self.instance.A), 3)
-        self.assertFalse( 3 in self.instance.A, "Found element in A that we removed")
+        jr = list(j.ranges())
+        self.assertEqual(jr, [NR(0,0,0), NR(1,1,0), NR(2,2,0), NNR('a')])
+        self.assertEqual(str(jr), "[[0], [1], [2], {a}]")
+        jr0, jr1, jr2, jr3 = jr
 
-    def test_removeInvalid(self):
-        """Check that we fail to remove an invalid set element"""
-        self.assertRaises(KeyError, self.instance.A.remove, 2)
-        self.assertEqual( len(self.instance.A), 4)
+        kr = list(k.ranges())
+        self.assertEqual(kr, [AnyRange()])
+        self.assertEqual(str(kr), "[[*]]")
+        kr = kr[0]
 
-    def test_discardValid(self):
-        """Check that we can discard a valid set element"""
-        self.instance.A.discard(self.e3)
-        self.assertEqual( len(self.instance.A), 3)
-        self.assertFalse( 3 in self.instance.A, "Found element in A that we removed")
+        self.assertFalse(ir.isdisjoint(ir))
+        self.assertFalse(ir.isdisjoint(jr0))
+        self.assertTrue(ir.isdisjoint(jr1))
+        self.assertTrue(ir.isdisjoint(jr3))
+        self.assertFalse(ir.isdisjoint(kr))
 
-    def test_discardInvalid(self):
-        """Check that we fail to remove an invalid set element without an exception"""
-        self.instance.A.discard(self.e2)
-        self.assertEqual( len(self.instance.A), 4)
+        self.assertFalse(jr0.isdisjoint(ir))
+        self.assertFalse(jr0.isdisjoint(jr0))
+        self.assertTrue(jr0.isdisjoint(jr1))
+        self.assertTrue(jr0.isdisjoint(jr3))
+        self.assertFalse(jr0.isdisjoint(kr))
 
-    def test_iterator(self):
-        """Check that we can iterate through the set"""
-        self.tmp = set()
-        for val in self.instance.A:
-            self.tmp.add(val)
-        self.assertFalse( self.tmp != self.instance.A.data(), "Set values found by the iterator appear to be different from the underlying set (%s) (%s)" % (str(self.tmp), str(self.instance.A.data())))
+        self.assertTrue(jr1.isdisjoint(ir))
+        self.assertTrue(jr1.isdisjoint(jr0))
+        self.assertFalse(jr1.isdisjoint(jr1))
+        self.assertTrue(jr1.isdisjoint(jr3))
+        self.assertFalse(jr1.isdisjoint(kr))
 
-    def test_eq1(self):
-        """Various checks for set equality and inequality (1)"""
-        self.assertEqual( self.instance.A == self.instance.tmpset1, True)
-        self.assertEqual( self.instance.tmpset1 == self.instance.A, True)
-        self.assertEqual( self.instance.A != self.instance.tmpset1, False)
-        self.assertEqual( self.instance.tmpset1 != self.instance.A, False)
+        self.assertTrue(jr3.isdisjoint(ir))
+        self.assertTrue(jr3.isdisjoint(jr0))
+        self.assertTrue(jr3.isdisjoint(jr1))
+        self.assertFalse(jr3.isdisjoint(jr3))
+        self.assertFalse(jr3.isdisjoint(kr))
 
-    def test_eq2(self):
-        """Various checks for set equality and inequality (2)"""
-        self.assertEqual( self.instance.A == self.instance.tmpset2, False)
-        self.assertEqual( self.instance.tmpset2 == self.instance.A, False)
-        self.assertEqual( self.instance.A != self.instance.tmpset2, True)
-        self.assertEqual( self.instance.tmpset2 != self.instance.A, True)
+        self.assertFalse(kr.isdisjoint(ir))
+        self.assertFalse(kr.isdisjoint(jr0))
+        self.assertFalse(kr.isdisjoint(jr1))
+        self.assertFalse(kr.isdisjoint(jr3))
+        self.assertFalse(kr.isdisjoint(kr))
 
-    def test_le1(self):
-        """Various checks for set subset (1)"""
-        self.assertEqual( self.instance.A < self.instance.tmpset1, False)
-        self.assertEqual( self.instance.A <= self.instance.tmpset1, True)
-        self.assertEqual( self.instance.A > self.instance.tmpset1, False)
-        self.assertEqual( self.instance.A >= self.instance.tmpset1, True)
-        self.assertEqual( self.instance.tmpset1 < self.instance.A, False)
-        self.assertEqual( self.instance.tmpset1 <= self.instance.A, True)
-        self.assertEqual( self.instance.tmpset1 > self.instance.A, False)
-        self.assertEqual( self.instance.tmpset1 >= self.instance.A, True)
+    def test_mixed_ranges_issubset(self):
+        i = RangeSet(0, 10, 2)
+        j = SetOf([0, 1, 2, 'a'])
+        k = Any
 
-    def test_le2(self):
-        """Various checks for set subset (2)"""
-        self.assertEqual( self.instance.A < self.instance.tmpset2, True)
-        self.assertEqual( self.instance.A <= self.instance.tmpset2, True)
-        self.assertEqual( self.instance.A > self.instance.tmpset2, False)
-        self.assertEqual( self.instance.A >= self.instance.tmpset2, False)
-        self.assertEqual( self.instance.tmpset2 < self.instance.A, False)
-        self.assertEqual( self.instance.tmpset2 <= self.instance.A, False)
-        self.assertEqual( self.instance.tmpset2 > self.instance.A, True)
-        self.assertEqual( self.instance.tmpset2 >= self.instance.A, True)
+        # Note that these ranges are verified in the test above
+        (ir,) = list(i.ranges())
+        jr0, jr1, jr2, jr3 = list(j.ranges())
+        kr, = list(k.ranges())
 
-    def test_le3(self):
-        """Various checks for set subset (3)"""
-        self.assertEqual( self.instance.A < self.instance.tmpset3, False)
-        self.assertEqual( self.instance.A <= self.instance.tmpset3, False)
-        self.assertEqual( self.instance.A > self.instance.tmpset3, False)
-        self.assertEqual( self.instance.A >= self.instance.tmpset3, False)
-        self.assertEqual( self.instance.tmpset3 < self.instance.A, False)
-        self.assertEqual( self.instance.tmpset3 <= self.instance.A, False)
-        self.assertEqual( self.instance.tmpset3 > self.instance.A, False)
-        self.assertEqual( self.instance.tmpset3 >= self.instance.A, False)
+        self.assertTrue(ir.issubset(ir))
+        self.assertFalse(ir.issubset(jr0))
+        self.assertFalse(ir.issubset(jr1))
+        self.assertFalse(ir.issubset(jr3))
+        self.assertTrue(ir.issubset(kr))
 
-    def test_contains(self):
-        """Various checks for contains() method"""
-        self.assertEqual( self.e1 in self.instance.A, True)
-        self.assertEqual( self.e2 in self.instance.A, False)
-        self.assertEqual( '2' in self.instance.A, False)
+        self.assertTrue(jr0.issubset(ir))
+        self.assertTrue(jr0.issubset(jr0))
+        self.assertFalse(jr0.issubset(jr1))
+        self.assertFalse(jr0.issubset(jr3))
+        self.assertTrue(jr0.issubset(kr))
 
-    def test_or(self):
-        """Check that set union works"""
-        self.instance.tmp = self.instance.A | self.instance.tmpset3
-        self.instance.tmp.construct()
-        self.assertEqual( self.instance.tmp == self.instance.setunion, True)
+        self.assertFalse(jr1.issubset(ir))
+        self.assertFalse(jr1.issubset(jr0))
+        self.assertTrue(jr1.issubset(jr1))
+        self.assertFalse(jr1.issubset(jr3))
+        self.assertTrue(jr1.issubset(kr))
 
-    def test_and(self):
-        """Check that set intersection works"""
-        self.instance.tmp = self.instance.A & self.instance.tmpset3
-        self.instance.tmp.construct()
-        self.assertEqual( self.instance.tmp == self.instance.setintersection, True)
+        self.assertFalse(jr3.issubset(ir))
+        self.assertFalse(jr3.issubset(jr0))
+        self.assertFalse(jr3.issubset(jr1))
+        self.assertTrue(jr3.issubset(jr3))
+        self.assertTrue(jr3.issubset(kr))
 
-    def test_xor(self):
-        """Check that set exclusive or works"""
-        self.instance.tmp = self.instance.A ^ self.instance.tmpset3
-        self.instance.tmp.construct()
-        self.assertEqual( self.instance.tmp == self.instance.setxor, True)
+        self.assertFalse(kr.issubset(ir))
+        self.assertFalse(kr.issubset(jr0))
+        self.assertFalse(kr.issubset(jr1))
+        self.assertFalse(kr.issubset(jr3))
+        self.assertTrue(kr.issubset(kr))
 
-    def test_diff(self):
-        """Check that set difference works"""
-        self.instance.tmp = self.instance.A - self.instance.tmpset3
-        self.instance.tmp.construct()
-        self.assertEqual( self.instance.tmp == self.instance.setdiff, True)
+    def test_mixed_ranges_range_difference(self):
+        i = RangeSet(0, 10, 2)
+        j = SetOf([0, 1, 2, 'a'])
+        k = Any
 
-    def test_mul(self):
-        """Check that set cross-product works"""
-        self.instance.tmp = self.instance.A * self.instance.tmpset3
-        self.instance.tmp.construct()
-        self.assertEqual( self.instance.tmp == self.instance.setmul, True)
+        # Note that these ranges are verified in the test above
+        ir, = list(i.ranges())
+        jr0, jr1, jr2, jr3 = list(j.ranges())
+        kr, = list(k.ranges())
 
-    def test_filter_constructor(self):
-        """ Check that sets can filter out unwanted elements """
-        def evenFilter(model, el):
-            return el % 2 == 0
-        self.instance.tmp = Set(initialize=range(0,10), filter=evenFilter)
-        #self.instance.tmp.construct()
-        self.assertEqual(sorted([x for x in self.instance.tmp]), [0,2,4,6,8])
+        self.assertEqual(ir.range_difference(i.ranges()), [])
+        self.assertEqual(ir.range_difference([jr0]), [NR(2,10,2)])
+        self.assertEqual(ir.range_difference([jr1]), [NR(0,10,2)])
+        self.assertEqual(ir.range_difference([jr2]), [NR(0,0,0), NR(4,10,2)])
+        self.assertEqual(ir.range_difference([jr3]), [NR(0,10,2)])
+        self.assertEqual(ir.range_difference(j.ranges()), [NR(4,10,2)])
+        self.assertEqual(ir.range_difference(k.ranges()), [])
 
-    def test_filter_attribute(self):
-        """ Check that sets can filter out unwanted elements """
-        def evenFilter(model, el):
-            return el % 2 == 0
-        # Note: we cannot use the (concrete) instance here: the set
-        # would be immediately constructed and would never see the
-        # filter
+        self.assertEqual(jr0.range_difference(i.ranges()), [])
+        self.assertEqual(jr0.range_difference([jr0]), [])
+        self.assertEqual(jr0.range_difference([jr1]), [jr0])
+        self.assertEqual(jr0.range_difference([jr2]), [jr0])
+        self.assertEqual(jr0.range_difference([jr3]), [jr0])
+        self.assertEqual(jr0.range_difference(j.ranges()), [])
+        self.assertEqual(jr0.range_difference(k.ranges()), [])
+
+        self.assertEqual(jr1.range_difference(i.ranges()), [jr1])
+        self.assertEqual(jr1.range_difference([jr0]), [jr1])
+        self.assertEqual(jr1.range_difference([jr1]), [])
+        self.assertEqual(jr1.range_difference([jr2]), [jr1])
+        self.assertEqual(jr1.range_difference([jr3]), [jr1])
+        self.assertEqual(jr1.range_difference(j.ranges()), [])
+        self.assertEqual(jr1.range_difference(k.ranges()), [])
+
+        self.assertEqual(jr3.range_difference(i.ranges()), [jr3])
+        self.assertEqual(jr3.range_difference([jr0]), [jr3])
+        self.assertEqual(jr3.range_difference([jr1]), [jr3])
+        self.assertEqual(jr3.range_difference([jr2]), [jr3])
+        self.assertEqual(jr3.range_difference([jr3]), [])
+        self.assertEqual(jr3.range_difference(j.ranges()), [])
+        self.assertEqual(jr3.range_difference(k.ranges()), [])
+
+        self.assertEqual(kr.range_difference(i.ranges()), [kr])
+        self.assertEqual(kr.range_difference([jr0]), [kr])
+        self.assertEqual(kr.range_difference([jr1]), [kr])
+        self.assertEqual(kr.range_difference([jr2]), [kr])
+        self.assertEqual(kr.range_difference([jr3]), [kr])
+        self.assertEqual(kr.range_difference(j.ranges()), [kr])
+        self.assertEqual(kr.range_difference(k.ranges()), [])
+
+    def test_mixed_ranges_range_intersection(self):
+        i = RangeSet(0, 10, 2)
+        j = SetOf([0, 1, 2, 'a'])
+        k = Any
+
+        # Note that these ranges are verified in the test above
+        ir, = list(i.ranges())
+        jr0, jr1, jr2, jr3 = list(j.ranges())
+        kr, = list(k.ranges())
+
+        self.assertEqual(ir.range_intersection(i.ranges()), [ir])
+        self.assertEqual(ir.range_intersection([jr0]), [jr0])
+        self.assertEqual(ir.range_intersection([jr1]), [])
+        self.assertEqual(ir.range_intersection([jr2]), [jr2])
+        self.assertEqual(ir.range_intersection([jr3]), [])
+        self.assertEqual(ir.range_intersection(j.ranges()), [jr0, jr2])
+        self.assertEqual(ir.range_intersection(k.ranges()), [ir])
+
+        self.assertEqual(jr0.range_intersection(i.ranges()), [jr0])
+        self.assertEqual(jr0.range_intersection([jr0]), [jr0])
+        self.assertEqual(jr0.range_intersection([jr1]), [])
+        self.assertEqual(jr0.range_intersection([jr2]), [])
+        self.assertEqual(jr0.range_intersection([jr3]), [])
+        self.assertEqual(jr0.range_intersection(j.ranges()), [jr0])
+        self.assertEqual(jr0.range_intersection(k.ranges()), [jr0])
+
+        self.assertEqual(jr1.range_intersection(i.ranges()), [])
+        self.assertEqual(jr1.range_intersection([jr0]), [])
+        self.assertEqual(jr1.range_intersection([jr1]), [jr1])
+        self.assertEqual(jr1.range_intersection([jr2]), [])
+        self.assertEqual(jr1.range_intersection([jr3]), [])
+        self.assertEqual(jr1.range_intersection(j.ranges()), [jr1])
+        self.assertEqual(jr1.range_intersection(k.ranges()), [jr1])
+
+        self.assertEqual(jr3.range_intersection(i.ranges()), [])
+        self.assertEqual(jr3.range_intersection([jr0]), [])
+        self.assertEqual(jr3.range_intersection([jr1]), [])
+        self.assertEqual(jr3.range_intersection([jr2]), [])
+        self.assertEqual(jr3.range_intersection([jr3]), [jr3])
+        self.assertEqual(jr3.range_intersection(j.ranges()), [jr3])
+        self.assertEqual(jr3.range_intersection(k.ranges()), [jr3])
+
+        self.assertEqual(kr.range_intersection(i.ranges()), [ir])
+        self.assertEqual(kr.range_intersection([jr0]), [jr0])
+        self.assertEqual(kr.range_intersection([jr1]), [jr1])
+        self.assertEqual(kr.range_intersection([jr2]), [jr2])
+        self.assertEqual(kr.range_intersection([jr3]), [jr3])
+        self.assertEqual(kr.range_intersection(j.ranges()), [jr0,jr1,jr2,jr3])
+        self.assertEqual(kr.range_intersection(k.ranges()), [kr])
+
+
+class Test_SetOf_and_RangeSet(unittest.TestCase):
+    def test_constructor(self):
+        i = SetOf([1,2,3])
+        self.assertIs(type(i), OrderedSetOf)
+        j = OrderedSetOf([1,2,3])
+        self.assertIs(type(i), OrderedSetOf)
+        self.assertEqual(i, j)
+
+        i = SetOf({1,2,3})
+        self.assertIs(type(i), UnorderedSetOf)
+        j = UnorderedSetOf([1,2,3])
+        self.assertIs(type(i), UnorderedSetOf)
+        self.assertEqual(i, j)
+
+        i = RangeSet(3)
+        self.assertEqual(len(i), 3)
+        self.assertEqual(len(list(i.ranges())), 1)
+
+        i = RangeSet(1,3)
+        self.assertEqual(len(i), 3)
+        self.assertEqual(len(list(i.ranges())), 1)
+
+        i = RangeSet(ranges=[NR(1,3,1)])
+        self.assertEqual(len(i), 3)
+        self.assertEqual(list(i.ranges()), [NR(1,3,1)])
+
+        i = RangeSet(1,3,0)
+        with self.assertRaisesRegexp(
+                TypeError, ".*'InfiniteSimpleRangeSet' has no len()"):
+            len(i)
+        self.assertEqual(len(list(i.ranges())), 1)
+
+        with self.assertRaisesRegexp(
+                TypeError, ".*'GlobalSet' has no len()"):
+            len(Integers)
+        self.assertEqual(len(list(Integers.ranges())), 2)
+
+        with self.assertRaisesRegexp(
+                ValueError, "RangeSet expects 3 or fewer positional "
+                "arguments \(received 4\)"):
+            RangeSet(1,2,3,4)
+
+        with self.assertRaisesRegexp(
+                TypeError, "'ranges' argument must be an iterable of "
+                "NumericRange objects"):
+            RangeSet(ranges=(NR(1,5,1), NNR('a')))
+
+        output = StringIO()
+        p = Param(initialize=5)
+        p.construct()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            i = RangeSet(p)
+            self.assertIs(type(i), AbstractFiniteSimpleRangeSet)
+            self.assertEqual(output.getvalue(), "")
+            i.construct()
+            ref = 'Constructing RangeSet, '\
+                  'name=AbstractFiniteSimpleRangeSet, from data=None\n'
+            self.assertEqual(output.getvalue(), ref)
+            # Calling construct() twice bypasses construction the second
+            # time around
+            i.construct()
+            self.assertEqual(output.getvalue(), ref)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            i = SetOf([1,2,3])
+            self.assertEqual(output.getvalue(), "")
+            i.construct()
+            ref = 'Constructing SetOf, name=OrderedSetOf, '\
+                  'from data=None\n'
+            self.assertEqual(output.getvalue(), ref)
+            # Calling construct() twice bypasses construction the second
+            # time around
+            i.construct()
+            self.assertEqual(output.getvalue(), ref)
+
+        i = RangeSet(0)
+        self.assertEqual(len(i), 0)
+        self.assertEqual(len(list(i.ranges())), 0)
+
+        i = RangeSet(0,-1)
+        self.assertEqual(len(i), 0)
+        self.assertEqual(len(list(i.ranges())), 0)
+
+        # Test abstract RangeSets
         m = AbstractModel()
-        m.tmp = Set(initialize=range(0,10))
-        m.tmp.filter = evenFilter
-        m.tmp.construct()
-        self.assertEqual(sorted([x for x in m.tmp]), [0,2,4,6,8])
+        m.p = Param()
+        m.q = Param()
+        m.s = Param()
+        m.i = RangeSet(m.p, m.q, m.s, finite=True)
+        self.assertIs(type(m.i), AbstractFiniteSimpleRangeSet)
+        i = m.create_instance(
+            data={None: {'p': {None: 1}, 'q': {None: 5}, 's': {None: 2}}})
+        self.assertIs(type(i.i), FiniteSimpleRangeSet)
+        self.assertEqual(list(i.i), [1,3,5])
 
-class SimpleSetAordered(SimpleSetA):
+        with self.assertRaisesRegexp(
+                ValueError,
+                "finite RangeSet over a non-finite range \(\[1..5\]\)"):
+            i = m.create_instance(
+                data={None: {'p': {None: 1}, 'q': {None: 5}, 's': {None: 0}}})
 
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set A := 1 3 5 7; end;\n")
-        OUTPUT.close()
-        #
-        # Create model instance
-        #
-        self.model.A = Set(ordered=True)
-        #
-        # Misc datasets
-        #
-        self.model.tmpset1 = Set(initialize=[1,3,5,7])
-        self.model.tmpset2 = Set(initialize=[1,2,3,5,7])
-        self.model.tmpset3 = Set(initialize=[2,3,5,7,9])
-
-        self.model.setunion = Set(initialize=[1,2,3,5,7,9])
-        self.model.setintersection = Set(initialize=[3,5,7])
-        self.model.setxor = Set(initialize=[1,2,9])
-        self.model.setdiff = Set(initialize=[1])
-        self.model.setmul = Set(initialize=[(1,2), (1,3), (1,5), (1,7), (1,9),
-                                      (3,2), (3,3), (3,5), (3,7), (3,9),
-                                      (5,2), (5,3), (5,5), (5,7), (5,9),
-                                      (7,2), (7,3), (7,5), (7,7), (7,9)])
-
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-
-        self.e1=1
-        self.e2=2
-        self.e3=3
-        self.e4=4
-        self.e5=5
-        self.e6=6
-
-    def test_first(self):
-        """Check that we can get the 'first' value in the set"""
-        self.tmp = self.instance.A.first()
-        self.assertNotEqual( self.tmp, None )
-        self.assertEqual( self.tmp, 1 )
-
-    def test_ordered(self):
-        tmp=[]
-        for val in self.instance.A:
-            tmp.append(val)
-        self.assertEqual( tmp, [1,3,5,7] )
-
-    def test_getitem(self):
-        self.assertEqual( self.instance.A[1], 1 )
-        self.assertEqual( self.instance.A[2], 3 )
-        self.assertEqual( self.instance.A[3], 5 )
-        self.assertEqual( self.instance.A[4], 7 )
-        self.assertEqual( self.instance.A[-1], 7 )
-        self.assertEqual( self.instance.A[-2], 5 )
-        self.assertEqual( self.instance.A[-3], 3 )
-        self.assertEqual( self.instance.A[-4], 1 )
-        self.assertRaises( IndexError, self.instance.A.__getitem__, 5)
-        self.assertRaises( IndexError, self.instance.A.__getitem__, 0)
-        self.assertRaises( IndexError, self.instance.A.__getitem__, -5)
-
-
-class TestRangeSet(SimpleSetA):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-        #
-        # Create model instance
-        #
-        self.model.A = RangeSet(1,5)
-        #
-        # Misc datasets
-        #
-        self.model.tmpset1 = Set(initialize=[1,2,3,4,5])
-        self.model.tmpset2 = Set(initialize=[1,2,3,4,5,7])
-        self.model.tmpset3 = Set(initialize=[2,3,5,7,9])
-
-        self.model.setunion = Set(initialize=[1,2,3,4,5,7,9])
-        self.model.setintersection = Set(initialize=[2,3,5])
-        self.model.setxor = Set(initialize=[1,4,7,9])
-        self.model.setdiff = Set(initialize=[1,4])
-        self.model.setmul = Set(initialize=[(1,2), (1,3), (1,5), (1,7), (1,9),
-                                      (2,2), (2,3), (2,5), (2,7), (2,9),
-                                      (3,2), (3,3), (3,5), (3,7), (3,9),
-                                      (4,2), (4,3), (4,5), (4,7), (4,9),
-                                      (5,2), (5,3), (5,5), (5,7), (5,9)])
-
-        self.instance = self.model.create_instance()
-
-        self.e1=1
-        self.e2=2
-        self.e3=3
-        self.e4=4
-        self.e5=5
-        self.e6=6
-
-    def test_clear(self):
-        """Check the clear() method empties the set"""
-        try:
-            self.instance.A.clear()
-            self.fail("Expected TypeError because a RangeSet is a virtual set")
-        except TypeError:
-            pass
-
-    def test_virtual(self):
-        """Check if this is a virtual set"""
-        self.assertEqual( self.instance.A.virtual, True)
-
-    def test_ordered_getitem(self):
-        """Check if this is a virtual set"""
-        self.assertEqual( self.instance.A[1], 1)
-        self.assertEqual( self.instance.A[2], 2)
-        self.assertEqual( self.instance.A[3], 3)
-        self.assertEqual( self.instance.A[4], 4)
-        self.assertEqual( self.instance.A[5], 5)
-        self.assertEqual( self.instance.A[-1], 5)
-        self.assertEqual( self.instance.A[-2], 4)
-        self.assertEqual( self.instance.A[-3], 3)
-        self.assertEqual( self.instance.A[-4], 2)
-        self.assertEqual( self.instance.A[-5], 1)
-        self.assertRaises( IndexError, self.instance.A.__getitem__, 6)
-        self.assertRaises( IndexError, self.instance.A.__getitem__, 0)
-        self.assertRaises( IndexError, self.instance.A.__getitem__, -6)
-
-    def test_bounds(self):
-        """Verify the bounds on this set"""
-        self.assertEqual( self.instance.A.bounds(), (1,5))
-
-    def test_addValid(self):
-        """Check that we can add valid set elements"""
-        pass
-
-    def test_addInvalid(self):
-        """Check that we get an error when adding invalid set elements"""
-        #
-        # This verifies that by default, all set elements are valid.  That
-        # is, the default within is None
-        #
-        try:
-            self.instance.A.add('2','3','4')
-            self.fail("Expected to generate an error when we remove an element from a RangeSet")
-        except TypeError:
-            pass
-        self.assertFalse( '2' in self.instance.A, "Value we attempted to add is not in A")
-
-    def test_removeValid(self):
-        """Check that we can remove a valid set element"""
-        try:
-            self.instance.A.remove(self.e3)
-            self.fail("Expected to generate an error when we remove an element from a RangeSet")
-        except KeyError:
-            pass
-        self.assertEqual( len(self.instance.A), 5)
-        self.assertTrue( self.e3 in self.instance.A, "Element is still in A")
-
-    def test_removeInvalid(self):
-        """Check that we fail to remove an invalid set element"""
-        self.assertRaises(KeyError, self.instance.A.remove, 6)
-        self.assertEqual( len(self.instance.A), 5)
-
-    def test_remove(self):
-        """ Check that the elements are properly removed  by .remove """
-        pass
-
-    def test_discardValid(self):
-        """Check that we can discard a valid set element"""
-        try:
-            self.instance.A.discard(self.e3)
-            self.fail("Expected to generate an error when we discare an element from a RangeSet")
-        except KeyError:
-            pass
-        self.assertEqual( len(self.instance.A), 5)
-        self.assertTrue( self.e3 in self.instance.A, "Found element in A that attemped to discard")
-
-    def test_discardInvalid(self):
-        """Check that we fail to remove an invalid set element without an exception"""
-        pass
+        with self.assertRaisesRegexp(
+                ValueError,
+                "RangeSet.construct\(\) does not support the data= argument."):
+            i = m.create_instance(
+                data={None: {'p': {None: 1}, 'q': {None: 5}, 's': {None: 1},
+                             'i': {None: [1,2,3]} }})
 
     def test_contains(self):
-        """Various checks for contains() method"""
-        self.assertEqual( self.e1 in self.instance.A, True)
-        self.assertEqual( self.e2 in self.instance.A, True)
-        self.assertEqual( '2' in self.instance.A, False)
-
-    def test_len(self):
-        """Check that a simple set of numeric elements has the right size"""
-        self.assertEqual( len(self.instance.A), 5)
-
-    def test_data(self):
-        """Check that we can access the underlying set data"""
-        self.assertEqual( len(self.instance.A.data()), 5)
-
-    def test_filter_constructor(self):
-        """ Check that RangeSets can filter out unwanted elements """
-        def evenFilter(model, el):
-            return el % 2 == 0
-        self.instance.tmp = RangeSet(0,10, filter=evenFilter)
-        #self.instance.tmp.construct()
-        self.assertEqual(sorted([x for x in self.instance.tmp]), [0,2,4,6,8,10])
-
-    def test_filter_attribute(self):
-        """ Check that RangeSets can filter out unwanted elements """
-        def evenFilter(model, el):
-            return el % 2 == 0
-        self.instance.tmp = RangeSet(0,10)
-        self.instance.tmp.filter = evenFilter
-        self.instance.tmp.construct()
-        self.assertEqual(sorted([x for x in self.instance.tmp]), [0,2,4,6,8,10])
-
-
-class TestRangeSet2(TestRangeSet):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-        #
-        # Create model instance
-        #
-        def validate_fn(model, val):
-            return (val >= 1) and (val <= 5)
-
-        self.model.A = RangeSet(1,10, validate=validate_fn)
-        #
-        # Misc datasets
-        #
-        self.model.tmpset1 = Set(initialize=[1,2,3,4,5])
-        self.model.tmpset2 = Set(initialize=[1,2,3,4,5,7])
-        self.model.tmpset3 = Set(initialize=[2,3,5,7,9])
-
-        self.model.setunion = Set(initialize=[1,2,3,4,5,7,9])
-        self.model.setintersection = Set(initialize=[2,3,5])
-        self.model.setxor = Set(initialize=[1,4,7,9])
-        self.model.setdiff = Set(initialize=[1,4])
-        self.model.setmul = Set(initialize=[(1,2), (1,3), (1,5), (1,7), (1,9),
-                                      (2,2), (2,3), (2,5), (2,7), (2,9),
-                                      (3,2), (3,3), (3,5), (3,7), (3,9),
-                                      (4,2), (4,3), (4,5), (4,7), (4,9),
-                                      (5,2), (5,3), (5,5), (5,7), (5,9)])
-
-        self.instance = self.model.create_instance()
-
-        self.e1=1
-        self.e2=2
-        self.e3=3
-        self.e4=4
-        self.e5=5
-        self.e6=6
-
-
-class TestRangeSet3(PyomoModel):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-        #
-        # Create model instance
-        #
-        self.model.A = RangeSet(1.0,5.0,0.8)
-        #
-        # Misc datasets
-        #
-        self.model.tmpset1 = Set(initialize=[1,2,3,4,5])
-        self.model.tmpset2 = Set(initialize=[1,2,3,4,5,7])
-        self.model.tmpset3 = Set(initialize=[2,3,5,7,9])
-
-        self.model.setunion = Set(initialize=[1,2,3,4,5,7,9])
-        self.model.setintersection = Set(initialize=[2,3,5])
-        self.model.setxor = Set(initialize=[1,4,7,9])
-        self.model.setdiff = Set(initialize=[1,4])
-        self.model.setmul = Set(initialize=[(1,2), (1,3), (1,5), (1,7), (1,9),
-                                      (2,2), (2,3), (2,5), (2,7), (2,9),
-                                      (3,2), (3,3), (3,5), (3,7), (3,9),
-                                      (4,2), (4,3), (4,5), (4,7), (4,9),
-                                      (5,2), (5,3), (5,5), (5,7), (5,9)])
-
-        self.instance = self.model.create_instance()
-
-        self.e1=1
-        self.e2=2
-        self.e3=3
-        self.e4=4
-        self.e5=5
-        self.e6=6
-
-    def test_bounds(self):
-        """Verify the bounds on this set"""
-        self.assertEqual( self.instance.A.bounds(), (1,5))
-
-
-class TestRangeSet_AltArgs(PyomoModel):
-
-    def test_ImmutableParams(self):
-        model = ConcreteModel()
-        model.lb = Param(initialize=1)
-        model.ub = Param(initialize=5)
-        model.A = RangeSet(model.lb, model.ub)
-        self.assertEqual( model.A.data(), set([1,2,3,4,5]) )
-
-    def test_MutableParams(self):
-        model = ConcreteModel()
-        model.lb = Param(initialize=1, mutable=True)
-        model.ub = Param(initialize=5, mutable=True)
-        model.A = RangeSet(model.lb, model.ub)
-        self.assertEqual( model.A.data(), set([1,2,3,4,5]) )
-
-        model.lb = 2
-        model.ub = 4
-        model.B = RangeSet(model.lb, model.ub)
-        # Note: rangesets are constant -- even if the mutable param
-        # under the hood changes
-        self.assertEqual( model.A.data(), set([1,2,3,4,5]) )
-        self.assertEqual( model.B.data(), set([2,3,4]) )
-
-    def test_Expressions(self):
-        model = ConcreteModel()
-        model.p = Param(initialize=1, mutable=True)
-        model.lb = Expression(expr=model.p*2-1)
-        model.ub = Expression(expr=model.p*5)
-        model.A = RangeSet(model.lb, model.ub)
-        self.assertEqual( model.A.data(), set([1,2,3,4,5]) )
-
-        model.p = 2
-        model.B = RangeSet(model.lb, model.ub)
-        # Note: rangesets are constant -- even if the mutable param
-        # under the hood changes
-        self.assertEqual( model.A.data(), set([1,2,3,4,5]) )
-        self.assertEqual( model.B.data(), set([3,4,5,6,7,8,9,10]) )
-
-
-
-class TestRangeSetMisc(unittest.TestCase):
-
-    def test_constructor1(self):
-        a=RangeSet(10)
-        a.construct()
-        tmp=[]
-        for i in a:
-            tmp.append(i)
-        self.assertEqual(tmp, list(range(1,11)))
-        self.assertEqual( a.bounds(), (1,10))
-
-
-    def test_constructor2(self):
-        a=RangeSet(1,10,2)
-        a.construct()
-        tmp=[]
-        for i in a:
-            tmp.append(i)
-        self.assertEqual(tmp, list(range(1,11,2)))
-        self.assertEqual( a.bounds(), (1,9))
-
-    def test_constructor3(self):
-        model=AbstractModel()
-        model.a=Param(initialize=1)
-        model.b=Param(initialize=2)
-        model.c=Param(initialize=10)
-        model.d=RangeSet( model.a*model.a, model.c*model.a, model.a*model.b)
-        instance=model.create_instance()
-        tmp=[]
-        for i in instance.d:
-            tmp.append(i)
-        self.assertEqual(tmp, list(range(1,11,2)))
-        self.assertEqual( instance.d.bounds(), (1,9))
-
-class SimpleSetB(SimpleSetA):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set A := A1 A3 A5 A7; end;\n")
-        OUTPUT.close()
-        #
-        # Create model instance
-        #
-        self.model.A = Set()
-        #
-        # Debugging
-        #
-        # Misc datasets
-        #
-        self.model.tmpset1 = Set(initialize=['A1','A3','A5','A7'])
-        self.model.tmpset2 = Set(initialize=['A1','A2','A3','A5','A7'])
-        self.model.tmpset3 = Set(initialize=['A2','A3','A5','A7','A9'])
-
-        self.model.setunion = Set(initialize=['A1','A2','A3','A5','A7','A9'])
-        self.model.setintersection = Set(initialize=['A3','A5','A7'])
-        self.model.setxor = Set(initialize=['A1','A2','A9'])
-        self.model.setdiff = Set(initialize=['A1'])
-        self.model.setmul = Set(initialize=[('A1','A2'), ('A1','A3'), ('A1','A5'), ('A1','A7'), ('A1','A9'),
-                                      ('A3','A2'), ('A3','A3'), ('A3','A5'), ('A3','A7'), ('A3','A9'),
-                                      ('A5','A2'), ('A5','A3'), ('A5','A5'), ('A5','A7'), ('A5','A9'),
-                                      ('A7','A2'), ('A7','A3'), ('A7','A5'), ('A7','A7'), ('A7','A9')])
-
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.e1='A1'
-        self.e2='A2'
-        self.e3='A3'
-        self.e4='A4'
-        self.e5='A5'
-        self.e6='A6'
-
-    def test_bounds(self):
-        self.assertEqual( self.instance.A.bounds(), None)
-
-class SimpleSetC(SimpleSetA):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set A := (A1,1) (A3,1) (A5,1) (A7,1); end;\n")
-        OUTPUT.close()
-        #
-        # Create model instance
-        #
-        self.model.A = Set(dimen=2)
-        #
-        # Debugging
-        #
-        # Misc datasets
-        #
-        self.model.tmpset1 = Set(initialize=[('A1',1), ('A3',1), ('A5',1), ('A7',1)])
-        self.model.tmpset2 = Set(initialize=[('A1',1),('A2',1),('A3',1),('A5',1),('A7',1)])
-        self.model.tmpset3 = Set(initialize=[('A2',1),('A3',1),('A5',1),('A7',1),('A9',1)])
-
-        self.model.setunion = Set(initialize=[('A1',1),('A2',1),('A3',1),('A5',1),('A7',1),('A9',1)])
-        self.model.setintersection = Set(initialize=[('A3',1),('A5',1),('A7',1)])
-        self.model.setxor = Set(initialize=[('A1',1),('A2',1),('A9',1)])
-        self.model.setdiff = Set(initialize=[('A1',1)])
-        self.model.setmul = Set(initialize=[(('A1',1,'A2',1)), (('A1',1,'A3',1)), (('A1',1,'A5',1)), (('A1',1,'A7',1)), (('A1',1,'A9',1)),
-                                      (('A3',1,'A2',1)), (('A3',1,'A3',1)), (('A3',1,'A5',1)), (('A3',1,'A7',1)), (('A3',1,'A9',1)),
-                                      (('A5',1,'A2',1)), (('A5',1,'A3',1)), (('A5',1,'A5',1)), (('A5',1,'A7',1)), (('A5',1,'A9',1)),
-                                      (('A7',1,'A2',1)), (('A7',1,'A3',1)), (('A7',1,'A5',1)), (('A7',1,'A7',1)), (('A7',1,'A9',1))])
-
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.e1=('A1',1)
-        self.e2=('A2',1)
-        self.e3=('A3',1)
-        self.e4=('A4',1)
-        self.e5=('A5',1)
-        self.e6=('A6',1)
-
-    def tearDown(self):
-        #
-        # Remove Set 'A' data file
-        #
-        os.remove(currdir+"setA.dat")
-        PyomoModel.tearDown(self)
-
-    def test_bounds(self):
-        self.assertEqual( self.instance.A.bounds(), None)
-
-    def test_addInvalid(self):
-        """Check that we get an error when adding invalid set elements"""
-        #
-        # This verifies that by default, all set elements are valid.  That
-        # is, the default within is None
-        #
-        self.assertEqual( self.instance.A.domain, None)
-        try:
-            self.instance.A.add('2','3','4')
-        except ValueError:
-            pass
-        else:
-            self.fail("fail test_addInvalid")
-        self.assertFalse( '2' in self.instance.A, "Found invalid new element in A")
-        self.instance.A.add(('2','3'))
-
-@unittest.skipIf(not _has_numpy, "Numpy is not installed")
-class SimpleSetNumpy(SimpleSetA):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set A := 1.0 3 5.0 7.0; end;\n")
-        OUTPUT.close()
-        #
-        # Create model instance
-        #
-        self.model.A = Set()
-        #
-        # Debugging
-        #
-        # Misc datasets
-        #
-        self.model.tmpset1 = Set(initialize=[1.0,3.0,5,7])
-        self.model.tmpset2 = Set(initialize=[1.0,2,3.0,5,7])
-        self.model.tmpset3 = Set(initialize=[2,3.0,5,7,9.1])
-
-        self.model.setunion = Set(initialize=[1.0,2,3.0,5,7,9.1])
-        self.model.setintersection = Set(initialize=[3.0,5,7])
-        self.model.setxor = Set(initialize=[1.0,2,9.1])
-        self.model.setdiff = Set(initialize=[1.0])
-        self.model.setmul = Set(initialize=[(1.0,2), (1.0,3.0), (1.0,5), (1.0,7), (1.0,9.1),
-                                      (3.0,2), (3.0,3.0), (3.0,5), (3.0,7), (3.0,9.1),
-                                      (5,2), (5,3.0), (5,5), (5,7), (5,9.1),
-                                      (7,2), (7,3.0), (7,5), (7,7), (7,9.1)])
-
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.e1=numpy.bool_(1)
-        self.e2=numpy.int_(2)
-        self.e3=numpy.float_(3.0)
-        self.e4=numpy.int_(4)
-        self.e5=numpy.int_(5)
-        self.e6=numpy.int_(6)
-
-    def test_numpy_bool(self):
-        model = ConcreteModel()
-        model.A = Set(initialize=[numpy.bool_(False), numpy.bool_(True)])
-        self.assertEqual( model.A.bounds(), None)
-
-    def test_numpy_int(self):
-        model = ConcreteModel()
-        model.A = Set(initialize=[numpy.int_(1.0), numpy.int_(0.0)])
-        self.assertEqual( model.A.bounds(), (0,1))
-
-    def test_numpy_float(self):
-        model = ConcreteModel()
-        model.A = Set(initialize=[numpy.float_(1.0), numpy.float_(0.0)])
-        self.assertEqual( model.A.bounds(), (0,1))
-
-
-class ArraySet(PyomoModel):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set Z := A C; set A[A] := 1 3 5 7; set A[C] := 3 5 7 9; end;\n")
-        OUTPUT.close()
-        #
-        # Create model instance
-        #
-        self.model.Z = Set()
-        self.model.A = Set(self.model.Z)
-        #
-        # Debugging
-        #
-        # Misc datasets
-        #
-        self.model.tmpset1 = Set()
-        self.model.tmpset2 = Set()
-        self.model.tmpset3 = Set()
-
-        self.model.S = RangeSet(0,5)
-        self.model.T = RangeSet(0,5)
-        self.model.R = RangeSet(0,3)
-        self.model.Q_a = Set(initialize=[1,3,5,7])
-        self.model.Q_c = Set(initialize=[3,5,7,9])
-
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.e1=('A1',1)
-
-    def Xtest_bounds(self):
-        self.assertEqual( self.instance.A.bounds(), None)
-
-    def test_getitem(self):
-        """Check the access to items"""
-        try:
-            tmp=[]
-            for val in self.instance.A['A']:
-                tmp.append(val)
-            tmp.sort()
-        except:
-            self.fail("Problems getting a valid set from a set array")
-        self.assertEqual( tmp, [1,3,5,7])
-        try:
-            tmp = self.instance.A['D']
-        except KeyError:
-            pass
-        else:
-            self.fail("Problems getting an invalid set from a set array")
-
-    def test_setitem(self):
-        """Check the access to items"""
-        try:
-            self.model.Z = Set(initialize=['A','C'])
-            self.model.A = Set(self.model.Z,initialize={'A':[1]})
-            self.instance = self.model.create_instance()
-            tmp=[1,6,9]
-            self.instance.A['A'] = tmp
-            self.instance.A['C'] = tmp
-        except:
-            self.fail("Problems setting a valid set into a set array")
-        try:
-            self.instance.A['D'] = tmp
-        except KeyError:
-            pass
-        else:
-            self.fail("Problems setting an invalid set into a set array")
-
-    def test_keys(self):
-        """Check the keys for the array"""
-        tmp=list(self.instance.A.keys())
-        tmp.sort()
-        self.assertEqual(tmp, ['A', 'C'])
-
-    def test_len(self):
-        """Check that a simple set of numeric elements has the right size"""
-        try:
-            len(self.instance.A)
-        except TypeError:
-            self.fail("fail test_len")
-        else:
-            pass
-
-    def test_data(self):
-        """Check that we can access the underlying set data"""
-        try:
-            self.instance.A.data()
-        except:
-            self.fail("Expected data() method to pass")
-
-    def test_dim(self):
-        """Check that a simple set has dimension zero for its indexing"""
-        self.assertEqual( self.instance.A.dim(), 1)
-
-    def test_clear(self):
-        """Check the clear() method empties the set"""
-        self.instance.A.clear()
-        for key in self.instance.A:
-            self.assertEqual( len(self.instance.A[key]), 0)
-
-    def test_virtual(self):
-        """Check if this is not a virtual set"""
-        try:
-            self.instance.A.virtual
-        except:
-            pass
-        else:
-            self.fail("Set arrays do not have a virtual data element")
-
-    def test_check_values(self):
-        """Check if the values added to this set are valid"""
-        #
-        # This should not throw an exception here
-        #
-        self.instance.A.check_values()
-
-    def test_first(self):
-        """Check that we can get the 'first' value in the set"""
-        pass
-
-    def test_removeValid(self):
-        """Check that we can remove a valid set element"""
-        pass
-
-    def test_removeInvalid(self):
-        """Check that we fail to remove an invalid set element"""
-        pass
-
-    def test_discardValid(self):
-        """Check that we can discard a valid set element"""
-        pass
-
-    def test_discardInvalid(self):
-        """Check that we fail to remove an invalid set element without an exception"""
-        pass
-
-    def test_iterator(self):
-        """Check that we can iterate through the set"""
-        tmp = 0
-        for key in self.instance.A:
-            tmp += len(self.instance.A[key])
-        self.assertEqual( tmp, 8)
-
-    def test_eq1(self):
-        """ Various checks for set equality and inequality (1) """
-        self.assertEqual(self.instance.A != self.instance.tmpset1, True)
-        self.assertEqual(self.instance.tmpset1 != self.instance.A, True)
-        self.assertEqual(self.instance.A == self.instance.tmpset1, False)
-        self.assertEqual(self.instance.tmpset1 == self.instance.A, False)
-
-    def test_eq2(self):
-        """ Various checks for set equality and inequality (2) """
-        self.assertEqual(self.instance.A == self.instance.tmpset2, False)
-        self.assertEqual(self.instance.tmpset2 == self.instance.A, False)
-        self.assertEqual(self.instance.A != self.instance.tmpset2, True)
-        self.assertEqual(self.instance.tmpset2 != self.instance.A, True)
-
-    def test_eq3(self):
-        """ Various checks for set equality and inequality (3) """
-
-        # Each test should be done with the arguments on each side to check
-        # for commutativity
-
-        # Self-equality
-        self.assertEqual(self.instance.S == self.instance.S, True)
-        self.assertEqual(self.instance.S != self.instance.S, False)
-
-        # Equivalent members
-        self.assertEqual(self.instance.S == self.instance.T, True)
-        self.assertEqual(self.instance.T == self.instance.S, True)
-
-        # Subset/superset nonequality
-        self.assertEqual(self.instance.S != self.instance.R, True)
-        self.assertEqual(self.instance.R != self.instance.S, True)
-
-        # Manually initialized (Q_a) v. data file initialized (A["A"]) equality
-        self.assertEqual(self.instance.A["A"] == self.instance.Q_a, True)
-        self.assertEqual(self.instance.Q_a == self.instance.A["A"], True)
-
-        # Manually initialized (Q_c) v. data file initialized (A["C"]) equality
-        self.assertEqual(self.instance.A["C"] == self.instance.Q_c, True)
-        self.assertEqual(self.instance.Q_c == self.instance.A["C"], True)
-
-        # Comparison between Set and non-Set objects
-        self.assertEqual(self.instance.A == 1.0, False)
-        self.assertEqual(1.0 == self.instance.A, False)
-
-        # Comparison between Set and non-Set objects
-        self.assertEqual(self.instance.A != 1.0, True)
-        self.assertEqual(1.0 != self.instance.A, True)
-
-    def test_contains(self):
-        """Various checks for contains() method"""
-        tmp = self.e1 in self.instance.A
-        self.assertEqual( tmp, False )
-
-    def test_or(self):
-        """Check that set union works"""
-        try:
-            self.instance.A | self.instance.tmpset3
-        except TypeError:
-            pass
-        else:
-            self.fail("fail test_or")
-
-    def test_and(self):
-        """Check that set intersection works"""
-        try:
-            self.instance.tmp = self.instance.A & self.instance.tmpset3
-        except TypeError:
-            pass
-        else:
-            self.fail("fail test_and")
-
-    def test_xor(self):
-        """Check that set exclusive or works"""
-        try:
-            self.instance.A ^ self.instance.tmpset3
-        except TypeError:
-            pass
-        else:
-            self.fail("fail test_xor")
-
-    def test_diff(self):
-        """Check that set difference works"""
-        try:
-            self.instance.A - self.instance.tmpset3
-        except TypeError:
-            pass
-        else:
-            self.fail("fail test_diff")
-
-    def test_mul(self):
-        """Check that set cross-product works"""
-        try:
-            self.instance.A * self.instance.tmpset3
-        except TypeError:
-            pass
-        else:
-            self.fail("fail test_mul")
-
-
-    def test_override_values(self):
+        r = RangeSet(5)
+        self.assertIn(1, r)
+        self.assertIn((1,), r)
+        self.assertNotIn(6, r)
+        self.assertNotIn((6,), r)
+
+        r = SetOf([1, (2,)])
+        self.assertIn(1, r)
+        self.assertIn((1,), r)
+        self.assertNotIn(2, r)
+        self.assertIn((2,), r)
+
+    def test_equality(self):
         m = ConcreteModel()
-        m.I = Set([1,2,3])
-        m.I[1] = [1,2,3]
-        self.assertEqual(sorted(m.I[1]), [1,2,3])
-        m.I[1] = [4,5,6]
-        self.assertEqual(sorted(m.I[1]), [4,5,6])
+        m.I = RangeSet(3)
+        m.NotI = RangeSet(4)
 
-        m.J = Set([1,2,3], ordered=True)
-        m.J[1] = [1,3,2]
-        self.assertEqual(list(m.J[1]), [1,3,2])
-        m.J[1] = [5,4,6]
-        self.assertEqual(list(m.J[1]), [5,4,6])
+        m.J = SetOf([1,2,3])
+        m.NotJ = SetOf([1,2,3,4])
 
-class ArraySet2(PyomoModel):
+        # Sets are equal to themselves
+        self.assertEqual(m.I, m.I)
+        self.assertEqual(m.J, m.J)
 
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set Z := A C; set Y := 1 2 ; set A[A,1] := 1 3 5 7; set A[C,2] := 3 5 7 9; end;")
-        OUTPUT.close()
-        #
-        # Create model instance
-        #
-        self.model.Z = Set()
-        self.model.Y = Set()
-        self.model.A = Set(self.model.Z,self.model.Y)
-        #
-        # Debugging
-        #
-        # Misc datasets
-        #
-        self.model.tmpset1 = Set()
-        self.model.tmpset2 = Set()
-        self.model.tmpset3 = Set()
+        # RangeSet to SetOf
+        self.assertEqual(m.I, m.J)
+        self.assertEqual(m.J, m.I)
 
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.e1=('A1',1)
+        # ordering shouldn't matter
+        self.assertEqual(SetOf([1,3,4,2]), SetOf({1,2,3,4}))
+        self.assertEqual(SetOf({1,2,3,4}), SetOf([1,3,4,2]))
+
+        # Inequality...
+        self.assertNotEqual(m.I, m.NotI)
+        self.assertNotEqual(m.NotI, m.I)
+        self.assertNotEqual(m.I, m.NotJ)
+        self.assertNotEqual(m.NotJ, m.I)
+        self.assertNotEqual(m.J, m.NotJ)
+        self.assertNotEqual(m.NotJ, m.J)
+        self.assertNotEqual(m.I, RangeSet(1,3,0))
+        self.assertNotEqual(RangeSet(1,3,0), m.I)
+
+        self.assertNotEqual(SetOf([1,3,5,2]), SetOf({1,2,3,4}))
+        self.assertNotEqual(SetOf({1,2,3,4}), SetOf([1,3,5,2]))
+
+        # Sets can be compared against non-set objects
+        self.assertEqual(
+            RangeSet(0,4,1),
+            [0,1,2,3,4]
+        )
+        self.assertEqual(
+            RangeSet(0,4),
+            [0,1,2,3,4]
+        )
+        self.assertEqual(
+            RangeSet(4),
+            [1,2,3,4]
+        )
+
+        # It can even work for non-iterable objects (that can't be cast
+        # to set())
+        class _NonIterable(object):
+            def __init__(self):
+                self.data = set({1,3,5})
+            def __contains__(self, val):
+                return val in self.data
+            def __len__(self):
+                return len(self.data)
+        self.assertEqual(SetOf({1,3,5}), _NonIterable())
+
+    def test_inequality(self):
+        self.assertTrue(SetOf([1,2,3]) <= SetOf({1,2,3}))
+        self.assertFalse(SetOf([1,2,3]) < SetOf({1,2,3}))
+
+        self.assertTrue(SetOf([1,2,3]) <= SetOf({1,2,3,4}))
+        self.assertTrue(SetOf([1,2,3]) < SetOf({1,2,3,4}))
+
+        self.assertFalse(SetOf([1,2,3]) <= SetOf({1,2}))
+        self.assertFalse(SetOf([1,2,3]) < SetOf({1,2}))
+
+        self.assertTrue(SetOf([1,2,3]) >= SetOf({1,2,3}))
+        self.assertFalse(SetOf([1,2,3]) > SetOf({1,2,3}))
+
+        self.assertFalse(SetOf([1,2,3]) >= SetOf({1,2,3,4}))
+        self.assertFalse(SetOf([1,2,3]) > SetOf({1,2,3,4}))
+
+        self.assertTrue(SetOf([1,2,3]) >= SetOf({1,2}))
+        self.assertTrue(SetOf([1,2,3]) > SetOf({1,2}))
+
+
+    def test_is_functions(self):
+        i = SetOf({1,2,3})
+        self.assertTrue(i.isdiscrete())
+        self.assertTrue(i.isfinite())
+        self.assertFalse(i.isordered())
+
+        i = SetOf([1,2,3])
+        self.assertTrue(i.isdiscrete())
+        self.assertTrue(i.isfinite())
+        self.assertTrue(i.isordered())
+
+        i = SetOf((1,2,3))
+        self.assertTrue(i.isdiscrete())
+        self.assertTrue(i.isfinite())
+        self.assertTrue(i.isordered())
+
+        i = RangeSet(3)
+        self.assertTrue(i.isdiscrete())
+        self.assertTrue(i.isfinite())
+        self.assertTrue(i.isordered())
+        self.assertIsInstance(i, _FiniteRangeSetData)
+
+        i = RangeSet(1,3)
+        self.assertTrue(i.isdiscrete())
+        self.assertTrue(i.isfinite())
+        self.assertTrue(i.isordered())
+        self.assertIsInstance(i, _FiniteRangeSetData)
+
+        i = RangeSet(1,3,0)
+        self.assertFalse(i.isdiscrete())
+        self.assertFalse(i.isfinite())
+        self.assertFalse(i.isordered())
+        self.assertIsInstance(i, _InfiniteRangeSetData)
+
+    def test_pprint(self):
+        m = ConcreteModel()
+        m.I = RangeSet(3)
+        m.K1 = RangeSet(0)
+        m.K2 = RangeSet(10, 9)
+        m.NotI = RangeSet(1,3,0)
+        m.J = SetOf([1,2,3])
+
+        buf = StringIO()
+        m.pprint()
+        m.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue().strip(), """
+4 RangeSet Declarations
+    I : Dimen=1, Size=3, Bounds=(1, 3)
+        Key  : Finite : Members
+        None :   True :   [1:3]
+    K1 : Dimen=1, Size=0, Bounds=(None, None)
+        Key  : Finite : Members
+        None :   True :      []
+    K2 : Dimen=1, Size=0, Bounds=(None, None)
+        Key  : Finite : Members
+        None :   True :      []
+    NotI : Dimen=1, Size=Inf, Bounds=(1, 3)
+        Key  : Finite : Members
+        None :  False :  [1..3]
+
+1 SetOf Declarations
+    J : Dimen=1, Size=3, Bounds=(1, 3)
+        Key  : Ordered : Members
+        None :    True : [1, 2, 3]
+
+5 Declarations: I K1 K2 NotI J""".strip())
+
+    def test_naming(self):
+        m = ConcreteModel()
+
+        i = RangeSet(3)
+        self.assertEqual(str(i), "[1:3]")
+        m.I = i
+        self.assertEqual(str(i), "I")
+
+        j = RangeSet(ranges=(NR(1,3,0), NR(4,7,1)))
+        self.assertEqual(str(j), "([1..3] | [4:7])")
+        m.J = j
+        self.assertEqual(str(j), "J")
+
+        k = SetOf((1,3,5))
+        self.assertEqual(str(k), "(1, 3, 5)")
+        m.K = k
+        self.assertEqual(str(k), "K")
+
+        l = SetOf([1,3,5])
+        self.assertEqual(str(l), "[1, 3, 5]")
+        m.L = l
+        self.assertEqual(str(l), "L")
+
+        n = RangeSet(0)
+        self.assertEqual(str(n), "[]")
+        m.N = n
+        self.assertEqual(str(n), "N")
+
+        m.a = Param(initialize=3)
+        o = RangeSet(m.a)
+        self.assertEqual(str(o), "AbstractFiniteSimpleRangeSet")
+        m.O = o
+        self.assertEqual(str(o), "O")
+
+        p = RangeSet(m.a, finite=False)
+        self.assertEqual(str(p), "AbstractInfiniteSimpleRangeSet")
+        m.P = p
+        self.assertEqual(str(p), "P")
+
+    def test_isdisjoint(self):
+        i = SetOf({1,2,3})
+        self.assertTrue(i.isdisjoint({4,5,6}))
+        self.assertFalse(i.isdisjoint({3,4,5,6}))
+
+        self.assertTrue(i.isdisjoint(SetOf({4,5,6})))
+        self.assertFalse(i.isdisjoint(SetOf({3,4,5,6})))
+
+        self.assertTrue(i.isdisjoint(RangeSet(4,6,0)))
+        self.assertFalse(i.isdisjoint(RangeSet(3,6,0)))
+
+        self.assertTrue(RangeSet(4,6,0).isdisjoint(i))
+        self.assertFalse(RangeSet(3,6,0).isdisjoint(i))
+
+        # It can even work for non-hashable objects (that can't be cast
+        # to set())
+        m = ConcreteModel()
+        m.p = Param(initialize=2)
+        m.q = Var(initialize=2)
+        _NonHashable = (1,3,5,m.p)
+        self.assertFalse(SetOf({2,4}).isdisjoint(_NonHashable))
+        self.assertTrue(SetOf({0,4}).isdisjoint(_NonHashable))
+        self.assertFalse(SetOf(_NonHashable).isdisjoint(_NonHashable))
+        self.assertFalse(SetOf((m.q,1,3,5,m.p)).isdisjoint(_NonHashable))
+        # Note: membership in tuples is done through
+        # __bool__(a.__eq__(b)), so Params/Vars with equivalent values will
+        # match
+        self.assertFalse(SetOf((m.q,)).isdisjoint(_NonHashable))
+
+        # It can even work for non-iterable objects (that can't be cast
+        # to set())
+        class _NonIterable(object):
+            def __init__(self):
+                self.data = set({1,3,5})
+            def __contains__(self, val):
+                return val in self.data
+            def __len__(self):
+                return len(self.data)
+        self.assertTrue(SetOf({2,4}).isdisjoint(_NonIterable()))
+        self.assertFalse(SetOf({2,3,4}).isdisjoint(_NonIterable()))
+
+    def test_issubset(self):
+        i = SetOf({1,2,3})
+        self.assertTrue(i.issubset({1,2,3,4}))
+        self.assertFalse(i.issubset({3,4,5,6}))
+
+        self.assertTrue(i.issubset(SetOf({1,2,3,4})))
+        self.assertFalse(i.issubset(SetOf({3,4,5,6})))
+
+        self.assertTrue(i.issubset(RangeSet(1,4,0)))
+        self.assertFalse(i.issubset(RangeSet(3,6,0)))
+
+        self.assertTrue(RangeSet(1,3,0).issubset(RangeSet(0,100,0)))
+        self.assertFalse(RangeSet(1,3,0).issubset(i))
+        self.assertFalse(RangeSet(3,6,0).issubset(i))
+
+        # It can even work for non-hashable objects (that can't be cast
+        # to set())
+        m = ConcreteModel()
+        m.p = Param(initialize=2)
+        m.q = Var(initialize=2)
+        _NonHashable = (1,3,5,m.p)
+        self.assertFalse(SetOf({0,1,3,5}).issubset(_NonHashable))
+        self.assertTrue(SetOf({1,3,5}).issubset(_NonHashable))
+        self.assertTrue(SetOf(_NonHashable).issubset(_NonHashable))
+        self.assertTrue(SetOf((m.q,1,3,5,m.p)).issubset(_NonHashable))
+        # Note: membership in tuples is done through
+        # __bool__(a.__eq__(b)), so Params/Vars with equivalent values will
+        # match
+        self.assertTrue(SetOf((m.q,1,3,5)).issubset(_NonHashable))
+
+        # It can even work for non-iterable objects (that can't be cast
+        # to set())
+        class _NonIterable(object):
+            def __init__(self):
+                self.data = set({1,3,5})
+            def __contains__(self, val):
+                return val in self.data
+            def __len__(self):
+                return len(self.data)
+        self.assertTrue(SetOf({1,5}).issubset(_NonIterable()))
+        self.assertFalse(SetOf({1,3,4}).issubset(_NonIterable()))
+
+    def test_issuperset(self):
+        i = SetOf({1,2,3})
+        self.assertTrue(i.issuperset({1,2}))
+        self.assertFalse(i.issuperset({3,4,5,6}))
+
+        self.assertTrue(i.issuperset(SetOf({1,2})))
+        self.assertFalse(i.issuperset(SetOf({3,4,5,6})))
+
+        self.assertFalse(i.issuperset(RangeSet(1,3,0)))
+        self.assertFalse(i.issuperset(RangeSet(3,6,0)))
+
+        self.assertTrue(RangeSet(1,3,0).issuperset(RangeSet(1,2,0)))
+        self.assertTrue(RangeSet(1,3,0).issuperset(i))
+        self.assertFalse(RangeSet(3,6,0).issuperset(i))
+
+        # It can even work for non-hashable objects (that can't be cast
+        # to set())
+        m = ConcreteModel()
+        m.p = Param(initialize=2)
+        m.q = Var(initialize=2)
+        _NonHashable = (1,3,5,m.p)
+        self.assertFalse(SetOf({1,3,5}).issuperset(_NonHashable))
+        self.assertTrue(SetOf(_NonHashable).issuperset(_NonHashable))
+        self.assertTrue(SetOf((m.q,1,3,5,m.p)).issuperset(_NonHashable))
+        # Note: membership in tuples is done through
+        # __bool__(a.__eq__(b)), so Params/Vars with equivalent values will
+        # match
+        self.assertTrue(SetOf((m.q,1,3,5)).issuperset(_NonHashable))
+
+        # But NOT non-iterable objects: we assume that everything that
+        # does not implement isfinite() is a discrete set.
+        class _NonIterable(object):
+            def __init__(self):
+                self.data = set({1,3,5})
+            def __contains__(self, val):
+                return val in self.data
+            def __len__(self):
+                return len(self.data)
+        with self.assertRaisesRegexp(TypeError, 'not iterable'):
+            SetOf({1,5}).issuperset(_NonIterable())
+        with self.assertRaisesRegexp(TypeError, 'not iterable'):
+            SetOf({1,3,4,5}).issuperset(_NonIterable())
+
+    def test_unordered_setof(self):
+        i = SetOf({1,3,2,0})
+
+        self.assertTrue(i.isfinite())
+        self.assertFalse(i.isordered())
+
+        self.assertEqual(i.ordered_data(), (0,1,2,3))
+        self.assertEqual(i.sorted_data(), (0,1,2,3))
+        self.assertEqual( tuple(reversed(i)),
+                          tuple(reversed(list(i))) )
+
+    def test_ordered_setof(self):
+        i = SetOf([1,3,2,0])
+
+        self.assertTrue(i.isfinite())
+        self.assertTrue(i.isordered())
+
+        self.assertEqual(i.ordered_data(), (1,3,2,0))
+        self.assertEqual(i.sorted_data(), (0,1,2,3))
+        self.assertEqual(tuple(reversed(i)), (0,2,3,1))
+
+        self.assertEqual(i[2], 3)
+        self.assertEqual(i[-1], 0)
+        with self.assertRaisesRegexp(
+                IndexError,"valid index values for Sets are "
+                "\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
+            i[0]
+        with self.assertRaisesRegexp(
+                IndexError, "OrderedSetOf index out of range"):
+            i[5]
+        with self.assertRaisesRegexp(
+                IndexError, "OrderedSetOf index out of range"):
+            i[-5]
+
+        self.assertEqual(i.ord(3), 2)
+        with self.assertRaisesRegexp(ValueError, "5 is not in list"):
+            i.ord(5)
+
+        self.assertEqual(i.first(), 1)
+        self.assertEqual(i.last(), 0)
+
+        self.assertEqual(i.next(3), 2)
+        self.assertEqual(i.prev(2), 3)
+        self.assertEqual(i.nextw(3), 2)
+        self.assertEqual(i.prevw(2), 3)
+        self.assertEqual(i.next(3,2), 0)
+        self.assertEqual(i.prev(2,2), 1)
+        self.assertEqual(i.nextw(3,2), 0)
+        self.assertEqual(i.prevw(2,2), 1)
+
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot advance past the end of the Set"):
+            i.next(0)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot advance before the beginning of the Set"):
+            i.prev(1)
+        self.assertEqual(i.nextw(0), 1)
+        self.assertEqual(i.prevw(1), 0)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot advance past the end of the Set"):
+            i.next(0,2)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot advance before the beginning of the Set"):
+            i.prev(1,2)
+        self.assertEqual(i.nextw(0,2), 3)
+        self.assertEqual(i.prevw(1,2), 2)
+
+        i = SetOf((1,3,2,0))
+
+        self.assertTrue(i.isfinite())
+        self.assertTrue(i.isordered())
+
+        self.assertEqual(i.ordered_data(), (1,3,2,0))
+        self.assertEqual(i.sorted_data(), (0,1,2,3))
+        self.assertEqual(tuple(reversed(i)), (0,2,3,1))
+
+        self.assertEqual(i[2], 3)
+        self.assertEqual(i[-1], 0)
+        with self.assertRaisesRegexp(
+                IndexError,"valid index values for Sets are "
+                "\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
+            i[0]
+        with self.assertRaisesRegexp(
+                IndexError, "OrderedSetOf index out of range"):
+            i[5]
+        with self.assertRaisesRegexp(
+                IndexError, "OrderedSetOf index out of range"):
+            i[-5]
+
+        self.assertEqual(i.ord(3), 2)
+        with self.assertRaisesRegexp(ValueError, "x not in tuple"):
+            i.ord(5)
+
+        i = SetOf([1, None, 'a'])
+
+        self.assertTrue(i.isfinite())
+        self.assertTrue(i.isordered())
+
+        self.assertEqual(i.ordered_data(), (1,None,'a'))
+        self.assertEqual(i.sorted_data(), (None,1,'a'))
+        self.assertEqual(tuple(reversed(i)), ('a',None,1))
+
+
+    def test_ranges(self):
+        i_data = [1,3,2,0]
+        i = SetOf(i_data)
+        r = list(i.ranges())
+        self.assertEqual(len(r), 4)
+        for idx, x in enumerate(r):
+            self.assertIsInstance(x, NR)
+            self.assertTrue(x.isfinite())
+            self.assertEqual(x.start, i[idx+1])
+            self.assertEqual(x.end, i[idx+1])
+            self.assertEqual(x.step, 0)
+
+        # Test that apparent numeric types that are not in native_types
+        # are handled correctly
+        try:
+            self.assertIn(int, native_types)
+            self.assertIn(int, native_numeric_types)
+
+            native_types.remove(int)
+            native_numeric_types.remove(int)
+
+            r = list(i.ranges())
+            self.assertEqual(len(r), 4)
+            for idx, x in enumerate(r):
+                self.assertIsInstance(x, NR)
+                self.assertTrue(x.isfinite())
+                self.assertEqual(x.start, i[idx+1])
+                self.assertEqual(x.end, i[idx+1])
+                self.assertEqual(x.step, 0)
+
+            self.assertIn(int, native_types)
+            self.assertIn(int, native_numeric_types)
+        finally:
+            native_types.add(int)
+            native_numeric_types.add(int)
+
+        i_data.append('abc')
+        try:
+            self.assertIn(str, native_types)
+            self.assertNotIn(str, native_numeric_types)
+
+            native_types.remove(str)
+
+            r = list(i.ranges())
+
+            self.assertEqual(len(r), 5)
+            # Note: as_numeric() will NOT automatically add types to the
+            # native_types set
+            self.assertNotIn(str, native_types)
+            self.assertNotIn(str, native_numeric_types)
+            for idx, x in enumerate(r[:-1]):
+                self.assertIsInstance(x, NR)
+                self.assertTrue(x.isfinite())
+                self.assertEqual(x.start, i[idx+1])
+                self.assertEqual(x.end, i[idx+1])
+                self.assertEqual(x.step, 0)
+            self.assertIs(type(r[-1]), NNR)
+        finally:
+            native_types.add(str)
 
     def test_bounds(self):
-        self.assertEqual( self.instance.A['A',1].bounds(), None)
-
-    def test_getitem(self):
-        """Check the access to items"""
-        try:
-            tmp=[]
-            for val in self.instance.A['A',1]:
-                tmp.append(val)
-            tmp.sort()
-        except:
-            self.fail("Problems getting a valid subsetset from a set array")
-        self.assertEqual( tmp, [1,3,5,7])
-
-        try:
-            tmp = self.instance.A['A',2]
-        except:
-            self.fail( "Problems getting a valid uninitialized subset "
-                       "from a set array" )
-
-        try:
-            tmp = self.instance.A['A',3]
-        except KeyError:
-            pass
-        else:
-            self.fail("Problems getting an invalid set from a set array")
-
-    def Xtest_setitem(self):
-        """Check the access to items"""
-        try:
-            self.model.Y = Set(initialize=[1,2])
-            self.model.Z = Set(initialize=['A','C'])
-            self.model.A = Set(self.model.Z,self.model.Y,initialize={'A':[1]})
-            self.instance = self.model.create_instance()
-            tmp=[1,6,9]
-            self.instance.A['A'] = tmp
-            self.instance.A['C'] = tmp
-        except:
-            self.fail("Problems setting a valid set into a set array")
-        try:
-            self.instance.A['D'] = tmp
-        except KeyError:
-            pass
-        else:
-            self.fail("Problems setting an invalid set into a set array")
-
-    def Xtest_keys(self):
-        """Check the keys for the array"""
-        tmp=self.instance.A.keys()
-        tmp.sort()
-        self.assertEqual(tmp, ['A', 'C'])
-
-    def Xtest_len(self):
-        """Check that a simple set of numeric elements has the right size"""
-        try:
-            len(self.instance.A)
-        except TypeError:
-            pass
-        else:
-            self.fail("fail test_len")
-
-    def Xtest_data(self):
-        """Check that we can access the underlying set data"""
-        try:
-            self.instance.A.data()
-        except TypeError:
-            pass
-        else:
-            self.fail("fail test_data")
-
-    def Xtest_dim(self):
-        """Check that a simple set has dimension zero for its indexing"""
-        self.assertEqual( self.instance.A.dim(), 1)
-
-    def Xtest_clear(self):
-        """Check the clear() method empties the set"""
-        self.instance.A.clear()
-        for key in self.instance.A:
-            self.assertEqual( len(self.instance.A[key]), 0)
-
-    def Xtest_virtual(self):
-        """Check if this is not a virtual set"""
-        self.assertEqual( self.instance.A.virtual, False)
-
-    def Xtest_check_values(self):
-        """Check if the values added to this set are valid"""
-        #
-        # This should not throw an exception here
-        #
-        self.instance.A.check_values()
-
-    def Xtest_first(self):
-        """Check that we can get the 'first' value in the set"""
-        pass
-
-    def Xtest_removeValid(self):
-        """Check that we can remove a valid set element"""
-        pass
-
-    def Xtest_removeInvalid(self):
-        """Check that we fail to remove an invalid set element"""
-        pass
-
-    def Xtest_discardValid(self):
-        """Check that we can discard a valid set element"""
-        pass
-
-    def Xtest_discardInvalid(self):
-        """Check that we fail to remove an invalid set element without an exception"""
-        pass
-
-    def Xtest_iterator(self):
-        """Check that we can iterate through the set"""
-        tmp = 0
-        for key in self.instance.A:
-            tmp += len(self.instance.A[key])
-        self.assertEqual( tmp, 8)
-
-    def Xtest_eq1(self):
-        """Various checks for set equality and inequality (1)"""
-        try:
-            self.assertEqual( self.instance.A == self.instance.tmpset1, True)
-            self.assertEqual( self.instance.tmpset1 == self.instance.A, True)
-            self.assertEqual( self.instance.A != self.instance.tmpset1, False)
-            self.assertEqual( self.instance.tmpset1 != self.instance.A, False)
-        except TypeError:
-            pass
-        else:
-            self.fail("fail test_eq1")
-
-    def Xtest_eq2(self):
-        """Various checks for set equality and inequality (2)"""
-        try:
-            self.assertEqual( self.instance.A == self.instance.tmpset2, False)
-            self.assertEqual( self.instance.tmpset2 == self.instance.A, False)
-            self.assertEqual( self.instance.A != self.instance.tmpset2, True)
-            self.assertEqual( self.instance.tmpset2 != self.instance.A, True)
-        except TypeError:
-            pass
-        else:
-            self.fail("fail test_eq2")
-
-    def Xtest_contains(self):
-        """Various checks for contains() method"""
-        tmp = self.e1 in self.instance.A
-        self.assertEqual( tmp, False )
-
-    def Xtest_or(self):
-        """Check that set union works"""
-        try:
-            self.instance.A | self.instance.tmpset3
-        except TypeError:
-            pass
-        else:
-            self.fail("fail test_or")
-
-    def Xtest_and(self):
-        """Check that set intersection works"""
-        try:
-            self.instance.tmp = self.instance.A & self.instance.tmpset3
-        except TypeError:
-            pass
-        else:
-            self.fail("fail test_and")
-
-    def Xtest_xor(self):
-        """Check that set exclusive or works"""
-        try:
-            self.instance.A ^ self.instance.tmpset3
-        except TypeError:
-            pass
-        else:
-            self.fail("fail test_xor")
-
-    def Xtest_diff(self):
-        """Check that set difference works"""
-        try:
-            self.instance.A - self.instance.tmpset3
-        except TypeError:
-            pass
-        else:
-            self.fail("fail test_diff")
-
-    def Xtest_mul(self):
-        """Check that set cross-product works"""
-        try:
-            self.instance.A * self.instance.tmpset3
-        except TypeError:
-            pass
-        else:
-            self.fail("fail test_mul")
-
-
-class TestRealSet(unittest.TestCase):
-
-    def test_bounds(self):
-        x = RealSet()
-        self.assertEqual(x.bounds(), (None, None))
-        x = RealSet(bounds=(1,2))
-        self.assertEqual(x.bounds(), (1, 2))
-
-    def test_inequality_comparison_fails(self):
-        x = RealSet()
-        y = RealSet()
-        with self.assertRaises(TypeError):
-            x < y
-        with self.assertRaises(TypeError):
-            x <= y
-        with self.assertRaises(TypeError):
-            x > y
-        with self.assertRaises(TypeError):
-            x >= y
-
-    def test_name(self):
-        x = RealSet()
-        self.assertEqual(x.name, None)
-        self.assertTrue('RealSet' in str(x))
-        x = RealSet(name="x")
-        self.assertEqual(x.name, 'x')
-        self.assertEqual(str(x), 'x')
-
-    def test_contains(self):
-        x = _VirtualSet()
-        self.assertTrue(None in x)
-        self.assertTrue(10 in x)
-        self.assertTrue(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertTrue(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertTrue(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertTrue(-2.2 in x)
-        self.assertTrue(-10 in x)
-        x = RealSet()
-        self.assertFalse(None in x)
-        self.assertTrue(10 in x)
-        self.assertTrue(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertTrue(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertTrue(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertTrue(-2.2 in x)
-        self.assertTrue(-10 in x)
-        x = RealSet(bounds=(-1, 1))
-        self.assertFalse(None in x)
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertTrue(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertTrue(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-    def test_PositiveReals(self):
-        x = PositiveReals
-        self.assertFalse(None in x)
-        self.assertTrue(10 in x)
-        self.assertTrue(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertTrue(0.3 in x)
-        self.assertFalse(0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertFalse(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-    def test_NonPositiveReals(self):
-        x = NonPositiveReals
-        self.assertFalse(None in x)
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertFalse(1 in x)
-        self.assertFalse(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertTrue(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertTrue(-2.2 in x)
-        self.assertTrue(-10 in x)
-
-    def test_NegativeReals(self):
-        x = NegativeReals
-        self.assertFalse(None in x)
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertFalse(1 in x)
-        self.assertFalse(0.3 in x)
-        self.assertFalse(0 in x)
-        self.assertTrue(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertTrue(-2.2 in x)
-        self.assertTrue(-10 in x)
-
-    def test_NonNegativeReals(self):
-        x = NonNegativeReals
-        self.assertFalse(None in x)
-        self.assertTrue(10 in x)
-        self.assertTrue(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertTrue(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertFalse(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-    def test_PercentFraction(self):
-        x = PercentFraction
-        self.assertFalse(None in x)
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertTrue(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertFalse(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-    def test_UnitInterval(self):
-        x = UnitInterval
-        self.assertFalse(None in x)
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertTrue(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertFalse(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-    def test_RealInterval(self):
-        x = RealInterval()
-        self.assertEqual(x.name,
-                         "RealInterval(None, None)")
-        self.assertFalse(None in x)
-        self.assertTrue(10 in x)
-        self.assertTrue(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertTrue(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertTrue(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertTrue(-2.2 in x)
-        self.assertTrue(-10 in x)
-
-        x = RealInterval(bounds=(-1,1))
-        self.assertEqual(x.name,
-                         "RealInterval(-1, 1)")
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertTrue(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertTrue(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-        x = RealInterval(bounds=(-1,1), name="JUNK")
-        self.assertEqual(x.name, "JUNK")
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertTrue(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertTrue(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-class TestIntegerSet(unittest.TestCase):
-
-    def test_bounds(self):
-        x = IntegerSet()
-        self.assertEqual(x.bounds(), (None, None))
-        x = IntegerSet(bounds=(1,2))
-        self.assertEqual(x.bounds(), (1, 2))
-
-    def test_inequality_comparison_fails(self):
-        x = RealSet()
-        y = RealSet()
-        with self.assertRaises(TypeError):
-            x < y
-        with self.assertRaises(TypeError):
-            x <= y
-        with self.assertRaises(TypeError):
-            x > y
-        with self.assertRaises(TypeError):
-            x >= y
-
-    def test_name(self):
-        x = IntegerSet()
-        self.assertEqual(x.name, None)
-        self.assertTrue('IntegerSet' in str(x))
-        x = IntegerSet(name="x")
-        self.assertEqual(x.name, 'x')
-        self.assertEqual(str(x), 'x')
-
-    def test_contains(self):
-        x = IntegerSet()
-        self.assertFalse(None in x)
-        self.assertTrue(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertFalse(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertTrue(-10 in x)
-        x = IntegerSet(bounds=(-1, 1))
-        self.assertFalse(None in x)
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertFalse(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-    def test_PositiveIntegers(self):
-        x = PositiveIntegers
-        self.assertFalse(None in x)
-        self.assertTrue(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertFalse(0.3 in x)
-        self.assertFalse(0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertFalse(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-    def test_NonPositiveIntegers(self):
-        x = NonPositiveIntegers
-        self.assertFalse(None in x)
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertFalse(1 in x)
-        self.assertFalse(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertTrue(-10 in x)
-
-    def test_NegativeIntegers(self):
-        x = NegativeIntegers
-        self.assertFalse(None in x)
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertFalse(1 in x)
-        self.assertFalse(0.3 in x)
-        self.assertFalse(0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertTrue(-10 in x)
-
-    def test_NonNegativeIntegers(self):
-        x = NonNegativeIntegers
-        self.assertFalse(None in x)
-        self.assertTrue(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertFalse(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertFalse(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-    def test_IntegerInterval(self):
-        x = IntegerInterval()
-        self.assertFalse(None in x)
-        self.assertEqual(x.name,
-                         "IntegerInterval(None, None)")
-        self.assertTrue(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertFalse(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertTrue(-10 in x)
-
-        x = IntegerInterval(bounds=(-1,1))
-        self.assertFalse(None in x)
-        self.assertEqual(x.name,
-                         "IntegerInterval(-1, 1)")
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertFalse(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-        x = IntegerInterval(bounds=(-1,1), name="JUNK")
-        self.assertFalse(None in x)
-        self.assertEqual(x.name, "JUNK")
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertFalse(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertTrue(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-class TestBooleanSet(unittest.TestCase):
-
-    def test_bounds(self):
-        x = BooleanSet()
-        self.assertEqual(x.bounds(), (0, 1))
-
-    def test_inequality_comparison_fails(self):
-        x = RealSet()
-        y = RealSet()
-        with self.assertRaises(TypeError):
-            x < y
-        with self.assertRaises(TypeError):
-            x <= y
-        with self.assertRaises(TypeError):
-            x > y
-        with self.assertRaises(TypeError):
-            x >= y
-
-    def test_name(self):
-        x = BooleanSet()
-        self.assertEqual(x.name, None)
-        self.assertTrue('BooleanSet' in str(x))
-        x = BooleanSet(name="x")
-        self.assertEqual(x.name, 'x')
-        self.assertEqual(str(x), 'x')
-
-    def test_contains(self):
-        x = BooleanSet()
-        self.assertFalse(None in x)
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertTrue(True in x)
-        self.assertTrue(1.0 in x)
-        self.assertFalse(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertTrue(False in x)
-        self.assertTrue(0.0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertFalse(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-    def test_Boolean(self):
-        x = Boolean
-        self.assertFalse(None in x)
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertTrue(True in x)
-        self.assertTrue(1.0 in x)
-        self.assertFalse(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertTrue(False in x)
-        self.assertTrue(0.0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertFalse(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-    def test_Binary(self):
-        x = Binary
-        self.assertFalse(None in x)
-        self.assertFalse(10 in x)
-        self.assertFalse(1.1 in x)
-        self.assertTrue(1 in x)
-        self.assertTrue(True in x)
-        self.assertTrue(1.0 in x)
-        self.assertFalse(0.3 in x)
-        self.assertTrue(0 in x)
-        self.assertTrue(False in x)
-        self.assertTrue(0.0 in x)
-        self.assertFalse(-0.45 in x)
-        self.assertFalse(-1 in x)
-        self.assertFalse(-2.2 in x)
-        self.assertFalse(-10 in x)
-
-class TestAnySet(SimpleSetA):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-        #
-        # Create model instance
-        #
-        x = _AnySet()
-        x.concrete=True
-        self.model.A = x
-        x.concrete=False
-        #
-        # Misc datasets
-        #
-        self.model.tmpset1 = Set(initialize=[1,'3',5,7])
-        self.model.tmpset2 = Set(initialize=[1,2,'3',5,7])
-        self.model.tmpset3 = Set(initialize=[2,'3',5,7,9])
-
-        y = _AnySet()
-        y.concrete=True
-        self.model.setunion = y
-        y.concrete=False
-        self.model.setintersection = Set(initialize=[1,'3',5,7])
-        self.model.setxor = Set(initialize=[])
-        self.model.setdiff = Set(initialize=[])
-        self.model.setmul = None
-
-        self.instance = self.model.create_instance()
-        self.e1=1
-        self.e2=2
-        self.e3='3'
-        self.e4=4
-        self.e5=5
-        self.e6=6
-
-    def test_bounds(self):
-        self.assertEqual( self.instance.A.bounds(), None)
-
-    def test_contains(self):
-        """Various checks for contains() method"""
-        self.assertEqual( self.e1 in self.instance.A, True)
-        self.assertEqual( self.e2 in self.instance.A, True)
-        self.assertEqual( '2' in self.instance.A, True)
-
-    def test_None1(self):
-        self.assertEqual( None in Any, True)
-
-    def test_len(self):
-        """Check that the set has the right size"""
-        try:
-            len(self.instance.A)
-        except ValueError:
-            pass
-        else:
-            self.fail("test_len failure")
-
-    def test_data(self):
-        """Check that we can access the underlying set data"""
-        try:
-            self.instance.A.data()
-        except TypeError:
-            pass
-        else:
-            self.fail("test_data failure")
-
-    def test_clear(self):
-        """Check that the clear() method generates an exception"""
-        self.assertRaises(TypeError, self.instance.A.clear)
-
-    def test_virtual(self):
-        """Check if this is not a virtual set"""
-        self.assertEqual( self.instance.A.virtual, True)
-
-    def test_discardValid(self):
-        """Check that we fail to remove an invalid set element without an exception"""
-        self.assertRaises(KeyError, self.instance.A.discard, self.e2)
-
-    def test_discardInvalid(self):
-        """Check that we fail to remove an invalid set element without an exception"""
-        pass
-
-    def test_removeValid(self):
-        """Check that we can remove a valid set element"""
-        self.assertRaises(KeyError, self.instance.A.remove, self.e3)
-
-    def test_removeInvalid(self):
-        pass
-
-    def test_addInvalid(self):
-        """Check that we get an error when adding invalid set elements"""
-        pass
-
-    def test_addValid(self):
-        """Check that we can add valid set elements"""
-        self.assertEqual( self.instance.A.domain, None)
-        self.assertRaises(TypeError,self.instance.A.add,2)
-
-    def test_iterator(self):
-        """Check that we can iterate through the set"""
-        try:
-            for val in self.instance.A:
-                tmp=val
-        except TypeError:
-            pass
-        else:
-            self.fail("test_iterator failure")
-
-    def test_eq1(self):
-        """Various checks for set equality and inequality (1)"""
-        self.assertTrue(not(self.instance.A == self.instance.tmpset1))
-        self.assertTrue(not(self.instance.tmpset1 == self.instance.A))
-        self.assertTrue(self.instance.A != self.instance.tmpset1)
-        self.assertTrue(self.instance.tmpset1 != self.instance.A)
-
-
-    def test_eq2(self):
-        """Various checks for set equality and inequality (2)"""
-        self.assertTrue(not(self.instance.A == self.instance.tmpset2))
-        self.assertTrue(not(self.instance.tmpset2 == self.instance.A))
-        self.assertTrue(self.instance.A != self.instance.tmpset2)
-        self.assertTrue(self.instance.tmpset2 != self.instance.A)
-
-    def test_le1(self):
-        """Various checks for set subset (1)"""
-        try:
-            self.instance.A < self.instance.tmpset1
-            self.instance.A <= self.instance.tmpset1
-            self.instance.A > self.instance.tmpset1
-            self.instance.A >= self.instance.tmpset1
-            self.instance.tmpset1 < self.instance.A
-            self.instance.tmpset1 <= self.instance.A
-            self.instance.tmpset1 > self.instance.A
-            self.instance.tmpset1 >= self.instance.A
-        except TypeError:
-            pass
-        else:
-            self.fail("test_le1 failure")
-
-    def test_le2(self):
-        """Various checks for set subset (2)"""
-        try:
-            self.instance.A < self.instance.tmpset2
-            self.instance.A <= self.instance.tmpset2
-            self.instance.A > self.instance.tmpset2
-            self.instance.A >= self.instance.tmpset2
-            self.instance.tmpset2 < self.instance.A
-            self.instance.tmpset2 <= self.instance.A
-            self.instance.tmpset2 > self.instance.A
-            self.instance.tmpset2 >= self.instance.A
-        except TypeError:
-            pass
-        else:
-            self.fail("test_le2 failure")
-
-    def test_le3(self):
-        """Various checks for set subset (3)"""
-        try:
-            self.instance.A < self.instance.tmpset3
-            self.instance.A <= self.instance.tmpset3
-            self.instance.A > self.instance.tmpset3
-            self.instance.A >= self.instance.tmpset3
-            self.instance.tmpset3 < self.instance.A
-            self.instance.tmpset3 <= self.instance.A
-            self.instance.tmpset3 > self.instance.A
-            self.instance.tmpset3 >= self.instance.A
-        except TypeError:
-            pass
-        else:
-            self.fail("test_le3 failure")
-
-    def test_or(self):
-        """Check that set union works"""
-        try:
-            self.instance.tmp = self.instance.A | self.instance.tmpset3
-        except TypeError:
-            pass
-        else:
-            self.fail("Operator __or__ should have failed.")
-
-    def test_and(self):
-        """Check that set intersection works"""
-        try:
-            self.instance.tmp = self.instance.A & self.instance.tmpset3
-        except TypeError:
-            pass
-        else:
-            self.fail("Operator __and__ should have failed.")
-
-    def test_xor(self):
-        """Check that set exclusive or works"""
-        try:
-            self.tmp = self.instance.A ^ self.instance.tmpset3
-        except:
-            pass
-        else:
-            self.fail("Operator __xor__ should have failed.")
-
-    def test_diff(self):
-        """Check that set difference works"""
-        try:
-            self.tmp = self.instance.A - self.instance.tmpset3
-        except:
-            pass
-        else:
-            self.fail("Operator __diff__ should have failed.")
-
-    def test_mul(self):
-        """Check that set cross-product works"""
-        try:
-            self.instance.tmp = self.instance.A * self.instance.tmpset3
-        except:
-            pass
-        else:
-            self.fail("Operator __mul__ should have failed.")
-
-
-class TestSetArgs1(PyomoModel):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-
-    def tearDown(self):
-        #
-        # Remove Set 'A' data file
-        #
-        if os.path.exists(currdir+"setA.dat"):
-            os.remove(currdir+"setA.dat")
-        PyomoModel.tearDown(self)
-
-    def test_initialize1(self):
-        self.model.A = Set(initialize=[1,2,3,'A'])
-        self.instance = self.model.create_instance()
-        self.assertEqual(len(self.instance.A),4)
-
-    def test_initialize2(self):
-        self.model.A = Set(initialize=[(i,j) for i in range(0,3) for j in range(1,4) if (i+j)%2 == 0])
-        self.instance = self.model.create_instance()
-        self.assertEqual(len(self.instance.A),4)
-
-    def test_initialize3(self):
-        self.model.A = Set(initialize=((i,j) for i in range(0,3) for j in range(1,4) if (i+j)%2 == 0))
-        self.instance = self.model.create_instance()
-        self.assertEqual(len(self.instance.A),4)
-
-    def test_initialize4(self):
-        self.model.A = Set(initialize=range(0,4))
-        def B_index(model):
-            return (i for i in model.A if i%2 == 0)
-        def B_init(model, i):
-            return range(i,2+i)
-        self.model.B = Set(B_index, initialize=B_init)
-        self.instance = self.model.create_instance()
-        #self.instance.pprint()
-        self.assertEqual(self.instance.B[0].value,set([0,1]))
-        self.assertEqual(self.instance.B[2].value,set([2,3]))
-        self.assertEqual(list(sorted(self.instance.B.keys())),[0,2])
-
-    def test_initialize5(self):
-        self.model.A = Set(initialize=range(0,4))
-        def B_index(model):
-            for i in model.A:
-                if i%2 == 0:
-                    yield i
-        def B_init(model, i):
-            return range(i,2+i)
-        self.model.B = Set(B_index, initialize=B_init)
-        self.instance = self.model.create_instance()
-        #self.instance.pprint()
-        self.assertEqual(self.instance.B[0].value,set([0,1]))
-        self.assertEqual(self.instance.B[2].value,set([2,3]))
-        self.assertEqual(list(sorted(self.instance.B.keys())),[0,2])
-
-    def test_initialize6(self):
-        self.model.A = Set(initialize=range(0,4))
-        def B_index(model):
-            for i in model.A:
-                if i%2 == 0:
-                    yield i
-        def B_init(model, i, j):
-            k=i+j               # A dummy calculation
-            if j:
-                return range(i,2+i)
-            return []
-        self.model.B = Set(B_index, [True,False], initialize=B_init)
-        self.instance = self.model.create_instance()
-        #self.instance.pprint()
-        self.assertEqual(set(self.instance.B.keys()),set([(0,True),(2,True),(0,False),(2,False)]))
-        self.assertEqual(self.instance.B[0,True].value,set([0,1]))
-        self.assertEqual(self.instance.B[2,True].value,set([2,3]))
-
-    def test_initialize7(self):
-        self.model.A = Set(initialize=range(0,3))
-        @set_options(dimen=3)
-        def B_index(model):
-            return [(i,i+1,i*i) for i in model.A]
-        def B_init(model, i, ii, iii, j):
-            k=i+j               # A dummy calculation
-            if j:
-                return range(i,2+i)
-            return []
-        self.model.B = Set(B_index, [True,False], initialize=B_init)
-        self.instance = self.model.create_instance()
-        #self.instance.pprint()
-        self.assertEqual(set(self.instance.B.keys()),set([(0,1,0,True),(1,2,1,True),(2,3,4,True),(0,1,0,False),(1,2,1,False),(2,3,4,False)]))
-        self.assertEqual(self.instance.B[0,1,0,True].value,set([0,1]))
-        self.assertEqual(self.instance.B[2,3,4,True].value,set([2,3]))
-
-    def test_initialize8(self):
-        self.model.A = Set(initialize=range(0,3))
-        def B_index(model):
-            return [(i,i+1,i*i) for i in model.A]
-        def B_init(model, i, ii, iii, j):
-            if j:
-                return range(i,2+i)
-            return []
-        self.model.B = Set(B_index, [True,False], initialize=B_init)
-        try:
-            self.instance = self.model.create_instance()
-            self.fail("Expected ValueError because B_index returns a tuple")
-        except ValueError:
-            pass
-
-    def test_initialize9(self):
-        self.model.A = Set(initialize=range(0,3))
-        @set_options(domain=Integers)
-        def B_index(model):
-            return [i/2.0 for i in model.A]
-        def B_init(model, i, j):
-            if j:
-                return range(int(i),int(2+i))
-            return []
-        self.model.B = Set(B_index, [True,False], initialize=B_init)
-        try:
-            self.instance = self.model.create_instance()
-            self.fail("Expected ValueError because B_index returns invalid set values")
-        except ValueError:
-            pass
-
-    def test_dimen1(self):
-        #
-        # Create model instance
-        #
-        self.model.A = Set(initialize=[1,2,3], dimen=1)
-        self.instance = self.model.create_instance()
-        #
-        try:
-            self.model.A = Set(initialize=[4,5,6], dimen=2)
-            self.instance = self.model.create_instance()
-        except ValueError:
-            pass
-        else:
-            self.fail("test_dimen")
-        #
-        self.model.A = Set(initialize=[(1,2), (2,3), (3,4)], dimen=2)
-        self.instance = self.model.create_instance()
-        #
-        try:
-            self.model.A = Set(initialize=[(1,2), (2,3), (3,4)], dimen=1)
-            self.instance = self.model.create_instance()
-        except ValueError:
-            pass
-        else:
-            self.fail("test_dimen")
-        #
-        def f(model):
-            return [(1,1), (2,2), (3,3)]
-        self.model.A = Set(initialize=f, dimen=2)
-        self.instance = self.model.create_instance()
-        #
-        try:
-            self.model.A = Set(initialize=f, dimen=3)
-            self.instance = self.model.create_instance()
-        except ValueError:
-            pass
-        else:
-            self.fail("test_dimen")
-
-    def test_dimen2(self):
-        try:
-            self.model.A = Set(initialize=[1,2,(3,4)])
-            self.instance = self.model.create_instance()
-        except ValueError:
-            pass
-        else:
-            self.fail("test_dimen2")
-        self.model.A = Set(dimen=None, initialize=[1,2,(3,4)])
-        self.instance = self.model.create_instance()
-
-
-    def test_rule(self):
-        #
-        # Create model instance
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; param n := 5; end;")
-        OUTPUT.close()
-        def tmp_init(model):
-            ##model.n.pprint()
-            ##print "HERE",model.n,value(model.n)
-            return range(0,value(model.n))
-        self.model.n = Param()
-        self.model.A = Set(initialize=tmp_init)
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual(len(self.instance.A),5)
-
-    def test_rule2(self):
-        #
-        # Create model instance
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; param n := 5; end;")
-        OUTPUT.close()
-        @simple_set_rule
-        def tmp_init(model, z):
-            if z>value(model.n) or z == 11:
-                return None
-            return z
-        self.model.n = Param()
-        self.model.A = Set(initialize=tmp_init)
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual(len(self.instance.A),5)
-
-    def test_rule3(self):
-        #
-        # Create model instance
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; param n := 5; end;")
-        OUTPUT.close()
-        def tmp_init(model, z):
-            if z>value(model.n) or z == 11:
-                return Set.End
-            return z
-        self.model.n = Param()
-        self.model.A = Set(initialize=tmp_init)
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual(len(self.instance.A),5)
-
-    def test_within1(self):
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set A := 1 3 5 7.5; end;")
-        OUTPUT.close()
-        #
-        # Create A with an error
-        #
-        self.model.A = Set(within=Integers)
-        try:
-            self.instance = self.model.create_instance(currdir+"setA.dat")
-        except ValueError:
-            pass
-        else:
-            self.fail("fail test_within1")
-
-    def test_within2(self):
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set A := 1 3 5 7.5; end;")
-        OUTPUT.close()
-        #
-        # Create A with an error
-        #
-        self.model.A = Set(within=Reals)
-        try:
-            self.instance = self.model.create_instance(currdir+"setA.dat")
-        except ValueError:
-            self.fail("fail test_within2")
-        else:
-            pass
-
-    def test_validation1(self):
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set A := 1 3 5 7.5; end;")
-        OUTPUT.close()
-        #
-        # Create A with an error
-        #
-        self.model.A = Set(validate=lambda model, x:x<6)
-        try:
-            self.instance = self.model.create_instance(currdir+"setA.dat")
-        except ValueError:
-            pass
-        else:
-            self.fail("fail test_validation1")
-
-    def test_validation2(self):
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set A := 1 3 5 5.5; end;")
-        OUTPUT.close()
-        #
-        # Create A with an error
-        #
-        self.model.A = Set(validate=lambda model, x:x<6)
-        try:
-            self.instance = self.model.create_instance(currdir+"setA.dat")
-        except ValueError:
-            self.fail("fail test_validation2")
-        else:
-            pass
-
-    def test_other1(self):
-        self.model.A = Set(initialize=[1,2,3,'A'], validate=lambda model, x:x in Integers)
-        try:
-            self.instance = self.model.create_instance()
-        except ValueError:
-            pass
-        else:
-            self.fail("fail test_other1")
-
-    def test_other2(self):
-        self.model.A = Set(initialize=[1,2,3,'A'], within=Integers)
-        try:
-            self.instance = self.model.create_instance()
-        except ValueError:
-            pass
-        else:
-            self.fail("fail test_other1")
-
-    def test_other3(self):
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; param n := 5; end;")
-        OUTPUT.close()
-        def tmp_init(model):
-            tmp=[]
-            for i in range(0,value(model.n)):
-                tmp.append(i/2.0)
-            return tmp
-        self.model.n = Param()
-        self.model.A = Set(initialize=tmp_init, validate=lambda model, x:x in Integers)
-        try:
-            self.instance = self.model.create_instance(currdir+"setA.dat")
-        except ValueError:
-            pass
-        else:
-            self.fail("fail test_other1")
-
-    def test_other4(self):
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; param n := 5; end;")
-        OUTPUT.close()
-        def tmp_init(model):
-            tmp=[]
-            for i in range(0,value(model.n)):
-                tmp.append(i/2.0)
-            return tmp
-        self.model.n = Param()
-        self.model.A = Set(initialize=tmp_init, within=Integers)
-        try:
-            self.instance = self.model.create_instance(currdir+"setA.dat")
-        except ValueError:
-            pass
-        else:
-            self.fail("fail test_other1")
-
-class TestSetArgs2(PyomoModel):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-
-    def tearDown(self):
-        #
-        # Remove Set 'A' data file
-        #
-        if os.path.exists(currdir+"setA.dat"):
-            os.remove(currdir+"setA.dat")
-        PyomoModel.tearDown(self)
-
-    def test_initialize(self):
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set Z := A C; set A[A] := 1 3 5 7; end;")
-        OUTPUT.close()
-        #
-        # Create model instance
-        #
-        self.model.Z = Set()
-        self.model.A = Set(self.model.Z, initialize={'A':[1,2,3,'A']})
-        self.instance = self.model.create_instance()
-        self.assertEqual(len(self.instance.A['A']),4)
+        self.assertEqual(SetOf([1,3,2,0]).bounds(), (0,3))
+        self.assertEqual(SetOf([1,3.0,2,0]).bounds(), (0,3.0))
+        self.assertEqual(SetOf([None,1,'a']).bounds(), (None,None))
+        self.assertEqual(SetOf(['apple','cat','bear']).bounds(),
+                         ('apple','cat'))
+
+        self.assertEqual(
+            RangeSet(ranges=(NR(0,10,2),NR(3,20,2))).bounds(),
+            (0,19)
+        )
+        self.assertEqual(
+            RangeSet(ranges=(NR(None,None,0),NR(0,10,2))).bounds(),
+            (None,None)
+        )
+        self.assertEqual(
+            RangeSet(ranges=(NR(100,None,-2),NR(0,10,2))).bounds(),
+            (None,100)
+        )
+        self.assertEqual(
+            RangeSet(ranges=(NR(-10,None,2),NR(0,10,2))).bounds(),
+            (-10,None)
+        )
+        self.assertEqual(
+            RangeSet(ranges=(NR(0,10,2),NR(None,None,0))).bounds(),
+            (None,None)
+        )
+        self.assertEqual(
+            RangeSet(ranges=(NR(0,10,2),NR(100,None,-2))).bounds(),
+            (None,100)
+        )
+        self.assertEqual(
+            RangeSet(ranges=(NR(0,10,2),NR(-10,None,2))).bounds(),
+            (-10,None)
+        )
 
     def test_dimen(self):
-        #
-        # Create model instance
-        #
-        self.model.Z = Set(initialize=[1,2])
-        self.model.A = Set(self.model.Z, initialize=[1,2,3], dimen=1)
-        self.instance = self.model.create_instance()
-        try:
-            self.model.A = Set(self.model.Z, initialize=[4,5,6], dimen=2)
-            self.instance = self.model.create_instance()
-        except ValueError:
-            pass
-        else:
-            self.fail("test_dimen")
-        self.model.A = Set(self.model.Z, initialize=[(1,2), (2,3), (3,4)], dimen=2)
-        self.instance = self.model.create_instance()
-        try:
-            self.model.A = Set(self.model.Z, initialize=[(1,2), (2,3), (3,4)], dimen=1)
-            self.instance = self.model.create_instance()
-        except ValueError:
-            pass
-        else:
-            self.fail("test_dimen")
+        self.assertEqual(SetOf([]).dimen, 0)
+        self.assertEqual(SetOf([1,2,3]).dimen, 1)
+        self.assertEqual(SetOf([(1,2),(2,3),(4,5)]).dimen, 2)
+        self.assertEqual(SetOf([1,(2,3)]).dimen, None)
 
-    def test_rule(self):
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; param n := 5; set Z := A C; end;")
-        OUTPUT.close()
-        def tmp_init(model, i):
-            return range(0,value(model.n))
-        self.model.n = Param()
-        self.model.Z = Set()
-        self.model.A = Set(self.model.Z, initialize=tmp_init)
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual(len(self.instance.A['A']),5)
+        a = [1,2,3,'abc']
+        SetOf_a = SetOf(a)
+        self.assertEqual(SetOf_a.dimen, 1)
+        a.append((1,2))
+        self.assertEqual(SetOf_a.dimen, None)
 
-    def test_rule2(self):
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; param n := 5; set Z := A C; end;")
-        OUTPUT.close()
-        @simple_set_rule
-        def tmp_rule2(model, z, i):
-            if z>value(model.n):
+    def test_rangeset_iter(self):
+        i = RangeSet(0,10,2)
+        self.assertEqual(tuple(i), (0,2,4,6,8,10))
+
+        i = RangeSet(ranges=(NR(0,5,2),NR(6,10,2)))
+        self.assertEqual(tuple(i), (0,2,4,6,8,10))
+
+        i = RangeSet(ranges=(NR(0,10,2),NR(0,10,2)))
+        self.assertEqual(tuple(i), (0,2,4,6,8,10))
+
+        i = RangeSet(ranges=(NR(0,10,2),NR(10,0,-2)))
+        self.assertEqual(tuple(i), (0,2,4,6,8,10))
+
+        i = RangeSet(ranges=(NR(0,10,2),NR(9,0,-2)))
+        self.assertEqual(tuple(i), (0,1,2,3,4,5,6,7,8,9,10))
+
+        i = RangeSet(ranges=(NR(0,10,2),NR(1,10,2)))
+        self.assertEqual(tuple(i), tuple(range(11)))
+
+        i = RangeSet(ranges=(NR(0,30,10),NR(12,14,1)))
+        self.assertEqual(tuple(i), (0,10,12,13,14,20,30))
+
+        i = RangeSet(ranges=(NR(0,0,0),NR(3,3,0),NR(2,2,0)))
+        self.assertEqual(tuple(i), (0,2,3))
+
+    def test_ord_index(self):
+        r = RangeSet(2,10,2)
+        for i,v in enumerate([2,4,6,8,10]):
+            self.assertEqual(r.ord(v), i+1)
+            self.assertEqual(r[i+1], v)
+        with self.assertRaisesRegexp(
+                IndexError,"valid index values for Sets are "
+                "\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
+            r[0]
+        with self.assertRaisesRegexp(
+                IndexError,"FiniteSimpleRangeSet index out of range"):
+            r[10]
+        with self.assertRaisesRegexp(
+                ValueError,"Cannot identify position of 5 in Set"):
+            r.ord(5)
+
+        r = RangeSet(ranges=(NR(2,10,2), NR(6,12,3)))
+        for i,v in enumerate([2,4,6,8,9,10,12]):
+            self.assertEqual(r.ord(v), i+1)
+            self.assertEqual(r[i+1], v)
+        with self.assertRaisesRegexp(
+                IndexError,"valid index values for Sets are "
+                "\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
+            r[0]
+        with self.assertRaisesRegexp(
+                IndexError,"FiniteSimpleRangeSet index out of range"):
+            r[10]
+        with self.assertRaisesRegexp(
+                ValueError,"Cannot identify position of 5 in Set"):
+            r.ord(5)
+
+        so = SetOf([0, (1,), 1])
+        self.assertEqual(so.ord((1,)), 2)
+        self.assertEqual(so.ord(1), 3)
+
+    def test_float_steps(self):
+        a = RangeSet(0, 4, .5)
+        self.assertEqual(len(a), 9)
+        self.assertEqual(list(a - RangeSet(0,4,1)), [0.5, 1.5, 2.5, 3.5])
+
+        with self.assertRaisesRegexp(
+                ValueError, "RangeSet: start, end ordering incompatible with "
+                "step direction \(got \[0:4:-0.5\]\)"):
+            RangeSet(0,4,-.5)
+
+class Test_SetOperator(unittest.TestCase):
+    def test_construct(self):
+        a = RangeSet(3)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            i = a * a
+            self.assertEqual(output.getvalue(), "")
+            i.construct()
+            ref = 'Constructing SetOperator, name=SetProduct_OrderedSet, '\
+                  'from data=None\n' \
+                  'Constructing Set, name=SetProduct_OrderedSet, '\
+                  'from data=None\n'
+            self.assertEqual(output.getvalue(), ref)
+            # Calling construct() twice bypasses construction the second
+            # time around
+            i.construct()
+            self.assertEqual(output.getvalue(), ref)
+
+
+class TestSetUnion(unittest.TestCase):
+    def test_pickle(self):
+        a = SetOf([1,3,5]) | SetOf([2,3,4])
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a,b)
+        self.assertEqual(a,b)
+
+    def test_len(self):
+        a = SetOf([1,2,3])
+        self.assertEqual(len(a), 3)
+        b = a | Reals
+        with self.assertRaisesRegexp(
+                OverflowError, 'The length of a non-finite Set is Inf'):
+            len(b)
+
+    def test_bounds(self):
+        a = SetOf([-2,-1,0,1])
+        b = a | NonNegativeReals
+        self.assertEqual(b.bounds(), (-2, None))
+        b = NonNegativeReals | a
+        self.assertEqual(b.bounds(), (-2, None))
+        b = a | RangeSet(3)
+        self.assertEqual(b.bounds(), (-2, 3))
+        b = NegativeReals | NonNegativeReals
+        self.assertEqual(b.bounds(), (None, None))
+
+    def test_naming(self):
+        m = ConcreteModel()
+
+        m.I = SetOf([1,2])
+        a = m.I | [3,4]
+        b = [-1,1] | a
+        self.assertEqual(str(a), "I | {3, 4}")
+        self.assertEqual(str(b), "{-1, 1} | (I | {3, 4})")
+        m.A = a
+        self.assertEqual(str(a), "A")
+        self.assertEqual(str(b), "{-1, 1} | A")
+
+    def test_domain_and_pprint(self):
+        m = ConcreteModel()
+        m.I = SetOf([1,2])
+        m.A = m.I | [3,4]
+
+        self.assertIs(m.A._domain, m.A)
+        # You can always set the domain to "Any" (we will just ignore it)
+        m.A._domain = Any
+        self.assertIs(m.A._domain, m.A)
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Setting the domain of a Set Operator is not allowed"):
+            m.A._domain = None
+
+        output = StringIO()
+        m.A.pprint(ostream=output)
+        ref="""
+A : Size=1, Index=None, Ordered=True
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I | {3, 4} :    4 : {1, 2, 3, 4}
+""".strip()
+        self.assertEqual(output.getvalue().strip(), ref)
+
+
+    def test_dimen(self):
+        m = ConcreteModel()
+        m.I1 = SetOf([1,2,3,4])
+        m.I2 = SetOf([(1,2), (3,4)])
+        m.IN = SetOf([(1,2), (3,4), 1, 2])
+        m.J = Set()
+        self.assertEqual((m.I1 | m.I1).dimen, 1)
+        self.assertEqual((m.I2 | m.I2).dimen, 2)
+        self.assertEqual((m.IN | m.IN).dimen, None)
+        self.assertEqual((m.I1 | m.I2).dimen, None)
+        self.assertEqual((m.IN | m.I2).dimen, None)
+        self.assertEqual((m.I2 | m.IN).dimen, None)
+        self.assertEqual((m.IN | m.I1).dimen, None)
+        self.assertEqual((m.I1 | m.IN).dimen, None)
+        self.assertEqual((m.I1 | m.J).dimen, UnknownSetDimen)
+        self.assertEqual((m.I2 | m.J).dimen, UnknownSetDimen)
+        self.assertEqual((m.IN | m.J).dimen, None)
+        self.assertEqual((m.J | m.I1).dimen, UnknownSetDimen)
+        self.assertEqual((m.J | m.I2).dimen, UnknownSetDimen)
+        self.assertEqual((m.J | m.IN).dimen, None)
+
+    def _verify_ordered_union(self, a, b):
+        # Note the placement of the second "3" in the middle of the set.
+        # This helps catch edge cases where we need to ensure it doesn't
+        # count as part of the set membership
+        if isinstance(a, SetOf):
+            self.assertTrue(a.isordered())
+            self.assertTrue(a.isfinite())
+        else:
+            self.assertIs(type(a), list)
+        if isinstance(b, SetOf):
+            self.assertTrue(b.isordered())
+            self.assertTrue(b.isfinite())
+        else:
+            self.assertIs(type(b), list)
+
+        x = a | b
+        self.assertIs(type(x), SetUnion_OrderedSet)
+        self.assertTrue(x.isfinite())
+        self.assertTrue(x.isordered())
+        self.assertEqual(len(x), 5)
+        self.assertEqual(list(x), [1,3,2,5,4])
+        self.assertEqual(x.ordered_data(), (1,3,2,5,4))
+        self.assertEqual(x.sorted_data(), (1,2,3,4,5))
+
+        self.assertIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertIn(4, x)
+        self.assertIn(5, x)
+        self.assertNotIn(6, x)
+
+        self.assertEqual(x.ord(1), 1)
+        self.assertEqual(x.ord(2), 3)
+        self.assertEqual(x.ord(3), 2)
+        self.assertEqual(x.ord(4), 5)
+        self.assertEqual(x.ord(5), 4)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "Cannot identify position of 6 in Set SetUnion_OrderedSet"):
+            x.ord(6)
+
+        self.assertEqual(x[1], 1)
+        self.assertEqual(x[2], 3)
+        self.assertEqual(x[3], 2)
+        self.assertEqual(x[4], 5)
+        self.assertEqual(x[5], 4)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "SetUnion_OrderedSet index out of range"):
+            x[6]
+
+        self.assertEqual(x[-1], 4)
+        self.assertEqual(x[-2], 5)
+        self.assertEqual(x[-3], 2)
+        self.assertEqual(x[-4], 3)
+        self.assertEqual(x[-5], 1)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "SetUnion_OrderedSet index out of range"):
+            x[-6]
+
+    def test_ordered_setunion(self):
+        self._verify_ordered_union(SetOf([1,3,2]), SetOf([5,3,4]))
+        self._verify_ordered_union([1,3,2], SetOf([5,3,4]))
+        self._verify_ordered_union(SetOf([1,3,2]), [5,3,4])
+
+
+    def _verify_finite_union(self, a, b):
+        # Note the placement of the second "3" in the middle of the set.
+        # This helps catch edge cases where we need to ensure it doesn't
+        # count as part of the set membership
+        if isinstance(a, SetOf):
+            if type(a._ref) is list:
+                self.assertTrue(a.isordered())
+            else:
+                self.assertFalse(a.isordered())
+            self.assertTrue(a.isfinite())
+        else:
+            self.assertIn(type(a), (list, set))
+        if isinstance(b, SetOf):
+            if type(b._ref) is list:
+                self.assertTrue(b.isordered())
+            else:
+                self.assertFalse(b.isordered())
+            self.assertTrue(b.isfinite())
+        else:
+            self.assertIn(type(b), (list, set))
+
+        x = a | b
+        self.assertIs(type(x), SetUnion_FiniteSet)
+        self.assertTrue(x.isfinite())
+        self.assertFalse(x.isordered())
+        self.assertEqual(len(x), 5)
+        if x._sets[0].isordered():
+            self.assertEqual(list(x)[:3], [1,3,2])
+        if x._sets[1].isordered():
+            self.assertEqual(list(x)[-2:], [5,4])
+        self.assertEqual(sorted(list(x)), [1,2,3,4,5])
+        self.assertEqual(x.ordered_data(), (1,2,3,4,5))
+        self.assertEqual(x.sorted_data(), (1,2,3,4,5))
+
+        self.assertIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertIn(4, x)
+        self.assertIn(5, x)
+        self.assertNotIn(6, x)
+
+        # THe ranges should at least filter out the duplicates
+        self.assertEqual(
+            len(list(x._sets[0].ranges()) + list(x._sets[1].ranges())), 6)
+        self.assertEqual(len(list(x.ranges())), 5)
+
+    def test_finite_setunion(self):
+        self._verify_finite_union(SetOf({1,3,2}), SetOf({5,3,4}))
+        self._verify_finite_union([1,3,2], SetOf({5,3,4}))
+        self._verify_finite_union(SetOf({1,3,2}), [5,3,4])
+        self._verify_finite_union({1,3,2}, SetOf([5,3,4]))
+        self._verify_finite_union(SetOf([1,3,2]), {5,3,4})
+
+
+    def _verify_infinite_union(self, a, b):
+        # Note the placement of the second "3" in the middle of the set.
+        # This helps catch edge cases where we need to ensure it doesn't
+        # count as part of the set membership
+        if isinstance(a, RangeSet):
+            self.assertFalse(a.isordered())
+            self.assertFalse(a.isfinite())
+        else:
+            self.assertIn(type(a), (list, set))
+        if isinstance(b, RangeSet):
+            self.assertFalse(b.isordered())
+            self.assertFalse(b.isfinite())
+        else:
+            self.assertIn(type(b), (list, set))
+
+        x = a | b
+        self.assertIs(type(x), SetUnion_InfiniteSet)
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
+
+        self.assertIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertIn(4, x)
+        self.assertIn(5, x)
+        self.assertNotIn(6, x)
+
+        self.assertEqual(list(x.ranges()),
+                         list(x._sets[0].ranges()) + list(x._sets[1].ranges()))
+
+    def test_infinite_setunion(self):
+        self._verify_infinite_union(RangeSet(1,3,0), RangeSet(3,5,0))
+        self._verify_infinite_union([1,3,2], RangeSet(3,5,0))
+        self._verify_infinite_union(RangeSet(1,3,0), [5,3,4])
+        self._verify_infinite_union({1,3,2}, RangeSet(3,5,0))
+        self._verify_infinite_union(RangeSet(1,3,0), {5,3,4})
+
+    def test_invalid_operators(self):
+        m = ConcreteModel()
+        m.I = RangeSet(5)
+        m.J = Set([1,2])
+        with self.assertRaisesRegexp(
+                TypeError, "Cannot apply a Set operator to an "
+                "indexed Set component \(J\)"):
+            m.I | m.J
+        m.x = Suffix()
+        with self.assertRaisesRegexp(
+                TypeError, "Cannot apply a Set operator to a "
+                "non-Set Suffix component \(x\)"):
+            m.I | m.x
+        m.y = Var([1,2])
+        with self.assertRaisesRegexp(
+                TypeError, "Cannot apply a Set operator to an "
+                "indexed Var component \(y\)"):
+            m.I | m.y
+        with self.assertRaisesRegexp(
+                TypeError, "Cannot apply a Set operator to a "
+                "non-Set component data \(y\[1\]\)"):
+            m.I | m.y[1]
+
+class TestSetIntersection(unittest.TestCase):
+    def test_pickle(self):
+        a = SetOf([1,3,5]) & SetOf([2,3,4])
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a,b)
+        self.assertEqual(a,b)
+
+    def test_bounds(self):
+        a = SetOf([-2,-1,0,1])
+        b = a & NonNegativeReals
+        self.assertEqual(b.bounds(), (0, 1))
+        b = NonNegativeReals & a
+        self.assertEqual(b.bounds(), (0, 1))
+        b = a & RangeSet(3)
+        self.assertEqual(b.bounds(), (1, 1))
+
+    def test_naming(self):
+        m = ConcreteModel()
+
+        m.I = SetOf([1,2])
+        a = m.I & [3,4]
+        b = [-1,1] & a
+        self.assertEqual(str(a), "I & {3, 4}")
+        self.assertEqual(str(b), "{-1, 1} & (I & {3, 4})")
+        m.A = a
+        self.assertEqual(str(a), "A")
+        self.assertEqual(str(b), "{-1, 1} & A")
+
+    def test_domain_and_pprint(self):
+        m = ConcreteModel()
+        m.I = SetOf([1,2])
+        m.A = m.I & [3,4]
+
+        self.assertIs(m.A._domain, m.A)
+        # You can always set the domain to "Any" (we will just ignore it)
+        m.A._domain = Any
+        self.assertIs(m.A._domain, m.A)
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Setting the domain of a Set Operator is not allowed"):
+            m.A._domain = None
+
+        output = StringIO()
+        m.A.pprint(ostream=output)
+        ref="""
+A : Size=1, Index=None, Ordered=True
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I & {3, 4} :    0 :      {}
+""".strip()
+        self.assertEqual(output.getvalue().strip(), ref)
+
+    def test_dimen(self):
+        m = ConcreteModel()
+        m.I1 = SetOf([1,2,3,4])
+        m.I2 = SetOf([(1,2), (3,4)])
+        m.IN = SetOf([(1,2), (3,4), 1, 2])
+        m.J = Set()
+        self.assertEqual((m.I1 & m.I1).dimen, 1)
+        self.assertEqual((m.I2 & m.I2).dimen, 2)
+        self.assertEqual((m.IN & m.IN).dimen, None)
+        self.assertEqual((m.I1 & m.I2).dimen, 0)
+        self.assertEqual((m.IN & m.I2).dimen, 2)
+        self.assertEqual((m.I2 & m.IN).dimen, 2)
+        self.assertEqual((m.IN & m.I1).dimen, 1)
+        self.assertEqual((m.I1 & m.IN).dimen, 1)
+        self.assertEqual((m.I1 & m.J).dimen, UnknownSetDimen)
+        self.assertEqual((m.I2 & m.J).dimen, UnknownSetDimen)
+        self.assertEqual((m.IN & m.J).dimen, UnknownSetDimen)
+        self.assertEqual((m.J & m.I1).dimen, UnknownSetDimen)
+        self.assertEqual((m.J & m.I2).dimen, UnknownSetDimen)
+        self.assertEqual((m.J & m.IN).dimen, UnknownSetDimen)
+
+    def _verify_ordered_intersection(self, a, b):
+        if isinstance(a, (Set, SetOf, RangeSet)):
+            a_ordered = a.isordered()
+        else:
+            a_ordered = type(a) is list
+        if isinstance(b, (Set, SetOf, RangeSet)):
+            b_ordered = b.isordered()
+        else:
+            b_ordered = type(b) is list
+        self.assertTrue(a_ordered or b_ordered)
+
+        if a_ordered:
+            ref = (3,2,5)
+        else:
+            ref = (2,3,5)
+
+        x = a & b
+        self.assertIs(type(x), SetIntersection_OrderedSet)
+        self.assertTrue(x.isfinite())
+        self.assertTrue(x.isordered())
+        self.assertEqual(len(x), 3)
+        self.assertEqual(list(x), list(ref))
+        self.assertEqual(x.ordered_data(), tuple(ref))
+        self.assertEqual(x.sorted_data(), (2,3,5))
+
+        self.assertNotIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertNotIn(4, x)
+        self.assertIn(5, x)
+        self.assertNotIn(6, x)
+
+        self.assertEqual(x.ord(2), ref.index(2)+1)
+        self.assertEqual(x.ord(3), ref.index(3)+1)
+        self.assertEqual(x.ord(5), 3)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot identify position of 6 in Set "
+                "SetIntersection_OrderedSet"):
+            x.ord(6)
+
+        self.assertEqual(x[1], ref[0])
+        self.assertEqual(x[2], ref[1])
+        self.assertEqual(x[3], 5)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "SetIntersection_OrderedSet index out of range"):
+            x[4]
+
+        self.assertEqual(x[-1], 5)
+        self.assertEqual(x[-2], ref[-2])
+        self.assertEqual(x[-3], ref[-3])
+        with self.assertRaisesRegexp(
+                IndexError,
+                "SetIntersection_OrderedSet index out of range"):
+            x[-4]
+
+    def test_ordered_setintersection(self):
+        self._verify_ordered_intersection(SetOf([1,3,2,5]), SetOf([0,2,3,4,5]))
+        self._verify_ordered_intersection(SetOf([1,3,2,5]), SetOf({0,2,3,4,5}))
+        self._verify_ordered_intersection(SetOf({1,3,2,5}), SetOf([0,2,3,4,5]))
+        self._verify_ordered_intersection(SetOf([1,3,2,5]), [0,2,3,4,5])
+        self._verify_ordered_intersection(SetOf([1,3,2,5]), {0,2,3,4,5})
+        self._verify_ordered_intersection([1,3,2,5], SetOf([0,2,3,4,5]))
+        self._verify_ordered_intersection({1,3,2,5}, SetOf([0,2,3,4,5]))
+
+
+    def _verify_finite_intersection(self, a, b):
+        # Note the placement of the second "3" in the middle of the set.
+        # This helps catch edge cases where we need to ensure it doesn't
+        # count as part of the set membership
+        if isinstance(a, (Set, SetOf, RangeSet)):
+            a_finite = a.isfinite()
+        else:
+            a_finite = True
+        if isinstance(b, (Set, SetOf, RangeSet)):
+            b_finite = b.isfinite()
+        else:
+            b_finite = True
+        self.assertTrue(a_finite or b_finite)
+
+        x = a & b
+        self.assertIs(type(x), SetIntersection_FiniteSet)
+        self.assertTrue(x.isfinite())
+        self.assertFalse(x.isordered())
+        self.assertEqual(len(x), 3)
+        if x._sets[0].isordered():
+            self.assertEqual(list(x)[:3], [3,2,5])
+        self.assertEqual(sorted(list(x)), [2,3,5])
+        self.assertEqual(x.ordered_data(), (2,3,5))
+        self.assertEqual(x.sorted_data(), (2,3,5))
+
+        self.assertNotIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertNotIn(4, x)
+        self.assertIn(5, x)
+        self.assertNotIn(6, x)
+
+        # The ranges should at least filter out the duplicates
+        self.assertEqual(
+            len(list(x._sets[0].ranges()) + list(x._sets[1].ranges())), 9)
+        self.assertEqual(len(list(x.ranges())), 3)
+
+
+    def test_finite_setintersection(self):
+        self._verify_finite_intersection(SetOf({1,3,2,5}), SetOf({0,2,3,4,5}))
+        self._verify_finite_intersection({1,3,2,5}, SetOf({0,2,3,4,5}))
+        self._verify_finite_intersection(SetOf({1,3,2,5}), {0,2,3,4,5})
+        self._verify_finite_intersection(
+            RangeSet(ranges=(NR(-5,-1,0), NR(2,3,0), NR(5,5,0), NR(10,20,0))),
+            SetOf({0,2,3,4,5}))
+        self._verify_finite_intersection(
+            SetOf({1,3,2,5}),
+            RangeSet(ranges=(NR(2,5,0), NR(2,5,0), NR(6,6,0), NR(6,6,0),
+                             NR(6,6,0))))
+
+
+    def _verify_infinite_intersection(self, a, b):
+        if isinstance(a, (Set, SetOf, RangeSet)):
+            a_finite = a.isfinite()
+        else:
+            a_finite = True
+        if isinstance(b, (Set, SetOf, RangeSet)):
+            b_finite = b.isfinite()
+        else:
+            b_finite = True
+        self.assertEqual([a_finite, b_finite], [False,False])
+
+        x = a & b
+        self.assertIs(type(x), SetIntersection_InfiniteSet)
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
+
+        self.assertNotIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertIn(4, x)
+        self.assertNotIn(5, x)
+        self.assertNotIn(6, x)
+
+        self.assertEqual(list(x.ranges()),
+                         list(RangeSet(2,4,0).ranges()))
+
+    def test_infinite_setintersection(self):
+        self._verify_infinite_intersection(RangeSet(0,4,0), RangeSet(2,6,0))
+
+    def test_odd_intersections(self):
+        # Test the intersection of an infinite discrete range with a
+        # finite continuous one
+        a = RangeSet(0, None, 2)
+        b = RangeSet(5,10,0)
+        m = ConcreteModel()
+        x = a & b
+        self.assertIs(type(x), SetIntersection_InfiniteSet)
+        m.X = x
+        self.assertIs(type(x), SetIntersection_OrderedSet)
+        self.assertEqual(list(x), [6,8,10])
+
+        self.assertEqual(x.ord(6), 1)
+        self.assertEqual(x.ord(8), 2)
+        self.assertEqual(x.ord(10), 3)
+
+        self.assertEqual(x[1], 6)
+        self.assertEqual(x[2], 8)
+        self.assertEqual(x[3], 10)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "X index out of range"):
+            x[4]
+
+        self.assertEqual(x[-3], 6)
+        self.assertEqual(x[-2], 8)
+        self.assertEqual(x[-1], 10)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "X index out of range"):
+            x[-4]
+
+
+
+class TestSetDifference(unittest.TestCase):
+    def test_pickle(self):
+        a = SetOf([1,3,5]) - SetOf([2,3,4])
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a,b)
+        self.assertEqual(a,b)
+
+    def test_bounds(self):
+        a = SetOf([-2,-1,0,1])
+        b = a - NonNegativeReals
+        self.assertEqual(b.bounds(), (-2, -1))
+        b = a - RangeSet(3)
+        self.assertEqual(b.bounds(), (-2, 0))
+
+    def test_naming(self):
+        m = ConcreteModel()
+
+        m.I = SetOf([1,2])
+        a = m.I - [3,4]
+        b = [-1,1] - a
+        self.assertEqual(str(a), "I - {3, 4}")
+        self.assertEqual(str(b), "{-1, 1} - (I - {3, 4})")
+        m.A = a
+        self.assertEqual(str(a), "A")
+        self.assertEqual(str(b), "{-1, 1} - A")
+
+    def test_domain_and_pprint(self):
+        m = ConcreteModel()
+        m.I = SetOf([1,2])
+        m.A = m.I - [3,4]
+
+        self.assertIs(m.A._domain, m.A)
+        # You can always set the domain to "Any" (we will just ignore it)
+        m.A._domain = Any
+        self.assertIs(m.A._domain, m.A)
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Setting the domain of a Set Operator is not allowed"):
+            m.A._domain = None
+
+        output = StringIO()
+        m.A.pprint(ostream=output)
+        ref="""
+A : Size=1, Index=None, Ordered=True
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I - {3, 4} :    2 : {1, 2}
+""".strip()
+        self.assertEqual(output.getvalue().strip(), ref)
+
+    def test_dimen(self):
+        m = ConcreteModel()
+        m.I1 = SetOf([1,2,3,4])
+        m.I2 = SetOf([(1,2), (3,4)])
+        m.IN = SetOf([(1,2), (3,4), 1, 2])
+        m.J = Set()
+        self.assertEqual((m.I1 - m.I1).dimen, 1)
+        self.assertEqual((m.I2 - m.I2).dimen, 2)
+        self.assertEqual((m.IN - m.IN).dimen, None)
+        self.assertEqual((m.I1 - m.I2).dimen, 1)
+        self.assertEqual((m.I2 - m.I1).dimen, 2)
+        self.assertEqual((m.IN - m.I2).dimen, None)
+        self.assertEqual((m.I2 - m.IN).dimen, 2)
+        self.assertEqual((m.IN - m.I1).dimen, None)
+        self.assertEqual((m.I1 - m.IN).dimen, 1)
+        self.assertEqual((m.I1 - m.J).dimen, 1)
+        self.assertEqual((m.I2 - m.J).dimen, 2)
+        self.assertEqual((m.IN - m.J).dimen, None)
+        self.assertEqual((m.J - m.I1).dimen, UnknownSetDimen)
+        self.assertEqual((m.J - m.I2).dimen, UnknownSetDimen)
+        self.assertEqual((m.J - m.IN).dimen, UnknownSetDimen)
+
+    def _verify_ordered_difference(self, a, b):
+        if isinstance(a, (Set, SetOf, RangeSet)):
+            a_ordered = a.isordered()
+        else:
+            a_ordered = type(a) is list
+        if isinstance(b, (Set, SetOf, RangeSet)):
+            b_ordered = b.isordered()
+        else:
+            b_ordered = type(b) is list
+        self.assertTrue(a_ordered)
+
+        x = a - b
+        self.assertIs(type(x), SetDifference_OrderedSet)
+        self.assertTrue(x.isfinite())
+        self.assertTrue(x.isordered())
+        self.assertEqual(len(x), 3)
+        self.assertEqual(list(x), [3,2,5])
+        self.assertEqual(x.ordered_data(), (3,2,5))
+        self.assertEqual(x.sorted_data(), (2,3,5))
+
+        self.assertNotIn(0, x)
+        self.assertNotIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertNotIn(4, x)
+        self.assertIn(5, x)
+        self.assertNotIn(6, x)
+
+        self.assertEqual(x.ord(2), 2)
+        self.assertEqual(x.ord(3), 1)
+        self.assertEqual(x.ord(5), 3)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot identify position of 6 in Set "
+                "SetDifference_OrderedSet"):
+            x.ord(6)
+
+        self.assertEqual(x[1], 3)
+        self.assertEqual(x[2], 2)
+        self.assertEqual(x[3], 5)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "SetDifference_OrderedSet index out of range"):
+            x[4]
+
+        self.assertEqual(x[-1], 5)
+        self.assertEqual(x[-2], 2)
+        self.assertEqual(x[-3], 3)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "SetDifference_OrderedSet index out of range"):
+            x[-4]
+
+    def test_ordered_setdifference(self):
+        self._verify_ordered_difference(SetOf([0,3,2,1,5,4]), SetOf([0,1,4]))
+        self._verify_ordered_difference(SetOf([0,3,2,1,5,4]), SetOf({0,1,4}))
+        self._verify_ordered_difference(SetOf([0,3,2,1,5,4]), [0,1,4])
+        self._verify_ordered_difference(SetOf([0,3,2,1,5,4]), {0,1,4})
+        self._verify_ordered_difference(SetOf([0,3,2,1,5,4]),
+                                        RangeSet(ranges=(NR(0,1,0),NR(4,4,0))))
+        self._verify_ordered_difference([0,3,2,1,5,4], SetOf([0,1,4]))
+        self._verify_ordered_difference([0,3,2,1,5,4], SetOf({0,1,4}))
+
+
+    def _verify_finite_difference(self, a, b):
+        # Note the placement of the second "3" in the middle of the set.
+        # This helps catch edge cases where we need to ensure it doesn't
+        # count as part of the set membership
+        if isinstance(a, (Set, SetOf, RangeSet)):
+            a_finite = a.isfinite()
+        else:
+            a_finite = True
+        if isinstance(b, (Set, SetOf, RangeSet)):
+            b_finite = b.isfinite()
+        else:
+            b_finite = True
+        self.assertTrue(a_finite or b_finite)
+
+        x = a - b
+        self.assertIs(type(x), SetDifference_FiniteSet)
+        self.assertTrue(x.isfinite())
+        self.assertFalse(x.isordered())
+        self.assertEqual(len(x), 3)
+        self.assertEqual(sorted(list(x)), [2,3,5])
+        self.assertEqual(x.ordered_data(), (2,3,5))
+        self.assertEqual(x.sorted_data(), (2,3,5))
+
+        self.assertNotIn(0, x)
+        self.assertNotIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertNotIn(4, x)
+        self.assertIn(5, x)
+        self.assertNotIn(6, x)
+
+        # The ranges should at least filter out the duplicates
+        self.assertEqual(
+            len(list(x._sets[0].ranges()) + list(x._sets[1].ranges())), 9)
+        self.assertEqual(len(list(x.ranges())), 3)
+
+
+    def test_finite_setdifference(self):
+        self._verify_finite_difference(SetOf({0,3,2,1,5,4}), SetOf({0,1,4}))
+        self._verify_finite_difference(SetOf({0,3,2,1,5,4}), SetOf([0,1,4]))
+        self._verify_finite_difference(SetOf({0,3,2,1,5,4}), [0,1,4])
+        self._verify_finite_difference(SetOf({0,3,2,1,5,4}), {0,1,4})
+        self._verify_finite_difference(
+            SetOf({0,3,2,1,5,4}),
+            RangeSet(ranges=(NR(0,1,0),NR(4,4,0),NR(6,10,0))))
+        self._verify_finite_difference({0,3,2,1,5,4}, SetOf([0,1,4]))
+        self._verify_finite_difference({0,3,2,1,5,4}, SetOf({0,1,4}))
+
+
+    def test_infinite_setdifference(self):
+        x = RangeSet(0,4,0) - RangeSet(2,6,0)
+        self.assertIs(type(x), SetDifference_InfiniteSet)
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
+
+        self.assertNotIn(-1, x)
+        self.assertIn(0, x)
+        self.assertIn(1, x)
+        self.assertIn(1.9, x)
+        self.assertNotIn(2, x)
+        self.assertNotIn(6, x)
+        self.assertNotIn(8, x)
+
+        self.assertEqual(
+            list(x.ranges()),
+            list(RangeSet(ranges=[NR(0,2,0,(True,False))]).ranges()))
+
+
+class TestSetSymmetricDifference(unittest.TestCase):
+    def test_pickle(self):
+        a = SetOf([1,3,5]) ^ SetOf([2,3,4])
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a,b)
+        self.assertEqual(a,b)
+
+    def test_bounds(self):
+        a = SetOf([-2,-1,0,1])
+        b = a ^ NonNegativeReals
+        self.assertEqual(b.bounds(), (-2, None))
+        c = a ^ RangeSet(3)
+        self.assertEqual(c.bounds(), (-2, 3))
+
+    def test_naming(self):
+        m = ConcreteModel()
+
+        m.I = SetOf([1,2])
+        a = m.I ^ [3,4]
+        b = [-1,1] ^ a
+        self.assertEqual(str(a), "I ^ {3, 4}")
+        self.assertEqual(str(b), "{-1, 1} ^ (I ^ {3, 4})")
+        m.A = a
+        self.assertEqual(str(a), "A")
+        self.assertEqual(str(b), "{-1, 1} ^ A")
+
+    def test_domain_and_pprint(self):
+        m = ConcreteModel()
+        m.I = SetOf([1,2])
+        m.A = m.I ^ [3,4]
+
+        self.assertIs(m.A._domain, m.A)
+        # You can always set the domain to "Any" (we will just ignore it)
+        m.A._domain = Any
+        self.assertIs(m.A._domain, m.A)
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Setting the domain of a Set Operator is not allowed"):
+            m.A._domain = None
+
+        output = StringIO()
+        m.A.pprint(ostream=output)
+        ref="""
+A : Size=1, Index=None, Ordered=True
+    Key  : Dimen : Domain     : Size : Members
+    None :     1 : I ^ {3, 4} :    4 : {1, 2, 3, 4}
+""".strip()
+        self.assertEqual(output.getvalue().strip(), ref)
+
+    def test_dimen(self):
+        m = ConcreteModel()
+        m.I1 = SetOf([1,2,3,4])
+        m.I2 = SetOf([(1,2), (3,4)])
+        m.IN = SetOf([(1,2), (3,4), 1, 2])
+        m.J = Set()
+        self.assertEqual((m.I1 ^ m.I1).dimen, 1)
+        self.assertEqual((m.I2 ^ m.I2).dimen, 2)
+        self.assertEqual((m.IN ^ m.IN).dimen, None)
+        self.assertEqual((m.I1 ^ m.I2).dimen, None)
+        self.assertEqual((m.I2 ^ m.I1).dimen, None)
+        self.assertEqual((m.IN ^ m.I2).dimen, None)
+        self.assertEqual((m.I2 ^ m.IN).dimen, None)
+        self.assertEqual((m.IN ^ m.I1).dimen, None)
+        self.assertEqual((m.I1 ^ m.IN).dimen, None)
+        self.assertEqual((m.I1 ^ m.J).dimen, UnknownSetDimen)
+        self.assertEqual((m.I2 ^ m.J).dimen, UnknownSetDimen)
+        self.assertEqual((m.IN ^ m.J).dimen, None)
+        self.assertEqual((m.J ^ m.I1).dimen, UnknownSetDimen)
+        self.assertEqual((m.J ^ m.I2).dimen, UnknownSetDimen)
+        self.assertEqual((m.J ^ m.IN).dimen, None)
+
+    def _verify_ordered_symdifference(self, a, b):
+        if isinstance(a, (Set, SetOf, RangeSet)):
+            a_ordered = a.isordered()
+        else:
+            a_ordered = type(a) is list
+        if isinstance(b, (Set, SetOf, RangeSet)):
+            b_ordered = b.isordered()
+        else:
+            b_ordered = type(b) is list
+        self.assertTrue(a_ordered)
+
+        x = a ^ b
+        self.assertIs(type(x), SetSymmetricDifference_OrderedSet)
+        self.assertTrue(x.isfinite())
+        self.assertTrue(x.isordered())
+        self.assertEqual(len(x), 4)
+        self.assertEqual(list(x), [3,2,5,0])
+        self.assertEqual(x.ordered_data(), (3,2,5,0))
+        self.assertEqual(x.sorted_data(), (0,2,3,5))
+
+        self.assertIn(0, x)
+        self.assertNotIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertNotIn(4, x)
+        self.assertIn(5, x)
+        self.assertNotIn(6, x)
+
+        self.assertEqual(x.ord(0), 4)
+        self.assertEqual(x.ord(2), 2)
+        self.assertEqual(x.ord(3), 1)
+        self.assertEqual(x.ord(5), 3)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot identify position of 6 in Set "
+                "SetSymmetricDifference_OrderedSet"):
+            x.ord(6)
+
+        self.assertEqual(x[1], 3)
+        self.assertEqual(x[2], 2)
+        self.assertEqual(x[3], 5)
+        self.assertEqual(x[4], 0)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "SetSymmetricDifference_OrderedSet index out of range"):
+            x[5]
+
+        self.assertEqual(x[-1], 0)
+        self.assertEqual(x[-2], 5)
+        self.assertEqual(x[-3], 2)
+        self.assertEqual(x[-4], 3)
+        with self.assertRaisesRegexp(
+                IndexError,
+                "SetSymmetricDifference_OrderedSet index out of range"):
+            x[-5]
+
+    def test_ordered_setsymmetricdifference(self):
+        self._verify_ordered_symdifference(SetOf([3,2,1,5,4]), SetOf([0,1,4]))
+        self._verify_ordered_symdifference(SetOf([3,2,1,5,4]), [0,1,4])
+        self._verify_ordered_symdifference([3,2,1,5,4], SetOf([0,1,4]))
+
+    def _verify_finite_symdifference(self, a, b):
+        # Note the placement of the second "3" in the middle of the set.
+        # This helps catch edge cases where we need to ensure it doesn't
+        # count as part of the set membership
+        if isinstance(a, (Set, SetOf, RangeSet)):
+            a_finite = a.isfinite()
+        else:
+            a_finite = True
+        if isinstance(b, (Set, SetOf, RangeSet)):
+            b_finite = b.isfinite()
+        else:
+            b_finite = True
+        self.assertTrue(a_finite or b_finite)
+
+        x = a ^ b
+        self.assertIs(type(x), SetSymmetricDifference_FiniteSet)
+        self.assertTrue(x.isfinite())
+        self.assertFalse(x.isordered())
+        self.assertEqual(len(x), 4)
+        self.assertEqual(sorted(list(x)), [0,2,3,5])
+        self.assertEqual(x.ordered_data(), (0,2,3,5))
+        self.assertEqual(x.sorted_data(), (0,2,3,5))
+
+        self.assertIn(0, x)
+        self.assertNotIn(1, x)
+        self.assertIn(2, x)
+        self.assertIn(3, x)
+        self.assertNotIn(4, x)
+        self.assertIn(5, x)
+        self.assertNotIn(6, x)
+
+        # The ranges should at least filter out the duplicates
+        self.assertEqual(
+            len(list(x._sets[0].ranges()) + list(x._sets[1].ranges())), 8)
+        self.assertEqual(len(list(x.ranges())), 4)
+
+
+    def test_finite_setsymmetricdifference(self):
+        self._verify_finite_symdifference(SetOf([3,2,1,5,4]), SetOf({0,1,4}))
+        self._verify_finite_symdifference(SetOf([3,2,1,5,4]), {0,1,4})
+        self._verify_finite_symdifference([3,2,1,5,4], SetOf({0,1,4}))
+        self._verify_finite_symdifference(SetOf({3,2,1,5,4}), SetOf({0,1,4}))
+        self._verify_finite_symdifference(SetOf({3,2,1,5,4}), SetOf([0,1,4]))
+        self._verify_finite_symdifference(SetOf({3,2,1,5,4}), [0,1,4])
+        self._verify_finite_symdifference(SetOf({3,2,1,5,4}), {0,1,4})
+        self._verify_finite_symdifference({3,2,1,5,4}, SetOf([0,1,4]))
+        self._verify_finite_symdifference({3,2,1,5,4}, SetOf({0,1,4}))
+
+
+    def test_infinite_setdifference(self):
+        x = RangeSet(0,4,0) ^ RangeSet(2,6,0)
+        self.assertIs(type(x), SetSymmetricDifference_InfiniteSet)
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
+
+        self.assertNotIn(-1, x)
+        self.assertIn(0, x)
+        self.assertIn(1, x)
+        self.assertIn(1.9, x)
+        self.assertNotIn(2, x)
+        self.assertNotIn(4, x)
+        self.assertIn(4.1, x)
+        self.assertIn(6, x)
+
+        self.assertEqual(
+            sorted(str(_) for _ in x.ranges()),
+            sorted(str(_) for _ in [
+                NR(0,2,0,(True,False)), NR(4,6,0,(False, True))
+            ]))
+
+        x = SetOf([3,2,1,5,4]) ^ RangeSet(3,6,0)
+        self.assertIs(type(x), SetSymmetricDifference_InfiniteSet)
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
+
+        self.assertNotIn(-1, x)
+        self.assertIn(1, x)
+        self.assertIn(2, x)
+        self.assertNotIn(3, x)
+        self.assertNotIn(4, x)
+        self.assertNotIn(5, x)
+        self.assertIn(4.1, x)
+        self.assertIn(5.1, x)
+        self.assertIn(6, x)
+
+        self.assertEqual(
+            sorted(str(_) for _ in x.ranges()),
+            sorted(str(_) for _ in [
+                NR(1,1,0),
+                NR(2,2,0),
+                NR(3,4,0,(False,False)),
+                NR(4,5,0,(False,False)),
+                NR(5,6,0,(False, True))
+            ]))
+
+        x = RangeSet(3,6,0) ^ SetOf([3,2,1,5,4])
+        self.assertIs(type(x), SetSymmetricDifference_InfiniteSet)
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
+
+        self.assertNotIn(-1, x)
+        self.assertIn(1, x)
+        self.assertIn(2, x)
+        self.assertNotIn(3, x)
+        self.assertNotIn(4, x)
+        self.assertNotIn(5, x)
+        self.assertIn(4.1, x)
+        self.assertIn(5.1, x)
+        self.assertIn(6, x)
+
+        self.assertEqual(
+            sorted(str(_) for _ in x.ranges()),
+            sorted(str(_) for _ in [
+                NR(1,1,0),
+                NR(2,2,0),
+                NR(3,4,0,(False,False)),
+                NR(4,5,0,(False,False)),
+                NR(5,6,0,(False, True))
+            ]))
+
+
+class TestSetProduct(unittest.TestCase):
+    def test_pickle(self):
+        a = SetOf([1,3,5]) * SetOf([2,3,4])
+        b = pickle.loads(pickle.dumps(a))
+        self.assertIsNot(a,b)
+        self.assertEqual(a,b)
+
+    def test_bounds(self):
+        a = SetOf([-2,-1,0,1])
+        b = a * NonNegativeReals
+        self.assertEqual(b.bounds(), ((-2, 0), (1, None)))
+        c = a * RangeSet(3)
+        self.assertEqual(c.bounds(), ((-2, 1), (1, 3)))
+
+    def test_naming(self):
+        m = ConcreteModel()
+
+        m.I = SetOf([1,2])
+        a = m.I * [3,4]
+        b = [-1,1] * a
+        self.assertEqual(str(a), "I*{3, 4}")
+        self.assertEqual(str(b), "{-1, 1}*(I*{3, 4})")
+        m.A = a
+        self.assertEqual(str(a), "A")
+        self.assertEqual(str(b), "{-1, 1}*A")
+
+        c = SetProduct(m.I, [1,2], m.I)
+        self.assertEqual(str(c), "I*{1, 2}*I")
+
+    def test_domain_and_pprint(self):
+        m = ConcreteModel()
+        m.I = SetOf([1,2])
+        m.A = m.I * [3,4]
+
+        self.assertIs(m.A._domain, m.A)
+        # You can always set the domain to "Any" (we will just ignore it)
+        m.A._domain = Any
+        self.assertIs(m.A._domain, m.A)
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Setting the domain of a Set Operator is not allowed"):
+            m.A._domain = None
+
+        output = StringIO()
+        m.A.pprint(ostream=output)
+        ref="""
+A : Size=1, Index=None, Ordered=True
+    Key  : Dimen : Domain   : Size : Members
+    None :     2 : I*{3, 4} :    4 : {(1, 3), (1, 4), (2, 3), (2, 4)}
+""".strip()
+        self.assertEqual(output.getvalue().strip(), ref)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2,3])
+        m.J = Reals * m.I
+        output = StringIO()
+        m.J.pprint(ostream=output)
+        ref="""
+J : Size=1, Index=None, Ordered=False
+    Key  : Dimen : Domain  : Size : Members
+    None :     2 : Reals*I :  Inf : <[None..None], ([1], [2], [3])>
+""".strip()
+        self.assertEqual(output.getvalue().strip(), ref)
+
+    def test_dimen(self):
+        m = ConcreteModel()
+        m.I1 = SetOf([1,2,3,4])
+        m.I2 = SetOf([(1,2), (3,4)])
+        m.IN = SetOf([(1,2), (3,4), 1, 2])
+        m.J = Set()
+        self.assertEqual((m.I1 * m.I1).dimen, 2)
+        self.assertEqual((m.I2 * m.I2).dimen, 4)
+        self.assertEqual((m.IN * m.IN).dimen, None)
+        self.assertEqual((m.I1 * m.I2).dimen, 3)
+        self.assertEqual((m.I2 * m.I1).dimen, 3)
+        self.assertEqual((m.IN * m.I2).dimen, None)
+        self.assertEqual((m.I2 * m.IN).dimen, None)
+        self.assertEqual((m.IN * m.I1).dimen, None)
+        self.assertEqual((m.I1 * m.IN).dimen, None)
+        self.assertIs((m.J * m.I1).dimen, UnknownSetDimen)
+        self.assertIs((m.J * m.I2).dimen, UnknownSetDimen)
+        self.assertIs((m.J * m.IN).dimen, None)
+        self.assertIs((m.I1 * m.J).dimen, UnknownSetDimen)
+        self.assertIs((m.I2 * m.J).dimen, UnknownSetDimen)
+        self.assertIs((m.IN * m.J).dimen, None)
+
+    def test_cutPointGenerator(self):
+        CG = SetProduct_InfiniteSet._cutPointGenerator
+        i = Any
+        j = SetOf([(1,1),(1,2),(2,1),(2,2)])
+
+        test = list(tuple(_) for _ in CG((i,i), 3))
+        ref =  [(0,0,3),(0,1,3),(0,2,3),(0,3,3)]
+        self.assertEqual(test, ref)
+
+        test = list(tuple(_) for _ in CG((i,i,i), 3))
+        ref =  [
+            (0,0,0,3),(0,0,1,3),(0,0,2,3),(0,0,3,3),
+            (0,1,1,3),(0,1,2,3),(0,1,3,3),
+            (0,2,2,3),(0,2,3,3),
+            (0,3,3,3)
+        ]
+        self.assertEqual(test, ref)
+
+        test = list(tuple(_) for _ in CG((i,j,i), 5))
+        ref =  [
+            (0,0,2,5),(0,1,3,5),(0,2,4,5),(0,3,5,5),
+        ]
+        self.assertEqual(test, ref)
+
+    def test_flatten_cross_product(self):
+        a = SetOf([1])
+        b = SetOf([1])
+        c = SetOf([1])
+        d = SetOf([1])
+
+        x = a * b
+        self.assertEqual(len(x._sets), 2)
+        self.assertEqual(list(x.flatten_cross_product()), [a,b])
+        x = a * b * c
+        self.assertEqual(len(x._sets), 2)
+        self.assertEqual(list(x.flatten_cross_product()), [a,b,c])
+        x = (a * b) * (c * d)
+        self.assertEqual(len(x._sets), 2)
+        self.assertEqual(list(x.flatten_cross_product()), [a,b,c,d])
+
+    def test_no_normalize_index(self):
+        try:
+            _oldFlatten = normalize_index.flatten
+            I = SetOf([1, (1,2)])
+            J = SetOf([3, (2,3)])
+            x = I * J
+
+            normalize_index.flatten = False
+            self.assertIs(x.dimen, None)
+            self.assertIn(((1,2),3), x)
+            self.assertIn((1,(2,3)), x)
+            # if we are not flattening, then lookup must match the
+            # subsets exactly.
+            self.assertNotIn((1,2,3), x)
+
+            normalize_index.flatten = True
+            self.assertIs(x.dimen, None)
+            self.assertIn(((1,2),3), x)
+            self.assertIn((1,(2,3)), x)
+            self.assertIn((1,2,3), x)
+        finally:
+            normalize_index.flatten = _oldFlatten
+
+    def test_infinite_setproduct(self):
+        x = PositiveIntegers * SetOf([2,3,5,7])
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
+        self.assertIn((1,2), x)
+        self.assertNotIn((0,2), x)
+        self.assertNotIn((1,1), x)
+        self.assertNotIn(('a',2), x)
+        self.assertNotIn((2,'a'), x)
+
+        x = SetOf([2,3,5,7]) * PositiveIntegers
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
+        self.assertIn((3,2), x)
+        self.assertNotIn((1,2), x)
+        self.assertNotIn((2,0), x)
+        self.assertNotIn(('a',2), x)
+        self.assertNotIn((2,'a'), x)
+
+        x = PositiveIntegers * PositiveIntegers
+        self.assertFalse(x.isfinite())
+        self.assertFalse(x.isordered())
+        self.assertIn((3,2), x)
+        self.assertNotIn((0,2), x)
+        self.assertNotIn((2,0), x)
+        self.assertNotIn(('a',2), x)
+        self.assertNotIn((2,'a'), x)
+
+    def _verify_finite_product(self, a, b):
+        if isinstance(a, (Set, SetOf, RangeSet)):
+            a_ordered = a.isordered()
+        else:
+            a_ordered = type(a) is list
+        if isinstance(b, (Set, SetOf, RangeSet)):
+            b_ordered = b.isordered()
+        else:
+            b_ordered = type(b) is list
+        self.assertFalse(a_ordered and b_ordered)
+
+        x = a * b
+
+        self.assertIs(type(x), SetProduct_FiniteSet)
+        self.assertTrue(x.isfinite())
+        self.assertFalse(x.isordered())
+        self.assertEqual(len(x), 6)
+        self.assertEqual(
+            sorted(list(x)), [(1,5),(1,6),(2,5),(2,6),(3,5),(3,6)])
+        self.assertEqual(
+            x.ordered_data(), ((1,5),(1,6),(2,5),(2,6),(3,5),(3,6)))
+        self.assertEqual(
+            x.sorted_data(), ((1,5),(1,6),(2,5),(2,6),(3,5),(3,6)))
+
+        self.assertNotIn(1, x)
+        self.assertIn((1,5), x)
+        self.assertIn(((1,),5), x)
+        self.assertNotIn((1,2,3), x)
+        self.assertNotIn((2,4), x)
+
+    def test_finite_setproduct(self):
+        self._verify_finite_product(SetOf({3,1,2}), SetOf({6,5}))
+        self._verify_finite_product(SetOf({3,1,2}), SetOf([6,5]))
+        self._verify_finite_product(SetOf([3,1,2]), SetOf({6,5}))
+        self._verify_finite_product(SetOf([3,1,2]), {6,5})
+        self._verify_finite_product({3,1,2}, SetOf([6,5]))
+        self._verify_finite_product(SetOf({3,1,2}), [6,5])
+        self._verify_finite_product([3,1,2], SetOf({6,5}))
+
+    def _verify_ordered_product(self, a, b):
+        if isinstance(a, (Set, SetOf, RangeSet)):
+            a_ordered = a.isordered()
+        else:
+            a_ordered = type(a) is list
+        self.assertTrue(a_ordered)
+        if isinstance(b, (Set, SetOf, RangeSet)):
+            b_ordered = b.isordered()
+        else:
+            b_ordered = type(b) is list
+        self.assertTrue(b_ordered)
+
+        x = a * b
+
+        self.assertIs(type(x), SetProduct_OrderedSet)
+        self.assertTrue(x.isfinite())
+        self.assertTrue(x.isordered())
+        self.assertEqual(len(x), 6)
+        self.assertEqual(list(x), [(3,6),(3,5),(1,6),(1,5),(2,6),(2,5)])
+        self.assertEqual(
+            x.ordered_data(), ((3,6),(3,5),(1,6),(1,5),(2,6),(2,5)))
+        self.assertEqual(
+            x.sorted_data(), ((1,5),(1,6),(2,5),(2,6),(3,5),(3,6)))
+
+        self.assertNotIn(1, x)
+        self.assertIn((1,5), x)
+        self.assertIn(((1,),5), x)
+        self.assertNotIn((1,2,3), x)
+        self.assertNotIn((2,4), x)
+
+        self.assertEqual(x.ord((3,6)), 1)
+        self.assertEqual(x.ord((3,5)), 2)
+        self.assertEqual(x.ord((1,6)), 3)
+        self.assertEqual(x.ord((1,5)), 4)
+        self.assertEqual(x.ord((2,6)), 5)
+        self.assertEqual(x.ord((2,5)), 6)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot identify position of \(3, 4\) in Set "
+                "SetProduct_OrderedSet"):
+            x.ord((3,4))
+
+        self.assertEqual(x[1], (3,6))
+        self.assertEqual(x[2], (3,5))
+        self.assertEqual(x[3], (1,6))
+        self.assertEqual(x[4], (1,5))
+        self.assertEqual(x[5], (2,6))
+        self.assertEqual(x[6], (2,5))
+        with self.assertRaisesRegexp(
+                IndexError,
+                "SetProduct_OrderedSet index out of range"):
+            x[7]
+
+        self.assertEqual(x[-6], (3,6))
+        self.assertEqual(x[-5], (3,5))
+        self.assertEqual(x[-4], (1,6))
+        self.assertEqual(x[-3], (1,5))
+        self.assertEqual(x[-2], (2,6))
+        self.assertEqual(x[-1], (2,5))
+        with self.assertRaisesRegexp(
+                IndexError,
+                "SetProduct_OrderedSet index out of range"):
+            x[-7]
+
+    def test_ordered_setproduct(self):
+        self._verify_ordered_product(SetOf([3,1,2]), SetOf([6,5]))
+        self._verify_ordered_product(SetOf([3,1,2]), [6,5])
+        self._verify_ordered_product([3,1,2], SetOf([6,5]))
+
+    def test_ordered_multidim_setproduct(self):
+        x = SetOf([(1,2),(3,4)]) * SetOf([(5,6),(7,8)])
+        self.assertEqual(x.dimen, 4)
+        try:
+            origFlattenCross = SetModule.FLATTEN_CROSS_PRODUCT
+
+            SetModule.FLATTEN_CROSS_PRODUCT = True
+            ref = [(1,2,5,6), (1,2,7,8), (3,4,5,6), (3,4,7,8)]
+            self.assertEqual(list(x), ref)
+            self.assertEqual(x.dimen, 4)
+
+            SetModule.FLATTEN_CROSS_PRODUCT = False
+            ref = [((1,2),(5,6)), ((1,2),(7,8)), ((3,4),(5,6)), ((3,4),(7,8))]
+            self.assertEqual(list(x), ref)
+            self.assertEqual(x.dimen, None)
+        finally:
+            SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
+
+        self.assertIn(((1,2),(5,6)), x)
+        self.assertIn((1,(2,5),6), x)
+        self.assertIn((1,2,5,6), x)
+        self.assertNotIn((5,6,1,2), x)
+
+    def test_ordered_nondim_setproduct(self):
+        NonDim = Set(initialize=[2, (2,3)], dimen=None)
+        NonDim.construct()
+
+        NonDim2 = Set(initialize=[4, (3,4)], dimen=None)
+        NonDim2.construct()
+
+        x = SetOf([1]).cross(NonDim, SetOf([3,4,5]))
+
+        self.assertEqual(len(x), 6)
+        try:
+            origFlattenCross = SetModule.FLATTEN_CROSS_PRODUCT
+
+            SetModule.FLATTEN_CROSS_PRODUCT = True
+            ref = [(1,2,3), (1,2,4), (1,2,5),
+                   (1,2,3,3), (1,2,3,4), (1,2,3,5)]
+            self.assertEqual(list(x), ref)
+            self.assertEqual(x.dimen, None)
+
+            SetModule.FLATTEN_CROSS_PRODUCT = False
+            ref = [(1,2,3), (1,2,4), (1,2,5),
+                   (1,(2,3),3), (1,(2,3),4), (1,(2,3),5)]
+            self.assertEqual(list(x), ref)
+            self.assertEqual(x.dimen, None)
+        finally:
+            SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
+
+        self.assertIn((1,2,3), x)
+        self.assertNotIn((1,2,6), x)
+        self.assertIn((1,(2,3),3), x)
+        self.assertIn((1,2,3,3), x)
+        self.assertNotIn((1,(2,4),3), x)
+
+        self.assertEqual(x.ord((1, 2, 3)), 1)
+        self.assertEqual(x.ord((1, (2, 3), 3)), 4)
+        self.assertEqual(x.ord((1, (2, 3), 5)), 6)
+        self.assertEqual(x.ord((1, 2, 3, 3)), 4)
+        self.assertEqual(x.ord((1, 2, 3, 5)), 6)
+
+        x = SetOf([1]).cross(NonDim, NonDim2, SetOf([0,1]))
+
+        self.assertEqual(len(x), 8)
+        try:
+            origFlattenCross = SetModule.FLATTEN_CROSS_PRODUCT
+
+            SetModule.FLATTEN_CROSS_PRODUCT = True
+            ref = [(1,2,4,0), (1,2,4,1), (1,2,3,4,0), (1,2,3,4,1),
+                   (1,2,3,4,0), (1,2,3,4,1), (1,2,3,3,4,0), (1,2,3,3,4,1)]
+            self.assertEqual(list(x), ref)
+            for i,v in enumerate(ref):
+                self.assertEqual(x[i+1], v)
+            self.assertEqual(x.dimen, None)
+
+            SetModule.FLATTEN_CROSS_PRODUCT = False
+            ref = [(1,2,4,0), (1,2,4,1),
+                   (1,2,(3,4),0), (1,2,(3,4),1),
+                   (1,(2,3),4,0), (1,(2,3),4,1),
+                   (1,(2,3),(3,4),0), (1,(2,3),(3,4),1)]
+            self.assertEqual(list(x), ref)
+            for i,v in enumerate(ref):
+                self.assertEqual(x[i+1], v)
+            self.assertEqual(x.dimen, None)
+        finally:
+            SetModule.FLATTEN_CROSS_PRODUCT = origFlattenCross
+
+        self.assertIn((1,2,4,0), x)
+        self.assertNotIn((1,2,6), x)
+        self.assertIn((1,(2,3),4,0), x)
+        self.assertIn((1,2,(3,4),0), x)
+        self.assertIn((1,2,3,4,0), x)
+        self.assertNotIn((1,2,5,4,0), x)
+
+        self.assertEqual(x.ord((1, 2, 4, 0)), 1)
+        self.assertEqual(x.ord((1, (2, 3), 4, 0)), 5)
+        self.assertEqual(x.ord((1, 2, (3, 4), 0)), 3)
+        self.assertEqual(x.ord((1, 2, 3, 4, 0)), 3)
+
+
+class TestGlobalSets(unittest.TestCase):
+    def test_globals(self):
+        self.assertEqual(Reals.__class__.__name__, 'GlobalSet')
+        self.assertIsInstance(Reals, RangeSet)
+
+    def test_pickle(self):
+        a = pickle.loads(pickle.dumps(Reals))
+        self.assertIs(a, Reals)
+
+    def test_deepcopy(self):
+        a = copy.deepcopy(Reals)
+        self.assertIs(a, Reals)
+
+    def test_name(self):
+        self.assertEqual(str(Reals), 'Reals')
+        self.assertEqual(str(Integers), 'Integers')
+
+
+def _init_set(m, *args):
+    n = 1
+    for i in args:
+        n *= i
+    return xrange(n)
+
+
+class TestSet(unittest.TestCase):
+    def test_deprecated_args(self):
+        m = ConcreteModel()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.I = Set(virtual=True)
+            self.assertEqual(len(m.I), 0)
+        self.assertEqual(
+            output.getvalue(),
+            "DEPRECATED: Pyomo Sets ignore the 'virtual' keyword argument\n")
+
+    def test_scalar_set_initialize_and_iterate(self):
+        m = ConcreteModel()
+        m.I = Set()
+        self.assertEqual(list(m.I), [])
+        self.assertEqual(list(reversed(m.I)), [])
+        self.assertEqual(m.I.data(), ())
+        self.assertEqual(m.I.dimen, UnknownSetDimen)
+
+        m = ConcreteModel()
+        with self.assertRaisesRegexp(
+                KeyError, "Cannot treat the scalar component 'I'"
+                "as an indexed component"):
+            m.I = Set(initialize={1:(1,3,2,4)})
+
+        m = ConcreteModel()
+        m.I = Set(initialize=(1,3,2,4))
+        self.assertEqual(list(m.I), [1,3,2,4])
+        self.assertEqual(list(reversed(m.I)), [4,2,3,1])
+        self.assertEqual(m.I.data(), (1,3,2,4))
+        self.assertEqual(m.I.dimen, 1)
+
+        def I_init(m):
+            yield 1
+            yield 3
+            yield 2
+            yield 4
+        m = ConcreteModel()
+        m.I = Set(initialize=I_init)
+        self.assertEqual(list(m.I), [1,3,2,4])
+        self.assertEqual(list(reversed(m.I)), [4,2,3,1])
+        self.assertEqual(m.I.data(), (1,3,2,4))
+        self.assertEqual(m.I.dimen, 1)
+
+        m = ConcreteModel()
+        m.I = Set(initialize={None: (1,3,2,4)})
+        self.assertEqual(list(m.I), [1,3,2,4])
+        self.assertEqual(list(reversed(m.I)), [4,2,3,1])
+        self.assertEqual(m.I.data(), (1,3,2,4))
+        self.assertEqual(m.I.dimen, 1)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m = ConcreteModel()
+            m.I = Set(initialize={1,3,2,4})
+            ref = "Initializing an ordered Set with a " \
+                  "fundamentally unordered data source (type: set)."
+            self.assertIn(ref, output.getvalue())
+        self.assertEqual(m.I.sorted_data(), (1,2,3,4))
+        # We can't directly compare the reversed to a reference list
+        # (because this is populated from an unordered set!) but we can
+        # compare it with the forward list.
+        self.assertEqual(list(reversed(list(m.I))), list(reversed(m.I)))
+        self.assertEqual(list(reversed(m.I.data())), list(reversed(m.I)))
+        self.assertEqual(m.I.dimen, 1)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m = ConcreteModel()
+            m.I = Set(initialize={1,3,2,4}, ordered=False)
+            self.assertEqual(output.getvalue(), "")
+        self.assertEqual(sorted(list(m.I)), [1,2,3,4])
+        # We can't directly compare the reversed to a reference list
+        # (because this is an unordered set!) but we can compare it with
+        # the forward list.
+        self.assertEqual(list(reversed(list(m.I))), list(reversed(m.I)))
+        self.assertEqual(list(reversed(m.I.data())), list(reversed(m.I)))
+        self.assertEqual(m.I.dimen, 1)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,3,2,4], ordered=Set.SortedOrder)
+        self.assertEqual(list(m.I), [1,2,3,4])
+        self.assertEqual(list(reversed(m.I)), [4,3,2,1])
+        self.assertEqual(m.I.data(), (1,2,3,4))
+        self.assertEqual(m.I.dimen, 1)
+
+        with self.assertRaisesRegexp(
+                TypeError, "Set 'ordered' argument is not valid \(must "
+                "be one of {False, True, <function>, Set.InsertionOrder, "
+                "Set.SortedOrder}\)"):
+            m = ConcreteModel()
+            m.I = Set(initialize=[1,3,2,4], ordered=Set)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,3,2,4], ordered=lambda x: reversed(sorted(x)))
+        self.assertEqual(list(m.I), [4,3,2,1])
+        self.assertEqual(list(reversed(m.I)), [1,2,3,4])
+        self.assertEqual(m.I.data(), (4,3,2,1))
+        self.assertEqual(m.I.dimen, 1)
+
+    def test_insertion_deletion(self):
+        def _verify(_s, _l):
+            self.assertTrue(_s.isordered())
+            self.assertTrue(_s.isfinite())
+            for i,v in enumerate(_l):
+                self.assertEqual(_s[i+1], v)
+            with self.assertRaisesRegexp(IndexError, "I index out of range"):
+                _s[len(_l)+1]
+            with self.assertRaisesRegexp(IndexError, "I index out of range"):
+                _s[len(_l)+2]
+
+            for i,v in enumerate(reversed(_l)):
+                self.assertEqual(_s[-(i+1)], v)
+            with self.assertRaisesRegexp(IndexError, "I index out of range"):
+                _s[-len(_l)-1]
+            with self.assertRaisesRegexp(IndexError, "I index out of range"):
+                _s[-len(_l)-2]
+
+            for i,v in enumerate(_l):
+                self.assertEqual(_s.ord(v), i+1)
+                self.assertEqual(_s.ord((v,)), i+1)
+
+            if _l:
+                _max = max(_l)
+                _min = min(_l)
+            else:
+                _max = 0
+                _min = 0
+            with self.assertRaisesRegexp(ValueError, "I.ord\(x\): x not in I"):
+                m.I.ord(_max+1)
+            with self.assertRaisesRegexp(ValueError, "I.ord\(x\): x not in I"):
+                m.I.ord(_min-1)
+            with self.assertRaisesRegexp(ValueError, "I.ord\(x\): x not in I"):
+                m.I.ord((_max+1,))
+
+        # Testing insertion order sets
+        m = ConcreteModel()
+        m.I = Set()
+        _verify(m.I, [])
+        m.I.add(1)
+        _verify(m.I, [1])
+        m.I.add(3)
+        _verify(m.I, [1,3])
+        m.I.add(2)
+        _verify(m.I, [1,3,2])
+        m.I.add(4)
+        _verify(m.I, [1,3,2,4])
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.I.add(3)
+        self.assertEqual(
+            output.getvalue(),
+            "Element 3 already exists in Set I; no action taken\n")
+        _verify(m.I, [1,3,2,4])
+
+        m.I.remove(3)
+        _verify(m.I, [1,2,4])
+
+        with self.assertRaisesRegexp(KeyError, "^3$"):
+            m.I.remove(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.add(3)
+        _verify(m.I, [1,2,4,3])
+
+        m.I.discard(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.discard(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.clear()
+        _verify(m.I, [])
+
+        m.I.add(6)
+        m.I.add(5)
+        _verify(m.I, [6,5])
+
+        tmp = set()
+        tmp.add(m.I.pop())
+        tmp.add(m.I.pop())
+        _verify(m.I, [])
+        self.assertEqual(tmp, {5,6})
+        with self.assertRaisesRegexp(KeyError, 'pop from an empty set'):
+            m.I.pop()
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.I.update([6])
+            _verify(m.I, [6])
+            m.I.update([6,5,6])
+            _verify(m.I, [6,5])
+
+            m.I = [0,-1,1]
+            _verify(m.I, [0,-1,1])
+
+            self.assertEqual(output.getvalue(), "")
+
+            # Assing unsorted data should generate warnings
+            m.I.update({3,4})
+            self.assertIn(
+                "Calling update() on an insertion order Set with a "
+                "fundamentally unordered data source (type: set)",
+                output.getvalue()
+            )
+            self.assertEqual(set(m.I), {0, -1, 1, 3, 4})
+            output.truncate(0)
+
+            m.I = {5,6}
+            self.assertIn(
+                "Calling set_value() on an insertion order Set with a "
+                "fundamentally unordered data source (type: set)",
+                output.getvalue()
+            )
+            self.assertEqual(set(m.I), {5,6})
+
+        # Testing sorted sets
+        m = ConcreteModel()
+        m.I = Set(ordered=Set.SortedOrder)
+        _verify(m.I, [])
+        m.I.add(1)
+        _verify(m.I, [1])
+        m.I.add(3)
+        _verify(m.I, [1,3])
+        m.I.add(2)
+        _verify(m.I, [1,2,3])
+        m.I.add(4)
+        _verify(m.I, [1,2,3,4])
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.I.add(3)
+        self.assertEqual(
+            output.getvalue(),
+            "Element 3 already exists in Set I; no action taken\n")
+        _verify(m.I, [1,2,3,4])
+
+        m.I.remove(3)
+        _verify(m.I, [1,2,4])
+
+        with self.assertRaisesRegexp(KeyError, "^3$"):
+            m.I.remove(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.add(3)
+        _verify(m.I, [1,2,3,4])
+
+        m.I.discard(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.discard(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.clear()
+        _verify(m.I, [])
+
+        m.I.add(6)
+        m.I.add(5)
+        _verify(m.I, [5,6])
+
+        tmp = set()
+        tmp.add(m.I.pop())
+        tmp.add(m.I.pop())
+        _verify(m.I, [])
+        self.assertEqual(tmp, {5,6})
+        with self.assertRaisesRegexp(KeyError, 'pop from an empty set'):
+            m.I.pop()
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.I.update([6])
+            _verify(m.I, [6])
+            m.I.update([6,5,6])
+            _verify(m.I, [5,6])
+
+            m.I = [0,-1,1]
+            _verify(m.I, [-1,0,1])
+
+            self.assertEqual(output.getvalue(), "")
+
+            # Assing unsorted data should not generate warnings (since
+            # we are sorting the Set!)
+            m.I.update({3,4})
+            self.assertEqual(output.getvalue(), "")
+            _verify(m.I, [-1,0,1,3,4])
+
+            m.I = {5,6}
+            self.assertEqual(output.getvalue(), "")
+            _verify(m.I, [5,6])
+
+    def test_unordered_insertion_deletion(self):
+        def _verify(_s, _l):
+            self.assertFalse(_s.isordered())
+            self.assertTrue(_s.isfinite())
+
+            self.assertEqual(sorted(_s), _l)
+            self.assertEqual(list(_s), list(reversed(list(reversed(_s)))))
+            for v in _l:
+                self.assertIn(v, _s)
+
+            if _l:
+                _max = max(_l)
+                _min = min(_l)
+            else:
+                _max = 0
+                _min = 0
+            self.assertNotIn(_max+1, _s)
+            self.assertNotIn(_min-1, _s)
+
+        # Testing unordered sets
+        m = ConcreteModel()
+        m.I = Set(ordered=False)
+        _verify(m.I, [])
+        m.I.add(1)
+        _verify(m.I, [1])
+        m.I.add(3)
+        _verify(m.I, [1,3])
+        m.I.add(2)
+        _verify(m.I, [1,2,3])
+        m.I.add(4)
+        _verify(m.I, [1,2,3,4])
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.I.add(3)
+        self.assertEqual(
+            output.getvalue(),
+            "Element 3 already exists in Set I; no action taken\n")
+        _verify(m.I, [1,2,3,4])
+
+        m.I.remove(3)
+        _verify(m.I, [1,2,4])
+
+        with self.assertRaisesRegexp(KeyError, "^3$"):
+            m.I.remove(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.add(3)
+        _verify(m.I, [1,2,3,4])
+
+        m.I.discard(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.discard(3)
+        _verify(m.I, [1,2,4])
+
+        m.I.clear()
+        _verify(m.I, [])
+
+        m.I.add(6)
+        m.I.add(5)
+        _verify(m.I, [5,6])
+
+        tmp = set()
+        tmp.add(m.I.pop())
+        tmp.add(m.I.pop())
+        _verify(m.I, [])
+        self.assertEqual(tmp, {5,6})
+        with self.assertRaisesRegexp(KeyError, 'pop from an empty set'):
+            m.I.pop()
+
+        m.I.update([5])
+        _verify(m.I, [5])
+        m.I.update([6,5])
+        _verify(m.I, [5,6])
+
+        m.I = [0,-1,1]
+        _verify(m.I, [-1,0,1])
+
+    def test_indexed_set(self):
+        # Implicit construction
+        m = ConcreteModel()
+        m.I = Set([1,2,3], ordered=False)
+        self.assertEqual(len(m.I), 3)
+        m.I[1].add(1)
+        m.I[2].add(2)
+        m.I[3].add(4)
+        self.assertEqual(list(m.I[1]), [1])
+        self.assertEqual(list(m.I[2]), [2])
+        self.assertEqual(list(m.I[3]), [4])
+        self.assertIsNot(m.I[1], m.I[2])
+        self.assertIsNot(m.I[1], m.I[3])
+        self.assertIsNot(m.I[2], m.I[3])
+        self.assertFalse(m.I[1].isordered())
+        self.assertFalse(m.I[2].isordered())
+        self.assertFalse(m.I[3].isordered())
+        self.assertIs(type(m.I[1]), _FiniteSetData)
+        self.assertIs(type(m.I[2]), _FiniteSetData)
+        self.assertIs(type(m.I[3]), _FiniteSetData)
+
+        # Explicit (constant) construction
+        m = ConcreteModel()
+        m.I = Set([1,2,3], initialize=(4,2,5))
+        self.assertEqual(len(m.I), 3)
+        self.assertEqual(list(m.I[1]), [4,2,5])
+        self.assertEqual(list(m.I[2]), [4,2,5])
+        self.assertEqual(list(m.I[3]), [4,2,5])
+        self.assertIsNot(m.I[1], m.I[2])
+        self.assertIsNot(m.I[1], m.I[3])
+        self.assertIsNot(m.I[2], m.I[3])
+        self.assertTrue(m.I[1].isordered())
+        self.assertTrue(m.I[2].isordered())
+        self.assertTrue(m.I[3].isordered())
+        self.assertIs(type(m.I[1]), _InsertionOrderSetData)
+        self.assertIs(type(m.I[2]), _InsertionOrderSetData)
+        self.assertIs(type(m.I[3]), _InsertionOrderSetData)
+
+        # Explicit (constant) construction
+        m = ConcreteModel()
+        m.I = Set([1,2,3], initialize=(4,2,5), ordered=Set.SortedOrder)
+        self.assertEqual(len(m.I), 3)
+        self.assertEqual(list(m.I[1]), [2,4,5])
+        self.assertEqual(list(m.I[2]), [2,4,5])
+        self.assertEqual(list(m.I[3]), [2,4,5])
+        self.assertIsNot(m.I[1], m.I[2])
+        self.assertIsNot(m.I[1], m.I[3])
+        self.assertIsNot(m.I[2], m.I[3])
+        self.assertTrue(m.I[1].isordered())
+        self.assertTrue(m.I[2].isordered())
+        self.assertTrue(m.I[3].isordered())
+        self.assertIs(type(m.I[1]), _SortedSetData)
+        self.assertIs(type(m.I[2]), _SortedSetData)
+        self.assertIs(type(m.I[3]), _SortedSetData)
+
+    def test_naming(self):
+        m = ConcreteModel()
+
+        i = Set()
+        self.assertEqual(str(i), "AbstractOrderedSimpleSet")
+        i.construct()
+        self.assertEqual(str(i), "{}")
+        m.I = i
+        self.assertEqual(str(i), "I")
+
+        j = Set(initialize=[1,2,3])
+        self.assertEqual(str(j), "AbstractOrderedSimpleSet")
+        j.construct()
+        self.assertEqual(str(j), "{1, 2, 3}")
+        m.J = j
+        self.assertEqual(str(j), "J")
+
+        k = Set([1,2,3])
+        self.assertEqual(str(k), "IndexedSet")
+        with self.assertRaisesRegexp(
+                ValueError, 'The component has not been constructed.'):
+            str(k[1])
+        m.K = k
+        self.assertEqual(str(k), "K")
+        self.assertEqual(str(k[1]), "K[1]")
+
+    def test_indexing(self):
+        m = ConcreteModel()
+        m.I = Set()
+        m.I = [1, 3, 2]
+        self.assertEqual(m.I[2], 3)
+        with self.assertRaisesRegexp(
+                IndexError, "I indices must be integers, not float"):
+            m.I[2.5]
+        with self.assertRaisesRegexp(
+                IndexError, "I indices must be integers, not str"):
+            m.I['a']
+
+    def test_add_filter_validate(self):
+        m = ConcreteModel()
+        m.I = Set(domain=Integers)
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Cannot add value 1.5 to Set I.\n"
+                "\tThe value is not in the domain Integers"):
+            m.I.add(1.5)
+
+        # Open question: should we cast the added value into the domain
+        # (if we do, how?)
+        self.assertTrue( m.I.add(1.0) )
+        self.assertIn(1, m.I)
+        self.assertIn(1., m.I)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertFalse( m.I.add(1) )
+        self.assertEquals(
+            output.getvalue(),
+            "Element 1 already exists in Set I; no action taken\n")
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertFalse( m.I.add((1,)) )
+        self.assertEquals(
+            output.getvalue(),
+            "Element (1,) already exists in Set I; no action taken\n")
+
+        m.J = Set()
+        # Note that pypy raises a different exception from cpython
+        err = "Unable to insert '{}' into Set J:\n\tTypeError: "\
+            "((unhashable type: 'dict')|('dict' objects are unhashable))"
+        with self.assertRaisesRegexp(TypeError, err):
+            m.J.add({})
+
+        self.assertTrue( m.J.add((1,)) )
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertFalse( m.J.add(1) )
+        self.assertEquals(
+            output.getvalue(),
+            "Element 1 already exists in Set J; no action taken\n")
+
+
+        def _l_tri(m, i, j):
+            return i >= j
+        m.K = Set(initialize=RangeSet(3)*RangeSet(3), filter=_l_tri)
+        self.assertEqual(
+            list(m.K), [(1,1), (2,1), (2,2), (3,1), (3,2), (3,3)])
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertTrue( m.K.add((0,0)) )
+            self.assertFalse( m.K.add((0,1)) )
+        self.assertEquals(output.getvalue(), "")
+        self.assertEqual(
+            list(m.K), [(1,1), (2,1), (2,2), (3,1), (3,2), (3,3), (0,0)])
+
+        # This tests a filter that matches the dimentionality of the
+        # component.  construct() needs to recognize that the filter is
+        # returning a constant in construct() and re-assign it to be the
+        # _filter for each _SetData
+        def _lt_3(m, i):
+            return i < 3
+        m.L = Set([1,2,3,4,5], initialize=RangeSet(10), filter=_lt_3)
+        self.assertEqual(len(m.L), 5)
+        self.assertEqual(list(m.L[1]), [1, 2])
+        self.assertEqual(list(m.L[5]), [1, 2])
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertTrue( m.L[2].add(0) )
+            self.assertFalse( m.L[2].add((100)) )
+        self.assertEquals(output.getvalue(), "")
+        self.assertEqual(list(m.L[2]), [1,2,0])
+
+
+        def _validate(m,i,j):
+            if i + j < 2:
+                return True
+            if i - j > 2:
+                return False
+            raise RuntimeError("Bogus value")
+        m = ConcreteModel()
+        m.I = Set(validate=_validate)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertTrue( m.I.add((0,1)) )
+            self.assertEqual(output.getvalue(), "")
+            with self.assertRaisesRegexp(
+                    ValueError,
+                    "The value=\(4, 1\) violates the validation rule of Set I"):
+                m.I.add((4,1))
+            self.assertEqual(output.getvalue(), "")
+            with self.assertRaisesRegexp(RuntimeError, "Bogus value"):
+                m.I.add((2,2))
+        self.assertEqual(
+            output.getvalue(),
+            "Exception raised while validating element '(2, 2)' for Set I\n")
+
+        # Note: one of these indices will trigger the exception in the
+        # validot when it is called for the index.
+        m.J = Set([(0,0), (2,2)], validate=_validate)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertTrue( m.J[2,2].add((0,1)) )
+            self.assertEqual(output.getvalue(), "")
+            with self.assertRaisesRegexp(
+                    ValueError,
+                    "The value=\(4, 1\) violates the validation rule of "
+                    "Set J\[0,0\]"):
+                m.J[0,0].add((4,1))
+            self.assertEqual(output.getvalue(), "")
+            with self.assertRaisesRegexp(RuntimeError, "Bogus value"):
+                m.J[2,2].add((2,2))
+        self.assertEqual(
+            output.getvalue(),
+            "Exception raised while validating element '(2, 2)' for "
+            "Set J[2,2]\n")
+
+    def test_domain(self):
+        m = ConcreteModel()
+        m.I = Set(domain=Integers)
+        m.I.add(1)
+        m.I.add(2.)
+        self.assertEqual(list(m.I), [1, 2.])
+        with self.assertRaisesRegexp(
+                ValueError, 'The value is not in the domain Integers'):
+            m.I.add(1.5)
+
+        m = ConcreteModel()
+        m.I = Set(within=Integers)
+        m.I.add(1)
+        m.I.add(2.)
+        self.assertEqual(list(m.I), [1, 2.])
+        with self.assertRaisesRegexp(
+                ValueError, 'The value is not in the domain Integers'):
+            m.I.add(1.5)
+
+        m = ConcreteModel()
+        m.I = Set(bounds=(1,5))
+        m.I.add(1)
+        m.I.add(2.)
+        self.assertEqual(list(m.I), [1, 2.])
+        with self.assertRaisesRegexp(
+                ValueError, 'The value is not in the domain \[1..5\]'):
+            m.I.add(5.5)
+
+        m = ConcreteModel()
+        m.I = Set(domain=Integers, within=RangeSet(0, None, 2), bounds=(0,9))
+        m.I = [0,2.,4]
+        self.assertEqual(list(m.I), [0,2.,4])
+        with self.assertRaisesRegexp(
+                ValueError, 'The value is not in the domain '
+                '\(Integers & \[0:None:2\]\) & \[0..9\]'):
+            m.I.add(1.5)
+        with self.assertRaisesRegexp(
+                ValueError, 'The value is not in the domain '
+                '\(Integers & \[0:None:2\]\) & \[0..9\]'):
+            m.I.add(1)
+        with self.assertRaisesRegexp(
+                ValueError, 'The value is not in the domain '
+                '\(Integers & \[0:None:2\]\) & \[0..9\]'):
+            m.I.add(10)
+
+
+    def test_pprint(self):
+        def myFcn(x):
+            return reversed(sorted(x))
+
+        m = ConcreteModel()
+        m.I_index = RangeSet(3)
+        m.I = Set(m.I_index, initialize=lambda m,i: xrange(i+1),
+                  domain=Integers)
+        m.J = Set(ordered=False)
+        m.K = Set(initialize=[(1,2), (3,4)], ordered=Set.SortedOrder)
+        m.L = Set(initialize=[(1,2), (3,4)], ordered=myFcn)
+        m.M = Reals - SetOf([0])
+        m.N = Integers - Reals
+
+        buf = StringIO()
+        m.pprint()
+        m.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue().strip(), """
+1 RangeSet Declarations
+    I_index : Dimen=1, Size=3, Bounds=(1, 3)
+        Key  : Finite : Members
+        None :   True :   [1:3]
+
+6 Set Declarations
+    I : Size=3, Index=I_index, Ordered=Insertion
+        Key : Dimen : Domain   : Size : Members
+          1 :     1 : Integers :    2 : {0, 1}
+          2 :     1 : Integers :    3 : {0, 1, 2}
+          3 :     1 : Integers :    4 : {0, 1, 2, 3}
+    J : Size=1, Index=None, Ordered=False
+        Key  : Dimen : Domain : Size : Members
+        None :    -- :    Any :    0 :      {}
+    K : Size=1, Index=None, Ordered=Sorted
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    2 : {(1, 2), (3, 4)}
+    L : Size=1, Index=None, Ordered={user}
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    2 : {(3, 4), (1, 2)}
+    M : Size=1, Index=None, Ordered=False
+        Key  : Dimen : Domain      : Size : Members
+        None :     1 : Reals - [0] :  Inf : ([None..0) | (0..None])
+    N : Size=1, Index=None, Ordered=False
+        Key  : Dimen : Domain           : Size : Members
+        None :     1 : Integers - Reals :  Inf :      []
+
+7 Declarations: I_index I J K L M N""".strip())
+
+    def test_pickle(self):
+        m = ConcreteModel()
+        m.I = Set(initialize={1, 2, 'a'}, ordered=False)
+        m.J = Set(initialize=(2,4,1))
+        m.K = Set(initialize=(2,4,1), ordered=Set.SortedOrder)
+        m.II = Set([1,2,3], m.J, initialize=_init_set)
+
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        ref = buf.getvalue()
+
+        n = pickle.loads(pickle.dumps(m))
+
+        self.assertIsNot(m, n)
+        self.assertIsNot(m.I, n.I)
+        self.assertIsNot(m.J, n.J)
+        self.assertIsNot(m.K, n.K)
+        self.assertIsNot(m.II, n.II)
+
+        self.assertEqual(m.I, n.I)
+        self.assertEqual(m.J, n.J)
+        self.assertEqual(m.K, n.K)
+        for i in m.II:
+            self.assertEqual(m.II[i], n.II[i])
+
+        buf = StringIO()
+        n.pprint(ostream=buf)
+        self.assertEqual(ref, buf.getvalue())
+
+    def test_dimen(self):
+        m = ConcreteModel()
+        m.I = Set()
+        self.assertEqual(m.I.dimen, UnknownSetDimen)
+        m.I.add((1,2))
+        self.assertEqual(m.I.dimen, 2)
+
+        m.J = Set(initialize=[1,2,3])
+        self.assertEqual(m.J.dimen, 1)
+
+        m.K = Set(initialize=[(1,2,3)])
+        self.assertEqual(m.K.dimen, 3)
+
+        with self.assertRaisesRegexp(
+                ValueError,
+                "The value=1 has dimension 1 and is not valid for Set K "
+                "which has dimen=3"):
+            m.K.add(1)
+
+        m.L = Set(dimen=None)
+        self.assertIsNone(m.L.dimen)
+        m.L.add(1)
+        self.assertIsNone(m.L.dimen)
+        m.L.add((2,3))
+        self.assertIsNone(m.L.dimen)
+        self.assertEqual(list(m.L), [1, (2,3)])
+
+    def test_construction(self):
+        m = AbstractModel()
+        m.I = Set(initialize=[1,2,3])
+        m.J = Set(initialize=[4,5,6])
+        m.II = Set([1,2,3], initialize={1:[0], 2:[1,2], 3: xrange(3)})
+        m.JJ = Set([1,2,3], initialize={1:[0], 2:[1,2], 3: xrange(3)})
+
+        output = StringIO()
+        m.pprint()
+        m.I.pprint(ostream=output)
+        m.II.pprint(ostream=output)
+        m.J.pprint(ostream=output)
+        m.JJ.pprint(ostream=output)
+        ref = """
+I : Size=0, Index=None, Ordered=Insertion
+    Not constructed
+II : Size=0, Index=II_index, Ordered=Insertion
+    Not constructed
+J : Size=0, Index=None, Ordered=Insertion
+    Not constructed
+JJ : Size=0, Index=JJ_index, Ordered=Insertion
+    Not constructed""".strip()
+        self.assertEqual(output.getvalue().strip(), ref)
+
+        i = m.create_instance(data={
+            None: {'I': [-1,0], 'II': {1: [10,11], 3:[30]}}
+        })
+
+        self.assertEqual(list(i.I), [-1,0])
+        self.assertEqual(list(i.J), [4,5,6])
+        self.assertEqual(list(i.II[1]), [10,11])
+        self.assertEqual(list(i.II[3]), [30])
+        self.assertEqual(list(i.JJ[1]), [0])
+        self.assertEqual(list(i.JJ[2]), [1,2])
+        self.assertEqual(list(i.JJ[3]), [0,1,2])
+
+        # Implicitly-constructed set should fall back on initialize!
+        self.assertEqual(list(i.II[2]), [1,2])
+
+        ref = """
+Constructing AbstractOrderedSimpleSet 'I' on [Model] from data=None
+Constructing Set, name=I, from data=None
+Constructed component ''[Model].I'':
+I : Size=1, Index=None, Ordered=Insertion
+    Key  : Dimen : Domain : Size : Members
+    None :    -- :    Any :    0 :      {}
+""".strip()
+        m = ConcreteModel()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            m.I = Set()
+            self.assertEqual(output.getvalue().strip(), ref)
+            # but re-constructing the set doesn't re-log the message
+            m.I.construct()
+            self.assertEqual(output.getvalue().strip(), ref)
+
+        # Test generators
+        m = ConcreteModel()
+        def _i_init(m):
+            yield 1
+            yield 3
+            yield 2
+        m.I = Set(initialize=_i_init)
+        self.assertEqual(list(m.I), [1,3,2])
+
+        m = ConcreteModel()
+        def _i_init(m):
+            yield 1
+            yield 3
+            yield Set.End
+            yield 2
+        m.I = Set(initialize=_i_init)
+        self.assertEqual(list(m.I), [1,3])
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,3,Set.End,2])
+        self.assertEqual(list(m.I), [1,3])
+
+    def test_unconstructed_api(self):
+        m = AbstractModel()
+        m.I = Set(ordered=False)
+        m.J = Set(ordered=Set.InsertionOrder)
+        m.K = Set(ordered=Set.SortedOrder)
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot iterate over AbstractFiniteSimpleSet 'I'"
+                " before it has been constructed \(initialized\)."):
+            for i in m.I:
+                pass
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot iterate over AbstractOrderedSimpleSet 'J'"
+                " before it has been constructed \(initialized\)."):
+            for i in m.J:
+                pass
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot iterate over AbstractSortedSimpleSet 'K'"
+                " before it has been constructed \(initialized\)."):
+            for i in m.K:
+                pass
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot test membership in AbstractFiniteSimpleSet 'I'"
+                " before it has been constructed \(initialized\)."):
+            1 in m.I
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot test membership in AbstractOrderedSimpleSet 'J'"
+                " before it has been constructed \(initialized\)."):
+            1 in m.J
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot test membership in AbstractSortedSimpleSet 'K'"
+                " before it has been constructed \(initialized\)."):
+            1 in m.K
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot access __len__ on AbstractFiniteSimpleSet 'I'"
+                " before it has been constructed \(initialized\)."):
+            len(m.I)
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot access __len__ on AbstractOrderedSimpleSet 'J'"
+                " before it has been constructed \(initialized\)."):
+            len(m.J)
+
+        with self.assertRaisesRegexp(
+                RuntimeError,
+                "Cannot access __len__ on AbstractSortedSimpleSet 'K'"
+                " before it has been constructed \(initialized\)."):
+            len(m.K)
+
+    def test_set_end(self):
+        # Tested counted initialization
+        m = ConcreteModel()
+        def _i_init(m, i):
+            if i < 5:
+                return 2*i
+            return Set.End
+        m.I = Set(initialize=_i_init)
+        self.assertEqual(list(m.I), [2,4,6,8])
+
+        m = ConcreteModel()
+        def _i_init(m, i, j):
+            if i < j:
+                return 2*i
+            return Set.End
+        m.I = Set([1,2,3], initialize=_i_init)
+        self.assertEqual(list(m.I[1]), [])
+        self.assertEqual(list(m.I[2]), [2])
+        self.assertEqual(list(m.I[3]), [2,4])
+
+        m = ConcreteModel()
+        def _i_init(m, i, j, k):
+            if i < j+k:
+                return 2*i
+            return Set.End
+        m.I = Set([1,2], [2,3], initialize=_i_init)
+        self.assertEqual(list(m.I[1,2]), [2,4])
+        self.assertEqual(list(m.I[1,3]), [2,4,6])
+        self.assertEqual(list(m.I[2,2]), [2,4,6])
+        self.assertEqual(list(m.I[2,3]), [2,4,6,8])
+
+        m = ConcreteModel()
+        def _i_init(m, i):
+            if i > 3:
                 return None
-            return z
-        self.model.n = Param()
-        self.model.Z = Set()
-        self.model.A = Set(self.model.Z, initialize=tmp_rule2)
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual(len(self.instance.A['A']),5)
+            return i
+        with self.assertRaisesRegexp(
+                ValueError, "Set rule returned None instead of Set.End"):
+            m.I1 = Set(initialize=_i_init)
+        @simple_set_rule
+        def _j_init(m, i):
+            if i > 3:
+                return None
+            return i
+        m.J = Set(initialize=_j_init)
+        self.assertEqual(list(m.J), [1,2,3])
 
-    def test_rule3(self):
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; param n := 5; set Z := A C; end;")
-        OUTPUT.close()
-        def tmp_rule2(model, z, i):
-            if z>value(model.n):
-                return Set.End
-            return z
-        self.model.n = Param()
-        self.model.Z = Set()
-        self.model.A = Set(self.model.Z, initialize=tmp_rule2)
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual(len(self.instance.A['A']),5)
-
-    def test_within1(self):
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set Z := A C; set A[A] := 1 3 5 7.5; end;")
-        OUTPUT.close()
-        #
-        # Create A with an error
-        #
-        self.model.Z = Set()
-        self.model.A = Set(self.model.Z, within=Integers)
-        try:
-            self.instance = self.model.create_instance(currdir+"setA.dat")
-        except ValueError:
-            pass
-        else:
-            self.fail("fail test_within1")
-
-    def test_within2(self):
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set Z := A C; set A[A] := 1 3 5 7.5; end;")
-        OUTPUT.close()
-        #
-        # Create A with an error
-        #
-        self.model.Z = Set()
-        self.model.A = Set(self.model.Z, within=Reals)
-        try:
-            self.instance = self.model.create_instance(currdir+"setA.dat")
-        except ValueError:
-            self.fail("fail test_within2")
-        else:
-            pass
-
-    def test_validation1(self):
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set Z := A C; set A[A] := 1 3 5 7.5; end;")
-        OUTPUT.close()
-        #
-        # Create A with an error
-        #
-        self.model.Z = Set()
-        self.model.A = Set(self.model.Z, validate=lambda model, x:x<6)
-        try:
-            self.instance = self.model.create_instance(currdir+"setA.dat")
-        except ValueError:
-            pass
-        else:
-            self.fail("fail test_within1")
-
-    def test_validation2(self):
-        #
-        # Create Set 'A' data file
-        #
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set Z := A C; set A[A] := 1 3 5 5.5; end;")
-        OUTPUT.close()
-        #
-        # Create A with an error
-        #
-        self.model.Z = Set()
-        self.model.A = Set(self.model.Z, validate=lambda model, x:x<6)
-        try:
-            self.instance = self.model.create_instance(currdir+"setA.dat")
-        except ValueError:
-            self.fail("fail test_within2")
-        else:
-            pass
-
-    def test_other1(self):
-        self.model.Z = Set(initialize=['A'])
-        self.model.A = Set(self.model.Z, initialize={'A':[1,2,3,'A']}, validate=lambda model, x:x in Integers)
-        try:
-            self.instance = self.model.create_instance()
-        except ValueError:
-            pass
-        else:
-            self.fail("fail test_other1")
-
-    def test_other2(self):
-        self.model.Z = Set(initialize=['A'])
-        self.model.A = Set(self.model.Z, initialize={'A':[1,2,3,'A']}, within=Integers)
-        try:
-            self.instance = self.model.create_instance()
-        except ValueError:
-            pass
-        else:
-            self.fail("fail test_other1")
-
-    def test_other3(self):
-        def tmp_init(model, i):
-            tmp=[]
-            for i in range(0,value(model.n)):
-                tmp.append(i/2.0)
-            return tmp
-        self.model.n = Param(initialize=5)
-        self.model.Z = Set(initialize=['A'])
-        self.model.A = Set(self.model.Z,initialize=tmp_init, validate=lambda model, x:x in Integers)
-        try:
-            self.instance = self.model.create_instance()
-        except ValueError:
-            pass
-        else:
-            self.fail("fail test_other1")
-
-    def test_other4(self):
-        def tmp_init(model, i):
-            tmp=[]
-            for i in range(0,value(model.n)):
-                tmp.append(i/2.0)
-            return tmp
-        self.model.n = Param(initialize=5)
-        self.model.Z = Set(initialize=['A'])
-        self.model.A = Set(self.model.Z, initialize=tmp_init, within=Integers)
-        self.model.B = Set(self.model.Z, initialize=tmp_init, within=Integers)
-        try:
-            self.instance = self.model.create_instance()
-        except ValueError:
-            pass
-        else:
-            self.fail("fail test_other1")
-
-class TestMisc(PyomoModel):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-        #
-        #
-        #
-        self.model.A = Set(initialize=[1,2,3])
-        self.model.B = Set(initialize=['a','b','c'])
-        self.model.C = Set(initialize=[4,5,6])
-
-    def tearDown(self):
-        #
-        # Remove Set 'A' data file
-        #
-        if os.path.exists(currdir+"setA.dat"):
-            os.remove(currdir+"setA.dat")
-        PyomoModel.tearDown(self)
-
-    def test_cross_set(self):
-        self.model.C = self.model.A * self.model.B
-        self.instance = self.model.create_instance()
-        self.assertEqual(len(self.instance.C),9)
-
-    def test_tricross_set(self):
-        self.model.D = self.model.A * self.model.B * self.model.C
-        self.instance = self.model.create_instance()
-        self.assertEqual(len(self.instance.D),27)
-
-    def test_virtual_cross_set(self):
-        self.model.C = self.model.A * self.model.B
-        self.model.C.virtual = True
-        self.instance = self.model.create_instance()
-        self.assertEqual(len(self.instance.C),9)
-        if not self.instance.C.value is None:
-            self.assertEqual(len(self.instance.C.value),0)
-        tmp=[]
-        for item in self.instance.C:
-            tmp.append(item)
-        self.assertEqual(len(tmp),9)
-
-
-class TestSetsInPython3(unittest.TestCase):
-    def test_pprint_mixed(self):
-        # In Python3, sorting a mixed string fails.  We have added a
-        # fallback more "robust" sorter, and this exercises that code
+    def test_set_skip(self):
+        # Test Set.Skip
         m = ConcreteModel()
-        m.Z = Set(initialize=['A','C'])
-        m.A = Set(m.Z, initialize={'A':[1,2,3,'A']})
-        buf = StringIO()
-        m.pprint(ostream=buf)
-        self.assertEqual("""2 Set Declarations
-    A : Dim=1, Dimen=1, Size=4, Domain=None, ArraySize=1, Ordered=False, Bounds=None
-        Key : Members
-          A : [1, 2, 3, 'A']
-    Z : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
-        ['A', 'C']
+        def _i_init(m,i):
+            if i % 2:
+                return Set.Skip
+            return range(i)
+        m.I = Set([1,2,3,4,5], initialize=_i_init)
+        self.assertEqual(len(m.I), 2)
+        self.assertIn(2, m.I)
+        self.assertEqual(list(m.I[2]), [0,1])
+        self.assertIn(4, m.I)
+        self.assertEqual(list(m.I[4]), [0,1,2,3])
+        self.assertNotIn(1, m.I)
+        self.assertNotIn(3, m.I)
+        self.assertNotIn(5, m.I)
+        output = StringIO()
+        m.I.pprint(ostream=output)
+        ref = """
+I : Size=2, Index=I_index, Ordered=Insertion
+    Key : Dimen : Domain : Size : Members
+      2 :     1 :    Any :    2 : {0, 1}
+      4 :     1 :    Any :    4 : {0, 1, 2, 3}
+""".strip()
+        self.assertEqual(output.getvalue().strip(), ref.strip())
 
-2 Declarations: Z A
-""", buf.getvalue())
-
-    def test_initialize_and_clone_from_dict_keys(self):
-        # In Python3, initializing a dictionary from keys() returns a
-        # dict_keys object (NOT a generator).  This tests that various
-        # ways of initializing a set from a dict all work.
-        #
-        # While deepcopying a model is generally not supported, this is
-        # an easy way to ensure that this simple model is cleanly
-        # clonable.
-        ref = """1 Set Declarations
-    INDEX : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 5)
-        [1, 3, 5]
-
-1 Param Declarations
-    p : Size=3, Index=INDEX, Domain=Any, Default=None, Mutable=False
-        Key : Value
-          1 :     2
-          3 :     4
-          5 :     6
-
-2 Declarations: INDEX p
-"""
-        #
-        # keys()
-        #
         m = ConcreteModel()
-        v = {1:2,3:4,5:6}
-        m.INDEX = Set(initialize=v.keys())
-        m.p = Param(m.INDEX, initialize=v)
-        buf = StringIO()
-        m.pprint(ostream=buf)
-        self.assertEqual(ref, buf.getvalue())
-        #
-        m2 = copy.deepcopy(m)
-        buf = StringIO()
-        m2.pprint(ostream=buf)
-        self.assertEqual(ref, buf.getvalue())
-        #
-        # six.iterkeys()
-        #
+        def _i_init(m,i):
+            if i % 2:
+                return None
+            return range(i)
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Set rule or initializer returned None instead of Set.Skip"):
+            m.I = Set([1,2,3,4,5], initialize=_i_init)
+
+        def _j_init(m):
+            return None
+        with self.assertRaisesRegexp(
+                ValueError,
+                "Set rule or initializer returned None instead of Set.Skip"):
+            m.J = Set(initialize=_j_init)
+
+    def test_sorted_operations(self):
+        I = Set(ordered=Set.SortedOrder, initialize=[0])
+        I.construct()
+        i = 0
+        self.assertTrue(i in I)
+        self.assertFalse(I._is_sorted)
+        I._sort()
+        self.assertTrue(I._is_sorted)
+
+        # adding a value already in the set does not affect _is_sorted
+        self.assertTrue(I._is_sorted)
+        self.assertFalse(I.add(i))
+        self.assertTrue(I._is_sorted)
+
+        # adding a new value clears _is_sorted
+        self.assertTrue(I._is_sorted)
+        self.assertTrue(I.add(1))
+        self.assertFalse(I._is_sorted)
+
+        # __str__
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            str(I), "{%s}" % ', '.join(str(_) for _ in range(-i,i+1)))
+        self.assertTrue(I._is_sorted)
+
+        # ranges()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I.ranges()),
+            ','.join('[%s]' % _ for _ in range(-i,i+1))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # __iter__
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I),
+            ','.join(str(_) for _ in range(-i,i+1))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # __reversed__
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in reversed(I)),
+            ','.join(str(_) for _ in reversed(range(-i,i+1)))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # data()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I.data()),
+            ','.join(str(_) for _ in range(-i,i+1))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # ordered_data()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I.ordered_data()),
+            ','.join(str(_) for _ in range(-i,i+1))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # sorted_data()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I.sorted_data()),
+            ','.join(str(_) for _ in range(-i,i+1))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # bounds()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.bounds(), (-i,i))
+        self.assertTrue(I._is_sorted)
+
+        # remove()
+        I.remove(0)
+        self.assertTrue(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I),
+            ','.join(str(_) for _ in range(-i,i+1) if _ != 0)
+        )
+        self.assertTrue(I._is_sorted)
+
+        # add()
+        I.add(0)
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I),
+            ','.join(str(_) for _ in range(-i,i+1))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # discard()
+        I.discard(0)
+        self.assertTrue(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I),
+            ','.join(str(_) for _ in range(-i,i+1) if _ != 0)
+        )
+        self.assertTrue(I._is_sorted)
+
+        # clear()
+        I.clear()
+        self.assertTrue(I._is_sorted)
+        self.assertEqual(','.join(str(_) for _ in I), '')
+        self.assertTrue(I._is_sorted)
+
+        # set_value()
+        i = 1
+        I.set_value({-i,0,i})
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(
+            ','.join(str(_) for _ in I),
+            ','.join(str(_) for _ in range(-i,i+1))
+        )
+        self.assertTrue(I._is_sorted)
+
+        # pop()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.pop(), i)
+        self.assertTrue(I._is_sorted)
+
+        # first()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.first(), -i)
+        self.assertTrue(I._is_sorted)
+
+        # last()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.last(), i)
+        self.assertTrue(I._is_sorted)
+
+        # next()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.next(-i), -i+1)
+        self.assertTrue(I._is_sorted)
+
+        # nextw()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.nextw(i), -i)
+        self.assertTrue(I._is_sorted)
+
+        # prev()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.prev(i), i-1)
+        self.assertTrue(I._is_sorted)
+
+        # prevw()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.prevw(-i), i)
+        self.assertTrue(I._is_sorted)
+
+        # getitem()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I[i+1], 0)
+        self.assertTrue(I._is_sorted)
+
+        # ord()
+        i += 1
+        I.update((i, -i))
+        self.assertFalse(I._is_sorted)
+        self.assertEqual(I.ord(0), i+1)
+        self.assertTrue(I._is_sorted)
+
+    def test_set_options(self):
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            @set_options(domain=Integers)
+            def Bindex(m):
+                return range(5)
+        self.assertIn(
+            "DEPRECATED: The set_options decorator seems nonessential",
+            output.getvalue())
+
         m = ConcreteModel()
-        v = {1:2,3:4,5:6}
-        m.INDEX = Set(initialize=iterkeys(v))
-        m.p = Param(m.INDEX, initialize=v)
-        buf = StringIO()
-        m.pprint(ostream=buf)
-        self.assertEqual(ref, buf.getvalue())
+        m.I = Set(initialize=[8,9])
+        m.J = m.I.cross(Bindex)
+        self.assertIs(m.J._sets[1]._domain, Integers)
+
+        # TODO: Once this is merged into IndexedContainer, the following
+        # should work
         #
-        m2 = copy.deepcopy(m)
-        buf = StringIO()
-        m2.pprint(ostream=buf)
-        self.assertEqual(ref, buf.getvalue())
+        #m.K = Set(Bindex)
+        #self.assertIs(m.K.index_set()._domain, Integers)
 
-
-class TestSetIO(PyomoModel):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-
-    def tearDown(self):
-        #
-        # Remove Set 'A' data file
-        #
-        if os.path.exists(currdir+"setA.dat"):
-            os.remove(currdir+"setA.dat")
-        PyomoModel.tearDown(self)
-
-    def test_io1(self):
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set A := A1 A2 A3; end;")
-        OUTPUT.close()
-        self.model.A = Set()
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual( len(self.instance.A), 3)
-
-    def test_io2(self):
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data; set B := 1 2 3 4; end;")
-        OUTPUT.close()
-        self.model.B = Set()
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual( len(self.instance.B), 4)
-
-    def test_io3(self):
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data;\n")
-        OUTPUT.write("set A := A1 A2 A3;\n")
-        OUTPUT.write("set B := 1 2 3 4;\n")
-        OUTPUT.write("set C := (A1,1) (A2,2) (A3,3);\n")
-        OUTPUT.write("end;\n")
-        OUTPUT.close()
-        self.model.A = Set()
-        self.model.B = Set()
-        self.model.C = self.model.A * self.model.B
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual( len(self.instance.C), 12)
-
-    def test_io4(self):
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data;\n")
-        OUTPUT.write("set A := A1 A2 A3;\n")
-        OUTPUT.write("set B := 1 2 3 4;\n")
-        OUTPUT.write("set D := (A1,1) (A2,2) (A3,3);\n")
-        OUTPUT.write("end;\n")
-        OUTPUT.close()
-        self.model.A = Set()
-        self.model.B = Set()
-        self.model.D = Set(within=self.model.A*self.model.B)
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual( len(self.instance.D), 3)
-
-    def test_io5(self):
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write("data;\n")
-        OUTPUT.write("set A := A1 A2 A3;\n")
-        OUTPUT.write("set B := 1 2 3 4;\n")
-        OUTPUT.write("set D : A1 A2 A3 :=\n")
-        OUTPUT.write("    1   +  -  +\n")
-        OUTPUT.write("    2   +  -  +\n")
-        OUTPUT.write("    3   +  -  +\n")
-        OUTPUT.write("    4   +  -  +;\n")
-        OUTPUT.write("end;\n")
-        OUTPUT.close()
-        self.model.A = Set()
-        self.model.B = Set()
-        self.model.D = Set(within=self.model.A*self.model.B)
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual( len(self.instance.D), 8)
-
-    def test_io6(self):
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write( "data;\n")
-        OUTPUT.write( "set A := A1 A2 A3;\n")
-        OUTPUT.write( "set B := 1 2 3 4;\n")
-        OUTPUT.write( "set E :=\n")
-        OUTPUT.write( "(A1,1,*) A1 A2\n")
-        OUTPUT.write( "(A2,2,*) A2 A3\n")
-        OUTPUT.write( "(A3,3,*) A1 A3 ;\n")
-        OUTPUT.write( "end;\n")
-        OUTPUT.close()
-        self.model.A = Set()
-        self.model.B = Set()
-        self.model.E = Set(within=self.model.A*self.model.B*self.model.A)
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual( len(self.instance.E), 6)
-
-    def test_io7(self):
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write( "data;\n")
-        OUTPUT.write( "set A := A1 A2 A3;\n")
-        OUTPUT.write( "set B := 1 2 3 4;\n")
-        OUTPUT.write( "set F[A1] := 1 3 5;\n")
-        OUTPUT.write( "set F[A2] := 2 4 6;\n")
-        OUTPUT.write( "set F[A3] := 3 5 7;\n")
-        OUTPUT.write( "end;\n")
-        OUTPUT.close()
-        self.model.A = Set()
-        self.model.B = Set()
-        self.model.F = Set(self.model.A)
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual( self.instance.F.dim(), 1)
-        self.assertEqual( len(list(self.instance.F.keys())), 3)
-        self.assertEqual( len(self.instance.F['A1']), 3)
-
-    def test_io8(self):
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write( "data;\n" )
-        OUTPUT.write( "set E :=\n" )
-        OUTPUT.write( "(A1,1,*) A1 A2\n" )
-        OUTPUT.write( "(*,2,*) A2 A3\n" )
-        OUTPUT.write( "(A3,3,*) A1 A3 ;\n" )
-        OUTPUT.write( "end;\n" )
-        OUTPUT.close()
-        self.model.E = Set(dimen=3)
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual( len(self.instance.E), 5)
-
-    def test_io9(self):
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write( "data;\n" )
-        OUTPUT.write( "set E :=\n" )
-        OUTPUT.write( "(A1,1,A1) (A1,1,A2)\n" )
-        OUTPUT.write( "(A2,2,A3)\n" )
-        OUTPUT.write( "(A3,3,A1) (A3,3,A3) ;\n" )
-        OUTPUT.write( "end;\n" )
-        OUTPUT.close()
-        self.model.E = Set(dimen=3)
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual( len(self.instance.E), 5)
-
-    def test_io10(self):
-        OUTPUT=open(currdir+"setA.dat","w")
-        OUTPUT.write( "data;\n" )
-        OUTPUT.write( "set A := 'A1 x' ' A2' \"A3\";\n" )
-        OUTPUT.write( "set F['A1 x'] := 1 3 5;\n" )
-        OUTPUT.write( "set F[\" A2\"] := 2 4 6;\n" )
-        OUTPUT.write( "set F['A3'] := 3 5 7;\n" )
-        OUTPUT.write( "end;\n" )
-        OUTPUT.close()
-        self.model.A = Set()
-        self.model.F = Set(self.model.A)
-        self.instance = self.model.create_instance(currdir+"setA.dat")
-        self.assertEqual( self.instance.F.dim(), 1)
-        self.assertEqual( len(list(self.instance.F.keys())), 3)
-        self.assertEqual( len(self.instance.F['A1 x']), 3)
-
-
-def init_fn(model):
-    return []
-
-def tmp_constructor(model, ctr, index):
-    if ctr == 10:
-        return None
-    else:
-        return ctr
-
-class TestSetErrors(PyomoModel):
-
-    def test_membership(self):
-        self.assertEqual( 0 in Boolean, True)
-        self.assertEqual( 1 in Boolean, True)
-        self.assertEqual( True in Boolean, True)
-        self.assertEqual( False in Boolean, True)
-        self.assertEqual( 1.1 in Boolean, False)
-        self.assertEqual( 2 in Boolean, False)
-
-        self.assertEqual( 0 in Integers, True)
-        self.assertEqual( 1 in Integers, True)
-        self.assertEqual( True in Integers, True)
-        self.assertEqual( False in Integers, True)
-        self.assertEqual( 1.1 in Integers, False)
-        self.assertEqual( 2 in Integers, True)
-
-        self.assertEqual( 0 in Reals, True)
-        self.assertEqual( 1 in Reals, True)
-        self.assertEqual( True in Reals, True)
-        self.assertEqual( False in Reals, True)
-        self.assertEqual( 1.1 in Reals, True)
-        self.assertEqual( 2 in Reals, True)
-
-        self.assertEqual( 0 in Any, True)
-        self.assertEqual( 1 in Any, True)
-        self.assertEqual( True in Any, True)
-        self.assertEqual( False in Any, True)
-        self.assertEqual( 1.1 in Any, True)
-        self.assertEqual( 2 in Any, True)
-
-    @unittest.skipIf(not _has_numpy, "Numpy is not installed")
-    def test_numpy_membership(self):
-
-        self.assertEqual( numpy.int_(0) in Boolean, True)
-        self.assertEqual( numpy.int_(1) in Boolean, True)
-        self.assertEqual( numpy.bool_(True) in Boolean, True)
-        self.assertEqual( numpy.bool_(False) in Boolean, True)
-        self.assertEqual( numpy.float_(1.1) in Boolean, False)
-        self.assertEqual( numpy.int_(2) in Boolean, False)
-
-        self.assertEqual( numpy.int_(0) in Integers, True)
-        self.assertEqual( numpy.int_(1) in Integers, True)
-        # Numpy.bool_ is NOT a numeric type
-        self.assertEqual( numpy.bool_(True) in Integers, False)
-        self.assertEqual( numpy.bool_(False) in Integers, False)
-        self.assertEqual( numpy.float_(1.1) in Integers, False)
-        self.assertEqual( numpy.int_(2) in Integers, True)
-
-        self.assertEqual( numpy.int_(0) in Reals, True)
-        self.assertEqual( numpy.int_(1) in Reals, True)
-        # Numpy.bool_ is NOT a numeric type
-        self.assertEqual( numpy.bool_(True) in Reals, False)
-        self.assertEqual( numpy.bool_(False) in Reals, False)
-        self.assertEqual( numpy.float_(1.1) in Reals, True)
-        self.assertEqual( numpy.int_(2) in Reals, True)
-
-        self.assertEqual( numpy.int_(0) in Any, True)
-        self.assertEqual( numpy.int_(1) in Any, True)
-        self.assertEqual( numpy.bool_(True) in Any, True)
-        self.assertEqual( numpy.bool_(False) in Any, True)
-        self.assertEqual( numpy.float_(1.1) in Any, True)
-        self.assertEqual( numpy.int_(2) in Any, True)
-
-    def test_setargs1(self):
+    def test_no_normalize_index(self):
         try:
-            a=Set()
-            c=Set(a,foo=None)
-            self.fail("test_setargs1 - expected error because of bad argument")
-        except ValueError:
+            _oldFlatten = normalize_index.flatten
+
+            normalize_index.flatten = False
+            m = ConcreteModel()
+            m.I = Set()
+            self.assertIs(m.I._dimen, UnknownSetDimen)
+            self.assertTrue(m.I.add((1,(2,3))))
+            self.assertIs(m.I._dimen, None)
+            self.assertNotIn(((1,2),3), m.I)
+            self.assertIn((1,(2,3)), m.I)
+            self.assertNotIn((1,2,3), m.I)
+
+            m.J = Set()
+            self.assertTrue(m.J.add(1))
+            self.assertIn(1, m.J)
+            self.assertNotIn((1,), m.J)
+            self.assertTrue(m.J.add((1,)))
+            self.assertIn(1, m.J)
+            self.assertIn((1,), m.J)
+            self.assertTrue(m.J.add((2,)))
+            self.assertNotIn(2, m.J)
+            self.assertIn((2,), m.J)
+
+            normalize_index.flatten = True
+            m = ConcreteModel()
+            m.I = Set()
+            self.assertIs(m.I._dimen, UnknownSetDimen)
+            m.I.add((1,(2,3)))
+            self.assertIs(m.I._dimen, 3)
+            self.assertIn(((1,2),3), m.I)
+            self.assertIn((1,(2,3)), m.I)
+            self.assertIn((1,2,3), m.I)
+
+            m.J = Set()
+            self.assertTrue(m.J.add(1))
+            self.assertIn(1, m.J)
+            self.assertIn((1,), m.J)
+            self.assertFalse(m.J.add((1,))) # Not added!
+            self.assertIn(1, m.J)
+            self.assertIn((1,), m.J)
+            self.assertTrue(m.J.add((2,)))
+            self.assertIn(2, m.J)
+            self.assertIn((2,), m.J)
+        finally:
+            normalize_index.flatten = _oldFlatten
+
+
+class TestAbstractSetAPI(unittest.TestCase):
+    def test_SetData(self):
+        # This tests an anstract non-finite set API
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[1])
+        s = _SetData(m.I)
+
+        #
+        # _SetData API
+        #
+
+        with self.assertRaises(DeveloperError):
+            # __contains__
+            None in s
+
+        self.assertFalse(s == m.I)
+        self.assertFalse(m.I == s)
+        self.assertTrue(s != m.I)
+        self.assertTrue(m.I != s)
+
+        with self.assertRaises(DeveloperError):
+            str(s)
+        with self.assertRaises(DeveloperError):
+            s.dimen
+
+        self.assertFalse(s.isfinite())
+        self.assertFalse(s.isordered())
+
+        with self.assertRaises(DeveloperError):
+            s.ranges()
+
+        with self.assertRaises(DeveloperError):
+            s.isdisjoint(m.I)
+        with self.assertRaises(DeveloperError):
+            m.I.isdisjoint(s)
+
+        with self.assertRaises(DeveloperError):
+            s.issuperset(m.I)
+        self.assertFalse(m.I.issuperset(s))
+
+        self.assertFalse(s.issubset(m.I))
+        with self.assertRaises(DeveloperError):
+            m.I.issubset(s)
+
+        self.assertIs(type(s.union(m.I)), SetUnion_InfiniteSet)
+        self.assertIs(type(m.I.union(s)), SetUnion_InfiniteSet)
+
+        self.assertIs(type(s.intersection(m.I)), SetIntersection_OrderedSet)
+        self.assertIs(type(m.I.intersection(s)), SetIntersection_OrderedSet)
+
+        self.assertIs(type(s.difference(m.I)), SetDifference_InfiniteSet)
+        self.assertIs(type(m.I.difference(s)), SetDifference_OrderedSet)
+
+        self.assertIs(type(s.symmetric_difference(m.I)),
+                      SetSymmetricDifference_InfiniteSet)
+        self.assertIs(type(m.I.symmetric_difference(s)),
+                      SetSymmetricDifference_InfiniteSet)
+
+        self.assertIs(type(s.cross(m.I)), SetProduct_InfiniteSet)
+        self.assertIs(type(m.I.cross(s)), SetProduct_InfiniteSet)
+
+        self.assertIs(type(s | m.I), SetUnion_InfiniteSet)
+        self.assertIs(type(m.I | s), SetUnion_InfiniteSet)
+
+        self.assertIs(type(s & m.I), SetIntersection_OrderedSet)
+        self.assertIs(type(m.I & s), SetIntersection_OrderedSet)
+
+        self.assertIs(type(s - m.I), SetDifference_InfiniteSet)
+        self.assertIs(type(m.I - s), SetDifference_OrderedSet)
+
+        self.assertIs(type(s ^ m.I), SetSymmetricDifference_InfiniteSet)
+        self.assertIs(type(m.I ^ s), SetSymmetricDifference_InfiniteSet)
+
+        self.assertIs(type(s * m.I), SetProduct_InfiniteSet)
+        self.assertIs(type(m.I * s), SetProduct_InfiniteSet)
+
+        self.assertFalse(s < m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I < s)
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s > m.I)
+        self.assertFalse(m.I > s)
+
+    def test_FiniteMixin(self):
+        # This tests an anstract finite set API
+        class FiniteMixin(_FiniteSetMixin, _SetData):
             pass
 
-    def test_setargs2(self):
-        try:
-            a=Set()
-            b=Set(a)
-            c=Set(within=b, dimen=2)
-            self.fail("test_setargs1 - expected error because of bad argument")
-        except ValueError:
-            pass
-        a=Set()
-        b=Set(a)
-        c=Set(within=b, dimen=1)
-        self.assertEqual(c.domain,b)
-        c.domain = a
-        self.assertEqual(c.domain,a)
+        m = ConcreteModel()
+        m.I = Set(initialize=[1])
+        s = FiniteMixin(m.I)
 
-    def test_setargs3(self):
+        #
+        # _SetData API
+        #
+
+        with self.assertRaises(DeveloperError):
+            # __contains__
+            None in s
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s == m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I == s)
+        with self.assertRaises(DeveloperError):
+            self.assertTrue(s != m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertTrue(m.I != s)
+
+        with self.assertRaises(DeveloperError):
+            str(s)
+        with self.assertRaises(DeveloperError):
+            s.dimen
+
+        self.assertTrue(s.isfinite())
+        self.assertFalse(s.isordered())
+
+        range_iter = s.ranges()
+        with self.assertRaises(DeveloperError):
+            list(range_iter)
+
+        with self.assertRaises(DeveloperError):
+            s.isdisjoint(m.I)
+        with self.assertRaises(DeveloperError):
+            m.I.isdisjoint(s)
+
+        with self.assertRaises(DeveloperError):
+            s.issuperset(m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I.issuperset(s))
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s.issubset(m.I))
+        with self.assertRaises(DeveloperError):
+            m.I.issubset(s)
+
+        self.assertIs(type(s.union(m.I)), SetUnion_FiniteSet)
+        self.assertIs(type(m.I.union(s)), SetUnion_FiniteSet)
+
+        self.assertIs(type(s.intersection(m.I)), SetIntersection_OrderedSet)
+        self.assertIs(type(m.I.intersection(s)), SetIntersection_OrderedSet)
+
+        self.assertIs(type(s.difference(m.I)), SetDifference_FiniteSet)
+        self.assertIs(type(m.I.difference(s)), SetDifference_OrderedSet)
+
+        self.assertIs(type(s.symmetric_difference(m.I)),
+                      SetSymmetricDifference_FiniteSet)
+        self.assertIs(type(m.I.symmetric_difference(s)),
+                      SetSymmetricDifference_FiniteSet)
+
+        self.assertIs(type(s.cross(m.I)), SetProduct_FiniteSet)
+        self.assertIs(type(m.I.cross(s)), SetProduct_FiniteSet)
+
+        self.assertIs(type(s | m.I), SetUnion_FiniteSet)
+        self.assertIs(type(m.I | s), SetUnion_FiniteSet)
+
+        self.assertIs(type(s & m.I), SetIntersection_OrderedSet)
+        self.assertIs(type(m.I & s), SetIntersection_OrderedSet)
+
+        self.assertIs(type(s - m.I), SetDifference_FiniteSet)
+        self.assertIs(type(m.I - s), SetDifference_OrderedSet)
+
+        self.assertIs(type(s ^ m.I), SetSymmetricDifference_FiniteSet)
+        self.assertIs(type(m.I ^ s), SetSymmetricDifference_FiniteSet)
+
+        self.assertIs(type(s * m.I), SetProduct_FiniteSet)
+        self.assertIs(type(m.I * s), SetProduct_FiniteSet)
+
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s < m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I < s)
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s > m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I > s)
+
+        #
+        # _FiniteSetMixin API
+        #
+
+        with self.assertRaises(DeveloperError):
+            len(s)
+
+        with self.assertRaises(DeveloperError):
+            # __iter__
+            iter(s)
+
+        with self.assertRaises(DeveloperError):
+            # __reversed__
+            reversed(s)
+
+        with self.assertRaises(DeveloperError):
+            s.data()
+
+        with self.assertRaises(DeveloperError):
+            s.ordered_data()
+
+        with self.assertRaises(DeveloperError):
+            s.sorted_data()
+
+        self.assertEqual(s.bounds(), (None,None))
+
+    def test_OrderedMixin(self):
+        # This tests an anstract ordered set API
+        class OrderedMixin(_OrderedSetMixin, _FiniteSetMixin, _SetData):
+            pass
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[1])
+        s = OrderedMixin(m.I)
+
+        #
+        # _SetData API
+        #
+
+        with self.assertRaises(DeveloperError):
+            # __contains__
+            None in s
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s == m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I == s)
+        with self.assertRaises(DeveloperError):
+            self.assertTrue(s != m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertTrue(m.I != s)
+
+        with self.assertRaises(DeveloperError):
+            str(s)
+        with self.assertRaises(DeveloperError):
+            s.dimen
+
+        self.assertTrue(s.isfinite())
+        self.assertTrue(s.isordered())
+
+        range_iter = s.ranges()
+        with self.assertRaises(DeveloperError):
+            list(range_iter)
+
+        with self.assertRaises(DeveloperError):
+            s.isdisjoint(m.I)
+        with self.assertRaises(DeveloperError):
+            m.I.isdisjoint(s)
+
+        with self.assertRaises(DeveloperError):
+            s.issuperset(m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I.issuperset(s))
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s.issubset(m.I))
+        with self.assertRaises(DeveloperError):
+            m.I.issubset(s)
+
+        self.assertIs(type(s.union(m.I)), SetUnion_OrderedSet)
+        self.assertIs(type(m.I.union(s)), SetUnion_OrderedSet)
+
+        self.assertIs(type(s.intersection(m.I)), SetIntersection_OrderedSet)
+        self.assertIs(type(m.I.intersection(s)), SetIntersection_OrderedSet)
+
+        self.assertIs(type(s.difference(m.I)), SetDifference_OrderedSet)
+        self.assertIs(type(m.I.difference(s)), SetDifference_OrderedSet)
+
+        self.assertIs(type(s.symmetric_difference(m.I)),
+                      SetSymmetricDifference_OrderedSet)
+        self.assertIs(type(m.I.symmetric_difference(s)),
+                      SetSymmetricDifference_OrderedSet)
+
+        self.assertIs(type(s.cross(m.I)), SetProduct_OrderedSet)
+        self.assertIs(type(m.I.cross(s)), SetProduct_OrderedSet)
+
+        self.assertIs(type(s | m.I), SetUnion_OrderedSet)
+        self.assertIs(type(m.I | s), SetUnion_OrderedSet)
+
+        self.assertIs(type(s & m.I), SetIntersection_OrderedSet)
+        self.assertIs(type(m.I & s), SetIntersection_OrderedSet)
+
+        self.assertIs(type(s - m.I), SetDifference_OrderedSet)
+        self.assertIs(type(m.I - s), SetDifference_OrderedSet)
+
+        self.assertIs(type(s ^ m.I), SetSymmetricDifference_OrderedSet)
+        self.assertIs(type(m.I ^ s), SetSymmetricDifference_OrderedSet)
+
+        self.assertIs(type(s * m.I), SetProduct_OrderedSet)
+        self.assertIs(type(m.I * s), SetProduct_OrderedSet)
+
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s < m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I < s)
+
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(s > m.I)
+        with self.assertRaises(DeveloperError):
+            self.assertFalse(m.I > s)
+
+        #
+        # _FiniteSetMixin API
+        #
+
+        with self.assertRaises(DeveloperError):
+            len(s)
+
+        with self.assertRaises(DeveloperError):
+            # __iter__
+            iter(s)
+
+        with self.assertRaises(DeveloperError):
+            # __reversed__
+            reversed(s)
+
+        with self.assertRaises(DeveloperError):
+            s.data()
+
+        with self.assertRaises(DeveloperError):
+            s.ordered_data()
+
+        with self.assertRaises(DeveloperError):
+            s.sorted_data()
+
+        self.assertEqual(s.bounds(), (None,None))
+
+        #
+        # _OrderedSetMixin API
+        #
+
+        with self.assertRaises(DeveloperError):
+            s.first()
+
+        with self.assertRaises(DeveloperError):
+            s.last()
+
+        with self.assertRaises(DeveloperError):
+            s.next(0)
+
+        with self.assertRaises(DeveloperError):
+            s.nextw(0)
+
+        with self.assertRaises(DeveloperError):
+            s.prev(0)
+
+        with self.assertRaises(DeveloperError):
+            s.prevw(0)
+
+        with self.assertRaises(DeveloperError):
+            s[0]
+
+        with self.assertRaises(DeveloperError):
+            s.ord(0)
+
+
+class TestSetUtils(unittest.TestCase):
+    def test_get_continuous_interval(self):
+        self.assertEqual(Reals.get_interval(), (None,None,0))
+        self.assertEqual(PositiveReals.get_interval(), (0,None,0))
+        self.assertEqual(NonNegativeReals.get_interval(), (0,None,0))
+        self.assertEqual(NonPositiveReals.get_interval(), (None,0,0))
+        self.assertEqual(NegativeReals.get_interval(), (None,0,0))
+
+        a = NonNegativeReals | NonPositiveReals
+        self.assertEqual(a.get_interval(), (None, None, 0))
+        a = NonPositiveReals | NonNegativeReals
+        self.assertEqual(a.get_interval(), (None, None, 0))
+
+        a = NegativeReals | PositiveReals
+        self.assertEqual(a.get_interval(), (None, None, None))
+        a = NegativeReals | PositiveReals | [0]
+        self.assertEqual(a.get_interval(), (None, None, 0))
+        a = NegativeReals | PositiveReals | RangeSet(0,5)
+        self.assertEqual(a.get_interval(), (None, None, 0))
+
+        a = NegativeReals | RangeSet(-3, 3)
+        self.assertEqual(a.get_interval(), (None, 3, None))
+        a = NegativeReals | Binary
+        self.assertEqual(a.get_interval(), (None, 1, None))
+        a = PositiveReals | Binary
+        self.assertEqual(a.get_interval(), (0, None, 0))
+
+        a = RangeSet(1,10,0) | RangeSet(5,15,0)
+        self.assertEqual(a.get_interval(), (1,15,0))
+        a = RangeSet(5,15,0) | RangeSet(1,10,0)
+        self.assertEqual(a.get_interval(), (1,15,0))
+
+        a = RangeSet(5,15,0) | RangeSet(1,4,0)
+        self.assertEqual(a.get_interval(), (1, 15, None))
+        a = RangeSet(1,4,0) | RangeSet(5,15,0)
+        self.assertEqual(a.get_interval(), (1, 15, None))
+
+        a = NegativeReals | Any
+        self.assertEqual(a.get_interval(), (None, None, None))
+        a = Any | NegativeReals
+        self.assertEqual(a.get_interval(), (None, None, None))
+        a = SetOf('abc') | NegativeReals
+        self.assertEqual(a.get_interval(), (None, None, None))
+        a = NegativeReals | SetOf('abc')
+        self.assertEqual(a.get_interval(), (None, None, None))
+
+    def test_get_discrete_interval(self):
+        self.assertEqual(Integers.get_interval(), (None,None,1))
+        self.assertEqual(PositiveIntegers.get_interval(), (1,None,1))
+        self.assertEqual(NegativeIntegers.get_interval(), (None,-1,1))
+        self.assertEqual(Binary.get_interval(), (0,1,1))
+
+        a = PositiveIntegers | NegativeIntegers
+        self.assertEqual(a.get_interval(), (None, None, None))
+        a = NegativeIntegers | NonNegativeIntegers
+        self.assertEqual(a.get_interval(), (None, None, 1))
+
+        a = SetOf([1,3,5,6,4,2])
+        self.assertEqual(a.get_interval(), (1, 6, 1))
+        a = SetOf([1,3,5,6,2])
+        self.assertEqual(a.get_interval(), (1, 6, None))
+        a = SetOf([1,3,5,6,4,2,'a'])
+        self.assertEqual(a.get_interval(), (None, None, None))
+        a = SetOf([3])
+        self.assertEqual(a.get_interval(), (3,3,0))
+
+        a = RangeSet(ranges=(NR(0,5,1), NR(5,10,1)))
+        self.assertEqual(a.get_interval(), (0, 10, 1))
+        a = RangeSet(ranges=(NR(5,10,1), NR(0,5,1)))
+        self.assertEqual(a.get_interval(), (0, 10, 1))
+
+        a = RangeSet(ranges=(NR(0,4,1), NR(5,10,1)))
+        self.assertEqual(a.get_interval(), (0, 10, 1))
+        a = RangeSet(ranges=(NR(5,10,1), NR(0,4,1)))
+        self.assertEqual(a.get_interval(), (0, 10, 1))
+
+        a = RangeSet(ranges=(NR(0,3,1), NR(5,10,1)))
+        self.assertEqual(a.get_interval(), (0, 10, None))
+        a = RangeSet(ranges=(NR(5,10,1), NR(0,3,1)))
+        self.assertEqual(a.get_interval(), (0, 10, None))
+
+        a = RangeSet(ranges=(NR(0,4,2), NR(6,10,2)))
+        self.assertEqual(a.get_interval(), (0, 10, 2))
+        a = RangeSet(ranges=(NR(6,10,2), NR(0,4,2)))
+        self.assertEqual(a.get_interval(), (0, 10, 2))
+
+        a = RangeSet(ranges=(NR(0,4,2), NR(5,10,2)))
+        self.assertEqual(a.get_interval(), (0, 9, None))
+        a = RangeSet(ranges=(NR(5,10,2), NR(0,4,2)))
+        self.assertEqual(a.get_interval(), (0, 9, None))
+
+        a = RangeSet(ranges=(NR(0,10,2), NR(0,10,3)))
+        self.assertEqual(a.get_interval(), (0, 10, None))
+        a = RangeSet(ranges=(NR(0,10,3), NR(0,10,2)))
+        self.assertEqual(a.get_interval(), (0, 10, None))
+
+        a = RangeSet(ranges=(NR(2,10,2), NR(0,12,4)))
+        self.assertEqual(a.get_interval(), (0,12,2))
+        a = RangeSet(ranges=(NR(0,12,4), NR(2,10,2)))
+        self.assertEqual(a.get_interval(), (0,12,2))
+
+        # Even though the following are reasonable intervals, we
+        # currently don't support resolving it:
+        a = RangeSet(ranges=(NR(0,10,2), NR(1,10,2)))
+        self.assertEqual(a.get_interval(), (0, 10, None))
+        a = RangeSet(ranges=(NR(0,10,3), NR(1,10,3), NR(2,10,3)))
+        self.assertEqual(a.get_interval(), (0, 10, None))
+
+
+class TestDeprecation(unittest.TestCase):
+    def test_virtual(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2,3])
+        m.J = m.I*m.I
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            self.assertFalse(m.I.virtual)
+        self.assertIn(
+            "The 'virtual' flag is no longer supported",
+            output.getvalue())
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            self.assertTrue(m.J.virtual)
+        self.assertIn(
+            "The 'virtual' flag is no longer supported",
+            output.getvalue())
+
+    def test_concrete(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2,3])
+        m.J = m.I*m.I
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            self.assertTrue(m.I.concrete)
+        self.assertIn(
+            "The 'concrete' flag is no longer supported",
+            output.getvalue())
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            self.assertTrue(m.J.concrete)
+        self.assertIn(
+            "The 'concrete' flag is no longer supported",
+            output.getvalue())
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            self.assertFalse(Reals.concrete)
+        self.assertIn(
+            "The 'concrete' flag is no longer supported",
+            output.getvalue())
+
+
+class TestIssues(unittest.TestCase):
+    def test_issue_43(self):
         model = ConcreteModel()
-        model.a=Set(dimen=1, initialize=(1,2))
-        try:
-            model.b=Set(dimen=2, initialize=(1,2))
-            self.fail("test_setargs3 - expected error because dimen does not match set values")
-        except ValueError:
-            pass
+        model.Jobs = Set(initialize=[0,1,2,3])
+        model.Dummy = Set(model.Jobs, within=model.Jobs,
+                          initialize=lambda m,i: range(i))
+        model.Cars = Set(initialize=['a','b'])
 
-    def test_setargs4(self):
+        a = model.Cars * model.Dummy[1]
+        self.assertEqual(len(a), 2)
+        self.assertIn(('a', 0), a)
+        self.assertIn(('b', 0), a)
+
+        b = model.Dummy[2] * model.Cars
+        self.assertEqual(len(b), 4)
+        self.assertIn((0, 'a'), b)
+        self.assertIn((0, 'b'), b)
+        self.assertIn((1, 'a'), b)
+        self.assertIn((1, 'b'), b)
+
+    def test_issue_116(self):
+        m = ConcreteModel()
+        m.s = Set(initialize=['one'])
+        m.t = Set([1], initialize=['one'])
+        m.x = Var(m.s)
+        if PY2:
+            self.assertFalse(m.s in m.s)
+            self.assertFalse(m.s in m.t)
+            with self.assertRaisesRegexp(KeyError, "Index 's' is not valid"):
+                m.x[m.s].display()
+        else:
+            # Note that pypy raises a different exception from cpython
+            err = "((unhashable type: 'OrderedSimpleSet')" \
+                "|('OrderedSimpleSet' objects are unhashable))"
+            with self.assertRaisesRegexp(TypeError, err):
+                self.assertFalse(m.s in m.s)
+            with self.assertRaisesRegexp(TypeError, err):
+                self.assertFalse(m.s in m.t)
+            with self.assertRaisesRegexp(TypeError, err):
+                m.x[m.s].display()
+
+        self.assertEqual(list(m.x), ['one'])
+
+    def test_issue_121(self):
         model = ConcreteModel()
-        model.A = Set(initialize=[1])
-        model.B = Set(model.A, initialize={1:[1]})
+        model.s = Set(initialize=[1,2,3])
+        self.assertEqual(list(model.s), [1,2,3])
+        model.s = [3,9]
+        self.assertEqual(list(model.s), [3,9])
+
+    def test_issue_134(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2])
+        m.J = Set(initialize=[4,5])
+        m.IJ = m.I * m.J
+        self.assertEqual(len(m.IJ), 4)
+        self.assertEqual(m.IJ.dimen, 2)
+        m.IJ2 = m.IJ * m.IJ
+        self.assertEqual(len(m.IJ2), 16)
+        self.assertEqual(m.IJ2.dimen, 4)
+        self.assertEqual(len(m.IJ), 4)
+        self.assertEqual(m.IJ.dimen, 2)
+
+    def test_issue_142(self):
+        CHOICES = [((1,2,3), 4,3), ((1,2,2), 4,3), ((1,3,3), 4,3)]
+
         try:
-            model.C = Set(model.B)
-            self.fail("test_setargs4 - expected error when passing in a set that is indexed")
-        except TypeError:
-            pass
+            _oldFlatten = normalize_index.flatten
 
-    def test_setargs5(self):
-        # Test that we can index a Set or RangeSet with an abstract set expression
-        model = AbstractModel()
-        model.A = Set()
-        model.B = Set()
-        model.C = model.A|model.B
-        model.Z = Set(model.C)
-        model.Y = RangeSet(model.C)
-        model.X = Param(model.C, default=0.0)
+            normalize_index.flatten = False
+            m = ConcreteModel()
+            output = StringIO()
+            with LoggingIntercept(output, 'pyomo.core'):
+                m.CHOICES = Set(initialize=CHOICES, dimen=3)
+                self.assertIn('Ignoring non-None dimen (3) for set CHOICES',
+                              output.getvalue())
 
-    def test_verify(self):
-        a=Set(initialize=[1,2,3])
-        b=Set(within=a)
+            self.assertEqual(m.CHOICES.dimen, None)
+            m.x = Var(m.CHOICES)
+            def c_rule(m, a, b, c):
+                return m.x[a,b,c] == 0
+            m.c = Constraint(m.CHOICES, rule=c_rule)
+            output = StringIO()
+            m.CHOICES.pprint(ostream=output)
+            m.x.pprint(ostream=output)
+            m.c.pprint(ostream=output)
+            ref="""
+CHOICES : Size=1, Index=None, Ordered=Insertion
+    Key  : Dimen : Domain : Size : Members
+    None :  None :    Any :    3 : {((1, 2, 3), 4, 3), ((1, 2, 2), 4, 3), ((1, 3, 3), 4, 3)}
+x : Size=3, Index=CHOICES
+    Key               : Lower : Value : Upper : Fixed : Stale : Domain
+    ((1, 2, 2), 4, 3) :  None :  None :  None : False :  True :  Reals
+    ((1, 2, 3), 4, 3) :  None :  None :  None : False :  True :  Reals
+    ((1, 3, 3), 4, 3) :  None :  None :  None : False :  True :  Reals
+c : Size=3, Index=CHOICES, Active=True
+    Key               : Lower : Body           : Upper : Active
+    ((1, 2, 2), 4, 3) :   0.0 : x[(1,2,2),4,3] :   0.0 :   True
+    ((1, 2, 3), 4, 3) :   0.0 : x[(1,2,3),4,3] :   0.0 :   True
+    ((1, 3, 3), 4, 3) :   0.0 : x[(1,3,3),4,3] :   0.0 :   True
+""".strip()
+            self.assertEqual(output.getvalue().strip(), ref)
+
+            normalize_index.flatten = True
+            m = ConcreteModel()
+            output = StringIO()
+            with LoggingIntercept(output, 'pyomo.core'):
+                m.CHOICES = Set(initialize=CHOICES)
+                self.assertEqual('',output.getvalue())
+            self.assertEqual(m.CHOICES.dimen, 5)
+            m.x = Var(m.CHOICES)
+            def c_rule(m, a1, a2, a3, b, c):
+                return m.x[a1,a2,a3,b,c] == 0
+            m.c = Constraint(m.CHOICES, rule=c_rule)
+
+            output = StringIO()
+            m.CHOICES.pprint(ostream=output)
+            m.x.pprint(ostream=output)
+            m.c.pprint(ostream=output)
+            ref="""
+CHOICES : Size=1, Index=None, Ordered=Insertion
+    Key  : Dimen : Domain : Size : Members
+    None :     5 :    Any :    3 : {(1, 2, 3, 4, 3), (1, 2, 2, 4, 3), (1, 3, 3, 4, 3)}
+x : Size=3, Index=CHOICES
+    Key             : Lower : Value : Upper : Fixed : Stale : Domain
+    (1, 2, 2, 4, 3) :  None :  None :  None : False :  True :  Reals
+    (1, 2, 3, 4, 3) :  None :  None :  None : False :  True :  Reals
+    (1, 3, 3, 4, 3) :  None :  None :  None : False :  True :  Reals
+c : Size=3, Index=CHOICES, Active=True
+    Key             : Lower : Body         : Upper : Active
+    (1, 2, 2, 4, 3) :   0.0 : x[1,2,2,4,3] :   0.0 :   True
+    (1, 2, 3, 4, 3) :   0.0 : x[1,2,3,4,3] :   0.0 :   True
+    (1, 3, 3, 4, 3) :   0.0 : x[1,3,3,4,3] :   0.0 :   True
+""".strip()
+            self.assertEqual(output.getvalue().strip(), ref)
+        finally:
+            normalize_index.flatten = _oldFlatten
+
+    def test_issue_148(self):
+        legal = set(['a','b','c'])
+        m = ConcreteModel()
+        m.s = Set(initialize=['a','b'], within=legal)
+        self.assertEqual(set(m.s), {'a','b'})
+        with self.assertRaisesRegexp(ValueError, 'Cannot add value d to Set s'):
+            m.s.add('d')
+
+    def test_issue_165(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var(domain=Binary)
+        m_binaries = [
+            v for v in m.component_data_objects(
+                ctype=Var, descend_into=True)
+            if v.domain is Binary and not v.fixed
+        ]
+        self.assertEqual(len(m_binaries), 1)
+        self.assertIs(m_binaries[0], m.y)
+
+        m2 = m.clone()
+        m2_binaries = [
+            v for v in m2.component_data_objects(
+                ctype=Var, descend_into=True)
+            if v.domain is Binary and not v.fixed
+        ]
+        self.assertEqual(len(m2_binaries), 1)
+        self.assertIs(m2_binaries[0], m2.y)
+
+    def test_issue_191(self):
+        m = ConcreteModel()
+        m.s = Set(['s1','s2'], initialize=[1,2,3])
+        m.s2 = Set(initialize=['a','b','c'])
+
+        m.p = Param(m.s['s1'], initialize=10)
+        temp = m.s['s1'] * m.s2
+        m.v = Var(temp, initialize=5)
+        self.assertEqual(len(m.v), 9)
+
+        m.v_1 = Var(m.s['s1'], m.s2, initialize=10)
+        self.assertEqual(len(m.v_1), 9)
+
+    def test_issue_325(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1, 2, 'a', 3], ordered=False)
+        self.assertEqual(set(m.I.data()), set([1, 2, 'a', 3]))
+        self.assertEqual(list(m.I.ordered_data()), [1, 2, 3, 'a'])
+        self.assertEqual(list(m.I.sorted_data()), [1, 2, 3, 'a'])
+
+        # Default sets are ordered by insertion order
+        m.I = Set(initialize=[1, 2, 'a', 3])
+        self.assertEqual(set(m.I.data()), set([1, 2, 'a', 3]))
+        self.assertEqual(list(m.I.data()), [1, 2, 'a', 3])
+        self.assertEqual(list(m.I.ordered_data()), [1, 2, 'a', 3])
+        self.assertEqual(list(m.I.sorted_data()), [1, 2, 3, 'a'])
+
+    def test_issue_358(self):
+        m = ConcreteModel()
+        m.s = RangeSet(1)
+        m.s2 = RangeSet(1)
+        m.set_mult = m.s * m.s2
+        m.s3 = RangeSet(1)
+
+        def _test(b, x, y, z):
+            print(x, y, z)
+        m.test = Block(m.set_mult, m.s3, rule=_test)
+        self.assertEqual(len(m.test), 1)
+        m.test2 = Block(m.set_mult, m.s3, rule=_test)
+        self.assertEqual(len(m.test2), 1)
+
+    def test_issue_637(self):
+        constraints = {
+            c for c in itertools.product(['constrA', 'constrB'], range(5))
+        }
+        vars = {
+            v for v in itertools.product(['var1', 'var2', 'var3'], range(5))
+        }
+        matrix_coefficients = {m for m in itertools.product(constraints, vars)}
+        m = ConcreteModel()
+        m.IDX = Set(initialize=matrix_coefficients)
+        m.Matrix = Param(m.IDX, default=0)
+        self.assertEqual(len(m.Matrix), 2*5*3*5)
+
+    def test_issue_758(self):
+        m = ConcreteModel()
+        m.I = RangeSet(5)
+
+        self.assertEqual(m.I.next(1), 2)
+        self.assertEqual(m.I.next(4), 5)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot advance past the end of the Set"):
+            m.I.next(5)
+
+        self.assertEqual(m.I.prev(2), 1)
+        self.assertEqual(m.I.prev(5), 4)
+        with self.assertRaisesRegexp(
+                IndexError, "Cannot advance before the beginning of the Set"):
+            m.I.prev(1)
+
+        self.assertEqual(m.I.nextw(1), 2)
+        self.assertEqual(m.I.nextw(4), 5)
+        self.assertEqual(m.I.nextw(5), 1)
+
+        self.assertEqual(m.I.prevw(2), 1)
+        self.assertEqual(m.I.prevw(5), 4)
+        self.assertEqual(m.I.prevw(1), 5)
+
+    def test_issue_835(self):
+        a = ["a", "x", "c", "b"]
+
+        model = ConcreteModel()
+        model.S = Set(initialize=a)
+        model.OS = Set(initialize=a, ordered=True)
+
+        self.assertEqual(list(model.S), a)
+        self.assertEqual(list(model.OS), a)
+
+        out1 = StringIO()
+        model.S.pprint(ostream=out1)
+        out2 = StringIO()
+        model.OS.pprint(ostream=out2)
+
+        self.assertEqual(
+            out1.getvalue().strip(),
+            out2.getvalue().strip()[1:],
+        )
+
+    @unittest.skipIf(NamedTuple is None, "typing module not available")
+    def test_issue_938(self):
+        NodeKey = NamedTuple('NodeKey', [('id', int)])
+        ArcKey = NamedTuple('ArcKey',
+                            [('node_from', NodeKey), ('node_to', NodeKey)])
+        def build_model():
+            model = ConcreteModel()
+            model.node_keys = Set(doc='Set of nodes',
+                                  initialize=[NodeKey(0), NodeKey(1)])
+            model.arc_keys = Set(doc='Set of arcs',
+                                 within=model.node_keys * model.node_keys,
+                                 initialize=[
+                                     ArcKey(NodeKey(0), NodeKey(0)),
+                                     ArcKey(NodeKey(0), NodeKey(1)),
+                                 ])
+            model.arc_variables = Var(model.arc_keys,
+                                      within=Binary)
+
+            def objective_rule(model_arg):
+                return sum(var for var in model_arg.arc_variables.values())
+            model.obj = Objective(rule=objective_rule)
+            return model
+
         try:
-            b._verify(4)
-            self.fail("test_verify - bad value was expected")
-        except ValueError:
-            pass
-        #
-        c=Set()
-        try:
-            c._verify( (1,2) )
-            self.fail("test_verify - bad value was expected")
-        except ValueError:
-            pass
-        #
-        c=Set(dimen=2)
-        try:
-            c._verify( (1,2,3) )
-            self.fail("test_verify - bad value was expected")
-        except ValueError:
-            pass
+            _oldFlatten = normalize_index.flatten
 
-    def test_construct(self):
-        a = Set(initialize={})
-        try:
-            a.construct()
-            self.fail("test_construct - expected failure constructing with a dictionary")
-        except ValueError:
-            pass
-        #
-        a = Set(initialize=init_fn)
-        try:
-            a.construct()
-            self.fail("test_construct - expected exception due to None model")
-        except ValueError:
-            pass
+            normalize_index.flatten = True
+            m = build_model()
+            output = StringIO()
+            m.pprint(ostream=output)
+            ref = """
+1 Var Declarations
+    arc_variables : Size=2, Index=arc_keys
+        Key    : Lower : Value : Upper : Fixed : Stale : Domain
+        (0, 0) :     0 :  None :     1 : False :  True : Binary
+        (0, 1) :     0 :  None :     1 : False :  True : Binary
 
-    def test_add(self):
-        a=Set()
-        a.add(1)
-        a.add("a")
-        try:
-            a.add({})
-            self.fail("test_add - expected type error because {} is unhashable")
-        except:
-            pass
+1 Objective Declarations
+    obj : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : arc_variables[0,0] + arc_variables[0,1]
 
-    def test_getitem(self):
-        a=Set(initialize=[1,2])
-        try:
-            a[0]
-            self.fail("test_getitem - cannot index an unordered set")
-        except ValueError:
-            pass
-        except IndexError:
-            pass
+2 Set Declarations
+    arc_keys : Set of arcs
+        Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain              : Size : Members
+        None :     2 : node_keys*node_keys :    2 : {(0, 0), (0, 1)}
+    node_keys : Set of nodes
+        Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    2 : {0, 1}
 
-    def test_eq(self):
-        a=Set(dimen=1,name="a",initialize=[1,2])
-        a.construct()
-        b=Set(dimen=2)
-        self.assertEqual(a==b,False)
-        self.assertTrue(not a.__eq__(Boolean))
-        self.assertTrue(not Boolean == a)
+4 Declarations: node_keys arc_keys arc_variables obj
+""".strip()
+            self.assertEqual(output.getvalue().strip(), ref)
 
-    def test_neq(self):
-        a=Set(dimen=1,initialize=[1,2])
-        a.construct()
-        b=Set(dimen=2)
-        self.assertEqual(a!=b,True)
-        self.assertTrue(a.__ne__(Boolean))
-        self.assertTrue(Boolean != a)
+            normalize_index.flatten = False
+            m = build_model()
+            output = StringIO()
+            m.pprint(ostream=output)
+            ref = """
+1 Var Declarations
+    arc_variables : Size=2, Index=arc_keys
+        Key                                                    : Lower : Value : Upper : Fixed : Stale : Domain
+        ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0)) :     0 :  None :     1 : False :  True : Binary
+        ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1)) :     0 :  None :     1 : False :  True : Binary
 
-    def test_contains(self):
-        a=Set(initialize=[1,3,5,7])
-        a.construct()
-        b=Set(initialize=[1,3])
-        b.construct()
-        self.assertEqual(b in a, True)
-        self.assertEqual(a in b, False)
-        self.assertEqual(1 in Integers, True)
-        self.assertEqual(1 in NonNegativeIntegers, True)
+1 Objective Declarations
+    obj : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : arc_variables[ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0))] + arc_variables[ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))]
 
-    def test_subset(self):
-        #try:
-        #    Integers in Reals
-        #    self.fail("test_subset - expected TypeError")
-        #except TypeError:
-        #    pass
-        #try:
-        #    Integers.issubset(Reals)
-        #    self.fail("test_subset - expected TypeError")
-        #except TypeError:
-        #    pass
-        try:
-            a=Set(dimen=1)
-            b=Set(dimen=2)
-            a in b
-            self.fail("test_subset - expected ValueError")
-        except ValueError:
-            pass
+2 Set Declarations
+    arc_keys : Set of arcs
+        Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain              : Size : Members
+        None :  None : node_keys*node_keys :    2 : {ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0)), ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))}
+    node_keys : Set of nodes
+        Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :  None :    Any :    2 : {NodeKey(id=0), NodeKey(id=1)}
 
-    def test_superset(self):
-        try:
-            Reals >= Integers
-            self.fail("test_subset - expected TypeError")
-        except TypeError:
-            pass
-        #try:
-        #    Integers.issubset(Reals)
-        #    self.fail("test_subset - expected TypeError")
-        #except TypeError:
-        #    pass
-        a=Set(initialize=[1,3,5,7])
-        a.construct()
-        b=Set(initialize=[1,3])
-        b.construct()
-        #self.assertEqual(Reals >= b, True)
-        #self.assertEqual(Reals >= [1,3,7], True)
-        #self.assertEqual(Reals >= [1,3,7,"a"], False)
-        self.assertEqual(a >= b, True)
+4 Declarations: node_keys arc_keys arc_variables obj
+""".strip()
+            self.assertEqual(output.getvalue().strip(), ref)
 
-    def test_lt(self):
-        try:
-            Integers < Reals
-            self.fail("test_subset - expected TypeError")
-        except TypeError:
-            pass
-        a=Set(initialize=[1,3,5,7])
-        a.construct()
-        a < Reals
-        b=Set(initialize=[1,3,5])
-        b.construct()
-        self.assertEqual(a<a,False)
-        self.assertEqual(b<a,True)
-        c=Set(initialize=[(1,2)])
-        c.construct()
-        try:
-            a<c
-            self.fail("test_subset - expected ValueError")
-        except ValueError:
-            pass
-
-    def test_gt(self):
-        a=Set(initialize=[1,3,5,7])
-        a.construct()
-        c=Set(initialize=[(1,2)])
-        c.construct()
-        try:
-            a>c
-            self.fail("test_subset - expected ValueError")
-        except ValueError:
-            pass
-
-    def test_or(self):
-        a=Set(initialize=[1,2,3])
-        c=Set(initialize=[(1,2)])
-        c.construct()
-        try:
-            Reals | Integers
-            self.fail("test_or - expected TypeError")
-        except TypeError:
-            pass
-        try:
-            a | Integers
-            self.fail("test_or - expected TypeError")
-        except TypeError:
-            pass
-        try:
-            a | c
-            self.fail("test_or - expected ValueError")
-        except ValueError:
-            pass
-
-    def test_and(self):
-        a=Set(initialize=[1,2,3])
-        c=Set(initialize=[(1,2)])
-        c.construct()
-        try:
-            Reals & Integers
-            self.fail("test_and - expected TypeError")
-        except TypeError:
-            pass
-        try:
-            a & Integers
-            self.fail("test_and - expected TypeError")
-        except TypeError:
-            pass
-        try:
-            a & c
-            self.fail("test_and - expected ValueError")
-        except ValueError:
-            pass
-
-    def test_xor(self):
-        a=Set(initialize=[1,2,3])
-        c=Set(initialize=[(1,2)])
-        c.construct()
-        try:
-            Reals ^ Integers
-            self.fail("test_xor - expected TypeError")
-        except TypeError:
-            pass
-        try:
-            a ^ Integers
-            self.fail("test_xor - expected TypeError")
-        except TypeError:
-            pass
-        try:
-            a ^ c
-            self.fail("test_xor - expected ValueError")
-        except ValueError:
-            pass
-
-    def test_sub(self):
-        a=Set(initialize=[1,2,3])
-        c=Set(initialize=[(1,2)])
-        c.construct()
-        try:
-            Reals - Integers
-            self.fail("test_sub - expected TypeError")
-        except TypeError:
-            pass
-        try:
-            a - Integers
-            self.fail("test_sub - expected TypeError")
-        except TypeError:
-            pass
-        try:
-            a - c
-            self.fail("test_sub - expected ValueError")
-        except ValueError:
-            pass
-
-    def test_mul(self):
-        a=Set(initialize=[1,2,3])
-        c=Set(initialize=[(1,2)])
-        c.construct()
-        try:
-            Reals * Integers
-            self.fail("test_mul - expected TypeError")
-        except TypeError:
-            pass
-        try:
-            a * Integers
-            self.fail("test_mul - expected TypeError")
-        except TypeError:
-            pass
-        try:
-            a * 1
-            self.fail("test_mul - expected TypeError")
-        except TypeError:
-            pass
-        b = a * c
-
-    def test_arrayset_construct(self):
-        a=Set(initialize=[1,2,3])
-        a.construct()
-        b=Set(a, initialize=tmp_constructor)
-        try:
-            b.construct({4:None})
-            self.fail("test_arrayset_construct - expected KeyError")
-        except KeyError:
-            pass
-        b._constructed=False
-        try:
-            b.construct()
-            self.fail("test_arrayset_construct - expected ValueError")
-        except ValueError:
-            pass
-        b=Set(a,a, initialize=tmp_constructor)
-        for i in b:
-            self.assertEqual(i in a, True)
-        try:
-            b.construct()
-            self.fail("test_arrayset_construct - expected ValueError")
-        except ValueError:
-            pass
-
-    def test_prodset(self):
-        a=Set(initialize=[1,2])
-        a.construct()
-        b=Set(initialize=[6,7])
-        b.construct()
-        c=a*b
-        c.construct()
-        self.assertEqual((6,2) in c, False)
-        c=pyomo.core.base.sets._SetProduct(a,b)
-        c.virtual=True
-        self.assertEqual((6,2) in c, False)
-        self.assertEqual((1,7) in c, True)
-        #c=pyomo.core.base.sets._SetProduct()
-        #c.virtual=True
-        #c.construct()
-        c=pyomo.core.base.sets._SetProduct(a,b,initialize={(1,7):None,(2,6):None})
-        c.construct()
-        c=pyomo.core.base.sets._SetProduct(a,b,initialize=(1,7))
-        c.construct()
-
-
-def virt_constructor(model, y):
-    return RealSet(validate=lambda model, x: x>y)
-
-
-class TestArraySetVirtual(unittest.TestCase):
-
-    def test_construct(self):
-        a=Set(initialize=[1,2,3])
-        a.construct()
-        b=Set(a, initialize=virt_constructor)
-        #b.construct()
-
-class TestNestedSetOperations(unittest.TestCase):
-
-    def test_union(self):
-
-        model = AbstractModel()
-        s1 = set([1,2])
-        model.s1 = Set(initialize=s1)
-        s2 = set(['a','b'])
-        model.s2 = Set(initialize=s2)
-        s3 = set([None,True])
-        model.s3 = Set(initialize=s3)
-
-        model.union1 =    (model.s1 | (model.s2 | (model.s3 | (model.s3 | model.s2))))
-        model.union2 =     model.s1 | (model.s2 | (model.s3 | (model.s3 | model.s2)))
-        model.union3 = ((((model.s1 | model.s2) | model.s3) | model.s3) | model.s2)
-
-        inst = model.create_instance()
-
-        union = s1 | s2 | s3 | s3 | s2
-        self.assertTrue(isinstance(inst.union1,
-                                   pyomo.core.base.sets._SetUnion))
-        self.assertEqual(inst.union1,
-                         (s1 | (s2 | (s3 | (s3 | s2)))))
-        self.assertTrue(isinstance(inst.union2,
-                                   pyomo.core.base.sets._SetUnion))
-        self.assertEqual(inst.union2,
-                         s1 | (s2 | (s3 | (s3 | s2))))
-        self.assertTrue(isinstance(inst.union3,
-                                   pyomo.core.base.sets._SetUnion))
-        self.assertEqual(inst.union3,
-                         ((((s1 | s2) | s3) | s3) | s2))
-
-    def test_intersection(self):
-
-        model = AbstractModel()
-        s1 = set([1,2])
-        model.s1 = Set(initialize=s1)
-        s2 = set(['a','b'])
-        model.s2 = Set(initialize=s2)
-        s3 = set([None,True])
-        model.s3 = Set(initialize=s3)
-
-        model.intersection1 = \
-            (model.s1 & (model.s2 & (model.s3 & (model.s3 & model.s2))))
-        model.intersection2 = \
-            model.s1 & (model.s2 & (model.s3 & (model.s3 & model.s2)))
-        model.intersection3 = \
-            ((((model.s1 & model.s2) & model.s3) & model.s3) & model.s2)
-        model.intersection4 = \
-            model.s3 & model.s1 & model.s3
-
-        inst = model.create_instance()
-
-        self.assertTrue(isinstance(inst.intersection1,
-                                   pyomo.core.base.sets._SetIntersection))
-        self.assertEqual(sorted(inst.intersection1),
-                         sorted((s1 & (s2 & (s3 & (s3 & s2))))))
-        self.assertTrue(isinstance(inst.intersection2,
-                                   pyomo.core.base.sets._SetIntersection))
-        self.assertEqual(sorted(inst.intersection2),
-                         sorted(s1 & (s2 & (s3 & (s3 & s2)))))
-        self.assertTrue(isinstance(inst.intersection3,
-                                   pyomo.core.base.sets._SetIntersection))
-        self.assertEqual(sorted(inst.intersection3),
-                         sorted(((((s1 & s2) & s3) & s3) & s2)))
-        self.assertTrue(isinstance(inst.intersection4,
-                                   pyomo.core.base.sets._SetIntersection))
-        self.assertEqual(sorted(inst.intersection4),
-                         sorted(s3 & s1 & s3))
-
-    def test_difference(self):
-
-        model = AbstractModel()
-        s1 = set([1,2])
-        model.s1 = Set(initialize=s1)
-        s2 = set(['a','b'])
-        model.s2 = Set(initialize=s2)
-        s3 = set([None,True])
-        model.s3 = Set(initialize=s3)
-
-        model.difference1 = \
-            (model.s1 - (model.s2 - (model.s3 - (model.s3 - model.s2))))
-        model.difference2 = \
-            model.s1 - (model.s2 - (model.s3 - (model.s3 - model.s2)))
-        model.difference3 = \
-            ((((model.s1 - model.s2) - model.s3) - model.s3) - model.s2)
-
-        inst = model.create_instance()
-
-        self.assertTrue(isinstance(inst.difference1,
-                                   pyomo.core.base.sets._SetDifference))
-        self.assertEqual(sorted(inst.difference1),
-                         sorted((s1 - (s2 - (s3 - (s3 - s2))))))
-        self.assertTrue(isinstance(inst.difference2,
-                                   pyomo.core.base.sets._SetDifference))
-        self.assertEqual(sorted(inst.difference2),
-                         sorted(s1 - (s2 - (s3 - (s3 - s2)))))
-        self.assertTrue(isinstance(inst.difference3,
-                                   pyomo.core.base.sets._SetDifference))
-        self.assertEqual(sorted(inst.difference3),
-                         sorted(((((s1 - s2) - s3) - s3) - s2)))
-
-    def test_symmetric_difference(self):
-
-        model = AbstractModel()
-        s1 = set([1,2])
-        model.s1 = Set(initialize=s1)
-        s2 = set([4,5])
-        model.s2 = Set(initialize=s2)
-        s3 = set([0,True])
-        model.s3 = Set(initialize=s3)
-
-        model.symdiff1 = \
-            (model.s1 ^ (model.s2 ^ (model.s3 ^ (model.s3 ^ model.s2))))
-        model.symdiff2 = \
-            model.s1 ^ (model.s2 ^ (model.s3 ^ (model.s3 ^ model.s2)))
-        model.symdiff3 = \
-            ((((model.s1 ^ model.s2) ^ model.s3) ^ model.s3) ^ model.s2)
-        model.symdiff4 = \
-            model.s1 ^ model.s2 ^ model.s3
-
-        inst = model.create_instance()
-
-        self.assertTrue(isinstance(inst.symdiff1,
-                                   pyomo.core.base.sets._SetSymmetricDifference))
-        self.assertEqual(sorted(inst.symdiff1),
-                         sorted((s1 ^ (s2 ^ (s3 ^ (s3 ^ s2))))))
-        self.assertTrue(isinstance(inst.symdiff2,
-                                   pyomo.core.base.sets._SetSymmetricDifference))
-        self.assertEqual(sorted(inst.symdiff2),
-                         sorted(s1 ^ (s2 ^ (s3 ^ (s3 ^ s2)))))
-        self.assertTrue(isinstance(inst.symdiff3,
-                                   pyomo.core.base.sets._SetSymmetricDifference))
-        self.assertEqual(sorted(inst.symdiff3),
-                         sorted(((((s1 ^ s2) ^ s3) ^ s3) ^ s2)))
-        self.assertTrue(isinstance(inst.symdiff4,
-                                   pyomo.core.base.sets._SetSymmetricDifference))
-        self.assertEqual(sorted(inst.symdiff4),
-                         sorted(s1 ^ s2 ^ s3))
-
-    def test_product(self):
-
-        model = AbstractModel()
-        s1 = set([1,2])
-        model.s1 = Set(initialize=s1)
-        s2 = set([4,5])
-        model.s2 = Set(initialize=s2)
-        s3 = set([0,True])
-        model.s3 = Set(initialize=s3)
-
-        model.product1 = \
-            (model.s1 * (model.s2 * (model.s3 * (model.s3 * model.s2))))
-        model.product2 = \
-            model.s1 * (model.s2 * (model.s3 * (model.s3 * model.s2)))
-        model.product3 = \
-            ((((model.s1 * model.s2) * model.s3) * model.s3) * model.s2)
-
-        inst = model.create_instance()
-
-        p = itertools.product
-
-        self.assertTrue(isinstance(inst.product1,
-                                   pyomo.core.base.sets._SetProduct))
-        prod1 = set([pyutilib_misc_flatten_tuple(i) \
-                     for i in set( p(s1,p(s2,p(s3,p(s3,s2)))) )])
-        self.assertEqual(sorted(inst.product1),
-                         sorted(prod1))
-        self.assertTrue(isinstance(inst.product2,
-                                   pyomo.core.base.sets._SetProduct))
-        prod2 = set([pyutilib_misc_flatten_tuple(i) \
-                     for i in  set( p(s1,p(s2,p(s3,p(s3,s2)))) )])
-        self.assertEqual(sorted(inst.product2),
-                         sorted(prod2))
-        self.assertTrue(isinstance(inst.product3,
-                                   pyomo.core.base.sets._SetProduct))
-        prod3 = set([pyutilib_misc_flatten_tuple(i) \
-                     for i in set( p(p(p(p(s1,s2),s3),s3),s2) )])
-        self.assertEqual(sorted(inst.product3),
-                         sorted(prod3))
-
-if __name__ == "__main__":
-    unittest.main()
+        finally:
+            normalize_index.flatten = _oldFlatten

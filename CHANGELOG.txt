@@ -6,6 +6,53 @@ Pyomo CHANGELOG
 Current Development
 -------------------------------------------------------------------------------
 
+
+-------------------------------------------------------------------------------
+Pyomo 5.6.7    7 Nov 2019
+-------------------------------------------------------------------------------
+
+- General
+  - Update links to tutorials and examples in the README (#1082)
+  - Verify Python 3.8 support (#1162)
+- Core
+  - Add a guard in getname for ComponentData with no parent (#1075)
+  - Add support for sqrt in Python-based AD implementation (#1086)
+  - Add methods to IndexedVar to set bounds for all indices (#1087)
+  - Replace ReciprocalExpression with DivisionExpression (#989)
+  - Fix bug where Set multiplication changed the original Sets (#1103)
+  - Improve ease of use of LinearExpression constructor (#1097)
+  - Tech preview of the Set component hierarchy rewrite (#1111)
+  - Add a get_interval method for Sets (#1128)
+  - Update pprint method for derived classes and add support for printing
+    ComponentData (#1043)
+  - Create a common interface for differentiation (#1059)
+  - Add function to calculate the Taylor series approximation of an 
+    expression (#1059)
+  - Fix in Sympy interface to avoid complex numbers (#1140)
+  - Add support for log10 in differentiation (#1145)
+- Solver Interfaces
+  - Fix bug in BARON and GAMS writers for handling exponential expressions (#1114)
+  - Improve Gurobi persistent interface, enable callbacks, lazy constraints,
+    and more (#1137)
+- MPEC updates
+  - Update transformations to descend into disjuncts (#1085)
+- PySP updates
+  - Replace Graph.node with Graph.nodes to support networkx 2.4 (#1141)
+- GDP updates
+  - Use a name buffer when generating component names (#1149)
+- Testing
+  - Add pathos library to the Appveyor build (#1135)
+- Contributed Packages
+  - Model viewer improvements and bug fixes (#1071, #1092)
+  - MindtPy outer approximation improvements (#983)
+  - GDPOpt improvements, support for Ports (#1098, #1133)
+  - FBBT improvements and bug fixes, updates to interval arithmetic, support 
+    for log10, replace math.inf with float('inf') (#1131, #1134, #1102, #1078, 
+    #1076, #1146)
+- Documentation
+  - Fix typo in working_models.rst (#1094)
+  - Add documentation for user interface to LinearExpression (#1120)
+
 -------------------------------------------------------------------------------
 Pyomo 5.6.6   21 Jun 2019
 -------------------------------------------------------------------------------

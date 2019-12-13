@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import pickle
-import collections
 
 import pyutilib.th as unittest
 from pyomo.core.kernel.component_set import ComponentSet
@@ -31,6 +30,14 @@ from pyomo.core.kernel.block import (block,
 from pyomo.core.kernel.suffix import suffix
 
 import six
+
+if six.PY3:
+    from collections.abc import Set as collections_Set
+    from collections.abc import MutableSet as collections_MutableSet
+else:
+    from collections import Set as collections_Set
+    from collections import MutableSet as collections_MutableSet
+
 
 class TestComponentSet(unittest.TestCase):
 
@@ -108,10 +115,10 @@ class TestComponentSet(unittest.TestCase):
 
     def test_type(self):
         cset = ComponentSet()
-        self.assertTrue(isinstance(cset, collections.Set))
-        self.assertTrue(isinstance(cset, collections.MutableSet))
-        self.assertTrue(issubclass(type(cset), collections.Set))
-        self.assertTrue(issubclass(type(cset), collections.MutableSet))
+        self.assertTrue(isinstance(cset, collections_Set))
+        self.assertTrue(isinstance(cset, collections_MutableSet))
+        self.assertTrue(issubclass(type(cset), collections_Set))
+        self.assertTrue(issubclass(type(cset), collections_MutableSet))
 
     def test_str(self):
         cset = ComponentSet()

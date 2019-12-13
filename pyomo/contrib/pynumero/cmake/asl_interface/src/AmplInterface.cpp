@@ -38,7 +38,7 @@ void AmplInterface::initialize(const char *nlfilename)
    // the local variable "asl".
    // For example:
    // #define X0		asl->i.X0_
-   // Therefore, in many of these methods, you will 
+   // Therefore, in many of these methods, you will
    // often see the assignment the asl pointer followed
    // by calls to the macros from the ASL.
 
@@ -95,20 +95,20 @@ void AmplInterface::initialize(const char *nlfilename)
 
    // read the options and get the name of the .nl file (stub)
    char *stub = getstops(argv.data(), oi);
-   
+
    delete[] oi->sname;
    oi->sname = NULL;
    delete[] oi->bsname;
    oi->bsname = NULL;
    delete[] oi->opname;
-   oi->opname = NULL;   
+   oi->opname = NULL;
    // this pointer may need to be stored for the call to write_sol
    //delete oi;
 
    FILE *nl = this->open_nl(asl, stub);
    _ASSERT_(nl != NULL);
 
-   // want initial values for the variables and the 
+   // want initial values for the variables and the
    // multipliers
    want_xpi0 = 1 | 2;
    // allocate space in the ASL structure for the initial values
@@ -119,7 +119,7 @@ void AmplInterface::initialize(const char *nlfilename)
 
    _ASSERT_EXIT_(n_var > 0, "Problem does not have any continuous variables");
    _ASSERT_EXIT_(nbv == 0 && niv == 0, "PyNumero does not support discrete variables");
-   _ASSERT_EXIT_(nwv == 0 && nlnc == 0 && lnc == 0, 
+   _ASSERT_EXIT_(nwv == 0 && nlnc == 0 && lnc == 0,
                  "PyNumero does not support network constraints");
    _ASSERT_EXIT_(n_cc == 0, "PyNumero does not support complementarities");
 
@@ -275,7 +275,7 @@ bool AmplInterface::eval_f(double *const_x, int nx, double& f) {
     _ASSERT_(_p_asl);
     _ASSERT_(n_obj == 1 && "AMPL problem must have a single objective function");
 
-    int nerror = 1;
+    fint nerror = 1;
     double retval = objval(obj_no, (double *) const_x, &nerror);
 
     if (nerror != 0) {
@@ -291,7 +291,7 @@ bool AmplInterface::eval_deriv_f(double *const_x, double *deriv_f, int nx) {
     _ASSERT_(_p_asl);
     _ASSERT_(n_obj == 1 && "AMPL problem must have a single objective function");
 
-    int nerror = 1;
+    fint nerror = 1;
     objgrd(obj_no, (double *) const_x, deriv_f, &nerror);
 
     if (nerror != 0) {
@@ -311,7 +311,7 @@ bool AmplInterface::eval_g(double *const_x, int nx, double *g, int ng) {
     _ASSERT_(nx == n_var);
     _ASSERT_(ng == n_con);
 
-    int nerror = 1;
+    fint nerror = 1;
     conval((double *) const_x, g, &nerror);
     if (nerror != 0) {
         return false;
@@ -341,7 +341,7 @@ bool AmplInterface::eval_jac_g(double *const_x, int nx, double *jac_g_values, in
     _ASSERT_(nnz_jac_g == nzc);
     _ASSERT_(jac_g_values);
 
-    int nerror = 1;
+    fint nerror = 1;
     jacval((double *) const_x, jac_g_values, &nerror);
     if (nerror != 0) {
         return false;
@@ -387,7 +387,7 @@ void AmplInterface::finalize_solution(int ampl_solve_result_num, char* msg, doub
     ASL_pfgh *asl = _p_asl;
     _ASSERT_(asl);
     _ASSERT_(const_x && const_lam);
-    
+
     // set the AMPL solver status'
     _ASSERT_MSG_(ampl_solve_result_num >= 0 && ampl_solve_result_num < 600,
                  "ampl_solve_result_num must be between 0 and 599 in AmplInterface::finalize_solution");
@@ -483,11 +483,11 @@ extern "C"
    void EXTERNAL_AmplInterface_get_init_x(AmplInterface *p_ai, double *invec, int n) {
       p_ai->get_init_x(invec, n);
    }
-   
+
    void EXTERNAL_AmplInterface_get_init_multipliers(AmplInterface *p_ai, double *invec, int n) {
       p_ai->get_init_multipliers(invec, n);
    }
-   
+
    bool EXTERNAL_AmplInterface_eval_f(AmplInterface *p_ai, double *invec, int n, double& f) {
       return p_ai->eval_f(invec, n, f);
    }
@@ -523,7 +523,7 @@ extern "C"
    void EXTERNAL_AmplInterface_finalize_solution(AmplInterface *p_ai,
                                                  int ampl_solve_result_num,
                                                  char* msg,
-                                                 double *const_x, int nx, 
+                                                 double *const_x, int nx,
                                                  double *const_lam, int nc) {
       p_ai->finalize_solution(ampl_solve_result_num, msg,
                               const_x, nx, const_lam, nc);
@@ -538,4 +538,3 @@ extern "C"
    }
 
 }
-
