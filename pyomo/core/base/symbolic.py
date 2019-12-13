@@ -15,7 +15,7 @@ from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available, No
 
 @deprecated(msg=('The differentiate function in pyomo.core.base.symbolic has been deprecated. Please use the ' +
                  'differentiate function in pyomo.core.expr.'),
-            version='TBD',
+            version='5.6.7',
             remove_in='5.7')
 def differentiate(expr, wrt=None, wrt_list=None):
     """Return derivative of expression.
