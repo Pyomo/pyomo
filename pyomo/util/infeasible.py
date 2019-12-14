@@ -122,10 +122,10 @@ def log_infeasible_bounds(m, tol=1E-6, logger=logger):
             logger.debug("Skipping VAR {} with no assigned value.")
             continue
         if var.has_lb() and value(var.lb - var) >= tol:
-            logger.info('VAR {}: {} < LB {}'.format(
+            logger.info('VAR {}: {} >/= LB {}'.format(
                 var.name, value(var), value(var.lb)))
         if var.has_ub() and value(var - var.ub) >= tol:
-            logger.info('VAR {}: {} > UB {}'.format(
+            logger.info('VAR {}: {} </= UB {}'.format(
                 var.name, value(var), value(var.ub)))
 
 
