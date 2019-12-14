@@ -25,6 +25,7 @@ class TestInfeasible(unittest.TestCase):
         m.c4 = Constraint(expr=m.y >= m.y.value)
         m.z = Var(bounds=(0, 6))
         m.c5 = Constraint(expr=m.z >= 5)
+        m.feasible = Constraint(expr=m.x + m.y <= 6)
         return m
 
     def test_log_infeasible_constraints(self):

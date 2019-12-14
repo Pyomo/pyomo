@@ -48,9 +48,9 @@ def log_infeasible_constraints(
                 if fabs(constr_lb_value - constr_body_value) >= tol:
                     equality_violated = True
             else:
-                if constr.has_lb() and fabs(constr_lb_value - constr_body_value) >= tol:
+                if constr.has_lb() and constr_lb_value - constr_body_value >= tol:
                     lb_violated = True
-                if constr.has_ub() and fabs(constr_body_value - constr_ub_value) >= tol:
+                if constr.has_ub() and constr_body_value - constr_ub_value >= tol:
                     ub_violated = True
 
         if not any((constr_undefined, equality_violated, lb_violated, ub_violated)):
