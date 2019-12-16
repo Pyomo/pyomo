@@ -67,7 +67,7 @@ if sys.version_info < (2, 7):
     requires.append('unittest2')
     requires.append('ordereddict')
 
-from setuptools import setup
+from setuptools import setup, find_packages
 import sys
 
 CYTHON_REQUIRED = "required"
@@ -159,7 +159,7 @@ def run_setup():
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Software Development :: Libraries :: Python Modules' ],
-      packages=packages,
+      packages=find_packages('pyomo/pyomo/*'),
       package_data={"pyomo.contrib.viewer":["*.ui"]},
       keywords=['optimization'],
       install_requires=requires,
