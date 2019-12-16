@@ -140,7 +140,6 @@ def run_setup():
         'Topic :: Software Development :: Libraries :: Python Modules' ],
       packages=find_packages(where='pyomo/*'),
       package_data={"pyomo.contrib.viewer":["*.ui"]},
-      data_files=[("",["LICENSE.txt"])],
       keywords=['optimization'],
       install_requires=requires,
       ext_modules = ext_modules,
