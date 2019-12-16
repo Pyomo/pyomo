@@ -241,7 +241,7 @@ class Param(IndexedComponent):
         """
         if self._default_val is _NotValid:
             return len(self._data)
-        return len(self._index)
+        return len(self._index_set)
 
     def __contains__(self, idx):
         """
@@ -250,7 +250,7 @@ class Param(IndexedComponent):
         """
         if self._default_val is _NotValid:
             return idx in self._data
-        return idx in self._index
+        return idx in self._index_set
 
     def __iter__(self):
         """
@@ -259,7 +259,7 @@ class Param(IndexedComponent):
         """
         if self._default_val is _NotValid:
             return self._data.__iter__()
-        return self._index.__iter__()
+        return self._index_set.__iter__()
 
     def is_expression_type(self):
         """Returns False because this is not an expression"""
@@ -379,7 +379,7 @@ class Param(IndexedComponent):
                 for index, new_value in iteritems(new_values):
                     self[index] = new_value
             else:
-                for index in self._index:
+                for index in self._index_set:
                     self[index] = new_values
             return
         #
@@ -400,14 +400,14 @@ class Param(IndexedComponent):
                 # For scalars, we will choose an approach based on
                 # how "dense" the Param is
                 if not self._data: # empty
-                    for index in self._index:
+                    for index in self._index_set:
                         p = self._data[index] = _ParamData(self)
                         p._value = new_values
-                elif len(self._data) == len(self._index):
-                    for index in self._index:
+                elif len(self._data) == len(self._index_set):
+                    for index in self._index_set:
                         self._data[index]._value = new_values
                 else:
-                    for index in self._index:
+                    for index in self._index_set:
                         if index not in self._data:
                             self._data[index] = _ParamData(self)
                         self._data[index]._value = new_values
@@ -666,7 +666,7 @@ class Param(IndexedComponent):
                     # it returns flattened tuples. Otherwise,
                     # the validation process is far too expensive.
                     #
-                    _iter = self._index.__iter__()
+                    _iter = self._index_set.__iter__()
                     idx = next(_iter)
                     #
                     # If a function returns a dict (or
@@ -801,7 +801,7 @@ This has resulted in the conversion of the source to dense form.
                 # We look at the first iteration index separately to
                 # to validate the value against the domain once.
                 #
-                _iter = self._index.__iter__()
+                _iter = self._index_set.__iter__()
                 idx = next(_iter)
                 self._setitem_when_not_present(idx, _init)
                 #
@@ -895,7 +895,7 @@ This has resulted in the conversion of the source to dense form.
         self._constructed = True
 
         # populate all other indices with default data
-        # (avoids calling _set_contains on self._index at runtime)
+        # (avoids calling _set_contains on self._index_set at runtime)
         if self._dense_initialize:
             self.to_dense_data()
         timer.report()
@@ -933,7 +933,7 @@ This has resulted in the conversion of the source to dense form.
         else:
             dataGen = lambda k, v: [ v, ]
         return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
+                  ("Index", self._index_set if self.is_indexed() else None),
                   ("Domain", self.domain.name),
                   ("Default", default),
                   ("Mutable", self._mutable),

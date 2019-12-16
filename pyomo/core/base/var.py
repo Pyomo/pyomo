@@ -599,13 +599,13 @@ class Var(IndexedComponent):
             # Calling dict.update((...) for ...) is roughly
             # 30% slower
             self_weakref = weakref_ref(self)
-            for ndx in self._index:
+            for ndx in self._index_set:
                 cdata = self._ComponentDataClass(
                     domain=self._domain_init_value, component=None)
                 cdata._component = self_weakref
                 self._data[ndx] = cdata
                 #self._initialize_members((ndx,))
-            self._initialize_members(self._index)
+            self._initialize_members(self._index_set)
         timer.report()
 
     def add(self, index):
@@ -752,7 +752,7 @@ class Var(IndexedComponent):
     def _pprint(self):
         """Print component information."""
         return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
+                  ("Index", self._index_set if self.is_indexed() else None),
                   ],
                  iteritems(self._data),
                  ( "Lower","Value","Upper","Fixed","Stale","Domain"),
@@ -983,7 +983,7 @@ class VarList(IndexedVar):
         # then let _validate_index complain when we set the value.
         if self._value_init_value.__class__ is dict:
             for i in xrange(len(self._value_init_value)):
-                self._index.add(i+1)
+                self._index_set.add(i+1)
         super(VarList,self).construct(data)
         # Note that the current Var initializer silently ignores
         # initialization data that is not in the underlying index set.  To
@@ -996,6 +996,6 @@ class VarList(IndexedVar):
 
     def add(self):
         """Add a variable to this list."""
-        next_idx = len(self._index) + 1
-        self._index.add(next_idx)
+        next_idx = len(self._index_set) + 1
+        self._index_set.add(next_idx)
         return self[next_idx]

@@ -728,9 +728,9 @@ class _BlockData(ActiveComponentData):
                         tset,
                         val.local_name + "_index_" + str(ctr)
                     )
-        if isinstance(val._index, _SetDataBase) and \
-                val._index.parent_component().local_name == "_unknown_":
-            self._construct_temporary_set(val._index, val.local_name + "_index")
+        if isinstance(val._index_set, _SetDataBase) and \
+                val._index_set.parent_component().local_name == "_unknown_":
+            self._construct_temporary_set(val._index_set, val.local_name + "_index")
         if isinstance(getattr(val, 'initialize', None), _SetDataBase) and \
                 val.initialize.parent_component().local_name == "_unknown_":
             self._construct_temporary_set(val.initialize, val.local_name + "_index_init")
@@ -906,7 +906,7 @@ component, use the block del_component() and add_component() methods.
         # kind of thing to an "update_parent()" method on the
         # components.
         #
-        if hasattr(val, '_index'):
+        if hasattr(val, '_index_set'):
             self._add_temporary_set(val)
         #
         # Add the component to the underlying Component store
@@ -1816,7 +1816,7 @@ class Block(ActiveIndexedComponent):
         #    (_BlockConstruction.data) that the individual blocks'
         #    add_component() can refer back to to handle component
         #    construction.
-        for idx in self._index:
+        for idx in self._index_set:
             _block = self[idx]
             if data is not None and idx in data:
                 _BlockConstruction.data[id(_block)] = data[idx]
@@ -1852,7 +1852,7 @@ class Block(ActiveIndexedComponent):
     def _pprint(self):
         _attrs = [
             ("Size", len(self)),
-            ("Index", self._index if self.is_indexed() else None),
+            ("Index", self._index_set if self.is_indexed() else None),
             ('Active', self.active),
         ]
         # HACK: suppress the top-level block header (for historical reasons)

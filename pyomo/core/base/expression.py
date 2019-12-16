@@ -295,7 +295,7 @@ class Expression(IndexedComponent):
         return (
             [('Size', len(self)),
              ('Index', None if (not self.is_indexed())
-                  else self._index)
+                  else self._index_set)
              ],
             self.iteritems(),
             ("Expression",),
@@ -387,7 +387,7 @@ class Expression(IndexedComponent):
         if _init_rule is not None:
             # construct and initialize with a rule
             if self.is_indexed():
-                for key in self._index:
+                for key in self._index_set:
                     self.add(key,
                              apply_indexed_rule(
                                  self,
@@ -399,12 +399,12 @@ class Expression(IndexedComponent):
         else:
             # construct and initialize with a value
             if _init_expr.__class__ is dict:
-                for key in self._index:
+                for key in self._index_set:
                     if key not in _init_expr:
                         continue
                     self.add(key, _init_expr[key])
             else:
-                for key in self._index:
+                for key in self._index_set:
                     self.add(key, _init_expr)
         timer.report()
 
@@ -512,7 +512,7 @@ class IndexedExpression(Expression):
 
     #
     # Leaving this method for backward compatibility reasons
-    # Note: It allows adding members outside of self._index.
+    # Note: It allows adding members outside of self._index_set.
     #       This has always been the case. Not sure there is
     #       any reason to maintain a reference to a separate
     #       index set if we allow this.

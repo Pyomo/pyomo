@@ -42,7 +42,7 @@ class BuildAction(IndexedComponent):
 
     def _pprint(self):
         return ([("Size", len(self)),
-                 ("Index", self._index if self.is_indexed() else None),
+                 ("Index", self._index_set if self.is_indexed() else None),
                  ("Active", self.active),]
                  , None, None, None)
 
@@ -61,7 +61,7 @@ class BuildAction(IndexedComponent):
             self._rule(self._parent())
         else:
             # Indexed component
-            for index in self._index:
+            for index in self._index_set:
                 apply_indexed_rule(self, self._rule, self._parent(), index)
         timer.report()
 

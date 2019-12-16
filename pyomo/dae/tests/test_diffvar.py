@@ -43,7 +43,7 @@ class TestDerivativeVar(unittest.TestCase):
         self.assertTrue(m.dv._sVar is m.v)
         self.assertTrue(m.v._derivative[('t',)]() is m.dv)
         self.assertTrue(m.dv.type() is DerivativeVar)
-        self.assertTrue(m.dv._index is m.t)
+        self.assertTrue(m.dv._index_set is m.t)
         self.assertTrue(m.dv2._wrt[0] is m.t)
         self.assertTrue(m.dv2._wrt[1] is m.t)
         self.assertTrue(m.v._derivative[('t', 't')]() is m.dv2)

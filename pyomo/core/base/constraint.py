@@ -657,7 +657,7 @@ class Constraint(ActiveIndexedComponent):
             A boolean that is true if this component has been constructed
         _data               
             A dictionary from the index set to component data objects
-        _index              
+        _index_set
             The set of valid indices
         _implicit_subsets   
             A tuple of set objects that represents the index set
@@ -771,7 +771,7 @@ class Constraint(ActiveIndexedComponent):
                     "of a constraint with a single expression" %
                     (self.name,) )
 
-            for ndx in self._index:
+            for ndx in self._index_set:
                 try:
                     tmp = apply_indexed_rule(self,
                                              _init_rule,
@@ -796,7 +796,7 @@ class Constraint(ActiveIndexedComponent):
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index if self.is_indexed() else None),
+             ("Index", self._index_set if self.is_indexed() else None),
              ("Active", self.active),
              ],
             iteritems(self),
@@ -1142,7 +1142,7 @@ class ConstraintList(IndexedConstraint):
             _generator = _init_rule
         if _generator is None:
             while True:
-                val = len(self._index) + 1
+                val = len(self._index_set) + 1
                 if generate_debug_messages:
                     logger.debug(
                         "   Constructing constraint index "+str(val))
@@ -1173,7 +1173,7 @@ class ConstraintList(IndexedConstraint):
 
     def add(self, expr):
         """Add a constraint with an implicit index."""
-        next_idx = len(self._index) + 1
-        self._index.add(next_idx)
+        next_idx = len(self._index_set) + 1
+        self._index_set.add(next_idx)
         return self.__setitem__(next_idx, expr)
 

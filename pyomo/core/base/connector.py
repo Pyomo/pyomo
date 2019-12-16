@@ -182,7 +182,7 @@ class Connector(IndexedComponent):
         # Construct _ConnectorData objects for all index values
         #
         if self.is_indexed():
-            self._initialize_members(self._index)
+            self._initialize_members(self._index_set)
         else:
             self._data[None] = self
             self._initialize_members([None])
@@ -219,7 +219,7 @@ class Connector(IndexedComponent):
                     _len = 1
                 yield _k, _len, str(_v)
         return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
+                  ("Index", self._index_set if self.is_indexed() else None),
                   ],
                  iteritems(self._data),
                  ( "Name","Size", "Variable", ),

@@ -50,10 +50,10 @@ class ExternalFunction(Component):
         Component.__init__(self, **kwds)
         self._constructed = True
         ### HACK ###
-        # FIXME: We must declare an _index attribute because
+        # FIXME: We must declare an _index_set attribute because
         # block._add_temporary_set assumes ALL components define an
         # index.  Sigh.
-        self._index = None
+        self._index_set = None
 
     def __call__(self, *args):
         args_ = []

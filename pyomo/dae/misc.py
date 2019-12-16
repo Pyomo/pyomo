@@ -124,7 +124,7 @@ def expand_components(block):
     # BlockData will be added to the indexed Block but will not be
     # constructed correctly.
     for blk in block.component_objects(Block, descend_into=True):
-        missing_idx = set(blk._index) - set(iterkeys(blk._data))
+        missing_idx = set(blk._index_set) - set(iterkeys(blk._data))
         if missing_idx:
             blk._dae_missing_idx = missing_idx
 
@@ -267,7 +267,7 @@ def _update_var(v):
     #       Var (which is now a IndexedComponent). However, it
     #       would be much slower to rely on that method to generate new
     #       _VarData for a large number of new indices.
-    new_indices = set(v._index) - set(iterkeys(v._data))
+    new_indices = set(v._index_set) - set(iterkeys(v._data))
     for index in new_indices:
         v.add(index)
 

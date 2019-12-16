@@ -196,7 +196,7 @@ class Complementarity(Block):
                     "Cannot initialize multiple indices of a Complementarity "
                     "component with a single expression")
             _self_parent = self._parent()
-            for idx in self._index:
+            for idx in self._index_set:
                 try:
                     tmp = apply_indexed_rule( self, _self_rule, _self_parent, idx )
                     self.add(idx, tmp)
@@ -281,7 +281,7 @@ Error thrown for Complementarity "%s"
 
         return (
             [("Size", len(self)),
-             ("Index", self._index if self.is_indexed() else None),
+             ("Index", self._index_set if self.is_indexed() else None),
              ("Active", self.active),
              ],
             iteritems(self._data),
@@ -325,7 +325,7 @@ class ComplementarityList(IndexedComplementarity):
         Add a complementarity condition with an implicit index.
         """
         self._nconditions += 1
-        self._index.add(self._nconditions)
+        self._index_set.add(self._nconditions)
         return Complementarity.add(self, self._nconditions, expr)
 
     def construct(self, data=None):

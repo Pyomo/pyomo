@@ -95,7 +95,7 @@ class DerivativeVar(Var):
             if sVar.dim() == 0:
                 num_contset = 0
             elif sVar.dim() == 1:
-                sidx_sets = sVar._index
+                sidx_sets = sVar._index_set
                 if sidx_sets.type() is ContinuousSet:
                     sVar._contset[sidx_sets] = 0
             else:

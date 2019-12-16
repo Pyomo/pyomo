@@ -1705,7 +1705,7 @@ class IndexedSet(Set):
         """
         Add a set to the index.
         """
-        if key not in self._index:
+        if key not in self._index_set:
             raise KeyError("Cannot set index "+str(key)+" in array set "+self.name)
         #
         # Create a _SetData object if one doesn't already exist
@@ -1781,7 +1781,7 @@ class IndexedSet(Set):
                     tmpkey=key[0]
                 else:
                     tmpkey=key
-                if tmpkey not in self._index:
+                if tmpkey not in self._index_set:
                     raise KeyError("Cannot construct index "+str(tmpkey)+" in array set "+self.name)
                 tmp = self._SetData(self, self._bounds)
                 for val in values[key]:
@@ -1793,7 +1793,7 @@ class IndexedSet(Set):
         elif type(self.initialize) is types.FunctionType:
             if self._parent is None:
                 raise ValueError("Need parent block to construct a set array with a function")
-            for key in self._index:
+            for key in self._index_set:
                 tmp = self._SetData(self, self._bounds)
                 self._data[key] = tmp
                 #
@@ -1827,7 +1827,7 @@ class IndexedSet(Set):
         #
         elif self.initialize is not None:
             if type(self.initialize) is not dict:
-                for key in self._index:
+                for key in self._index_set:
                     tmp = self._SetData(self, self._bounds)
                     for val in self.initialize:
                         tmp._add(val)
