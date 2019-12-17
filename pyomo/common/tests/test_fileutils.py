@@ -108,9 +108,8 @@ class TestFileUtils(unittest.TestCase):
         open(os.path.join(subdir,fname),'w').close()
         open(os.path.join(subdir,'aaa'),'w').close()
         # we can find files in the CWD
-        self.assertEqual(
-            os.path.join(self.tmpdir,fname),
-            find_file(fname)
+        self.assertIn(
+            os.path.join(self.tmpdir,fname), find_file(fname)
         )
         # unless we don't look in the cwd
         self.assertEqual(
@@ -118,7 +117,7 @@ class TestFileUtils(unittest.TestCase):
             find_file(fname, cwd=False)
         )
         # cwd overrides pathlist
-        self.assertEqual(
+        self.assertIn(
             os.path.join(self.tmpdir,fname),
             find_file(fname, pathlist=[subdir])
         )
@@ -148,21 +147,21 @@ class TestFileUtils(unittest.TestCase):
         )
 
         # implicit extensions work (even if they are not necessary)
-        self.assertEqual(
+        self.assertIn(
             os.path.join(self.tmpdir,fname),
             find_file(fname, ext='.py')
         )
-        self.assertEqual(
+        self.assertIn(
             os.path.join(self.tmpdir,fname),
             find_file(fname, ext=['.py'])
         )
 
         # implicit extensions work (and when they are not necessary)
-        self.assertEqual(
+        self.assertIn(
             os.path.join(self.tmpdir,fname),
             find_file(fname[:-3], ext='.py')
         )
-        self.assertEqual(
+        self.assertIn(
             os.path.join(self.tmpdir,fname),
             find_file(fname[:-3], ext=['.py'])
         )
@@ -219,7 +218,7 @@ class TestFileUtils(unittest.TestCase):
         open(os.path.join(config_bindir, f_in_configbin),'w').close()
 
 
-        self.assertEqual(
+        self.assertIn(
             os.path.join(self.tmpdir, f_in_cwd_ldlib_path),
             find_library(f_in_cwd_ldlib_path)
         )
@@ -320,19 +319,19 @@ class TestFileUtils(unittest.TestCase):
               else None ),
             find_executable(f_in_cwd_notexe)
         )
-        self.assertEqual(
+        self.assertIn(
             os.path.join(self.tmpdir, f_in_cwd_ldlib_path),
             find_executable(f_in_cwd_ldlib_path)
         )
-        self.assertEqual(
+        self.assertIn(
             os.path.join(pathdir, f_in_cwd_ldlib_path),
             find_executable(f_in_cwd_ldlib_path, cwd=False)
         )
-        self.assertEqual(
+        self.assertIn(
             os.path.join(pathdir, f_in_path_extension) + exeExt,
             find_executable(f_in_path_extension)
         )
-        self.assertEqual(
+        self.assertIn(
             os.path.join(pathdir, f_in_path),
             find_executable(f_in_path)
         )
@@ -340,7 +339,7 @@ class TestFileUtils(unittest.TestCase):
             None,
             find_executable(f_in_path, include_PATH=False)
         )
-        self.assertEqual(
+        self.assertIn(
             os.path.join(pathdir, f_in_path),
             find_executable(f_in_path, pathlist=os.pathsep+pathdir+os.pathsep)
         )
