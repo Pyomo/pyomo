@@ -69,6 +69,7 @@ class _VarData(ComponentData, NumericValue):
         #   - NumericValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = None
 
     #
     # Interface
@@ -320,6 +321,7 @@ class _GeneralVarData(_VarData):
         self._component = weakref_ref(component) if (component is not None) \
                           else None
         self._value = None
+        self._index = NoArgumentGiven
         #
         # The type of the lower and upper bound attributes can either
         # be atomic numeric types in Python, expressions, etc.
@@ -604,6 +606,7 @@ class Var(IndexedComponent):
                     domain=self._domain_init_value, component=None)
                 cdata._component = self_weakref
                 self._data[ndx] = cdata
+                cdata._index = ndx
                 #self._initialize_members((ndx,))
             self._initialize_members(self._index_set)
         timer.report()
@@ -993,9 +996,12 @@ class VarList(IndexedVar):
         if self._value_init_value.__class__ is dict:
             for k,v in iteritems(self._value_init_value):
                 self[k] = v
+                # self[k]._index = k
 
     def add(self):
         """Add a variable to this list."""
         next_idx = len(self._index_set) + 1
         self._index_set.add(next_idx)
-        return self[next_idx]
+        obj = self[next_idx]
+        obj._index = next_idx
+        return obj

@@ -14,6 +14,7 @@ import sys
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.expr import current as EXPR
@@ -245,6 +246,7 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl,
         # Inlining ComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NoArgumentGiven
 
 
 @ModelComponentFactory.register("Named expressions that can be used in other expressions.")
@@ -524,5 +526,6 @@ class IndexedExpression(Expression):
             return None
         cdata = _GeneralExpressionData(expr, component=self)
         self._data[index] = cdata
+        cdata._index = index
         return cdata
 

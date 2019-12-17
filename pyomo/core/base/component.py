@@ -21,6 +21,7 @@ from weakref import ref as weakref_ref
 from pyutilib.misc.indent_io import StreamIndenter
 
 import pyomo.common
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.core.base.misc import tabular_writer, sorted_robust
 
 logger = logging.getLogger('pyomo.core')
@@ -216,6 +217,7 @@ class _ComponentBase(object):
                         "Unable to clone Pyomo component attribute.\n"
                         "%s '%s' contains an uncopyable field '%s' (%s)"
                         % ( what, self.name, k, type(v) ))
+                    # raise  # Uncomment this to see what the underlying error was.
         ans.__setstate__(new_state)
         return ans
 
@@ -651,9 +653,10 @@ class ComponentData(_ComponentBase):
 
     Private class attributes:
         _component      A weakref to the component that owns this data object
+        _index          The index of the data object
         """
 
-    __pickle_slots__ = ('_component',)
+    __pickle_slots__ = ('_component', '_index')
     __slots__ = __pickle_slots__ + ('__weakref__',)
 
     def __init__(self, component):
@@ -665,6 +668,7 @@ class ComponentData(_ComponentBase):
         # this assumption is significantly faster.
         #
         self._component = weakref_ref(component)
+        self._index = NoArgumentGiven
 
     def __getstate__(self):
         """Prepare a picklable state of this instance for pickling.
@@ -702,6 +706,7 @@ class ComponentData(_ComponentBase):
             state['_component'] = None
         else:
             state['_component'] = self._component()
+        state['_index'] = self._index
         return state
 
     def __setstate__(self, state):
@@ -794,10 +799,11 @@ class ComponentData(_ComponentBase):
         self_component = self.parent_component()
         if self_component is None:
             return None
-        for idx, component_data in self_component.iteritems():
-            if component_data is self:
-                return idx
-        return None
+        return self._index
+        # for idx, component_data in self_component.iteritems():
+        #     if component_data is self:
+        #         return idx
+        # return None
 
     def __str__(self):
         """Return a string with the component name and index"""
@@ -825,9 +831,9 @@ class ComponentData(_ComponentBase):
         #
         # Using the buffer, which is a dictionary:  id -> string
         #
-        if name_buffer is not None and id(self) in name_buffer:
-            # Return the name if it is in the buffer
-            return name_buffer[id(self)]
+        # if name_buffer is not None and id(self) in name_buffer:
+        #     # Return the name if it is in the buffer
+        #     return name_buffer[id(self)]
 
         c = self.parent_component()
         if c is self:
@@ -842,6 +848,7 @@ class ComponentData(_ComponentBase):
             # Get the name of the parent component
             #
             base = c.getname(fully_qualified, name_buffer, relative_to)
+            return base + _name_index_generator(self.index())
         else:
             #
             # Defensive: this is a ComponentData without a valid
@@ -851,26 +858,26 @@ class ComponentData(_ComponentBase):
             #
             return '[Unattached %s]' % (type(self).__name__,)
 
-        if name_buffer is not None:
-            # Iterate through the dictionary and generate all names in
-            # the buffer
-            for idx, obj in iteritems(c):
-                name_buffer[id(obj)] = base + _name_index_generator(idx)
-            if id(self) in name_buffer:
-                # Return the name if it is in the buffer
-                return name_buffer[id(self)]
-        else:
-            #
-            # No buffer, so we iterate through the component _data
-            # dictionary until we find this object.  This can be much
-            # more expensive than if a buffer is provided.
-            #
-            for idx, obj in iteritems(c):
-                if obj is self:
-                    return base + _name_index_generator(idx)
+        # if name_buffer is not None:
+        #     # Iterate through the dictionary and generate all names in
+        #     # the buffer
+        #     for idx, obj in iteritems(c):
+        #         name_buffer[id(obj)] = base + _name_index_generator(idx)
+        #     if id(self) in name_buffer:
+        #         # Return the name if it is in the buffer
+        #         return name_buffer[id(self)]
+        # else:
+        #     #
+        #     # No buffer, so we iterate through the component _data
+        #     # dictionary until we find this object.  This can be much
+        #     # more expensive than if a buffer is provided.
+        #     #
+        #     for idx, obj in iteritems(c):
+        #         if obj is self:
+        #             return base + _name_index_generator(idx)
         #
-        raise RuntimeError("Fatal error: cannot find the component data in "
-                           "the owning component's _data dictionary.")
+        # raise RuntimeError("Fatal error: cannot find the component data in "
+        #                    "the owning component's _data dictionary.")
 
     def is_indexed(self):
         """Return true if this component is indexed"""
@@ -932,6 +939,7 @@ class ActiveComponentData(ComponentData):
 
     Private class attributes:
         _component      A weakref to the component that owns this data object
+        _index          The index of the data object
         _active         A boolean that indicates whether this data is active
     """
 

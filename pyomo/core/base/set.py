@@ -1619,6 +1619,7 @@ class Set(IndexedComponent):
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
+        obj._index = index
         if self._init_dimen is not None:
             _d = self._init_dimen(self, index)
             if _d is not UnknownSetDimen and (not normalize_index.flatten) \

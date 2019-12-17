@@ -23,6 +23,7 @@ from weakref import ref as weakref_ref
 
 from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule, \
     apply_parameterized_indexed_rule, sorted_robust
@@ -158,6 +159,7 @@ class _SetData(_SetDataBase):
         #
         self._clear()
         self._bounds = bounds
+        self._index = NoArgumentGiven
 
     def __getstate__(self):
         """
@@ -288,6 +290,7 @@ class _OrderedSetData(_SetDataBase):
         # the base ComponentData constructor.
         #
         self._component = weakref_ref(owner)
+        self._index = NoArgumentGiven
         #
         self._bounds = bounds
         if self.parent_component().ordered is Set.InsertionOrder:
@@ -1699,6 +1702,7 @@ class IndexedSet(Set):
         This returns an exception.
         """
         tmp = self._data[index] = self._SetData(self, self._bounds)
+        tmp._index = index
         return tmp
 
     def __setitem__(self, key, vals):
@@ -1714,6 +1718,7 @@ class IndexedSet(Set):
             self._data[key].clear()
         else:
             self._data[key] = self._SetData(self, self._bounds)
+            self._data[key]._index = key
         #
         # Add the elements in vals to the _SetData object
         #
@@ -1787,6 +1792,7 @@ class IndexedSet(Set):
                 for val in values[key]:
                     tmp._add(val)
                 self._data[tmpkey] = tmp
+                self._data[tmpkey]._index = tmpkey
         #
         # Construct using the rule
         #
@@ -1796,6 +1802,7 @@ class IndexedSet(Set):
             for key in self._index_set:
                 tmp = self._SetData(self, self._bounds)
                 self._data[key] = tmp
+                self._data[key]._index = key
                 #
                 if isinstance(key,tuple):
                     tmpkey = key
@@ -1832,12 +1839,14 @@ class IndexedSet(Set):
                     for val in self.initialize:
                         tmp._add(val)
                     self._data[key] = tmp
+                    self._data[key]._index = key
             else:
                 for key in self.initialize:
                     tmp = self._SetData(self, self._bounds)
                     for val in self.initialize[key]:
                         tmp._add(val)
                     self._data[key] = tmp
+                    self._data[key]._index = key
         timer.report()
 
 

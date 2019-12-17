@@ -114,6 +114,7 @@ class ComponentDict(collections_MutableMapping):
                     # * see __delitem__ for explanation
                     self._data[key]._component = None
                 self._data[key] = val
+                self._data[key]._index = key
                 return
             elif (key in self._data) and (self._data[key] is val):
                 # a very special case that makes sense to handle

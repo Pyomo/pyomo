@@ -134,6 +134,7 @@ def _get_indexed_component_data_name(component, index):
             component._data[index] = component._ComponentDataClass(
                 component=component)
         try:
+            component._data[index]._index = index
             ans = component._data[index].name
         except:
             ans = component.name + '[{unknown index}]'
@@ -710,6 +711,7 @@ value() function.""" % ( self.name, i ))
 
         """
         obj.set_value(value)
+        obj._index = index
         return obj
 
     def _setitem_when_not_present(self, index, value):
@@ -730,6 +732,7 @@ value() function.""" % ( self.name, i ))
             obj = self._data[index] = self._ComponentDataClass(component=self)
         try:
             obj.set_value(value)
+            obj._index = index
             return obj
         except:
             del self._data[index]

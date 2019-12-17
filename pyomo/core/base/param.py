@@ -15,6 +15,7 @@ import types
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
@@ -72,6 +73,7 @@ class _ParamData(ComponentData, NumericValue):
         # the base ComponentData constructor.
         #
         self._component = weakref_ref(component)
+        self._index = NoArgumentGiven
         #
         # The following is equivalent to calling the
         # base NumericValue constructor.
@@ -471,6 +473,7 @@ class Param(IndexedComponent):
             if self._mutable:
                 # Note: _ParamData defaults to _NotValid
                 ans = self._data[index] = _ParamData(self)
+                ans._index = index
                 return ans
             if self.is_indexed():
                 idx_str = '%s[%s]' % (self.name, index,)
@@ -596,6 +599,7 @@ class Param(IndexedComponent):
             elif self._mutable:
                 obj = self._data[index] = _ParamData(self)
                 obj.set_value(value, index)
+                obj._index = index
                 return obj
             else:
                 self._data[index] = value

@@ -17,6 +17,8 @@ import logging
 from weakref import ref as weakref_ref
 
 import pyutilib.math
+
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import logical_expr
 from pyomo.core.expr.numvalue import (ZeroConstant,
@@ -184,6 +186,7 @@ class _ConstraintData(ActiveComponentData):
         self._component = weakref_ref(component) if (component is not None) \
                           else None
         self._active = True
+        self._index = NoArgumentGiven
 
     #
     # Interface
@@ -323,6 +326,7 @@ class _GeneralConstraintData(_ConstraintData):
         self._component = weakref_ref(component) if (component is not None) \
                           else None
         self._active = True
+        self._index = NoArgumentGiven
 
         self._body = None
         self._lower = None

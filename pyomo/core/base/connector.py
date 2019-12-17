@@ -16,6 +16,7 @@ from six import iteritems, itervalues, iterkeys
 from six.moves import xrange
 from weakref import ref as weakref_ref
 
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.common.plugin import Plugin, implements
 
@@ -43,6 +44,7 @@ class _ConnectorData(ComponentData, NumericValue):
         #   - NumericValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NoArgumentGiven
 
         self.vars = {}
         self.aggregators = {}
