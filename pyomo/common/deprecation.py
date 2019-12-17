@@ -7,7 +7,12 @@ import textwrap
 
 from pyomo.common.errors import DeveloperError
 
+
 def _default_msg(user_msg, version, remove_in, func=None):
+    """Generate the default deprecation message.
+
+    See deprecated() function for argument details.
+    """
     if user_msg is None:
         if inspect.isclass(func):
             _obj = ' class'
@@ -26,6 +31,7 @@ def _default_msg(user_msg, version, remove_in, func=None):
         user_msg += "  (%s)" % (', '.join(comment))
     return user_msg
 
+
 def deprecation_warning(msg, logger='pyomo.core', version=None, remove_in=None):
     """Standardized formatter for deprecation warnings
 
@@ -39,7 +45,8 @@ def deprecation_warning(msg, logger='pyomo.core', version=None, remove_in=None):
     logging.getLogger(logger).warning(
         textwrap.fill('DEPRECATED: %s' % (msg,), width=70) )
 
-def deprecated( msg=None, logger='pyomo.core', version=None, remove_in=None ):
+
+def deprecated(msg=None, logger='pyomo.core', version=None, remove_in=None):
     """Indicate that a function, method or class is deprecated.
 
     This decorator will cause a warning to be logged when the wrapped

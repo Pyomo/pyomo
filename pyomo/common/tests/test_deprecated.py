@@ -45,7 +45,7 @@ class TestDeprecated(unittest.TestCase):
         #"""Test for deprecated function decorator."""
         @deprecated(version='')
         def foo(bar='yeah'):
-            logger.warn(bar)
+            logger.warning(bar)
 
         self.assertIn('DEPRECATION WARNING: This function has been deprecated',
                       foo.__doc__)
@@ -86,7 +86,7 @@ class TestDeprecated(unittest.TestCase):
             Because I document my public functions.
 
             """
-            logger.warn(bar)
+            logger.warning(bar)
 
         self.assertIn('DEPRECATION WARNING: This function has been deprecated',
                       foo.__doc__)
@@ -128,7 +128,7 @@ class TestDeprecated(unittest.TestCase):
             Because I document my public functions.
 
             """
-            logger.warn(bar)
+            logger.warning(bar)
 
         self.assertIn('DEPRECATION WARNING: This is a custom message',
                       foo.__doc__)
@@ -170,7 +170,7 @@ class TestDeprecated(unittest.TestCase):
             Because I document my public functions.
 
             """
-            logger.warn(bar)
+            logger.warning(bar)
 
         self.assertIn('DEPRECATION WARNING: This is a custom message',
                       foo.__doc__)
@@ -208,7 +208,7 @@ class TestDeprecated(unittest.TestCase):
         @deprecated(version='')
         class foo(object):
             def __init__(self):
-                logger.warn('yeah')
+                logger.warning('yeah')
 
         self.assertIn('DEPRECATION WARNING: This class has been deprecated',
                       foo.__doc__)
@@ -233,7 +233,7 @@ class TestDeprecated(unittest.TestCase):
                 pass
             @deprecated(version='')
             def bar(self):
-                logger.warn('yeah')
+                logger.warning('yeah')
 
         self.assertIn('DEPRECATION WARNING: This function has been deprecated',
                       foo.bar.__doc__)
@@ -257,7 +257,7 @@ class TestDeprecated(unittest.TestCase):
                 pass
             @deprecated(version='1.2', remove_in='3.4')
             def bar(self):
-                logger.warn('yeah')
+                logger.warning('yeah')
 
         self.assertIn('DEPRECATION WARNING: This function has been deprecated',
                       foo.bar.__doc__)
