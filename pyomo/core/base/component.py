@@ -707,6 +707,7 @@ class ComponentData(_ComponentBase):
             state['_component'] = None
         else:
             state['_component'] = self._component()
+        state['_index'] = self._index
         return state
 
     def __setstate__(self, state):
