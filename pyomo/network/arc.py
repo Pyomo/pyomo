@@ -10,6 +10,7 @@
 
 __all__ = [ 'Arc' ]
 
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.network.port import Port
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
@@ -83,6 +84,7 @@ class _ArcData(ActiveComponentData):
         self._ports = None
         self._directed = None
         self._expanded_block = None
+        self._index = NoArgumentGiven
         if len(kwds):
             self.set_value(kwds)
 

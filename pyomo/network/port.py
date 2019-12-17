@@ -15,7 +15,7 @@ from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
 from pyomo.common.timing import ConstructionTimer
-from pyomo.common.modeling import unique_component_name
+from pyomo.common.modeling import unique_component_name, NoArgumentGiven
 
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
@@ -55,6 +55,7 @@ class _PortData(ComponentData):
         #   - NumericValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NoArgumentGiven
 
         self.vars = {}
         self._arcs = []
@@ -334,6 +335,7 @@ class Port(IndexedComponent):
     def _getitem_when_not_present(self, idx):
         """Returns the default component data value."""
         tmp = self._data[idx] = _PortData(component=self)
+        tmp._index = idx
         return tmp
 
     def construct(self, data=None):
