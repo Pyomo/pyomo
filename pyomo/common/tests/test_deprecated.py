@@ -231,6 +231,34 @@ class TestDeprecated(unittest.TestCase):
         self.assertIn('DEPRECATED: This function has been deprecated',
                       DEP_OUT.getvalue())
 
+    def test_with_remove_in(self):
+        class foo(object):
+            def __init__(self):
+                pass
+            @deprecated(version='1.2', remove_in='3.4')
+            def bar(self):
+                logger.warn('yeah')
+
+        self.assertIn('DEPRECATION WARNING: This function has been deprecated',
+                      foo.bar.__doc__)
+        self.assertIn('(deprecated in 1.2, will be removed in 3.4)',
+                      foo.bar.__doc__.replace('\n',' '))
+
+        # Test the default argument
+        DEP_OUT = StringIO()
+        FCN_OUT = StringIO()
+        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
+            with LoggingIntercept(FCN_OUT, 'pyomo.common'):
+                foo().bar()
+        # Test that the function produces output
+        self.assertIn('yeah', FCN_OUT.getvalue())
+        self.assertNotIn('DEPRECATED', FCN_OUT.getvalue())
+        # Test that the deprecation warning was logged
+        self.assertIn('DEPRECATED: This function has been deprecated',
+                      DEP_OUT.getvalue())
+        self.assertIn('(deprecated in 1.2, will be removed in 3.4)',
+                      DEP_OUT.getvalue())
+
 
 
 if __name__ == '__main__':
