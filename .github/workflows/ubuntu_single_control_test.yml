@@ -1,4 +1,4 @@
-name: (WIP) MacOS Pyomo Test Workflow
+name: Ubuntu Pyomo Single Python Control Test
 
 on:
   pull_request:
@@ -8,11 +8,11 @@ on:
 jobs:
   build:
 
-    runs-on: macos-latest
+    runs-on: ubuntu-18.04
     strategy:
       max-parallel: 4
       matrix:
-        # python-version: [2.7, 3.5, 3.6, 3.7]
+        # python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
         python-version: [2.7]
 
     steps:
@@ -23,7 +23,6 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        which pico
         python -m pip install --upgrade pip
         # pip install -r requirements.txt
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
@@ -47,4 +46,3 @@ jobs:
         pip install nose
         KEY_JOB=1
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
-        
