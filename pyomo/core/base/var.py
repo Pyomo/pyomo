@@ -69,7 +69,7 @@ class _VarData(ComponentData, NumericValue):
         #   - NumericValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
-        self._index = None
+        self._index = NoArgumentGiven
 
     #
     # Interface
@@ -595,6 +595,7 @@ class Var(IndexedComponent):
         #
         if not self.is_indexed():
             self._data[None] = self
+            self._data[None]._index = None
             self._initialize_members((None,))
         elif self._dense:
             # This loop is optimized for speed with pypy.
@@ -626,6 +627,8 @@ class Var(IndexedComponent):
         else:
             obj = self._data[index] = self._ComponentDataClass(
                 self._domain_init_value, component=self)
+        # TODO untested
+        obj._index = index
         self._initialize_members((index,))
         return obj
 

@@ -219,6 +219,7 @@ class Complementarity(Block):
             # the _args component and return
             #
             self[index]._args = ( as_numeric(cc.arg0), as_numeric(cc.arg1) )
+            self[index]._index = index
             return self[index]
         #
         if cc.__class__ is tuple:
@@ -233,7 +234,9 @@ class Complementarity(Block):
             # Call add() recursively to apply the error same error
             # checks.
             #
-            return self.add(index, tuple(cc))
+            obj = self.add(index, tuple(cc))
+            obj._index = index
+            return obj
         elif cc is None:
                 raise ValueError("""
 Invalid complementarity condition.  The complementarity condition
@@ -248,6 +251,7 @@ Error thrown for Complementarity "%s"
                 % (self.name, cc) )
         #
         self[index]._args = tuple( as_numeric(x) for x in cc )
+        self[index]._index = index
         return self[index]
 
     def _pprint(self):

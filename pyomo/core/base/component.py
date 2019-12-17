@@ -543,8 +543,8 @@ class Component(_ComponentBase):
                 ans = self._name
         else:
             ans = self._name
-        if name_buffer is not None:
-            name_buffer[id(self)] = ans
+        # if name_buffer is not None:
+        #     name_buffer[id(self)] = ans
         return ans
 
     @property
@@ -793,18 +793,12 @@ class ComponentData(_ComponentBase):
         to the parent component index set. None is returned if
         this instance does not have a parent component, or if
         - for some unknown reason - this instance does not belong
-        to the parent component's index set. This method is not
-        intended to be a fast method;  it should be used rarely,
-        primarily in cases of label formulation.
+        to the parent component's index set.
         """
         self_component = self.parent_component()
         if self_component is None:
             return None
         return self._index
-        # for idx, component_data in self_component.iteritems():
-        #     if component_data is self:
-        #         return idx
-        # return None
 
     def __str__(self):
         """Return a string with the component name and index"""
@@ -827,14 +821,12 @@ class ComponentData(_ComponentBase):
         else:
             return self.__str__()
 
-    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
+    def getname(self, fully_qualified=False, name_buffer=NoArgumentGiven, relative_to=None):
         """Return a string with the component name and index"""
-        #
-        # Using the buffer, which is a dictionary:  id -> string
-        #
-        # if name_buffer is not None and id(self) in name_buffer:
-        #     # Return the name if it is in the buffer
-        #     return name_buffer[id(self)]
+
+        if name_buffer is not NoArgumentGiven:
+            # deprecation_warning
+            pass
 
         c = self.parent_component()
         if c is self:
