@@ -35,6 +35,12 @@ def unique_component_name(instance, name):
             name += str(randint(0,9))
 
 
+# Helper class for NoArgumentGiven object below.
+class _NoArgumentGiven(object):
+    def __str__(self):
+        return "<No argument specified>"
+
+
 """
 Object to be used to indicate that an optional argument
 was not specified, if `None` may be ambiguous. Usage:
@@ -43,4 +49,4 @@ was not specified, if `None` may be ambiguous. Usage:
   >>>     if value is NoArgumentGiven:
   >>>         pass  # no argument was provided to `value`
 """
-NoArgumentGiven = object()
+NoArgumentGiven = _NoArgumentGiven()
