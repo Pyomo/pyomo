@@ -28,8 +28,7 @@ jobs:
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
         pip install --quiet git+https://github.com/PyUtilib/pyutilib
         python setup.py develop
-        pip install numpy
-        pip install scipy
+        pip install numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos
     - name: Install extensions
       run: |
         pyomo download-extensions
