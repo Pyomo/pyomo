@@ -1,7 +1,7 @@
 """Testing for deprecated function."""
 import pyutilib.th as unittest
 from pyomo.common import DeveloperError
-from pyomo.common.deprecation import deprecated
+from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.log import LoggingIntercept
 
 from six import StringIO
@@ -12,6 +12,26 @@ logger = logging.getLogger('pyomo.common')
 
 class TestDeprecated(unittest.TestCase):
     """Tests for deprecated function decorator."""
+
+    def test_deprecation_warning(self):
+        DEP_OUT = StringIO()
+        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
+            deprecation_warning(None, version='1.2', remove_in='3.4')
+
+        self.assertIn('DEPRECATED: This has been deprecated',
+                      DEP_OUT.getvalue())
+        self.assertIn('(deprecated in 1.2, will be removed in 3.4)',
+                      DEP_OUT.getvalue().replace('\n',' '))
+
+        DEP_OUT = StringIO()
+        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
+            deprecation_warning("custom message here", version='1.2', remove_in='3.4')
+
+        self.assertIn('DEPRECATED: custom message here',
+                      DEP_OUT.getvalue())
+        self.assertIn('(deprecated in 1.2, will be removed in 3.4)',
+                      DEP_OUT.getvalue().replace('\n',' '))
+
 
     def test_no_version_exception(self):
         with self.assertRaises(DeveloperError):
