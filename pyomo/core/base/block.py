@@ -1883,6 +1883,7 @@ class SimpleBlock(_BlockData, Block):
         _BlockData.__init__(self, component=self)
         Block.__init__(self, *args, **kwds)
         self._data[None] = self
+        self._index = None
 
     def display(self, filename=None, ostream=None, prefix=""):
         """
