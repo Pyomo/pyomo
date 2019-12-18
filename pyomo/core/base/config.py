@@ -13,7 +13,7 @@ from pyomo.common.config import (
 )
 
 
-class PyomoOptions_(object):
+class _PyomoOptions(object):
 
     def __init__(self):
         self._options_stack = [ default_pyomo_config() ]
@@ -129,4 +129,4 @@ def default_pyomo_config():
     return config
 
 
-PyomoOptions = PyomoOptions_()
+PyomoOptions = _PyomoOptions()
