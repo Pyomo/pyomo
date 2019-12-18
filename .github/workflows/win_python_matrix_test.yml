@@ -24,6 +24,7 @@ jobs:
     - name: Install dependencies
       shell: cmd
       run: |
+          echo on
           echo "-- Setting Path and Showing Python Version"
           SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PYTHON%\\Library\\bin;%PATH%
           echo %PATH%
