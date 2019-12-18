@@ -61,12 +61,12 @@ def log_infeasible_constraints(
 
         log_template = "CONSTR {name}: {lb_value}{lb_operator}{body_value}{ub_operator}{ub_value}"
         if log_expression:
-            log_template += "\n  {lb_expr}{lb_operator}{body_expr}{ub_operator}{ub_expr}"
+            log_template += "\n  - EXPR: {lb_expr}{lb_operator}{body_expr}{ub_operator}{ub_expr}"
         if log_variables:
-            vars_template = "  VAR {name}: {value}"
-            log_template += "\n{var_printout}"
+            vars_template = "\n  - VAR {name}: {value}"
+            log_template += "{var_printout}"
             constraint_vars = identify_variables(constr.body, include_fixed=True)
-            output_dict['var_printout'] = '\n'.join(
+            output_dict['var_printout'] = ''.join(
                 vars_template.format(name=v.name, value=v.value) for v in constraint_vars)
 
         output_dict['body_value'] = "missing variable value" if constr_undefined else constr_body_value
