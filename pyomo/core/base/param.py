@@ -595,6 +595,7 @@ class Param(IndexedComponent):
             if index is None and not self.is_indexed():
                 self._data[None] = self
                 self.set_value(value, index)
+                self._index = index
                 return self
             elif self._mutable:
                 obj = self._data[index] = _ParamData(self)
@@ -897,6 +898,8 @@ This has resulted in the conversion of the source to dense form.
         # inmutable Param is now an exception).
         #
         self._constructed = True
+        if not self.is_indexed():
+            self._index = None
 
         # populate all other indices with default data
         # (avoids calling _set_contains on self._index_set at runtime)
@@ -991,6 +994,7 @@ class SimpleParam(_ParamData, Param):
             _raise_modifying_immutable_error(self, index)
         if not self._data:
             self._data[index] = self
+            self._index = None
         super(SimpleParam, self).set_value(value, index)
 
     def is_constant(self):

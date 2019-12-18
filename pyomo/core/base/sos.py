@@ -305,6 +305,7 @@ class SOSConstraint(ActiveIndexedComponent):
         else:
             soscondata = _SOSConstraintData(self)
         self._data[index] = soscondata
+        soscondata._index = index
 
         soscondata.level = self._sosLevel
 
