@@ -48,9 +48,9 @@ def log_infeasible_constraints(
                 if fabs(constr_lb_value - constr_body_value) >= tol:
                     equality_violated = True
             else:
-                if constr.has_lb() and fabs(constr_lb_value - constr_body_value) >= tol:
+                if constr.has_lb() and constr_lb_value - constr_body_value >= tol:
                     lb_violated = True
-                if constr.has_ub() and fabs(constr_body_value - constr_ub_value) >= tol:
+                if constr.has_ub() and constr_body_value - constr_ub_value >= tol:
                     ub_violated = True
 
         if not any((constr_undefined, equality_violated, lb_violated, ub_violated)):
@@ -122,10 +122,10 @@ def log_infeasible_bounds(m, tol=1E-6, logger=logger):
             logger.debug("Skipping VAR {} with no assigned value.")
             continue
         if var.has_lb() and value(var.lb - var) >= tol:
-            logger.info('VAR {}: {} < LB {}'.format(
+            logger.info('VAR {}: {} >/= LB {}'.format(
                 var.name, value(var), value(var.lb)))
         if var.has_ub() and value(var - var.ub) >= tol:
-            logger.info('VAR {}: {} > UB {}'.format(
+            logger.info('VAR {}: {} </= UB {}'.format(
                 var.name, value(var), value(var.ub)))
 
 
