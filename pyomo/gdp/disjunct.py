@@ -13,7 +13,7 @@ import sys
 from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
-from pyomo.common.modeling import unique_component_name
+from pyomo.common.modeling import unique_component_name, NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
     ModelComponentFactory, Binary, Block, Var, ConstraintList, Any
@@ -172,6 +172,7 @@ class SimpleDisjunct(_DisjunctData, Disjunct):
         _DisjunctData.__init__(self, self)
         Disjunct.__init__(self, *args, **kwds)
         self._data[None] = self
+        self._index = None
 
 
 class IndexedDisjunct(Disjunct):
@@ -192,6 +193,7 @@ class _DisjunctionData(ActiveComponentData):
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NoArgumentGiven
         self._active = True
         self.disjuncts = []
         self.xor = True
@@ -334,6 +336,7 @@ class Disjunction(ActiveIndexedComponent):
 
         _self_parent = self.parent_block()
         if not self.is_indexed():
+            self._index = None
             if self._init_rule is not None:
                 expr = self._init_rule(_self_parent)
             elif self._init_expr is not None:
@@ -423,6 +426,7 @@ class SimpleDisjunction(_DisjunctionData, Disjunction):
 
         if len(self._data) == 0:
             self._data[None] = self
+            self._index = None
         if expr is Disjunction.Skip:
             del self[None]
             return None

@@ -1364,6 +1364,7 @@ class Piecewise(Block):
         else:
             comp = self
         self._data[index] = comp
+        comp._index = index
         comp.updateBoundType(self._bound_type)
         comp.updatePoints(_self_domain_pts_index,range_pts)
         comp.build_constraints(func,_self_xvar,_self_yvar)
