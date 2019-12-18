@@ -143,8 +143,6 @@ class Connector(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Connector:
             return super(Connector, cls).__new__(cls)
-        logger.warning("DEPRECATED: The Connector component is deprecated. "
-            "It has been replaced by Port in the pyomo.network package.")
         if args == ():
             return SimpleConnector.__new__(SimpleConnector)
         else:
@@ -281,13 +279,13 @@ class IndexedConnector(Connector):
     pass
 
 
-@deprecated(
-    "Use of pyomo.connectors is deprecated. "
-    "Its functionality has been replaced by pyomo.network.",
-    version='TBD', remove_in='TBD',)
 class ConnectorExpander(Plugin):
     implements(IPyomoScriptModifyInstance)
 
+    @deprecated(
+        "Use of pyomo.connectors is deprecated. "
+        "Its functionality has been replaced by pyomo.network.",
+        version='TBD', remove_in='TBD', )
     def apply(self, **kwds):
         instance = kwds.pop('instance')
         xform = TransformationFactory('core.expand_connectors')
