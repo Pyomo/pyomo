@@ -187,6 +187,7 @@ class Connector(IndexedComponent):
             self._initialize_members(self._index_set)
         else:
             self._data[None] = self
+            self._index = None
             self._initialize_members([None])
         timer.report()
 

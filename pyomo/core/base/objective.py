@@ -465,6 +465,7 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
     def __init__(self, *args, **kwd):
         _GeneralObjectiveData.__init__(self, expr=None, component=self)
         Objective.__init__(self, *args, **kwd)
+        self._index = None
 
     #
     # Since this class derives from Component and
