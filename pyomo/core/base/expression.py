@@ -382,6 +382,7 @@ class Expression(IndexedComponent):
 
         if not self.is_indexed():
             self._data[None] = self
+            self._index = None
 
         #
         # Construct and initialize members

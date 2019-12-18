@@ -326,7 +326,7 @@ class _GeneralConstraintData(_ConstraintData):
         self._component = weakref_ref(component) if (component is not None) \
                           else None
         self._active = True
-        self._index = NoArgumentGiven
+        self._index = None
 
         self._body = None
         self._lower = None
