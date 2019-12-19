@@ -543,8 +543,8 @@ class Component(_ComponentBase):
                 ans = self._name
         else:
             ans = self._name
-        # if name_buffer is not None:
-        #     name_buffer[id(self)] = ans
+        if name_buffer is not None:
+            name_buffer[id(self)] = ans
         return ans
 
     @property
@@ -821,12 +821,8 @@ class ComponentData(_ComponentBase):
         else:
             return self.__str__()
 
-    def getname(self, fully_qualified=False, name_buffer=NoArgumentGiven, relative_to=None):
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
         """Return a string with the component name and index"""
-
-        if name_buffer is not NoArgumentGiven:
-            # deprecation_warning
-            pass
 
         c = self.parent_component()
         if c is self:
@@ -841,7 +837,6 @@ class ComponentData(_ComponentBase):
             # Get the name of the parent component
             #
             base = c.getname(fully_qualified, name_buffer, relative_to)
-            return base + _name_index_generator(self.index())
         else:
             #
             # Defensive: this is a ComponentData without a valid
@@ -851,26 +846,10 @@ class ComponentData(_ComponentBase):
             #
             return '[Unattached %s]' % (type(self).__name__,)
 
-        # if name_buffer is not None:
-        #     # Iterate through the dictionary and generate all names in
-        #     # the buffer
-        #     for idx, obj in iteritems(c):
-        #         name_buffer[id(obj)] = base + _name_index_generator(idx)
-        #     if id(self) in name_buffer:
-        #         # Return the name if it is in the buffer
-        #         return name_buffer[id(self)]
-        # else:
-        #     #
-        #     # No buffer, so we iterate through the component _data
-        #     # dictionary until we find this object.  This can be much
-        #     # more expensive than if a buffer is provided.
-        #     #
-        #     for idx, obj in iteritems(c):
-        #         if obj is self:
-        #             return base + _name_index_generator(idx)
-        #
-        # raise RuntimeError("Fatal error: cannot find the component data in "
-        #                    "the owning component's _data dictionary.")
+        myname = base + _name_index_generator(self.index())
+        if name_buffer is not None:
+            name_buffer[id(self)] = myname
+        return myname
 
     def is_indexed(self):
         """Return true if this component is indexed"""
