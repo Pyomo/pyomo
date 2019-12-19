@@ -55,25 +55,25 @@ jobs:
           Write-Host "-- Showing the Current Shell Environment
           gci Env: | Sort Name
 
-          #Write-Host "-- Setup for additional packages"
-          #SET ADDITIONAL_CF_PKGS=setuptools pip coverage sphinx_rtd_theme
-          #SET MINICONDA_EXTRAS=""
-          #IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn)
-          #IF DEFINED EXTRAS (SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% pymysql pyro4 pint pathos %MINICONDA_EXTRAS%)
-          #SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% glpk ipopt
-          #%CONDAFORGE% %ADDITIONAL_CF_PKGS%
-          #ps: Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe'
-          #windows_x64_64.exe /SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS
-          #SET PATH=%cd%\\gams;%PATH%
-          #git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
-          #python -m pip install git+https://github.com/PyUtilib/pyutilib
-          #python setup.py develop
-          #SET BUILD_DIR=%cd%
-          #SET COVERAGE_PROCESS_START=%BUILD_DIR%\\coveragerc
-          #copy %BUILD_DIR%\\.coveragerc %COVERAGE_PROCESS_START%
-          #Write-Host data_file=%BUILD_DIR%\\.coverage >> %COVERAGE_PROCESS_START%
-          # NOTE python coverage cmd is not parsing correctly, temp removed to make progress, see appveyor script example
-          #SET PYOMO_CONFIG_DIR=%BUILD_DIR%\\config
+ #         Write-Host "-- Setup for additional packages"
+ #         SET ADDITIONAL_CF_PKGS=setuptools pip coverage sphinx_rtd_theme
+ #         SET MINICONDA_EXTRAS=""
+ #         IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn)
+ #         IF DEFINED EXTRAS (SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% pymysql pyro4 pint pathos %MINICONDA_EXTRAS%)
+ #         SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% glpk ipopt
+ #         %CONDAFORGE% %ADDITIONAL_CF_PKGS%
+ #         ps: Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe'
+ #         windows_x64_64.exe /SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS
+ #         SET PATH=%cd%\\gams;%PATH%
+ #         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
+ #         python -m pip install git+https://github.com/PyUtilib/pyutilib
+ #         python setup.py develop
+ #         SET BUILD_DIR=%cd%
+ #         SET COVERAGE_PROCESS_START=%BUILD_DIR%\\coveragerc
+ #         copy %BUILD_DIR%\\.coveragerc %COVERAGE_PROCESS_START%
+ #         Write-Host data_file=%BUILD_DIR%\\.coverage >> %COVERAGE_PROCESS_START%
+ #          NOTE python coverage cmd is not parsing correctly, temp removed to make progress, see appveyor script example
+ #         SET PYOMO_CONFIG_DIR=%BUILD_DIR%\\config
 
     - name: Install extensions
       shell: pwsh
