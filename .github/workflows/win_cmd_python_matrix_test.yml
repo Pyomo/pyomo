@@ -22,7 +22,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      shell: pwsh
+      shell: cmd
       run: |
           # Echo all commands
           @echo on
