@@ -72,8 +72,7 @@ class ComponentSet(collections_MutableSet):
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys
         assert len(state) == 1
-        self._data = dict((id(obj), obj)
-                          for obj in state['_data'])
+        self._data = {id(obj):obj for obj in state['_data']}
 
     def __getstate__(self):
         return {'_data': tuple(self._data.values())}
