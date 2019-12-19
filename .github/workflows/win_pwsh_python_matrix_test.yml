@@ -52,7 +52,7 @@ jobs:
           Write-Host "-- If we are using full Anaconda instead of GitHub's MiniConda, install it"
           IF (NOT DEFINED gci Env:USING_MINICONDA) {conda install anaconda}
 
-          Write-Host "-- Showing the Current Shell Environment
+          Write-Host "-- Showing the Current Shell Environment"
           gci Env: | Sort Name
 
  #         Write-Host "-- Setup for additional packages"
