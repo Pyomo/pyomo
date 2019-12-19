@@ -42,7 +42,7 @@ jobs:
           Write-Host "-- Determine if we will use GitHub's Miniconda or install Anaconda"
           gci Env:USING_MINICONDA=1
 
-          Write-Host "-- Showing the Current Shell Environment
+          Write-Host "-- Showing the Current Shell Environment"
           gci Env: | Sort Name
 
           Write-Host "-- Update conda, then force it to NOT update itself again"
