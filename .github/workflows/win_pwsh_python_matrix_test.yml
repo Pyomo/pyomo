@@ -31,7 +31,7 @@ jobs:
           gci Env: | Sort Name
 
           Write-Host "-- Setting Path and Showing Python Version"
-          $Env:Path += $Env:CONDA"/Scripts"
+          $Env:Path += $Env:CONDA + "\Scripts"
           python --version
 
           Write-Host "-- Setting Conda Env Vars"
