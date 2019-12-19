@@ -22,29 +22,38 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      shell: cmd
+      shell: pwsh
       run: |
           @echo on
           @echo "-- Initial SHELL Environment Settings"
           SET
+
           @echo "-- Setting Path and Showing Python Version"
-          SET PATH=%PYTHON%;%PYTHON%\Scripts;%PYTHON%\Library\bin;%PATH%
+          #SET PATH=%PYTHON%;%PYTHON%\Scripts;%PYTHON%\Library\bin;%PATH%
           python --version
+
           @echo "-- Setting Conda Env Vars"
           SET CONDA_INSTALL=conda install -q -y
           SET ANACONDA=%CONDA_INSTALL% -c anaconda
           SET CONDAFORGE=%CONDA_INSTALL% -c conda-forge --no-update-deps
-          @echo "-- Determine if we will use Appveyor's Miniconda or install Anaconda (intermittently one or the other suffers from NumPy failing to load the MKL DLL; See #542, #577"
+
+          @echo "-- Determine if we will use GitHub's Miniconda or install Anaconda"
           SET USING_MINICONDA=1
+
           @echo "-- Showing the Current Shell Environment
           SET
+
           @echo "-- Update conda, then force it to NOT update itself again"
           conda config --set always_yes yes
           conda config --set auto_update_conda false
-          @echo "-- If we are using full Anaconda instead of Appveyor's MiniConda, install it"
-          IF NOT DEFINED USING_MINICONDA (conda install anaconda)
-          @echo "-- Display the PATH"
-          echo %PATH%
+
+          @echo "-- If we are using full Anaconda instead of GitHub's MiniConda, install it"
+          #IF NOT DEFINED USING_MINICONDA (conda install anaconda)
+          IF (NOT DEFINED USING_MINICONDA) {conda install anaconda}
+
+          @echo "-- Showing the Current Shell Environment
+          SET
+
           @echo "-- Setup for additional packages"
           SET ADDITIONAL_CF_PKGS=setuptools pip coverage sphinx_rtd_theme
           SET MINICONDA_EXTRAS=""
