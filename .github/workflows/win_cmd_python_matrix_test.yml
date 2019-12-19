@@ -43,6 +43,7 @@ jobs:
           SET USING_MINICONDA=1
 
           @echo "-- Update conda, then force it to NOT update itself again"
+          ::#conda create -n new_python_env python=2.7
           conda config --set always_yes yes
           conda config --set auto_update_conda false
           conda info
@@ -79,6 +80,8 @@ jobs:
     - name: Install extensions
       shell: cmd
       run: |
+          ::#Echo all commands
+          @echo on
           @echo "-- Pyomo download-extensions"
           pyomo download-extensions
           pyomo build-extensions
@@ -98,11 +101,13 @@ jobs:
     - name: Run nightly tests with test.pyomo
       shell: cmd
       run: |
-        echo "-- Setup and run nosetests"
-        SET BUILD_DIR=%cd%
-        ::#SET COVERAGE_PROCESS_START=%BUILD_DIR%\coveragerc
-        SET PYOMO_CONFIG_DIR=%BUILD_DIR%\config
-        DIR
-        test.pyomo -v --cat="nightly" pyomo %BUILD_DIR%\pyomo-model-libraries
+          ::#Echo all commands
+          @echo on
+          @echo "-- Setup and run nosetests"
+          SET BUILD_DIR=%cd%
+          ::#SET COVERAGE_PROCESS_START=%BUILD_DIR%\coveragerc
+          SET PYOMO_CONFIG_DIR=%BUILD_DIR%\config
+          DIR
+          test.pyomo -v --cat="nightly" pyomo %BUILD_DIR%\pyomo-model-libraries
 
 

@@ -36,8 +36,8 @@ jobs:
 
           Write-Host "-- Setting Conda Env Vars"
           $Env:CONDA_INSTALL="conda install -q -y"
-          $Env:ANACONDA="gci Env:CONDA_INSTALL -c anaconda"
-          $Env:CONDAFORGE=gci Env:CONDA_INSTALL -c conda-forge --no-update-deps
+          $Env:ANACONDA=$Env:CONDA_INSTALL + " -c anaconda"
+          $Env:CONDAFORGE=$Env:CONDA_INSTALL + " -c conda-forge --no-update-deps
 
           Write-Host "-- Determine if we will use GitHub's Miniconda or install Anaconda"
           $Env:USING_MINICONDA=1
@@ -49,8 +49,8 @@ jobs:
           conda config --set always_yes yes
           conda config --set auto_update_conda false
 
-          Write-Host "-- If we are using full Anaconda instead of GitHub's MiniConda, install it"
-          IF (NOT DEFINED gci Env:USING_MINICONDA) {conda install anaconda}
+#          Write-Host "-- If we are using full Anaconda instead of GitHub's MiniConda, install it"
+#          IF (NOT DEFINED $Env:USING_MINICONDA) {conda install anaconda}
 
           Write-Host "-- Showing the Current Shell Environment"
           gci Env: | Sort Name
