@@ -30,8 +30,7 @@ jobs:
           @echo "-- Initial SHELL Environment Settings"
           SET
 
-          @echo "-- Setting Path and Showing Python Version"
-          ::#SET PATH=%PYTHON%;%PYTHON%\Scripts;%PYTHON%\Library\bin;%PATH%
+          @echo "-- Setting Conda Path and Showing Python Version"
           SET PATH=%CONDA%\Scripts;%PATH%
           python --version
 
@@ -43,26 +42,26 @@ jobs:
           @echo "-- Determine if we will use GitHub's Miniconda or install Anaconda"
           SET USING_MINICONDA=1
 
-          @echo "-- Showing the Current Shell Environment
-          SET
-
           @echo "-- Update conda, then force it to NOT update itself again"
           conda config --set always_yes yes
           conda config --set auto_update_conda false
+          conda info
 
-          @echo "-- If we are using full Anaconda instead of GitHub's MiniConda, install it"
-          IF NOT DEFINED USING_MINICONDA (conda install anaconda)
+          ::#@echo "-- If we are using full Anaconda instead of GitHub's MiniConda, install it"
+          ::#IF NOT DEFINED USING_MINICONDA (conda install anaconda)
 
           @echo "-- Showing the Current Shell Environment
           SET
 
           @echo "-- Setup for additional packages"
-          ::#SET ADDITIONAL_CF_PKGS=setuptools pip coverage sphinx_rtd_theme
-          ::#SET MINICONDA_EXTRAS=""
-          ::#IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn)
-          ::#IF DEFINED EXTRAS (SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% pymysql pyro4 pint pathos %MINICONDA_EXTRAS%)
-          ::#SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% glpk ipopt
-          ::#%CONDAFORGE% %ADDITIONAL_CF_PKGS%
+          conda list
+          SET ADDITIONAL_CF_PKGS=setuptools pip coverage sphinx_rtd_theme
+          SET MINICONDA_EXTRAS=""
+          IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn)
+          SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% pymysql pyro4 pint pathos %MINICONDA_EXTRAS%
+          SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% glpk ipopt
+          %CONDAFORGE% %ADDITIONAL_CF_PKGS%
+          conda list
           ::#ps: Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe'
           ::#windows_x64_64.exe /SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS
           ::#SET PATH=%cd%\\gams;%PATH%
