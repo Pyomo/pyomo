@@ -54,17 +54,18 @@ jobs:
           SET
 
           @echo "-- Setup for additional packages"
-          conda list
+          ::#conda list
           SET ADDITIONAL_CF_PKGS=setuptools pip coverage sphinx_rtd_theme
           SET MINICONDA_EXTRAS=""
           IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn)
           SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% pymysql pyro4 pint pathos %MINICONDA_EXTRAS%
           SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% glpk ipopt
           %CONDAFORGE% %ADDITIONAL_CF_PKGS%
-          conda list
+          ::#conda list
           ::#ps: Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe'
           ::#windows_x64_64.exe /SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS
           ::#SET PATH=%cd%\\gams;%PATH%
+          DIR
           git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
           python -m pip install git+https://github.com/PyUtilib/pyutilib
           python setup.py develop
@@ -101,6 +102,7 @@ jobs:
         ::#SET BUILD_DIR=%cd%
         ::#SET COVERAGE_PROCESS_START=%BUILD_DIR%\coveragerc
         ::#SET PYOMO_CONFIG_DIR=%BUILD_DIR%\config
+        DIR
         test.pyomo -v --cat="nightly" pyomo %BUILD_DIR%\pyomo-model-libraries
 
 
