@@ -1,4 +1,4 @@
-name: (WIP) Windows Pyomo Test Workflow
+name: (WIP) Windows Cmd Shell Pyomo Test Workflow
 
 on:
   pull_request:
@@ -24,7 +24,9 @@ jobs:
     - name: Install dependencies
       shell: pwsh
       run: |
+          # Echo all commands
           @echo on
+
           @echo "-- Initial SHELL Environment Settings"
           SET
 
@@ -48,8 +50,7 @@ jobs:
           conda config --set auto_update_conda false
 
           @echo "-- If we are using full Anaconda instead of GitHub's MiniConda, install it"
-          #IF NOT DEFINED USING_MINICONDA (conda install anaconda)
-          IF (NOT DEFINED USING_MINICONDA) {conda install anaconda}
+          IF NOT DEFINED USING_MINICONDA (conda install anaconda)
 
           @echo "-- Showing the Current Shell Environment
           SET
