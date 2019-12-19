@@ -32,6 +32,7 @@ jobs:
 
           @echo "-- Setting Path and Showing Python Version"
           ::#SET PATH=%PYTHON%;%PYTHON%\Scripts;%PYTHON%\Library\bin;%PATH%
+          SET PATH=%CONDA%;%PATH%
           python --version
 
           @echo "-- Setting Conda Env Vars"
