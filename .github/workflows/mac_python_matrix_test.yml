@@ -32,6 +32,7 @@ jobs:
         brew link --overwrite gcc
         brew install pkg-config
         brew install unixodbc
+        brew install cython
         pip install numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos glpk ipopt
     - name: Install extensions
       run: |
