@@ -27,15 +27,16 @@ jobs:
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
         pip install --quiet git+https://github.com/PyUtilib/pyutilib
         python setup.py develop
+
+    - name: Install extensions
+      run: |
         brew update
         brew install bash gcc
         brew link --overwrite gcc
         brew install pkg-config
         brew install unixodbc
-        pip install cython
-        pip install numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos glpk ipopt
-    - name: Install extensions
-      run: |
+        pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos 
+        pip install glpk ipopt
         pyomo download-extensions
         pyomo build-extensions
     - name: Run nightly tests with test.pyomo
