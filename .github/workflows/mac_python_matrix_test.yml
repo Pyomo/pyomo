@@ -37,7 +37,6 @@ jobs:
         brew install pkg-config
         brew install unixodbc
 
-<# Install python modules #>
         pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos
         
         brew install ipopt
