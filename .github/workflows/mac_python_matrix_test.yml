@@ -30,13 +30,17 @@ jobs:
 
     - name: Install extensions
       run: |
+#       Brew install headers for pyodbc 
         brew update
         brew install bash gcc
         brew link --overwrite gcc
         brew install pkg-config
         brew install unixodbc
+#       Install extra modules
         pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos 
-        pip install glpk ipopt
+#       Install subset of solvers       
+        pip install glpk 
+#       Download extensions
         pyomo download-extensions
         pyomo build-extensions
     - name: Run nightly tests with test.pyomo
