@@ -2095,6 +2095,13 @@ class RangeSet(Component):
             args,
             kwds.pop('ranges', ()),
         )
+        self._init_validate = Initializer(kwds.pop('validate', None))
+        self._init_filter = Initializer(kwds.pop('filter', None))
+        self._init_bounds = kwds.pop('bounds', None)
+        if self._init_bounds is not None:
+            self._init_bounds = RangeSetInitializer(
+                self._init_bounds, default_step=0)
+
         Component.__init__(self, **kwds)
         # Shortcut: if all the relevant construction information is
         # simple (hard-coded) values, then it is safe to go ahead and
@@ -2186,7 +2193,88 @@ class RangeSet(Component):
                     "specify 'finite=False' when declaring the RangeSet"
                     % (r,))
 
+        parent = self.parent_block()
+        if self._init_bounds is not None:
+            bnds = self._init_bounds(parent, None)
+            tmp = []
+            for r in ranges:
+                tmp.extend(r.range_intersection(bnds.ranges()))
+            ranges = tuple(tmp)
+
         self._ranges = ranges
+
+        if self._init_filter is not None:
+            if not self.isfinite():
+                raise ValueError(
+                    "The 'filter' keyword argument is not valid for "
+                    "non-finite RangeSet component (%s)" % (self.name,))
+
+            try:
+                _filter = Initializer(self._init_filter(parent, None))
+                if _filter.constant():
+                    # _init_filter was the actual filter function; use it.
+                    _filter = self._init_filter
+            except:
+                # We will assume any exceptions raised when getting the
+                # filter for this index indicate that the function
+                # should have been passed directly to the underlying sets.
+                _filter = self._init_filter
+
+            # If this is a finite set, then we can go adead and filter
+            # all the ranges.  This allows pprint and len to be correct,
+            # without special handling
+            new_ranges = []
+            old_ranges = list(self.ranges())
+            old_ranges.reverse()
+            block = self.parent_component()
+            while old_ranges:
+                r = old_ranges.pop()
+                for i,val in enumerate(_FiniteRangeSetData._range_gen(r)):
+                    if not _filter(block, val):
+                        split_r = r.range_difference((NumericRange(val,val,0),))
+                        if len(split_r) == 2:
+                            new_ranges.append(split_r[0])
+                            old_ranges.append(split_r[1])
+                        elif len(split_r) == 1:
+                            if i == 0:
+                                old_ranges.append(split_r[0])
+                            else:
+                                new_ranges.append(split_r[0])
+                        i = None
+                        break
+                if i is not None:
+                    new_ranges.append(r)
+            self._ranges = new_ranges
+
+        if self._init_validate is not None:
+            if not self.isfinite():
+                raise ValueError(
+                    "The 'validate' keyword argument is not valid for "
+                    "non-finite RangeSet component (%s)" % (self.name,))
+
+            try:
+                _validate = Initializer(self._init_validate(parent, None))
+                if _validate.constant():
+                    # _init_validate was the actual validate function; use it.
+                    _validate = self._init_validate
+            except:
+                # We will assume any exceptions raised when getting the
+                # validator for this index indicate that the function
+                # should have been passed directly to the underlying set.
+                _validate = self._init_validate
+
+            for val in self:
+                try:
+                    flag = _validate(parent, val)
+                except:
+                    logger.error(
+                        "Exception raised while validating element '%s' "
+                        "for Set %s" % (val, self.name))
+                    raise
+                if not flag:
+                    raise ValueError(
+                        "The value=%s violates the validation rule of "
+                        "Set %s" % (val, self.name))
 
         timer.report()
 

@@ -739,6 +739,75 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 data={None: {'p': {None: 1}, 'q': {None: 5}, 's': {None: 1},
                              'i': {None: [1,2,3]} }})
 
+    def test_filter(self):
+        def rFilter(m, i):
+            return i % 2
+        # Simple filter (beginning with the *first* element)
+        r = RangeSet(10, filter=rFilter)
+        self.assertEqual(r, [1,3,5,7,9])
+
+        # Nothing to remove
+        r = RangeSet(1, filter=rFilter)
+        self.assertEqual(r, [1])
+
+        # Remove the only element in the range
+        r = RangeSet(2,2, filter=rFilter)
+        self.assertEqual(r, [])
+
+        # remove the *second* element in the range
+        r = RangeSet(2,3, filter=rFilter)
+        self.assertEqual(r, [3])
+
+        # Test a filter that doesn't raise an exception for "None"
+        def rFilter(m, i):
+            return i is None or i % 2
+        r = RangeSet(10, filter=rFilter)
+        self.assertEqual(r, [1,3,5,7,9])
+
+        with self.assertRaisesRegexp(
+                ValueError, "The 'filter' keyword argument is not "
+                "valid for non-finite RangeSet component"):
+            r = RangeSet(1,10,0, filter=rFilter)
+
+    def test_validate(self):
+        def rFilter(m, i):
+            return i % 2
+        # Simple validation
+        r = RangeSet(1,10,2, validate=rFilter)
+        self.assertEqual(r, [1,3,5,7,9])
+
+        # Failed validation
+        with self.assertRaisesRegexp(
+                ValueError, "The value=2 violates the validation rule"):
+            r = RangeSet(10, validate=rFilter)
+
+        # Test a validation that doesn't raise an exception for "None"
+        def rFilter(m, i):
+            return i is None or i % 2
+        r = RangeSet(1,10,2, validate=rFilter)
+        self.assertEqual(r, [1,3,5,7,9])
+
+        with self.assertRaisesRegexp(
+                ValueError, "The 'validate' keyword argument is not "
+                "valid for non-finite RangeSet component"):
+            r = RangeSet(1,10,0, validate=rFilter)
+
+        def badRule(m, i):
+            raise RuntimeError("ERROR: %s" % i)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            with self.assertRaisesRegexp(
+                    RuntimeError, "ERROR: 1"):
+                r = RangeSet(10, validate=badRule)
+        self.assertEqual(
+            output.getvalue(),
+            "Exception raised while validating element "
+            "'1' for Set AbstractFiniteSimpleRangeSet\n")
+
+    def test_bounds(self):
+        r = RangeSet(100, bounds=(2.5, 5.5))
+        self.assertEqual(r, [3,4,5])
+
     def test_contains(self):
         r = RangeSet(5)
         self.assertIn(1, r)
