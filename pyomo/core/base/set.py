@@ -78,7 +78,13 @@ def process_setarg(arg):
         args.setdefault('initialize', arg)
         args.setdefault('ordered', type(arg) not in Set._UnorderedInitializers)
         ans = Set(**args)
-        ans.construct()
+
+        _init = args['initialize']
+        if not ( inspect.isgenerator(_init)
+                 or inspect.isfunction(_init)
+                 or ( isinstance(_init, ComponentData)
+                      and not _init.parent_component().is_constructed() )):
+            ans.construct()
         return ans
     except AttributeError:
         pass
@@ -91,19 +97,35 @@ def process_setarg(arg):
     #               ordered=type(arg) in {tuple, list}))
     # ans.construct()
     #
-    # But this causes problems, especially because Set()'s
-    # constructor needs to know if the object is ordered
-    # (Set defaults to ordered, and will toss a warning if
-    # the underlying data is not ordered)).  While we could
-    # add checks where we create the Set (like here and in
-    # the __r*__ operators) and pass in a reasonable value
-    # for ordered, it is starting to make more sense to use
-    # SetOf (which has that logic).  Alternatively, we could
-    # use SetOf to create the Set:
+    # But this causes problems, especially because Set()'s constructor
+    # needs to know if the object is ordered (Set defaults to ordered,
+    # and will toss a warning if the underlying data sourcce is not
+    # ordered)).  While we could add checks where we create the Set
+    # (like here and in the __r*__ operators) and pass in a reasonable
+    # value for ordered, it is starting to make more sense to use SetOf
+    # (which has that logic).  Alternatively, we could use SetOf to
+    # create the Set:
     #
-    tmp = SetOf(arg)
-    ans = Set(initialize=tmp, ordered=tmp.isordered())
-    ans.construct()
+    _defer_construct = False
+    if inspect.isgenerator(arg):
+        _ordered = True
+        _defer_construct = True
+    elif inspect.isfunction(arg):
+        _ordered = True
+        _defer_construct = True
+    else:
+        arg = SetOf(arg)
+        _ordered = arg.isordered()
+
+    ans = Set(initialize=arg, ordered=_ordered)
+    #
+    # Because the resulting set will be attached to the model (at least
+    # for the time being), we will NOT construct it here unless the data
+    # is already determined (either statically provided, or through an
+    # already-constructed component).
+    #
+    if not _defer_construct:
+        ans.construct()
     #
     # Or we can do the simple thing and just use SetOf:
     #
@@ -218,7 +240,9 @@ class RangeSetInitializer(InitializerBase):
         if len(val) < 3:
             val = tuple(val) + (self.default_step,)
         ans = RangeSet(*tuple(val))
-        ans.construct()
+        # We don't need to construct here, as the RangeSet will
+        # automatically construct itself if it can
+        #ans.construct()
         return ans
 
     def constant(self):
@@ -2110,7 +2134,10 @@ class RangeSet(Component):
         # NOTE: We will need to revisit this if we ever allow passing
         # data into the construct method (which would override the
         # hard-coded values here).
-        if all(type(_) in native_types for _ in args):
+        if all(type(_) in native_types
+               or ( isinstance(_, _ComponentBase)
+                    and _.parent_component().is_constructed())
+               for _ in args):
             self.construct()
 
 
@@ -2340,6 +2367,10 @@ class _SetOperator(_SetData, Set):
                 implicit.append(_new_set)
         self._sets = tuple(sets)
         self._implicit_subsets = tuple(implicit)
+        # We will implicitly construct all set operators if the operands
+        # are all constructed.
+        if all(_.parent_component()._constructed for _ in self._sets):
+            self.construct()
 
     def __getstate__(self):
         """
@@ -2358,8 +2389,8 @@ class _SetOperator(_SetData, Set):
                 logger.debug("Constructing SetOperator, name=%s, from data=%r"
                              % (self.name, data))
         for s in self._sets:
-            s.construct()
-        super(_SetOperator, self).construct(data)
+            s.parent_component().construct()
+        super(SetOperator, self).construct()
         timer.report()
 
     # Note: because none of the slots on this class need to be edited,

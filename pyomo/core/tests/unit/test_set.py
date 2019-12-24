@@ -158,9 +158,10 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
         self.assertIsInstance(s._sets[1], RangeSet)
 
+        p = Param(initialize=3)
         a = SetInitializer(Reals)
         a.intersect(SetInitializer(Integers))
-        a.intersect(RangeSetInitializer(3, default_step=0))
+        a.intersect(RangeSetInitializer(p, default_step=0))
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), SetIntersectInitializer)
         self.assertIs(type(a._set._A), SetIntersectInitializer)
@@ -171,6 +172,7 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertFalse(a.verified)
         s = a(None,None)
         self.assertIs(type(s), SetIntersection_InfiniteSet)
+        p.construct()
         s.construct()
         self.assertIs(type(s), SetIntersection_OrderedSet)
         self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
@@ -179,9 +181,10 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertFalse(s._sets[1].isfinite())
         self.assertTrue(s.isfinite())
 
+        p = Param(initialize=3)
         a = SetInitializer(Reals)
         a.intersect(SetInitializer({1:Integers}))
-        a.intersect(RangeSetInitializer(3, default_step=0))
+        a.intersect(RangeSetInitializer(p, default_step=0))
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), SetIntersectInitializer)
         self.assertIs(type(a._set._A), SetIntersectInitializer)
@@ -194,6 +197,7 @@ class Test_SetInitializer(unittest.TestCase):
             a(None,None)
         s = a(None,1)
         self.assertIs(type(s), SetIntersection_InfiniteSet)
+        p.construct()
         s.construct()
         self.assertIs(type(s), SetIntersection_OrderedSet)
         self.assertIs(type(s._sets[0]), SetIntersection_InfiniteSet)
@@ -679,10 +683,10 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         output = StringIO()
         p = Param(initialize=5)
+        i = RangeSet(p)
+        self.assertIs(type(i), AbstractFiniteSimpleRangeSet)
         p.construct()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
-            i = RangeSet(p)
-            self.assertIs(type(i), AbstractFiniteSimpleRangeSet)
             self.assertEqual(output.getvalue(), "")
             i.construct()
             ref = 'Constructing RangeSet, '\
@@ -996,14 +1000,26 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         m.a = Param(initialize=3)
         o = RangeSet(m.a)
-        self.assertEqual(str(o), "AbstractFiniteSimpleRangeSet")
+        self.assertEqual(str(o), "[1:3]")
         m.O = o
         self.assertEqual(str(o), "O")
 
         p = RangeSet(m.a, finite=False)
-        self.assertEqual(str(p), "AbstractInfiniteSimpleRangeSet")
+        self.assertEqual(str(p), "[1:3]")
         m.P = p
         self.assertEqual(str(p), "P")
+
+        b = Param(initialize=3)
+        oo = RangeSet(b)
+        self.assertEqual(str(oo), "AbstractFiniteSimpleRangeSet")
+        pp = RangeSet(b, finite=False)
+        self.assertEqual(str(pp), "AbstractInfiniteSimpleRangeSet")
+
+        b.construct()
+        m.OO = oo
+        self.assertEqual(str(oo), "OO")
+        m.PP = pp
+        self.assertEqual(str(pp), "PP")
 
     def test_isdisjoint(self):
         i = SetOf({1,2,3})
@@ -1414,14 +1430,19 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
 class Test_SetOperator(unittest.TestCase):
     def test_construct(self):
-        a = RangeSet(3)
+        p = Param(initialize=3)
+        a = RangeSet(p)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             i = a * a
             self.assertEqual(output.getvalue(), "")
+        p.construct()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             i.construct()
             ref = 'Constructing SetOperator, name=SetProduct_OrderedSet, '\
                   'from data=None\n' \
+                  'Constructing RangeSet, name=AbstractFiniteSimpleRangeSet, '\
+                  'from data=None\n'\
                   'Constructing Set, name=SetProduct_OrderedSet, '\
                   'from data=None\n'
             self.assertEqual(output.getvalue(), ref)
@@ -1916,34 +1937,38 @@ A : Size=1, Index=None, Ordered=True
     def test_odd_intersections(self):
         # Test the intersection of an infinite discrete range with a
         # finite continuous one
-        a = RangeSet(0, None, 2)
-        b = RangeSet(5,10,0)
-        m = ConcreteModel()
-        x = a & b
-        self.assertIs(type(x), SetIntersection_InfiniteSet)
-        m.X = x
-        self.assertIs(type(x), SetIntersection_OrderedSet)
-        self.assertEqual(list(x), [6,8,10])
+        m = AbstractModel()
+        m.p = Param(initialize=0)
+        m.a = RangeSet(0, None, 2)
+        m.b = RangeSet(5,10,m.p, finite=False)
+        m.x = m.a & m.b
+        self.assertTrue(m.a._constructed)
+        self.assertFalse(m.b._constructed)
+        self.assertFalse(m.x._constructed)
+        self.assertIs(type(m.x), SetIntersection_InfiniteSet)
+        i = m.create_instance()
+        self.assertIs(type(i.x), SetIntersection_OrderedSet)
+        self.assertEqual(list(i.x), [6,8,10])
 
-        self.assertEqual(x.ord(6), 1)
-        self.assertEqual(x.ord(8), 2)
-        self.assertEqual(x.ord(10), 3)
+        self.assertEqual(i.x.ord(6), 1)
+        self.assertEqual(i.x.ord(8), 2)
+        self.assertEqual(i.x.ord(10), 3)
 
-        self.assertEqual(x[1], 6)
-        self.assertEqual(x[2], 8)
-        self.assertEqual(x[3], 10)
+        self.assertEqual(i.x[1], 6)
+        self.assertEqual(i.x[2], 8)
+        self.assertEqual(i.x[3], 10)
         with self.assertRaisesRegexp(
                 IndexError,
-                "X index out of range"):
-            x[4]
+                "x index out of range"):
+            i.x[4]
 
-        self.assertEqual(x[-3], 6)
-        self.assertEqual(x[-2], 8)
-        self.assertEqual(x[-1], 10)
+        self.assertEqual(i.x[-3], 6)
+        self.assertEqual(i.x[-2], 8)
+        self.assertEqual(i.x[-1], 10)
         with self.assertRaisesRegexp(
                 IndexError,
-                "X index out of range"):
-            x[-4]
+                "x index out of range"):
+            i.x[-4]
 
 
 
