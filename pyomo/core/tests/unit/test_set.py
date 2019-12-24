@@ -3213,6 +3213,17 @@ class TestSet(unittest.TestCase):
         m.I = [0,-1,1]
         _verify(m.I, [-1,0,1])
 
+    def test_multiple_insertion(self):
+        m = ConcreteModel()
+        m.I = Set(ordered=True, initialize=[1])
+
+        self.assertEqual(m.I.add(3,2,4), 3)
+        self.assertEqual(tuple(m.I.data()), (1,3,2,4))
+
+        self.assertEqual(m.I.add(1,5,4), 1)
+        self.assertEqual(tuple(m.I.data()), (1,3,2,4,5))
+
+
     def test_indexed_set(self):
         # Implicit construction
         m = ConcreteModel()
