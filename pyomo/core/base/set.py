@@ -2421,7 +2421,7 @@ class AbstractFiniteSimpleRangeSet(FiniteSimpleRangeSet):
 # Set Operators
 ############################################################################
 
-class _SetOperator(_SetData, Set):
+class SetOperator(_SetData, Set):
     __slots__ = ('_sets','_implicit_subsets')
 
     def __init__(self, *args, **kwds):
@@ -2445,8 +2445,8 @@ class _SetOperator(_SetData, Set):
         """
         This method must be defined because this class uses slots.
         """
-        state = super(_SetOperator, self).__getstate__()
-        for i in _SetOperator.__slots__:
+        state = super(SetOperator, self).__getstate__()
+        for i in SetOperator.__slots__:
             state[i] = getattr(self, i)
         return state
 
@@ -2494,7 +2494,7 @@ class _SetOperator(_SetData, Set):
         _args = []
         for arg in self._sets:
             arg_str = str(arg)
-            if ' ' in arg_str and isinstance(arg, _SetOperator):
+            if ' ' in arg_str and isinstance(arg, SetOperator):
                 arg_str = "(" + arg_str + ")"
             _args.append(arg_str)
         return self._operator.join(_args)
@@ -2560,7 +2560,7 @@ class _SetOperator(_SetData, Set):
 
 ############################################################################
 
-class SetUnion(_SetOperator):
+class SetUnion(SetOperator):
     __slots__ = tuple()
 
     _operator = " | "
@@ -2569,7 +2569,7 @@ class SetUnion(_SetOperator):
         if cls != SetUnion:
             return super(SetUnion, cls).__new__(cls)
 
-        set0, set1 = _SetOperator._checkArgs(*args)
+        set0, set1 = SetOperator._checkArgs(*args)
         if set0[0] and set1[0]:
             cls = SetUnion_OrderedSet
         elif set0[1] and set1[1]:
@@ -2676,7 +2676,7 @@ class SetUnion_OrderedSet(_OrderedSetMixin, SetUnion_FiniteSet):
 
 ############################################################################
 
-class SetIntersection(_SetOperator):
+class SetIntersection(SetOperator):
     __slots__ = tuple()
 
     _operator = " & "
@@ -2685,7 +2685,7 @@ class SetIntersection(_SetOperator):
         if cls != SetIntersection:
             return super(SetIntersection, cls).__new__(cls)
 
-        set0, set1 = _SetOperator._checkArgs(*args)
+        set0, set1 = SetOperator._checkArgs(*args)
         if set0[0] or set1[0]:
             cls = SetIntersection_OrderedSet
         elif set0[1] or set1[1]:
@@ -2802,7 +2802,7 @@ class SetIntersection_OrderedSet(_OrderedSetMixin, SetIntersection_FiniteSet):
 
 ############################################################################
 
-class SetDifference(_SetOperator):
+class SetDifference(SetOperator):
     __slots__ = tuple()
 
     _operator = " - "
@@ -2811,7 +2811,7 @@ class SetDifference(_SetOperator):
         if cls != SetDifference:
             return super(SetDifference, cls).__new__(cls)
 
-        set0, set1 = _SetOperator._checkArgs(*args)
+        set0, set1 = SetOperator._checkArgs(*args)
         if set0[0]:
             cls = SetDifference_OrderedSet
         elif set0[1]:
@@ -2892,7 +2892,7 @@ class SetDifference_OrderedSet(_OrderedSetMixin, SetDifference_FiniteSet):
 
 ############################################################################
 
-class SetSymmetricDifference(_SetOperator):
+class SetSymmetricDifference(SetOperator):
     __slots__ = tuple()
 
     _operator = " ^ "
@@ -2901,7 +2901,7 @@ class SetSymmetricDifference(_SetOperator):
         if cls != SetSymmetricDifference:
             return super(SetSymmetricDifference, cls).__new__(cls)
 
-        set0, set1 = _SetOperator._checkArgs(*args)
+        set0, set1 = SetOperator._checkArgs(*args)
         if set0[0] and set1[0]:
             cls = SetSymmetricDifference_OrderedSet
         elif set0[1] and set1[1]:
@@ -3000,7 +3000,7 @@ class SetSymmetricDifference_OrderedSet(_OrderedSetMixin,
 
 ############################################################################
 
-class SetProduct(_SetOperator):
+class SetProduct(SetOperator):
     __slots__ = tuple()
 
     _operator = "*"
@@ -3009,7 +3009,7 @@ class SetProduct(_SetOperator):
         if cls != SetProduct:
             return super(SetProduct, cls).__new__(cls)
 
-        _sets = _SetOperator._checkArgs(*args)
+        _sets = SetOperator._checkArgs(*args)
         if all(_[0] for _ in _sets):
             cls = SetProduct_OrderedSet
         elif all(_[1] for _ in _sets):
