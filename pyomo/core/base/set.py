@@ -603,15 +603,44 @@ class _SetData(_SetDataBase):
         return (interval.start, interval.end, interval.step)
 
     @property
-    @deprecated("The 'virtual' flag is no longer supported", version='TBD')
+    @deprecated("The 'virtual' attribute is no longer supported", version='TBD')
     def virtual(self):
-        return False
+        return isinstance(self, (_AnySet, SetOperator, _InfiniteRangeSetData))
+
+    @virtual.setter
+    def virtual(self, value):
+        if value != self.virtual:
+            raise ValueError(
+                "Attempting to set the (deprecated) 'virtual' attribute on %s "
+                "to an invalid value (%s)" % (self.name, value))
 
     @property
-    @deprecated("The 'concrete' flag is no longer supported.  "
+    @deprecated("The 'concrete' attribute is no longer supported.  "
                 "Use isdiscrete() or isfinite()", version='TBD')
     def concrete(self):
         return self.isfinite()
+
+    @concrete.setter
+    def concrete(self, value):
+        if value != self.concrete:
+            raise ValueError(
+                "Attempting to set the (deprecated) 'concrete' attribute on %s "
+                "to an invalid value (%s)" % (self.name, value))
+
+    @property
+    @deprecated("The 'ordered' attribute is no longer supported.  "
+                "Use isordered()", version='TBD')
+    def ordered(self):
+        return self.isordered()
+
+
+    @deprecated("check_values() is deprecated: Sets only contain valid members",
+                version='TBD')
+    def check_values(self):
+        """
+        Verify that the values in this set are valid.
+        """
+        return True
 
     def isdisjoint(self, other):
         """Test if this Set is disjoint from `other`
@@ -859,6 +888,12 @@ class _FiniteSetMixin(object):
 
     def data(self):
         return tuple(self)
+
+    @property
+    @deprecated("The 'value' attribute is deprecated.  Use .data() to "
+                "retrieve the values in a finite set.", version='TBD')
+    def value(self):
+        return set(self)
 
     def sorted_data(self):
         return tuple(sorted_robust(self.data()))
@@ -1608,6 +1643,16 @@ class Set(IndexedComponent):
         # reliable.
         if self._init_values.__class__ is IndexedCallInitializer:
             self._init_values = CountedCallInitializer(self, self._init_values)
+
+
+    @deprecated("check_values is deprecated: Sets only contain valid members",
+                version='TBD')
+    def check_values(self):
+        """
+        Verify that the values in this set are valid.
+        """
+        return True
+
 
     def construct(self, data=None):
         if self._constructed:
@@ -2492,10 +2537,6 @@ class _SetOperator(_SetData, Set):
             raise ValueError(
                 "Setting the domain of a Set Operator is not allowed: %s" % val)
 
-    @property
-    @deprecated("The 'virtual' flag is no longer supported", version='TBD')
-    def virtual(self):
-        return True
 
     @staticmethod
     def _checkArgs(*sets):
