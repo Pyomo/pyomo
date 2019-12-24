@@ -525,11 +525,12 @@ You can silence this warning by one of three ways:
 
         # This is only called through __{get,set,del}item__, which has
         # already trapped unhashable objects.
-        if idx in self._index:
+        validated_idx = self._index.get(idx, _NotFound)
+        if validated_idx is not _NotFound:
             # If the index is in the underlying index set, then return it
             #  Note: This check is potentially expensive (e.g., when the
             # indexing set is a complex set operation)!
-            return idx
+            return validated_idx
 
         if idx.__class__ is _IndexedComponent_slice:
             return idx

@@ -3261,6 +3261,18 @@ class TestSet(unittest.TestCase):
         self.assertIs(type(m.I[2]), _SortedSetData)
         self.assertIs(type(m.I[3]), _SortedSetData)
 
+        # Explicit (procedural) construction
+        m = ConcreteModel()
+        m.I = Set([1,2,3], ordered=True)
+        self.assertEqual(len(m.I), 0)
+        m.I[1] = [1,2,3]
+        m.I[(2,)] = [4,5,6]
+        # test index mapping
+        self.assertEqual(sorted(m.I._data.keys()), [1,2])
+        self.assertEqual(list(m.I[1]), [1,2,3])
+        self.assertEqual(list(m.I[2]), [4,5,6])
+
+
     def test_naming(self):
         m = ConcreteModel()
 

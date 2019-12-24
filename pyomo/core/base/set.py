@@ -298,6 +298,10 @@ class RangeSetInitializer(InitializerBase):
 #
 
 
+class _NotFound(object):
+    "Internal type flag used to indicate if an object is not found in a set"
+    pass
+
 # A trivial class that we can use to test if an object is a "legitimate"
 # set (either SimpleSet, or a member of an IndexedSet)
 class _SetDataBase(ComponentData):
@@ -315,8 +319,11 @@ class _SetData(_SetDataBase):
     __slots__ = ()
 
     def __contains__(self, value):
+        return self.get(value, _NotFound) is not _NotFound
+
+    def get(self, value, default=None):
         raise DeveloperError("Derived set class (%s) failed to "
-                             "implement __contains__" % (type(self).__name__,))
+                             "implement get()" % (type(self).__name__,))
 
     def isdiscrete(self):
         """Returns True if this set admits only discrete members"""
@@ -921,7 +928,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
     # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
-    def __contains__(self, value):
+    def get(self, value, default=None):
         """
         Return True if the set contains a given value.
 
@@ -930,7 +937,9 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         if normalize_index.flatten:
             value = normalize_index(value)
 
-        return value in self._values
+        if value in self._values:
+            return value
+        return default
 
     def __iter__(self):
         return iter(self._values)
@@ -1398,7 +1407,7 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
 
 _SET_API = (
     ('__contains__', 'test membership in'),
-    'ranges', 'bounds',
+    'get', 'ranges', 'bounds',# 'domain',
 )
 _FINITESET_API = _SET_API + (
     ('__iter__', 'iterate over'),
@@ -1838,15 +1847,17 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
         Component.__init__(self, **kwds)
         self._ref = reference
 
-    def __contains__(self, value):
+    def get(self, value, default=None):
         # Note that the efficiency of this depends on the reference object
         #
         # The bulk of single-value set members were stored as scalars.
         # Check that first.
         if value.__class__ is tuple and len(value) == 1:
             if value[0] in self._ref:
-                return True
-        return value in self._ref
+                return value[0]
+        if value in self._ref:
+            return value
+        return default
 
     def __len__(self):
         return len(self._ref)
@@ -1955,14 +1966,16 @@ class _InfiniteRangeSetData(_SetData):
     # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
-    def __contains__(self, value):
+    def get(self, value, default=None):
         # The bulk of single-value set members were stored as scalars.
         # Check that first.
         if value.__class__ is tuple and len(value) == 1:
             v = value[0]
             if any(v in r for r in self._ranges):
-                return True
-        return any(value in r for r in self._ranges)
+                return v
+        if any(value in r for r in self._ranges):
+            return value
+        return default
 
     def isdiscrete(self):
         """Returns True if this set admits only discrete members"""
@@ -2504,8 +2517,13 @@ class SetUnion(_SetOperator):
 class SetUnion_InfiniteSet(SetUnion):
     __slots__ = tuple()
 
-    def __contains__(self, val):
-        return any(val in s for s in self._sets)
+    def get(self, val, default=None):
+        #return any(val in s for s in self._sets)
+        for s in self._sets:
+            v = s.get(val, default)
+            if v is not default:
+                return v
+        return default
 
 
 class SetUnion_FiniteSet(_FiniteSetMixin, SetUnion_InfiniteSet):
@@ -2630,8 +2648,13 @@ class SetIntersection(_SetOperator):
 class SetIntersection_InfiniteSet(SetIntersection):
     __slots__ = tuple()
 
-    def __contains__(self, val):
-        return all(val in s for s in self._sets)
+    def get(self, val, default=None):
+        #return all(val in s for s in self._sets)
+        for s in self._sets:
+            v = s.get(val, default)
+            if v is default:
+                return default
+        return v
 
 
 class SetIntersection_FiniteSet(_FiniteSetMixin, SetIntersection_InfiniteSet):
@@ -2728,8 +2751,15 @@ class SetDifference(_SetOperator):
 class SetDifference_InfiniteSet(SetDifference):
     __slots__ = tuple()
 
-    def __contains__(self, val):
-        return val in self._sets[0] and not val in self._sets[1]
+    def get(self, val, default=None):
+        #return val in self._sets[0] and not val in self._sets[1]
+        v_l = self._sets[0].get(val, default)
+        if v_l is default:
+            return default
+        v_r = self._sets[1].get(val, default)
+        if v_r is default:
+            return v_l
+        return default
 
 
 class SetDifference_FiniteSet(_FiniteSetMixin, SetDifference_InfiniteSet):
@@ -2824,8 +2854,15 @@ class SetSymmetricDifference(_SetOperator):
 class SetSymmetricDifference_InfiniteSet(SetSymmetricDifference):
     __slots__ = tuple()
 
-    def __contains__(self, val):
-        return (val in self._sets[0]) ^ (val in self._sets[1])
+    def get(self, val, default=None):
+        #return (val in self._sets[0]) ^ (val in self._sets[1])
+        v_l = self._sets[0].get(val, default)
+        v_r = self._sets[1].get(val, default)
+        if v_l is default:
+            return v_r
+        if v_r is default:
+            return v_l
+        return default
 
 
 class SetSymmetricDifference_FiniteSet(_FiniteSetMixin,
@@ -2942,8 +2979,14 @@ class SetProduct(_SetOperator):
 class SetProduct_InfiniteSet(SetProduct):
     __slots__ = tuple()
 
-    def __contains__(self, val):
-        return self._find_val(val) is not None
+    def get(self, val, default=None):
+        #return self._find_val(val) is not None
+        v = self._find_val(val)
+        if v is None:
+            return default
+        if normalize_index.flatten:
+            return flatten_tuple(v[0])
+        return v[0]
 
     def _find_val(self, val):
         """Locate a value in this SetProduct
@@ -3159,8 +3202,8 @@ class _AnySet(_SetData, Set):
         kwds.setdefault('domain', self)
         Set.__init__(self, **kwds)
 
-    def __contains__(self, val):
-        return True
+    def get(self, val, default=None):
+        return val
 
     def ranges(self):
         yield AnyRange()
