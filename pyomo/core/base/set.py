@@ -1855,11 +1855,19 @@ class FiniteSimpleSet(_FiniteSetData, Set):
 
 class OrderedSimpleSet(_InsertionOrderSetData, Set):
     def __init__(self, **kwds):
+        # In case someone inherits from us, we will provide a rational
+        # default for the "ordered" flag
+        kwds.setdefault('ordered', Set.InsertionOrder)
+
         _InsertionOrderSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
 class SortedSimpleSet(_SortedSetData, Set):
     def __init__(self, **kwds):
+        # In case someone inherits from us, we will provide a rational
+        # default for the "ordered" flag
+        kwds.setdefault('ordered', Set.SortedOrder)
+
         _SortedSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
