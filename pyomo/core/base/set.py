@@ -1292,7 +1292,7 @@ class _InsertionOrderSetData(_OrderedSetData):
     __slots__ = ()
 
     def set_value(self, val):
-        if type(val) in self._UnorderedInitializers:
+        if type(val) in Set._UnorderedInitializers:
             logger.warning(
                 "Calling set_value() on an insertion order Set with "
                 "a fundamentally unordered data source (type: %s).  "
@@ -1301,7 +1301,7 @@ class _InsertionOrderSetData(_OrderedSetData):
         super(_InsertionOrderSetData, self).set_value(val)
 
     def update(self, values):
-        if type(values) in self._UnorderedInitializers:
+        if type(values) in Set._UnorderedInitializers:
             logger.warning(
                 "Calling update() on an insertion order Set with "
                 "a fundamentally unordered data source (type: %s).  "
@@ -1696,7 +1696,7 @@ class Set(IndexedComponent):
         if self._init_values is not None:
             # _values was initialized above...
             if obj.isordered() \
-                   and type(_values) in self._UnorderedInitializers:
+                   and type(_values) in Set._UnorderedInitializers:
                 logger.warning(
                     "Initializing an ordered Set with a fundamentally "
                     "unordered data source (type: %s).  This WILL potentially "
