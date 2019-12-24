@@ -2536,7 +2536,7 @@ J : Size=1, Index=None, Ordered=False
         ]
         self.assertEqual(test, ref)
 
-    def test_flatten_cross_product(self):
+    def test_subsets(self):
         a = SetOf([1])
         b = SetOf([1])
         c = SetOf([1])
@@ -2544,13 +2544,20 @@ J : Size=1, Index=None, Ordered=False
 
         x = a * b
         self.assertEqual(len(x._sets), 2)
-        self.assertEqual(list(x.flatten_cross_product()), [a,b])
+        self.assertEqual(list(x.subsets()), [a,b])
         x = a * b * c
         self.assertEqual(len(x._sets), 2)
-        self.assertEqual(list(x.flatten_cross_product()), [a,b,c])
+        self.assertEqual(list(x.subsets()), [a,b,c])
         x = (a * b) * (c * d)
         self.assertEqual(len(x._sets), 2)
-        self.assertEqual(list(x.flatten_cross_product()), [a,b,c,d])
+        self.assertEqual(list(x.subsets()), [a,b,c,d])
+
+        x = (a - b) * (c * d)
+        self.assertEqual(len(x._sets), 2)
+        self.assertEqual(len(list(x.subsets())), 3)
+        self.assertEqual(list(x.subsets())[-2:], [c,d])
+        self.assertEqual(len(list(x.subsets(True))), 4)
+        self.assertEqual(list(x.subsets(True)), [a,b,c,d])
 
     def test_no_normalize_index(self):
         try:

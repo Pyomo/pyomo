@@ -337,6 +337,9 @@ class _SetData(_SetDataBase):
         """Returns True if this is an ordered finite discrete (iterable) Set"""
         return False
 
+    def subsets(self, expand_all_set_operators=None):
+        return [ self ]
+
     def __eq__(self, other):
         if self is other:
             return True
@@ -2447,6 +2450,35 @@ class _SetOperator(_SetData, Set):
         """Returns True if this set admits only discrete members"""
         return all(r.isdiscrete() for r in self.ranges())
 
+    def subsets(self, expand_all_set_operators=None):
+        if not isinstance(self, SetProduct):
+            if expand_all_set_operators is None:
+                logger.warning("""
+                Extracting subsets for Set %s, which is a SetOperator
+                other than a SetProduct.  Returning this set and not
+                decending into the set operands.  To descend into this
+                operator, specify
+                'subsets(expand_all_set_operators=False)' or to suppress
+                this warning, specify
+                'subsets(expand_all_set_operators=False)'""" % ( self.name, ))
+                yield self
+                return
+            elif not expand_all_set_operators:
+                yield self
+                return
+        for s in self._sets:
+            for ss in s.subsets(
+                    expand_all_set_operators=expand_all_set_operators):
+                yield ss
+
+    @property
+    @deprecated("SetProduct.set_tuple() is deprecated.  "
+                "Use SetProduct.subsets() to get the operator arguments.",
+                version='TBD')
+    def set_tuple(self):
+        # Despite its name, in the old SetProduct, set_tuple held a list
+        return list(self.subsets())
+
     @property
     def _domain(self):
         # We hijack the _domain attribute of _SetOperator so that pprint
@@ -2937,24 +2969,14 @@ class SetProduct(_SetOperator):
             cls = SetProduct_InfiniteSet
         return cls.__new__(cls)
 
-    def flatten_cross_product(self):
-        # This is recursive, but the chances of a deeply nested product
-        # of Sets is exceptionally low.
-        for s in self._sets:
-            if isinstance(s, SetProduct):
-                for ss in s.flatten_cross_product():
-                    yield ss
-            else:
-                yield s
-
     def ranges(self):
         yield RangeProduct(list(
-            list(_.ranges()) for _ in self.flatten_cross_product()
+            list(_.ranges()) for _ in self.subsets(False)
         ))
 
     def bounds(self):
-        return ( tuple(_.bounds()[0] for _ in self.flatten_cross_product()),
-                 tuple(_.bounds()[1] for _ in self.flatten_cross_product()) )
+        return ( tuple(_.bounds()[0] for _ in self.subsets(False)),
+                 tuple(_.bounds()[1] for _ in self.subsets(False)) )
 
     @property
     def dimen(self):
