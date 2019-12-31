@@ -145,7 +145,7 @@ class PathList(Path):
             return [ super(PathList, self).__call__(data) ]
 
 
-def add_docstring_list(docstring, configblock):
+def add_docstring_list(docstring, configblock, indent_spacing=0):
     """Returns the docstring with a formatted configuration arguments listing."""
     return docstring + "    ".join(
         configblock.generate_documentation(

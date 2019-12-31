@@ -30,10 +30,10 @@ from pyomo.contrib.gdpopt.master_initialize import (
 )
 from pyomo.contrib.gdpopt.util import (
     _DoNothing, a_logger, copy_var_list_values,
-    create_utility_block, model_is_valid, process_objective,
+    create_utility_block, presolve_lp_nlp, process_objective,
     setup_results_object,
-    restore_logger_level, time_code
-)
+    restore_logger_level, time_code,
+    setup_solver_environment)
 from pyomo.core.base import ConstraintList
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.results import SolverResults
@@ -72,6 +72,93 @@ class GDPoptSolver(object):
 
     """
 
+    def solve(self, model, **kwds):
+        """Solve the model.
+
+        Warning: this solver is still in beta. Keyword arguments subject to
+        change. Undocumented keyword arguments definitely subject to change.
+
+        This function performs all of the GDPopt solver setup and problem
+        validation. It then calls upon helper functions to construct the
+        initial master approximation and iteration loop.
+
+        Args:
+            model (Block): a Pyomo model or block to be solved
+
+        """
+        config = self.CONFIG(kwds.pop('options', {}))
+        config.set_value(kwds)
+
+        with setup_solver_environment(model, config) as solve_data:
+            self._log_solver_intro_message(config)
+            solve_data.results.solver.name = 'GDPopt %s - %s' % (
+                str(self.version()), config.strategy)
+
+            # Verify that objective has correct form
+            process_objective(solve_data, config)
+
+            # Presolve LP or NLP problems using subsolvers
+            presolved, presolve_results = presolve_lp_nlp(solve_data, config)
+            if presolved:
+                # TODO merge the solver results
+                return presolve_results  # problem presolved
+
+            # Initialize the master problem
+            with time_code(solve_data.timing, 'initialization'):
+                GDPopt_initialize_master(solve_data, config)
+
+            # Algorithm main loop
+            with time_code(solve_data.timing, 'main loop'):
+                GDPopt_iteration_loop(solve_data, config)
+
+        return solve_data.results
+
+    """Support use as a context manager under current solver API"""
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
+
+    def available(self, exception_flag=True):
+        """Check if solver is available.
+
+        TODO: For now, it is always available. However, sub-solvers may not
+        always be available, and so this should reflect that possibility.
+
+        """
+        return True
+
+    def version(self):
+        """Return a 3-tuple describing the solver version."""
+        return __version__
+
+    def _log_solver_intro_message(self, config):
+        config.logger.info(
+            "Starting GDPopt version %s using %s algorithm"
+            % (".".join(map(str, self.version())), config.strategy)
+        )
+        config.logger.info(
+            """
+If you use this software, you may cite the following:
+- Implementation:
+Chen, Q; Johnson, ES; Siirola, JD; Grossmann, IE.
+Pyomo.GDP: Disjunctive Models in Python. 
+Proc. of the 13th Intl. Symposium on Process Systems Eng.
+San Diego, 2018.
+- LOA algorithm:
+Türkay, M; Grossmann, IE.
+Logic-based MINLP algorithms for the optimal synthesis of process networks.
+Comp. and Chem. Eng. 1996, 20(8), 959–978.
+DOI: 10.1016/0098-1354(95)00219-7.
+- GLOA algorithm:
+Lee, S; Grossmann, IE.
+A Global Optimization Algorithm for Nonconvex Generalized Disjunctive Programming and Applications to Process Systems
+Comp. and Chem. Eng. 2001, 25, 1675-1697.
+DOI: 10.1016/S0098-1354(01)00732-3
+        """.strip()
+        )
+
     _metasolver = False
 
     CONFIG = ConfigBlock("GDPopt")
@@ -83,8 +170,8 @@ class GDPoptSolver(object):
         default=600,
         domain=PositiveInt,
         description="Time limit (seconds, default=600)",
-        doc="Seconds allowed until terminated. Note that the time limit can"
-            "currently only be enforced between subsolver invocations. You may"
+        doc="Seconds allowed until terminated. Note that the time limit can "
+            "currently only be enforced between subsolver invocations. You may "
             "need to set subsolver time limits as well."
     ))
     CONFIG.declare("strategy", ConfigValue(
@@ -124,13 +211,17 @@ class GDPoptSolver(object):
         description="Flag to enable or diable Pyomo MIP presolve. Default=True.",
         domain=bool
     ))
-    mip_solver_args = CONFIG.declare(
-        "mip_solver_args", ConfigBlock(implicit=True))
+    mip_solver_args = CONFIG.declare("mip_solver_args", ConfigBlock(
+        description="Keyword arguments to send to the MILP subsolver "
+        "solve() invocation",
+        implicit=True))
     CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
         description="Nonlinear solver to use"))
-    nlp_solver_args = CONFIG.declare(
-        "nlp_solver_args", ConfigBlock(implicit=True))
+    nlp_solver_args = CONFIG.declare("nlp_solver_args", ConfigBlock(
+        description="Keyword arguments to send to the NLP subsolver "
+        "solve() invocation",
+        implicit=True))
     CONFIG.declare("subproblem_presolve", ConfigValue(
         default=True,
         description="Flag to enable or disable subproblem presolve. Default=True.",
@@ -140,8 +231,10 @@ class GDPoptSolver(object):
         default="baron",
         description="MINLP solver to use"
     ))
-    minlp_solver_args = CONFIG.declare(
-        "minlp_solver_args", ConfigBlock(implicit=True))
+    minlp_solver_args = CONFIG.declare("minlp_solver_args", ConfigBlock(
+        description="Keyword arguments to send to the MINLP subsolver "
+        "solve() invocation",
+        implicit=True))
     CONFIG.declare("call_before_master_solve", ConfigValue(
         default=_DoNothing,
         description="callback hook before calling the master problem solver"
@@ -226,160 +319,7 @@ class GDPoptSolver(object):
         description="Force subproblems to be NLP, even if discrete variables exist."
     ))
 
-    __doc__ = add_docstring_list(__doc__, CONFIG)
 
-    def available(self, exception_flag=True):
-        """Check if solver is available.
-
-        TODO: For now, it is always available. However, sub-solvers may not
-        always be available, and so this should reflect that possibility.
-
-        """
-        return True
-
-    def version(self):
-        """Return a 3-tuple describing the solver version."""
-        return __version__
-
-    def solve(self, model, **kwds):
-        """Solve the model.
-
-        Warning: this solver is still in beta. Keyword arguments subject to
-        change. Undocumented keyword arguments definitely subject to change.
-
-        This function performs all of the GDPopt solver setup and problem
-        validation. It then calls upon helper functions to construct the
-        initial master approximation and iteration loop.
-
-        Args:
-            model (Block): a Pyomo model or block to be solved
-
-        """
-        config = self.CONFIG(kwds.pop('options', {}))
-        config.set_value(kwds)
-        solve_data = GDPoptSolveData()
-        solve_data.results = SolverResults()
-        solve_data.timing = Container()
-
-        old_logger_level = config.logger.getEffectiveLevel()
-        with time_code(solve_data.timing, 'total', is_main_timer=True), \
-                restore_logger_level(config.logger), \
-                create_utility_block(model, 'GDPopt_utils', solve_data):
-            if config.tee and old_logger_level > logging.INFO:
-                # If the logger does not already include INFO, include it.
-                config.logger.setLevel(logging.INFO)
-            config.logger.info(
-                "Starting GDPopt version %s using %s algorithm"
-                % (".".join(map(str, self.version())), config.strategy)
-            )
-            config.logger.info(
-                """
-If you use this software, you may cite the following:
-- Implementation:
-    Chen, Q; Johnson, ES; Siirola, JD; Grossmann, IE.
-    Pyomo.GDP: Disjunctive Models in Python. 
-    Proc. of the 13th Intl. Symposium on Process Systems Eng.
-    San Diego, 2018.
-- LOA algorithm:
-    Türkay, M; Grossmann, IE.
-    Logic-based MINLP algorithms for the optimal synthesis of process networks.
-    Comp. and Chem. Eng. 1996, 20(8), 959–978.
-    DOI: 10.1016/0098-1354(95)00219-7.
-- GLOA algorithm:
-    Lee, S; Grossmann, IE.
-    A Global Optimization Algorithm for Nonconvex Generalized Disjunctive Programming and Applications to Process Systems
-    Comp. and Chem. Eng. 2001, 25, 1675-1697.
-    DOI: 10.1016/S0098-1354(01)00732-3
-                """.strip()
-            )
-            solve_data.results.solver.name = 'GDPopt %s - %s' % (
-                str(self.version()), config.strategy)
-
-            solve_data.original_model = model
-            solve_data.working_model = model.clone()
-            GDPopt = solve_data.working_model.GDPopt_utils
-            setup_results_object(solve_data, config)
-
-            solve_data.current_strategy = config.strategy
-
-            # Verify that objective has correct form
-            process_objective(solve_data, config)
-
-            # Save model initial values. These are used later to initialize NLP
-            # subproblems.
-            solve_data.initial_var_values = list(
-                v.value for v in GDPopt.variable_list)
-            solve_data.best_solution_found = None
-
-            # Validate the model to ensure that GDPopt is able to solve it.
-            if not model_is_valid(solve_data, config):
-                return
-
-            # Integer cuts exclude particular discrete decisions
-            GDPopt.integer_cuts = ConstraintList(doc='integer cuts')
-
-            # Feasible integer cuts exclude discrete realizations that have
-            # been explored via an NLP subproblem. Depending on model
-            # characteristics, the user may wish to revisit NLP subproblems
-            # (with a different initialization, for example). Therefore, these
-            # cuts are not enabled by default, unless the initial model has no
-            # discrete decisions.
-
-            # Note: these cuts will only exclude integer realizations that are
-            # not already in the primary GDPopt_integer_cuts ConstraintList.
-            GDPopt.no_backtracking = ConstraintList(
-                doc='explored integer cuts')
-
-            # Set up iteration counters
-            solve_data.master_iteration = 0
-            solve_data.mip_iteration = 0
-            solve_data.nlp_iteration = 0
-
-            # set up bounds
-            solve_data.LB = float('-inf')
-            solve_data.UB = float('inf')
-            solve_data.iteration_log = {}
-
-            # Flag indicating whether the solution improved in the past
-            # iteration or not
-            solve_data.feasible_solution_improved = False
-
-            # Initialize the master problem
-            with time_code(solve_data.timing, 'initialization'):
-                GDPopt_initialize_master(solve_data, config)
-
-            # Algorithm main loop
-            with time_code(solve_data.timing, 'main loop'):
-                GDPopt_iteration_loop(solve_data, config)
-
-            if solve_data.best_solution_found is not None:
-                # Update values in working model
-                copy_var_list_values(
-                    from_list=solve_data.best_solution_found.GDPopt_utils.variable_list,
-                    to_list=GDPopt.variable_list,
-                    config=config)
-                # Update values in original model
-                copy_var_list_values(
-                    GDPopt.variable_list,
-                    solve_data.original_model.GDPopt_utils.variable_list,
-                    config)
-
-            solve_data.results.problem.lower_bound = solve_data.LB
-            solve_data.results.problem.upper_bound = solve_data.UB
-
-        solve_data.results.solver.timing = solve_data.timing
-        solve_data.results.solver.user_time = solve_data.timing.total
-        solve_data.results.solver.wallclock_time = solve_data.timing.total
-
-        solve_data.results.solver.iterations = solve_data.master_iteration
-
-        return solve_data.results
-
-    #
-    # Support "with" statements.
-    #
-    def __enter__(self):
-        return self
-
-    def __exit__(self, t, v, traceback):
-        pass
+# Add the CONFIG arguments to the solve method docstring
+GDPoptSolver.solve.__doc__ = add_docstring_list(
+    GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_spacing=4)
