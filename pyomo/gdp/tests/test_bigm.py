@@ -597,6 +597,81 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
 
 
+class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
+    def test_nonlinear_bigM(self):
+        m = models.makeTwoTermDisj_Nonlinear()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
+
+        # first constraint
+        c = disjBlock[0].component("d[0].c")
+        self.assertEqual(len(c), 1)
+        self.assertTrue(c['ub'].active)
+        repn = generate_standard_repn(c['ub'].body)
+        self.assertFalse(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 2)
+        check_linear_coef(self, repn, m.x, 1)
+        check_linear_coef(self, repn, m.d[0].indicator_var, 94)
+        self.assertEqual(repn.constant, -94)
+        self.assertEqual(c['ub'].upper, m.d[0].c.upper)
+        self.assertIsNone(c['ub'].lower)
+
+    def test_nonlinear_bigM_missing_var_bounds(self):
+        m = models.makeTwoTermDisj_Nonlinear()
+        m.y.setlb(None)
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Cannot estimate M for unbounded nonlinear "
+            "expressions.\n\t\(found while processing "
+            "constraint d\[0\].c\)",
+            TransformationFactory('gdp.bigm').apply_to,
+            m)
+
+    def test_nonlinear_disjoint(self):
+        m = ConcreteModel()
+        x = m.x = Var(bounds=(-4, 4))
+        y = m.y = Var(bounds=(-10, 10))
+        m.disj = Disjunction(expr=[
+            [x**2 + y**2 <= 2, x**3 + y**2 + x * y >= 1.0/2.0],
+            [(x - 3)**2 + (y - 3)**2 <= 1]
+        ])
+        TransformationFactory('gdp.bigm').apply_to(m)
+        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
+
+        # first disjunct, first constraint
+        c = disjBlock[0].component("disj_disjuncts[0].constraint")
+        self.assertEqual(len(c), 2)
+        repn = generate_standard_repn(c[1, 'ub'].body)
+        self.assertFalse(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 1)
+        # check_linear_coef(self, repn, m.x, 1)
+        check_linear_coef(self, repn, m.disj_disjuncts[0].indicator_var, 114)
+        self.assertEqual(repn.constant, -114)
+        self.assertEqual(c[1, 'ub'].upper, m.disj_disjuncts[0].constraint[1].upper)
+        self.assertIsNone(c[1, 'ub'].lower)
+        # first disjunct, second constraint
+        repn = generate_standard_repn(c[2, 'lb'].body)
+        self.assertFalse(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 1)
+        # check_linear_coef(self, repn, m.x, 1)
+        check_linear_coef(self, repn, m.disj_disjuncts[0].indicator_var, -104.5)
+        self.assertEqual(repn.constant, 104.5)
+        self.assertEqual(c[2, 'lb'].lower, m.disj_disjuncts[0].constraint[2].lower)
+        self.assertIsNone(c[2, 'lb'].upper)
+        # second disjunct, first constraint
+        c = disjBlock[1].component("disj_disjuncts[1].constraint")
+        self.assertEqual(len(c), 1)
+        repn = generate_standard_repn(c[1, 'ub'].body)
+        self.assertFalse(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 3)
+        check_linear_coef(self, repn, m.x, -6)
+        check_linear_coef(self, repn, m.y, -6)
+        check_linear_coef(self, repn, m.disj_disjuncts[1].indicator_var, 217)
+        self.assertEqual(repn.constant, -199)
+        self.assertEqual(c[1, 'ub'].upper, m.disj_disjuncts[1].constraint[1].upper)
+        self.assertIsNone(c[1, 'ub'].lower)
+
+
 class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
     def setUp(self):
         # set seed so we can test name collisions predictably
