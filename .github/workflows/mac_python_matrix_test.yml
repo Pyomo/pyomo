@@ -8,7 +8,7 @@ on:
 
 jobs:
   pyomo-mac-tests:
-    name: Pyomo Test (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Pyomo Test (${{ matrix.python-version }}, MacOS)
     runs-on: macos-latest
     strategy:
       max-parallel: 4
@@ -36,7 +36,7 @@ jobs:
         brew install bash gcc
         brew link --overwrite gcc
         brew install pkg-config
-        brew install unixodbc # Now install Python modules
+        brew install unixodbc -universal # Now install Python modules
 
         pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos
         
