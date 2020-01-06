@@ -13,8 +13,7 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
-        python-version: [2.7, 3.5, 3.6, 3.7, 3.8, pypy3, pypy2] # All available Python versions
-        # python-version: [2.7]
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8] # All available Python versions
 
     steps:
     - uses: actions/checkout@v1 # Checkout branch(es)
@@ -36,7 +35,8 @@ jobs:
         brew install bash gcc
         brew link --overwrite gcc
         brew install pkg-config
-        brew install unixodbc -universal # Now install Python modules
+        brew install unixodbc
+        brew install freetds # Now install Python modules
 
         pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos
         
