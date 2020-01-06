@@ -7,8 +7,8 @@ on:
       # Can add additional branches if desired
 
 jobs:
-  build:
-
+  pyomo-mac-tests:
+    name: Pyomo Test (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: macos-latest
     strategy:
       max-parallel: 4
