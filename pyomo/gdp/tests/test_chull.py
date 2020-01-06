@@ -289,19 +289,19 @@ class TwoTermDisj(unittest.TestCase):
 
     def test_disaggregation_constraint(self):
         m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.chull').apply_to(m)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
 
-        disCons = m._gdp_chull_relaxation_disjunction_disaggregation
-        self.assertIsInstance(disCons, Constraint)
-        # one for each of the variables
-        self.assertEqual(len(disCons), 3)
-        self.check_disaggregation_constraint(disCons[2], m.w, disjBlock[0].w,
-                                             disjBlock[1].w)
-        self.check_disaggregation_constraint(disCons[0], m.x, disjBlock[0].x,
-                                             disjBlock[1].x)
-        self.check_disaggregation_constraint(disCons[1], m.y, disjBlock[0].y,
-                                             disjBlock[1].y)
+        self.check_disaggregation_constraint(
+            chull.get_disaggregation_constraint(m.w, m.disjunction), m.w,
+            disjBlock[0].w, disjBlock[1].w)
+        self.check_disaggregation_constraint(
+            chull.get_disaggregation_constraint(m.x, m.disjunction), m.x,
+            disjBlock[0].x, disjBlock[1].x)
+        self.check_disaggregation_constraint(
+            chull.get_disaggregation_constraint(m.y, m.disjunction), m.y,
+            disjBlock[0].y, disjBlock[1].y)
 
     def test_original_disjuncts_deactivated(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -380,24 +380,32 @@ class TwoTermDisj(unittest.TestCase):
 
     def test_bigMConstraint_mappings(self):
         m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.chull').apply_to(m)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
 
         for i in [0,1]:
-            srcBigm = disjBlock[i]._gdp_transformation_info[
-                'boundConstraintToSrcVar']
-            bigm = m.d[i]._gdp_transformation_info['chull']['bigmConstraints']
-            self.assertEqual(len(srcBigm), 3)
-            self.assertEqual(len(bigm), 3)
-            # TODO: this too...
             mappings = ComponentMap()
-            mappings[m.w] = disjBlock[i].w_bounds
-            mappings[m.y] = disjBlock[i].y_bounds
-            mappings[m.x] = disjBlock[i].x_bounds
+            # [ESJ 11/05/2019] I think this test was useless before... I think
+            # this *map* was useless before. It should be disaggregated variable
+            # to the constraints, not the original variable? Why did this even
+            # work??
+            mappings[disjBlock[i].w] = disjBlock[i].w_bounds
+            mappings[disjBlock[i].y] = disjBlock[i].y_bounds
+            mappings[disjBlock[i].x] = disjBlock[i].x_bounds
             for var, cons in iteritems(mappings):
-                self.assertIs(srcBigm[cons], var)
-                self.assertIs(bigm[var], cons)
+                self.assertIs(chull.get_var_bounds_constraint(var), cons)
+
+    def test_var_global_because_objective(self):
+        m = models.localVar()
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+
+        #TODO: desired behavior here has got to be an error about not having
+        #bounds on y. We don't know how to tranform this, but the issue is that
+        #right now we think we do!
+        self.assertTrue(False)
 
     def test_do_not_transform_user_deactivated_disjuncts(self):
         # TODO
@@ -476,34 +484,31 @@ class TwoTermDisj(unittest.TestCase):
 
 
 class IndexedDisjunction(unittest.TestCase):
-
     def test_disaggregation_constraints(self):
         m = models.makeTwoTermIndexedDisjunction()
-        TransformationFactory('gdp.chull').apply_to(m)
-
-        disaggregationCons = m._gdp_chull_relaxation_disjunction_disaggregation
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
         relaxedDisjuncts = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
-        self.assertIsInstance(disaggregationCons, Constraint)
-        self.assertEqual(len(disaggregationCons), 3)
 
         disaggregatedVars = {
-            (1, 0): [relaxedDisjuncts[0].component('x[1]'),
-                          relaxedDisjuncts[1].component('x[1]')],
-            (2, 0): [relaxedDisjuncts[2].component('x[2]'),
-                          relaxedDisjuncts[3].component('x[2]')],
-            (3, 0): [relaxedDisjuncts[4].component('x[3]'),
-                          relaxedDisjuncts[5].component('x[3]')],
+            1: [relaxedDisjuncts[0].component('x[1]'),
+                relaxedDisjuncts[1].component('x[1]')],
+            2: [relaxedDisjuncts[2].component('x[2]'),
+                relaxedDisjuncts[3].component('x[2]')],
+            3: [relaxedDisjuncts[4].component('x[3]'),
+                relaxedDisjuncts[5].component('x[3]')],
         }
 
         for i, disVars in iteritems(disaggregatedVars):
-            cons = disaggregationCons[i]
+            cons = chull.get_disaggregation_constraint(m.x[i],
+                                                       m.disjunction[i])
             self.assertEqual(cons.lower, 0)
             self.assertEqual(cons.upper, 0)
             repn = generate_standard_repn(cons.body)
             self.assertTrue(repn.is_linear())
             self.assertEqual(repn.constant, 0)
             self.assertEqual(len(repn.linear_vars), 3)
-            check_linear_coef(self, repn, m.x[i[0]], 1)
+            check_linear_coef(self, repn, m.x[i], 1)
             check_linear_coef(self, repn, disVars[0], -1)
             check_linear_coef(self, repn, disVars[1], -1)
 
@@ -545,14 +550,9 @@ class DisaggregatedVarNamingConflict(unittest.TestCase):
 
         for v, cons in consmap:
             disCons = chull.get_disaggregation_constraint(v, m.disjunction)
-            self.assertIsInstance(disCons, Constraint)
             self.assertIs(disCons, cons)
-        # TODO: the above thing fails because the index gets overwritten. I
-        # don't know how to keep them unique at the moment. When I do, I also
-        # need to test that the indices are actually what we expect.
 
 class NestedDisjunction(unittest.TestCase):
-
     def test_deactivated_disjunct_leaves_nested_disjuncts_active(self):
         m = models.makeNestedDisjunctions_FlatDisjuncts()
         m.d1.deactivate()
@@ -617,6 +617,7 @@ class NestedDisjunction(unittest.TestCase):
             m.d3.indicator_var.fix(case[2])
             m.d4.indicator_var.fix(case[3])
             results = solver.solve(m)
+            set_trace()
             print(case, results.solver)
             if case[4] is None:
                 self.assertEqual(results.solver.termination_condition,
@@ -625,7 +626,6 @@ class NestedDisjunction(unittest.TestCase):
                 self.assertEqual(results.solver.termination_condition,
                                  pyomo.opt.TerminationCondition.optimal)
                 self.assertEqual(value(m.obj), case[4])
-
 
 class TestSpecialCases(unittest.TestCase):
     def test_warn_for_untransformed(self):

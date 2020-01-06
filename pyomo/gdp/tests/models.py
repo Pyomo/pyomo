@@ -91,6 +91,23 @@ def makeTwoTermDisj_IndexedConstraints_BoundedVars():
     m.disjunction = Disjunction(expr=[m.disjunct[0], m.disjunct[1]])
     return m
 
+def localVar():
+    # y appears in a global constraint and a single disjunct.
+    m = ConcreteModel()
+    m.x = Var(bounds=(0,3))
+
+    m.disj1 = Disjunct()
+    m.disj1.cons = Constraint(expr=m.x >= 1)
+
+    m.disj2 = Disjunct()
+    m.disj2.y = Var(bounds=(1,3))
+    m.disj2.cons = Constraint(expr=m.x + m.disj2.y == 3)
+
+    m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
+
+    # This makes y global actually... But in disguise.
+    m.objective = Objective(expr=m.x + m.disj2.y)
+    return m
 
 def makeThreeTermDisj_IndexedConstraints():
     m = ConcreteModel()

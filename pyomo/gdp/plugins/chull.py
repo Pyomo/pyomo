@@ -71,13 +71,28 @@ class ConvexHull_Transformation(Transformation):
     Each block has a dictionary "_constraintMap":
     
         'srcConstraints': ComponentMap(<transformed constraint>:
-                                       <src constraint>)
+                                       <src constraint>),
         'transformedConstraints': ComponentMap(<src constraint>:
                                                <transformed constraint>)
+
+    It will have a dictionary "_disaggregatedVarMap:
+        'srcVar': ComponentMap(<src var>:<disaggregated var>),
+        'disaggregatedVar': ComponentMap(<disaggregated var>:<src var>)
+
+    And, last, it will have a ComponentMap "_bigMConstraintMap":
+
+        <disaggregated var>:<bounds constraint>
 
     All transformed Disjuncts will have a pointer to the block their transformed
     constraints are on, and all transformed Disjunctions will have a 
     pointer to the corresponding OR or XOR constraint.
+
+    The _pyomo_gdp_chull_relaxation block will have a ComponentMap
+    "_disaggregationConstraintMap":
+        <src var>:ComponentMap(<srcDisjunction>: <disaggregation constraint>)
+
+    TODO: I wish:
+        (<src var>, <srcDisjunction>): <disaggregation constraint>
 
     """
 
@@ -241,20 +256,9 @@ class ConvexHull_Transformation(Transformation):
         # case of nested disjunctions
         transBlock.disaggregationConstraints = Constraint(Any)
 
-        # We'll store maps for disaggregated variables and constraints here 
-
-        
-        transBlock._bigMConstraintMap = {
-            'srcVar': ComponentMap(),
-            'bigmConstraint': ComponentMap(),
-        }
-            
-        # TODO: maybe?
+        # This will map from srcVar to a map of srcDisjunction to the
+        # disaggregation constraint corresponding to srcDisjunction
         transBlock._disaggregationConstraintMap = ComponentMap()
-
-        # ESJ: TODO: What is this for?? I think nothing--it was compensating for
-        # broken active status shtuffs
-        # transBlock.disjContainers = ComponentSet()
 
         return transBlock
 
@@ -303,10 +307,10 @@ class ConvexHull_Transformation(Transformation):
         # IndexedDisjunction, not otherwise
         orC = Constraint(disjunction.index_set()) if \
               disjunction.is_indexed() else Constraint()
-        parent.add_component(
-            unique_component_name(parent, '_gdp_chull_relaxation_' +
-                                  disjunction.name + '_xor'),
-            orC)
+        parent.add_component( unique_component_name(parent,
+                                                    '_gdp_chull_relaxation_' +
+                                                    disjunction.name + '_xor'),
+                              orC)
         disjunction._algebraic_constraint = weakref_ref(orC)
 
         return orC
@@ -351,23 +355,16 @@ class ConvexHull_Transformation(Transformation):
         varOrder = []
         varsByDisjunct = ComponentMap()
         for disjunct in obj.disjuncts:
-            # # This is crazy, but if the disjunct has been previously
-            # # relaxed, the disjunct *could* be deactivated.
-            # not_active = not disjunct.active
-            # if not_active:
-            #     disjunct._activate_without_unfixing_indicator()
-
-            # [ESJ 10/18/2019] John, why was this in a try-finally structure? We
-            # can't have the ick case with it being already transformed now
-            # because the same disjunct can't be in multiple disjunctions... so
-            # are we safe?
-            #try:
             disjunctVars = varsByDisjunct[disjunct] = ComponentSet()
             for cons in disjunct.component_data_objects(
                     Constraint,
                     active = True,
                     sort=SortComponents.deterministic,
                     descend_into=Block):
+                # [ESJ 12/10/2019] I don't think I agree with this... Fixing is
+                # not a promise for the future. And especially since this is
+                # undocumented, we are asking for trouble with silent failures
+                # later...
                 # we aren't going to disaggregate fixed
                 # variables. This means there is trouble if they are
                 # unfixed later...
@@ -378,12 +375,9 @@ class ConvexHull_Transformation(Transformation):
                     # deterministic order (the order that we found
                     # them)
                     disjunctVars.add(var)
-                    if var not in varOrder_set:
+                    if not var in varOrder_set:
                         varOrder.append(var)
                         varOrder_set.add(var)
-            # finally:
-            #     if not_active:
-            #         disjunct._deactivate_without_fixing_indicator()
 
         # We will only disaggregate variables that
         #  1) appear in multiple disjuncts, or
@@ -399,7 +393,7 @@ class ConvexHull_Transformation(Transformation):
                 varSet.append(var)
             elif self._contained_in(var, disjuncts[0]):
                 localVars[disjuncts[0]].append(var)
-            # [ESJ 10/18/2019] This is strange though because it means we
+            # [ESJ 10/18/2019] TODO: This is strange though because it means we
             # shouldn't have a bug with double-disaggregating right now... And I
             # thought we did. But this is also not my code.
             elif self._contained_in(var, transBlock):
@@ -446,13 +440,18 @@ class ConvexHull_Transformation(Transformation):
             # and update the map so that we can find this later. We index by
             # variable and the particular disjunction because there is a
             # different one for each disjunction
-            disaggregationConstraintMap[
-                (var, obj)] = disaggregationConstraint[consIdx]
-            # TODO: We need to make sure this map gets updated when we move
-            # things off the disjunct for nested disjunctions
+            if not disaggregationConstraintMap.get(var) is None:
+                disaggregationConstraintMap[var][obj] = disaggregationConstraint[
+                    consIdx]
+            else:
+                thismap = disaggregationConstraintMap[var] = ComponentMap()
+                thismap[obj] = disaggregationConstraint[consIdx]
+            # I wish:
+            # disaggregationConstraintMap[
+            #     (var, obj)] = disaggregationConstraint[consIdx]
 
     def _transform_disjunct(self, obj, transBlock, varSet, localVars):
-        # deactivated means either we've already transformed or user deactivated
+        # deactivated should only come from the user
         if not obj.active:
             if obj.indicator_var.is_fixed():
                 if value(obj.indicator_var) == 0:
@@ -481,10 +480,10 @@ class ConvexHull_Transformation(Transformation):
                     "it appears in has not. Putting the same disjunct in "
                     "multiple disjunctions is not supported." % obj.name)
 
-        # add reference to original disjunct to info dict on
-        # transformation block
+        # create a relaxation block for this disjunct
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
+
         # add the map that will link back and forth between transformed
         # constraints and their originals.
         relaxationBlock._constraintMap = {
@@ -497,7 +496,11 @@ class ConvexHull_Transformation(Transformation):
             'srcVar': ComponentMap(),
             'disaggregatedVar': ComponentMap(),
         }
-        # add mappings (so we'll know we've relaxed)
+        # Map between disaggregated variables and their lb*indicator <= var <=
+        # ub*indicator constraints
+        relaxationBlock._bigMConstraintMap = ComponentMap()
+
+        # add mappings to source disjunct (so we'll know we've relaxed)
         obj._transformation_block = weakref_ref(relaxationBlock)
         relaxationBlock._srcDisjunct = weakref_ref(obj)
 
@@ -541,9 +544,7 @@ class ConvexHull_Transformation(Transformation):
                 bigmConstraint.add(
                     'ub', disaggregatedVar <= obj.indicator_var*ub)
 
-            transBlock._bigMConstraintMap[
-                'bigmConstraint'][var] = bigmConstraint
-            transBlock._bigMConstraintMap['srcVar'][bigmConstraint] = var
+            relaxationBlock._bigMConstraintMap[disaggregatedVar] = bigmConstraint
             
         for var in localVars:
             lb = var.lb
@@ -568,12 +569,13 @@ class ConvexHull_Transformation(Transformation):
             )
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(conName, bigmConstraint)
+            
+            # These are the constraints for the variables we didn't disaggregate
+            # since they are local to a single disjunct
             bigmConstraint.add('lb', obj.indicator_var*lb <= var)
             bigmConstraint.add('ub', var <= obj.indicator_var*ub)
 
-            transBlock._bigMConstraintMap[
-                'bigmConstraint'][var] = bigmConstraint
-            transBlock._bigMConstraintMap['srcVar'][bigmConstraint] = var
+            relaxationBlock._bigMConstraintMap[var] = bigmConstraint
             
         var_substitute_map = dict((id(v), newV) for v, newV in iteritems(
             relaxationBlock._disaggregatedVarMap['disaggregatedVar']))
@@ -602,7 +604,7 @@ class ConvexHull_Transformation(Transformation):
                 Disjunction, 
                 sort=SortComponents.deterministic, 
                 descend_into=(Block)):
-            if not obj.algebraic_constraint:
+            if not obj.algebraic_constraint is None:
                 # This could be bad if it's active since that means its
                 # untransformed, but we'll wait to yell until the next loop
                 continue
@@ -670,7 +672,8 @@ class ConvexHull_Transformation(Transformation):
         # I can't think why we would do anything messier at the moment. (And I
         # don't want to descend into Blocks because we already handled the
         # above).
-        for cons in fromBlock.component_objects((Constraint, Var)):
+        for cons in fromBlock.component_objects((Constraint, Var),
+                                                descend_into=False):
             fromBlock.del_component(cons)
             toBlock.add_component(unique_component_name( toBlock, cons.name),
                                   cons)
@@ -681,7 +684,8 @@ class ConvexHull_Transformation(Transformation):
             # deleting the whole old block anyway, but it is to keep pyomo from
             # getting upset about the same component living on multiple blocks
             oldblock.del_component(obj)
-            newblock.add_component(obj.name, obj)
+            newblock.add_component(obj.getname(fully_qualified=True,
+                                               name_buffer=NAME_BUFFER), obj)
 
     def _warn_for_active_disjunction( self, disjunction, disjunct,
                                       var_substitute_map, zero_substitute_map):
@@ -727,7 +731,6 @@ class ConvexHull_Transformation(Transformation):
                         "transformed.".format(problemdisj.name,
                                               outerdisjunct.name))
 
-    # ESJ: Why is this different from bigm??
     def _transform_block_on_disjunct( self, block, disjunct, var_substitute_map,
                                       zero_substitute_map):
         # We look through everything on the component map of the block
@@ -735,8 +738,10 @@ class ConvexHull_Transformation(Transformation):
         # directly.  (We are passing the disjunct through so that when
         # we find constraints, _transform_constraint will have access to
         # the correct indicator variable.
-        self._transform_block_components( block, disjunct, var_substitute_map,
-                                          zero_substitute_map)
+        for i in sorted(iterkeys(block)):
+            self._transform_block_components( block[i], disjunct,
+                                              var_substitute_map,
+                                              zero_substitute_map)
 
 
     def _transform_constraint(self, obj, disjunct, var_substitute_map,
@@ -902,18 +907,23 @@ class ConvexHull_Transformation(Transformation):
                             % transformedConstraint.name)
         return transBlock._constraintMap['srcConstraints'][transformedConstraint]
 
-    def get_transformed_constraint(self, srcConstraint):
-        # We are going to have to traverse up until we find the disjunct this
-        # constraint lives on
-        parent = srcConstraint.parent_block()
-        # [ESJ 08/06/2019] I actually don't know how to do this prettily...
+    # TODO: This needs to go to util because I think it gets used in bigm too
+    def _get_parent_disjunct(self, obj, err_message):
+        # We are going to have to traverse up until we find the disjunct that
+        # obj lives on
+        parent = obj.parent_block()
         while not type(parent) in (_DisjunctData, SimpleDisjunct):
             parent = parent.parent_block()
             if parent is None:
-                raise GDP_Error(
-                    "Constraint %s is not on a disjunct and so was not "
-                    "transformed" % srcConstraint.name)
-        transBlock = parent._transformation_block
+                raise GDP_Error(err_message)
+        return parent
+
+    def get_transformed_constraint(self, srcConstraint):
+        disjunct = self._get_parent_disjunct(
+            srcConstraint,                     
+            "Constraint %s is not on a disjunct and so was not "
+            "transformed" % srcConstraint.name)
+        transBlock = disjunct._transformation_block
         if transBlock is None:
             raise GDP_Error("Constraint %s is on a disjunct which has not been "
                             "transformed" % srcConstraint.name)
@@ -945,6 +955,8 @@ class ConvexHull_Transformation(Transformation):
                             % disaggregated_var.name)
         return transBlock._disaggregatedVarMap['srcVar'][disaggregated_var]
 
+    # retrieves the disaggregation constraint for original_var resulting from
+    # transforming disjunction
     def get_disaggregation_constraint(self, original_var, disjunction):
         for disjunct in disjunction.disjuncts:
             transBlock = disjunct._transformation_block
@@ -955,9 +967,35 @@ class ConvexHull_Transformation(Transformation):
                             "None of its disjuncts are transformed." 
                             % disjunction.name)
         try:
-            return transBlock().parent_block().disaggregationConstraintMap[
-                (original_var, disjunction)]
+            return transBlock().parent_block()._disaggregationConstraintMap[
+                original_var][disjunction]
         except:
             raise GDP_Error("It doesn't appear that %s is a variable that was "
-                            "disaggregated by %s" % (original_var.name,
-                                                     disjunction.name))
+                            "disaggregated by Disjunction %s" % 
+                            (original_var.name, disjunction.name))
+
+    def get_var_bounds_constraint(self, v):
+        # v is a disaggregated variable: get the indicator*lb <= it <=
+        # indicator*ub constraint for it
+        transBlock = v.parent_block()
+        try:
+            return transBlock._bigMConstraintMap[v]
+        except:
+            raise GDP_Error("Either %s is not a disaggregated variable, or "
+                            "the disjunction that disaggregates it has not "
+                            "been properly transformed." % v.name)
+
+    # I don't think we need this. look for the only variable not named
+    # 'indicator_var'! If we ever need to be efficient, we can do the reverse
+    # map.
+    # def get_var_from_bounds_constraint(self, cons):
+    #     transBlock = cons.parent_block()
+    #     return transBlock._bigMConstraintMap['srcVar'][cons]
+
+    # TODO: These maps actually get used in cuttingplanes. It will be worth
+    # making sure that the ones that are called there are on the more efficient
+    # side...
+
+    # TODO: This is not a relaxation, I would love to not be using that word in
+    # the code... And I need a convention for distinguishing between the
+    # disjunct transBlocks and the parent blocks of those.
