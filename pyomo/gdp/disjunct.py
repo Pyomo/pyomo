@@ -76,8 +76,6 @@ class _Initializer(object):
 
 class _DisjunctData(_BlockData):
 
-    # [ESJ 08/16/2019] TODO: Is this a good idea? (If not, need to change back
-    # in DisjunctionData also)
     @property
     def transformation_block(self):
         return self._transformation_block
@@ -100,7 +98,7 @@ class _DisjunctData(_BlockData):
             raise GDP_Error("Attempting to call set_value on an already-"
                             "transformed disjunct! Since disjunct %s "
                             "has been transformed, replacing it here will "
-                            "not effect the model." % self.name)
+                            "not affect the model." % self.name)
 
         # Call the base class set_value. (Note we are changing decl_order by
         # doing things this way: the indicator var will always be last rather
@@ -248,11 +246,9 @@ class _DisjunctionData(ActiveComponentData):
             # [ESJ 06/21/2019] This is really an issue with the reclassifier,
             # but in the case where you are iteratively adding to an
             # IndexedDisjunct indexed by Any which has already been transformed,
-            # the new Disjuncts are parading as Blocks already. This catches
-            # them for who they are anyway.
-            # [ESJ 09/13/2019] We still need this. I didn't dig again, but I am
-            # tempted to trust my past self.
-            if isinstance(e, _DisjunctData) or isinstance(e, SimpleDisjunct):
+            # the new Disjuncts are Blocks already. This catches them for who
+            # they are anyway.
+            if isinstance(e, (_DisjunctData, SimpleDisjunct)):
             #if hasattr(e, 'type') and e.type() == Disjunct:
                 self.disjuncts.append(e)
                 continue
