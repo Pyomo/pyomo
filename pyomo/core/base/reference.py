@@ -410,7 +410,7 @@ def _identify_wildcard_sets(iter_stack, index):
         if len(index[i]) != len(level):
             return None
         # if any subset differs
-        if any(index[i].get(j,None) is not _set for j,_set in iteritems(level)):
+        if any(index[i].get(j,None) != _set for j,_set in iteritems(level)):
             return None
     return index
 

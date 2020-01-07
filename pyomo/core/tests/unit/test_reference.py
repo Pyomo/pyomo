@@ -540,7 +540,7 @@ class TestReference(unittest.TestCase):
         m.r = Reference(m.b[:].x[:])
 
         self.assertIs(m.r.type(), Var)
-        self.assertIs(type(m.r.index_set()), SetOf)
+        self.assertIs(type(m.r.index_set()), _SetProduct)
         self.assertEqual(len(m.r), 2*2)
         self.assertEqual(m.r[1,3].lb, 1)
         self.assertEqual(m.r[2,4].lb, 2)
