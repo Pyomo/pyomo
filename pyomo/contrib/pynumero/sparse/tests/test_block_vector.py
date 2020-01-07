@@ -7,12 +7,13 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+from __future__ import division
 import sys
 import pyutilib.th as unittest
 
 import pyomo.contrib.pynumero as pn
 if not (pn.sparse.numpy_available and pn.sparse.scipy_available):
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run BlockVector tests")
 
 import numpy as np
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
@@ -153,13 +154,8 @@ class TestBlockVector(unittest.TestCase):
         for bid, blk in enumerate(vv):
             self.assertTrue(np.allclose(blk, v2[bid]))
 
-        with self.assertRaises(NotImplementedError) as ctx:
-            vv = v.clip(4.0, 9.0, out=v2)
-
     def test_compress(self):
         v = self.ones
-        with self.assertRaises(NotImplementedError) as ctx:
-            vv = v.compress(1, out=1)
 
         v = BlockVector(2)
         a = np.ones(5)
@@ -261,7 +257,7 @@ class TestBlockVector(unittest.TestCase):
 
     def test_diagonal(self):
         v = self.ones
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(NotImplementedError) as ctx:
             vv = v.diagonal()
 
     def test_getfield(self):
@@ -413,17 +409,19 @@ class TestBlockVector(unittest.TestCase):
         size = sum(self.list_sizes_ones)
         self.assertEqual(self.ones.size, size)
 
+    def test_length(self):
+        size = sum(self.list_sizes_ones)
+        self.assertEqual(len(self.ones), self.ones.nblocks)
+
     def test_argmax(self):
-        v = BlockVector(2)
-        v[0] = np.arange(5)
-        v[1] = np.arange(10, 15)
-        self.assertEqual(v.argmax(), v.size-1)
+        v = self.ones
+        with self.assertRaises(NotImplementedError) as ctx:
+            vv = v.argmax()
 
     def test_argmin(self):
-        v = BlockVector(2)
-        v[0] = np.arange(5)
-        v[1] = np.arange(10, 15)
-        self.assertEqual(v.argmin(), 0)
+        v = self.ones
+        with self.assertRaises(NotImplementedError) as ctx:
+            vv = v.argmin()
 
     def test_cumprod(self):
 
@@ -531,41 +529,51 @@ class TestBlockVector(unittest.TestCase):
         result = v.flatten() * v1
         self.assertTrue(np.allclose(result.flatten(), v.flatten() * v1.flatten()))
 
-    # @unittest.skipIf(sys.version_info < (3, 0), 'not supported in this veresion')
-    # def test_truediv(self):
-    #     v = self.ones
-    #     v1 = v.clone(5, copy=True)
-    #     result = v / v1
-    #     self.assertListEqual(result.tolist(), [1/5] * v.size)
-    #     result = v / v1.flatten()
-    #     self.assertTrue(np.allclose(result.flatten(), v.flatten() / v1.flatten()))
-    #
-    # @unittest.skipIf(sys.version_info < (3, 0), 'not supported in this veresion')
-    # def test_rtruediv(self):
-    #     v = self.ones
-    #     v1 = v.clone(5, copy=True)
-    #     result = v1.__rtruediv__(v)
-    #     self.assertListEqual(result.tolist(), [1 / 5] * v.size)
-    #     result = v.flatten() / v1
-    #     self.assertTrue(np.allclose(result.flatten(), v.flatten() / v1.flatten()))
-    #
-    # def test_floordiv(self):
-    #     v = self.ones
-    #     v.fill(2)
-    #     v1 = v.clone(5, copy=True)
-    #     result = v1 // v
-    #     self.assertListEqual(result.tolist(), [5 // 2] * v.size)
-    #     result = v // v1.flatten()
-    #     self.assertTrue(np.allclose(result.flatten(), v.flatten() // v1.flatten()))
-    #
-    # def test_rfloordiv(self):
-    #     v = self.ones
-    #     v.fill(2)
-    #     v1 = v.clone(5, copy=True)
-    #     result = v.__rfloordiv__(v1)
-    #     self.assertListEqual(result.tolist(), [5 // 2] * v.size)
-    #     result = v.flatten() // v1
-    #     self.assertTrue(np.allclose(result.flatten(), v.flatten() // v1.flatten()))
+    def test_truediv(self):
+        v = self.ones
+        v1 = v.clone(5.0, copy=True)
+        result = v / v1
+        self.assertListEqual(result.tolist(), [1.0/5.0] * v.size)
+        result = v / v1.flatten()
+        self.assertTrue(np.allclose(result.flatten(), v.flatten() / v1.flatten()))
+        result = 5.0 / v1
+        self.assertTrue(np.allclose(result.flatten(), v.flatten()))
+        result = v1 / 5.0
+        self.assertTrue(np.allclose(result.flatten(), v.flatten()))
+
+    def test_rtruediv(self):
+        v = self.ones
+        v1 = v.clone(5.0, copy=True)
+        result = v1.__rtruediv__(v)
+        self.assertListEqual(result.tolist(), [1.0 / 5.0] * v.size)
+        result = v.flatten() / v1
+        self.assertTrue(np.allclose(result.flatten(), v.flatten() / v1.flatten()))
+        result = 5.0 / v1
+        self.assertTrue(np.allclose(result.flatten(), v.flatten()))
+        result = v1 / 5.0
+        self.assertTrue(np.allclose(result.flatten(), v.flatten()))
+
+    def test_floordiv(self):
+        v = self.ones
+        v.fill(2.0)
+        v1 = v.clone(5.0, copy=True)
+        result = v1 // v
+        self.assertListEqual(result.tolist(), [5.0 // 2.0] * v.size)
+        result = v // v1.flatten()
+        self.assertTrue(np.allclose(result.flatten(), v.flatten() // v1.flatten()))
+
+    def test_rfloordiv(self):
+        v = self.ones
+        v.fill(2.0)
+        v1 = v.clone(5.0, copy=True)
+        result = v.__rfloordiv__(v1)
+        self.assertListEqual(result.tolist(), [5.0 // 2.0] * v.size)
+        result = v.flatten() // v1
+        self.assertTrue(np.allclose(result.flatten(), v.flatten() // v1.flatten()))
+        result = 2.0 // v1
+        self.assertTrue(np.allclose(result.flatten(), np.zeros(v1.size)))
+        result = v1 // 2.0
+        self.assertTrue(np.allclose(result.flatten(), np.ones(v1.size)*2.0))
 
     def test_iadd(self):
         v = self.ones
@@ -581,16 +589,22 @@ class TestBlockVector(unittest.TestCase):
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
+        a_copy = a.copy()
+        b_copy = b.copy()
+
         v[0] = a
         v[1] = b
         v += 1.0
 
-        self.assertTrue(np.allclose(v[0], a + 1))
-        self.assertTrue(np.allclose(v[1], b + 1))
+        self.assertTrue(np.allclose(v[0], a_copy + 1))
+        self.assertTrue(np.allclose(v[1], b_copy + 1))
 
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
+        a_copy = a.copy()
+        b_copy = b.copy()
+
         v[0] = a
         v[1] = b
 
@@ -599,8 +613,8 @@ class TestBlockVector(unittest.TestCase):
         v2[1] = np.ones(9)
 
         v += v2
-        self.assertTrue(np.allclose(v[0], a + 1))
-        self.assertTrue(np.allclose(v[1], b + 1))
+        self.assertTrue(np.allclose(v[0], a_copy + 1))
+        self.assertTrue(np.allclose(v[1], b_copy + 1))
 
         self.assertTrue(np.allclose(v2[0], np.ones(5)))
         self.assertTrue(np.allclose(v2[1], np.ones(9)))
@@ -622,16 +636,20 @@ class TestBlockVector(unittest.TestCase):
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
+        a_copy = a.copy()
+        b_copy = b.copy()
         v[0] = a
         v[1] = b
         v -= 5.0
 
-        self.assertTrue(np.allclose(v[0], a - 5.0))
-        self.assertTrue(np.allclose(v[1], b - 5.0))
+        self.assertTrue(np.allclose(v[0], a_copy - 5.0))
+        self.assertTrue(np.allclose(v[1], b_copy - 5.0))
 
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
+        a_copy = a.copy()
+        b_copy = b.copy()
         v[0] = a
         v[1] = b
 
@@ -640,8 +658,8 @@ class TestBlockVector(unittest.TestCase):
         v2[1] = np.ones(9)
 
         v -= v2
-        self.assertTrue(np.allclose(v[0], a - 1))
-        self.assertTrue(np.allclose(v[1], b - 1))
+        self.assertTrue(np.allclose(v[0], a_copy - 1))
+        self.assertTrue(np.allclose(v[1], b_copy - 1))
 
         self.assertTrue(np.allclose(v2[0], np.ones(5)))
         self.assertTrue(np.allclose(v2[1], np.ones(9)))
@@ -662,17 +680,21 @@ class TestBlockVector(unittest.TestCase):
 
         v = BlockVector(2)
         a = np.ones(5)
-        b = np.arange(9)
+        b = np.arange(9, dtype=np.float64)
+        a_copy = a.copy()
+        b_copy = b.copy()
         v[0] = a
         v[1] = b
         v *= 2.0
 
-        self.assertTrue(np.allclose(v[0], a * 2.0))
-        self.assertTrue(np.allclose(v[1], b * 2.0))
+        self.assertTrue(np.allclose(v[0], a_copy * 2.0))
+        self.assertTrue(np.allclose(v[1], b_copy * 2.0))
 
         v = BlockVector(2)
         a = np.ones(5)
         b = np.zeros(9)
+        a_copy = a.copy()
+        b_copy = b.copy()
         v[0] = a
         v[1] = b
 
@@ -681,8 +703,8 @@ class TestBlockVector(unittest.TestCase):
         v2[1] = np.ones(9) * 2
 
         v *= v2
-        self.assertTrue(np.allclose(v[0], a * 2))
-        self.assertTrue(np.allclose(v[1], b * 2))
+        self.assertTrue(np.allclose(v[0], a_copy * 2))
+        self.assertTrue(np.allclose(v[1], b_copy * 2))
 
         self.assertTrue(np.allclose(v2[0], np.ones(5) * 2))
         self.assertTrue(np.allclose(v2[1], np.ones(9) * 2))
@@ -943,6 +965,16 @@ class TestBlockVector(unittest.TestCase):
         v2 = v.copy()
         self.assertTrue(np.allclose(v.flatten(), v2.flatten()))
 
+    def test_copy_structure(self):
+        v = BlockVector(2)
+        a = np.ones(5)
+        b = np.zeros(9)
+        v[0] = a
+        v[1] = b
+        v2 = v.copy_structure()
+        self.assertEqual(v[0].size, v2[0].size)
+        self.assertEqual(v[1].size, v2[1].size)
+
     def test_unary_ufuncs(self):
 
         v = BlockVector(2)
@@ -996,7 +1028,7 @@ class TestBlockVector(unittest.TestCase):
         for fun in reduce_funcs:
             self.assertAlmostEqual(fun(v), fun(v.flatten()))
 
-        other_funcs = [np.all, np.any, np.std, np.ptp, np.argmax, np.argmin]
+        other_funcs = [np.all, np.any, np.std, np.ptp]
         for fun in other_funcs:
             self.assertAlmostEqual(fun(v), fun(v.flatten()))
 

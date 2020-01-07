@@ -960,7 +960,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
             B2[i, i] = 1.0
         Ji[1, 0] = coo_matrix(B1)
         Ji[1, 1] = coo_matrix(B2)
-        dense_Ji = Ji.todense()
+        dense_Ji = Ji.toarray()
 
         x = self.nlp.create_vector_x()
         jac_g = self.nlp.jacobian_g(x)
@@ -971,45 +971,45 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
 
         # check block jacobians
         for i in range(self.n_scenarios):
-            jac_gi = jac_g[i, i].todense()
+            jac_gi = jac_g[i, i].toarray()
             self.assertTrue(np.allclose(jac_gi, dense_Ji))
 
         # check coupling jacobians
         Ai_ = BlockMatrix(1, 2)
         Ai_[0, 1] = identity(nz)
         Ai_[0, 0] = empty_matrix(nz, self.G.shape[1])
-        Ai_ = Ai_.todense()
-        Bi_ = -identity(nz).todense()
+        Ai_ = Ai_.toarray()
+        Bi_ = -identity(nz).toarray()
         for i in range(self.n_scenarios):
             Ai = jac_g[self.n_scenarios + i, i]
-            self.assertTrue(np.allclose(Ai.todense(), Ai_))
+            self.assertTrue(np.allclose(Ai.toarray(), Ai_))
             Bi = jac_g[self.n_scenarios + i, self.n_scenarios]
-            self.assertTrue(np.allclose(Bi.todense(), Bi_))
+            self.assertTrue(np.allclose(Bi.toarray(), Bi_))
 
         # test out
         # change g values
         for i in range(self.n_scenarios):
             jac_g[i, i] *= 2.0
-            jac_gi = jac_g[i, i].todense()
+            jac_gi = jac_g[i, i].toarray()
             self.assertTrue(np.allclose(jac_gi, 2*dense_Ji))
         self.nlp.jacobian_g(x, out=jac_g)
 
         # check block jacobians
         for i in range(self.n_scenarios):
-            jac_gi = jac_g[i, i].todense()
+            jac_gi = jac_g[i, i].toarray()
             self.assertTrue(np.allclose(jac_gi, dense_Ji))
 
         # check coupling jacobians
         Ai_ = BlockMatrix(1, 2)
         Ai_[0, 1] = identity(nz)
         Ai_[0, 0] = empty_matrix(nz, self.G.shape[1])
-        Ai_ = Ai_.todense()
-        Bi_ = -identity(nz).todense()
+        Ai_ = Ai_.toarray()
+        Bi_ = -identity(nz).toarray()
         for i in range(self.n_scenarios):
             Ai = jac_g[self.n_scenarios + i, i]
-            self.assertTrue(np.allclose(Ai.todense(), Ai_))
+            self.assertTrue(np.allclose(Ai.toarray(), Ai_))
             Bi = jac_g[self.n_scenarios + i, self.n_scenarios]
-            self.assertTrue(np.allclose(Bi.todense(), Bi_))
+            self.assertTrue(np.allclose(Bi.toarray(), Bi_))
 
         # test flattened vector
         jac_g = self.nlp.jacobian_g(x.flatten())
@@ -1020,20 +1020,20 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
 
         # check block jacobians
         for i in range(self.n_scenarios):
-            jac_gi = jac_g[i, i].todense()
+            jac_gi = jac_g[i, i].toarray()
             self.assertTrue(np.allclose(jac_gi, dense_Ji))
 
         # check coupling jacobians
         Ai_ = BlockMatrix(1, 2)
         Ai_[0, 1] = identity(nz)
         Ai_[0, 0] = empty_matrix(nz, self.G.shape[1])
-        Ai_ = Ai_.todense()
-        Bi_ = -identity(nz).todense()
+        Ai_ = Ai_.toarray()
+        Bi_ = -identity(nz).toarray()
         for i in range(self.n_scenarios):
             Ai = jac_g[self.n_scenarios + i, i]
-            self.assertTrue(np.allclose(Ai.todense(), Ai_))
+            self.assertTrue(np.allclose(Ai.toarray(), Ai_))
             Bi = jac_g[self.n_scenarios + i, self.n_scenarios]
-            self.assertTrue(np.allclose(Bi.todense(), Bi_))
+            self.assertTrue(np.allclose(Bi.toarray(), Bi_))
 
         # test nlp2
         instance = self.scenarios2['s0']
@@ -1140,7 +1140,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
             B2[i, i] = 1.0
         Ji[1, 0] = coo_matrix(B1)
         Ji[1, 1] = coo_matrix(B2)
-        dense_Ji = Ji.todense()
+        dense_Ji = Ji.toarray()
 
         x = self.nlp.create_vector_x()
         jac_c = self.nlp.jacobian_c(x)
@@ -1151,45 +1151,45 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
 
         # check block jacobians
         for i in range(self.n_scenarios):
-            jac_ci = jac_c[i, i].todense()
+            jac_ci = jac_c[i, i].toarray()
             self.assertTrue(np.allclose(jac_ci, dense_Ji))
 
         # check coupling jacobians
         Ai_ = BlockMatrix(1, 2)
         Ai_[0, 1] = identity(nz)
         Ai_[0, 0] = empty_matrix(nz, self.G.shape[1])
-        Ai_ = Ai_.todense()
-        Bi_ = -identity(nz).todense()
+        Ai_ = Ai_.toarray()
+        Bi_ = -identity(nz).toarray()
         for i in range(self.n_scenarios):
             Ai = jac_c[self.n_scenarios + i, i]
-            self.assertTrue(np.allclose(Ai.todense(), Ai_))
+            self.assertTrue(np.allclose(Ai.toarray(), Ai_))
             Bi = jac_c[self.n_scenarios + i, self.n_scenarios]
-            self.assertTrue(np.allclose(Bi.todense(), Bi_))
+            self.assertTrue(np.allclose(Bi.toarray(), Bi_))
 
         # test out
         # change g values
         for i in range(self.n_scenarios):
             jac_c[i, i] *= 2.0
-            jac_ci = jac_c[i, i].todense()
+            jac_ci = jac_c[i, i].toarray()
             self.assertTrue(np.allclose(jac_ci, 2 * dense_Ji))
         self.nlp.jacobian_c(x, out=jac_c)
 
         # check block jacobians
         for i in range(self.n_scenarios):
-            jac_ci = jac_c[i, i].todense()
+            jac_ci = jac_c[i, i].toarray()
             self.assertTrue(np.allclose(jac_ci, dense_Ji))
 
         # check coupling jacobians
         Ai_ = BlockMatrix(1, 2)
         Ai_[0, 1] = identity(nz)
         Ai_[0, 0] = empty_matrix(nz, self.G.shape[1])
-        Ai_ = Ai_.todense()
-        Bi_ = -identity(nz).todense()
+        Ai_ = Ai_.toarray()
+        Bi_ = -identity(nz).toarray()
         for i in range(self.n_scenarios):
             Ai = jac_c[self.n_scenarios + i, i]
-            self.assertTrue(np.allclose(Ai.todense(), Ai_))
+            self.assertTrue(np.allclose(Ai.toarray(), Ai_))
             Bi = jac_c[self.n_scenarios + i, self.n_scenarios]
-            self.assertTrue(np.allclose(Bi.todense(), Bi_))
+            self.assertTrue(np.allclose(Bi.toarray(), Bi_))
 
         # test flattened vector
         jac_g = self.nlp.jacobian_c(x.flatten())
@@ -1200,20 +1200,20 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
 
         # check block jacobians
         for i in range(self.n_scenarios):
-            jac_ci = jac_c[i, i].todense()
+            jac_ci = jac_c[i, i].toarray()
             self.assertTrue(np.allclose(jac_ci, dense_Ji))
 
         # check coupling jacobians
         Ai_ = BlockMatrix(1, 2)
         Ai_[0, 1] = identity(nz)
         Ai_[0, 0] = empty_matrix(nz, self.G.shape[1])
-        Ai_ = Ai_.todense()
-        Bi_ = -identity(nz).todense()
+        Ai_ = Ai_.toarray()
+        Bi_ = -identity(nz).toarray()
         for i in range(self.n_scenarios):
             Ai = jac_c[self.n_scenarios + i, i]
-            self.assertTrue(np.allclose(Ai.todense(), Ai_))
+            self.assertTrue(np.allclose(Ai.toarray(), Ai_))
             Bi = jac_c[self.n_scenarios + i, self.n_scenarios]
-            self.assertTrue(np.allclose(Bi.todense(), Bi_))
+            self.assertTrue(np.allclose(Bi.toarray(), Bi_))
 
         # test nlp2
         instance = self.scenarios2['s0']
@@ -1361,45 +1361,45 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         Hi[0, 0] = coo_matrix(self.G)
         Hi[1, 1] = empty_matrix(nz, nz) # this is because of the way the test problem was setup
 
-        Hi = Hi.todense()
+        Hi = Hi.toarray()
         x = self.nlp.create_vector_x()
         y = self.nlp.create_vector_y()
         H = self.nlp.hessian_lag(x, y)
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(H[i, i].todense(), Hi))
-        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].todense(),
-                                    empty_matrix(nz, nz).todense()))
+            self.assertTrue(np.allclose(H[i, i].toarray(), Hi))
+        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].toarray(),
+                                    empty_matrix(nz, nz).toarray()))
 
         # test out
         # change g values
         for i in range(self.n_scenarios):
             H[i, i] *= 2.0
-            Hj = H[i, i].todense()
+            Hj = H[i, i].toarray()
             self.assertTrue(np.allclose(Hj, 2.0 * Hi))
         self.nlp.hessian_lag(x, y, out=H)
 
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(H[i, i].todense(), Hi))
-        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].todense(),
-                                    empty_matrix(nz, nz).todense()))
+            self.assertTrue(np.allclose(H[i, i].toarray(), Hi))
+        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].toarray(),
+                                    empty_matrix(nz, nz).toarray()))
 
         H = self.nlp.hessian_lag(x.flatten(), y)
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(H[i, i].todense(), Hi))
-        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].todense(),
-                                    empty_matrix(nz, nz).todense()))
+            self.assertTrue(np.allclose(H[i, i].toarray(), Hi))
+        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].toarray(),
+                                    empty_matrix(nz, nz).toarray()))
 
         H = self.nlp.hessian_lag(x.flatten(), y.flatten())
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(H[i, i].todense(), Hi))
-        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].todense(),
-                                    empty_matrix(nz, nz).todense()))
+            self.assertTrue(np.allclose(H[i, i].toarray(), Hi))
+        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].toarray(),
+                                    empty_matrix(nz, nz).toarray()))
 
         H = self.nlp.hessian_lag(x, y.flatten())
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(H[i, i].todense(), Hi))
-        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].todense(),
-                                    empty_matrix(nz, nz).todense()))
+            self.assertTrue(np.allclose(H[i, i].toarray(), Hi))
+        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].toarray(),
+                                    empty_matrix(nz, nz).toarray()))
 
     def test_expansion_matrix_xl(self):
 

@@ -10,10 +10,11 @@
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 import numpy as np
 
-__all__ = ['allclose', 'concatenate', 'where', 'isin']
+__all__ = ['allclose', 'concatenate', 'where', 'isin', 'setdiff1d', 'intersect1d']
 
 
 def allclose(x1, x2, rtol, atol):
+    # this needs to be implemented for parallel
     x1_flat = x1.flatten()
     x2_flat = x2.flatten()
     return np.allclose(x1_flat, x2_flat, rtol=rtol, atol=atol)
@@ -211,3 +212,95 @@ def isin(element, test_elements, assume_unique=False, invert=False):
 
     else:
         raise NotImplementedError()
+
+
+def intersect1d(ar1, ar2, assume_unique=False, return_indices=False):
+
+    if return_indices:
+        raise NotImplementedError()
+
+    if isinstance(ar1, tuple) and len(ar1) == 1:
+        x = ar1[0]
+    elif isinstance(ar1, np.ndarray) or isinstance(ar1, BlockVector):
+        x = ar1
+    else:
+        raise RuntimeError('ar1 type not recognized. Needs to be np.ndarray or BlockVector')
+
+    if isinstance(ar2, tuple) and len(ar2) == 1:
+        y = ar2[0]
+    elif isinstance(ar2, np.ndarray) or isinstance(ar1, BlockVector):
+        y = ar2
+    else:
+        raise RuntimeError('ar2 type not recognized. Needs to be np.ndarray or BlockVector')
+
+    if isinstance(x, BlockVector) and isinstance(y, BlockVector):
+
+        assert x.nblocks == y.nblocks, "Number of blocks does not match"
+        assert not x.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not y.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+
+        res = BlockVector(x.nblocks)
+        for i in range(x.nblocks):
+            res[i] = intersect1d(x[i], y[i], assume_unique=assume_unique)
+        return res
+    elif isinstance(x, BlockVector) and isinstance(y, np.ndarray):
+        assert not x.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+
+        res = BlockVector(x.nblocks)
+        for i in range(x.nblocks):
+            res[i] = np.intersect1d(x[i], y, assume_unique=assume_unique)
+        return res
+    elif isinstance(x, np.ndarray) and isinstance(y, BlockVector):
+
+        assert not y.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+
+        res = BlockVector(y.nblocks)
+        for i in range(y.nblocks):
+            res[i] = np.intersect1d(x, y[i], assume_unique=assume_unique)
+        return res
+    else:
+        return np.intersect1d(x, y, assume_unique=assume_unique)
+
+
+def setdiff1d(ar1, ar2, assume_unique=False):
+
+    if isinstance(ar1, tuple) and len(ar1) == 1:
+        x = ar1[0]
+    elif isinstance(ar1, np.ndarray) or isinstance(ar1, BlockVector):
+        x = ar1
+    else:
+        raise RuntimeError('ar1 type not recognized. Needs to be np.ndarray or BlockVector')
+
+    if isinstance(ar2, tuple) and len(ar2) == 1:
+        y = ar2[0]
+    elif isinstance(ar2, np.ndarray) or isinstance(ar1, BlockVector):
+        y = ar2
+    else:
+        raise RuntimeError('ar2 type not recognized. Needs to be np.ndarray or BlockVector')
+
+    if isinstance(x, BlockVector) and isinstance(y, BlockVector):
+
+        assert x.nblocks == y.nblocks, "Number of blocks does not match"
+        assert not x.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        assert not y.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+
+        res = BlockVector(x.nblocks)
+        for i in range(x.nblocks):
+            res[i] = setdiff1d(x[i], y[i], assume_unique=assume_unique)
+        return res
+    elif isinstance(x, BlockVector) and isinstance(y, np.ndarray):
+        assert not x.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+        res = BlockVector(x.nblocks)
+        for i in range(x.nblocks):
+            res[i] = np.setdiff1d(x[i], y, assume_unique=assume_unique)
+        return res
+    elif isinstance(x, np.ndarray) and isinstance(y, BlockVector):
+
+        assert not y.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
+
+        res = BlockVector(y.nblocks)
+        for i in range(y.nblocks):
+            res[i] = np.setdiff1d(x, y[i], assume_unique=assume_unique)
+        return res
+    else:
+        return np.setdiff1d(x, y, assume_unique=assume_unique)

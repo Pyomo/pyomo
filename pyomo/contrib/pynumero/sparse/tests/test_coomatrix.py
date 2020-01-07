@@ -11,12 +11,12 @@ import sys
 import os
 import pyutilib.th as unittest
 
-try:
-    from scipy.sparse import csr_matrix, csc_matrix, coo_matrix, identity
-    import numpy as np
-except ImportError:
-    raise unittest.SkipTest(
-        "Pynumero needs scipy and numpy to run COO matrix tests")
+import pyomo.contrib.pynumero as pn
+if not (pn.sparse.numpy_available and pn.sparse.scipy_available):
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to TestEmptyMatrix tests")
+
+from scipy.sparse import csr_matrix, csc_matrix, coo_matrix, identity
+import numpy as np
 
 from pyomo.contrib.pynumero.sparse.coo import (diagonal_matrix,
                                                empty_matrix)
@@ -29,8 +29,3 @@ class TestEmptyMatrix(unittest.TestCase):
         m = empty_matrix(3, 3)
         self.assertEqual(m.shape, (3, 3))
         self.assertEqual(m.nnz, 0)
-
-
-
-
-

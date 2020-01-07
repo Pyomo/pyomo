@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 import pyutilib.th as unittest
 
-from .. import numpy_available, scipy_available
+from pyomo.contrib.pynumero import numpy_available, scipy_available
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
@@ -85,6 +85,3 @@ class TestSparseUtils(unittest.TestCase):
 
         with self.assertRaises(Exception) as context:
             self.assertTrue(is_symmetric_sparse(range(5)))
-
-
-
