@@ -431,9 +431,6 @@ class BigM_Transformation(Transformation):
             handler = self.handlers.get(obj.type(), None)
             if not handler:
                 if handler is None:
-                    # TODO: It is here that we need to make sure we are only
-                    # yelling of the offender is an ActiveComponent, right?
-                    # (Need to write a test for this when you understand it...)
                     raise GDP_Error(
                         "No BigM transformation handler registered "
                         "for modeling components of type %s. If your " 
@@ -449,7 +446,7 @@ class BigM_Transformation(Transformation):
     def _transfer_transBlock_data(self, fromBlock, toBlock):
         # We know that we have a list of transformed disjuncts on both. We need
         # to move those over. Then there might be constraints on the block also
-        # (at this point only the diaggregation constraints from chull,
+        # (at this point only the disaggregation constraints from chull,
         # but... I'll leave it general for now.)
         disjunctList = toBlock.relaxedDisjuncts
         for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
