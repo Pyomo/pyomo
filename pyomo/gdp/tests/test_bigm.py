@@ -715,6 +715,15 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         self.assertIs(m.disjunction._algebraic_constraint(),
                       m._gdp_bigm_relaxation_disjunction_xor)
 
+    # TODO: I don't know if this is even interesting. It looks like using Skip
+    # just means the index is not created, which is absolutely fine.
+
+    # def test_indexed_disjunction_skip_index(self):
+    #     m = models.makeIndexedDisjunction_SkipIndex()
+    #     TransformationFactory('gdp.bigm').apply_to(m)
+
+    #     set_trace()
+
 
 class DisjOnBlock(unittest.TestCase, CommonTests):
     # when the disjunction is on a block, we want the xor constraint
@@ -2488,7 +2497,7 @@ class TestErrors(unittest.TestCase):
         self.assertRaisesRegexp(
             GDP_Error,
             "Found transformed disjunction "
-            "disjunction_disjuncts\[0\].nestedDisjunction on disjunt "
+            "disjunction_disjuncts\[0\].nestedDisjunction on disjunct "
             "disjunction_disjuncts\[0\], "
             "but none of its disjuncts have been transformed. "
             "This is very strange.",

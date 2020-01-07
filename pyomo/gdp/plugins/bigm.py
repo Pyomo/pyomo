@@ -38,11 +38,6 @@ logger = logging.getLogger('pyomo.gdp.bigm')
 NAME_BUFFER = {}
 
 def _to_dict(val):
-    # [ESJ 09/14/2019] It doesn't seem like this can happen. Even if you
-    # explicitly specify it, this doesn't get called because None is the default
-    # value maybe?
-    # if val is None:
-    #     return val
     if isinstance(val, ComponentMap):
         return val
     if isinstance(val, dict):
@@ -181,6 +176,9 @@ class BigM_Transformation(Transformation):
             _HACK_transform_whole_instance = True
         else:
             _HACK_transform_whole_instance = False
+        # We need to check that all the targets are in fact on instance. As we
+        # do this, we will use the set below to cache components we know to be
+        # in the tree rooted at instance.
         knownBlocks = set()
         for t in targets:
             # [ESJ 08/22/2019] This can go away when we deprecate CUIDs. The
@@ -408,13 +406,14 @@ class BigM_Transformation(Transformation):
             # get this disjunction's relaxation block.
             transBlock = None
             for d in obj.disjuncts:
-                if d._transformation_block:
+                # Check if d is transformed
+                if not d._transformation_block is None:
                     transBlock = d._transformation_block().parent_block()
                     # We found it, no need to keep looking
                     break
             if transBlock is None:
                 raise GDP_Error(
-                    "Found transformed disjunction %s on disjunt %s, "
+                    "Found transformed disjunction %s on disjunct %s, "
                     "but none of its disjuncts have been transformed. "
                     "This is very strange." % (obj.name, disjunct.name))
             # move transBlock up to parent component

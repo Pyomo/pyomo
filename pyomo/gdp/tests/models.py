@@ -128,6 +128,21 @@ def makeTwoTermIndexedDisjunction():
     m.disjunction = Disjunction(m.A, rule=disj_rule)
     return m
 
+def makeIndexedDisjunction_SkipIndex():
+    m = ConcreteModel()
+    m.x = Var(bounds=(0, 10))
+    @m.Disjunct([0,1])
+    def disjuncts(d, i):
+        m = d.model()
+        d.cons = Constraint(expr=m.x == i)
+
+    @m.Disjunction([0,1])
+    def disjunctions(m, i):
+        if i == 0:
+            return Disjunction.Skip
+        return [m.disjuncts[i], m.disjuncts[0]]
+
+    return m
 
 def makeTwoTermMultiIndexedDisjunction():
     m = ConcreteModel()
