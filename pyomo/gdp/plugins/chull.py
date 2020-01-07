@@ -596,36 +596,12 @@ class ConvexHull_Transformation(Transformation):
 
     def _transform_block_components( self, block, disjunct, var_substitute_map,
                                      zero_substitute_map):
-        # We first need to find any transformed disjunctions that might be here
-        # because we need to move their transformation blocks up onto the parent
-        # block before we transform anything else on this block 
-        # TODO: this is copied from BigM... This stuff should move to util!
-        destinationBlock = disjunct._transformation_block().parent_block()
-        for obj in block.component_data_objects(
-                Disjunction, 
-                sort=SortComponents.deterministic, 
-                descend_into=(Block)):
-            if not obj.algebraic_constraint is None:
-                # This could be bad if it's active since that means its
-                # untransformed, but we'll wait to yell until the next loop
-                continue
-            # get this disjunction's relaxation block.
-            transBlock = None
-            for d in obj.disjuncts:
-                if d._transformation_block:
-                    transBlock = d._transformation_block().parent_block()
-                    # We found it, no need to keep looking
-                    break
-            if transBlock is None:
-                raise GDP_Error(
-                    "Found transformed disjunction %s on disjunct %s, "
-                    "but none of its disjuncts have been transformed. "
-                    "This is very strange." % (obj.name, disjunct.name))
-            # move transBlock up to parent component
-            self._transfer_transBlock_data(transBlock, destinationBlock)
-            # delete the entire transformed disjunct container:
-            del transBlock
-
+        # As opposed to bigm, in chull we do not need to do anything special for
+        # nested disjunctions. The indicator variables and disaggregated
+        # variables of the inner disjunction will need to be disaggregated again
+        # anyway, and nothing will get double-bigm-ed. (If an untransformed
+        # disjunction is lurking here, we will catch it below).
+        
         # Look through the component map of block and transform
         # everything we have a handler for. Yell if we don't know how
         # to handle it.
@@ -647,46 +623,6 @@ class ConvexHull_Transformation(Transformation):
             # through so that we will have access to the indicator
             # variables down the line.
             handler(obj, disjunct, var_substitute_map, zero_substitute_map)
-
-    def _transfer_transBlock_data(self, fromBlock, toBlock):
-        # We know that we have a list of transformed disjuncts on both. We need
-        # to move those over. Then there might be constraints on the block also
-        # (at this point only the diaggregation constraints from chull,
-        # but... I'll leave it general for now.)
-        disjunctList = toBlock.relaxedDisjuncts
-        for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
-            # I think this should work when #1106 is resolved:
-            # disjunctList[len(disjunctList)] = disjunctBlock
-            # newblock = disjunctList[len(disjunctList)-1]
-
-            # HACK in the meantime:
-            newblock = disjunctList[len(disjunctList)]
-            self._copy_to_block(disjunctBlock, newblock)
-
-            # update the mappings
-            original = disjunctBlock._srcDisjunct()
-            original._transformation_block = weakref_ref(newblock)
-            newblock._srcDisjunct = weakref_ref(original)
-
-        # move any constraints and variables. I'm assuming they are all just on
-        # the transformation block right now, because that is in our control and
-        # I can't think why we would do anything messier at the moment. (And I
-        # don't want to descend into Blocks because we already handled the
-        # above).
-        for cons in fromBlock.component_objects((Constraint, Var),
-                                                descend_into=False):
-            fromBlock.del_component(cons)
-            toBlock.add_component(unique_component_name( toBlock, cons.name),
-                                  cons)
-
-    def _copy_to_block(self, oldblock, newblock):
-        for obj in oldblock.component_objects(Constraint):
-            # [ESJ 07/18/2019] This shouldn't actually matter because we are
-            # deleting the whole old block anyway, but it is to keep pyomo from
-            # getting upset about the same component living on multiple blocks
-            oldblock.del_component(obj)
-            newblock.add_component(obj.getname(fully_qualified=True,
-                                               name_buffer=NAME_BUFFER), obj)
 
     def _warn_for_active_disjunction( self, disjunction, disjunct,
                                       var_substitute_map, zero_substitute_map):
