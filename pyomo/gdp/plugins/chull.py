@@ -250,6 +250,7 @@ class ConvexHull_Transformation(Transformation):
         instance.add_component(transBlockName, transBlock)
         transBlock.relaxedDisjuncts = Block(Any)
         transBlock.lbub = Set(initialize = ['lb','ub','eq'])
+        # TODO: This is wrong!!
         # We will store all of the disaggregation constraints for any
         # Disjunctions we transform onto this block here. Note that this
         # (correctly) means that we will move them up off of the Disjunct in the
@@ -617,7 +618,7 @@ class ConvexHull_Transformation(Transformation):
                     break
             if transBlock is None:
                 raise GDP_Error(
-                    "Found transformed disjunction %s on disjunt %s, "
+                    "Found transformed disjunction %s on disjunct %s, "
                     "but none of its disjuncts have been transformed. "
                     "This is very strange." % (obj.name, disjunct.name))
             # move transBlock up to parent component
