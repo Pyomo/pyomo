@@ -465,17 +465,9 @@ class BigM_Transformation(Transformation):
             original._transformation_block = weakref_ref(newblock)
             newblock._srcDisjunct = weakref_ref(original)
 
-        # move any constraints. I'm assuming they are all just on the
-        # transformation block right now, because that is in our control and I
-        # can't think why we would do anything messier at the moment. (And I
-        # don't want to descend into Blocks because we already handled the
-        # above).
-        for cons in fromBlock.component_data_objects(Constraint):
-            # (This is not going to get tested until this same process is used
-            # in chull.)
-            toBlock.add_component(unique_component_name(
-                cons.getname(fully_qualified=True, name_buffer=NAME_BUFFER), 
-                toBlock), cons)
+            # Note that we could handle other components here if we ever needed
+            # to, but we control what is on the transformation block and
+            # currently everything is on the blocks that we just moved...
 
     def _copy_to_block(self, oldblock, newblock):
         for obj in oldblock.component_objects(Constraint):
@@ -492,7 +484,7 @@ class BigM_Transformation(Transformation):
         assert disjunction.active
         problemdisj = disjunction
         if disjunction.is_indexed():
-            for i in disjunction:
+            for i in sorted(iterkeys(disjunction)):
                 if disjunction[i].active:
                     # a _DisjunctionData is active, we will yell about
                     # it specifically.
@@ -515,7 +507,7 @@ class BigM_Transformation(Transformation):
         assert innerdisjunct.active
         problemdisj = innerdisjunct
         if innerdisjunct.is_indexed():
-            for i in innerdisjunct:
+            for i in sorted(iterkeys(innerdisjunct)):
                 if innerdisjunct[i].active:
                     # This is shouldn't be true, we will complain about it.
                     problemdisj = innerdisjunct[i]
