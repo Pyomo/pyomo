@@ -60,7 +60,7 @@ class _MatrixConstraintData(_ConstraintData):
         _index          The row index into the main coefficient matrix
     """
 
-    __slots__ = ('_index')
+    __slots__ = ('_index',)
 
     # the super secret flag that makes the writers
     # handle _MatrixConstraintData objects more efficiently
