@@ -287,10 +287,12 @@ class ConvexHull_Transformation(Transformation):
                 descent_order=TraversalStrategy.PostfixDFS):
             self._transform_disjunction(disjunction)
 
-    # TODO: I believe that this is now identical to its cousin in bigm. Should
-    # probably move the whole thing to util
-    def _get_xor_constraint(self, disjunction):
-        # Put the XOR (or OR) constraint on the parent block of the Disjunction
+    def _get_xor_constraint(self, disjunction, transBlock):
+        # NOTE: This differs from bigm because in chull there is no reason to
+        # but the XOR constraint on the parent block of the Disjunction. We
+        # don't move anything in the case of nested disjunctions, so to avoid
+        # name conflicts, we put everything together on the transformation
+        # block.
 
         # We never do this for just a DisjunctionData because we need
         # to know about the index set of its parent component. So if
@@ -301,17 +303,14 @@ class ConvexHull_Transformation(Transformation):
         if not disjunction._algebraic_constraint is None:
             return disjunction._algebraic_constraint()
 
-        parent = disjunction.parent_block()
-        
         # add the XOR (or OR) constraints to parent block (with
         # unique name) It's indexed if this is an
         # IndexedDisjunction, not otherwise
         orC = Constraint(disjunction.index_set()) if \
               disjunction.is_indexed() else Constraint()
-        parent.add_component( unique_component_name(parent,
-                                                    '_gdp_chull_relaxation_' +
-                                                    disjunction.name + '_xor'),
-                              orC)
+        transBlock.add_component( 
+            unique_component_name(transBlock, disjunction.name + '_xor'),
+            orC)
         disjunction._algebraic_constraint = weakref_ref(orC)
 
         return orC
@@ -320,7 +319,7 @@ class ConvexHull_Transformation(Transformation):
         # put the transformation block on the parent block of the Disjunction
         transBlock = self._add_transformation_block(obj.parent_block())
         # and create the xor constraint
-        xorConstraint = self._get_xor_constraint(obj)
+        xorConstraint = self._get_xor_constraint(obj, transBlock)
 
         # create the disjunction constraint and disaggregation
         # constraints and then relax each of the disjunctionDatas
@@ -346,7 +345,7 @@ class ConvexHull_Transformation(Transformation):
 
         parent_component = obj.parent_component()
         
-        orConstraint = self._get_xor_constraint(parent_component)
+        orConstraint = self._get_xor_constraint(parent_component, transBlock)
         disaggregationConstraint = transBlock.disaggregationConstraints
         disaggregationConstraintMap = transBlock._disaggregationConstraintMap
 

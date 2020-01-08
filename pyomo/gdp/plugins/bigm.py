@@ -252,8 +252,14 @@ class BigM_Transformation(Transformation):
             self._transform_disjunction(disjunction, bigM)
 
     def _get_xor_constraint(self, disjunction):
-        # Put the disjunction constraint on its parent block and
-        # determine whether it is an OR or XOR constraint.
+        # Put the disjunction constraint on its parent block and determine
+        # whether it is an OR or XOR constraint. Note that we put the XOR
+        # constraint on the parent block for convenience in the case of nested
+        # disjunctions. Because it is the only product of the transformation
+        # which we do not move off of the outer disjunct when we transform
+        # it. (This differs from chull, where we move nothing for nested
+        # disjunctions and so store the XOR constraint on the transformation
+        # block.)
 
         # We never do this for just a DisjunctionData because we need to know
         # about the index set of its parent component (so that we can make the

@@ -256,7 +256,7 @@ class TwoTermDisj(unittest.TestCase):
         m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.chull').apply_to(m)
 
-        xorC = m._gdp_chull_relaxation_disjunction_xor
+        xorC = m._pyomo_gdp_chull_relaxation.disjunction_xor
         self.assertIsInstance(xorC, Constraint)
         self.assertEqual(len(xorC), 1)
 
