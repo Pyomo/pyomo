@@ -117,10 +117,9 @@ class TestFileUtils(unittest.TestCase):
             find_file(fname, cwd=False)
         )
         # cwd overrides pathlist
-        self.assertIn(
-            os.path.join(self.tmpdir,fname),
-            find_file(fname, pathlist=[subdir])
-        )
+        self.assertTrue(find_file(fname, pathlist=[subdir]).endswith(os.path.join(self.tmpdir,fname)),
+                "%s does not end with %s" % (find_file(fname, pathlist=[subdir]), os.path.join(self.tmpdir,fname)))
+        
         self.assertEqual(
             os.path.join(subdir,fname),
             find_file(fname, pathlist=[subdir], cwd=False)
@@ -147,24 +146,18 @@ class TestFileUtils(unittest.TestCase):
         )
 
         # implicit extensions work (even if they are not necessary)
-        self.assertIn(
-            os.path.join(self.tmpdir,fname),
-            find_file(fname, ext='.py')
-        )
-        self.assertIn(
-            os.path.join(self.tmpdir,fname),
-            find_file(fname, ext=['.py'])
-        )
+        self.assertTrue(find_file(fname, ext='.py').endswith(os.path.join(self.tmpdir,fname)),
+                "%s does not end with %s" % (find_file(fname, ext='.py'), os.path.join(self.tmpdir,fname)))
+        
+        self.assertTrue(find_file(fname, ext=['.py']).endswith(os.path.join(self.tmpdir,fname)),
+                "%s does not end with %s" % (find_file(fname, ext=['.py']), os.path.join(self.tmpdir,fname)))
 
         # implicit extensions work (and when they are not necessary)
-        self.assertIn(
-            os.path.join(self.tmpdir,fname),
-            find_file(fname[:-3], ext='.py')
-        )
-        self.assertIn(
-            os.path.join(self.tmpdir,fname),
-            find_file(fname[:-3], ext=['.py'])
-        )
+        self.assertTrue(find_file(fname[:-3], ext='.py').endswith(os.path.join(self.tmpdir,fname)),
+                "%s does not end with %s" % (find_file(fname[:-3], ext='.py'), os.path.join(self.tmpdir,fname)))
+        
+        self.assertTrue(find_file(fname[:-3], ext=['.py']).endswith(os.path.join(self.tmpdir,fname)),
+                "%s does not end with %s" % (find_file(fname[:-3], ext=['.py']), os.path.join(self.tmpdir,fname)))
 
         # only files are found
         self.assertEqual(
@@ -218,10 +211,9 @@ class TestFileUtils(unittest.TestCase):
         open(os.path.join(config_bindir, f_in_configbin),'w').close()
 
 
-        self.assertIn(
-            os.path.join(self.tmpdir, f_in_cwd_ldlib_path),
-            find_library(f_in_cwd_ldlib_path)
-        )
+        self.assertTrue(find_library(f_in_cwd_ldlib_path).endswith(os.path.join(self.tmpdir, f_in_cwd_ldlib_path)),
+                "%s does not end with %s" % (find_library(f_in_cwd_ldlib_path), os.path.join(self.tmpdir, f_in_cwd_ldlib_path)))
+        
         self.assertEqual(
             os.path.join(ldlibdir, f_in_cwd_ldlib_path),
             find_library(f_in_cwd_ldlib_path, cwd=False)
@@ -319,30 +311,25 @@ class TestFileUtils(unittest.TestCase):
               else None ),
             find_executable(f_in_cwd_notexe)
         )
-        self.assertIn(
-            os.path.join(self.tmpdir, f_in_cwd_ldlib_path),
-            find_executable(f_in_cwd_ldlib_path)
-        )
-        self.assertIn(
-            os.path.join(pathdir, f_in_cwd_ldlib_path),
-            find_executable(f_in_cwd_ldlib_path, cwd=False)
-        )
-        self.assertIn(
-            os.path.join(pathdir, f_in_path_extension) + exeExt,
-            find_executable(f_in_path_extension)
-        )
-        self.assertIn(
-            os.path.join(pathdir, f_in_path),
-            find_executable(f_in_path)
-        )
+        self.assertTrue(find_executable(f_in_cwd_ldlib_path).endswith(os.path.join(self.tmpdir, f_in_cwd_ldlib_path)),
+                "%s does not end with %s" % (find_executable(f_in_cwd_ldlib_path), os.path.join(self.tmpdir, f_in_cwd_ldlib_path)))
+
+        self.assertTrue(find_executable(f_in_cwd_ldlib_path, cwd=False).endswith(os.path.join(self.tmpdir, f_in_cwd_ldlib_path)),
+                "%s does not end with %s" % (find_executable(f_in_cwd_ldlib_path, cwd=False), os.path.join(self.tmpdir, f_in_cwd_ldlib_path)))
+
+        self.assertTrue(find_executable(f_in_path_extension).endswith(os.path.join(pathdir, f_in_path_extension) + exeExt),
+                "%s does not end with %s" % (find_executable(f_in_path_extension), os.path.join(pathdir, f_in_path_extension) + exeExt))
+
+        self.assertTrue(find_executable(f_in_path).endswith(os.path.join(pathdir, f_in_path)),
+                "%s does not end with %s" % (find_executable(f_in_path), os.path.join(pathdir, f_in_path)))
+
         self.assertEqual(
             None,
             find_executable(f_in_path, include_PATH=False)
         )
-        self.assertIn(
-            os.path.join(pathdir, f_in_path),
-            find_executable(f_in_path, pathlist=os.pathsep+pathdir+os.pathsep)
-        )
+        self.assertTrue(find_executable(f_in_path, pathlist=os.pathsep+pathdir+os.pathsep).endswith(os.path.join(pathdir, f_in_path)),
+                "%s does not end with %s" % (find_executable(f_in_path, pathlist=os.pathsep+pathdir+os.pathsep), os.path.join(pathdir, f_in_path)))
+        
         # test an explicit pathlist overrides PATH
         self.assertEqual(
             os.path.join(ldlibdir, f_in_cwd_ldlib_path),
