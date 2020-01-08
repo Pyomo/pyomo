@@ -798,8 +798,6 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
                 G,
                 edge_probability_attribute=None)
 
-TestScenarioTree = unittest.category('smoke','nightly','expensive')(TestScenarioTree)
-TestScenarioTreeFromNetworkX = unittest.category('smoke','nightly','expensive')(TestScenarioTreeFromNetworkX)
 
 if __name__ == "__main__":
     unittest.main()
