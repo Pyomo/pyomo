@@ -116,7 +116,10 @@ def target_list(x):
             "\n\tRecieved %s" % (type(x),))
 
 # [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
-#  putting it here for now so that all the gdp transformations can use it
+#  putting it here for now so that all the gdp transformations can use it.
+# Returns True if child is a node or leaf in the tree rooted at parent, False
+# otherwise. Accepts list of known components in the tree and updates this list
+# to enhance performance in future calls.
 def is_child_of(parent, child, knownBlocks=None):
     # Note: we can get away with set() and not ComponentSet because we will only
     # store Blocks (or their ilk), and Blocks are hashable (only derivatives of
@@ -141,5 +144,3 @@ def is_child_of(parent, child, knownBlocks=None):
             node = node.parent_block()
         else:
             node = container
-
-    return knownBlocks

@@ -1,5 +1,4 @@
 import sys
-import collections
 import pickle
 
 import pyutilib.th as unittest
@@ -25,6 +24,14 @@ from pyomo.core.kernel.set_types import (RealSet,
 
 import six
 from six import StringIO
+
+if six.PY3:
+    from collections.abc import Mapping as collections_Mapping
+    from collections.abc import MutableMapping as collections_MutableMapping
+else:
+    from collections import Mapping as collections_Mapping
+    from collections import MutableMapping as collections_MutableMapping
+
 
 class Test_suffix(unittest.TestCase):
 
@@ -102,10 +109,10 @@ class Test_suffix(unittest.TestCase):
     def test_type(self):
         s = suffix()
         self.assertTrue(isinstance(s, ICategorizedObject))
-        self.assertTrue(isinstance(s, collections.Mapping))
-        self.assertTrue(isinstance(s, collections.MutableMapping))
-        self.assertTrue(issubclass(type(s), collections.Mapping))
-        self.assertTrue(issubclass(type(s), collections.MutableMapping))
+        self.assertTrue(isinstance(s, collections_Mapping))
+        self.assertTrue(isinstance(s, collections_MutableMapping))
+        self.assertTrue(issubclass(type(s), collections_Mapping))
+        self.assertTrue(issubclass(type(s), collections_MutableMapping))
 
     def test_import_export_enabled(self):
         s = suffix()

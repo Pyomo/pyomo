@@ -16,7 +16,7 @@ try:
 except ImportError:
     numpy_available = False
 
-
+@unittest.skipIf(not SolverFactory('ipopt').available(False), "The IPOPT solver is not available")
 @unittest.skipIf(not SolverFactory('gjh').available(False), "The GJH solver is not available")
 @unittest.skipIf(not numpy_available, "Cannot test the trustregion solver without numpy")
 class TestTrustRegionConfigBlock(unittest.TestCase):

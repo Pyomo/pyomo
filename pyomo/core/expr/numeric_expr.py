@@ -834,7 +834,7 @@ class ReciprocalExpression(ExpressionBase):
     PRECEDENCE = 4
 
     @deprecated("ReciprocalExpression is deprecated. Use DivisionExpression",
-                version='TBD')
+                version='5.6.7')
     def __init__(self, args):
         super(ReciprocalExpression, self).__init__(args)
 

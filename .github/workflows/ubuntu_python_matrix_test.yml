@@ -1,0 +1,47 @@
+name: Ubuntu Pyomo Tests Workflow (Slim, Matrixed, Nightly)
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+
+    runs-on: ubuntu-18.04
+    strategy:
+      max-parallel: 4
+      matrix:
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+        # python-version: [2.7]
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # pip install -r requirements.txt
+        git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
+        pip install --quiet git+https://github.com/PyUtilib/pyutilib
+        python setup.py develop
+        pip install numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos
+    - name: Install extensions
+      run: |
+        pyomo download-extensions
+        pyomo build-extensions
+#     - name: Lint with flake8
+#       run: |
+#         pip install flake8
+#         # stop the build if there are Python syntax errors or undefined names
+#         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+#         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+#         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Run nightly tests with test.pyomo
+      run: |
+        pip install nose
+        KEY_JOB=1
+        test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries

@@ -13,6 +13,8 @@
 import logging
 import textwrap
 
+from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
+from pyomo.contrib.fbbt.interval import inf
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, Any, value,
@@ -38,11 +40,6 @@ logger = logging.getLogger('pyomo.gdp.bigm')
 NAME_BUFFER = {}
 
 def _to_dict(val):
-    # [ESJ 09/14/2019] It doesn't seem like this can happen. Even if you
-    # explicitly specify it, this doesn't get called because None is the default
-    # value maybe?
-    # if val is None:
-    #     return val
     if isinstance(val, ComponentMap):
         return val
     if isinstance(val, dict):
@@ -181,6 +178,9 @@ class BigM_Transformation(Transformation):
             _HACK_transform_whole_instance = True
         else:
             _HACK_transform_whole_instance = False
+        # We need to check that all the targets are in fact on instance. As we
+        # do this, we will use the set below to cache components we know to be
+        # in the tree rooted at instance.
         knownBlocks = set()
         for t in targets:
             # [ESJ 08/22/2019] This can go away when we deprecate CUIDs. The
@@ -408,13 +408,14 @@ class BigM_Transformation(Transformation):
             # get this disjunction's relaxation block.
             transBlock = None
             for d in obj.disjuncts:
-                if d._transformation_block:
+                # Check if d is transformed
+                if not d._transformation_block is None:
                     transBlock = d._transformation_block().parent_block()
                     # We found it, no need to keep looking
                     break
             if transBlock is None:
                 raise GDP_Error(
-                    "Found transformed disjunction %s on disjunt %s, "
+                    "Found transformed disjunction %s on disjunct %s, "
                     "but none of its disjuncts have been transformed. "
                     "This is very strange." % (obj.name, disjunct.name))
             # move transBlock up to parent component
@@ -447,7 +448,7 @@ class BigM_Transformation(Transformation):
     def _transfer_transBlock_data(self, fromBlock, toBlock):
         # We know that we have a list of transformed disjuncts on both. We need
         # to move those over. Then there might be constraints on the block also
-        # (at this point only the diaggregation constraints from chull,
+        # (at this point only the disaggregation constraints from chull,
         # but... I'll leave it general for now.)
         disjunctList = toBlock.relaxedDisjuncts
         for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
@@ -464,17 +465,9 @@ class BigM_Transformation(Transformation):
             original._transformation_block = weakref_ref(newblock)
             newblock._srcDisjunct = weakref_ref(original)
 
-        # move any constraints. I'm assuming they are all just on the
-        # transformation block right now, because that is in our control and I
-        # can't think why we would do anything messier at the moment. (And I
-        # don't want to descend into Blocks because we already handled the
-        # above).
-        for cons in fromBlock.component_objects(Constraint):
-            # (This is not going to get tested until this same process is used
-            # in chull.)
-            toBlock.add_component(unique_component_name(
-                cons.getname(fully_qualified=True, name_buffer=NAME_BUFFER), 
-                toBlock), cons)
+            # Note that we could handle other components here if we ever needed
+            # to, but we control what is on the transformation block and
+            # currently everything is on the blocks that we just moved...
 
     def _copy_to_block(self, oldblock, newblock):
         for obj in oldblock.component_objects(Constraint):
@@ -491,7 +484,7 @@ class BigM_Transformation(Transformation):
         assert disjunction.active
         problemdisj = disjunction
         if disjunction.is_indexed():
-            for i in disjunction:
+            for i in sorted(iterkeys(disjunction)):
                 if disjunction[i].active:
                     # a _DisjunctionData is active, we will yell about
                     # it specifically.
@@ -514,7 +507,7 @@ class BigM_Transformation(Transformation):
         assert innerdisjunct.active
         problemdisj = innerdisjunct
         if innerdisjunct.is_indexed():
-            for i in innerdisjunct:
+            for i in sorted(iterkeys(innerdisjunct)):
                 if innerdisjunct[i].active:
                     # This is shouldn't be true, we will complain about it.
                     problemdisj = innerdisjunct[i]
@@ -741,9 +734,14 @@ class BigM_Transformation(Transformation):
                             "\n\t(found unbounded var %s while processing "
                             "constraint %s)" % (var.name, name))
         else:
-            raise GDP_Error("Cannot estimate M for nonlinear "
-                            "expressions.\n\t(found while processing "
-                            "constraint %s)" % name)
+            # expression is nonlinear. Try using `contrib.fbbt` to estimate.
+            expr_lb, expr_ub = compute_bounds_on_expr(expr)
+            if expr_lb == -inf or expr_ub == inf:
+                raise GDP_Error("Cannot estimate M for unbounded nonlinear "
+                                "expressions.\n\t(found while processing "
+                                "constraint %s)" % name)
+            else:
+                M = (expr_lb, expr_ub)
 
         return tuple(M)
 

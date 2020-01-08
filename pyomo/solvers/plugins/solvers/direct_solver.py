@@ -23,8 +23,6 @@ class DirectSolver(DirectOrPersistentSolver):
     Subclasses need to:
     1.) Initialize self._solver_model during _presolve before calling DirectSolver._presolve
     """
-    def __init__(self, **kwds):
-        DirectOrPersistentSolver.__init__(self, **kwds)
 
     def _presolve(self, *args, **kwds):
         """
