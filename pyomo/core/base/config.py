@@ -11,9 +11,11 @@ from pyutilib.misc.config import ConfigBase
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, ADVANCED_OPTION, PYOMO_CONFIG_DIR,
 )
+import logging
+logger = logging.getLogger('pyomo.core')
 
 
-class PyomoOptions_(object):
+class _PyomoOptions(object):
 
     def __init__(self):
         self._options_stack = [ default_pyomo_config() ]
@@ -66,7 +68,7 @@ class PyomoOptions_(object):
 
     def __setattr__(self, name, value):
         if name == '_options_stack':
-            super(PyomoOptions_,self).__setattr__(name, value)
+            super(_PyomoOptions,self).__setattr__(name, value)
         else:
             return self.active_config().__setattr__(name, value)
 
@@ -97,7 +99,7 @@ class PyomoOptions_(object):
         return self.active_config().items(name, config)
 
     def add(self, name, config):
-        return self.active_config().add(name, value)
+        return self.active_config().add(name, config)
 
     def value(self, accessValue=True):
         return self.active_config().value(accessValue)
@@ -111,7 +113,6 @@ class PyomoOptions_(object):
     #
     # END clone of the ConfigBlock API
     #
-
 
 
 def default_pyomo_config():
@@ -129,4 +130,4 @@ def default_pyomo_config():
     return config
 
 
-PyomoOptions = PyomoOptions_()
+PyomoOptions = _PyomoOptions()
