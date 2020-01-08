@@ -35,12 +35,14 @@ def unique_component_name(instance, name):
             name += str(randint(0,9))
 
 
-"""
-Object to be used to indicate that an optional argument
-was not specified, if `None` may be ambiguous. Usage:
+class NoArgumentGiven(object):
+    """
+    Class to be used to indicate that an optional argument
+    was not specified, if `None` may be ambiguous. Usage:
 
-  >>> def foo(value=NoArgumentGiven):
-  >>>     if value is NoArgumentGiven:
-  >>>         pass  # no argument was provided to `value`
-"""
-NoArgumentGiven = object()
+      >>> def foo(value=NoArgumentGiven):
+      >>>     if value is NoArgumentGiven:
+      >>>         pass  # no argument was provided to `value`
+
+    """
+    pass

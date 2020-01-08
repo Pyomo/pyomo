@@ -7,7 +7,32 @@ import textwrap
 
 from pyomo.common.errors import DeveloperError
 
-def deprecation_warning(msg, logger='pyomo.core'):
+
+def _default_msg(user_msg, version, remove_in, func=None):
+    """Generate the default deprecation message.
+
+    See deprecated() function for argument details.
+    """
+    if user_msg is None:
+        if inspect.isclass(func):
+            _obj = ' class'
+        elif inspect.isfunction(func):
+            _obj = ' function'
+        else:
+            _obj = ''
+        user_msg = 'This%s has been deprecated and may be removed in a ' \
+                   'future release.' % (_obj,)
+    comment = []
+    if version:
+        comment.append('deprecated in %s' % (version,))
+    if remove_in:
+        comment.append('will be removed in %s' % (remove_in))
+    if comment:
+        user_msg += "  (%s)" % (', '.join(comment))
+    return user_msg
+
+
+def deprecation_warning(msg, logger='pyomo.core', version=None, remove_in=None):
     """Standardized formatter for deprecation warnings
 
     This is a standardized routine for formatting deprecation warnings
@@ -16,10 +41,12 @@ def deprecation_warning(msg, logger='pyomo.core'):
     Args:
         msg (str): the deprecation message to format
     """
+    msg = _default_msg(msg, version, remove_in)
     logging.getLogger(logger).warning(
         textwrap.fill('DEPRECATED: %s' % (msg,), width=70) )
 
-def deprecated( msg=None, logger='pyomo.core', version=None, remove_in=None ):
+
+def deprecated(msg=None, logger='pyomo.core', version=None, remove_in=None):
     """Indicate that a function, method or class is deprecated.
 
     This decorator will cause a warning to be logged when the wrapped
@@ -48,7 +75,7 @@ def deprecated( msg=None, logger='pyomo.core', version=None, remove_in=None ):
         raise DeveloperError("@deprecated missing initial version")
 
     def wrap(func):
-        message = _default_msg(msg, func)
+        message = _default_msg(msg, version, remove_in, func)
 
         @functools.wraps(func, assigned=('__module__', '__name__'))
         def wrapper(*args, **kwargs):
@@ -63,24 +90,5 @@ def deprecated( msg=None, logger='pyomo.core', version=None, remove_in=None ):
                 'DEPRECATION WARNING: %s' % (message,), width=70) + '\n\n' + \
                 textwrap.fill(textwrap.dedent(func.__doc__.strip()))
         return wrapper
-
-    def _default_msg(user_msg, func):
-        if user_msg is None:
-            if inspect.isclass(func):
-                _obj = ' class'
-            elif inspect.isfunction(func):
-                _obj = ' function'
-            else:
-                _obj = ''
-            user_msg = 'This%s has been deprecated and may be removed in a ' \
-                       'future release.' % (_obj,)
-        comment = []
-        if version:
-            comment.append('deprecated in %s' % (version,))
-        if remove_in:
-            comment.append('will be removed in %s' % (remove_in))
-        if comment:
-            user_msg += "  (%s)" % (','.join(comment))
-        return user_msg
 
     return wrap
