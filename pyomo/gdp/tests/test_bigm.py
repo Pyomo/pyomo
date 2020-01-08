@@ -2633,16 +2633,6 @@ class TestErrors(unittest.TestCase):
             bigm.get_transformed_constraint,
             m.disjunct[2, 'b'].cons_b)
 
-    def test_no_m_estimation_for_nonlinear(self):
-        m = models.makeTwoTermDisj_Nonlinear()
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Cannot estimate M for nonlinear "
-            "expressions.\n\t\(found while processing "
-            "constraint d\[0\].c\)",
-            TransformationFactory('gdp.bigm').apply_to,
-            m)
-
     def test_silly_target(self):
         m = models.makeTwoTermDisj()
         self.assertRaisesRegexp(

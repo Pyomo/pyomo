@@ -335,7 +335,7 @@ class TestDisjunct(unittest.TestCase):
             "Attempting to call set_value on an already-"
             "transformed disjunct! Since disjunct %s "
             "has been transformed, replacing it here will "
-            "not effect the model." % m.d.name,
+            "not affect the model." % m.d.name,
             m.d.set_value,
             new_d)
 
