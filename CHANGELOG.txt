@@ -6,6 +6,86 @@ Pyomo CHANGELOG
 Current Development
 -------------------------------------------------------------------------------
 
+
+-------------------------------------------------------------------------------
+Pyomo 5.6.8   13 Dec 2019
+-------------------------------------------------------------------------------
+
+- General
+  - Fix collections imports for Python 3.x (#1175)
+  - Add verbose logging options for infeasibility testing (#1207)
+- Core
+  - Remove deprecated call to formatargspec in Python 3.x (#1174)
+  - Remove old, unreachable code in PyomoModel.py (#1189)
+  - Clean up default argument for variable fix method (#1221)
+- Solver Interfaces
+  - Fix incorrect precision warnings in the GAMS and BARON writers (#1166)
+  - Fix typo in MOSEK problem status handling (#1170)
+  - Fix bug in NEOS interface for Python 3.x (#1206)
+- DAE updates
+  - Fix bug in get_index_information (#1195)
+  - Remove use of _implicit_subsets (#1197)
+- PySP updates
+  - Expose options for CC and CVaR in the rapper interface (#1211)
+- Testing
+  - Disable extras on Appveyor Python 3.7 build (#1180)
+  - Add Python 3.8 to Travis test suite (#1182)
+  - Updates to Jenkins build infrastructure (#1216)
+- Documentation
+  - Minor updates for PySP, GDP, stream-based walkers, and installation
+    (#1168, #1191, #1204, #1208)
+- Contributed Packages
+  - Add MC++ compiled library version checking (#1172)
+  - Fix minor type mismatch in PyNumero (#1214)
+  - Fix deprecation warning in Mindtpy (#1188)
+  - Add test skipping to trust region tests requiring IPOPT (#1220)
+
+-------------------------------------------------------------------------------
+Pyomo 5.6.7    7 Nov 2019
+-------------------------------------------------------------------------------
+
+- General
+  - Update links to tutorials and examples in the README (#1082)
+  - Verify Python 3.8 support (#1162)
+- Core
+  - Add a guard in getname for ComponentData with no parent (#1075)
+  - Add support for sqrt in Python-based AD implementation (#1086)
+  - Add methods to IndexedVar to set bounds for all indices (#1087)
+  - Replace ReciprocalExpression with DivisionExpression (#989)
+  - Fix bug where Set multiplication changed the original Sets (#1103)
+  - Improve ease of use of LinearExpression constructor (#1097)
+  - Tech preview of the Set component hierarchy rewrite (#1111)
+  - Add a get_interval method for Sets (#1128)
+  - Update pprint method for derived classes and add support for printing
+    ComponentData (#1043)
+  - Create a common interface for differentiation (#1059)
+  - Add function to calculate the Taylor series approximation of an 
+    expression (#1059)
+  - Fix in Sympy interface to avoid complex numbers (#1140)
+  - Add support for log10 in differentiation (#1145)
+- Solver Interfaces
+  - Fix bug in BARON and GAMS writers for handling exponential expressions (#1114)
+  - Improve Gurobi persistent interface, enable callbacks, lazy constraints,
+    and more (#1137)
+- MPEC updates
+  - Update transformations to descend into disjuncts (#1085)
+- PySP updates
+  - Replace Graph.node with Graph.nodes to support networkx 2.4 (#1141)
+- GDP updates
+  - Use a name buffer when generating component names (#1149)
+- Testing
+  - Add pathos library to the Appveyor build (#1135)
+- Contributed Packages
+  - Model viewer improvements and bug fixes (#1071, #1092)
+  - MindtPy outer approximation improvements (#983)
+  - GDPOpt improvements, support for Ports (#1098, #1133)
+  - FBBT improvements and bug fixes, updates to interval arithmetic, support 
+    for log10, replace math.inf with float('inf') (#1131, #1134, #1102, #1078, 
+    #1076, #1146)
+- Documentation
+  - Fix typo in working_models.rst (#1094)
+  - Add documentation for user interface to LinearExpression (#1120)
+
 -------------------------------------------------------------------------------
 Pyomo 5.6.6   21 Jun 2019
 -------------------------------------------------------------------------------

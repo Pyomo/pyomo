@@ -86,6 +86,13 @@ class FileDownloader(object):
             help="Use CACERT as the file of certificate authorities "
             "to verify peers.",
         )
+        parser.add_argument(
+            '-v','--verbose',
+            action='store_true',
+            dest='verbose',
+            default=False,
+            help="Verbose output when download fails",
+        )
         return parser
 
     def parse_args(self, argv):
@@ -122,7 +129,9 @@ class FileDownloader(object):
     def retrieve_url(self, url):
         """Return the contents of a URL as an io.BytesIO object"""
         try:
-            ctx = ssl.create_default_context(cafile=self.cacert)
+            ctx = ssl.create_default_context()
+            if self.cacert:
+                ctx.load_verify_locations(cafile=self.cacert)
             if self.insecure:
                 ctx.check_hostname = False
                 ctx.verify_mode = ssl.CERT_NONE

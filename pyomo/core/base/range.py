@@ -8,11 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import collections
 import math
 
-from six import iteritems
+from six import iteritems, PY3
 from six.moves import xrange
+
+if PY3:
+    from collections.abc import Sequence as collections_Sequence
+else:
+    from collections import Sequence as collections_Sequence
 
 try:
     from math import remainder
@@ -893,7 +897,7 @@ class RangeProduct(object):
         return not self.__eq__(other)
 
     def __contains__(self, value):
-        if not isinstance(value, collections.Sequence):
+        if not isinstance(value, collections_Sequence):
             return False
         if len(value) != len(self.range_lists):
             return False

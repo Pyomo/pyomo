@@ -1023,7 +1023,7 @@ class wwphextension(pyomo.common.plugin.SingletonPlugin):
 
             if (self.CheckWeightOscillationAfterIter > 0) and \
                (ph._current_iteration >= self.CheckWeightOscillationAfterIter):
-                if (last_flip_iter is 0) or \
+                if (last_flip_iter == 0) or \
                    (flip_duration >= self.FixIfWeightOscillationCycleLessThan):
                     pass
                 else:

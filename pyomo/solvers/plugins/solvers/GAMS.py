@@ -83,7 +83,7 @@ class _GAMSSolver(object):
         tokens = quote_split('[ ]+',istr)
         for token in tokens:
             index = token.find('=')
-            if index is -1:
+            if index == -1:
                 raise ValueError(
                     "Solver options must have the form option=value: '%s'" % istr)
             try:

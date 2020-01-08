@@ -6,7 +6,7 @@ from math import fabs, floor, log
 
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
                         Objective, Reals, Suffix, Var, minimize, value)
-from pyomo.core.base.symbolic import differentiate
+from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.kernel.component_map import ComponentMap
@@ -72,7 +72,7 @@ def calc_jacobians(solve_data, config):
         if c.body.polynomial_degree() in (1, 0):
             continue  # skip linear constraints
         vars_in_constr = list(EXPR.identify_variables(c.body))
-        jac_list = differentiate(c.body, wrt_list=vars_in_constr)
+        jac_list = differentiate(c.body, wrt_list=vars_in_constr, mode=differentiate.Modes.sympy)
         solve_data.jacobians[c] = ComponentMap(
             (var, jac_wrt_var)
             for var, jac_wrt_var in zip(vars_in_constr, jac_list))
