@@ -314,9 +314,10 @@ class TestFileUtils(unittest.TestCase):
         self.assertTrue(find_executable(f_in_cwd_ldlib_path).endswith(os.path.join(self.tmpdir, f_in_cwd_ldlib_path)),
                 "%s does not end with %s" % (find_executable(f_in_cwd_ldlib_path), os.path.join(self.tmpdir, f_in_cwd_ldlib_path)))
 
-        self.assertTrue(find_executable(f_in_cwd_ldlib_path, cwd=False).endswith(os.path.join(self.tmpdir, f_in_cwd_ldlib_path)),
-                "%s does not end with %s" % (find_executable(f_in_cwd_ldlib_path, cwd=False), os.path.join(self.tmpdir, f_in_cwd_ldlib_path)))
-
+        self.assertEqual(
+            os.path.join(pathdir, f_in_cwd_ldlib_path),
+            find_executable(f_in_cwd_ldlib_path, cwd=False)
+        )
         self.assertTrue(find_executable(f_in_path_extension).endswith(os.path.join(pathdir, f_in_path_extension) + exeExt),
                 "%s does not end with %s" % (find_executable(f_in_path_extension), os.path.join(pathdir, f_in_path_extension) + exeExt))
 
