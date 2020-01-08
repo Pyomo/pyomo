@@ -18,8 +18,7 @@ from pyomo.common.download import FileDownloader
 logger = logging.getLogger('pyomo.common')
 
 # These URLs were retrieved from
-#     https://ampl.com/resources/extended-function-library/
-#     with the 'www' removed, as it causes a security flag
+#     https://ampl.com/resources/extended-function-library/ 
 urlmap = {
     'linux':   'https://ampl.com/NEW/amplgsl/amplgsl.linux-intel%s.zip',
     'windows': 'https://ampl.com/NEW/amplgsl/amplgsl.mswin%s.zip',
