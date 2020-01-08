@@ -47,4 +47,3 @@ jobs:
         pip install nose
         KEY_JOB=1
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries # Run nightly, stable tests
-        

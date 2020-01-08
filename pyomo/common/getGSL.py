@@ -18,12 +18,12 @@ from pyomo.common.download import FileDownloader
 logger = logging.getLogger('pyomo.common')
 
 # These URLs were retrieved from
-#     https://ampl.com/resources/extended-function-library/ 
+#     https://ampl.com/resources/extended-function-library/
 urlmap = {
-    'linux':   'https://ampl.com/NEW/amplgsl/amplgsl.linux-intel%s.zip',
-    'windows': 'https://ampl.com/NEW/amplgsl/amplgsl.mswin%s.zip',
-    'cygwin':  'https://ampl.com/NEW/amplgsl/amplgsl.mswin%s.zip',
-    'darwin':  'https://ampl.com/NEW/amplgsl/amplgsl.macosx%s.zip'
+    'linux':   'https://www.ampl.com/NEW/amplgsl/amplgsl.linux-intel%s.zip',
+    'windows': 'https://www.ampl.com/NEW/amplgsl/amplgsl.mswin%s.zip',
+    'cygwin':  'https://www.ampl.com/NEW/amplgsl/amplgsl.mswin%s.zip',
+    'darwin':  'https://www.ampl.com/NEW/amplgsl/amplgsl.macosx%s.zip'
 }
 
 def find_GSL():
