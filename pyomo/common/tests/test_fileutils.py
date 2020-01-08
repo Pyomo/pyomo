@@ -108,9 +108,9 @@ class TestFileUtils(unittest.TestCase):
         open(os.path.join(subdir,fname),'w').close()
         open(os.path.join(subdir,'aaa'),'w').close()
         # we can find files in the CWD
-        self.assertIn(
-            os.path.join(self.tmpdir,fname), find_file(fname)
-        )
+        # On OSX, the identified path is prepended with 'private/'
+        self.assertTrue(find_file(fname).endswith(os.path.join(self.tmpdir,fname)),
+                "%s does not end with %s" % (find_file(fname), os.path.join(self.tmpdir,fname)))
         # unless we don't look in the cwd
         self.assertEqual(
             None,
