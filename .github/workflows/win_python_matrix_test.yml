@@ -1,4 +1,4 @@
-name: Windows Pyomo Tests Workflow (Slim, Matrixed, Nightly)
+name: continuous-integration/github/pr/win
 
 on: 
   pull_request: 
@@ -7,7 +7,7 @@ on:
 
 jobs:
   pyomo-tests:
-    name: Pyomo Test (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       max-parallel: 5
@@ -17,7 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Set up Python ${{ matrix.python-version }} with Miniconda
-      uses: goanpeca/setup-miniconda@v1
+      uses: goanpeca/setup-miniconda@v1 # Using an action created by user goanpeca to set up different Python Miniconda environments
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python-version }}
