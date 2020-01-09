@@ -107,71 +107,104 @@ class TestFileUtils(unittest.TestCase):
         open(os.path.join(self.tmpdir,fname),'w').close()
         open(os.path.join(subdir,fname),'w').close()
         open(os.path.join(subdir,'aaa'),'w').close()
+        #
+        # On OSX, the identified path is (sometimes) prepended with
+        # '/private/'. These two paths are in fact equivalent on OSX,
+        # but we will explicitly verify that fact.
+        #
         # we can find files in the CWD
-        # On OSX, the identified path is prepended with 'private/'
-        self.assertTrue(find_file(fname).endswith(os.path.join(self.tmpdir,fname)),
-                "%s does not end with %s" % (find_file(fname), os.path.join(self.tmpdir,fname)))
+        #
+        found=find_file(fname)
+        ref=os.path.join(self.tmpdir,fname)
+        self.assertTrue(
+            found.endswith(ref), "%s does not end with %s" % (found, ref))
+        self.assertTrue(os.path.samefile(ref, found))
+
         # unless we don't look in the cwd
-        self.assertEqual(
-            None,
-            find_file(fname, cwd=False)
-        )
+        self.assertIsNone(find_file(fname, cwd=False))
+
         # cwd overrides pathlist
-        self.assertTrue(find_file(fname, pathlist=[subdir]).endswith(os.path.join(self.tmpdir,fname)),
-                "%s does not end with %s" % (find_file(fname, pathlist=[subdir]), os.path.join(self.tmpdir,fname)))
+        found=find_file(fname, pathlist=[subdir])
+        ref=os.path.join(self.tmpdir,fname)
+        self.assertTrue(
+            found.endswith(ref), "%s does not end with %s" % (found, ref))
+        self.assertTrue(os.path.samefile(ref, found))
         
-        self.assertEqual(
-            os.path.join(subdir,fname),
-            find_file(fname, pathlist=[subdir], cwd=False)
-        )
+        found=find_file(fname, pathlist=[subdir], cwd=False)
+        ref=os.path.join(subdir,fname)
+        self.assertTrue(
+            found.endswith(ref), "%s does not end with %s" % (found, ref))
+        self.assertTrue(os.path.samefile(ref, found))
+
         # ...unless the CWD match fails the MODE check
         #  (except on Windows, where all files have X_OK)
-        self.assertEqual(
-            ( os.path.join(self.tmpdir,fname)
-              if _system() in ('windows','cygwin')
-              else None ),
-            find_file(fname, pathlist=[subdir], mode=os.X_OK)
-        )
+        found = find_file(fname, pathlist=[subdir], mode=os.X_OK)
+        if _system() in ('windows','cygwin'):
+            ref = os.path.join(self.tmpdir,fname)
+            self.assertTrue(
+                found.endswith(ref), "%s does not end with %s" % (found, ref))
+            self.assertTrue(os.path.samefile(ref, found))
+        else:
+            self.assertIsNone(found)
+
         self._make_exec(os.path.join(subdir,fname))
-        self.assertEqual(
-            ( os.path.join(self.tmpdir,fname)
-              if _system() in ('windows','cygwin')
-              else os.path.join(subdir,fname) ),
-            find_file(fname, pathlist=[subdir], mode=os.X_OK)
-        )
+        found = find_file(fname, pathlist=[subdir], mode=os.X_OK)
+        if _system() in ('windows','cygwin'):
+            ref = os.path.join(self.tmpdir,fname)
+        else:
+            ref = os.path.join(subdir,fname)
+        self.assertTrue(
+            found.endswith(ref), "%s does not end with %s" % (found, ref))
+        self.assertTrue(os.path.samefile(ref, found))
+
         # pathlist may also be a string
-        self.assertEqual(
-            os.path.join(subdir,fname),
-            find_file(fname, pathlist=os.pathsep+subdir+os.pathsep, cwd=False)
-        )
+        found=find_file(fname, pathlist=os.pathsep+subdir+os.pathsep, cwd=False)
+        ref=os.path.join(subdir,fname)
+        self.assertTrue(
+            found.endswith(ref), "%s does not end with %s" % (found, ref))
+        self.assertTrue(os.path.samefile(ref, found))
 
         # implicit extensions work (even if they are not necessary)
-        self.assertTrue(find_file(fname, ext='.py').endswith(os.path.join(self.tmpdir,fname)),
-                "%s does not end with %s" % (find_file(fname, ext='.py'), os.path.join(self.tmpdir,fname)))
-        
-        self.assertTrue(find_file(fname, ext=['.py']).endswith(os.path.join(self.tmpdir,fname)),
-                "%s does not end with %s" % (find_file(fname, ext=['.py']), os.path.join(self.tmpdir,fname)))
+        found=find_file(fname, ext='.py')
+        ref=os.path.join(self.tmpdir,fname)
+        self.assertTrue(
+            found.endswith(ref), "%s does not end with %s" % (found, ref))
+        self.assertTrue(os.path.samefile(ref, found))
 
-        # implicit extensions work (and when they are not necessary)
-        self.assertTrue(find_file(fname[:-3], ext='.py').endswith(os.path.join(self.tmpdir,fname)),
-                "%s does not end with %s" % (find_file(fname[:-3], ext='.py'), os.path.join(self.tmpdir,fname)))
-        
-        self.assertTrue(find_file(fname[:-3], ext=['.py']).endswith(os.path.join(self.tmpdir,fname)),
-                "%s does not end with %s" % (find_file(fname[:-3], ext=['.py']), os.path.join(self.tmpdir,fname)))
+        found=find_file(fname, ext=['.py'])
+        ref=os.path.join(self.tmpdir,fname)
+        self.assertTrue(
+            found.endswith(ref), "%s does not end with %s" % (found, ref))
+        self.assertTrue(os.path.samefile(ref, found))
+
+        # implicit extensions work (when they are necessary)
+        found=find_file(fname[:-3], ext='.py')
+        ref=os.path.join(self.tmpdir,fname)
+        self.assertTrue(
+            found.endswith(ref), "%s does not end with %s" % (found, ref))
+        self.assertTrue(os.path.samefile(ref, found))
+
+        found=find_file(fname[:-3], ext=['.py'])
+        ref=os.path.join(self.tmpdir,fname)
+        self.assertTrue(
+            found.endswith(ref), "%s does not end with %s" % (found, ref))
+        self.assertTrue(os.path.samefile(ref, found))
 
         # only files are found
-        self.assertEqual(
-            os.path.join(subdir,subdir_name),
-            find_file( subdir_name,
-                       pathlist=[self.tmpdir, subdir], cwd=False )
-        )
+        found = find_file( subdir_name,
+                           pathlist=[self.tmpdir, subdir], cwd=False )
+        ref = os.path.join(subdir,subdir_name)
+        self.assertTrue(
+            found.endswith(ref), "%s does not end with %s" % (found, ref))
+        self.assertTrue(os.path.samefile(ref, found))
 
         # empty dirs are skipped
-        self.assertEqual(
-            os.path.join(subdir,subdir_name),
-            find_file( subdir_name,
-                       pathlist=['', self.tmpdir, subdir], cwd=False )
-        )
+        found = find_file( subdir_name,
+                           pathlist=['', self.tmpdir, subdir], cwd=False )
+        ref = os.path.join(subdir,subdir_name)
+        self.assertTrue(
+            found.endswith(ref), "%s does not end with %s" % (found, ref))
+        self.assertTrue(os.path.samefile(ref, found))
 
     def test_find_library(self):
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
