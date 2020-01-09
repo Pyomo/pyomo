@@ -28,6 +28,14 @@ from pyomo.common.fileutils import (
     PathManager, _system, _path, _exeExt, _libExt, _ExecutableData,
 )
 
+try:
+    samefile = os.path.samefile
+except AttributeError:
+    # os.path.samefile is not available in Python 2.7 under Windows.
+    # Mock up a dummy function for that platform.
+    def samefile(a,b):
+        return True
+
 _this_file = this_file()
 _this_file_dir = this_file_dir()
 
@@ -118,7 +126,7 @@ class TestFileUtils(unittest.TestCase):
         ref=os.path.join(self.tmpdir,fname)
         self.assertTrue(
             found.endswith(ref), "%s does not end with %s" % (found, ref))
-        self.assertTrue(os.path.samefile(ref, found))
+        self.assertTrue(samefile(ref, found))
 
         # unless we don't look in the cwd
         self.assertIsNone(find_file(fname, cwd=False))
@@ -128,13 +136,13 @@ class TestFileUtils(unittest.TestCase):
         ref=os.path.join(self.tmpdir,fname)
         self.assertTrue(
             found.endswith(ref), "%s does not end with %s" % (found, ref))
-        self.assertTrue(os.path.samefile(ref, found))
+        self.assertTrue(samefile(ref, found))
         
         found=find_file(fname, pathlist=[subdir], cwd=False)
         ref=os.path.join(subdir,fname)
         self.assertTrue(
             found.endswith(ref), "%s does not end with %s" % (found, ref))
-        self.assertTrue(os.path.samefile(ref, found))
+        self.assertTrue(samefile(ref, found))
 
         # ...unless the CWD match fails the MODE check
         #  (except on Windows, where all files have X_OK)
@@ -143,7 +151,7 @@ class TestFileUtils(unittest.TestCase):
             ref = os.path.join(self.tmpdir,fname)
             self.assertTrue(
                 found.endswith(ref), "%s does not end with %s" % (found, ref))
-            self.assertTrue(os.path.samefile(ref, found))
+            self.assertTrue(samefile(ref, found))
         else:
             self.assertIsNone(found)
 
@@ -155,40 +163,40 @@ class TestFileUtils(unittest.TestCase):
             ref = os.path.join(subdir,fname)
         self.assertTrue(
             found.endswith(ref), "%s does not end with %s" % (found, ref))
-        self.assertTrue(os.path.samefile(ref, found))
+        self.assertTrue(samefile(ref, found))
 
         # pathlist may also be a string
         found=find_file(fname, pathlist=os.pathsep+subdir+os.pathsep, cwd=False)
         ref=os.path.join(subdir,fname)
         self.assertTrue(
             found.endswith(ref), "%s does not end with %s" % (found, ref))
-        self.assertTrue(os.path.samefile(ref, found))
+        self.assertTrue(samefile(ref, found))
 
         # implicit extensions work (even if they are not necessary)
         found=find_file(fname, ext='.py')
         ref=os.path.join(self.tmpdir,fname)
         self.assertTrue(
             found.endswith(ref), "%s does not end with %s" % (found, ref))
-        self.assertTrue(os.path.samefile(ref, found))
+        self.assertTrue(samefile(ref, found))
 
         found=find_file(fname, ext=['.py'])
         ref=os.path.join(self.tmpdir,fname)
         self.assertTrue(
             found.endswith(ref), "%s does not end with %s" % (found, ref))
-        self.assertTrue(os.path.samefile(ref, found))
+        self.assertTrue(samefile(ref, found))
 
         # implicit extensions work (when they are necessary)
         found=find_file(fname[:-3], ext='.py')
         ref=os.path.join(self.tmpdir,fname)
         self.assertTrue(
             found.endswith(ref), "%s does not end with %s" % (found, ref))
-        self.assertTrue(os.path.samefile(ref, found))
+        self.assertTrue(samefile(ref, found))
 
         found=find_file(fname[:-3], ext=['.py'])
         ref=os.path.join(self.tmpdir,fname)
         self.assertTrue(
             found.endswith(ref), "%s does not end with %s" % (found, ref))
-        self.assertTrue(os.path.samefile(ref, found))
+        self.assertTrue(samefile(ref, found))
 
         # only files are found
         found = find_file( subdir_name,
@@ -196,7 +204,7 @@ class TestFileUtils(unittest.TestCase):
         ref = os.path.join(subdir,subdir_name)
         self.assertTrue(
             found.endswith(ref), "%s does not end with %s" % (found, ref))
-        self.assertTrue(os.path.samefile(ref, found))
+        self.assertTrue(samefile(ref, found))
 
         # empty dirs are skipped
         found = find_file( subdir_name,
@@ -204,7 +212,7 @@ class TestFileUtils(unittest.TestCase):
         ref = os.path.join(subdir,subdir_name)
         self.assertTrue(
             found.endswith(ref), "%s does not end with %s" % (found, ref))
-        self.assertTrue(os.path.samefile(ref, found))
+        self.assertTrue(samefile(ref, found))
 
     def test_find_library(self):
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
