@@ -228,7 +228,7 @@ class ConvexHull_Transformation(Transformation):
             else:
                 raise GDP_Error(
                     "Target %s was not a Block, Disjunct, or Disjunction. "
-                    "It was of type %s and can't be transformed"
+                    "It was of type %s and can't be transformed."
                     % (t.name, type(t)) )
 
         # HACK for backwards compatibility with the older GDP transformations
@@ -241,8 +241,8 @@ class ConvexHull_Transformation(Transformation):
             HACK_GDP_Disjunct_Reclassifier().apply_to(instance)
 
     def _add_transformation_block(self, instance):
-         # make a transformation block on instance where we will store
-         # transformed components
+        # make a transformation block on instance where we will store
+        # transformed components
         transBlockName = unique_component_name(
             instance,
             '_pyomo_gdp_chull_relaxation')
@@ -250,11 +250,8 @@ class ConvexHull_Transformation(Transformation):
         instance.add_component(transBlockName, transBlock)
         transBlock.relaxedDisjuncts = Block(Any)
         transBlock.lbub = Set(initialize = ['lb','ub','eq'])
-        # TODO: This is wrong!!
         # We will store all of the disaggregation constraints for any
-        # Disjunctions we transform onto this block here. Note that this
-        # (correctly) means that we will move them up off of the Disjunct in the
-        # case of nested disjunctions
+        # Disjunctions we transform onto this block here.
         transBlock.disaggregationConstraints = Constraint(Any)
 
         # This will map from srcVar to a map of srcDisjunction to the
@@ -263,6 +260,12 @@ class ConvexHull_Transformation(Transformation):
 
         return transBlock
 
+    # TODO: Aha, this is where John already wrote the util.is_child_of
+    # function... We have a problem though because we can't just switch this out
+    # to that one because we are using set() for the knownBlocks and we are
+    # starting at a variable here... But actually that might be a bug with
+    # is_child_of, come to think of it. You shouldn't add the first thing you
+    # see until you know it is a Block. Anyway, the point is we don't need both.
     def _contained_in(self, var, block):
         "Return True if a var is in the subtree rooted at block"
         while var is not None:
@@ -316,8 +319,14 @@ class ConvexHull_Transformation(Transformation):
         return orC
 
     def _transform_disjunction(self, obj):
-        # put the transformation block on the parent block of the Disjunction
-        transBlock = self._add_transformation_block(obj.parent_block())
+        # put the transformation block on the parent block of the Disjunction,
+        # unless this is a disjunction we have seen in a prior call to chull, in
+        # which case we will use the same transformation block we created
+        # before.
+        if not obj._algebraic_constraint is None:
+            transBlock = obj._algebraic_constraint().parent_block()
+        else:
+            transBlock = self._add_transformation_block(obj.parent_block())
         # and create the xor constraint
         xorConstraint = self._get_xor_constraint(obj, transBlock)
 
@@ -341,13 +350,29 @@ class ConvexHull_Transformation(Transformation):
                             % obj.name)
         
         if transBlock is None:
-            transBlock = self._add_transformation_block(obj.parent_block())
+            # It's possible that we have already created a transformation block
+            # for another disjunctionData from this same container. If that's
+            # the case, let's use the same transformation block. (Else it will
+            # be really confusing that the XOR constraint goes to that old block
+            # but we create a new one here.)
+            if not obj.parent_component()._algebraic_constraint is None:
+                transBlock = obj.parent_component()._algebraic_constraint().\
+                             parent_block()
+            else:
+                transBlock = self._add_transformation_block(obj.parent_block())
 
         parent_component = obj.parent_component()
         
         orConstraint = self._get_xor_constraint(parent_component, transBlock)
         disaggregationConstraint = transBlock.disaggregationConstraints
         disaggregationConstraintMap = transBlock._disaggregationConstraintMap
+
+        # Just because it's unlikely this is what someone meant to do...    
+        if len(obj.disjuncts) == 0:
+            raise GDP_Error("Disjunction %s is empty. This is " 
+                            "likely indicative of a modeling error."  %
+                            obj.getname(fully_qualified=True,
+                                        name_buffer=NAME_BUFFER))
 
         # We first go through and collect all the variables that we
         # are going to disaggregate.
@@ -361,12 +386,11 @@ class ConvexHull_Transformation(Transformation):
                     active = True,
                     sort=SortComponents.deterministic,
                     descend_into=Block):
-                # [ESJ 12/10/2019] I don't think I agree with this... Fixing is
-                # not a promise for the future. And especially since this is
-                # undocumented, we are asking for trouble with silent failures
-                # later...
-                # we aren't going to disaggregate fixed
-                # variables. This means there is trouble if they are
+                # [ESJ 12/10/2019] TODO: I don't think I agree with
+                # this... Fixing is not a promise for the future. And especially
+                # since this is undocumented, we are asking for trouble with
+                # silent failures later...  we aren't going to disaggregate
+                # fixed variables. This means there is trouble if they are
                 # unfixed later...
                 for var in EXPR.identify_variables(
                         cons.body, include_fixed=False):
@@ -393,9 +417,6 @@ class ConvexHull_Transformation(Transformation):
                 varSet.append(var)
             elif self._contained_in(var, disjuncts[0]):
                 localVars[disjuncts[0]].append(var)
-            # [ESJ 10/18/2019] TODO: This is strange though because it means we
-            # shouldn't have a bug with double-disaggregating right now... And I
-            # thought we did. But this is also not my code.
             elif self._contained_in(var, transBlock):
                 # There is nothing to do here: these are already
                 # disaggregated vars that can/will be forced to 0 when
@@ -412,6 +433,9 @@ class ConvexHull_Transformation(Transformation):
             self._transform_disjunct(disjunct, transBlock, varSet,
                                      localVars[disjunct])
         orConstraint.add(index, (or_expr, 1))
+        # map the DisjunctionData to its XOR constraint to mark it as
+        # transformed
+        obj._algebraic_constraint = weakref_ref(orConstraint[index])
 
         for i, var in enumerate(varSet):
             disaggregatedExpr = 0
@@ -446,9 +470,9 @@ class ConvexHull_Transformation(Transformation):
             else:
                 thismap = disaggregationConstraintMap[var] = ComponentMap()
                 thismap[obj] = disaggregationConstraint[consIdx]
-            # I wish:
-            # disaggregationConstraintMap[
-            #     (var, obj)] = disaggregationConstraint[consIdx]
+                
+        # deactivate for the writers
+        obj.deactivate()
 
     def _transform_disjunct(self, obj, transBlock, varSet, localVars):
         # deactivated should only come from the user
