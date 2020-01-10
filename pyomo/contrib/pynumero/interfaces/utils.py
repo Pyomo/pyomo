@@ -8,7 +8,28 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import numpy as np
+from scipy.sparse import coo_matrix
 
+def build_bounds_mask(vector):
+    """
+    Creates masks for converting from the full vector of bounds that 
+    may contain -np.inf or np.inf to a vector of bounds that are finite
+    only.
+    """
+    return build_compression_mask_for_finite_values(vector)
+
+def build_compression_matrix(compression_mask):
+    """
+    Return a sparse matrix CM of ones such that
+    compressed_vector = CM*full_vector based on the 
+    compression mask
+    """
+    cols = compression_mask.nonzero()[0]
+    nnz = len(cols)
+    rows = np.arange(nnz, dtype=np.int)
+    data = np.ones(nnz)
+    return coo_matrix((data, (rows, cols)), shape=(nnz, len(compression_mask)))
+    
 def build_compression_mask_for_finite_values(vector):
     """
     Creates masks for converting from the full vector of

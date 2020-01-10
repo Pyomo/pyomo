@@ -30,7 +30,8 @@ import tempfile
 
 from scipy.sparse import coo_matrix
 
-from pyomo.contrib.pynumero.interfaces.utils import build_compression_mask_for_finite_values, full_to_compressed, compressed_to_full
+from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix, \
+    build_compression_mask_for_finite_values, full_to_compressed, compressed_to_full
 
 def create_pyomo_model1():
     m = pyo.ConcreteModel()
@@ -529,8 +530,17 @@ class TestUtils(unittest.TestCase):
         anlp = AslNLP(self.filename)
         full_to_compressed_mask = build_compression_mask_for_finite_values(anlp.primals_lb())
 
-        # test full_to_compressed
+        # test build_bounds_mask - should be the same as above
+        self.assertTrue(np.array_equal(full_to_compressed_mask, build_bounds_mask(anlp.primals_lb())))
+
         expected_compressed_primals_lb = np.asarray([-1, -3, -5, -7, -9], dtype=np.float64)
+
+        # test build_compression_matrix
+        C = build_compression_matrix(full_to_compressed_mask)
+        compressed_primals_lb = C*anlp.primals_lb()
+        self.assertTrue(np.array_equal(expected_compressed_primals_lb, compressed_primals_lb))
+
+        # test full_to_compressed
         compressed_primals_lb = full_to_compressed(anlp.primals_lb(), full_to_compressed_mask)
         self.assertTrue(np.array_equal(expected_compressed_primals_lb, compressed_primals_lb))
         # test in place
@@ -558,6 +568,8 @@ class TestUtils(unittest.TestCase):
         full_primals_lb.fill(0.0)
         compressed_to_full(compressed_primals_lb, full_to_compressed_mask, out=full_primals_lb)
         self.assertTrue(np.array_equal(expected_full_primals_lb, full_primals_lb))
+
+        
 
         
 
