@@ -14,10 +14,10 @@ if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run BlockMatrix tests")
 
 from scipy.sparse import coo_matrix, bmat
+import scipy.sparse as sp
 import numpy as np
 
 from pyomo.contrib.pynumero.sparse import (BlockMatrix,
-                                           BlockSymMatrix,
                                            BlockVector,
                                            empty_matrix)
 import warnings
@@ -34,14 +34,14 @@ class TestBlockMatrix(unittest.TestCase):
 
         bm = BlockMatrix(2, 2)
         bm.name = 'basic_matrix'
-        bm[0, 0] = m
-        bm[1, 1] = m
-        bm[0, 1] = m
+        bm[0, 0] = m.copy()
+        bm[1, 1] = m.copy()
+        bm[0, 1] = m.copy()
         self.basic_m = bm
 
         self.composed_m = BlockMatrix(2, 2)
-        self.composed_m[0, 0] = self.block_m
-        self.composed_m[1, 1] = self.basic_m
+        self.composed_m[0, 0] = self.block_m.copy()
+        self.composed_m[1, 1] = self.basic_m.copy()
 
     def test_name(self):
         self.assertEqual(self.basic_m.name, 'basic_matrix')
@@ -180,8 +180,8 @@ class TestBlockMatrix(unittest.TestCase):
         m = BlockMatrix(2, 2)
         m[0, 1] = self.block_m
         self.assertFalse(m.is_empty_block(0, 1))
-        self.assertEqual(m.row_block_sizes()[0], self.block_m.shape[0])
-        self.assertEqual(m.col_block_sizes()[1], self.block_m.shape[1])
+        self.assertEqual(m._brow_lengths[0], self.block_m.shape[0])
+        self.assertEqual(m._bcol_lengths[1], self.block_m.shape[1])
         self.assertEqual(m[0, 1].shape, self.block_m.shape)
 
     def test_coo_data(self):
@@ -270,9 +270,9 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertIsNone(self.basic_m[1, 0])
         self.basic_m[1, 1] = None
         self.assertIsNone(self.basic_m[1, 1])
-        self.assertEqual(self.basic_m._brow_lengths[1], 0)
+        self.assertEqual(self.basic_m._brow_lengths[1], self.block_m.shape[0])
         self.basic_m[1, 1] = self.block_m
-        self.assertEqual(self.basic_m._brow_lengths[1], self.block_m.shape[1])
+        self.assertEqual(self.basic_m._brow_lengths[1], self.block_m.shape[0])
 
     def test_add(self):
 
@@ -449,8 +449,14 @@ class TestBlockMatrix(unittest.TestCase):
 
         A_dense = self.basic_m.toarray()
         A_block = self.basic_m
+        print(A_dense)
+        print(A_block.toarray())
         A_dense *= 3
+        print(A_dense)
+        print(A_block.toarray())
         A_block *= 3.
+        print(A_dense)
+        print(A_block.toarray())
 
         self.assertTrue(np.allclose(A_block.toarray(), A_dense))
 
@@ -658,7 +664,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.block_m = m
 
         bm = BlockMatrix(2, 2)
-        bm.name = 'basic_matrix'
         bm[0, 0] = m
         bm[1, 1] = m
         bm[0, 1] = m
@@ -743,95 +748,54 @@ class TestBlockMatrix(unittest.TestCase):
         brow = m.get_block_row_index(6)
         self.assertEqual(brow, 1)
 
-class TestSymBlockMatrix(unittest.TestCase):
+    def test_matrix_multiply(self):
+        """
+        Test
 
-    def setUp(self):
+        [A  B  C   *  [G  J   = [A*G + B*H + C*I    A*J + B*K + C*L
+         D  E  F]      H  K      D*G + E*H + F*I    D*J + E*K + F*L]
+                       I  L]
+        """
+        np.random.seed(0)
+        A = sp.csr_matrix(np.random.normal(0, 10, (2, 2)))
+        B = sp.csr_matrix(np.random.normal(0, 10, (2, 2)))
+        C = sp.csr_matrix(np.random.normal(0, 10, (2, 2)))
+        D = sp.csr_matrix(np.random.normal(0, 10, (2, 2)))
+        E = sp.csr_matrix(np.random.normal(0, 10, (2, 2)))
+        F = sp.csr_matrix(np.random.normal(0, 10, (2, 2)))
+        G = sp.csr_matrix(np.random.normal(0, 10, (2, 2)))
+        H = sp.csr_matrix(np.random.normal(0, 10, (2, 2)))
+        I = sp.csr_matrix(np.random.normal(0, 10, (2, 2)))
+        J = sp.csr_matrix(np.random.normal(0, 10, (2, 2)))
+        K = sp.csr_matrix(np.random.normal(0, 10, (2, 2)))
+        L = sp.csr_matrix(np.random.normal(0, 10, (2, 2)))
 
-        row = np.array([0, 1, 4, 1, 2, 7, 2, 3, 5, 3, 4, 5, 4, 7, 5, 6, 6, 7])
-        col = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6, 7])
-        data = np.array([27, 5, 12, 56, 66, 34, 94, 31, 41, 7, 98, 72, 24, 33, 78, 47, 98, 41])
+        bm1 = BlockMatrix(2, 3)
+        bm2 = BlockMatrix(3, 2)
 
-        off_diagonal_mask = row != col
-        new_row = np.concatenate([row, col[off_diagonal_mask]])
-        new_col = np.concatenate([col, row[off_diagonal_mask]])
-        new_data = np.concatenate([data, data[off_diagonal_mask]])
-        m = coo_matrix((new_data, (new_row, new_col)), shape=(8, 8))
+        bm1[0, 0] = A
+        bm1[0, 1] = B
+        bm1[0, 2] = C
+        bm1[1, 0] = D
+        bm1[1, 1] = E
+        bm1[1, 2] = F
 
-        self.block00 = m
+        bm2[0, 0] = G
+        bm2[1, 0] = H
+        bm2[2, 0] = I
+        bm2[0, 1] = J
+        bm2[1, 1] = K
+        bm2[2, 1] = L
 
-        row = np.array([0, 3, 1, 0])
-        col = np.array([0, 3, 1, 2])
-        data = np.array([4, 5, 7, 9])
-        m = coo_matrix((data, (row, col)), shape=(4, 8))
+        got = (bm1 * bm2).toarray()
+        exp00 = (A * G + B * H + C * I).toarray()
+        exp01 = (A * J + B * K + C * L).toarray()
+        exp10 = (D * G + E * H + F * I).toarray()
+        exp11 = (D * J + E * K + F * L).toarray()
+        exp = np.zeros((4, 4))
+        exp[0:2, 0:2] = exp00
+        exp[0:2, 2:4] = exp01
+        exp[2:4, 0:2] = exp10
+        exp[2:4, 2:4] = exp11
 
-        self.block10 = m
-
-        row = np.array([0, 1, 2, 3])
-        col = np.array([0, 1, 2, 3])
-        data = np.array([1, 1, 1, 1])
-        m = coo_matrix((data, (row, col)), shape=(4, 4))
-
-        self.block11 = m
-
-        bm = BlockSymMatrix(2)
-        bm.name = 'basic_matrix'
-        bm[0, 0] = self.block00
-        bm[1, 0] = self.block10
-        bm[1, 1] = self.block11
-        self.basic_m = bm
-
-    def test_tocoo(self):
-        m = self.basic_m.tocoo()
-        a = m.toarray()
-        self.assertTrue(np.allclose(a, a.T, atol=1e-3))
-
-    def test_coo_data(self):
-        m = self.basic_m.tocoo()
-        data = self.basic_m.coo_data()
-        self.assertListEqual(m.data.tolist(), data.tolist())
-
-    def test_multiply(self):
-
-        # test scalar multiplication
-        m = self.basic_m * 5.0
-        dense_m = m.toarray()
-
-        b00 = self.block00.tocoo()
-        b11 = self.block11.tocoo()
-        b10 = self.block10
-        scipy_m = bmat([[b00, b10.transpose()], [b10, b11]], format='coo')
-        dense_scipy_m = scipy_m.toarray() * 5.0
-
-        self.assertTrue(np.allclose(dense_scipy_m, dense_m, atol=1e-3))
-
-        m = 5.0 * self.basic_m
-        dense_m = m.toarray()
-
-        self.assertTrue(np.allclose(dense_scipy_m, dense_m, atol=1e-3))
-
-        # test matrix vector product
-        m = self.basic_m
-        x = BlockVector(m.bshape[1])
-        for i in range(m.bshape[1]):
-            x[i] = np.ones(m.col_block_sizes()[i], dtype=np.float64)
-        dinopy_res = m * x
-        scipy_res = scipy_m * x.flatten()
-
-        self.assertListEqual(dinopy_res.tolist(), scipy_res.tolist())
-        dinopy_res = m * x.flatten()
-        scipy_res = scipy_m * x.flatten()
-
-        self.assertListEqual(dinopy_res.tolist(), scipy_res.tolist())
-
-        self.basic_m *= 5.0
-        self.assertTrue(np.allclose(self.basic_m.toarray(), dense_m, atol=1e-3))
-
-    def test_transpose(self):
-
-        m = self.basic_m.transpose()
-        dense_m = self.basic_m.toarray().transpose()
-        self.assertTrue(np.allclose(m.toarray(), dense_m))
-
-        m = self.basic_m.transpose(copy=True)
-        dense_m = self.basic_m.toarray().transpose()
-        self.assertTrue(np.allclose(m.toarray(), dense_m))
+        self.assertTrue(np.allclose(got, exp))

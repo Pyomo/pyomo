@@ -16,7 +16,6 @@ if not (numpy_available and scipy_available):
 from scipy.sparse import coo_matrix, bmat
 import numpy as np
 
-from pyomo.contrib.pynumero.sparse import BlockSymMatrix
 from pyomo.contrib.pynumero.sparse.utils import is_symmetric_dense, is_symmetric_sparse
 
 class TestSparseUtils(unittest.TestCase):
@@ -49,13 +48,6 @@ class TestSparseUtils(unittest.TestCase):
 
         self.block11 = m
 
-        bm = BlockSymMatrix(2)
-        bm.name = 'basic_matrix'
-        bm[0, 0] = self.block00
-        bm[1, 0] = self.block10
-        bm[1, 1] = self.block11
-        self.basic_m = bm
-
     def test_is_symmetric_dense(self):
 
         m = self.block00.toarray()
@@ -68,8 +60,6 @@ class TestSparseUtils(unittest.TestCase):
         m = self.block00
         self.assertTrue(is_symmetric_sparse(m))
         m = self.block00.toarray()
-        self.assertTrue(is_symmetric_sparse(m))
-        m = self.basic_m
         self.assertTrue(is_symmetric_sparse(m))
         m = self.block11
         self.assertTrue(is_symmetric_sparse(m))

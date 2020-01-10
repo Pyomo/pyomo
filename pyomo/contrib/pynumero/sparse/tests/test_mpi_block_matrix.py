@@ -32,16 +32,13 @@ except ImportError:
     raise unittest.SkipTest(
         "Pynumero needs mpi4py to run mpi block vector tests")
 try:
-    from pyomo.contrib.pynumero.sparse.mpi_block_matrix import (MPIBlockMatrix,
-                                                                MPIBlockSymMatrix)
+    from pyomo.contrib.pynumero.sparse.mpi_block_matrix import (MPIBlockMatrix)
 except ImportError:
     raise unittest.SkipTest(
         "Pynumero needs mpi4py to run mpi block vector tests")
 
 from pyomo.contrib.pynumero.sparse import (BlockVector,
-                                           BlockMatrix,
-                                           BlockSymMatrix)
-from scipy.sparse import identity
+                                           BlockMatrix)
 import warnings
 
 @unittest.skipIf(comm.Get_size() < 3, "Need at least 3 processors to run tests")
@@ -1160,81 +1157,3 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         with self.assertRaises(Exception) as context:
             res = serial_mat1 > mat1
-
-@unittest.skipIf(comm.Get_size() < 3, "Need at least 3 processors to run tests")
-class TestMPIBlockSymMatrix(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-
-        if comm.Get_size() < 3:
-            raise unittest.SkipTest("Need at least 3 processors to run tests")
-
-        row = np.array([0, 3, 1, 2, 3, 0])
-        col = np.array([0, 0, 1, 2, 3, 3])
-        data = np.array([2., 1, 3, 4, 5, 1])
-        m = coo_matrix((data, (row, col)), shape=(4, 4))
-
-        rank = comm.Get_rank()
-        # create mpi matrix
-        rank_ownership = [[0, -1], [-1, 1]]
-        bm = MPIBlockSymMatrix(2, rank_ownership, comm)
-        if rank == 0:
-            bm[0, 0] = m
-        if rank == 1:
-            bm[1, 1] = m
-        bm[1, 0] = identity(4)
-
-        bm.broadcast_block_sizes()
-        cls.basic_mat = bm
-
-        # create serial matrix image
-        serial_bm = BlockSymMatrix(2)
-        serial_bm[0, 0] = m
-        serial_bm[1, 1] = m
-        serial_bm[1, 0] = identity(4)
-        cls.serial_mat = serial_bm
-
-    def test_transpose(self):
-        mat = self.basic_mat
-        mat2 = self.serial_mat
-
-        res = mat.transpose()
-        serial_res = mat2.transpose()
-
-        self.assertIsInstance(res, MPIBlockMatrix)
-        self.assertTrue(np.allclose(mat.rank_ownership, res.rank_ownership))
-        rows, columns = np.nonzero(res.ownership_mask)
-        for i, j in zip(rows, columns):
-            if res[i, j] is not None:
-                self.assertTrue(np.allclose(res[i, j].toarray(),
-                                            serial_res[i, j].toarray()))
-            else:
-                self.assertIsNone(serial_res[i, j])
-
-
-        res = mat.transpose(copy=True)
-        serial_res = mat2.transpose()
-
-        self.assertIsInstance(res, MPIBlockMatrix)
-        self.assertTrue(np.allclose(mat.rank_ownership, res.rank_ownership))
-        rows, columns = np.nonzero(res.ownership_mask)
-        for i, j in zip(rows, columns):
-            if res[i, j] is not None:
-                self.assertTrue(np.allclose(res[i, j].toarray(),
-                                            serial_res[i, j].toarray()))
-            else:
-                self.assertIsNone(serial_res[i, j])
-
-        res = mat.T
-        serial_res = mat2.transpose()
-
-        self.assertIsInstance(res, MPIBlockMatrix)
-        self.assertTrue(np.allclose(mat.rank_ownership, res.rank_ownership))
-        rows, columns = np.nonzero(res.ownership_mask)
-        for i, j in zip(rows, columns):
-            if res[i, j] is not None:
-                self.assertTrue(np.allclose(res[i, j].toarray(),
-                                            serial_res[i, j].toarray()))
-            else:
-                self.assertIsNone(serial_res[i, j])
