@@ -321,7 +321,13 @@ def execute_extended_nlp_interface(self, anlp):
     anlp.evaluate_hessian_lag(out=hess)
     dense_hess = hess.todense()
     self.assertTrue(np.array_equal(dense_hess, expected_hess))
-
+    # change the value of the obj factor
+    anlp.set_obj_factor(2.0)
+    hess = anlp.evaluate_hessian_lag()
+    dense_hess = hess.todense()
+    expected_hess = [ [4.0*i*j for j in range(1, 10)] for i in range(1,10) ]
+    expected_hess = np.asarray(expected_hess, dtype=np.float64)
+    self.assertTrue(np.array_equal(dense_hess, expected_hess))
 
 @unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestAslNLP(unittest.TestCase):

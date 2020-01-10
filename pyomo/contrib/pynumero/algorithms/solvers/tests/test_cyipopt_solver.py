@@ -11,7 +11,7 @@
 import pyutilib.th as unittest
 import pyomo.environ as aml
 
-from ... import numpy_available, scipy_available
+from pyomo.contrib.pynumero import numpy_available, scipy_available
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
@@ -23,13 +23,14 @@ if not AmplInterface.available():
     raise unittest.SkipTest(
         "Pynumero needs the ASL extension to run CyIpoptSolver tests")
 
-from pyomo.contrib.pynumero.interfaces import PyomoNLP, TwoStageStochasticNLP
+from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 
 try:
     import ipopt
-    from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
 except ImportError:
     raise unittest.SkipTest("Pynumero needs cyipopt to run CyIpoptSolver tests")
+
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver, CyIpoptNLP
 
 
 def create_model1():
@@ -57,7 +58,6 @@ def create_model2():
 
 
 def create_model3(G, A, b, c):
-
     nx = G.shape[0]
     nl = A.shape[0]
 
@@ -88,7 +88,6 @@ def create_model3(G, A, b, c):
     return model
 
 def create_model4():
-
     m = aml.ConcreteModel()
     m.x = aml.Var([1, 2], initialize=1.0)
     m.c1 = aml.Constraint(expr=m.x[1] + m.x[2] - 1 == 0)
@@ -110,7 +109,6 @@ def create_model6():
 
 
 def create_model9():
-
     # clplatea OXR2-MN-V-0
     model = aml.ConcreteModel()
 
@@ -141,23 +139,27 @@ class TestCyIpoptSolver(unittest.TestCase):
     def test_model1(self):
         model = create_model1()
         nlp = PyomoNLP(model)
-        solver = CyIpoptSolver(nlp)
+        solver = CyIpoptSolver(CyIpoptNLP(nlp))
         x, info = solver.solve(tee=False)
         x_sol = np.array([3.85958688, 4.67936007, 3.10358931])
         y_sol = np.array([-1.0, 53.90357665])
         self.assertTrue(np.allclose(x, x_sol, rtol=1e-4))
-        self.assertAlmostEqual(nlp.objective(x), -428.6362455416348)
+        nlp.set_primals(x)
+        nlp.set_duals(y_sol)
+        self.assertAlmostEqual(nlp.evaluate_objective(), -428.6362455416348, places=5)
         self.assertTrue(np.allclose(info['mult_g'], y_sol, rtol=1e-4))
 
     def test_model2(self):
         model = create_model2()
         nlp = PyomoNLP(model)
-        solver = CyIpoptSolver(nlp)
+        solver = CyIpoptSolver(CyIpoptNLP(nlp))
         x, info = solver.solve(tee=False)
         x_sol = np.array([3.0, 1.99997807])
         y_sol = np.array([0.00017543])
         self.assertTrue(np.allclose(x, x_sol, rtol=1e-4))
-        self.assertAlmostEqual(nlp.objective(x), -31.000000057167462, 3)
+        nlp.set_primals(x)
+        nlp.set_duals(y_sol)
+        self.assertAlmostEqual(nlp.evaluate_objective(), -31.000000057167462, places=5)
         self.assertTrue(np.allclose(info['mult_g'], y_sol, rtol=1e-4))
 
     def test_model3(self):
@@ -168,48 +170,15 @@ class TestCyIpoptSolver(unittest.TestCase):
 
         model = create_model3(G, A, b, c)
         nlp = PyomoNLP(model)
-        solver = CyIpoptSolver(nlp)
+        solver = CyIpoptSolver(CyIpoptNLP(nlp))
         x, info = solver.solve(tee=False)
         x_sol = np.array([2.0, -1.0, 1.0])
         y_sol = np.array([-3.,  2.])
         self.assertTrue(np.allclose(x, x_sol, rtol=1e-4))
-        self.assertAlmostEqual(nlp.objective(x), -3.5, 3)
+        nlp.set_primals(x)
+        nlp.set_duals(y_sol)
+        self.assertAlmostEqual(nlp.evaluate_objective(), -3.5, places=5)
         self.assertTrue(np.allclose(info['mult_g'], y_sol, rtol=1e-4))
-
-    def test_composite_nlp(self):
-
-        G = np.array([[6, 2, 1], [2, 5, 2], [1, 2, 4]])
-        A = np.array([[1, 0, 1], [0, 1, 1]])
-        b = np.array([3, 0])
-        c = np.array([-8, -3, -3])
-
-        scenarios = dict()
-        coupling_vars = dict()
-        n_scenarios = 2
-        np.random.seed(seed=985739465)
-        bs = [b, b+0.001]
-
-        for i in range(n_scenarios):
-            instance = create_model3(G, A, bs[i], c)
-            nlp = PyomoNLP(instance)
-            scenario_name = "s{}".format(i)
-            scenarios[scenario_name] = nlp
-            coupling_vars[scenario_name] = [nlp.variable_idx(instance.x[0])]
-
-        nlp = TwoStageStochasticNLP(scenarios, coupling_vars)
-
-        solver = CyIpoptSolver(nlp)
-        x, info = solver.solve(tee=False)
-        x_sol = np.array([2.00003846,
-                          -0.99996154,
-                          0.99996154,
-                          2.00003846,
-                          -0.99996154,
-                          1.00096154,
-                          2.00003846])
-
-        self.assertTrue(np.allclose(x, x_sol, rtol=1e-4))
-        self.assertAlmostEqual(nlp.objective(x), -6.99899, 3)
 
 
 

@@ -25,6 +25,7 @@ from pyomo.contrib.pynumero.interfaces.nlp import ExtendedNLP
 
 __all__ = ['AslNLP', 'AmplNLP']
 
+# TODO: need to add support for obj_factor
 # ToDo: need to add support for modifying bounds.
 # support for variable bounds seems trivial.
 # support for constraint bounds would require more work. (this is less frequent?)
@@ -59,6 +60,7 @@ class AslNLP(ExtendedNLP):
         self._duals_full = self._init_duals_full.copy()
         self._duals_eq = self._init_duals_eq.copy()
         self._duals_ineq = self._init_duals_ineq.copy()
+        self._obj_factor = 1.0
         self._cached_objective = None
         self._cached_grad_objective = self.create_new_vector('primals')
         self._cached_con_full = np.zeros(self._n_con_full, dtype=np.float64)
@@ -77,13 +79,21 @@ class AslNLP(ExtendedNLP):
                                                (self._irows_hess, self._jcols_hess)),
                                               shape=(self._n_primals, self._n_primals))
 
-        self._invalidate_cache()
+        self._invalidate_primals_cache()
+        self._invalidate_duals_cache()
+        self._invalidate_obj_factor_cache()
 
-    def _invalidate_cache(self):
+    def _invalidate_primals_cache(self):
         self._objective_is_cached = False
         self._grad_objective_is_cached = False
         self._con_full_is_cached = False
         self._jac_full_is_cached = False
+        self._hessian_lag_is_cached = False
+
+    def _invalidate_duals_cache(self):
+        self._hessian_lag_is_cached = False
+
+    def _invalidate_obj_factor_cache(self):
         self._hessian_lag_is_cached = False
 
     def _collect_nlp_structure(self):
@@ -365,27 +375,32 @@ class AslNLP(ExtendedNLP):
 
     # overloaded from NLP
     def set_primals(self, primals):
-        self._invalidate_cache()
+        self._invalidate_primals_cache()
         np.copyto(self._primals, primals)
 
     # overloaded from NLP
     def set_duals(self, duals):
-        self._invalidate_cache()
+        self._invalidate_duals_cache()
         np.copyto(self._duals_full, duals)
         # keep the separated duals up to date just in case
         np.compress(self._con_full_eq_mask, self._duals_full, out=self._duals_eq)
         np.compress(self._con_full_ineq_mask, self._duals_full, out=self._duals_ineq)
+
+    # overloaded from NLP
+    def set_obj_factor(self, obj_factor):
+        self._invalidate_obj_factor_cache()
+        self._obj_factor = obj_factor
         
     # overloaded from NLP
     def set_duals_eq(self, duals_eq):
-        self._invalidate_cache()
+        self._invalidate_duals_cache()
         np.copyto(self._duals_eq, duals_eq)
         # keep duals_full up to date just in case
         self._duals_full[self._con_full_eq_mask] = self._duals_eq
 
     # overloaded from NLP
     def set_duals_ineq(self, duals_ineq):
-        self._invalidate_cache()
+        self._invalidate_duals_cache()
         np.copyto(self._duals_ineq, duals_ineq)
         # keep duals_full up to date just in case
         self._duals_full[self._con_full_ineq_mask] = self._duals_ineq
@@ -528,13 +543,10 @@ class AslNLP(ExtendedNLP):
             self._evaluate_objective_and_cache_if_necessary()
             self._evaluate_constraints_and_cache_if_necessary()
 
-            # TODO: support objective scaling factor
-            obj_factor = 1.0
-
             # get the hessian
             data = np.zeros(self._nnz_hess_lag_lower, np.float64)
             self._asl.eval_hes_lag(self._primals, self._duals_full,
-                                   data, obj_factor=obj_factor)
+                                   data, obj_factor=self._obj_factor)
             values = np.concatenate((data, data[self._lower_hess_mask]))
             #TODO: find out why this is done
             values += 1e-16 # this is to deal with scipy bug temporarily

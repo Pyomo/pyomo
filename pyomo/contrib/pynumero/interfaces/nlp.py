@@ -62,28 +62,28 @@ class NLP(abc.ABC):
     def __init__(self):
         pass
     
-    @abc.abstractproperty
+    @abc.abstractmethod
     def n_primals(self):
         """
         Returns number of primal variables
         """
         pass
 
-    @abc.abstractproperty
+    @abc.abstractmethod
     def n_constraints(self):
         """
         Returns number of constraints
         """
         pass
     
-    @abc.abstractproperty
+    @abc.abstractmethod
     def nnz_jacobian(self):
         """
         Returns number of nonzero values in jacobian of equality constraints
         """
         pass
 
-    @abc.abstractproperty
+    @abc.abstractmethod
     def nnz_hessian_lag(self):
         """
         Returns number of nonzero values in hessian of the lagrangian function
@@ -195,6 +195,20 @@ class NLP(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def set_obj_factor(self, obj_factor):
+        """Set the value of the objective function factor
+        to be used in calls to the evaluation of the hessian
+        of the lagrangian (evaluate_hessian_lag)
+
+        Parameters
+        ----------
+        obj_factor: float
+            Value of the objective function factor used
+            in the evaluation of the hessian of the lagrangian
+        """
+        pass
+
+    @abc.abstractmethod
     def evaluate_objective(self):
         """Returns value of objective function evaluated at the 
         values given for the primal variables in set_primals
@@ -287,28 +301,28 @@ class ExtendedNLP(NLP):
         super(ExtendedNLP, self).__init__()
         pass
     
-    @abc.abstractproperty
+    @abc.abstractmethod
     def n_eq_constraints(self):
         """
         Returns number of equality constraints
         """
         pass
     
-    @abc.abstractproperty
+    @abc.abstractmethod
     def n_ineq_constraints(self):
         """
         Returns number of inequality constraints
         """
         pass
     
-    @abc.abstractproperty
+    @abc.abstractmethod
     def nnz_jacobian_eq(self):
         """
         Returns number of nonzero values in jacobian of equality constraints
         """
         pass
 
-    @abc.abstractproperty
+    @abc.abstractmethod
     def nnz_jacobian_ineq(self):
         """
         Returns number of nonzero values in jacobian of inequality constraints
