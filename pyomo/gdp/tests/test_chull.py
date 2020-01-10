@@ -16,7 +16,6 @@ from pyomo.repn import generate_standard_repn
 
 from pyomo.gdp import *
 import pyomo.gdp.tests.models as models
-import pyomo.gdp.tests.common_tests as common
 
 import pyomo.opt
 linear_solvers = pyomo.opt.check_available_solvers(
