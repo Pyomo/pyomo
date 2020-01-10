@@ -501,14 +501,14 @@ class TestPyomoNLP(unittest.TestCase):
         # extract_submatrix_hessian_lag
         expected_hess = [ [2.0*i*j for j in range(1, 10)] for i in range(1,10) ]
         expected_hess = np.asarray(expected_hess, dtype=np.float64)
-        hess = nlp.extract_submatrix_hessian_lag(pyomo_variables=[self.pm.x])
+        hess = nlp.extract_submatrix_hessian_lag(pyomo_variables_rows=[self.pm.x], pyomo_variables_cols=[self.pm.x])
         dense_hess = hess.todense()
         self.assertTrue(np.array_equal(dense_hess, expected_hess))
 
         expected_hess = [ [2.0*i*j for j in [1, 4, 9, 5]] for i in [1, 4, 9, 5]]
         expected_hess = np.asarray(expected_hess, dtype=np.float64)
         variables = [self.pm.x[1], self.pm.x[4], self.pm.x[9], self.pm.x[5]]
-        hess = nlp.extract_submatrix_hessian_lag(pyomo_variables=variables)
+        hess = nlp.extract_submatrix_hessian_lag(pyomo_variables_rows=variables, pyomo_variables_cols=variables)
         dense_hess = hess.todense()
         self.assertTrue(np.array_equal(dense_hess, expected_hess))
 

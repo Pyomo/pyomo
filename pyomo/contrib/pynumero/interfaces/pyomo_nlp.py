@@ -93,6 +93,22 @@ class PyomoNLP(AslNLP):
         idx_to_condata = {i:v for v,i in six.iteritems(self._condata_to_idx)}
         return [idx_to_condata[i] for i in range(len(idx_to_condata))]
 
+    def variable_names(self):
+        """
+        Return an ordered list of the Pyomo variable
+        names in the order corresponding to the primals
+        """
+        pyomo_variables = self.get_pyomo_variables()
+        return [v.getname() for v in pyomo_variables]
+
+    def constraint_names(self):
+        """
+        Return an ordered list of the Pyomo constraint
+        names in the order corresponding to internal constraint order
+        """
+        pyomo_constraints = self.get_pyomo_constraints()
+        return [v.getname() for v in pyomo_constraints]
+
     def get_primal_indices(self, pyomo_variables):
         """
         Return the list of indices for the primals
@@ -189,32 +205,37 @@ class PyomoNLP(AslNLP):
 
         return coo_matrix((submatrix_data, (submatrix_irows, submatrix_jcols)), shape=(len(constraint_indices), len(primal_indices)))
 
-    def extract_submatrix_hessian_lag(self, pyomo_variables):
+    def extract_submatrix_hessian_lag(self, pyomo_variables_rows, pyomo_variables_cols):
         """
         Return the submatrix of the hessian of the lagrangian that 
         corresponds to the list of Pyomo variables provided
 
         Parameters
         ----------
-        pyomo_variables : list of Pyomo Var or VarData objects
+        pyomo_variables_rows : list of Pyomo Var or VarData objects
+            List of Pyomo Var or VarData objects corresponding to the desired rows
+        pyomo_variables_cols : list of Pyomo Var or VarData objects
+            List of Pyomo Var or VarData objects corresponding to the desired columns
         """
         hess_lag = self.evaluate_hessian_lag()
-        primal_indices = self.get_primal_indices(pyomo_variables)
-        row_mask = np.isin(hess_lag.row, primal_indices)
-        col_mask = np.isin(hess_lag.col, primal_indices)
+        primal_indices_rows = self.get_primal_indices(pyomo_variables_rows)
+        primal_indices_cols = self.get_primal_indices(pyomo_variables_cols)
+        row_mask = np.isin(hess_lag.row, primal_indices_rows)
+        col_mask = np.isin(hess_lag.col, primal_indices_cols)
         submatrix_mask = row_mask & col_mask
         submatrix_irows = np.compress(submatrix_mask, hess_lag.row)
         submatrix_jcols = np.compress(submatrix_mask, hess_lag.col)
         submatrix_data = np.compress(submatrix_mask, hess_lag.data)
 
         # ToDo: this is expensive - have to think about how to do this with numpy
-        submatrix_map = {j:i for i,j in enumerate(primal_indices)}
+        submatrix_map = {j:i for i,j in enumerate(primal_indices_rows)}
         for i, v in enumerate(submatrix_irows):
             submatrix_irows[i] = submatrix_map[v]
 
+        submatrix_map = {j:i for i,j in enumerate(primal_indices_cols)}
         for i, v in enumerate(submatrix_jcols):
             submatrix_jcols[i] = submatrix_map[v]
 
-        return coo_matrix((submatrix_data, (submatrix_irows, submatrix_jcols)), shape=(len(primal_indices), len(primal_indices)))
+        return coo_matrix((submatrix_data, (submatrix_irows, submatrix_jcols)), shape=(len(primal_indices_rows), len(primal_indices_cols)))
     
 

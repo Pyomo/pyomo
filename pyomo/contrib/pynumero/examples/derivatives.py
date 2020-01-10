@@ -8,14 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 from pyomo.contrib.pynumero.sparse import BlockSymMatrix
-from pyomo.contrib.pynumero.interfaces import PyomoNLP
+from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 import matplotlib.pylab as plt
 import pyomo.environ as aml
 import pyomo.dae as dae
 
 
 def create_problem(begin, end):
-
     m = aml.ConcreteModel()
     m.t = dae.ContinuousSet(bounds=(begin, end))
 
@@ -64,17 +63,22 @@ discretizer.reduce_collocation_points(instance, var=instance.u, ncp=1, contset=i
 
 # Interface pyomo model with nlp
 nlp = PyomoNLP(instance)
-x = nlp.create_vector_x()
-lam = nlp.create_vector_y()
+x = nlp.create_new_vector('primals')
+x.fill(1.0)
+nlp.set_primals(x)
+
+lam = nlp.create_new_vector('duals')
+lam.fill(1.0)
+nlp.set_duals(lam)
 
 # Evaluate jacobian
-jac_c = nlp.jacobian_g(x)
-plt.spy(jac_c)
+jac = nlp.evaluate_jacobian()
+plt.spy(jac)
 plt.title('Jacobian of the constraints\n')
 plt.show()
 
 # Evaluate hessian of the lagrangian
-hess_lag = nlp.hessian_lag(x, lam)
+hess_lag = nlp.evaluate_hessian_lag()
 plt.spy(hess_lag)
 plt.title('Hessian of the Lagrangian function\n')
 plt.show()
@@ -82,7 +86,7 @@ plt.show()
 # Build KKT matrix
 kkt = BlockSymMatrix(2)
 kkt[0, 0] = hess_lag
-kkt[1, 0] = jac_c
+kkt[1, 0] = jac
 plt.spy(kkt.tocoo())
 plt.title('KKT system\n')
 plt.show()
