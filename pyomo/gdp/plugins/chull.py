@@ -91,9 +91,6 @@ class ConvexHull_Transformation(Transformation):
     "_disaggregationConstraintMap":
         <src var>:ComponentMap(<srcDisjunction>: <disaggregation constraint>)
 
-    TODO: I wish:
-        (<src var>, <srcDisjunction>): <disaggregation constraint>
-
     """
 
 
@@ -211,8 +208,8 @@ class ConvexHull_Transformation(Transformation):
                         "Target %s is not a component on the instance!" % tmp)
 
             # check that t is in fact a child of instance
-            if not is_child_of(parent=instance, child=t,
-                                       knownBlocks=knownBlocks):
+            if not is_child_of(parent=instance, child=t, 
+                               knownBlocks=knownBlocks):
                 raise GDP_Error("Target %s is not a component on instance %s!"
                                 % (t.name, instance.name))                
             if t.type() is Disjunction:
@@ -260,12 +257,9 @@ class ConvexHull_Transformation(Transformation):
 
         return transBlock
 
-    # TODO: Aha, this is where John already wrote the util.is_child_of
-    # function... We have a problem though because we can't just switch this out
-    # to that one because we are using set() for the knownBlocks and we are
-    # starting at a variable here... But actually that might be a bug with
-    # is_child_of, come to think of it. You shouldn't add the first thing you
-    # see until you know it is a Block. Anyway, the point is we don't need both.
+    # Note that this is very similar to the is_child_of function in util, but it
+    # differs in that we are only interest in looking through the block
+    # structure, rather than all the components.
     def _contained_in(self, var, block):
         "Return True if a var is in the subtree rooted at block"
         while var is not None:

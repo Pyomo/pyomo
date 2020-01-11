@@ -1458,9 +1458,12 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
                                  pyomo.opt.TerminationCondition.optimal)
                 self.assertEqual(value(m.obj), case[4])
 
-    # TODO: This fails because of the name collision stuf. It seems that
+    # TODO: This fails because of the name collision stuff. It seems that
     # apply_to and create_using choose different things in the unique namer,
     # even when I set the seed. Does that make any sense?
+
+    # set seed in apply_to and see if this still happens. Maybe something gets
+    # mucked with in clone
     def test_create_using(self):
         m = models.makeNestedDisjunctions_FlatDisjuncts()
         self.diff_apply_to_and_create_using(m)
