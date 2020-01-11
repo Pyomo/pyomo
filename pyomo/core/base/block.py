@@ -1884,15 +1884,9 @@ class Block(ActiveIndexedComponent):
                 del _BlockConstruction.data[id(_block)]
 
             if isinstance(obj, _BlockData) and obj is not _block:
-                # If the user returns a block, use their block instead
-                # of the empty one we just created.
-                for c in list(obj.component_objects(descend_into=False)):
-                    obj.del_component(c)
-                    _block.add_component(c.local_name, c)
-                # transfer over any other attributes that are not components
-                for name, val in iteritems(obj.__dict__):
-                    if not hasattr(_block, name) and not hasattr(self, name):
-                        super(_BlockData, _block).__setattr__(name, val)
+                # If the user returns a block, transfer over everything
+                # they defined into the empty one we created.
+                _block.set_value(obj)
 
             # TBD: Should we allow skipping Blocks???
             # if obj is Block.Skip and idx is not None:
