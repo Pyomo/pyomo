@@ -78,24 +78,12 @@ class _DisjunctData(_BlockData):
         _BlockData.__init__(self, component)
         self.indicator_var = Var(within=Binary)
 
-    def set_value(self, val):
-        _indicator_var = self.indicator_var
-        # Remove everything
-        for k in list(getattr(self, '_decl', {})):
-            self.del_component(k)
-        self._ctypes = {}
-        self._decl = {}
-        self._decl_order = []
-        # Now copy over everything from the other block.  If the other
+    def set_value(self, val, guarantee_components=set()):
+        # Copy over everything from the other block.  If the other
         # block has an indicator_var, it should override this block's.
         # Otherwise restore this block's indicator_var.
-        if val:
-            if 'indicator_var' not in val:
-                self.add_component('indicator_var', _indicator_var)
-            for k in sorted(iterkeys(val)):
-                self.add_component(k,val[k])
-        else:
-            self.add_component('indicator_var', _indicator_var)
+        guarantee_components.add('indicator_var')
+        super(_DisjunctData, self).set_value(val, guarantee_components)
 
     def activate(self):
         super(_DisjunctData, self).activate()

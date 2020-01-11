@@ -647,6 +647,88 @@ class TestBlock(unittest.TestCase):
         self.block.x = None
         self.assertEqual(self.block.x._value, None)
 
+        ### creation of a circular reference
+        b = Block(concrete=True)
+        b.c = Block()
+        with self.assertRaisesRegexp(
+                ValueError, "Cannot assign the top-level block as a subblock "
+                "of one of its children \(c\): creates a circular hierarchy"):
+            b.c.d = b
+
+    def test_set_value(self):
+        b = Block(concrete=True)
+        b.x = Var()
+        b.y = Var()
+        c = Block(concrete=True)
+        c.z = Param(initialize=5)
+        c.x = c_x = Param(initialize=5)
+        c.y = 'a string'
+
+        b.set_value(c)
+        self.assertEqual(list(b.component_map()), ['z','x'])
+        self.assertEqual(list(c.component_map()), [])
+        self.assertIs(b.x, c_x)
+        self.assertIs(b.y, c.y)
+        self.assertEqual(b.y, 'a string')
+
+        b = Block(concrete=True)
+        b.x = Var()
+        b.y = b_y = Var()
+        c = Block(concrete=True)
+        c.z = Param(initialize=5)
+        c.x = c_x = Param(initialize=5)
+        c.y = 'a string'
+
+        b.set_value(c, guarantee_components={'y','x'})
+        self.assertEqual(list(b.component_map()), ['y','z','x'])
+        self.assertEqual(list(c.component_map()), [])
+        self.assertIs(b.x, c_x)
+        self.assertIsNot(b.y, c.y)
+        self.assertIs(b.y, b_y)
+
+        ### assignment of dict
+        b = Block(concrete=True)
+        b.x = Var()
+        b.y = b_y = Var()
+        c = { 'z': Param(initialize=5),
+              'x': Param(initialize=5),
+              'y': 'a string' }
+
+        b.set_value(c, guarantee_components={'y','x'})
+        self.assertEqual(list(b.component_map()), ['y','x','z'])
+        self.assertEqual(sorted(list(iterkeys(c))), ['x','y','z'])
+        self.assertIs(b.x, c['x'])
+        self.assertIsNot(b.y, c['y'])
+        self.assertIs(b.y, b_y)
+
+        ### assignment of self
+        b = Block(concrete=True)
+        b.x = b_x = Var()
+        b.y = b_y = Var()
+        b.set_value(b)
+
+        self.assertEqual(list(b.component_map()), ['x','y'])
+        self.assertIs(b.x, b_x)
+        self.assertIs(b.y, b_y)
+
+        ### creation of a circular reference
+        b = Block(concrete=True)
+        b.c = Block()
+        b.c.d = Block()
+        b.c.d.e = Block()
+        with self.assertRaisesRegexp(
+                ValueError, '_BlockData.set_value\(\): Cannot set a sub-block '
+                '\(c.d.e\) to a parent block \(c\):'):
+            b.c.d.e.set_value(b.c)
+
+        ### bad data type
+        b = Block(concrete=True)
+        with self.assertRaisesRegexp(
+                ValueError,
+                '_BlockData.set_value\(\): expected a Block or None;'
+                ' received str'):
+            b.set_value('foo')
+
     def test_iterate_hierarchy_defaults(self):
         self.assertIs( TraversalStrategy.BFS,
                        TraversalStrategy.BreadthFirstSearch )

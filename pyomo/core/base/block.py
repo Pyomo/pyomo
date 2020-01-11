@@ -21,6 +21,12 @@ from operator import itemgetter, attrgetter
 from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
+import collections
+if PY3:
+    from collections.abc import Mapping as collections_Mapping
+else:
+    from collections import Mapping as collections_Mapping
+
 from pyutilib.misc.indent_io import StreamIndenter
 
 from pyomo.common.timing import ConstructionTimer
@@ -33,7 +39,6 @@ from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.suffix import ComponentMap
 from pyomo.core.base.indexed_component import IndexedComponent, \
     ActiveIndexedComponent, UnindexedComponent_set
-import collections
 
 from pyomo.opt.base import ProblemFormat, guess_format
 from pyomo.opt import WriterFactory
@@ -702,15 +707,56 @@ class _BlockData(ActiveComponentData):
             #
             super(_BlockData, self).__delattr__(name)
 
-    def set_value(self, val):
-        for k in list(getattr(self, '_decl', {})):
-            self.del_component(k)
-        self._ctypes = {}
-        self._decl = {}
-        self._decl_order = []
-        if val:
-            for k in sorted(iterkeys(val)):
-                self.add_component(k,val[k])
+    def set_value(self, val, guarantee_components=()):
+        if isinstance(val, _BlockData):
+            # There is a special case where assinging a parent block to
+            # this block creates a circular hierarchy
+            if val is self:
+                return
+            p_block = self.parent_block()
+            while p_block is not None:
+                if p_block is val:
+                    raise ValueError(
+                        "_BlockData.set_value(): Cannot set a sub-block (%s)"
+                        " to a parent block (%s): creates a circular hierarchy"
+                        % (self, val))
+                p_block = p_block.parent_block()
+            # record the components and the non-component objects added
+            # to the block
+            val_comp_map = val.component_map()
+            val_raw_dict = val.__dict__
+        elif val is None:
+            val_comp_map = val_raw_dict = {}
+        elif isinstance(val, collections_Mapping):
+            val_comp_map = {}
+            val_raw_dict = val
+        else:
+            raise ValueError("_BlockData.set_value(): expected a Block or "
+                             "None; received %s" % (type(val).__name__,))
+
+        for k in list(self.component_map()):
+            if k not in guarantee_components or k in val_comp_map or (
+                    k in val_raw_dict
+                    and isinstance(val_raw_dict[k], Component) ):
+                self.del_component(k)
+
+        if not guarantee_components:
+            # We can only clean up the underlying storage if we actually
+            # removed all the components
+            self._ctypes = {}
+            self._decl = {}
+            self._decl_order = []
+
+        # Use component_map for the components to preserve decl_order
+        for k,v in iteritems(val_comp_map):
+            val.del_component(k)
+            self.add_component(k,v)
+        # Because Blocks are not slotized and we allow the
+        # assignment of arbitraty data to Blocks, we will move over
+        # any other unrecognized entries in the object's __dict__:
+        for k in sorted(iterkeys(val_raw_dict)):
+            if k not in self.__dict__:
+                setattr(self, k, val_raw_dict[k])
 
     def _add_temporary_set(self, val):
         """TODO: This method has known issues (see tickets) and needs to be
@@ -891,6 +937,18 @@ single owning block (or model), and a component may not appear
 multiple times in a block.  If you want to re-name or move this
 component, use the block del_component() and add_component() methods.
 """ % (msg.strip(),))
+        #
+        # If the new component is a Block, then there is the chance that
+        # it is the model(), and assigning it would create a circular
+        # hierarchy.  Note that we only have to check the model as the
+        # check immediately above would catch any "internal" blocks in
+        # the block hierarchy
+        #
+        if isinstance(val, Block) and val is self.model():
+            raise ValueError(
+                "Cannot assign the top-level block as a subblock of one of "
+                "its children (%s): creates a circular hierarchy"
+                % (self,))
         #
         # Set the name and parent pointer of this component.
         #
