@@ -55,12 +55,17 @@ jobs:
         Write-Host ("Clone model library...")
         Write-Host ("")     
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
+        $env:py = (Get-Command python).Version.Major
+        if ($env:py -eq 2) {
+        $env:a = Get-Content 'C:\Miniconda\envs\test\lib\site-packages\pkg_resources\py2_warn.py'
+        $env:b = 'import warnings'
+        $env:c = 'warnings.simplefilter("ignore", UserWarning)'
+        Set-Content 'C:\Miniconda\envs\test\lib\site-packages\pkg_resources\py2_warn.py' -value $b,$c,$a
+        }
         Write-Host ("")
         Write-Host ("Install PyUtilib...")
         Write-Host ("") 
         git clone --quiet https://github.com/PyUtilib/pyutilib.git
-        $env:PYTHONWARNINGS="ignore::DeprecationWarning"
-        $env:WarningPreference = 'SilentlyContinue'
         cd pyutilib
         python setup.py develop
         cd ..
