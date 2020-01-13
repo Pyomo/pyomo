@@ -65,7 +65,7 @@ jobs:
         Write-Host ("")
         Write-Host ("Install Pyomo...")
         Write-Host ("") 
-        python setup.py develop
+        python -W ignore setup.py develop
     - name: Install extensions
       shell: pwsh
       run: |
