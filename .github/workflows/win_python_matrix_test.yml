@@ -57,11 +57,8 @@ jobs:
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
         $env:py = (Get-Command python).Version.Major
         if ($env:py -eq 2) {
-        $env:a = Get-Content 'C:\Miniconda\envs\test\lib\site-packages\pkg_resources\py2_warn.py'
-        $env:b = 'import warnings'
-        $env:c = 'warnings.simplefilter("ignore", UserWarning)'
-        Set-Content 'C:\Miniconda\envs\test\lib\site-packages\pkg_resources\py2_warn.py' -value $b,$c,$a
-        }
+        Write-Host "WARNING: Python 2.7 End-Of-Life"
+        Remove-Item 'C:\Miniconda\envs\test\lib\site-packages\pkg_resources\py2_warn.py'}
         Write-Host ("")
         Write-Host ("Install PyUtilib...")
         Write-Host ("") 
