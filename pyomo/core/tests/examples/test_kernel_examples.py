@@ -79,7 +79,6 @@ def create_test_method(example):
         self.assertEqual(rc, 0, msg=log)
     return testmethod
 
-@unittest.category("smoke", "nightly", "expensive")
 class TestKernelExamples(unittest.TestCase):
     pass
 for filename in examples:

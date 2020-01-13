@@ -76,14 +76,14 @@ class Test(unittest.TestCase):
         baseline_file = os.path.join(currdir, 'baselines', 'diet1_pyomo_dat.jsn')
         self.assertMatchesJsonBaseline(results_file, baseline_file)
 
-    @unittest.category('nightly', 'expensive')
+    @unittest.category('nightly')
     @unittest.skipUnless(pyodbc_available, "Requires PyODBC")
     def test_pyomo_mdb(self):
         results_file = self.run_pyomo(os.path.join(exdir, 'diet1.py'), os.path.join(exdir, 'diet1.db.dat'), outputpath=os.path.join(currdir, 'pyomo_mdb.jsn'))
         baseline_file = os.path.join(currdir, 'baselines', 'diet1_pyomo_mdb.jsn')
         self.assertMatchesJsonBaseline(results_file, baseline_file)
 
-    @unittest.category('nightly', 'expensive')
+    @unittest.category('nightly')
     @unittest.skipUnless(pyodbc_available, "Requires PyODBC")
     def test_mdb_equality(self):
         dat_results_file = self.run_pyomo(os.path.join(exdir, 'diet1.py'), os.path.join(exdir, 'diet.dat'), outputpath=os.path.join(currdir, 'dat_results.jsn'))
