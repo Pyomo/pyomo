@@ -40,7 +40,7 @@ class PyomoNLP(AslNLP):
 
             # add a dummy objective if one does not exist
             # TODO: Do we need this?
-            objectives = pyomo_model.component_map(aml.Objective, active=True)
+            objectives = list(pyomo_model.component_data_objects(ctype=aml.Objective, active=True, descend_into=True))
             if len(objectives) == 0:
                 pyomo_model._dummy_obj = aml.Objective(expr=0.0)
 
