@@ -193,7 +193,8 @@ def execute_extended_nlp_interface(self, anlp):
     self.assertTrue(np.array_equal(expected_gradient, grad_obj))
     # test inplace
     grad_obj = np.ones(9)
-    anlp.evaluate_grad_objective(out=grad_obj)
+    ret = anlp.evaluate_grad_objective(out=grad_obj)
+    self.assertTrue(ret is grad_obj)
     self.assertTrue(np.array_equal(expected_gradient, grad_obj))
     # change the value of the primals
     anlp.set_primals(2.0*np.ones(9))
@@ -209,7 +210,8 @@ def execute_extended_nlp_interface(self, anlp):
     self.assertTrue(np.array_equal(expected_con, con))
     # test inplace
     con = np.zeros(9)
-    anlp.evaluate_constraints(out=con)
+    ret = anlp.evaluate_constraints(out=con)
+    self.assertTrue(ret is con)
     self.assertTrue(np.array_equal(expected_con, con))
     # change the value of the primals
     anlp.set_primals(2.0*np.ones(9))
@@ -225,7 +227,8 @@ def execute_extended_nlp_interface(self, anlp):
     self.assertTrue(np.array_equal(expected_con_eq, con_eq))
     # test inplace
     con_eq = np.zeros(2)
-    anlp.evaluate_eq_constraints(out=con_eq)
+    ret = anlp.evaluate_eq_constraints(out=con_eq)
+    self.assertTrue(ret is con_eq)
     self.assertTrue(np.array_equal(expected_con_eq, con_eq))
     # change the value of the primals
     anlp.set_primals(2.0*np.ones(9))
@@ -241,7 +244,8 @@ def execute_extended_nlp_interface(self, anlp):
     self.assertTrue(np.array_equal(expected_con_ineq, con_ineq))
     # test inplace
     con_ineq = np.zeros(7)
-    anlp.evaluate_ineq_constraints(out=con_ineq)
+    ret = anlp.evaluate_ineq_constraints(out=con_ineq)
+    self.assertTrue(ret is con_ineq)
     self.assertTrue(np.array_equal(expected_con_ineq, con_ineq))
     # change the value of the primals
     anlp.set_primals(2.0*np.ones(9))
@@ -259,7 +263,8 @@ def execute_extended_nlp_interface(self, anlp):
     self.assertTrue(np.array_equal(dense_jac, expected_jac))
     # test inplace
     jac.data = 0*jac.data
-    anlp.evaluate_jacobian(out=jac)
+    ret = anlp.evaluate_jacobian(out=jac)
+    self.assertTrue(ret is jac)
     dense_jac = jac.todense()
     self.assertTrue(np.array_equal(dense_jac, expected_jac))
     # change the value of the primals
@@ -277,7 +282,8 @@ def execute_extended_nlp_interface(self, anlp):
     self.assertTrue(np.array_equal(dense_jac_eq, expected_jac_eq))
     # test inplace
     jac_eq.data = 0*jac_eq.data
-    anlp.evaluate_jacobian_eq(out=jac_eq)
+    ret = anlp.evaluate_jacobian_eq(out=jac_eq)
+    self.assertTrue(ret is jac_eq)
     dense_jac_eq = jac_eq.todense()
     self.assertTrue(np.array_equal(dense_jac_eq, expected_jac_eq))
     # change the value of the primals
@@ -295,7 +301,8 @@ def execute_extended_nlp_interface(self, anlp):
     self.assertTrue(np.array_equal(dense_jac_ineq, expected_jac_ineq))
     # test inplace
     jac_ineq.data = 0*jac_ineq.data
-    anlp.evaluate_jacobian_ineq(out=jac_ineq)
+    ret = anlp.evaluate_jacobian_ineq(out=jac_ineq)
+    self.assertTrue(ret is jac_ineq)
     dense_jac_ineq = jac_ineq.todense()
     self.assertTrue(np.array_equal(dense_jac_ineq, expected_jac_ineq))
     # change the value of the primals
@@ -313,7 +320,8 @@ def execute_extended_nlp_interface(self, anlp):
     self.assertTrue(np.array_equal(dense_hess, expected_hess))
     # test inplace
     hess.data = np.zeros(len(hess.data))
-    anlp.evaluate_hessian_lag(out=hess)
+    ret = anlp.evaluate_hessian_lag(out=hess)
+    self.assertTrue(ret is hess)
     dense_hess = hess.todense()
     self.assertTrue(np.array_equal(dense_hess, expected_hess))
     # change the value of the primals
@@ -551,7 +559,8 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(np.array_equal(expected_compressed_primals_lb, compressed_primals_lb))
         # test in place
         compressed_primals_lb = np.zeros(len(expected_compressed_primals_lb))
-        full_to_compressed(anlp.primals_lb(), full_to_compressed_mask, out=compressed_primals_lb)
+        ret = full_to_compressed(anlp.primals_lb(), full_to_compressed_mask, out=compressed_primals_lb)
+        self.assertTrue(ret is compressed_primals_lb)
         self.assertTrue(np.array_equal(expected_compressed_primals_lb, compressed_primals_lb))
         
         # test compressed_to_full
@@ -560,7 +569,8 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(np.array_equal(expected_full_primals_lb, full_primals_lb))
         # test in place
         full_primals_lb.fill(0.0)
-        compressed_to_full(compressed_primals_lb, full_to_compressed_mask, out=full_primals_lb, default=-np.inf)
+        ret = compressed_to_full(compressed_primals_lb, full_to_compressed_mask, out=full_primals_lb, default=-np.inf)
+        self.assertTrue(ret is full_primals_lb)
         self.assertTrue(np.array_equal(expected_full_primals_lb, full_primals_lb))
 
         # test no default
@@ -572,12 +582,10 @@ class TestUtils(unittest.TestCase):
         # test in place no default
         expected_full_primals_lb = np.asarray([-1, 0.0, -3, 0.0, -5, 0.0, -7, 0.0, -9], dtype=np.float64)
         full_primals_lb.fill(0.0)
-        compressed_to_full(compressed_primals_lb, full_to_compressed_mask, out=full_primals_lb)
+        ret = compressed_to_full(compressed_primals_lb, full_to_compressed_mask, out=full_primals_lb)
+        self.assertTrue(ret is full_primals_lb)
         self.assertTrue(np.array_equal(expected_full_primals_lb, full_primals_lb))
 
-        
-
-        
 
 if __name__ == '__main__':
     TestAslNLP.setUpClass()

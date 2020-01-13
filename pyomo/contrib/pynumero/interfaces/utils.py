@@ -56,6 +56,7 @@ def build_compression_mask_for_finite_values(vector):
 def full_to_compressed(full_array, compression_mask, out=None):
     if out is not None:
         np.compress(compression_mask, full_array, out=out)
+        return out
     else:
         return np.compress(compression_mask, full_array)
 
@@ -70,5 +71,4 @@ def compressed_to_full(compressed_array, compression_mask, out=None, default=Non
     if default is not None:
         ret[~compression_mask] = default
 
-    if out is None:
-        return ret
+    return ret

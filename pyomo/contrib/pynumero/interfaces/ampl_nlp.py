@@ -425,6 +425,7 @@ class AslNLP(ExtendedNLP):
             if not isinstance(out, np.ndarray) or out.size != self._n_primals:
                 raise RuntimeError('Called evaluate_grad_objective with an invalid "out" argument - should take an ndarray of size {}'.format(self._n_primals))
             np.copyto(out, self._cached_grad_objective)
+            return out
         else:
             return self._cached_grad_objective.copy()
 
@@ -446,6 +447,7 @@ class AslNLP(ExtendedNLP):
                                    ' "out" argument - should take an ndarray of '
                                    'size {}'.format(self._n_con_full))
             np.copyto(out, self._cached_con_full)
+            return out
         else:
             return self._cached_con_full.copy()
 
@@ -459,6 +461,7 @@ class AslNLP(ExtendedNLP):
                                    ' "out" argument - should take an ndarray of '
                                    'size {}'.format(self._n_con_eq))
             self._cached_con_full.compress(self._con_full_eq_mask, out=out)
+            return  out
         else:
             return self._cached_con_full.compress(self._con_full_eq_mask)
 
@@ -472,6 +475,7 @@ class AslNLP(ExtendedNLP):
                                    ' "out" argument - should take an ndarray of '
                                    'size {}'.format(self._n_con_ineq))
             self._cached_con_full.compress(self._con_full_ineq_mask, out=out)
+            return out
         else:
             return self._cached_con_full.compress(self._con_full_ineq_mask)
 
@@ -495,6 +499,7 @@ class AslNLP(ExtendedNLP):
                                    ' shape=({},{}) and nnz={}'
                                    .format(self._n_con_full, self._n_primals, self._nnz_jac_full))
             np.copyto(out.data, self._cached_jac_full.data)
+            return out
         else:
             return self._cached_jac_full.copy()
 
@@ -513,6 +518,7 @@ class AslNLP(ExtendedNLP):
                                    .format(self._n_con_eq, self._n_primals, self._nnz_jac_eq))
             
             self._cached_jac_full.data.compress(self._nz_con_full_eq_mask, out=out.data)
+            return out
         else:
             self._cached_jac_full.data.compress(self._nz_con_full_eq_mask, out=self._cached_jac_eq.data)
             return self._cached_jac_eq.copy()
@@ -532,6 +538,7 @@ class AslNLP(ExtendedNLP):
                                    .format(self._n_con_ineq, self._n_primals, self._nnz_jac_ineq))
             
             self._cached_jac_full.data.compress(self._nz_con_full_ineq_mask, out=out.data)
+            return out
         else:
             self._cached_jac_full.data.compress(self._nz_con_full_ineq_mask, out=self._cached_jac_ineq.data)
             return self._cached_jac_ineq.copy()
@@ -561,6 +568,7 @@ class AslNLP(ExtendedNLP):
                                    ' shape=({},{}) adn nnz={}'
                                    .format(self._n_primals, self._n_primals, self._nnz_hessian_lag))
             np.copyto(out.data, self._cached_hessian_lag.data)
+            return out
         else:
             return self._cached_hessian_lag.copy()
 
