@@ -140,6 +140,8 @@ def execute_extended_nlp_interface(self, anlp):
     new_primals = np.asarray(expected_primals, dtype=np.float64)
     expected_primals = np.asarray(expected_primals, dtype=np.float64)
     anlp.set_primals(new_primals)
+    ret = anlp.get_primals()
+    self.assertTrue(np.array_equal(new_primals, ret))
     self.assertTrue(np.array_equal(expected_primals, anlp._primals))
     anlp.set_primals(np.ones(9))
 
@@ -148,6 +150,8 @@ def execute_extended_nlp_interface(self, anlp):
     expected_duals = np.asarray(expected_duals, dtype=np.float64)
     anlp.set_duals(new_duals)
     self.assertTrue(np.array_equal(expected_duals, anlp._duals_full))
+    ret = anlp.get_duals()
+    self.assertTrue(np.array_equal(new_duals, ret))
     expected_duals_eq = np.asarray([2, 6], dtype=np.float64)
     self.assertTrue(np.array_equal(expected_duals_eq, anlp._duals_eq))
     expected_duals_ineq = np.asarray([1, 3, 4, 5, 7, 8, 9], dtype=np.float64)
@@ -157,6 +161,8 @@ def execute_extended_nlp_interface(self, anlp):
     expected_duals_eq = [i+1 for i in range(2)]
     new_duals_eq = np.asarray(expected_duals_eq, dtype=np.float64)
     anlp.set_duals_eq(new_duals_eq)
+    ret = anlp.get_duals_eq()
+    self.assertTrue(np.array_equal(new_duals_eq, ret))
     self.assertTrue(np.array_equal(expected_duals_eq, anlp._duals_eq))
     expected_duals = np.asarray([1, 1, 1, 1, 1, 2, 1, 1, 1], dtype=np.float64)
     self.assertTrue(np.array_equal(expected_duals, anlp._duals_full))
@@ -169,6 +175,8 @@ def execute_extended_nlp_interface(self, anlp):
     expected_duals_ineq = [i+1 for i in range(7)]
     new_duals_ineq = np.asarray(expected_duals_ineq, dtype=np.float64)
     anlp.set_duals_ineq(new_duals_ineq)
+    ret = anlp.get_duals_ineq()
+    self.assertTrue(np.array_equal(new_duals_ineq, ret))
     self.assertTrue(np.array_equal(expected_duals_ineq, anlp._duals_ineq))
     expected_duals = np.asarray([1, 1, 2, 3, 4, 1, 5, 6, 7], dtype=np.float64)
     self.assertTrue(np.array_equal(expected_duals, anlp._duals_full))
