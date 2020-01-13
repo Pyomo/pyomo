@@ -60,6 +60,7 @@ jobs:
         Write-Host ("") 
         git clone --quiet https://github.com/PyUtilib/pyutilib.git
         $env:PYTHONWARNINGS="ignore::DeprecationWarning"
+        $env:WarningPreference = 'SilentlyContinue'
         cd pyutilib
         python setup.py develop
         cd ..
@@ -71,6 +72,7 @@ jobs:
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::DeprecationWarning"
+        $env:WarningPreference = 'SilentlyContinue'
         Write-Host "Pyomo download-extensions"
         Invoke-Expression "pyomo download-extensions -W ignore"
         Invoke-Expression "pyomo build-extensions -W ignore"
@@ -81,6 +83,7 @@ jobs:
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::DeprecationWarning"
+        $env:WarningPreference = 'SilentlyContinue'
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
         $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries -W ignore"
