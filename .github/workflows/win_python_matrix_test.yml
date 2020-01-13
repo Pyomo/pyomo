@@ -70,8 +70,8 @@ jobs:
       shell: pwsh
       run: |
         Write-Host "Pyomo download-extensions"
-        Invoke-Expression "pyomo download-extensions"
-        Invoke-Expression "pyomo build-extensions"
+        Invoke-Expression "pyomo download-extensions -W ignore"
+        Invoke-Expression "pyomo build-extensions -W ignore"
         Write-Host "Calling solvers"
         Invoke-Expression "glpsol -v"
         Invoke-Expression "ipopt -v"
@@ -80,5 +80,5 @@ jobs:
       run: |
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
-        $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
+        $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries -W ignore"
         Invoke-Expression $env:EXP
