@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -422,7 +423,13 @@ class TestPyomoUnit(unittest.TestCase):
         delta_degF = uc.delta_degF
         R = uc.rankine
 
-        self._get_check_units_ok(2.0*R + 3.0*R, uc, 'rankine', expr.NPV_SumExpression)
+        # In some recent versions of pint, rankine can be either
+        # 'rankine' or '°R' (note UTF-8 encoding, which requires the
+        # "coding: utf-8" comment flag at the top of this file).
+        R_str = R.getname()
+        #self.assertIn(R_str, ['rankine', '°R'])
+
+        self._get_check_units_ok(2.0*R + 3.0*R, uc, R_str, expr.NPV_SumExpression)
         self._get_check_units_ok(2.0*K + 3.0*K, uc, 'K', expr.NPV_SumExpression)
 
         ex = 2.0*delta_degC + 3.0*delta_degC + 1.0*delta_degC

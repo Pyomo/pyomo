@@ -54,7 +54,7 @@ examples_dir = join(pysp_examples_dir, "scripting")
 
 solvers = check_available_solvers('cplex', 'glpk')
 
-@unittest.category('nightly','expensive')
+@unittest.category('nightly')
 class TestExamples(unittest.TestCase):
 
     def setUp(self):

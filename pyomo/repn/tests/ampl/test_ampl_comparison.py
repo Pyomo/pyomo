@@ -37,7 +37,6 @@ class Tests(unittest.TestCase):
 class BaselineTests(Tests):
     def __init__(self, *args, **kwds):
         Tests.__init__(self, *args, **kwds)
-BaselineTests = unittest.category('smoke', 'nightly','expensive')(BaselineTests)
 
 #
 #The following test generates an nl file for the test case
@@ -63,7 +62,6 @@ class ASLTests(Tests):
 
     def __init__(self, *args, **kwds):
         Tests.__init__(self, *args, **kwds)
-ASLTests = unittest.category('smoke','nightly','expensive')(ASLTests)
 
 #
 # The following test calls the gjh_asl_json executable to

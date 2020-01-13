@@ -25,7 +25,6 @@ import pyomo.scripting.convert as convert
 _NL_diff_tol = 1e-9
 _LP_diff_tol = 1e-9
 
-@unittest.category('smoke', 'nightly', 'expensive')
 class Test(unittest.TestCase):
 
     def run_convert2nl(self, name):
