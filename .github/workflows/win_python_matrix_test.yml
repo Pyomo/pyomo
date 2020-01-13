@@ -52,7 +52,7 @@ jobs:
         Invoke-Expression "conda config --set always_yes yes"
         Invoke-Expression "conda config --set auto_update_conda false"
         Write-Host ("")
-        Write-Host ("Clone model library and install PyUtilib and Pyomo...")
+        Write-Host ("Clone model library...")
         Write-Host ("") 
         $env:CurrentWPref = $env:WarningPreference
         $env:CurrentEPref = $env:ErrorActionPreference
@@ -60,10 +60,16 @@ jobs:
         $env:ErrorActionPreference = "SilentlyContinue"
         git --version     
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
+        Write-Host ("")
+        Write-Host ("Install PyUtilib...")
+        Write-Host ("") 
         git clone --quiet https://github.com/PyUtilib/pyutilib.git
         cd pyutilib
         python setup.py develop
         cd ..
+        Write-Host ("")
+        Write-Host ("Install Pyomo...")
+        Write-Host ("") 
         python setup.py develop
         $env:WarningPreference = $env:CurrentWPref
         $env:ErrorActionPreference = $env:CurrentEPref
