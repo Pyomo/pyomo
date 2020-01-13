@@ -57,7 +57,7 @@ jobs:
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
         $env:py = (Get-Command python).Version.Major
         Write-Host $env:py
-        if ($env:py -contains 2) {
+        if ($env:py -contains 0) { # Python 2 Major Version shows up as 0
         Write-Host ("WARNING: Python 2.7 End-Of-Life")
         Remove-Item 'C:\Miniconda\envs\test\lib\site-packages\pkg_resources\py2_warn.py'}
         Write-Host ("")
