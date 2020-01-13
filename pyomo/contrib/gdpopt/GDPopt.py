@@ -26,7 +26,7 @@ from pyomo.common.config import (
     ConfigBlock, ConfigList, ConfigValue, In, NonNegativeFloat, NonNegativeInt,
     add_docstring_list, PositiveInt
 )
-from pyomo.contrib.gdpopt.branch_and_bound import perform_branch_and_bound
+from pyomo.contrib.gdpopt.branch_and_bound import _perform_branch_and_bound
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
 from pyomo.contrib.gdpopt.master_initialize import (
@@ -122,7 +122,7 @@ class GDPoptSolver(object):
                 with time_code(solve_data.timing, 'main loop'):
                     GDPopt_iteration_loop(solve_data, config)
             elif solve_data.active_strategy == 'LBB':
-                perform_branch_and_bound(solve_data)
+                _perform_branch_and_bound(solve_data)
 
         return solve_data.results
 

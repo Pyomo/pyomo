@@ -139,6 +139,8 @@ def process_objective(solve_data, config, move_linear_objective=False):
         main_obj = active_objectives[0]
     solve_data.results.problem.sense = main_obj.sense
     solve_data.objective_sense = main_obj.sense
+    solve_data.infeasible_value = float('inf') if main_obj.sense == minimize else float('-inf')
+    solve_data.unbounded_value = -1 * solve_data.infeasible_value
 
     # Move the objective to the constraints if it is nonlinear
     if main_obj.expr.polynomial_degree() not in (1, 0) \
@@ -494,7 +496,7 @@ def setup_solver_environment(model, config):
         solve_data.original_model = model
         solve_data.working_model = model.clone()
         setup_results_object(solve_data, config)
-        solve_data.current_strategy = config.strategy
+        solve_data.active_strategy = config.strategy
         util_block = solve_data.working_model.GDPopt_utils
 
         # Save model initial values.

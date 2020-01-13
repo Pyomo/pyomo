@@ -92,6 +92,12 @@ class GDPbbSolver(object):
     def solve(self, model, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
+        return SolverFactory('gdpopt').solve(
+            model, strategy='LBB',
+            minlp_solver=config.solver, minlp_solver_args=config.solver_args,
+            tee=config.tee, check_sat=config.check_sat, logger=config.logger,
+            time_limit=config.time_limit
+        )
 
         # Validate model to be used with gdpbb
         self.validate_model(model)

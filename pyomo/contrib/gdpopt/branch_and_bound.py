@@ -1,16 +1,34 @@
+import traceback
 from collections import namedtuple
-from heapq import heappush, heappop
+from heapq import heappush, heappop, heapreplace
 from math import fabs
 
+from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.contrib.satsolver.satsolver import satisfiable
-from pyomo.core import minimize, Block, Suffix, Constraint, ComponentMap, TransformationFactory
+from pyomo.core import minimize, Block, Suffix, Constraint, ComponentMap, TransformationFactory, Objective, value
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
+from pyomo.opt import SolverFactory, SolverStatus
+from pyomo.opt import TerminationCondition as tc
+
 
 _linear_degrees = {1, 0}
 
+# Data tuple for each node that also functions as the sort key.
+# Therefore, ordering of the arguments below matters.
+BBNodeData = namedtuple('BBNodeData', [
+    'obj_lb',  # lower bound on objective value, sign corrected to minimize
+    'obj_ub',  # upper bound on objective value, sign corrected to minimize
+    'is_screened',  # True if the node has been screened; False if not.
+    'is_evaluated',  # True if node has been evaluated; False if not.
+    'num_unbranched_disjunctions',  # number of unbranched disjunctions
+    'node_count',  # cumulative node counter
+    'unbranched_disjunction_indices', # list of unbranched disjunction indices
+])
+
 
 def _perform_branch_and_bound(solve_data):
+    solve_data.explored_nodes = 0
     root_node = solve_data.working_model
     root_util_blk = root_node.GDPopt_utils
     config = solve_data.config
@@ -80,97 +98,210 @@ def _perform_branch_and_bound(solve_data):
 
     # Set up the priority queue
     queue = solve_data.bb_queue = []
-    BBNodeData = namedtuple('BBNodeData', [
-        'obj_lb',  # lower bound on objective value, sign corrected to minimize
-        'obj_ub',  # upper bound on objective value, sign corrected to minimize
-        'unbranched_disjunctions',  # number of unbranched disjunctions
-        'node_count',  # cumulative node counter
-    ])
+    solve_data.created_nodes = 0
+    unbranched_disjunction_indices = [i for i, disjunction in enumerate(root_util_blk.disjunction_list)
+                                      if disjunction in root_util_blk.disjunction_to_unfixed_disjuncts]
     sort_tuple = BBNodeData(
-        obj_lb=obj_sign_correction * float('-inf'),
-        obj_ub=obj_sign_correction * float('inf'),
-        unbranched_disjunctions=len(root_util_blk.disjunction_to_unfixed_disjuncts),
-        node_count=0
+        obj_lb=float('-inf'),
+        obj_ub=float('inf'),
+        is_screened=False,
+        is_evaluated=False,
+        num_unbranched_disjunctions=len(unbranched_disjunction_indices),
+        node_count=0,
+        unbranched_disjunction_indices=unbranched_disjunction_indices,
     )
     heappush(queue, (sort_tuple, root_node))
 
     # Do the branch and bound
     while len(queue) > 0:
         # visit the top node on the heap
-        node_data, node_model = queue[0]
-        if node_data.obj_lb < node_data.obj_ub:  # TODO relax this with epsilon
+        # from pprint import pprint
+        # pprint([x[0] for x in queue])
+        node_data, node_model = heappop(queue)
+        if not node_data.is_screened:
+            # Node has not been evaluated.
+            solve_data.explored_nodes += 1
+            new_node_data = _prescreen_node(node_data, node_model, solve_data)
+            heappush(queue, (new_node_data, node_model))  # replace with updated node data
+        elif node_data.obj_lb < node_data.obj_ub - config.bound_tolerance and not node_data.is_evaluated:
             # Node has not been fully evaluated.
-            _evaluate_node(node_data, node_model, solve_data)
-        elif node_data.unbranched_disjunctions == 0:
-            # We have reached a leaf node.
+            # Note: infeasible and unbounded nodes will skip this condition, because of strict inequality
+            new_node_data = _evaluate_node(node_data, node_model, solve_data)
+            heappush(queue, (new_node_data, node_model))  # replace with updated node data
+        elif node_data.num_unbranched_disjunctions == 0 or node_data.obj_lb == float('inf'):
+            # We have reached a leaf node, or the best available node is infeasible.
             original_model = solve_data.original_model
-            for orig_var, val in zip(original_model.GDPopt_utils.variable_list,
-                                     node_model.GDPopt_utils.variable_list):
-                orig_var.value = val
+            copy_var_list_values(
+                from_list=node_model.GDPopt_utils.variable_list,
+                to_list=original_model.GDPopt_utils.variable_list,
+                config=config,
+            )
 
             # TODO reevaluate these settings
-            solve_data.results.problem.lower_bound = node_data.obj_lb
-            solve_data.results.problem.upper_bound = node_data.obj_ub
-            solve_data.results.solver.timing = solve_data.timing
-            solve_data.results.solver.iterations = solve_data.explored_nodes
-            # solve_data.results.solver.termination_condition = incumbent_results.solver.termination_condition
-            return solve_data.results
+            bounds = obj_sign_correction * (node_data.obj_lb, node_data.obj_ub)
+            solve_data.LB = obj_sign_correction * (node_data.obj_lb if solve_data.objective_sense == minimize else
+                                                   node_data.obj_ub)
+            solve_data.UB = obj_sign_correction * (node_data.obj_ub if solve_data.objective_sense == minimize else
+                                                   node_data.obj_lb)
+            solve_data.master_iteration = solve_data.explored_nodes
+            if node_data.obj_lb == float('inf'):
+                solve_data.results.solver.termination_condition = tc.infeasible
+            elif node_data.obj_ub == float('-inf'):
+                solve_data.results.solver.termination_condition = tc.unbounded
+            else:
+                solve_data.results.solver.termination_condition = tc.optimal
+            return
         else:
-            _branch_on_node()
+            _branch_on_node(node_data, node_model, solve_data)
+
+
+def _branch_on_node(node_data, node_model, solve_data):
+    # Keeping the naive branch selection
+    config = solve_data.config
+    disjunction_to_branch_idx = node_data.unbranched_disjunction_indices[0]
+    disjunction_to_branch = node_model.GDPopt_utils.disjunction_list[disjunction_to_branch_idx]
+    num_unfixed_disjuncts = len(node_model.GDPopt_utils.disjunction_to_unfixed_disjuncts[disjunction_to_branch])
+    config.logger.info("Branching on disjunction %s" % disjunction_to_branch.name)
+    node_count = solve_data.created_nodes
+    newly_created_nodes = 0
+
+    for disjunct_index_to_fix_True in range(num_unfixed_disjuncts):
+        # Create a new branch for each unfixed disjunct
+        child_model = node_model.clone()
+        child_disjunction_to_branch = child_model.GDPopt_utils.disjunction_list[disjunction_to_branch_idx]
+        child_unfixed_disjuncts = child_model.GDPopt_utils.disjunction_to_unfixed_disjuncts[child_disjunction_to_branch]
+        for idx, child_disjunct in enumerate(child_unfixed_disjuncts):
+            if idx == disjunct_index_to_fix_True:
+                child_disjunct.indicator_var.fix(1)
+            else:
+                child_disjunct.deactivate()
+        if not child_disjunction_to_branch.xor:
+            raise NotImplementedError("We still need to add support for non-XOR disjunctions.")
+            # This requires adding all combinations of activation status among unfixed_disjuncts
+        # Reactivate nonlinear constraints in the newly-fixed child disjunct
+        fixed_True_disjunct = child_unfixed_disjuncts[disjunct_index_to_fix_True]
+        for constr in child_model.GDPopt_utils.disjunct_to_nonlinear_constraints.get(fixed_True_disjunct, ()):
+            constr.activate()
+
+        del child_model.GDPopt_utils.disjunction_to_unfixed_disjuncts[child_disjunction_to_branch]
+        for child_disjunct in child_unfixed_disjuncts:
+            child_model.GDPopt_utils.disjunct_to_nonlinear_constraints.pop(child_disjunct, None)
+
+        newly_created_nodes += 1
+        child_node_data = node_data._replace(
+            is_screened=False,
+            is_evaluated=False,
+            num_unbranched_disjunctions=node_data.num_unbranched_disjunctions - 1,
+            node_count=node_count + newly_created_nodes,
+            unbranched_disjunction_indices=node_data.unbranched_disjunction_indices[1:],
+            obj_ub=float('inf'),
+        )
+        heappush(solve_data.bb_queue, (child_node_data, child_model))
+
+    solve_data.created_nodes += newly_created_nodes
+
+    config.logger.info("Added %s new nodes with %s relaxed disjunctions to the heap. Size now %s." % (
+        num_unfixed_disjuncts, node_data.num_unbranched_disjunctions - 1, len(solve_data.bb_queue)))
+
+    pass
+
+
+def _prescreen_node(node_data, node_model, solve_data):
+    config = solve_data.config
+    # Check node for satisfiability if sat-solver is enabled
+    if config.check_sat and satisfiable(node_model, config.logger) is False:
+        if node_data.node_count == 0:
+            config.logger.info("Root node is not satisfiable. Problem is infeasible.")
+        else:
+            config.debug.info("SAT solver pruned node %s" % node_data.node_count)
+        new_lb = new_ub = float('inf')
+    else:
+        # Solve model subproblem
+        solve_data.config.logger.debug(
+            "Screening node %s with LB %.10g and %s inactive disjunctions." % (
+                node_data.node_count, node_data.obj_lb, node_data.num_unbranched_disjunctions
+            ))
+        new_lb, new_ub = _local_solve_rnGDP_subproblem(node_model, solve_data)
+        new_lb = max(node_data.obj_lb, new_lb)
+    new_node_data = node_data._replace(obj_lb=new_lb, obj_ub=new_ub, is_screened=True)
+    return new_node_data
 
 
 def _evaluate_node(node_data, node_model, solve_data):
-    solve_data.config.logger.info(
-        "Exploring node with LB %.10g and %s inactive disjunctions." % (
-            node_data.obj_lb, node_data.unbranched_disjunctions
-        ))
-    return _solve_rnGDP_subproblem(node_model, solve_data)
-
-
-def _process_root_node(solve_data):
     config = solve_data.config
-    root_node = solve_data.working_model
-    obj_sign = solve_data.obj_sense_sign_factor  # 1 if minimize, -1 if maximize
-    if config.check_sat and satisfiable(root_node, config.logger) is False:
-        # Problem is not satisfiable. Problem is infeasible.
-        config.logger.info("Root node is not satisfiable. Problem is infeasible.")
-        obj_value = obj_sign * float('inf')
-        return obj_value
-    else:
-        # solve the root node
-        config.logger.info("Solving the root node.")
-        obj_value, result, var_values = _solve_subproblem(root_node, solve_data)
-        return obj_value
-
-
-def _branch_on_node():
-    pass
+    # Solve model subproblem
+    solve_data.config.logger.info(
+        "Exploring node %s with LB %.10g UB %.10g and %s inactive disjunctions." % (
+            node_data.node_count, node_data.obj_lb, node_data.obj_ub, node_data.num_unbranched_disjunctions
+        ))
+    new_lb, new_ub = _solve_rnGDP_subproblem(node_model, solve_data)
+    new_node_data = node_data._replace(obj_lb=new_lb, obj_ub=new_ub, is_evaluated=True)
+    return new_node_data
 
 
 def _solve_rnGDP_subproblem(model, solve_data):
     config = solve_data.config
-    TransformationFactory('gdp.bigm').apply_to(model)
+    subproblem = TransformationFactory('gdp.bigm').create_using(model)
     main_obj = next(subproblem.component_data_objects(Objective, active=True))
     obj_sign_correction = 1 if solve_data.objective_sense == minimize else -1
 
     try:
-        result = SolverFactory(config.solver).solve(subproblem, **config.solver_args)
+        result = SolverFactory(config.minlp_solver).solve(subproblem, **config.minlp_solver_args)
     except RuntimeError as e:
         config.logger.warning(
             "Solver encountered RuntimeError. Treating as infeasible. "
             "Msg: %s\n%s" % (str(e), traceback.format_exc()))
-        var_values = [v.value for v in subproblem.GDPbb_utils.variable_list]
-        return obj_sign * float('inf'), SolverResults(), var_values
+        copy_var_list_values(  # copy variable values, even if errored
+            from_list=subproblem.GDPopt_utils.variable_list,
+            to_list=model.GDPopt_utils.variable_list,
+            config=config, ignore_integrality=True
+        )
+        return float('inf'), float('inf')
 
-    var_values = [v.value for v in subproblem.GDPbb_utils.variable_list]
     term_cond = result.solver.termination_condition
-    if result.solver.status is SolverStatus.ok and any(
-            term_cond == valid_cond for valid_cond in (tc.optimal, tc.locallyOptimal, tc.feasible)):
-        return value(main_obj.expr), result, var_values
+    if term_cond == tc.optimal:
+        assert result.solver.status is SolverStatus.ok
+        lb = result.problem.lower_bound
+        copy_var_list_values(
+            from_list=subproblem.GDPopt_utils.variable_list,
+            to_list=model.GDPopt_utils.variable_list,
+            config=config,
+        )
+        return lb, obj_sign_correction * value(main_obj.expr)
+    elif term_cond == tc.locallyOptimal or term_cond == tc.feasible:
+        assert result.solver.status is SolverStatus.ok
+        lb = result.problem.lower_bound
+        # TODO handle LB absent
+        copy_var_list_values(
+            from_list=subproblem.GDPopt_utils.variable_list,
+            to_list=model.GDPopt_utils.variable_list,
+            config=config,
+        )
+        return lb, obj_sign_correction * value(main_obj.expr)
     elif term_cond == tc.unbounded:
-        return obj_sign * float('-inf'), result, var_values
+        copy_var_list_values(
+            from_list=subproblem.GDPopt_utils.variable_list,
+            to_list=model.GDPopt_utils.variable_list,
+            config=config, ignore_integrality=True
+        )
+        return float('-inf'), float('-inf')
     elif term_cond == tc.infeasible:
-        return obj_sign * float('inf'), result, var_values
+        copy_var_list_values(
+            from_list=subproblem.GDPopt_utils.variable_list,
+            to_list=model.GDPopt_utils.variable_list,
+            config=config, ignore_integrality=True
+        )
+        return float('inf'), float('inf')
     else:
-        config.logger.warning("Unknown termination condition of %s" % term_cond)
-        return obj_sign * float('inf'), result, var_values
+        config.logger.warning("Unknown termination condition of %s. Treating as infeasible." % term_cond)
+        copy_var_list_values(
+            from_list=subproblem.GDPopt_utils.variable_list,
+            to_list=model.GDPopt_utils.variable_list,
+            config=config, ignore_integrality=True
+        )
+        return float('inf'), float('inf')
+
+
+def _local_solve_rnGDP_subproblem(model, solve_data):
+    # TODO for now, return (LB, UB) = (-inf, inf) (for minimize)
+    return solve_data.unbounded_value, solve_data.infeasible_value
