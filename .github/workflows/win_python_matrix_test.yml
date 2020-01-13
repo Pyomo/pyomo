@@ -24,6 +24,7 @@ jobs:
     - name: Install dependencies
       shell: pwsh
       run: |
+        python -W ignore::DeprecationWarning
         Write-Host ("Current Enviroment variables: ")
         gci env: | Sort Name
         Write-Host ("")
@@ -60,15 +61,16 @@ jobs:
         Write-Host ("") 
         git clone --quiet https://github.com/PyUtilib/pyutilib.git
         cd pyutilib
-        python -W ignore setup.py develop
+        python setup.py develop
         cd ..
         Write-Host ("")
         Write-Host ("Install Pyomo...")
         Write-Host ("") 
-        python -W ignore setup.py develop
+        python setup.py develop
     - name: Install extensions
       shell: pwsh
       run: |
+        python -W ignore::DeprecationWarning
         Write-Host "Pyomo download-extensions"
         Invoke-Expression "pyomo download-extensions -W ignore"
         Invoke-Expression "pyomo build-extensions -W ignore"
@@ -78,6 +80,7 @@ jobs:
     - name: Run nightly tests with test.pyomo
       shell: pwsh
       run: |
+        python -W ignore::DeprecationWarning
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
         $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries -W ignore"
