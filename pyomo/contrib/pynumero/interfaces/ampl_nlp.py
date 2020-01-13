@@ -379,6 +379,10 @@ class AslNLP(ExtendedNLP):
         np.copyto(self._primals, primals)
 
     # overloaded from NLP
+    def get_primals(self):
+        return  self._primals.copy()
+
+    # overloaded from NLP
     def set_duals(self, duals):
         self._invalidate_duals_cache()
         np.copyto(self._duals_full, duals)
@@ -387,23 +391,39 @@ class AslNLP(ExtendedNLP):
         np.compress(self._con_full_ineq_mask, self._duals_full, out=self._duals_ineq)
 
     # overloaded from NLP
+    def get_duals(self):
+        return self._duals_full.copy()
+
+    # overloaded from NLP
     def set_obj_factor(self, obj_factor):
         self._invalidate_obj_factor_cache()
         self._obj_factor = obj_factor
-        
+
     # overloaded from NLP
+    def get_obj_factor(self):
+        return self._obj_factor
+    
+    # overloaded from ExtendedNLP
     def set_duals_eq(self, duals_eq):
         self._invalidate_duals_cache()
         np.copyto(self._duals_eq, duals_eq)
         # keep duals_full up to date just in case
         self._duals_full[self._con_full_eq_mask] = self._duals_eq
 
-    # overloaded from NLP
+    # overloaded from ExtendedNLP
+    def get_duals_eq(self):
+        return self._duals_eq.copy()
+
+    # overloaded from ExtendedNLP
     def set_duals_ineq(self, duals_ineq):
         self._invalidate_duals_cache()
         np.copyto(self._duals_ineq, duals_ineq)
         # keep duals_full up to date just in case
         self._duals_full[self._con_full_ineq_mask] = self._duals_ineq
+
+    # overloaded from ExtendedNLP
+    def get_duals_ineq(self):
+        return self._duals_ineq.copy()
 
     def _evaluate_objective_and_cache_if_necessary(self):
         if not self._objective_is_cached:

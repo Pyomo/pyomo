@@ -183,6 +183,14 @@ class NLP(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def get_primals(self):
+        """Get a copy of the values of the primal variables as
+        provided in set_primals. These are the values that will
+        be used in calls to the evaluation methods
+        """
+        pass
+
+    @abc.abstractmethod
     def set_duals(self, duals):
         """Set the value of the dual variables for the constraints
         to be used in calls to the evaluation methods (hessian_lag)
@@ -191,6 +199,14 @@ class NLP(abc.ABC):
         ----------
         duals: vector_like
             Vector with the values of dual variables for the equality constraints
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_duals(self):
+        """Get a copy of the values of the dual variables as
+        provided in set_duals. These are the values that will
+        be used in calls to the evaluation methods.
         """
         pass
 
@@ -205,6 +221,15 @@ class NLP(abc.ABC):
         obj_factor: float
             Value of the objective function factor used
             in the evaluation of the hessian of the lagrangian
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_obj_factor(self):
+        """Get the value of the objective function factor as 
+        set by set_obj_factor. This is the value that will
+        be used in calls to the evaluation of the hessian
+        of the lagrangian (evaluate_hessian_lag)
         """
         pass
 
@@ -400,6 +425,14 @@ class ExtendedNLP(NLP):
         pass
 
     @abc.abstractmethod
+    def get_duals_eq(self):
+        """Get a copy of the values of the dual variables of the equality
+        constraints as provided in set_duals_eq. These are the values
+        that will be used in calls to the evaluation methods.
+        """
+        pass
+
+    @abc.abstractmethod
     def set_duals_ineq(self, duals_ineq):
         """Set the value of the dual variables for the inequality constraints
         to be used in calls to the evaluation methods (hessian_lag)
@@ -408,6 +441,14 @@ class ExtendedNLP(NLP):
         ----------
         duals_ineq: vector_like
             Vector with the values of dual variables for the inequality constraints
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_duals_ineq(self):
+        """Get a copy of the values of the dual variables of the inequality
+        constraints as provided in set_duals_eq. These are the values
+        that will be used in calls to the evaluation methods.
         """
         pass
 
