@@ -72,8 +72,11 @@ class ConvexHull_Transformation(Transformation):
     
         'srcConstraints': ComponentMap(<transformed constraint>:
                                        <src constraint>),
-        'transformedConstraints': ComponentMap(<src constraint>:
-                                               <transformed constraint>)
+        'transformedConstraints':ComponentMap(<src constraint container>:
+                                              <transformed constraint container>,
+                                              <src constraintData>:
+                                              [<transformed constraintDatas>]
+                                             )
 
     It will have a dictionary "_disaggregatedVarMap:
         'srcVar': ComponentMap(<src var>:<disaggregated var>),
@@ -258,7 +261,7 @@ class ConvexHull_Transformation(Transformation):
         return transBlock
 
     # Note that this is very similar to the is_child_of function in util, but it
-    # differs in that we are only interest in looking through the block
+    # differs in that we are only interested in looking through the block
     # structure, rather than all the components.
     def _contained_in(self, var, block):
         "Return True if a var is in the subtree rooted at block"
@@ -727,6 +730,7 @@ class ConvexHull_Transformation(Transformation):
         constraintMap['transformedConstraints'][obj] = newConstraint
         # add mapping of transformed constraint back to original constraint
         constraintMap['srcConstraints'][newConstraint] = obj
+        print(obj.name)
 
         for i in sorted(iterkeys(obj)):
             c = obj[i]
@@ -787,11 +791,29 @@ class ConvexHull_Transformation(Transformation):
                         # that structure, the disaggregated variable
                         # will also be fixed to 0.
                         v[0].fix(0)
+                        # ESJ: TODO: I'm not sure what to do here... It is
+                        # reasonable to ask where the transformed constraint
+                        # is. The answer is the bounds of the disaggregated
+                        # variable... For now I think I will make that the
+                        # answer, but this is a bit wacky because usually the
+                        # answer to the question is a constraint, not a
+                        # variable.
+                        # Also TODO: I guess this should be a list if c is a
+                        # constraintData... If we go for this system at all.
+                        constraintMap[
+                            'transformedConstraints'][c] = v[0]
+                        # also an open question whether this makes sense:
+                        constraintMap['srcConstraints'][v[0]] = c
                         continue
                     newConsExpr = expr - (1-y)*h_0 == c.lower*y
 
                 if obj.is_indexed():
                     newConstraint.add((i, 'eq'), newConsExpr)
+                    # map the constraintData (we mapped the container above)
+                    constraintMap[
+                        'transformedConstraints'][c] = [newConstraint[i,'eq']]
+                    constraintMap['srcConstraints'][newConstraint[i,'eq']] = c
+
                 else:
                     newConstraint.add('eq', newConsExpr)
                 continue
@@ -812,6 +834,10 @@ class ConvexHull_Transformation(Transformation):
 
                 if obj.is_indexed():
                     newConstraint.add((i, 'lb'), newConsExpr)
+                    # map the constraintData (we mapped the container above)
+                    constraintMap[
+                        'transformedConstraints'][c] = [newConstraint[i,'lb']]
+                    constraintMap['srcConstraints'][newConstraint[i,'lb']] = c
                 else:
                     newConstraint.add('lb', newConsExpr)
 
@@ -828,6 +854,14 @@ class ConvexHull_Transformation(Transformation):
 
                 if obj.is_indexed():
                     newConstraint.add((i, 'ub'), newConsExpr)
+                    # map the constraintData (we mapped the container above)
+                    transformed = constraintMap['transformedConstraints'].get(c)
+                    if not transformed is None:
+                        transformed.append(newConstraint[i,'ub'])
+                    else:
+                        constraintMap['transformedConstraints'][c] = \
+                                                        [newConstraint[i,'ub']]
+                    constraintMap['srcConstraints'][newConstraint[i,'ub']] = c
                 else:
                     newConstraint.add('ub', newConsExpr)
 
@@ -883,8 +917,9 @@ class ConvexHull_Transformation(Transformation):
                             "transformed" % srcConstraint.name)
         # if it's not None, it's the weakref we wanted.
         transBlock = transBlock()
-        if hasattr(transBlock, "_constraintMap") and transBlock._constraintMap[
-                'transformedConstraints'].get(srcConstraint):
+        if hasattr(transBlock, "_constraintMap") and not \
+           transBlock._constraintMap['transformedConstraints'].\
+           get(srcConstraint) is None:
             return transBlock._constraintMap['transformedConstraints'][
                 srcConstraint]
         raise GDP_Error("Constraint %s has not been transformed." 

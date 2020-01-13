@@ -526,6 +526,36 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
                 len(list(relaxed.component_data_objects(Constraint))), 3*2+i)
             self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
 
+    def test_do_not_transform_deactivated_constraintDatas(self):
+        m = models.makeTwoTermDisj_IndexedConstraints()
+        m.a[1].setlb(0)
+        m.a[1].setub(100)
+        m.a[2].setlb(0)
+        m.a[2].setub(100)
+        m.b.simpledisj1.c[1].deactivate()
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+        indexedCons = chull.get_transformed_constraint(m.b.simpledisj1.c)
+        # This is actually 0 because c[1] is deactivated and c[0] fixes a[2] to
+        # 0, which is done by fixing the diaggregated variable instead
+        self.assertEqual(len(indexedCons), 0)
+        disaggregated_a2 = chull.get_disaggregated_var(m.a[2], m.b.simpledisj1)
+        self.assertIsInstance(disaggregated_a2, Var)
+        self.assertTrue(disaggregated_a2.is_fixed())
+        self.assertEqual(value(disaggregated_a2), 0)
+        
+        # ESJ: TODO: This is my insane idea to map to the disaggregated var that
+        # is fixed if that is in fact what the "constraint" is. Also I guess it
+        # should be a list of length 1... Ick.
+        self.assertIs(chull.get_transformed_constraint(m.b.simpledisj1.c[2]),
+                      disaggregated_a2)
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Constraint b.simpledisj1.c\[1\] has not been transformed.",
+            chull.get_transformed_constraint,
+            m.b.simpledisj1.c[1])
+
 
 class IndexedDisjunction(unittest.TestCase, CommonTests):
     def setUp(self):
@@ -1460,10 +1490,8 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
 
     # TODO: This fails because of the name collision stuff. It seems that
     # apply_to and create_using choose different things in the unique namer,
-    # even when I set the seed. Does that make any sense?
-
-    # set seed in apply_to and see if this still happens. Maybe something gets
-    # mucked with in clone
+    # even when I set the seed.  If I set seed in apply_to then this doesn't
+    # happen, so something is going wrong in clone.
     def test_create_using(self):
         m = models.makeNestedDisjunctions_FlatDisjuncts()
         self.diff_apply_to_and_create_using(m)
