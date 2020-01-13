@@ -124,7 +124,7 @@ class GDPbbSolver(object):
             process_objective(solve_data, config)
             objectives = solve_data.original_model.component_data_objects(Objective, active=True)
             obj = next(objectives, None)
-            obj_sign = 1 if obj.sense == minimize else -1
+            solve_data.obj_sense_sign_factor = obj_sign = 1 if obj.sense == minimize else -1
             solve_data.results.problem.sense = obj.sense
 
             # set up lists to keep track of which disjunctions have been covered.

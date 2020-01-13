@@ -108,6 +108,20 @@ def presolve_lp_nlp(solve_data, config):
 
 
 def process_objective(solve_data, config, move_linear_objective=False):
+    """Process model objective function.
+
+    Check that the model has only 1 valid objective.
+    If the objective is nonlinear, move it into the constraints.
+    If no objective function exists, emit a warning and create a dummy objective.
+
+    Parameters
+    ----------
+    solve_data (GDPoptSolveData): solver environment data class
+    config (ConfigBlock): solver configuration options
+    move_linear_objective (bool): if True, move even linear
+        objective functions to the constraints
+
+    """
     m = solve_data.working_model
     util_blk = getattr(m, solve_data.util_block_name)
     # Handle missing or multiple objectives
@@ -282,7 +296,8 @@ def build_ordered_component_lists(model, solve_data):
     setattr(
         util_blk, 'disjunct_list', list(
             model.component_data_objects(
-                ctype=Disjunct, descend_into=(Block, Disjunct))))
+                ctype=Disjunct, active=True,
+                descend_into=(Block, Disjunct))))
     setattr(
         util_blk, 'disjunction_list', list(
             model.component_data_objects(

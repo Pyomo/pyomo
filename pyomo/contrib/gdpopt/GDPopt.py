@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """Main driver module for GDPopt solver.
 
+20.1.1 changes:
+- internal cleanup of codebase
+- merge GDPbb capabilities
 19.10.11 changes:
 - bugfix on SolverStatus error message
 19.5.13 changes:
@@ -23,6 +26,7 @@ from pyomo.common.config import (
     ConfigBlock, ConfigList, ConfigValue, In, NonNegativeFloat, NonNegativeInt,
     add_docstring_list, PositiveInt
 )
+from pyomo.contrib.gdpopt.branch_and_bound import perform_branch_and_bound
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
 from pyomo.contrib.gdpopt.master_initialize import (
@@ -72,6 +76,12 @@ class GDPoptSolver(object):
 
     """
 
+    _supported_strategies = {
+        'LOA',  # Logic-based outer approximation
+        'GLOA',  # Global logic-based outer approximation
+        'LBB',  # Logic-based branch-and-bound
+    }
+
     def solve(self, model, **kwds):
         """Solve the model.
 
@@ -103,13 +113,16 @@ class GDPoptSolver(object):
                 # TODO merge the solver results
                 return presolve_results  # problem presolved
 
-            # Initialize the master problem
-            with time_code(solve_data.timing, 'initialization'):
-                GDPopt_initialize_master(solve_data, config)
+            if solve_data.active_strategy in {'LOA', 'GLOA'}:
+                # Initialize the master problem
+                with time_code(solve_data.timing, 'initialization'):
+                    GDPopt_initialize_master(solve_data, config)
 
-            # Algorithm main loop
-            with time_code(solve_data.timing, 'main loop'):
-                GDPopt_iteration_loop(solve_data, config)
+                # Algorithm main loop
+                with time_code(solve_data.timing, 'main loop'):
+                    GDPopt_iteration_loop(solve_data, config)
+            elif solve_data.active_strategy == 'LBB':
+                perform_branch_and_bound(solve_data)
 
         return solve_data.results
 
@@ -140,6 +153,21 @@ class GDPoptSolver(object):
         )
         config.logger.info(
             """
+Subsolvers:
+- MILP: {milp}{gams_milp}
+- NLP: {nlp}{gams_nlp}
+- MINLP: {minlp}{gams_minlp}
+            """.format(
+                milp=config.mip_solver,
+                gams_milp=config.mip_solver_args.solver if config.mip_solver == 'gams' else '',
+                nlp=config.nlp_solver,
+                gams_nlp=config.nlp_solver_args.solver if config.nlp_solver == 'gams' else '',
+                minlp=config.minlp_solver,
+                gams_minlp=config.minlp_solver_args.solver if config.minlp_solver == 'gams' else '',
+            ).strip()
+        )
+        config.logger.info(
+            """
 If you use this software, you may cite the following:
 - Implementation:
 Chen, Q; Johnson, ES; Siirola, JD; Grossmann, IE.
@@ -161,9 +189,10 @@ DOI: 10.1016/S0098-1354(01)00732-3
 
     _metasolver = False
 
+    # Declare configuration options for the GDPopt solver
     CONFIG = ConfigBlock("GDPopt")
     CONFIG.declare("iterlim", ConfigValue(
-        default=30, domain=NonNegativeInt,
+        default=100, domain=NonNegativeInt,
         description="Iteration limit."
     ))
     CONFIG.declare("time_limit", ConfigValue(
@@ -175,7 +204,7 @@ DOI: 10.1016/S0098-1354(01)00732-3
             "need to set subsolver time limits as well."
     ))
     CONFIG.declare("strategy", ConfigValue(
-        default="LOA", domain=In(["LOA", "GLOA"]),
+        default="LOA", domain=In(_supported_strategies),
         description="Decomposition strategy to use."
     ))
     CONFIG.declare("init_strategy", ConfigValue(
@@ -211,6 +240,12 @@ DOI: 10.1016/S0098-1354(01)00732-3
         description="Flag to enable or diable Pyomo MIP presolve. Default=True.",
         domain=bool
     ))
+    CONFIG.declare("check_sat", ConfigValue(
+        default=False,
+        domain=bool,
+        description="When True, GDPopt-LBB will check satisfiability "
+        "at each node via the pyomo.contrib.satsolver interface"
+    ))
     mip_solver_args = CONFIG.declare("mip_solver_args", ConfigBlock(
         description="Keyword arguments to send to the MILP subsolver "
         "solve() invocation",
@@ -239,7 +274,6 @@ DOI: 10.1016/S0098-1354(01)00732-3
         default=_DoNothing,
         description="callback hook before calling the master problem solver"
     ))
-
     CONFIG.declare("call_after_master_solve", ConfigValue(
         default=_DoNothing,
         description="callback hook after a solution of the master problem"
