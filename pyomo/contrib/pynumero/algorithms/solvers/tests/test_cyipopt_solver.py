@@ -180,5 +180,14 @@ class TestCyIpoptSolver(unittest.TestCase):
         self.assertAlmostEqual(nlp.evaluate_objective(), -3.5, places=5)
         self.assertTrue(np.allclose(info['mult_g'], y_sol, rtol=1e-4))
 
+    def test_options(self):
+        model = create_model1()
+        nlp = PyomoNLP(model)
+        solver = CyIpoptSolver(CyIpoptNLP(nlp), options={'max_iter': 1})
+        x, info = solver.solve(tee=False)
+        nlp.set_primals(x)
+        self.assertAlmostEqual(nlp.evaluate_objective(), -5.0879028e+02, places=5)
+
+        
 
 

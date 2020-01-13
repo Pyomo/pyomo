@@ -455,6 +455,7 @@ class TestPyomoNLP(unittest.TestCase):
     def test_nlp_interface(self):
         nlp = PyomoNLP(self.pm)
         execute_extended_nlp_interface(self, nlp)
+        self.assertTrue(nlp.pyomo_model() is self.pm)
 
     def test_indices_methods(self):
         nlp = PyomoNLP(self.pm)
@@ -465,11 +466,19 @@ class TestPyomoNLP(unittest.TestCase):
         ids = [id(variables[i]) for i in range(9)]
         self.assertTrue(expected_ids == ids)
 
+        variable_names = nlp.variable_names()
+        expected_names = [self.pm.x[i].getname() for i in range(1,10)]
+        self.assertTrue(variable_names == expected_names)
+
         # get_pyomo_constraints
         constraints = nlp.get_pyomo_constraints()
         expected_ids = [id(self.pm.c[i]) for i in range(1,10)]
         ids = [id(constraints[i]) for i in range(9)]
         self.assertTrue(expected_ids == ids)
+
+        constraint_names = nlp.constraint_names()
+        expected_names = [c.getname() for c in nlp.get_pyomo_constraints()]
+        self.assertTrue(constraint_names == expected_names)
 
         # get_primal_indices
         expected_primal_indices = [i for i in range(9)]
@@ -533,6 +542,17 @@ class TestPyomoNLP(unittest.TestCase):
         hess = nlp.extract_submatrix_hessian_lag(pyomo_variables_rows=variables, pyomo_variables_cols=variables)
         dense_hess = hess.todense()
         self.assertTrue(np.array_equal(dense_hess, expected_hess))
+
+    def test_no_objective(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.c = pyo.Constraint(expr=2.0*m.x>=5)
+        nlp = PyomoNLP(m)
+        xinit = np.ones(1)
+        nlp.set_primals(xinit)
+        # let's just make sure the constraints still work even though there is no obj
+        self.assertTrue(np.array_equal(2.0*np.ones(1), nlp.evaluate_constraints()))
+
 
 @unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestUtils(unittest.TestCase):

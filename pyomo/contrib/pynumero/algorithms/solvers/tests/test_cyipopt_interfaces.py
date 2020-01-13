@@ -112,4 +112,3 @@ class TestCyIpoptNLP(unittest.TestCase):
         hess_lower = sp.coo_matrix((values, (rows,cols)), shape=(len(x), len(x))).todense()
         expected_hess_lower = np.asarray([[-286.0, 0.0, 0.0], [0.0, 4.0, 0.0], [-144.0, 0.0, 192.0]], dtype=np.float64)
         self.assertTrue(np.allclose(expected_hess_lower, hess_lower))
-        
