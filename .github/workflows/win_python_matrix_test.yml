@@ -56,8 +56,9 @@ jobs:
         Write-Host ("")     
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
         $env:py = (Get-Command python).Version.Major
-        if ($env:py -eq 2) {
-        Write-Host "WARNING: Python 2.7 End-Of-Life"
+        Write-Host $env:py
+        if ($env:py -contains 2) {
+        Write-Host ("WARNING: Python 2.7 End-Of-Life")
         Remove-Item 'C:\Miniconda\envs\test\lib\site-packages\pkg_resources\py2_warn.py'}
         Write-Host ("")
         Write-Host ("Install PyUtilib...")
