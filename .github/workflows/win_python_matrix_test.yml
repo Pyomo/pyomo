@@ -60,7 +60,7 @@ jobs:
         Write-Host ("") 
         git clone --quiet https://github.com/PyUtilib/pyutilib.git
         cd pyutilib
-        python setup.py develop
+        python -W ignore setup.py develop
         cd ..
         Write-Host ("")
         Write-Host ("Install Pyomo...")
