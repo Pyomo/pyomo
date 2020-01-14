@@ -1468,8 +1468,13 @@ def compute_bounds_on_expr(expr):
     bnds_dict = ComponentMap()
     visitor = _FBBTVisitorLeafToRoot(bnds_dict)
     visitor.dfs_postorder_stack(expr)
+    lb, ub = bnds_dict[expr]
+    if lb == -interval.inf:
+        lb = None
+    if ub == interval.inf:
+        ub = None
 
-    return bnds_dict[expr]
+    return lb, ub
 
 
 class BoundsManager(object):
