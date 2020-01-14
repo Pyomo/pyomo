@@ -277,6 +277,11 @@ DOI: 10.1016/S0098-1354(00)00581-0.
         description="When True, GDPopt-LBB will check satisfiability "
         "at each node via the pyomo.contrib.satsolver interface"
     ))
+    CONFIG.declare("solve_local_rnGDP", ConfigValue(
+        default=False,
+        domain=bool,
+        description="When True, GDPopt-LBB will solve a local MINLP at each node."
+    ))
     mip_solver_args = CONFIG.declare("mip_solver_args", ConfigBlock(
         description="Keyword arguments to send to the MILP subsolver "
         "solve() invocation",
