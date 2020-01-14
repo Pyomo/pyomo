@@ -284,11 +284,24 @@ class _MatrixConstraintData(_ConstraintData):
             "MatrixConstraint row elements can not be updated"
         )
 
+
 @ModelComponentFactory.register(
                    "A set of constraint expressions in Ax=b form.")
 class MatrixConstraint(collections_Mapping,
                        IndexedConstraint):
     """
+    Defines a set of linear constraints of the form:
+
+       lb <= Ax <= ub
+
+    where A is specified in the standard compressed sparse
+    row (CSR) format. Variables must be provided as a list,
+    whose ordering maps the variables to their column index
+    in the associated coefficient matrix. This modeling
+    component allows for fast construction of large linear
+    constraint sets as it bypasses Pyomo's expression
+    system.
+
     Parameters
     ----------
     A_data : list
@@ -303,6 +316,22 @@ class MatrixConstraint(collections_Mapping,
         The list of constraint upper bounds
     x : list
         The list of pyomo variables mapped to their appropriate column
+
+    Example
+    -------
+    >>> from pyomo.environ import *
+    >>> from pyomo.core.base.matrix_constraint import MatrixConstraint
+    >>> model = ConcreteModel()
+    >>>
+    >>> # x_{i} <= x_{i+1}   (for i in {1,2})
+    >>> model.v = Var(RangeSet(0,2))
+    >>> data    = [1.0, -1.0, 1.0, -1.0]
+    >>> indices = [  0,    1,   1,    2]
+    >>> indptr  = [0, 2, 4]
+    >>> lb      = [None, None]
+    >>> ub      = [ 0.0,  0.0]
+    >>> x       = [model.v[0], model.v[1], model.v[2]]
+    >>> model.c = MatrixConstraint(data, indices, indptr, lb, ub, x)
     """
 
     def __init__(self, A_data, A_indices, A_indptr, lb, ub, x):
@@ -353,8 +382,11 @@ class MatrixConstraint(collections_Mapping,
     # Remove methods that allow modifying this constraint
     #
 
-    def add(self, index, expr):
+    def add(self, index, expr):  # pragma:nocover
         raise NotImplementedError
 
-    def __delitem__(self):
+    def __delitem__(self):  # pragma:nocover
+        raise NotImplementedError
+
+    def __setitem__(self, key, value):  # pragma:nocover
         raise NotImplementedError
