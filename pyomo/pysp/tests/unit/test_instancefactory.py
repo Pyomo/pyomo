@@ -46,7 +46,6 @@ def setUpModule():
         join(testdatadir, "reference_test_model.py"))[0].model
 
 
-@unittest.category('smoke','nightly','expensive')
 class Test(unittest.TestCase):
 
     @classmethod
