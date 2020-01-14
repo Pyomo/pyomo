@@ -5,6 +5,7 @@
 - internal cleanup of codebase
 - merge GDPbb capabilities (logic-based branch and bound)
 - refactoring of GDPbb code
+- update logging information to include subsolver options
 19.10.11 changes:
 - bugfix on SolverStatus error message
 19.5.13 changes:
@@ -20,6 +21,10 @@
 
 """
 from __future__ import division
+
+from textwrap import indent
+
+from six import StringIO
 
 from pyomo.common.config import (
     ConfigBlock, ConfigList, ConfigValue, In, NonNegativeFloat, NonNegativeInt,
@@ -53,7 +58,8 @@ class GDPoptSolver(object):
 
     These approaches include:
 
-    - Outer approximation
+    - Logic-based outer approximation (LOA)
+    - Logic-based branch-and-bound (LBB)
     - Partial surrogate cuts [pending]
     - Generalized Bender decomposition [pending]
 
@@ -65,7 +71,11 @@ class GDPoptSolver(object):
     Questions: Please make a post at StackOverflow and/or contact Qi Chen
     <https://github.com/qtothec>.
 
-    Keyword arguments below are specified for the :code:`solve` function.
+    Several key GDPopt components were prototyped by BS and MS students:
+
+    - Logic-based branch and bound: Sunjeev Kale
+    - MC++ interface: Johnny Bates
+    - LOA set-covering initialization: Eloy Fernandez
 
     """
 
@@ -144,41 +154,69 @@ class GDPoptSolver(object):
             "Starting GDPopt version %s using %s algorithm"
             % (".".join(map(str, self.version())), config.strategy)
         )
+        mip_args_output = StringIO()
+        nlp_args_output = StringIO()
+        minlp_args_output = StringIO()
+        config.mip_solver_args.display(ostream=mip_args_output)
+        config.nlp_solver_args.display(ostream=nlp_args_output)
+        config.minlp_solver_args.display(ostream=minlp_args_output)
+        mip_args_text = indent(mip_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
+        nlp_args_text = indent(nlp_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
+        minlp_args_text = indent(minlp_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
+        mip_args_text = "" if len(mip_args_text.strip()) == 0 else "\n" + mip_args_text
+        nlp_args_text = "" if len(nlp_args_text.strip()) == 0 else "\n" + nlp_args_text
+        minlp_args_text = "" if len(minlp_args_text.strip()) == 0 else "\n" + minlp_args_text
         config.logger.info(
             """
 Subsolvers:
-- MILP: {milp}{gams_milp}
-- NLP: {nlp}{gams_nlp}
-- MINLP: {minlp}{gams_minlp}
+- MILP: {milp}{milp_args}
+- NLP: {nlp}{nlp_args}
+- MINLP: {minlp}{minlp_args}
             """.format(
                 milp=config.mip_solver,
-                gams_milp=config.mip_solver_args.get('solver', '') if config.mip_solver == 'gams' else '',
+                milp_args=mip_args_text,
                 nlp=config.nlp_solver,
-                gams_nlp=config.nlp_solver_args.get('solver', '') if config.nlp_solver == 'gams' else '',
+                nlp_args=nlp_args_text,
                 minlp=config.minlp_solver,
-                gams_minlp=config.minlp_solver_args.get('solver', '') if config.minlp_solver == 'gams' else '',
+                minlp_args=minlp_args_text,
             ).strip()
         )
-        config.logger.info(
-            """
+        to_cite_text = """
 If you use this software, you may cite the following:
 - Implementation:
 Chen, Q; Johnson, ES; Siirola, JD; Grossmann, IE.
 Pyomo.GDP: Disjunctive Models in Python. 
 Proc. of the 13th Intl. Symposium on Process Systems Eng.
 San Diego, 2018.
+        """.strip()
+        if config.strategy == "LOA":
+            to_cite_text += "\n"
+            to_cite_text += """
 - LOA algorithm:
 Türkay, M; Grossmann, IE.
 Logic-based MINLP algorithms for the optimal synthesis of process networks.
 Comp. and Chem. Eng. 1996, 20(8), 959–978.
 DOI: 10.1016/0098-1354(95)00219-7.
+            """.strip()
+        elif config.strategy == "GLOA":
+            to_cite_text += "\n"
+            to_cite_text += """
 - GLOA algorithm:
 Lee, S; Grossmann, IE.
-A Global Optimization Algorithm for Nonconvex Generalized Disjunctive Programming and Applications to Process Systems
+A Global Optimization Algorithm for Nonconvex Generalized Disjunctive Programming and Applications to Process Systems.
 Comp. and Chem. Eng. 2001, 25, 1675-1697.
-DOI: 10.1016/S0098-1354(01)00732-3
-        """.strip()
-        )
+DOI: 10.1016/S0098-1354(01)00732-3.
+            """.strip()
+        elif config.strategy == "LBB":
+            to_cite_text += "\n"
+            to_cite_text += """
+- LBB algorithm:
+Lee, S; Grossmann, IE.
+New algorithms for nonlinear generalized disjunctive programming.
+Comp. and Chem. Eng. 2000, 24, 2125-2141.
+DOI: 10.1016/S0098-1354(00)00581-0.
+            """.strip()
+        config.logger.info(to_cite_text)
 
     _metasolver = False
 
