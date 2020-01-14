@@ -23,7 +23,7 @@ BBNodeData = namedtuple('BBNodeData', [
     'is_evaluated',  # True if node has been evaluated; False if not.
     'num_unbranched_disjunctions',  # number of unbranched disjunctions
     'node_count',  # cumulative node counter
-    'unbranched_disjunction_indices', # list of unbranched disjunction indices
+    'unbranched_disjunction_indices',  # list of unbranched disjunction indices
 ])
 
 
@@ -32,7 +32,6 @@ def _perform_branch_and_bound(solve_data):
     root_node = solve_data.working_model
     root_util_blk = root_node.GDPopt_utils
     config = solve_data.config
-    obj_sign_correction = 1 if solve_data.objective_sense == minimize else -1
 
     # Map unfixed disjunct -> list of deactivated constraints
     root_util_blk.disjunct_to_nonlinear_constraints = ComponentMap()
@@ -116,8 +115,10 @@ def _perform_branch_and_bound(solve_data):
     while len(queue) > 0:
         # visit the top node on the heap
         # from pprint import pprint
-        # pprint([x[0] for x in queue])
+        # pprint([(x[0].node_count, x[0].obj_lb, x[0].obj_ub, x[0].num_unbranched_disjunctions) for x in sorted(queue)])
         node_data, node_model = heappop(queue)
+        config.logger.info("Nodes: %s LB %.10g Unbranched %s" % (
+            solve_data.explored_nodes, node_data.obj_lb, node_data.num_unbranched_disjunctions))
         if not node_data.is_screened:
             # Node has not been evaluated.
             solve_data.explored_nodes += 1
@@ -137,12 +138,8 @@ def _perform_branch_and_bound(solve_data):
                 config=config,
             )
 
-            # TODO reevaluate these settings
-            bounds = obj_sign_correction * (node_data.obj_lb, node_data.obj_ub)
-            solve_data.LB = obj_sign_correction * (node_data.obj_lb if solve_data.objective_sense == minimize else
-                                                   node_data.obj_ub)
-            solve_data.UB = obj_sign_correction * (node_data.obj_ub if solve_data.objective_sense == minimize else
-                                                   node_data.obj_lb)
+            solve_data.LB = node_data.obj_lb if solve_data.objective_sense == minimize else -node_data.obj_ub
+            solve_data.UB = node_data.obj_ub if solve_data.objective_sense == minimize else -node_data.obj_lb
             solve_data.master_iteration = solve_data.explored_nodes
             if node_data.obj_lb == float('inf'):
                 solve_data.results.solver.termination_condition = tc.infeasible
@@ -203,8 +200,6 @@ def _branch_on_node(node_data, node_model, solve_data):
     config.logger.info("Added %s new nodes with %s relaxed disjunctions to the heap. Size now %s." % (
         num_unfixed_disjuncts, node_data.num_unbranched_disjunctions - 1, len(solve_data.bb_queue)))
 
-    pass
-
 
 def _prescreen_node(node_data, node_model, solve_data):
     config = solve_data.config
@@ -242,8 +237,7 @@ def _evaluate_node(node_data, node_model, solve_data):
 def _solve_rnGDP_subproblem(model, solve_data):
     config = solve_data.config
     subproblem = TransformationFactory('gdp.bigm').create_using(model)
-    main_obj = next(subproblem.component_data_objects(Objective, active=True))
-    obj_sign_correction = 1 if solve_data.objective_sense == minimize else -1
+    obj_sense_correction = solve_data.objective_sense != minimize
 
     try:
         result = SolverFactory(config.minlp_solver).solve(subproblem, **config.minlp_solver_args)
@@ -261,23 +255,25 @@ def _solve_rnGDP_subproblem(model, solve_data):
     term_cond = result.solver.termination_condition
     if term_cond == tc.optimal:
         assert result.solver.status is SolverStatus.ok
-        lb = result.problem.lower_bound
+        lb = result.problem.lower_bound if not obj_sense_correction else -result.problem.upper_bound
+        ub = result.problem.upper_bound if not obj_sense_correction else -result.problem.lower_bound
         copy_var_list_values(
             from_list=subproblem.GDPopt_utils.variable_list,
             to_list=model.GDPopt_utils.variable_list,
             config=config,
         )
-        return lb, obj_sign_correction * value(main_obj.expr)
+        return lb, ub
     elif term_cond == tc.locallyOptimal or term_cond == tc.feasible:
         assert result.solver.status is SolverStatus.ok
-        lb = result.problem.lower_bound
+        lb = result.problem.lower_bound if not obj_sense_correction else -result.problem.upper_bound
+        ub = result.problem.upper_bound if not obj_sense_correction else -result.problem.lower_bound
         # TODO handle LB absent
         copy_var_list_values(
             from_list=subproblem.GDPopt_utils.variable_list,
             to_list=model.GDPopt_utils.variable_list,
             config=config,
         )
-        return lb, obj_sign_correction * value(main_obj.expr)
+        return lb, ub
     elif term_cond == tc.unbounded:
         copy_var_list_values(
             from_list=subproblem.GDPopt_utils.variable_list,
@@ -304,4 +300,4 @@ def _solve_rnGDP_subproblem(model, solve_data):
 
 def _local_solve_rnGDP_subproblem(model, solve_data):
     # TODO for now, return (LB, UB) = (-inf, inf) (for minimize)
-    return solve_data.unbounded_value, solve_data.infeasible_value
+    return float('-inf'), float('inf')

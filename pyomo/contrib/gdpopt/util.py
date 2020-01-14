@@ -139,8 +139,6 @@ def process_objective(solve_data, config, move_linear_objective=False):
         main_obj = active_objectives[0]
     solve_data.results.problem.sense = main_obj.sense
     solve_data.objective_sense = main_obj.sense
-    solve_data.infeasible_value = float('inf') if main_obj.sense == minimize else float('-inf')
-    solve_data.unbounded_value = -1 * solve_data.infeasible_value
 
     # Move the objective to the constraints if it is nonlinear
     if main_obj.expr.polynomial_degree() not in (1, 0) \
@@ -435,7 +433,7 @@ def get_main_elapsed_time(timing_data_obj):
 
 
 @deprecated(
-    "This function has been deprecated in favor of the more specific "
+    "'restore_logger_level()' has been deprecated in favor of the more specific "
     "'lower_logger_level_to()' function.", version='TBD', remove_in='TBD')
 @contextmanager
 def restore_logger_level(logger):

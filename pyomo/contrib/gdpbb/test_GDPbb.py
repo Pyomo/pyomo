@@ -10,7 +10,7 @@ from six import StringIO
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.satsolver.satsolver import _z3_available
-from pyomo.environ import SolverFactory, value, ConcreteModel, Var, Objective
+from pyomo.environ import SolverFactory, value, ConcreteModel, Var, Objective, maximize
 from pyomo.gdp import Disjunction
 from pyomo.opt import TerminationCondition
 
@@ -54,6 +54,22 @@ class TestGDPBB(unittest.TestCase):
             solver_args=minlp_args,
         )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+    @unittest.skipUnless(license_available, "Problem is too big for unlicensed BARON.")
+    def test_LBB_8PP_max(self):
+        """Test the logic-based branch and bound algorithm."""
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        obj = next(eight_process.component_data_objects(Objective, active=True))
+        obj.sense = maximize
+        obj.set_value(-1 * obj.expr)
+        SolverFactory('gdpbb').solve(
+            eight_process, tee=False,
+            solver=minlp_solver,
+            solver_args=minlp_args,
+        )
+        self.assertAlmostEqual(value(eight_process.profit.expr), -68, places=1)
 
     @unittest.skipUnless(license_available, "Problem is too big for unlicensed BARON.")
     def test_LBB_strip_pack(self):
