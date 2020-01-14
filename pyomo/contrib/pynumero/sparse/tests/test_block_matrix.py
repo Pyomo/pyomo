@@ -19,7 +19,8 @@ import numpy as np
 
 from pyomo.contrib.pynumero.sparse import (BlockMatrix,
                                            BlockVector,
-                                           empty_matrix)
+                                           empty_matrix,
+                                           NotFullyDefinedBlockMatrixError)
 import warnings
 
 
@@ -38,6 +39,10 @@ class TestBlockMatrix(unittest.TestCase):
         bm[1, 1] = m.copy()
         bm[0, 1] = m.copy()
         self.basic_m = bm
+        self.dense = np.zeros((8, 8))
+        self.dense[0:4, 0:4] = m.toarray()
+        self.dense[0:4, 4:8] = m.toarray()
+        self.dense[4:8, 4:8] = m.toarray()
 
         self.composed_m = BlockMatrix(2, 2)
         self.composed_m[0, 0] = self.block_m.copy()
@@ -241,11 +246,11 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertListEqual(dcol.tolist(), scol.tolist())
         self.assertListEqual(ddata.tolist(), sdata.tolist())
 
-    def test_has_empty_rows(self):
-        self.assertFalse(self.basic_m.has_empty_rows())
+    def test_has_undefined_rows(self):
+        self.assertFalse(self.basic_m.has_undefined_rows())
 
-    def test_has_empty_cols(self):
-        self.assertFalse(self.basic_m.has_empty_cols())
+    def test_has_undefined_cols(self):
+        self.assertFalse(self.basic_m.has_undefined_cols())
 
     def test_transpose(self):
 
@@ -321,6 +326,23 @@ class TestBlockMatrix(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             mm = A_block + 1.0
 
+    def test_add_copy(self):
+        """
+        The purpose of this test is to ensure that copying happens correctly when block matrices are added.
+        For example, when adding
+
+        [A  B   +  [D  0
+         0  C]      E  F]
+
+        we want to make sure that E and B both get copied in the result rather than just placed in the result.
+        """
+        bm = self.basic_m.copy()
+        bmT = bm.transpose()
+        res = bm + bmT
+        self.assertIsNot(res[1, 0], bmT[1, 0])
+        self.assertIsNot(res[0, 1], bm[0, 1])
+        self.assertTrue(np.allclose(res.toarray(), self.dense + self.dense.transpose()))
+
     def test_sub(self):
 
         A_dense = self.basic_m.toarray()
@@ -330,8 +352,6 @@ class TestBlockMatrix(unittest.TestCase):
         aa = A_dense - A_dense
         mm = A_block - A_block
 
-        self.assertTrue(np.allclose(aa, mm.toarray()))
-        mm = A_block.__rsub__(A_block)
         self.assertTrue(np.allclose(aa, mm.toarray()))
 
         mm = A_block2 - A_block.tocoo()
@@ -345,9 +365,6 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertTrue(np.allclose(dense_r, mm.toarray()))
 
         with self.assertRaises(Exception) as context:
-            mm = A_block.__rsub__(A_block.toarray())
-
-        with self.assertRaises(Exception) as context:
             mm = A_block - A_block.toarray()
 
         with self.assertRaises(Exception) as context:
@@ -355,6 +372,23 @@ class TestBlockMatrix(unittest.TestCase):
 
         with self.assertRaises(Exception) as context:
             mm = 1.0 - A_block
+
+    def test_sub_copy(self):
+        """
+        The purpose of this test is to ensure that copying happens correctly when block matrices are subtracted.
+        For example, when subtracting
+
+        [A  B   -  [D  0
+         0  C]      E  F]
+
+        we want to make sure that E and B both get copied in the result rather than just placed in the result.
+        """
+        bm = self.basic_m.copy()
+        bmT = 2 * bm.transpose()
+        res = bm - bmT
+        self.assertIsNot(res[1, 0], bmT[1, 0])
+        self.assertIsNot(res[0, 1], bm[0, 1])
+        self.assertTrue(np.allclose(res.toarray(), self.dense - 2 * self.dense.transpose()))
 
     def test_neg(self):
 
@@ -367,33 +401,74 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertTrue(np.allclose(aa, mm.toarray()))
 
     def test_copyfrom(self):
-        A_dense = self.basic_m.toarray()
-        A_block = 2 * self.basic_m
-        A_block2 = 2 * self.basic_m
+        bm0 = self.basic_m.copy()
+        bm = bm0.copy_structure()
+        self.assertFalse(np.allclose(bm.toarray(), self.dense))
+        bm.copyfrom(bm0.tocoo())
+        self.assertTrue(np.allclose(bm.toarray(), self.dense))
 
-        A_block.copyfrom(self.basic_m.tocoo())
+        flat = np.ones((8, 8))
+        bm.copyfrom(flat)
+        self.assertTrue(np.allclose(flat, bm.toarray()))
 
-        dd = A_block.toarray()
-        self.assertTrue(np.allclose(dd, A_dense))
+        bm.copyfrom(bm0)
+        self.assertTrue(np.allclose(bm.toarray(), self.dense))
 
-        A_block = 2 * self.basic_m
-        flat = np.ones(A_block.shape)
-        A_block.copyfrom(flat)
-        self.assertTrue(np.allclose(flat, A_block.toarray()))
+        bm[0, 0].data.fill(1.0)
+        self.assertAlmostEqual(bm0.toarray()[0, 0], 2)  # this tests that a deep copy was done
+        self.assertAlmostEqual(bm.toarray()[0, 0], 1)
 
-        A_block = self.basic_m.copy_structure()
-        to_copy = 2 * self.basic_m
-        A_block.copyfrom(to_copy)
+        bm.copyfrom(bm0, deep=False)
+        bm[0, 0].data.fill(1.0)
+        self.assertAlmostEqual(bm0.toarray()[0, 0], 1)  # this tests that a shallow copy was done
+        self.assertAlmostEqual(bm.toarray()[0, 0], 1)
 
-        dd = A_block.toarray()
-        self.assertTrue(np.allclose(dd, A_block2.toarray()))
+    def test_copyto(self):
+        bm0 = self.basic_m.copy()
+        coo = bm0.tocoo()
+        coo.data.fill(1.0)
+        csr = coo.tocsr()
+        csc = coo.tocsc()
+        self.assertFalse(np.allclose(coo.toarray(), self.dense))
+        self.assertFalse(np.allclose(csr.toarray(), self.dense))
+        self.assertFalse(np.allclose(csc.toarray(), self.dense))
+        bm0.copyto(coo)
+        bm0.copyto(csr)
+        bm0.copyto(csc)
+        self.assertTrue(np.allclose(coo.toarray(), self.dense))
+        self.assertTrue(np.allclose(csr.toarray(), self.dense))
+        self.assertTrue(np.allclose(csc.toarray(), self.dense))
+
+        flat = np.ones((8, 8))
+        bm0.copyto(flat)
+        self.assertTrue(np.allclose(flat, self.dense))
+
+        bm = bm0.copy_structure()
+        bm0.copyto(bm)
+        self.assertTrue(np.allclose(bm.toarray(), self.dense))
+
+        bm[0, 0].data.fill(1.0)
+        self.assertAlmostEqual(bm0.toarray()[0, 0], 2)  # this tests that a deep copy was done
+        self.assertAlmostEqual(bm.toarray()[0, 0], 1)
+
+        bm0.copyto(bm, deep=False)
+        bm[0, 0].data.fill(1.0)
+        self.assertAlmostEqual(bm0.toarray()[0, 0], 1)  # this tests that a shallow copy was done
+        self.assertAlmostEqual(bm.toarray()[0, 0], 1)
 
     def test_copy(self):
+        clone = self.basic_m.copy()
+        self.assertTrue(np.allclose(clone.toarray(), self.dense))
+        clone[0, 0].data.fill(1)
+        self.assertAlmostEqual(clone.toarray()[0, 0], 1)
+        self.assertAlmostEqual(self.basic_m.toarray()[0, 0], 2)
 
-        A_dense = self.basic_m.toarray()
-        A_block = self.basic_m
-        clone = A_block.copy()
-        self.assertTrue(np.allclose(clone.toarray(), A_dense))
+        bm = self.basic_m.copy()
+        clone = bm.copy(deep=False)
+        self.assertTrue(np.allclose(clone.toarray(), self.dense))
+        clone[0, 0].data.fill(1)
+        self.assertAlmostEqual(clone.toarray()[0, 0], 1)
+        self.assertAlmostEqual(bm.toarray()[0, 0], 1)
 
     def test_iadd(self):
 
@@ -469,11 +544,10 @@ class TestBlockMatrix(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             A_block *= A_block.toarray()
 
-    @unittest.skip('Ignore this for now')
     def test_itruediv(self):
 
         A_dense = self.basic_m.toarray()
-        A_block = self.basic_m
+        A_block = self.basic_m.copy()
         A_dense /= 3
         A_block /= 3.
 
@@ -488,7 +562,6 @@ class TestBlockMatrix(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             A_block /= A_block.toarray()
 
-    @unittest.skip('Ignore this for now')
     def test_truediv(self):
 
         A_dense = self.basic_m.toarray()
@@ -654,6 +727,17 @@ class TestBlockMatrix(unittest.TestCase):
             self.assertTrue(np.allclose(A_bool_flat.toarray(),
                                         A_bool_block.toarray()))
 
+    def test_gt(self):
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            A = self.basic_m.copy()
+            B = 2 * A.transpose()
+
+            res = A > B
+            expected = A.toarray() > B.toarray()
+            self.assertTrue(np.allclose(res.toarray(), expected))
+
     def test_abs(self):
 
         row = np.array([0, 3, 1, 2, 3, 0])
@@ -799,3 +883,33 @@ class TestBlockMatrix(unittest.TestCase):
         exp[2:4, 2:4] = exp11
 
         self.assertTrue(np.allclose(got, exp))
+
+    def test_dimensions(self):
+        bm = BlockMatrix(2, 2)
+        self.assertTrue(bm.has_undefined_rows())
+        self.assertTrue(bm.has_undefined_cols())
+        with self.assertRaises(NotFullyDefinedBlockMatrixError):
+            shape = bm.shape
+        with self.assertRaises(NotFullyDefinedBlockMatrixError):
+            bm[0, 0] = BlockMatrix(2, 2)
+        with self.assertRaises(NotFullyDefinedBlockMatrixError):
+            row_sizes = bm.row_block_sizes()
+        with self.assertRaises(NotFullyDefinedBlockMatrixError):
+            col_sizes = bm.col_block_sizes()
+        bm2 = BlockMatrix(2, 2)
+        bm2[0, 0] = coo_matrix((2, 2))
+        bm2[1, 1] = coo_matrix((2, 2))
+        bm3 = bm2.copy()
+        bm[0, 0] = bm2
+        bm[1, 1] = bm3
+        self.assertFalse(bm.has_undefined_rows())
+        self.assertFalse(bm.has_undefined_cols())
+        self.assertEqual(bm.shape, (8, 8))
+        bm[0, 0] = None
+        self.assertFalse(bm.has_undefined_rows())
+        self.assertFalse(bm.has_undefined_cols())
+        self.assertEqual(bm.shape, (8, 8))
+        self.assertTrue(np.all(bm.row_block_sizes() == np.ones(2)*4))
+        self.assertTrue(np.all(bm.col_block_sizes() == np.ones(2)*4))
+        self.assertTrue(np.all(bm.row_block_sizes(copy=False) == np.ones(2)*4))
+        self.assertTrue(np.all(bm.col_block_sizes(copy=False) == np.ones(2)*4))
