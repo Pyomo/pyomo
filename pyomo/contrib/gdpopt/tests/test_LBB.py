@@ -1,4 +1,4 @@
-"""Tests for the GDPbb solver plugin."""
+"""Tests for the Logic-based Branch and Bound solver plugin."""
 import logging
 
 from math import fabs
@@ -15,7 +15,7 @@ from pyomo.gdp import Disjunction
 from pyomo.opt import TerminationCondition
 
 currdir = dirname(abspath(__file__))
-exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))
+exdir = normpath(join(currdir, '..', '..', '..', '..', 'examples', 'gdp'))
 
 minlp_solver = 'baron'
 minlp_args = dict()
@@ -24,7 +24,7 @@ license_available = SolverFactory(minlp_solver).license_is_valid() if solver_ava
 
 
 @unittest.skipUnless(solver_available, "Required subsolver %s is not available" % (minlp_solver,))
-class TestGDPBB(unittest.TestCase):
+class TestGDPopt_LBB(unittest.TestCase):
     """Tests for logic-based branch and bound."""
 
     def test_infeasible_GDP(self):
@@ -35,10 +35,11 @@ class TestGDPBB(unittest.TestCase):
             [m.x ** 2 >= 3, m.x >= 3],
             [m.x ** 2 <= -1, m.x <= -1]])
         m.o = Objective(expr=m.x)
-        result = SolverFactory('gdpbb').solve(
+        result = SolverFactory('gdpopt').solve(
             m, tee=False,
-            solver=minlp_solver,
-            solver_args=minlp_args,
+            strategy='LBB',
+            minlp_solver=minlp_solver,
+            minlp_solver_args=minlp_args,
         )
         self.assertEqual(result.solver.termination_condition, TerminationCondition.infeasible)
 
@@ -48,10 +49,11 @@ class TestGDPBB(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpbb').solve(
+        SolverFactory('gdpopt').solve(
             eight_process, tee=False,
-            solver=minlp_solver,
-            solver_args=minlp_args,
+            strategy='LBB',
+            minlp_solver=minlp_solver,
+            minlp_solver_args=minlp_args,
         )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
@@ -64,10 +66,11 @@ class TestGDPBB(unittest.TestCase):
         obj = next(eight_process.component_data_objects(Objective, active=True))
         obj.sense = maximize
         obj.set_value(-1 * obj.expr)
-        SolverFactory('gdpbb').solve(
+        SolverFactory('gdpopt').solve(
             eight_process, tee=False,
-            solver=minlp_solver,
-            solver_args=minlp_args,
+            strategy='LBB',
+            minlp_solver=minlp_solver,
+            minlp_solver_args=minlp_args,
         )
         self.assertAlmostEqual(value(eight_process.profit.expr), -68, places=1)
 
@@ -77,10 +80,11 @@ class TestGDPBB(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         strip_pack = exfile.build_rect_strip_packing_model()
-        SolverFactory('gdpbb').solve(
+        SolverFactory('gdpopt').solve(
             strip_pack, tee=False,
-            solver=minlp_solver,
-            solver_args=minlp_args,
+            strategy='LBB',
+            minlp_solver=minlp_solver,
+            minlp_solver_args=minlp_args,
         )
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
@@ -91,10 +95,11 @@ class TestGDPBB(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'constrained_layout', 'cons_layout_model.py'))
         cons_layout = exfile.build_constrained_layout_model()
-        SolverFactory('gdpbb').solve(
+        SolverFactory('gdpopt').solve(
             cons_layout, tee=False,
-            solver=minlp_solver,
-            solver_args=minlp_args,
+            strategy='LBB',
+            minlp_solver=minlp_solver,
+            minlp_solver_args=minlp_args,
         )
         objective_value = value(cons_layout.min_dist_cost.expr)
         self.assertTrue(
@@ -105,10 +110,11 @@ class TestGDPBB(unittest.TestCase):
         """Test LBB with Francisco thesis example."""
         exfile = import_file(join(exdir, 'small_lit', 'ex_633_trespalacios.py'))
         model = exfile.build_simple_nonconvex_gdp()
-        SolverFactory('gdpbb').solve(
+        SolverFactory('gdpopt').solve(
             model, tee=False,
-            solver=minlp_solver,
-            solver_args=minlp_args,
+            strategy='LBB',
+            minlp_solver=minlp_solver,
+            minlp_solver_args=minlp_args,
         )
         objective_value = value(model.obj.expr)
         self.assertAlmostEqual(objective_value, 4.46, 2)
@@ -116,7 +122,7 @@ class TestGDPBB(unittest.TestCase):
 
 @unittest.skipUnless(solver_available, "Required subsolver %s is not available" % (minlp_solver,))
 @unittest.skipUnless(_z3_available, "Z3 SAT solver is not available.")
-class TestGDPBB_Z3(unittest.TestCase):
+class TestGDPopt_LBB_Z3(unittest.TestCase):
     """Tests for logic-based branch and bound with Z3 SAT solver integration."""
 
     def test_infeasible_GDP(self):
@@ -127,10 +133,11 @@ class TestGDPBB_Z3(unittest.TestCase):
             [m.x ** 2 >= 3, m.x >= 3],
             [m.x ** 2 <= -1, m.x <= -1]])
         m.o = Objective(expr=m.x)
-        result = SolverFactory('gdpbb').solve(
+        result = SolverFactory('gdpopt').solve(
             m, tee=False,
-            solver=minlp_solver,
-            solver_args=minlp_args,
+            strategy='LBB',
+            minlp_solver=minlp_solver,
+            minlp_solver_args=minlp_args,
         )
         self.assertEqual(result.solver.termination_condition, TerminationCondition.infeasible)
 
@@ -140,10 +147,11 @@ class TestGDPBB_Z3(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpbb').solve(
+        SolverFactory('gdpopt').solve(
             eight_process, tee=False, check_sat=True,
-            solver=minlp_solver,
-            solver_args=minlp_args,
+            strategy='LBB',
+            minlp_solver=minlp_solver,
+            minlp_solver_args=minlp_args,
         )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
@@ -153,10 +161,11 @@ class TestGDPBB_Z3(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         strip_pack = exfile.build_rect_strip_packing_model()
-        SolverFactory('gdpbb').solve(
+        SolverFactory('gdpopt').solve(
             strip_pack, tee=False, check_sat=True,
-            solver=minlp_solver,
-            solver_args=minlp_args,
+            strategy='LBB',
+            minlp_solver=minlp_solver,
+            minlp_solver_args=minlp_args,
         )
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
@@ -167,10 +176,11 @@ class TestGDPBB_Z3(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'constrained_layout', 'cons_layout_model.py'))
         cons_layout = exfile.build_constrained_layout_model()
-        SolverFactory('gdpbb').solve(
+        SolverFactory('gdpopt').solve(
             cons_layout, tee=False, check_sat=True,
-            solver=minlp_solver,
-            solver_args=minlp_args,
+            strategy='LBB',
+            minlp_solver=minlp_solver,
+            minlp_solver_args=minlp_args,
         )
         objective_value = value(cons_layout.min_dist_cost.expr)
         self.assertTrue(
@@ -181,10 +191,11 @@ class TestGDPBB_Z3(unittest.TestCase):
         """Test LBB with Francisco thesis example."""
         exfile = import_file(join(exdir, 'small_lit', 'ex_633_trespalacios.py'))
         model = exfile.build_simple_nonconvex_gdp()
-        SolverFactory('gdpbb').solve(
+        SolverFactory('gdpopt').solve(
             model, tee=False, check_sat=True,
-            solver=minlp_solver,
-            solver_args=minlp_args,
+            strategy='LBB',
+            minlp_solver=minlp_solver,
+            minlp_solver_args=minlp_args,
         )
         objective_value = value(model.obj.expr)
         self.assertAlmostEqual(objective_value, 4.46, 2)

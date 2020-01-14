@@ -163,7 +163,7 @@ def solve_LOA_master(solve_data, config):
     solve_data.mip_iteration += 1
     main_objective = next(m.component_data_objects(Objective, active=True))
 
-    if solve_data.current_strategy == 'LOA':
+    if solve_data.active_strategy == 'LOA':
         # Set up augmented Lagrangean penalty objective
         main_objective.deactivate()
         sign_adjust = 1 if main_objective.sense == minimize else -1
@@ -178,7 +178,7 @@ def solve_LOA_master(solve_data, config):
 
         obj_expr = GDPopt.oa_obj.expr
         base_obj_expr = main_objective.expr
-    elif solve_data.current_strategy == 'GLOA':
+    elif solve_data.active_strategy == 'GLOA':
         obj_expr = base_obj_expr = main_objective.expr
 
     mip_result = solve_linear_GDP(m, solve_data, config)

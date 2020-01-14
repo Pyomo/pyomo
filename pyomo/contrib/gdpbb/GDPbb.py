@@ -12,6 +12,7 @@ import traceback
 
 from pyutilib.misc import Container
 
+from pyomo.common import deprecated
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.common.config import (ConfigBlock, ConfigValue, PositiveInt)
 from pyomo.contrib.gdpopt.util import create_utility_block, time_code, a_logger, restore_logger_level, \
@@ -76,6 +77,13 @@ class GDPbbSolver(object):
             "currently only be enforced between subsolver invocations. You may"
             "need to set subsolver time limits as well."
     ))
+
+    @deprecated("GDPbb has been merged into GDPopt. "
+                "You can use the algorithm using GDPopt with strategy='LBB'.",
+                logger="pyomo.solvers",
+                version='TBD', remove_in='TBD')
+    def __init__(self, *args, **kwargs):
+        super(GDPbbSolver, self).__init__(*args, **kwargs)
 
     def available(self, exception_flag=True):
         """Check if solver is available.

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """Main driver module for GDPopt solver.
 
-20.1.1 changes:
+20.1.14 changes:
 - internal cleanup of codebase
-- merge GDPbb capabilities
+- merge GDPbb capabilities (logic-based branch and bound)
+- refactoring of GDPbb code
 19.10.11 changes:
 - bugfix on SolverStatus error message
 19.5.13 changes:
@@ -20,30 +21,22 @@
 """
 from __future__ import division
 
-import logging
-
 from pyomo.common.config import (
     ConfigBlock, ConfigList, ConfigValue, In, NonNegativeFloat, NonNegativeInt,
     add_docstring_list, PositiveInt
 )
 from pyomo.contrib.gdpopt.branch_and_bound import _perform_branch_and_bound
-from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
 from pyomo.contrib.gdpopt.master_initialize import (
     GDPopt_initialize_master, valid_init_strategies
 )
 from pyomo.contrib.gdpopt.util import (
-    _DoNothing, a_logger, copy_var_list_values,
-    create_utility_block, presolve_lp_nlp, process_objective,
-    setup_results_object,
-    restore_logger_level, time_code,
+    _DoNothing, a_logger, presolve_lp_nlp, process_objective,
+    time_code,
     setup_solver_environment)
-from pyomo.core.base import ConstraintList
 from pyomo.opt.base import SolverFactory
-from pyomo.opt.results import SolverResults
-from pyutilib.misc import Container
 
-__version__ = (19, 5, 13)  # Note: date-based version number
+__version__ = (20, 1, 14)  # Note: date-based version number
 
 
 @SolverFactory.register(
@@ -159,11 +152,11 @@ Subsolvers:
 - MINLP: {minlp}{gams_minlp}
             """.format(
                 milp=config.mip_solver,
-                gams_milp=config.mip_solver_args.solver if config.mip_solver == 'gams' else '',
+                gams_milp=config.mip_solver_args.get('solver', '') if config.mip_solver == 'gams' else '',
                 nlp=config.nlp_solver,
-                gams_nlp=config.nlp_solver_args.solver if config.nlp_solver == 'gams' else '',
+                gams_nlp=config.nlp_solver_args.get('solver', '') if config.nlp_solver == 'gams' else '',
                 minlp=config.minlp_solver,
-                gams_minlp=config.minlp_solver_args.solver if config.minlp_solver == 'gams' else '',
+                gams_minlp=config.minlp_solver_args.get('solver', '') if config.minlp_solver == 'gams' else '',
             ).strip()
         )
         config.logger.info(
