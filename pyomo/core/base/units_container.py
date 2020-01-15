@@ -34,7 +34,7 @@ Examples:
        >>> model = ConcreteModel()
        >>> model.acc = Var()
        >>> model.obj = Objective(expr=(model.acc*un.m/un.s**2 - 9.81*un.m/un.s**2)**2)
-       >>> print(units.get_units(model.obj.expr))
+       >>> print(un.get_units(model.obj.expr))
        m ** 2 / s ** 4
 
 .. note:: This module has a module level instance of a PyomoUnitsContainer that you can access using
@@ -115,7 +115,7 @@ class InconsistentUnitsError(UnitsError):
     """
     An exception indicating that inconsistent units are present on an expression.
 
-    E.g., x == y, where x is in units of units.kg and y is in units of units.meter
+    E.g., x == y, where x is in units of kg and y is in units of meter
     """
     def __init__(self, exp1, exp2, msg):
         msg = '{}: {} not compatible with {}.'.format(str(msg), str(exp1), str(exp2))
