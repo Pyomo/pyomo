@@ -13,7 +13,6 @@ import traceback
 from pyutilib.misc import Container
 
 from pyomo.common import deprecated
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.common.config import (ConfigBlock, ConfigValue, PositiveInt)
 from pyomo.contrib.gdpopt.util import create_utility_block, time_code, a_logger, restore_logger_level, \
     setup_results_object, get_main_elapsed_time, process_objective
@@ -21,7 +20,8 @@ from pyomo.contrib.satsolver.satsolver import satisfiable
 from pyomo.core import (
     Objective, TransformationFactory,
     minimize, value, Constraint, Suffix)
-from pyomo.gdp import Disjunct, Disjunction
+from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.gdp import Disjunction
 from pyomo.opt import SolverFactory, SolverStatus, SolverResults
 from pyomo.opt import TerminationCondition as tc
 
@@ -138,7 +138,6 @@ class GDPbbSolver(object):
             process_objective(solve_data, config)
             objectives = solve_data.original_model.component_data_objects(Objective, active=True)
             obj = next(objectives, None)
-            solve_data.obj_sense_sign_factor = obj_sign = 1 if obj.sense == minimize else -1
             solve_data.results.problem.sense = obj.sense
 
             # set up lists to keep track of which disjunctions have been covered.
