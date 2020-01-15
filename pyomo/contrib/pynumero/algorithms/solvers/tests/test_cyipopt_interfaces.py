@@ -25,6 +25,12 @@ if not AmplInterface.available():
 
 import scipy.sparse as sp
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+
+try:
+    import ipopt
+except ImportError:
+    raise unittest.SkipTest("Pynumero needs cyipopt to run CyIpoptSolver tests")
+
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptNLP
 
 
