@@ -12,6 +12,7 @@ from pyomo.opt import SolverFactory
 class TestGDPBB(unittest.TestCase):
     """Tests for logic-based branch and bound."""
 
+    @unittest.skipUnless(SolverFactory('glpk').available(exception_flag=False))
     def test_deprecation_warning(self):
         """Test for deprecation warning with small infeasible GDP."""
         m = ConcreteModel()
