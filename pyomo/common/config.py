@@ -12,7 +12,7 @@ import os
 import platform
 
 import six
-from pyutilib.misc.config import ConfigValue
+from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
 
 if 'PYOMO_CONFIG_DIR' in os.environ:
     PYOMO_CONFIG_DIR = os.path.abspath(os.environ['PYOMO_CONFIG_DIR'])
