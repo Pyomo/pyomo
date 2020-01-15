@@ -11,6 +11,7 @@ jobs:
     name: py${{ matrix.python-version }}
     runs-on: macos-latest
     strategy:
+      fail-fast: false
       max-parallel: 5
       matrix:
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8] # All available Python versions
@@ -39,8 +40,8 @@ jobs:
         brew install freetds # Now install Python modules
 
         pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos
-        
-        pyomo download-extensions # Get Pyomo extensions 
+
+        pyomo download-extensions # Get Pyomo extensions
         pyomo build-extensions
     - name: Run nightly, not fragile tests with test.pyomo
       run: |

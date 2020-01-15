@@ -1,7 +1,7 @@
 name: continuous-integration/github/pr/win
 
-on: 
-  pull_request: 
+on:
+  pull_request:
     branches:
       - master
 
@@ -10,10 +10,12 @@ jobs:
     name: py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       max-parallel: 5
       matrix:
         os: ['windows-latest']
-        python-version: ['2.7', '3.5', '3.6', '3.7', '3.8']
+        python-version: [3.5, 3.6, 3.7, 3.8] # Note: 2.7 fails GitHub actions on win due to Deprecation warning - We are disabling it.
+
     steps:
     - uses: actions/checkout@v1
     - name: Set up Python ${{ matrix.python-version }} with Miniconda
@@ -53,7 +55,7 @@ jobs:
         Invoke-Expression "conda config --set auto_update_conda false"
         Write-Host ("")
         Write-Host ("Clone model library...")
-        Write-Host ("")     
+        Write-Host ("")
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
         $env:py = (Get-Command python).Version.Major
         Write-Host $env:py
@@ -62,14 +64,14 @@ jobs:
         Remove-Item 'C:\Miniconda\envs\test\lib\site-packages\pkg_resources\py2_warn.py'}
         Write-Host ("")
         Write-Host ("Install PyUtilib...")
-        Write-Host ("") 
+        Write-Host ("")
         git clone --quiet https://github.com/PyUtilib/pyutilib.git
         cd pyutilib
         python setup.py develop
         cd ..
         Write-Host ("")
         Write-Host ("Install Pyomo...")
-        Write-Host ("") 
+        Write-Host ("")
         python setup.py develop
     - name: Install extensions
       shell: pwsh
@@ -89,5 +91,5 @@ jobs:
         $env:WarningPreference = 'SilentlyContinue'
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
-        $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries -W ignore"
+        $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
         Invoke-Expression $env:EXP
