@@ -68,7 +68,7 @@ class GDPoptSolver(object):
     This solver implementation was developed by Carnegie Mellon University in the
     research group of Ignacio Grossmann.
 
-    For nonconvex problems, the bounds self.LB and self.UB may not be rigorous.
+    For nonconvex problems, LOA may not report rigorous lower/upper bounds.
 
     Questions: Please make a post at StackOverflow and/or contact Qi Chen
     <https://github.com/qtothec>.
