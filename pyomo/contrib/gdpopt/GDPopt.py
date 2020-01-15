@@ -8,6 +8,7 @@
 - update logging information to include subsolver options
 - improve SuppressInfeasibleWarning
 - simplify mip preprocessing
+- remove not-fully-implemented 'backtracking' from LOA
 19.10.11 changes:
 - bugfix on SolverStatus error message
 19.5.13 changes:
