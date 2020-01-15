@@ -18,24 +18,27 @@ This module provides support for including units within Pyomo expressions, and p
 methods for checking the consistency of units within those expresions.
 
 To use this package within your Pyomo model, you first need an instance of a PyomoUnitsContainer.
-You can use the module level instance called `units` and use the pre-defined units in expressions or
-components.
+You can use the module level instance obtained by calling `:func:units()`.
 
-Examples:
-    To use a unit within an expression, simply reference the desired unit as an attribute on the
-    module singleton `units`.
+Examples: 
+    To use a unit within an expression, simply reference the desired
+    unit as an attribute on the PyomoUnitsContainer. This module has a
+    singleton units container that can be accessed with the module
+    function `:func:units()`.
 
     .. doctest::
 
-       >>> from pyomo.environ import ConcreteModel, Var, Objective, units # import components and 'units' instance
+       >>> # import components and units module level function
+       >>> from pyomo.environ import ConcreteModel, Var, Objective, units
+       >>> un = units()
        >>> model = ConcreteModel()
        >>> model.acc = Var()
-       >>> model.obj = Objective(expr=(model.acc*units.m/units.s**2 - 9.81*units.m/units.s**2)**2)
+       >>> model.obj = Objective(expr=(model.acc*un.m/un.s**2 - 9.81*un.m/un.s**2)**2)
        >>> print(units.get_units(model.obj.expr))
        m ** 2 / s ** 4
 
-.. note:: This module has a module level instance of a PyomoUnitsContainer called `units` that you
-         should use for creating, retreiving, and checking units
+.. note:: This module has a module level instance of a PyomoUnitsContainer that you can access using
+          `:func:units()`. This should typically be used for creating, retreiving, and checking units
 
 .. note:: This is a work in progress. Once the components units implementations are complete, the units will eventually
           work similar to the following.
@@ -43,9 +46,10 @@ Examples:
           .. code-block:: python
 
              from pyomo.environ import ConcreteModel, Var, Objective, units
+             un = units()
              model = ConcreteModel()
-             model.x = Var(units=units.kg/units.m)
-             model.obj = Objective(expr=(model.x - 97.2*units.kg/units.m)**2)
+             model.x = Var(units=un.kg/un.m)
+             model.obj = Objective(expr=(model.x - 97.2*un.kg/un.m)**2)
 
 Notes:
     * The implementation is currently based on the `pint <http://pint.readthedocs.io>`_
@@ -737,8 +741,7 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         """
         assert len(list_of_unit_tuples) == 1
 
-        pyomo_unit = list_of_unit_tuples[0][0]
-        pint_unit = list_of_unit_tuples[0][1]
+        pyomo_unit, pint_unit = list_of_unit_tuples[0]
         return (pyomo_unit, pint_unit)
 
     def _get_dimensionless_with_dimensionless_children(self, node, list_of_unit_tuples):
@@ -884,8 +887,7 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         """
         assert len(list_of_unit_tuples) == 1
 
-        pyomo_unit = list_of_unit_tuples[0][0]
-        pint_unit = list_of_unit_tuples[0][1]
+        pyomo_unit, pint_unit = list_of_unit_tuples[0]
         if pint_unit is None:
             assert pyomo_unit is None
             # unitless, all is OK
@@ -920,8 +922,7 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         """
         assert len(list_of_unit_tuples) == 1
 
-        pyomo_unit = list_of_unit_tuples[0][0]
-        pint_unit = list_of_unit_tuples[0][1]
+        pyomo_unit, pint_unit = list_of_unit_tuples[0]
         if not self._pint_unit_equivalent_to_dimensionless(pint_unit):
             raise UnitsError('Expected dimensionless argument to function in expression {},'
                              ' but found {}'.format(
@@ -1042,11 +1043,14 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
 class PyomoUnitsContainer(object):
     """Class that is used to create and contain units in Pyomo.
 
-    This is the class that is used to create, contain, and interact with units in Pyomo.
-    The module (:mod:`pyomo.core.base.units_container`) also contains a module attribute
-    called `units` that is a singleton instance of a PyomoUnitsContainer. This singleton should be
-    used instead of creating your own instance of a :py:class:`PyomoUnitsContainer`.
-    For an overview of the usage of this class, see the module documentation
+    This is the class that is used to create, contain, and interact
+    with units in Pyomo.  The module
+    (:mod:`pyomo.core.base.units_container`) also contains a function
+    `:func:units()` that returns a singleton instance of a
+    PyomoUnitsContainer. This singleton should typically be used
+    instead of creating your own instance of a
+    :py:class:`PyomoUnitsContainer`.  For an overview of the usage of
+    this class, see the module documentation
     (:mod:`pyomo.core.base.units_container`)
 
     This class is based on the "pint" module. Documentation for available units can be found
@@ -1055,27 +1059,17 @@ class PyomoUnitsContainer(object):
     Note: Pre-defined units can be accessed through attributes on the PyomoUnitsContainer
     class; however, these attributes are created dynamically through the __getattr__ method,
     and are not present on the class until they are requested.
+
     """
     def __init__(self):
         """Create a PyomoUnitsContainer instance. """
-        # Developers: Do not interact with this attribute directly, but instead
-        # access through the property _pint_registry since that is where the import
-        # of the 'pint' module is checked
-        self.__pint_registry = None
-
-    @property
-    def _pint_registry(self):
-        """ Return the pint.UnitsRegistry instance corresponding to this container. """
         if pint_module is None:
             # pint was not imported for some reason
             raise RuntimeError("The PyomoUnitsContainer in the units_container module requires"
                               " the package 'pint', but this package could not be imported."
                               " Please make sure you have 'pint' installed.")
 
-        if self.__pint_registry is None:
-            self.__pint_registry = pint_module.UnitRegistry()
-
-        return self.__pint_registry
+        self._pint_registry = pint_module.UnitRegistry()
 
     def __getattr__(self, item):
         """
@@ -1312,6 +1306,9 @@ class PyomoUnitsContainer(object):
 
 #: Module level instance of a PyomoUnitsContainer to use for all units within a Pyomo model
 # See module level documentation for an example.
-units = PyomoUnitsContainer()
-
-
+_pyomo_units_container = None
+def units():
+    global _pyomo_units_container
+    if _pyomo_units_container is None:
+        _pyomo_units_container = PyomoUnitsContainer()
+    return _pyomo_units_container
