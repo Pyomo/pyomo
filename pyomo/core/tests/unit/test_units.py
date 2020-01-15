@@ -450,6 +450,18 @@ class TestPyomoUnit(unittest.TestCase):
         model.obj = Objective(expr=(model.acc*units().m/units().s**2 - 9.81*units().m/units().s**2)**2)
         self.assertEqual('m ** 2 / s ** 4', str(units().get_units(model.obj.expr)))
 
+    def test_convert_value(self):
+        u = units()
+        x = 0.4535923*u.kg
+        expected_lb_value = 1.0
+        actual_lb_value = u.convert_value(src=x, from_units=u.kg, to_units=u.lb)
+        self.assertAlmostEqual(expected_lb_value, actual_lb_value, places=5)
+        actual_lb_value = u.convert_value(src=x, to_units=u.lb)
+        self.assertAlmostEqual(expected_lb_value, actual_lb_value, places=5)
+
+        with self.assertRaises(UnitsError):
+            actual_lb_value = u.convert_value(src=x, from_units=u.meters, to_units=u.lb)
+
 
 if __name__ == "__main__":
     unittest.main()

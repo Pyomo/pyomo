@@ -388,7 +388,7 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
 
         units_equivalence_tolerance : float (default 1e-12)
             Floating point tolerance used when deciding if units are equivalent
-            or not. (It can happen that units
+            or not.
 
         Notes
         -----
@@ -1279,30 +1279,52 @@ class PyomoUnitsContainer(object):
         pyomo_unit2, pint_unit2 = self._get_units_tuple(expr2)
         return _UnitExtractionVisitor(self)._pint_units_equivalent(pint_unit1, pint_unit2)
 
-    # def convert_value(self, src_value, from_units=None, to_units=None):
-    #     """
-    #     This method performs explicit conversion of a numerical value in
-    #     one unit to a numerical value in another unit.
-    #
-    #     Parameters
-    #     ----------
-    #     src_value : float
-    #        The numeric value that will be converted
-    #     from_units : Pyomo expression with units
-    #        The source units for value
-    #     to_units : Pyomo expression with units
-    #        The desired target units for the new value
-    #
-    #     Returns
-    #     -------
-    #        float : The new value (src_value converted from from_units to to_units)
-    #     """
-    #     from_pyomo_unit, from_pint_unit = self._get_units_tuple(from_units)
-    #     to_pyomo_unit, to_pint_unit = self._get_units_tuple(to_units)
-    #
-    #     src_quantity = src_value * pint_src_unit
-    #     dest_quantity = src_quantity.to(pint_dest_unit)
-    #     return dest_quantity.magnitude
+    def convert_value(self, src, from_units=None, to_units=None):
+        """
+        This method performs explicit conversion of a numerical value (or
+        expression evaluated to a numerical value) from one unit to
+        another, and returns the new value.
+
+        If src is a native numerical type (e.g. float), then
+        from_units must be specified. If src is a Pyomo expression AND
+        from_units is None, then this code will retrieve the
+        from_units from the expression itself. Note that this method
+        returns a numerical value (not another Pyomo expression), so
+        any Pyomo expression passed in src will be evaluated.
+
+        If from_units is provided, but it does not agree with the units
+        in src, then an expection is raised.
+
+        Parameters
+        ----------
+        src : float or Pyomo expression
+           The source value that will be converted
+        from_units : None or Pyomo units expression
+           The units on the src. If None, then this mehtod will try
+           to retrieve the units from the src as a Pyomo expression
+        to_units : Pyomo units expression
+           The desired target units for the new value
+
+        Returns
+        -------
+           float : The converted value
+
+        """
+        src_pyomo_unit, src_pint_unit = self._get_units_tuple(src)
+        if from_units is None:
+            from_pyomo_unit, from_pint_unit = src_pyomo_unit, src_pint_unit
+        else:
+            from_pyomo_unit, from_pint_unit = self._get_units_tuple(from_units)
+            if src_pint_unit is not None and \
+               not _UnitExtractionVisitor(self)._pint_units_equivalent(src_pint_unit, from_pint_unit):
+                raise UnitsError('convert_value called with a src argument that contains units'
+                                 ' that do not agree with the from_units argument.')
+        to_pyomo_unit, to_pint_unit = self._get_units_tuple(to_units)
+
+        # convert the values
+        src_quantity = value(src) * from_pint_unit
+        dest_quantity = src_quantity.to(to_pint_unit)
+        return dest_quantity.magnitude
 
 #: Module level instance of a PyomoUnitsContainer to use for all units within a Pyomo model
 # See module level documentation for an example.
