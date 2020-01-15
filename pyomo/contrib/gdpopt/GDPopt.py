@@ -222,4 +222,4 @@ DOI: 10.1016/S0098-1354(00)00581-0.
 
 # Add the CONFIG arguments to the solve method docstring
 GDPoptSolver.solve.__doc__ = add_docstring_list(
-    GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_spacing=4)
+    GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_by=8)
