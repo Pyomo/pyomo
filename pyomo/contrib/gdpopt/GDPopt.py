@@ -25,8 +25,6 @@
 """
 from __future__ import division
 
-from textwrap import indent
-
 from six import StringIO
 
 from pyomo.common.config import (
@@ -40,7 +38,7 @@ from pyomo.contrib.gdpopt.master_initialize import (
 )
 from pyomo.contrib.gdpopt.util import (
     presolve_lp_nlp, process_objective,
-    time_code,
+    time_code, indent,
     setup_solver_environment)
 from pyomo.opt.base import SolverFactory
 
