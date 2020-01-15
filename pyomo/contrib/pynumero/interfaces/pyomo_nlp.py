@@ -68,7 +68,6 @@ class PyomoNLP(AslNLP):
             # delete the nl file
             pyutilib.services.TempfileManager.pop()
 
-    @property
     def pyomo_model(self):
         """
         Return optimization model
