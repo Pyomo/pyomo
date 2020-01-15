@@ -1,16 +1,12 @@
 import traceback
 from collections import namedtuple
-from heapq import heappush, heappop, heapreplace
-from math import fabs
+from heapq import heappush, heappop
 
-from pyomo.contrib.gdpopt.util import copy_var_list_values
+from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWarning
 from pyomo.contrib.satsolver.satsolver import satisfiable
-from pyomo.core import minimize, Block, Suffix, Constraint, ComponentMap, TransformationFactory, Objective, value
-from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.gdp import Disjunct, Disjunction
+from pyomo.core import minimize, Suffix, Constraint, ComponentMap, TransformationFactory
 from pyomo.opt import SolverFactory, SolverStatus
 from pyomo.opt import TerminationCondition as tc
-
 
 _linear_degrees = {1, 0}
 
@@ -246,7 +242,8 @@ def _solve_rnGDP_subproblem(model, solve_data):
     obj_sense_correction = solve_data.objective_sense != minimize
 
     try:
-        result = SolverFactory(config.minlp_solver).solve(subproblem, **config.minlp_solver_args)
+        with SuppressInfeasibleWarning():
+            result = SolverFactory(config.minlp_solver).solve(subproblem, **config.minlp_solver_args)
     except RuntimeError as e:
         config.logger.warning(
             "Solver encountered RuntimeError. Treating as infeasible. "
@@ -311,7 +308,8 @@ def _solve_local_rnGDP_subproblem(model, solve_data):
     obj_sense_correction = solve_data.objective_sense != minimize
 
     try:
-        result = SolverFactory('gams').solve(subproblem,)
+        with SuppressInfeasibleWarning():
+            result = SolverFactory(config.local_minlp_solver).solve(subproblem, **config.local_minlp_solver_args)
     except RuntimeError as e:
         config.logger.warning(
             "Solver encountered RuntimeError. Treating as infeasible. "

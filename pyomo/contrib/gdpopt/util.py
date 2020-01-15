@@ -2,9 +2,11 @@
 from __future__ import division
 
 import logging
-import six
-from math import fabs, floor, log
+import timeit
+from contextlib import contextmanager
+from math import fabs
 
+import six
 from pyutilib.misc import Container
 
 from pyomo.common import deprecated
@@ -12,15 +14,12 @@ from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.core import (Block, Constraint,
-                        Objective, Reals, Var, minimize, value, Expression, ConstraintList)
+                        Objective, Reals, Var, minimize, value, ConstraintList)
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory, SolverResults
 from pyomo.opt.results import ProblemSense
-from pyomo.common.log import LoggingIntercept
-import timeit
-from contextlib import contextmanager
 from pyomo.util.model_size import build_model_size_report
 
 
@@ -43,33 +42,32 @@ class _DoNothing(object):
         return _do_nothing
 
 
-class SuppressInfeasibleWarning(LoggingIntercept):
+class SuppressInfeasibleWarning(object):
     """Suppress the infeasible model warning message from solve().
 
     The "WARNING: Loading a SolverResults object with a warning status" warning
     message from calling solve() is often unwanted, but there is no clear way
     to suppress it.
 
+    This is modeled on LoggingIntercept from pyomo.common.log,
+    but different in function.
+
     """
 
-    def __init__(self):
-        self._captured_warning = six.StringIO()
-        super(SuppressInfeasibleWarning, self).__init__(
-            self._captured_warning, 'pyomo.core', logging.WARNING)
+    class InfeasibleWarningFilter(logging.Filter):
+        def filter(self, record):
+            return not record.getMessage().startswith(
+                "Loading a SolverResults object with a warning status into model=")
 
-    def __exit__(self, *args):
-        super(SuppressInfeasibleWarning, self).__exit__(*args)
-        captured_warning = self._captured_warning.getvalue().strip()
-        if captured_warning:
-            # Check to make sure the warning is what we expect
-            if not captured_warning.startswith(
-                "Loading a SolverResults object with a warning status into"
-            ) or not captured_warning.endswith(
-                "Problem may be infeasible."
-            ):
-                # Warning is different than expected. Forward warning to user.
-                logger = logging.getLogger('pyomo.core')
-                logger.warning(captured_warning)
+    warning_filter = InfeasibleWarningFilter()
+
+    def __enter__(self):
+        logger = logging.getLogger('pyomo.core')
+        logger.addFilter(self.warning_filter)
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        logger = logging.getLogger('pyomo.core')
+        logger.removeFilter(self.warning_filter)
 
 
 def presolve_lp_nlp(solve_data, config):
@@ -537,4 +535,3 @@ def setup_solver_environment(model, config):
     solve_data.results.solver.timing = solve_data.timing
     solve_data.results.solver.user_time = solve_data.timing.total
     solve_data.results.solver.wallclock_time = solve_data.timing.total
-

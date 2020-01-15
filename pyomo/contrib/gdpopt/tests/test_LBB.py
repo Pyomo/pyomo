@@ -1,14 +1,11 @@
 """Tests for the Logic-based Branch and Bound solver plugin."""
-import logging
 
 from math import fabs
 from os.path import abspath, dirname, join, normpath
 
 import pyutilib.th as unittest
 from pyutilib.misc import import_file
-from six import StringIO
 
-from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.satsolver.satsolver import _z3_available
 from pyomo.environ import SolverFactory, value, ConcreteModel, Var, Objective, maximize
 from pyomo.gdp import Disjunction
@@ -118,6 +115,24 @@ class TestGDPopt_LBB(unittest.TestCase):
         )
         objective_value = value(model.obj.expr)
         self.assertAlmostEqual(objective_value, 4.46, 2)
+
+    @unittest.skipUnless(license_available, "Problem is too big for unlicensed BARON.")
+    @unittest.skipUnless(SolverFactory('bonmin').available(), "Bonmin is not avaialable")
+    def test_LBB_8PP_with_screening(self):
+        """Test the logic-based branch and bound algorithm."""
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        SolverFactory('gdpopt').solve(
+            eight_process, tee=False,
+            strategy='LBB',
+            minlp_solver=minlp_solver,
+            minlp_solver_args=minlp_args,
+            solve_local_rnGDP=True,
+            local_minlp_solver='bonmin',
+            local_minlp_solver_args={},
+        )
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
 
 @unittest.skipUnless(solver_available, "Required subsolver %s is not available" % (minlp_solver,))
