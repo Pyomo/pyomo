@@ -10,12 +10,11 @@ jobs:
     name: py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: false # This flag causes all of the matrix to continue to run, even if one matrix option fails
       max-parallel: 5
       matrix:
         os: ['windows-latest']
-        python-version: [3.5, 3.6, 3.7, 3.8] # Note: 2.7 fails GitHub actions on win due to Deprecation warning - We are disabling it.
-
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8] 
     steps:
     - uses: actions/checkout@v1
     - name: Set up Python ${{ matrix.python-version }} with Miniconda
@@ -26,6 +25,7 @@ jobs:
     - name: Install dependencies
       shell: pwsh
       run: |
+        $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host ("Current Enviroment variables: ")
         gci env: | Sort Name
         Write-Host ("")
@@ -54,17 +54,9 @@ jobs:
         Invoke-Expression "conda config --set always_yes yes"
         Invoke-Expression "conda config --set auto_update_conda false"
         Write-Host ("")
-        Write-Host ("Clone model library...")
+        Write-Host ("Clone model library and install PyUtilib...")
         Write-Host ("")
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
-        $env:py = (Get-Command python).Version.Major
-        Write-Host $env:py
-        if ($env:py -contains 0) { # Python 2 Major Version shows up as 0
-        Write-Host ("WARNING: Python 2.7 End-Of-Life")
-        Remove-Item 'C:\Miniconda\envs\test\lib\site-packages\pkg_resources\py2_warn.py'}
-        Write-Host ("")
-        Write-Host ("Install PyUtilib...")
-        Write-Host ("")
         git clone --quiet https://github.com/PyUtilib/pyutilib.git
         cd pyutilib
         python setup.py develop
@@ -76,19 +68,17 @@ jobs:
     - name: Install extensions
       shell: pwsh
       run: |
-        $env:PYTHONWARNINGS="ignore::DeprecationWarning"
-        $env:WarningPreference = 'SilentlyContinue'
+        $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host "Pyomo download-extensions"
-        Invoke-Expression "pyomo download-extensions -W ignore"
-        Invoke-Expression "pyomo build-extensions -W ignore"
+        Invoke-Expression "pyomo download-extensions"
+        Invoke-Expression "pyomo build-extensions"
         Write-Host "Calling solvers"
         Invoke-Expression "glpsol -v"
         Invoke-Expression "ipopt -v"
     - name: Run nightly tests with test.pyomo
       shell: pwsh
       run: |
-        $env:PYTHONWARNINGS="ignore::DeprecationWarning"
-        $env:WarningPreference = 'SilentlyContinue'
+        $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
         $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
