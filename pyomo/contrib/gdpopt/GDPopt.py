@@ -156,21 +156,26 @@ class GDPoptSolver(object):
         mip_args_output = StringIO()
         nlp_args_output = StringIO()
         minlp_args_output = StringIO()
+        lminlp_args_output = StringIO()
         config.mip_solver_args.display(ostream=mip_args_output)
         config.nlp_solver_args.display(ostream=nlp_args_output)
         config.minlp_solver_args.display(ostream=minlp_args_output)
+        config.local_minlp_solver_args.display(ostream=lminlp_args_output)
         mip_args_text = indent(mip_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
         nlp_args_text = indent(nlp_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
         minlp_args_text = indent(minlp_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
+        lminlp_args_text = indent(lminlp_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
         mip_args_text = "" if len(mip_args_text.strip()) == 0 else "\n" + mip_args_text
         nlp_args_text = "" if len(nlp_args_text.strip()) == 0 else "\n" + nlp_args_text
         minlp_args_text = "" if len(minlp_args_text.strip()) == 0 else "\n" + minlp_args_text
+        lminlp_args_text = "" if len(lminlp_args_text.strip()) == 0 else "\n" + lminlp_args_text
         config.logger.info(
             """
 Subsolvers:
 - MILP: {milp}{milp_args}
 - NLP: {nlp}{nlp_args}
 - MINLP: {minlp}{minlp_args}
+- local MINLP: {lminlp}{lminlp_args}
             """.format(
                 milp=config.mip_solver,
                 milp_args=mip_args_text,
@@ -178,6 +183,8 @@ Subsolvers:
                 nlp_args=nlp_args_text,
                 minlp=config.minlp_solver,
                 minlp_args=minlp_args_text,
+                lminlp=config.local_minlp_solver,
+                lminlp_args=lminlp_args_text,
             ).strip()
         )
         to_cite_text = """
