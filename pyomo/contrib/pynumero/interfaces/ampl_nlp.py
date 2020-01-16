@@ -27,8 +27,8 @@ __all__ = ['AslNLP', 'AmplNLP']
 
 # TODO: need to add support for obj_factor
 # ToDo: need to add support for modifying bounds.
-# support for variable bounds seems trivial.
-# support for constraint bounds would require more work. (this is less frequent?)
+# support for changing variable bounds seems possible.
+# support for changing inequality bounds would require more work. (this is less frequent?)
 # TODO: check performance impacts of cacheing - memory and computational time.
 # TODO: only create and cache data for ExtendedNLP methods if they are ever asked for
 # TODO: There are todos in the code below
