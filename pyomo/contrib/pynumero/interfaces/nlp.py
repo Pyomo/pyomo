@@ -54,9 +54,6 @@ import abc
 
 __all__ = ['NLP']
 
-#TODO: Decide if we need the condensing matrix stuff
-# we could simplify this interface and provide some utility functions
-# to create the necessary masks if an algorithm needed it
 @six.add_metaclass(abc.ABCMeta)
 class NLP(object):
     def __init__(self):
