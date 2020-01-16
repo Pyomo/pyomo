@@ -547,12 +547,8 @@ class TestPyomoNLP(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
         m.c = pyo.Constraint(expr=2.0*m.x>=5)
-        nlp = PyomoNLP(m)
-        xinit = np.ones(1)
-        nlp.set_primals(xinit)
-        # let's just make sure the constraints still work even though there is no obj
-        self.assertTrue(np.array_equal(2.0*np.ones(1), nlp.evaluate_constraints()))
-
+        with self.assertRaises(NotImplementedError):
+            nlp = PyomoNLP(m)
 
 @unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestUtils(unittest.TestCase):

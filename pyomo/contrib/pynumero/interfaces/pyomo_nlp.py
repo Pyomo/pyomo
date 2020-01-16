@@ -38,11 +38,19 @@ class PyomoNLP(AslNLP):
             # get the temp file names for the nl file
             nl_file = pyutilib.services.TempfileManager.create_tempfile(suffix='pynumero.nl')
 
-            # add a dummy objective if one does not exist
-            # TODO: Do we need this?
+            
+            # The current AmplInterface code only supports a single objective function
+            # Therefore, we throw an error if there is not one (and only one) active
+            # objective function. This is better than adding a dummy objective that the
+            # user does not know about (since we do nnot have a good place to remove
+            # this objective later
+            # TODO: extend the AmplInterface and the AslNLP to correctly handle this
+            # This currently addresses issue #1217
             objectives = list(pyomo_model.component_data_objects(ctype=aml.Objective, active=True, descend_into=True))
-            if len(objectives) == 0:
-                pyomo_model._dummy_obj = aml.Objective(expr=0.0)
+            if len(objectives) != 1:
+                raise NotImplementedError('The ASL interface and PyomoNLP in PyNumero currently only support single objective'
+                                          ' problems. Deactivate any extra objectives you may have, or add a dummy objective'
+                                          ' (f(x)=0) if you have a square problem.')
 
             # write the nl file for the Pyomo model and get the symbolMap
             fname, symbolMap = pyomo.opt.WriterFactory('nl')(pyomo_model, nl_file, lambda x:True, {})
