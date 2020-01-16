@@ -58,7 +58,7 @@ __all__ = ['NLP']
 # we could simplify this interface and provide some utility functions
 # to create the necessary masks if an algorithm needed it
 @six.add_metaclass(abc.ABCMeta)
-class NLP(abc.ABC):
+class NLP(object):
     def __init__(self):
         pass
     
