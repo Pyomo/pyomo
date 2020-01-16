@@ -660,7 +660,7 @@ class AmplNLP(AslNLP):
 
     def constraint_names(self):
         """Returns an ordered list with the names of all the constraints
-        (corresponding to evaluate_consraints)"""
+        (corresponding to evaluate_constraints)"""
         return list(self._con_full_idx_to_name)
 
     def eq_constraint_names(self):
