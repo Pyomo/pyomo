@@ -1,13 +1,13 @@
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-import pyomo.environ as aml
+import pyomo.environ as pyo
 
 
 def create_model():
-    m = aml.ConcreteModel()
-    m.x = aml.Var([1, 2, 3], initialize=4.0)
-    m.c = aml.Constraint(expr=m.x[3] ** 2 + m.x[1] == 25)
-    m.d = aml.Constraint(expr=m.x[2] ** 2 + m.x[1] <= 18.0)
-    m.o = aml.Objective(expr=m.x[1] ** 4 - 3 * m.x[1] * m.x[2] ** 3 + m.x[3] ** 2 - 8.0)
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var([1, 2, 3], initialize=4.0)
+    m.c = pyo.Constraint(expr=m.x[3] ** 2 + m.x[1] == 25)
+    m.d = pyo.Constraint(expr=m.x[2] ** 2 + m.x[1] <= 18.0)
+    m.o = pyo.Objective(expr=m.x[1] ** 4 - 3 * m.x[1] * m.x[2] ** 3 + m.x[3] ** 2 - 8.0)
     m.x[1].setlb(0.0)
     m.x[2].setlb(0.0)
 
