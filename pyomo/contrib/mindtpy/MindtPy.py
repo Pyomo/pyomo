@@ -29,7 +29,7 @@ from pyomo.contrib.gdpopt.util import (
     _DoNothing, copy_var_list_values,
     create_utility_block,
     restore_logger_level, time_code,
-    setup_results_object, process_objective, a_logger)
+    setup_results_object, process_objective, a_logger, lower_logger_level_to)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_master
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
 from pyomo.contrib.mindtpy.util import (
@@ -257,13 +257,10 @@ class MindtPySolver(object):
                 apply_to(solve_data.working_model)
 
 
-        old_logger_level = config.logger.getEffectiveLevel()
+        new_logging_level = logging.INFO if config.tee else None
         with time_code(solve_data.timing, 'total', is_main_timer=True), \
-             restore_logger_level(config.logger), \
+             lower_logger_level_to(config.logger, new_logging_level), \
              create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
-            if config.tee and old_logger_level > logging.INFO:
-                # If the logger does not already include INFO, include it.
-                config.logger.setLevel(logging.INFO)
             config.logger.info("---Starting MindtPy---")
 
             MindtPy = solve_data.working_model.MindtPy_utils

@@ -175,7 +175,7 @@ class brancherextension(pyomo.common.plugin.SingletonPlugin):
             return False, ("N/A", 0)
         
 #=========================
-        def Select_var_by_dist_from_xbar(self, ph):
+    def Select_var_by_dist_from_xbar(self, ph):
         # assuming the solve is complete, find a good variable on which to branch
         # we want the biggest dist from the lowest stage with a non-zero...
         # this is looking for an outlier with general ints, but for binaries, it picks the var
