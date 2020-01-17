@@ -106,6 +106,7 @@ after_success:
   - ${DOC} coverage combine
   - ${DOC} codecov --env TAG -X gcov
     # Trigger PyomoGallery build, but only when building the master branch
+    # Note: this is disabled unless a token is injected through an
+    # environment variable
   - "if [ -n \"${SECRET_TRAVIS_TOKEN}\" -a -n \"${KEY_JOB}\" -a \"${TRAVIS_PULL_REQUEST}\" == false ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token ${SECRET_TRAVIS_TOKEN}' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
 
-deploy:
