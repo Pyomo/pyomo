@@ -105,13 +105,16 @@ class CPLEXDirect(DirectSolver):
             for block in self._pyomo_model.block_data_objects(descend_into=True, active=True):
                 for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=False, active=True, sort=False):
                     var.stale = True
+        _log_file = self._log_file
+        if (self.version()[0] > 12) or (self.version()[0] == 12 and self.version()[1] >= 10):
+            _log_file = open(self._log_file, 'w')
         if self._tee:
             def _process_stream(arg):
                 sys.stdout.write(arg)
                 return arg
-            self._solver_model.set_results_stream(self._log_file, _process_stream)
+            self._solver_model.set_results_stream(_log_file, _process_stream)
         else:
-            self._solver_model.set_results_stream(self._log_file)
+            self._solver_model.set_results_stream(_log_file)
 
         if self._keepfiles:
             print("Solver log file: "+self._log_file)
@@ -181,6 +184,8 @@ class CPLEXDirect(DirectSolver):
         self._solver_model.solve()
         t1 = time.time()
         self._wallclock_time = t1 - t0
+        if (self.version()[0] > 12) or (self.version()[0] == 12 and self.version()[1] >= 10):
+            _log_file.close()
 
         # FIXME: can we get a return code indicating if CPLEX had a significant failure?
         return Bunch(rc=None, log=None)
