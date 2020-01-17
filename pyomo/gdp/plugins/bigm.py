@@ -338,9 +338,9 @@ class BigM_Transformation(Transformation):
 
         # add or (or xor) constraint
         if xor:
-            xorConstraint.add(index, (or_expr, 1))
+            xorConstraint.add(index, expr=or_expr == 1)
         else:
-            xorConstraint.add(index, (1, or_expr, None))
+            xorConstraint.add(index, expr=or_expr >= 1)
         # Mark the DisjunctionData as transformed by mapping it to its XOR
         # constraint.
         obj._algebraic_constraint = weakref_ref(xorConstraint[index])
