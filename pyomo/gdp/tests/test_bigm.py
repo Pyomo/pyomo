@@ -218,8 +218,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
     def test_xor_constraints(self):
         m = models.makeTwoTermDisj()
         TransformationFactory('gdp.bigm').apply_to(m)
-        # make sure we created the xor constraint and put it on the parent
-        # block of the disjunction--in this case the model.
+        # make sure we created the xor constraint and put it on the relaxation
+        # block
         xor = m._pyomo_gdp_bigm_relaxation.component("disjunction_xor")
         self.assertIsInstance(xor, Constraint)
         self.assertIs(m.d[0].indicator_var, xor.body.arg(0))
@@ -468,6 +468,14 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             bigM={None: (-20,19)})
         self.checkMs(m, -20, -20, 19, 19)
 
+    # TODO: This does not in fact work, but it doesn't know that...
+    def test_block_M_arg(self):
+        m = models.makeTwoTermDisj_IndexedConstraints()
+        TransformationFactory('gdp.bigm').apply_to(
+            m,
+            bigM={m.b: 100, m.b.simpledisj1.c: 13})
+        #set_trace()
+
     def test_tuple_M_suffix(self):
         m = models.makeTwoTermDisj()
         m.BigM = Suffix(direction=Suffix.LOCAL)
@@ -636,7 +644,8 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
         # check_linear_coef(self, repn, m.x, 1)
         check_linear_coef(self, repn, m.disj_disjuncts[0].indicator_var, 114)
         self.assertEqual(repn.constant, -114)
-        self.assertEqual(c[1, 'ub'].upper, m.disj_disjuncts[0].constraint[1].upper)
+        self.assertEqual(c[1, 'ub'].upper,
+                         m.disj_disjuncts[0].constraint[1].upper)
         self.assertIsNone(c[1, 'ub'].lower)
         # first disjunct, second constraint
         repn = generate_standard_repn(c[2, 'lb'].body)
@@ -645,7 +654,8 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
         # check_linear_coef(self, repn, m.x, 1)
         check_linear_coef(self, repn, m.disj_disjuncts[0].indicator_var, -104.5)
         self.assertEqual(repn.constant, 104.5)
-        self.assertEqual(c[2, 'lb'].lower, m.disj_disjuncts[0].constraint[2].lower)
+        self.assertEqual(c[2, 'lb'].lower,
+                         m.disj_disjuncts[0].constraint[2].lower)
         self.assertIsNone(c[2, 'lb'].upper)
         # second disjunct, first constraint
         c = disjBlock[1].component("disj_disjuncts[1].constraint")
@@ -657,7 +667,8 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
         check_linear_coef(self, repn, m.y, -6)
         check_linear_coef(self, repn, m.disj_disjuncts[1].indicator_var, 217)
         self.assertEqual(repn.constant, -199)
-        self.assertEqual(c[1, 'ub'].upper, m.disj_disjuncts[1].constraint[1].upper)
+        self.assertEqual(c[1, 'ub'].upper,
+                         m.disj_disjuncts[1].constraint[1].upper)
         self.assertIsNone(c[1, 'ub'].lower)
 
 
@@ -788,20 +799,10 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         self.assertIs(m.disjunction._algebraic_constraint(),
                       transBlock.disjunction_xor)
 
-    # TODO: I don't know if this is even interesting. It looks like using Skip
-    # just means the index is not created, which is absolutely fine.
-
-    # def test_indexed_disjunction_skip_index(self):
-    #     m = models.makeIndexedDisjunction_SkipIndex()
-    #     TransformationFactory('gdp.bigm').apply_to(m)
-
-    #     set_trace()
-
-
 class DisjOnBlock(unittest.TestCase, CommonTests):
-    # when the disjunction is on a block, we want the xor constraint
-    # on its parent block, but the transformation block still on the
-    # model.
+    # when the disjunction is on a block, we want all of the stuff created by
+    # the transformation to go on that block also so that solving the block
+    # maintains its meaning
 
     def test_xor_constraint_added(self):
         m = models.makeTwoTermDisjOnBlock()
@@ -1774,7 +1775,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         # check that there is nothing in component map of the disjunct
         # transformation blocks
         #for i in range(1):
-            # ESJ: Is this change okay? I don't understand this test...
+            # TODO ESJ: Is this change okay? I don't understand this test...
         self.assertIsNone(m.disjunct[1]._pyomo_gdp_bigm_relaxation.\
                           component("relaxedDisjuncts"))
         self.assertIsNone(m.simpledisjunct._pyomo_gdp_bigm_relaxation.\
