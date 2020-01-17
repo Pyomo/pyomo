@@ -48,6 +48,8 @@ class CommonTests:
         modelcopy.pprint(ostream=modelcopy_buf)
         modelcopy_output = modelcopy_buf.getvalue()
 
+        # reset the seed for the apply_to call.
+        random.seed(666)
         TransformationFactory('gdp.chull').apply_to(model)
         model_buf = StringIO()
         model.pprint(ostream=model_buf)

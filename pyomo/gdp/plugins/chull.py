@@ -730,7 +730,6 @@ class ConvexHull_Transformation(Transformation):
         constraintMap['transformedConstraints'][obj] = newConstraint
         # add mapping of transformed constraint back to original constraint
         constraintMap['srcConstraints'][newConstraint] = obj
-        print(obj.name)
 
         for i in sorted(iterkeys(obj)):
             c = obj[i]
