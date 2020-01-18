@@ -550,7 +550,6 @@ class TestEmbeddedSP(unittest.TestCase):
         d = BetaDistribution(1,1)
         d.sample()
 
-TestEmbeddedSP = unittest.category('smoke','nightly','expensive')(TestEmbeddedSP)
 
 if __name__ == "__main__":
     unittest.main()

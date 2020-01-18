@@ -24,7 +24,8 @@ if not AmplInterface.available():
         "Pynumero needs the ASL extension to run NLP tests")
 
 
-from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP, NLP
+from pyomo.contrib.pynumero.interfaces.nlp import NLP
+from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.interfaces.nlp_compositions import TwoStageStochasticNLP
 from pyomo.contrib.pynumero.sparse import (BlockVector,
                                            BlockMatrix,

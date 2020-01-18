@@ -1,0 +1,85 @@
+name: continuous-integration/github/pr/win
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  pyomo-tests:
+    name: py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false # This flag causes all of the matrix to continue to run, even if one matrix option fails
+      max-parallel: 5
+      matrix:
+        os: ['windows-latest']
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8] 
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python ${{ matrix.python-version }} with Miniconda
+      uses: goanpeca/setup-miniconda@v1 # Using an action created by user goanpeca to set up different Python Miniconda environments
+      with:
+        auto-update-conda: true
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      shell: pwsh
+      run: |
+        $env:PYTHONWARNINGS="ignore::UserWarning"
+        Write-Host ("Current Enviroment variables: ")
+        gci env: | Sort Name
+        Write-Host ("")
+        Write-Host ("Setting Conda Env Vars... ")
+        Write-Host ("")
+        $env:CONDA_INSTALL = "conda install -q -y "
+        $env:ANACONDA = $env:CONDA_INSTALL + " -c anaconda "
+        $env:CONDAFORGE = $env:CONDA_INSTALL + " -c conda-forge --no-update-deps "
+        $env:USING_MINICONDA = 1
+        $env:ADDITIONAL_CF_PKGS="setuptools pip coverage sphinx_rtd_theme "
+        $env:MINICONDA_EXTRAS=""
+        $env:MINICONDA_EXTRAS="numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn "
+        $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + "pymysql pyro4 pint pathos " + $env:MINICONDA_EXTRAS
+        $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk ipopt"
+        $env:EXP = $env:CONDAFORGE + $env:ADDITIONAL_CF_PKGS
+        Invoke-Expression $env:EXP
+        Write-Host ("Installing GAMS")
+        Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
+        Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS'
+        $env:PATH += $(Get-Location).Path + "\gams"
+        Write-Host ("New Shell Environment: ")
+        gci env: | Sort Name
+        Write-Host ("")
+        Write-Host ("Update conda, then force it to NOT update itself again...")
+        Write-Host ("")
+        Invoke-Expression "conda config --set always_yes yes"
+        Invoke-Expression "conda config --set auto_update_conda false"
+        Write-Host ("")
+        Write-Host ("Clone model library and install PyUtilib...")
+        Write-Host ("")
+        git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
+        git clone --quiet https://github.com/PyUtilib/pyutilib.git
+        cd pyutilib
+        python setup.py develop
+        cd ..
+        Write-Host ("")
+        Write-Host ("Install Pyomo...")
+        Write-Host ("")
+        python setup.py develop
+    - name: Install extensions
+      shell: pwsh
+      run: |
+        $env:PYTHONWARNINGS="ignore::UserWarning"
+        Write-Host "Pyomo download-extensions"
+        Invoke-Expression "pyomo download-extensions"
+        Invoke-Expression "pyomo build-extensions"
+        Write-Host "Calling solvers"
+        Invoke-Expression "glpsol -v"
+        Invoke-Expression "ipopt -v"
+    - name: Run nightly tests with test.pyomo
+      shell: pwsh
+      run: |
+        $env:PYTHONWARNINGS="ignore::UserWarning"
+        Write-Host "Setup and run nosetests"
+        $env:BUILD_DIR = $(Get-Location).Path
+        $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
+        Invoke-Expression $env:EXP
