@@ -29,7 +29,7 @@ jobs:
         pip install numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd matplotlib dill
         pip install pandas # Pandas needs to be installed after its dependencies to work correctly for Python 2.7 
         pip install seaborn pymysql pyro4 pint pathos
-        pip install cplex
+        pip install cplex || echo "CPLEX Community Edition is not available for ${{ matrix.python-version }}"
         echo "Installing GAMS..."
         wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/linux/linux_x64_64_sfx.exe
         chmod +x linux_x64_64_sfx.exe

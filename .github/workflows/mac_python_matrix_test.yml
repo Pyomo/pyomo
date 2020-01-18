@@ -40,6 +40,7 @@ jobs:
         brew install freetds # Now install Python modules
 
         pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos
+        pip install cplex || echo "CPLEX Community Edition is not available for ${{ matrix.python-version }}"
 
         pyomo download-extensions # Get Pyomo extensions
         pyomo build-extensions
