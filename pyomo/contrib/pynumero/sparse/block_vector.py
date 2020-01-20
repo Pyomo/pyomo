@@ -58,34 +58,26 @@ class BlockVector(np.ndarray, BaseBlockVector):
     """
 
     def __new__(cls, vectors):
-
         if isinstance(vectors, int):
-            blocks = [None for i in range(vectors)]
-            block_mask = np.zeros(vectors, dtype=bool)
-            brow_lengths = np.zeros(vectors, dtype=np.int64)
-            arr = np.asarray(blocks, dtype='object')
-            obj = arr.view(cls)
-            obj._brow_lengths = np.array(brow_lengths, dtype=np.int64)
-            obj._block_mask = block_mask
-            obj._nblocks = len(brow_lengths)
-            obj._has_none = True
-            return obj
+            nblocks = vectors
         elif isinstance(vectors, list):
             nblocks = len(vectors)
-            blocks = [None for i in range(nblocks)]
-            block_mask = np.zeros(nblocks, dtype=bool)
-            brow_lengths = np.zeros(nblocks, dtype=np.int64)
-            arr = np.asarray(blocks, dtype='object')
-            obj = arr.view(cls)
-            obj._brow_lengths = np.array(brow_lengths, dtype=np.int64)
-            obj._block_mask = block_mask
-            obj._nblocks = len(brow_lengths)
-            obj._has_none = True
-            for idx, blk in enumerate(vectors):
-                obj[idx] = blk
-            return obj
         else:
             raise RuntimeError('Vectors must be a list of an integer')
+
+        blocks = [None for i in range(nblocks)]
+        arr = np.asarray(blocks, dtype='object')
+        obj = arr.view(cls)
+        obj._brow_lengths = np.zeros(nblocks, dtype=np.int64)
+        obj._block_mask = np.zeros(nblocks, dtype=bool)
+        obj._nblocks = nblocks
+        obj._has_none = True
+
+        if isinstance(vectors, list):
+            for idx, blk in enumerate(vectors):
+                obj[idx] = blk
+
+        return obj
 
     def __init__(self, vectors):
         pass
@@ -96,7 +88,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             return
         self._brow_lengths = getattr(obj, '_brow_lengths', None)
         self._nblocks = getattr(obj, '_nblocks', 0)
-        self._found_none = getattr(obj, '_has_none', True)
+        self._has_none = getattr(obj, '_has_none', True)
+        self._block_mask = getattr(obj, '_block_mask', None)
 
     def __array_prepare__(self, out_arr, context=None):
         """This method is required to subclass from numpy array"""
