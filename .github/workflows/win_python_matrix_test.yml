@@ -33,7 +33,7 @@ jobs:
         Write-Host ("")
         $env:CONDA_INSTALL = "conda install -q -y "
         $env:ANACONDA = $env:CONDA_INSTALL + " -c anaconda "
-        $env:CONDAFORGE = $env:CONDA_INSTALL + " -c conda-forge --no-update-deps "
+        $env:CONDAFORGE = $env:CONDA_INSTALL + " -c conda-forge --no-update-deps -c ibmdecisionoptimization cplex "
         $env:USING_MINICONDA = 1
         $env:ADDITIONAL_CF_PKGS="setuptools pip coverage sphinx_rtd_theme "
         $env:MINICONDA_EXTRAS=""
