@@ -33,7 +33,7 @@ jobs:
         Write-Host ("")
         $env:CONDA_INSTALL = "conda install -q -y "
         $env:ANACONDA = $env:CONDA_INSTALL + " -c anaconda "
-        $env:CONDAFORGE = $env:CONDA_INSTALL + " -c conda-forge --no-update-deps -c ibmdecisionoptimization cplex "
+        $env:CONDAFORGE = $env:CONDA_INSTALL + " -c conda-forge --no-update-deps "
         $env:USING_MINICONDA = 1
         $env:ADDITIONAL_CF_PKGS="setuptools pip coverage sphinx_rtd_theme "
         $env:MINICONDA_EXTRAS=""
@@ -41,6 +41,9 @@ jobs:
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + "pymysql pyro4 pint pathos " + $env:MINICONDA_EXTRAS
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk ipopt"
         $env:EXP = $env:CONDAFORGE + $env:ADDITIONAL_CF_PKGS
+        $env:CPLEX = $env:CONDAFORGE + "-c ibmdecisionoptimization cplex"
+        Write-Host ("Trying to install CPLEX...")
+        try {Invoke-Expression $env:CPLEX} catch {Write-Host ("") Write-Host ("CPLEX Community Edition is not available for Python ${{ matrix.python-version }}") Write-Host ("")}
         Invoke-Expression $env:EXP
         Write-Host ("Installing GAMS")
         Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
