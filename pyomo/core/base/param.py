@@ -15,6 +15,7 @@ import types
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
@@ -23,7 +24,7 @@ from pyomo.core.base.indexed_component import IndexedComponent, \
     UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.numvalue import NumericValue, native_types, value
-from pyomo.core.base.set_types import Any
+from pyomo.core.base.set_types import Any, Reals
 
 from six import iteritems, iterkeys, next, itervalues
 
@@ -41,6 +42,24 @@ def _raise_modifying_immutable_error(obj, index):
         "declare the parameter as mutable [i.e., Param(mutable=True)]"
         % (name,))
 
+class _ImplicitAny(Any.__class__):
+    """An Any that issues a deprecation warning for non-Real values.
+
+    This is a helper class to implement the deprecation wornings for the
+    change of Param's implicit domain from Any to Reals.
+
+    """
+    def __contains__(self, val):
+        if val not in Reals:
+            deprecation_warning(
+                "The default domain for Param objects is 'Any'.  However, "
+                "we will be changing that default to 'Reals' in the "
+                "future.  If you really intend the domain of this Param "
+                "to be 'Any', you can suppress this warning by explicitly "
+                "specifying 'within=Any' to the Param constructor.",
+                version='TBD', remove_in='6.0')
+        return True
+ImplicitAny = _ImplicitAny(name='Any')
 
 class _NotValid(object):
     """A dummy type that is pickle-safe that we can use as the default
@@ -213,7 +232,7 @@ class Param(IndexedComponent):
         self._rule          = kwd.pop('rule', _NotValid )
         self._rule          = kwd.pop('initialize', self._rule )
         self._validate      = kwd.pop('validate', None )
-        self.domain         = kwd.pop('domain', Any )
+        self.domain         = kwd.pop('domain', None )
         self.domain         = kwd.pop('within', self.domain )
         self._mutable       = kwd.pop('mutable', Param.DefaultMutable )
         self._default_val   = kwd.pop('default', _NotValid )
@@ -224,7 +243,7 @@ class Param(IndexedComponent):
                 "The 'repn' keyword is not a validate keyword argument for Param")
         #
         if self.domain is None:
-            self.domain = Any
+            self.domain = ImplicitAny
         #
         kwd.setdefault('ctype', Param)
         IndexedComponent.__init__(self, *args, **kwd)
