@@ -13,6 +13,8 @@
 import logging
 import textwrap
 
+from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
+from pyomo.contrib.fbbt.interval import inf
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, Any, value,
@@ -694,8 +696,13 @@ class BigM_Transformation(Transformation):
                             "\n\t(found unbounded var %s while processing "
                             "constraint %s)" % (var.name, name))
         else:
-            raise GDP_Error("Cannot estimate M for nonlinear "
-                            "expressions.\n\t(found while processing "
-                            "constraint %s)" % name)
+            # expression is nonlinear. Try using `contrib.fbbt` to estimate.
+            expr_lb, expr_ub = compute_bounds_on_expr(expr)
+            if expr_lb == -inf or expr_ub == inf:
+                raise GDP_Error("Cannot estimate M for unbounded nonlinear "
+                                "expressions.\n\t(found while processing "
+                                "constraint %s)" % name)
+            else:
+                M = (expr_lb, expr_ub)
 
         return tuple(M)

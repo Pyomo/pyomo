@@ -88,7 +88,7 @@ script:
   - ${DOC} python --version
   - ${DOC} pip --version
   - ${DOC} pip list
-  - ${DOC} env | sort
+  - ${DOC} env | grep -vi SECRET | sort
   - ${DOC} test.pyomo -v --cat=$CATEGORY pyomo `pwd`/pyomo-model-libraries
  # Run documentation tests
   - |
@@ -106,27 +106,7 @@ after_success:
   - ${DOC} coverage combine
   - ${DOC} codecov --env TAG -X gcov
     # Trigger PyomoGallery build, but only when building the master branch
-  - "if [ -n \"${KEY_JOB}\" -a \"${TRAVIS_PULL_REQUEST}\" == false ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token 4DadIB521uUPyBXMtvQVOw' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
+    # Note: this is disabled unless a token is injected through an
+    # environment variable
+  - "if [ -n \"${SECRET_TRAVIS_TOKEN}\" -a -n \"${KEY_JOB}\" -a \"${TRAVIS_PULL_REQUEST}\" == false ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token ${SECRET_TRAVIS_TOKEN}' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
 
-deploy:
-  - provider: pypi
-    server: https://testpypi.python.org/pypi # Updated
-    user: whart111
-    password:
-      secure: "bxNfz0XywTc4vL2M39eEeYvTzDIjhwddzHRljCPCkP8ANLuxh6DPxFvFZDNGw+TA/U0q7r7POuhloa1zen0WyrcoWtWmC4WlixNoJ5mIl1RWXqpUzV5VqReYfYDE6FJs9G0tCrcgF/vzyzajDH9atxUxCdAoWqUnOdx+XcOBarUuz5PTRbI+GLkI8IJCyOgS0khXvoLbj4qi+SW9aOS4EKTQMxv3EPy9V3HNNe4yzbmnCFfaEWUVCFVs5vH7x4WbD3CN2lyjaE5ZTQHrAx2GZtTgZWtyypmv0nfXQ49s32xw/CRb9POUUQ4IGQybAcD2bEJeqaV+6HB93yJVcy6gYCCm0WV++sL1gsD1vYcmtqpWloF4O/lnQkaW0fD4twJUjapXm8QqCFRtXBt7/DxL72vQu1MWbeBQs3Vxo+1xBqy64txhXmREeTEIBfvmTxMRkIvensxwh8uRlhd252iJQC2K6KlIcG5kyEbsAkQp42JPswqveIZb0DmsHZ3LC2fN+UJICI04+UKDnqISibrtjNtD3HiGkdj1OGyzv3tOZx4ZrfPXQ8o3CR+291SJ/ADZAyMrLoNI6rOl0z9IRyCLUViz3QPZz4g7ClZUoJ9Hm7y9/v3nQcIC3/D7G1QzyLCoRpHEwb6lifyp2o6W8MOcwZYs/Uv0saNYMnftRmVFxhY="
-    distributions: sdist --format=gztar bdist_wheel
-    on:
-      tags: false
-      branch: master
-      python: '2.7'
-      condition: '"$YAML" = "pyyaml"'
-  - provider: pypi
-    user: whart111
-    password:
-      secure: "bxNfz0XywTc4vL2M39eEeYvTzDIjhwddzHRljCPCkP8ANLuxh6DPxFvFZDNGw+TA/U0q7r7POuhloa1zen0WyrcoWtWmC4WlixNoJ5mIl1RWXqpUzV5VqReYfYDE6FJs9G0tCrcgF/vzyzajDH9atxUxCdAoWqUnOdx+XcOBarUuz5PTRbI+GLkI8IJCyOgS0khXvoLbj4qi+SW9aOS4EKTQMxv3EPy9V3HNNe4yzbmnCFfaEWUVCFVs5vH7x4WbD3CN2lyjaE5ZTQHrAx2GZtTgZWtyypmv0nfXQ49s32xw/CRb9POUUQ4IGQybAcD2bEJeqaV+6HB93yJVcy6gYCCm0WV++sL1gsD1vYcmtqpWloF4O/lnQkaW0fD4twJUjapXm8QqCFRtXBt7/DxL72vQu1MWbeBQs3Vxo+1xBqy64txhXmREeTEIBfvmTxMRkIvensxwh8uRlhd252iJQC2K6KlIcG5kyEbsAkQp42JPswqveIZb0DmsHZ3LC2fN+UJICI04+UKDnqISibrtjNtD3HiGkdj1OGyzv3tOZx4ZrfPXQ8o3CR+291SJ/ADZAyMrLoNI6rOl0z9IRyCLUViz3QPZz4g7ClZUoJ9Hm7y9/v3nQcIC3/D7G1QzyLCoRpHEwb6lifyp2o6W8MOcwZYs/Uv0saNYMnftRmVFxhY="
-    distributions: sdist --format=gztar bdist_wheel
-    on:
-      tags: true
-      branch: master
-      python: '2.7'
-      condition: '"$YAML" = "pyyaml"'

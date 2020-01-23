@@ -12,6 +12,7 @@
 #
 
 import logging
+
 from pyutilib.misc import LogHandler
 
 from pyomo.common.fileutils import PYOMO_ROOT_DIR
@@ -43,10 +44,10 @@ class LoggingIntercept(object):
 
     Examples:
         >>> import six, logging
-        >>> from pyomo.common.log import LoggingInercept
+        >>> from pyomo.common.log import LoggingIntercept
         >>> buf = six.StringIO()
         >>> with LoggingIntercept(buf, 'pyomo.core', logging.WARNING):
-        ...     logging.getLogger('pyomo.core').warn('a simple message')
+        ...     logging.getLogger('pyomo.core').warning('a simple message')
         >>> buf.getvalue()
     """
 

@@ -48,9 +48,9 @@ def log_infeasible_constraints(
                 if fabs(constr_lb_value - constr_body_value) >= tol:
                     equality_violated = True
             else:
-                if constr.has_lb() and fabs(constr_lb_value - constr_body_value) >= tol:
+                if constr.has_lb() and constr_lb_value - constr_body_value >= tol:
                     lb_violated = True
-                if constr.has_ub() and fabs(constr_body_value - constr_ub_value) >= tol:
+                if constr.has_ub() and constr_body_value - constr_ub_value >= tol:
                     ub_violated = True
 
         if not any((constr_undefined, equality_violated, lb_violated, ub_violated)):
@@ -61,12 +61,12 @@ def log_infeasible_constraints(
 
         log_template = "CONSTR {name}: {lb_value}{lb_operator}{body_value}{ub_operator}{ub_value}"
         if log_expression:
-            log_template += "\n  {lb_expr}{lb_operator}{body_expr}{ub_operator}{ub_expr}"
+            log_template += "\n  - EXPR: {lb_expr}{lb_operator}{body_expr}{ub_operator}{ub_expr}"
         if log_variables:
-            vars_template = "  VAR {name}: {value}"
-            log_template += "\n{var_printout}"
+            vars_template = "\n  - VAR {name}: {value}"
+            log_template += "{var_printout}"
             constraint_vars = identify_variables(constr.body, include_fixed=True)
-            output_dict['var_printout'] = '\n'.join(
+            output_dict['var_printout'] = ''.join(
                 vars_template.format(name=v.name, value=v.value) for v in constraint_vars)
 
         output_dict['body_value'] = "missing variable value" if constr_undefined else constr_body_value
@@ -122,10 +122,10 @@ def log_infeasible_bounds(m, tol=1E-6, logger=logger):
             logger.debug("Skipping VAR {} with no assigned value.")
             continue
         if var.has_lb() and value(var.lb - var) >= tol:
-            logger.info('VAR {}: {} < LB {}'.format(
+            logger.info('VAR {}: {} >/= LB {}'.format(
                 var.name, value(var), value(var.lb)))
         if var.has_ub() and value(var - var.ub) >= tol:
-            logger.info('VAR {}: {} > UB {}'.format(
+            logger.info('VAR {}: {} </= UB {}'.format(
                 var.name, value(var), value(var.ub)))
 
 

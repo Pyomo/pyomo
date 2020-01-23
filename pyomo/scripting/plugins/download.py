@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import logging
+import traceback
 from pyomo.common.download import FileDownloader, DownloadFactory
 from pyomo.scripting.pyomo_parser import add_subparser
 
@@ -34,9 +35,13 @@ class GroupDownloader(object):
             except SystemExit:
                 result = 'FAIL'
                 returncode = 1
+                if args.verbose:
+                    traceback.print_exc()
             except:
                 result = 'FAIL'
                 returncode = 1
+                if args.verbose:
+                    traceback.print_exc()
             results.append(result_fmt % (result, target))
         logger.info("Finished downloading Pyomo extensions.")
         logger.info(

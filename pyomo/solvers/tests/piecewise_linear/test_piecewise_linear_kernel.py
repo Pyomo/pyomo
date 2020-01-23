@@ -100,7 +100,6 @@ def assignTests(cls, problem_list):
                                     baseline_results = json.load(f)
                                     setattr(cls,PROBLEM+'_results',baseline_results)
 
-@unittest.category('smoke', 'nightly', 'expensive')
 class PiecewiseLinearKernelTest(unittest.TestCase):
     pass
 assignTests(PiecewiseLinearKernelTest, problems)
