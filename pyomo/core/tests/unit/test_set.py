@@ -3787,6 +3787,30 @@ I : Size=1, Index=None, Ordered=Insertion
         m.J = Set(initialize=_j_init)
         self.assertEqual(list(m.J), [1,2,3])
 
+        # Backwards compatability: Test rule for indexed component that
+        # does not take the index
+        @simple_set_rule
+        def _k_init(m):
+            return [1,2,3]
+        m.K = Set([1], initialize=_k_init)
+        self.assertEqual(list(m.K[1]), [1,2,3])
+
+
+        @simple_set_rule
+        def _l_init(m, l):
+            if l > 3:
+                return None
+            return tuple(range(l))
+        m.L = Set(initialize=_l_init, dimen=None)
+        self.assertEqual(list(m.L), [0, (0,1), (0,1,2)])
+
+        m.M = Set([1,2,3], initialize=_l_init)
+        self.assertEqual(list(m.M), [1,2,3])
+        self.assertEqual(list(m.M[1]), [0])
+        self.assertEqual(list(m.M[2]), [0,1])
+        self.assertEqual(list(m.M[3]), [0,1,2])
+
+
     def test_set_skip(self):
         # Test Set.Skip
         m = ConcreteModel()

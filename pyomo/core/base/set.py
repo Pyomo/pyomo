@@ -43,8 +43,12 @@ from pyomo.core.base.misc import sorted_robust
 
 if six.PY3:
     from collections.abc import Sequence as collections_Sequence
+    def formatargspec(fn):
+        return str(inspect.signature(fn))
 else:
     from collections import Sequence as collections_Sequence
+    def formatargspec(fn):
+        return str(inspect.formatargspec(*inspect.getargspec(fn)))
 
 
 logger = logging.getLogger('pyomo.core')
@@ -169,12 +173,26 @@ def simple_set_rule( fn ):
         ...
     """
 
-    def wrapper_function ( *args, **kwargs ):
-        value = fn( *args, **kwargs )
+    # Because some of our processing of initializer functions relies on
+    # knowing the number of positional arguments, we will go to extra
+    # effort here to preserve the original function signature.
+    _funcdef = """def wrapper_function%s:
+        args, varargs, kwds, local_env = inspect.getargvalues(
+            inspect.currentframe())
+        args = tuple(local_env[_] for _ in args) + (varargs or ())
+        value = fn(*args, **(kwds or {}))
+        # Map None -> Set.End
         if value is None:
             return Set.End
         return value
-    return wrapper_function
+""" % (formatargspec(fn),)
+    # Create the wrapper in a temporary environment that mimics this
+    # function's environment.
+    _env = dict(globals())
+    _env.update(locals())
+    exec(_funcdef, _env)
+    return _env['wrapper_function']
+
 
 class UnknownSetDimen(object): pass
 
