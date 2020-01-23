@@ -4061,7 +4061,7 @@ I : Size=2, Index=I_index, Ordered=Insertion
             def Bindex(m):
                 return range(5)
         self.assertIn(
-            "DEPRECATED: The set_options decorator seems nonessential",
+            "The set_options decorator is deprecated",
             output.getvalue())
 
         m = ConcreteModel()

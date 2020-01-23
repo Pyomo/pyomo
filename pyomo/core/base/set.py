@@ -73,12 +73,12 @@ def process_setarg(arg):
         raise TypeError("Cannot apply a Set operator to a non-Set "
                         "component data (%s)" % (arg.name,))
 
-    # TODO: DEPRECATE this functionality? It has never been documented,
+    # DEPRECATED: This functionality has never been documented,
     # and I don't know of a use of it in the wild.
-    try:
+    if hasattr(arg, 'set_options'):
         # If the argument has a set_options attribute, then use
         # it to initialize a set
-        args = getattr(arg,'set_options')
+        args = arg.set_options
         args.setdefault('initialize', arg)
         args.setdefault('ordered', type(arg) not in Set._UnorderedInitializers)
         ans = Set(**args)
@@ -90,8 +90,6 @@ def process_setarg(arg):
                       and not _init.parent_component().is_constructed() )):
             ans.construct()
         return ans
-    except AttributeError:
-        pass
 
     # TBD: should lists/tuples be copied into Sets, or
     # should we preserve the reference using SetOf?
@@ -137,7 +135,9 @@ def process_setarg(arg):
     return ans
 
 
-@deprecated('The set_options decorator seems nonessential and is deprecated',
+@deprecated('The set_options decorator is deprecated; create Sets from '
+            'functions explicitly by passing the function to the Set '
+            'constructor using the "initialize=" keyword argument.',
             version='TBD')
 def set_options(**kwds):
     """
