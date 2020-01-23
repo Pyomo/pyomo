@@ -2,7 +2,9 @@ import traceback
 from collections import namedtuple
 from heapq import heappush, heappop
 
-from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWarning
+from pyomo.common.errors import InfeasibleConstraintException
+from pyomo.contrib.fbbt.fbbt import fbbt
+from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWarning, get_main_elapsed_time
 from pyomo.contrib.satsolver.satsolver import satisfiable
 from pyomo.core import minimize, Suffix, Constraint, ComponentMap, TransformationFactory
 from pyomo.opt import SolverFactory, SolverStatus
@@ -117,6 +119,25 @@ def _perform_branch_and_bound(solve_data):
         node_data, node_model = heappop(queue)
         config.logger.info("Nodes: %s LB %.10g Unbranched %s" % (
             solve_data.explored_nodes, node_data.obj_lb, node_data.num_unbranched_disjunctions))
+
+        # Check time limit
+        elapsed = get_main_elapsed_time(solve_data.timing)
+        if elapsed >= config.time_limit:
+            config.logger.info(
+                'GDPopt-LBB unable to converge bounds '
+                'before time limit of {} seconds. '
+                'Elapsed: {} seconds'
+                .format(config.time_limit, elapsed))
+            no_feasible_soln = float('inf')
+            solve_data.LB = node_data.obj_lb if solve_data.objective_sense == minimize else -no_feasible_soln
+            solve_data.UB = no_feasible_soln if solve_data.objective_sense == minimize else -node_data.obj_lb
+            config.logger.info(
+                'Final bound values: LB: {}  UB: {}'.
+                format(solve_data.LB, solve_data.UB))
+            solve_data.results.solver.termination_condition = tc.maxTimeLimit
+            return True
+
+        # Handle current node
         if not node_data.is_screened:
             # Node has not been evaluated.
             solve_data.explored_nodes += 1
@@ -177,6 +198,7 @@ def _branch_on_node(node_data, node_model, solve_data):
         fixed_True_disjunct = child_unfixed_disjuncts[disjunct_index_to_fix_True]
         for constr in child_model.GDPopt_utils.disjunct_to_nonlinear_constraints.get(fixed_True_disjunct, ()):
             constr.activate()
+            child_model.BigM[constr] = 1  # set arbitrary BigM (ok, because we fix corresponding Y=True)
 
         del child_model.GDPopt_utils.disjunction_to_unfixed_disjuncts[child_disjunction_to_branch]
         for child_disjunct in child_unfixed_disjuncts:
@@ -243,7 +265,22 @@ def _solve_rnGDP_subproblem(model, solve_data):
 
     try:
         with SuppressInfeasibleWarning():
-            result = SolverFactory(config.minlp_solver).solve(subproblem, **config.minlp_solver_args)
+            try:
+                fbbt(subproblem, integer_tol=config.integer_tolerance)
+            except InfeasibleConstraintException:
+                copy_var_list_values(  # copy variable values, even if errored
+                    from_list=subproblem.GDPopt_utils.variable_list,
+                    to_list=model.GDPopt_utils.variable_list,
+                    config=config, ignore_integrality=True
+                )
+                return float('inf'), float('inf')
+            minlp_args = dict(config.minlp_solver_args)
+            if config.minlp_solver == 'gams':
+                elapsed = get_main_elapsed_time(solve_data.timing)
+                remaining = max(config.time_limit - elapsed, 1)
+                minlp_args['add_options'] = minlp_args.get('add_options', [])
+                minlp_args['add_options'].append('option reslim=%s;' % remaining)
+            result = SolverFactory(config.minlp_solver).solve(subproblem, **minlp_args)
     except RuntimeError as e:
         config.logger.warning(
             "Solver encountered RuntimeError. Treating as infeasible. "
