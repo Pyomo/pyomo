@@ -54,3 +54,11 @@ _old_etype_strings = {
 _eq = 0
 _le = 1
 _lt = 2
+
+# logical propositions
+_and = 0
+_or = 1
+_inv = 2
+_equiv = 3
+_xor = 4
+_impl = 5

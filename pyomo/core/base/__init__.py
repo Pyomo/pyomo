@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr.numvalue import *
-from pyomo.core.expr.logicalvalue import * # I added this as an analogue
+from pyomo.core.expr.logicalvalue import *
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.objective import (minimize,
                                          maximize)

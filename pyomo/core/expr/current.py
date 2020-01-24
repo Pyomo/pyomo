@@ -26,6 +26,7 @@ from pyomo.core.expr import expr_common as common
 # Pull symbols from the appropriate expression system
 #
 from pyomo.core.expr import numvalue as _numvalue
+from pyomo.core.expr import logicalvalue as _logicalvalue
 
 # Pyomo5
 if _mode == Mode.pyomo5_trees:
@@ -60,6 +61,9 @@ if _mode == Mode.pyomo5_trees:
         = _numeric_expr._generate_other_expression
     _numvalue._generate_relational_expression \
         = _logical_expr._generate_relational_expression
+
+    # Initialize logicalvalue functions
+    _logicalvalue._generate_logical_proposition = _logical_expr._generate_logical_proposition
 else:
     raise ValueError("No other expression systems are supported in Pyomo right now.")    #pragma: no cover
 

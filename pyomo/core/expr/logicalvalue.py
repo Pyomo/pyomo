@@ -1,88 +1,20 @@
-#Below is copied from numvalue.py
-
-__all__ = ('value_logical', 'value', 'is_constant', 'is_fixed', 'is_variable_type',
-           'is_potentially_variable', 'LogicalValue', 'TrueConstant',
-           'FalseConstant', 'native_logical_types', 'native_types',
-           'native_logical_values')
+__all__ = ('value_logical', 'LogicalValue', 'TrueConstant',
+           'FalseConstant', 'native_logical_values')
 
 import sys
 import logging
-from six import iteritems, PY3, string_types, text_type, binary_type
-
-from pyomo.core.expr.expr_common import \
-    (_add, _sub, _mul, _div, _pow,
-     _neg, _abs, _inplace, _radd,
-     _rsub, _rmul, _rdiv, _rpow,
-     _iadd, _isub, _imul, _idiv,
-     _ipow, _lt, _le, _eq)
+from six import iteritems
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
+from pyomo.core.expr.numvalue import native_types, native_logical_types
+from pyomo.core.expr.expr_common import _and, _or, _equiv, _inv, _xor, _impl
 
 logger = logging.getLogger('pyomo.core')
+native_logical_values = {True, False, 1, 0}
 
-#keep it for now?
-def _generate_sum_expression(etype, _self, _other):
-    raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
-def _generate_mul_expression(etype, _self, _other):
-    raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
-def _generate_other_expression(etype, _self, _other):
-    raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
-def _generate_relational_expression(etype, lhs, rhs):
-    raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
+def _generate_logical_proposition(etype, _self, _other):
+    raise RuntimeError("Incomplete import of Pyomo expression system")  #pragma: no cover
 
-##------------------------------------------------------------------------
-##
-## Standard types of expressions
-##
-##------------------------------------------------------------------------
-'''
-class NonLogicalValue(object):
-    """An object that contains a non-logical value
-
-    Constructor Arguments:
-        value           The initial value.
-    """
-    __slots__ = ('value',)
-
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return str(self.value)
-
-    def __getstate__(self):
-        state = {}
-        state['value'] = getattr(self,'value')
-        return state
-
-    def __setstate__(self, state):
-        setattr(self, 'value', state['value'])
-
-
-nonpyomo_leaf_types = set([NonLogicalValue])
-
-'''
-
-#start
-native_types = set([ bool, str, type(None) ])
-native_logical_types = set([bool])
-native_logical_values = set([True, False, 1, 0])
-
-#tbc
-
-def RegisterLogicalType(new_type):
-    """
-    A utility function for updating the set of types that are
-    recognized as handling boolean values. This function does not
-    register the type of integer or numeric.
-
-    The argument should be a class (e.g., numpy.bool_).
-    """
-    global native_logical_types
-    global native_types
-    native_logical_types.add(new_type)
-    native_types.add(new_type)
-    #nonpyomo_leaf_types.add(new_type)
 
 def value(obj, exception=True):
     #0-0 Thinkng about a way to make it work
@@ -112,7 +44,6 @@ def value(obj, exception=True):
         # works, then return the object
         #
         try:
-            check_if_logical_type_and_cache(obj)
             return obj
         except:
             raise TypeError(
@@ -150,125 +81,56 @@ def value(obj, exception=True):
       
 
 value_logical = value  
-#assigning an alias to distinguish it from the numeric version 
+#assigning an alias to distinguish it from the numeric version
 
+# def is_fixed(obj):
+#     """
+#     A utility function that returns a boolean that indicates
+#     whether the input object's value is fixed.
+#     """
+#     # JDS: NB: I am not sure why we allow str to be a constant, but
+#     # since we have historically done so, we check for type membership
+#     # in native_types and not in native_numeric_types.
+#     #
+#     if obj.__class__ in native_types:
+#         return True
+#     try:
+#         return obj.is_fixed()
+#     except AttributeError:
+#         pass
+#     raise TypeError(
+#         "Cannot assess properties of object with unknown type: %s"
+#         % (type(obj).__name__,))
+#
+# def is_variable_type(obj):
+#     """
+#     A utility function that returns a boolean indicating
+#     whether the input object is a variable.
+#     """
+#     if obj.__class__ in native_types:
+#         # change native_types
+#         return False
+#     if (obj is 1 ) or (obj is 0):
+#         # 0-0 change later
+#         return False
+#     try:
+#         return obj.is_variable_type()
+#     except AttributeError:
+#         return False
+#
+# def is_potentially_variable(obj):
+#     """
+#     A utility function that returns a boolean indicating
+#     whether the input object can reference variables.
+#     """
+#     if obj.__class__ in native_types:
+#         return False
+#     try:
+#         return obj.is_potentially_variable()
+#     except AttributeError:
+#         return False
 
-def is_constant(obj):
-    """
-    A utility function that returns a boolean that indicates
-    whether the object is a constant.
-    """
-    # This method is rarely, if ever, called.  Plus, since the
-    # expression generation (and constraint generation) system converts
-    # everything to NumericValues, it is better (i.e., faster) to assume
-    # that the obj is a NumericValue
-    #
-    # JDS: NB: I am not sure why we allow str to be a constant, but
-    # since we have historically done so, we check for type membership
-    # in native_types and not in native_numeric_types.
-    #
-    if obj.__class__ in native_types:
-        return True
-    try:
-        return obj.is_constant()
-    except AttributeError:
-        pass
-    try:
-        # Now we need to confirm that we have an unknown numeric type
-        check_if_logical_type_and_cache(obj)
-        # As this branch is only hit for previously unknown (to Pyomo)
-        # types that behave reasonably like numbers, we know they *must*
-        # be constant.
-        return True
-    except:
-        raise TypeError(
-            "Cannot assess properties of object with unknown type: %s"
-            % (type(obj).__name__,))
-
-def is_fixed(obj):
-    """
-    A utility function that returns a boolean that indicates
-    whether the input object's value is fixed.
-    """
-    # JDS: NB: I am not sure why we allow str to be a constant, but
-    # since we have historically done so, we check for type membership
-    # in native_types and not in native_numeric_types.
-    #
-    if obj.__class__ in native_types:
-        return True
-    try:
-        return obj.is_fixed()
-    except AttributeError:
-        pass
-    try:
-        # Now we need to confirm that we have an unknown numeric type
-        check_if_logical_type_and_cache(obj)
-        # As this branch is only hit for previously unknown (to Pyomo)
-        # types that behave reasonably like numbers, we know they *must*
-        # be fixed.
-        return True
-    except:
-        raise TypeError(
-            "Cannot assess properties of object with unknown type: %s"
-            % (type(obj).__name__,))
-
-def is_variable_type(obj):
-    """
-    A utility function that returns a boolean indicating
-    whether the input object is a variable.
-    """
-    if obj.__class__ in native_types:
-        # change native_types
-        return False
-    if (obj is 1 ) or (obj is 0):
-        # 0-0 change later
-        return False
-    try:
-        return obj.is_variable_type()
-    except AttributeError:
-        return False
-
-def is_potentially_variable(obj):
-    """
-    A utility function that returns a boolean indicating
-    whether the input object can reference variables.
-    """
-    if obj.__class__ in native_types:
-        return False
-    try:
-        return obj.is_potentially_variable()
-    except AttributeError:
-        return False
-
-
-def is_logical_data(obj):
-    """
-    A utility function that returns a boolean indicating
-    whether the input object is logical and not potentially
-    variable.
-    """
-    if obj.__class__ in native_logical_types:
-        return True
-    elif obj.__class__ in native_types:
-       #change this 0-0
-        return False
-    try:
-        # Test if this is an expression object that 
-        # is not potentially variable
-        return not obj.is_potentially_variable()
-    except AttributeError:
-        pass
-    try:
-        # Now we need to confirm that we have an unknown logical type
-        check_if_logical_type_and_cache(obj)
-       #0-0 this function needs modifying
-        return True
-    except:
-        pass
-    return False
-
-
-_KnownConstants = {}
+# _KnownConstants = {}
 #tbc
 
 def as_logical(obj):
@@ -285,62 +147,26 @@ def as_logical(obj):
 
     Returns: A true or false LogicalConstant or the original object
     """
-    #0-0 concatanate int's?
     #if obj.__class__ in native_logical_types or obj is 1 or obj is 0:
-    if obj in native_logical_values: 
-        val = _KnownConstants.get(obj, None)
-        if val is not None:
-
-            return val 
-        #
-        # Create the logical constant.  This really
-        # should be the only place in the code
-        # where these objects are constructed.
-        #
-        retval = LogicalConstant(obj)
-        #
-        # Cache the numeric constants.  We used a bounded cache size
-        # to avoid unexpectedly large lists of constants.  There are
-        # typically a small number of constants that need to be cached.
-        #
-        # NOTE:  A LFU policy might be more sensible here, but that
-        # requires a more complex cache.  It's not clear that that
-        # is worth the extra cost.
-         
-        return retval
-        #the rest should be errors
+    if obj in native_logical_values:
+        return LogicalConstant(obj)
     #
     # Ignore objects that are duck types to work with Pyomo expressions
     #
     try:
         obj.is_expression_type()
         return obj
-        #0-0 should be fine for now
     except AttributeError:
         pass
-    #
-    #check later 0-0
-    #try:
-    #    return check_if_logical_type_and_cache(obj)
-    #except:
-    #    pass
     #
     # Generate errors
     #
     if obj.__class__ in native_types:
-        raise TypeError("Cannot treat the value '%s' as a constant" % str(obj))
+        raise TypeError("Cannot treat the value '%s' as a logical constant" % str(obj))
     raise TypeError(
-        "Cannot treat the value '%s' as a constant because it has unknown "
+        "Cannot treat the value '%s' as a logical constant because it has unknown "
         "type '%s'" % (str(obj), type(obj).__name__))
 
-#0-0 I think it's time to look at this one
-def check_if_logical_type_and_cache(obj):
-   pass
-#cut
-
-
-
-#the following is a logical version for Logical value
 
 class LogicalValue(object):
     #an abstract class 
@@ -348,9 +174,8 @@ class LogicalValue(object):
     #__slots__ = ('value',)
     __slots__ = ()
     __hash__ = None
+
     def __getstate__(self):
-    #delete the docs for an identation error
-    #0-0
         _base = super(LogicalValue, self)
         if hasattr(_base, '__getstate__'):
             return _base.__getstate__()
@@ -382,7 +207,7 @@ class LogicalValue(object):
         block; otherwise return the value converted to a string
         """
         _base = super(LogicalValue, self)
-        if hasattr(_base,'getname'):
+        if hasattr(_base, 'getname'):
             return _base.getname(fully_qualified, name_buffer)
         else:
             return str(type(self))
@@ -424,7 +249,6 @@ class LogicalValue(object):
         """Return True if this Logical value is a named expression"""
         return False
 
-    #what do we about this
     def is_expression_type(self):
         """Return True if this Logical value is an expression"""
         return False
@@ -437,336 +261,129 @@ class LogicalValue(object):
         """
         Return True if this Logical value represents a relational expression.
         """
+        # TODO this is meaningless
         return False
 
     def is_indexed(self):
         """Return True if this Logical value is an indexed object"""
         return False
 
-
     def __float__(self):
-        """
-        Coerce the value to a floating point
-
-        Raises:
-            TypeError
-        """
         raise TypeError(
-        """Implicit conversion of Pyomo LogicalValue type `%s' to a float is
-        disabled. This error is often the result of using Pyomo components as
-        arguments to one of the Python built-in math module functions when
-        defining expressions. Avoid this error by using Pyomo-provided math
-        functions.""" % (self.name,))
+            "Implicit conversion of Pyomo LogicalValue type "
+            "'%s' to a float is disabled." % (self.name,))
 
     def __int__(self):
-        """
-        Coerce the value to an integer
-
-        Raises:
-            TypeError
-        """
         raise TypeError(
-        """Implicit conversion of Pyomo LogicalValue type `%s' to an integer is
-        disabled. This error is often the result of using Pyomo components as
-        arguments to one of the Python built-in math module functions when
-        defining expressions. Avoid this error by using Pyomo-provided math
-        functions.""" % (self.name,))
+            "Implicit conversion of Pyomo LogicalValue type "
+            "'%s' to an integer is disabled." % (self.name,))
 
-    #tbc    
-    def __lt__(self,other):
-        """
-        Less than operator
-
-        Should not be used for logical values
-        """
+    def __lt__(self, other):
         return TypeError(
-        """Unable to do comparison between logical values. Avoid this error by
-        using boolean variable.""")
+            "Numeric comparison with LogicalValue %s is not allowed." % self.name)
 
-    def __gt__(self,other):
-        """
-        Greater than operator
-
-        Should not be used for logical values
-        """
+    def __gt__(self, other):
         return TypeError(
-        """Unable to do comparison between logical values. Avoid this error by
-        using boolean variable.""")
+            "Numeric comparison with LogicalValue %s is not allowed." % self.name)
 
-    def __le__(self,other):
-        """
-        Less than or equal operator
-
-        Should not be used for logical values
-        """
+    def __le__(self, other):
         return TypeError(
-        """Unable to do comparison between logical values. Avoid this error by
-        using boolean variable.""")
+            "Numeric comparison with LogicalValue %s is not allowed." % self.name)
 
-    def __ge__(self,other):
-        """
-        Greater than or equal operator
-
-        Should not be used for logical values
-        """
+    def __ge__(self, other):
         return TypeError(
-        """Unable to do comparison between logical values. Avoid this error by
-        using boolean variable.""")
-
-    #tbd
-    def __eq__(self,other):
-        
-
-        #return Equivalence_expression(self,other)
-        raise TypeError("""This function should not be called. Avoid this error by using
-            logical expressions intead of logical values""")
-        return True
+            "Numeric comparison with LogicalValue %s is not allowed." % self.name)
     
-    def __add__(self,other):
-        """
-        Binary addition
+    def __add__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-        Should not be used for logical values
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
+    def __sub__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-    def __sub__(self,other):
-        """
-        Binary subtraction
+    def __mul__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-        This method is called when Python processes the statement::
-        
-            self - other
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
+    def __div__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-    def __mul__(self,other):
-        """
-        Binary multiplication
+    def __truediv__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-        This method is called when Python processes the statement::
-        
-            self * other
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
+    def __pow__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-    def __div__(self,other):
-        """
-        Binary division
+    def __radd__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-        This method is called when Python processes the statement::
-        
-            self / other
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
+    def __rsub__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-    def __truediv__(self,other):
-        """
-        Binary division (when __future__.division is in effect)
+    def __rmul__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-        This method is called when Python processes the statement::
-        
-            self / other
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
+    def __rdiv__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-    def __pow__(self,other):
-        """
-        Binary power
+    def __rtruediv__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-        This method is called when Python processes the statement::
-        
-            self ** other
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
+    def __rpow__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-    def __radd__(self,other):
-        """
-        Binary addition
+    def __iadd__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-        This method is called when Python processes the statement::
-        
-            other + self
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
+    def __isub__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-    def __rsub__(self,other):
-        """
-        Binary subtraction
+    def __imul__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-        This method is called when Python processes the statement::
-        
-            other - self
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
+    def __idiv__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-    def __rmul__(self,other):
-        """
-        Binary multiplication
+    def __itruediv__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
+    def __ipow__(self, other):
+        return TypeError("Unable to perform arithmetic operations between logical values.")
 
-    def __rdiv__(self,other):
-        """Binary division
-
-        This method is called when Python processes the statement::
-        
-            other / self
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
-
-    def __rtruediv__(self,other):
-        """
-        Binary division (when __future__.division is in effect)
-
-        This method is called when Python processes the statement::
-        
-            other / self
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
-
-    def __rpow__(self,other):
-        """
-        Binary power
-
-        This method is called when Python processes the statement::
-        
-            other ** self
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
-
-    def __iadd__(self,other):
-        """
-        Binary addition
-
-        This method is called when Python processes the statement::
-        
-            self += other
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
-
-    def __isub__(self,other):
-        """
-        Binary subtraction
-
-        This method is called when Python processes the statement::
-
-            self -= other
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
-
-    def __imul__(self,other):
-        """
-        Binary multiplication
-
-        This method is called when Python processes the statement::
-
-            self *= other
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
-
-    def __idiv__(self,other):
-        """
-        Binary division
-
-        This method is called when Python processes the statement::
-        
-            self /= other
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
-
-    def __itruediv__(self,other):
-        """
-        Binary division (when __future__.division is in effect)
-
-        This method is called when Python processes the statement::
-        
-            self /= other
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
-
-    def __ipow__(self,other):
-        """
-        Binary power
-
-        This method is called when Python processes the statement::
-        
-            self **= other
-        """
-        return TypeError(
-        """Unable to perform arithmetic operations between logical values. Avoid this error by
-        using boolean variable.""")
-
-    #tbc   0-0 
     def __neg__(self):
-        """
-        Negation
+        return TypeError("""Negation operator on logical values is not defined.""")
 
-        This method is called when Python processes the statement::
-        
-            - self
-
-        Expected to be used as a LogicalExpression
-        """
-        return TypeError(
-        """Unable to take negative of a logical value. Please use the negation
-        Logical Expression instead""")# 0-0 add the exact expression after finished
-    #keep this one?
     def __pos__(self):
-        """
-        Positive expression
-
-        This method is called when Python processes the statement::
-        
-            + self
-        """
-        return self
+        return TypeError("""Positive operator on logical values is not defined.""")
 
     def __abs__(self):
-        """ Absolute value
+        return TypeError("""Absolute value operator on logical values is not defined.""")
 
-        This method is called when Python processes the statement::
-        
-            abs(self)
-        """
-        return TypeError(
-        """Unable to take absolute of a logical value. Avoid this error by
-        using boolean variable.""")
+    def __bool__(self):
+        """Evaluation as a boolean (using if, and, or keywords)"""
+        return TypeError("Use value() for finding the value of a LogicalValue.")
+
+    def __eq__(self, other):
+        return _generate_logical_proposition(_equiv, self, other)
+
+    def equivalent_to(self, other):
+        return _generate_logical_proposition(_equiv, self, other)
+
+    def __and__(self, other):
+        return _generate_logical_proposition(_and, self, other)
+
+    def __or__(self, other):
+        return _generate_logical_proposition(_or, self, other)
+
+    def __invert__(self):
+        return _generate_logical_proposition(_inv, self, None)
+
+    def __xor__(self, other):
+        return _generate_logical_proposition(_xor, self, other)
+
+    def xor(self, other):
+        return _generate_logical_proposition(_xor, self, other)
+
+    def implies(self, other):
+        return _generate_logical_proposition(_impl, self, other)
 
     # 0-0
     def to_string(self, verbose=None, labeler=None, smap=None,
@@ -789,7 +406,7 @@ class LogicalValue(object):
             try:
                 return str(self())
             except:
-                pass        
+                pass
         if not self.is_constant():
             if smap:
                 return smap.getSymbol(self, labeler)
@@ -807,9 +424,7 @@ class LogicalConstant(LogicalValue):
 
     __slots__ = ('value',)
 
-    #0-0 impose restriction on initialization?
     def __init__(self, value):
-        #fine like this?
         if value not in native_logical_values:
             raise TypeError('Not a valid LogicalValue. Unable to create a logical constant')
         self.value = value
@@ -817,7 +432,7 @@ class LogicalConstant(LogicalValue):
     def __getstate__(self):
         state = super(LogicalConstant, self).__getstate__()
         for i in LogicalConstant.__slots__:
-            state[i] = getattr(self,i)
+            state[i] = getattr(self, i)
         return state
 
     def is_constant(self):
@@ -826,18 +441,19 @@ class LogicalConstant(LogicalValue):
     def is_fixed(self):
         return True
 
-    #def is_potentially_variable(self):
-    #    return False
+    def is_potentially_variable(self):
+        return False
 
     def __str__(self):
         return str(self.value)
 
-    #RaiseTypeError ("value of x?")    
     def __nonzero__(self):
-        raise ValueError("Do you mean value of this logical constant : '%s'"
+        raise ValueError(
+            "Boolean constant cannot be compared to zero: '%s'"
             % (self.name,))
 
-    __bool__ = __nonzero__
+    def __bool__(self):
+        return self.value
 
     def __call__(self, exception=True):
         """Return the constant value"""
@@ -852,7 +468,3 @@ class LogicalConstant(LogicalValue):
 # We use as_logical() so that the constant is also in the cache
 TrueConstant = as_logical(True)
 FalseConstant = as_logical(False)
-
-
-
-

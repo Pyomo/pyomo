@@ -95,6 +95,8 @@ nonpyomo_leaf_types = set([NonNumericValue])
 native_numeric_types = set([ int, float, bool ])
 native_integer_types = set([ int, bool ])
 native_boolean_types = set([ int, bool, str ])
+native_logical_types = {bool, }
+pyomo_constant_types = set()  # includes NumericConstant
 try:
     native_numeric_types.add(long)
     native_integer_types.add(long)
@@ -187,7 +189,7 @@ def value(obj, exception=True):
     """
     if obj.__class__ in native_types:
         return obj
-    if obj.__class__ is NumericConstant:
+    if obj.__class__ in pyomo_constant_types:
         #
         # I'm commenting this out for now, but I think we should never expect
         # to see a numeric constant with value None.
@@ -1051,6 +1053,9 @@ class NumericConstant(NumericValue):
         if ostream is None:         #pragma:nocover
             ostream = sys.stdout
         ostream.write(str(self))
+
+
+pyomo_constant_types.add(NumericConstant)
 
 
 # We use as_numeric() so that the constant is also in the cache

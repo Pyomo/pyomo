@@ -37,35 +37,42 @@ def create_model3(y):
     #model3
     a1 = LogicalAnd(y[0].implies(y[1]), Not(y[2]))
     a3 = LogicalAnd(LogicalXor(y[4],y[5]))
-    root_node = a1 or LogicalAnd(y[3]) or a3
+    root_node = a1 | LogicalAnd(y[3]) | a3
     return root_node
 
 def create_model4(y):
     #model4
-    return (y[0].implies(y[1]) and Not(y[2])) or y[3])
+    a0 = y[0].implies(y[1])
+    a1 = Not(y[2])
+    a2 = a0 & a1
+    a3 = a2 | y[3]
+    return a3
+    # return (y[0].implies(y[1]) and Not(y[2])) or y[3]
 
 def create_model5(y):
     #model 5, for cnf walker
     a2 = LogicalAnd(y[0], y[1])
-    o1 = LogicalOr(a1, y[3])
-    a1 = LogicalAnd(01, y[4])
+    o1 = LogicalOr(a2, y[3])
+    a1 = LogicalAnd(o1, y[4])
     return a1
 
 class TestLogicalClasses(unittest.TestCase):
 
-    def test_elementary_nodes(self):
+    def test_BooleanVar(self):
         """
         Test 1
         """
         m = ConcreteModel()
         m.Y1 = BooleanVar() 
         m.Y2 = BooleanVar()
+
+        self.assertIsNone(m.Y1.value)
+        m.Y1.set_value(False)
+        self.assertFalse(m.Y1.value)
+        m.Y1.set_value(True)
+        self.assertTrue(m.Y1.value)
         
-        m.Y1.value = True
-        m.Y2.value = True
-        #try alterbate way to set value
-        #m.Y1.set_value(True)
-        #m.Y2.set_value(True)
+        m.Y1.value, m.Y2.value = True, True
         self.assertTrue(value(LogicalAnd(m.Y1, m.Y2)))
         self.assertTrue(value(LogicalOr(m.Y1, m.Y2)))
         self.assertTrue(value(Implies(m.Y1, m.Y2)))
@@ -84,10 +91,10 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertTrue(value(LogicalXor(m.Y1, m.Y2)))
 
         m.Y1.value, m.Y2.value = False, False
-        self.assertFalse(value(logical_expr.LogicalAnd(m.Y1, m.Y2)))
-        self.assertFalse(value(logical_expr.LogicalOr(m.Y1, m.Y2)))
-        self.assertTrue(value(logical_expr.Implies(m.Y1, m.Y2)))
-        self.assertFalse(value(logical_expr.LogicalXor(m.Y1, m.Y2)))
+        self.assertFalse(value(LogicalAnd(m.Y1, m.Y2)))
+        self.assertFalse(value(LogicalOr(m.Y1, m.Y2)))
+        self.assertTrue(value(Implies(m.Y1, m.Y2)))
+        self.assertFalse(value(LogicalXor(m.Y1, m.Y2)))
 
 
     def test_And_Or_nodes(self):
@@ -474,13 +481,9 @@ class TestLogicalClasses(unittest.TestCase):
 
     def test_cnf_walker(self):
         m = ConcreteModel()
-        m.Y0 = BooleanVar()
-        m.Y1 = BooleanVar()
-        m.Y2 = BooleanVar()
-        m.Y3 = BooleanVar()
-        m.Y4 = BooleanVar()
-        Y = list([m.Y0, m.Y1, m.Y2, m.Y3, m.Y4])
-        rn = create_model4(Y)
+        m.Y = BooleanVar(RangeSet(0, 4))
+        rn = create_model4(m.Y)
+        print(rn)
         
 
 

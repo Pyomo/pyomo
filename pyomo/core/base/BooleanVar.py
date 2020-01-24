@@ -11,8 +11,9 @@ __all__ = ['BooleanVar', '_BooleanVarData', '_GeneralBooleanVarData', 'BooleanVa
 import logging
 from weakref import ref as weakref_ref
 
-from pyomo.common.timing import ConstructionTimer 
-from pyomo.core.base.logicalvalue import LogicalValue, value, is_fixed
+from pyomo.common.timing import ConstructionTimer
+from pyomo.core.expr.numvalue import value
+from pyomo.core.base.logicalvalue import LogicalValue
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals, Boolean  # needed?
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
@@ -370,7 +371,7 @@ class BooleanVar(IndexedComponent):
             self_weakref = weakref_ref(self)
             for ndx in self._index:
                 cdata = self._ComponentDataClass(
-                    domain=self._domain_init_value, component=None)
+                    domain=Boolean, component=None)
                 cdata._component = self_weakref
                 self._data[ndx] = cdata
             self._initialize_members(self._index)
@@ -411,7 +412,7 @@ class BooleanVar(IndexedComponent):
         """Initialize variable data for all indices in a set."""
         # Initialize domains
         #
-        self.domain = BooleanSet
+        # self.domain = BooleanSet
 
         #
         # Initialize values

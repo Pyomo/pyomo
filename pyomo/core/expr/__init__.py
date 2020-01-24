@@ -25,10 +25,8 @@ from .numvalue import (
 )
 
 from .logicalvalue import (
-	value, is_constant, is_fixed, is_variable_type,
-    is_potentially_variable, LogicalValue, TrueConstant,
-    FalseConstant, native_logical_types,
-    native_logical_values
+	LogicalValue, TrueConstant,
+    FalseConstant,
 )
 
 from .numeric_expr import linear_expression, nonlinear_expression

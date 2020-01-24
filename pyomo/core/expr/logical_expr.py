@@ -41,7 +41,7 @@ from .expr_common import (
     _rdiv, _rpow, _iadd, _isub,
     _imul, _idiv, _ipow, _lt, _le,
     _eq,
-)
+    _and, _or, _equiv, _inv, _xor, _impl)
 
 from .visitor import (
     evaluate_expression, expression_to_string, polynomial_degree,
@@ -514,6 +514,28 @@ else:
                 return InequalityExpression((lhs, rhs), strict)
 
 
+def _generate_logical_proposition(etype, lhs, rhs):
+    if etype == _equiv:
+        return EquivalenceExpression(lhs, rhs)
+    elif etype == _inv:
+        assert rhs is None
+        return NotExpression(lhs)
+    elif etype == _xor:
+        return XorExpression(lhs, rhs)
+    elif etype == _impl:
+        return ImplicationExpression(lhs, rhs)
+    elif etype == _and:
+        if type(lhs) == AndExpression:
+            return lhs.add(rhs)
+        elif type(rhs) == AndExpression:
+            return rhs.add(lhs)
+        else:
+            return AndExpression((lhs, rhs))
+    elif etype == _or:
+        return OrExpression((lhs, rhs))
+    else:
+        raise ValueError("Unknown logical proposition type '%s'" % etype)  # pragma: no cover
+
 
 class LogicalExpressionBase(LogicalValue):
     """
@@ -528,13 +550,11 @@ class LogicalExpressionBase(LogicalValue):
         args (list or tuple): Children of this node.
     """
 
-    # 0-0 do we need this and used this new base for the expressions above?
     __slots__ =  ('_args_',)
     PRECEDENCE = 10
 
     def __init__(self, args):
         self._args_ = args
-
 
     def nargs(self):
         """
@@ -545,7 +565,6 @@ class LogicalExpressionBase(LogicalValue):
         return 2
 
     def args(self, i):
-        #0-0
         """
         Return the i-th child node.
 
@@ -559,7 +578,6 @@ class LogicalExpressionBase(LogicalValue):
             raise KeyError("Invalid index for expression argsument: %d" % i)
         if i < 0:
             return self._args_[self.nargs()+i]
-            #0-0 send a warning?
         return self._args_[i]
 
     @property
@@ -572,7 +590,6 @@ class LogicalExpressionBase(LogicalValue):
         """
         return self._args_[:self.nargs()]
 
-
     def __getstate__(self):
         """
         Pickle the expression object
@@ -580,8 +597,8 @@ class LogicalExpressionBase(LogicalValue):
         Returns:
             The pickled state.
         """
-        state = super(ExpressionBase, self).__getstate__()
-        for i in ExpressionBase.__slots__:
+        state = super(LogicalExpressionBase, self).__getstate__()
+        for i in LogicalExpressionBase.__slots__:
            state[i] = getattr(self,i)
         return state
 
@@ -640,7 +657,7 @@ class LogicalExpressionBase(LogicalValue):
         return expression_to_string(self, verbose=verbose, labeler=labeler, smap=smap, compute_values=compute_values)
 
     def _precedence(self):
-        return ExpressionBase.PRECEDENCE
+        return LogicalExpressionBase.PRECEDENCE
 
     def _associativity(self):
         """Return the associativity of this operator.
@@ -650,12 +667,10 @@ class LogicalExpressionBase(LogicalValue):
         interpreted as "not associative" (implying any argsuments that
         are at this operator's _precedence() will be enclosed in parens).
         """
-        #0-0 do we need this?
         return 1
 
     def _to_string(self, values, verbose, smap, compute_values):            #pragma: no cover
         """
-        #0-0 pass for now
         Construct a string representation for this node, using the string
         representations of its children.
 
@@ -679,7 +694,9 @@ class LogicalExpressionBase(LogicalValue):
         Returns:
             A string representation for this node.
         """
-        pass
+        raise NotImplementedError(
+            "Derived expression (%s) failed to "
+            "implement _to_string()" % (str(self.__class__), ))
 
     def getname(self, *args, **kwds):                       #pragma: no cover
         """
@@ -694,8 +711,9 @@ class LogicalExpressionBase(LogicalValue):
         Returns:
             A string name for the function.
         """
-        raise NotImplementedError("Derived expression (%s) failed to "\
-            "implement getname()" % ( str(self.__class__), ))
+        raise NotImplementedError(
+            "Derived expression (%s) failed to "
+            "implement getname()" % (str(self.__class__), ))
 
     def clone(self, substitute=None):
         """
@@ -747,25 +765,25 @@ class LogicalExpressionBase(LogicalValue):
         """
         return self.__class__(args)
 
-    def create_potentially_variable_object(self):
-        """
-        Create a potentially variable version of this object.
-
-        This method returns an object that is a potentially variable
-        version of the current object.  In the simplest
-        case, this simply sets the value of `__class__`:
-
-            self.__class__ = self.__class__.__mro__[1]
-
-        Note that this method is allowed to modify the current object
-        and return it.  But in some cases it may create a new
-        potentially variable object.
-
-        Returns:
-            An object that is potentially variable.
-        """
-        self.__class__ = self.__class__.__mro__[1]
-        return self
+    # def create_potentially_variable_object(self):
+    #     """
+    #     Create a potentially variable version of this object.
+    #
+    #     This method returns an object that is a potentially variable
+    #     version of the current object.  In the simplest
+    #     case, this simply sets the value of `__class__`:
+    #
+    #         self.__class__ = self.__class__.__mro__[1]
+    #
+    #     Note that this method is allowed to modify the current object
+    #     and return it.  But in some cases it may create a new
+    #     potentially variable object.
+    #
+    #     Returns:
+    #         An object that is potentially variable.
+    #     """
+    #     self.__class__ = self.__class__.__mro__[1]
+    #     return self
 
     def is_constant(self):
         """Return True if this expression is an atomic constant
@@ -791,9 +809,6 @@ class LogicalExpressionBase(LogicalValue):
 
     def _is_fixed(self, values):
         """
-
-        # 0-0 leave it for now?
-
         Compute whether this expression is fixed given
         the fixed values of its children.
 
@@ -867,10 +882,6 @@ class LogicalExpressionBase(LogicalValue):
         """
         return sizeof_expression(self)
 
-    #def polynomial_degree(self):
-    #not needed for logical expresion
-    #def _compute_polynomial_degree(self, values):                          #pragma: no cover
-
     def _apply_operation(self, result):     #pragma: no cover
         """
         Compute the values of this node given the values of its children.
@@ -899,109 +910,9 @@ class LogicalExpressionBase(LogicalValue):
         Returns:
             A floating point value for this expression.
         """
-        raise NotImplementedError("Derived expression (%s) failed to "\
-            "implement _apply_operation()" % ( str(self.__class__), ))
-    
-    """
-    ---------------------**********************--------------------
-    The following are nodes creators that should be used to create
-    new nodes properly.
-    """
-        
-    #NotExpression Creator
-    def __invert__(self):
-        return NotExpression(self)
-
-
-    #EquivalanceExpression Creator
-    def __eq__(self, other):
-        return EquivalenceExpression(self, other)
-
-    def equals(self, other):
-        return EquivalenceExpression(self, other)
-
-    #XorExpression Creator
-    def __xor__(self, other):
-        return XorExpression(self, other)
-
-    def xor(self, other):
-        return XorExpression(self, other)
-
-    def implies(self, other):
-        return Implication(self, other)
-
-    #AndExpressionCreator
-    #Create a new node iff neither node is an AndNode
-    #If we have an "AndNode" already, safe_add new node to the exisiting one.
-    def __and__(self, other):
-        if (type(self) != AndExpression):  
-            if (type(other) != AndExpression):
-                #return AndExpression(set([self, other])) #set version
-                return AndExpression(list([self, other]))
-            else :
-                other._add(self)
-                self = other
-                return self
-        else :
-            self._add(other)
-        return self
-
-    #class method for AndExpression,basically the same logic as above
-    '''
-    #This section is documented just in case the class method is needed
-    #in the future
-    def LogicalAnd(self, other):
-        if (self.getname() != "AndExpression"):  
-            if (other.getname() != "AndExpression"):
-                #return AndExpression(set([self, other])) #set version
-                return AndExpression(list([self, other]))
-            else :
-                other._add(self)
-                # 0-0 This step is a safety consideration, we can also 
-                # use the python add and access the list to make things 
-                # faster(not by much I guess)
-                self = other
-                return self
-        else:
-            self._add(other)
-        return self
-    '''
-    
-    #OrExpressionCreator
-    #Create a new node iff neither node is an OrNode
-    def __or__(self, other):
-        if (type(self) != OrExpression):  
-            if (type(other) != OrExpression):
-                #return OrExpression(set([self, other])) #set version
-                return OrExpression(list([self, other]))
-            else :
-                other._add(self)
-                self = other
-                return self
-        else :
-            self._add(other)
-        return self
-
-    '''
-        This section is documented just in case the class method is needed
-        in the future
-    #class method for OrExpression,basically the same logic as above
-    def LogicalOr(self, other):
-        if (self.getname() != "OrExpression"):  
-            if (other.getname() != "OrExpression"):
-                #return OrExpression(set([self, other])) #set version
-                return OrExpression(list([self, other]))
-            else :
-                other._add(self)
-                # 0-0 This step is a safety consideration, we can also 
-                # use the python add and access the list to make things 
-                # faster(not by much I guess)
-                self = other
-                return self
-        else:
-            self._add(other)
-        return self
-    '''
+        raise NotImplementedError(
+            "Derived expression (%s) failed to "
+            "implement _apply_operation()" % (str(self.__class__), ))
 
 """
 ---------------------------******************--------------------
@@ -1023,7 +934,7 @@ def LogicalXor(arg1, arg2):
 
 # 0-0 add a static method for impies>
 def Implies(arg1, arg2):
-    return Implication(arg1, arg2)
+    return ImplicationExpression(arg1, arg2)
 
 # static method for AndExpression creator
 # create a new node iff neither node is an AndNode
@@ -1110,18 +1021,18 @@ class UnaryExpression(LogicalExpressionBase):
     BinaryExperssion or MultiNodesExpression.
     """
 
-    __slots__ = ("_args_",)
+    # __slots__ = ("_args_",)
 
-    """
-    #0-0
-    The precedence of an abstract class should not be a concern here, so it will be set
-    to zero for now.
-    """
-    def __init__(self, args):
-        self._args_ = list([args])
-        #print("The variable is initialized using UnaryExpression")
-        #for tracing purpose only, delete later.
-        #0-0 
+    # """
+    # #0-0
+    # The precedence of an abstract class should not be a concern here, so it will be set
+    # to zero for now.
+    # """
+    # def __init__(self, args):
+    #     self._args_ = list([args])
+    #     #print("The variable is initialized using UnaryExpression")
+    #     #for tracing purpose only, delete later.
+    #     #0-0
 
     PRECEDENCE = 10
 
@@ -1135,15 +1046,12 @@ class UnaryExpression(LogicalExpressionBase):
         return UnaryExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        #question: how should this one work in general, though this function should not
-        #be called ever imo. 
-        #fine to raise this error?
-        raise NotImplementedError("Derived expression (%s) failed to "\
-                "implement _apply_operation()" % ( str(self.__class__), ))
+        raise NotImplementedError(
+            "Derived expression (%s) failed to "
+            "implement _to_string()" % (str(self.__class__), ))
 
     def _apply_operation(self):
         raise TypeError("Please use Notexpression instead.")
-        #0-0 ok to do this?
         
 
 
@@ -1183,10 +1091,6 @@ class BinaryExpression(LogicalExpressionBase):
 
     def __init__(self, larg, rarg):
         self._args_ = list([larg, rarg])
-        #
-        #print("The variable is initialized using BinaryExpression")
-        #for tracing purpose only, delete later.
-        #0-0 
 
     PRECEDENCE = 10
     #As this class should never be used in practice.
@@ -1228,7 +1132,7 @@ class EquivalenceExpression(BinaryExpression):
             return 'EquivalanceExpression'
 
         def _precendence(self):
-            return EquivalanceExpression.PRECEDENCE
+            return EquivalenceExpression.PRECEDENCE
 
         def _to_string(self, values, verbose, smap, compute_values):
             return " Equals ".join(values)
@@ -1270,7 +1174,7 @@ class XorExpression(BinaryExpression):
             return operator.xor(resList[0], resList[1])
 
 
-class Implication(BinaryExpression):
+class ImplicationExpression(BinaryExpression):
         """
         This is the node for Implication, this node should have exactly two children
         """
@@ -1284,7 +1188,7 @@ class Implication(BinaryExpression):
             return 'Implication'
 
         def _precendence(self):
-            return XorExpression.PRECEDENCE
+            return ImplicationExpression.PRECEDENCE
 
         def _to_string(self, values, verbose, smap, compute_values):
             #pass this one for now 0-0
