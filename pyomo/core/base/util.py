@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -16,7 +16,7 @@ import functools
 import inspect
 import six
 
-from six import iteritems
+from six import iteritems, iterkeys
 
 if six.PY2:
     getargspec = inspect.getargspec
@@ -184,6 +184,7 @@ def Initializer(init,
     else:
         return ConstantInitializer(init)
 
+
 class InitializerBase(object):
     __slots__ = ()
 
@@ -195,6 +196,24 @@ class InitializerBase(object):
     def __setstate__(self, state):
         for key, val in iteritems(state):
             object.__setattr__(self, key, val)
+
+    def constant(self):
+        """Return True if this initializer is constant across all indices"""
+        return False
+
+    def contains_indices(self):
+        """Return True if this initializer contains embedded indices"""
+        return False
+
+    def indices(self):
+        """Return a generator over the embedded indices
+
+        This will raise a RuntimeError if this initializer does not
+        contain embedded indices
+        """
+        raise RuntimeError("Initializer %s does not contain embedded indixes"
+                           % (type(self).__name__,))
+
 
 class ConstantInitializer(InitializerBase):
     __slots__ = ('val','verified')
@@ -209,6 +228,7 @@ class ConstantInitializer(InitializerBase):
     def constant(self):
         return True
 
+
 class ItemInitializer(InitializerBase):
     __slots__ = ('_dict',)
 
@@ -218,8 +238,12 @@ class ItemInitializer(InitializerBase):
     def __call__(self, parent, idx):
         return self._dict[idx]
 
-    def constant(self):
-        return False
+    def contains_indices(self):
+        return True
+
+    def indices(self):
+        return iterkeys(self._dict)
+
 
 class IndexedCallInitializer(InitializerBase):
     __slots__ = ('_fcn',)
@@ -237,8 +261,6 @@ class IndexedCallInitializer(InitializerBase):
         else:
             return self._fcn(parent, idx)
 
-    def constant(self):
-        return False
 
 
 class CountedCallGenerator(object):
@@ -332,8 +354,6 @@ class CountedCallInitializer(InitializerBase):
             self._is_counted_rule = False
         return self.__call__(parent, idx)
 
-    def constant(self):
-        return False
 
 class ScalarCallInitializer(InitializerBase):
     __slots__ = ('_fcn',)
@@ -343,7 +363,3 @@ class ScalarCallInitializer(InitializerBase):
 
     def __call__(self, parent, idx):
         return self._fcn(parent)
-
-    def constant(self):
-        return False
-

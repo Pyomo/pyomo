@@ -22,7 +22,7 @@ from six.moves import xrange
 from pyutilib.misc.misc import flatten_tuple
 
 from pyomo.common.deprecation import deprecated, deprecation_warning
-from pyomo.common.errors import DeveloperError
+from pyomo.common.errors import DeveloperError, PyomoException
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import (
     native_types, native_numeric_types, as_numeric, value,
@@ -229,6 +229,15 @@ class SetInitializer(InitializerBase):
     def constant(self):
         return self._set is None or self._set.constant()
 
+    def contains_indices(self):
+        return self._set is not None and self._set.contains_indices()
+
+    def indices(self):
+        if self._set is not None:
+            return self._set.indices()
+        else:
+            super(SetInitializer, self).indices()
+
     def setdefault(self, val):
         if self._set is None:
             self._set = ConstantInitializer(val)
@@ -244,6 +253,22 @@ class SetIntersectInitializer(InitializerBase):
 
     def constant(self):
         return self._A.constant() and self._B.constant()
+
+    def contains_indices(self):
+        return self._A.contains_indices() or self._B.contains_indices()
+
+    def indices(self):
+        if self._A.contains_indices():
+            if self._B.contains_indices():
+                if set(self._A.indices()) != set (self._B.indices()):
+                    raise ValueError(
+                        "SetIntersectInitializer contains two "
+                        "sub-initializers with inconsistent external indices")
+            return self._A.indices()
+        else:
+            # It is OK (and desirable) for this to raise the exception
+            # if B does not contain external indices
+            return self._B.indices()
 
 class RangeSetInitializer(InitializerBase):
     __slots__ = ('_init', 'default_step',)
@@ -269,6 +294,50 @@ class RangeSetInitializer(InitializerBase):
     def setdefault(self, val):
         # This is a real range set... there is no default to set
         pass
+
+class TuplizeError(PyomoException):
+    pass
+
+class TuplizeValuesInitializer(InitializerBase):
+    __slots__ = ('_init', '_dimen')
+
+    def __new__(cls, *args):
+        if args == (None,):
+            return None
+        else:
+            return super(TuplizeValuesInitializer, cls).__new__(cls, *args)
+
+    def __init__(self, _init):
+        self._init = _init
+        self._dimen = UnknownSetDimen
+
+    def __call__(self, parent, index):
+        _val = self._init(parent, index)
+        if self._dimen in {1, None, UnknownSetDimen}:
+            return _val
+        if not _val:
+            return _val
+        if isinstance(_val[0], tuple):
+            return _val
+        return self._tuplize(_val, parent, index)
+
+    def constant(self):
+        return self._init.constant()
+
+    def contains_indices(self):
+        return self._init.contains_indices()
+
+    def indices(self):
+        return self._init.indices()
+
+    def _tuplize(self, _val, parent, index):
+        d = self._dimen
+        if len(_val) % d:
+            raise TuplizeError(
+                "Cannot tuplize list data for set %%s%%s because its "
+                "length %s is not a multiple of dimen=%s" % (len(_val), d))
+
+        return list(tuple(_val[d*i:d*(i+1)]) for i in xrange(len(_val)//d))
 
 #
 # DESIGN NOTES
@@ -1646,9 +1715,9 @@ class Set(IndexedComponent):
         self._init_dimen = Initializer(
             kwds.pop('dimen', UnknownSetDimen),
             arg_not_specified=UnknownSetDimen)
-        self._init_values = Initializer(
-            kwds.pop('initialize', ()),
-            treat_sequences_as_mappings=False, allow_generators=True)
+        self._init_values = TuplizeValuesInitializer(Initializer(
+            kwds.pop('initialize', None),
+            treat_sequences_as_mappings=False, allow_generators=True))
         self._init_validate = Initializer(kwds.pop('validate', None))
         self._init_filter = Initializer(kwds.pop('filter', None))
 
@@ -1663,8 +1732,10 @@ class Set(IndexedComponent):
         # HACK to make the "counted call" syntax work.  We wait until
         # after the base class is set up so that is_indexed() is
         # reliable.
-        if self._init_values.__class__ is IndexedCallInitializer:
-            self._init_values = CountedCallInitializer(self, self._init_values)
+        if self._init_values is not None \
+           and self._init_values._init.__class__ is IndexedCallInitializer:
+            self._init_values._init = CountedCallInitializer(
+                self, self._init_values._init)
 
 
     @deprecated("check_values is deprecated: Sets only contain valid members",
@@ -1687,15 +1758,22 @@ class Set(IndexedComponent):
         if data is not None:
             # Data supplied to construct() should override data provided
             # to the constructor
-            tmp_init, self._init_values = self._init_values, Initializer(
-                    data, treat_sequences_as_mappings=False)
+            tmp_init, self._init_values \
+                = self._init_values, TuplizeValuesInitializer(
+                    Initializer(data, treat_sequences_as_mappings=False))
         try:
-            if type(self._init_values) is ItemInitializer:
-                for index in iterkeys(self._init_values._dict):
-                    # The index is coming in externally; we need to
-                    # validate it
+            if self._init_values is None:
+                if not self.is_indexed():
+                    # This ensures backwards compatibility by causing all
+                    # scalar sets (including set operators) to be
+                    # initialized (and potentially empty) after construct().
+                    self._getitem_when_not_present(None)
+            elif self._init_values.contains_indices():
+                # The index is coming in externally; we need to validate it
+                for index in self._init_values.indices():
                     IndexedComponent.__getitem__(self, index)
             else:
+                # Bypass the index validation and create the member directly
                 for index in self.index_set():
                     self._getitem_when_not_present(index)
         finally:
@@ -1710,8 +1788,46 @@ class Set(IndexedComponent):
     #
     def _getitem_when_not_present(self, index):
         """Returns the default component data value."""
+        # Because we allow sets within an IndexedSet to have different
+        # dimen, we have moved the tuplization logic from PyomoModel
+        # into Set (because we cannot know the dimen of a _SetData until
+        # we are actually constructing that index).  This also means
+        # that we need to potentially communicate the dimen to the
+        # (wrapped) vaue initializer.  So, we will get the dimen first,
+        # then get the values.  Only then will we know that this index
+        # will actually be constructed (and not Skipped).
+        _block = self.parent_block()
+
+        if self._init_dimen is not None:
+            _d = self._init_dimen(_block, index)
+            if ( not normalize_index.flatten and _d is not UnknownSetDimen
+                 and _d is not None ):
+                logger.warning(
+                    "Ignoring non-None dimen (%s) for set %s%s "
+                    "(normalize_index.flatten is False, so dimen "
+                    "verification is not available)." % (
+                        _d, self.name,
+                        ("[%s]" % (index,) if self.is_indexed() else "") ))
+                _d = None
+        else:
+            _d = UnknownSetDimen
+
+        if self._init_domain is not None:
+            domain = self._init_domain(_block, index)
+            if _d is UnknownSetDimen and domain is not None \
+               and domain.dimen is not None:
+                _d = domain.dimen
+        else:
+            domain = None
+
         if self._init_values is not None:
-            _values = self._init_values(self, index)
+            self._init_values._dimen = _d
+            try:
+                _values = self._init_values(_block, index)
+            except TuplizeError as e:
+                raise ValueError( str(e) % (
+                    self._name, "[%s]" % index if self.is_indexed() else ""))
+
             if _values is Set.Skip:
                 return
             elif _values is None:
@@ -1722,23 +1838,15 @@ class Set(IndexedComponent):
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
-        if self._init_dimen is not None:
-            _d = self._init_dimen(self, index)
-            if _d is not UnknownSetDimen and (not normalize_index.flatten) \
-               and _d is not None:
-                logger.warning(
-                    "Ignoring non-None dimen (%s) for set %s "
-                    "(normalize_index.flatten is False, so dimen "
-                    "verification is not available)." % (_d, obj.name))
-                _d = None
+        if _d is not UnknownSetDimen:
             obj._dimen = _d
-        if self._init_domain is not None:
-            obj._domain = self._init_domain(self, index)
-            if isinstance(obj._domain, _SetOperator):
-                obj._domain.construct()
+        if domain is not None:
+            obj._domain = domain
+            if self.parent_component().is_constructed():
+                domain.construct()
         if self._init_validate is not None:
             try:
-                obj._validate = Initializer(self._init_validate(self, index))
+                obj._validate = Initializer(self._init_validate(_block, index))
                 if obj._validate.constant():
                     # _init_validate was the actual validate function; use it.
                     obj._validate = self._init_validate
@@ -1749,7 +1857,7 @@ class Set(IndexedComponent):
                 obj._validate = self._init_validate
         if self._init_filter is not None:
             try:
-                _filter = Initializer(self._init_filter(self, index))
+                _filter = Initializer(self._init_filter(_block, index))
                 if _filter.constant():
                     # _init_filter was the actual filter function; use it.
                     _filter = self._init_filter

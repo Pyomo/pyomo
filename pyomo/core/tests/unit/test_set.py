@@ -775,6 +775,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
     def test_validate(self):
         def rFilter(m, i):
+            self.assertIs(m, None)
             return i % 2
         # Simple validation
         r = RangeSet(1,10,2, validate=rFilter)
@@ -3374,7 +3375,8 @@ class TestSet(unittest.TestCase):
             "Element 1 already exists in Set J; no action taken\n")
 
 
-        def _l_tri(m, i, j):
+        def _l_tri(model, i, j):
+            self.assertIs(model, m)
             return i >= j
         m.K = Set(initialize=RangeSet(3)*RangeSet(3), filter=_l_tri)
         self.assertEqual(
@@ -3392,7 +3394,8 @@ class TestSet(unittest.TestCase):
         # component.  construct() needs to recognize that the filter is
         # returning a constant in construct() and re-assign it to be the
         # _filter for each _SetData
-        def _lt_3(m, i):
+        def _lt_3(model, i):
+            self.assertIs(model, m)
             return i < 3
         m.L = Set([1,2,3,4,5], initialize=RangeSet(10), filter=_lt_3)
         self.assertEqual(len(m.L), 5)
@@ -3407,13 +3410,14 @@ class TestSet(unittest.TestCase):
         self.assertEqual(list(m.L[2]), [1,2,0])
 
 
-        def _validate(m,i,j):
+        m = ConcreteModel()
+        def _validate(model,i,j):
+            self.assertIs(model, m)
             if i + j < 2:
                 return True
             if i - j > 2:
                 return False
             raise RuntimeError("Bogus value")
-        m = ConcreteModel()
         m.I = Set(validate=_validate)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
@@ -3603,8 +3607,10 @@ class TestSet(unittest.TestCase):
         m = AbstractModel()
         m.I = Set(initialize=[1,2,3])
         m.J = Set(initialize=[4,5,6])
+        m.K = Set(initialize=[(1,4),(2,6),(3,5)], within=m.I*m.J)
         m.II = Set([1,2,3], initialize={1:[0], 2:[1,2], 3: xrange(3)})
         m.JJ = Set([1,2,3], initialize={1:[0], 2:[1,2], 3: xrange(3)})
+        m.KK = Set([1,2], initialize=[], dimen=lambda m,i: i)
 
         output = StringIO()
         m.pprint()
@@ -3624,19 +3630,49 @@ JJ : Size=0, Index=JJ_index, Ordered=Insertion
         self.assertEqual(output.getvalue().strip(), ref)
 
         i = m.create_instance(data={
-            None: {'I': [-1,0], 'II': {1: [10,11], 3:[30]}}
+            None: {'I': [-1,0], 'II': {1: [10,11], 3:[30]},
+                   'K': [-1, 4, -1, 6, 0, 5]}
         })
 
         self.assertEqual(list(i.I), [-1,0])
         self.assertEqual(list(i.J), [4,5,6])
+        self.assertEqual(list(i.K), [(-1,4),(-1,6),(0,5)])
         self.assertEqual(list(i.II[1]), [10,11])
         self.assertEqual(list(i.II[3]), [30])
         self.assertEqual(list(i.JJ[1]), [0])
         self.assertEqual(list(i.JJ[2]), [1,2])
         self.assertEqual(list(i.JJ[3]), [0,1,2])
+        self.assertEqual(list(i.KK[1]), [])
+        self.assertEqual(list(i.KK[2]), [])
 
         # Implicitly-constructed set should fall back on initialize!
         self.assertEqual(list(i.II[2]), [1,2])
+
+        # Additional tests for tuplize:
+        i = m.create_instance(data={
+            None: {'K': [(1,4),(2,6)],
+                   'KK': [1,4,2,6]}
+        })
+        self.assertEqual(list(i.K), [(1,4),(2,6)])
+        self.assertEqual(list(i.KK), [1,2])
+        self.assertEqual(list(i.KK[1]), [1,4,2,6])
+        self.assertEqual(list(i.KK[2]), [(1,4),(2,6)])
+        i = m.create_instance(data={
+            None: {'K': []}
+        })
+        self.assertEqual(list(i.K), [])
+        with self.assertRaisesRegexp(
+                ValueError, "Cannot tuplize list data for set K because "
+                "its length 3 is not a multiple of dimen=2"):
+            i = m.create_instance(data={
+                None: {'K': [1,2,3]}
+            })
+        with self.assertRaisesRegexp(
+                ValueError, "Cannot tuplize list data for set KK\[2\] because "
+                "its length 3 is not a multiple of dimen=2"):
+            i = m.create_instance(data={
+                None: {'KK': {2: [1,2,3]}}
+            })
 
         ref = """
 Constructing AbstractOrderedSimpleSet 'I' on [Model] from data=None
@@ -3779,6 +3815,7 @@ I : Size=1, Index=None, Ordered=Insertion
         with self.assertRaisesRegexp(
                 ValueError, "Set rule returned None instead of Set.End"):
             m.I1 = Set(initialize=_i_init)
+
         @simple_set_rule
         def _j_init(m, i):
             if i > 3:
