@@ -19,8 +19,6 @@ import weakref
 from six import iteritems, iterkeys
 from six.moves import xrange
 
-from pyutilib.misc.misc import flatten_tuple
-
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import DeveloperError, PyomoException
 from pyomo.common.timing import ConstructionTimer
@@ -3176,6 +3174,18 @@ class SetProduct(SetOperator):
                 ans += s_dim
         return UnknownSetDimen if _unknown else ans
 
+    def _flatten_product(self, val):
+        """Flatten any nested set product terms (due to nested products)
+
+        Note that because this is called in a recursive context, this
+        method is assued that there is no more than a single level of
+        nested tuples (so this only needs to check the top-level terms)
+
+        """
+        for i in xrange(len(val)-1, -1, -1):
+            if val[i].__class__ is tuple:
+                val = val[:i] + val[i] + val[i+1:]
+        return val
 
 class SetProduct_InfiniteSet(SetProduct):
     __slots__ = tuple()
@@ -3186,7 +3196,7 @@ class SetProduct_InfiniteSet(SetProduct):
         if v is None:
             return default
         if normalize_index.flatten:
-            return flatten_tuple(v[0])
+            return self._flatten_product(v[0])
         return v[0]
 
     def _find_val(self, val):
@@ -3335,10 +3345,10 @@ class SetProduct_FiniteSet(_FiniteSetMixin, SetProduct_InfiniteSet):
     def __iter__(self):
         _iter = itertools.product(*self._sets)
         # Note: if all the member sets are simple 1-d sets, then there
-        # is no need to call flatten_tuple.
+        # is no need to call flatten_product.
         if FLATTEN_CROSS_PRODUCT and normalize_index.flatten \
            and self.dimen != len(self._sets):
-            return (flatten_tuple(_) for _ in _iter)
+            return (self._flatten_product(_) for _ in _iter)
         return _iter
 
     def __len__(self):
@@ -3366,7 +3376,7 @@ class SetProduct_OrderedSet(_OrderedSetMixin, SetProduct_FiniteSet):
         ans = tuple(s[i+1] for s,i in zip(self._sets, _ord))
         if FLATTEN_CROSS_PRODUCT and normalize_index.flatten \
            and self.dimen != len(ans):
-            return flatten_tuple(ans)
+            return self._flatten_product(ans)
         return ans
 
     def ord(self, item):
