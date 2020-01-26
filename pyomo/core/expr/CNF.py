@@ -1,5 +1,5 @@
 from .logical_expr import (LogicalExpressionBase, NotExpression, AndExpression, 
-    OrExpression, Implication, EquivalenceExpression, XorExpression, 
+    OrExpression, ImplicationExpression, EquivalenceExpression, XorExpression,
     ExactlyExpression, AtMostExpression, AtLeastExpression, Not, Equivalence, 
     LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor
     )

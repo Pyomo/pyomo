@@ -1,14 +1,10 @@
 import pyutilib.th as unittest
-from pyomo.environ import *
-from pyomo.core.expr.logical_expr import (LogicalExpressionBase, UnaryExpression,
-    NotExpression, BinaryExpression, MultiArgsExpression,
-    AndExpression, OrExpression, Implication, EquivalenceExpression, XorExpression, 
-    ExactlyExpression, AtMostExpression, AtLeastExpression, Not, Equivalence, 
-    LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor, 
-    )
 
 import pyomo.core.expr.CNF as cnf
-import itertools as it
+from pyomo.core.expr.logical_expr import (Not, Equivalence,
+                                          LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor,
+                                          )
+from pyomo.environ import *
 
 '''
 First testing file.
@@ -16,32 +12,35 @@ First testing file.
 
 
 def create_model1(y):
-    #model 1 with 5 checkpoints, 11 literals
+    # model 1 with 5 checkpoints, 11 literals
     c1 = (Implies(y[1], y[2])).equals(LogicalXor(y[3], y[4]))
     c2 = y[0] & Not(c1)
     c3 = Not(Implies(y[5], y[6]))
     c4 = LogicalOr(y[7], y[8], y[9])
     c5 = LogicalAnd((c3 & c4), y[10])
     root_node = c2 | Not(c5)
-    return root_node  
+    return root_node
+
 
 def create_model2(y):
-    #model 2 with 3 checkpoints, 11 literals
+    # model 2 with 3 checkpoints, 11 literals
     c1 = Not(y[1]).implies(y[2] ^ y[3])
     c2 = LogicalAnd(LogicalOr(y[4], y[5], y[6]))
     c3 = Equivalence(LogicalXor(y[8], y[9]), y[10])
     root_node = LogicalOr(y[0], LogicalAnd(c1, c2), Not(y[7]), c3)
     return root_node
 
+
 def create_model3(y):
-    #model3
+    # model3
     a1 = LogicalAnd(y[0].implies(y[1]), Not(y[2]))
-    a3 = LogicalAnd(LogicalXor(y[4],y[5]))
+    a3 = LogicalAnd(LogicalXor(y[4], y[5]))
     root_node = a1 | LogicalAnd(y[3]) | a3
     return root_node
 
+
 def create_model4(y):
-    #model4
+    # model4
     a0 = y[0].implies(y[1])
     a1 = Not(y[2])
     a2 = a0 & a1
@@ -49,12 +48,14 @@ def create_model4(y):
     return a3
     # return (y[0].implies(y[1]) and Not(y[2])) or y[3]
 
+
 def create_model5(y):
-    #model 5, for cnf walker
+    # model 5, for cnf walker
     a2 = LogicalAnd(y[0], y[1])
     o1 = LogicalOr(a2, y[3])
     a1 = LogicalAnd(o1, y[4])
     return a1
+
 
 class TestLogicalClasses(unittest.TestCase):
 
@@ -63,7 +64,7 @@ class TestLogicalClasses(unittest.TestCase):
         Test 1
         """
         m = ConcreteModel()
-        m.Y1 = BooleanVar() 
+        m.Y1 = BooleanVar()
         m.Y2 = BooleanVar()
 
         self.assertIsNone(m.Y1.value)
@@ -71,7 +72,7 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertFalse(m.Y1.value)
         m.Y1.set_value(True)
         self.assertTrue(m.Y1.value)
-        
+
         m.Y1.value, m.Y2.value = True, True
         self.assertTrue(value(LogicalAnd(m.Y1, m.Y2)))
         self.assertTrue(value(LogicalOr(m.Y1, m.Y2)))
@@ -96,10 +97,9 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertTrue(value(Implies(m.Y1, m.Y2)))
         self.assertFalse(value(LogicalXor(m.Y1, m.Y2)))
 
-
     def test_And_Or_nodes(self):
         m = ConcreteModel()
-        m.Y1 = BooleanVar() 
+        m.Y1 = BooleanVar()
         m.Y2 = BooleanVar()
         m.Y3 = BooleanVar()
         m.Y4 = BooleanVar()
@@ -107,129 +107,88 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y1.value = True
         m.Y2.value = True
         m.Y3.value = True
-        #try alterbate way to set value
-        #m.Y1.set_value(True)
-        #m.Y2.set_value(True)
+        # try alterbate way to set value
+        # m.Y1.set_value(True)
+        # m.Y2.set_value(True)
         And_static = LogicalAnd(m.Y1, m.Y2, m.Y3)
         Or_static = LogicalOr(m.Y1, m.Y2, m.Y3)
-        And_operator = m.Y1 & m.Y2 & m.Y3 
-        Or_operator = m.Y1 | m.Y2 | m.Y3    
+        And_operator = m.Y1 & m.Y2 & m.Y3
+        Or_operator = m.Y1 | m.Y2 | m.Y3
         self.assertTrue(value(And_static))
         self.assertTrue(value(Or_static))
         self.assertTrue(value(And_operator.implies(Or_operator)))
         self.assertTrue(value(Implies(And_operator, Or_operator)))
 
-
-
         m.Y1.value, m.Y2.value, m.Y3.value, = False, True, True
         And_static = LogicalAnd(m.Y1, m.Y2, m.Y3)
         Or_static = LogicalOr(m.Y1, m.Y2, m.Y3)
-        And_operator = m.Y1 & m.Y2 & m.Y3 
-        Or_operator = m.Y1 | m.Y2 | m.Y3    
+        And_operator = m.Y1 & m.Y2 & m.Y3
+        Or_operator = m.Y1 | m.Y2 | m.Y3
         self.assertFalse(value(And_static))
         self.assertTrue(value(Or_static))
         self.assertTrue(value(And_operator.implies(Or_operator)))
-        self.assertTrue(value(Implies(And_operator, Or_operator)))    
+        self.assertTrue(value(Implies(And_operator, Or_operator)))
 
-    def test_binary_nodes(self):
+    def test_binary_equiv(self):
         m = ConcreteModel()
-        m.Y1 = BooleanVar() 
+        m.Y1 = BooleanVar()
         m.Y2 = BooleanVar()
-        
-        #######-----------------------------########
-        m.Y1.value, m.Y2.value = True, True
+        op_static = Equivalence(m.Y1, m.Y2)
+        op_class = m.Y1.equals(m.Y2)
+        op_operator = m.Y1 == m.Y2
+        truth_table = [
+            [True, True, True],
+            [True, False, False],
+            [False, True, False],
+            [False, False, True]
+        ]
+        for line in truth_table:
+            m.Y1.value, m.Y2.value = line[0], line[1]
+            self.assertEquals(value(op_static), line[2])
+            self.assertEquals(value(op_class), line[2])
+            self.assertEquals(value(op_operator), line[2])
 
-        eq_static =  Equivalence(m.Y1, m.Y2)
-        eq_class = m.Y1.equals(m.Y2)
-        eq_operator = (m.Y1 == m.Y2)
-        self.assertTrue(value(eq_static))
-        self.assertTrue(value(eq_class))
-        self.assertTrue(value(eq_operator))
+    def test_binary_xor(self):
+        m = ConcreteModel()
+        m.Y1 = BooleanVar()
+        m.Y2 = BooleanVar()
+        op_static = LogicalXor(m.Y1, m.Y2)
+        op_class = m.Y1.xor(m.Y2)
+        op_operator = m.Y1 ^ m.Y2
+        truth_table = [
+            [True, True, False],
+            [True, False, True],
+            [False, True, True],
+            [False, False, False]
+        ]
+        for line in truth_table:
+            m.Y1.value, m.Y2.value = line[0], line[1]
+            self.assertEquals(value(op_static), line[2])
+            self.assertEquals(value(op_class), line[2])
+            self.assertEquals(value(op_operator), line[2])
 
-        xor_static = LogicalXor(m.Y1, m.Y2)
-        xor_class = m.Y1.xor(m.Y2)
-        xor_operator =  m.Y1 ^ m.Y2
-        self.assertFalse(value(xor_static))
-        self.assertFalse(value(xor_class))
-        self.assertFalse(value(xor_operator))
-
-        implication_static = Implies(m.Y1, m.Y2)
-        implication_class = m.Y1.implies(m.Y2)
-        self.assertTrue(value(implication_static))
-        self.assertTrue(value(implication_class))
-
-        #######-----------------------------########
-        m.Y1.value, m.Y2.value = True, False
-
-        eq_static =  Equivalence(m.Y1, m.Y2)
-        eq_class = m.Y1.equals(m.Y2)
-        eq_operator = (m.Y1 == m.Y2)
-        self.assertFalse(value(eq_static))
-        self.assertFalse(value(eq_class))
-        self.assertFalse(value(eq_operator))
-
-        xor_static = LogicalXor(m.Y1, m.Y2)
-        xor_class = m.Y1.xor(m.Y2)
-        xor_operator =  m.Y1 ^ m.Y2
-        self.assertTrue(value(xor_static))
-        self.assertTrue(value(xor_class))
-        self.assertTrue(value(xor_operator))
-
-        implication_static = Implies(m.Y1, m.Y2)
-        implication_class = m.Y1.implies(m.Y2)
-        self.assertFalse(value(implication_static))
-        self.assertFalse(value(implication_class))
-
-
-        #######-----------------------------########
-        m.Y1.value, m.Y2.value = False, True
-
-        eq_static =  Equivalence(m.Y1, m.Y2)
-        eq_class = m.Y1.equals(m.Y2)
-        eq_operator = (m.Y1 == m.Y2)
-        self.assertFalse(value(eq_static))
-        self.assertFalse(value(eq_class))
-        self.assertFalse(value(eq_operator))
-
-        xor_static = LogicalXor(m.Y1, m.Y2)
-        xor_class = m.Y1.xor(m.Y2)
-        xor_operator =  m.Y1 ^ m.Y2
-        self.assertTrue(value(xor_static))
-        self.assertTrue(value(xor_class))
-        self.assertTrue(value(xor_operator))
-
-        implication_static = Implies(m.Y1, m.Y2)
-        implication_class = m.Y1.implies(m.Y2)
-        self.assertTrue(value(implication_static))
-        self.assertTrue(value(implication_class))
-
-        ######----------------------------#######
-
-        m.Y1.value, m.Y2.value = False, False
-        eq_static =  Equivalence(m.Y1, m.Y2)
-        eq_class = m.Y1.equals(m.Y2)
-        seq_operator = (m.Y1 == m.Y2)
-        self.assertTrue(value(eq_static))
-        self.assertTrue(value(eq_class))
-        self.assertTrue(value(eq_operator))
-
-        xor_static = LogicalXor(m.Y1, m.Y2)
-        xor_class = m.Y1.xor(m.Y2)
-        xor_operator =  m.Y1 ^ m.Y2
-        self.assertFalse(value(xor_static))
-        self.assertFalse(value(xor_class))
-        self.assertFalse(value(xor_operator))
-
-        implication_static = Implies(m.Y1, m.Y2)
-        implication_class = m.Y1.implies(m.Y2)
-        self.assertTrue(value(implication_static))
-        self.assertTrue(value(implication_class))
-
-        #######-----------------------------########
+    def test_binary_implies(self):
+        m = ConcreteModel()
+        m.Y1 = BooleanVar()
+        m.Y2 = BooleanVar()
+        op_static = Implies(m.Y1, m.Y2)
+        op_class = m.Y1.implies(m.Y2)
+        truth_table = [
+            [True, True, True],
+            [True, False, False],
+            [False, True, True],
+            [False, False, True]
+        ]
+        for line in truth_table:
+            m.Y1.value, m.Y2.value = line[0], line[1]
+            self.assertEquals(value(op_static), line[2])
+            self.assertEquals(value(op_class), line[2])
+            nnf = Not(m.Y1) | m.Y2
+            self.assertEquals(value(op_static), value(nnf))
 
     def test_MultiArgsExpression(self):
         m = ConcreteModel()
-        m.Y1 = BooleanVar() 
+        m.Y1 = BooleanVar()
         m.Y2 = BooleanVar()
         m.Y3 = BooleanVar()
         m.Y4 = BooleanVar()
@@ -240,11 +199,10 @@ class TestLogicalClasses(unittest.TestCase):
         Test for AndExpression and OrExpression
         """
 
-
         m.Y1.value, m.Y2.value, m.Y3.value, m.Y4.value = True, True, True, True
         And_static = LogicalAnd(m.Y1, m.Y2, m.Y3, m.Y4)
         And_operator = m.Y1 & m.Y2 & m.Y3 & m.Y4
-        self.assertTrue(value(And_static)) 
+        self.assertTrue(value(And_static))
         self.assertTrue(value(And_operator))
 
         Or_static = LogicalOr(m.Y1, m.Y2, m.Y3, m.Y4)
@@ -255,7 +213,7 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y1.value, m.Y2.value, m.Y3.value, m.Y4.value = True, True, True, False
         And_static = LogicalAnd(m.Y1, m.Y2, m.Y3, m.Y4)
         And_operator = m.Y1 & m.Y2 & m.Y3 & m.Y4
-        self.assertFalse(value(And_static)) 
+        self.assertFalse(value(And_static))
         self.assertFalse(value(And_operator))
 
         Or_static = LogicalOr(m.Y1, m.Y2, m.Y3, m.Y4)
@@ -267,7 +225,7 @@ class TestLogicalClasses(unittest.TestCase):
 
         And_static = LogicalAnd(m.Y1, m.Y2, m.Y3, m.Y4)
         And_operator = m.Y1 & m.Y2 & m.Y3 & m.Y4
-        self.assertFalse(value(And_static)) 
+        self.assertFalse(value(And_static))
         self.assertFalse(value(And_operator))
         Or_static = LogicalOr(m.Y1, m.Y2, m.Y3, m.Y4)
         Or_operator = m.Y1 | m.Y2 | m.Y3 | m.Y4
@@ -275,7 +233,7 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertFalse(value(Or_operator))
 
         ###########----------------------###########
-          
+
         """
         Test for Exactly, AtMost and AtLeast
         """
@@ -313,7 +271,6 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertFalse(value(AtLeast_2))
         self.assertTrue(value(AtLeast_3))
         self.assertTrue(value(AtLeast_4))
-
 
         m.Y1.value, m.Y2.value, m.Y3.value, m.Y4.value = True, False, False, False
 
@@ -375,15 +332,14 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertTrue(Not(m.Y1).is_expression_type())
         self.assertTrue(Equivalence(m.Y1, m.Y2).is_expression_type())
         self.assertTrue(AtMost(1, [m.Y1, m.Y2, m.Y3]).is_expression_type())
-        
+
     def test_is_CNF(self):
-        
         m = ConcreteModel()
         m.Y1 = BooleanVar()
         m.Y2 = BooleanVar()
         m.Y3 = BooleanVar()
         m.Y4 = BooleanVar()
-        
+
         """
         A single literal test for if_CNF
         """
@@ -412,7 +368,6 @@ class TestLogicalClasses(unittest.TestCase):
         root_node_and = LogicalAnd(Or_node_1, Or_node_2)
         self.assertTrue(cnf.is_CNF(root_node_and))
 
-
         """
         A simple test for if_CNF with only and, or and not expression with no
         nested node. Expect False
@@ -423,10 +378,10 @@ class TestLogicalClasses(unittest.TestCase):
         Not_node = ~m.Y3
         Leaf_node = m.Y4
         root_node_or = And_node | Not_node | Leaf_node
-        self.assertFalse(cnf.is_CNF(root_node_or)) 
-        #self.assertTrue(type(root_node_and) is MultiArgsExpression)
+        self.assertFalse(cnf.is_CNF(root_node_or))
+        # self.assertTrue(type(root_node_and) is MultiArgsExpression)
 
-    #def test_reduce_not(self):
+    # def test_reduce_not(self):
     '''
     def test_make_column(self):
         m = ConcreteModel()
@@ -438,6 +393,7 @@ class TestLogicalClasses(unittest.TestCase):
         x = cnf.make_columns(rn._args_)
         print(list(x))
     '''
+
     def test_prepare_to_distribute(self):
         m = ConcreteModel()
         m.Y0 = BooleanVar()
@@ -452,7 +408,7 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y9 = BooleanVar()
         m.Y10 = BooleanVar()
         Y = list([m.Y0, m.Y1, m.Y2, m.Y3, m.Y4, m.Y5, m.Y6, m.Y7, m.Y8, m.Y9, m.Y10])
-        rn = create_model2(Y) #create a root node of model 2
+        rn = create_model2(Y)  # create a root node of model 2
         cnf.prepare_to_distribute(rn)
         """
         print(rn._args_[0])
@@ -461,8 +417,8 @@ class TestLogicalClasses(unittest.TestCase):
         print(rn._args_[3]) 
         print(rn._args_[4])
         """
-        #print(rn)
-        #cnf.column 
+        # print(rn)
+        # cnf.column
 
     def test_distribute(self):
         m = ConcreteModel()
@@ -476,15 +432,13 @@ class TestLogicalClasses(unittest.TestCase):
         rn = create_model3(Y)
         tup = cnf.make_columns(rn)
         LogicalOr(list(tup))
-        #cnf.distribute_and_in_or
-
+        # cnf.distribute_and_in_or
 
     def test_cnf_walker(self):
         m = ConcreteModel()
         m.Y = BooleanVar(RangeSet(0, 4))
         rn = create_model4(m.Y)
         print(rn)
-        
 
 
 if __name__ == "__main__":

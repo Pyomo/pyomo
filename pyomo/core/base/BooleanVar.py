@@ -1,7 +1,8 @@
 #Is this correct? #Take domain out
 from six import itervalues, iteritems
 
-from pyomo.core.expr.logical_expr import  (LogicalXor, EquivalenceExpression, Implication, AndExpression,
+from pyomo.core.expr.logicalvalue import LogicalValue
+from pyomo.core.expr.logical_expr import  (LogicalXor, EquivalenceExpression, ImplicationExpression, AndExpression,
 OrExpression, MultiArgsExpression, NotExpression, XorExpression,)
 
 
@@ -13,7 +14,6 @@ from weakref import ref as weakref_ref
 
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import value
-from pyomo.core.base.logicalvalue import LogicalValue
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals, Boolean  # needed?
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
@@ -136,36 +136,6 @@ class _BooleanVarData(ComponentData, LogicalValue):
             return smap.getSymbol(self, labeler)
         return self.name
 
-    def xor(self, Y2):
-        return LogicalXor(self, Y2)
-
-    def equals(self, Y2):
-        return EquivalenceExpression(self, Y2)
-
-    def implies(self, Y2):
-        return Implication(self, Y2)
-
-    def __invert__(self):
-        return NotExpression(self)
-
-    """THe following establishes nodes with operator"""
-    def __eq__(self, other):
-        return EquivalenceExpression(self, other)
-
-    def __xor__(self, other):
-        return XorExpression(self, other)
-
-    def __and__(self, other):
-        if isinstance(other, AndExpression):
-            return other.add(self)
-        else:
-            return AndExpression([self, other])
-
-    def __or__(self, other):
-        if isinstance(other, OrExpression):
-            return other.add(self)
-        else:
-            return OrExpression([self, other])
 
 class _GeneralBooleanVarData(_BooleanVarData):
     """
@@ -214,7 +184,6 @@ class _GeneralBooleanVarData(_BooleanVarData):
             state[i] = getattr(self, i)
         return state
 
-    # copied from var.py
     # Note: None of the slots on this class need to be edited, so we
     # don't need to implement a specialized __setstate__ method, and
     # can quietly rely on the super() class's implementation.
