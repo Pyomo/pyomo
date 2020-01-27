@@ -1,6 +1,8 @@
 import pyutilib.th as unittest
 from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
 import pyomo.environ as pe
+import subprocess
+from os import devnull
 try:
     import mpi4py
     mpi4py_available = True
@@ -160,3 +162,14 @@ class TestBenders(unittest.TestCase):
         self.assertAlmostEqual(m.devoted_acreage['CORN'].value, 80, 7)
         self.assertAlmostEqual(m.devoted_acreage['SUGAR_BEETS'].value, 250, 7)
         self.assertAlmostEqual(m.devoted_acreage['WHEAT'].value, 170, 7)
+
+    @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
+    @unittest.skipIf(not numpy_available, 'numpy is not available.')
+    def test_par_farmer(self):
+        assert subprocess.check_call('mpirun -n 3 python par_farmer.py', shell = True) == 0
+
+    @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
+    @unittest.skipIf(not numpy_available, 'numpy is not available.')
+    def test_par_grothkey(self):
+        assert subprocess.check_call('mpirun -n 2 python par_grothkey.py', shell = True) == 0
+
