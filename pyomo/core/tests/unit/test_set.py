@@ -2836,6 +2836,19 @@ class TestGlobalSets(unittest.TestCase):
         self.assertEqual(str(Reals), 'Reals')
         self.assertEqual(str(Integers), 'Integers')
 
+    def test_iteration(self):
+        with self.assertRaisesRegexp(
+                AttributeError,
+                "__iter__ is not available for non-finite Sets"):
+            iter(Reals)
+
+        with self.assertRaisesRegexp(
+                AttributeError,
+                "__iter__ is not available for non-finite Sets"):
+            iter(Integers)
+
+        self.assertEqual(list(iter(Binary)), [0,1])
+
 
 def _init_set(m, *args):
     n = 1

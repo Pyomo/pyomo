@@ -425,6 +425,16 @@ class _SetData(_SetDataBase):
     def subsets(self, expand_all_set_operators=None):
         return [ self ]
 
+    def __iter__(self):
+        """Iterate over the set members
+
+        Raises AttributeError for non-finite sets.  This must be
+        declared for non-finite sets beause scalar sets inherit from
+        IndexedComponent, which provides an iterator (over the
+        underlying indexing set).
+        """
+        raise AttributeError("__iter__ is not available for non-finite Sets")
+
     def __eq__(self, other):
         if self is other:
             return True
