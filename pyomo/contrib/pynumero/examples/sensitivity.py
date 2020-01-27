@@ -102,7 +102,7 @@ p0 = np.array([pyo.value(m.nominal_eta1), pyo.value(m.nominal_eta2)])
 p = np.array([4.45, 1.05])
 dp = p - p0
 dx = ds.dot(dp)[0:3]
-new_x = [x[i] for i in [0, 2, 3]] + dx
+new_x = x[[0,2,3]] + dx
 print("dp:", dp)
 print("dx:", dx)
 print("sensitivity based x:\n", new_x)
