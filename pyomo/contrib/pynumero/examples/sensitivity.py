@@ -94,7 +94,6 @@ Np[1, 0] = nlp.extract_submatrix_jacobian(pyomo_variables=[m.eta1, m.eta2], pyom
 
 ds = spsolve(M.tocsc(), -Np.tocsc())
 
-print(nlp.variable_names())
 print("ds:\n", ds.todense())
 #################################################################
 
@@ -102,15 +101,19 @@ p0 = np.array([pyo.value(m.nominal_eta1), pyo.value(m.nominal_eta2)])
 p = np.array([4.45, 1.05])
 dp = p - p0
 dx = ds.dot(dp)[0:3]
-new_x = x[[0,2,3]] + dx
+x_indices = nlp.get_primal_indices([m.x1, m.x2, m.x3])
+x_names = np.array(nlp.variable_names())
+new_x = x[x_indices] + dx
 print("dp:", dp)
 print("dx:", dx)
-print("sensitivity based x:\n", new_x)
+print("Variable names: \n",x_names[x_indices])
+print("Sensitivity based x:\n", new_x)
 
 #################################################################
 m = create_model(4.45, 1.05)
 opt = pyo.SolverFactory('ipopt')
 results = opt.solve(m, tee=False)
 nlp = PyomoNLP(m)
-print("NLP based x:\n", nlp.init_primals()[[0,2,3]])
+new_x = nlp.init_primals()
+print("NLP based x:\n", new_x[nlp.get_primal_indices([m.x1, m.x2, m.x3])])
 
