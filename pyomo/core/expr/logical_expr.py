@@ -1064,7 +1064,7 @@ class XorExpression(BinaryLogicalExpression):
         return XorExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return " xor ".join(values)
+        return " ^ ".join(values)
 
     def _apply_operation(self, result):
         return operator.xor(result[0], result[1])
@@ -1072,7 +1072,7 @@ class XorExpression(BinaryLogicalExpression):
 
 class ImplicationExpression(BinaryLogicalExpression):
     """
-    Logical Implication statement: Y_1 --> Y_2.
+    Logical Implication statement: Y_1 >> Y_2.
     """
     __slots__ = ()
 
@@ -1085,7 +1085,7 @@ class ImplicationExpression(BinaryLogicalExpression):
         return ImplicationExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return "[" + " implies ".join(values) + "]"
+        return " >> ".join(values)
 
     def _apply_operation(self, result):
         return (not result[0]) or result[1]

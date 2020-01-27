@@ -138,11 +138,15 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
         op_static = Implies(m.Y1, m.Y2)
         op_class = m.Y1.implies(m.Y2)
+        op_loperator = m.Y2 << m.Y1
+        op_roperator = m.Y1 >> m.Y2
         for truth_combination in _generate_possible_truth_inputs(2):
             m.Y1.value, m.Y2.value = truth_combination[0], truth_combination[1]
             correct_value = (not truth_combination[0]) or truth_combination[1]
             self.assertEquals(value(op_static), correct_value)
             self.assertEquals(value(op_class), correct_value)
+            self.assertEquals(value(op_loperator), correct_value)
+            self.assertEquals(value(op_roperator), correct_value)
             nnf = Not(m.Y1) | m.Y2
             self.assertEquals(value(op_static), value(nnf))
 

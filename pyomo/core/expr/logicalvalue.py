@@ -19,7 +19,6 @@ def _generate_logical_proposition(etype, _self, _other):
 
 
 def as_logical(obj):
-    # raise error for anything other than {0,1,True,False}
     """
     A function that creates a LogicalConstant object that
     wraps Python logical values.
@@ -275,6 +274,12 @@ class LogicalValue(object):
 
     def xor(self, other):
         return _generate_logical_proposition(_xor, self, other)
+
+    def __lshift__(self, other):
+        return _generate_logical_proposition(_impl, other, self)
+
+    def __rshift__(self, other):
+        return _generate_logical_proposition(_impl, self, other)
 
     def implies(self, other):
         return _generate_logical_proposition(_impl, self, other)

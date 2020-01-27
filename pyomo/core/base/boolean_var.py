@@ -159,9 +159,9 @@ class _GeneralBooleanVarData(_BooleanVarData):
         methods and we need to deter directly modifying or accessing
         these attributes in certain cases.
         """
-    __slots__ = ('_value', '_domain', 'fixed', 'stale')
+    __slots__ = ('_value', '_domain', 'fixed', 'stale', '_as_binary')
 
-    def __init__(self, domain=Boolean, component=None):
+    def __init__(self, component=None):
         #
         # These lines represent in-lining of the
         # following constructors:
@@ -178,15 +178,34 @@ class _GeneralBooleanVarData(_BooleanVarData):
         self.fixed = False
         self.stale = True
 
+        self._as_binary = None
+
     def __getstate__(self):
         state = super(_GeneralBooleanVarData, self).__getstate__()
         for i in _GeneralBooleanVarData.__slots__:
             state[i] = getattr(self, i)
+        if self._as_binary is not None:
+            state['_as_binary'] = self._as_binary()
         return state
 
-    # Note: None of the slots on this class need to be edited, so we
-    # don't need to implement a specialized __setstate__ method, and
-    # can quietly rely on the super() class's implementation.
+    def __setstate__(self, state):
+        """Restore a picked state into this instance.
+
+        Note: adapted from class ComponentData in pyomo.core.base.component
+
+        """
+        if state['_as_binary'] is not None and type(state['_as_binary']) is not weakref_ref:
+            state['_as_binary'] = weakref_ref(state['_as_binary'])
+
+        _base = super(_GeneralBooleanVarData, self)
+        if hasattr(_base, '__setstate__'):
+            _base.__setstate__(state)
+        else:
+            for key, val in iteritems(state):
+                # Note: per the Python data model docs, we explicitly
+                # set the attribute using object.__setattr__() instead
+                # of setting self.__dict__[key] = val.
+                object.__setattr__(self, key, val)
 
     #
     # Abstract Interface
@@ -229,6 +248,13 @@ class _GeneralBooleanVarData(_BooleanVarData):
 
     free = unfix
 
+    def as_binary(self):
+        """Get the binary _VarData associated with this _GeneralBooleanVarData"""
+        return self._as_binary() if self._as_binary is not None else None
+
+    def set_binary_var(self, binary_var):
+        """Associate a binary _VarData to this _GeneralBooleanVarData"""
+        self._as_binary = weakref_ref(binary_var) if binary_var is not None else None
 
 
 @ModelComponentFactory.register("Logical decision variables.")
@@ -339,8 +365,7 @@ class BooleanVar(IndexedComponent):
             # 30% slower
             self_weakref = weakref_ref(self)
             for ndx in self._index:
-                cdata = self._ComponentDataClass(
-                    domain=Boolean, component=None)
+                cdata = self._ComponentDataClass(component=None)
                 cdata._component = self_weakref
                 self._data[ndx] = cdata
             self._initialize_members(self._index)
@@ -432,22 +457,16 @@ class BooleanVar(IndexedComponent):
             Print component information.
             What do we want to print in this case.
         """
-        pass
-        '''
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
                   ],
                  iteritems(self._data),
-                 ( "Lower","Value","Upper","Fixed","Stale","Domain"),
-                 lambda k, v: [ value(v.lb),
-                                v.value,
-                                value(v.ub),
+                 ( "Value","Fixed","Stale"),
+                 lambda k, v: [ v.value,
                                 v.fixed,
                                 v.stale,
-                                v.domain
                                 ]
                  )
-                 '''
 
 class SimpleBooleanVar(_GeneralBooleanVarData, BooleanVar):
     
@@ -455,9 +474,7 @@ class SimpleBooleanVar(_GeneralBooleanVarData, BooleanVar):
     #0-0 Does the following automatically store information in the same 
     #memory block?
     def __init__(self, *args, **kwd):
-        _GeneralBooleanVarData.__init__(self,
-                                 domain=None,
-                                 component=self)
+        _GeneralBooleanVarData.__init__(self, component=self)
         BooleanVar.__init__(self, *args, **kwd)
 
     """
