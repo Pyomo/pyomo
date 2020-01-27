@@ -601,6 +601,7 @@ class Param(IndexedComponent):
                 return value
         except:
             del self._data[index]
+            raise
 
 
     def _validate_value(self, index, value, validate_domain=True):
