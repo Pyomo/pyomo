@@ -17,16 +17,6 @@ from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 sympy_available = True
 try:
     import sympy
-
-    def _prod(*x):
-        ans = x[0]
-        for i in x[1:]:
-            ans *= i
-        return ans
-
-    def _sum(*x):
-        return sum(x_ for x_ in x)
-
     _operatorMap = {
         sympy.Or: LogicalOr,
         sympy.And: LogicalAnd,
