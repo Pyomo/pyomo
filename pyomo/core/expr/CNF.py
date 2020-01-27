@@ -1,8 +1,8 @@
-from .logical_expr import (LogicalExpressionBase, NotExpression, AndExpression, 
-    OrExpression, ImplicationExpression, EquivalenceExpression, XorExpression,
-    ExactlyExpression, AtMostExpression, AtLeastExpression, Not, Equivalence, 
-    LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor
-    )
+from .logical_expr import (LogicalExpressionBase, NotExpression, AndExpression,
+                           OrExpression, ImplicationExpression, EquivalenceExpression, XorExpression,
+                           ExactlyExpression, AtMostExpression, AtLeastExpression, Not, Equivalent,
+                           LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor
+                           )
 
 import itertools as it
 
@@ -62,7 +62,7 @@ def is_binary_expression(node):
         return True
     if type(node) is EquivalenceExpression:
         return True
-    if type(node) is Implication:
+    if type(node) is ImplicationExpression:
         return True
     return False
 

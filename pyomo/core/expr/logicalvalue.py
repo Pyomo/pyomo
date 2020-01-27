@@ -1,4 +1,4 @@
-__all__ = ('value_logical', 'LogicalValue', 'TrueConstant',
+__all__ = ('LogicalValue', 'TrueConstant',
            'FalseConstant', 'native_logical_values')
 
 import sys
@@ -16,71 +16,71 @@ def _generate_logical_proposition(etype, _self, _other):
     raise RuntimeError("Incomplete import of Pyomo expression system")  #pragma: no cover
 
 
-def value(obj, exception=True):
-    #0-0 Thinkng about a way to make it work
-    """
-
-    Returns: A numeric value or None.
-    """
-   
-    if obj.__class__ in native_logical_types:
-        return bool(obj)
-    if obj.__class__ is LogicalConstant:
-        #   
-        # do not expect LogicalConstant with value None.
-        #
-        #if exception and obj.value is None:
-        #    raise ValueError(
-        #        "No value for uninitialized LogicalConstant object %s"
-        #        % (obj.name,))
-        return obj.value
-    # Test if we have a duck types for Pyomo expressions
-    #
-    try:
-        obj.is_expression_type()
-    except AttributeError:
-        #
-        # If not, then try to coerce this into a logical constant.  If that
-        # works, then return the object
-        #
-        try:
-            return obj
-        except:
-            raise TypeError(
-                "Cannot evaluate object with unknown type: %s" %
-                (type(obj).__name__,))
-    #
-    # Evaluate the expression object
-    #
-    if exception:
-        #
-        # Here, we try to catch the exception
-        #
-        try:
-            tmp = obj(exception=True)
-            if tmp is None:
-                raise ValueError(
-                    "No value for uninitialized LogicalcValue object %s"
-                    % (obj.name,))
-            return tmp
-        except TemplateExpressionError:
-            # Template expressions work by catching this error type. So
-            # we should defer this error handling and not log an error
-            # message.
-            raise
-        except:
-            logger.error(
-                "evaluating object as logical value: %s\n    (object: %s)\n%s"
-                % (obj, type(obj), sys.exc_info()[1]))
-            raise
-    else:
-        #
-        # Here, we do not try to catch the exception
-        #
-        return obj(exception=False)
-      
-
-value_logical = value  
+# def value(obj, exception=True):
+#     #0-0 Thinkng about a way to make it work
+#     """
+#
+#     Returns: A numeric value or None.
+#     """
+#
+#     if obj.__class__ in native_logical_types:
+#         return bool(obj)
+#     if obj.__class__ is LogicalConstant:
+#         #
+#         # do not expect LogicalConstant with value None.
+#         #
+#         #if exception and obj.value is None:
+#         #    raise ValueError(
+#         #        "No value for uninitialized LogicalConstant object %s"
+#         #        % (obj.name,))
+#         return obj.value
+#     # Test if we have a duck types for Pyomo expressions
+#     #
+#     try:
+#         obj.is_expression_type()
+#     except AttributeError:
+#         #
+#         # If not, then try to coerce this into a logical constant.  If that
+#         # works, then return the object
+#         #
+#         try:
+#             return obj
+#         except:
+#             raise TypeError(
+#                 "Cannot evaluate object with unknown type: %s" %
+#                 (type(obj).__name__,))
+#     #
+#     # Evaluate the expression object
+#     #
+#     if exception:
+#         #
+#         # Here, we try to catch the exception
+#         #
+#         try:
+#             tmp = obj(exception=True)
+#             if tmp is None:
+#                 raise ValueError(
+#                     "No value for uninitialized LogicalcValue object %s"
+#                     % (obj.name,))
+#             return tmp
+#         except TemplateExpressionError:
+#             # Template expressions work by catching this error type. So
+#             # we should defer this error handling and not log an error
+#             # message.
+#             raise
+#         except:
+#             logger.error(
+#                 "evaluating object as logical value: %s\n    (object: %s)\n%s"
+#                 % (obj, type(obj), sys.exc_info()[1]))
+#             raise
+#     else:
+#         #
+#         # Here, we do not try to catch the exception
+#         #
+#         return obj(exception=False)
+#
+#
+# value_logical = value
 #assigning an alias to distinguish it from the numeric version
 
 # def is_fixed(obj):
@@ -370,7 +370,21 @@ class LogicalValue(object):
     def __and__(self, other):
         return _generate_logical_proposition(_and, self, other)
 
+    def __rand__(self, other):
+        return _generate_logical_proposition(_and, other, self)
+
+    def and_(self, other):
+        """Trailing underscore avoids name conflict with keyword 'and'."""
+        return _generate_logical_proposition(_and, self, other)
+
     def __or__(self, other):
+        return _generate_logical_proposition(_or, self, other)
+
+    def __ror__(self, other):
+        return _generate_logical_proposition(_or, other, self)
+
+    def or_(self, other):
+        """Trailing underscore avoids name conflict with keyword 'or'."""
         return _generate_logical_proposition(_or, self, other)
 
     def __invert__(self):
@@ -385,7 +399,6 @@ class LogicalValue(object):
     def implies(self, other):
         return _generate_logical_proposition(_impl, self, other)
 
-    # 0-0
     def to_string(self, verbose=None, labeler=None, smap=None,
                   compute_values=False):
         """
