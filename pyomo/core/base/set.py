@@ -475,6 +475,11 @@ class _SetData(_SetDataBase):
         raise DeveloperError("Derived set class (%s) failed to "
                              "implement dimen" % (type(self).__name__,))
 
+    @property
+    def domain(self):
+        raise DeveloperError("Derived set class (%s) failed to "
+                             "implement domain" % (type(self).__name__,))
+
     def ranges(self):
         raise DeveloperError("Derived set class (%s) failed to "
                              "implement ranges" % (type(self).__name__,))
@@ -728,6 +733,11 @@ class _SetData(_SetDataBase):
     def ordered(self):
         return self.isordered()
 
+    @property
+    @deprecated("'filter' is no longer a public attribute.",
+                version='TBD')
+    def filter(self):
+        return None
 
     @deprecated("check_values() is deprecated: Sets only contain valid members",
                 version='TBD')
@@ -1044,7 +1054,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         # storage
         if not hasattr(self, '_values'):
             self._values = set()
-        self._domain = None
+        self._domain = Any
         self._validate = None
         self._filter = None
         self._dimen = UnknownSetDimen
@@ -1094,6 +1104,15 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
     def dimen(self):
         return self._dimen
 
+    @property
+    def domain(self):
+        return self._domain
+
+    @property
+    @deprecated("'filter' is no longer a public attribute.",
+                version='TBD')
+    def filter(self):
+        return self._filter
 
     def add(self, *values):
         count = 0
@@ -2091,6 +2110,10 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
                 return None
         return ans
 
+    @property
+    def domain(self):
+        return self
+
     def _pprint(self):
         """
         Return data that will be printed for this component.
@@ -2178,6 +2201,10 @@ class _InfiniteRangeSetData(_SetData):
     @property
     def dimen(self):
         return 1
+
+    @property
+    def domain(self):
+        return Reals
 
     def ranges(self):
         return iter(self._ranges)
@@ -2281,11 +2308,12 @@ class _FiniteRangeSetData( _SortedSetMixin,
             "Cannot identify position of %s in Set %s: item not in Set"
             % (item, self.name))
 
-    # We must redefine ranges() and bounds() so that we get the
+    # We must redefine ranges(), bounds(), and domain so that we get the
     # _InfiniteRangeSetData version and not the one from
     # _FiniteSetMixin.
     bounds = _InfiniteRangeSetData.bounds
     ranges = _InfiniteRangeSetData.ranges
+    domain = _InfiniteRangeSetData.domain
 
 
 class RangeSet(Component):
@@ -2671,8 +2699,12 @@ class SetOperator(_SetData, Set):
         return list(self.subsets())
 
     @property
+    def domain(self):
+        return self._domain
+
+    @property
     def _domain(self):
-        # We hijack the _domain attribute of _SetOperator so that pprint
+        # We hijack the _domain attribute of SetOperator so that pprint
         # prints out the expression as the Set's "domain".  Doing this
         # as a property prevents the circular reference
         return self

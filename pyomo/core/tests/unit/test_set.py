@@ -3346,6 +3346,7 @@ class TestSet(unittest.TestCase):
     def test_add_filter_validate(self):
         m = ConcreteModel()
         m.I = Set(domain=Integers)
+        self.assertIs(m.I.filter, None)
         with self.assertRaisesRegexp(
                 ValueError,
                 "Cannot add value 1.5 to Set I.\n"
@@ -3392,6 +3393,8 @@ class TestSet(unittest.TestCase):
             self.assertIs(model, m)
             return i >= j
         m.K = Set(initialize=RangeSet(3)*RangeSet(3), filter=_l_tri)
+        self.assertIsInstance(m.K.filter, IndexedCallInitializer)
+        self.assertIs(m.K.filter._fcn, _l_tri)
         self.assertEqual(
             list(m.K), [(1,1), (2,1), (2,2), (3,1), (3,2), (3,3)])
 
@@ -3469,7 +3472,12 @@ class TestSet(unittest.TestCase):
 
     def test_domain(self):
         m = ConcreteModel()
+        m.I = Set()
+        self.assertIs(m.I.domain, Any)
+
+        m = ConcreteModel()
         m.I = Set(domain=Integers)
+        self.assertIs(m.I.domain, Integers)
         m.I.add(1)
         m.I.add(2.)
         self.assertEqual(list(m.I), [1, 2.])
@@ -3479,6 +3487,7 @@ class TestSet(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(within=Integers)
+        self.assertIs(m.I.domain, Integers)
         m.I.add(1)
         m.I.add(2.)
         self.assertEqual(list(m.I), [1, 2.])
@@ -3488,6 +3497,7 @@ class TestSet(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(bounds=(1,5))
+        self.assertEqual(m.I.domain, RangeSet(1,5,0))
         m.I.add(1)
         m.I.add(2.)
         self.assertEqual(list(m.I), [1, 2.])
@@ -3497,6 +3507,7 @@ class TestSet(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(domain=Integers, within=RangeSet(0, None, 2), bounds=(0,9))
+        self.assertEqual(m.I.domain, RangeSet(0,9,2))
         m.I = [0,2.,4]
         self.assertEqual(list(m.I), [0,2.,4])
         with self.assertRaisesRegexp(
@@ -4199,6 +4210,8 @@ class TestAbstractSetAPI(unittest.TestCase):
             str(s)
         with self.assertRaises(DeveloperError):
             s.dimen
+        with self.assertRaises(DeveloperError):
+            s.domain
 
         self.assertFalse(s.isfinite())
         self.assertFalse(s.isordered())
@@ -4289,6 +4302,8 @@ class TestAbstractSetAPI(unittest.TestCase):
             str(s)
         with self.assertRaises(DeveloperError):
             s.dimen
+        with self.assertRaises(DeveloperError):
+            s.domain
 
         self.assertTrue(s.isfinite())
         self.assertFalse(s.isordered())
@@ -4411,6 +4426,8 @@ class TestAbstractSetAPI(unittest.TestCase):
             str(s)
         with self.assertRaises(DeveloperError):
             s.dimen
+        with self.assertRaises(DeveloperError):
+            s.domain
 
         self.assertTrue(s.isfinite())
         self.assertTrue(s.isordered())
@@ -4642,6 +4659,33 @@ class TestSetUtils(unittest.TestCase):
 
 
 class TestDeprecation(unittest.TestCase):
+    def test_filter(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2,3])
+        m.J = m.I*m.I
+        m.K = Set(initialize=[1,2,3], filter=lambda m,i: i%2)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            self.assertIsNone(m.I.filter)
+        self.assertRegexpMatches(
+            output.getvalue(),
+            "^DEPRECATED: 'filter' is no longer a public attribute")
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            self.assertIsNone(m.J.filter)
+        self.assertRegexpMatches(
+            output.getvalue(),
+            "^DEPRECATED: 'filter' is no longer a public attribute")
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            self.assertIsInstance(m.K.filter, IndexedCallInitializer)
+        self.assertRegexpMatches(
+            output.getvalue(),
+            "^DEPRECATED: 'filter' is no longer a public attribute")
+
     def test_virtual(self):
         m = ConcreteModel()
         m.I = Set(initialize=[1,2,3])
