@@ -249,7 +249,7 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
         m.Y3 = BooleanVar()
 
-        self.assertEqual(str(LogicalAnd(m.Y1, m.Y2, m.Y3)), "Y1 AND Y2 AND Y3")
+        self.assertEqual(str(LogicalAnd(m.Y1, m.Y2, m.Y3)), "Y1 & Y2 & Y3")
         # TODO need to test other combinations as well
 
     def test_node_types(self):
@@ -272,7 +272,19 @@ class TestLogicalClasses(unittest.TestCase):
         x = to_cnf(implication)
         _check_equivalent(self, implication, x)
 
+        atleast = AtLeast(1, m.Y1, m.Y2)
+        x = to_cnf(atleast)
+        self.assertIs(atleast, x)  # should be no change
+
+        nestedatleast = Implies(m.Y1, AtLeast(1, m.Y1, m.Y2))
+        x = to_cnf(nestedatleast)
+        self.assertEquals(str(x), "AtLeast(1: [Y1, Y2]) | (~Y1)")
+        _check_equivalent(self, nestedatleast, x)
+
         # TODO need to test other combinations as well
+
+    def test_cnf_to_linear(self):
+        pass
 
 
 if __name__ == "__main__":

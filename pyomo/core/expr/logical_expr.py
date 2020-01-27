@@ -9,9 +9,6 @@
 #  ___________________________________________________________________________
 
 
-"""
-Notes. Delete later
-"""
 from __future__ import division
 
 from itertools import islice
@@ -950,6 +947,7 @@ def Implies(Y1, Y2):
 
 
 def LogicalAnd(*args):
+    # TODO handle IndexedBooleanVar
     result = AndExpression([])
     for arg in args:
         result = result.add(arg)
@@ -957,6 +955,7 @@ def LogicalAnd(*args):
 
 
 def LogicalOr(*args):
+    # TODO handle IndexedBooleanVar
     result = OrExpression([])
     for arg in args:
         result = result.add(arg)
@@ -1014,7 +1013,7 @@ class NotExpression(UnaryLogicalExpression):
         return NotExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return "not (%s)" % values[0]
+        return "~%s" % values[0]
 
     def _apply_operation(self, result):
         return not result[0]
@@ -1038,13 +1037,13 @@ class EquivalenceExpression(BinaryLogicalExpression):
     PRECEDENCE = 7
 
     def getname(self, *arg, **kwd):
-        return 'Logical Equivalence'
+        return 'iff'
 
     def _precendence(self):
         return EquivalenceExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return " equivalent to ".join(values)
+        return " iff ".join(values)
 
     def _apply_operation(self, result):
         return result[0] == result[1]
@@ -1059,7 +1058,7 @@ class XorExpression(BinaryLogicalExpression):
     PRECEDENCE = 6
 
     def getname(self, *arg, **kwd):
-        return 'Logical XOR'
+        return 'xor'
 
     def _precendence(self):
         return XorExpression.PRECEDENCE
@@ -1080,7 +1079,7 @@ class ImplicationExpression(BinaryLogicalExpression):
     PRECEDENCE = 4
 
     def getname(self, *arg, **kwd):
-        return 'Implication'
+        return 'implies'
 
     def _precendence(self):
         return ImplicationExpression.PRECEDENCE
@@ -1119,13 +1118,13 @@ class AndExpression(MultiArgsExpression):
     PRECEDENCE = 5
 
     def getname(self, *arg, **kwd):
-        return 'AndExpression'
+        return 'and'
 
     def _precendence(self):
         return AndExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return " AND ".join(values)
+        return " & ".join(values)
 
     def _apply_operation(self, result):
         return all(result)
@@ -1154,13 +1153,13 @@ class OrExpression(MultiArgsExpression):
     PRECEDENCE = 5
 
     def getname(self, *arg, **kwd):
-        return 'OrExpression'
+        return 'or'
 
     def _precendence(self):
         return OrExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return " Or ".join(values)
+        return " | ".join(values)
 
     def _apply_operation(self, result):
         return any(result)
@@ -1198,13 +1197,13 @@ class ExactlyExpression(MultiArgsExpression):
     PRECEDENCE = 8
 
     def getname(self, *arg, **kwd):
-        return 'ExactlyExpression'
+        return 'exactly'
 
     def _precendence(self):
         return ExactlyExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return "Exactly %s: [%s]" % (values[0], ", ".join(values[1:]))
+        return "Exactly(%s: [%s])" % (values[0], ", ".join(values[1:]))
 
     def _apply_operation(self, result):
         return sum(result[1:]) == result[0]
@@ -1225,13 +1224,13 @@ class AtMostExpression(MultiArgsExpression):
     PRECEDENCE = 8
 
     def getname(self, *arg, **kwd):
-        return 'AtMostExpression'
+        return 'atmost'
 
     def _precendence(self):
         return AtMostExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return "At Most %s: [%s]" % (values[0], ", ".join(values[1:]))
+        return "AtMost(%s: [%s])" % (values[0], ", ".join(values[1:]))
 
     def _apply_operation(self, result):
         return sum(result[1:]) <= result[0]
@@ -1252,13 +1251,13 @@ class AtLeastExpression(MultiArgsExpression):
     PRECEDENCE = 8
 
     def getname(self, *arg, **kwd):
-        return 'AtLeastExpression'
+        return 'atleast'
 
     def _precendence(self):
         return AtLeastExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return "At Least %s: [%s]" % (values[0], ", ".join(values[1:]))
+        return "AtLeast(%s: [%s])" % (values[0], ", ".join(values[1:]))
 
     def _apply_operation(self, result):
         return sum(result[1:]) >= result[0]

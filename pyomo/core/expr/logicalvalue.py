@@ -1,5 +1,6 @@
-__all__ = ('LogicalValue', 'TrueConstant',
-           'FalseConstant', 'native_logical_values')
+__all__ = (
+    'LogicalValue', 'TrueConstant', 'FalseConstant',
+    'native_logical_values', 'LogicalConstant', 'as_logical')
 
 import sys
 import logging
@@ -12,126 +13,10 @@ from pyomo.core.expr.expr_common import _and, _or, _equiv, _inv, _xor, _impl
 logger = logging.getLogger('pyomo.core')
 native_logical_values = {True, False, 1, 0}
 
+
 def _generate_logical_proposition(etype, _self, _other):
     raise RuntimeError("Incomplete import of Pyomo expression system")  #pragma: no cover
 
-
-# def value(obj, exception=True):
-#     #0-0 Thinkng about a way to make it work
-#     """
-#
-#     Returns: A numeric value or None.
-#     """
-#
-#     if obj.__class__ in native_logical_types:
-#         return bool(obj)
-#     if obj.__class__ is LogicalConstant:
-#         #
-#         # do not expect LogicalConstant with value None.
-#         #
-#         #if exception and obj.value is None:
-#         #    raise ValueError(
-#         #        "No value for uninitialized LogicalConstant object %s"
-#         #        % (obj.name,))
-#         return obj.value
-#     # Test if we have a duck types for Pyomo expressions
-#     #
-#     try:
-#         obj.is_expression_type()
-#     except AttributeError:
-#         #
-#         # If not, then try to coerce this into a logical constant.  If that
-#         # works, then return the object
-#         #
-#         try:
-#             return obj
-#         except:
-#             raise TypeError(
-#                 "Cannot evaluate object with unknown type: %s" %
-#                 (type(obj).__name__,))
-#     #
-#     # Evaluate the expression object
-#     #
-#     if exception:
-#         #
-#         # Here, we try to catch the exception
-#         #
-#         try:
-#             tmp = obj(exception=True)
-#             if tmp is None:
-#                 raise ValueError(
-#                     "No value for uninitialized LogicalcValue object %s"
-#                     % (obj.name,))
-#             return tmp
-#         except TemplateExpressionError:
-#             # Template expressions work by catching this error type. So
-#             # we should defer this error handling and not log an error
-#             # message.
-#             raise
-#         except:
-#             logger.error(
-#                 "evaluating object as logical value: %s\n    (object: %s)\n%s"
-#                 % (obj, type(obj), sys.exc_info()[1]))
-#             raise
-#     else:
-#         #
-#         # Here, we do not try to catch the exception
-#         #
-#         return obj(exception=False)
-#
-#
-# value_logical = value
-#assigning an alias to distinguish it from the numeric version
-
-# def is_fixed(obj):
-#     """
-#     A utility function that returns a boolean that indicates
-#     whether the input object's value is fixed.
-#     """
-#     # JDS: NB: I am not sure why we allow str to be a constant, but
-#     # since we have historically done so, we check for type membership
-#     # in native_types and not in native_numeric_types.
-#     #
-#     if obj.__class__ in native_types:
-#         return True
-#     try:
-#         return obj.is_fixed()
-#     except AttributeError:
-#         pass
-#     raise TypeError(
-#         "Cannot assess properties of object with unknown type: %s"
-#         % (type(obj).__name__,))
-#
-# def is_variable_type(obj):
-#     """
-#     A utility function that returns a boolean indicating
-#     whether the input object is a variable.
-#     """
-#     if obj.__class__ in native_types:
-#         # change native_types
-#         return False
-#     if (obj is 1 ) or (obj is 0):
-#         # 0-0 change later
-#         return False
-#     try:
-#         return obj.is_variable_type()
-#     except AttributeError:
-#         return False
-#
-# def is_potentially_variable(obj):
-#     """
-#     A utility function that returns a boolean indicating
-#     whether the input object can reference variables.
-#     """
-#     if obj.__class__ in native_types:
-#         return False
-#     try:
-#         return obj.is_potentially_variable()
-#     except AttributeError:
-#         return False
-
-# _KnownConstants = {}
-#tbc
 
 def as_logical(obj):
     # raise error for anything other than {0,1,True,False}
@@ -147,8 +32,7 @@ def as_logical(obj):
 
     Returns: A true or false LogicalConstant or the original object
     """
-    #if obj.__class__ in native_logical_types or obj is 1 or obj is 0:
-    if obj in native_logical_values:
+    if obj.__class__ in native_logical_types:
         return LogicalConstant(obj)
     #
     # Ignore objects that are duck types to work with Pyomo expressions
@@ -169,9 +53,6 @@ def as_logical(obj):
 
 
 class LogicalValue(object):
-    #an abstract class 
-    #
-    #__slots__ = ('value',)
     __slots__ = ()
     __hash__ = None
 
@@ -261,8 +142,7 @@ class LogicalValue(object):
         """
         Return True if this Logical value represents a relational expression.
         """
-        # TODO this is meaningless
-        return False
+        return True
 
     def is_indexed(self):
         """Return True if this Logical value is an indexed object"""
