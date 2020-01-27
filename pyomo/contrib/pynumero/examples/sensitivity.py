@@ -81,9 +81,6 @@ y = compute_init_lam(nlp, x=x)
 nlp.set_primals(x)
 nlp.set_duals(y)
 
-#J = nlp.evaluate_jacobian()
-#H = nlp.evaluate_hessian_lag()
-
 J = nlp.extract_submatrix_jacobian(pyomo_variables=[m.x1, m.x2, m.x3], pyomo_constraints=[m.const1, m.const2])
 H = nlp.extract_submatrix_hessian_lag(pyomo_variables_rows=[m.x1, m.x2, m.x3], pyomo_variables_cols=[m.x1, m.x2, m.x3])
 
@@ -92,9 +89,6 @@ M[0, 0] = H
 M[1, 0] = J
 
 Np = BlockMatrix(2, 1)
-#Np[0, 0] = nlp.extract_submatrix_hessian_lag(pyomo_variables_rows=nlp.get_pyomo_variables(), pyomo_variables_cols=[m.eta1, m.eta2])
-#Np[1, 0] = nlp.extract_submatrix_jacobian(pyomo_variables=[m.eta1, m.eta2], pyomo_constraints=nlp.get_pyomo_constraints())
-
 Np[0, 0] = nlp.extract_submatrix_hessian_lag(pyomo_variables_rows=[m.x1, m.x2, m.x3], pyomo_variables_cols=[m.eta1, m.eta2])
 Np[1, 0] = nlp.extract_submatrix_jacobian(pyomo_variables=[m.eta1, m.eta2], pyomo_constraints=[m.const1, m.const2])
 
