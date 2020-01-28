@@ -36,7 +36,7 @@ class _BooleanVarData(ComponentData, LogicalValue):
     # Interface
     #
     def is_binary(self):
-        return True
+        return False
 
     def is_fixed(self):
         """Returns True if this variable is fixed, otherwise returns False."""

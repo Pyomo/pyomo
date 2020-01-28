@@ -12,7 +12,7 @@ from pyomo.core.expr.logical_expr import (
     XorExpression,
     ExactlyExpression, AtMostExpression, AtLeastExpression, Not, Equivalent,
     LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor,
-)
+    special_logical_atom_types)
 
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.kernel.component_set import ComponentSet
@@ -65,9 +65,6 @@ class PyomoSympyLogicalBimap(object):
         return iterkeys(self.sympy2pyomo)
 
 
-_special_atom_classes = {ExactlyExpression, AtMostExpression, AtLeastExpression}
-
-
 class Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
 
     def __init__(self, object_map, bool_varlist):
@@ -79,7 +76,7 @@ class Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
     def exitNode(self, node, values):
         _op = _pyomo_operator_map.get(node.__class__, None)
         if _op is None:
-            if node.__class__ in _special_atom_classes:
+            if node.__class__ in special_logical_atom_types:
                 raise ValueError("Encountered special atom class '%s' in root node" % node.__class__)
             return node._apply_operation(values)
         else:
@@ -95,7 +92,7 @@ class Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
         # We will descend into all expressions...
         #
         if child.is_expression_type():
-            if child.__class__ in _special_atom_classes:
+            if child.__class__ in special_logical_atom_types:
                 indicator_var = self.boolean_variable_list.add()
                 self.special_atom_map[indicator_var] = child
                 return False, self.object_map.getSympySymbol(indicator_var)
@@ -163,7 +160,7 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
       with only literals as logical arguments
 
     """
-    if type(expr) in _special_atom_classes:
+    if type(expr) in special_logical_atom_types:
         # If root node is one of the special atoms, recursively convert its
         # children nodes to CNF.
         return _convert_children_to_literals(expr, bool_varlist, bool_var_to_special_atoms)
@@ -204,7 +201,7 @@ def _convert_children_to_literals(special_atom, bool_varlist, bool_var_to_specia
             # We need to do a substitution
             need_new_expression = True
             new_indicator = bool_varlist.add()
-            if type(child) in _special_atom_classes:
+            if type(child) in special_logical_atom_types:
                 child_cnf = _convert_children_to_literals(child, bool_varlist, bool_var_to_special_atoms)
                 bool_var_to_special_atoms[new_indicator] = child_cnf[0]
             else:
@@ -217,21 +214,6 @@ def _convert_children_to_literals(special_atom, bool_varlist, bool_var_to_specia
         return [new_atom_with_literals] + new_statements
     else:
         return [special_atom]
-
-
-def sympyify_expression(expr, bool_varlist):
-    """Convert a Pyomo expression to a Sympy expression"""
-    #
-    # Create the visitor and call it.
-    #
-    object_map = PyomoSympyLogicalBimap()
-    special_atoms = ComponentMap()
-    visitor = Pyomo2SympyVisitor(object_map, bool_varlist, special_atoms)
-    # is_expr, ans = visitor.beforeChild(None, expr)
-    # if not is_expr:
-    #     return object_map, ans
-
-    return object_map, visitor.walk_expression(expr), special_atoms
 
 
 def sympy2pyomo_expression(expr, object_map):

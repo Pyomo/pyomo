@@ -1261,3 +1261,6 @@ class AtLeastExpression(MultiArgsExpression):
 
     def _apply_operation(self, result):
         return sum(result[1:]) >= result[0]
+
+
+special_logical_atom_types = {ExactlyExpression, AtMostExpression, AtLeastExpression}
