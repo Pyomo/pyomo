@@ -345,7 +345,7 @@ def execute_extended_nlp_interface(self, anlp):
     expected_hess = np.asarray(expected_hess, dtype=np.float64)
     self.assertTrue(np.array_equal(dense_hess, expected_hess))
 
-@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
+
 class TestAslNLP(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
