@@ -755,7 +755,7 @@ class _BlockData(ActiveComponentData):
         # assignment of arbitraty data to Blocks, we will move over
         # any other unrecognized entries in the object's __dict__:
         for k in sorted(iterkeys(val_raw_dict)):
-            if k not in self.__dict__:
+            if k not in self.__dict__ or not k.startswith("_"):
                 setattr(self, k, val_raw_dict[k])
 
     def _add_temporary_set(self, val):
