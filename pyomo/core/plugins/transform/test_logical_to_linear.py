@@ -31,12 +31,13 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
 
         # TODO two below do not work yet
 
-        # m = ConcreteModel()
-        # m.s = RangeSet(3)
-        # m.Y = BooleanVar(m.s)
-        # m.p = LogicalStatement(expr=m.Y[1] >> AtLeast(2, m.Y[1], m.Y[2], m.Y[3]))
-        # TransformationFactory('core.logical_to_linear').apply_to(m)
-        # m.pprint()
+    def test_xfrm_atleast_nonroot(self):
+        m = ConcreteModel()
+        m.s = RangeSet(3)
+        m.Y = BooleanVar(m.s)
+        m.p = LogicalStatement(expr=m.Y[1] >> AtLeast(2, m.Y[1], m.Y[2], m.Y[3]))
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        m.pprint()
 
         # m = ConcreteModel()
         # m.s = RangeSet(3)

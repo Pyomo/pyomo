@@ -70,15 +70,17 @@ _special_atom_classes = {ExactlyExpression, AtMostExpression, AtLeastExpression}
 
 class Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
 
-    def __init__(self, object_map, bool_varlist, special_atom_map):
+    def __init__(self, object_map, bool_varlist):
         super(Pyomo2SympyVisitor, self).__init__()
         self.object_map = object_map
         self.boolean_variable_list = bool_varlist
-        self.special_atom_map = special_atom_map
+        self.special_atom_map = ComponentMap()
 
     def exitNode(self, node, values):
         _op = _pyomo_operator_map.get(node.__class__, None)
         if _op is None:
+            if node.__class__ in _special_atom_classes:
+                raise ValueError("Encountered special atom class '%s' in root node" % node.__class__)
             return node._apply_operation(values)
         else:
             return _op(*tuple(values))
@@ -151,54 +153,70 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
     not provided on which to store the augmented variables,
     and augmented variables are needed.
 
-    This function will return a tuple containing:
+    This function will return a list of CNF logical statements, including:
     - CNF of original statement, including possible substitutions
-    - list of additional CNF statements (for enforcing equivalence)
-    - mapping of augmented variables to special atoms (see note above) with only literals as logical arguments
+    - Additional CNF statements (for enforcing equivalence to augmented variables)
 
     In addition, the function will have side effects:
     - augmented variables are added to the passed bool_varlist
-    - mapping from augmented variables to equivalent special atoms updated with new entries
+    - mapping from augmented variables to equivalent special atoms (see note above)
+      with only literals as logical arguments
 
     """
     if type(expr) in _special_atom_classes:
-        # If root node is one of the spcial atoms, recursively convert its
+        # If root node is one of the special atoms, recursively convert its
         # children nodes to CNF.
         return _convert_children_to_literals(expr, bool_varlist, bool_var_to_special_atoms)
 
     # While performing conversion to sympy, substitute new boolean variables for
     # non-root special atoms.
     pyomo_sympy_map = PyomoSympyLogicalBimap()
-    bool_var_to_special_atoms = ComponentMap()
-    visitor = Pyomo2SympyVisitor(pyomo_sympy_map, bool_varlist, bool_var_to_special_atoms)
+    bool_var_to_special_atoms = ComponentMap() if bool_var_to_special_atoms is None else bool_var_to_special_atoms
+    visitor = Pyomo2SympyVisitor(pyomo_sympy_map, bool_varlist)
     sympy_expr = visitor.walk_expression(expr)
 
-    # For all newly added indicator variables, create statements enforcing equivalence
-    new_logic_statements = [Equivalent(bool_var, )]
+    new_statements = []
+    # If visitor encountered any special atoms in non-root node, ensure that their children are literals:
+    for indicator_var, special_atom in visitor.special_atom_map.items():
+        atom_cnf = _convert_children_to_literals(
+            special_atom, bool_varlist, bool_var_to_special_atoms)
+        bool_var_to_special_atoms[indicator_var] = atom_cnf[0]
+        new_statements.extend(atom_cnf[1:])
 
     cnf_form = sympy.to_cnf(sympy_expr)
-    return sympy2pyomo_expression(cnf_form, symbol_map), []  # additional statements
+    return [sympy2pyomo_expression(cnf_form, pyomo_sympy_map)] + new_statements  # additional statements
 
 
 def _convert_children_to_literals(special_atom, bool_varlist, bool_var_to_special_atoms):
-    """If the child logical statements are not literals, substitute augmented boolean variables."""
-    new_args = [special_atom.args(0)]
+    """If the child logical statements are not literals, substitute augmented boolean variables.
+
+    Same return types as to_cnf() function.
+
+    """
+    new_args = [special_atom.args[0]]
     new_statements = []
     need_new_expression = False
-    for child in special_atom.args()[1:]:
+    for child in special_atom.args[1:]:
         if type(child) in native_types or not child.is_expression_type():
             # Child is a literal. Simply append to new argument list.
             new_args.append(child)
         else:
+            # We need to do a substitution
             need_new_expression = True
-            child_cnf, child_new_statements, _ = to_cnf(child, bool_varlist, bool_var_to_special_atoms)
-            new_args.append(child_cnf)
-            new_statements.extend(child_new_statements)
+            new_indicator = bool_varlist.add()
+            if type(child) in _special_atom_classes:
+                child_cnf = _convert_children_to_literals(child, bool_varlist, bool_var_to_special_atoms)
+                bool_var_to_special_atoms[new_indicator] = child_cnf[0]
+            else:
+                child_cnf = to_cnf(new_indicator.equivalent_to(child), bool_varlist, bool_var_to_special_atoms)
+                new_statements.append(child_cnf[0])
+            new_args.append(new_indicator)
+            new_statements.extend(child_cnf[1:])
     if need_new_expression:
         new_atom_with_literals = special_atom.__class__(new_args)
-        return new_atom_with_literals, new_statements
+        return [new_atom_with_literals] + new_statements
     else:
-        return special_atom, []
+        return [special_atom]
 
 
 def sympyify_expression(expr, bool_varlist):

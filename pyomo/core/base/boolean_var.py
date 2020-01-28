@@ -384,8 +384,7 @@ class BooleanVar(IndexedComponent):
         if index is None and not self.is_indexed():
             obj = self._data[index] = self
         else:
-            obj = self._data[index] = self._ComponentDataClass(
-                self._domain_init_value, component=self)
+            obj = self._data[index] = self._ComponentDataClass(component=self)
         self._initialize_members((index,))
         return obj
     def _setitem_when_not_present(self, index, value):
