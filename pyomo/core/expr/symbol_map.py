@@ -58,12 +58,9 @@ class SymbolMap(object):
         }
 
     def __setstate__(self, state):
-        self.byObject = dict(
-            (id(obj), key) for key, obj  in state['bySymbol'] )
-        self.bySymbol = dict(
-            (key, weakref_ref(obj)) for key, obj in state['bySymbol'] )
-        self.aliases = dict(
-            (key, weakref_ref(obj)) for key, obj in state['aliases'] )
+        self.byObject = {id(obj):key for key, obj  in state['bySymbol']}
+        self.bySymbol = {key:weakref_ref(obj) for key,obj in state['bySymbol']}
+        self.aliases = {key:weakref_ref(obj) for key, obj in state['aliases']}
 
     def addSymbol(self, obj, symb):
         """
@@ -78,7 +75,7 @@ class SymbolMap(object):
 
         This method assumes that symbol names will not conflict.
         """
-        tuples = list((obj, symb) for obj,symb in obj_symbol_tuples)
+        tuples = [(obj, symb) for obj,symb in obj_symbol_tuples]
         self.byObject.update((id(obj_), symb_) for obj_,symb_ in tuples)
         self.bySymbol.update((symb_, weakref_ref(obj_)) for obj_,symb_ in tuples)
 
