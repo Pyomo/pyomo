@@ -708,8 +708,41 @@ class _BlockData(ActiveComponentData):
             super(_BlockData, self).__delattr__(name)
 
     def set_value(self, val, guarantee_components=()):
+        """Set (override) the value of this Component Data
+
+        This removes all components assigned to this block and then
+        moves over all components and all non-private attributes from
+        `val`.  Because this component is not slotized, we cannot
+        distinguish between instance attributes declared by `__init__()`
+        and non-components assigned by the user.  Therefore, we will not
+        remove *any* attributes and only copy over attributes that
+        either are not already present here or are not private (do not
+        begin with a "_").
+
+        Derived blocks may wish to ensure that certain components are
+        always present on this block (notably the `indicator_var` `Var`
+        on `Disjunct`).  Derived classes may wrap this method and
+        provide a `guarantee_components` set.  Components whose local
+        name appears in the `guarantee_components` set will only be
+        removed from this Block if `val` contains either a component or
+        attribute with the same local name.  This will "guarantee" that
+        this object will still have the required attributes after
+        set_value()
+
+        Parameters
+        ----------
+        val: _BlockData or dict
+            The Block or mapping that contains the new attributed to
+            assign to the model.
+        guarantee_components: sequence or set
+            components on this block whose local name appears in
+            guarantee_components will not be automatically removed
+            unless there is a component or attribute in `val` with the
+            same name.
+
+        """
         if isinstance(val, _BlockData):
-            # There is a special case where assinging a parent block to
+            # There is a special case where assigning a parent block to
             # this block creates a circular hierarchy
             if val is self:
                 return
@@ -752,7 +785,7 @@ class _BlockData(ActiveComponentData):
             val.del_component(k)
             self.add_component(k,v)
         # Because Blocks are not slotized and we allow the
-        # assignment of arbitraty data to Blocks, we will move over
+        # assignment of arbitrary data to Blocks, we will move over
         # any other unrecognized entries in the object's __dict__:
         for k in sorted(iterkeys(val_raw_dict)):
             if k not in self.__dict__ or not k.startswith("_"):
