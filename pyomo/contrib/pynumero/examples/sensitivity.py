@@ -81,34 +81,39 @@ y = compute_init_lam(nlp, x=x)
 nlp.set_primals(x)
 nlp.set_duals(y)
 
-J = nlp.evaluate_jacobian()
-H = nlp.evaluate_hessian_lag()
+J = nlp.extract_submatrix_jacobian(pyomo_variables=[m.x1, m.x2, m.x3], pyomo_constraints=[m.const1, m.const2])
+H = nlp.extract_submatrix_hessian_lag(pyomo_variables_rows=[m.x1, m.x2, m.x3], pyomo_variables_cols=[m.x1, m.x2, m.x3])
 
 M = BlockSymMatrix(2)
 M[0, 0] = H
 M[1, 0] = J
 
 Np = BlockMatrix(2, 1)
-Np[0, 0] = nlp.extract_submatrix_hessian_lag(pyomo_variables_rows=nlp.get_pyomo_variables(), pyomo_variables_cols=[m.eta1, m.eta2])
-Np[1, 0] = nlp.extract_submatrix_jacobian(pyomo_variables=[m.eta1, m.eta2], pyomo_constraints=nlp.get_pyomo_constraints())
+Np[0, 0] = nlp.extract_submatrix_hessian_lag(pyomo_variables_rows=[m.x1, m.x2, m.x3], pyomo_variables_cols=[m.eta1, m.eta2])
+Np[1, 0] = nlp.extract_submatrix_jacobian(pyomo_variables=[m.eta1, m.eta2], pyomo_constraints=[m.const1, m.const2])
 
-ds = spsolve(M.tocsc(), Np.tocsc())
-print(nlp.variable_names())
+ds = spsolve(M.tocsc(), -Np.tocsc())
 
+print("ds:\n", ds.todense())
 #################################################################
 
 p0 = np.array([pyo.value(m.nominal_eta1), pyo.value(m.nominal_eta2)])
 p = np.array([4.45, 1.05])
 dp = p - p0
-dx = ds.dot(dp)[0:nlp.n_primals()]
-new_x = x + dx
-print(new_x)
+dx = ds.dot(dp)[0:3]
+x_indices = nlp.get_primal_indices([m.x1, m.x2, m.x3])
+x_names = np.array(nlp.variable_names())
+new_x = x[x_indices] + dx
+print("dp:", dp)
+print("dx:", dx)
+print("Variable names: \n",x_names[x_indices])
+print("Sensitivity based x:\n", new_x)
 
 #################################################################
 m = create_model(4.45, 1.05)
 opt = pyo.SolverFactory('ipopt')
-results = opt.solve(m, tee=True)
+results = opt.solve(m, tee=False)
 nlp = PyomoNLP(m)
-print(nlp.init_primals())
-
+new_x = nlp.init_primals()
+print("NLP based x:\n", new_x[nlp.get_primal_indices([m.x1, m.x2, m.x3])])
 
