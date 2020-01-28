@@ -2896,7 +2896,7 @@ class TestSet(unittest.TestCase):
 
         m = ConcreteModel()
         with self.assertRaisesRegexp(
-                KeyError, "Cannot treat the scalar component 'I'"
+                KeyError, "Cannot treat the scalar component 'I' "
                 "as an indexed component"):
             m.I = Set(initialize={1:(1,3,2,4)})
 
@@ -2930,7 +2930,7 @@ class TestSet(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core'):
             m = ConcreteModel()
             m.I = Set(initialize={1,3,2,4})
-            ref = "Initializing an ordered Set with a " \
+            ref = "Initializing ordered Set I with a " \
                   "fundamentally unordered data source (type: set)."
             self.assertIn(ref, output.getvalue())
         self.assertEqual(m.I.sorted_data(), (1,2,3,4))

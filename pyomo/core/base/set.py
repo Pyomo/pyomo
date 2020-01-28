@@ -536,7 +536,7 @@ class _SetData(_SetDataBase):
         # Note: I'd like to use set() for ranges, since we will be
         # randomly removing elelments from the list; however, since we
         # do it by enumerating over ranges, using set() would make this
-        # routine nondeterministic.  Not a hoge issue for the result,
+        # routine nondeterministic.  Not a huge issue for the result,
         # but problemmatic for code coverage.
         ranges = list(self.ranges())
         try:
@@ -1914,13 +1914,13 @@ class Set(IndexedComponent):
             if obj.isordered() \
                    and type(_values) in Set._UnorderedInitializers:
                 logger.warning(
-                    "Initializing an ordered Set with a fundamentally "
+                    "Initializing ordered Set %s with a fundamentally "
                     "unordered data source (type: %s).  This WILL potentially "
                     "lead to nondeterministic behavior in Pyomo"
-                    % (type(_values).__name__,))
+                    % (self.name, type(_values).__name__,))
             # Special case: set operations that are not first attached
             # to the model must be constructed.
-            if isinstance(_values, _SetOperator):
+            if isinstance(_values, SetOperator):
                 _values.construct()
             for val in _values:
                 if val is Set.End:
@@ -2691,7 +2691,7 @@ class SetOperator(_SetData, Set):
                 other than a SetProduct.  Returning this set and not
                 decending into the set operands.  To descend into this
                 operator, specify
-                'subsets(expand_all_set_operators=False)' or to suppress
+                'subsets(expand_all_set_operators=True)' or to suppress
                 this warning, specify
                 'subsets(expand_all_set_operators=False)'""" % ( self.name, ))
                 yield self
@@ -2705,7 +2705,7 @@ class SetOperator(_SetData, Set):
                 yield ss
 
     @property
-    @deprecated("SetProduct.set_tuple() is deprecated.  "
+    @deprecated("SetProduct.set_tuple is deprecated.  "
                 "Use SetProduct.subsets() to get the operator arguments.",
                 version='TBD')
     def set_tuple(self):
@@ -3466,6 +3466,12 @@ class SetProduct_OrderedSet(_OrderedSetMixin, SetProduct_FiniteSet):
 class _AnySet(_SetData, Set):
     def __init__(self, **kwds):
         _SetData.__init__(self, component=self)
+        # There is a chicken-and-egg game here: the SetInitializer uses
+        # Any as part of the processing of the domain/within/bounds
+        # domain restrictions.  However, Any has not been declared when
+        # constructing Any, so we need to bypass that logic.  This
+        # works, but requires us to declare a special domain setter to
+        # accept (and ignore) this value.
         kwds.setdefault('domain', self)
         Set.__init__(self, **kwds)
 

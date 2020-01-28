@@ -556,7 +556,7 @@ You can silence this warning by one of three ways:
         #
         if not self.is_indexed():
             raise KeyError(
-                "Cannot treat the scalar component '%s'"
+                "Cannot treat the scalar component '%s' "
                 "as an indexed component" % ( self.name, ))
         #
         # Raise an exception
