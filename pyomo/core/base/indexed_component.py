@@ -95,6 +95,8 @@ normalize_index.flatten = True
 
 class _NotFound(object):
     pass
+class _NotSpecified(object):
+    pass
 
 #
 # Get the fully-qualified name for this index.  If there isn't anything
@@ -712,7 +714,7 @@ value() function.""" % ( self.name, i ))
         obj.set_value(value)
         return obj
 
-    def _setitem_when_not_present(self, index, value):
+    def _setitem_when_not_present(self, index, value=_NotSpecified):
         """Perform the fundamental component item creation and storage.
 
         Components that want to implement a nonstandard storage mechanism
@@ -729,11 +731,12 @@ value() function.""" % ( self.name, i ))
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
         try:
-            obj.set_value(value)
-            return obj
+            if value is not _NotSpecified:
+                obj.set_value(value)
         except:
             del self._data[index]
             raise
+        return obj
 
     def set_value(self, value):
         """Set the value of a scalar component."""

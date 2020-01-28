@@ -12,16 +12,18 @@ __all__ = ['Block', 'TraversalStrategy', 'SortComponents',
            'active_components', 'components', 'active_components_data',
            'components_data', 'SimpleBlock']
 
+import collections
 import copy
+import logging
 import sys
 import weakref
-import logging
+import textwrap
+
 from inspect import isclass
 from operator import itemgetter, attrgetter
 from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
-import collections
 if PY3:
     from collections.abc import Mapping as collections_Mapping
 else:
@@ -707,12 +709,21 @@ class _BlockData(ActiveComponentData):
             #
             super(_BlockData, self).__delattr__(name)
 
-    def set_value(self, val, guarantee_components=()):
+    def set_value(self, val):
+        raise RuntimeError(textwrap.dedent(
+            """\
+            Block components do not support assignment or set_value().
+            Use the transfer_attributes_from() method to transfer the
+            components and public attributes from one block to another:
+                model.b[1].transfer_attributes_from(other_block)
+            """))
+
+    def transfer_attributes_from(self, src, guarantee_components=()):
         """Set (override) the value of this Component Data
 
         This removes all components assigned to this block and then
         moves over all components and all non-private attributes from
-        `val`.  Because this component is not slotized, we cannot
+        `src`.  Because this component is not slotized, we cannot
         distinguish between instance attributes declared by `__init__()`
         and non-components assigned by the user.  Therefore, we will not
         remove *any* attributes and only copy over attributes that
@@ -724,53 +735,55 @@ class _BlockData(ActiveComponentData):
         on `Disjunct`).  Derived classes may wrap this method and
         provide a `guarantee_components` set.  Components whose local
         name appears in the `guarantee_components` set will only be
-        removed from this Block if `val` contains either a component or
+        removed from this Block if `src` contains either a component or
         attribute with the same local name.  This will "guarantee" that
         this object will still have the required attributes after
         set_value()
 
         Parameters
         ----------
-        val: _BlockData or dict
-            The Block or mapping that contains the new attributed to
-            assign to the model.
+        src: _BlockData or dict
+            The Block or mapping that contains the new attributes to
+            assign to this block.
+
         guarantee_components: sequence or set
             components on this block whose local name appears in
             guarantee_components will not be automatically removed
-            unless there is a component or attribute in `val` with the
-            same name.
-
+            unless there is a component or attribute in `src` with the
+            same name, thereby guaranteeing that the component will be
+            present in the block.
         """
-        if isinstance(val, _BlockData):
+        if isinstance(src, _BlockData):
             # There is a special case where assigning a parent block to
             # this block creates a circular hierarchy
-            if val is self:
+            if src is self:
                 return
             p_block = self.parent_block()
             while p_block is not None:
-                if p_block is val:
+                if p_block is src:
                     raise ValueError(
-                        "_BlockData.set_value(): Cannot set a sub-block (%s)"
-                        " to a parent block (%s): creates a circular hierarchy"
-                        % (self, val))
+                        "_BlockData.transfer_attributes_from(): Cannot set a "
+                        "sub-block (%s) to a parent block (%s): creates a "
+                        "circular hierarchy" % (self, src))
                 p_block = p_block.parent_block()
             # record the components and the non-component objects added
             # to the block
-            val_comp_map = val.component_map()
-            val_raw_dict = val.__dict__
-        elif val is None:
-            val_comp_map = val_raw_dict = {}
-        elif isinstance(val, collections_Mapping):
-            val_comp_map = {}
-            val_raw_dict = val
+            src_comp_map = src.component_map()
+            src_raw_dict = src.__dict__
+        elif src is None:
+            src_comp_map = src_raw_dict = {}
+        elif isinstance(src, collections_Mapping):
+            src_comp_map = {}
+            src_raw_dict = src
         else:
-            raise ValueError("_BlockData.set_value(): expected a Block or "
-                             "None; received %s" % (type(val).__name__,))
+            raise ValueError(
+                "_BlockData.transfer_attributes_from(): expected a "
+                "Block or None; received %s" % (type(src).__name__,))
 
         for k in list(self.component_map()):
-            if k not in guarantee_components or k in val_comp_map or (
-                    k in val_raw_dict
-                    and isinstance(val_raw_dict[k], Component) ):
+            if k not in guarantee_components or k in src_comp_map or (
+                    k in src_raw_dict
+                    and isinstance(src_raw_dict[k], Component) ):
                 self.del_component(k)
 
         if not guarantee_components:
@@ -781,15 +794,15 @@ class _BlockData(ActiveComponentData):
             self._decl_order = []
 
         # Use component_map for the components to preserve decl_order
-        for k,v in iteritems(val_comp_map):
-            val.del_component(k)
+        for k,v in iteritems(src_comp_map):
+            src.del_component(k)
             self.add_component(k,v)
         # Because Blocks are not slotized and we allow the
         # assignment of arbitrary data to Blocks, we will move over
         # any other unrecognized entries in the object's __dict__:
-        for k in sorted(iterkeys(val_raw_dict)):
+        for k in sorted(iterkeys(src_raw_dict)):
             if k not in self.__dict__ or not k.startswith("_"):
-                setattr(self, k, val_raw_dict[k])
+                setattr(self, k, src_raw_dict[k])
 
     def _add_temporary_set(self, val):
         """TODO: This method has known issues (see tickets) and needs to be
@@ -1856,7 +1869,7 @@ class Block(ActiveIndexedComponent):
             self.construct()
 
     def _getitem_when_not_present(self, idx):
-        return self._setitem_when_not_present(idx, None)
+        return self._setitem_when_not_present(idx)
 
     def find_component(self, label_or_component):
         """
@@ -1916,10 +1929,10 @@ class Block(ActiveIndexedComponent):
             if id(_block) in _BlockConstruction.data:
                 del _BlockConstruction.data[id(_block)]
 
-            if isinstance(obj, _BlockData) and obj is not _block:
+            if obj is not _block and isinstance(obj, _BlockData):
                 # If the user returns a block, transfer over everything
                 # they defined into the empty one we created.
-                _block.set_value(obj)
+                _block.transfer_attributes_from(obj)
 
             # TBD: Should we allow skipping Blocks???
             # if obj is Block.Skip and idx is not None:

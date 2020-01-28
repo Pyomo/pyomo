@@ -657,19 +657,31 @@ class TestBlock(unittest.TestCase):
 
     def test_set_value(self):
         b = Block(concrete=True)
+        with self.assertRaisesRegexp(
+                RuntimeError, "Block components do not support assignment "
+                "or set_value"):
+            b.set_value(None)
+
+        b.b = Block()
+        with self.assertRaisesRegexp(
+                RuntimeError, "Block components do not support assignment "
+                "or set_value"):
+            b.b = 5
+
+    def test_transfer_attributes_from(self):
+        b = Block(concrete=True)
         b.x = Var()
         b.y = Var()
         c = Block(concrete=True)
         c.z = Param(initialize=5)
         c.x = c_x = Param(initialize=5)
-        c.y = 'a string'
+        c.y = c_y = 5
 
-        b.set_value(c)
+        b.transfer_attributes_from(c)
         self.assertEqual(list(b.component_map()), ['z','x'])
         self.assertEqual(list(c.component_map()), [])
         self.assertIs(b.x, c_x)
-        self.assertIs(b.y, c.y)
-        self.assertEqual(b.y, 'a string')
+        self.assertIs(b.y, c_y)
 
         b = Block(concrete=True)
         b.x = Var()
@@ -677,14 +689,15 @@ class TestBlock(unittest.TestCase):
         c = Block(concrete=True)
         c.z = Param(initialize=5)
         c.x = c_x = Param(initialize=5)
-        c.y = 'a string'
+        c.y = c_y = 5
 
-        b.set_value(c, guarantee_components={'y','x'})
+        b.transfer_attributes_from(c, guarantee_components={'y','x'})
         self.assertEqual(list(b.component_map()), ['y','z','x'])
         self.assertEqual(list(c.component_map()), [])
         self.assertIs(b.x, c_x)
-        self.assertIsNot(b.y, c.y)
+        self.assertIsNot(b.y, c_y)
         self.assertIs(b.y, b_y)
+        self.assertEqual(value(b.y), value(c_y))
 
         ### assignment of dict
         b = Block(concrete=True)
@@ -692,20 +705,21 @@ class TestBlock(unittest.TestCase):
         b.y = b_y = Var()
         c = { 'z': Param(initialize=5),
               'x': Param(initialize=5),
-              'y': 'a string' }
+              'y': 5 }
 
-        b.set_value(c, guarantee_components={'y','x'})
+        b.transfer_attributes_from(c, guarantee_components={'y','x'})
         self.assertEqual(list(b.component_map()), ['y','x','z'])
         self.assertEqual(sorted(list(iterkeys(c))), ['x','y','z'])
         self.assertIs(b.x, c['x'])
         self.assertIsNot(b.y, c['y'])
         self.assertIs(b.y, b_y)
+        self.assertEqual(value(b.y), value(c_y))
 
         ### assignment of self
         b = Block(concrete=True)
         b.x = b_x = Var()
         b.y = b_y = Var()
-        b.set_value(b)
+        b.transfer_attributes_from(b)
 
         self.assertEqual(list(b.component_map()), ['x','y'])
         self.assertIs(b.x, b_x)
@@ -717,17 +731,17 @@ class TestBlock(unittest.TestCase):
         b.c.d = Block()
         b.c.d.e = Block()
         with self.assertRaisesRegexp(
-                ValueError, '_BlockData.set_value\(\): Cannot set a sub-block '
-                '\(c.d.e\) to a parent block \(c\):'):
-            b.c.d.e.set_value(b.c)
+                ValueError, '_BlockData.transfer_attributes_from\(\): '
+                'Cannot set a sub-block \(c.d.e\) to a parent block \(c\):'):
+            b.c.d.e.transfer_attributes_from(b.c)
 
         ### bad data type
         b = Block(concrete=True)
         with self.assertRaisesRegexp(
                 ValueError,
-                '_BlockData.set_value\(\): expected a Block or None;'
-                ' received str'):
-            b.set_value('foo')
+                '_BlockData.transfer_attributes_from\(\): expected a Block '
+                'or None; received str'):
+            b.transfer_attributes_from('foo')
 
     def test_iterate_hierarchy_defaults(self):
         self.assertIs( TraversalStrategy.BFS,
