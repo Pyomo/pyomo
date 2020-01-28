@@ -19,7 +19,6 @@ import numpy as np
 
 from pyomo.contrib.pynumero.sparse import (BlockMatrix,
                                            BlockVector,
-                                           empty_matrix,
                                            NotFullyDefinedBlockMatrixError)
 import warnings
 
@@ -805,11 +804,11 @@ class TestBlockMatrix(unittest.TestCase):
     def test_get_block_column_index(self):
 
         m = BlockMatrix(2,4)
-        m[0, 0] = empty_matrix(3, 2)
-        m[0, 1] = empty_matrix(3, 4)
-        m[0, 2] = empty_matrix(3, 3)
-        m[0, 3] = empty_matrix(3, 6)
-        m[1, 3] = empty_matrix(5, 6)
+        m[0, 0] = coo_matrix((3, 2))
+        m[0, 1] = coo_matrix((3, 4))
+        m[0, 2] = coo_matrix((3, 3))
+        m[0, 3] = coo_matrix((3, 6))
+        m[1, 3] = coo_matrix((5, 6))
 
         bcol = m.get_block_column_index(8)
         self.assertEqual(bcol, 2)
@@ -821,11 +820,11 @@ class TestBlockMatrix(unittest.TestCase):
     def test_get_block_row_index(self):
 
         m = BlockMatrix(2,4)
-        m[0, 0] = empty_matrix(3, 2)
-        m[0, 1] = empty_matrix(3, 4)
-        m[0, 2] = empty_matrix(3, 3)
-        m[0, 3] = empty_matrix(3, 6)
-        m[1, 3] = empty_matrix(5, 6)
+        m[0, 0] = coo_matrix((3, 2))
+        m[0, 1] = coo_matrix((3, 4))
+        m[0, 2] = coo_matrix((3, 3))
+        m[0, 3] = coo_matrix((3, 6))
+        m[1, 3] = coo_matrix((5, 6))
 
         brow = m.get_block_row_index(0)
         self.assertEqual(brow, 0)

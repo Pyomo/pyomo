@@ -26,7 +26,6 @@ from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from scipy.sparse import coo_matrix, csr_matrix, csc_matrix
 from scipy.sparse import isspmatrix
 from pyomo.contrib.pynumero.sparse.utils import is_symmetric_sparse
-from pyomo.contrib.pynumero.sparse import empty_matrix
 from .base_block import BaseBlockMatrix
 from scipy.sparse.base import spmatrix
 import operator
