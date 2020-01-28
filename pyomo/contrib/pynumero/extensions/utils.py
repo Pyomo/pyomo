@@ -17,6 +17,11 @@ def find_pynumero_library(library_name):
     asl_path = find_library(library_name)
     if asl_path is not None:
         return asl_path
+
+    # On windows the library is prefixed with 'lib'
+    asl_path = find_library('lib'+library_name)
+    if asl_path is not None:
+        return asl_path
     else:
         # try looking into extensions directory now
         file_path = os.path.abspath(__file__)
