@@ -273,15 +273,15 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
 
         implication = Implies(m.Y1, m.Y2)
-        x = to_cnf(implication)
+        x, _ = to_cnf(implication)
         _check_equivalent(self, implication, x)
 
         atleast = AtLeast(1, m.Y1, m.Y2)
-        x = to_cnf(atleast)
+        x, _ = to_cnf(atleast)
         self.assertIs(atleast, x)  # should be no change
 
         nestedatleast = Implies(m.Y1, AtLeast(1, m.Y1, m.Y2))
-        x = to_cnf(nestedatleast)
+        x, _ = to_cnf(nestedatleast)
         self.assertEquals(str(x), "AtLeast(1: [Y1, Y2]) | (~Y1)")
         _check_equivalent(self, nestedatleast, x)
 
