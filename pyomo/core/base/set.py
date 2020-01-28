@@ -438,9 +438,9 @@ class _SetData(_SetDataBase):
     def __eq__(self, other):
         if self is other:
             return True
-        try:
+        if hasattr(other, 'isfinite'):
             other_isfinite = other.isfinite()
-        except:
+        elif hasattr(other, '__contains__'):
             # we assume that everything that does not implement
             # isfinite() is a discrete set.
             other_isfinite = True
@@ -450,6 +450,8 @@ class _SetData(_SetDataBase):
                 other = set(other)
             except:
                 pass
+        else:
+            return False
         if self.isfinite():
             if not other_isfinite:
                 return False
@@ -759,9 +761,9 @@ class _SetData(_SetDataBase):
         -------
         bool : True if this set is disjoint from `other`
         """
-        try:
+        if hasattr(other, 'isfinite'):
             other_isfinite = other.isfinite()
-        except:
+        elif hasattr(other, '__contains__'):
             # we assume that everything that does not implement
             # isfinite() is a discrete set.
             other_isfinite = True
@@ -771,6 +773,10 @@ class _SetData(_SetDataBase):
                 other = set(other)
             except:
                 pass
+        else:
+            # Raise an exception consistent with Python's set.isdisjoint()
+            raise TypeError(
+                "'%s' object is not iterable" % (type(other).__name__,))
         if self.isfinite():
             for x in self:
                 if x in other:
@@ -796,9 +802,9 @@ class _SetData(_SetDataBase):
         -------
         bool : True if this set is a subset of `other`
         """
-        try:
+        if hasattr(other, 'isfinite'):
             other_isfinite = other.isfinite()
-        except:
+        elif hasattr(other, '__contains__'):
             # we assume that everything that does not implement
             # isfinite() is a discrete set.
             other_isfinite = True
@@ -808,6 +814,10 @@ class _SetData(_SetDataBase):
                 other = set(other)
             except:
                 pass
+        else:
+            # Raise an exception consistent with Python's set.issubset()
+            raise TypeError(
+                "'%s' object is not iterable" % (type(other).__name__,))
         if self.isfinite():
             for x in self:
                 if x not in other:
@@ -828,9 +838,9 @@ class _SetData(_SetDataBase):
             return True
 
     def issuperset(self, other):
-        try:
+        if hasattr(other, 'isfinite'):
             other_isfinite = other.isfinite()
-        except:
+        elif hasattr(other, '__contains__'):
             # we assume that everything that does not implement
             # isfinite() is a discrete set.
             other_isfinite = True
@@ -840,6 +850,10 @@ class _SetData(_SetDataBase):
                 other = set(other)
             except:
                 pass
+        else:
+            # Raise an exception consistent with Python's set.issuperset()
+            raise TypeError(
+                "'%s' object is not iterable" % (type(other).__name__,))
         if other_isfinite:
             for x in other:
                 # Other may contain elements that are not representable

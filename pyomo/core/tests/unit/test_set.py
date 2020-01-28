@@ -884,6 +884,9 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 return len(self.data)
         self.assertEqual(SetOf({1,3,5}), _NonIterable())
 
+        # Test types that cannot be case to set
+        self.assertNotEqual(SetOf({3,}), 3)
+
     def test_inequality(self):
         self.assertTrue(SetOf([1,2,3]) <= SetOf({1,2,3}))
         self.assertFalse(SetOf([1,2,3]) < SetOf({1,2,3}))
@@ -1063,6 +1066,11 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertTrue(SetOf({2,4}).isdisjoint(_NonIterable()))
         self.assertFalse(SetOf({2,3,4}).isdisjoint(_NonIterable()))
 
+        # test bad type
+        with self.assertRaisesRegexp(
+                TypeError, "'int' object is not iterable"):
+            i.isdisjoint(1)
+
     def test_issubset(self):
         i = SetOf({1,2,3})
         self.assertTrue(i.issubset({1,2,3,4}))
@@ -1104,6 +1112,11 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 return len(self.data)
         self.assertTrue(SetOf({1,5}).issubset(_NonIterable()))
         self.assertFalse(SetOf({1,3,4}).issubset(_NonIterable()))
+
+        # test bad type
+        with self.assertRaisesRegexp(
+                TypeError, "'int' object is not iterable"):
+            i.issubset(1)
 
     def test_issuperset(self):
         i = SetOf({1,2,3})
@@ -1147,6 +1160,11 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             SetOf({1,5}).issuperset(_NonIterable())
         with self.assertRaisesRegexp(TypeError, 'not iterable'):
             SetOf({1,3,4,5}).issuperset(_NonIterable())
+
+        # test bad type
+        with self.assertRaisesRegexp(
+                TypeError, "'int' object is not iterable"):
+            i.issuperset(1)
 
     def test_unordered_setof(self):
         i = SetOf({1,3,2,0})
