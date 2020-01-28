@@ -16,26 +16,25 @@ if not (pn.sparse.numpy_available and pn.sparse.scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run BlockVector tests")
 
 import numpy as np
-from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
+from pyomo.contrib.pynumero.sparse.block_vector import BlockVector, NotFullyDefinedBlockVectorError
 
 
 class TestBlockVector(unittest.TestCase):
 
     def test_constructor(self):
 
-        v = BlockVector(4)
-        self.assertEqual(v.nblocks, 4)
-        self.assertEqual(v.bshape, (4,))
-        self.assertEqual(v.size, 0)
+        v = BlockVector(2)
+        self.assertEqual(v.nblocks, 2)
+        self.assertEqual(v.bshape, (2,))
+        with self.assertRaises(NotFullyDefinedBlockVectorError):
+            v_size = v.size
 
         v[0] = np.ones(2)
         v[1] = np.ones(4)
         self.assertEqual(v.size, 6)
         self.assertEqual(v.shape, (6,))
-        v[0] = None
-        self.assertEqual(v.size, 4)
-        self.assertEqual(v.shape, (4,))
-        self.assertEqual(v.ndim, 1)
+        with self.assertRaises(AssertionError):
+            v[0] = None
 
         with self.assertRaises(Exception) as context:
             BlockVector('hola')
@@ -64,7 +63,8 @@ class TestBlockVector(unittest.TestCase):
         v = self.ones
         self.assertEqual(v.mean(), flat_v.mean())
         v = BlockVector(2)
-        self.assertEqual(v.mean(), 0.0)
+        with self.assertRaises(NotFullyDefinedBlockVectorError):
+            v_mean = v.mean()
 
     def test_sum(self):
         self.assertEqual(self.ones.sum(), self.ones.size)
@@ -712,6 +712,51 @@ class TestBlockVector(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             v *= 'hola'
 
+    def test_itruediv(self):
+        v = self.ones
+        v /= 3
+        self.assertTrue(np.allclose(v.flatten(), np.ones(v.size)/3))
+        v.fill(1.0)
+        v /= v
+        self.assertTrue(np.allclose(v.flatten(), np.ones(v.size)))
+        v.fill(1.0)
+        v /= np.ones(v.size) * 2
+        self.assertTrue(np.allclose(v.flatten(), np.ones(v.size) / 2))
+
+        v = BlockVector(2)
+        a = np.ones(5)
+        b = np.arange(9, dtype=np.float64)
+        a_copy = a.copy()
+        b_copy = b.copy()
+        v[0] = a
+        v[1] = b
+        v /= 2.0
+
+        self.assertTrue(np.allclose(v[0], a_copy / 2.0))
+        self.assertTrue(np.allclose(v[1], b_copy / 2.0))
+
+        v = BlockVector(2)
+        a = np.ones(5)
+        b = np.zeros(9)
+        a_copy = a.copy()
+        b_copy = b.copy()
+        v[0] = a
+        v[1] = b
+
+        v2 = BlockVector(2)
+        v2[0] = np.ones(5) * 2
+        v2[1] = np.ones(9) * 2
+
+        v /= v2
+        self.assertTrue(np.allclose(v[0], a_copy / 2))
+        self.assertTrue(np.allclose(v[1], b_copy / 2))
+
+        self.assertTrue(np.allclose(v2[0], np.ones(5) * 2))
+        self.assertTrue(np.allclose(v2[1], np.ones(9) * 2))
+
+        with self.assertRaises(Exception) as context:
+            v *= 'hola'
+
     def test_getitem(self):
         v = self.ones
         for i, s in enumerate(self.list_sizes_ones):
@@ -742,9 +787,11 @@ class TestBlockVector(unittest.TestCase):
     def test_has_none(self):
         v = self.ones
         self.assertFalse(v.has_none)
-        v[0] = None
-        self.assertTrue(v.has_none)
+        v = BlockVector(3)
         v[0] = np.ones(2)
+        v[2] = np.ones(3)
+        self.assertTrue(v.has_none)
+        v[1] = np.ones(2)
         self.assertFalse(v.has_none)
 
     def test_copyfrom(self):

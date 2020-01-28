@@ -94,6 +94,11 @@ class BlockMatrix(BaseBlockMatrix):
         self._bshape = shape
 
         self._block_mask = np.zeros(shape, dtype=bool)
+
+        # _brow_lengths and _bcol_lengths get converted to dtype=np.int64 as soon as
+        # all of the dimensions are defined. Until then, users do not have access
+        # to these. See __setitem__, has_undefined_rows, has_undefined_cols,
+        # row_block_sizes, col_block_sizes, and assert_block_structure
         self._brow_lengths = np.empty(nbrows, dtype=np.float64)
         self._bcol_lengths = np.empty(nbcols, dtype=np.float64)
         self._brow_lengths.fill(np.nan)

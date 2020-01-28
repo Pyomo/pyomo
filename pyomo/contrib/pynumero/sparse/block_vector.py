@@ -28,6 +28,16 @@ import copy as cp
 __all__ = ['BlockVector']
 
 
+class NotFullyDefinedBlockVectorError(Exception):
+    pass
+
+
+def assert_block_structure(vec):
+    msgr = 'Operation not allowed with None blocks.'
+    if vec.has_none:
+        raise NotFullyDefinedBlockVectorError(msgr)
+
+
 class BlockVector(np.ndarray, BaseBlockVector):
     """
     Structured vector interface. This interface can be used to
@@ -41,11 +51,10 @@ class BlockVector(np.ndarray, BaseBlockVector):
     _brow_lengths: numpy.ndarray
         1D-Array of size nblocks that specifies the length of each entry
         in the block vector
-    _block_mask: numpy.ndarray bool
-        1D-Array of size nblocks that tells if entry is none. Operations with
-        BlockVectors require all entries to be different that none.
-    _has_none: bool
-        This attribute is used to assert all entries are not none.
+    _undefined_brows: set
+        A set of block indices for which the blocks are still None (i.e., the dimensions
+        have not yet ben set). Operations with BlockVectors require all entries to be
+        different than None.
 
     Parameters
     ----------
@@ -68,10 +77,11 @@ class BlockVector(np.ndarray, BaseBlockVector):
         blocks = [None for i in range(nblocks)]
         arr = np.asarray(blocks, dtype='object')
         obj = arr.view(cls)
-        obj._brow_lengths = np.zeros(nblocks, dtype=np.int64)
-        obj._block_mask = np.zeros(nblocks, dtype=bool)
         obj._nblocks = nblocks
-        obj._has_none = True
+
+        obj._brow_lengths = np.empty(nblocks, dtype=np.float64)
+        obj._brow_lengths.fill(np.nan)
+        obj._undefined_brows = set(range(nblocks))
 
         if isinstance(vectors, list):
             for idx, blk in enumerate(vectors):
@@ -88,8 +98,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             return
         self._brow_lengths = getattr(obj, '_brow_lengths', None)
         self._nblocks = getattr(obj, '_nblocks', 0)
-        self._has_none = getattr(obj, '_has_none', True)
-        self._block_mask = getattr(obj, '_block_mask', None)
+        self._undefined_brows = getattr(obj, '_undefined_brows', None)
 
     def __array_prepare__(self, out_arr, context=None):
         """This method is required to subclass from numpy array"""
@@ -167,12 +176,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
         x1 = args[0]
         x2 = args[1]
         if isinstance(x1, BlockVector) and isinstance(x2, BlockVector):
-            assert not x1.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
-            assert not x2.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(x1)
+            assert_block_structure(x2)
             assert x1.nblocks == x2.nblocks, \
                 'Operation on BlockVectors need the same number of blocks on each operand'
             assert x1.size == x2.size, \
@@ -184,9 +189,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
             return res
         elif type(x1)==np.ndarray and isinstance(x2, BlockVector):
-            assert not x2.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(x2)
             assert x1.size == x2.size, \
                 'Dimension missmatch {}!={}'.format(x1.size, x2.size)
             res = BlockVector(x2.nblocks)
@@ -198,9 +201,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 accum += nelements
             return res
         elif type(x2)==np.ndarray and isinstance(x1, BlockVector):
-            assert not x1.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(x1)
             assert x1.size == x2.size, \
                 'Dimension missmatch {}!={}'.format(x1.size, x2.size)
             res = BlockVector(x1.nblocks)
@@ -212,18 +213,14 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 accum += nelements
             return res
         elif np.isscalar(x1) and isinstance(x2, BlockVector):
-            assert not x2.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(x2)
             res = BlockVector(x2.nblocks)
             for i in range(x2.nblocks):
                 _args = [x1] + [x2[i]] + [args[j] for j in range(2, len(args))]
                 res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
             return res
         elif np.isscalar(x2) and isinstance(x1, BlockVector):
-            assert not x1.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(x1)
             res = BlockVector(x1.nblocks)
             for i in range(x1.nblocks):
                 _args = [x1[i]] + [x2] + [args[j] for j in range(2, len(args))]
@@ -258,6 +255,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Returns total number of elements in this BlockVector
         """
+        assert_block_structure(self)
         return np.sum(self._brow_lengths),
 
     @property
@@ -265,6 +263,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Returns total number of elements in this BlockVector
         """
+        assert_block_structure(self)
         return np.sum(self._brow_lengths)
 
     @property
@@ -277,24 +276,18 @@ class BlockVector(np.ndarray, BaseBlockVector):
     @property
     def has_none(self):
         """
-        Indicate if thi BlockVector has none entry.
-
-        Notes
-        -----
-        this only checks if all entries at the BlockVector are
-        different than none. It does not check recursively for subvectors
-        to not have nones.
-
+        Indicate if this BlockVector has any none entries.
         """
         # this flag is updated in __setattr__
-        return self._has_none
+        return len(self._undefined_brows) != 0
 
     def block_sizes(self, copy=True):
         """
         Returns 1D-Array with sizes of individual blocks in this BlockVector
         """
+        assert_block_structure(self)
         if copy:
-            return np.copy(self._brow_lengths)
+            return self._brow_lengths.copy()
         return self._brow_lengths
 
     def dot(self, other, out=None):
@@ -311,9 +304,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
         """
         assert out is None, 'Operation not supported with out keyword'
-        assert not self.has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         if isinstance(other, BlockVector):
-            assert not other.has_none, 'Operations not allowed with None blocks.'
+            assert_block_structure(other)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -332,7 +325,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the sum of all entries in this BlockVector
         """
-        assert not self.has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         results = np.array([self[i].sum() for i in range(self.nblocks)])
         return results.sum(axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
@@ -340,7 +333,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Returns True if all elements evaluate to True.
         """
-        assert not self.has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         results = np.array([self[i].all() for i in range(self.nblocks)],
                             dtype=np.bool)
         return results.all(axis=axis, out=out, keepdims=keepdims)
@@ -349,7 +342,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Returns True if any element evaluate to True.
         """
-        assert not self.has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         results = np.array([self[i].any() for i in range(self.nblocks)],
                             dtype=np.bool)
         return results.any(axis=axis, out=out, keepdims=keepdims)
@@ -358,7 +351,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the largest value stored in this BlockVector
         """
-        assert not self.has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         results = np.array([self[i].max() for i in range(self.nblocks) if self[i].size > 0])
         return results.max(axis=axis, out=out, keepdims=keepdims)
 
@@ -367,14 +360,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
         if copy:
             bv = BlockVector(self.nblocks)
             for bid, vv in enumerate(self):
-                if self._block_mask[bid]:
+                if bid not in self._undefined_brows:
                     bv[bid] = vv.astype(dtype,
                                         order=order,
                                         casting=casting,
                                         subok=subok,
                                         copy=copy)
-                else:
-                    bv[bid] = None
             return bv
         raise NotImplementedError("astype not implemented for copy=False")
 
@@ -395,7 +386,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         BlockVector
 
         """
-        assert not self.has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         assert out is None, 'Out keyword not supported'
 
         bv = BlockVector(self.nblocks)
@@ -417,12 +408,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
         BlockVector
 
         """
-        assert not self._has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         assert out is None, 'Out keyword not supported'
         result = BlockVector(self.nblocks)
 
         if isinstance(condition, BlockVector):
-            assert not condition.has_none, 'Operations not allowed with None blocks.'
+            assert_block_structure(condition)
             assert self.shape == condition.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, condition.shape)
             assert self.nblocks == condition.nblocks, \
@@ -450,7 +441,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Complex-conjugate all elements.
         """
-        assert not self._has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         result = BlockVector(self.nblocks)
         for idx in range(self.nblocks):
             result[idx] = self[idx].conj()
@@ -460,7 +451,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Complex-conjugate all elements.
         """
-        assert not self._has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         result = BlockVector(self.nblocks)
         for idx in range(self.nblocks):
             result[idx] = self[idx].conjugate()
@@ -470,7 +461,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Return the indices of the elements that are non-zero.
         """
-        assert not self._has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         result = BlockVector(self.nblocks)
         for idx in range(self.nblocks):
             result[idx] = self[idx].nonzero()[0]
@@ -480,7 +471,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Peak to peak (maximum - minimum) value along a given axis.
         """
-        assert not self._has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         assert out is None, 'Out keyword not supported'
         return self.max()-self.min()
 
@@ -488,7 +479,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Return BlockVector with each element rounded to the given number of decimals
         """
-        assert not self._has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         assert out is None, 'Out keyword not supported'
         result = BlockVector(self.nblocks)
         for idx in range(self.nblocks):
@@ -517,7 +508,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the smallest value stored in the vector
         """
-        assert not self._has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         results = np.array([self[i].min() for i in range(self.nblocks)])
         return results.min(axis=axis, out=out, keepdims=keepdims)
 
@@ -534,7 +525,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the product of all entries in this BlockVector
         """
-        assert not self._has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         results = np.array([self[i].prod() for i in range(self.nblocks)])
         return results.prod(axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
@@ -552,7 +543,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         None
 
         """
-        assert not self._has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         for i in range(self.nblocks):
             self[i].fill(value)
 
@@ -582,7 +573,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         numpy.ndarray
 
         """
-        assert not self._has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         all_blocks = tuple(self[i].flatten(order=order) for i in range(self.nblocks))
         return np.concatenate(all_blocks)
 
@@ -601,7 +592,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         numpy.ndarray
 
         """
-        assert not self._has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         all_blocks = tuple(self[i].ravel(order=order) for i in range(self.nblocks))
         return np.concatenate(all_blocks)
 
@@ -632,7 +623,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         value: scalar (optional)
             all entries of the cloned vector are set to this value
         copy: bool (optinal)
-            if True makes a deepcopy of each block in this vector. default False
+            if True makes a deepcopy of each block in this vector. default True
 
         Returns
         -------
@@ -641,15 +632,11 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         result = BlockVector(self.nblocks)
         for idx in range(self.nblocks):
-            if copy:
-                if isinstance(self[idx], BaseBlockVector):
+            if idx not in self._undefined_brows:
+                if copy:
                     result[idx] = self[idx].copy()
                 else:
-                    result[idx] = cp.deepcopy(self[idx])
-            else:
-                result[idx] = self[idx]
-            result._block_mask[idx] = self._block_mask[idx]
-            result._brow_lengths[idx] = self._brow_lengths[idx]
+                    result[idx] = self[idx]
         if value is not None:
             result.fill(value)
         return result
@@ -699,8 +686,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                     raise RuntimeError('Should never get here')
         elif isinstance(other, np.ndarray):
 
-            assert not self.has_none, \
-                'Operation not allowed with None blocks. Specify all blocks'
+            assert_block_structure(self)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
 
@@ -760,7 +746,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         bv = BlockVector(self.nblocks)
         for bid in range(self.nblocks):
-            if self._block_mask[bid]:
+            if bid not in self._undefined_brows:
                 bv[bid] = self[bid].copy(order=order)
         return bv
 
@@ -806,13 +792,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         # supports addition with scalar, numpy.ndarray and BlockVectors
         # returns BlockVector
         result = BlockVector(self.nblocks)
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -847,13 +829,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         # supports substraction with scalar, numpy.ndarray and BlockVectors
         # returns BlockVector
         result = BlockVector(self.nblocks)
-        assert not self.has_none, \
-            'Operation not allowed with None blocks. ' \
-            'Specify all blocks in BlockVector'
+        assert_block_structure(self)
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -883,13 +861,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
     def __rsub__(self, other):  # other - self
 
         result = BlockVector(self.nblocks)
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -921,14 +895,10 @@ class BlockVector(np.ndarray, BaseBlockVector):
         # elementwise multiply this BlockVector with other vector
         # supports multiplication with scalar, numpy.ndarray and BlockVectors
         # returns BlockVector
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         result = BlockVector(self.nblocks)
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -962,14 +932,10 @@ class BlockVector(np.ndarray, BaseBlockVector):
         # elementwise divide this BlockVector with other vector
         # supports division with scalar, numpy.ndarray and BlockVectors
         # returns BlockVector
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         result = BlockVector(self.nblocks)
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -997,14 +963,10 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __rtruediv__(self, other):
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         result = BlockVector(self.nblocks)
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -1032,14 +994,10 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __floordiv__(self, other):
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         result = BlockVector(self.nblocks)
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -1067,14 +1025,10 @@ class BlockVector(np.ndarray, BaseBlockVector):
             raise NotImplementedError()
 
     def __rfloordiv__(self, other):
-        assert not self.has_none, \
-            'Operation not allowed with None blocks. '\
-            'Specify all blocks in BlockVector'
+        assert_block_structure(self)
         result = BlockVector(self.nblocks)
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -1104,17 +1058,13 @@ class BlockVector(np.ndarray, BaseBlockVector):
     def __iadd__(self, other):
         # elementwise inplace addition to this BlockVector with other vector
         # supports addition with scalar, numpy.ndarray and BlockVectors
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         if np.isscalar(other):
             for idx, blk in enumerate(self):
                 self[idx] += other # maybe it suffice with doing self[idx] = self[idf] + other
             return self
         elif isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -1138,17 +1088,13 @@ class BlockVector(np.ndarray, BaseBlockVector):
     def __isub__(self, other):
         # elementwise inplace subtraction to this BlockVector with other vector
         # supports subtraction with scalar, numpy.ndarray and BlockVectors
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         if np.isscalar(other):
             for idx, blk in enumerate(self):
                 self[idx] -= other
             return self
         elif isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -1172,17 +1118,13 @@ class BlockVector(np.ndarray, BaseBlockVector):
     def __imul__(self, other):
         # elementwise inplace multiplication to this BlockVector with other vector
         # supports multiplication with scalar, numpy.ndarray and BlockVectors
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         if np.isscalar(other):
             for idx, blk in enumerate(self):
                 self[idx] *= other
             return self
         elif isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -1206,17 +1148,13 @@ class BlockVector(np.ndarray, BaseBlockVector):
     def __itruediv__(self, other):
         # elementwise inplace division to this BlockVector with other vector
         # supports division with scalar, numpy.ndarray and BlockVectors
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         if np.isscalar(other):
             for idx, blk in enumerate(self):
                 self[idx] /= other
             return self
         elif isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                'Specify all blocks in BlockVector'
+            assert_block_structure(other)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -1275,42 +1213,32 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
         assert not isinstance(key, slice), 'Slicing not supported for BlockVector'
         assert -self.nblocks < key < self.nblocks, 'out of range'
-        if value is None:
-            super(BlockVector, self).__setitem__(key, None)
-            self._block_mask[key] = False
-            self._brow_lengths[key] = 0
-            self._has_none = True
-        else:
-            assert isinstance(value, np.ndarray) or \
-                isinstance(value, BaseBlockVector), \
-                    'Blocks need to be numpy arrays or BlockVectors'
-            assert value.ndim == 1, 'Blocks need to be 1D'
-            super(BlockVector, self).__setitem__(key, value)
-            self._block_mask[key] = True
+        assert isinstance(value, np.ndarray) or \
+            isinstance(value, BaseBlockVector), \
+                'Blocks need to be numpy arrays or BlockVectors'
+        assert value.ndim == 1, 'Blocks need to be 1D'
+
+        if np.isnan(self._brow_lengths[key]):
             self._brow_lengths[key] = value.size
+            self._undefined_brows.remove(key)
+            if len(self._undefined_brows) == 0:
+                self._brow_lengths = np.asarray(self._brow_lengths, dtype=np.int64)
+        else:
+            assert self._brow_lengths[key] == value.size, \
+                'incompatible demensions for block {key}; ' \
+                'got {got}; expected {exp}'.format(key=key,
+                                                   got=value.size,
+                                                   exp=self._brow_lengths[key])
 
-            # ToDo: if value is BlockVector check if it has None?
-            # Only fully specified block vectors allowed?
-            # the drawback of this is that it will prevent us to create
-            # BlockVectors of BlockVectors upfront
-            # e.g. BlockVector([BlockVector(2), np.ones(3)]) would not work
-
-            # check if we need to update _has_none flag
-            if self._has_none:
-                # check if all entries are not none
-                self._has_none = not self._block_mask.all()
+        super(BlockVector, self).__setitem__(key, value)
 
     def __le__(self, other):
         # elementwise less_equal this BlockVector with other vector
         # supports less_equal with scalar, numpy.ndarray and BlockVectors
         # returns BlockVector
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             flags = [vv.__le__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
@@ -1337,13 +1265,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         # elementwise less_than this BlockVector with other vector
         # supports less_than with scalar, numpy.ndarray and BlockVectors
         # returns BlockVector
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                'Specify all blocks in BlockVector'
+            assert_block_structure(other)
             flags = [vv.__lt__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
@@ -1370,13 +1294,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         # elementwise greater_equal this BlockVector with other vector
         # supports greater_equal with scalar, numpy.ndarray and BlockVectors
         # returns BlockVector
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             flags = [vv.__ge__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
@@ -1403,13 +1323,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         # elementwise greater_than this BlockVector with other vector
         # supports greater_than with scalar, numpy.ndarray and BlockVectors
         # returns BlockVector
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             flags = [vv.__gt__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
@@ -1436,13 +1352,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         # elementwise equal_to this BlockVector with other vector
         # supports equal_to with scalar, numpy.ndarray and BlockVectors
         # returns BlockVector
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             flags = [vv.__eq__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
@@ -1469,13 +1381,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         # elementwise not_equal_to this BlockVector with other vector
         # supports not_equal_to with scalar, numpy.ndarray and BlockVectors
         # returns BlockVector
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         if isinstance(other, BlockVector):
-            assert not other.has_none, \
-                'Operation not allowed with None blocks.' \
-                ' Specify all blocks in BlockVector'
+            assert_block_structure(other)
             flags = [vv.__ne__(other[bid]) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
@@ -1500,9 +1408,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def __neg__(self):
         # elementwise negate this BlockVector
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         bv = BlockVector(self.nblocks)
         for bid in range(self.nblocks):
             bv[bid] = self[bid].__neg__()
@@ -1510,9 +1416,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def __contains__(self, item):
         other = item
-        assert not self.has_none, \
-            'Operation not allowed with None blocks.' \
-            ' Specify all blocks in BlockVector'
+        assert_block_structure(self)
         if np.isscalar(other):
             contains = False
             for idx, blk in enumerate(self):
@@ -1551,7 +1455,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBLockVector
 
-        assert not self.has_none, 'Operations not allowed with None blocks.'
+        assert_block_structure(self)
         assert len(rank_ownership) == self.nblocks, \
             'rank_ownership must be of size {}'.format(self.nblocks)
 
