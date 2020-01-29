@@ -175,7 +175,7 @@ class TestBenders(unittest.TestCase):
 
     @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
-    def test_2par_farmer(self):
+    def test_4scen_farmer(self):
         assert subprocess.check_call('mpirun -n 2 python par_4scen_farmer.py', shell = True) == 0
 
 
