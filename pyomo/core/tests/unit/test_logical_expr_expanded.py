@@ -223,6 +223,7 @@ class TestLogicalClasses(unittest.TestCase):
                 m.Y.set_values(dict(enumerate(truth_combination, 1)))
                 correct_value = sum(truth_combination) == ntrue
                 self.assertEquals(value(Exactly(ntrue, *(m.Y[i] for i in m.s))), correct_value)
+                self.assertEquals(value(Exactly(ntrue, m.Y)), correct_value)
 
     def test_nary_atmost(self):
         nargs = 5
@@ -234,6 +235,7 @@ class TestLogicalClasses(unittest.TestCase):
                 m.Y.set_values(dict(enumerate(truth_combination, 1)))
                 correct_value = sum(truth_combination) <= ntrue
                 self.assertEquals(value(AtMost(ntrue, *(m.Y[i] for i in m.s))), correct_value)
+                self.assertEquals(value(AtMost(ntrue, m.Y)), correct_value)
 
     def test_nary_atleast(self):
         nargs = 5
@@ -245,6 +247,7 @@ class TestLogicalClasses(unittest.TestCase):
                 m.Y.set_values(dict(enumerate(truth_combination, 1)))
                 correct_value = sum(truth_combination) >= ntrue
                 self.assertEquals(value(AtLeast(ntrue, *(m.Y[i] for i in m.s))), correct_value)
+                self.assertEquals(value(AtLeast(ntrue, m.Y)), correct_value)
 
     def test_to_string(self):
         m = ConcreteModel()
