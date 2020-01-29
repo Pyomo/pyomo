@@ -1365,8 +1365,7 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
     def _sort(self):
         self._ordered_values = list(self.parent_component()._sort_fcn(
             self._ordered_values))
-        self._values = dict(
-            (j, i) for i, j in enumerate(self._ordered_values) )
+        self._values = {j:i for i, j in enumerate(self._ordered_values)}
         self._is_sorted = True
 
 
