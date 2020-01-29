@@ -194,6 +194,50 @@ class BlockMatrix(BaseBlockMatrix):
         else:
             return self._bcol_lengths
 
+    def get_row_size(self, row):
+        if row in self._undefined_brows:
+            raise NotFullyDefinedBlockMatrixError('The dimensions of the requested row are not defined.')
+        return int(self._brow_lengths[row])
+
+    def get_col_size(self, col):
+        if col in self._undefined_bcols:
+            raise NotFullyDefinedBlockMatrixError('The dimensions of the requested column are not defined.')
+        return int(self._bcol_lengths[col])
+
+    def set_row_size(self, row, size):
+        if row in self._undefined_brows:
+            self._undefined_brows.remove(row)
+            self._brow_lengths[row] = size
+            if len(self._undefined_brows) == 0:
+                self._brow_lengths = np.asarray(self._brow_lengths, dtype=np.int64)
+        else:
+            if self._brow_lengths[row] != size:
+                raise ValueError('Incompatible row dimensions for '
+                                 'row {row}; got {got}; '
+                                 'expected {exp}'.format(row=row,
+                                                         got=size,
+                                                         exp=self._brow_lengths[row]))
+
+    def set_col_size(self, col, size):
+        if col in self._undefined_bcols:
+            self._undefined_bcols.remove(col)
+            self._bcol_lengths[col] = size
+            if len(self._undefined_bcols) == 0:
+                self._bcol_lengths = np.asarray(self._bcol_lengths, dtype=np.int64)
+        else:
+            if self._bcol_lengths[col] != size:
+                raise ValueError('Incompatible column dimensions for '
+                                 'column {col}; got {got}; '
+                                 'expected {exp}'.format(col=col,
+                                                         got=size,
+                                                         exp=self._bcol_lengths[col]))
+
+    def is_row_defined(self, row):
+        return row not in self._undefined_brows
+
+    def is_col_defined(self, col):
+        return col not in self._undefined_bcols
+
     def block_shapes(self):
         """
         Returns list with shapes of blocks in this BlockMatrix
@@ -737,69 +781,10 @@ class BlockMatrix(BaseBlockMatrix):
                 assert isspmatrix(value), 'blocks need to be sparse matrices or BlockMatrices'
 
             nrows, ncols = value.shape
-            if np.isnan(self._brow_lengths[idx]) and np.isnan(self._bcol_lengths[jdx]):
-                self._blocks[idx, jdx] = value
-                self._block_mask[idx, jdx] = True
-
-                self._brow_lengths[idx] = nrows
-                self._undefined_brows.remove(idx)
-                if len(self._undefined_brows) == 0:
-                    self._brow_lengths = np.asarray(self._brow_lengths, dtype=np.int64)
-
-                self._bcol_lengths[jdx] = ncols
-                self._undefined_bcols.remove(jdx)
-                if len(self._undefined_bcols) == 0:
-                    self._bcol_lengths = np.asarray(self._bcol_lengths, dtype=np.int64)
-
-            elif np.isnan(self._bcol_lengths[jdx]):
-                assert self._brow_lengths[idx] == nrows,\
-                    'Incompatible row dimensions for block ({i},{j}) ' \
-                    'got {got}, expected {exp}.'.format(i=idx,
-                                                        j=jdx,
-                                                        exp=self._brow_lengths[idx],
-                                                        got=nrows)
-
-                self._blocks[idx, jdx] = value
-                self._block_mask[idx, jdx] = True
-
-                self._bcol_lengths[jdx] = ncols
-                self._undefined_bcols.remove(jdx)
-                if len(self._undefined_bcols) == 0:
-                    self._bcol_lengths = np.asarray(self._bcol_lengths, dtype=np.int64)
-
-            elif np.isnan(self._brow_lengths[idx]):
-                assert self._bcol_lengths[jdx] == ncols, \
-                    'Incompatible col dimensions for block ({i},{j}) ' \
-                    'got {got}, expected {exp}.'.format(i=idx,
-                                                        j=jdx,
-                                                        exp=self._bcol_lengths[jdx],
-                                                        got=ncols)
-
-                self._blocks[idx, jdx] = value
-                self._block_mask[idx, jdx] = True
-
-                self._brow_lengths[idx] = nrows
-                self._undefined_brows.remove(idx)
-                if len(self._undefined_brows) == 0:
-                    self._brow_lengths = np.asarray(self._brow_lengths, dtype=np.int64)
-
-            else:
-                assert self._brow_lengths[idx] == nrows, \
-                    'Incompatible row dimensions for block ({i},{j}) ' \
-                    'got {got}, expected {exp}.'.format(i=idx,
-                                                        j=jdx,
-                                                        exp=self._brow_lengths[idx],
-                                                        got=nrows)
-
-                assert self._bcol_lengths[jdx] == ncols, \
-                    'Incompatible col dimensions for block ({i},{j}) ' \
-                    'got {got}, expected {exp}.'.format(i=idx,
-                                                        j=jdx,
-                                                        exp=self._bcol_lengths[jdx],
-                                                        got=ncols)
-
-                self._blocks[idx, jdx] = value
-                self._block_mask[idx, jdx] = True
+            self.set_row_size(idx, nrows)
+            self.set_col_size(jdx, ncols)
+            self._blocks[idx, jdx] = value
+            self._block_mask[idx, jdx] = True
 
     def __add__(self, other):
 

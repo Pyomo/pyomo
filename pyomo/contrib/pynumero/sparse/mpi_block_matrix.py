@@ -21,15 +21,15 @@ where m_{i,j} are sparse matrices
 
 """
 
-from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
-from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
-from pyomo.contrib.pynumero.sparse.utils import is_symmetric_sparse
-from pyomo.contrib.pynumero.sparse import empty_matrix
-from pyomo.contrib.pynumero.sparse.warnings import MPISpaceWarning
+from .mpi_block_vector import MPIBlockVector
+from .block_vector import BlockVector
+from .block_matrix import BlockMatrix, NotFullyDefinedBlockMatrixError
+from .warnings import MPISpaceWarning
 from .base_block import BaseBlockMatrix
 from warnings import warn
 from mpi4py import MPI
 import numpy as np
+from scipy.sparse import isspmatrix
 
 # Array classifiers
 SINGLE_OWNER=1
@@ -38,6 +38,13 @@ ALL_OWN_IT=0
 
 
 # ALL_OWNED = -1
+
+
+def assert_block_structure(mat):
+    msg = 'Call MPIBlockMatrix.broadcast_block_sizes() first. '
+    if mat.has_undefined_rows() or mat.has_undefined_cols():
+        raise NotFullyDefinedBlockMatrixError(msg)
+
 
 class MPIBlockMatrix(BaseBlockMatrix):
     """
@@ -79,19 +86,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
         to be ALL_OWN_IT=0. Finally if two or more blocks have different owner in
         a column, the column is said to be MULTIPLE_OWNER=2. This information is useful
         when performing matrix-vector and matrix-matrix products
-    _brow_lengths: numpy.ndarray
-        1D-array with sizes of block-rows
-    _bcol_lengths: numpy.ndarray
-        1D-array with sizes of block-columns
-    _need_broadcast_sizes: bool
-        True if length of any block changed. If true user will need to call
-        broadcast_block_sizes in the future before performing any operation.
-        Users will be notified if that is the case.
-    _done_first_broadcast_sizes: bool
-        True if broadcast_block_sizes has been called and the length of any
-        block changed since. If true user will need to call
-        broadcast_block_sizes in the future before performing any operation.
-        Users will be notified if that is the case.
 
     Parameters
     -------------------
@@ -145,6 +139,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
                     owner = rank_ownership[i][j]
                 else:
                     owner = rank_ownership[i, j]
+                if owner != int(owner):
+                    raise ValueError('rank_ownership must contain integers only')
                 assert owner < self._mpiw.Get_size(), \
                     'rank owner out of range'
                 self._rank_owner[i, j] = owner
@@ -189,16 +185,13 @@ class MPIBlockMatrix(BaseBlockMatrix):
                         break
 
         if row_block_sizes is None and col_block_sizes is None:
-            self._need_broadcast_sizes = True
-            self._done_first_broadcast_sizes = False
-            self._brow_lengths = np.zeros(nbrows, dtype=np.int64)
-            self._bcol_lengths = np.zeros(nbcols, dtype=np.int64)
+            pass
         else:
             if row_block_sizes is not None and col_block_sizes is not None:
-                self._need_broadcast_sizes = False
-                self._done_first_broadcast_sizes = True
-                self._brow_lengths = np.array(row_block_sizes, dtype=np.int64)
-                self._bcol_lengths = np.array(col_block_sizes, dtype=np.int64)
+                for row_ndx, row_size in enumerate(row_block_sizes):
+                    self._block_matrix.set_row_size(row_ndx, row_size)
+                for col_ndx, col_size in enumerate(col_block_sizes):
+                    self._block_matrix.set_col_size(col_ndx, col_size)
             elif row_block_sizes is None and col_block_sizes is not None:
                 raise RuntimeError('Specify row_block_sizes')
             else:
@@ -220,8 +213,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         """
         Returns tuple with total number of rows and columns
         """
-        self._assert_broadcasted_sizes()
-        return np.sum(self._brow_lengths), np.sum(self._bcol_lengths)
+        return self._block_matrix.shape
 
     @property
     def nnz(self):
@@ -267,20 +259,26 @@ class MPIBlockMatrix(BaseBlockMatrix):
         return owned_blocks
 
     @property
-    def rank_ownership(self):
+    def rank_ownership(self, copy=True):
         """
         Returns 2D array that specifies process rank that owns each blocks. If
         a block is owned by all the ownership=-1.
         """
-        return self._rank_owner
+        if copy:
+            return self._rank_owner.copy()
+        else:
+            return self._rank_owner
 
     @property
-    def ownership_mask(self):
+    def ownership_mask(self, copy=True):
         """
         Returns boolean 2D-Array that indicates which blocks are owned by
         this processor
         """
-        return self._owned_mask
+        if copy:
+            return self._owned_mask.copy()
+        else:
+            return self._owned_mask
 
     @property
     def mpi_comm(self):
@@ -323,6 +321,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         m = self.bshape[0]
         n = self.bshape[1]
+        assert_block_structure(self)
         if not self._need_broadcast_sizes:
             result = MPIBlockMatrix(n, m, self._rank_owner.T, self._mpiw,
                                     row_block_sizes=self._bcol_lengths.copy(),
@@ -422,17 +421,28 @@ class MPIBlockMatrix(BaseBlockMatrix):
         rank = self._mpiw.Get_rank()
         num_processors = self._mpiw.Get_size()
 
-        local_row_data = self._block_matrix.row_block_sizes()
-        local_col_data = self._block_matrix.col_block_sizes()
+        local_row_data = np.zeros(self.bshape[0], dtype=np.int64)
+        local_col_data = np.zeros(self.bshape[1], dtype=np.int64)
+        local_row_data.fill(-1)
+        local_col_data.fill(-1)
+        for row_ndx in range(self.bshape[0]):
+            if self._block_matrix.is_row_defined(row_ndx):
+                local_row_data[row_ndx] = self._block_matrix.get_row_size(row_ndx)
+        for col_ndx in range(self.bshape[1]):
+            if self._block_matrix.is_col_defined(col_ndx):
+                local_col_data[col_ndx] = self._block_matrix.get_col_size(col_ndx)
+
         send_data = np.concatenate([local_row_data, local_col_data])
 
         receive_data = np.empty(num_processors * (self.bshape[0] + self.bshape[1]),
                                 dtype=np.int64)
-
         self._mpiw.Allgather(send_data, receive_data)
 
         proc_dims = np.split(receive_data, num_processors)
         m, n = self.bshape
+
+        brow_lengths = np.zeros(m, dtype=np.int64)
+        bcol_lengths = np.zeros(m, dtype=np.int64)
 
         # check the rows
         for i in range(m):
@@ -445,13 +455,16 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 msg = 'Row {} has more than one dimension accross processors'.format(i)
                 raise RuntimeError(msg)
             elif len(rows_length) == 2:
-                if 0 not in rows_length:
+                if -1 not in rows_length:
                     msg = 'Row {} has more than one dimension accross processors'.format(i)
                     raise RuntimeError(msg)
-                rows_length.remove(0)
+                rows_length.remove(-1)
+            elif -1 in rows_length:
+                msg = 'The dimensions of block row {} were not defined in any process'.format(i)
+                raise NotFullyDefinedBlockMatrixError(msg)
 
             # here rows_length must only have one element
-            self._brow_lengths[i] = rows_length.pop()
+            brow_lengths[i] = rows_length.pop()
 
         # check columns
         for i in range(n):
@@ -472,8 +485,27 @@ class MPIBlockMatrix(BaseBlockMatrix):
             # here rows_length must only have one element
             self._bcol_lengths[i] = cols_length.pop()
 
-        self._need_broadcast_sizes = False
-        self._done_first_broadcast_sizes = True
+        for row_ndx, row_size in enumerate(self._brow_lengths):
+            self._block_matrix.set_row_size(row_ndx, row_size)
+        for col_ndx, col_size in enumerate(self._bcol_lengths):
+            self._block_matrix.set_col_size(col_ndx, col_size)
+
+        if self.has_undefined_rows():
+            undefined_rows = list()
+            for row_ndx in range(self.bshape[0]):
+                if not self._block_matrix.is_row_defined(row_ndx):
+                    undefined_rows.append(row_ndx)
+                raise NotFullyDefinedBlockMatrixError('After calling broadcast_block_sizes, '
+                                                      'the following block row dimensions were '
+                                                      'still undefined: {0}'.format(str(undefined_rows)))
+        if self.has_undefined_cols():
+            undefined_cols = list()
+            for col_ndx in range(self.bshape[1]):
+                if not self._block_matrix.is_col_defined(col_ndx):
+                    undefined_cols.append(col_ndx)
+                raise NotFullyDefinedBlockMatrixError('After calling broadcast_block_sizes, '
+                                                      'the following block column dimensions were '
+                                                      'still undefined: {0}'.format(str(undefined_cols)))
 
     def row_block_sizes(self, copy=True):
         """
@@ -527,31 +559,31 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 sizes[i].append(shape)
         return sizes
 
-    def has_empty_rows(self):
+    def has_undefined_rows(self):
         """
-        Indicates if the matrix has block-rows that are empty
+        Indicates if the matrix has block-rows with undefined dimensions
 
         Returns
         -------
-        boolean
+        bool
 
         """
-        raise NotImplementedError('Operation not supported by MPIBlockMatrix')
+        return self._block_matrix.has_undefined_rows()
 
-    def has_empty_cols(self):
+    def has_undefined_cols(self):
         """
-        Indicates if the matrix has block-columns that are empty
+        Indicates if the matrix has block-columns with undefined dimensions
 
         Returns
         -------
-        boolean
+        bool
 
         """
-        raise NotImplementedError('Operation not supported by MPIBlockMatrix')
+        return self._block_matrix.has_undefined_cols()
 
     def reset_bcol(self, jdx):
         """
-        Resets all blocks in selected column to None
+        Resets all blocks in selected column to None (0 nonzero entries)
 
         Parameters
         ----------
@@ -564,11 +596,10 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         """
         self._block_matrix.reset_bcol(jdx)
-        self._bcol_lengths[jdx] = 0
 
     def reset_brow(self, idx):
         """
-        Resets all blocks in selected row to None
+        Resets all blocks in selected row to None (0 nonzero entries)
 
         Parameters
         ----------
@@ -581,7 +612,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         """
         self._block_matrix.reset_brow(idx)
-        self._brow_lengths[idx] = 0
 
     def copy(self):
         """
@@ -596,7 +626,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
         result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw)
         result._block_matrix = self._block_matrix.copy()
         result._need_broadcast_sizes = self._need_broadcast_sizes
-        result._done_first_broadcast_sizes = self._done_first_broadcast_sizes
         result._brow_lengths = self._brow_lengths.copy()
         result._bcol_lengths = self._bcol_lengths.copy()
         return result
@@ -617,7 +646,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
         result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw)
         result._block_matrix = self._block_matrix.copy_structure()
         result._need_broadcast_sizes = self._need_broadcast_sizes
-        result._done_first_broadcast_sizes = self._done_first_broadcast_sizes
         result._brow_lengths = self._brow_lengths.copy()
         result._bcol_lengths = self._bcol_lengths.copy()
         return result
@@ -625,7 +653,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
     # ToDo: need support for copy from and copy to
 
     def _assert_broadcasted_sizes(self):
-
         if not self._done_first_broadcast_sizes:
             assert not self._need_broadcast_sizes, \
                 'First need to call broadcast_block_sizes()'
@@ -736,16 +763,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
                owner < 0, \
                'Block {} not owned by processor {}'.format(key, rank)
 
-        # Flag broadcasting if needed
-        if value is None:
-            if self._block_matrix[key] is not None:
-                if self._brow_lengths[idx] != 0 or self._bcol_lengths[jdx] != 0:
-                    self._need_broadcast_sizes = True
-        else:
-            m, n  = value.shape
-            if self._brow_lengths[idx] != m or self._bcol_lengths[jdx] != n:
-                self._need_broadcast_sizes = True
-
         self._block_matrix[key] = value
 
     def __add__(self, other):
@@ -781,11 +798,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 else:
                     result[i, j] = None
             return result
-
-        if isinstance(other, BlockMatrix):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
-        if isspmatrix(other):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
