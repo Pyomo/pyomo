@@ -21,6 +21,7 @@ from pyomo.core.base.indexed_component import IndexedComponent, UnindexedCompone
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.sets import Set
 from pyomo.core.base.util import is_functor
+from six.moves import xrange
 
 logger = logging.getLogger('pyomo.core')
 

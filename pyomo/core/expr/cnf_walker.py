@@ -165,6 +165,10 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
         # children nodes to CNF.
         return _convert_children_to_literals(expr, bool_varlist, bool_var_to_special_atoms)
 
+    # If root node is not an expression, just return it.
+    if type(expr) in native_types or not expr.is_expression_type():
+        return [expr]
+
     # While performing conversion to sympy, substitute new boolean variables for
     # non-root special atoms.
     pyomo_sympy_map = PyomoSympyLogicalBimap()

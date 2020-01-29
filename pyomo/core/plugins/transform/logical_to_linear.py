@@ -2,11 +2,12 @@
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import TransformationFactory, BooleanVar, VarList, Binary, LogicalStatement, Block, ConstraintList, \
-    native_types, BooleanVarList
+    native_types, BooleanVarList, as_logical
 from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr.logical_expr import AndExpression, OrExpression, NotExpression, AtLeastExpression, \
-    AtMostExpression, ExactlyExpression, special_logical_atom_types
-from pyomo.core.expr.numvalue import native_logical_types
+    AtMostExpression, ExactlyExpression, special_logical_atom_types, EqualityExpression, InequalityExpression, \
+    RangedExpression
+from pyomo.core.expr.numvalue import native_logical_types, value
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.kernel.component_map import ComponentMap
@@ -37,45 +38,76 @@ class LogicalToLinear(IsomorphicTransformation):
                     if bool_vardata.fixed:
                         new_binary_vardata.fix()
 
-        new_constrlist_name = unique_component_name(model, 'logic_to_linear')
-        new_constrlist = ConstraintList()
-        setattr(model, new_constrlist_name, new_constrlist)
+        # Process statements in global (entire model) context
+        _process_statements_in_logical_context(model)
+        # Process statements that appear in disjuncts
+        for disjunct in model.component_data_objects(Disjunct, descend_into=(Block, Disjunct), active=True):
+            _process_statements_in_logical_context(disjunct)
 
-        new_boolvar_list_name = unique_component_name(model, 'logic_to_linear_augmented_vars')
-        new_boolvarlist = BooleanVarList()
-        setattr(model, new_boolvar_list_name, new_boolvarlist)
-        new_var_list_name = unique_component_name(model, 'logic_to_linear_augmented_vars_asbinary')
-        new_varlist = VarList(domain=Binary)
-        setattr(model, new_var_list_name, new_varlist)
-        indicator_map = ComponentMap()
-        cnf_statements = []
-        # Convert all logical statements to CNF
-        for logic_statement in model.component_data_objects(ctype=LogicalStatement, active=True):
-            cnf_statements.extend(to_cnf(logic_statement.body, new_boolvarlist, indicator_map))
-            logic_statement.deactivate()
 
-        # Associate new Boolean vars to new binary variables
-        for bool_vardata in new_boolvarlist.values():
-            new_binary_vardata = new_varlist.add()
-            bool_vardata.set_binary_var(new_binary_vardata)
+def _process_statements_in_logical_context(context):
+    new_constrlist_name = unique_component_name(context, 'logic_to_linear')
+    new_constrlist = ConstraintList()
+    setattr(context, new_constrlist_name, new_constrlist)
 
-        # Add constraints associated with each CNF statement
-        for cnf_statement in cnf_statements:
-            for linear_constraint in _cnf_to_linear_constraint_list(cnf_statement):
-                new_constrlist.add(expr=linear_constraint)
+    new_boolvar_list_name = unique_component_name(context, 'logic_to_linear_augmented_vars')
+    new_boolvarlist = BooleanVarList()
+    setattr(context, new_boolvar_list_name, new_boolvarlist)
+    new_var_list_name = unique_component_name(context, 'logic_to_linear_augmented_vars_asbinary')
+    new_varlist = VarList(domain=Binary)
+    setattr(context, new_var_list_name, new_varlist)
+    indicator_map = ComponentMap()
+    cnf_statements = []
+    # Convert all logical statements to CNF
+    for logic_statement in context.component_data_objects(ctype=LogicalStatement, active=True):
+        cnf_statements.extend(to_cnf(logic_statement.body, new_boolvarlist, indicator_map))
+        logic_statement.deactivate()
 
-        # Add bigM associated with special atoms
-        for indicator_var, special_atom in indicator_map.items():
-            for linear_constraint in _cnf_to_linear_constraint_list(special_atom, indicator_var, new_varlist):
-                new_constrlist.add(expr=linear_constraint)
-        pass
+    # Associate new Boolean vars to new binary variables
+    for bool_vardata in new_boolvarlist.values():
+        new_binary_vardata = new_varlist.add()
+        bool_vardata.set_binary_var(new_binary_vardata)
 
-        # TODO handle logical statements defined in Disjuncts (recursion)
-        pass
+    # Add constraints associated with each CNF statement
+    for cnf_statement in cnf_statements:
+        for linear_constraint in _cnf_to_linear_constraint_list(cnf_statement):
+            new_constrlist.add(expr=linear_constraint)
+
+    # Add bigM associated with special atoms
+    for indicator_var, special_atom in indicator_map.items():
+        for linear_constraint in _cnf_to_linear_constraint_list(special_atom, indicator_var, new_varlist):
+            new_constrlist.add(expr=linear_constraint)
+
+    # If added components were not used, remove them.
+    # Note: it is ok to simply delete the index_set for these components, because by
+    # default, a new set object is generated for each [Thing]List.
+    if len(new_constrlist) == 0:
+        context.del_component(new_constrlist.index_set())
+        context.del_component(new_constrlist)
+    if len(new_boolvarlist) == 0:
+        context.del_component(new_boolvarlist.index_set())
+        context.del_component(new_boolvarlist)
+    if len(new_varlist) == 0:
+        context.del_component(new_varlist.index_set())
+        context.del_component(new_varlist)
 
 
 def _cnf_to_linear_constraint_list(cnf_expr, indicator_var=None, binary_varlist=None):
-    return CnfToLinearVisitor(indicator_var, binary_varlist).walk_expression(cnf_expr)
+    # Screen for constants
+    if type(cnf_expr) in native_types or cnf_expr.is_constant():
+        if value(cnf_expr) is True:
+            return []
+        else:
+            raise ValueError(
+                "Cannot build linear constraint for logical expression with constant value False: %s"
+                % cnf_expr)
+    if cnf_expr.is_expression_type():
+        return CnfToLinearVisitor(indicator_var, binary_varlist).walk_expression(cnf_expr)
+    else:
+        return [cnf_expr.as_binary() == 1]  # Assume that cnf_expr is a BooleanVar
+
+
+_numeric_relational_types = {InequalityExpression, EqualityExpression, RangedExpression}
 
 
 class CnfToLinearVisitor(StreamBasedExpressionVisitor):
@@ -153,4 +185,9 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
         return False, child.as_binary()
 
     def finalizeResult(self, result):
-        return result if type(result) is list else [result]
+        if type(result) is list:
+            return result
+        elif type(result) in _numeric_relational_types:
+            return [result]
+        else:
+            return [result == 1]
