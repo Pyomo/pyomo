@@ -29,6 +29,11 @@ jobs:
         Write-Host ("Current Enviroment variables: ")
         gci env: | Sort Name
         Write-Host ("")
+        Write-Host ("Update conda, then force it to NOT update itself again...")
+        Write-Host ("")
+        Invoke-Expression "conda config --set always_yes yes"
+        Invoke-Expression "conda config --set auto_update_conda false"
+        Write-Host ("")
         Write-Host ("Setting Conda Env Vars... ")
         Write-Host ("")
         $env:CONDA_INSTALL = "conda install -q -y "
@@ -40,19 +45,25 @@ jobs:
         $env:MINICONDA_EXTRAS="numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn "
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + "pymysql pyro4 pint pathos " + $env:MINICONDA_EXTRAS
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk ipopt pynumero_libraries"
+        Write-Host ("")
+        Write-Host ("Installing Conda packages... ")
+        Write-Host ("")
         $env:EXP = $env:CONDAFORGE + $env:ADDITIONAL_CF_PKGS
         Invoke-Expression $env:EXP
+        Write-Host ("")
+        Write-Host ("Setting up pynumero_libraries... ")
+        Write-Host ("")
+        $env:PYNUMERO = $env:CONDA_INSTALL + " -c conda-forge pynumero_libraries"
+        $env:EXP = $env:CONDAFORGE + $env:PYNUMERO
+        try {Invoke-Expression $env:PYNUMERO} catch {Write-Host ("Pynumero_libraries is not available for Python ${{matrix.python-version}}") }
+        Write-Host ("")
         Write-Host ("Installing GAMS")
+        Write-Host ("")
         Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
         Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS'
         $env:PATH += $(Get-Location).Path + "\gams"
         Write-Host ("New Shell Environment: ")
         gci env: | Sort Name
-        Write-Host ("")
-        Write-Host ("Update conda, then force it to NOT update itself again...")
-        Write-Host ("")
-        Invoke-Expression "conda config --set always_yes yes"
-        Invoke-Expression "conda config --set auto_update_conda false"
         Write-Host ("")
         Write-Host ("Clone model library and install PyUtilib...")
         Write-Host ("")
