@@ -165,11 +165,23 @@ class TestBenders(unittest.TestCase):
 
     @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
-    def test_par_farmer(self):
+    def test_3par_farmer(self):
         assert subprocess.check_call('mpirun -n 3 python par_farmer.py', shell = True) == 0
+
+    @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
+    @unittest.skipIf(not numpy_available, 'numpy is not available.')
+    def test_2par_farmer(self):
+        assert subprocess.check_call('mpirun -n 2 python par_farmer.py', shell = True) == 0
+
+    @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
+    @unittest.skipIf(not numpy_available, 'numpy is not available.')
+    def test_2par_farmer(self):
+        assert subprocess.check_call('mpirun -n 2 python par_4scen_farmer.py', shell = True) == 0
+
 
     @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
     def test_par_grothkey(self):
         assert subprocess.check_call('mpirun -n 2 python par_grothkey.py', shell = True) == 0
+
 
