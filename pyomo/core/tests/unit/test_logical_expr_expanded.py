@@ -3,7 +3,6 @@ from itertools import product
 
 import pyutilib.th as unittest
 
-# import pyomo.core.expr.CNF as cnf
 from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr.logical_expr import (Not, Equivalent,
                                           Or, Implies, And, Exactly, AtMost, AtLeast, Xor,
