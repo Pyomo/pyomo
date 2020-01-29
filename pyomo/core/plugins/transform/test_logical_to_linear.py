@@ -29,6 +29,18 @@ class TestAtomicTransformations(unittest.TestCase):
         TransformationFactory('core.logical_to_linear').apply_to(m)
         m.pprint()
 
+    def test_constant_True(self):
+        m = ConcreteModel()
+        m.p = LogicalStatement(expr=True)
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        m.pprint()
+
+    def test_nothing_to_do(self):
+        m = ConcreteModel()
+        m.p = LogicalStatement()
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        m.pprint()
+
 
 class TestLogicalToLinearTransformation(unittest.TestCase):
     def test_longer_statement(self):
