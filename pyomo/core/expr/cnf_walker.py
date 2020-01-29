@@ -11,7 +11,7 @@ from pyomo.core.expr.logical_expr import (
     AndExpression, OrExpression, ImplicationExpression, EquivalenceExpression,
     XorExpression,
     ExactlyExpression, AtMostExpression, AtLeastExpression, Not, Equivalent,
-    LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor,
+    Or, Implies, And, Exactly, AtMost, AtLeast, Xor,
     special_logical_atom_types)
 
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
@@ -21,8 +21,8 @@ sympy_available = True
 try:
     import sympy
     _operatorMap = {
-        sympy.Or: LogicalOr,
-        sympy.And: LogicalAnd,
+        sympy.Or: Or,
+        sympy.And: And,
         sympy.Implies: Implies,
         sympy.Equivalent: Equivalent,
         sympy.Not: Not,

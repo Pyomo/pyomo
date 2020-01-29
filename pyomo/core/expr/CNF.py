@@ -1,7 +1,7 @@
 from .logical_expr import (LogicalExpressionBase, NotExpression, AndExpression,
                            OrExpression, ImplicationExpression, EquivalenceExpression, XorExpression,
                            ExactlyExpression, AtMostExpression, AtLeastExpression, Not, Equivalent,
-                           LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor
+                           Or, Implies, And, Exactly, AtMost, AtLeast, Xor
                            )
 
 import itertools as it
@@ -184,7 +184,7 @@ def prepare_to_distribute(node):
                 l = l - 1 
                 i = i - 1 
             if is_literal(node._args_[i]):
-                node._args_[i] = LogicalAnd(node._args_[i])
+                node._args_[i] = And(node._args_[i])
             if(type(node._args_[i]) is not AndExpression):
                 assert 1 == 0
                 #delete later

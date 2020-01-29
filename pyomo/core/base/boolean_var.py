@@ -2,8 +2,8 @@
 from six import itervalues, iteritems
 
 from pyomo.core.expr.logicalvalue import LogicalValue
-from pyomo.core.expr.logical_expr import  (LogicalXor, EquivalenceExpression, ImplicationExpression, AndExpression,
-OrExpression, MultiArgsExpression, NotExpression, XorExpression,)
+from pyomo.core.expr.logical_expr import  (Xor, EquivalenceExpression, ImplicationExpression, AndExpression,
+                                           OrExpression, MultiArgsExpression, NotExpression, XorExpression, )
 
 
 __all__ = ['BooleanVar', '_BooleanVarData', '_GeneralBooleanVarData', 'BooleanVarList', 'SimpleBooleanVar']

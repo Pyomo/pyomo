@@ -11,6 +11,7 @@
 
 from __future__ import division
 
+import types
 from itertools import islice
 
 _using_chained_inequality = True
@@ -528,19 +529,9 @@ def _generate_logical_proposition(etype, lhs, rhs):
     elif etype == _impl:
         return ImplicationExpression((lhs, rhs))
     elif etype == _and:
-        if type(lhs) == AndExpression:
-            return lhs.add(rhs)
-        elif type(rhs) == AndExpression:
-            return rhs.add(lhs)  # TODO add ladd()?
-        else:
-            return AndExpression([lhs, rhs])
+        return And(lhs, rhs)
     elif etype == _or:
-        if type(lhs) == OrExpression:
-            return lhs.add(rhs)
-        elif type(rhs) == OrExpression:
-            return rhs.add(lhs)
-        else:
-            return OrExpression([lhs, rhs])
+        return Or(lhs, rhs)
     else:
         raise ValueError("Unknown logical proposition type '%s'" % etype)  # pragma: no cover
 
@@ -938,7 +929,7 @@ def Equivalent(Y1, Y2):
     return EquivalenceExpression((Y1, Y2))
 
 
-def LogicalXor(Y1, Y2):
+def Xor(Y1, Y2):
     return XorExpression((Y1, Y2))
 
 
@@ -946,19 +937,33 @@ def Implies(Y1, Y2):
     return ImplicationExpression((Y1, Y2))
 
 
-def LogicalAnd(*args):
-    # TODO handle IndexedBooleanVar
-    result = AndExpression([])
+def _flattened(args):
+    """Flatten any potentially indexed arguments."""
     for arg in args:
-        result = result.add(arg)
+        if arg.__class__ in native_types:
+            yield arg
+        else:
+            if isinstance(arg, (types.GeneratorType, list)):
+                for _argdata in arg:
+                    yield _argdata
+            elif arg.is_indexed():
+                for _argdata in arg.values():
+                    yield _argdata
+            else:
+                yield arg
+
+
+def And(*args):
+    result = AndExpression([])
+    for argdata in _flattened(args):
+        result = result.add(argdata)
     return result
 
 
-def LogicalOr(*args):
-    # TODO handle IndexedBooleanVar
+def Or(*args):
     result = OrExpression([])
-    for arg in args:
-        result = result.add(arg)
+    for argdata in _flattened(args):
+        result = result.add(argdata)
     return result
 
 
@@ -968,7 +973,7 @@ def Exactly(n, *args):
     Usage: Exactly(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = ExactlyExpression([n, ] + list(args))
+    result = ExactlyExpression([n, ] + list(_flattened(args)))
     return result
 
 
@@ -978,7 +983,7 @@ def AtMost(n, *args):
     Usage: AtMost(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = AtMostExpression([n, ] + list(args))
+    result = AtMostExpression([n, ] + list(_flattened(args)))
     return result
 
 
@@ -988,7 +993,7 @@ def AtLeast(n, *args):
     Usage: AtLeast(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
-    result = AtLeastExpression([n, ] + list(args))
+    result = AtLeastExpression([n, ] + list(_flattened(args)))
     return result
 
 
@@ -1107,6 +1112,23 @@ class MultiArgsExpression(LogicalExpressionBase):
         return 'MultiArgsExpression'
 
 
+def _add_to_and_or_expression(orig_expr, new_arg):
+    # Clone 'self', because AndExpression/OrExpression are immutable
+    if new_arg.__class__ == orig_expr.__class__:
+        # adding new AndExpression/OrExpression on the right
+        new_expr = orig_expr.__class__(orig_expr._args_)
+        new_expr._args_.extend(islice(new_arg._args_, new_arg._nargs))
+    else:
+        # adding new singleton on the right
+        new_expr = orig_expr.__class__(orig_expr._args_)
+        new_expr._args_.append(new_arg)
+
+    # TODO set up id()-based scheme for avoiding duplicate entries
+
+    new_expr._nargs = len(new_expr._args_)
+    return new_expr
+
+
 class AndExpression(MultiArgsExpression):
     """
     This is the node for AndExpression.
@@ -1135,16 +1157,7 @@ class AndExpression(MultiArgsExpression):
                 return LogicalConstant(False)
             elif new_arg is True:
                 return self
-
-        # Clone 'self', because AndExpression are immutable
-        new_self = self.__class__(self._args_)
-        if new_arg.__class__ is AndExpression:
-            new_self._args_.extend(islice(new_arg._args_, new_arg._nargs))
-        elif new_arg is not None:
-            # TODO set up id()-based scheme for avoiding duplicate entries
-            new_self._args_.append(new_arg)
-        new_self._nargs = len(new_self._args_)
-        return new_self
+        return _add_to_and_or_expression(self, new_arg)
 
 
 class OrExpression(MultiArgsExpression):
@@ -1170,16 +1183,7 @@ class OrExpression(MultiArgsExpression):
                 return self
             elif new_arg is True:
                 return LogicalConstant(True)
-
-        # Clone 'self', because OrExpression are immutable
-        new_self = self.__class__(self._args_)
-        if new_arg.__class__ is OrExpression:
-            new_self._args_.extend(islice(new_arg._args_, new_arg._nargs))
-        elif new_arg is not None:
-            # TODO set up id()-based scheme for avoiding duplicate entries
-            new_self._args_.append(new_arg)
-        new_self._nargs = len(new_self._args_)
-        return new_self
+        return _add_to_and_or_expression(self, new_arg)
 
 
 class ExactlyExpression(MultiArgsExpression):

@@ -4,9 +4,9 @@ from itertools import product
 import pyutilib.th as unittest
 
 # import pyomo.core.expr.CNF as cnf
-from pyomo.core.expr.cnf_walker import sympyify_expression, to_cnf
+from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr.logical_expr import (Not, Equivalent,
-                                          LogicalOr, Implies, LogicalAnd, Exactly, AtMost, AtLeast, LogicalXor,
+                                          Or, Implies, And, Exactly, AtMost, AtLeast, Xor,
                                           )
 from pyomo.core.expr.logicalvalue import LogicalConstant
 from pyomo.core.expr.visitor import identify_variables
@@ -19,11 +19,11 @@ First testing file.
 
 def create_model1(y):
     # model 1 with 5 checkpoints, 11 literals
-    c1 = (Implies(y[1], y[2])).equals(LogicalXor(y[3], y[4]))
+    c1 = (Implies(y[1], y[2])).equals(Xor(y[3], y[4]))
     c2 = y[0] & Not(c1)
     c3 = Not(Implies(y[5], y[6]))
-    c4 = LogicalOr(y[7], y[8], y[9])
-    c5 = LogicalAnd((c3 & c4), y[10])
+    c4 = Or(y[7], y[8], y[9])
+    c5 = And((c3 & c4), y[10])
     root_node = c2 | Not(c5)
     return root_node
 
@@ -31,17 +31,17 @@ def create_model1(y):
 def create_model2(y):
     # model 2 with 3 checkpoints, 11 literals
     c1 = Not(y[1]).implies(y[2] ^ y[3])
-    c2 = LogicalAnd(LogicalOr(y[4], y[5], y[6]))
-    c3 = Equivalent(LogicalXor(y[8], y[9]), y[10])
-    root_node = LogicalOr(y[0], LogicalAnd(c1, c2), Not(y[7]), c3)
+    c2 = And(Or(y[4], y[5], y[6]))
+    c3 = Equivalent(Xor(y[8], y[9]), y[10])
+    root_node = Or(y[0], And(c1, c2), Not(y[7]), c3)
     return root_node
 
 
 def create_model3(y):
     # model3
-    a1 = LogicalAnd(y[0].implies(y[1]), Not(y[2]))
-    a3 = LogicalAnd(LogicalXor(y[4], y[5]))
-    root_node = a1 | LogicalAnd(y[3]) | a3
+    a1 = And(y[0].implies(y[1]), Not(y[2]))
+    a3 = And(Xor(y[4], y[5]))
+    root_node = a1 | And(y[3]) | a3
     return root_node
 
 
@@ -57,9 +57,9 @@ def create_model4(y):
 
 def create_model5(y):
     # model 5, for cnf walker
-    a2 = LogicalAnd(y[0], y[1])
-    o1 = LogicalOr(a2, y[3])
-    a1 = LogicalAnd(o1, y[4])
+    a2 = And(y[0], y[1])
+    o1 = Or(a2, y[3])
+    a1 = And(o1, y[4])
     return a1
 
 
@@ -122,7 +122,7 @@ class TestLogicalClasses(unittest.TestCase):
         m = ConcreteModel()
         m.Y1 = BooleanVar()
         m.Y2 = BooleanVar()
-        op_static = LogicalXor(m.Y1, m.Y2)
+        op_static = Xor(m.Y1, m.Y2)
         op_class = m.Y1.xor(m.Y2)
         op_operator = m.Y1 ^ m.Y2
         for truth_combination in _generate_possible_truth_inputs(2):
@@ -154,7 +154,7 @@ class TestLogicalClasses(unittest.TestCase):
         m = ConcreteModel()
         m.Y1 = BooleanVar()
         m.Y2 = BooleanVar()
-        op_static = LogicalAnd(m.Y1, m.Y2)
+        op_static = And(m.Y1, m.Y2)
         op_class = m.Y1.and_(m.Y2)
         op_operator = m.Y1 & m.Y2
         for truth_combination in _generate_possible_truth_inputs(2):
@@ -168,7 +168,7 @@ class TestLogicalClasses(unittest.TestCase):
         m = ConcreteModel()
         m.Y1 = BooleanVar()
         m.Y2 = BooleanVar()
-        op_static = LogicalOr(m.Y1, m.Y2)
+        op_static = Or(m.Y1, m.Y2)
         op_class = m.Y1.or_(m.Y2)
         op_operator = m.Y1 | m.Y2
         for truth_combination in _generate_possible_truth_inputs(2):
@@ -183,7 +183,7 @@ class TestLogicalClasses(unittest.TestCase):
         m = ConcreteModel()
         m.s = RangeSet(nargs)
         m.Y = BooleanVar(m.s)
-        op_static = LogicalAnd(*(m.Y[i] for i in m.s))
+        op_static = And(*(m.Y[i] for i in m.s))
         op_class = LogicalConstant(True)
         op_operator = True
         for y in m.Y.values():
@@ -201,7 +201,7 @@ class TestLogicalClasses(unittest.TestCase):
         m = ConcreteModel()
         m.s = RangeSet(nargs)
         m.Y = BooleanVar(m.s)
-        op_static = LogicalOr(*(m.Y[i] for i in m.s))
+        op_static = Or(*(m.Y[i] for i in m.s))
         op_class = LogicalConstant(False)
         op_operator = False
         for y in m.Y.values():
@@ -253,7 +253,7 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
         m.Y3 = BooleanVar()
 
-        self.assertEqual(str(LogicalAnd(m.Y1, m.Y2, m.Y3)), "Y1 & Y2 & Y3")
+        self.assertEqual(str(And(m.Y1, m.Y2, m.Y3)), "Y1 & Y2 & Y3")
         # TODO need to test other combinations as well
 
     def test_node_types(self):
@@ -280,19 +280,14 @@ class TestLogicalClasses(unittest.TestCase):
         x = to_cnf(atleast)[0]
         self.assertIs(atleast, x)  # should be no change
 
-        nestedatleast = Implies(m.Y1, AtLeast(1, m.Y1, m.Y2))
+        nestedatleast = Implies(m.Y1, atleast)
         m.extraY = BooleanVarList()
         indicator_map = ComponentMap()
         x = to_cnf(nestedatleast, m.extraY, indicator_map)
-        # self.assertEquals(str(x), "AtLeast(1: [Y1, Y2]) | (~Y1)")
-        # _check_equivalent(self, nestedatleast, x)
-        print(x[0])
-        print(indicator_map)
+        self.assertEquals(str(x[0]), "extraY[1] | (~Y1)")
+        self.assertIs(indicator_map[m.extraY[1]], atleast)
 
         # TODO need to test other combinations as well
-
-    def test_cnf_to_linear(self):
-        pass
 
 
 if __name__ == "__main__":
