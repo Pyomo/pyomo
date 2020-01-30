@@ -30,7 +30,7 @@ from pyomo.core.base.plugin import ModelComponentFactory, \
     IPyomoScriptModifyInstance, TransformationFactory
 from pyomo.core.kernel.component_map import ComponentMap
 
-from pyomo.network.util import replicate_var
+from pyomo.network.util import create_var, tighten_var_domain
 
 logger = logging.getLogger('pyomo.network')
 
@@ -204,10 +204,6 @@ class _PortData(ComponentData):
     def is_extensive(self, name):
         """Return True if the rule for this port member is Port.Extensive"""
         return self.rule_for(name) is Port.Extensive
-
-    def is_conservative(self, name):
-        """Return True if the rule for this port member is Port.Conservative"""
-        return self.rule_for(name) is Port.Conservative
 
     def fix(self):
         """
@@ -385,13 +381,23 @@ class Port(IndexedComponent):
         if type(items) is dict:
             for key, val in iteritems(items):
                 if type(val) is tuple:
-                    port.add(val[0], key, val[1])
+                    if len(val) == 2:
+                        obj, rule = val
+                        port.add(obj, key, rule)
+                    else:
+                        obj, rule, kwds = val
+                        port.add(obj, key, rule, **kwds)
                 else:
                     port.add(val, key)
         else:
             for val in self._initialize:
                 if type(val) is tuple:
-                    port.add(val[0], rule=val[1])
+                    if len(val) == 2:
+                        obj, rule = val
+                        port.add(obj, rule=rule)
+                    else:
+                        obj, rule, kwds = val
+                        port.add(obj, rule=rule, **kwds)
                 else:
                     port.add(val)
 
@@ -452,7 +458,7 @@ class Port(IndexedComponent):
             Port._add_equality_constraint(arc, name, index_set)
 
     @staticmethod
-    def Extensive(port, name, index_set, include_splitfrac=False,
+    def Extensive(port, name, index_set, include_splitfrac=None,
             write_var_sum=True):
         """
         Arc Expansion procedure for extensive variable properties
@@ -502,23 +508,6 @@ class Port(IndexedComponent):
         in_vars = Port._Combine(port, name, index_set)
 
     @staticmethod
-    def Conservative(port, name, index_set):
-        """
-        Arc Expansion procedure for conservative variable properties.
-
-        This procedure is the rule to use when variable quantities should
-        be conserved without fixing a split for inlets or fixing combinations
-        for outlet.
-
-        It acts like Extensive but does not introduces a split variable
-        nor a split constraint.
-        """
-
-        port_parent = port.parent_block()
-        out_vars = Port._Split_Conservative(port, name, index_set)
-        in_vars = Port._Combine(port, name, index_set)
-
-    @staticmethod
     def _Combine(port, name, index_set):
         port_parent = port.parent_block()
         var = port.vars[name]
@@ -541,6 +530,9 @@ class Port(IndexedComponent):
             evar = Port._create_evar(port.vars[name], name, eblock, index_set)
             in_vars.append(evar)
 
+        if len(sources) == 1:
+            tighten_var_domain(port.vars[name], in_vars[0], index_set)
+
         # Create constraint: var == sum of evars
         # Same logic as Port._Split
         cname = unique_component_name(port_parent, "%s_%s_insum" %
@@ -556,12 +548,11 @@ class Port(IndexedComponent):
         return in_vars
 
     @staticmethod
-    def _Split(port, name, index_set, include_splitfrac=False,
+    def _Split(port, name, index_set, include_splitfrac=None,
             write_var_sum=True):
         port_parent = port.parent_block()
         var = port.vars[name]
         out_vars = []
-        no_splitfrac = False
         dests = port.dests(active=True)
 
         if not len(dests):
@@ -577,7 +568,8 @@ class Port(IndexedComponent):
                         "Cannot fix splitfrac not at 1 for port '%s' with a "
                         "single dest '%s'" % (port.name, dests[0].name))
 
-            no_splitfrac = True
+            if include_splitfrac is not True:
+                include_splitfrac = False
 
             if len(dests[0].destination.sources(active=True)) == 1:
                 # This is a 1-to-1 connection, no need for evar, just equality.
@@ -592,7 +584,7 @@ class Port(IndexedComponent):
             evar = Port._create_evar(port.vars[name], name, eblock, index_set)
             out_vars.append(evar)
 
-            if no_splitfrac:
+            if include_splitfrac is False:
                 continue
 
             # Create and potentially initialize split fraction variables.
@@ -627,7 +619,7 @@ class Port(IndexedComponent):
                                     "splitfracs, please pass the "
                                     " include_splitfrac=True argument." %
                                     (port.name, arc.name))
-                        no_splitfrac = True
+                        include_splitfrac = False
                         continue
 
                 eblock.splitfrac = Var()
@@ -647,6 +639,9 @@ class Port(IndexedComponent):
             con = Constraint(index_set, rule=rule)
             eblock.add_component(cname, con)
 
+        if len(dests) == 1:
+            tighten_var_domain(port.vars[name], out_vars[0], index_set)
+
         if write_var_sum:
             # Create var total sum constraint: var == sum of evars
             # Need to alphanum port name in case it is indexed.
@@ -661,7 +656,7 @@ class Port(IndexedComponent):
             port_parent.add_component(cname, con)
         else:
             # OR create constraint on splitfrac vars: sum == 1
-            if no_splitfrac:
+            if include_splitfrac is False:
                 raise ValueError(
                     "Cannot choose to write split fraction sum constraint for "
                     "ports with a single destination or a single Extensive "
@@ -673,56 +668,6 @@ class Port(IndexedComponent):
             con = Constraint(expr=
                 sum(a.expanded_block.splitfrac for a in dests) == 1)
             port_parent.add_component(cname, con)
-
-        return out_vars
-
-    @staticmethod
-    def _Split_Conservative(port, name, index_set):
-        port_parent = port.parent_block()
-        var = port.vars[name]
-        out_vars = []
-        no_splitfrac = False
-        dests = port.dests(active=True)
-
-        if not len(dests):
-            return out_vars
-
-        if len(dests) == 1:
-            # No need for splitting on one outlet.
-            # Make sure they do not try to fix splitfrac not at 1.
-            splitfracspec = port.get_split_fraction(dests[0])
-            if splitfracspec is not None:
-                if splitfracspec[0] != 1 and splitfracspec[1] is True:
-                    raise ValueError(
-                        "Cannot fix splitfrac not at 1 for port '%s' with a "
-                        "single dest '%s'" % (port.name, dests[0].name))
-
-            if len(dests[0].destination.sources(active=True)) == 1:
-                # This is a 1-to-1 connection, no need for evar, just equality.
-                arc = dests[0]
-                Port._add_equality_constraint(arc, name, index_set)
-                return out_vars
-
-        for arc in dests:
-            eblock = arc.expanded_block
-
-            # Make and record new variables for every arc with this member.
-            evar = Port._create_evar(port.vars[name], name, eblock, index_set)
-            out_vars.append(evar)
-
-        # Create var total sum constraint: var == sum of evars
-        # Need to alphanum port name in case it is indexed.
-        cname = unique_component_name(port_parent, "%s_%s_outsum" %
-                                      (alphanum_label_from_name(port.local_name), name))
-
-        def rule(m, *args):
-            if len(args):
-                return sum(evar[args] for evar in out_vars) == var[args]
-            else:
-                return sum(evar for evar in out_vars) == var
-
-        con = Constraint(index_set, rule=rule)
-        port_parent.add_component(cname, con)
 
         return out_vars
 
@@ -751,9 +696,8 @@ class Port(IndexedComponent):
         # before making a new one.
         evar = eblock.component(name)
         if evar is None:
-            evar = replicate_var(member, name, eblock, index_set)
+            evar = create_var(member, name, eblock, index_set)
         return evar
-
 
 class SimplePort(Port, _PortData):
 

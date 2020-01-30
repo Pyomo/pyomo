@@ -984,14 +984,14 @@ class TestArc(unittest.TestCase):
     1 Declarations: v_equality
 """)
 
-    def test_conservative_single_var(self):
+    def test_extensive_no_splitfrac_single_var(self):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
         m.z = Var()
-        m.p1 = Port(initialize={'v': (m.x, Port.Conservative)})
-        m.p2 = Port(initialize={'v': (m.y, Port.Conservative)})
-        m.p3 = Port(initialize={'v': (m.z, Port.Conservative)})
+        m.p1 = Port(initialize={'v': (m.x, Port.Extensive, {'include_splitfrac':False})})
+        m.p2 = Port(initialize={'v': (m.y, Port.Extensive, {'include_splitfrac':False})})
+        m.p3 = Port(initialize={'v': (m.z, Port.Extensive, {'include_splitfrac':False})})
         m.a1 = Arc(source=m.p1, destination=m.p2)
         m.a2 = Arc(source=m.p1, destination=m.p3)
 
@@ -1136,7 +1136,7 @@ class TestArc(unittest.TestCase):
 13 Declarations: x y z p1 p2 p3 a1 a2 a1_expanded a2_expanded p1_v_outsum p2_v_insum p3_v_insum
 """)
 
-    def test_conservative_expansion(self):
+    def test_extensive_no_splitfrac_expansion(self):
         m = ConcreteModel()
         m.time = Set(initialize=[1, 2, 3])
 
@@ -1147,12 +1147,12 @@ class TestArc(unittest.TestCase):
         def source_block(b):
             b.t = Set(initialize=[1, 2, 3])
             b.p_out = Var(b.t)
-            b.outlet = Port(initialize={'p': (b.p_out, Port.Conservative)})
+            b.outlet = Port(initialize={'p': (b.p_out, Port.Extensive, {'include_splitfrac':False})})
 
         def load_block(b):
             b.t = Set(initialize=[1, 2, 3])
             b.p_in = Var(b.t)
-            b.inlet = Port(initialize={'p': (b.p_in, Port.Conservative)})
+            b.inlet = Port(initialize={'p': (b.p_in, Port.Extensive, {'include_splitfrac':False})})
 
         source_block(m.source)
         load_block(m.load1)
@@ -1530,9 +1530,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1558,9 +1558,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1586,9 +1586,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1614,9 +1614,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :     0 :  None :  None : False :  True :  Reals
+                  b :     0 :  None :  None : False :  True :  Reals
+                  c :     0 :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1657,9 +1657,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1685,9 +1685,9 @@ class TestArc(unittest.TestCase):
         2 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :     0 :  None :  None : False :  True :  Reals
+                  b :     0 :  None :  None : False :  True :  Reals
+                  c :     0 :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1702,9 +1702,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1730,9 +1730,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1758,9 +1758,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
