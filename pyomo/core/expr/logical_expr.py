@@ -551,7 +551,7 @@ class LogicalExpressionBase(LogicalValue):
 
     __slots__ = ('_args_',)
 
-    PRECEDENCE = 10
+    PRECEDENCE = 0
 
     def __init__(self, args):
         self._args_ = args
@@ -1009,7 +1009,7 @@ class NotExpression(UnaryLogicalExpression):
     """
     This is the node for a NotExpression, this node should have exactly one child
     """
-    PRECEDENCE = 10
+    PRECEDENCE = 2
 
     def getname(self, *arg, **kwd):
         return 'Logical Negation'
@@ -1039,7 +1039,7 @@ class EquivalenceExpression(BinaryLogicalExpression):
     """
     __slots__ = ()
 
-    PRECEDENCE = 7
+    PRECEDENCE = 6
 
     def getname(self, *arg, **kwd):
         return 'iff'
@@ -1060,7 +1060,7 @@ class XorExpression(BinaryLogicalExpression):
     """
     __slots__ = ()
 
-    PRECEDENCE = 6
+    PRECEDENCE = 5
 
     def getname(self, *arg, **kwd):
         return 'xor'
@@ -1081,7 +1081,7 @@ class ImplicationExpression(BinaryLogicalExpression):
     """
     __slots__ = ()
 
-    PRECEDENCE = 4
+    PRECEDENCE = 6
 
     def getname(self, *arg, **kwd):
         return 'implies'
@@ -1137,7 +1137,7 @@ class AndExpression(MultiArgsExpression):
     """
     __slots__ = ()
 
-    PRECEDENCE = 5
+    PRECEDENCE = 4
 
     def getname(self, *arg, **kwd):
         return 'and'
@@ -1163,7 +1163,7 @@ class AndExpression(MultiArgsExpression):
 class OrExpression(MultiArgsExpression):
     __slots__ = ()
 
-    PRECEDENCE = 5
+    PRECEDENCE = 4
 
     def getname(self, *arg, **kwd):
         return 'or'
@@ -1198,7 +1198,7 @@ class ExactlyExpression(MultiArgsExpression):
     """
     __slots__ = ()
 
-    PRECEDENCE = 8
+    PRECEDENCE = 9
 
     def getname(self, *arg, **kwd):
         return 'exactly'
@@ -1225,7 +1225,7 @@ class AtMostExpression(MultiArgsExpression):
     """
     __slots__ = ()
 
-    PRECEDENCE = 8
+    PRECEDENCE = 9
 
     def getname(self, *arg, **kwd):
         return 'atmost'
@@ -1252,7 +1252,7 @@ class AtLeastExpression(MultiArgsExpression):
     """
     __slots__ = ()
 
-    PRECEDENCE = 8
+    PRECEDENCE = 9
 
     def getname(self, *arg, **kwd):
         return 'atleast'
