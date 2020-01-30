@@ -32,24 +32,32 @@ jobs:
         brew install unixodbc
         brew install freetds # Now install Python modules
         python -m pip install --upgrade pip
+        echo ""
         echo "Install Pyomo dependencies..."
+        echo ""
         pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos
     - name: Install Pyomo and extensions
       run: |
         echo "Clone Pyomo-model-libraries..."
         python -m pip install --upgrade pip
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
+        echo ""
         echo "Install PyUtilib..."
+        echo ""
         pip install --quiet git+https://github.com/PyUtilib/pyutilib
+        echo ""
         echo "Install Pyomo..."
+        echo ""
         python setup.py develop # Install Pyomo
+        echo ""
         echo "Install extensions..."
+        echo ""
         pyomo download-extensions # Get Pyomo extensions
         pyomo build-extensions
     - name: Run nightly, not fragile tests with test.pyomo
       run: |
+        echo "Run test.pyomo..."
         python -m pip install --upgrade pip
         pip install nose
-        echo "Run test.pyomo..."
         KEY_JOB=1
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries # Run nightly, stable tests
