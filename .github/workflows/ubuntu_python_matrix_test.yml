@@ -1,9 +1,9 @@
-name: continuous-integration/github/pr/linux
+name: Ubuntu no Py27
 
 on:
-  pull_request:
+  push:
     branches:
-      - master
+      - remove_py27_ga
 
 jobs:
   pyomo-linux-tests:
@@ -11,9 +11,9 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       fail-fast: false
-      max-parallel: 5
+      max-parallel: 4
       matrix:
-        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+        python-version: [3.5, 3.6, 3.7, 3.8]
     steps:
     - uses: actions/checkout@v1
     - name: Set up Python ${{ matrix.python-version }}
@@ -22,34 +22,32 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        export PYTHONWARNINGS="ignore::UserWarning"
         echo "Upgrade pip..."
         python -m pip install --upgrade pip
         echo "Install extras..."
         pip install numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd matplotlib dill
         pip install pandas # Pandas needs to be installed after its dependencies to work correctly for Python 2.7 
         pip install seaborn pymysql pyro4 pint pathos 
-        echo "Installing GAMS..."
+        echo "Install GAMS..."
         wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/linux/linux_x64_64_sfx.exe
         chmod +x linux_x64_64_sfx.exe
         ./linux_x64_64_sfx.exe -q -d gams
         PATH=$PATH:/gams/gams24.3_linux_x64_64_sfx
-        echo "Cloning Pyomo-model-libraries..."
+        echo "Clone Pyomo-model-libraries..."
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
-        echo "Installing PyUtilib..."
+        echo "Install PyUtilib..."
         pip install --quiet git+https://github.com/PyUtilib/pyutilib
-        echo "Installing Pyomo..."
+        echo "Install Pyomo..."
         python setup.py develop
     - name: Install extensions
       run: |
-        export PYTHONWARNINGS="ignore::UserWarning"
         echo "Download and install extensions..."
         pyomo download-extensions
         pyomo build-extensions
     - name: Run nightly tests with test.pyomo
       run: |
-        export PYTHONWARNINGS="ignore::UserWarning"
         echo "Run test.pyomo..."
+        python -m pip install --upgrade pip
         pip install nose
         KEY_JOB=1
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
