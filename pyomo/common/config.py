@@ -10,8 +10,8 @@
 
 import os
 import platform
-import six
 
+import six
 from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
 
 if 'PYOMO_CONFIG_DIR' in os.environ:
@@ -145,9 +145,9 @@ class PathList(Path):
             return [ super(PathList, self).__call__(data) ]
 
 
-def add_docstring_list(docstring, configblock):
+def add_docstring_list(docstring, configblock, indent_by=4):
     """Returns the docstring with a formatted configuration arguments listing."""
-    return docstring + "    ".join(
+    return docstring + (" " * indent_by).join(
         configblock.generate_documentation(
             block_start="Keyword Arguments\n-----------------\n",
             block_end="",
