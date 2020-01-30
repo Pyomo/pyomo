@@ -39,8 +39,8 @@ def where(*args):
             assert not condition.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
             res = BlockVector(condition.nblocks)
             for i in range(condition.nblocks):
-                _args = [condition[i]]
-                res[i] = where(*_args)[0]
+                _args = [condition.get_block(i)]
+                res.set_block(i, where(*_args)[0])
             return (res,)
         else:
             x = args[1]
@@ -53,8 +53,8 @@ def where(*args):
                 assert x.nblocks == y.nblocks, 'Operation on BlockVectors need the same number of blocks on each operand'
                 res = BlockVector(condition.nblocks)
                 for i in range(condition.nblocks):
-                    _args = [condition[i], x[i], y[i]]
-                    res[i] = where(*_args)
+                    _args = [condition.get_block(i), x.get_block(i), y.get_block(i)]
+                    res.set_block(i, where(*_args))
                 return res
             elif isinstance(x, np.ndarray) and isinstance(y, BlockVector):
                 assert not condition.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
@@ -66,8 +66,8 @@ def where(*args):
                 accum = 0
                 for i in range(condition.nblocks):
                     nelements = condition._brow_lengths[i]
-                    _args = [condition[i], x[accum: accum + nelements], y[i]]
-                    res[i] = where(*_args)
+                    _args = [condition.get_block(i), x[accum: accum + nelements], y.get_block(i)]
+                    res.set_block(i, where(*_args))
                     accum += nelements
                 return res
 
@@ -81,8 +81,8 @@ def where(*args):
                 accum = 0
                 for i in range(condition.nblocks):
                     nelements = condition._brow_lengths[i]
-                    _args = [condition[i], x[i], y[accum: accum + nelements]]
-                    res[i] = where(*_args)
+                    _args = [condition.get_block(i), x.get_block(i), y[accum: accum + nelements]]
+                    res.set_block(i, where(*_args))
                     accum += nelements
                 return res
 
@@ -95,8 +95,8 @@ def where(*args):
                 accum = 0
                 for i in range(condition.nblocks):
                     nelements = condition._brow_lengths[i]
-                    _args = [condition[i], x, y[i]]
-                    res[i] = where(*_args)
+                    _args = [condition.get_block(i), x, y.get_block(i)]
+                    res.set_block(i, where(*_args))
                     accum += nelements
                 return res
 
@@ -109,8 +109,8 @@ def where(*args):
                 accum = 0
                 for i in range(condition.nblocks):
                     nelements = condition._brow_lengths[i]
-                    _args = [condition[i], x[i], y]
-                    res[i] = where(*_args)
+                    _args = [condition.get_block(i), x.get_block(i), y]
+                    res.set_block(i, where(*_args))
                     accum += nelements
                 return res
 
@@ -122,8 +122,8 @@ def where(*args):
                 accum = 0
                 for i in range(condition.nblocks):
                     nelements = condition._brow_lengths[i]
-                    _args = [condition[i], x[accum: accum + nelements], y[accum: accum + nelements]]
-                    res[i] = where(*_args)
+                    _args = [condition.get_block(i), x[accum: accum + nelements], y[accum: accum + nelements]]
+                    res.set_block(i, where(*_args))
                     accum += nelements
                 return res
 
@@ -134,8 +134,8 @@ def where(*args):
                 accum = 0
                 for i in range(condition.nblocks):
                     nelements = condition._brow_lengths[i]
-                    _args = [condition[i], x[accum: accum + nelements], y]
-                    res[i] = where(*_args)
+                    _args = [condition.get_block(i), x[accum: accum + nelements], y]
+                    res.set_block(i, where(*_args))
                     accum += nelements
                 return res
 
@@ -146,8 +146,8 @@ def where(*args):
                 accum = 0
                 for i in range(condition.nblocks):
                     nelements = condition._brow_lengths[i]
-                    _args = [condition[i], x, y[accum: accum + nelements]]
-                    res[i] = where(*_args)
+                    _args = [condition.get_block(i), x, y[accum: accum + nelements]]
+                    res.set_block(i, where(*_args))
                     accum += nelements
                 return res
 
@@ -155,8 +155,8 @@ def where(*args):
                 assert not condition.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
                 res = BlockVector(condition.nblocks)
                 for i in range(condition.nblocks):
-                    _args = [condition[i], x, y]
-                    res[i] = where(*_args)
+                    _args = [condition.get_block(i), x, y]
+                    res.set_block(i, where(*_args))
                 return res
 
             else:
@@ -186,10 +186,10 @@ def isin(element, test_elements, assume_unique=False, invert=False):
         assert element.nblocks == test_elements.nblocks, 'Operation on BlockVectors need the same number of blocks on each operand'
         res = BlockVector(element.nblocks)
         for i in range(element.nblocks):
-            res[i] = isin(element[i],
-                          test_elements[i],
-                          assume_unique=assume_unique,
-                          invert=invert)
+            res.set_block(i, isin(element.get_block(i),
+                                  test_elements.get_block(i),
+                                  assume_unique=assume_unique,
+                                  invert=invert))
         return res
 
     elif isinstance(element, BlockVector) and isinstance(test_elements, np.ndarray):
@@ -197,10 +197,10 @@ def isin(element, test_elements, assume_unique=False, invert=False):
         assert not element.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
         res = BlockVector(element.nblocks)
         for i in range(element.nblocks):
-            res[i] = isin(element[i],
-                          test_elements,
-                          assume_unique=assume_unique,
-                          invert=invert)
+            res.set_block(i, isin(element.get_block(i),
+                                  test_elements,
+                                  assume_unique=assume_unique,
+                                  invert=invert))
         return res
 
     elif isinstance(element, np.ndarray) and isinstance(test_elements, np.ndarray):
@@ -241,14 +241,14 @@ def intersect1d(ar1, ar2, assume_unique=False, return_indices=False):
 
         res = BlockVector(x.nblocks)
         for i in range(x.nblocks):
-            res[i] = intersect1d(x[i], y[i], assume_unique=assume_unique)
+            res.set_block(i, intersect1d(x.get_block(i), y.get_block(i), assume_unique=assume_unique))
         return res
     elif isinstance(x, BlockVector) and isinstance(y, np.ndarray):
         assert not x.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
 
         res = BlockVector(x.nblocks)
         for i in range(x.nblocks):
-            res[i] = np.intersect1d(x[i], y, assume_unique=assume_unique)
+            res.set_block(i, np.intersect1d(x.get_block(i), y, assume_unique=assume_unique))
         return res
     elif isinstance(x, np.ndarray) and isinstance(y, BlockVector):
 
@@ -256,7 +256,7 @@ def intersect1d(ar1, ar2, assume_unique=False, return_indices=False):
 
         res = BlockVector(y.nblocks)
         for i in range(y.nblocks):
-            res[i] = np.intersect1d(x, y[i], assume_unique=assume_unique)
+            res.set_block(i, np.intersect1d(x, y.get_block(i), assume_unique=assume_unique))
         return res
     else:
         return np.intersect1d(x, y, assume_unique=assume_unique)
@@ -286,13 +286,13 @@ def setdiff1d(ar1, ar2, assume_unique=False):
 
         res = BlockVector(x.nblocks)
         for i in range(x.nblocks):
-            res[i] = setdiff1d(x[i], y[i], assume_unique=assume_unique)
+            res.set_block(i, setdiff1d(x.get_block(i), y.get_block(i), assume_unique=assume_unique))
         return res
     elif isinstance(x, BlockVector) and isinstance(y, np.ndarray):
         assert not x.has_none, 'Operation not allowed with None blocks. Specify all blocks in BlockVector'
         res = BlockVector(x.nblocks)
         for i in range(x.nblocks):
-            res[i] = np.setdiff1d(x[i], y, assume_unique=assume_unique)
+            res.set_block(i, np.setdiff1d(x.get_block(i), y, assume_unique=assume_unique))
         return res
     elif isinstance(x, np.ndarray) and isinstance(y, BlockVector):
 
@@ -300,7 +300,7 @@ def setdiff1d(ar1, ar2, assume_unique=False):
 
         res = BlockVector(y.nblocks)
         for i in range(y.nblocks):
-            res[i] = np.setdiff1d(x, y[i], assume_unique=assume_unique)
+            res.set_block(i, np.setdiff1d(x, y.get_block(i), assume_unique=assume_unique))
         return res
     else:
         return np.setdiff1d(x, y, assume_unique=assume_unique)

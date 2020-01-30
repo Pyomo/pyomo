@@ -35,7 +35,7 @@ class TestSparseIntrinsics(unittest.TestCase):
         condition = bv >= 4.5
         res = pn.where(condition)[0]
         for bid, blk in enumerate(res):
-            self.assertTrue(np.allclose(blk, pn.where(bv[bid] >= 4.5)))
+            self.assertTrue(np.allclose(blk, pn.where(bv.get_block(bid) >= 4.5)))
 
         flat_condition = condition.flatten()
         res = pn.where(condition, 2.0, 1.0)
@@ -78,34 +78,34 @@ class TestSparseIntrinsics(unittest.TestCase):
         test_bv = BlockVector(2)
         a = np.array([1.1, 3.3])
         b = np.array([5.5, 7.7])
-        test_bv[0] = a
-        test_bv[1] = b
+        test_bv.set_block(0, a)
+        test_bv.set_block(1, b)
 
         res = pn.isin(bv, test_bv)
         for bid, blk in enumerate(bv):
-            self.assertEqual(blk.size, res[bid].size)
-            res_flat = np.isin(blk, test_bv[bid])
-            self.assertTrue(np.allclose(res[bid], res_flat))
+            self.assertEqual(blk.size, res.get_block(bid).size)
+            res_flat = np.isin(blk, test_bv.get_block(bid))
+            self.assertTrue(np.allclose(res.get_block(bid), res_flat))
 
         c = np.concatenate([a, b])
         res = pn.isin(bv, c)
         for bid, blk in enumerate(bv):
-            self.assertEqual(blk.size, res[bid].size)
+            self.assertEqual(blk.size, res.get_block(bid).size)
             res_flat = np.isin(blk, c)
-            self.assertTrue(np.allclose(res[bid], res_flat))
+            self.assertTrue(np.allclose(res.get_block(bid), res_flat))
 
         res = pn.isin(bv, test_bv, invert=True)
         for bid, blk in enumerate(bv):
-            self.assertEqual(blk.size, res[bid].size)
-            res_flat = np.isin(blk, test_bv[bid], invert=True)
-            self.assertTrue(np.allclose(res[bid], res_flat))
+            self.assertEqual(blk.size, res.get_block(bid).size)
+            res_flat = np.isin(blk, test_bv.get_block(bid), invert=True)
+            self.assertTrue(np.allclose(res.get_block(bid), res_flat))
 
         c = np.concatenate([a, b])
         res = pn.isin(bv, c, invert=True)
         for bid, blk in enumerate(bv):
-            self.assertEqual(blk.size, res[bid].size)
+            self.assertEqual(blk.size, res.get_block(bid).size)
             res_flat = np.isin(blk, c, invert=True)
-            self.assertTrue(np.allclose(res[bid], res_flat))
+            self.assertTrue(np.allclose(res.get_block(bid), res_flat))
 
     # ToDo: try np.copy on a blockvector
 
@@ -116,17 +116,17 @@ class TestSparseIntrinsics(unittest.TestCase):
         bvv = BlockVector([vv1, vv2])
         res = pn.intersect1d(self.bv, bvv)
         self.assertIsInstance(res, BlockVector)
-        self.assertTrue(np.allclose(res[0], vv1))
-        self.assertTrue(np.allclose(res[1], vv2))
+        self.assertTrue(np.allclose(res.get_block(0), vv1))
+        self.assertTrue(np.allclose(res.get_block(1), vv2))
         vv3 = np.array([1.1, 7.7])
         res = pn.intersect1d(self.bv, vv3)
         self.assertIsInstance(res, BlockVector)
-        self.assertTrue(np.allclose(res[0], np.array([1.1])))
-        self.assertTrue(np.allclose(res[1], np.array([7.7])))
+        self.assertTrue(np.allclose(res.get_block(0), np.array([1.1])))
+        self.assertTrue(np.allclose(res.get_block(1), np.array([7.7])))
         res = pn.intersect1d(vv3, self.bv)
         self.assertIsInstance(res, BlockVector)
-        self.assertTrue(np.allclose(res[0], np.array([1.1])))
-        self.assertTrue(np.allclose(res[1], np.array([7.7])))
+        self.assertTrue(np.allclose(res.get_block(0), np.array([1.1])))
+        self.assertTrue(np.allclose(res.get_block(1), np.array([7.7])))
 
     def test_setdiff1d(self):
 
@@ -135,10 +135,10 @@ class TestSparseIntrinsics(unittest.TestCase):
         bvv = BlockVector([vv1, vv2])
         res = pn.setdiff1d(self.bv, bvv)
         self.assertIsInstance(res, BlockVector)
-        self.assertTrue(np.allclose(res[0], np.array([2.2])))
-        self.assertTrue(np.allclose(res[1], np.array([5.5, 6.6])))
+        self.assertTrue(np.allclose(res.get_block(0), np.array([2.2])))
+        self.assertTrue(np.allclose(res.get_block(1), np.array([5.5, 6.6])))
         vv3 = np.array([1.1, 7.7])
         res = pn.setdiff1d(self.bv, vv3)
         self.assertIsInstance(res, BlockVector)
-        self.assertTrue(np.allclose(res[0], np.array([2.2, 3.3])))
-        self.assertTrue(np.allclose(res[1], np.array([4.4, 5.5, 6.6])))
+        self.assertTrue(np.allclose(res.get_block(0), np.array([2.2, 3.3])))
+        self.assertTrue(np.allclose(res.get_block(1), np.array([4.4, 5.5, 6.6])))

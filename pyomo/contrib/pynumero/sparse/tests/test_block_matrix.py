@@ -34,9 +34,9 @@ class TestBlockMatrix(unittest.TestCase):
 
         bm = BlockMatrix(2, 2)
         bm.name = 'basic_matrix'
-        bm[0, 0] = m.copy()
-        bm[1, 1] = m.copy()
-        bm[0, 1] = m.copy()
+        bm.set_block(0, 0, m.copy())
+        bm.set_block(1, 1, m.copy())
+        bm.set_block(0, 1, m.copy())
         self.basic_m = bm
         self.dense = np.zeros((8, 8))
         self.dense[0:4, 0:4] = m.toarray()
@@ -44,8 +44,8 @@ class TestBlockMatrix(unittest.TestCase):
         self.dense[4:8, 4:8] = m.toarray()
 
         self.composed_m = BlockMatrix(2, 2)
-        self.composed_m[0, 0] = self.block_m.copy()
-        self.composed_m[1, 1] = self.basic_m.copy()
+        self.composed_m.set_block(0, 0, self.block_m.copy())
+        self.composed_m.set_block(1, 1, self.basic_m.copy())
 
     def test_name(self):
         self.assertEqual(self.basic_m.name, 'basic_matrix')
@@ -137,8 +137,8 @@ class TestBlockMatrix(unittest.TestCase):
         m = self.basic_m
         scipy_mat = bmat([[block, block], [None, block]], format='coo')
         x = BlockVector(2)
-        x[0] = np.ones(block.shape[1], dtype=np.float64)
-        x[1] = np.ones(block.shape[1], dtype=np.float64)
+        x.set_block(0, np.ones(block.shape[1], dtype=np.float64))
+        x.set_block(1, np.ones(block.shape[1], dtype=np.float64))
 
         res_scipy = scipy_mat.dot(x.flatten())
         res_dinopy = m * x
@@ -174,19 +174,19 @@ class TestBlockMatrix(unittest.TestCase):
         m = BlockMatrix(3, 3)
         for i in range(3):
             for j in range(3):
-                self.assertIsNone(m[i, j])
+                self.assertIsNone(m.get_block(i, j))
 
-        m[0, 1] = self.block_m
-        self.assertEqual(m[0, 1].shape, self.block_m.shape)
+        m.set_block(0, 1, self.block_m)
+        self.assertEqual(m.get_block(0, 1).shape, self.block_m.shape)
 
     def test_setitem(self):
 
         m = BlockMatrix(2, 2)
-        m[0, 1] = self.block_m
+        m.set_block(0, 1, self.block_m)
         self.assertFalse(m.is_empty_block(0, 1))
         self.assertEqual(m._brow_lengths[0], self.block_m.shape[0])
         self.assertEqual(m._bcol_lengths[1], self.block_m.shape[1])
-        self.assertEqual(m[0, 1].shape, self.block_m.shape)
+        self.assertEqual(m.get_block(0, 1).shape, self.block_m.shape)
 
     def test_coo_data(self):
         m = self.basic_m.tocoo()
@@ -211,8 +211,8 @@ class TestBlockMatrix(unittest.TestCase):
         A_block = self.basic_m
         x = np.ones(A_dense.shape[1])
         block_x = BlockVector(2)
-        block_x[0] = np.ones(self.block_m.shape[1])
-        block_x[1] = np.ones(self.block_m.shape[1])
+        block_x.set_block(0, np.ones(self.block_m.shape[1]))
+        block_x.set_block(1, np.ones(self.block_m.shape[1]))
         flat_res = A_block.dot(x).flatten()
         block_res = A_block.dot(block_x)
         self.assertTrue(np.allclose(A_dense.dot(x), flat_res))
@@ -222,12 +222,12 @@ class TestBlockMatrix(unittest.TestCase):
     def test_reset_brow(self):
         self.basic_m.reset_brow(0)
         for j in range(self.basic_m.bshape[1]):
-            self.assertIsNone(self.basic_m[0, j])
+            self.assertIsNone(self.basic_m.get_block(0, j))
 
     def test_reset_bcol(self):
         self.basic_m.reset_bcol(0)
         for j in range(self.basic_m.bshape[0]):
-            self.assertIsNone(self.basic_m[j, 0])
+            self.assertIsNone(self.basic_m.get_block(j, 0))
 
     def test_to_scipy(self):
 
@@ -270,12 +270,12 @@ class TestBlockMatrix(unittest.TestCase):
 
     def test_set_item(self):
 
-        self.basic_m[1, 0] = None
-        self.assertIsNone(self.basic_m[1, 0])
-        self.basic_m[1, 1] = None
-        self.assertIsNone(self.basic_m[1, 1])
+        self.basic_m.set_block(1, 0, None)
+        self.assertIsNone(self.basic_m.get_block(1, 0))
+        self.basic_m.set_block(1, 1, None)
+        self.assertIsNone(self.basic_m.get_block(1, 1))
         self.assertEqual(self.basic_m._brow_lengths[1], self.block_m.shape[0])
-        self.basic_m[1, 1] = self.block_m
+        self.basic_m.set_block(1, 1, self.block_m)
         self.assertEqual(self.basic_m._brow_lengths[1], self.block_m.shape[0])
 
     def test_add(self):
@@ -338,8 +338,8 @@ class TestBlockMatrix(unittest.TestCase):
         bm = self.basic_m.copy()
         bmT = bm.transpose()
         res = bm + bmT
-        self.assertIsNot(res[1, 0], bmT[1, 0])
-        self.assertIsNot(res[0, 1], bm[0, 1])
+        self.assertIsNot(res.get_block(1, 0), bmT.get_block(1, 0))
+        self.assertIsNot(res.get_block(0, 1), bm.get_block(0, 1))
         self.assertTrue(np.allclose(res.toarray(), self.dense + self.dense.transpose()))
 
     def test_sub(self):
@@ -385,8 +385,8 @@ class TestBlockMatrix(unittest.TestCase):
         bm = self.basic_m.copy()
         bmT = 2 * bm.transpose()
         res = bm - bmT
-        self.assertIsNot(res[1, 0], bmT[1, 0])
-        self.assertIsNot(res[0, 1], bm[0, 1])
+        self.assertIsNot(res.get_block(1, 0), bmT.get_block(1, 0))
+        self.assertIsNot(res.get_block(0, 1), bm.get_block(0, 1))
         self.assertTrue(np.allclose(res.toarray(), self.dense - 2 * self.dense.transpose()))
 
     def test_neg(self):
@@ -413,12 +413,12 @@ class TestBlockMatrix(unittest.TestCase):
         bm.copyfrom(bm0)
         self.assertTrue(np.allclose(bm.toarray(), self.dense))
 
-        bm[0, 0].data.fill(1.0)
+        bm.get_block(0, 0).data.fill(1.0)
         self.assertAlmostEqual(bm0.toarray()[0, 0], 2)  # this tests that a deep copy was done
         self.assertAlmostEqual(bm.toarray()[0, 0], 1)
 
         bm.copyfrom(bm0, deep=False)
-        bm[0, 0].data.fill(1.0)
+        bm.get_block(0, 0).data.fill(1.0)
         self.assertAlmostEqual(bm0.toarray()[0, 0], 1)  # this tests that a shallow copy was done
         self.assertAlmostEqual(bm.toarray()[0, 0], 1)
 
@@ -446,26 +446,26 @@ class TestBlockMatrix(unittest.TestCase):
         bm0.copyto(bm)
         self.assertTrue(np.allclose(bm.toarray(), self.dense))
 
-        bm[0, 0].data.fill(1.0)
+        bm.get_block(0, 0).data.fill(1.0)
         self.assertAlmostEqual(bm0.toarray()[0, 0], 2)  # this tests that a deep copy was done
         self.assertAlmostEqual(bm.toarray()[0, 0], 1)
 
         bm0.copyto(bm, deep=False)
-        bm[0, 0].data.fill(1.0)
+        bm.get_block(0, 0).data.fill(1.0)
         self.assertAlmostEqual(bm0.toarray()[0, 0], 1)  # this tests that a shallow copy was done
         self.assertAlmostEqual(bm.toarray()[0, 0], 1)
 
     def test_copy(self):
         clone = self.basic_m.copy()
         self.assertTrue(np.allclose(clone.toarray(), self.dense))
-        clone[0, 0].data.fill(1)
+        clone.get_block(0, 0).data.fill(1)
         self.assertAlmostEqual(clone.toarray()[0, 0], 1)
         self.assertAlmostEqual(self.basic_m.toarray()[0, 0], 2)
 
         bm = self.basic_m.copy()
         clone = bm.copy(deep=False)
         self.assertTrue(np.allclose(clone.toarray(), self.dense))
-        clone[0, 0].data.fill(1)
+        clone.get_block(0, 0).data.fill(1)
         self.assertAlmostEqual(clone.toarray()[0, 0], 1)
         self.assertAlmostEqual(bm.toarray()[0, 0], 1)
 
@@ -747,9 +747,9 @@ class TestBlockMatrix(unittest.TestCase):
         self.block_m = m
 
         bm = BlockMatrix(2, 2)
-        bm[0, 0] = m
-        bm[1, 1] = m
-        bm[0, 1] = m
+        bm.set_block(0, 0, m)
+        bm.set_block(1, 1, m)
+        bm.set_block(0, 1, m)
 
         abs_flat = abs(bm.tocoo())
         abs_mat = abs(bm)
@@ -804,11 +804,11 @@ class TestBlockMatrix(unittest.TestCase):
     def test_get_block_column_index(self):
 
         m = BlockMatrix(2,4)
-        m[0, 0] = coo_matrix((3, 2))
-        m[0, 1] = coo_matrix((3, 4))
-        m[0, 2] = coo_matrix((3, 3))
-        m[0, 3] = coo_matrix((3, 6))
-        m[1, 3] = coo_matrix((5, 6))
+        m.set_block(0, 0, coo_matrix((3, 2)))
+        m.set_block(0, 1, coo_matrix((3, 4)))
+        m.set_block(0, 2, coo_matrix((3, 3)))
+        m.set_block(0, 3, coo_matrix((3, 6)))
+        m.set_block(1, 3, coo_matrix((5, 6)))
 
         bcol = m.get_block_column_index(8)
         self.assertEqual(bcol, 2)
@@ -820,11 +820,11 @@ class TestBlockMatrix(unittest.TestCase):
     def test_get_block_row_index(self):
 
         m = BlockMatrix(2,4)
-        m[0, 0] = coo_matrix((3, 2))
-        m[0, 1] = coo_matrix((3, 4))
-        m[0, 2] = coo_matrix((3, 3))
-        m[0, 3] = coo_matrix((3, 6))
-        m[1, 3] = coo_matrix((5, 6))
+        m.set_block(0, 0, coo_matrix((3, 2)))
+        m.set_block(0, 1, coo_matrix((3, 4)))
+        m.set_block(0, 2, coo_matrix((3, 3)))
+        m.set_block(0, 3, coo_matrix((3, 6)))
+        m.set_block(1, 3, coo_matrix((5, 6)))
 
         brow = m.get_block_row_index(0)
         self.assertEqual(brow, 0)
@@ -856,19 +856,19 @@ class TestBlockMatrix(unittest.TestCase):
         bm1 = BlockMatrix(2, 3)
         bm2 = BlockMatrix(3, 2)
 
-        bm1[0, 0] = A
-        bm1[0, 1] = B
-        bm1[0, 2] = C
-        bm1[1, 0] = D
-        bm1[1, 1] = E
-        bm1[1, 2] = F
+        bm1.set_block(0, 0, A)
+        bm1.set_block(0, 1, B)
+        bm1.set_block(0, 2, C)
+        bm1.set_block(1, 0, D)
+        bm1.set_block(1, 1, E)
+        bm1.set_block(1, 2, F)
 
-        bm2[0, 0] = G
-        bm2[1, 0] = H
-        bm2[2, 0] = I
-        bm2[0, 1] = J
-        bm2[1, 1] = K
-        bm2[2, 1] = L
+        bm2.set_block(0, 0, G)
+        bm2.set_block(1, 0, H)
+        bm2.set_block(2, 0, I)
+        bm2.set_block(0, 1, J)
+        bm2.set_block(1, 1, K)
+        bm2.set_block(2, 1, L)
 
         got = (bm1 * bm2).toarray()
         exp00 = (A * G + B * H + C * I).toarray()
@@ -890,21 +890,21 @@ class TestBlockMatrix(unittest.TestCase):
         with self.assertRaises(NotFullyDefinedBlockMatrixError):
             shape = bm.shape
         with self.assertRaises(NotFullyDefinedBlockMatrixError):
-            bm[0, 0] = BlockMatrix(2, 2)
+            bm.set_block(0, 0, BlockMatrix(2, 2))
         with self.assertRaises(NotFullyDefinedBlockMatrixError):
             row_sizes = bm.row_block_sizes()
         with self.assertRaises(NotFullyDefinedBlockMatrixError):
             col_sizes = bm.col_block_sizes()
         bm2 = BlockMatrix(2, 2)
-        bm2[0, 0] = coo_matrix((2, 2))
-        bm2[1, 1] = coo_matrix((2, 2))
+        bm2.set_block(0, 0, coo_matrix((2, 2)))
+        bm2.set_block(1, 1, coo_matrix((2, 2)))
         bm3 = bm2.copy()
-        bm[0, 0] = bm2
-        bm[1, 1] = bm3
+        bm.set_block(0, 0, bm2)
+        bm.set_block(1, 1, bm3)
         self.assertFalse(bm.has_undefined_rows())
         self.assertFalse(bm.has_undefined_cols())
         self.assertEqual(bm.shape, (8, 8))
-        bm[0, 0] = None
+        bm.set_block(0, 0, None)
         self.assertFalse(bm.has_undefined_rows())
         self.assertFalse(bm.has_undefined_cols())
         self.assertEqual(bm.shape, (8, 8))

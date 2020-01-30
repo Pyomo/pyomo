@@ -374,7 +374,7 @@ class BlockMatrix(BaseBlockMatrix):
         ii, jj = np.nonzero(self._block_mask)
         for i, j in zip(ii, jj):
 
-            B = self[i, j].tocoo()
+            B = self.get_block(i, j).tocoo()
             # get slice that contains all elements in current block
             idx = slice(nnz, nnz + B.nnz)
 
@@ -478,9 +478,9 @@ class BlockMatrix(BaseBlockMatrix):
                                         other_col_sizes[i]))
                     for k in range(self.bshape[1]):
                         if self._block_mask[i, k] and not other.is_empty_block(k, j):
-                            prod = self._blocks[i,k] * other[k, j]
+                            prod = self._blocks[i,k] * other.get_block(k, j)
                             accum = accum + prod
-                    result[i, j] = accum
+                    result.set_block(i, j, accum)
             return result
         elif isspmatrix(other):
             raise NotImplementedError('BlockMatrix multiply with spmatrix not supported')
@@ -520,7 +520,7 @@ class BlockMatrix(BaseBlockMatrix):
         for i in range(m):
             for j in range(n):
                 if not self.is_empty_block(i, j):
-                    mat[j, i] = self[i, j].transpose(copy=True)
+                    mat.set_block(j, i, self.get_block(i, j).transpose(copy=True))
         return mat
 
     def is_empty_block(self, idx, jdx):
@@ -591,13 +591,13 @@ class BlockMatrix(BaseBlockMatrix):
                 for i in range(m):
                     for j in range(n):
                         if not other.is_empty_block(i, j):
-                            self[i, j] = other[i, j].copy()
+                            self.set_block(i, j, other.get_block(i, j).copy())
                         else:
-                            self[i, j] = None
+                            self.set_block(i, j, None)
             else:
                 for i in range(m):
                     for j in range(n):
-                        self[i, j] = other[i, j]
+                        self.set_block(i, j, other.get_block(i, j))
 
         elif isspmatrix(other) or isinstance(other, np.ndarray):
             assert other.shape == self.shape, \
@@ -622,9 +622,9 @@ class BlockMatrix(BaseBlockMatrix):
                     mmm = mm[:, col_offsets[j]:col_offsets[j+1]]
 
                     if self.is_empty_block(i, j) and mmm.nnz == 0:
-                        self[i, j] = None
+                        self.set_block(i, j, None)
                     else:
-                        self[i, j] = mmm
+                        self.set_block(i, j, mmm)
 
         else:
             raise NotImplementedError("Format not supported")
@@ -655,14 +655,14 @@ class BlockMatrix(BaseBlockMatrix):
                 for i in range(m):
                     for j in range(n):
                         if self.is_empty_block(i, j):
-                            other[i, j] = None
+                            other.set_block(i, j, None)
                         else:
-                            other[i, j] = self[i, j].copy()
+                            other.set_block(i, j, self.get_block(i, j).copy())
             else:
                 m, n = self.bshape
                 for i in range(m):
                     for j in range(n):
-                        other[i, j] = self[i, j]
+                        other.set_block(i, j, self.get_block(i, j))
         elif isspmatrix(other) or isinstance(other, np.ndarray):
             assert other.shape == self.shape, \
                 'dimensions mismatch {} != {}'.format(self.shape, other.shape)
@@ -708,10 +708,10 @@ class BlockMatrix(BaseBlockMatrix):
         ii, jj = np.nonzero(self._block_mask)
         if deep:
             for i, j in zip(ii, jj):
-                result[i, j] = self._blocks[i, j].copy()
+                result.set_block(i, j, self._blocks[i, j].copy())
         else:
             for i, j in zip(ii, jj):
-                result[i, j] = self._blocks[i, j]
+                result.set_block(i, j, self._blocks[i, j])
         return result
 
     def copy_structure(self):
@@ -730,10 +730,10 @@ class BlockMatrix(BaseBlockMatrix):
         ii, jj = np.nonzero(self._block_mask)
         for i, j in zip(ii, jj):
             if isinstance(self._blocks[i, j], BlockMatrix):
-                result[i, j] = self._blocks[i, j].copy_structure()
+                result.set_block(i, j, self._blocks[i, j].copy_structure())
             else:
                 nrows, ncols = self._blocks[i, j].shape
-                result[i, j] = coo_matrix((nrows, ncols))
+                result.set_block(i, j, coo_matrix((nrows, ncols)))
         return result
 
     def __repr__(self):
@@ -747,31 +747,20 @@ class BlockMatrix(BaseBlockMatrix):
                 msg += '({}, {}): {}\n'.format(idx, jdx, repn)
         return msg
 
-    def __getitem__(self, item):
+    def get_block(self, row, col):
+        assert row >= 0 and col >= 0, 'indices must be positive'
+        assert row < self.bshape[0] and \
+               col < self.bshape[1], 'Indices out of range'
+        return self._blocks[row, col]
 
-        assert isinstance(item, tuple), 'Indices must be tuples (i,j)'
+    def set_block(self, row, col, value):
+        assert row >= 0 and col >= 0, 'Indices must be positive'
 
-        idx, jdx = item
-        assert idx >= 0 and jdx >= 0, 'indices must be positive'
-        assert idx < self.bshape[0] and \
-               jdx < self.bshape[1], 'Indices out of range'
-        return self._blocks[item]
-
-    def __setitem__(self, key, value):
-
-        assert not isinstance(key, slice), 'Slices not supported in BlockMatrix'
-        assert isinstance(key, tuple), 'Indices must be tuples (i,j)'
-
-        idx, jdx = key
-        assert idx >= 0 and \
-               jdx >= 0, 'Indices must be positive'
-
-        assert idx < self.bshape[0] and \
-               jdx < self.bshape[1], 'Indices out of range'
+        assert row < self.bshape[0] and col < self.bshape[1], 'Indices out of range'
 
         if value is None:
-            self._blocks[idx, jdx] = None
-            self._block_mask[idx, jdx] = False
+            self._blocks[row, col] = None
+            self._block_mask[row, col] = False
         else:
             if isinstance(value, BaseBlockMatrix):
                 assert_block_structure(value)
@@ -779,10 +768,16 @@ class BlockMatrix(BaseBlockMatrix):
                 assert isspmatrix(value), 'blocks need to be sparse matrices or BlockMatrices'
 
             nrows, ncols = value.shape
-            self.set_row_size(idx, nrows)
-            self.set_col_size(jdx, ncols)
-            self._blocks[idx, jdx] = value
-            self._block_mask[idx, jdx] = True
+            self.set_row_size(row, nrows)
+            self.set_col_size(col, ncols)
+            self._blocks[row, col] = value
+            self._block_mask[row, col] = True
+
+    def __getitem__(self, item):
+        raise NotImplementedError('BlockMatrix does not support __getitem__.')
+
+    def __setitem__(self, item):
+        raise NotImplementedError('BlockMatrix does not support __setitem__.')
 
     def __add__(self, other):
 
@@ -801,11 +796,11 @@ class BlockMatrix(BaseBlockMatrix):
             iterator.update(zip(*np.nonzero(other._block_mask)))
             for i, j in iterator:
                 if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
-                    result[i, j] = self._blocks[i, j] + other[i, j]
+                    result.set_block(i, j, self._blocks[i, j] + other.get_block(i, j))
                 elif not self.is_empty_block(i, j):
-                    result[i, j] = self._blocks[i, j].copy()
+                    result.set_block(i, j, self._blocks[i, j].copy())
                 elif not other.is_empty_block(i, j):
-                    result[i, j] = other[i, j].copy()
+                    result.set_block(i, j, other.get_block(i, j).copy())
             return result
         elif isspmatrix(other):
             # Note: this is not efficient but is just for flexibility.
@@ -836,11 +831,11 @@ class BlockMatrix(BaseBlockMatrix):
             iterator.update(zip(*np.nonzero(other._block_mask)))
             for i, j in iterator:
                 if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
-                    result[i, j] = self._blocks[i, j] - other[i, j]
+                    result.set_block(i, j, self._blocks[i, j] - other.get_block(i, j))
                 elif not self.is_empty_block(i, j):
-                    result[i, j] = self._blocks[i, j].copy()
+                    result.set_block(i, j, self._blocks[i, j].copy())
                 elif not other.is_empty_block(i, j):
-                    result[i, j] = -other[i, j]
+                    result.set_block(i, j, -other.get_block(i, j))
             return result
         elif isspmatrix(other):
             # Note: this is not efficient but is just for flexibility.
@@ -870,7 +865,7 @@ class BlockMatrix(BaseBlockMatrix):
             result = BlockMatrix(bm, bn)
             ii, jj = np.nonzero(self._block_mask)
             for i, j in zip(ii, jj):
-                result[i, j] = self._blocks[i, j] * other
+                result.set_block(i, j, self._blocks[i, j] * other)
             return result
         elif isinstance(other, BlockVector):
             assert bn == other.bshape[0], 'Dimension mismatch'
@@ -881,12 +876,13 @@ class BlockMatrix(BaseBlockMatrix):
             nblocks = self.bshape[0]
             result = BlockVector(nblocks)
             for i in range(bm):
-                result[i] = np.zeros(self._brow_lengths[i])
+                result.set_block(i, np.zeros(self._brow_lengths[i]))
                 for j in range(bn):
                     if not self.is_empty_block(i, j):
-                        x = other[j]
+                        x = other.get_block(j)
                         A = self._blocks[i, j]
-                        result[i] += A * x
+                        blk = result.get_block(i)
+                        blk += A * x
             return result
         elif isinstance(other, np.ndarray):
 
@@ -901,13 +897,14 @@ class BlockMatrix(BaseBlockMatrix):
             nblocks = self.bshape[0]
             result = BlockVector(nblocks)
             for i in range(bm):
-                result[i] = np.zeros(self._brow_lengths[i])
+                result.set_block(i, np.zeros(self._brow_lengths[i]))
                 counter = 0
                 for j in range(bn):
                     if not self.is_empty_block(i, j):
                         A = self._blocks[i, j]
                         x = other[counter: counter + A.shape[1]]
-                        result[i] += A * x
+                        blk = result.get_block(i)
+                        blk += A * x
                         counter += A.shape[0]
             return result
         elif isinstance(other, BlockMatrix) or isspmatrix(other):
@@ -922,7 +919,7 @@ class BlockMatrix(BaseBlockMatrix):
             result = BlockMatrix(bm, bn)
             ii, jj = np.nonzero(self._block_mask)
             for i, j in zip(ii, jj):
-                result[i, j] = self._blocks[i, j] / other
+                result.set_block(i, j, self._blocks[i, j] / other)
             return result
         raise NotImplementedError('Operation not supported by BlockMatrix')
 
@@ -935,7 +932,7 @@ class BlockMatrix(BaseBlockMatrix):
             result = BlockMatrix(bm, bn)
             ii, jj = np.nonzero(self._block_mask)
             for i, j in zip(ii, jj):
-                result[i, j] = self._blocks[i, j] * other
+                result.set_block(i, j, self._blocks[i, j] * other)
             return result
         elif isspmatrix(other):
             raise NotImplementedError('sparse matrix times block matrix is not supported.')
@@ -949,7 +946,7 @@ class BlockMatrix(BaseBlockMatrix):
         res = BlockMatrix(*self.bshape)
         ii, jj = np.nonzero(self._block_mask)
         for i, j in zip(ii, jj):
-            res[i, j] = abs(self._blocks[i, j])
+            res.set_block(i, j, abs(self._blocks[i, j]))
         return res
 
     def __iadd__(self, other):
@@ -964,9 +961,9 @@ class BlockMatrix(BaseBlockMatrix):
             iterator.update(zip(*np.nonzero(other._block_mask)))
             for i, j in iterator:
                 if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
-                    self[i, j] += other[i, j]
+                    self._blocks[i, j] += other.get_block(i, j)
                 elif not other.is_empty_block(i, j):
-                    self[i, j] = other[i, j].copy()
+                    self.set_block(i, j, other.get_block(i, j).copy())
             return self
         elif isspmatrix(other):
             # Note: this is not efficient but is just for flexibility.
@@ -988,9 +985,9 @@ class BlockMatrix(BaseBlockMatrix):
             iterator.update(zip(*np.nonzero(other._block_mask)))
             for i, j in iterator:
                 if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
-                    self[i, j] -= other[i, j]
+                    self._blocks[i, j] -= other.get_block(i, j)
                 elif not other.is_empty_block(i, j):
-                    self[i, j] = -other[i, j]  # the copy happens in __neg__ of other[i, j]
+                    self.set_block(i, j, -other.get_block(i, j))  # the copy happens in __neg__ of other.get_block(i, j)
             return self
         elif isspmatrix(other):
             # Note: this is not efficient but is just for flexibility.
@@ -1023,7 +1020,7 @@ class BlockMatrix(BaseBlockMatrix):
         res = BlockMatrix(*self.bshape)
         ii, jj = np.nonzero(self._block_mask)
         for i, j in zip(ii, jj):
-            res[i, j] = -self._blocks[i, j]
+            res.set_block(i, j, -self._blocks[i, j])
         return res
 
     def _comparison_helper(self, operation, other):
@@ -1034,17 +1031,17 @@ class BlockMatrix(BaseBlockMatrix):
             for i in range(m):
                 for j in range(n):
                     if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
-                        result[i, j] = operation(self._blocks[i, j], other[i, j])
+                        result.set_block(i, j, operation(self._blocks[i, j], other.get_block(i, j)))
                     else:
                         nrows = self._brow_lengths[i]
                         ncols = self._bcol_lengths[j]
                         mat = coo_matrix((nrows, ncols))
                         if not self.is_empty_block(i, j):
-                            result[i, j] = operation(self._blocks[i, j], mat)
+                            result.set_block(i, j, operation(self._blocks[i, j], mat))
                         elif not other.is_empty_block(i, j):
-                            result[i, j] = operation(mat, other[i, j])
+                            result.set_block(i, j, operation(mat, other.get_block(i, j)))
                         else:
-                            result[i, j] = operation(mat, mat)
+                            result.set_block(i, j, operation(mat, mat))
             return result
         elif isinstance(other, BlockMatrix) or isspmatrix(other):
             if isinstance(other, BlockMatrix):
@@ -1056,12 +1053,12 @@ class BlockMatrix(BaseBlockMatrix):
             for i in range(m):
                 for j in range(n):
                     if not self.is_empty_block(i, j):
-                        result[i, j] = operation(self._blocks[i, j], other)
+                        result.set_block(i, j, operation(self._blocks[i, j], other))
                     else:
                         nrows = self._brow_lengths[i]
                         ncols = self._bcol_lengths[j]
                         matc = coo_matrix((nrows, ncols))
-                        result[i, j] = operation(matc, other)
+                        result.set_block(i, j, operation(matc, other))
             return result
         else:
             if other.__class__.__name__ == 'MPIBlockMatrix':
@@ -1202,7 +1199,7 @@ class BlockMatrix(BaseBlockMatrix):
         # build block vector
         result = BlockVector(bm)
         for i in range(bm):
-            mat = self[i, bcol]
+            mat = self.get_block(i, bcol)
             if self.is_empty_block(i, bcol):
                 v = np.zeros(self._brow_lengths[i])
             elif isinstance(mat, BaseBlockMatrix):
@@ -1211,7 +1208,7 @@ class BlockMatrix(BaseBlockMatrix):
             else:
                 # if it is sparse matrix transform array to vector
                 v = mat.getcol(j-offset).toarray().flatten()
-            result[i] = v
+            result.set_block(i, v)
         return result
 
     def getrow(self, i):
@@ -1245,7 +1242,7 @@ class BlockMatrix(BaseBlockMatrix):
         # build block vector
         result = BlockVector(bn)
         for j in range(bn):
-            mat = self[brow, j]
+            mat = self.get_block(brow, j)
             if self.is_empty_block(brow, j):
                 v = np.zeros(self._bcol_lengths[j])
             elif isinstance(mat, BaseBlockMatrix):
@@ -1254,7 +1251,7 @@ class BlockMatrix(BaseBlockMatrix):
             else:
                 # if it is sparse matrix transform array to vector
                 v = mat.getcol(i-offset).toarray().flatten()
-            result[j] = v
+            result.set_block(j, v)
         return result
 
     def toMPIBlockMatrix(self, rank_ownership, mpi_comm):
@@ -1286,6 +1283,6 @@ class BlockMatrix(BaseBlockMatrix):
 
         # populate matrix
         rank = mpi_comm.Get_rank()
-        for ij in mat.owned_blocks:
-            mat[ij] = self[ij]
+        for i, j in mat.owned_blocks:
+            mat.set_block(i, j, self.get_block(i, j))
         return mat

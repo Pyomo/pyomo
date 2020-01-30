@@ -85,7 +85,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
         if isinstance(vectors, list):
             for idx, blk in enumerate(vectors):
-                obj[idx] = blk
+                obj.set_block(idx, blk)
 
         return obj
 
@@ -161,8 +161,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
         if isinstance(x, BlockVector):
             v = BlockVector(x.nblocks)
             for i in range(x.nblocks):
-                _args = [x[i]] + [args[j] for j in range(1, len(args))]
-                v[i] = self._unary_operation(ufunc, method, *_args, **kwargs)
+                _args = [x.get_block(i)] + [args[j] for j in range(1, len(args))]
+                v.set_block(i, self._unary_operation(ufunc, method, *_args, **kwargs))
             return v
         elif type(x) == np.ndarray:
             return super(BlockVector, self).__array_ufunc__(ufunc, method,
@@ -185,8 +185,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             res = BlockVector(x1.nblocks)
 
             for i in range(x1.nblocks):
-                _args = [x1[i]] + [x2[i]] + [args[j] for j in range(2, len(args))]
-                res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
+                _args = [x1.get_block(i)] + [x2.get_block(i)] + [args[j] for j in range(2, len(args))]
+                res.set_block(i, self._binary_operation(ufunc, method, *_args, **kwargs))
             return res
         elif type(x1)==np.ndarray and isinstance(x2, BlockVector):
             assert_block_structure(x2)
@@ -196,8 +196,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for i in range(x2.nblocks):
                 nelements = x2._brow_lengths[i]
-                _args = [x1[accum: accum + nelements]] + [x2[i]] + [args[j] for j in range(2, len(args))]
-                res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
+                _args = [x1[accum: accum + nelements]] + [x2.get_block(i)] + [args[j] for j in range(2, len(args))]
+                res.set_block(i, self._binary_operation(ufunc, method, *_args, **kwargs))
                 accum += nelements
             return res
         elif type(x2)==np.ndarray and isinstance(x1, BlockVector):
@@ -208,23 +208,23 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for i in range(x1.nblocks):
                 nelements = x1._brow_lengths[i]
-                _args = [x1[i]] + [x2[accum: accum + nelements]] + [args[j] for j in range(2, len(args))]
-                res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
+                _args = [x1.get_block(i)] + [x2[accum: accum + nelements]] + [args[j] for j in range(2, len(args))]
+                res.set_block(i, self._binary_operation(ufunc, method, *_args, **kwargs))
                 accum += nelements
             return res
         elif np.isscalar(x1) and isinstance(x2, BlockVector):
             assert_block_structure(x2)
             res = BlockVector(x2.nblocks)
             for i in range(x2.nblocks):
-                _args = [x1] + [x2[i]] + [args[j] for j in range(2, len(args))]
-                res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
+                _args = [x1] + [x2.get_block(i)] + [args[j] for j in range(2, len(args))]
+                res.set_block(i, self._binary_operation(ufunc, method, *_args, **kwargs))
             return res
         elif np.isscalar(x2) and isinstance(x1, BlockVector):
             assert_block_structure(x1)
             res = BlockVector(x1.nblocks)
             for i in range(x1.nblocks):
-                _args = [x1[i]] + [x2] + [args[j] for j in range(2, len(args))]
-                res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
+                _args = [x1.get_block(i)] + [x2] + [args[j] for j in range(2, len(args))]
+                res.set_block(i, self._binary_operation(ufunc, method, *_args, **kwargs))
             return res
         elif (type(x1)==np.ndarray or np.isscalar(x1)) and (type(x2)==np.ndarray or np.isscalar(x2)):
             return super(BlockVector, self).__array_ufunc__(ufunc, method,
@@ -312,7 +312,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             assert self.nblocks == other.nblocks, \
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
-            return sum(self[i].dot(other[i]) for i in range(self.nblocks))
+            return sum(self.get_block(i).dot(other.get_block(i)) for i in range(self.nblocks))
         elif type(other)==np.ndarray:
             bv = self.flatten()
             return bv.dot(other)
@@ -326,7 +326,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         Returns the sum of all entries in this BlockVector
         """
         assert_block_structure(self)
-        results = np.array([self[i].sum() for i in range(self.nblocks)])
+        results = np.array([self.get_block(i).sum() for i in range(self.nblocks)])
         return results.sum(axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     def all(self, axis=None, out=None, keepdims=False):
@@ -334,7 +334,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         Returns True if all elements evaluate to True.
         """
         assert_block_structure(self)
-        results = np.array([self[i].all() for i in range(self.nblocks)],
+        results = np.array([self.get_block(i).all() for i in range(self.nblocks)],
                             dtype=np.bool)
         return results.all(axis=axis, out=out, keepdims=keepdims)
 
@@ -343,7 +343,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         Returns True if any element evaluate to True.
         """
         assert_block_structure(self)
-        results = np.array([self[i].any() for i in range(self.nblocks)],
+        results = np.array([self.get_block(i).any() for i in range(self.nblocks)],
                             dtype=np.bool)
         return results.any(axis=axis, out=out, keepdims=keepdims)
 
@@ -352,7 +352,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         Returns the largest value stored in this BlockVector
         """
         assert_block_structure(self)
-        results = np.array([self[i].max() for i in range(self.nblocks) if self[i].size > 0])
+        results = np.array([self.get_block(i).max() for i in range(self.nblocks) if self.get_block(i).size > 0])
         return results.max(axis=axis, out=out, keepdims=keepdims)
 
     def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True):
@@ -361,11 +361,11 @@ class BlockVector(np.ndarray, BaseBlockVector):
             bv = BlockVector(self.nblocks)
             for bid, vv in enumerate(self):
                 if bid not in self._undefined_brows:
-                    bv[bid] = vv.astype(dtype,
-                                        order=order,
-                                        casting=casting,
-                                        subok=subok,
-                                        copy=copy)
+                    bv.set_block(bid, vv.astype(dtype,
+                                                order=order,
+                                                casting=casting,
+                                                subok=subok,
+                                                copy=copy))
             return bv
         raise NotImplementedError("astype not implemented for copy=False")
 
@@ -391,7 +391,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
         bv = BlockVector(self.nblocks)
         for bid in range(self.nblocks):
-            bv[bid] = self[bid].clip(min=min, max=max, out=None)
+            bv.set_block(bid, self.get_block(bid).clip(min=min, max=max, out=None))
         return bv
 
     def compress(self, condition, axis=None, out=None):
@@ -420,7 +420,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             condition.nblocks)
             for idx in range(self.nblocks):
-                result[idx] = self[idx].compress(condition[idx])
+                result.set_block(idx, self.get_block(idx).compress(condition.get_block(idx)))
             return result
         elif type(condition)==np.ndarray:
             assert self.shape == condition.shape, \
@@ -429,7 +429,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx in range(self.nblocks):
                 nelements = self._brow_lengths[idx]
-                result[idx] = self[idx].compress(condition[accum: accum + nelements])
+                result.set_block(idx, self.get_block(idx).compress(condition[accum: accum + nelements]))
                 accum += nelements
             return result
         else:
@@ -444,7 +444,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         result = BlockVector(self.nblocks)
         for idx in range(self.nblocks):
-            result[idx] = self[idx].conj()
+            result.set_block(idx, self.get_block(idx).conj())
         return result
 
     def conjugate(self):
@@ -454,7 +454,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         result = BlockVector(self.nblocks)
         for idx in range(self.nblocks):
-            result[idx] = self[idx].conjugate()
+            result.set_block(idx, self.get_block(idx).conjugate())
         return result
 
     def nonzero(self):
@@ -464,7 +464,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         result = BlockVector(self.nblocks)
         for idx in range(self.nblocks):
-            result[idx] = self[idx].nonzero()[0]
+            result.set_block(idx, self.get_block(idx).nonzero()[0])
         return (result,)
 
     def ptp(self, axis=None, out=None, keepdims=False):
@@ -483,7 +483,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert out is None, 'Out keyword not supported'
         result = BlockVector(self.nblocks)
         for idx in range(self.nblocks):
-            result[idx] = self[idx].round(decimals=decimals)
+            result.set_block(idx, self.get_block(idx).round(decimals=decimals))
         return result
 
     def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
@@ -509,7 +509,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         Returns the smallest value stored in the vector
         """
         assert_block_structure(self)
-        results = np.array([self[i].min() for i in range(self.nblocks)])
+        results = np.array([self.get_block(i).min() for i in range(self.nblocks)])
         return results.min(axis=axis, out=out, keepdims=keepdims)
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):
@@ -526,7 +526,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         Returns the product of all entries in this BlockVector
         """
         assert_block_structure(self)
-        results = np.array([self[i].prod() for i in range(self.nblocks)])
+        results = np.array([self.get_block(i).prod() for i in range(self.nblocks)])
         return results.prod(axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     def fill(self, value):
@@ -545,7 +545,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         assert_block_structure(self)
         for i in range(self.nblocks):
-            self[i].fill(value)
+            self.get_block(i).fill(value)
 
     def tolist(self):
         """
@@ -574,7 +574,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
         """
         assert_block_structure(self)
-        all_blocks = tuple(self[i].flatten(order=order) for i in range(self.nblocks))
+        all_blocks = tuple(self.get_block(i).flatten(order=order) for i in range(self.nblocks))
         return np.concatenate(all_blocks)
 
     def ravel(self, order='C'):
@@ -593,7 +593,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
         """
         assert_block_structure(self)
-        all_blocks = tuple(self[i].ravel(order=order) for i in range(self.nblocks))
+        all_blocks = tuple(self.get_block(i).ravel(order=order) for i in range(self.nblocks))
         return np.concatenate(all_blocks)
 
     def cumprod(self, axis=None, dtype=None, out=None):
@@ -634,9 +634,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         for idx in range(self.nblocks):
             if idx not in self._undefined_brows:
                 if copy:
-                    result[idx] = self[idx].copy()
+                    result.set_block(idx, self.get_block(idx).copy())
                 else:
-                    result[idx] = self[idx]
+                    result.set_block(idx, self.get_block(idx))
         if value is not None:
             result.fill(value)
         return result
@@ -663,23 +663,23 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx in range(other.nblocks):
-                if isinstance(self[idx], BlockVector):
-                    self[idx].copyfrom(other[idx])
-                elif isinstance(self[idx], np.ndarray):
-                    if isinstance(other[idx], BlockVector):
-                        self[idx] = other[idx].copy()
-                    elif isinstance(other[idx], np.ndarray):
-                        np.copyto(self[idx], other[idx])
+                if isinstance(self.get_block(idx), BlockVector):
+                    self.get_block(idx).copyfrom(other.get_block(idx))
+                elif isinstance(self.get_block(idx), np.ndarray):
+                    if isinstance(other.get_block(idx), BlockVector):
+                        self.set_block(idx, other.get_block(idx).copy())
+                    elif isinstance(other.get_block(idx), np.ndarray):
+                        np.copyto(self.get_block(idx), other.get_block(idx))
                     elif blk is None:
-                        self[idx] = None
+                        self.set_block(idx, None)
                     else:
                         raise RuntimeError('Input not recognized')
-                elif self[idx] is None:
-                    if isinstance(other[idx], np.ndarray):
+                elif self.get_block(idx) is None:
+                    if isinstance(other.get_block(idx), np.ndarray):
                         # this inlcude block vectors too
-                        self[idx] = other[idx].copy()
+                        self.set_block(idx, other.get_block(idx).copy())
                     elif blk is None:
-                        self[idx] = None
+                        self.set_block(idx, None)
                     else:
                         raise RuntimeError('Input not recognized')
                 else:
@@ -692,12 +692,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
             offset = 0
             for idx in range(self.nblocks):
-                subarray = other[offset: offset + self[idx].size]
-                if isinstance(self[idx], BlockVector):
-                    self[idx].copyfrom(subarray)
+                subarray = other[offset: offset + self.get_block(idx).size]
+                if isinstance(self.get_block(idx), BlockVector):
+                    self.get_block(idx).copyfrom(subarray)
                 else:
-                    np.copyto(self[idx], subarray)
-                offset += self[idx].size
+                    np.copyto(self.get_block(idx), subarray)
+                offset += self.get_block(idx).size
         else:
             raise NotImplementedError()
 
@@ -720,18 +720,18 @@ class BlockVector(np.ndarray, BaseBlockVector):
                                                                other.nblocks)
             assert self.nblocks == other.nblocks, msgj
             for idx in range(self.nblocks):
-                if isinstance(other[idx], BlockVector):
-                    other[idx].copyfrom(self[idx])
-                elif isinstance(other[idx], np.ndarray):
-                    if self[idx] is not None:
-                        np.copyto(other[idx], self[idx].flatten())
+                if isinstance(other.get_block(idx), BlockVector):
+                    other.get_block(idx).copyfrom(self.get_block(idx))
+                elif isinstance(other.get_block(idx), np.ndarray):
+                    if self.get_block(idx) is not None:
+                        np.copyto(other.get_block(idx), self.get_block(idx).flatten())
                     else:
-                        other[idx] = None
-                elif other[idx] is None:
-                    if self[idx] is not None:
-                        other[idx] = self[idx].copy()
+                        other.set_block(idx, None)
+                elif other.get_block(idx) is None:
+                    if self.get_block(idx) is not None:
+                        other.set_block(idx, self.get_block(idx).copy())
                     else:
-                        other[idx] = None
+                        other.set_block(idx, None)
                 else:
                     raise RuntimeError('Should never get here')
 
@@ -747,7 +747,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         bv = BlockVector(self.nblocks)
         for bid in range(self.nblocks):
             if bid not in self._undefined_brows:
-                bv[bid] = self[bid].copy(order=order)
+                bv.set_block(bid, self.get_block(bid).copy(order=order))
         return bv
 
     def copy_structure(self):
@@ -756,11 +756,11 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         bv = BlockVector(self.nblocks)
         for bid in range(self.nblocks):
-            if self[bid] is not None:
-                if isinstance(self[bid], BlockVector):
-                    bv[bid] = self[bid].copy_structure()
-                elif type(self[bid]) == np.ndarray:
-                    bv[bid] = np.zeros(self[bid].size, dtype=self[bid].dtype)
+            if self.get_block(bid) is not None:
+                if isinstance(self.get_block(bid), BlockVector):
+                    bv.set_block(bid, self.get_block(bid).copy_structure())
+                elif type(self.get_block(bid)) == np.ndarray:
+                    bv.set_block(bid, np.zeros(self.get_block(bid).size, dtype=self.get_block(bid).dtype))
                 else:
                     raise NotImplementedError('Should never get here')
         return bv
@@ -785,7 +785,11 @@ class BlockVector(np.ndarray, BaseBlockVector):
             'More blocks passed than allocated {} != {}'.format(len(blocks),
                                                                 self.nblocks)
         for idx, blk in enumerate(blocks):
-            self[idx] = blk
+            self.set_block(idx, blk)
+
+    def __iter__(self):
+        for ndx in range(self._nblocks):
+            yield self.get_block(ndx)
 
     def __add__(self, other):
         # add this BlockVector with other vector
@@ -801,7 +805,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                result[idx] = blk + other[idx]
+                result.set_block(idx, blk + other.get_block(idx))
             return result
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -809,12 +813,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk + other[accum: accum + nelements]
+                result.set_block(idx, blk + other[accum: accum + nelements])
                 accum += nelements
             return result
         elif np.isscalar(other):
             for idx, blk in enumerate(self):
-                result[idx] = blk + other
+                result.set_block(idx, blk + other)
             return result
         else:
             if other.__class__.__name__ == 'MPIBlockVector':
@@ -838,7 +842,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                result[idx] = blk - other[idx]
+                result.set_block(idx, blk - other.get_block(idx))
             return result
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -846,12 +850,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk - other[accum: accum + nelements]
+                result.set_block(idx, blk - other[accum: accum + nelements])
                 accum += nelements
             return result
         elif np.isscalar(other):
             for idx, blk in enumerate(self):
-                result[idx] = blk - other
+                result.set_block(idx, blk - other)
             return result
         else:
             if other.__class__.__name__ == 'MPIBlockVector':
@@ -870,7 +874,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                result[idx] = other[idx] - blk
+                result.set_block(idx, other.get_block(idx) - blk)
             return result
 
         elif type(other)==np.ndarray:
@@ -879,12 +883,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = other[accum: accum + nelements] - blk
+                result.set_block(idx, other[accum: accum + nelements] - blk)
                 accum += nelements
             return result
         elif np.isscalar(other):
             for idx, blk in enumerate(self):
-                result[idx] = other - blk
+                result.set_block(idx, other - blk)
             return result
         else:
             if other.__class__.__name__ == 'MPIBlockVector':
@@ -905,7 +909,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                result[idx] = blk .__mul__(other[idx])
+                result.set_block(idx, blk .__mul__(other.get_block(idx)))
             return result
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -913,12 +917,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk.__mul__(other[accum: accum + nelements])
+                result.set_block(idx, blk.__mul__(other[accum: accum + nelements]))
                 accum += nelements
             return result
         elif np.isscalar(other):
             for idx, blk in enumerate(self):
-                result[idx] = blk.__mul__(other)
+                result.set_block(idx, blk.__mul__(other))
             return result
         else:
             if other.__class__.__name__ == 'MPIBlockVector':
@@ -942,7 +946,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                result[idx] = blk / other[idx]
+                result.set_block(idx, blk / other.get_block(idx))
             return result
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -950,12 +954,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk / other[accum: accum + nelements]
+                result.set_block(idx, blk / other[accum: accum + nelements])
                 accum += nelements
             return result
         elif np.isscalar(other):
             for idx, blk in enumerate(self):
-                result[idx] = blk / other
+                result.set_block(idx, blk / other)
             return result
         else:
             if other.__class__.__name__ == 'MPIBlockVector':
@@ -973,7 +977,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                result[idx] = other[idx] / blk
+                result.set_block(idx, other.get_block(idx) / blk)
             return result
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -981,12 +985,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = other[accum: accum + nelements] / blk
+                result.set_block(idx, other[accum: accum + nelements] / blk)
                 accum += nelements
             return result
         elif np.isscalar(other):
             for idx, blk in enumerate(self):
-                result[idx] = other / blk
+                result.set_block(idx, other / blk)
             return result
         else:
             if other.__class__.__name__ == 'MPIBlockVector':
@@ -1004,7 +1008,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                result[idx] = blk // other[idx]
+                result.set_block(idx, blk // other.get_block(idx))
             return result
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -1012,12 +1016,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk // other[accum: accum + nelements]
+                result.set_block(idx, blk // other[accum: accum + nelements])
                 accum += nelements
             return result
         elif np.isscalar(other):
             for idx, blk in enumerate(self):
-                result[idx] = blk // other
+                result.set_block(idx, blk // other)
             return result
         else:
             if other.__class__.__name__ == 'MPIBlockVector':
@@ -1035,7 +1039,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                result[idx] = other[idx] // blk
+                result.set_block(idx, other.get_block(idx) // blk)
             return result
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -1043,12 +1047,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = other[accum: accum + nelements] // blk
+                result.set_block(idx, other[accum: accum + nelements] // blk)
                 accum += nelements
             return result
         elif np.isscalar(other):
             for idx, blk in enumerate(self):
-                result[idx] = other // blk
+                result.set_block(idx, other // blk)
             return result
         else:
             if other.__class__.__name__ == 'MPIBlockVector':
@@ -1061,7 +1065,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         if np.isscalar(other):
             for idx, blk in enumerate(self):
-                self[idx] += other # maybe it suffice with doing self[idx] = self[idf] + other
+                blk += other
             return self
         elif isinstance(other, BlockVector):
             assert_block_structure(other)
@@ -1071,7 +1075,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                self[idx] += other[idx]
+                blk += other.get_block(idx)
             return self
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -1079,7 +1083,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                self[idx] += other[accum: accum + nelements]
+                blk += other[accum: accum + nelements]
                 accum += nelements
             return self
         else:
@@ -1091,7 +1095,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         if np.isscalar(other):
             for idx, blk in enumerate(self):
-                self[idx] -= other
+                blk -= other
             return self
         elif isinstance(other, BlockVector):
             assert_block_structure(other)
@@ -1101,7 +1105,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                self[idx] -= other[idx]
+                blk -= other.get_block(idx)
             return self
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -1109,7 +1113,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                self[idx] -= other[accum: accum + nelements]
+                blk -= other[accum: accum + nelements]
                 accum += nelements
             return self
         else:
@@ -1121,7 +1125,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         if np.isscalar(other):
             for idx, blk in enumerate(self):
-                self[idx] *= other
+                blk *= other
             return self
         elif isinstance(other, BlockVector):
             assert_block_structure(other)
@@ -1131,7 +1135,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                self[idx] *= other[idx]
+                blk *= other.get_block(idx)
             return self
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -1139,7 +1143,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                self[idx] *= other[accum: accum + nelements]
+                blk *= other[accum: accum + nelements]
                 accum += nelements
             return self
         else:
@@ -1151,7 +1155,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         if np.isscalar(other):
             for idx, blk in enumerate(self):
-                self[idx] /= other
+                blk /= other
             return self
         elif isinstance(other, BlockVector):
             assert_block_structure(other)
@@ -1161,7 +1165,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 'Number of blocks mismatch {} != {}'.format(self.nblocks,
                                                             other.nblocks)
             for idx, blk in enumerate(self):
-                self[idx] /= other[idx]
+                blk /= other.get_block(idx)
             return self
         elif type(other)==np.ndarray:
             assert self.shape == other.shape, \
@@ -1169,7 +1173,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                self[idx] /= other[accum: accum + nelements]
+                blk /= other[accum: accum + nelements]
                 accum += nelements
             return self
         else:
@@ -1178,10 +1182,10 @@ class BlockVector(np.ndarray, BaseBlockVector):
     def __str__(self):
         msg = ''
         for idx in range(self.bshape[0]):
-            if isinstance(self[idx], BlockVector):
-                repn = self[idx].__repr__()
+            if isinstance(self.get_block(idx), BlockVector):
+                repn = self.get_block(idx).__repr__()
                 repn += '\n'
-                for j, vv in enumerate(self[idx]):
+                for j, vv in enumerate(self.get_block(idx)):
                     if isinstance(vv, BlockVector):
                         repn += '   {}: {}\n'.format(j, vv.__repr__())
                         repn += '\n'
@@ -1192,9 +1196,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
                                 repn += '      {}: array({})\n'.format(jj, vvv.size)
                     else:
                         repn += '   {}: array({})\n'.format(j, vv.size)
-            elif isinstance(self[idx], np.ndarray):
-                repn = "array({})".format(self[idx].size)
-            elif self[idx] is None:
+            elif isinstance(self.get_block(idx), np.ndarray):
+                repn = "array({})".format(self.get_block(idx).size)
+            elif self.get_block(idx) is None:
                 repn = None
             else:
                 raise NotImplementedError("Should not get here")
@@ -1204,13 +1208,11 @@ class BlockVector(np.ndarray, BaseBlockVector):
     def __repr__(self):
         return '{}{}'.format(self.__class__.__name__, self.bshape)
 
-    def __getitem__(self, item):
+    def get_block(self, key):
+        assert not isinstance(key, slice), 'Slicing not supported for BlockVector'
+        return super(BlockVector, self).__getitem__(key)
 
-        assert not isinstance(item, slice), 'Slicing not supported for BlockVector'
-        return super(BlockVector, self).__getitem__(item)
-
-    def __setitem__(self, key, value):
-
+    def set_block(self, key, value):
         assert not isinstance(key, slice), 'Slicing not supported for BlockVector'
         assert -self.nblocks < key < self.nblocks, 'out of range'
         assert isinstance(value, np.ndarray) or \
@@ -1232,6 +1234,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
         super(BlockVector, self).__setitem__(key, value)
 
+    def __getitem__(self, item):
+        raise NotImplementedError('BlockVector does not support __getitem__.')
+
+    def __setitem__(self, key, value):
+        raise NotImplementedError('BlockVector does not support __setitem__.')
+
     def __le__(self, other):
         # elementwise less_equal this BlockVector with other vector
         # supports less_equal with scalar, numpy.ndarray and BlockVectors
@@ -1239,7 +1247,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         if isinstance(other, BlockVector):
             assert_block_structure(other)
-            flags = [vv.__le__(other[bid]) for bid, vv in enumerate(self)]
+            flags = [vv.__le__(other.get_block(bid)) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
         elif type(other)==np.ndarray:
@@ -1249,7 +1257,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk.__le__(other[accum: accum + nelements])
+                result.set_block(idx, blk.__le__(other[accum: accum + nelements]))
                 accum += nelements
             return result
         elif np.isscalar(other):
@@ -1268,7 +1276,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         if isinstance(other, BlockVector):
             assert_block_structure(other)
-            flags = [vv.__lt__(other[bid]) for bid, vv in enumerate(self)]
+            flags = [vv.__lt__(other.get_block(bid)) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
         elif type(other)==np.ndarray:
@@ -1278,7 +1286,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk.__lt__(other[accum: accum + nelements])
+                result.set_block(idx, blk.__lt__(other[accum: accum + nelements]))
                 accum += nelements
             return result
         elif np.isscalar(other):
@@ -1297,7 +1305,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         if isinstance(other, BlockVector):
             assert_block_structure(other)
-            flags = [vv.__ge__(other[bid]) for bid, vv in enumerate(self)]
+            flags = [vv.__ge__(other.get_block(bid)) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
         elif type(other)==np.ndarray:
@@ -1307,7 +1315,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk.__ge__(other[accum: accum + nelements])
+                result.set_block(idx, blk.__ge__(other[accum: accum + nelements]))
                 accum += nelements
             return result
         elif np.isscalar(other):
@@ -1326,7 +1334,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         if isinstance(other, BlockVector):
             assert_block_structure(other)
-            flags = [vv.__gt__(other[bid]) for bid, vv in enumerate(self)]
+            flags = [vv.__gt__(other.get_block(bid)) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
         elif type(other)==np.ndarray:
@@ -1336,7 +1344,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk.__gt__(other[accum: accum + nelements])
+                result.set_block(idx, blk.__gt__(other[accum: accum + nelements]))
                 accum += nelements
             return result
         elif np.isscalar(other):
@@ -1355,7 +1363,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         if isinstance(other, BlockVector):
             assert_block_structure(other)
-            flags = [vv.__eq__(other[bid]) for bid, vv in enumerate(self)]
+            flags = [vv.__eq__(other.get_block(bid)) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
         elif type(other)==np.ndarray:
@@ -1365,7 +1373,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk.__eq__(other[accum: accum + nelements])
+                result.set_block(idx, blk.__eq__(other[accum: accum + nelements]))
                 accum += nelements
             return result
         elif np.isscalar(other):
@@ -1384,7 +1392,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         if isinstance(other, BlockVector):
             assert_block_structure(other)
-            flags = [vv.__ne__(other[bid]) for bid, vv in enumerate(self)]
+            flags = [vv.__ne__(other.get_block(bid)) for bid, vv in enumerate(self)]
             bv = BlockVector(flags)
             return bv
         elif type(other)==np.ndarray:
@@ -1394,7 +1402,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for idx, blk in enumerate(self):
                 nelements = self._brow_lengths[idx]
-                result[idx] = blk.__ne__(other[accum: accum + nelements])
+                result.set_block(idx, blk.__ne__(other[accum: accum + nelements]))
                 accum += nelements
             return result
         elif np.isscalar(other):
@@ -1411,7 +1419,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         assert_block_structure(self)
         bv = BlockVector(self.nblocks)
         for bid in range(self.nblocks):
-            bv[bid] = self[bid].__neg__()
+            bv.set_block(bid, self.get_block(bid).__neg__())
         return bv
 
     def __contains__(self, item):
@@ -1466,7 +1474,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
         # populate blocks in the right spaces
         for bid in mpi_bv.owned_blocks:
-            mpi_bv[bid] = self[bid]
+            mpi_bv.set_block(bid, self.get_block(bid))
 
         return mpi_bv
 
