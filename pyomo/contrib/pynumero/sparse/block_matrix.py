@@ -960,14 +960,13 @@ class BlockMatrix(BaseBlockMatrix):
             assert other.shape == self.shape, \
                 'dimensions mismatch {} != {}'.format(self.shape, other.shape)
 
-            m, n = self.bshape
-            for i in range(m):
-                for j in range(n):
-                    if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
-                        self[i, j] += other[i, j]
-                    elif not other.is_empty_block(i, j):
-                        self[i, j] = other[i, j].copy()
-
+            iterator = set(zip(*np.nonzero(self._block_mask)))
+            iterator.update(zip(*np.nonzero(other._block_mask)))
+            for i, j in iterator:
+                if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
+                    self[i, j] += other[i, j]
+                elif not other.is_empty_block(i, j):
+                    self[i, j] = other[i, j].copy()
             return self
         elif isspmatrix(other):
             # Note: this is not efficient but is just for flexibility.
@@ -985,13 +984,13 @@ class BlockMatrix(BaseBlockMatrix):
             assert other.shape == self.shape, \
                 'dimensions mismatch {} != {}'.format(self.shape, other.shape)
 
-            m, n = self.bshape
-            for i in range(m):
-                for j in range(n):
-                    if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
-                        self[i, j] -= other[i, j]
-                    elif not other.is_empty_block(i, j):
-                        self[i, j] = -other[i, j]  # the copy happens in __neg__ of other[i, j]
+            iterator = set(zip(*np.nonzero(self._block_mask)))
+            iterator.update(zip(*np.nonzero(other._block_mask)))
+            for i, j in iterator:
+                if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
+                    self[i, j] -= other[i, j]
+                elif not other.is_empty_block(i, j):
+                    self[i, j] = -other[i, j]  # the copy happens in __neg__ of other[i, j]
             return self
         elif isspmatrix(other):
             # Note: this is not efficient but is just for flexibility.
