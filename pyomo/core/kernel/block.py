@@ -369,8 +369,8 @@ class block(IBlock):
         # Generate the list of active import suffixes on
         # this top level model
         valid_import_suffixes = \
-            dict((obj.storage_key, obj)
-                 for obj in import_suffix_generator(self))
+            {obj.storage_key:obj
+                 for obj in import_suffix_generator(self)}
 
         # To ensure that import suffix data gets properly
         # overwritten (e.g., the case where nonzero dual
