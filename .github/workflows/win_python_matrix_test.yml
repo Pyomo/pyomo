@@ -73,7 +73,7 @@ jobs:
         Write-Host "Pyomo download-extensions"
         Write-Host ("")
         Invoke-Expression "pyomo download-extensions"
-        Invoke-Expression "pyomo build-extensions"
+        try {Invoke-Expression "pyomo build-extensions"}
     - name: Run nightly tests with test.pyomo
       shell: pwsh
       run: |
