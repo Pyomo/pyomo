@@ -709,6 +709,34 @@ class _BlockData(ActiveComponentData):
             #
             super(_BlockData, self).__delattr__(name)
 
+    def _compact_decl_storage(self):
+        idxMap = {}
+        _new_decl_order = []
+        j = 0
+        # Squeeze out the None entries
+        for i, entry in enumerate(self._decl_order):
+            if entry[0] is not None:
+                idxMap[i] = j
+                j += 1
+                _new_decl_order.append(entry)
+        # Update the _decl map
+        self._decl = {k:idxMap[idx] for k,idx in iteritems(self._decl)}
+        # Update the ctypes
+        for ctype, info in iteritems(self._ctypes):
+            idx = info[0]
+            entry = self._decl_order[idx]
+            while entry[0] is None:
+                idx = entry[1]
+                entry = self._decl_order[idx]
+            info[0] = idxMap[idx]
+            while entry[1] is not None:
+                if entry[0] is not None:
+                    last = idx
+                idx = entry[1]
+                entry = self._decl_order[idx]
+            info[1] = idxMap[last]
+        self._decl_order =_new_decl_order
+
     def set_value(self, val):
         raise RuntimeError(textwrap.dedent(
             """\
@@ -718,40 +746,36 @@ class _BlockData(ActiveComponentData):
                 model.b[1].transfer_attributes_from(other_block)
             """))
 
-    def transfer_attributes_from(self, src, guarantee_components=()):
-        """Set (override) the value of this Component Data
+    def clear(self):
+        for name in iterkeys(self.component_map()):
+            if name not in self._Block_reserved_words:
+                self.del_component(name)
+        for attr in dir(self):
+            if attr not in self._Block_reserved_words:
+                delattr(self, attr)
+        self._compact_decl_storage()
 
-        This removes all components assigned to this block and then
-        moves over all components and all non-private attributes from
-        `src`.  Because this component is not slotized, we cannot
-        distinguish between instance attributes declared by `__init__()`
-        and non-components assigned by the user.  Therefore, we will not
-        remove *any* attributes and only copy over attributes that
-        either are not already present here or are not private (do not
-        begin with a "_").
+    def transfer_attributes_from(self, src):
+        """Transfer user-defined attributes from src to this block
 
-        Derived blocks may wish to ensure that certain components are
-        always present on this block (notably the `indicator_var` `Var`
-        on `Disjunct`).  Derived classes may wrap this method and
-        provide a `guarantee_components` set.  Components whose local
-        name appears in the `guarantee_components` set will only be
-        removed from this Block if `src` contains either a component or
-        attribute with the same local name.  This will "guarantee" that
-        this object will still have the required attributes after
-        transfer_attributes_from()
+        This transfers all components and user-defined attributes from
+        the block or dictionary `src` and places them on this Block.
+        Components are transferred in declaration order.
+
+        If a Component on `src` is also declared on this block as eiher
+        a Component or attribute, the local Component or attribute is
+        replaced by the incoming component.  If an attribute name on
+        `src` matches a Component declared on this block, then the
+        incoming attribute is passed to the local Component's
+        `set_value()` method.  Attribute names appearing in this block's
+        `_Block_reserved_words` set will not be transferred (although
+        Components will be).
 
         Parameters
         ----------
         src: _BlockData or dict
             The Block or mapping that contains the new attributes to
             assign to this block.
-
-        guarantee_components: sequence or set of component local names
-            components on this block whose local name appears in
-            guarantee_components will not be automatically removed
-            unless there is a component or attribute in `src` with the
-            same name, thereby guaranteeing that the component will be
-            present in the block.
         """
         if isinstance(src, _BlockData):
             # There is a special case where assigning a parent block to
@@ -769,39 +793,30 @@ class _BlockData(ActiveComponentData):
             # record the components and the non-component objects added
             # to the block
             src_comp_map = src.component_map()
-            src_raw_dict = src.__dict__
-        elif src is None:
-            src_comp_map = src_raw_dict = {}
+            src_raw_dict = {k:v for k,v in iteritems(src.__dict__)
+                            if k not in src_comp_map}
         elif isinstance(src, collections_Mapping):
             src_comp_map = {}
             src_raw_dict = src
+        elif src is None:
+            return
         else:
             raise ValueError(
                 "_BlockData.transfer_attributes_from(): expected a "
                 "Block or None; received %s" % (type(src).__name__,))
 
-        for k in list(self.component_map()):
-            if k not in guarantee_components or k in src_comp_map or (
-                    k in src_raw_dict
-                    and isinstance(src_raw_dict[k], Component) ):
-                self.del_component(k)
-
-        if not guarantee_components:
-            # We can only clean up the underlying storage if we actually
-            # removed all the components
-            self._ctypes = {}
-            self._decl = {}
-            self._decl_order = []
-
         # Use component_map for the components to preserve decl_order
         for k,v in iteritems(src_comp_map):
+            if k in self._decl:
+                self.del_component(k)
             src.del_component(k)
             self.add_component(k,v)
         # Because Blocks are not slotized and we allow the
         # assignment of arbitrary data to Blocks, we will move over
         # any other unrecognized entries in the object's __dict__:
         for k in sorted(iterkeys(src_raw_dict)):
-            if k not in self.__dict__ or not k.startswith("_"):
+            if k not in self._Block_reserved_words or not hasattr(self, k) \
+               or k in self._decl:
                 setattr(self, k, src_raw_dict[k])
 
     def _add_temporary_set(self, val):
@@ -945,7 +960,7 @@ class _BlockData(ActiveComponentData):
         if not val.valid_model_component():
             raise RuntimeError(
                 "Cannot add '%s' as a component to a block" % str(type(val)))
-        if name in self._Block_reserved_words:
+        if name in self._Block_reserved_words and hasattr(self, name):
             raise ValueError("Attempting to declare a block component using "
                              "the name of a reserved attribute:\n\t%s"
                              % (name,))

@@ -677,21 +677,31 @@ class TestBlock(unittest.TestCase):
         c.x = c_x = Param(initialize=5)
         c.y = c_y = 5
 
+        b.clear()
         b.transfer_attributes_from(c)
         self.assertEqual(list(b.component_map()), ['z','x'])
         self.assertEqual(list(c.component_map()), [])
         self.assertIs(b.x, c_x)
         self.assertIs(b.y, c_y)
 
-        b = Block(concrete=True)
-        b.x = Var()
-        b.y = b_y = Var()
+        class DerivedBlock(SimpleBlock):
+            _Block_reserved_words = set()
+            def __init__(self, *args, **kwds):
+                super(DerivedBlock, self).__init__(*args, **kwds)
+                self.x = Var()
+                self.y = Var()
+        DerivedBlock._Block_reserved_words = set(dir(DerivedBlock()))
+
+        b = DerivedBlock(concrete=True)
+        b_x = b.x
+        b_y = b.y
         c = Block(concrete=True)
         c.z = Param(initialize=5)
         c.x = c_x = Param(initialize=5)
         c.y = c_y = 5
 
-        b.transfer_attributes_from(c, guarantee_components={'y','x'})
+        b.clear()
+        b.transfer_attributes_from(c)
         self.assertEqual(list(b.component_map()), ['y','z','x'])
         self.assertEqual(list(c.component_map()), [])
         self.assertIs(b.x, c_x)
@@ -700,14 +710,15 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(value(b.y), value(c_y))
 
         ### assignment of dict
-        b = Block(concrete=True)
-        b.x = Var()
-        b.y = b_y = Var()
+        b = DerivedBlock(concrete=True)
+        b_x = b.x
+        b_y = b.y
         c = { 'z': Param(initialize=5),
               'x': Param(initialize=5),
               'y': 5 }
 
-        b.transfer_attributes_from(c, guarantee_components={'y','x'})
+        b.clear()
+        b.transfer_attributes_from(c)
         self.assertEqual(list(b.component_map()), ['y','x','z'])
         self.assertEqual(sorted(list(iterkeys(c))), ['x','y','z'])
         self.assertIs(b.x, c['x'])

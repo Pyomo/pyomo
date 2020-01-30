@@ -74,17 +74,11 @@ class _Initializer(object):
 
 class _DisjunctData(_BlockData):
 
+    _Block_reserved_words = set()
+
     def __init__(self, component):
         _BlockData.__init__(self, component)
         self.indicator_var = Var(within=Binary)
-
-    def transfer_attributes_from(self, src, guarantee_components=set()):
-        # Copy over everything from the other block.  If the other
-        # block has an indicator_var, it should override this block's.
-        # Otherwise restore this block's indicator_var.
-        guarantee_components.add('indicator_var')
-        super(_DisjunctData, self).transfer_attributes_from(
-            src, guarantee_components)
 
     def activate(self):
         super(_DisjunctData, self).activate()
@@ -166,6 +160,7 @@ class SimpleDisjunct(_DisjunctData, Disjunct):
 class IndexedDisjunct(Disjunct):
     pass
 
+_DisjunctData._Block_reserved_words = set(dir(Disjunct()))
 
 
 class _DisjunctionData(ActiveComponentData):
