@@ -1,9 +1,9 @@
 name: continuous-integration/github/pr/osx
 
 on:
-  pull_request:
+  push:
     branches:
-      - master
+      - mac_gams
       # Can add additional branches if desired
 
 jobs:
@@ -35,6 +35,13 @@ jobs:
         echo "Install Pyomo dependencies..."
         echo ""
         pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos
+        echo ""
+        echo "Install GAMS..."
+        echo ""
+        wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/30.1.0/macosx/osx_x64_64_sfx.exe
+        chmod +x osx_x64_64_sfx.exe
+        ./osx_x64_64_sfx.exe -q -d gams
+        PATH=$PATH:/gams/gams30.1_osx_x64_64
     - name: Install Pyomo and extensions
       run: |
         echo "Clone Pyomo-model-libraries..."
