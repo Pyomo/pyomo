@@ -105,8 +105,6 @@ class BlockMatrix(BaseBlockMatrix):
         self._undefined_brows = set(range(nbrows))
         self._undefined_bcols = set(range(nbcols))
 
-        #super(BlockMatrix, self).__init__()
-
     @property
     def bshape(self):
         """

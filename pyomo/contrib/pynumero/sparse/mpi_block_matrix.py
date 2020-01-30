@@ -29,7 +29,8 @@ from .base_block import BaseBlockMatrix
 from warnings import warn
 from mpi4py import MPI
 import numpy as np
-from scipy.sparse import isspmatrix
+from scipy.sparse import coo_matrix
+import operator
 
 # Array classifiers
 SINGLE_OWNER=1
@@ -189,9 +190,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
         else:
             if row_block_sizes is not None and col_block_sizes is not None:
                 for row_ndx, row_size in enumerate(row_block_sizes):
-                    self._block_matrix.set_row_size(row_ndx, row_size)
+                    self.set_row_size(row_ndx, row_size)
                 for col_ndx, col_size in enumerate(col_block_sizes):
-                    self._block_matrix.set_col_size(col_ndx, col_size)
+                    self.set_col_size(col_ndx, col_size)
             elif row_block_sizes is None and col_block_sizes is not None:
                 raise RuntimeError('Specify row_block_sizes')
             else:
@@ -222,7 +223,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         """
         local_nnz = 0
         rank = self._mpiw.Get_rank()
-        block_indices = self._unique_owned_mask if rank!=0 else self._owned_mask
+        block_indices = self._unique_owned_mask if rank != 0 else self._owned_mask
 
         # this is an easy and efficient way to loop though owned blocks
         ii, jj = np.nonzero(block_indices)
@@ -259,31 +260,43 @@ class MPIBlockMatrix(BaseBlockMatrix):
         return owned_blocks
 
     @property
-    def rank_ownership(self, copy=True):
+    def rank_ownership(self):
         """
         Returns 2D array that specifies process rank that owns each blocks. If
         a block is owned by all the ownership=-1.
         """
-        if copy:
-            return self._rank_owner.copy()
-        else:
-            return self._rank_owner
+        return self._rank_owner
 
     @property
-    def ownership_mask(self, copy=True):
+    def ownership_mask(self):
         """
         Returns boolean 2D-Array that indicates which blocks are owned by
         this processor
         """
-        if copy:
-            return self._owned_mask.copy()
-        else:
-            return self._owned_mask
+        return self._owned_mask
 
     @property
     def mpi_comm(self):
         """Returns MPI communicator"""
         return self._mpiw
+
+    def get_row_size(self, row):
+        return self._block_matrix.get_row_size(row)
+
+    def get_col_size(self, col):
+        return self._block_matrix.get_col_size(col)
+
+    def set_row_size(self, row, size):
+        self._block_matrix.set_row_size(row, size)
+
+    def set_col_size(self, col, size):
+        self._block_matrix.set_col_size(col, size)
+
+    def is_row_defined(self, row):
+        return self._block_matrix.is_row_defined(row)
+
+    def is_col_defined(self, col):
+        return self._block_matrix.is_col_defined(col)
 
     @property
     def T(self):
@@ -298,7 +311,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         """
         return self * other
 
-    def transpose(self, axes=None, copy=False):
+    def transpose(self, axes=None, copy=True):
         """
         Reverses the dimensions of the block matrix.
 
@@ -307,8 +320,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
         axes: None, optional
             This argument is in the signature solely for NumPy compatibility reasons. Do not pass in
             anything except for the default value.
-        copy: bool, optional
-            Indicates whether or not attributes of self should be copied whenever possible.
+        copy: bool
+            This argument is in the signature solely for scipy compatibility reasons. Do not pass in
+            anything except for the default value.
 
         Returns
         -------
@@ -318,21 +332,20 @@ class MPIBlockMatrix(BaseBlockMatrix):
             raise ValueError(("Sparse matrices do not support "
                               "an 'axes' parameter because swapping "
                               "dimensions is the only logical permutation."))
+        if not copy:
+            raise ValueError('MPIBlockMatrix only supports transpose with copy=True')
 
         m = self.bshape[0]
         n = self.bshape[1]
         assert_block_structure(self)
-        if not self._need_broadcast_sizes:
-            result = MPIBlockMatrix(n, m, self._rank_owner.T, self._mpiw,
-                                    row_block_sizes=self._bcol_lengths.copy(),
-                                    col_block_sizes=self._brow_lengths.copy())
-        else:
-            raise RuntimeError('Call broadcast_block_sizes() before transposing')
+        result = MPIBlockMatrix(n, m, self._rank_owner.T, self._mpiw,
+                                row_block_sizes=self.col_block_sizes(),
+                                col_block_sizes=self.row_block_sizes())
 
         rows, columns = np.nonzero(self.ownership_mask)
         for i, j in zip(rows, columns):
             if self[i, j] is not None:
-                result[j, i] = self[i, j].transpose(copy=copy)
+                result[j, i] = self[i, j].transpose(copy=True)
         return result
 
     def tocoo(self):
@@ -442,7 +455,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         m, n = self.bshape
 
         brow_lengths = np.zeros(m, dtype=np.int64)
-        bcol_lengths = np.zeros(m, dtype=np.int64)
+        bcol_lengths = np.zeros(n, dtype=np.int64)
 
         # check the rows
         for i in range(m):
@@ -451,7 +464,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 row_sizes, col_sizes = np.split(proc_dims[k],
                                                 [self.bshape[0]])
                 rows_length.add(row_sizes[i])
-            if len(rows_length)>2:
+            if len(rows_length) > 2:
                 msg = 'Row {} has more than one dimension accross processors'.format(i)
                 raise RuntimeError(msg)
             elif len(rows_length) == 2:
@@ -473,67 +486,60 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 rows_sizes, col_sizes = np.split(proc_dims[k],
                                                  [self.bshape[0]])
                 cols_length.add(col_sizes[i])
-            if len(cols_length)>2:
+            if len(cols_length) > 2:
                 msg = 'Column {} has more than one dimension accross processors'.format(i)
                 raise RuntimeError(msg)
             elif len(cols_length) == 2:
-                if 0 not in cols_length:
+                if -1 not in cols_length:
                     msg = 'Column {} has more than one dimension accross processors'.format(i)
                     raise RuntimeError(msg)
-                cols_length.remove(0)
+                cols_length.remove(-1)
+            elif -1 in cols_length:
+                msg = 'The dimensions of block column {} were not defined in any process'.format(i)
+                raise NotFullyDefinedBlockMatrixError(msg)
 
             # here rows_length must only have one element
-            self._bcol_lengths[i] = cols_length.pop()
+            bcol_lengths[i] = cols_length.pop()
 
-        for row_ndx, row_size in enumerate(self._brow_lengths):
+        for row_ndx, row_size in enumerate(brow_lengths):
             self._block_matrix.set_row_size(row_ndx, row_size)
-        for col_ndx, col_size in enumerate(self._bcol_lengths):
+        for col_ndx, col_size in enumerate(bcol_lengths):
             self._block_matrix.set_col_size(col_ndx, col_size)
-
-        if self.has_undefined_rows():
-            undefined_rows = list()
-            for row_ndx in range(self.bshape[0]):
-                if not self._block_matrix.is_row_defined(row_ndx):
-                    undefined_rows.append(row_ndx)
-                raise NotFullyDefinedBlockMatrixError('After calling broadcast_block_sizes, '
-                                                      'the following block row dimensions were '
-                                                      'still undefined: {0}'.format(str(undefined_rows)))
-        if self.has_undefined_cols():
-            undefined_cols = list()
-            for col_ndx in range(self.bshape[1]):
-                if not self._block_matrix.is_col_defined(col_ndx):
-                    undefined_cols.append(col_ndx)
-                raise NotFullyDefinedBlockMatrixError('After calling broadcast_block_sizes, '
-                                                      'the following block column dimensions were '
-                                                      'still undefined: {0}'.format(str(undefined_cols)))
 
     def row_block_sizes(self, copy=True):
         """
-        Returns row-block sizes
+        Returns array with row-block sizes
+
+        Parameters
+        ----------
+        copy: bool
+            If False, then the internal array which stores the row block sizes will be returned without being copied.
+            Setting copy to False is risky and should only be done with extreme care.
 
         Returns
         -------
         numpy.ndarray
 
         """
-        self._assert_broadcasted_sizes()
-        if copy:
-            return np.copy(self._brow_lengths)
-        return self._brow_lengths
+        assert_block_structure(self)
+        return self._block_matrix.row_block_sizes(copy=copy)
 
     def col_block_sizes(self, copy=True):
         """
-        Returns col-block sizes
+        Returns array with col-block sizes
+
+        Parameters
+        ----------
+        copy: bool
+            If False, then the internal array which stores the column block sizes will be returned without being copied.
+            Setting copy to False is risky and should only be done with extreme care.
 
         Returns
         -------
-        numpy.narray
-
+        numpy.ndarray
         """
-        self._assert_broadcasted_sizes()
-        if copy:
-            return np.copy(self._bcol_lengths)
-        return self._bcol_lengths
+        assert_block_structure(self)
+        return self._block_matrix.col_block_sizes(copy=copy)
 
     def block_shapes(self):
         """
@@ -549,15 +555,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
         list
 
         """
-        self._assert_broadcasted_sizes()
-        bm, bn = self.bshape
-        sizes = [list() for i in range(bm)]
-        for i in range(bm):
-            sizes[i] = list()
-            for j in range(bn):
-                shape = self._brow_lengths[i], self._bcol_lengths[j]
-                sizes[i].append(shape)
-        return sizes
+        assert_block_structure(self)
+        return self._block_matrix.block_shapes()
 
     def has_undefined_rows(self):
         """
@@ -625,9 +624,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
         m, n = self.bshape
         result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw)
         result._block_matrix = self._block_matrix.copy()
-        result._need_broadcast_sizes = self._need_broadcast_sizes
-        result._brow_lengths = self._brow_lengths.copy()
-        result._bcol_lengths = self._bcol_lengths.copy()
         return result
 
     def copy_structure(self):
@@ -645,20 +641,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
         m, n = self.bshape
         result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw)
         result._block_matrix = self._block_matrix.copy_structure()
-        result._need_broadcast_sizes = self._need_broadcast_sizes
-        result._brow_lengths = self._brow_lengths.copy()
-        result._bcol_lengths = self._bcol_lengths.copy()
         return result
 
     # ToDo: need support for copy from and copy to
-
-    def _assert_broadcasted_sizes(self):
-        if not self._done_first_broadcast_sizes:
-            assert not self._need_broadcast_sizes, \
-                'First need to call broadcast_block_sizes()'
-        else:
-            assert not self._need_broadcast_sizes, \
-                'Changes in structure. Need to recall broadcast_block_sizes()'
 
     # Note: this requires communication
     def _assert_correct_owners(self, root=0):
@@ -699,7 +684,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
     def pprint(self, root=0):
         """Prints MPIBlockMatrix in pretty format"""
-        self._assert_broadcasted_sizes()
+        assert_block_structure(self)
         msg = self.__repr__() + '\n'
         num_processors = self._mpiw.Get_size()
         # figure out which ones are none
@@ -721,8 +706,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
         for idx in range(m):
             for jdx in range(n):
                 rank = self._rank_owner[idx, jdx] if self._rank_owner[idx, jdx] >= 0 else 'A'
-                row_size = self._brow_lengths[idx]
-                col_size = self._bcol_lengths[jdx]
+                row_size = self.get_row_size(idx)
+                col_size = self.get_col_size(jdx)
                 is_none = '' if global_mask[idx, jdx] else '*'
                 repn = 'Owned by {} Shape({},{}){}'.format(rank,
                                                            row_size,
@@ -733,7 +718,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
             print(msg)
 
     def __getitem__(self, item):
-
         block = self._block_matrix[item]
         owner = self._rank_owner[item]
         rank = self._mpiw.Get_rank()
@@ -766,18 +750,14 @@ class MPIBlockMatrix(BaseBlockMatrix):
         self._block_matrix[key] = value
 
     def __add__(self, other):
-
-        # ToDo: this might not be needed
-        self._assert_broadcasted_sizes()
+        assert_block_structure(self)
         m, n = self.bshape
         result = self.copy_structure()
 
         rank = self._mpiw.Get_rank()
 
         if isinstance(other, MPIBlockMatrix):
-
-            # ToDo: this might not be needed
-            other._assert_broadcasted_sizes()
+            assert_block_structure(other)
 
             assert other.bshape == self.bshape, \
                 'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
@@ -792,9 +772,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 if mat1 is not None and mat2 is not None:
                     result[i, j] = mat1 + mat2
                 elif mat1 is not None and mat2 is None:
-                    result[i, j] = mat1
+                    result[i, j] = mat1.copy()
                 elif mat1 is None and mat2 is not None:
-                    result[i, j] = mat2
+                    result[i, j] = mat2.copy()
                 else:
                     result[i, j] = None
             return result
@@ -805,16 +785,13 @@ class MPIBlockMatrix(BaseBlockMatrix):
         return self.__add__(other)
 
     def __sub__(self, other):
-
-        self._assert_broadcasted_sizes()
+        assert_block_structure(self)
         m, n = self.bshape
         result = self.copy_structure()
         rank = self._mpiw.Get_rank()
 
         if isinstance(other, MPIBlockMatrix):
-
-            # ToDo: this might not be needed
-            other._assert_broadcasted_sizes()
+            assert_block_structure(other)
 
             assert other.bshape == self.bshape, \
                 'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
@@ -829,31 +806,23 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 if mat1 is not None and mat2 is not None:
                     result[i, j] = mat1 - mat2
                 elif mat1 is not None and mat2 is None:
-                    result[i, j] = mat1
+                    result[i, j] = mat1.copy()
                 elif mat1 is None and mat2 is not None:
                     result[i, j] = -mat2
                 else:
                     result[i, j] = None
             return result
 
-        if isinstance(other, BlockMatrix):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
-        if isspmatrix(other):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
-
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __rsub__(self, other):
-
-        self._assert_broadcasted_sizes()
+        assert_block_structure(self)
         m, n = self.bshape
         result = self.copy_structure()
-
         rank = self._mpiw.Get_rank()
 
         if isinstance(other, MPIBlockMatrix):
-
-            other._assert_broadcasted_sizes()
+            assert_block_structure(other)
             assert other.bshape == self.bshape, \
                 'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
 
@@ -869,27 +838,19 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 elif mat1 is not None and mat2 is None:
                     result[i, j] = -mat1
                 elif mat1 is None and mat2 is not None:
-                    result[i, j] = mat2
+                    result[i, j] = mat2.copy()
                 else:
                     result[i, j] = None
             return result
 
-        if isinstance(other, BlockMatrix):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
-        if isspmatrix(other):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
-
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __mul__(self, other):
-
-        self._assert_broadcasted_sizes()
+        assert_block_structure(self)
         m, n = self.bshape
         result = self.copy_structure()
 
         if isinstance(other, MPIBlockVector):
-
-            other._assert_broadcasted_sizes()
             rank = self._mpiw.Get_rank()
             m, n = self.bshape
             assert n == other.nblocks, 'Dimension mismatch'
@@ -914,7 +875,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
             result = MPIBlockVector(m,
                                     row_rank_ownership,
                                     self._mpiw,
-                                    block_sizes=self._brow_lengths.copy())
+                                    block_sizes=self.row_block_sizes())
 
             # check same mpi spaces in matrix and vector
             owners_match = True
@@ -929,7 +890,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
             if owners_match:
                 for i in range(m):
-                    local_sum = np.zeros(self._brow_lengths[i])
+                    local_sum = np.zeros(self.get_row_size(i))
                     for j in range(n):
                         mat_owner = self._rank_owner[i, j]
                         vector_owner = other.rank_ownership[j]
@@ -947,7 +908,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
                         global_sum = self._mpiw.reduce(local_sum,
                                                        op=MPI.SUM,
                                                        root=row_owner)
-                    if row_owner == rank  or row_owner < 0:
+                    if row_owner == rank or row_owner < 0:
                         result[i] = global_sum
                 return result
             else:
@@ -971,8 +932,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __rmul__(self, other):
-
-        self._assert_broadcasted_sizes()
+        assert_block_structure(self)
         m, n = self.bshape
         result = self.copy_structure()
 
@@ -993,15 +953,13 @@ class MPIBlockMatrix(BaseBlockMatrix):
         if isinstance(other, BlockMatrix):
             raise NotImplementedError('Matrix-Matrix multiply not supported yet')
 
-
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __pow__(self, other):
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __truediv__(self, other):
-
-        self._assert_broadcasted_sizes()
+        assert_block_structure(self)
         m, n = self.bshape
         result = self.copy_structure()
 
@@ -1017,14 +975,11 @@ class MPIBlockMatrix(BaseBlockMatrix):
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __iadd__(self, other):
-
-        # ToDo: this might not be needed
-        self._assert_broadcasted_sizes()
+        assert_block_structure(self)
         m, n = self.bshape
 
         if isinstance(other, MPIBlockMatrix):
-            # ToDo: this might not be needed
-            other._assert_broadcasted_sizes()
+            assert_block_structure(other)
 
             assert other.bshape == self.bshape, \
                 'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
@@ -1039,25 +994,17 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 if mat1 is not None and mat2 is not None:
                     self[i, j] += mat2
                 elif mat1 is None and mat2 is not None:
-                    self[i, j] = mat2
+                    self[i, j] = mat2.copy()
             return self
-
-        if isinstance(other, BlockMatrix):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
-        if isspmatrix(other):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __isub__(self, other):
-
-        # ToDo: this might not be needed
-        self._assert_broadcasted_sizes()
+        assert_block_structure(self)
         m, n = self.bshape
 
         if isinstance(other, MPIBlockMatrix):
-            # ToDo: this might not be needed
-            other._assert_broadcasted_sizes()
+            assert_block_structure(other)
 
             assert other.bshape == self.bshape, \
                 'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
@@ -1075,357 +1022,109 @@ class MPIBlockMatrix(BaseBlockMatrix):
                     self[i, j] = -mat2
             return self
 
-        if isinstance(other, BlockMatrix):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
-        if isspmatrix(other):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __imul__(self, other):
-
-        self._assert_broadcasted_sizes()
+        assert_block_structure(self)
         m, n = self.bshape
 
         if np.isscalar(other):
             ii, jj = np.nonzero(self._owned_mask)
             for i, j in zip(ii, jj):
                 if not self._block_matrix.is_empty_block(i, j):
-                    self[i, j] = self[i, j] * other
+                    self[i, j] *= other
             return self
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __itruediv__(self, other):
-
-        self._assert_broadcasted_sizes()
+        assert_block_structure(self)
         m, n = self.bshape
 
         if np.isscalar(other):
             ii, jj = np.nonzero(self._owned_mask)
             for i, j in zip(ii, jj):
                 if not self._block_matrix.is_empty_block(i, j):
-                    self[i, j] = self[i, j] / other
+                    self[i, j] /= other
             return self
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __neg__(self):
+        assert_block_structure(self)
+        result = self.copy_structure()
 
         ii, jj = np.nonzero(self._owned_mask)
         for i, j in zip(ii, jj):
             if not self._block_matrix.is_empty_block(i, j):
-                self[i, j] = -self[i, j]
-        return self
+                result[i, j] = -self[i, j]
+        return result
 
     def __abs__(self):
+        assert_block_structure(self)
+        result = self.copy_structure()
 
         ii, jj = np.nonzero(self._owned_mask)
         for i, j in zip(ii, jj):
             if not self._block_matrix.is_empty_block(i, j):
-                self[i, j] = self[i, j].__abs__()
-        return self
+                result[i, j] = abs(self[i, j])
+        return result
+
+    def _comparison_helper(self, operation, other):
+        assert_block_structure(self)
+        m, n = self.bshape
+        result = self.copy_structure()
+
+        if isinstance(other, MPIBlockMatrix):
+            assert_block_structure(other)
+            assert other.bshape == self.bshape, 'dimension mismatch {} != {}'.format(self.bshape, other.bshape)
+            assert np.array_equal(self.rank_ownership, other.rank_ownership), 'MPIBlockMatrices must be distributed in ' \
+                                                                              'the same processors'
+
+            for i, j in zip(*np.nonzero(self.ownership_mask)):
+                mat1 = self[i, j]
+                mat2 = other[i, j]
+
+                if mat1 is not None and mat2 is not None:
+                    result[i, j] = operation(mat1, mat2)
+                elif mat1 is not None:
+                    result[i, j] = operation(mat1, 0)
+                elif mat2 is not None:
+                    result[i, j] = operation(0, mat2)
+                else:
+                    nrows = self.get_row_size(i)
+                    ncols = self.get_col_size(j)
+                    mat = coo_matrix((nrows, ncols))
+                    result[i, j] = operation(mat, mat)
+            return result
+        elif np.isscalar(other):
+            for i, j in zip(*np.nonzero(self.ownership_mask)):
+                if not self._block_matrix.is_empty_block(i, j):
+                    result[i, j] = operation(self[i, j], other)
+                else:
+                    nrows = self.get_row_size(i)
+                    ncols = self.get_col_size(j)
+                    mat = coo_matrix((nrows, ncols))
+                    result[i, j] = operation(mat, other)
+            return result
+        else:
+            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __eq__(self, other):
-
-        self._assert_broadcasted_sizes() # needed for the nones
-        m, n = self.bshape
-        result = self.copy_structure()
-
-        if isinstance(other, MPIBlockMatrix):
-            other._assert_broadcasted_sizes()
-            assert other.bshape == self.bshape, \
-                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
-
-            assert np.array_equal(self._rank_owner, other._rank_owner), \
-                'MPIBlockMatrices must be distributed in same processors'
-
-            ii, jj = np.nonzero(self._owned_mask)
-            for i, j in zip(ii, jj):
-                mat1 = self[i, j]
-                mat2 = other[i, j]
-
-                if mat1 is not None and mat2 is not None:
-                    result[i, j] = mat1.__eq__(mat2)
-                elif mat1 is not None and mat2 is None:
-                    result[i, j] = mat1.__eq__(0.0)
-                elif mat1 is None and mat2 is not None:
-                    result[i, j] = mat2.__eq__(0.0)
-                else:
-                    nrows = self._brow_lengths[i]
-                    ncols = self._bcol_lengths[j]
-                    mat = empty_matrix(nrows, ncols)
-                    result[i, j] = mat.__eq__(0.0)
-            return result
-
-        if isinstance(other, BlockMatrix):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
-        if np.isscalar(other):
-            ii, jj = np.nonzero(self._owned_mask)
-            for i, j in zip(ii, jj):
-                if not self._block_matrix.is_empty_block(i, j):
-                    result[i, j] = self[i, j].__eq__(other)
-                else:
-                    nrows = self._brow_lengths[i]
-                    ncols = self._bcol_lengths[j]
-                    mat = empty_matrix(nrows, ncols)
-                    result[i, j] = mat.__eq__(other)
-            return result
-
-        raise NotImplementedError('Operation not supported by MPIBlockMatrix')
+        return self._comparison_helper(operation=operator.eq, other=other)
 
     def __ne__(self, other):
-
-        self._assert_broadcasted_sizes() # needed for the nones
-        m, n = self.bshape
-        result = self.copy_structure()
-
-        if isinstance(other, MPIBlockMatrix):
-            other._assert_broadcasted_sizes()
-            assert other.bshape == self.bshape, \
-                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
-
-            assert np.array_equal(self._rank_owner, other._rank_owner), \
-                'MPIBlockMatrices must be distributed in same processors'
-
-            ii, jj = np.nonzero(self._owned_mask)
-            for i, j in zip(ii, jj):
-                mat1 = self[i, j]
-                mat2 = other[i, j]
-
-                if mat1 is not None and mat2 is not None:
-                    result[i, j] = mat1.__ne__(mat2)
-                elif mat1 is not None and mat2 is None:
-                    result[i, j] = mat1.__ne__(0.0)
-                elif mat1 is None and mat2 is not None:
-                    result[i, j] = mat2.__ne__(0.0)
-                else:
-                    nrows = self._brow_lengths[i]
-                    ncols = self._bcol_lengths[j]
-                    mat = empty_matrix(nrows, ncols)
-                    result[i, j] = mat.__ne__(0.0)
-            return result
-
-        if isinstance(other, BlockMatrix):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
-        if np.isscalar(other):
-            ii, jj = np.nonzero(self._owned_mask)
-            for i, j in zip(ii, jj):
-                if not self._block_matrix.is_empty_block(i, j):
-                    result[i, j] = self[i, j].__ne__(other)
-                else:
-                    nrows = self._brow_lengths[i]
-                    ncols = self._bcol_lengths[j]
-                    mat = empty_matrix(nrows, ncols)
-                    result[i, j] = mat.__ne__(other)
-            return result
-
-        raise NotImplementedError('Operation not supported by MPIBlockMatrix')
+        return self._comparison_helper(operation=operator.ne, other=other)
 
     def __le__(self, other):
-
-        self._assert_broadcasted_sizes() # needed for the nones
-        m, n = self.bshape
-        result = self.copy_structure()
-
-        if isinstance(other, MPIBlockMatrix):
-            other._assert_broadcasted_sizes()
-            assert other.bshape == self.bshape, \
-                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
-
-            assert np.array_equal(self._rank_owner, other._rank_owner), \
-                'MPIBlockMatrices must be distributed in same processors'
-
-            ii, jj = np.nonzero(self._owned_mask)
-            for i, j in zip(ii, jj):
-                mat1 = self[i, j]
-                mat2 = other[i, j]
-
-                if mat1 is not None and mat2 is not None:
-                    result[i, j] = mat1.__le__(mat2)
-                else:
-                    nrows = self._brow_lengths[i]
-                    ncols = self._bcol_lengths[j]
-                    mat = empty_matrix(nrows, ncols)
-                    if mat1 is not None and mat2 is None:
-                        result[i, j] = mat1.__le__(mat)
-                    elif mat1 is None and mat2 is not None:
-                        result[i, j] = mat2.__le__(mat)
-                    else:
-                        result[i, j] = mat.__le__(mat)
-            return result
-        if isinstance(other, BlockMatrix):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
-        if np.isscalar(other):
-            ii, jj = np.nonzero(self._owned_mask)
-            for i, j in zip(ii, jj):
-                if not self._block_matrix.is_empty_block(i, j):
-                    result[i, j] = self[i, j].__le__(other)
-                else:
-                    nrows = self._brow_lengths[i]
-                    ncols = self._bcol_lengths[j]
-                    mat = empty_matrix(nrows, ncols)
-                    result[i, j] = mat.__le__(other)
-            return result
-
-        raise NotImplementedError('Operation not supported by MPIBlockMatrix')
+        return self._comparison_helper(operation=operator.le, other=other)
 
     def __lt__(self, other):
-
-        self._assert_broadcasted_sizes() # needed for the nones
-        m, n = self.bshape
-        result = self.copy_structure()
-
-        if isinstance(other, MPIBlockMatrix):
-
-            other._assert_broadcasted_sizes()
-            assert other.bshape == self.bshape, \
-                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
-
-            assert np.array_equal(self._rank_owner, other._rank_owner), \
-                'MPIBlockMatrices must be distributed in same processors'
-
-            ii, jj = np.nonzero(self._owned_mask)
-            for i, j in zip(ii, jj):
-                mat1 = self[i, j]
-                mat2 = other[i, j]
-
-                if mat1 is not None and mat2 is not None:
-                    result[i, j] = mat1.__lt__(mat2)
-                else:
-                    nrows = self._brow_lengths[i]
-                    ncols = self._bcol_lengths[j]
-                    mat = empty_matrix(nrows, ncols)
-                    if mat1 is not None and mat2 is None:
-                        result[i, j] = mat1.__lt__(mat)
-                    elif mat1 is None and mat2 is not None:
-                        result[i, j] = mat2.__lt__(mat)
-                    else:
-                        result[i, j] = mat.__lt__(mat)
-            return result
-
-        if isinstance(other, BlockMatrix):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
-        if np.isscalar(other):
-            ii, jj = np.nonzero(self._owned_mask)
-            for i, j in zip(ii, jj):
-                if not self._block_matrix.is_empty_block(i, j):
-                    result[i, j] = self[i, j].__lt__(other)
-                else:
-                    nrows = self._brow_lengths[i]
-                    ncols = self._bcol_lengths[j]
-                    mat = empty_matrix(nrows, ncols)
-                    result[i, j] = mat.__lt__(other)
-            return result
-
-        raise NotImplementedError('Operation not supported by MPIBlockMatrix')
+        return self._comparison_helper(operation=operator.lt, other=other)
 
     def __ge__(self, other):
-
-        self._assert_broadcasted_sizes() # needed for the nones
-        m, n = self.bshape
-        result = self.copy_structure()
-
-        if isinstance(other, MPIBlockMatrix):
-            other._assert_broadcasted_sizes()
-            assert other.bshape == self.bshape, \
-                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
-
-            assert np.array_equal(self._rank_owner, other._rank_owner), \
-                'MPIBlockMatrices must be distributed in same processors'
-
-            ii, jj = np.nonzero(self._owned_mask)
-            for i, j in zip(ii, jj):
-                mat1 = self[i, j]
-                mat2 = other[i, j]
-
-                if mat1 is not None and mat2 is not None:
-                    result[i, j] = mat1.__ge__(mat2)
-                else:
-                    nrows = self._brow_lengths[i]
-                    ncols = self._bcol_lengths[j]
-                    mat = empty_matrix(nrows, ncols)
-                    if mat1 is not None and mat2 is None:
-                        result[i, j] = mat1.__ge__(mat)
-                    elif mat1 is None and mat2 is not None:
-                        result[i, j] = mat2.__ge__(mat)
-                    else:
-                        result[i, j] = mat.__ge__(mat)
-            return result
-        if isinstance(other, BlockMatrix):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
-        if np.isscalar(other):
-            ii, jj = np.nonzero(self._owned_mask)
-            for i, j in zip(ii, jj):
-                if not self._block_matrix.is_empty_block(i, j):
-                    result[i, j] = self[i, j].__ge__(other)
-                else:
-                    nrows = self._brow_lengths[i]
-                    ncols = self._bcol_lengths[j]
-                    mat = empty_matrix(nrows, ncols)
-                    result[i, j] = mat.__ge__(other)
-            return result
-
-        raise NotImplementedError('Operation not supported by MPIBlockMatrix')
+        return self._comparison_helper(operation=operator.ge, other=other)
 
     def __gt__(self, other):
-
-        self._assert_broadcasted_sizes() # needed for the nones
-        m, n = self.bshape
-        result = self.copy_structure()
-
-        if isinstance(other, MPIBlockMatrix):
-            other._assert_broadcasted_sizes()
-            assert other.bshape == self.bshape, \
-                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
-
-            assert np.array_equal(self._rank_owner, other._rank_owner), \
-                'MPIBlockMatrices must be distributed in same processors'
-
-            ii, jj = np.nonzero(self._owned_mask)
-            for i, j in zip(ii, jj):
-                mat1 = self[i, j]
-                mat2 = other[i, j]
-
-                if mat1 is not None and mat2 is not None:
-                    result[i, j] = mat1.__gt__(mat2)
-                else:
-                    nrows = self._brow_lengths[i]
-                    ncols = self._bcol_lengths[j]
-                    mat = empty_matrix(nrows, ncols)
-                    if mat1 is not None and mat2 is None:
-                        result[i, j] = mat1.__gt__(mat)
-                    elif mat1 is None and mat2 is not None:
-                        result[i, j] = mat2.__gt__(mat)
-                    else:
-                        result[i, j] = mat.__gt__(mat)
-            return result
-        if isinstance(other, BlockMatrix):
-            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
-        if np.isscalar(other):
-            ii, jj = np.nonzero(self._owned_mask)
-            for i, j in zip(ii, jj):
-                if not self._block_matrix.is_empty_block(i, j):
-                    result[i, j] = self[i, j].__gt__(other)
-                else:
-                    nrows = self._brow_lengths[i]
-                    ncols = self._bcol_lengths[j]
-                    mat = empty_matrix(nrows, ncols)
-                    result[i, j] = mat.__gt__(other)
-            return result
-        raise NotImplementedError('Operation not supported by MPIBlockMatrix')
-
-    def sum(self, axis=None, dtype=None, out=None):
-        BaseBlockMatrix.sum(self, axis=axis, dtype=dtype, out=out)
-
-    def mean(self, axis=None, dtype=None, out=None):
-        BaseBlockMatrix.mean(self, axis=axis, dtype=dtype, out=out)
-
-    def diagonal(self, k=0):
-        BaseBlockMatrix.diagonal(self, k=k)
-
-    def nonzero(self):
-        BaseBlockMatrix.nonzero(self)
-
-    def setdiag(self, values, k=0):
-        BaseBlockMatrix.setdiag(self, value, k=k)
+        return self._comparison_helper(operation=operator.gt, other=other)
 
     def get_block_column_index(self, index):
         """
