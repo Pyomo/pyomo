@@ -22,7 +22,7 @@ jobs:
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Install Pyomo dependencies
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
@@ -44,26 +44,36 @@ jobs:
         $env:MINICONDA_EXTRAS=""
         $env:MINICONDA_EXTRAS="numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn "
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + "pymysql pyro4 pint pathos " + $env:MINICONDA_EXTRAS
-        $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk ipopt pynumero_libraries"
-        Write-Host ("")
-        Write-Host ("Installing Conda packages... ")
-        Write-Host ("")
+        $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk ipopt"
         $env:EXP = $env:CONDAFORGE + $env:ADDITIONAL_CF_PKGS
         Invoke-Expression $env:EXP
+        $env:PYNUMERO = $env:CONDAFORGE + " pynumero_libraries"
         Write-Host ("")
-        Write-Host ("Setting up pynumero_libraries... ")
+        Write-Host ("Try to install Pynumero_libraries...")
         Write-Host ("")
-        $env:PYNUMERO = $env:CONDA_INSTALL + " -c conda-forge pynumero_libraries"
-        $env:EXP = $env:CONDAFORGE + $env:PYNUMERO
-        try {Invoke-Expression $env:PYNUMERO} catch {Write-Host ("Pynumero_libraries is not available for Python ${{matrix.python-version}}") }
+        try
+        {
+            Invoke-Expression $env:PYNUMERO
+        }
+        catch
+        {
+            Write-Host ("####################################################")
+            Write-Host ("WARNING: Pynumero_libraries is not available for Python ${{matrix.python-version}}")
+            Write-Host ("####################################################")
+        }
         Write-Host ("")
-        Write-Host ("Installing GAMS")
+        Write-Host ("Install GAMS...")
         Write-Host ("")
         Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
         Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS'
         $env:PATH += $(Get-Location).Path + "\gams"
+        Write-Host ("")
         Write-Host ("New Shell Environment: ")
         gci env: | Sort Name
+    - name: Install Pyomo and extensions
+      shell: pwsh
+      run: |
+        $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host ("")
         Write-Host ("Clone model library and install PyUtilib...")
         Write-Host ("")
@@ -76,16 +86,10 @@ jobs:
         Write-Host ("Install Pyomo...")
         Write-Host ("")
         python setup.py develop
-    - name: Install extensions
-      shell: pwsh
-      run: |
-        $env:PYTHONWARNINGS="ignore::UserWarning"
+        Write-Host ("")
         Write-Host "Pyomo download-extensions"
+        Write-Host ("")
         Invoke-Expression "pyomo download-extensions"
-        Invoke-Expression "pyomo build-extensions"
-        Write-Host "Calling solvers"
-        Invoke-Expression "glpsol -v"
-        Invoke-Expression "ipopt -v"
     - name: Run nightly tests with test.pyomo
       shell: pwsh
       run: |
