@@ -1,9 +1,9 @@
-name: Mac no Python 2.7
+name: continuous-integration/github/pr/osx
 
 on:
-  push:
+  pull_request:
     branches:
-      - remove_py27_ga
+      - master
       # Can add additional branches if desired
 
 jobs:

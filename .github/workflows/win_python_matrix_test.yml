@@ -1,9 +1,9 @@
-name: Windows reconfigure
+name: continuous-integration/github/pr/win
 
 on:
-  push:
+  pull_request:
     branches:
-      - remove_py27_ga
+      - master
 
 jobs:
   pyomo-tests:
