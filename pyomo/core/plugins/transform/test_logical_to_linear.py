@@ -1,6 +1,7 @@
 import pyutilib.th as unittest
 
 from pyomo.core.expr.logical_expr import AtLeast, AtMost, Exactly
+from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.environ import ConcreteModel, BooleanVar, LogicalStatement, TransformationFactory, RangeSet, \
     Var, Constraint
 from pyomo.gdp import Disjunct, Disjunction
@@ -13,6 +14,7 @@ def _generate_boolean_model(nvars):
     return m
 
 
+@unittest.skipUnless(sympy_available, "Sympy not available")
 class TestAtomicTransformations(unittest.TestCase):
     def test_implies(self):
         m = ConcreteModel()
@@ -42,6 +44,7 @@ class TestAtomicTransformations(unittest.TestCase):
         m.pprint()
 
 
+@unittest.skipUnless(sympy_available, "Sympy not available")
 class TestLogicalToLinearTransformation(unittest.TestCase):
     def test_longer_statement(self):
         m = ConcreteModel()

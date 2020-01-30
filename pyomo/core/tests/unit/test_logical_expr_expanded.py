@@ -8,6 +8,7 @@ from pyomo.core.expr.logical_expr import (Not, Equivalent,
                                           Or, Implies, And, Exactly, AtMost, AtLeast, Xor,
                                           )
 from pyomo.core.expr.logicalvalue import LogicalConstant
+from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.environ import *
 
@@ -269,6 +270,7 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertTrue(Equivalent(m.Y1, m.Y2).is_expression_type())
         self.assertTrue(AtMost(1, [m.Y1, m.Y2, m.Y3]).is_expression_type())
 
+    @unittest.skipUnless(sympy_available, "sympy not available")
     def test_cnf(self):
         m = ConcreteModel()
         m.Y1 = BooleanVar()
