@@ -738,7 +738,7 @@ class _BlockData(ActiveComponentData):
         removed from this Block if `src` contains either a component or
         attribute with the same local name.  This will "guarantee" that
         this object will still have the required attributes after
-        set_value()
+        transfer_attributes_from()
 
         Parameters
         ----------
@@ -746,7 +746,7 @@ class _BlockData(ActiveComponentData):
             The Block or mapping that contains the new attributes to
             assign to this block.
 
-        guarantee_components: sequence or set
+        guarantee_components: sequence or set of component local names
             components on this block whose local name appears in
             guarantee_components will not be automatically removed
             unless there is a component or attribute in `src` with the
