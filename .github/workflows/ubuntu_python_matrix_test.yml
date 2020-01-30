@@ -1,4 +1,4 @@
-name: Ubuntu no Py27
+name: Ubuntu no Python 2.7
 
 on:
   push:
