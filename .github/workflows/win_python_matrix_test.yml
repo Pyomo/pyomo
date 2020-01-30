@@ -1,9 +1,9 @@
-name: continuous-integration/github/pr/win
+name: Windows reconfigure
 
 on:
-  pull_request:
+  push:
     branches:
-      - master
+      - remove_py27_ga
 
 jobs:
   pyomo-tests:
@@ -22,12 +22,17 @@ jobs:
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Install Pyomo dependencies
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host ("Current Enviroment variables: ")
         gci env: | Sort Name
+        Write-Host ("")
+        Write-Host ("Update conda, then force it to NOT update itself again...")
+        Write-Host ("")
+        Invoke-Expression "conda config --set always_yes yes"
+        Invoke-Expression "conda config --set auto_update_conda false"
         Write-Host ("")
         Write-Host ("Setting Conda Env Vars... ")
         Write-Host ("")
@@ -48,11 +53,10 @@ jobs:
         $env:PATH += $(Get-Location).Path + "\gams"
         Write-Host ("New Shell Environment: ")
         gci env: | Sort Name
-        Write-Host ("")
-        Write-Host ("Update conda, then force it to NOT update itself again...")
-        Write-Host ("")
-        Invoke-Expression "conda config --set always_yes yes"
-        Invoke-Expression "conda config --set auto_update_conda false"
+    - name: Install Pyomo and extensions
+      shell: pwsh
+      run: |
+        $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host ("")
         Write-Host ("Clone model library and install PyUtilib...")
         Write-Host ("")
@@ -65,16 +69,11 @@ jobs:
         Write-Host ("Install Pyomo...")
         Write-Host ("")
         python setup.py develop
-    - name: Install extensions
-      shell: pwsh
-      run: |
-        $env:PYTHONWARNINGS="ignore::UserWarning"
+        Write-Host ("")
         Write-Host "Pyomo download-extensions"
+        Write-Host ("")
         Invoke-Expression "pyomo download-extensions"
         Invoke-Expression "pyomo build-extensions"
-        Write-Host "Calling solvers"
-        Invoke-Expression "glpsol -v"
-        Invoke-Expression "ipopt -v"
     - name: Run nightly tests with test.pyomo
       shell: pwsh
       run: |
