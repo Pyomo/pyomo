@@ -24,7 +24,7 @@ def test_grothey():
 
         return m, complicating_vars_map
 
-    m = create_master()
+    m = create_master()s
     master_vars = [m.y]
     m.benders = BendersCutGenerator()
     m.benders.set_input(master_vars=master_vars, tol=1e-8)

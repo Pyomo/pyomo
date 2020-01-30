@@ -1,5 +1,4 @@
-#from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
-from benders_cuts import BendersCutGenerator
+from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
 import pyomo.environ as pe
 import numpy as np
 

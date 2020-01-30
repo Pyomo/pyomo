@@ -160,6 +160,13 @@ class BendersCutGeneratorData(_BlockData):
         self.subproblem_solvers = list()
         self.tol = None
         self.all_master_etas = list()
+        self._subproblem_ndx_map = dict()  # map from ndx in self.subproblems (local) to the global subproblem ndx
+
+    def global_num_subproblems(self):
+        return int(self.num_subproblems_by_rank.sum())
+
+    def local_num_subproblems(self):
+        return len(self.subproblems)
 
     def set_input(self, master_vars, tol=1e-6):
         """
@@ -168,12 +175,7 @@ class BendersCutGeneratorData(_BlockData):
         Parameters
         ----------
         master_vars
-        master_eta
         tol
-
-        Returns
-        -------
-
         """
         self.num_subproblems_by_rank = np.zeros(MPI.COMM_WORLD.Get_size())
         del self.cuts
@@ -188,6 +190,7 @@ class BendersCutGeneratorData(_BlockData):
         self.tol = tol
         self.subproblem_solvers = list()
         self.all_master_etas = list()
+        self._subproblem_ndx_map = dict()
 
     def add_subproblem(self, subproblem_fn, subproblem_fn_kwargs, master_eta, subproblem_solver='gurobi_persistent', relax_subproblem_cons=False):
         _rank = np.argmin(self.num_subproblems_by_rank)
@@ -199,6 +202,7 @@ class BendersCutGeneratorData(_BlockData):
             self.subproblems.append(subproblem)
             self.complicating_vars_maps.append(complicating_vars_map)
             _setup_subproblem(subproblem, master_vars=[complicating_vars_map[i] for i in self.master_vars if i in complicating_vars_map], relax_subproblem_cons=relax_subproblem_cons)
+            self._subproblem_ndx_map[len(self.subproblems) - 1] = self.global_num_subproblems() - 1
 
             if isinstance(subproblem_solver, str):
                 subproblem_solver = pe.SolverFactory(subproblem_solver)
@@ -207,15 +211,16 @@ class BendersCutGeneratorData(_BlockData):
                 subproblem_solver.set_instance(subproblem)
 
     def generate_cut(self):
-        coefficients = np.zeros(len(self.subproblems)*len(self.master_vars), dtype='d')
-        constants = np.zeros(len(self.subproblems), dtype='d')
-        eta_coeffs = np.zeros(len(self.subproblems), dtype='d')
+        coefficients = np.zeros(self.global_num_subproblems() * len(self.master_vars), dtype='d')
+        constants = np.zeros(self.global_num_subproblems(), dtype='d')
+        eta_coeffs = np.zeros(self.global_num_subproblems(), dtype='d')
 
-        coeff_ndx = 0
-        for subproblem_ndx in range(len(self.subproblems)):
-            subproblem = self.subproblems[subproblem_ndx]
-            complicating_vars_map = self.complicating_vars_maps[subproblem_ndx]
-            master_eta = self.master_etas[subproblem_ndx]
+        for local_subproblem_ndx in range(len(self.subproblems)):
+            subproblem = self.subproblems[local_subproblem_ndx]
+            global_subproblem_ndx = self._subproblem_ndx_map[local_subproblem_ndx]
+            complicating_vars_map = self.complicating_vars_maps[local_subproblem_ndx]
+            master_eta = self.master_etas[local_subproblem_ndx]
+            coeff_ndx = global_subproblem_ndx * len(self.master_vars)
 
             subproblem.fix_complicating_vars = pe.ConstraintList()
             var_to_con_map = pe.ComponentMap()
@@ -228,7 +233,7 @@ class BendersCutGeneratorData(_BlockData):
             subproblem.fix_eta = pe.Constraint(expr=subproblem._eta - master_eta.value == 0)
             subproblem._eta.value = master_eta.value
 
-            subproblem_solver = self.subproblem_solvers[subproblem_ndx]
+            subproblem_solver = self.subproblem_solvers[local_subproblem_ndx]
             if subproblem_solver.name not in solver_dual_sign_convention:
                 raise NotImplementedError('BendersCutGenerator is unaware of the dual sign convention of subproblem solver ' + self.subproblem_solver.name)
             sign_convention = solver_dual_sign_convention[subproblem_solver.name]
@@ -248,8 +253,8 @@ class BendersCutGeneratorData(_BlockData):
                     raise RuntimeError('Unable to generate cut because subproblem failed to converge.')
                 subproblem.solutions.load_from(res)
 
-            constants[subproblem_ndx] = pe.value(subproblem._z)
-            eta_coeffs[subproblem_ndx] = sign_convention * pe.value(subproblem.dual[subproblem.obj_con])
+            constants[global_subproblem_ndx] = pe.value(subproblem._z)
+            eta_coeffs[global_subproblem_ndx] = sign_convention * pe.value(subproblem.dual[subproblem.obj_con])
             for master_var in self.master_vars:
                 if master_var in complicating_vars_map:
                     c = var_to_con_map[master_var]
@@ -264,15 +269,15 @@ class BendersCutGeneratorData(_BlockData):
             del subproblem.fix_complicating_vars_index
             del subproblem.fix_eta
 
-        total_num_subproblems = int(np.sum(self.num_subproblems_by_rank))
+        total_num_subproblems = self.global_num_subproblems()
         global_constants = np.zeros(total_num_subproblems, dtype='d')
         global_coeffs = np.zeros(total_num_subproblems*len(self.master_vars), dtype='d')
         global_eta_coeffs = np.zeros(total_num_subproblems, dtype='d')
 
         comm = MPI.COMM_WORLD
-        comm.Allgatherv([constants, MPI.DOUBLE], [global_constants, MPI.DOUBLE])
-        comm.Allgatherv([coefficients, MPI.DOUBLE], [global_coeffs, MPI.DOUBLE])
-        comm.Allgatherv([eta_coeffs, MPI.DOUBLE], [global_eta_coeffs, MPI.DOUBLE])
+        comm.Allreduce([constants, MPI.DOUBLE], [global_constants, MPI.DOUBLE])
+        comm.Allreduce([eta_coeffs, MPI.DOUBLE], [global_eta_coeffs, MPI.DOUBLE])
+        comm.Allreduce([coefficients, MPI.DOUBLE], [global_coeffs, MPI.DOUBLE])
 
         global_constants = [float(i) for i in global_constants]
         global_coeffs = [float(i) for i in global_coeffs]
@@ -280,11 +285,11 @@ class BendersCutGeneratorData(_BlockData):
 
         coeff_ndx = 0
         cuts_added = list()
-        for subproblem_ndx in range(total_num_subproblems):
-            cut_expr = global_constants[subproblem_ndx]
+        for global_subproblem_ndx in range(total_num_subproblems):
+            cut_expr = global_constants[global_subproblem_ndx]
             if cut_expr > self.tol:
-                master_eta = self.all_master_etas[subproblem_ndx]
-                cut_expr -= global_eta_coeffs[subproblem_ndx] * (master_eta - master_eta.value)
+                master_eta = self.all_master_etas[global_subproblem_ndx]
+                cut_expr -= global_eta_coeffs[global_subproblem_ndx] * (master_eta - master_eta.value)
                 for master_var in self.master_vars:
                     coeff = global_coeffs[coeff_ndx]
                     cut_expr -= coeff * (master_var - master_var.value)
@@ -293,4 +298,5 @@ class BendersCutGeneratorData(_BlockData):
                 cuts_added.append(new_cut)
             else:
                 coeff_ndx += len(self.master_vars)
+
         return cuts_added
