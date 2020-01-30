@@ -124,7 +124,7 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
 
     def exitNode(self, node, values):
         if type(node) == AndExpression:
-            return list(values)
+            return list((v if type(v) in _numeric_relational_types else v == 1) for v in values)
         elif type(node) == OrExpression:
             return sum(values) >= 1
         elif type(node) == NotExpression:
