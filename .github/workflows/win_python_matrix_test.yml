@@ -47,10 +47,13 @@ jobs:
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk ipopt"
         $env:EXP = $env:CONDAFORGE + $env:ADDITIONAL_CF_PKGS
         Invoke-Expression $env:EXP
+        Write-Host ("")
         Write-Host ("Installing GAMS")
+        Write-Host ("")
         Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
         Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS'
         $env:PATH += $(Get-Location).Path + "\gams"
+        Write-Host ("")
         Write-Host ("New Shell Environment: ")
         gci env: | Sort Name
     - name: Install Pyomo and extensions
@@ -73,7 +76,7 @@ jobs:
         Write-Host "Pyomo download-extensions"
         Write-Host ("")
         Invoke-Expression "pyomo download-extensions"
-        try {Invoke-Expression "pyomo build-extensions"}
+        
     - name: Run nightly tests with test.pyomo
       shell: pwsh
       run: |
