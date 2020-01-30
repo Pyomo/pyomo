@@ -45,6 +45,19 @@ class LogicalToLinear(IsomorphicTransformation):
             _process_statements_in_logical_context(disjunct)
 
 
+def update_boolean_vars_from_binary(model, integer_tolerance=1e-5):
+    """Updates all Boolean variables based on the value of their linked binary variables."""
+    for boolean_var in model.component_data_objects(BooleanVar, descend_into=(Block, Disjunct)):
+        binary_var = boolean_var.as_binary()
+        if binary_var is not None and binary_var.value is not None:
+            if abs(binary_var.value - 1) <= integer_tolerance:
+                boolean_var.value = True
+            elif abs(binary_var.value) <= integer_tolerance:
+                boolean_var.value = False
+            else:
+                raise ValueError("Binary variable has non-{0,1} value: %s = %s" % (binary_var.name, binary_var.value))
+
+
 def _process_statements_in_logical_context(context):
     new_constrlist_name = unique_component_name(context, 'logic_to_linear')
     new_constrlist = ConstraintList()

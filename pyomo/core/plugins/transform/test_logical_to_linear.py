@@ -2,6 +2,7 @@ import pyutilib.th as unittest
 
 from pyomo.core.expr.logical_expr import AtLeast, AtMost, Exactly
 from pyomo.core.expr.sympy_tools import sympy_available
+from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
 from pyomo.environ import ConcreteModel, BooleanVar, LogicalStatement, TransformationFactory, RangeSet, \
     Var, Constraint
 from pyomo.gdp import Disjunct, Disjunction
@@ -129,6 +130,28 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         ])
         TransformationFactory('core.logical_to_linear').apply_to(m)
         m.pprint()
+
+
+@unittest.skipUnless(sympy_available, "Sympy not available")
+class TestLogicalToLinearBackmap(unittest.TestCase):
+    def test_backmap(self):
+        m = _generate_boolean_model(3)
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        m.Y_asbinary[1].value = 1
+        m.Y_asbinary[2].value = 0
+        update_boolean_vars_from_binary(m)
+        self.assertTrue(m.Y[1].value)
+        self.assertFalse(m.Y[2].value)
+        self.assertIsNone(m.Y[3].value)
+
+    def test_backmap_noninteger(self):
+        m = _generate_boolean_model(2)
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        m.Y_asbinary[1].value = 0.9
+        update_boolean_vars_from_binary(m, integer_tolerance=0.1)
+        self.assertTrue(m.Y[1].value)
+        with self.assertRaisesRegexp(ValueError, r"Binary variable has non-\{0,1\} value"):
+            update_boolean_vars_from_binary(m)
 
 
 if __name__ == "__main__":
