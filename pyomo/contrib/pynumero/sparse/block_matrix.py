@@ -797,15 +797,15 @@ class BlockMatrix(BaseBlockMatrix):
                 'dimensions mismatch {} != {}'.format(self.shape, other.shape)
             assert_block_structure(other)
 
-            m, n = self.bshape
-            for i in range(m):
-                for j in range(n):
-                    if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
-                        result[i, j] = self._blocks[i, j] + other[i, j]
-                    elif not self.is_empty_block(i, j):
-                        result[i, j] = self._blocks[i, j].copy()
-                    elif not other.is_empty_block(i, j):
-                        result[i, j] = other[i, j].copy()
+            iterator = set(zip(*np.nonzero(self._block_mask)))
+            iterator.update(zip(*np.nonzero(other._block_mask)))
+            for i, j in iterator:
+                if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
+                    result[i, j] = self._blocks[i, j] + other[i, j]
+                elif not self.is_empty_block(i, j):
+                    result[i, j] = self._blocks[i, j].copy()
+                elif not other.is_empty_block(i, j):
+                    result[i, j] = other[i, j].copy()
             return result
         elif isspmatrix(other):
             # Note: this is not efficient but is just for flexibility.
@@ -832,15 +832,15 @@ class BlockMatrix(BaseBlockMatrix):
             assert other.shape == self.shape, \
                 'dimensions mismatch {} != {}'.format(self.shape, other.shape)
             assert_block_structure(other)
-            m, n = self.bshape
-            for i in range(m):
-                for j in range(n):
-                    if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
-                        result[i, j] = self._blocks[i, j] - other[i, j]
-                    elif not self.is_empty_block(i, j):
-                        result[i, j] = self._blocks[i, j].copy()
-                    elif not other.is_empty_block(i, j):
-                        result[i, j] = -other[i, j]
+            iterator = set(zip(*np.nonzero(self._block_mask)))
+            iterator.update(zip(*np.nonzero(other._block_mask)))
+            for i, j in iterator:
+                if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
+                    result[i, j] = self._blocks[i, j] - other[i, j]
+                elif not self.is_empty_block(i, j):
+                    result[i, j] = self._blocks[i, j].copy()
+                elif not other.is_empty_block(i, j):
+                    result[i, j] = -other[i, j]
             return result
         elif isspmatrix(other):
             # Note: this is not efficient but is just for flexibility.
@@ -1036,15 +1036,16 @@ class BlockMatrix(BaseBlockMatrix):
                 for j in range(n):
                     if not self.is_empty_block(i, j) and not other.is_empty_block(i, j):
                         result[i, j] = operation(self._blocks[i, j], other[i, j])
-                    elif not self.is_empty_block(i, j):
-                        result[i, j] = operation(self._blocks[i, j], 0.0)
-                    elif not other.is_empty_block(i, j):
-                        result[i, j] = operation(0.0, other[i, j])
                     else:
                         nrows = self._brow_lengths[i]
                         ncols = self._bcol_lengths[j]
                         mat = coo_matrix((nrows, ncols))
-                        result[i, j] = operation(mat, mat)
+                        if not self.is_empty_block(i, j):
+                            result[i, j] = operation(self._blocks[i, j], mat)
+                        elif not other.is_empty_block(i, j):
+                            result[i, j] = operation(mat, other[i, j])
+                        else:
+                            result[i, j] = operation(mat, mat)
             return result
         elif isinstance(other, BlockMatrix) or isspmatrix(other):
             if isinstance(other, BlockMatrix):

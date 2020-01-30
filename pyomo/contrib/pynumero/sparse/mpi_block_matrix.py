@@ -33,9 +33,9 @@ from scipy.sparse import coo_matrix
 import operator
 
 # Array classifiers
-SINGLE_OWNER=1
-MULTIPLE_OWNER=2
-ALL_OWN_IT=0
+SINGLE_OWNER = 1
+MULTIPLE_OWNER = 2
+ALL_OWN_IT = 0
 
 
 # ALL_OWNED = -1
@@ -816,33 +816,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __rsub__(self, other):
-        assert_block_structure(self)
-        m, n = self.bshape
-        result = self.copy_structure()
-        rank = self._mpiw.Get_rank()
-
-        if isinstance(other, MPIBlockMatrix):
-            assert_block_structure(other)
-            assert other.bshape == self.bshape, \
-                'dimensions mismatch {} != {}'.format(self.bshape, other.bshape)
-
-            assert np.array_equal(self._rank_owner, other._rank_owner), \
-                'MPIBlockMatrices must be distributed in same processors'
-
-            ii, jj = np.nonzero(self._owned_mask)
-            for i, j in zip(ii, jj):
-                mat1 = self[i, j]
-                mat2 = other[i, j]
-                if mat1 is not None and mat2 is not None:
-                    result[i, j] = mat2 - mat1
-                elif mat1 is not None and mat2 is None:
-                    result[i, j] = -mat1
-                elif mat1 is None and mat2 is not None:
-                    result[i, j] = mat2.copy()
-                else:
-                    result[i, j] = None
-            return result
-
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __mul__(self, other):
@@ -1085,15 +1058,16 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
                 if mat1 is not None and mat2 is not None:
                     result[i, j] = operation(mat1, mat2)
-                elif mat1 is not None:
-                    result[i, j] = operation(mat1, 0)
-                elif mat2 is not None:
-                    result[i, j] = operation(0, mat2)
                 else:
                     nrows = self.get_row_size(i)
                     ncols = self.get_col_size(j)
                     mat = coo_matrix((nrows, ncols))
-                    result[i, j] = operation(mat, mat)
+                    if mat1 is not None:
+                        result[i, j] = operation(mat1, mat)
+                    elif mat2 is not None:
+                        result[i, j] = operation(mat, mat2)
+                    else:
+                        result[i, j] = operation(mat, mat)
             return result
         elif np.isscalar(other):
             for i, j in zip(*np.nonzero(self.ownership_mask)):
@@ -1140,12 +1114,12 @@ class MPIBlockMatrix(BaseBlockMatrix):
         int
 
         """
-        self._assert_broadcasted_sizes()
+        assert_block_structure(self)
 
         bm, bn = self.bshape
         # get cummulative sum of block sizes
-        cum = self._bcol_lengths.cumsum()
-        assert index >=0, 'index out of bounds'
+        cum = self.col_block_sizes(copy=False).cumsum()
+        assert index >= 0, 'index out of bounds'
         assert index < cum[bn-1], 'index out of bounds'
 
         # exits if only has one column
@@ -1174,12 +1148,12 @@ class MPIBlockMatrix(BaseBlockMatrix):
         int
 
         """
-        self._assert_broadcasted_sizes()
+        assert_block_structure(self)
 
         bm, bn = self.bshape
         # get cummulative sum of block sizes
-        cum = self._brow_lengths.cumsum()
-        assert index >=0, 'index out of bounds'
+        cum = self.row_block_sizes(copy=False).cumsum()
+        assert index >= 0, 'index out of bounds'
         assert index < cum[bm-1], 'index out of bounds'
 
         # exits if only has one column
@@ -1217,26 +1191,26 @@ class MPIBlockMatrix(BaseBlockMatrix):
         col_ownership = []
         bm, bn = self.bshape
         for i in range(bm):
-             col_ownership.append(self._rank_owner[i, bcol])
+            col_ownership.append(self._rank_owner[i, bcol])
         # create vector
         bv = MPIBlockVector(bm,
-                           col_ownership,
-                           self._mpiw,
-                           block_sizes=block_sizes)
+                            col_ownership,
+                            self._mpiw,
+                            block_sizes=block_sizes)
 
         # compute offset columns
         offset = 0
         if bcol > 0:
-            cum_sum = self._bcol_lengths.cumsum()
+            cum_sum = self.col_block_sizes(copy=False).cumsum()
             offset = cum_sum[bcol-1]
 
         # populate vector
         rank = self._mpiw.Get_rank()
         for row_bid, owner in enumerate(col_ownership):
-            if rank == owner or owner<0:
+            if rank == owner or owner < 0:
                 sub_matrix = self._block_matrix[row_bid, bcol]
                 if self._block_matrix.is_empty_block(row_bid, bcol):
-                    v = np.zeros(self._brow_lengths[row_bid])
+                    v = np.zeros(self.get_row_size(row_bid))
                 elif isinstance(sub_matrix, BaseBlockMatrix):
                     v = sub_matrix.getcol(j-offset)
                 else:
@@ -1277,7 +1251,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         # compute offset columns
         offset = 0
         if brow > 0:
-            cum_sum = self._brow_lengths.cumsum()
+            cum_sum = self.row_block_sizes(copy=False).cumsum()
             offset = cum_sum[brow-1]
         # populate vector
         rank = self._mpiw.Get_rank()
@@ -1285,7 +1259,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
             if rank == owner or owner<0:
                 sub_matrix = self._block_matrix[brow, col_bid]
                 if self._block_matrix.is_empty_block(brow, col_bid):
-                    v = np.zeros(self._bcol_lengths[col_bid])
+                    v = np.zeros(self.get_col_size(col_bid))
                 elif isinstance(sub_matrix, BaseBlockMatrix):
                     v = sub_matrix.getrow(i-offset)
                 else:

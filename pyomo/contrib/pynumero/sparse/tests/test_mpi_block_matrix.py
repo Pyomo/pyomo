@@ -24,18 +24,18 @@ try:
             "These tests need at least 3 processors")
 except ImportError:
     raise unittest.SkipTest(
-        "Pynumero needs mpi4py to run mpi block vector tests")
+        "Pynumero needs mpi4py to run mpi block matrix tests")
 
 try:
     from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
 except ImportError:
     raise unittest.SkipTest(
-        "Pynumero needs mpi4py to run mpi block vector tests")
+        "Pynumero needs mpi4py to run mpi block matrix tests")
 try:
     from pyomo.contrib.pynumero.sparse.mpi_block_matrix import (MPIBlockMatrix)
 except ImportError:
     raise unittest.SkipTest(
-        "Pynumero needs mpi4py to run mpi block vector tests")
+        "Pynumero needs mpi4py to run mpi block matrix tests")
 
 from pyomo.contrib.pynumero.sparse import (BlockVector,
                                            BlockMatrix)
