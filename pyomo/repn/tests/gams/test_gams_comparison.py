@@ -34,7 +34,6 @@ class Tests(unittest.TestCase):
 class BaselineTests(Tests):
     def __init__(self, *args, **kwds):
         Tests.__init__(self, *args, **kwds)
-BaselineTests = unittest.category('smoke', 'nightly','expensive')(BaselineTests)
 
 #
 # The following test generates a GMS file for the test case

@@ -221,10 +221,11 @@ def update_contset_indexed_component(comp, expansion_map):
 
     # Extract the indexing sets. Must treat components with a single
     # index separately from components with multiple indexing sets.
-    if comp._implicit_subsets is None:
-        indexset = [comp._index]
+    temp = comp.index_set()
+    if hasattr(temp, 'set_tuple'):
+        indexset = comp.index_set().set_tuple
     else:
-        indexset = comp._implicit_subsets
+        indexset = [temp,]
 
     for s in indexset:
         if s.type() == ContinuousSet and s.get_changed():
@@ -404,12 +405,8 @@ def add_discretization_equations(block, d):
         except IndexError:
             return Constraint.Skip
 
-    if d.dim() == 1:
-        block.add_component(d.local_name + '_disc_eq',
-                            Constraint(d._index, rule=_disc_eq))
-    else:
-        block.add_component(d.local_name + '_disc_eq',
-                            Constraint(*d._implicit_subsets, rule=_disc_eq))
+    block.add_component(d.local_name + '_disc_eq',
+                        Constraint(d.index_set(), rule=_disc_eq))
 
 
 def add_continuity_equations(block, d, i, loc):
@@ -445,11 +442,8 @@ def add_continuity_equations(block, d, i, loc):
         except IndexError:
             return Constraint.Skip
 
-    if d.dim() == 1:
-        block.add_component(nme, Constraint(d._index, rule=_cont_eq))
-    else:
-        block.add_component(nme, Constraint(*d._implicit_subsets,
-                                            rule=_cont_eq))
+    block.add_component(nme, Constraint(d.index_set(),
+                                        rule=_cont_eq))
 
 
 def block_fully_discretized(b):
@@ -480,9 +474,9 @@ def get_index_information(var, ds):
 
     if var.dim() != 1:
         indCount = 0
-        for index in var._implicit_subsets:
+        for index in var.index_set().set_tuple:
             if isinstance(index, ContinuousSet):
-                if index == ds:
+                if index is ds:
                     dsindex = indCount
                 else:
                     # If var is indexed by multiple ContinuousSets treat

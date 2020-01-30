@@ -21,6 +21,7 @@ from weakref import ref as weakref_ref
 from pyutilib.misc.indent_io import StreamIndenter
 
 import pyomo.common
+from pyomo.common import deprecated
 from pyomo.core.base.misc import tabular_writer, sorted_robust
 
 logger = logging.getLogger('pyomo.core')
@@ -64,9 +65,9 @@ def name(component, index=None, fully_qualified=False, relative_to=None):
                             % (index, component.name) )
         return base + _name_index_generator( index )
 
+
+@deprecated(msg="The cname() function has been renamed to name()", version='TBD', remove_in='TBD')
 def cname(*args, **kwds):
-    logger.warning(
-        "DEPRECATED: The cname() function has been renamed to name()" )
     return name(*args, **kwds)
 
 
@@ -1049,7 +1050,7 @@ class ComponentUID(object):
         return a
 
     def __getstate__(self):
-        return dict((x,getattr(self,x)) for x in ComponentUID.__slots__)
+        return {x:getattr(self, x) for x in ComponentUID.__slots__}
 
     def __setstate__(self, state):
         for key, val in iteritems(state):

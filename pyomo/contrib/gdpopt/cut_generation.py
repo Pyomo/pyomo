@@ -227,16 +227,9 @@ def add_integer_cut(var_values, target_model, solve_data, config, feasible=False
         int_cut = (sum(1 - v for v in var_value_is_one) +
                    sum(v for v in var_value_is_zero)) >= 1
 
-        if not feasible:
-            config.logger.info('Adding integer cut')
-            GDPopt.integer_cuts.add(expr=int_cut)
-        else:
-            backtracking_enabled = (
-                "disabled" if GDPopt.no_backtracking.active else "allowed")
-            config.logger.info(
-                'Registering explored configuration. '
-                'Backtracking is currently %s.' % backtracking_enabled)
-            GDPopt.no_backtracking.add(expr=int_cut)
+        # Exclude the current binary combination
+        config.logger.info('Adding integer cut')
+        GDPopt.integer_cuts.add(expr=int_cut)
 
     if config.calc_disjunctive_bounds:
         with time_code(solve_data.timing, "disjunctive variable bounding"):

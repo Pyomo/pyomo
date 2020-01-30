@@ -149,7 +149,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         """
         Set the value of an attribute on a gurobi linear constraint.
 
-        Paramaters
+        Parameters
         ----------
         con: pyomo.core.base.constraint._GeneralConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
@@ -177,7 +177,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         """
         Set the value of an attribute on a gurobi variable.
 
-        Paramaters
+        Parameters
         ----------
         con: pyomo.core.base.var._GeneralVarData
             The pyomo var for which the corresponding gurobi var attribute
@@ -315,7 +315,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         """
         Get the value of an attribute on a gurobi var.
 
-        Paramaters
+        Parameters
         ----------
         var: pyomo.core.base.var._GeneralVarData
             The pyomo var for which the corresponding gurobi var attribute
@@ -356,7 +356,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         """
         Get the value of an attribute on a gurobi linear constraint.
 
-        Paramaters
+        Parameters
         ----------
         con: pyomo.core.base.constraint._GeneralConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
@@ -384,7 +384,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         """
         Get the value of an attribute on a gurobi sos constraint.
 
-        Paramaters
+        Parameters
         ----------
         con: pyomo.core.base.sos._SOSConstraintData
             The pyomo SOS constraint for which the corresponding gurobi SOS constraint attribute
@@ -401,7 +401,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         """
         Get the value of an attribute on a gurobi quadratic constraint.
 
-        Paramaters
+        Parameters
         ----------
         con: pyomo.core.base.constraint._GeneralConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
