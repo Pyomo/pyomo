@@ -551,11 +551,10 @@ class Var(IndexedComponent):
         Return a dictionary of index-value pairs.
         """
         if include_fixed_values:
-            return dict((idx, vardata.value)
-                            for idx, vardata in iteritems(self._data))
-        return dict((idx, vardata.value)
+            return {idx:vardata.value for idx,vardata in iteritems(self._data)}
+        return {idx:vardata.value
                             for idx, vardata in iteritems(self._data)
-                                                if not vardata.fixed)
+                                                if not vardata.fixed}
 
     extract_values = get_values
 

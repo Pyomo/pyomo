@@ -190,7 +190,7 @@ class InitializerBase(object):
     verified = False
 
     def __getstate__(self):
-        return dict((k, getattr(self,k)) for k in self.__slots__)
+        return {k:getattr(self,k) for k in self.__slots__}
 
     def __setstate__(self, state):
         for key, val in iteritems(state):
