@@ -46,6 +46,20 @@ jobs:
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk ipopt"
         $env:EXP = $env:CONDAFORGE + $env:ADDITIONAL_CF_PKGS
         Invoke-Expression $env:EXP
+        $env:PYNUMERO = $env:CONDAFORGE + " pynumero_libraries"
+        Write-Host ("")
+        Write-Host ("Try to install Pynumero_libraries...")
+        Write-Host ("")
+        try
+        {
+            Invoke-Expression $env:PYNUMERO
+        }
+        catch
+        {
+            Write-Host ("####################################################")
+            Write-Host ("WARNING: Pynumero_libraries is not available for Python ${{matrix.python-version}}")
+            Write-Host ("####################################################")
+        }
         Write-Host ("")
         Write-Host ("Installing GAMS")
         Write-Host ("")
@@ -75,7 +89,7 @@ jobs:
         Write-Host "Pyomo download-extensions"
         Write-Host ("")
         Invoke-Expression "pyomo download-extensions"
-        
+
     - name: Run nightly tests with test.pyomo
       shell: pwsh
       run: |
