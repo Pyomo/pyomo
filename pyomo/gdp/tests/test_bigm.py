@@ -2705,11 +2705,7 @@ class TestErrors(unittest.TestCase):
             TransformationFactory('gdp.bigm').apply_to,
             m)
 
-    # TODO: This actually really pathological, it might make more sense to test
-    # that when the inner *disjunction* is deactivated that we ignore it. This
-    # *I think* should be expected behavior, but it's ugly.
-    def test_transformed_disjunction_all_disjuncts_deactivated(self):
-        # I'm not sure I like that I can make this happen...
+    def test_infeasible_xor_because_all_disjuncts_deactivated(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0,8))
         m.y = Var(bounds=(0,7))
@@ -2721,25 +2717,77 @@ class TestErrors(unittest.TestCase):
         # will have to land in the second disjunct of m.disjunction
         m.disjunction.disjuncts[0].nestedDisjunction.disjuncts[0].deactivate()
         m.disjunction.disjuncts[0].nestedDisjunction.disjuncts[1].deactivate()
-        # "transform" something with nothing to transform
+        # This should create a 0 = 1 XOR constraint, actually...
         TransformationFactory('gdp.bigm').apply_to(
             m, 
             targets=m.disjunction.disjuncts[0].nestedDisjunction)
 
+        # check that our XOR is the bad thing it should be.
+        transBlock = m.disjunction.disjuncts[0].component(
+            "_pyomo_gdp_bigm_relaxation")
+        xor = transBlock.component(
+            "disjunction_disjuncts[0].nestedDisjunction_xor")
+        self.assertIsInstance(xor, Constraint)
+        self.assertEqual(value(xor.lower), 1)
+        self.assertEqual(value(xor.upper), 1)
+        repn = generate_standard_repn(xor.body)
+        for v in repn.linear_vars:
+            self.assertTrue(v.is_fixed())
+            self.assertEqual(value(v), 0)
+
         # make sure when we transform the outer thing, all is well
         TransformationFactory('gdp.bigm').apply_to(m)
 
-        # This is a really dumb case, but we should have just transformed the
-        # outer disjunction without getting distracted by the silly things
-        # happening inside.
         transBlock = m.component("_pyomo_gdp_bigm_relaxation")
         self.assertIsInstance(transBlock, Block)
         self.assertEqual(len(transBlock.relaxedDisjuncts), 2)
-        disjunct1 = transBlock.relaxedDisjuncts[0]
-        # self.assertIsInstance(disjunct1.component(
-        # TODO: make sure we have the right constraints on these blocks!
         self.assertIsInstance(transBlock.component("disjunction_xor"),
                               Constraint)
+        disjunct1 = transBlock.relaxedDisjuncts[0]
+        # longest constraint name EVER...
+        relaxed_xor = disjunct1.component(
+            "disjunction_disjuncts[0]._pyomo_gdp_bigm_relaxation."
+            "disjunction_disjuncts[0].nestedDisjunction_xor")
+        self.assertIsInstance(relaxed_xor, Constraint)
+        repn = generate_standard_repn(relaxed_xor['lb'].body)
+        self.assertEqual(relaxed_xor['lb'].lower, 1)
+        self.assertIsNone(relaxed_xor['lb'].upper)
+        # the other variables got eaten in the constant because they are fixed.
+        self.assertEqual(len(repn.linear_vars), 1)
+        check_linear_coef(
+            self, repn,
+            m.disjunction.disjuncts[0].indicator_var,
+            -1)
+        self.assertEqual(repn.constant, 1)
+        repn = generate_standard_repn(relaxed_xor['ub'].body)
+        self.assertIsNone(relaxed_xor['ub'].lower)
+        self.assertEqual(value(relaxed_xor['ub'].upper), 1)
+        self.assertEqual(len(repn.linear_vars), 1)
+        check_linear_coef(
+            self, repn,
+            m.disjunction.disjuncts[0].indicator_var,
+            -1)
+
+        # and last check that the other constraints here look fine
+        x0 = disjunct1.component("disjunction_disjuncts[0].constraint")
+        self.assertIsInstance(x0, Constraint)
+        lb = x0[(1, 'lb')]
+        self.assertEqual(value(lb.lower), 0)
+        self.assertIsNone(lb.upper)
+        repn = generate_standard_repn(lb.body)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 1)
+        check_linear_coef(self, repn, m.x, 1)
+
+        ub = x0[(1, 'ub')]
+        self.assertIsNone(ub.lower)
+        self.assertEqual(value(ub.upper), 0)
+        repn = generate_standard_repn(ub.body)
+        self.assertEqual(repn.constant, -8)
+        self.assertEqual(len(repn.linear_vars), 2)
+        check_linear_coef(self, repn, m.x, 1)
+        check_linear_coef(self, repn, m.disjunction_disjuncts[0].indicator_var,
+                          8)
 
     def test_retrieving_nondisjunctive_components(self):
         m = models.makeTwoTermDisj()
