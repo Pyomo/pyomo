@@ -1,18 +1,17 @@
 name: continuous-integration/github/pr/win
 
 on:
-  push:
+  pull_request:
     branches:
-      - mac_gams
+      - master
 
 jobs:
   pyomo-tests:
     name: py${{ matrix.python-version }}
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     strategy:
       fail-fast: false # This flag causes all of the matrix to continue to run, even if one matrix option fails
       matrix:
-        os: ['windows-latest']
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8] 
     steps:
     - uses: actions/checkout@v1
@@ -96,6 +95,5 @@ jobs:
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
         $env:PATH += ';' + $(Get-Location).Path + "\gams"
-        gams
-        #$env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
-        #Invoke-Expression $env:EXP
+        $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
+        Invoke-Expression $env:EXP

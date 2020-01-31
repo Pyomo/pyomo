@@ -1,9 +1,9 @@
 name: continuous-integration/github/pr/linux
 
 on:
-  push:
+  pull_request:
     branches:
-      - mac_gams
+      - master
 
 jobs:
   pyomo-linux-tests:

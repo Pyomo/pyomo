@@ -1,9 +1,9 @@
 name: continuous-integration/github/pr/osx
 
 on:
-  push:
+  pull_request:
     branches:
-      - mac_gams
+      - master
       # Can add additional branches if desired
 
 jobs:
@@ -61,7 +61,7 @@ jobs:
     - name: Run nightly, not fragile tests with test.pyomo
       run: |
         echo "Run test.pyomo..."
-        PATH=$PATH:$(pwd)/gams/gams29.1_osx_x64_64/
+        PATH=$PATH:$(pwd)/gams/gams29.1_osx_x64_64_sfx/
         export PATH # Need license for 30.1.0: https://www.gams.com/latest/docs/UG_License.html
         pip install nose
         KEY_JOB=1
