@@ -53,9 +53,8 @@ jobs:
     - name: Run nightly tests with test.pyomo
       run: |
         echo "Run test.pyomo..."
-        PATH=$PATH:gams/gams24.3_linux_x64_64_sfx/
+        PATH=$PATH:$(pwd)/gams/gams24.8_linux_x64_64_sfx/
         export PATH
-        gams
-        #pip install nose
-        #KEY_JOB=1
-        #test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
+        pip install nose
+        KEY_JOB=1
+        test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries

@@ -64,8 +64,7 @@ jobs:
         Write-Host ("Installing GAMS")
         Write-Host ("")
         Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
-        Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS'
-        $env:PATH += $(Get-Location).Path + "\gams"
+        Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS' -Wait
         Write-Host ("")
         Write-Host ("New Shell Environment: ")
         gci env: | Sort Name
@@ -96,7 +95,7 @@ jobs:
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
-        $env:PATH += $(Get-Location).Path + "\gams"
+        $env:PATH += ';' + $(Get-Location).Path + "\gams"
         gams
         #$env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
         #Invoke-Expression $env:EXP
