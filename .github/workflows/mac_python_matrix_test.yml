@@ -41,7 +41,8 @@ jobs:
         wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/30.1.0/macosx/osx_x64_64_sfx.exe
         chmod +x osx_x64_64_sfx.exe
         ./osx_x64_64_sfx.exe -q -d gams
-        PATH=$PATH:/gams/gams30.1_osx_x64_64
+        PATH=$PATH:gams/gams30.1_osx_x64_64/
+        export PATH # Need license: https://www.gams.com/latest/docs/UG_License.html
     - name: Install Pyomo and extensions
       run: |
         echo "Clone Pyomo-model-libraries..."
