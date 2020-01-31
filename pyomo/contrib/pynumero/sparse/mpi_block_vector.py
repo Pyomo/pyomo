@@ -111,7 +111,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 # empty the blocks that are not owned by this processor
                 # blocks that are not owned by this proceesor are set
                 # to numpy.zeros(0) in _block_vector
-                obj._block_vector[i] = np.zeros(0)
+                obj._block_vector.set_block(i, np.zeros(0))
             else:
                 obj._owned_blocks.append(i)
                 obj._owned_mask[i] = True
@@ -213,13 +213,13 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             v = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
             for i in self._owned_blocks:
                 _args = [x[i]] + [args[j] for j in range(1, len(args))]
-                v[i] = self._unary_operation(ufunc, method, *_args, **kwargs)
+                v.set_block(i, self._unary_operation(ufunc, method, *_args, **kwargs))
             return v
         elif isinstance(x, BlockVector):
             v = BlockVector(x.nblocks)
             for i in range(x.nblocks):
                 _args = [x[i]] + [args[j] for j in range(1, len(args))]
-                v[i] = self._unary_operation(ufunc, method, *_args, **kwargs)
+                v.set_block(i, self._unary_operation(ufunc, method, *_args, **kwargs))
             return v
         elif type(x) == np.ndarray:
             return super(MPIBlockVector, self).__array_ufunc__(ufunc, method,
@@ -241,7 +241,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             res = MPIBlockVector(x1.nblocks, x1._rank_owner, self._mpiw)
             for i in x1._owned_blocks:
                 _args = [x1[i]] + [x2[i]] + [args[j] for j in range(2, len(args))]
-                res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
+                res.set_block(i, self._binary_operation(ufunc, method, *_args, **kwargs))
             return res
         elif isinstance(x1, BlockVector) and isinstance(x2, MPIBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -251,13 +251,13 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             res = MPIBlockVector(x1.nblocks, x1._rank_owner, self._mpiw)
             for i in x1._owned_blocks:
                 _args = [x1[i]] + [x2] + [args[j] for j in range(2, len(args))]
-                res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
+                res.set_block(i, self._binary_operation(ufunc, method, *_args, **kwargs))
             return res
         elif isinstance(x2, MPIBlockVector) and np.isscalar(x1):
             res = MPIBlockVector(x2.nblocks, x2._rank_owner, self._mpiw)
             for i in x2._owned_blocks:
                 _args = [x1] + [x2[i]] + [args[j] for j in range(2, len(args))]
-                res[i] = self._binary_operation(ufunc, method, *_args, **kwargs)
+                res.set_block(i, self._binary_operation(ufunc, method, *_args, **kwargs))
             return res
         elif isinstance(x1, MPIBlockVector) and type(x2)==np.ndarray:
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -538,7 +538,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         rank = self._mpiw.Get_rank()
         result = self.copy_structure()
         for i in self._owned_blocks:
-            result[i] = self._block_vector[i].conj()
+            result.set_block(i, self._block_vector[i].conj())
         return result
 
     def conjugate(self):
@@ -554,7 +554,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         result = self.copy_structure()
         assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         for i in self._owned_blocks:
-            result[i] = self._block_vector[i].nonzero()[0]
+            result.set_block(i, self._block_vector[i].nonzero()[0])
         return (result,)
 
     def round(self, decimals=0, out=None):
@@ -565,7 +565,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         result = self.copy_structure()
         for i in self._owned_blocks:
-            result[i] = self._block_vector[i].round(decimals=decimals)
+            result.set_block(i, self._block_vector[i].round(decimals=decimals))
         return result
 
     def clip(self, min=None, max=None, out=None):
@@ -589,7 +589,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         assert not self._block_vector.has_none, 'Operations not allowed with None blocks.'
         result = self.copy_structure()
         for i in self._owned_blocks:
-            result[i] = self._block_vector[i].clip(min=min, max=max)
+            result.set_block(i, self._block_vector[i].clip(min=min, max=max))
         return result
 
     def compress(self, condition, axis=None, out=None):
@@ -616,7 +616,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert np.array_equal(self._rank_owner, condition._rank_owner), msg
             assert self._mpiw == condition._mpiw, 'Need to have same communicator'
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].compress(condition[i])
+                result.set_block(i, self._block_vector[i].compress(condition[i]))
             return result
         if isinstance(condition, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -655,18 +655,18 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                     self._block_vector[i].copyfrom(other[i])
                 elif type(self._block_vector[i]) == np.ndarray:
                     if isinstance(other[i], BlockVector):
-                        self._block_vector[i] = other[i].copy()
+                        self._block_vector.set_block(i, other[i].copy())
                     elif type(other[i])==np.ndarray:
                         np.copyto(self._block_vector[i], other[i])
                     elif other[i] is None:
-                        self._block_vector[i] = None
+                        self._block_vector.set_block(i, None)
                     else:
                         raise RuntimeError('Input not recognized')
                 elif self._block_vector[i] is None:
                     if isinstance(other[i], np.ndarray):
-                        self._block_vector[i] = other[i].copy()
+                        self._block_vector.set_block(i, other[i].copy())
                     elif other[i] is None:
-                        self._block_vector[i] = None
+                        self._block_vector.set_block(i, None)
                     else:
                         raise RuntimeError('Input not recognized')
                 else:
@@ -681,18 +681,18 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                     self._block_vector[i].copyfrom(other[i])
                 elif isinstance(self._block_vector[i], np.ndarray):
                     if isinstance(other[i], BlockVector):
-                        self._block_vector[i] = other[i].copy()
+                        self._block_vector.set_block(i, other[i].copy())
                     elif isinstance(other[i], np.ndarray):
                         np.copyto(self._block_vector[i], other[i])
                     elif other[i] is None:
-                        self._block_vector[i] = None
+                        self._block_vector.set_block(i, None)
                     else:
                         raise RuntimeError('Input not recognized')
                 elif self._block_vector[i] is None:
                     if isinstance(other[i], np.ndarray):
-                        self._block_vector[i] = other[i].copy()
+                        self._block_vector.set_block(i, other[i].copy())
                     elif other[i] is None:
-                        self._block_vector[i] = None
+                        self._block_vector.set_block(i, None)
                     else:
                         raise RuntimeError('Input not recognized')
                 else:
@@ -736,12 +736,12 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                     if blk is not None:
                         np.copyto(other[i], blk.flatten())
                     else:
-                        other[i] = None
+                        other.set_block(i, None)
                 elif other[i] is None:
                     if blk is not None:
-                        other[i] = blk.copy()
+                        other.set_block(i, blk.copy())
                     else:
-                        other[i] = None
+                        other.set_block(i, None)
                 else:
                     raise RuntimeError('Should never get here')
         elif isinstance(other, BlockVector):
@@ -785,7 +785,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                     block_data = splitted_data[owner][bid]
                 else:
                     block_data = self._block_vector[bid]
-                other[bid] = block_data
+                other.set_block(bid, block_data)
 
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -812,7 +812,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         assert len(blocks) == self.nblocks, msg
 
         for i in self._owned_blocks:
-            self[i] = blocks[i]
+            self.set_block(i, blocks[i])
 
     def clone(self, value=None, copy=True):
         """
@@ -942,7 +942,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 chunk_size_per_processor[owner] += chunk_size
 
         receive_size = sum(chunk_size_per_processor)
-        send_data = np.concatenate([self._block_vector[bid] for bid in self._unique_owned_blocks])
+        send_data = np.concatenate([self._block_vector.get_block(bid) for bid in self._unique_owned_blocks])
         receive_data = np.empty(receive_size, dtype=send_data.dtype)
 
         # communicate data to all
@@ -963,7 +963,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 block_data = splitted_data[owner][bid]
             else:
                 block_data = self._block_vector[bid]
-            new_MPIBlockVector[bid] = block_data
+            new_MPIBlockVector.set_block(bid, block_data)
 
         # no need to broadcast sizes coz all have the same 
         new_MPIBlockVector._done_first_broadcast_sizes = True
@@ -1009,11 +1009,11 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             # first check if block is owned by everyone in source
             if src_owner < 0:
                 if rank == dest_owner:
-                    new_MPIBlockVector[bid] = self[bid]
+                    new_MPIBlockVector.set_block(bid, self[bid])
             # then check if it is the same owner to just copy without any mpi call
             elif src_owner == dest_owner:
                 if src_owner == rank:
-                    new_MPIBlockVector[bid] = self[bid]
+                    new_MPIBlockVector.set_block(bid, self[bid])
             else:
                 # if destination is in different space
                 if dest_owner >= 0:
@@ -1024,7 +1024,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                     elif rank == dest_owner:
                         data = np.empty(self._brow_lengths[bid], dtype=np.float64)
                         self._mpiw.Recv([data, MPI.DOUBLE], source=src_owner)
-                        new_MPIBlockVector[bid] = data
+                        new_MPIBlockVector.set_block(bid, data)
                 # if destination is all processors
                 else:
                     # broadcast from source to all
@@ -1034,7 +1034,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                         data = np.empty(self._brow_lengths[bid], dtype=np.float64)
 
                     self._mpiw.Bcast(data, root=src_owner)
-                    new_MPIBlockVector[bid] = data
+                    new_MPIBlockVector.set_block(bid, data)
 
         return new_MPIBlockVector
 
@@ -1048,7 +1048,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i] + other[i]
+                result.set_block(i, self._block_vector[i] + other[i])
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1056,7 +1056,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i] + other
+                result.set_block(i, self._block_vector[i] + other)
             return result
         else:
             raise NotImplementedError()
@@ -1074,7 +1074,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i] - other[i]
+                result.set_block(i, self._block_vector[i] - other[i])
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1082,7 +1082,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i] - other
+                result.set_block(i, self._block_vector[i] - other)
             return result
         else:
             raise NotImplementedError()
@@ -1097,7 +1097,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                result[i] =  other[i] - self._block_vector[i]
+                result.set_block(i,  other[i] - self._block_vector[i])
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1105,7 +1105,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result[i] =  other - self._block_vector[i]
+                result.set_block(i,  other - self._block_vector[i])
             return result
         else:
             raise NotImplementedError()
@@ -1120,7 +1120,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__mul__(other[i])
+                result.set_block(i, self._block_vector[i].__mul__(other[i]))
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1128,7 +1128,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__mul__(other)
+                result.set_block(i, self._block_vector[i].__mul__(other))
             return result
         else:
             raise NotImplementedError()
@@ -1146,7 +1146,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i] / other[i]
+                result.set_block(i, self._block_vector[i] / other[i])
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1154,7 +1154,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i] / other
+                result.set_block(i, self._block_vector[i] / other)
             return result
         else:
             raise NotImplementedError()
@@ -1169,7 +1169,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                result[i] = other[i] / self._block_vector[i]
+                result.set_block(i, other[i] / self._block_vector[i])
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1177,7 +1177,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result[i] = other / self._block_vector[i]
+                result.set_block(i, other / self._block_vector[i])
             return result
         else:
             raise NotImplementedError()
@@ -1193,7 +1193,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             result._rank_owner = self._rank_owner
 
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i] // other[i]
+                result.set_block(i, self._block_vector[i] // other[i])
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1201,7 +1201,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i] // other
+                result.set_block(i, self._block_vector[i] // other)
             return result
         else:
             raise NotImplementedError()
@@ -1216,7 +1216,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                result[i] = other[i] // self._block_vector[i]
+                result.set_block(i, other[i] // self._block_vector[i])
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1224,7 +1224,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result[i] = other // self._block_vector[i]
+                result.set_block(i, other // self._block_vector[i])
             return result
         else:
             raise NotImplementedError()
@@ -1304,7 +1304,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                self._block_vector[i] = self._block_vector[i] / other[i]
+                self._block_vector.set_block(i, self._block_vector[i] / other[i])
             return self
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1312,7 +1312,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                self._block_vector[i] = self._block_vector[i] / other
+                self._block_vector.set_block(i, self._block_vector[i] / other)
             return self
         else:
             raise NotImplementedError()
@@ -1327,7 +1327,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__le__(other[i])
+                result.set_block(i, self._block_vector[i].__le__(other[i]))
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1335,7 +1335,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__le__(other)
+                result.set_block(i, self._block_vector[i].__le__(other))
             return result
         else:
             raise NotImplementedError()
@@ -1350,7 +1350,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__lt__(other[i])
+                result.set_block(i, self._block_vector[i].__lt__(other[i]))
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1358,7 +1358,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__lt__(other)
+                result.set_block(i, self._block_vector[i].__lt__(other))
             return result
         else:
             raise NotImplementedError()
@@ -1373,7 +1373,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__ge__(other[i])
+                result.set_block(i, self._block_vector[i].__ge__(other[i]))
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1381,7 +1381,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__ge__(other)
+                result.set_block(i, self._block_vector[i].__ge__(other))
             return result
         else:
             raise NotImplementedError()
@@ -1396,7 +1396,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__gt__(other[i])
+                result.set_block(i, self._block_vector[i].__gt__(other[i]))
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1404,7 +1404,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__gt__(other)
+                result.set_block(i, self._block_vector[i].__gt__(other))
             return result
         else:
             raise NotImplementedError()
@@ -1419,7 +1419,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__eq__(other[i])
+                result.set_block(i, self._block_vector[i].__eq__(other[i]))
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1427,7 +1427,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__eq__(other)
+                result.set_block(i, self._block_vector[i].__eq__(other))
             return result
         else:
             raise NotImplementedError()
@@ -1442,7 +1442,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__ne__(other[i])
+                result.set_block(i, self._block_vector[i].__ne__(other[i]))
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -1450,7 +1450,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result[i] = self._block_vector[i].__ne__(other)
+                result.set_block(i, self._block_vector[i].__ne__(other))
             return result
         else:
             raise NotImplementedError()
@@ -1466,15 +1466,15 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         else:
             raise NotImplementedError()
 
-    def __getitem__(self, key):
+    def get_block(self, key):
 
         owner = self._rank_owner[key]
         rank = self._mpiw.Get_rank()
         assert owner == rank or \
                owner < 0, 'Block {} not own by processor {}'.format(key, rank)
-        return self._block_vector[key]
+        return self._block_vector.get_block(key)
 
-    def __setitem__(self, key, value):
+    def set_block(self, key, value):
 
         owner = self._rank_owner[key]
         rank = self._mpiw.Get_rank()
@@ -1488,7 +1488,13 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             if self._brow_lengths[key] != new_size:
                 self._need_broadcast_sizes = True
 
-        self._block_vector[key] = value
+        self._block_vector.set_block(key, value)
+
+    def __getitem__(self, item):
+        raise NotImplementedError('MPIBlockVector does not support __getitem__.')
+
+    def __setitem__(self, key, value):
+        raise NotImplementedError('MPIBlockVector does not support __setitem__.')
 
     def __str__(self):
         msg = '{}{}:\n'.format(self.__class__.__name__, self.bshape)

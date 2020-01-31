@@ -776,7 +776,7 @@ class BlockMatrix(BaseBlockMatrix):
     def __getitem__(self, item):
         raise NotImplementedError('BlockMatrix does not support __getitem__.')
 
-    def __setitem__(self, item):
+    def __setitem__(self, item, val):
         raise NotImplementedError('BlockMatrix does not support __setitem__.')
 
     def __add__(self, other):

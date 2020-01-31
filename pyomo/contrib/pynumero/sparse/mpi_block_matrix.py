@@ -229,7 +229,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         ii, jj = np.nonzero(block_indices)
         for i, j in zip(ii, jj):
             if not self._block_matrix.is_empty_block(i, j):
-                local_nnz += self._block_matrix[i, j].nnz
+                local_nnz += self._block_matrix.get_block(i, j).nnz
 
         return self._mpiw.allreduce(local_nnz, op=MPI.SUM)
 
@@ -344,8 +344,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         rows, columns = np.nonzero(self.ownership_mask)
         for i, j in zip(rows, columns):
-            if self[i, j] is not None:
-                result[j, i] = self[i, j].transpose(copy=True)
+            if self.get_block(i, j) is not None:
+                result.set_block(j, i, self.get_block(i, j).transpose(copy=True))
         return result
 
     def tocoo(self):
@@ -717,37 +717,36 @@ class MPIBlockMatrix(BaseBlockMatrix):
         if self._mpiw.Get_rank() == root:
             print(msg)
 
-    def __getitem__(self, item):
-        block = self._block_matrix[item]
-        owner = self._rank_owner[item]
+    def get_block(self, row, col):
+        block = self._block_matrix.get_block(row, col)
+        owner = self._rank_owner[row, col]
         rank = self._mpiw.Get_rank()
         assert owner == rank or \
                owner < 0, \
-               'Block {} not owned by processor {}'.format(item, rank)
+               'Block {} not owned by processor {}'.format((row, col), rank)
 
         return block
 
-    def __setitem__(self, key, value):
+    def set_block(self, row, col, value):
+        assert row >= 0 and \
+               col >= 0, 'Indices must be positive'
 
-        assert not isinstance(key, slice), \
-            'Slices not supported in MPIBlockMatrix'
-        assert isinstance(key, tuple), \
-            'Indices must be tuples (i,j)'
+        assert row < self.bshape[0] and \
+               col < self.bshape[1], 'Indices out of range'
 
-        idx, jdx = key
-        assert idx >= 0 and \
-               jdx >= 0, 'Indices must be positive'
-
-        assert idx < self.bshape[0] and \
-               jdx < self.bshape[1], 'Indices out of range'
-
-        owner = self._rank_owner[key]
+        owner = self._rank_owner[row, col]
         rank = self._mpiw.Get_rank()
         assert owner == rank or \
                owner < 0, \
-               'Block {} not owned by processor {}'.format(key, rank)
+               'Block {} not owned by processor {}'.format((row, col), rank)
 
-        self._block_matrix[key] = value
+        self._block_matrix.set_block(row, col, value)
+
+    def __getitem__(self, item):
+        raise NotImplementedError('MPIBlockMatrix does not support __getitem__.')
+
+    def __setitem__(self, item, val):
+        raise NotImplementedError('MPIBlockMatrix does not support __setitem__.')
 
     def __add__(self, other):
         assert_block_structure(self)
@@ -767,16 +766,16 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
             ii, jj = np.nonzero(self._owned_mask)
             for i, j in zip(ii, jj):
-                mat1 = self[i, j]
-                mat2 = other[i, j]
+                mat1 = self.get_block(i, j)
+                mat2 = other.get_block(i, j)
                 if mat1 is not None and mat2 is not None:
-                    result[i, j] = mat1 + mat2
+                    result.set_block(i, j, mat1 + mat2)
                 elif mat1 is not None and mat2 is None:
-                    result[i, j] = mat1.copy()
+                    result.set_block(i, j, mat1.copy())
                 elif mat1 is None and mat2 is not None:
-                    result[i, j] = mat2.copy()
+                    result.set_block(i, j, mat2.copy())
                 else:
-                    result[i, j] = None
+                    result.set_block(i, j, None)
             return result
 
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
@@ -801,16 +800,16 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
             ii, jj = np.nonzero(self._owned_mask)
             for i, j in zip(ii, jj):
-                mat1 = self[i, j]
-                mat2 = other[i, j]
+                mat1 = self.get_block(i, j)
+                mat2 = other.get_block(i, j)
                 if mat1 is not None and mat2 is not None:
-                    result[i, j] = mat1 - mat2
+                    result.set_block(i, j, mat1 - mat2)
                 elif mat1 is not None and mat2 is None:
-                    result[i, j] = mat1.copy()
+                    result.set_block(i, j, mat1.copy())
                 elif mat1 is None and mat2 is not None:
-                    result[i, j] = -mat2
+                    result.set_block(i, j, -mat2)
                 else:
-                    result[i, j] = None
+                    result.set_block(i, j, None)
             return result
 
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
@@ -870,9 +869,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
                         if (mat_owner == vector_owner and rank == mat_owner) or \
                             (mat_owner == rank and vector_owner < 0) or \
                             (vector_owner == rank and mat_owner < 0):
-                            x = other[j]
-                            if self[i, j] is not None:
-                                local_sum += self[i, j] * x
+                            x = other.get_block(j)
+                            if self.get_block(i, j) is not None:
+                                local_sum += self.get_block(i, j) * x
 
                     row_owner = row_rank_ownership[i]
                     if row_owner < 0:
@@ -882,7 +881,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
                                                        op=MPI.SUM,
                                                        root=row_owner)
                     if row_owner == rank or row_owner < 0:
-                        result[i] = global_sum
+                        result.set_block(i, global_sum)
                 return result
             else:
                 if rank == 0:
@@ -894,7 +893,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
             ii, jj = np.nonzero(self._owned_mask)
             for i, j in zip(ii, jj):
                 if not self._block_matrix.is_empty_block(i, j):
-                    result[i, j] = self[i, j] * other
+                    result.set_block(i, j, self.get_block(i, j) * other)
             return result
 
         if isinstance(other, MPIBlockMatrix):
@@ -913,7 +912,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
             ii, jj = np.nonzero(self._owned_mask)
             for i, j in zip(ii, jj):
                 if not self._block_matrix.is_empty_block(i, j):
-                    result[i, j] = self[i, j] * other
+                    result.set_block(i, j, self.get_block(i, j) * other)
             return result
 
         if isinstance(other, MPIBlockVector):
@@ -940,7 +939,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
             ii, jj = np.nonzero(self._owned_mask)
             for i, j in zip(ii, jj):
                 if not self._block_matrix.is_empty_block(i, j):
-                    result[i, j] = self[i, j] / other
+                    result.set_block(i, j, self.get_block(i, j) / other)
             return result
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
@@ -962,12 +961,13 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
             ii, jj = np.nonzero(self._owned_mask)
             for i, j in zip(ii, jj):
-                mat1 = self[i, j]
-                mat2 = other[i, j]
+                mat1 = self.get_block(i, j)
+                mat2 = other.get_block(i, j)
                 if mat1 is not None and mat2 is not None:
-                    self[i, j] += mat2
+                    mat1 += mat2
+                    self.set_block(i, j, mat1)
                 elif mat1 is None and mat2 is not None:
-                    self[i, j] = mat2.copy()
+                    self.set_block(i, j, mat2.copy())
             return self
 
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
@@ -987,12 +987,14 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
             ii, jj = np.nonzero(self._owned_mask)
             for i, j in zip(ii, jj):
-                mat1 = self[i, j]
-                mat2 = other[i, j]
+                mat1 = self.get_block(i, j)
+                mat2 = other.get_block(i, j)
                 if mat1 is not None and mat2 is not None:
-                    self[i, j] -= mat2
+                    blk = self.get_block(i, j)
+                    blk -= mat2
+                    self.set_block(i, j, blk)
                 elif mat1 is None and mat2 is not None:
-                    self[i, j] = -mat2
+                    self.set_block(i, j, -mat2)
             return self
 
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
@@ -1005,7 +1007,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
             ii, jj = np.nonzero(self._owned_mask)
             for i, j in zip(ii, jj):
                 if not self._block_matrix.is_empty_block(i, j):
-                    self[i, j] *= other
+                    blk = self.get_block(i, j)
+                    blk *= other
+                    self.set_block(i, j, blk)
             return self
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
@@ -1017,7 +1021,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
             ii, jj = np.nonzero(self._owned_mask)
             for i, j in zip(ii, jj):
                 if not self._block_matrix.is_empty_block(i, j):
-                    self[i, j] /= other
+                    blk = self.get_block(i, j)
+                    blk /= other
+                    self.set_block(i, j, blk)
             return self
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
@@ -1028,7 +1034,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         ii, jj = np.nonzero(self._owned_mask)
         for i, j in zip(ii, jj):
             if not self._block_matrix.is_empty_block(i, j):
-                result[i, j] = -self[i, j]
+                result.set_block(i, j, -self.get_block(i, j))
         return result
 
     def __abs__(self):
@@ -1038,7 +1044,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         ii, jj = np.nonzero(self._owned_mask)
         for i, j in zip(ii, jj):
             if not self._block_matrix.is_empty_block(i, j):
-                result[i, j] = abs(self[i, j])
+                result.set_block(i, j, abs(self.get_block(i, j)))
         return result
 
     def _comparison_helper(self, operation, other):
@@ -1053,31 +1059,31 @@ class MPIBlockMatrix(BaseBlockMatrix):
                                                                               'the same processors'
 
             for i, j in zip(*np.nonzero(self.ownership_mask)):
-                mat1 = self[i, j]
-                mat2 = other[i, j]
+                mat1 = self.get_block(i, j)
+                mat2 = other.get_block(i, j)
 
                 if mat1 is not None and mat2 is not None:
-                    result[i, j] = operation(mat1, mat2)
+                    result.set_block(i, j, operation(mat1, mat2))
                 else:
                     nrows = self.get_row_size(i)
                     ncols = self.get_col_size(j)
                     mat = coo_matrix((nrows, ncols))
                     if mat1 is not None:
-                        result[i, j] = operation(mat1, mat)
+                        result.set_block(i, j, operation(mat1, mat))
                     elif mat2 is not None:
-                        result[i, j] = operation(mat, mat2)
+                        result.set_block(i, j, operation(mat, mat2))
                     else:
-                        result[i, j] = operation(mat, mat)
+                        result.set_block(i, j, operation(mat, mat))
             return result
         elif np.isscalar(other):
             for i, j in zip(*np.nonzero(self.ownership_mask)):
                 if not self._block_matrix.is_empty_block(i, j):
-                    result[i, j] = operation(self[i, j], other)
+                    result.set_block(i, j, operation(self.get_block(i, j), other))
                 else:
                     nrows = self.get_row_size(i)
                     ncols = self.get_col_size(j)
                     mat = coo_matrix((nrows, ncols))
-                    result[i, j] = operation(mat, other)
+                    result.set_block(i, j, operation(mat, other))
             return result
         else:
             raise NotImplementedError('Operation not supported by MPIBlockMatrix')
@@ -1208,7 +1214,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         rank = self._mpiw.Get_rank()
         for row_bid, owner in enumerate(col_ownership):
             if rank == owner or owner < 0:
-                sub_matrix = self._block_matrix[row_bid, bcol]
+                sub_matrix = self._block_matrix.get_block(row_bid, bcol)
                 if self._block_matrix.is_empty_block(row_bid, bcol):
                     v = np.zeros(self.get_row_size(row_bid))
                 elif isinstance(sub_matrix, BaseBlockMatrix):
@@ -1216,7 +1222,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 else:
                     # if it is sparse matrix transform array to vector
                     v = sub_matrix.getcol(j-offset).toarray().flatten()
-                bv[row_bid] = v
+                bv.set_block(row_bid, v)
         return bv
 
     def getrow(self, i):
@@ -1257,7 +1263,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         rank = self._mpiw.Get_rank()
         for col_bid, owner in enumerate(row_ownership):
             if rank == owner or owner<0:
-                sub_matrix = self._block_matrix[brow, col_bid]
+                sub_matrix = self._block_matrix.get_block(brow, col_bid)
                 if self._block_matrix.is_empty_block(brow, col_bid):
                     v = np.zeros(self.get_col_size(col_bid))
                 elif isinstance(sub_matrix, BaseBlockMatrix):
@@ -1265,5 +1271,5 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 else:
                     # if it is sparse matrix transform array to vector
                     v = sub_matrix.getrow(i-offset).toarray().flatten()
-                bv[col_bid] = v
+                bv.set_block(col_bid, v)
         return bv
