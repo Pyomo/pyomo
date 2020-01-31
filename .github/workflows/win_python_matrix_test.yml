@@ -1,9 +1,9 @@
 name: continuous-integration/github/pr/win
 
 on:
-  pull_request:
+  push:
     branches:
-      - master
+      - mac_gams
 
 jobs:
   pyomo-tests:
@@ -96,5 +96,7 @@ jobs:
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
-        $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
-        Invoke-Expression $env:EXP
+        $env:PATH += $(Get-Location).Path + "\gams"
+        gams
+        #$env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
+        #Invoke-Expression $env:EXP
