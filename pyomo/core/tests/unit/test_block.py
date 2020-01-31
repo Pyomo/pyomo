@@ -751,7 +751,7 @@ class TestBlock(unittest.TestCase):
         with self.assertRaisesRegexp(
                 ValueError,
                 '_BlockData.transfer_attributes_from\(\): expected a Block '
-                'or None; received str'):
+                'or dict; received str'):
             b.transfer_attributes_from('foo')
 
     def test_iterate_hierarchy_defaults(self):

@@ -798,12 +798,10 @@ class _BlockData(ActiveComponentData):
         elif isinstance(src, collections_Mapping):
             src_comp_map = {}
             src_raw_dict = src
-        elif src is None:
-            return
         else:
             raise ValueError(
                 "_BlockData.transfer_attributes_from(): expected a "
-                "Block or None; received %s" % (type(src).__name__,))
+                "Block or dict; received %s" % (type(src).__name__,))
 
         # Use component_map for the components to preserve decl_order
         for k,v in iteritems(src_comp_map):
