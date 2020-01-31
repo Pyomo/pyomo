@@ -37,7 +37,14 @@ from weakref import ref as weakref_ref
 
 logger = logging.getLogger('pyomo.gdp.bigm')
 
+# TODO DEBUG
+from nose.tools import set_trace
+
 NAME_BUFFER = {}
+used_args = ComponentMap() # If everything was sure to go well, this could be a
+                           # dictionary. But if someone messes up and gives us a
+                           # Var as a key in bigMargs, I need the error not to
+                           # be when I try to put it into this map!
 
 def _to_dict(val):
     if isinstance(val, ComponentMap):
@@ -63,6 +70,8 @@ class BigM_Transformation(Transformation):
        1) if the constraint appears in the bigM argument dict
        2) if the constraint parent_component appears in the bigM
           argument dict
+       3) if any block which is an ancestor to the constraint appears in 
+          the bigM argument dict
        3) if 'None' is in the bigM argument dict
        4) if the constraint or the constraint parent_component appear in
           a BigM Suffix attached to any parent_block() beginning with the
@@ -123,7 +132,7 @@ class BigM_Transformation(Transformation):
         super(BigM_Transformation, self).__init__()
         self.handlers = {
             Constraint:  self._transform_constraint,
-            Var:         False,
+            Var:         self._check_local_variable,
             Connector:   False,
             Expression:  False,
             Suffix:      False,
@@ -150,12 +159,14 @@ class BigM_Transformation(Transformation):
 
     def _apply_to(self, instance, **kwds):
         assert not NAME_BUFFER
+        assert not used_args
         try:
             self._apply_to_impl(instance, **kwds)
         finally:
             # Clear the global name buffer now that we are done
             NAME_BUFFER.clear()
-
+            # same for our bookkeeping about what we used from bigM arg dict
+            used_args.clear()
 
     def _apply_to_impl(self, instance, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
@@ -173,8 +184,11 @@ class BigM_Transformation(Transformation):
         bigM = config.bigM
 
         targets = config.targets
+        # This is a set of eve
+        nodesToTransform = set()
         if targets is None:
             targets = (instance, )
+            nodesToTransform.add(instance)
             _HACK_transform_whole_instance = True
         else:
             _HACK_transform_whole_instance = False
@@ -214,6 +228,20 @@ class BigM_Transformation(Transformation):
                     "Target %s was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed."
                     % (t.name, type(t)))
+
+        # issue warnings about anything that was in the bigM args dict that we
+        # didn't use
+        if not bigM is None and len(bigM) > len(used_args):
+            warning_msg = ("Unused arguments in the bigM map! "
+                           "These arguments were not used by the "
+                           "transformation:\n")
+            for component, m in iteritems(bigM):
+                if not component in used_args:
+                    if hasattr(component, 'name'):
+                        warning_msg += "\t%s\n" % component.name
+                    else:
+                        warning_msg += "\t%s\n" % component
+            logger.warn(warning_msg)
 
         # HACK for backwards compatibility with the older GDP transformations
         #
@@ -285,8 +313,10 @@ class BigM_Transformation(Transformation):
         # if this is an IndexedDisjunction we have seen in a prior call to the
         # transformation, we already have a transformation block for it. We'll
         # use that.
-        # TODO: test that we don't accidentally retransform anything because
-        # of this...
+
+        # TODO: test that we don't accidentally retransform anything because of
+        # this... I think this is okay because the real question is about if
+        # disjuncts are active or not... But that's a little funky.
         if not obj._algebraic_constraint is None:
             transBlock = obj._algebraic_constraint().parent_block()
         else:
@@ -451,6 +481,14 @@ class BigM_Transformation(Transformation):
             # disjunctList[len(disjunctList)] = disjunctBlock
             # newblock = disjunctList[len(disjunctList)-1]
 
+            # In the new world order, this should work:
+            # newblock = disjunctList[len(disjunctList)]
+            # newblock.transfer_attributes_from(disjunctBlock)
+
+            # Actually, the following might work, too, but only if we add a
+            # formal BlockList (which M. Bynum was asking for on 1/26/20.
+            # newblock = disjunctList.add(disjunctBlock)
+
             # HACK in the meantime:
             newblock = disjunctList[len(disjunctList)]
             self._copy_to_block(disjunctBlock, newblock)
@@ -531,6 +569,43 @@ class BigM_Transformation(Transformation):
         for i in sorted(iterkeys(block)):
             self._transform_block_components( block[i], disjunct, bigMargs,
                                               suffix_list)
+
+    def _check_local_variable(self, obj, disjunct, bigMargs, suffix_list):
+        # If someone has declared a variable on a disjunct, they *might* not be
+        # insane. If they only use it on that disjunct then this is well
+        # defined. We don't relax the variable bounds, we can use them to relax
+        # everything else, and it will be okay. In bigm, if the variable is used
+        # elsewhere in the model, we are toast: there is no legal declaration of
+        # a global var on a disjunct because this implies its bounds are not
+        # global. So we can just scream. We'll let users give us a Suffix to
+        # classify variables as local so they can override our screaming if they
+        # think they know what they're doing.
+
+        # ignore indicator variables, they are special
+        if obj is disjunct.indicator_var:
+            return
+
+        # read off the Suffix
+        # TODO: John, is the name okay?
+        local_var = disjunct.component('LocalVar')
+        if type(local_var) is Suffix:
+            if obj in local_var:
+                # we're trusting the user
+                return
+
+        # If we globalize it without the bounds (which I think is the only
+        # rational response), then we will inevitably end up complaining later
+        # about not having bounds on a variable that we created, which seems way
+        # more confusing. So just yell here. (This is not quite true: If the
+        # variable is used nowhere we wouldn't have to complain. But if that's
+        # the case, it should just be removed from the model anyway...)
+        raise GDP_Error("Variable %s is declared on disjunct %s but not marked "
+                        "as being a local variable. If %s is not used outside "
+                        "this disjunct and hence is truly local, add a "
+                        "LocalVar Suffix to the disjunct. If it is global, "
+                        "declare it outside of the disjunct." % (obj.name,
+                                                                 disjunct.name,
+                                                                 obj.name))
 
     def _get_constraint_map_dict(self, transBlock):
         if not hasattr(transBlock, "_constraintMap"):
@@ -652,16 +727,22 @@ class BigM_Transformation(Transformation):
             c.deactivate()
 
     def _get_M_from_args(self, constraint, bigMargs):
-        # check args: we only have to look for constraint, constraintdata, and
-        # None
+        # check args: we first look in the keys for constraint and
+        # constraintdata. In the absence of those, we traverse up the blocks,
+        # and as a last resort check for a value for None
         if bigMargs is None:
             return None
 
+        # check for the constraint itself and it's container
         parent = constraint.parent_component()
         if constraint in bigMargs:
-            return bigMargs[constraint]
+            m = bigMargs[constraint]
+            used_args[constraint] = m
+            return m
         elif parent in bigMargs:
-            return bigMargs[parent]
+            m = bigMargs[parent]
+            used_args[parent] = m
+            return m
 
         # [ESJ 08/22/2019] We apparently never actually check what is in
         # bigMargs... So I'll just yell about CUIDs if we find them here.
@@ -672,12 +753,37 @@ class BigM_Transformation(Transformation):
         parentcuid = ComponentUID(constraint.parent_component())
         if cuid in bigMargs:
             deprecation_warning(deprecation_msg)
-            return bigMargs[cuid]
+            m = bigMargs[cuid]
+            used_args[cuid] = m
+            return m
         elif parentcuid in bigMargs:
             deprecation_warning(deprecation_msg)
-            return bigMargs[parentcuid]
-        elif None in bigMargs:
-            return bigMargs[None]
+            m = bigMargs[parentcuid]
+            used_args[parentcuid] = m
+            return m
+
+        # traverse up the blocks
+        block = parent.parent_block()
+        while not block is None:
+            if block in bigMargs:
+                m = bigMargs[block]
+                used_args[block] = m
+                return m
+            # UGH and to be backwards compatible with what we should have done,
+            # we'll check the cuids of the blocks for now too.
+            blockcuid = ComponentUID(block)
+            if blockcuid in bigMargs:
+                deprecation_warning(deprecation_msg)
+                m = bigMargs[blockcuid]
+                used_args[blockcuid] = m
+                return m
+            block = block.parent_block()
+                
+        # last check for value for None!
+        if None in bigMargs:
+            m = bigMargs[None]
+            used_args[None] = m
+            return m
         return None
 
     def _get_M_from_suffixes(self, constraint, suffix_list):

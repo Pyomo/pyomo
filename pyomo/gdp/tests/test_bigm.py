@@ -15,6 +15,7 @@ from pyomo.gdp import *
 from pyomo.core.base import constraint
 from pyomo.core.expr import current as EXPR
 from pyomo.repn import generate_standard_repn
+from pyomo.common.log import LoggingIntercept
 
 import pyomo.gdp.tests.models as models
 
@@ -281,6 +282,16 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertIs(disjBlock[0], m.d[1].transformation_block())
         self.assertIs(bigm.get_src_disjunct(disjBlock[0]), m.d[1])
 
+    def test_do_not_transform_userDeactivated_IndexedDisjunction(self):
+        m = models.makeTwoTermIndexedDisjunction()
+        # TODO: Is this what I have to do to not transform anything??
+        m.disjunction.deactivate()
+        for idx in m.disjunct:
+            m.disjunct[idx].deactivate()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        #set_trace()
+
     # helper method to check the M values in all of the transformed
     # constraints (m, M) is the tuple for M.  This also relies on the
     # disjuncts being transformed in the same order every time.
@@ -468,14 +479,6 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             bigM={None: (-20,19)})
         self.checkMs(m, -20, -20, 19, 19)
 
-    # TODO: This does not in fact work, but it doesn't know that...
-    def test_block_M_arg(self):
-        m = models.makeTwoTermDisj_IndexedConstraints()
-        TransformationFactory('gdp.bigm').apply_to(
-            m,
-            bigM={m.b: 100, m.b.simpledisj1.c: 13})
-        #set_trace()
-
     def test_tuple_M_suffix(self):
         m = models.makeTwoTermDisj()
         m.BigM = Suffix(direction=Suffix.LOCAL)
@@ -593,6 +596,43 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
                 len(list(relaxed.component_data_objects(Constraint))), i)
             self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
 
+    def test_var_global_because_objective(self):
+        m = models.localVar()
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Variable disj2.y is declared on disjunct disj2 but not marked "
+            "as being a local variable. If disj2.y is not used outside "
+            "this disjunct and hence is truly local, add a "
+            "LocalVar Suffix to the disjunct. If it is global, "
+            "declare it outside of the disjunct.",
+            TransformationFactory('gdp.bigm').apply_to,
+            m)
+
+    def test_local_var_suffix(self):
+        m = models.localVar()
+
+        # it's the objective that's the problem, so just change that (not that
+        # you couldn't make a false promise with that Suffix)
+        m.del_component(m.objective)
+        # Then we promise that y is in fact local
+        m.disj2.LocalVar = Suffix(direction=Suffix.LOCAL)
+        m.disj2.LocalVar[m.disj2.y] = None
+
+        # do the transformation and trust
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
+
+        # we just need to make sure that constraint was transformed correctly,
+        # which just means that the M values were correct.
+        transformedC = bigm.get_transformed_constraint(m.disj2.cons)
+        lb = transformedC['lb']
+        ub = transformedC['ub']
+        repn = generate_standard_repn(lb.body)
+        self.assertTrue(repn.is_linear())
+        check_linear_coef(self, repn, m.disj2.indicator_var, -2)
+        repn = generate_standard_repn(ub.body)
+        self.assertTrue(repn.is_linear())
+        check_linear_coef(self, repn, m.disj2.indicator_var, 3)
 
 class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
     def test_nonlinear_bigM(self):
@@ -892,6 +932,115 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
 
         # check m values
         self.checkMs(m, -34, 34, 34, -3, 1.5)
+
+    def test_block_M_arg(self):
+        m = models.makeTwoTermDisjOnBlock()
+        m = self.add_disj_not_on_block(m)
+        TransformationFactory('gdp.bigm').apply_to(m, 
+                                                   bigM={m.b: 100,
+                                                         m.b.disjunct[1].c: 13})
+        self.checkMs(m, -100, 100, 13, -3, 1.5)
+
+    def test_disjunct_M_arg(self):
+        m = models.makeTwoTermDisjOnBlock()
+        m = self.add_disj_not_on_block(m)
+        TransformationFactory('gdp.bigm').apply_to(m, 
+                                                   bigM={m.b: 100,
+                                                         m.b.disjunct[1]: 13})
+        self.checkMs(m, -100, 100, 13, -3, 1.5)
+
+    def test_block_M_arg_with_default(self):
+        m = models.makeTwoTermDisjOnBlock()
+        m = self.add_disj_not_on_block(m)
+        TransformationFactory('gdp.bigm').apply_to(m, 
+                                                   bigM={m.b: 100,
+                                                         m.b.disjunct[1].c: 13,
+                                                         None: 34})
+        self.checkMs(m, -100, 100, 13, -34, 34)
+
+    def test_model_M_arg(self):
+        m = models.makeTwoTermDisjOnBlock()
+        m = self.add_disj_not_on_block(m)
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.gdp.bigm'):
+            TransformationFactory('gdp.bigm').apply_to(
+                m, 
+                bigM={m: 100,
+                      m.b.disjunct[1].c: 13})
+        self.checkMs(m, -100, 100, 13, -100, 100)
+        # make sure we didn't get any warnings when we used all the args
+        self.assertEqual(out.getvalue(), '')
+
+    def test_model_M_arg_overrides_None(self):
+        m = models.makeTwoTermDisjOnBlock()
+        m = self.add_disj_not_on_block(m)
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.gdp.bigm'):
+            TransformationFactory('gdp.bigm').apply_to(
+                m, 
+                bigM={m: 100,
+                      m.b.disjunct[1].c: 13,
+                      None: 34})
+        self.checkMs(m, -100, 100, 13, -100, 100)
+        self.assertEqual(out.getvalue(),
+                         "Unused arguments in the bigM map! "
+                         "These arguments were not used by the "
+                         "transformation:\n\tNone\n\n")
+
+    def test_warning_for_crazy_bigm_args(self):
+        m = models.makeTwoTermDisjOnBlock()
+        m = self.add_disj_not_on_block(m)
+        out = StringIO()
+        bigM = ComponentMap({m: 100, m.b.disjunct[1].c: 13})
+        # this is silly
+        bigM[m.a] = 34
+        with LoggingIntercept(out, 'pyomo.gdp.bigm'):
+            TransformationFactory('gdp.bigm').apply_to( m, bigM=bigM)
+        self.checkMs(m, -100, 100, 13, -100, 100)
+        self.assertEqual(out.getvalue(),
+                         "Unused arguments in the bigM map! "
+                         "These arguments were not used by the "
+                         "transformation:\n\ta\n\n")
+
+    def test_use_above_scope_m_value(self):
+        m = models.makeTwoTermDisjOnBlock()
+        m = self.add_disj_not_on_block(m)
+        bigM = ComponentMap({m: 100, m.b.disjunct[1].c: 13})
+        out = StringIO()
+        # transform just the block. We expect to use the M value specified on
+        # the model, and we should comment on nothing.
+        with LoggingIntercept(out, 'pyomo.gdp.bigm'):
+            TransformationFactory('gdp.bigm').apply_to( m.b, bigM=bigM)
+        self.checkFirstDisjMs(m, -100, 100, 13)
+        self.assertEqual(out.getvalue(), '')
+
+    def test_unused_arguments_transform_block(self):
+        m = models.makeTwoTermDisjOnBlock()
+        m = self.add_disj_not_on_block(m)
+
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 1e6
+        m.b.BigM = Suffix(direction=Suffix.LOCAL)
+        m.b.BigM[None] = 15
+
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.gdp.bigm'):
+            TransformationFactory('gdp.bigm').apply_to( 
+                m.b, 
+                bigM={m: 100, 
+                      m.b: 13,
+                      m.simpledisj2.c: 10})
+            
+        self.checkFirstDisjMs(m, -13, 13, 13)
+
+        # The order these get printed depends on a dictionary order, so test
+        # this way...
+        self.assertIn("Unused arguments in the bigM map! "
+                      "These arguments were not used by the "
+                      "transformation:",
+                      out.getvalue())
+        self.assertIn("simpledisj2.c", out.getvalue())
+        self.assertIn("unknown", out.getvalue())
 
     def test_suffix_M_simple_disj(self):
         m = models.makeTwoTermDisjOnBlock()
@@ -1772,18 +1921,10 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         m = models.makeNestedDisjunctions()
         TransformationFactory('gdp.bigm').apply_to(m)
 
-        # check that there is nothing in component map of the disjunct
-        # transformation blocks
-        #for i in range(1):
-            # TODO ESJ: Is this change okay? I don't understand this test...
         self.assertIsNone(m.disjunct[1]._pyomo_gdp_bigm_relaxation.\
                           component("relaxedDisjuncts"))
         self.assertIsNone(m.simpledisjunct._pyomo_gdp_bigm_relaxation.\
                           component("relaxedDisjuncts"))
-            # self.assertEqual(len(m.disjunct[1]._pyomo_gdp_bigm_relaxation.\
-            #                      relaxedDisjuncts[i].component_map()), 0)
-            # self.assertEqual(len(m.simpledisjunct._pyomo_gdp_bigm_relaxation.\
-            #                       relaxedDisjuncts[i].component_map()), 0)
         
     def test_mappings_between_disjunctions_and_xors(self):
         m = models.makeNestedDisjunctions()
@@ -2563,6 +2704,7 @@ class TestErrors(unittest.TestCase):
             "indicator_var to 0.\)",
             TransformationFactory('gdp.bigm').apply_to,
             m)
+
     # TODO: This actually really pathological, it might make more sense to test
     # that when the inner *disjunction* is deactivated that we ignore it. This
     # *I think* should be expected behavior, but it's ugly.
