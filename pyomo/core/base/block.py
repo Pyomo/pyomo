@@ -762,7 +762,7 @@ class _BlockData(ActiveComponentData):
         the block or dictionary `src` and places them on this Block.
         Components are transferred in declaration order.
 
-        If a Component on `src` is also declared on this block as eiher
+        If a Component on `src` is also declared on this block as either
         a Component or attribute, the local Component or attribute is
         replaced by the incoming component.  If an attribute name on
         `src` matches a Component declared on this block, then the
