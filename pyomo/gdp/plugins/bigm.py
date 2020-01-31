@@ -37,9 +37,6 @@ from weakref import ref as weakref_ref
 
 logger = logging.getLogger('pyomo.gdp.bigm')
 
-# TODO DEBUG
-from nose.tools import set_trace
-
 NAME_BUFFER = {}
 used_args = ComponentMap() # If everything was sure to go well, this could be a
                            # dictionary. But if someone messes up and gives us a
@@ -184,11 +181,8 @@ class BigM_Transformation(Transformation):
         bigM = config.bigM
 
         targets = config.targets
-        # This is a set of eve
-        nodesToTransform = set()
         if targets is None:
             targets = (instance, )
-            nodesToTransform.add(instance)
             _HACK_transform_whole_instance = True
         else:
             _HACK_transform_whole_instance = False
@@ -310,13 +304,12 @@ class BigM_Transformation(Transformation):
         return orC
 
     def _transform_disjunction(self, obj, bigM):
+        if not obj.active:
+            return
+
         # if this is an IndexedDisjunction we have seen in a prior call to the
         # transformation, we already have a transformation block for it. We'll
         # use that.
-
-        # TODO: test that we don't accidentally retransform anything because of
-        # this... I think this is okay because the real question is about if
-        # disjuncts are active or not... But that's a little funky.
         if not obj._algebraic_constraint is None:
             transBlock = obj._algebraic_constraint().parent_block()
         else:
@@ -586,7 +579,6 @@ class BigM_Transformation(Transformation):
             return
 
         # read off the Suffix
-        # TODO: John, is the name okay?
         local_var = disjunct.component('LocalVar')
         if type(local_var) is Suffix:
             if obj in local_var:

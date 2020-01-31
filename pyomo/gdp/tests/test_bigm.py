@@ -96,6 +96,36 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertFalse(oldblock.disjuncts[0].active)
         self.assertFalse(oldblock.disjuncts[1].active)
 
+    def test_do_not_transform_twice_if_disjunction_reactivated(self):
+        m = models.makeTwoTermDisj()
+        # this is a hack, but just diff the pprint from this and from calling
+        # the transformation again.
+        TransformationFactory('gdp.bigm').apply_to(m)
+        first_buf = StringIO()
+        m.pprint(ostream=first_buf)
+        first_output = first_buf.getvalue()
+
+        TransformationFactory('gdp.bigm').apply_to(m)
+        second_buf = StringIO()
+        m.pprint(ostream=second_buf)
+        second_output = second_buf.getvalue()
+
+        self.assertMultiLineEqual(first_output, second_output)
+
+        # this is a stupid thing to do, but we should still know not to
+        # retransform because active status is now *not* the source of truth.
+        m.disjunction.activate()
+
+        # This is kind of the wrong error, but I'll live with it: at least we
+        # get an error.
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "The disjunct d\[0\] has been transformed, but a disjunction "
+            "it appears in has not. Putting the same disjunct in "
+            "multiple disjunctions is not supported.",
+            TransformationFactory('gdp.bigm').apply_to,
+            m)
+
     def test_xor_constraint_mapping(self):
         m = models.makeTwoTermDisj()
         bigm = TransformationFactory('gdp.bigm')
@@ -284,13 +314,18 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
     def test_do_not_transform_userDeactivated_IndexedDisjunction(self):
         m = models.makeTwoTermIndexedDisjunction()
-        # TODO: Is this what I have to do to not transform anything??
+        # If you truly want to transform nothing, deactivate everything
         m.disjunction.deactivate()
         for idx in m.disjunct:
             m.disjunct[idx].deactivate()
         TransformationFactory('gdp.bigm').apply_to(m)
 
-        #set_trace()
+        # no transformation block, nothing transformed
+        self.assertIsNone(m.component("_pyomo_gdp_bigm_transformation"))
+        for idx in m.disjunct:
+            self.assertIsNone(m.disjunct[idx].transformation_block)
+        for idx in m.disjunction:
+            self.assertIsNone(m.disjunction[idx].algebraic_constraint)
 
     # helper method to check the M values in all of the transformed
     # constraints (m, M) is the tuple for M.  This also relies on the
