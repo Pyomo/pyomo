@@ -33,7 +33,7 @@ jobs:
         wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/linux/linux_x64_64_sfx.exe
         chmod +x linux_x64_64_sfx.exe
         ./linux_x64_64_sfx.exe -q -d gams
-        python /gams/gams24.8_linux_x64_64_sfx/apifiles/Python/api/setup.py install -noCheck
+        python gams/gams24.8_linux_x64_64_sfx/apifiles/Python/api/setup.py install -noCheck
     - name: Install Pyomo and extensions
       run: |
         echo "Clone Pyomo-model-libraries..."
