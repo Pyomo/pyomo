@@ -668,6 +668,47 @@ class TestBlock(unittest.TestCase):
                 "or set_value"):
             b.b = 5
 
+    def test_clear(self):
+        class DerivedBlock(SimpleBlock):
+            _Block_reserved_words = None
+
+        DerivedBlock._Block_reserved_words \
+            = set(['a','b','c']) | _BlockData._Block_reserved_words
+
+        m = ConcreteModel()
+        m.clear()
+        self.assertEqual(m._ctypes, {})
+        self.assertEqual(m._decl, {})
+        self.assertEqual(m._decl_order, [])
+
+        m.w = 5
+        m.x = Var()
+        m.y = Param()
+        m.z = Var()
+        m.clear()
+        self.assertFalse(hasattr(m, 'w'))
+        self.assertEqual(m._ctypes, {})
+        self.assertEqual(m._decl, {})
+        self.assertEqual(m._decl_order, [])
+
+        m.b = DerivedBlock()
+        m.b.a = a = Param()
+        m.b.x = Var()
+        m.b.b = b = Var()
+        m.b.y = Var()
+        m.b.z = Param()
+        m.b.c = c = Param()
+        m.b.clear()
+        self.assertEqual(m.b._ctypes, {Var: [1, 1, 1], Param:[0,2,2]})
+        self.assertEqual(m.b._decl, {'a':0, 'b':1, 'c':2})
+        self.assertEqual(len(m.b._decl_order), 3)
+        self.assertIs(m.b._decl_order[0][0], a)
+        self.assertIs(m.b._decl_order[1][0], b)
+        self.assertIs(m.b._decl_order[2][0], c)
+        self.assertEqual(m.b._decl_order[0][1], 2)
+        self.assertEqual(m.b._decl_order[1][1], None)
+        self.assertEqual(m.b._decl_order[2][1], None)
+
     def test_transfer_attributes_from(self):
         b = Block(concrete=True)
         b.x = Var()

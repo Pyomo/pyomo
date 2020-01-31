@@ -721,21 +721,24 @@ class _BlockData(ActiveComponentData):
                 _new_decl_order.append(entry)
         # Update the _decl map
         self._decl = {k:idxMap[idx] for k,idx in iteritems(self._decl)}
-        # Update the ctypes
+        # Update the ctypes, _decl_order linked lists
         for ctype, info in iteritems(self._ctypes):
             idx = info[0]
             entry = self._decl_order[idx]
             while entry[0] is None:
                 idx = entry[1]
                 entry = self._decl_order[idx]
-            info[0] = idxMap[idx]
+            info[0] = last = idxMap[idx]
             while entry[1] is not None:
-                if entry[0] is not None:
-                    last = idx
                 idx = entry[1]
                 entry = self._decl_order[idx]
-            info[1] = idxMap[last]
-        self._decl_order =_new_decl_order
+                if entry[0] is not None:
+                    this = idxMap[idx]
+                    _new_decl_order[last] = (_new_decl_order[last][0], this)
+                    last = this
+            info[1] = last
+            _new_decl_order[last] = (_new_decl_order[last][0], None)
+        self._decl_order = _new_decl_order
 
     def set_value(self, val):
         raise RuntimeError(textwrap.dedent(
@@ -750,7 +753,7 @@ class _BlockData(ActiveComponentData):
         for name in iterkeys(self.component_map()):
             if name not in self._Block_reserved_words:
                 self.del_component(name)
-        for attr in dir(self):
+        for attr in tuple(self.__dict__):
             if attr not in self._Block_reserved_words:
                 delattr(self, attr)
         self._compact_decl_storage()
