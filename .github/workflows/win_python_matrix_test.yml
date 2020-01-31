@@ -64,7 +64,7 @@ jobs:
         Write-Host ("")
         Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
         Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS' -Wait
-        python gams\apifiles\Python\api\setup.py install -noCheck
+        python gams\apifiles\Python\api\setup.py install 
         Write-Host ("")
         Write-Host ("New Shell Environment: ")
         gci env: | Sort Name
