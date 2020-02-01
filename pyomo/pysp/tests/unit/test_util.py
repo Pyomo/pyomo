@@ -33,7 +33,6 @@ from pyomo.pysp.scenariotree.util import \
      scenario_tree_id_to_puint64,
      scenario_tree_id_to_nzuint64)
 
-@unittest.category('smoke','nightly','expensive')
 class TestScenarioTreeIDToInteger(unittest.TestCase):
 
     _name = "Root"

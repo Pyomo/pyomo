@@ -211,8 +211,7 @@ class _TestComponentDictBase(object):
     def test_keys(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._cdatatype(self._arg()))
-                                   for i in index)
+        raw_constraint_dict = {i:self._cdatatype(self._arg()) for i in index}
         model.c = self._ctype(raw_constraint_dict)
         self.assertEqual(sorted(list(raw_constraint_dict.keys()), key=str),
                          sorted(list(model.c.keys()), key=str))
@@ -220,8 +219,7 @@ class _TestComponentDictBase(object):
     def test_values(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._cdatatype(self._arg()))
-                                   for i in index)
+        raw_constraint_dict = {i:self._cdatatype(self._arg()) for i in index}
         model.c = self._ctype(raw_constraint_dict)
         self.assertEqual(
             sorted(list(id(_v)
@@ -234,8 +232,7 @@ class _TestComponentDictBase(object):
     def test_items(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._cdatatype(self._arg()))
-                                   for i in index)
+        raw_constraint_dict = {i:self._cdatatype(self._arg()) for i in index}
         model.c = self._ctype(raw_constraint_dict)
         self.assertEqual(
             sorted(list((_i, id(_v))
@@ -248,8 +245,7 @@ class _TestComponentDictBase(object):
     def test_update(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._cdatatype(self._arg()))
-                                   for i in index)
+        raw_constraint_dict = {i:self._cdatatype(self._arg()) for i in index}
         model.c = self._ctype()
         model.c.update(raw_constraint_dict)
         self.assertEqual(sorted(list(raw_constraint_dict.keys()), key=str),

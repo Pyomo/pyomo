@@ -39,9 +39,8 @@ class _CharMapper(object):
            other: the character to return for all characters not in
                   preserve or translate
         """
-        self.table = dict(
-            (k if isinstance(k, int) else ord(k), v)
-            for k,v in six.iteritems(dict(translate)) )
+        self.table = {k if isinstance(k, int) else ord(k): v
+            for k,v in six.iteritems(dict(translate)) }
         for c in preserve:
             _c = ord(c)
             if _c in self.table and self.table[_c] != c:
