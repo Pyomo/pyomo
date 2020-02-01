@@ -44,10 +44,8 @@ used_args = ComponentMap() # If everything was sure to go well, this could be a
                            # be when I try to put it into this map!
 
 def _to_dict(val):
-    if isinstance(val, ComponentMap):
-        return val
-    if isinstance(val, dict):
-        return val
+    if isinstance(val, (dict, ComponentMap)):
+       return val
     return {None: val}
 
 
@@ -273,7 +271,7 @@ class BigM_Transformation(Transformation):
                 descent_order=TraversalStrategy.PostfixDFS):
             self._transform_disjunction(disjunction, bigM)
 
-    def _get_xor_constraint(self, disjunction, transBlock):
+    def _add_xor_constraint(self, disjunction, transBlock):
         # Put the disjunction constraint on the transformation block and
         # determine whether it is an OR or XOR constraint.
 
@@ -318,7 +316,7 @@ class BigM_Transformation(Transformation):
         # If this is an IndexedDisjunction, we have to create the XOR constraint
         # here because we want its index to match the disjunction. In any case,
         # we might as well.
-        xorConstraint = self._get_xor_constraint(obj, transBlock)
+        xorConstraint = self._add_xor_constraint(obj, transBlock)
 
         # relax each of the disjunctionDatas
         for i in sorted(iterkeys(obj)):
@@ -338,7 +336,7 @@ class BigM_Transformation(Transformation):
         if transBlock is None:
             transBlock = self._add_transformation_block(obj.parent_block())
         if xorConstraint is None:
-            xorConstraint = self._get_xor_constraint(obj.parent_component(),
+            xorConstraint = self._add_xor_constraint(obj.parent_component(),
                                                      transBlock)
 
         xor = obj.xor
@@ -712,7 +710,7 @@ class BigM_Transformation(Transformation):
         if bigMargs is None:
             return None
 
-        # check for the constraint itself and it's container
+        # check for the constraint itself and its container
         parent = constraint.parent_component()
         if constraint in bigMargs:
             m = bigMargs[constraint]
@@ -861,18 +859,19 @@ class BigM_Transformation(Transformation):
 
     def _find_parent_disjunct(self, constraint):
         # traverse up until we find the disjunct this constraint lives on
-        parent = constraint.parent_block()
-        while not type(parent) in (_DisjunctData, SimpleDisjunct):
-            parent = parent.parent_block()
-            if parent is None:
+        parent_disjunct = constraint.parent_block()
+        while type(parent_disjunct) not in (_DisjunctData, SimpleDisjunct):
+            if parent_disjunct is None:
                 raise GDP_Error(
                     "Constraint %s is not on a disjunct and so was not "
                     "transformed" % constraint.name)
-        return parent
+            parent_disjunct = parent_disjunct.parent_block()
+
+        return parent_disjunct
 
     def _get_constraint_transBlock(self, constraint):
-        parent = self._find_parent_disjunct(constraint)
-        transBlock = parent._transformation_block
+        parent_disjunct = self._find_parent_disjunct(constraint)
+        transBlock = parent_disjunct._transformation_block
         if transBlock is None:
             raise GDP_Error("Constraint %s is on a disjunct which has not been "
                             "transformed" % constraint.name)

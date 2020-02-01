@@ -17,8 +17,6 @@ import pyomo.gdp.plugins.bigm
 
 from six import iterkeys
 
-# TODO DEBUG
-from nose.tools import set_trace
 
 class TestDisjunction(unittest.TestCase):
     def test_empty_disjunction(self):
