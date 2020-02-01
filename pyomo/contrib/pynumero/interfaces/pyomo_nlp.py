@@ -135,7 +135,7 @@ class PyomoNLP(AslNLP):
             else:
                 var_id = self._vardata_to_idx[v]
                 var_indices.append(var_id)
-        return var_indices
+        return np.array(var_indices)
 
     def get_constraint_indices(self, pyomo_constraints):
         """
@@ -156,7 +156,7 @@ class PyomoNLP(AslNLP):
             else:
                 con_id = self._condata_to_idx[c]
                 con_indices.append(con_id)
-        return con_indices
+        return np.array(con_indices)
 
     def extract_subvector_grad_objective(self, pyomo_variables):
         """Compute the gradient of the objective and return the entries
