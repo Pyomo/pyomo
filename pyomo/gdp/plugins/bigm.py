@@ -470,21 +470,8 @@ class BigM_Transformation(Transformation):
         # we need to leave those on the disjunct.
         disjunctList = toBlock.relaxedDisjuncts
         for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
-            # I think this should work when #1106 is resolved:
-            # disjunctList[len(disjunctList)] = disjunctBlock
-            # newblock = disjunctList[len(disjunctList)-1]
-
-            # In the new world order, this should work:
-            # newblock = disjunctList[len(disjunctList)]
-            # newblock.transfer_attributes_from(disjunctBlock)
-
-            # Actually, the following might work, too, but only if we add a
-            # formal BlockList (which M. Bynum was asking for on 1/26/20.
-            # newblock = disjunctList.add(disjunctBlock)
-
-            # HACK in the meantime:
             newblock = disjunctList[len(disjunctList)]
-            self._copy_to_block(disjunctBlock, newblock)
+            newblock.transfer_attributes_from(disjunctBlock)
 
             # update the mappings
             original = disjunctBlock._srcDisjunct()
@@ -493,20 +480,10 @@ class BigM_Transformation(Transformation):
 
         # we delete this container because we just moved everything out
         del fromBlock.relaxedDisjuncts
-        #fromBlock.del_component(fromBlock.relaxedDisjuncts)
 
         # Note that we could handle other components here if we ever needed
         # to, but we control what is on the transformation block and
         # currently everything is on the blocks that we just moved...
-
-    def _copy_to_block(self, oldblock, newblock):
-        for obj in oldblock.component_objects(Constraint):
-            # [ESJ 07/18/2019] This shouldn't actually matter because we are
-            # deleting the whole old block anyway, but it is to keep pyomo from
-            # getting upset about the same component living on multiple blocks
-            oldblock.del_component(obj)
-            newblock.add_component(obj.getname(fully_qualified=True,
-                                               name_buffer=NAME_BUFFER), obj)
 
     def _warn_for_active_disjunction(self, disjunction, disjunct, bigMargs,
                                      suffix_list):
