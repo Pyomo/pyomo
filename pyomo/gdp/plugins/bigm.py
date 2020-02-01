@@ -404,6 +404,13 @@ class BigM_Transformation(Transformation):
         # add reference to original disjunct on transformation block
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
+        # we will keep a map of constraints (hashable, ha!) to a tuple to
+        # indicate where their m value came from, either (arg dict, key) if it
+        # came from args, (Suffix, key) if it came from Suffixes, or (M_lower,
+        # M_upper) if we calcualted it ourselves. I am keeping it here because I
+        # want it to move with the disjunct transformation blocks in the case of
+        # nested constraints, to make it easier to query.
+        relaxationBlock.bigm_src = {}
         obj._transformation_block = weakref_ref(relaxationBlock)
         relaxationBlock._srcDisjunct = weakref_ref(obj)
 
@@ -587,6 +594,7 @@ class BigM_Transformation(Transformation):
                               suffix_list):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
+        bigm_src = transBlock.bigm_src
         constraintMap = self._get_constraint_map_dict(transBlock)
         
         disjunctionRelaxationBlock = transBlock.parent_block()
@@ -619,7 +627,7 @@ class BigM_Transformation(Transformation):
 
             # first, we see if an M value was specified in the arguments.
             # (This returns None if not)
-            M = self._get_M_from_args(c, bigMargs)
+            M = self._get_M_from_args(c, bigMargs, bigm_src)
 
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 _name = obj.getname(
@@ -630,7 +638,7 @@ class BigM_Transformation(Transformation):
 
             # if we didn't get something from args, try suffixes:
             if M is None:
-                M = self._get_M_from_suffixes(c, suffix_list)
+                M = self._get_M_from_suffixes(c, suffix_list, bigm_src)
 
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 _name = obj.getname(
@@ -659,8 +667,10 @@ class BigM_Transformation(Transformation):
 
             if c.lower is not None and M[0] is None:
                 M = (self._estimate_M(c.body, name)[0] - c.lower, M[1])
+                bigm_src[c] = M
             if c.upper is not None and M[1] is None:
                 M = (M[0], self._estimate_M(c.body, name)[1] - c.upper)
+                bigm_src[c] = M
 
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 _name = obj.getname(
@@ -695,7 +705,7 @@ class BigM_Transformation(Transformation):
             # deactivate because we relaxed
             c.deactivate()
 
-    def _get_M_from_args(self, constraint, bigMargs):
+    def _get_M_from_args(self, constraint, bigMargs, bigm_src):
         # check args: we first look in the keys for constraint and
         # constraintdata. In the absence of those, we traverse up the blocks,
         # and as a last resort check for a value for None
@@ -707,14 +717,16 @@ class BigM_Transformation(Transformation):
         if constraint in bigMargs:
             m = bigMargs[constraint]
             used_args[constraint] = m
+            bigm_src[constraint] = (bigMargs, constraint)
             return m
         elif parent in bigMargs:
             m = bigMargs[parent]
             used_args[parent] = m
+            bigm_src[constraint] = (bigMargs, parent)
             return m
 
-        # [ESJ 08/22/2019] We apparently never actually check what is in
-        # bigMargs... So I'll just yell about CUIDs if we find them here.
+        # We don't check what is in bigMargs until the end if we didn't use
+        # it... So just yell about CUIDs if we find them here.
         deprecation_msg = ("In the future the bigM argument will no longer "
                            "allow ComponentUIDs as keys. Keys should be "
                            "constraints (in either a dict or ComponentMap)")
@@ -724,11 +736,13 @@ class BigM_Transformation(Transformation):
             deprecation_warning(deprecation_msg)
             m = bigMargs[cuid]
             used_args[cuid] = m
+            bigm_src[constraint] = (bigMargs, cuid)
             return m
         elif parentcuid in bigMargs:
             deprecation_warning(deprecation_msg)
             m = bigMargs[parentcuid]
             used_args[parentcuid] = m
+            bigm_src[constraint] = (bigMargs, parentcuid)
             return m
 
         # traverse up the blocks
@@ -737,6 +751,7 @@ class BigM_Transformation(Transformation):
             if block in bigMargs:
                 m = bigMargs[block]
                 used_args[block] = m
+                bigm_src[constraint] = (bigMargs, block)
                 return m
             # UGH and to be backwards compatible with what we should have done,
             # we'll check the cuids of the blocks for now too.
@@ -745,6 +760,7 @@ class BigM_Transformation(Transformation):
                 deprecation_warning(deprecation_msg)
                 m = bigMargs[blockcuid]
                 used_args[blockcuid] = m
+                bigm_src[constraint] = (bigMargs, blockcuid)
                 return m
             block = block.parent_block()
                 
@@ -752,21 +768,24 @@ class BigM_Transformation(Transformation):
         if None in bigMargs:
             m = bigMargs[None]
             used_args[None] = m
+            bigm_src[constraint] = (bigMargs, None)
             return m
         return None
 
-    def _get_M_from_suffixes(self, constraint, suffix_list):
+    def _get_M_from_suffixes(self, constraint, suffix_list, bigm_src):
         M = None
         # first we check if the constraint or its parent is a key in any of the
         # suffix lists
         for bigm in suffix_list:
             if constraint in bigm:
                 M = bigm[constraint]
+                bigm_src[constraint] = (bigm, constraint)
                 break
 
             # if c is indexed, check for the parent component
             if constraint.parent_component() in bigm:
                 M = bigm[constraint.parent_component()]
+                bigm_src[constraint] = (bigm, constraint.parent_component())
                 break
 
         # if we didn't get an M that way, traverse upwards through the blocks
@@ -775,6 +794,7 @@ class BigM_Transformation(Transformation):
             for bigm in suffix_list:
                 if None in bigm:
                     M = bigm[None]
+                    bigm_src[constraint] = (bigm, None)
                     break
         return M
 
@@ -839,23 +859,31 @@ class BigM_Transformation(Transformation):
                             % transformedConstraint.name)
         return transBlock._constraintMap['srcConstraints'][transformedConstraint]
 
-    def get_transformed_constraint(self, srcConstraint):
-        # We are going to have to traverse up until we find the disjunct this
-        # constraint lives on
-        parent = srcConstraint.parent_block()
-        # [ESJ 08/06/2019] I actually don't know how to do this prettily...
+    def _find_parent_disjunct(self, constraint):
+        # traverse up until we find the disjunct this constraint lives on
+        parent = constraint.parent_block()
         while not type(parent) in (_DisjunctData, SimpleDisjunct):
             parent = parent.parent_block()
             if parent is None:
                 raise GDP_Error(
                     "Constraint %s is not on a disjunct and so was not "
-                    "transformed" % srcConstraint.name)
+                    "transformed" % constraint.name)
+        return parent
+
+    def _get_constraint_transBlock(self, constraint):
+        parent = self._find_parent_disjunct(constraint)
         transBlock = parent._transformation_block
         if transBlock is None:
             raise GDP_Error("Constraint %s is on a disjunct which has not been "
-                            "transformed" % srcConstraint.name)
+                            "transformed" % constraint.name)
         # if it's not None, it's the weakref we wanted.
         transBlock = transBlock()
+
+        return transBlock
+
+    def get_transformed_constraint(self, srcConstraint):
+        transBlock = self._get_constraint_transBlock(srcConstraint)
+        
         if hasattr(transBlock, "_constraintMap") and transBlock._constraintMap[
                 'transformedConstraints'].get(srcConstraint):
             return transBlock._constraintMap['transformedConstraints'][
@@ -872,3 +900,8 @@ class BigM_Transformation(Transformation):
         raise GDP_Error("It appears that %s is not an XOR or OR constraint "
                         "resulting from transforming a Disjunction."
                         % xor_constraint.name)
+
+    def get_m_value_src(self, constraint):
+        transBlock = self._get_constraint_transBlock(constraint)
+        # This is a KeyError if it fails, but it is also my fault if it fails...
+        return transBlock.bigm_src[constraint]

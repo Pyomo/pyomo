@@ -963,35 +963,91 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         m = self.add_disj_not_on_block(m)
         m.b.BigM = Suffix(direction=Suffix.LOCAL)
         m.b.BigM[None] = 34
-        TransformationFactory('gdp.bigm').apply_to(m)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
 
         # check m values
         self.checkMs(m, -34, 34, 34, -3, 1.5)
+        
+        # check the source of the values
+        (src, key) = bigm.get_m_value_src(m.simpledisj.c)
+        self.assertEqual(src, -3)
+        self.assertIsNone(key)
+        (src, key) = bigm.get_m_value_src(m.simpledisj2.c)
+        self.assertIsNone(src)
+        self.assertEqual(key, 1.5)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[0].c)
+        self.assertIs(src, m.b.BigM)
+        self.assertIsNone(key)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[1].c)
+        self.assertIs(src, m.b.BigM)
+        self.assertIsNone(key)
 
     def test_block_M_arg(self):
         m = models.makeTwoTermDisjOnBlock()
         m = self.add_disj_not_on_block(m)
-        TransformationFactory('gdp.bigm').apply_to(m, 
-                                                   bigM={m.b: 100,
-                                                         m.b.disjunct[1].c: 13})
+        bigms = {m.b: 100, m.b.disjunct[1].c: 13}
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m, bigM=bigms)
         self.checkMs(m, -100, 100, 13, -3, 1.5)
+
+        # check the source of the values
+        (src, key) = bigm.get_m_value_src(m.simpledisj.c)
+        self.assertEqual(src, -3)
+        self.assertIsNone(key)
+        (src, key) = bigm.get_m_value_src(m.simpledisj2.c)
+        self.assertIsNone(src)
+        self.assertEqual(key, 1.5)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[0].c)
+        self.assertIs(src, bigms)
+        self.assertIs(key, m.b)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[1].c)
+        self.assertIs(src, bigms)
+        self.assertIs(key, m.b.disjunct[1].c)
 
     def test_disjunct_M_arg(self):
         m = models.makeTwoTermDisjOnBlock()
         m = self.add_disj_not_on_block(m)
-        TransformationFactory('gdp.bigm').apply_to(m, 
-                                                   bigM={m.b: 100,
-                                                         m.b.disjunct[1]: 13})
+        bigm = TransformationFactory('gdp.bigm')
+        bigms = {m.b: 100, m.b.disjunct[1]: 13}
+        bigm.apply_to(m, bigM=bigms)
         self.checkMs(m, -100, 100, 13, -3, 1.5)
+
+        # check the source of the values
+        (src, key) = bigm.get_m_value_src(m.simpledisj.c)
+        self.assertEqual(src, -3)
+        self.assertIsNone(key)
+        (src, key) = bigm.get_m_value_src(m.simpledisj2.c)
+        self.assertIsNone(src)
+        self.assertEqual(key, 1.5)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[0].c)
+        self.assertIs(src, bigms)
+        self.assertIs(key, m.b)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[1].c)
+        self.assertIs(src, bigms)
+        self.assertIs(key, m.b.disjunct[1])
 
     def test_block_M_arg_with_default(self):
         m = models.makeTwoTermDisjOnBlock()
         m = self.add_disj_not_on_block(m)
-        TransformationFactory('gdp.bigm').apply_to(m, 
-                                                   bigM={m.b: 100,
-                                                         m.b.disjunct[1].c: 13,
-                                                         None: 34})
+        bigm = TransformationFactory('gdp.bigm')
+        bigms = {m.b: 100, m.b.disjunct[1].c: 13, None: 34}
+        bigm.apply_to(m, bigM=bigms)
         self.checkMs(m, -100, 100, 13, -34, 34)
+
+        # check the source of the values
+        (src, key) = bigm.get_m_value_src(m.simpledisj.c)
+        self.assertIs(src, bigms)
+        self.assertIsNone(key)
+        (src, key) = bigm.get_m_value_src(m.simpledisj2.c)
+        self.assertIs(src, bigms)
+        self.assertIsNone(key)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[0].c)
+        self.assertIs(src, bigms)
+        self.assertIs(key, m.b)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[1].c)
+        self.assertIs(src, bigms)
+        self.assertIs(key, m.b.disjunct[1].c)
 
     def test_model_M_arg(self):
         m = models.makeTwoTermDisjOnBlock()
@@ -1085,8 +1141,23 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         m.BigM = Suffix(direction=Suffix.LOCAL)
         m.BigM[None] = 20
 
-        TransformationFactory('gdp.bigm').apply_to(m)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
         self.checkMs(m, -20, 20, 20, -45, 20)
+
+        # check source of the m values
+        (src, key) = bigm.get_m_value_src(m.simpledisj.c)
+        self.assertIs(src, m.simpledisj.BigM)
+        self.assertIsNone(key)
+        (src, key) = bigm.get_m_value_src(m.simpledisj2.c)
+        self.assertIs(src, m.BigM)
+        self.assertIsNone(key)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[0].c)
+        self.assertIs(src, m.BigM)
+        self.assertIsNone(key)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[1].c)
+        self.assertIs(src, m.BigM)
+        self.assertIsNone(key)
 
     def test_suffix_M_constraintKeyOnBlock(self):
         m = models.makeTwoTermDisjOnBlock()
@@ -1116,8 +1187,23 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         m.BigM = Suffix(direction=Suffix.LOCAL)
         m.BigM[None] = 20
 
-        TransformationFactory('gdp.bigm').apply_to(m)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
         self.checkMs(m, -20, 20, 20, -87, 20)
+
+        # check source of the m values
+        (src, key) = bigm.get_m_value_src(m.simpledisj.c)
+        self.assertIs(src, m.simpledisj.BigM)
+        self.assertIs(key, m.simpledisj.c)
+        (src, key) = bigm.get_m_value_src(m.simpledisj2.c)
+        self.assertIs(src, m.BigM)
+        self.assertIsNone(key)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[0].c)
+        self.assertIs(src, m.BigM)
+        self.assertIsNone(key)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[1].c)
+        self.assertIs(src, m.BigM)
+        self.assertIsNone(key)
 
     def test_block_targets_inactive(self):
         m = models.makeTwoTermDisjOnBlock()
