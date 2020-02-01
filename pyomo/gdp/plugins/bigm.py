@@ -840,6 +840,14 @@ class BigM_Transformation(Transformation):
     # These are all functions to retrieve transformed components from original
     # ones and vice versa.
     def get_src_disjunct(self, transBlock):
+        """Return the Disjunct object whose transformed components are on
+        transBlock.
+
+        Parameters
+        ----------
+        transBlock: _BlockData which is in the relaxedDisjuncts IndexedBlock
+                    on a transformation block.
+        """
         if not hasattr(transBlock, '_srcDisjunct') or \
            not type(transBlock._srcDisjunct) is weakref_ref:
             raise GDP_Error("Block %s doesn't appear to be a transformation "
@@ -848,6 +856,15 @@ class BigM_Transformation(Transformation):
         return transBlock._srcDisjunct()
 
     def get_src_constraint(self, transformedConstraint):
+        """Return the original Constraint whose transformed counterpart is
+        transformedConstraint
+
+        Parameters
+        ----------
+        transformedConstraint: Constraint, which must be a component on one of 
+        the BlockDatas in the relaxedDisjuncts Block of 
+        a transformation block
+        """
         transBlock = transformedConstraint.parent_block()
         # This should be our block, so if it's not, the user messed up and gave
         # us the wrong thing. If they happen to also have a _constraintMap then
@@ -881,6 +898,13 @@ class BigM_Transformation(Transformation):
         return transBlock
 
     def get_transformed_constraint(self, srcConstraint):
+        """Return the transformed version of srcConstraint
+
+        Parameters
+        ----------
+        srcConstraint: Constraint, which must be in the subtree of a
+                       transformed Disjunct
+        """
         transBlock = self._get_constraint_transBlock(srcConstraint)
         
         if hasattr(transBlock, "_constraintMap") and transBlock._constraintMap[
@@ -891,6 +915,14 @@ class BigM_Transformation(Transformation):
                         % srcConstraint.name)
 
     def get_src_disjunction(self, xor_constraint):
+        """Return the Disjunction corresponding to xor_constraint
+
+        Parameters
+        ----------
+        xor_constraint: Constraint, which must be the logical constraint 
+                        (located on the transformation block) of some 
+                        Disjunction
+        """
         m = xor_constraint.model()
         for disjunction in m.component_data_objects(Disjunction):
             if disjunction._algebraic_constraint:
@@ -901,6 +933,27 @@ class BigM_Transformation(Transformation):
                         % xor_constraint.name)
 
     def get_m_value_src(self, constraint):
+        """Return a tuple indicating how the M value used to transform 
+        constraint was specified. (In particular, this can be used to 
+        verify which BigM Suffixes were actually necessary to the 
+        transformation.)
+
+        If the M value came from an arg, returns (bigm_arg_dict, key), where 
+        bigm_arg_dict is the dictionary itself and key is the key in that 
+        dictionary which gave us the M value.
+
+        If the M value came from a Suffix, returns (suffix, key) where suffix 
+        is the BigM suffix used and key is the key in that Suffix.
+
+        If the transformation calculated the value, returns (M_lower, M_upper),
+        where M_lower is the float we calculated for the lower bound constraint
+        and M_upper is the value calculated for the upper bound constraint.
+
+        Parameters
+        ----------
+        constraint: Constraint, which must be in the subtree of a transformed 
+                    Disjunct
+        """
         transBlock = self._get_constraint_transBlock(constraint)
         # This is a KeyError if it fails, but it is also my fault if it fails...
         return transBlock.bigm_src[constraint]
