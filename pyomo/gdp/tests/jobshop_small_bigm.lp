@@ -21,17 +21,17 @@ c_u_Feas(C)_:
 +1 t(C)
 <= -6
 
-c_e__gdp_bigm_relaxation_disj_xor(A_B_3)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(A_B_3)_:
 +1 NoClash(A_B_3_0)_indicator_var
 +1 NoClash(A_B_3_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(A_C_1)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(A_C_1)_:
 +1 NoClash(A_C_1_0)_indicator_var
 +1 NoClash(A_C_1_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(B_C_2)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(B_C_2)_:
 +1 NoClash(B_C_2_0)_indicator_var
 +1 NoClash(B_C_2_1)_indicator_var
 = 1
