@@ -2069,6 +2069,63 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
             self.assertIs(disjunction.algebraic_constraint(), xor)
             self.assertIs(bigm.get_src_disjunction(xor), disjunction)
 
+    def test_disjunct_mappings(self):
+        m = models.makeNestedDisjunctions()
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
+
+        disjunctBlocks = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
+
+        # I want to check that I correctly updated the pointers to the
+        # transformation blocks on the inner Disjuncts.
+        self.assertIs(m.disjunct[1].innerdisjunct[0].transformation_block(),
+                      disjunctBlocks[5])
+        self.assertIs(disjunctBlocks[5]._srcDisjunct(),
+                      m.disjunct[1].innerdisjunct[0])
+
+        self.assertIs(m.disjunct[1].innerdisjunct[1].transformation_block(),
+                      disjunctBlocks[6])
+        self.assertIs(disjunctBlocks[6]._srcDisjunct(),
+                      m.disjunct[1].innerdisjunct[1])
+
+        self.assertIs(m.simpledisjunct.innerdisjunct0.transformation_block(),
+                      disjunctBlocks[1])
+        self.assertIs(disjunctBlocks[1]._srcDisjunct(),
+                      m.simpledisjunct.innerdisjunct0)
+
+        self.assertIs(m.simpledisjunct.innerdisjunct1.transformation_block(),
+                      disjunctBlocks[2])
+        self.assertIs(disjunctBlocks[2]._srcDisjunct(),
+                      m.simpledisjunct.innerdisjunct1)
+
+    def test_m_value_mappings(self):
+        m = models.makeNestedDisjunctions()
+        bigm = TransformationFactory('gdp.bigm')
+        m.simpledisjunct.BigM = Suffix(direction=Suffix.LOCAL)
+        m.simpledisjunct.BigM[None] = 58
+        m.simpledisjunct.BigM[m.simpledisjunct.innerdisjunct0.c] = 42
+        bigms = {m.disjunct[1].innerdisjunct[0]: 89}
+        bigm.apply_to(m, bigM=bigms)
+
+        (src, key) = bigm.get_m_value_src(m.disjunct[1].innerdisjunct[0].c)
+        self.assertIs(src, bigms)
+        self.assertIs(key, m.disjunct[1].innerdisjunct[0])
+        (src, key) = bigm.get_m_value_src(m.disjunct[1].innerdisjunct[1].c)
+        self.assertEqual(src, -5)
+        self.assertIsNone(key)
+        (src, key) = bigm.get_m_value_src(m.disjunct[0].c)
+        self.assertEqual(src, -11)
+        self.assertEqual(key, 7)
+        (src, key) = bigm.get_m_value_src(m.disjunct[1].c)
+        self.assertIsNone(src)
+        self.assertEqual(key, 21)
+        (src, key) = bigm.get_m_value_src(m.simpledisjunct.innerdisjunct0.c)
+        self.assertIs(src, m.simpledisjunct.BigM)
+        self.assertIs(key, m.simpledisjunct.innerdisjunct0.c)
+        (src, key) = bigm.get_m_value_src(m.simpledisjunct.innerdisjunct1.c)
+        self.assertIs(src, m.simpledisjunct.BigM)
+        self.assertIsNone(key)
+
     # many of the transformed constraints look like this, so can call this
     # function to test them.
     def check_bigM_constraint(self, cons, variable, M, indicator_var):
