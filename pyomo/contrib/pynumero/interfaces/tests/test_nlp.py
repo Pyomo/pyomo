@@ -482,17 +482,17 @@ class TestPyomoNLP(unittest.TestCase):
 
         # get_primal_indices
         expected_primal_indices = [i for i in range(9)]
-        self.assertTrue(expected_primal_indices == nlp.get_primal_indices([self.pm.x]))
+        self.assertTrue(expected_primal_indices == nlp.get_primal_indices([self.pm.x]).tolist())
         expected_primal_indices = [0, 3, 8, 4]
         variables = [self.pm.x[1], self.pm.x[4], self.pm.x[9], self.pm.x[5]]
-        self.assertTrue(expected_primal_indices == nlp.get_primal_indices(variables))
+        self.assertTrue(expected_primal_indices == nlp.get_primal_indices(variables).tolist())
 
         # get_constraint_indices
         expected_constraint_indices = [i for i in range(9)]
-        self.assertTrue(expected_constraint_indices == nlp.get_constraint_indices([self.pm.c]))
+        self.assertTrue(expected_constraint_indices == nlp.get_constraint_indices([self.pm.c]).tolist())
         expected_constraint_indices = [0, 3, 8, 4]
         constraints = [self.pm.c[1], self.pm.c[4], self.pm.c[9], self.pm.c[5]]
-        self.assertTrue(expected_constraint_indices == nlp.get_constraint_indices(constraints))
+        self.assertTrue(expected_constraint_indices == nlp.get_constraint_indices(constraints).tolist())
 
         # extract_subvector_grad_objective
         expected_gradient = np.asarray([2*sum((i+1)*(j+1) for j in range(9)) for i in range(9)], dtype=np.float64)
