@@ -10,6 +10,7 @@
 import pyomo.environ as pyo
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.sparse import BlockSymMatrix, BlockMatrix, BlockVector
+from pyomo.contrib.pynumero.interfaces.utils import extract_submatrix
 from scipy.sparse import identity
 from scipy.sparse import coo_matrix
 from scipy.sparse.linalg import spsolve, inv
@@ -69,17 +70,18 @@ print("Null space matrix:\n",Z.toarray())
 # computing reduced hessian with null space matriz
 reduced_hessian = Z_sparse.T * H * Z_sparse
 print("Reduced hessian matrix:\n",reduced_hessian.toarray())
-
+print("Inverse reduced hessian:\n", inv(reduced_hessian).toarray())
 
 # computing the reduced hessian with back solves
 kkt_matrix = kkt.tocsc()
 nvars = kkt_matrix.shape[1]
-row = xd_indices-1.0
+row = xd_indices
 col = np.arange(nd)
 data = np.ones(nd)
 
 rhs = coo_matrix((data, (row, col)), shape=(nvars, nd))
-reduce_hessian = spsolve(kkt_matrix, rhs.tocsc())
-print("Reduced hessian matrix (kkt backsolves):\n",reduced_hessian.toarray())
+backsolves = spsolve(kkt_matrix, rhs.tocsc())
+reduced_hessian = extract_submatrix(backsolves, xd_indices, np.arange(nd))
+print("Inverse reduced hessian matrix (kkt backsolves):\n",reduced_hessian.toarray())
 
     

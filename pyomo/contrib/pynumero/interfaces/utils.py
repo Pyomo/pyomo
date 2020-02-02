@@ -72,3 +72,35 @@ def compressed_to_full(compressed_array, compression_mask, out=None, default=Non
         ret[~compression_mask] = default
 
     return ret
+
+
+def extract_submatrix(M, row_indices, col_indices):
+    """
+    Return the submatrix that corresponds to the list
+    of row and column indices specified
+
+    Parameters
+    ----------
+
+    row_indices : np.array with indices of rows to extract
+    col_indices : np.array with indices of rows to extract
+    """
+    matrix = M.tocoo()
+    row_mask = np.isin(matrix.row, row_indices)
+    col_mask = np.isin(matrix.col, col_indices)
+    submatrix_mask = row_mask & col_mask
+    submatrix_irows = np.compress(submatrix_mask, matrix.row)
+    submatrix_jcols = np.compress(submatrix_mask, matrix.col)
+    submatrix_data = np.compress(submatrix_mask, matrix.data)
+
+    # ToDo: this is expensive - have to think about how to do this with numpy
+    row_submatrix_map = {j: i for i, j in enumerate(row_indices)}
+    for i, v in enumerate(submatrix_irows):
+        submatrix_irows[i] = row_submatrix_map[v]
+
+    col_submatrix_map = {j: i for i, j in enumerate(col_indices)}
+    for i, v in enumerate(submatrix_jcols):
+        submatrix_jcols[i] = col_submatrix_map[v]
+
+    return coo_matrix((submatrix_data, (submatrix_irows, submatrix_jcols)),
+                      shape=(len(row_indices), len(col_indices)))
