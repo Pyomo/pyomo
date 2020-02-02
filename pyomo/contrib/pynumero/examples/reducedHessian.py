@@ -17,9 +17,13 @@ from scipy.sparse.linalg import spsolve, inv
 import numpy as np
 
 """
-This example demonstrates two different ways to compute the reduced hessian for a nonlinear equality constrained optimization problem. The first approach relies on the calculation of the null space matrix Z. The second approach uses the KKT matrix to compute the reduced matrix by performing a sequence of inexpensive backsolves. 
+This example demonstrates two different ways to compute the reduced hessian
+for a nonlinear equality constrained optimization problem. The first approach
+relies on the calculation of the null space matrix Z. The second approach uses the
+KKT matrix to compute the reduced matrix by performing a sequence of inexpensive backsolves.
 
-The sample can be found in section 3.2 of V.Zavala PhD thesis https://pdfs.semanticscholar.org/469b/ecbd5b2413b115cfe6afd6255986e5c651dc.pdf
+The sample can be found in section 3.2 of V.Zavala PhD thesis
+https://pdfs.semanticscholar.org/469b/ecbd5b2413b115cfe6afd6255986e5c651dc.pdf
 """
 
 def create_model():
