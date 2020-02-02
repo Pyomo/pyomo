@@ -923,6 +923,13 @@ class BigM_Transformation(Transformation):
                         (located on the transformation block) of some 
                         Disjunction
         """
+        # NOTE: This is indeed a linear search through the Disjunctions on the
+        # model. I am leaving it this way on the assumption that asking XOR
+        # constraints for their Disjunction is not going to be a common
+        # question. If we ever need efficiency then we should store a reverse
+        # map from the XOR constraint to the Disjunction on the transformation
+        # block while we do the transformation. And then this method could query
+        # that map.
         m = xor_constraint.model()
         for disjunction in m.component_data_objects(Disjunction):
             if disjunction._algebraic_constraint:
