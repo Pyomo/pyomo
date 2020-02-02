@@ -2975,6 +2975,16 @@ class TestSet(unittest.TestCase):
         self.assertEqual(m.I.data(), (4,3,2,1))
         self.assertEqual(m.I.dimen, 1)
 
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            with self.assertRaisesRegexp(
+                    TypeError, "'int' object is not iterable"):
+                m = ConcreteModel()
+                m.I = Set(initialize=5)
+            ref = "Initializer for Set I returned non-iterable object " \
+                  "of type int."
+            self.assertIn(ref, output.getvalue())
+
     def test_insertion_deletion(self):
         def _verify(_s, _l):
             self.assertTrue(_s.isordered())

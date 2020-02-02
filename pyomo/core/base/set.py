@@ -1928,7 +1928,18 @@ class Set(IndexedComponent):
             # to the model must be constructed.
             if isinstance(_values, SetOperator):
                 _values.construct()
-            for val in _values:
+            try:
+                val_iter = iter(_values)
+            except TypeError:
+                logger.error(
+                    "Initializer for Set %s%s returned non-iterable object "
+                    "of type %s." % (
+                        self.name,
+                        ("[%s]" % (index,) if self.is_indexed() else ""),
+                        _values if _values.__class__ is type
+                        else type(_values).__name__ ))
+                raise
+            for val in val_iter:
                 if val is Set.End:
                     break
                 if _filter is None or _filter(self, val):
