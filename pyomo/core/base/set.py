@@ -1116,6 +1116,12 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
 
     @property
     def dimen(self):
+        if self._dimen is UnknownSetDimen:
+            # Special case: abstract Sets with constant dimen
+            # initializers have a known dimen before construction
+            _comp = self.parent_component()
+            if not _comp._constructed and _comp._init_dimen.constant():
+                return _comp._init_dimen.val
         return self._dimen
 
     @property

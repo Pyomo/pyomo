@@ -3645,6 +3645,15 @@ class TestSet(unittest.TestCase):
         self.assertIsNone(m.L.dimen)
         self.assertEqual(list(m.L), [1, (2,3)])
 
+        a = AbstractModel()
+        a.I = Set(initialize=[1,2,3])
+        self.assertEqual(a.I.dimen, UnknownSetDimen)
+        a.J = Set(initialize=[1,2,3], dimen=1)
+        self.assertEqual(a.J.dimen, 1)
+        m = a.create_instance(data={None:{'I': {None:[(1,2), (3,4)]}}})
+        self.assertEqual(m.I.dimen, 2)
+        self.assertEqual(m.J.dimen, 1)
+
     def test_construction(self):
         m = AbstractModel()
         m.I = Set(initialize=[1,2,3])
