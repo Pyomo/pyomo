@@ -127,7 +127,7 @@ class BigM_Transformation(Transformation):
         super(BigM_Transformation, self).__init__()
         self.handlers = {
             Constraint:  self._transform_constraint,
-            Var:         self._check_local_variable,
+            Var:         False,
             Connector:   False,
             Expression:  False,
             Suffix:      False,
@@ -544,42 +544,6 @@ class BigM_Transformation(Transformation):
         for i in sorted(iterkeys(block)):
             self._transform_block_components( block[i], disjunct, bigMargs,
                                               suffix_list)
-
-    def _check_local_variable(self, obj, disjunct, bigMargs, suffix_list):
-        # If someone has declared a variable on a disjunct, they *might* not be
-        # insane. If they only use it on that disjunct then this is well
-        # defined. We don't relax the variable bounds, we can use them to relax
-        # everything else, and it will be okay. In bigm, if the variable is used
-        # elsewhere in the model, we are toast: there is no legal declaration of
-        # a global var on a disjunct because this implies its bounds are not
-        # global. So we can just scream. We'll let users give us a Suffix to
-        # classify variables as local so they can override our screaming if they
-        # think they know what they're doing.
-
-        # ignore indicator variables, they are special
-        if obj is disjunct.indicator_var:
-            return
-
-        # read off the Suffix
-        local_var = disjunct.component('LocalVar')
-        if type(local_var) is Suffix:
-            if obj in local_var:
-                # we're trusting the user
-                return
-
-        # If we globalize it without the bounds (which I think is the only
-        # rational response), then we will inevitably end up complaining later
-        # about not having bounds on a variable that we created, which seems way
-        # more confusing. So just yell here. (This is not quite true: If the
-        # variable is used nowhere we wouldn't have to complain. But if that's
-        # the case, it should just be removed from the model anyway...)
-        raise GDP_Error("Variable %s is declared on disjunct %s but not marked "
-                        "as being a local variable. If %s is not used outside "
-                        "this disjunct and hence is truly local, add a "
-                        "LocalVar Suffix to the disjunct. If it is global, "
-                        "declare it outside of the disjunct." % (obj.name,
-                                                                 disjunct.name,
-                                                                 obj.name))
 
     def _get_constraint_map_dict(self, transBlock):
         if not hasattr(transBlock, "_constraintMap"):

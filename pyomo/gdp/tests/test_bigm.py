@@ -629,31 +629,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
                 len(list(relaxed.component_objects(Constraint))), 1)
             self.assertEqual(
                 len(list(relaxed.component_data_objects(Constraint))), i)
-            self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
+            self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)        
 
-    def test_var_global_because_objective(self):
+    def test_local_var(self):
         m = models.localVar()
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Variable disj2.y is declared on disjunct disj2 but not marked "
-            "as being a local variable. If disj2.y is not used outside "
-            "this disjunct and hence is truly local, add a "
-            "LocalVar Suffix to the disjunct. If it is global, "
-            "declare it outside of the disjunct.",
-            TransformationFactory('gdp.bigm').apply_to,
-            m)
-
-    def test_local_var_suffix(self):
-        m = models.localVar()
-
-        # it's the objective that's the problem, so just change that (not that
-        # you couldn't make a false promise with that Suffix)
-        m.del_component(m.objective)
-        # Then we promise that y is in fact local
-        m.disj2.LocalVar = Suffix(direction=Suffix.LOCAL)
-        m.disj2.LocalVar[m.disj2.y] = None
-
-        # do the transformation and trust
         bigm = TransformationFactory('gdp.bigm')
         bigm.apply_to(m)
 
