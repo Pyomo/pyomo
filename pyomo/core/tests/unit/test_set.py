@@ -692,6 +692,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             ref = 'Constructing RangeSet, '\
                   'name=AbstractFiniteSimpleRangeSet, from data=None\n'
             self.assertEqual(output.getvalue(), ref)
+            self.assertIs(type(i), FiniteSimpleRangeSet)
             # Calling construct() twice bypasses construction the second
             # time around
             i.construct()
@@ -714,9 +715,31 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(len(i), 0)
         self.assertEqual(len(list(i.ranges())), 0)
 
+        # Special case: we do not error when the constructing a 0-length
+        # RangeSetwith bounds (i, i-1)
         i = RangeSet(0,-1)
         self.assertEqual(len(i), 0)
         self.assertEqual(len(list(i.ranges())), 0)
+
+        # Test non-finite RangeSets
+        i = RangeSet(1,10)
+        self.assertIs(type(i), FiniteSimpleRangeSet)
+        i = RangeSet(1,10,0)
+        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        i = RangeSet(1,1,0)
+        self.assertIs(type(i), FiniteSimpleRangeSet)
+        i = RangeSet(1,None)
+        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        i = RangeSet(1, float('inf'))
+        self.assertIs(type(i), InfiniteSimpleRangeSet)
+
+        p = Param(initialize=float('inf'))
+        i = RangeSet(1, p, 1)
+        self.assertIs(type(i), AbstractFiniteSimpleRangeSet)
+        p.construct()
+        i = RangeSet(1, p, 1)
+        self.assertIs(type(i), InfiniteSimpleRangeSet)
+
 
         # Test abstract RangeSets
         m = AbstractModel()

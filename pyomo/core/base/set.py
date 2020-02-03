@@ -53,6 +53,8 @@ logger = logging.getLogger('pyomo.core')
 
 _prePython37 = sys.version_info[:2] < (3,7)
 
+_inf = float('inf')
+
 FLATTEN_CROSS_PRODUCT = True
 
 
@@ -2362,10 +2364,28 @@ class RangeSet(Component):
             if 'ranges' in kwds:
                 if any(not r.isfinite() for r in kwds['ranges']):
                     finite = False
-            if all(type(_) in native_types for _ in args):
-                if None in args or (len(args) > 2 and args[2] == 0):
+            for i,_ in enumerate(args):
+                if type(_) not in native_types:
+                    # Strange nosetest coverage issue: if the logic is
+                    # negated and the continue is in the "else", that
+                    # line is not caught as being covered.
+                    if not isinstance(_, ComponentData) \
+                       or not _.parent_component().is_constructed():
+                        continue
+                    else:
+                        # "Peek" at constructed components to try and
+                        # infer if this component will be Infinite
+                        _ = value(_)
+                if i < 2:
+                    if _ in {None, _inf, -_inf}:
+                        finite = False
+                        break
+                elif _ == 0 and args[0] is not args[1]:
                     finite = False
             if finite is None:
+                # Assume "undetermined" RangeSets will be finite.  If a
+                # user wants them to be infinite, they can always
+                # specify finite=False
                 finite = True
 
         if finite:
