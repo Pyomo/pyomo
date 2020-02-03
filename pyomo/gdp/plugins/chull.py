@@ -21,8 +21,8 @@ from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy,
-    Any, RangeSet, Reals, value
-)
+    Any, RangeSet, Reals, value,
+    LogicalStatement)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import clone_without_expression_components, target_list
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
@@ -167,6 +167,7 @@ class ConvexHull_Transformation(Transformation):
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
+            LogicalStatement: self._warn_for_active_logical_statement,
             }
 
 
@@ -690,6 +691,33 @@ class ConvexHull_Transformation(Transformation):
                         "or its disjunction transformed before {1} can be "
                         "transformed.".format(problemdisj.name,
                                               outerdisjunct.name))
+
+    def _warn_for_active_logical_statement(
+            self, logical_statment, disjunct, infodict, var_substitute_map,
+            zero_substitute_map):
+        # this should only have gotten called if the logical statement is active
+        assert logical_statment.active
+        problem_statement = logical_statment
+        if logical_statment.is_indexed():
+            for i in logical_statment:
+                if logical_statment[i].active:
+                    # a _LogicalStatementData is active, we will yell about
+                    # it specifically.
+                    problem_statement = logical_statment[i]
+                    break
+            # None of the _LogicalStatmentDatas were actually active. We
+            # are OK and we can deactivate the container.
+            else:
+                logical_statment.deactivate()
+                return
+        parentblock = problem_statement.parent_block()
+        # the logical statement should only have been active if it wasn't transformed
+        _probStatementName = problem_statement.getname(
+            fully_qualified=True, name_buffer=NAME_BUFFER)
+        raise GDP_Error("Found untransformed logical statment %s in disjunct %s! "
+                        "The logical statment must be transformed before the "
+                        "disjunct. Use the logical_to_linear transformation."
+                        % (_probStatementName, disjunct.name))
 
 
     def _transform_block_on_disjunct(

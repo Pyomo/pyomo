@@ -512,7 +512,7 @@ class BigM_Transformation(Transformation):
         if logical_statment.is_indexed():
             for i in logical_statment:
                 if logical_statment[i].active:
-                    # a _DisjunctionData is active, we will yell about
+                    # a _LogicalStatmentData is active, we will yell about
                     # it specifically.
                     problem_statement = logical_statment[i]
                     break
