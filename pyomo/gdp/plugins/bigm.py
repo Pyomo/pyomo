@@ -127,7 +127,12 @@ class BigM_Transformation(Transformation):
         super(BigM_Transformation, self).__init__()
         self.handlers = {
             Constraint:  self._transform_constraint,
-            Var:         False,
+            Var:         False, # Note that if a Var appears on a Disjunct, we
+                                # still treat its bounds as global. If the
+                                # intent is for its bounds to be on the
+                                # disjunct, it should be declared with no bounds
+                                # and the bounds should be set in constraints on
+                                # the Disjunct.
             Connector:   False,
             Expression:  False,
             Suffix:      False,
