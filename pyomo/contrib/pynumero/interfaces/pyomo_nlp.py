@@ -14,6 +14,7 @@ the Ampl Solver Library (ASL) implementation
 import pyomo
 import pyomo.environ as aml
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
+from pyomo.contrib.pynumero.interfaces.utils import extract_submatrix
 import pyutilib
 
 from scipy.sparse import coo_matrix
@@ -194,23 +195,7 @@ class PyomoNLP(AslNLP):
         jac = self.evaluate_jacobian()
         primal_indices = self.get_primal_indices(pyomo_variables)
         constraint_indices = self.get_constraint_indices(pyomo_constraints)
-        row_mask = np.isin(jac.row, constraint_indices)
-        col_mask = np.isin(jac.col, primal_indices)
-        submatrix_mask = row_mask & col_mask
-        submatrix_irows = np.compress(submatrix_mask, jac.row)
-        submatrix_jcols = np.compress(submatrix_mask, jac.col)
-        submatrix_data = np.compress(submatrix_mask, jac.data)
-
-        # ToDo: this is expensive - have to think about how to do this with numpy
-        row_submatrix_map = {j:i for i,j in enumerate(constraint_indices)}
-        for i, v in enumerate(submatrix_irows):
-            submatrix_irows[i] = row_submatrix_map[v]
-
-        col_submatrix_map = {j:i for i,j in enumerate(primal_indices)}
-        for i, v in enumerate(submatrix_jcols):
-            submatrix_jcols[i] = col_submatrix_map[v]
-
-        return coo_matrix((submatrix_data, (submatrix_irows, submatrix_jcols)), shape=(len(constraint_indices), len(primal_indices)))
+        return extract_submatrix(jac, constraint_indices, primal_indices)
 
     def extract_submatrix_hessian_lag(self, pyomo_variables_rows, pyomo_variables_cols):
         """
@@ -227,22 +212,6 @@ class PyomoNLP(AslNLP):
         hess_lag = self.evaluate_hessian_lag()
         primal_indices_rows = self.get_primal_indices(pyomo_variables_rows)
         primal_indices_cols = self.get_primal_indices(pyomo_variables_cols)
-        row_mask = np.isin(hess_lag.row, primal_indices_rows)
-        col_mask = np.isin(hess_lag.col, primal_indices_cols)
-        submatrix_mask = row_mask & col_mask
-        submatrix_irows = np.compress(submatrix_mask, hess_lag.row)
-        submatrix_jcols = np.compress(submatrix_mask, hess_lag.col)
-        submatrix_data = np.compress(submatrix_mask, hess_lag.data)
-
-        # ToDo: this is expensive - have to think about how to do this with numpy
-        submatrix_map = {j:i for i,j in enumerate(primal_indices_rows)}
-        for i, v in enumerate(submatrix_irows):
-            submatrix_irows[i] = submatrix_map[v]
-
-        submatrix_map = {j:i for i,j in enumerate(primal_indices_cols)}
-        for i, v in enumerate(submatrix_jcols):
-            submatrix_jcols[i] = submatrix_map[v]
-
-        return coo_matrix((submatrix_data, (submatrix_irows, submatrix_jcols)), shape=(len(primal_indices_rows), len(primal_indices_cols)))
+        return extract_submatrix(hess_lag, primal_indices_rows, primal_indices_cols)
     
 
