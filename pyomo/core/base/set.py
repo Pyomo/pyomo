@@ -2694,6 +2694,25 @@ class SetOperator(_SetData, Set):
         for s in self._sets:
             s.parent_component().construct()
         super(SetOperator, self).construct()
+        if data:
+            deprecation_warning(
+                "Providing construction data to SetOperator objects is "
+                "deprecated.  This data is ignored and in a future version "
+                "will not be allowed", version='TBD')
+            fail = len(data) > 1 or None not in data
+            if not fail:
+                _data = data[None]
+                if len(_data) != len(self):
+                    fail = True
+                else:
+                    for v in _data:
+                        if v not in self:
+                            fail = True
+                            break
+            if fail:
+                raise ValueError(
+                    "Constructing SetOperator %s with incompatible data "
+                    "(data=%s}" % (self.name, data))
         timer.report()
 
     # Note: because none of the slots on this class need to be edited,

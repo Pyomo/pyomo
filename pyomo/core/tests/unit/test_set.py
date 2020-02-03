@@ -2894,6 +2894,41 @@ J : Size=1, Index=None, Ordered=False
         self.assertEqual(x.ord((1, 2, (3, 4), 0)), 3)
         self.assertEqual(x.ord((1, 2, 3, 4, 0)), 3)
 
+    def test_setproduct_construct_data(self):
+        m = AbstractModel()
+        m.I = Set(initialize=[1,2])
+        m.J = m.I * m.I
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.create_instance(
+                data={None:{'J': {None: [(1,1),(1,2),(2,1),(2,2)]}}})
+        self.assertIn(
+            "DEPRECATED: Providing construction data to SetOperator objects "
+            "is deprecated", output.getvalue().replace('\n',' '))
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            with self.assertRaisesRegexp(
+                    ValueError, "Constructing SetOperator J with "
+                    "incompatible data \(data=\{None: \[\(1, 1\), \(1, 2\), "
+                    "\(2, 1\)\]\}"):
+                m.create_instance(
+                    data={None:{'J': {None: [(1,1),(1,2),(2,1)]}}})
+        self.assertIn(
+            "DEPRECATED: Providing construction data to SetOperator objects "
+            "is deprecated", output.getvalue().replace('\n',' '))
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            with self.assertRaisesRegexp(
+                    ValueError, "Constructing SetOperator J with "
+                    "incompatible data \(data=\{None: \[\(1, 3\), \(1, 2\), "
+                    "\(2, 1\), \(2, 2\)\]\}"):
+                m.create_instance(
+                    data={None:{'J': {None: [(1,3),(1,2),(2,1),(2,2)]}}})
+        self.assertIn(
+            "DEPRECATED: Providing construction data to SetOperator objects "
+            "is deprecated", output.getvalue().replace('\n',' '))
 
 class TestGlobalSets(unittest.TestCase):
     def test_globals(self):
