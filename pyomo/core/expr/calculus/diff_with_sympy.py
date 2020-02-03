@@ -51,7 +51,7 @@ def differentiate(expr, wrt=None, wrt_list=None):
     # appear in the expression (so that we can detect wrt combinations
     # that are, by definition, 0)
     #
-    partial_derivs = dict((x,None) for x in objectMap.sympyVars())
+    partial_derivs = {x:None for x in objectMap.sympyVars()}
     #
     # Setup the WRT list
     #

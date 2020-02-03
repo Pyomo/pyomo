@@ -16,6 +16,7 @@ from six import iteritems, itervalues, iterkeys
 from six.moves import xrange
 from weakref import ref as weakref_ref
 
+from pyomo.common import deprecated
 from pyomo.common.timing import ConstructionTimer
 from pyomo.common.plugin import Plugin, implements
 
@@ -117,7 +118,6 @@ class _ConnectorData(ComponentData, NumericValue):
                     yield v
 
 
-
 @ModelComponentFactory.register("A bundle of variables that can be manipilated together.")
 class Connector(IndexedComponent):
     """A collection of variables, which may be defined over a index
@@ -143,15 +143,16 @@ class Connector(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Connector:
             return super(Connector, cls).__new__(cls)
-        logger.warning("DEPRECATED: The Connector component is deprecated. "
-            "It has been replaced by Port in the pyomo.network package.")
         if args == ():
             return SimpleConnector.__new__(SimpleConnector)
         else:
             return IndexedConnector.__new__(IndexedConnector)
 
-
     # TODO: default keyword is  not used?  Need to talk to Bill ...?
+    @deprecated(
+        "Use of pyomo.connectors is deprecated. "
+        "Its functionality has been replaced by pyomo.network.",
+        version='TBD', remove_in='TBD',)
     def __init__(self, *args, **kwd):
         kwd.setdefault('ctype', Connector)
         self._rule = kwd.pop('rule', None)
@@ -278,10 +279,13 @@ class IndexedConnector(Connector):
     pass
 
 
-
 class ConnectorExpander(Plugin):
     implements(IPyomoScriptModifyInstance)
 
+    @deprecated(
+        "Use of pyomo.connectors is deprecated. "
+        "Its functionality has been replaced by pyomo.network.",
+        version='TBD', remove_in='TBD', )
     def apply(self, **kwds):
         instance = kwds.pop('instance')
         xform = TransformationFactory('core.expand_connectors')

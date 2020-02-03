@@ -280,8 +280,7 @@ class _TestDictContainerBase(object):
 
     def test_keys(self):
         index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._ctype_factory())
-                                   for i in index)
+        raw_constraint_dict = {i:self._ctype_factory() for i in index}
         c = self._container_type(raw_constraint_dict)
         self.assertEqual(sorted(list(raw_constraint_dict.keys()),
                                 key=str),
@@ -289,8 +288,7 @@ class _TestDictContainerBase(object):
 
     def test_values(self):
         index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._ctype_factory())
-                                   for i in index)
+        raw_constraint_dict = {i:self._ctype_factory() for i in index}
         c = self._container_type(raw_constraint_dict)
         self.assertEqual(
             sorted(list(id(_v)
@@ -302,8 +300,7 @@ class _TestDictContainerBase(object):
 
     def test_items(self):
         index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._ctype_factory())
-                                   for i in index)
+        raw_constraint_dict = {i:self._ctype_factory() for i in index}
         c = self._container_type(raw_constraint_dict)
         self.assertEqual(
             sorted(list((_i, id(_v))
@@ -315,8 +312,7 @@ class _TestDictContainerBase(object):
 
     def test_update(self):
         index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._ctype_factory())
-                                   for i in index)
+        raw_constraint_dict = {i:self._ctype_factory() for i in index}
         c = self._container_type()
         c.update(raw_constraint_dict)
         self.assertEqual(sorted(list(raw_constraint_dict.keys()),

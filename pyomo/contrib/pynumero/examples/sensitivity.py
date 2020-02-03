@@ -7,72 +7,113 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-import pyomo.environ as aml
-from pyomo.contrib.pynumero.interfaces import PyomoNLP
-from pyomo.contrib.pynumero.sparse import BlockSymMatrix, BlockMatrix
-from pyomo.contrib.pynumero.interfaces.utils import compute_init_lam
+import pyomo.environ as pyo
+from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+from pyomo.contrib.pynumero.sparse import BlockSymMatrix, BlockMatrix, BlockVector
+from scipy.sparse import identity
 from scipy.sparse.linalg import spsolve
 import numpy as np
 
 
 def create_model(eta1, eta2):
-    model = aml.ConcreteModel()
+    model = pyo.ConcreteModel()
     # variables
-    model.x1 = aml.Var(initialize=0.15)
-    model.x2 = aml.Var(initialize=0.15)
-    model.x3 = aml.Var(initialize=0.0)
+    model.x1 = pyo.Var(initialize=0.15)
+    model.x2 = pyo.Var(initialize=0.15)
+    model.x3 = pyo.Var(initialize=0.0)
     # parameters
-    model.eta1 = aml.Var()
-    model.eta2 = aml.Var()
+    model.eta1 = pyo.Var()
+    model.eta2 = pyo.Var()
 
-    model.nominal_eta1 = aml.Param(initialize=eta1, mutable=True)
-    model.nominal_eta2 = aml.Param(initialize=eta2, mutable=True)
+    model.nominal_eta1 = pyo.Param(initialize=eta1, mutable=True)
+    model.nominal_eta2 = pyo.Param(initialize=eta2, mutable=True)
 
     # constraints + objective
-    model.const1 = aml.Constraint(expr=6*model.x1+3*model.x2+2*model.x3 - model.eta1 == 0)
-    model.const2 = aml.Constraint(expr=model.eta2*model.x1+model.x2-model.x3-1 == 0)
-    model.cost = aml.Objective(expr=model.x1**2 + model.x2**2 + model.x3**2)
-    model.consteta1 = aml.Constraint(expr=model.eta1 == model.nominal_eta1)
-    model.consteta2 = aml.Constraint(expr=model.eta2 == model.nominal_eta2)
+    model.const1 = pyo.Constraint(expr=6*model.x1+3*model.x2+2*model.x3 - model.eta1 == 0)
+    model.const2 = pyo.Constraint(expr=model.eta2*model.x1+model.x2-model.x3-1 == 0)
+    model.cost = pyo.Objective(expr=model.x1**2 + model.x2**2 + model.x3**2)
+    model.consteta1 = pyo.Constraint(expr=model.eta1 == model.nominal_eta1)
+    model.consteta2 = pyo.Constraint(expr=model.eta2 == model.nominal_eta2)
 
     return model
 
+def compute_init_lam(nlp, x=None, lam_max=1e3):
+    if x is None:
+        x = nlp.init_primals()
+    else:
+        assert x.size == nlp.n_primals()
+    nlp.set_primals(x)
+
+    assert nlp.n_ineq_constraints() == 0, "only supported for equality constrained nlps for now"
+
+    nx = nlp.n_primals()
+    nc = nlp.n_constraints()
+
+    # create Jacobian
+    jac = nlp.evaluate_jacobian()
+
+    # create gradient of objective
+    df = nlp.evaluate_grad_objective()
+
+    # create KKT system
+    kkt = BlockSymMatrix(2)
+    kkt[0, 0] = identity(nx)
+    kkt[1, 0] = jac
+
+    zeros = np.zeros(nc)
+    rhs = BlockVector([-df, zeros])
+
+    flat_kkt = kkt.tocoo().tocsc()
+    flat_rhs = rhs.flatten()
+
+    sol = spsolve(flat_kkt, flat_rhs)
+    return sol[nlp.n_primals() : nlp.n_primals() + nlp.n_constraints()]
+
 #################################################################
 m = create_model(4.5, 1.0)
-opt = aml.SolverFactory('ipopt')
+opt = pyo.SolverFactory('ipopt')
 results = opt.solve(m, tee=True)
 
 #################################################################
 nlp = PyomoNLP(m)
-x = nlp.x_init()
+x = nlp.init_primals()
 y = compute_init_lam(nlp, x=x)
+nlp.set_primals(x)
+nlp.set_duals(y)
 
-J = nlp.jacobian_g(x)
-H = nlp.hessian_lag(x, y)
+J = nlp.extract_submatrix_jacobian(pyomo_variables=[m.x1, m.x2, m.x3], pyomo_constraints=[m.const1, m.const2])
+H = nlp.extract_submatrix_hessian_lag(pyomo_variables_rows=[m.x1, m.x2, m.x3], pyomo_variables_cols=[m.x1, m.x2, m.x3])
 
 M = BlockSymMatrix(2)
 M[0, 0] = H
 M[1, 0] = J
 
 Np = BlockMatrix(2, 1)
-Np[0, 0] = nlp.hessian_lag(x, y, subset_variables_col=[m.eta1, m.eta2])
-Np[1, 0] = nlp.jacobian_g(x, subset_variables=[m.eta1, m.eta2])
+Np[0, 0] = nlp.extract_submatrix_hessian_lag(pyomo_variables_rows=[m.x1, m.x2, m.x3], pyomo_variables_cols=[m.eta1, m.eta2])
+Np[1, 0] = nlp.extract_submatrix_jacobian(pyomo_variables=[m.eta1, m.eta2], pyomo_constraints=[m.const1, m.const2])
 
-ds = spsolve(M.tocsc(), Np.tocsc())
-print(nlp.variable_order())
+ds = spsolve(M.tocsc(), -Np.tocsc())
 
+print("ds:\n", ds.todense())
 #################################################################
 
-p0 = np.array([aml.value(m.nominal_eta1), aml.value(m.nominal_eta2)])
+p0 = np.array([pyo.value(m.nominal_eta1), pyo.value(m.nominal_eta2)])
 p = np.array([4.45, 1.05])
 dp = p - p0
-dx = ds.dot(dp)[0:nlp.nx]
-new_x = x + dx
-print(new_x)
+dx = ds.dot(dp)[0:3]
+x_indices = nlp.get_primal_indices([m.x1, m.x2, m.x3])
+x_names = np.array(nlp.variable_names())
+new_x = x[x_indices] + dx
+print("dp:", dp)
+print("dx:", dx)
+print("Variable names: \n",x_names[x_indices])
+print("Sensitivity based x:\n", new_x)
 
 #################################################################
 m = create_model(4.45, 1.05)
-opt = aml.SolverFactory('ipopt')
-results = opt.solve(m, tee=True)
+opt = pyo.SolverFactory('ipopt')
+results = opt.solve(m, tee=False)
 nlp = PyomoNLP(m)
-print(nlp.x_init())
+new_x = nlp.init_primals()
+print("NLP based x:\n", new_x[nlp.get_primal_indices([m.x1, m.x2, m.x3])])
+
