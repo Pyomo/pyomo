@@ -170,10 +170,10 @@ class DictContainer(IHomogeneousContainer,
     def __eq__(self, other):
         if not isinstance(other, collections_Mapping):
             return False
-        return dict((key, (type(val), id(val)))
-                    for key, val in self.items()) == \
-               dict((key, (type(val), id(val)))
-                    for key, val in other.items())
+        return {key:(type(val), id(val))
+                    for key, val in self.items()} == \
+               {key:(type(val), id(val))
+                    for key, val in other.items()}
 
     def __ne__(self, other):
         return not (self == other)

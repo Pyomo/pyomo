@@ -21,7 +21,6 @@ except ImportError:
 from pyomo.contrib.pynumero.sparse.coo import (diagonal_matrix,
                                                empty_matrix)
 
-@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestEmptyMatrix(unittest.TestCase):
 
     def test_constructor(self):
