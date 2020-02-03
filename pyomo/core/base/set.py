@@ -2471,7 +2471,7 @@ class RangeSet(Component):
             # the old RangeSet implementation, where we did less
             # validation of the RangeSet arguments, and allowed the
             # creation of 0-length RangeSets
-            if args[1] - args[0] != -1:
+            if None in args or args[1] - args[0] != -1:
                 args = (args[0],args[1],1)
 
         if len(args) == 3:
@@ -2480,19 +2480,37 @@ class RangeSet(Component):
             # the NumericRange object.  We will just discretize this
             # range (mostly for backwards compatability)
             start, end, step = args
-            if step and int(step) != step:
-                if (end >= start) ^ (step > 0):
-                    raise ValueError(
-                        "RangeSet: start, end ordering incompatible with "
-                        "step direction (got [%s:%s:%s])" % (start,end,step))
-                n = start
-                i = 0
-                while (step > 0 and n <= end) or (step < 0 and n >= end):
-                    ranges = ranges + (NumericRange(n,n,0),)
-                    i += 1
-                    n = start + step*i
+            if step:
+                if start is None:
+                    start, end = end, start
+                    step *= -1
+
+                if start is None:
+                    # Backwards compatability: assume unbounded RangeSet
+                    # is grounded at 0
+                    ranges += ( NumericRange(0, None, step),
+                                NumericRange(0, None, -step) )
+                elif int(step) != step:
+                    if end is None:
+                        raise ValueError(
+                            "RangeSet does not support unbounded ranges "
+                            "with a non-integer step (got [%s:%s:%s])"
+                            % (start, end, step))
+                    if (end >= start) ^ (step > 0):
+                        raise ValueError(
+                            "RangeSet: start, end ordering incompatible with "
+                            "step direction (got [%s:%s:%s])"
+                            % (start, end, step))
+                    n = start
+                    i = 0
+                    while (step > 0 and n <= end) or (step < 0 and n >= end):
+                        ranges += (NumericRange(n,n,0),)
+                        i += 1
+                        n = start + step*i
+                else:
+                    ranges += (NumericRange(start, end, step),)
             else:
-                ranges = ranges + (NumericRange(*args),)
+                ranges += (NumericRange(*args),)
 
         for r in ranges:
             if not isinstance(r, NumericRange):

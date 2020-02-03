@@ -681,6 +681,16 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 "NumericRange objects"):
             RangeSet(ranges=(NR(1,5,1), NNR('a')))
 
+        with self.assertRaisesRegexp(
+                ValueError, "Constructing a finite RangeSet over a "
+                "non-finite range "):
+            RangeSet(finite=True, ranges=(NR(1,5,0),))
+
+        with self.assertRaisesRegexp(
+                ValueError, "RangeSet does not support unbounded ranges "
+                "with a non-integer step"):
+            RangeSet(0,None,0.5)
+
         output = StringIO()
         p = Param(initialize=5)
         i = RangeSet(p)
@@ -728,10 +738,35 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertIs(type(i), InfiniteSimpleRangeSet)
         i = RangeSet(1,1,0)
         self.assertIs(type(i), FiniteSimpleRangeSet)
+        j = RangeSet(1, float('inf'))
+        self.assertIs(type(j), InfiniteSimpleRangeSet)
         i = RangeSet(1,None)
         self.assertIs(type(i), InfiniteSimpleRangeSet)
-        i = RangeSet(1, float('inf'))
+        self.assertEqual(i,j)
+        self.assertIn(1, i)
+        self.assertIn(100, i)
+        self.assertNotIn(0, i)
+        self.assertNotIn(1.5, i)
+        i = RangeSet(None,1)
         self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIn(1, i)
+        self.assertNotIn(100, i)
+        self.assertIn(0, i)
+        self.assertNotIn(0.5, i)
+        i = RangeSet(None,None)
+        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIn(1, i)
+        self.assertIn(100, i)
+        self.assertIn(0, i)
+        self.assertNotIn(0.5, i)
+
+        i = RangeSet(None,None,bounds=(-5,10))
+        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIn(10, i)
+        self.assertNotIn(11, i)
+        self.assertIn(-5, i)
+        self.assertNotIn(-6, i)
+        self.assertNotIn(0.5, i)
 
         p = Param(initialize=float('inf'))
         i = RangeSet(1, p, 1)
