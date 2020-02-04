@@ -33,9 +33,9 @@ class NotFullyDefinedBlockVectorError(Exception):
 
 
 def assert_block_structure(vec):
-    msgr = 'Operation not allowed with None blocks.'
     if vec.has_none:
-        raise NotFullyDefinedBlockVectorError(msgr)
+        msg = 'Operation not allowed with None blocks.'
+        raise NotFullyDefinedBlockVectorError(msg)
 
 
 class BlockVector(np.ndarray, BaseBlockVector):
@@ -58,22 +58,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     Parameters
     ----------
-    vectors: int or list of numpy.ndarray or BlockVectors
-        Blocks contained in the BlockVector.
-        If a list is passed the BlockVctor is initialized from
-        the list of 1d-arrays. Otherwise, if an integer is passed all
-        entries in the BlockVector are initialized as None.
+    nblocks: int
+        The number of blocks in the BlockVector
 
     """
 
-    def __new__(cls, vectors):
-        if isinstance(vectors, int):
-            nblocks = vectors
-        elif isinstance(vectors, list):
-            nblocks = len(vectors)
-        else:
-            raise RuntimeError('Vectors must be a list of an integer')
-
+    def __new__(cls, nblocks):
         blocks = [None for i in range(nblocks)]
         arr = np.asarray(blocks, dtype='object')
         obj = arr.view(cls)
@@ -83,13 +73,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         obj._brow_lengths.fill(np.nan)
         obj._undefined_brows = set(range(nblocks))
 
-        if isinstance(vectors, list):
-            for idx, blk in enumerate(vectors):
-                obj.set_block(idx, blk)
-
         return obj
 
-    def __init__(self, vectors):
+    def __init__(self, nblocks):
         pass
 
     def __array_finalize__(self, obj):
@@ -289,6 +275,28 @@ class BlockVector(np.ndarray, BaseBlockVector):
         if copy:
             return self._brow_lengths.copy()
         return self._brow_lengths
+
+    def get_block_size(self, ndx):
+        if ndx in self._undefined_brows:
+            raise NotFullyDefinedBlockVectorError('The dimensions of the requested block are not defined.')
+        return int(self._brow_lengths[ndx])
+
+    def _set_block_size(self, ndx, size):
+        if ndx in self._undefined_brows:
+            self._undefined_brows.remove(ndx)
+            self._brow_lengths[ndx] = size
+            if len(self._undefined_brows) == 0:
+                self._brow_lengths = np.asarray(self._brow_lengths, dtype=np.int64)
+        else:
+            if self._brow_lengths[ndx] != size:
+                raise ValueError('Incompatible dimensions for '
+                                 'block {ndx}; got {got}; '
+                                 'expected {exp}'.format(ndx=ndx,
+                                                         got=size,
+                                                         exp=self._brow_lengths[ndx]))
+
+    def is_block_defined(self, ndx):
+        return ndx not in self._undefined_brows
 
     def dot(self, other, out=None):
         """
@@ -655,8 +663,11 @@ class BlockVector(np.ndarray, BaseBlockVector):
         None
 
         """
+        assert_block_structure(self)
 
         if isinstance(other, BlockVector):
+            assert_block_structure(other)
+
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             assert self.nblocks == other.nblocks, \
@@ -670,23 +681,17 @@ class BlockVector(np.ndarray, BaseBlockVector):
                         self.set_block(idx, other.get_block(idx).copy())
                     elif isinstance(other.get_block(idx), np.ndarray):
                         np.copyto(self.get_block(idx), other.get_block(idx))
-                    elif blk is None:
-                        self.set_block(idx, None)
                     else:
                         raise RuntimeError('Input not recognized')
                 elif self.get_block(idx) is None:
                     if isinstance(other.get_block(idx), np.ndarray):
                         # this inlcude block vectors too
                         self.set_block(idx, other.get_block(idx).copy())
-                    elif blk is None:
-                        self.set_block(idx, None)
                     else:
                         raise RuntimeError('Input not recognized')
                 else:
-                    raise RuntimeError('Should never get here')
+                    raise RuntimeError('Input not recognized')
         elif isinstance(other, np.ndarray):
-
-            assert_block_structure(self)
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
 
@@ -699,7 +704,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                     np.copyto(self.get_block(idx), subarray)
                 offset += self.get_block(idx).size
         else:
-            raise NotImplementedError()
+            raise NotImplementedError('Operation not supported by BlockVector')
 
     def copyto(self, other):
         """
@@ -1209,29 +1214,18 @@ class BlockVector(np.ndarray, BaseBlockVector):
         return '{}{}'.format(self.__class__.__name__, self.bshape)
 
     def get_block(self, key):
-        assert not isinstance(key, slice), 'Slicing not supported for BlockVector'
         return super(BlockVector, self).__getitem__(key)
 
     def set_block(self, key, value):
-        assert not isinstance(key, slice), 'Slicing not supported for BlockVector'
         assert -self.nblocks < key < self.nblocks, 'out of range'
         assert isinstance(value, np.ndarray) or \
             isinstance(value, BaseBlockVector), \
                 'Blocks need to be numpy arrays or BlockVectors'
         assert value.ndim == 1, 'Blocks need to be 1D'
 
-        if np.isnan(self._brow_lengths[key]):
-            self._brow_lengths[key] = value.size
-            self._undefined_brows.remove(key)
-            if len(self._undefined_brows) == 0:
-                self._brow_lengths = np.asarray(self._brow_lengths, dtype=np.int64)
-        else:
-            assert self._brow_lengths[key] == value.size, \
-                'incompatible demensions for block {key}; ' \
-                'got {got}; expected {exp}'.format(key=key,
-                                                   got=value.size,
-                                                   exp=self._brow_lengths[key])
-
+        if isinstance(value, BaseBlockVector):
+            assert_block_structure(value)
+        self.set_block_size(key, value.size)
         super(BlockVector, self).__setitem__(key, value)
 
     def __getitem__(self, item):
@@ -1457,11 +1451,11 @@ class BlockVector(np.ndarray, BaseBlockVector):
             processors then its ownership is -1. Otherwise, if a block is owned by
             a single processor, then its ownership is equal to the rank of the
             processor.
-        mpi_com: MPI communicator
+        mpi_comm: MPI communicator
             An MPI communicator. Tyically MPI.COMM_WORLD
 
         """
-        from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBLockVector
+        from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
 
         assert_block_structure(self)
         assert len(rank_ownership) == self.nblocks, \
@@ -1475,6 +1469,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         # populate blocks in the right spaces
         for bid in mpi_bv.owned_blocks:
             mpi_bv.set_block(bid, self.get_block(bid))
+        mpi_bv.broadcast_block_sizes()
 
         return mpi_bv
 

@@ -69,6 +69,10 @@ class BlockMatrix(BaseBlockMatrix):
         1D-array with sizes of block-rows
     _bcol_lengths: numpy.ndarray
         1D-array with sizes of block-columns
+    _undefined_brows: set
+        set of block row indices with undefined dimensions
+    _undefined_bcols: set
+        set of block column indices with undefined dimensions
 
     Parameters
     -------------------
@@ -883,6 +887,7 @@ class BlockMatrix(BaseBlockMatrix):
                         A = self._blocks[i, j]
                         blk = result.get_block(i)
                         blk += A * x
+                        result.set_block(i, blk)
             return result
         elif isinstance(other, np.ndarray):
 

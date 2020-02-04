@@ -22,7 +22,9 @@ where m_{i,j} are sparse matrices
 """
 
 from .mpi_block_vector import MPIBlockVector
+from .mpi_block_vector import assert_block_structure as mpi_block_vector_assert_block_structure
 from .block_vector import BlockVector
+from .block_vector import assert_block_structure as block_vector_assert_block_structure
 from .block_matrix import BlockMatrix, NotFullyDefinedBlockMatrixError
 from .warnings import MPISpaceWarning
 from .base_block import BaseBlockMatrix
@@ -42,8 +44,8 @@ ALL_OWN_IT = 0
 
 
 def assert_block_structure(mat):
-    msg = 'Call MPIBlockMatrix.broadcast_block_sizes() first. '
     if mat.has_undefined_rows() or mat.has_undefined_cols():
+        msg = 'Call MPIBlockMatrix.broadcast_block_sizes() first. '
         raise NotFullyDefinedBlockMatrixError(msg)
 
 
@@ -73,20 +75,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
         _rank_owner tells which processor(s) owns each block, _unique_owned_mask tells
         if a block is owned by this processor. Blocks that are owned by everyone
         (i.e. ownership = -1) are False in _unique_owned_mask
-    _row_type: numpy.ndarray int
-        1D-Array that classify the type of row. Rows can be of three types. If
-        all the row blocks have the same owner, the row is said to be SINGLE_OWNER=1.
-        If all the blocks in the row have ownership equals -1, the row is said
-        to be ALL_OWN_IT=0. Finally if two or more blocks have different owner in
-        a row, the row is said to be MULTIPLE_OWNER=2. This information is useful
-        when performing matrix-vector and matrix-matrix products
-    _col_type: numpy.ndarray int
-        1D-Array that classify the type of column. Columns can be of three types. If
-        all the column blocks have the same owner, the column is said to be SINGLE_OWNER=1.
-        If all the blocks in the column have ownership equals -1, the column is said
-        to be ALL_OWN_IT=0. Finally if two or more blocks have different owner in
-        a column, the column is said to be MULTIPLE_OWNER=2. This information is useful
-        when performing matrix-vector and matrix-matrix products
 
     Parameters
     -------------------
@@ -100,21 +88,13 @@ class MPIBlockMatrix(BaseBlockMatrix):
                     owned by all processes the rank is -1. Blocks that are
                     None should be owned by all processes.
     mpi_comm : MPI communicator
-    row_block_sizes: array_like, optional
-        Array_like of size nbrows. This specifies the length of each row in
-        the MPIBlockMatrix.
-    col_block_sizes: array_like, optional
-        Array_like of size nbcols. This specifies the length of each column in
-        the MPIBlockMatrix.
     """
 
     def __init__(self,
                  nbrows,
                  nbcols,
                  rank_ownership,
-                 mpi_comm,
-                 row_block_sizes=None,
-                 col_block_sizes=None):
+                 mpi_comm):
 
         shape = (nbrows, nbcols)
         self._block_matrix = BlockMatrix(nbrows, nbcols)
@@ -155,52 +135,10 @@ class MPIBlockMatrix(BaseBlockMatrix):
         assert self._assert_correct_owners(), \
             'rank_owner must be the same in all processors'
 
-        # classify row ownership
-        self._row_type = np.empty(nbrows, dtype=np.int64)
-        for i in range(nbrows):
-            self._row_type[i] = ALL_OWN_IT
-            last_owner = -1
-            for j in range(nbcols):
-                owner = self._rank_owner[i, j]
-                if owner >= 0:
-                    if self._row_type[i] == ALL_OWN_IT:
-                        last_owner = owner
-                        self._row_type[i] = SINGLE_OWNER
-                    elif self._row_type[i] == SINGLE_OWNER and owner != last_owner:
-                        self._row_type[i] = MULTIPLE_OWNER
-                        break
-
-        # classify column ownership
-        self._column_type = np.empty(nbcols, dtype=np.int64)
-        for j in range(nbcols):
-            self._column_type[j] = ALL_OWN_IT
-            last_owner = -1
-            for i in range(nbrows):
-                owner = self._rank_owner[i, j]
-                if owner >= 0:
-                    if self._column_type[j] == ALL_OWN_IT:
-                        last_owner = owner
-                        self._column_type[j] = SINGLE_OWNER
-                    elif self._column_type[j] == SINGLE_OWNER and owner != last_owner:
-                        self._column_type[j] = MULTIPLE_OWNER
-                        break
-
-        if row_block_sizes is None and col_block_sizes is None:
-            pass
-        else:
-            if row_block_sizes is not None and col_block_sizes is not None:
-                for row_ndx, row_size in enumerate(row_block_sizes):
-                    self.set_row_size(row_ndx, row_size)
-                for col_ndx, col_size in enumerate(col_block_sizes):
-                    self.set_col_size(col_ndx, col_size)
-            elif row_block_sizes is None and col_block_sizes is not None:
-                raise RuntimeError('Specify row_block_sizes')
-            else:
-                raise RuntimeError('Specify col_block_sizes')
-
         # make some of the pointers unmutable
         self._rank_owner.flags.writeable = False
         self._owned_mask.flags.writeable = False
+        self._unique_owned_mask.flags.writeable = False
 
     @property
     def bshape(self):
@@ -502,9 +440,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
             bcol_lengths[i] = cols_length.pop()
 
         for row_ndx, row_size in enumerate(brow_lengths):
-            self._block_matrix.set_row_size(row_ndx, row_size)
+            self.set_row_size(row_ndx, row_size)
         for col_ndx, col_size in enumerate(bcol_lengths):
-            self._block_matrix.set_col_size(col_ndx, col_size)
+            self.set_col_size(col_ndx, col_size)
 
     def row_block_sizes(self, copy=True):
         """
@@ -586,7 +524,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         Parameters
         ----------
-        idx: integer
+        jdx: integer
             column index to be reset
 
         Returns
@@ -817,91 +755,59 @@ class MPIBlockMatrix(BaseBlockMatrix):
     def __rsub__(self, other):
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
+    def _block_vector_multiply(self, other):
+        """
+        Parameters
+        ----------
+        other: BlockVector
+
+        Returns
+        -------
+        result: BlockVector
+        """
+        block_vector_assert_block_structure(other)
+        assert self.bshape[1] == other.nblocks, 'Dimension mismatch'
+        local_result = other.copy_structure()
+        rank = self._mpiw.Get_rank()
+        if rank == 0:
+            block_indices = self._owned_mask
+        else:
+            block_indices = self._unique_owned_mask
+        for row_ndx, col_ndx in zip(*np.nonzero(block_indices)):
+            res_blk = local_result.get_block(row_ndx)
+            res_blk += self.get_block(row_ndx, col_ndx) * other.get_block(col_ndx)
+            local_result.set_block(row_ndx, res_blk)
+        global_result = other.copy_structure()
+        for ndx in range(global_result.nblocks):
+            self._mpiw.Allreduce(local_result[ndx], global_result[ndx])
+        return global_result
+
     def __mul__(self, other):
         assert_block_structure(self)
-        m, n = self.bshape
-        result = self.copy_structure()
 
         if isinstance(other, MPIBlockVector):
-            rank = self._mpiw.Get_rank()
-            m, n = self.bshape
-            assert n == other.nblocks, 'Dimension mismatch'
-            assert not other.has_none, 'Block vector must not have none entries' # this check is expensive
-            assert np.compress(self._row_type == MULTIPLE_OWNER,
-                               self._row_type).size == 0, \
-                'Matrix-vector multiply only supported for ' \
-                'matrices with single rank owner in each row.' \
-                'Call pynumero.matvec_multiply instead or modify matrix ownership'
-
-            # Note: this relies on the assertion above
-            row_rank_ownership = np.empty(m, dtype=np.int64)
-            for i in range(m):
-                row_rank_ownership[i] = -1
-                if self._row_type[i] != ALL_OWN_IT:
-                    for j in range(n):
-                        owner = self._rank_owner[i, j]
-                        if owner != row_rank_ownership[i]:
-                            row_rank_ownership[i] = owner
-                            break
-
-            result = MPIBlockVector(m,
-                                    row_rank_ownership,
-                                    self._mpiw,
-                                    block_sizes=self.row_block_sizes())
-
-            # check same mpi spaces in matrix and vector
-            owners_match = True
-            for i in range(m):
-                for j in range(n):
-                    mat_owner = self._rank_owner[i, j]
-                    vector_owner = other.rank_ownership[j]
-                    if mat_owner != vector_owner:
-                        if mat_owner >= 0 and vector_owner >= 0:
-                            owners_match = False
-                            break
-
-            if owners_match:
-                for i in range(m):
-                    local_sum = np.zeros(self.get_row_size(i))
-                    for j in range(n):
-                        mat_owner = self._rank_owner[i, j]
-                        vector_owner = other.rank_ownership[j]
-                        if (mat_owner == vector_owner and rank == mat_owner) or \
-                            (mat_owner == rank and vector_owner < 0) or \
-                            (vector_owner == rank and mat_owner < 0):
-                            x = other.get_block(j)
-                            if self.get_block(i, j) is not None:
-                                local_sum += self.get_block(i, j) * x
-
-                    row_owner = row_rank_ownership[i]
-                    if row_owner < 0:
-                        global_sum = self._mpiw.allreduce(local_sum, op=MPI.SUM)
-                    else:
-                        global_sum = self._mpiw.reduce(local_sum,
-                                                       op=MPI.SUM,
-                                                       root=row_owner)
-                    if row_owner == rank or row_owner < 0:
-                        result.set_block(i, global_sum)
-                return result
-            else:
-                if rank == 0:
-                    msg = "Matrix-vector multiply with blocks in different MPI spaces is inefficient."
-                    warn(msg, MPISpaceWarning)
-                return self.__mul__(other.make_local_copy())
-
-        if np.isscalar(other):
+            global_other = other.make_local_copy()
+            global_result = self._block_vector_multiply(global_other)
+            local_result = other.copy_structure()
+            for ndx in local_result.owned_blocks:
+                local_result[ndx] = global_result[ndx]
+        elif isinstance(other, BlockVector):
+            return self._block_vector_multiply(other)
+        elif isinstance(other, np.ndarray):
+            block_other = BlockVector(nblocks=self.bshape[1])
+            for ndx in range(self.bshape[1]):
+                block_other[ndx] = np.zeros(self.get_col_size(ndx), dtype=other.dtype)
+            block_other.copyfrom(other)
+            return self._block_vector_multiply(block_other).flatten()
+        elif np.isscalar(other):
+            result = self.copy_structure()
             ii, jj = np.nonzero(self._owned_mask)
             for i, j in zip(ii, jj):
                 if not self._block_matrix.is_empty_block(i, j):
                     result.set_block(i, j, self.get_block(i, j) * other)
             return result
-
-        if isinstance(other, MPIBlockMatrix):
-            raise NotImplementedError('Matrix-Matrix multiply not supported yet')
-        if isinstance(other, BlockMatrix):
-            raise NotImplementedError('Matrix-Matrix multiply not supported yet')
-
-        raise NotImplementedError('Operation not supported by MPIBlockMatrix')
+        else:
+            raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __rmul__(self, other):
         assert_block_structure(self)
