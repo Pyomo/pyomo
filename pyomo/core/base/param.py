@@ -305,10 +305,7 @@ class Param(IndexedComponent):
             # Thus, we need to create a temporary dictionary that contains the
             # values from the ParamData objects.
             #
-            ans = {}
-            for key, param_value in self.iteritems():
-                ans[key] = param_value()
-            return ans
+            return {key:param_value() for key,param_value in self.iteritems()}
         elif not self.is_indexed():
             #
             # The parameter is a scalar, so we need to create a temporary
