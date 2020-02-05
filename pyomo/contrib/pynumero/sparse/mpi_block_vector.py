@@ -17,6 +17,7 @@ from .block_vector import assert_block_structure as block_vector_assert_block_st
 from mpi4py import MPI
 import numpy as np
 import copy as cp
+import operator
 
 __all__ = ['MPIBlockVector']
 
@@ -524,10 +525,9 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         Complex-conjugate all elements.
         """
         assert_block_structure(self)
-        rank = self._mpiw.Get_rank()
         result = self.copy_structure()
         for i in self._owned_blocks:
-            result.set_block(i, self._block_vector.get_block(i).conj())
+            result.set_block(i, self.get_block(i).conj())
         return result
 
     def conjugate(self):
@@ -540,10 +540,11 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the indices of the elements that are non-zero.
         """
-        result = self.copy_structure()
+        result = MPIBlockVector(nblocks=self.nblocks, rank_owner=self.rank_ownership, mpi_comm=self.mpi_comm)
         assert_block_structure(self)
         for i in self._owned_blocks:
             result.set_block(i, self._block_vector.get_block(i).nonzero()[0])
+        result.broadcast_block_sizes()
         return (result,)
 
     def round(self, decimals=0, out=None):
@@ -597,21 +598,22 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         assert out is None, 'Out keyword not supported'
         assert_block_structure(self)
-        result = self.copy_structure()
+        result = MPIBlockVector(nblocks=self.nblocks, rank_owner=self.rank_ownership, mpi_comm=self.mpi_comm)
         if isinstance(condition, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
             assert np.array_equal(self._rank_owner, condition._rank_owner), msg
             assert self._mpiw == condition._mpiw, 'Need to have same communicator'
             for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).compress(condition.get_block(i)))
+                result.set_block(i, self.get_block(i).compress(condition.get_block(i)))
+            result.broadcast_block_sizes()
             return result
         if isinstance(condition, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(condition, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         else:
-            raise NotImplementedError()
+            raise NotImplementedError('Operation not supported by MPIBlockVector')
 
     def copyfrom(self, other):
         """
@@ -625,50 +627,25 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         -------
         None
         """
-        assert_block_structure(self)
         if isinstance(other, MPIBlockVector):
             assert_block_structure(other)
             msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks, other.nblocks)
             assert self.nblocks == other.nblocks, msg
-            assert self.shape == other.shape, 'Dimension mismatch: {} != {}'.format(self.shape, other.shape)
             msg = 'BlockVectors must be distributed in same processors'
             assert np.array_equal(self._rank_owner, other.rank_ownership), msg
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                if isinstance(self._block_vector.get_block(i), BlockVector):
-                    self._block_vector.get_block(i).copyfrom(other.get_block(i))
-                elif isinstance(self._block_vector.get_block(i), np.ndarray):
-                    if isinstance(other.get_block(i), BlockVector):
-                        self.set_block(i, other.get_block(i).copy())
-                    elif isinstance(other.get_block(i), np.ndarray):
-                        np.copyto(self._block_vector.get_block(i), other.get_block(i))
-                    else:
-                        raise RuntimeError('Input not recognized')
-                else:
-                    msg = 'Block {ndx} type not recognized: {blk_type}.'.format(ndx=i,
-                                                                                blk_type=type(self.get_block(i)))
-                    raise RuntimeError(msg)
+                self.set_block(i, other.get_block(i).copy())
 
         elif isinstance(other, BlockVector):
             block_vector_assert_block_structure(other)
             msg = 'Number of blocks mismatch {} != {}'.format(self.nblocks, other.nblocks)
             assert self.nblocks == other.nblocks, msg
             for i in self._owned_blocks:
-                if isinstance(self._block_vector.get_block(i), BlockVector):
-                    self._block_vector.get_block(i).copyfrom(other.get_block(i))
-                elif isinstance(self._block_vector.get_block(i), np.ndarray):
-                    if isinstance(other.get_block(i), BlockVector):
-                        self.set_block(i, other.get_block(i).copy())
-                    elif isinstance(other.get_block(i), np.ndarray):
-                        np.copyto(self._block_vector.get_block(i), other.get_block(i))
-                    else:
-                        raise RuntimeError('Input not recognized')
-                else:
-                    msg = 'Block {ndx} type not recognized: {blk_type}.'.format(ndx=i,
-                                                                                blk_type=type(self.get_block(i)))
-                    raise RuntimeError(msg)
+                self.set_block(i, other.get_block(i).copy())
         elif isinstance(other, np.ndarray):
+            assert_block_structure(self)
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             offset = 0
             for idx in range(self.nblocks):
@@ -919,8 +896,9 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         local_serialized_structure = np.zeros(global_length_per_block.sum(), dtype=np.int64)
 
         offset = 0
+        block_indices_set = set(block_indices)
         for ndx in range(self.nblocks):
-            if self._owned_mask[ndx]:
+            if ndx in block_indices_set:
                 local_serialized_structure[offset: offset+global_length_per_block[ndx]] = serialized_structure_by_block[ndx]
             offset += global_length_per_block[ndx]
         global_serialized_structure = np.zeros(global_length_per_block.sum(), dtype=np.int64)
@@ -940,557 +918,203 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         -------
         BlockVector
         """
+        assert_block_structure(self)
         result = self.make_local_structure_copy()
 
-        # determine size sent by each processor
-        num_processors = self._mpiw.Get_size()
-        nblocks = self.nblocks
+        local_data = np.zeros(self.size)
+        global_data = np.zeros(self.size)
+
+        offset = 0
         rank = self._mpiw.Get_rank()
-        chunk_size_per_processor = np.zeros(num_processors, dtype=np.int64)
-        sizes_within_processor = [np.zeros(nblocks, dtype=np.int64) for k in range(num_processors)]
-        for i in range(nblocks):
-            owner = self._rank_owner[i]
-            if owner >= 0:
-                chunk_size = self._brow_lengths[i]
-                sizes_within_processor[owner][i] = chunk_size
-                chunk_size_per_processor[owner] += chunk_size
-
-        receive_size = sum(chunk_size_per_processor)
-        send_data = np.concatenate([self._block_vector.get_block(bid) for bid in self._unique_owned_blocks])
-        receive_data = np.empty(receive_size, dtype=send_data.dtype)
-
-        # communicate data to all
-        self._mpiw.Allgatherv(send_data, (receive_data, chunk_size_per_processor))
-
-        # split data by processor
-        proc_dims = np.split(receive_data, chunk_size_per_processor.cumsum())
-
-        # split data within processor
-        splitted_data = []
-        for k in range(num_processors):
-            splitted_data.append(np.split(proc_dims[k],
-                                          sizes_within_processor[k].cumsum()))
-        # populate new vector
-        for bid in range(nblocks):
-            owner = self._rank_owner[bid]
-            if owner >= 0:
-                block_data = splitted_data[owner][bid]
-            else:
-                block_data = self._block_vector.get_block(bid)
-            new_MPIBlockVector.set_block(bid, block_data)
-
-        # no need to broadcast sizes coz all have the same 
-        new_MPIBlockVector._done_first_broadcast_sizes = True
-        new_MPIBlockVector._need_broadcast_sizes = False
-
-        return new_MPIBlockVector
-
-    def make_new_MPIBlockVector(self, rank_ownership):
-        """
-        Creates copy of this MPIBlockVector in a different MPI space. If
-        rank_ownership is the same as in this MPIBlockVector a copy of this
-        MPIBlockVector is returned.
-
-        Parameters
-        ----------
-        rank_ownership: array_like
-            Array_like of size nblocks. Each entry defines ownership of each block.
-            There are two types of ownership. Block that are owned by all processor,
-            and blocks owned by a single processor. If a block is owned by all
-            processors then its ownership is -1. Otherwise, if a block is owned by
-            a single processor, then its ownership is equal to the rank of the
-            processor.
-
-        Returns
-        -------
-        MPIBLockVector
-
-        """
-        self._assert_broadcasted_sizes()
-        new_ownership = np.array(rank_ownership)
-        if np.array_equal(self.rank_ownership, new_ownership):
-            return self.copy()
-
-        new_MPIBlockVector = MPIBlockVector(self.nblocks,
-                                            new_ownership,
-                                            self._mpiw,
-                                            block_sizes=self.block_sizes())
-        rank = self._mpiw.Get_rank()
-        for bid in range(self.nblocks):
-            src_owner = self.rank_ownership[bid]
-            dest_owner = new_ownership[bid]
-
-            # first check if block is owned by everyone in source
-            if src_owner < 0:
-                if rank == dest_owner:
-                    new_MPIBlockVector.set_block(bid, self.get_block(bid))
-            # then check if it is the same owner to just copy without any mpi call
-            elif src_owner == dest_owner:
-                if src_owner == rank:
-                    new_MPIBlockVector.set_block(bid, self.get_block(bid))
-            else:
-                # if destination is in different space
-                if dest_owner >= 0:
-                    # point to point communication
-                    if rank == src_owner:
-                        data = self.get_block(bid)
-                        self._mpiw.Send([data, MPI.DOUBLE], dest=dest_owner)
-                    elif rank == dest_owner:
-                        data = np.empty(self._brow_lengths[bid], dtype=np.float64)
-                        self._mpiw.Recv([data, MPI.DOUBLE], source=src_owner)
-                        new_MPIBlockVector.set_block(bid, data)
-                # if destination is all processors
+        if rank == 0:
+            block_indices = set(self._owned_blocks)
+        else:
+            block_indices = set(self._unique_owned_blocks)
+        for ndx in range(self.nblocks):
+            if ndx in block_indices:
+                blk = self.get_block(ndx)
+                if isinstance(blk, BlockVector):
+                    local_data[offset: offset + self.get_block_size(ndx)] = blk.flatten()
+                elif isinstance(blk, np.ndarray):
+                    local_data[offset: offset + self.get_block_size(ndx)] = blk
                 else:
-                    # broadcast from source to all
-                    if rank == src_owner:
-                        data = self.get_block(bid)
-                    else:
-                        data = np.empty(self._brow_lengths[bid], dtype=np.float64)
+                    raise ValueError('Unrecognized block type')
+            offset += self.get_block_size(ndx)
 
-                    self._mpiw.Bcast(data, root=src_owner)
-                    new_MPIBlockVector.set_block(bid, data)
+        self._mpiw.Allreduce(local_data, global_data)
+        result.copyfrom(global_data)
 
-        return new_MPIBlockVector
+        return result
 
-    def __add__(self, other):
-        rank = self._mpiw.Get_rank()
+    def _binary_operation_helper(self, other, operation):
+        assert_block_structure(self)
         result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
             assert np.array_equal(self._rank_owner, other._rank_owner), \
                 'MPIBlockVectors must be distributed in same processors'
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i) + other.get_block(i))
+                result.set_block(i, operation(self.get_block(i), other.get_block(i)))
             return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif type(other)==np.ndarray:
+        elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i) + other)
+                result.set_block(i, operation(self.get_block(i), other))
             return result
         else:
-            raise NotImplementedError()
+            raise NotImplementedError('Operation not supported by MPIBlockVector')
 
-    def __radd__(self, other):  # other + self
+    def _reverse_binary_operation_helper(self, other, operation):
+        assert_block_structure(self)
+        result = self.copy_structure()
+        if isinstance(other, BlockVector):
+            raise RuntimeError('Operation not supported by MPIBlockVector')
+        elif isinstance(other, np.ndarray):
+            raise RuntimeError('Operation not supported by MPIBlockVector')
+        elif np.isscalar(other):
+            for i in self._owned_blocks:
+                result.set_block(i,  operation(other, self.get_block(i)))
+            return result
+        else:
+            raise NotImplementedError('Operation not supported by MPIBlockVector')
+
+    def _inplace_binary_operation_helper(self, other, operation):
+        assert_block_structure(self)
+        if isinstance(other, MPIBlockVector):
+            assert_block_structure(other)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
+            assert np.array_equal(self._rank_owner, other._rank_owner), \
+                'MPIBlockVectors must be distributed in same processors'
+            assert self._mpiw == other._mpiw, 'Need to have same communicator'
+
+            for i in self._owned_blocks:
+                blk = self.get_block(i)
+                operation(blk, other.get_block(i))
+                self.set_block(i, blk)
+            return self
+        elif isinstance(other, BlockVector):
+            raise RuntimeError('Operation not supported by MPIBlockVector')
+        elif isinstance(other, np.ndarray):
+            raise RuntimeError('Operation not supported by MPIBlockVector')
+        elif np.isscalar(other):
+            for i in self._owned_blocks:
+                blk = self.get_block(i)
+                operation(blk, other)
+                self.set_block(i, blk)
+            return self
+        else:
+            raise NotImplementedError('Operation not supported by MPIBlockVector')
+
+    def __add__(self, other):
+        return self._binary_operation_helper(other, operator.add)
+
+    def __radd__(self, other):
         return self.__add__(other)
 
     def __sub__(self, other):
-        rank = self._mpiw.Get_rank()
-        result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i) - other.get_block(i))
-            return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif type(other)==np.ndarray:
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i) - other)
-            return result
-        else:
-            raise NotImplementedError()
+        return self._binary_operation_helper(other, operator.sub)
 
     def __rsub__(self, other):
-        rank = self._mpiw.Get_rank()
-        result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
-            for i in self._owned_blocks:
-                result.set_block(i,  other.get_block(i) - self._block_vector.get_block(i))
-            return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif type(other)==np.ndarray:
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                result.set_block(i,  other - self._block_vector.get_block(i))
-            return result
-        else:
-            raise NotImplementedError()
+        return self._reverse_binary_operation_helper(other, operator.sub)
 
     def __mul__(self, other):
-        rank = self._mpiw.Get_rank()
-        result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
+        return self._binary_operation_helper(other, operator.mul)
 
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).__mul__(other.get_block(i)))
-            return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).__mul__(other))
-            return result
-        else:
-            raise NotImplementedError()
-
-    def __rmul__(self, other):  # other + self
+    def __rmul__(self, other):
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        rank = self._mpiw.Get_rank()
-        result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i) / other.get_block(i))
-            return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i) / other)
-            return result
-        else:
-            raise NotImplementedError()
+        return self._binary_operation_helper(other, operator.truediv)
 
     def __rtruediv__(self, other):
-        rank = self._mpiw.Get_rank()
-        result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
-            for i in self._owned_blocks:
-                result.set_block(i, other.get_block(i) / self._block_vector.get_block(i))
-            return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                result.set_block(i, other / self._block_vector.get_block(i))
-            return result
-        else:
-            raise NotImplementedError()
+        return self._reverse_binary_operation_helper(other, operator.truediv)
 
     def __floordiv__(self, other):
-        rank = self._mpiw.Get_rank()
-        result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-            result._rank_owner = self._rank_owner
-
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i) // other.get_block(i))
-            return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i) // other)
-            return result
-        else:
-            raise NotImplementedError()
+        return self._binary_operation_helper(other, operator.floordiv)
 
     def __rfloordiv__(self, other):
-        rank = self._mpiw.Get_rank()
-        result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
+        return self._reverse_binary_operation_helper(other, operator.floordiv)
 
-            for i in self._owned_blocks:
-                result.set_block(i, other.get_block(i) // self._block_vector.get_block(i))
-            return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif type(other)==np.ndarray:
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                result.set_block(i, other // self._block_vector.get_block(i))
-            return result
-        else:
-            raise NotImplementedError()
+    def __neg__(self):
+        assert_block_structure(self)
+        result = self.copy_structure()
+        for ndx in self._owned_blocks:
+            result.set_block(ndx, -self.get_block(ndx))
+        return result
 
     def __iadd__(self, other):
-        rank = self._mpiw.Get_rank()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
-            for i in self._owned_blocks:
-                blk = self._block_vector.get_block(i)
-                blk += other.get_block(i)
-                self.set_block(i, blk)
-            return self
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif type(other)==np.ndarray:
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                blk = self._block_vector.get_block(i)
-                blk += other
-                self.set_block(i, blk)
-            return self
-        else:
-            raise NotImplementedError()
+        return self._inplace_binary_operation_helper(other, operator.iadd)
 
     def __isub__(self, other):
-        rank = self._mpiw.Get_rank()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
-            for i in self._owned_blocks:
-                blk = self.get_block(i)
-                blk -= other.get_block(i)
-                self.set_block(i, blk)
-            return self
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                blk = self.get_block(i)
-                blk -= other
-                self.set_block(i, blk)
-            return self
-        else:
-            raise NotImplementedError()
+        return self._inplace_binary_operation_helper(other, operator.isub)
 
     def __imul__(self, other):
-        rank = self._mpiw.Get_rank()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
-            for i in self._owned_blocks:
-                blk = self.get_block(i)
-                blk *= other.get_block(i)
-                self.set_block(i, blk)
-            return self
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                blk = self.get_block(i)
-                blk *= other
-                self.set_block(i, blk)
-            return self
-        else:
-            raise NotImplementedError()
+        return self._inplace_binary_operation_helper(other, operator.imul)
 
     def __itruediv__(self, other):
-        rank = self._mpiw.Get_rank()
+        return self._inplace_binary_operation_helper(other, operator.itruediv)
+
+    def _comparison_helper(self, other, operation):
+        assert_block_structure(self)
+        result = self.copy_structure()
         if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
+            assert_block_structure(other)
+            assert self.nblocks == other.nblocks, \
+                'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
+            assert np.array_equal(self._rank_owner, other._rank_owner), \
+                'MPIBlockVectors must be distributed in same processors'
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
             for i in self._owned_blocks:
-                self.set_block(i, self._block_vector.get_block(i) / other.get_block(i))
-            return self
+                result.set_block(i, operation(self.get_block(i), other.get_block(i)))
+            return result
         elif isinstance(other, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif np.isscalar(other):
             for i in self._owned_blocks:
-                self.set_block(i, self._block_vector.get_block(i) / other)
-            return self
+                result.set_block(i, operation(self.get_block(i), other))
+            return result
         else:
-            raise NotImplementedError()
+            raise NotImplementedError('Operation not supported by MPIBlockVector')
 
     def __le__(self, other):
-        rank = self._mpiw.Get_rank()
-        result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).__le__(other.get_block(i)))
-            return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).__le__(other))
-            return result
-        else:
-            raise NotImplementedError()
+        return self._comparison_helper(other, operator.le)
 
     def __lt__(self, other):
-        rank = self._mpiw.Get_rank()
-        result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).__lt__(other.get_block(i)))
-            return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).__lt__(other))
-            return result
-        else:
-            raise NotImplementedError()
+        return self._comparison_helper(other, operator.lt)
 
     def __ge__(self, other):
-        rank = self._mpiw.Get_rank()
-        result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).__ge__(other.get_block(i)))
-            return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).__ge__(other))
-            return result
-        else:
-            raise NotImplementedError()
+        return self._comparison_helper(other, operator.ge)
 
     def __gt__(self, other):
-        rank = self._mpiw.Get_rank()
-        result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).__gt__(other.get_block(i)))
-            return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).__gt__(other))
-            return result
-        else:
-            raise NotImplementedError()
+        return self._comparison_helper(other, operator.gt)
 
     def __eq__(self, other):
-        rank = self._mpiw.Get_rank()
-        result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).__eq__(other.get_block(i)))
-            return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).__eq__(other))
-            return result
-        else:
-            raise NotImplementedError()
+        return self._comparison_helper(other, operator.eq)
 
     def __ne__(self, other):
-        rank = self._mpiw.Get_rank()
-        result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
-            # Note: do not need to check same size? this is checked implicitly
-            msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(self._rank_owner, other._rank_owner), msg
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).__ne__(other.get_block(i)))
-            return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
-        elif np.isscalar(other):
-            for i in self._owned_blocks:
-                result.set_block(i, self._block_vector.get_block(i).__ne__(other))
-            return result
-        else:
-            raise NotImplementedError()
+        return self._comparison_helper(other, operator.ne)
 
     def __contains__(self, item):
         other = item
+        assert_block_structure(self)
         if np.isscalar(other):
             contains = False
             for i in self._owned_blocks:
-                if self._block_vector.get_block(i).__contains__(other):
+                if other in self.get_block(i):
                     contains = True
             return bool(self._mpiw.allreduce(contains, op=MPI.SUM))
         else:
-            raise NotImplementedError()
+            raise NotImplementedError('Operation not supported by MPIBlockVector')
 
     def get_block(self, key):
         owner = self._rank_owner[key]
@@ -1499,20 +1123,13 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         return self._block_vector.get_block(key)
 
     def set_block(self, key, value):
-
         owner = self._rank_owner[key]
         rank = self._mpiw.Get_rank()
-        assert owner == rank or \
-               owner < 0, 'Block {} not owned by processor {}'.format(key, rank)
-        if value is None:
-            if self._block_vector.get_block(key) is not None:
-                self._need_broadcast_sizes = True
-        else:
-            new_size = value.size
-            if self._brow_lengths[key] != new_size:
-                self._need_broadcast_sizes = True
+        assert owner == rank or owner < 0, \
+            'Block {} not owned by processor {}'.format(key, rank)
 
         self._block_vector.set_block(key, value)
+        self._set_block_size(key, value.size)
 
     def __getitem__(self, item):
         raise NotImplementedError('MPIBlockVector does not support __getitem__.')
@@ -1535,7 +1152,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         self._assert_broadcasted_sizes()
         msg = self.__repr__() + '\n'
         num_processors = self._mpiw.Get_size()
-        local_mask = self._block_vector._block_mask.flatten()
+        local_mask = self._owned_mask.flatten()
         receive_data = np.empty(num_processors * self.nblocks,
                                 dtype=np.bool)
         self._mpiw.Allgather(local_mask, receive_data)

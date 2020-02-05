@@ -32,7 +32,7 @@ except ImportError:
     raise unittest.SkipTest(
         "Pynumero needs mpi4py to run mpi block matrix tests")
 try:
-    from pyomo.contrib.pynumero.sparse.mpi_block_matrix import (MPIBlockMatrix)
+    from pyomo.contrib.pynumero.sparse.mpi_block_matrix import (MPIBlockMatrix, NotFullyDefinedBlockMatrixError)
 except ImportError:
     raise unittest.SkipTest(
         "Pynumero needs mpi4py to run mpi block matrix tests")
@@ -76,9 +76,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         # create mpi matrix
         rank_ownership = [[0, -1], [-1, 1]]
-        bm = MPIBlockMatrix(2, 2, rank_ownership, comm,
-                            row_block_sizes=[4, 4],
-                            col_block_sizes=[4, 4])
+        bm = MPIBlockMatrix(2, 2, rank_ownership, comm)
         if rank == 0:
             bm.set_block(0, 0, m)
         if rank == 1:
@@ -133,7 +131,8 @@ class TestMPIBlockMatrix(unittest.TestCase):
     def test_shape(self):
         self.assertEqual(self.square_mpi_mat.shape, (8, 8))
         self.assertEqual(self.rectangular_mpi_mat.shape, (8, 10))
-        self.assertEqual(self.square_mpi_mat_no_broadcast.shape, (8, 8))
+        with self.assertRaises(NotFullyDefinedBlockMatrixError):
+            self.assertEqual(self.square_mpi_mat_no_broadcast.shape, (8, 8))
 
     def test_tocoo(self):
         with self.assertRaises(Exception) as context:
@@ -465,17 +464,17 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         res = mat1 * bv1
         serial_res = serial_mat1 * serial_bv1
-        self.assertIsInstance(res, MPIBlockVector)
-        indices = np.nonzero(res.ownership_mask)[0]
-        for bid in indices:
+        self.assertIsInstance(res, BlockVector)
+        self.assertEqual(res.nblocks, serial_res.nblocks)
+        for bid in range(serial_res.nblocks):
             self.assertTrue(np.allclose(res.get_block(bid),
                                         serial_res.get_block(bid)))
 
         res = mat2 * bv1
         serial_res = serial_mat2 * serial_bv1
-        self.assertIsInstance(res, MPIBlockVector)
-        indices = np.nonzero(res.ownership_mask)[0]
-        for bid in indices:
+        self.assertIsInstance(res, BlockVector)
+        self.assertEqual(res.nblocks, serial_res.nblocks)
+        for bid in range(serial_res.nblocks):
             self.assertTrue(np.allclose(res.get_block(bid),
                                         serial_res.get_block(bid)))
 
@@ -488,17 +487,17 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         res = mat1 * bv1
         serial_res = serial_mat1 * serial_bv1
-        self.assertIsInstance(res, MPIBlockVector)
-        indices = np.nonzero(res.ownership_mask)[0]
-        for bid in indices:
+        self.assertIsInstance(res, BlockVector)
+        self.assertEqual(res.nblocks, serial_res.nblocks)
+        for bid in range(serial_res.nblocks):
             self.assertTrue(np.allclose(res.get_block(bid),
                                         serial_res.get_block(bid)))
 
         res = mat2 * bv1
-        serial_res = serial_mat1 * serial_bv1
-        self.assertIsInstance(res, MPIBlockVector)
-        indices = np.nonzero(res.ownership_mask)[0]
-        for bid in indices:
+        serial_res = serial_mat2 * serial_bv1
+        self.assertIsInstance(res, BlockVector)
+        self.assertEqual(res.nblocks, serial_res.nblocks)
+        for bid in range(serial_res.nblocks):
             self.assertTrue(np.allclose(res.get_block(bid),
                                         serial_res.get_block(bid)))
 
@@ -522,16 +521,17 @@ class TestMPIBlockMatrix(unittest.TestCase):
         serial_bv1.set_block(1, np.arange(4, dtype=np.float64) + 4)
         serial_bv1.set_block(2, np.arange(2, dtype=np.float64) + 8)
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            res = mat1 * bv1
-            serial_res = serial_mat1 * serial_bv1
+        # with warnings.catch_warnings():
+        #     warnings.simplefilter("ignore")
+        res = mat1 * bv1
+        serial_res = serial_mat1 * serial_bv1
 
-            self.assertIsInstance(res, MPIBlockVector)
-            indices = np.nonzero(res.ownership_mask)[0]
-            for bid in indices:
-                self.assertTrue(np.allclose(res.get_block(bid),
-                                            serial_res.get_block(bid)))
+        self.assertIsInstance(res, BlockVector)
+        self.assertEqual(serial_res.nblocks, 2)
+        self.assertEqual(res.nblocks, 2)
+        for bid in range(serial_res.nblocks):
+            self.assertTrue(np.allclose(res.get_block(bid),
+                                        serial_res.get_block(bid)))
 
         bv1 = MPIBlockVector(3, [0, 1, 0], comm)
 
@@ -544,16 +544,14 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         res = mat1 * bv1
         serial_res = serial_mat1 * serial_bv1
-
-        self.assertIsInstance(res, MPIBlockVector)
-        indices = np.nonzero(res.ownership_mask)[0]
-        for bid in indices:
+        self.assertIsInstance(res, BlockVector)
+        self.assertEqual(res.nblocks, serial_res.nblocks)
+        for bid in range(serial_res.nblocks):
             self.assertTrue(np.allclose(res.get_block(bid),
                                         serial_res.get_block(bid)))
 
         res = mat1 * 3.0
         serial_res = serial_mat1 * 3.0
-
         self.assertIsInstance(res, MPIBlockMatrix)
         rows, columns = np.nonzero(res.ownership_mask)
         for i, j in zip(rows, columns):
@@ -616,9 +614,9 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         res = mat1.dot(bv1)
         serial_res = serial_mat1.dot(serial_bv1)
-        self.assertIsInstance(res, MPIBlockVector)
-        indices = np.nonzero(res.ownership_mask)[0]
-        for bid in indices:
+        self.assertIsInstance(res, BlockVector)
+        self.assertEqual(res.nblocks, serial_res.nblocks)
+        for bid in range(serial_res.nblocks):
             self.assertTrue(np.allclose(res.get_block(bid),
                                         serial_res.get_block(bid)))
 
@@ -862,7 +860,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         with self.assertRaises(Exception) as context:
             res = mat1 == serial_mat1
-
 
     def test_ne(self):
 

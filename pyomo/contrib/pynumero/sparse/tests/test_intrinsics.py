@@ -26,8 +26,10 @@ class TestSparseIntrinsics(unittest.TestCase):
         self.v2 = np.array([4.4, 5.5, 6.6, 7.7])
         self.v3 = np.array([1.1, 2.2, 3.3])*2
         self.v4 = np.array([4.4, 5.5, 6.6, 7.7])*2
-        self.bv = BlockVector([self.v1, self.v2])
-        self.bv2 = BlockVector([self.v3, self.v4])
+        self.bv = BlockVector(2)
+        self.bv2 = BlockVector(2)
+        self.bv.set_blocks([self.v1, self.v2])
+        self.bv2.set_blocks([self.v3, self.v4])
 
     def test_where(self):
 
@@ -54,7 +56,8 @@ class TestSparseIntrinsics(unittest.TestCase):
         res_flat = pn.where(flat_condition, np.ones(bv.size) * 2.0, np.ones(bv.size))
         self.assertTrue(np.allclose(res.flatten(), res_flat))
 
-        bones = BlockVector([np.ones(3), np.ones(4)])
+        bones = BlockVector(2)
+        bones.set_blocks([np.ones(3), np.ones(4)])
 
         res = pn.where(condition, bones * 2.0, 1.0)
         res_flat = pn.where(flat_condition, np.ones(bv.size) * 2.0, 1.0)
@@ -113,7 +116,8 @@ class TestSparseIntrinsics(unittest.TestCase):
 
         vv1 = np.array([1.1, 3.3])
         vv2 = np.array([4.4, 7.7])
-        bvv = BlockVector([vv1, vv2])
+        bvv = BlockVector(2)
+        bvv.set_blocks([vv1, vv2])
         res = pn.intersect1d(self.bv, bvv)
         self.assertIsInstance(res, BlockVector)
         self.assertTrue(np.allclose(res.get_block(0), vv1))
@@ -132,7 +136,8 @@ class TestSparseIntrinsics(unittest.TestCase):
 
         vv1 = np.array([1.1, 3.3])
         vv2 = np.array([4.4, 7.7])
-        bvv = BlockVector([vv1, vv2])
+        bvv = BlockVector(2)
+        bvv.set_blocks([vv1, vv2])
         res = pn.setdiff1d(self.bv, bvv)
         self.assertIsInstance(res, BlockVector)
         self.assertTrue(np.allclose(res.get_block(0), np.array([2.2])))

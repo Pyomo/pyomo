@@ -23,7 +23,7 @@ where v_i are numpy arrays of dimension 1
 from __future__ import division
 from .base_block import BaseBlockVector
 import numpy as np
-import copy as cp
+import operator
 
 __all__ = ['BlockVector']
 
@@ -1225,7 +1225,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
         if isinstance(value, BaseBlockVector):
             assert_block_structure(value)
-        self.set_block_size(key, value.size)
+        self._set_block_size(key, value.size)
         super(BlockVector, self).__setitem__(key, value)
 
     def __getitem__(self, item):
@@ -1234,179 +1234,46 @@ class BlockVector(np.ndarray, BaseBlockVector):
     def __setitem__(self, key, value):
         raise NotImplementedError('BlockVector does not support __setitem__.')
 
-    def __le__(self, other):
-        # elementwise less_equal this BlockVector with other vector
-        # supports less_equal with scalar, numpy.ndarray and BlockVectors
-        # returns BlockVector
+    def _comparison_helper(self, other, operation):
         assert_block_structure(self)
+        result = self.copy_structure()
         if isinstance(other, BlockVector):
             assert_block_structure(other)
-            flags = [vv.__le__(other.get_block(bid)) for bid, vv in enumerate(self)]
-            bv = BlockVector(flags)
-            return bv
-        elif type(other)==np.ndarray:
+            for ndx in range(self.nblocks):
+                result.set_block(ndx, operation(self.get_block(ndx), other.get_block(ndx)))
+            return result
+        elif isinstance(other, np.ndarray):
             assert self.shape == other.shape, \
                 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            result = BlockVector(self.nblocks)
             accum = 0
-            for idx, blk in enumerate(self):
-                nelements = self._brow_lengths[idx]
-                result.set_block(idx, blk.__le__(other[accum: accum + nelements]))
-                accum += nelements
+            for ndx in range(self.nblocks):
+                result.set_block(ndx, operation(self.get_block(ndx), other[accum : accum + self.get_block_size(ndx)]))
+                accum += self.get_block_size(ndx)
             return result
         elif np.isscalar(other):
-            flags = [vv.__le__(other) for bid, vv in enumerate(self)]
-            bv = BlockVector(flags)
-            return bv
+            for ndx in range(self.nblocks):
+                result.set_block(ndx, operation(self.get_block(ndx), other))
+            return result
         else:
-            if other.__class__.__name__ == 'MPIBlockVector':
-                raise RuntimeError('Operation not supported by BlockVector')
-            raise NotImplementedError()
+            raise NotImplementedError('Operation not supported by BlockVector')
+
+    def __le__(self, other):
+        return self._comparison_helper(other, operator.le)
 
     def __lt__(self, other):
-        # elementwise less_than this BlockVector with other vector
-        # supports less_than with scalar, numpy.ndarray and BlockVectors
-        # returns BlockVector
-        assert_block_structure(self)
-        if isinstance(other, BlockVector):
-            assert_block_structure(other)
-            flags = [vv.__lt__(other.get_block(bid)) for bid, vv in enumerate(self)]
-            bv = BlockVector(flags)
-            return bv
-        elif type(other)==np.ndarray:
-            assert self.shape == other.shape, \
-                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            result = BlockVector(self.nblocks)
-            accum = 0
-            for idx, blk in enumerate(self):
-                nelements = self._brow_lengths[idx]
-                result.set_block(idx, blk.__lt__(other[accum: accum + nelements]))
-                accum += nelements
-            return result
-        elif np.isscalar(other):
-            flags = [vv.__lt__(other) for bid, vv in enumerate(self)]
-            bv = BlockVector(flags)
-            return bv
-        else:
-            if other.__class__.__name__ == 'MPIBlockVector':
-                raise RuntimeError('Operation not supported by BlockVector')
-            raise NotImplementedError()
+        return self._comparison_helper(other, operator.lt)
 
     def __ge__(self, other):
-        # elementwise greater_equal this BlockVector with other vector
-        # supports greater_equal with scalar, numpy.ndarray and BlockVectors
-        # returns BlockVector
-        assert_block_structure(self)
-        if isinstance(other, BlockVector):
-            assert_block_structure(other)
-            flags = [vv.__ge__(other.get_block(bid)) for bid, vv in enumerate(self)]
-            bv = BlockVector(flags)
-            return bv
-        elif type(other)==np.ndarray:
-            assert self.shape == other.shape, \
-                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            result = BlockVector(self.nblocks)
-            accum = 0
-            for idx, blk in enumerate(self):
-                nelements = self._brow_lengths[idx]
-                result.set_block(idx, blk.__ge__(other[accum: accum + nelements]))
-                accum += nelements
-            return result
-        elif np.isscalar(other):
-            flags = [vv.__ge__(other) for bid, vv in enumerate(self)]
-            bv = BlockVector(flags)
-            return bv
-        else:
-            if other.__class__.__name__ == 'MPIBlockVector':
-                raise RuntimeError('Operation not supported by BlockVector')
-            raise NotImplementedError()
+        return self._comparison_helper(other, operator.ge)
 
     def __gt__(self, other):
-        # elementwise greater_than this BlockVector with other vector
-        # supports greater_than with scalar, numpy.ndarray and BlockVectors
-        # returns BlockVector
-        assert_block_structure(self)
-        if isinstance(other, BlockVector):
-            assert_block_structure(other)
-            flags = [vv.__gt__(other.get_block(bid)) for bid, vv in enumerate(self)]
-            bv = BlockVector(flags)
-            return bv
-        elif type(other)==np.ndarray:
-            assert self.shape == other.shape, \
-                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            result = BlockVector(self.nblocks)
-            accum = 0
-            for idx, blk in enumerate(self):
-                nelements = self._brow_lengths[idx]
-                result.set_block(idx, blk.__gt__(other[accum: accum + nelements]))
-                accum += nelements
-            return result
-        elif np.isscalar(other):
-            flags = [vv.__gt__(other) for bid, vv in enumerate(self)]
-            bv = BlockVector(flags)
-            return bv
-        else:
-            if other.__class__.__name__ == 'MPIBlockVector':
-                raise RuntimeError('Operation not supported by BlockVector')
-            raise NotImplementedError()
+        return self._comparison_helper(other, operator.gt)
 
     def __eq__(self, other):
-        # elementwise equal_to this BlockVector with other vector
-        # supports equal_to with scalar, numpy.ndarray and BlockVectors
-        # returns BlockVector
-        assert_block_structure(self)
-        if isinstance(other, BlockVector):
-            assert_block_structure(other)
-            flags = [vv.__eq__(other.get_block(bid)) for bid, vv in enumerate(self)]
-            bv = BlockVector(flags)
-            return bv
-        elif type(other)==np.ndarray:
-            assert self.shape == other.shape, \
-                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            result = BlockVector(self.nblocks)
-            accum = 0
-            for idx, blk in enumerate(self):
-                nelements = self._brow_lengths[idx]
-                result.set_block(idx, blk.__eq__(other[accum: accum + nelements]))
-                accum += nelements
-            return result
-        elif np.isscalar(other):
-            flags = [vv.__eq__(other) for bid, vv in enumerate(self)]
-            bv = BlockVector(flags)
-            return bv
-        else:
-            if other.__class__.__name__ == 'MPIBlockVector':
-                raise RuntimeError('Operation not supported by BlockVector')
-            raise NotImplementedError()
+        return self._comparison_helper(other, operator.eq)
 
     def __ne__(self, other):
-        # elementwise not_equal_to this BlockVector with other vector
-        # supports not_equal_to with scalar, numpy.ndarray and BlockVectors
-        # returns BlockVector
-        assert_block_structure(self)
-        if isinstance(other, BlockVector):
-            assert_block_structure(other)
-            flags = [vv.__ne__(other.get_block(bid)) for bid, vv in enumerate(self)]
-            bv = BlockVector(flags)
-            return bv
-        elif type(other)==np.ndarray:
-            assert self.shape == other.shape, \
-                'Dimension mismatch {} != {}'.format(self.shape, other.shape)
-            result = BlockVector(self.nblocks)
-            accum = 0
-            for idx, blk in enumerate(self):
-                nelements = self._brow_lengths[idx]
-                result.set_block(idx, blk.__ne__(other[accum: accum + nelements]))
-                accum += nelements
-            return result
-        elif np.isscalar(other):
-            flags = [vv.__ne__(other) for bid, vv in enumerate(self)]
-            bv = BlockVector(flags)
-            return bv
-        else:
-            if other.__class__.__name__ == 'MPIBlockVector':
-                raise RuntimeError('Operation not supported by BlockVector')
-            raise NotImplementedError()
+        return self._comparison_helper(other, operator.ne)
 
     def __neg__(self):
         # elementwise negate this BlockVector
@@ -1463,8 +1330,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
         mpi_bv = MPIBlockVector(self.nblocks,
                                 rank_ownership,
-                                mpi_comm,
-                                block_sizes=self.block_sizes())
+                                mpi_comm)
 
         # populate blocks in the right spaces
         for bid in mpi_bv.owned_blocks:

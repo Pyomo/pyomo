@@ -276,9 +276,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         m = self.bshape[0]
         n = self.bshape[1]
         assert_block_structure(self)
-        result = MPIBlockMatrix(n, m, self._rank_owner.T, self._mpiw,
-                                row_block_sizes=self.col_block_sizes(),
-                                col_block_sizes=self.row_block_sizes())
+        result = MPIBlockMatrix(n, m, self._rank_owner.T, self._mpiw)
 
         rows, columns = np.nonzero(self.ownership_mask)
         for i, j in zip(rows, columns):
@@ -767,19 +765,24 @@ class MPIBlockMatrix(BaseBlockMatrix):
         """
         block_vector_assert_block_structure(other)
         assert self.bshape[1] == other.nblocks, 'Dimension mismatch'
-        local_result = other.copy_structure()
+        local_result = BlockVector(self.bshape[0])
+        for row_ndx in range(self.bshape[0]):
+            local_result.set_block(row_ndx, np.zeros(self.get_row_size(row_ndx)))
         rank = self._mpiw.Get_rank()
         if rank == 0:
             block_indices = self._owned_mask
         else:
             block_indices = self._unique_owned_mask
         for row_ndx, col_ndx in zip(*np.nonzero(block_indices)):
-            res_blk = local_result.get_block(row_ndx)
-            res_blk += self.get_block(row_ndx, col_ndx) * other.get_block(col_ndx)
-            local_result.set_block(row_ndx, res_blk)
-        global_result = other.copy_structure()
-        for ndx in range(global_result.nblocks):
-            self._mpiw.Allreduce(local_result[ndx], global_result[ndx])
+            if self.get_block(row_ndx, col_ndx) is not None:
+                res_blk = local_result.get_block(row_ndx)
+                res_blk += self.get_block(row_ndx, col_ndx) * other.get_block(col_ndx)
+                local_result.set_block(row_ndx, res_blk)
+        flat_local = local_result.flatten()
+        flat_global = np.zeros(flat_local.size)
+        self._mpiw.Allreduce(flat_local, flat_global)
+        global_result = local_result.copy_structure()
+        global_result.copyfrom(flat_global)
         return global_result
 
     def __mul__(self, other):
@@ -787,10 +790,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         if isinstance(other, MPIBlockVector):
             global_other = other.make_local_copy()
-            global_result = self._block_vector_multiply(global_other)
-            local_result = other.copy_structure()
-            for ndx in local_result.owned_blocks:
-                local_result[ndx] = global_result[ndx]
+            result = self._block_vector_multiply(global_other)
+            return result
         elif isinstance(other, BlockVector):
             return self._block_vector_multiply(other)
         elif isinstance(other, np.ndarray):
@@ -1107,8 +1108,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         # create vector
         bv = MPIBlockVector(bm,
                             col_ownership,
-                            self._mpiw,
-                            block_sizes=block_sizes)
+                            self._mpiw)
 
         # compute offset columns
         offset = 0
@@ -1158,8 +1158,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         # create vector
         bv = MPIBlockVector(bn,
                             row_ownership,
-                            self._mpiw,
-                            block_sizes=block_sizes)
+                            self._mpiw)
         # compute offset columns
         offset = 0
         if brow > 0:
