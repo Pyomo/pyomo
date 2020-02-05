@@ -33,6 +33,7 @@ from mpi4py import MPI
 import numpy as np
 from scipy.sparse import coo_matrix
 import operator
+from __future__ import division
 
 # Array classifiers
 SINGLE_OWNER = 1
