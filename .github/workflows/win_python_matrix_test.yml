@@ -62,13 +62,24 @@ jobs:
         Write-Host ("")
         Write-Host ("Installing GAMS")
         Write-Host ("")
-        Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
+        Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
         Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS' -Wait
-        cd gams\apifiles\Python\api\
-        python setup.py -q install 
-        Write-Host ("")
-        Write-Host ("New Shell Environment: ")
-        gci env: | Sort Name
+        cd gams\apifiles\Python\
+        $env:py_ver = (Get-Command python).FileVersionInfo.FileVersion
+        if(!$env:py_ver) {
+          cd api
+          python setup.py -q install
+        }elseif($env:py_ver -Match '3.6') {
+          cd api_36
+          python setup.py -q install
+        }elseif($env:py_ver -Match '3.7') {
+          cd api_37
+          python setup.py -q install -noCheck
+        }else { 
+          Write-Host ("WARNING: GAMS Python API bindings not available for Python " + ${{matrix.python-version}})
+          cd api_34
+          python setup.py -q install -noCheck
+        }
     - name: Install Pyomo and extensions
       shell: pwsh
       run: |
@@ -89,12 +100,11 @@ jobs:
         Write-Host "Pyomo download-extensions"
         Write-Host ("")
         Invoke-Expression "pyomo download-extensions"
-
     - name: Run nightly tests with test.pyomo
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
-        Write-Host "Setup and run nosetests"
+        Write-Host "Setup and run nosetests..."
         $env:BUILD_DIR = $(Get-Location).Path
         $env:PATH += ';' + $(Get-Location).Path + "\gams"
         $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"

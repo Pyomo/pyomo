@@ -41,8 +41,21 @@ jobs:
         wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/macosx/osx_x64_64_sfx.exe
         chmod +x osx_x64_64_sfx.exe
         ./osx_x64_64_sfx.exe -q -d gams
-        cd gams/gams29.1_osx_x64_64_sfx/apifiles/Python/api/
-        python setup.py -q install -noCheck
+        cd gams/gams29.1_osx_x64_64_sfx/apifiles/Python/
+        py_ver="$(python --version)"
+        if [[ "$py_ver" == *"2.7"* ]]; then
+          cd api
+          python setup.py -q install
+        elif [[ "$py_ver" == *'3.6'* ]]; then
+          cd api_36
+          python setup.py -q install
+        elif [[ "$py_ver" == *'3.7'* || "$py_ver" == *'3.8'* ]]; then
+          cd api_37
+          python setup.py -q install -noCheck
+        else 
+          cd api_34
+          python setup.py -q install -noCheck
+        fi
     - name: Install Pyomo and extensions
       run: |
         echo "Clone Pyomo-model-libraries..."
@@ -63,8 +76,8 @@ jobs:
     - name: Run nightly, not fragile tests with test.pyomo
       run: |
         echo "Run test.pyomo..."
-        PATH=$PATH:$(pwd)/gams/gams29.1_osx_x64_64_sfx/
-        export PATH # Need license for 30.1.0: https://www.gams.com/latest/docs/UG_License.html
+        export PATH=$PATH:$(pwd)/gams/gams29.1_osx_x64_64_sfx/ 
+        export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$(pwd)/gams/gams29.1_osx_x64_64_sfx/
         pip install nose
         KEY_JOB=1
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries # Run nightly, stable tests
