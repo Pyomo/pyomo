@@ -29,6 +29,7 @@ from pyomo.contrib.pynumero.sparse.utils import is_symmetric_sparse
 from .base_block import BaseBlockMatrix
 from scipy.sparse.base import spmatrix
 import operator
+from __future__ import division
 
 import numpy as np
 import six
