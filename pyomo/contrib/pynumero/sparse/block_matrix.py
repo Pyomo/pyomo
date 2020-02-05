@@ -21,6 +21,7 @@ where m_{i,j} are sparse matrices
 
 """
 
+from __future__ import division
 from scipy.sparse.sputils import upcast, isscalarlike, get_index_dtype
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from scipy.sparse import coo_matrix, csr_matrix, csc_matrix
@@ -29,7 +30,6 @@ from pyomo.contrib.pynumero.sparse.utils import is_symmetric_sparse
 from .base_block import BaseBlockMatrix
 from scipy.sparse.base import spmatrix
 import operator
-from __future__ import division
 
 import numpy as np
 import six

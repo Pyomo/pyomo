@@ -21,6 +21,7 @@ where m_{i,j} are sparse matrices
 
 """
 
+from __future__ import division
 from .mpi_block_vector import MPIBlockVector
 from .mpi_block_vector import assert_block_structure as mpi_block_vector_assert_block_structure
 from .block_vector import BlockVector
@@ -33,7 +34,6 @@ from mpi4py import MPI
 import numpy as np
 from scipy.sparse import coo_matrix
 import operator
-from __future__ import division
 
 # Array classifiers
 SINGLE_OWNER = 1
