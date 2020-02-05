@@ -26,7 +26,7 @@ jobs:
         echo ""
         echo "Install extras..."
         echo ""
-        pip install numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd matplotlib dill pandas seaborn pymysql pyro4 pint pathos 
+        pip install numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd matplotlib dill pandas seaborn pymysql pyro4 pint pathos mpi4py
         echo ""
         echo "Install GAMS..."
         echo ""
@@ -57,3 +57,4 @@ jobs:
         pip install nose
         KEY_JOB=1
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
+	mpirun -np 3 nosetests -v --with-coverage --cover-xml --cover-package=pyomo.contrib.pynumero.sparse pyomo.contrib.pynumero.sparse.tests.test_mpi_block_vector.py pyomo.contrib.pynumero.sparse.tests.test_mpi_block_matrix.py
