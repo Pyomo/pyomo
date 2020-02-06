@@ -21,7 +21,6 @@ where m_{i,j} are sparse matrices
 
 """
 
-from __future__ import division
 from scipy.sparse.sputils import upcast, isscalarlike, get_index_dtype
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from scipy.sparse import coo_matrix, csr_matrix, csc_matrix
@@ -1018,6 +1017,15 @@ class BlockMatrix(BaseBlockMatrix):
                 self._blocks[i, j] /= other
             return self
         raise NotImplementedError('Operation not supported by BlockMatrix')
+
+    def __div__(self, other):
+        return self.__truediv__(other)
+
+    def __rdiv__(self, other):
+        return self.__rtruediv__(other)
+
+    def __idiv__(self, other):
+        return self.__itruediv__(other)
 
     def __ifloordiv__(self, other):
         raise NotImplementedError('Operation not supported by BlockMatrix')

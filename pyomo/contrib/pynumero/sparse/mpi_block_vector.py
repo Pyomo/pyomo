@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 
-from __future__ import division
 from pyomo.contrib.pynumero.sparse import BlockVector
 from .base_block import BaseBlockVector
 from .block_vector import NotFullyDefinedBlockVectorError
@@ -1060,6 +1059,15 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def __itruediv__(self, other):
         return self._inplace_binary_operation_helper(other, operator.itruediv)
+
+    def __div__(self, other):
+        return self.__truediv__(other)
+
+    def __rdiv__(self, other):
+        return self.__rtruediv__(other)
+
+    def __idiv__(self, other):
+        return self.__itruediv__(other)
 
     def _comparison_helper(self, other, operation):
         assert_block_structure(self)

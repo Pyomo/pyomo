@@ -21,7 +21,6 @@ where m_{i,j} are sparse matrices
 
 """
 
-from __future__ import division
 from .mpi_block_vector import MPIBlockVector
 from .mpi_block_vector import assert_block_structure as mpi_block_vector_assert_block_structure
 from .block_vector import BlockVector
@@ -934,6 +933,15 @@ class MPIBlockMatrix(BaseBlockMatrix):
                     self.set_block(i, j, blk)
             return self
         raise NotImplementedError('Operation not supported by MPIBlockMatrix')
+
+    def __div__(self, other):
+        return self.__truediv__(other)
+
+    def __rdiv__(self, other):
+        return self.__rtruediv__(other)
+
+    def __idiv__(self, other):
+        return self.__itruediv__(other)
 
     def __neg__(self):
         assert_block_structure(self)

@@ -20,7 +20,6 @@ where v_i are numpy arrays of dimension 1
 .. rubric:: Contents
 
 """
-from __future__ import division
 from .base_block import BaseBlockVector
 import numpy as np
 import operator
@@ -1183,6 +1182,15 @@ class BlockVector(np.ndarray, BaseBlockVector):
             return self
         else:
             raise NotImplementedError()
+
+    def __div__(self, other):
+        return self.__truediv__(other)
+
+    def __rdiv__(self, other):
+        return self.__rtruediv__(other)
+
+    def __idiv__(self, other):
+        return self.__itruediv__(other)
 
     def __str__(self):
         msg = ''
