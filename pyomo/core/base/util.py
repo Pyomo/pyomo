@@ -119,6 +119,8 @@ def disable_methods(methods):
         base = cls.__bases__[0]
 
         def construct(self, data=None):
+            if hasattr(self, '_name') and self._name == self.__class__.__name__:
+                self._name = base.__name__
             self.__class__ = base
             return base.construct(self, data)
         construct.__doc__ = base.construct.__doc__

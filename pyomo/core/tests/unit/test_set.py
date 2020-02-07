@@ -701,7 +701,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             self.assertEqual(output.getvalue(), "")
             i.construct()
             ref = 'Constructing RangeSet, '\
-                  'name=AbstractFiniteSimpleRangeSet, from data=None\n'
+                  'name=FiniteSimpleRangeSet, from data=None\n'
             self.assertEqual(output.getvalue(), ref)
             self.assertIs(type(i), FiniteSimpleRangeSet)
             # Calling construct() twice bypasses construction the second
@@ -866,7 +866,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(
             output.getvalue(),
             "Exception raised while validating element "
-            "'1' for Set AbstractFiniteSimpleRangeSet\n")
+            "'1' for Set FiniteSimpleRangeSet\n")
 
     def test_bounds(self):
         r = RangeSet(100, bounds=(2.5, 5.5))
@@ -1519,7 +1519,7 @@ class Test_SetOperator(unittest.TestCase):
             i.construct()
             ref = 'Constructing SetOperator, name=SetProduct_OrderedSet, '\
                   'from data=None\n' \
-                  'Constructing RangeSet, name=AbstractFiniteSimpleRangeSet, '\
+                  'Constructing RangeSet, name=FiniteSimpleRangeSet, '\
                   'from data=None\n'\
                   'Constructing Set, name=SetProduct_OrderedSet, '\
                   'from data=None\n'
