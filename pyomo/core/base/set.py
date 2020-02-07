@@ -528,6 +528,12 @@ class _SetData(_SetDataBase):
                         break
                 else:
                     ub = max(ub, _ub)
+        if lb is not None:
+            if int(lb) == lb:
+                lb = int(lb)
+        if ub is not None:
+            if int(ub) == ub:
+                ub = int(ub)
         return lb, ub
 
     def get_interval(self):
