@@ -55,6 +55,7 @@ from pyomo.core.base.set import (
     _FiniteSetMixin, _OrderedSetMixin,
     SetInitializer, SetIntersectInitializer, RangeSetInitializer,
     UnknownSetDimen,
+    DeclareGlobalSet, IntegerSet, RealSet,
     simple_set_rule, set_options,
  )
 from pyomo.environ import (
@@ -2959,6 +2960,115 @@ class TestGlobalSets(unittest.TestCase):
             iter(Integers)
 
         self.assertEqual(list(iter(Binary)), [0,1])
+
+    def test_declare(self):
+        DeclareGlobalSet(RangeSet( name='TrinarySet',
+                                   ranges=(NR(0,2,1),) ),
+                         globals())
+        self.assertEqual(list(TrinarySet), [0,1,2])
+        a = pickle.loads(pickle.dumps(TrinarySet))
+        self.assertIs(a, TrinarySet)
+        del SetModule.GlobalSets['TrinarySet']
+        del globals()['TrinarySet']
+        with self.assertRaisesRegex(
+                NameError, "global name 'TrinarySet' is not defined"):
+            TrinarySet
+        # Now test the automatic identification of the globals() scope
+        DeclareGlobalSet(RangeSet( name='TrinarySet',
+                                   ranges=(NR(0,2,1),) ))
+        self.assertEqual(list(TrinarySet), [0,1,2])
+        a = pickle.loads(pickle.dumps(TrinarySet))
+        self.assertIs(a, TrinarySet)
+        del SetModule.GlobalSets['TrinarySet']
+        del globals()['TrinarySet']
+
+    def test_RealSet_IntegerSet(self):
+        a = SetModule.RealSet()
+        self.assertEqual(a, Reals)
+        self.assertIsNot(a, Reals)
+
+        a = SetModule.RealSet(bounds=(1,3))
+        self.assertEqual(a.bounds(), (1,3))
+
+        a = SetModule.IntegerSet()
+        self.assertEqual(a, Integers)
+        self.assertIsNot(a, Integers)
+
+        a = SetModule.IntegerSet(bounds=(1,3))
+        self.assertEqual(a.bounds(), (1,3))
+        self.assertEqual(list(a), [1,2,3])
+
+    def test_intervals(self):
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.RealInterval()
+        self.assertIn("RealInterval has been deprecated.", output.getvalue())
+        self.assertEqual(a, Reals)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.RealInterval(bounds=(0,None))
+        self.assertIn("RealInterval has been deprecated.", output.getvalue())
+        self.assertEqual(a, NonNegativeReals)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.RealInterval(bounds=5)
+        self.assertIn("RealInterval has been deprecated.", output.getvalue())
+        self.assertEqual(a, RangeSet(1,5,0))
+
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.RealInterval(bounds=(5,))
+        self.assertIn("RealInterval has been deprecated.", output.getvalue())
+        self.assertEqual(a, RangeSet(1,5,0))
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.IntegerInterval()
+        self.assertIn("IntegerInterval has been deprecated.", output.getvalue())
+        self.assertEqual(a, Integers)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.IntegerInterval(bounds=(0,None))
+        self.assertIn("IntegerInterval has been deprecated.", output.getvalue())
+        self.assertEqual(a, NonNegativeIntegers)
+        self.assertFalse(a.isfinite())
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.IntegerInterval(bounds=(None,-1))
+        self.assertIn("IntegerInterval has been deprecated.", output.getvalue())
+        self.assertEqual(a, NegativeIntegers)
+        self.assertFalse(a.isfinite())
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.IntegerInterval(bounds=(-float('inf'),-1))
+        self.assertIn("IntegerInterval has been deprecated.", output.getvalue())
+        self.assertEqual(a, NegativeIntegers)
+        self.assertFalse(a.isfinite())
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.IntegerInterval(bounds=(0,3))
+        self.assertIn("IntegerInterval has been deprecated.", output.getvalue())
+        self.assertEqual(list(a), [0,1,2,3])
+        self.assertTrue(a.isfinite())
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.IntegerInterval(bounds=5)
+        self.assertIn("IntegerInterval has been deprecated.", output.getvalue())
+        self.assertEqual(list(a), [1,2,3,4,5])
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.IntegerInterval(bounds=(5,))
+        self.assertIn("IntegerInterval has been deprecated.", output.getvalue())
+        self.assertEqual(list(a), [1,2,3,4,5])
 
 
 def _init_set(m, *args):

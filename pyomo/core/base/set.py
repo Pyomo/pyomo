@@ -280,8 +280,14 @@ class RangeSetInitializer(InitializerBase):
         val = self._init(parent, idx)
         if not isinstance(val, collections_Sequence):
             val = (1, val, self.default_step)
-        if len(val) < 3:
-            val = tuple(val) + (self.default_step,)
+        else:
+            val = tuple(val)
+            if len(val) == 2:
+                val += (self.default_step,)
+            elif len(val) == 1:
+                val = (1, val[0], self.default_step)
+            elif len(val) == 0:
+                val = (None, None, self.default_step)
         ans = RangeSet(*tuple(val))
         # We don't need to construct here, as the RangeSet will
         # automatically construct itself if it can
@@ -3562,7 +3568,31 @@ class _AnySet(_SetData, Set):
         return None
 
 
-def DeclareGlobalSet(obj):
+############################################################################
+
+GlobalSets = {}
+def _get_global_set(name):
+    return GlobalSets[name]
+_get_global_set.__safe_for_unpickling__ = True
+
+class GlobalSetBase(object):
+    """The base class for all Global sets"""
+    __slots__ = ()
+
+    def __reduce__(self):
+        # Cause pickle to preserve references to this object
+        return _get_global_set, (self.local_name,)
+
+    def __deepcopy__(self, memo):
+        # Prevent deepcopy from duplicating this object
+        return self
+
+    def __str__(self):
+        # Override str() to always print out the global set name
+        return self.name
+
+
+def DeclareGlobalSet(obj, caller_globals=None):
     """Declare a copy of a set as a global set in the calling module
 
     This takes a Set object and declares a duplicate of it as a
@@ -3576,7 +3606,10 @@ def DeclareGlobalSet(obj):
 
     """
     obj.construct()
-    class GlobalSet(obj.__class__):
+    assert obj.parent_component() is obj
+    assert obj.parent_block() is None
+
+    class GlobalSet(GlobalSetBase, obj.__class__):
         __doc__ = """%s
 
         References to this object will not be duplicated by deepcopy
@@ -3584,95 +3617,201 @@ def DeclareGlobalSet(obj):
 
         """ % (obj.doc,)
         # Note: a simple docstring does not appear to be picked up (at
-        # least in Python 2.7, so we will explicitly set the __doc__
+        # least in Python 2.7), so we will explicitly set the __doc__
         # attribute.
 
         __slots__ = ()
 
-        def __init__(self, _obj):
-            _obj.__class__.__setstate__(self, _obj.__getstate__())
-            self._component = weakref.ref(self)
-            self.construct()
-            assert _obj.parent_component() is _obj
-            assert _obj.parent_block() is None
-            caller_globals = inspect.stack()[1][0].f_globals
-            assert self.local_name not in caller_globals
-            caller_globals[self.local_name] = self
+        global_name = None
 
-        def __reduce__(self):
-            # Cause pickle to preserve references to this object
-            return self.name
+        def __new__(cls, **kwds):
+            """Hijack __new__ to mock up old RealSet el al. interface
 
-        def __deepcopy__(self, memo):
-            # Prevent deepcopy from duplicating this object
-            return self
+            In the original Set implementation (Pyomo<=5.6.7), the
+            global sets were instances of their own virtual set classes
+            (RealSet, IntegerSet, BooleanSet), and one could create new
+            instances of those sets with modified bounds.  Since the
+            GlobalSet mechansism also declares new classes for every
+            GlobalSet, we can mock up the old behavior through how we
+            handle __new__().
+            """
+            if cls is GlobalSet and GlobalSet.global_name \
+               and issubclass(GlobalSet, RangeSet):
+                base_set = GlobalSets[GlobalSet.global_name]
+                bounds = kwds.pop('bounds', None)
+                range_init = SetInitializer(base_set)
+                if bounds is not None:
+                    range_init.intersect(
+                        RangeSetInitializer(bounds, default_step=0)
+                    )
+                name = name_kwd = kwds.pop('name', None)
+                cls_name = kwds.pop('class_name', None)
+                if name is None:
+                    if cls_name is None:
+                        name = base_set.name
+                    else:
+                        name = cls_name
+                ans = RangeSet( ranges=list(range_init(None, None).ranges()),
+                                name=name )
+                if name_kwd is None and (
+                        cls_name is not None or bounds is not None):
+                    ans._name += str(ans.bounds())
+            else:
+                ans = super(GlobalSet, cls).__new__(cls, **kwds)
+            if kwds:
+                raise RuntimeError("Unexpected keyword argument")
+            return ans
 
-        def __str__(self):
-            # Override str() to always print out the global set name
-            return self.name
+    # Build the global set before registering its name so that we don't
+    # run afoul of the logic in GlobalSet.__new__
+    _name = obj.local_name
+    if ( _name in GlobalSets and _set is not GlobalSets[_name] ):
+        raise RuntimeError("Duplicate Global Set declaration, %s"
+                           % (_name,))
 
-    return GlobalSet(obj)
+    # Push this object into the caller's module namespace
+    # Stack: 0: DeclareGlobalSet()
+    #        1: the caller
+    if caller_globals is None:
+        _stack = inspect.stack()
+        try:
+            caller_globals = _stack[1][0].f_globals
+        finally:
+            del _stack
+    if _name in caller_globals:
+        raise RuntimeError("Refusing to overwrite global object, %s"
+                           % (_name,))
+
+    _set = GlobalSet()
+    # TODO: Can GlobalSets be a proper Block?
+    GlobalSets[_name] = caller_globals[_name] = _set
+    GlobalSet.global_name = _name
+
+    _set.__class__.__setstate__(_set, obj.__getstate__())
+    _set._component = weakref.ref(_set)
+    _set.construct()
+    return _set
 
 
 DeclareGlobalSet(_AnySet(
     name='Any',
     doc="A global Pyomo Set that admits any value",
-))
+), globals())
+DeclareGlobalSet(_AnyWithNoneSet(
+    name='AnyWithNone',
+    doc="A global Pyomo Set that admits any value",
+), globals())
+DeclareGlobalSet(RangeSet(
+    name='EmptySet',
+    doc="A global Pyomo Set that contains no members",
+    ranges=(),
+), globals())
 
 DeclareGlobalSet(RangeSet(
     name='Reals',
     doc='A global Pyomo Set that admits any real (floating point) value',
     ranges=(NumericRange(None,None,0),),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='NonNegativeReals',
     doc='A global Pyomo Set admitting any real value in [0, +inf]',
     ranges=(NumericRange(0,None,0),),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='NonPositiveReals',
     doc='A global Pyomo Set admitting any real value in [-inf, 0]',
     ranges=(NumericRange(None,0,0),),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='NegativeReals',
     doc='A global Pyomo Set admitting any real value in [-inf, 0)',
     ranges=(NumericRange(None,0,0,(True,False)),),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='PositiveReals',
     doc='A global Pyomo Set admitting any real value in (0, +inf]',
     ranges=(NumericRange(0,None,0,(False,True)),),
-))
+), globals())
 
 DeclareGlobalSet(RangeSet(
     name='Integers',
     doc='A global Pyomo Set admitting any integer value',
     ranges=(NumericRange(0,None,1), NumericRange(0,None,-1)),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='NonNegativeIntegers',
     doc='A global Pyomo Set admitting any integer value in [0, +inf]',
     ranges=(NumericRange(0,None,1),),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='NonPositiveIntegers',
     doc='A global Pyomo Set admitting any integer value in [-inf, 0]',
     ranges=(NumericRange(0,None,-1),),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='NegativeIntegers',
     doc='A global Pyomo Set admitting any integer value in [-inf, -1]',
     ranges=(NumericRange(-1,None,-1),),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='PositiveIntegers',
     doc='A global Pyomo Set admitting any integer value in [1, +inf]',
     ranges=(NumericRange(1,None,1),),
-))
+), globals())
 
 DeclareGlobalSet(RangeSet(
     name='Binary',
     doc='A global Pyomo Set admitting the integers {0, 1}',
     ranges=(NumericRange(0,1,1),),
-))
+), globals())
+
+#TODO: Convert Boolean from an alias for Binary to a proper Boolean Set
+#      admitting {True, False})
+DeclareGlobalSet(RangeSet(
+    name='Boolean',
+    doc='A global Pyomo Set admitting the integers {0, 1}',
+    ranges=(NumericRange(0,1,1),),
+), globals())
+
+DeclareGlobalSet(RangeSet(
+    name='PercentFraction',
+    doc='A global Pyomo Set admitting any real value in [0, 1]',
+    ranges=(NumericRange(0,1,0),),
+), globals())
+DeclareGlobalSet(RangeSet(
+    name='UnitInterval',
+    doc='A global Pyomo Set admitting any real value in [0, 1]',
+    ranges=(NumericRange(0,1,0),),
+), globals())
+
+DeclareGlobalSet(Set(
+    initialize=[None],
+    name='UnindexedComponent_set',
+    doc='A global Pyomo Set for unindexed (scalar) IndexedComponent objects',
+), globals())
+
+
+RealSet = Reals.__class__
+IntegerSet = Integers.__class__
+BinarySet = Binary.__class__
+BooleanSet = Boolean.__class__
+
+
+#
+# Backwards compatibility: declare the RealInterval and IntegerInterval
+# classes (leveraging the new global RangeSet objects)
+#
+
+class RealInterval(RealSet):
+    @deprecated("RealInterval has been deprecated.  Please use "
+                "RangeSet(lower, upper, 0)", version='TBD')
+    def __new__(cls, **kwds):
+        kwds.setdefault('class_name', 'RealInterval')
+        return super(RealInterval, cls).__new__(RealSet, **kwds)
+
+class IntegerInterval(IntegerSet):
+    @deprecated("IntegerInterval has been deprecated.  Please use "
+                "RangeSet(lower, upper, 1)", version='TBD')
+    def __new__(cls, **kwds):
+        kwds.setdefault('class_name', 'IntegerInterval')
+        return super(IntegerInterval, cls).__new__(IntegerSet, **kwds)
