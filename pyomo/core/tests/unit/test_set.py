@@ -33,7 +33,7 @@ from pyomo.core.base.util import (
 )
 from pyomo.core.base.set import (
     NumericRange as NR, NonNumericRange as NNR,
-    AnyRange, _AnySet, Any, Binary,
+    AnyRange, _AnySet, Any, _EmptySet, EmptySet, Binary,
     Reals, NonNegativeReals, PositiveReals, NonPositiveReals, NegativeReals,
     Integers, PositiveIntegers, NegativeIntegers,
     NonPositiveIntegers, NonNegativeIntegers,
@@ -312,6 +312,64 @@ class InfiniteSetTester(unittest.TestCase):
 
         self.assertFalse(Any.isdiscrete())
         self.assertFalse(Any.isfinite())
+
+        self.assertEqual(Any.dim(), 0)
+        with self.assertRaisesRegex(
+                AttributeError, "object of type 'Any' has no len()"):
+            len(Any)
+        with self.assertRaisesRegex(
+                AttributeError,
+                "__iter__ is not available for non-finite Sets"):
+            list(Any)
+        self.assertEqual(list(Any.ranges()), [AnyRange()])
+        self.assertEqual(Any.bounds(), (None,None))
+        self.assertEqual(Any.dimen, None)
+
+        tmp = _AnySet()
+        self.assertFalse(tmp.isdiscrete())
+        self.assertFalse(tmp.isfinite())
+        self.assertEqual(Any, tmp)
+        tmp.clear()
+        self.assertEqual(Any, tmp)
+
+        self.assertEqual(tmp.domain, Any)
+        self.assertEqual(str(Any), 'Any')
+        self.assertEqual(str(tmp), '_AnySet')
+        b = ConcreteModel()
+        b.tmp = tmp
+        self.assertEqual(str(tmp), 'tmp')
+
+    def test_EmptySet(self):
+        self.assertNotIn(0, EmptySet)
+        self.assertNotIn(1.5, EmptySet)
+        self.assertNotIn(100, EmptySet),
+        self.assertNotIn(-100, EmptySet),
+        self.assertNotIn('A', EmptySet)
+        self.assertNotIn(None, EmptySet)
+
+        self.assertTrue(EmptySet.isdiscrete())
+        self.assertTrue(EmptySet.isfinite())
+
+        self.assertEqual(EmptySet.dim(), 0)
+        self.assertEqual(len(EmptySet), 0)
+        self.assertEqual(list(EmptySet), [])
+        self.assertEqual(list(EmptySet.ranges()), [])
+        self.assertEqual(EmptySet.bounds(), (None,None))
+        self.assertEqual(EmptySet.dimen, 0)
+
+        tmp = _EmptySet()
+        self.assertTrue(tmp.isdiscrete())
+        self.assertTrue(tmp.isfinite())
+        self.assertEqual(EmptySet, tmp)
+        tmp.clear()
+        self.assertEqual(EmptySet, tmp)
+
+        self.assertEqual(tmp.domain, EmptySet)
+        self.assertEqual(str(EmptySet), 'EmptySet')
+        self.assertEqual(str(tmp), '_EmptySet')
+        b = ConcreteModel()
+        b.tmp = tmp
+        self.assertEqual(str(tmp), 'tmp')
 
     @unittest.skipIf(not numpy_available, "NumPy required for these tests")
     def test_numpy_compatible(self):

@@ -3578,9 +3578,69 @@ class _AnySet(_SetData, Set):
     def bounds(self):
         return (None, None)
 
+    # We need to implement this to override the clear() from IndexedComponent
+    def clear(self):
+        return
+
+    # We need to implement this to override __len__ from IndexedComponent
+    def __len__(self):
+        raise AttributeError("object of type 'Any' has no len()")
+
     @property
     def dimen(self):
         return None
+
+    @property
+    def domain(self):
+        return Any
+
+    def __str__(self):
+        if self.parent_block() is not None:
+            return self.name
+        return type(self).__name__
+
+
+class _AnyWithNoneSet(_AnySet):
+    # Note that we put the deprecation warning on contains() and not on
+    # the class because we will always create a global instance for
+    # backwards compatability with the Book.
+    @deprecated("The AnyWithNone set is deprecated.  "
+                "Use Any, which includes None", version='TBD')
+    def get(self, val, default=None):
+        return super(_AnySet, self).get(val, default)
+
+
+class _EmptySet(_FiniteSetMixin, _SetData, Set):
+    def __init__(self, **kwds):
+        _SetData.__init__(self, component=self)
+        Set.__init__(self, **kwds)
+
+    def get(self, val, default=None):
+        return default
+
+    # We need to implement this to override clear from IndexedComponent
+    def clear(self):
+        pass
+
+    # We need to implement this to override __len__ from IndexedComponent
+    def __len__(self):
+        return 0
+
+    def __iter__(self):
+        return iter(tuple())
+
+    @property
+    def dimen(self):
+        return 0
+
+    @property
+    def domain(self):
+        return EmptySet
+
+    def __str__(self):
+        if self.parent_block() is not None:
+            return self.name
+        return type(self).__name__
 
 
 ############################################################################
@@ -3716,10 +3776,9 @@ DeclareGlobalSet(_AnyWithNoneSet(
     name='AnyWithNone',
     doc="A global Pyomo Set that admits any value",
 ), globals())
-DeclareGlobalSet(RangeSet(
+DeclareGlobalSet(_EmptySet(
     name='EmptySet',
     doc="A global Pyomo Set that contains no members",
-    ranges=(),
 ), globals())
 
 DeclareGlobalSet(RangeSet(
