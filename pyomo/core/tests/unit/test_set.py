@@ -5060,8 +5060,15 @@ class TestIssues(unittest.TestCase):
         m.s = Set(initialize=['one'])
         m.t = Set([1], initialize=['one'])
         m.x = Var(m.s)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertTrue(m.s in m.s)
+        self.assertIn(
+            "Testing for set subsets with 'a in b' is deprecated.",
+            output.getvalue()
+        )
         if PY2:
-            self.assertFalse(m.s in m.s)
             self.assertFalse(m.s in m.t)
             with self.assertRaisesRegexp(KeyError, "Index 's' is not valid"):
                 m.x[m.s].display()
@@ -5069,8 +5076,6 @@ class TestIssues(unittest.TestCase):
             # Note that pypy raises a different exception from cpython
             err = "((unhashable type: 'OrderedSimpleSet')" \
                 "|('OrderedSimpleSet' objects are unhashable))"
-            with self.assertRaisesRegexp(TypeError, err):
-                self.assertFalse(m.s in m.s)
             with self.assertRaisesRegexp(TypeError, err):
                 self.assertFalse(m.s in m.t)
             with self.assertRaisesRegexp(TypeError, err):

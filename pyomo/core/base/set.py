@@ -412,7 +412,16 @@ class _SetData(_SetDataBase):
     __slots__ = ()
 
     def __contains__(self, value):
-        return self.get(value, _NotFound) is not _NotFound
+        ans = self.get(value, _NotFound)
+        if ans is _NotFound:
+            if isinstance(value, _SetData):
+                deprecation_warning(
+                    "Testing for set subsets with 'a in b' is deprecated.  "
+                    "Use 'a.issubset(b)'.", version='TBD')
+                return value.issubset(self)
+            else:
+                return False
+        return True
 
     def get(self, value, default=None):
         raise DeveloperError("Derived set class (%s) failed to "
