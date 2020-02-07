@@ -98,7 +98,7 @@ def solve_NLP(nlp_model, solve_data, config):
         try:
             results = nlp_solver.solve(nlp_model, **config.nlp_solver_args)
         except ValueError as err:
-            if 'Cannot load SolverResults object with bad status: error' in str(err):
+            if 'Cannot load a SolverResults object with bad status: error' in str(err):
                 results = SolverResults()
                 results.solver.termination_condition = tc.error
                 results.solver.message = str(err)

@@ -6,7 +6,7 @@ from math import fabs, floor, log
 
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
                         Objective, Reals, Suffix, Var, minimize, value)
-from pyomo.core.base.symbolic import differentiate
+from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.kernel.component_map import ComponentMap
@@ -33,15 +33,6 @@ def model_is_valid(solve_data, config):
     """
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
-
-    # Check for any integer variables
-    if any(True for v in m.component_data_objects(
-            ctype=Var, descend_into=True)
-            if v.is_integer() and not v.fixed):
-        raise ValueError('Model contains unfixed integer variables. '
-                         'MindtPy does not currently support solution of '
-                         'such problems.')
-        # TODO add in the reformulation using base 2
 
     # Handle LP/NLP being passed to the solver
     prob = solve_data.results.problem
@@ -81,7 +72,7 @@ def calc_jacobians(solve_data, config):
         if c.body.polynomial_degree() in (1, 0):
             continue  # skip linear constraints
         vars_in_constr = list(EXPR.identify_variables(c.body))
-        jac_list = differentiate(c.body, wrt_list=vars_in_constr)
+        jac_list = differentiate(c.body, wrt_list=vars_in_constr, mode=differentiate.Modes.sympy)
         solve_data.jacobians[c] = ComponentMap(
             (var, jac_wrt_var)
             for var, jac_wrt_var in zip(vars_in_constr, jac_list))

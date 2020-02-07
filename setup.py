@@ -16,25 +16,6 @@ import sys
 import os
 
 
-def _find_packages(path):
-    """
-    Generate a list of nested packages
-    """
-    pkg_list = []
-    if not os.path.exists(path):
-        return []
-    if not os.path.exists(path+os.sep+"__init__.py"):
-        return []
-    else:
-        pkg_list.append(path)
-    for root, dirs, files in os.walk(path, topdown=True):
-        if root in pkg_list and "__init__.py" in files:
-            for name in dirs:
-                if os.path.exists(root+os.sep+name+os.sep+"__init__.py"):
-                    pkg_list.append(root+os.sep+name)
-    return [pkg for pkg in map(lambda x:x.replace(os.sep, "."), pkg_list)]
-
-
 def read(*rnames):
     with open(os.path.join(os.path.dirname(__file__), *rnames)) as README:
         # Strip all leading badges up to, but not including the COIN-OR
@@ -57,7 +38,7 @@ def get_version():
     return _verInfo['__version__']
 
 requires = [
-    'PyUtilib>=5.7.2.dev0',
+    'PyUtilib>=5.7.4.dev0',
     'appdirs',
     'ply',
     'six>=1.4',
@@ -67,7 +48,7 @@ if sys.version_info < (2, 7):
     requires.append('unittest2')
     requires.append('ordereddict')
 
-from setuptools import setup
+from setuptools import setup, find_packages
 import sys
 
 CYTHON_REQUIRED = "required"
@@ -120,8 +101,6 @@ ERROR: Cython was explicitly requested with --with-cython, but cythonization
             raise
         using_cython = False
 
-packages = _find_packages('pyomo')
-
 def run_setup():
    setup(name='Pyomo',
       #
@@ -153,12 +132,13 @@ def run_setup():
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: Jython',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Software Development :: Libraries :: Python Modules' ],
-      packages=packages,
+      packages=find_packages(exclude=("scripts",)),
       package_data={"pyomo.contrib.viewer":["*.ui"]},
       keywords=['optimization'],
       install_requires=requires,

@@ -28,6 +28,7 @@ from pyomo.core.expr.numeric_expr import (
     NPV_ProductExpression, NPV_ReciprocalExpression, NPV_SumExpression,
     NPV_UnaryFunctionExpression, PowExpression, ProductExpression,
     ReciprocalExpression, SumExpression, UnaryFunctionExpression,
+    NPV_DivisionExpression, DivisionExpression,
 )
 from pyomo.core.expr.visitor import (
     StreamBasedExpressionVisitor, identify_variables,
@@ -37,6 +38,8 @@ from pyomo.core.kernel.component_map import ComponentMap
 logger = logging.getLogger('pyomo.contrib.mcpp')
 
 path = os.path.dirname(__file__)
+
+__version__ = "19.11.12"
 
 
 def mcpp_available():
@@ -48,7 +51,8 @@ NPV_expressions = (
     NPV_AbsExpression, NPV_ExternalFunctionExpression,
     NPV_NegationExpression, NPV_PowExpression,
     NPV_ProductExpression, NPV_ReciprocalExpression, NPV_SumExpression,
-    NPV_UnaryFunctionExpression)
+    NPV_UnaryFunctionExpression, NPV_DivisionExpression,
+)
 
 
 def _MCPP_lib():
@@ -58,6 +62,9 @@ def _MCPP_lib():
 
     _MCPP_lib._mcpp = mcpp = ctypes.CDLL(Library('mcppInterface').path())
 
+    # Version number
+    mcpp.get_version.restype = ctypes.c_char_p
+    
     mcpp.toString.argtypes = [ctypes.c_void_p]
     mcpp.toString.restype = ctypes.c_char_p
 
@@ -196,6 +203,14 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
     def __init__(self, expression, improved_var_bounds=None):
         super(MCPP_visitor, self).__init__()
         self.mcpp = _MCPP_lib()
+        so_file_version = self.mcpp.get_version()
+        if six.PY3:
+            so_file_version = so_file_version.decode("utf-8")
+        if not so_file_version == __version__:
+            raise MCPP_Error(
+                "Shared object file version %s is out of date with MC++ interface version %s. "
+                "Please rebuild the library." % (so_file_version, __version__)
+            )
         self.missing_value_warnings = []
         self.expr = expression
         vars = list(identify_variables(expression, include_fixed=False))
@@ -237,7 +252,10 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             else:
                 ans = self.mcpp.try_binary_fcn(self.mcpp.powerx, data[0], data[1])
         elif isinstance(node, ReciprocalExpression):
+            # Note: unreachable after ReciprocalExpression was removed
             ans = self.mcpp.try_unary_fcn(self.mcpp.reciprocal, data[0])
+        elif isinstance(node, DivisionExpression):
+            ans = self.mcpp.try_binary_fcn(self.mcpp.divide, data[0], data[1])
         elif isinstance(node, NegationExpression):
             ans = self.mcpp.negation(data[0])
         elif isinstance(node, AbsExpression):

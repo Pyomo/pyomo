@@ -30,7 +30,7 @@ from pyomo.core.kernel.base import ICategorizedObject
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter, WriterFactory
 from pyomo.repn.util import valid_expr_ctypes_minlp, \
-    valid_active_ctypes_minlp
+    valid_active_ctypes_minlp, ftoa
 
 import logging
 
@@ -86,6 +86,9 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
                 else:
                     tmp.append(val)
 
+        if node.__class__ in EXPR.NPV_expression_types:
+            return ftoa(value(node))
+
         if node.__class__ is EXPR.PowExpression:
             # If the exponent is a positive integer, use the power() function.
             # Otherwise, use the ** operator.
@@ -122,7 +125,7 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             return True, None
 
         if node.__class__ in native_types:
-            return True, str(node)
+            return True, ftoa(node)
 
         if node.is_expression_type():
             # we will descend into this, so type checking will happen later
@@ -146,14 +149,12 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
 
         if node.is_variable_type():
             if node.fixed:
-                return True, node.to_string(
-                    verbose=False, smap=self.smap, compute_values=True)
+                return True, ftoa(value(node))
             else:
                 label = self.smap.getSymbol(node)
                 return True, label
 
-        return True, node.to_string(
-            verbose=False, smap=self.smap, compute_values=True)
+        return True, ftoa(value(node))
 
     def ctype(self, comp):
         if isinstance(comp, ICategorizedObject):
@@ -280,14 +281,6 @@ def split_long_line(line):
         line = line[i:]
     new_lines += line
     return new_lines
-
-
-def _get_bound(exp):
-    if exp is None:
-        return None
-    if is_fixed(exp):
-        return value(exp)
-    raise ValueError("non-fixed bound or weight: " + str(exp))
 
 
 @WriterFactory.register('gams', 'Generate the corresponding GAMS file')
@@ -548,14 +541,14 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 ConstraintIO.write('%s.. %s =e= %s ;\n' % (
                     constraint_names[-1],
                     con_body_str,
-                    _get_bound(con.upper)
+                    ftoa(con.upper)
                 ))
             else:
                 if con.has_lb():
                     constraint_names.append('%s_lo' % cName)
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
-                        _get_bound(con.lower),
+                        ftoa(con.lower),
                         con_body_str,
                     ))
                 if con.has_ub():
@@ -563,7 +556,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
                         con_body_str,
-                        _get_bound(con.upper)
+                        ftoa(con.upper)
                     ))
 
         obj = list(model.component_data_objects(Objective,
@@ -623,7 +616,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             if category == 'positive':
                 if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
-                                      (var_name, _get_bound(var.ub)))
+                                      (var_name, ftoa(var.ub)))
             elif category == 'ints':
                 if not var.has_lb():
                     warn_int_bounds = True
@@ -633,7 +626,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     output_file.write("%s.lo = -1.0E+100;\n" % (var_name))
                 elif value(var.lb) != 0:
                     output_file.write("%s.lo = %s;\n" %
-                                      (var_name, _get_bound(var.lb)))
+                                      (var_name, ftoa(var.lb)))
                 if not var.has_ub():
                     warn_int_bounds = True
                     # GAMS has an option value called IntVarUp that is the
@@ -645,25 +638,26 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     output_file.write("%s.up = +1.0E+100;\n" % (var_name))
                 else:
                     output_file.write("%s.up = %s;\n" %
-                                      (var_name, _get_bound(var.ub)))
+                                      (var_name, ftoa(var.ub)))
             elif category == 'binary':
                 if var.has_lb() and value(var.lb) != 0:
                     output_file.write("%s.lo = %s;\n" %
-                                      (var_name, _get_bound(var.lb)))
+                                      (var_name, ftoa(var.lb)))
                 if var.has_ub() and value(var.ub) != 1:
                     output_file.write("%s.up = %s;\n" %
-                                      (var_name, _get_bound(var.ub)))
+                                      (var_name, ftoa(var.ub)))
             elif category == 'reals':
                 if var.has_lb():
                     output_file.write("%s.lo = %s;\n" %
-                                      (var_name, _get_bound(var.lb)))
+                                      (var_name, ftoa(var.lb)))
                 if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
-                                      (var_name, _get_bound(var.ub)))
+                                      (var_name, ftoa(var.ub)))
             else:
                 raise KeyError('Category %s not supported' % category)
             if warmstart and var.value is not None:
-                output_file.write("%s.l = %s;\n" % (var_name, var.value))
+                output_file.write("%s.l = %s;\n" %
+                                  (var_name, ftoa(var.value)))
 
         if warn_int_bounds:
             logger.warning(

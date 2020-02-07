@@ -55,8 +55,7 @@ class _IndexedComponent_slice(object):
         "blanket" implementation of :py:meth:`__getattr__`, we need to
         explicitly implement these to avoid "accidentally" extending or
         evaluating this slice."""
-        return dict(
-            (k,getattr(self,k)) for k in self.__dict__)
+        return {k:getattr(self,k) for k in self.__dict__}
 
     def __setstate__(self, state):
         """Deserialize the state into this object. """
@@ -161,6 +160,14 @@ class _IndexedComponent_slice(object):
         the slice and call the item.  This allows "vector-like" operations
         like: `m.x[:,1].fix(0)`.
         """
+        # There is a weird case in pypy3.6-7.2.0 where __name__ gets
+        # called after retrieving an attribute that will be called.  I
+        # don't know why that happens, but we will trap it here and
+        # remove the getattr(__name__) from the call stack.
+        if self._call_stack[-1][0] == _IndexedComponent_slice.get_attribute \
+           and self._call_stack[-1][1] == '__name__':
+            self._call_stack.pop()
+
         self._call_stack.append( (
             _IndexedComponent_slice.call, idx, kwds ) )
         if self._call_stack[-2][1] == 'component':

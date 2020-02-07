@@ -49,7 +49,9 @@ environment:
     - PYTHON_VERSION: 3.7
       PYTHON: "C:\\Miniconda37"
       CATEGORY: "nightly"
-      EXTRAS: YES
+      # [191115]: disable extras because of installation dependency 
+      # issues with Miniconda 3.7 on appveyor
+      #EXTRAS: YES
 
 
 install:
@@ -102,7 +104,7 @@ install:
   - SET MINICONDA_EXTRAS=""
   - IF DEFINED USING_MINICONDA (SET MINICONDA_EXTRAS=numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn)
   #
-  - "IF DEFINED EXTRAS (SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% pymysql pyro4 pint %MINICONDA_EXTRAS%)"
+  - "IF DEFINED EXTRAS (SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% pymysql pyro4 pint pathos %MINICONDA_EXTRAS%)"
   #- "IF DEFINED EXTRAS (%CONDAFORGE% mkl)"
   #
   # Finally, add any solvers we want to the list

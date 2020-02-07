@@ -74,31 +74,11 @@ class _Initializer(object):
 
 class _DisjunctData(_BlockData):
 
+    _Block_reserved_words = set()
+
     def __init__(self, component):
         _BlockData.__init__(self, component)
         self.indicator_var = Var(within=Binary)
-
-    def pprint(self, ostream=None, verbose=False, prefix=""):
-        _BlockData.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
-
-    def set_value(self, val):
-        _indicator_var = self.indicator_var
-        # Remove everything
-        for k in list(getattr(self, '_decl', {})):
-            self.del_component(k)
-        self._ctypes = {}
-        self._decl = {}
-        self._decl_order = []
-        # Now copy over everything from the other block.  If the other
-        # block has an indicator_var, it should override this block's.
-        # Otherwise restore this block's indicator_var.
-        if val:
-            if 'indicator_var' not in val:
-                self.add_component('indicator_var', _indicator_var)
-            for k in sorted(iterkeys(val)):
-                self.add_component(k,val[k])
-        else:
-            self.add_component('indicator_var', _indicator_var)
 
     def activate(self):
         super(_DisjunctData, self).activate()
@@ -176,13 +156,11 @@ class SimpleDisjunct(_DisjunctData, Disjunct):
         Disjunct.__init__(self, *args, **kwds)
         self._data[None] = self
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
-        Disjunct.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
-
 
 class IndexedDisjunct(Disjunct):
     pass
 
+_DisjunctData._Block_reserved_words = set(dir(Disjunct()))
 
 
 class _DisjunctionData(ActiveComponentData):

@@ -42,7 +42,7 @@ Pyomo is available under the BSD License, see the LICENSE.txt file.
 
 Pyomo is currently tested with the following Python implementations:
 
-* CPython: 2.7, 3.4, 3.5, 3.6, 3.7
+* CPython: 2.7, 3.4, 3.5, 3.6, 3.7, 3.8
 * PyPy: 2, 3
 
 ### Installation
@@ -54,6 +54,12 @@ Pyomo is currently tested with the following Python implementations:
 #### Anaconda [![Anaconda version](https://anaconda.org/conda-forge/pyomo/badges/version.svg)](https://anaconda.org/conda-forge/pyomo) [![Anaconda downloads](https://anaconda.org/conda-forge/pyomo/badges/downloads.svg)](https://anaconda.org/conda-forge/pyomo)
 
     conda install -c conda-forge pyomo
+
+### Tutorials and Examples
+
+* [Pyomo Workshop Slides](https://software.sandia.gov/downloads/pub/pyomo/Pyomo-Workshop-Summer-2018.pdf)
+* [Prof. Jeffrey Kantor's Pyomo Cookbook](https://jckantor.github.io/ND-Pyomo-Cookbook/)
+* [Pyomo Gallery](https://github.com/Pyomo/PyomoGallery)
 
 ### Getting Help
 

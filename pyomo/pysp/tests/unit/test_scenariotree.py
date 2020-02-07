@@ -787,19 +787,17 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         self.assertEqual(list(model.Bundles), ["B"])
         self.assertEqual(list(model.BundleScenarios["B"]),
                          ["u"+str(i) for i in range(4)])
-        G.node["u0"]["bundle"] = None
+        G.nodes["u0"]["bundle"] = None
         with self.assertRaises(ValueError):
             ScenarioTreeModelFromNetworkX(
                 G,
                 edge_probability_attribute=None)
-        del G.node["u0"]["bundle"]
+        del G.nodes["u0"]["bundle"]
         with self.assertRaises(ValueError):
             ScenarioTreeModelFromNetworkX(
                 G,
                 edge_probability_attribute=None)
 
-TestScenarioTree = unittest.category('smoke','nightly','expensive')(TestScenarioTree)
-TestScenarioTreeFromNetworkX = unittest.category('smoke','nightly','expensive')(TestScenarioTreeFromNetworkX)
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -218,9 +219,13 @@ class TestPyomoUnit(unittest.TestCase):
         # test MonomialTermExpression
         self._get_check_units_ok(model.x*kg, uc, 'kg', expr.MonomialTermExpression)
 
-        # test ReciprocalExpression, NPV_ReciprocalExpression
-        self._get_check_units_ok(1.0/(model.x*kg), uc, '1 / kg', expr.ReciprocalExpression)
-        self._get_check_units_ok(1.0/kg, uc, '1 / kg', expr.NPV_ReciprocalExpression)
+        # test DivisionExpression, NPV_DivisionExpression
+        self._get_check_units_ok(1.0/(model.x*kg), uc, '1 / kg', expr.DivisionExpression)
+        self._get_check_units_ok(2.0/kg, uc, '1 / kg', expr.NPV_DivisionExpression)
+        self._get_check_units_ok((model.x*kg)/1.0, uc, 'kg', expr.MonomialTermExpression)
+        self._get_check_units_ok(kg/2.0, uc, 'kg', expr.NPV_DivisionExpression)
+        self._get_check_units_ok(model.y*m/(model.x*kg), uc, 'm / kg', expr.DivisionExpression)
+        self._get_check_units_ok(m/kg, uc, 'm / kg', expr.NPV_DivisionExpression)
         # I don't think that there are combinations that can "fail" for products
 
         # test PowExpression, NPV_PowExpression
@@ -418,7 +423,13 @@ class TestPyomoUnit(unittest.TestCase):
         delta_degF = uc.delta_degF
         R = uc.rankine
 
-        self._get_check_units_ok(2.0*R + 3.0*R, uc, 'rankine', expr.NPV_SumExpression)
+        # In some recent versions of pint, rankine can be either
+        # 'rankine' or '°R' (note UTF-8 encoding, which requires the
+        # "coding: utf-8" comment flag at the top of this file).
+        R_str = R.getname()
+        #self.assertIn(R_str, ['rankine', '°R'])
+
+        self._get_check_units_ok(2.0*R + 3.0*R, uc, R_str, expr.NPV_SumExpression)
         self._get_check_units_ok(2.0*K + 3.0*K, uc, 'K', expr.NPV_SumExpression)
 
         ex = 2.0*delta_degC + 3.0*delta_degC + 1.0*delta_degC

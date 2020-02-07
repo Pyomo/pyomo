@@ -14,7 +14,6 @@ __all__ = ("_LinearConstraintData", "MatrixConstraint",
 import time
 import logging
 import array
-import collections
 from weakref import ref as weakref_ref
 
 from pyomo.core.base.set_types import Any
@@ -32,8 +31,14 @@ from pyomo.core.base.constraint import (Constraint,
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.repn import generate_standard_repn
 
-from six import iteritems
+from six import iteritems, PY3
 from six.moves import xrange
+
+if PY3:
+    from collections.abc import Mapping as collections_Mapping
+else:
+    from collections import Mapping as collections_Mapping
+
 
 logger = logging.getLogger('pyomo.core')
 
@@ -621,7 +626,7 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
 
 @ModelComponentFactory.register(
                    "A set of constraint expressions in Ax=b form.")
-class MatrixConstraint(collections.Mapping,
+class MatrixConstraint(collections_Mapping,
                        IndexedConstraint):
 
     #

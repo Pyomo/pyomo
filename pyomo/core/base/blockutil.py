@@ -13,10 +13,11 @@
 
 __all__ = ['has_discrete_variables']
 
+from pyomo.common import deprecated
 from pyomo.core.base import Var
 
+
+@deprecated("This function has been moved to `pyomo.util.blockutil`", version='TBD', remove_in='TBD')
 def has_discrete_variables(block):
-    for vardata in block.component_data_objects(Var, active=True):
-        if not vardata.is_continuous():
-            return True
-    return False
+    from pyomo.util.blockutil import has_discrete_variables
+    return has_discrete_variables(block)

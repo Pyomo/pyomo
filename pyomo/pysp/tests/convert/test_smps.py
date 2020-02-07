@@ -35,7 +35,7 @@ pysp_examples_dir = \
 
 _run_verbose = True
 
-@unittest.category('nightly','expensive')
+@unittest.category('nightly')
 class TestConvertSMPSSimple(unittest.TestCase):
 
     @unittest.nottest
@@ -586,7 +586,7 @@ create_test_classes('farmer',
                     'farmer',
                     farmer_model_dir,
                     farmer_data_dir,
-                    ('nightly','expensive'))
+                    ('nightly',))
 
 piecewise_model = join(thisdir, "piecewise_model.py")
 piecewise_scenario_tree = join(thisdir, "piecewise_scenario_tree.py")
@@ -594,7 +594,7 @@ create_test_classes('piecewise',
                     'piecewise',
                     piecewise_model,
                     piecewise_scenario_tree,
-                    ('nightly','expensive'))
+                    ('nightly',))
 
 # uses the same baselines as 'piecewise',
 # except annotations are declared differently
@@ -603,7 +603,7 @@ create_test_classes('piecewise_alt',
                     'piecewise',
                     piecewise_model,
                     piecewise_scenario_tree,
-                    ('nightly','expensive'))
+                    ('nightly',))
 
 if __name__ == "__main__":
     unittest.main()

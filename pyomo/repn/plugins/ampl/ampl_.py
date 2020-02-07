@@ -87,12 +87,10 @@ def _build_op_template():
     div_comment = "\t#/"
     _op_template[EXPR.ProductExpression] = prod_template
     _op_comment[EXPR.ProductExpression] = prod_comment
+    _op_template[EXPR.DivisionExpression] = div_template
+    _op_comment[EXPR.DivisionExpression] = div_comment
     _op_template[EXPR.ReciprocalExpression] = div_template
     _op_comment[EXPR.ReciprocalExpression] = div_comment
-    del prod_template
-    del prod_comment
-    del div_template
-    del div_comment
 
     _op_template[EXPR.ExternalFunctionExpression] = ("f%d %d{C}\n", #function
                                                       "h%d:%s{C}\n") #string arg
@@ -525,6 +523,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
             elif exp_type is EXPR.ProductExpression:
                 prod_str = self._op_string[EXPR.ProductExpression]
                 OUTPUT.write(prod_str)
+                self._print_nonlinear_terms_NL(exp.arg(0))
+                self._print_nonlinear_terms_NL(exp.arg(1))
+
+            elif exp_type is EXPR.DivisionExpression:
+                assert exp.nargs() == 2
+                div_str = self._op_string[EXPR.DivisionExpression]
+                OUTPUT.write(div_str)
                 self._print_nonlinear_terms_NL(exp.arg(0))
                 self._print_nonlinear_terms_NL(exp.arg(1))
 

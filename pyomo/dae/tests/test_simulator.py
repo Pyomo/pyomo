@@ -964,51 +964,51 @@ class TestExpressionCheckers(unittest.TestCase):
         e = 5 * m.dv[t] == m.v[t]
         temp = _check_productexpression(e, 0)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR.ProductExpression)
+        self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         e = m.v[t] == 5 * m.dv[t]
         temp = _check_productexpression(e, 1)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR.ProductExpression)
+        self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         # Check multiplication by fixed param
         e = m.p * m.dv[t] == m.v[t]
         temp = _check_productexpression(e, 0)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR.ProductExpression)
+        self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         e = m.v[t] == m.p * m.dv[t]
         temp = _check_productexpression(e, 1)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR.ProductExpression)
+        self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         # Check multiplication by mutable param
         e = m.mp * m.dv[t] == m.v[t]
         temp = _check_productexpression(e, 0)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR.ProductExpression)
-        self.assertIs(m.mp, temp[1].arg(1).arg(0))      # Reciprocal
+        self.assertIs(type(temp[1]), EXPR.DivisionExpression)
+        self.assertIs(m.mp, temp[1].arg(1))      # Reciprocal
         self.assertIs(e.arg(1), temp[1].arg(0))
 
         e = m.v[t] == m.mp * m.dv[t]
         temp = _check_productexpression(e, 1)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR.ProductExpression)
-        self.assertIs(m.mp, temp[1].arg(1).arg(0))      # Reciprocal
+        self.assertIs(type(temp[1]), EXPR.DivisionExpression)
+        self.assertIs(m.mp, temp[1].arg(1))      # Reciprocal
         self.assertIs(e.arg(0), temp[1].arg(0))
 
         # Check multiplication by var
         e = m.y * m.dv[t] / m.z == m.v[t]
         temp = _check_productexpression(e, 0)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR.ProductExpression)
+        self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(e.arg(1), temp[1].arg(0).arg(0))
         self.assertIs(m.z,        temp[1].arg(0).arg(1))
 
         e = m.v[t] == m.y * m.dv[t] / m.z
         temp = _check_productexpression(e, 1)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR.ProductExpression)
+        self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(e.arg(0), temp[1].arg(0).arg(0))
         self.assertIs(m.z, temp[1].arg(0).arg(1))
 
@@ -1016,16 +1016,16 @@ class TestExpressionCheckers(unittest.TestCase):
         e = m.y / (m.dv[t] * m.z) == m.mp
         temp = _check_productexpression(e, 0)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR.ProductExpression)
+        self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(m.y,        temp[1].arg(0))
-        self.assertIs(e.arg(1), temp[1].arg(1).arg(0).arg(0))
+        self.assertIs(e.arg(1), temp[1].arg(1).arg(0))
 
         e = m.mp == m.y / (m.dv[t] * m.z)
         temp = _check_productexpression(e, 1)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR.ProductExpression)
+        self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(m.y,        temp[1].arg(0))
-        self.assertIs(e.arg(0), temp[1].arg(1).arg(0).arg(0))
+        self.assertIs(e.arg(0), temp[1].arg(1).arg(0))
         
         # Check expression with no DerivativeVar
         e = m.v[t] * m.y / m.z == m.v[t] * m.y / m.z
@@ -1100,7 +1100,7 @@ class TestExpressionCheckers(unittest.TestCase):
         e = 5 * m.dv[t] + 5 * m.y - m.z == m.v[t]
         temp = _check_viewsumexpression(e, 0)
         self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(type(temp[1]), EXPR.ProductExpression)
+        self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         self.assertIs(type(temp[1].arg(0).arg(0)), EXPR.GetItemExpression)
         self.assertIs(m.y, temp[1].arg(0).arg(1).arg(1))

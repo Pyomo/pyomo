@@ -1622,7 +1622,7 @@ class ScenarioTree(object):
                 scenario_leaf_node_name = value(scenario_leaf_ids[scenario_name])
                 if scenario_leaf_node_name not in self._tree_node_map:
                     raise ValueError("Uknown tree node=%s specified as leaf "
-                                     "of scenario=%s"
+                                     "of scenario=%s" %
                                      (scenario_leaf_node_name, scenario_name))
                 else:
                     new_scenario._leaf_node = \

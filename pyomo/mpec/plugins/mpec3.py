@@ -16,6 +16,7 @@ from pyomo.core.base import (Transformation,
                              Block,
                              SortComponents)
 from pyomo.mpec.complementarity import Complementarity
+from pyomo.gdp import Disjunct
 
 from six import iterkeys
 
@@ -38,12 +39,14 @@ class MPEC3_Transformation(Transformation):
         #
         # Iterate over the model finding Complementarity components
         #
-        for block in instance.block_data_objects(active=True, sort=SortComponents.deterministic):
-            for complementarity in block.component_objects(Complementarity, active=True, descend_into=False):
-                for index in sorted(iterkeys(complementarity)):
-                    _data = complementarity[index]
-                    if not _data.active:
-                        continue
-                    _data.to_standard_form()
-                    #
-                block.reclassify_component_type(complementarity, Block)
+        for complementarity in instance.component_objects(Complementarity, active=True,
+                                                          descend_into=(Block, Disjunct),
+                                                          sort=SortComponents.deterministic):
+            block = complementarity.parent_block()
+            for index in sorted(iterkeys(complementarity)):
+                _data = complementarity[index]
+                if not _data.active:
+                    continue
+                _data.to_standard_form()
+                #
+            block.reclassify_component_type(complementarity, Block)

@@ -99,6 +99,9 @@ def _check_productexpression(expr, i):
         if curr.__class__ is EXPR.ProductExpression:
             stack.append((curr.arg(0), e_))
             stack.append((curr.arg(1), e_))
+        elif curr.__class__ is EXPR.DivisionExpression:
+            stack.append((curr.arg(0), e_))
+            stack.append((curr.arg(1), - e_))
         elif curr.__class__ is EXPR.ReciprocalExpression:
             stack.append((curr.arg(0), - e_))
         elif type(curr) is EXPR.GetItemExpression and \
@@ -459,15 +462,17 @@ class Simulator:
             # determine its order in the indexing sets
             if con.dim() == 0:
                 continue
-            elif con._implicit_subsets is None:
+                
+            conindex = con.index_set()
+            if not hasattr(conindex, 'set_tuple'):
                 # Check if the continuous set is the indexing set
-                if con._index is not contset:
+                if conindex is not contset:
                     continue
                 else:
                     csidx = 0
                     noncsidx = (None,)
             else:
-                temp = con._implicit_subsets
+                temp = conindex.set_tuple
                 dimsum = 0
                 csidx = -1
                 noncsidx = None
@@ -520,13 +525,15 @@ class Simulator:
                 # Case 3: m.p*m.dxdt[t] = RHS
                 if args is None:
                     if type(tempexp.arg(0)) is EXPR.ProductExpression or \
-                       type(tempexp.arg(0)) is EXPR.ReciprocalExpression:
+                       type(tempexp.arg(0)) is EXPR.ReciprocalExpression or \
+                       type(tempexp.arg(0)) is EXPR.DivisionExpression:
                         args = _check_productexpression(tempexp, 0)
 
                 # Case 4: RHS =  m.p*m.dxdt[t]
                 if args is None:
                     if type(tempexp.arg(1)) is EXPR.ProductExpression or \
-                       type(tempexp.arg(1)) is EXPR.ReciprocalExpression:
+                       type(tempexp.arg(1)) is EXPR.ReciprocalExpression or \
+                       type(tempexp.arg(1)) is EXPR.DivisionExpression:
                         args = _check_productexpression(tempexp, 1)
 
                 # Case 5: m.dxdt[t] + sum(ELSE) = RHS
@@ -585,7 +592,7 @@ class Simulator:
                         "DerivativeVar %s" % str(dvkey))
             
                 derivlist.append(dvkey)
-                if self._intpackage is 'casadi':
+                if self._intpackage == 'casadi':
                     rhsdict[dvkey] = substitute_pyomo2casadi(RHS, templatemap)
                 else:
                     rhsdict[dvkey] = convert_pyomo2scipy(RHS, templatemap)
@@ -754,7 +761,7 @@ class Simulator:
             valid_integrators = ['vode', 'zvode', 'lsoda', 'dopri5', 'dop853']
             if integrator is None:
                 integrator = 'lsoda'
-            elif integrator is 'odeint':
+            elif integrator == 'odeint':
                 integrator = 'lsoda'
         else:
             # Specify the casadi integrator to use for simulation.
@@ -818,7 +825,7 @@ class Simulator:
                 else:
                     self._simalgvars.append(alg)
 
-            if self._intpackage is 'scipy' and len(self._simalgvars) != 0:
+            if self._intpackage == 'scipy' and len(self._simalgvars) != 0:
                 raise DAE_Error("When simulating with Scipy you must "
                                 "provide values for all parameters "
                                 "and algebraic variables that are indexed "
@@ -871,7 +878,7 @@ class Simulator:
                 initcon.append(value(v._base[vidx]))
 
         # Call the integrator
-        if self._intpackage is 'scipy':
+        if self._intpackage == 'scipy':
             if not scipy_available:
                 raise ValueError("The scipy module is not available. "
                                   "Cannot simulate the model.")

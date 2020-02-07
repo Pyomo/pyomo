@@ -329,8 +329,8 @@ class Expression(IndexedComponent):
     # expensive to extract the contents of an expression.
     #
     def extract_values(self):
-        return dict((key, expression_data.expr) \
-                    for key, expression_data in iteritems(self))
+        return {key:expression_data.expr
+                for key, expression_data in iteritems(self)}
 
     #
     # takes as input a (index, value) dictionary for updating this
