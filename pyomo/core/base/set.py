@@ -2314,6 +2314,9 @@ class _InfiniteRangeSetData(_SetData):
     def domain(self):
         return Reals
 
+    def clear(self):
+        self._ranges = ()
+
     def ranges(self):
         return iter(self._ranges)
 
@@ -2683,6 +2686,14 @@ class RangeSet(Component):
                         "Set %s" % (val, self.name))
 
         timer.report()
+
+    #
+    # Until the time that we support indexed RangeSet objects, we will
+    # mock up some of the IndexedComponent API for consistency with the
+    # previous (<=5.6.7) implementation.
+    #
+    def dim(self):
+        return 0
 
 
     def _pprint(self):
