@@ -450,13 +450,24 @@ class _SetData(_SetDataBase):
         IndexedComponent, which provides an iterator (over the
         underlying indexing set).
         """
-        raise AttributeError("__iter__ is not available for non-finite Sets")
+        raise TypeError(
+            "'%s' object is not iterable (non-finite Set '%s' "
+            "is not iterable)" % (self.__class__.__name__, self.name))
 
     def __eq__(self, other):
         if self is other:
             return True
+        # Special case: non-finite range sets that only contain finite
+        # ranges (or no ranges).  We will re-generate non-finite sets to
+        # make sure we get an accurate "finiteness" flag.
         if hasattr(other, 'isfinite'):
             other_isfinite = other.isfinite()
+            if not other_isfinite:
+                try:
+                    other = RangeSet(ranges=list(other.ranges()))
+                    other_isfinite = other.isfinite()
+                except TypeError:
+                    pass
         elif hasattr(other, '__contains__'):
             # we assume that everything that does not implement
             # isfinite() is a discrete set.
@@ -469,6 +480,11 @@ class _SetData(_SetDataBase):
                 pass
         else:
             return False
+        if not self.isfinite():
+            try:
+                self = RangeSet(ranges=list(self.ranges()))
+            except TypeError:
+                pass
         if self.isfinite():
             if not other_isfinite:
                 return False
@@ -825,8 +841,17 @@ class _SetData(_SetDataBase):
         -------
         bool : True if this set is a subset of `other`
         """
+        # Special case: non-finite range sets that only contain finite
+        # ranges (or no ranges).  We will re-generate non-finite sets to
+        # make sure we get an accurate "finiteness" flag.
         if hasattr(other, 'isfinite'):
             other_isfinite = other.isfinite()
+            if not other_isfinite:
+                try:
+                    other = RangeSet(ranges=list(other.ranges()))
+                    other_isfinite = other.isfinite()
+                except TypeError:
+                    pass
         elif hasattr(other, '__contains__'):
             # we assume that everything that does not implement
             # isfinite() is a discrete set.
@@ -841,6 +866,11 @@ class _SetData(_SetDataBase):
             # Raise an exception consistent with Python's set.issubset()
             raise TypeError(
                 "'%s' object is not iterable" % (type(other).__name__,))
+        if not self.isfinite():
+            try:
+                self = RangeSet(ranges=list(self.ranges()))
+            except TypeError:
+                pass
         if self.isfinite():
             for x in self:
                 if x not in other:
@@ -861,8 +891,28 @@ class _SetData(_SetDataBase):
             return True
 
     def issuperset(self, other):
+        """Test if this Set is a superset of `other`
+
+        Parameters
+        ----------
+            other : ``Set`` or ``iterable``
+                The Set or iterable object to compare this Set against
+
+        Returns
+        -------
+        bool : True if this set is a superset of `other`
+        """
+        # Special case: non-finite range sets that only contain finite
+        # ranges (or no ranges).  We will re-generate non-finite sets to
+        # make sure we get an accurate "finiteness" flag.
         if hasattr(other, 'isfinite'):
             other_isfinite = other.isfinite()
+            if not other_isfinite:
+                try:
+                    other = RangeSet(ranges=list(other.ranges()))
+                    other_isfinite = other.isfinite()
+                except TypeError:
+                    pass
         elif hasattr(other, '__contains__'):
             # we assume that everything that does not implement
             # isfinite() is a discrete set.
@@ -888,7 +938,12 @@ class _SetData(_SetDataBase):
                 except TypeError:
                     return False
             return True
-        elif self.isfinite():
+        if not self.isfinite():
+            try:
+                self = RangeSet(ranges=list(self.ranges()))
+            except TypeError:
+                pass
+        if self.isfinite():
             return False
         else:
             return other.issubset(self)
@@ -3584,7 +3639,7 @@ class _AnySet(_SetData, Set):
 
     # We need to implement this to override __len__ from IndexedComponent
     def __len__(self):
-        raise AttributeError("object of type 'Any' has no len()")
+        raise TypeError("object of type 'Any' has no len()")
 
     @property
     def dimen(self):

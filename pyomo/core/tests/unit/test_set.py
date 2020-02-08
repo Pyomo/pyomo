@@ -291,6 +291,34 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertFalse(Reals.isdiscrete())
         self.assertFalse(Reals.isfinite())
 
+        self.assertEqual(Reals.dim(), 0)
+        with self.assertRaisesRegex(
+                TypeError, "object of type 'GlobalSet' has no len\(\)"):
+            len(Reals)
+        with self.assertRaisesRegex(
+                TypeError, "'GlobalSet' object is not iterable "
+                "\(non-finite Set 'Reals' is not iterable\)"):
+            list(Reals)
+        self.assertEqual(list(Reals.ranges()), [NR(None,None,0)])
+        self.assertEqual(Reals.bounds(), (None,None))
+        self.assertEqual(Reals.dimen, 1)
+
+        tmp = RealSet()
+        self.assertFalse(tmp.isdiscrete())
+        self.assertFalse(tmp.isfinite())
+        self.assertEqual(Reals, tmp)
+        self.assertEqual(tmp, Reals)
+        tmp.clear()
+        self.assertEqual(EmptySet, tmp)
+        self.assertEqual(tmp, EmptySet)
+
+        self.assertEqual(tmp.domain, Reals)
+        self.assertEqual(str(Reals), 'Reals')
+        self.assertEqual(str(tmp), 'Reals')
+        b = ConcreteModel()
+        b.tmp = tmp
+        self.assertEqual(str(tmp), 'tmp')
+
     def test_Integers(self):
         self.assertIn(0, Integers)
         self.assertNotIn(1.5, Integers)
@@ -301,6 +329,34 @@ class InfiniteSetTester(unittest.TestCase):
 
         self.assertTrue(Integers.isdiscrete())
         self.assertFalse(Integers.isfinite())
+
+        self.assertEqual(Integers.dim(), 0)
+        with self.assertRaisesRegex(
+                TypeError, "object of type 'GlobalSet' has no len\(\)"):
+            len(Integers)
+        with self.assertRaisesRegex(
+                TypeError, "'GlobalSet' object is not iterable "
+                "\(non-finite Set 'Integers' is not iterable\)"):
+            list(Integers)
+        self.assertEqual(list(Integers.ranges()), [NR(0,None,1),NR(0,None,-1)])
+        self.assertEqual(Integers.bounds(), (None,None))
+        self.assertEqual(Integers.dimen, 1)
+
+        tmp = IntegerSet()
+        self.assertTrue(tmp.isdiscrete())
+        self.assertFalse(tmp.isfinite())
+        self.assertEqual(Integers, tmp)
+        self.assertEqual(tmp, Integers)
+        tmp.clear()
+        self.assertEqual(EmptySet, tmp)
+        self.assertEqual(tmp, EmptySet)
+
+        self.assertEqual(tmp.domain, Reals)
+        self.assertEqual(str(Integers), 'Integers')
+        self.assertEqual(str(tmp), 'Integers')
+        b = ConcreteModel()
+        b.tmp = tmp
+        self.assertEqual(str(tmp), 'tmp')
 
     def test_Any(self):
         self.assertIn(0, Any)
@@ -315,11 +371,11 @@ class InfiniteSetTester(unittest.TestCase):
 
         self.assertEqual(Any.dim(), 0)
         with self.assertRaisesRegex(
-                AttributeError, "object of type 'Any' has no len()"):
+                TypeError, "object of type 'Any' has no len\(\)"):
             len(Any)
         with self.assertRaisesRegex(
-                AttributeError,
-                "__iter__ is not available for non-finite Sets"):
+                TypeError, "'GlobalSet' object is not iterable "
+                "\(non-finite Set 'Any' is not iterable\)"):
             list(Any)
         self.assertEqual(list(Any.ranges()), [AnyRange()])
         self.assertEqual(Any.bounds(), (None,None))
@@ -423,6 +479,17 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertTrue(PositiveIntegers.issubset(Integers))
         self.assertFalse(PositiveIntegers.issuperset(Integers))
         self.assertFalse(PositiveIntegers.isdisjoint(Integers))
+
+        # Special case: cleared non-finite rangesets
+        tmp = IntegerSet()
+        tmp.clear()
+        self.assertTrue(tmp.issubset(EmptySet))
+        self.assertTrue(tmp.issuperset(EmptySet))
+        self.assertTrue(tmp.isdisjoint(EmptySet))
+
+        self.assertTrue(EmptySet.issubset(tmp))
+        self.assertTrue(EmptySet.issuperset(tmp))
+        self.assertTrue(EmptySet.isdisjoint(tmp))
 
 
     def test_equality(self):
@@ -3008,13 +3075,13 @@ class TestGlobalSets(unittest.TestCase):
 
     def test_iteration(self):
         with self.assertRaisesRegexp(
-                AttributeError,
-                "__iter__ is not available for non-finite Sets"):
+                TypeError, "'GlobalSet' object is not iterable "
+                "\(non-finite Set 'Reals' is not iterable\)"):
             iter(Reals)
 
         with self.assertRaisesRegexp(
-                AttributeError,
-                "__iter__ is not available for non-finite Sets"):
+                TypeError, "'GlobalSet' object is not iterable "
+                "\(non-finite Set 'Integers' is not iterable\)"):
             iter(Integers)
 
         self.assertEqual(list(iter(Binary)), [0,1])
@@ -4499,10 +4566,14 @@ class TestAbstractSetAPI(unittest.TestCase):
             # __contains__
             None in s
 
-        self.assertFalse(s == m.I)
-        self.assertFalse(m.I == s)
-        self.assertTrue(s != m.I)
-        self.assertTrue(m.I != s)
+        with self.assertRaises(DeveloperError):
+            s == m.I
+        with self.assertRaises(DeveloperError):
+            m.I == s
+        with self.assertRaises(DeveloperError):
+            s != m.I
+        with self.assertRaises(DeveloperError):
+            m.I != s
 
         with self.assertRaises(DeveloperError):
             str(s)
@@ -4524,9 +4595,11 @@ class TestAbstractSetAPI(unittest.TestCase):
 
         with self.assertRaises(DeveloperError):
             s.issuperset(m.I)
-        self.assertFalse(m.I.issuperset(s))
+        with self.assertRaises(DeveloperError):
+            m.I.issuperset(s)
 
-        self.assertFalse(s.issubset(m.I))
+        with self.assertRaises(DeveloperError):
+            s.issubset(m.I)
         with self.assertRaises(DeveloperError):
             m.I.issubset(s)
 
@@ -4562,13 +4635,15 @@ class TestAbstractSetAPI(unittest.TestCase):
         self.assertIs(type(s * m.I), SetProduct_InfiniteSet)
         self.assertIs(type(m.I * s), SetProduct_InfiniteSet)
 
-        self.assertFalse(s < m.I)
         with self.assertRaises(DeveloperError):
-            self.assertFalse(m.I < s)
+            s < m.I
+        with self.assertRaises(DeveloperError):
+            m.I < s
 
         with self.assertRaises(DeveloperError):
-            self.assertFalse(s > m.I)
-        self.assertFalse(m.I > s)
+            s > m.I
+        with self.assertRaises(DeveloperError):
+            m.I > s
 
     def test_FiniteMixin(self):
         # This tests an anstract finite set API
