@@ -1214,7 +1214,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
 
     def add(self, *values):
         count = 0
-        parent = self.parent_block()
+        _block = self.parent_block()
         for value in values:
             if normalize_index.flatten:
                 _value = normalize_index(value)
@@ -1246,12 +1246,12 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
                                 % (value, self.name, exc[0].__name__, exc[1]))
 
             if self._filter is not None:
-                if not self._filter(parent, _value):
+                if not self._filter(_block, _value):
                     continue
 
             if self._validate is not None:
                 try:
-                    flag = self._validate(parent, _value)
+                    flag = self._validate(_block, _value)
                 except:
                     logger.error(
                         "Exception raised while validating element '%s' "
@@ -2019,7 +2019,7 @@ class Set(IndexedComponent):
             for val in val_iter:
                 if val is Set.End:
                     break
-                if _filter is None or _filter(self, val):
+                if _filter is None or _filter(_block, val):
                     obj.add(val)
         # We defer adding the filter until now so that add() doesn't
         # call it a second time.
@@ -2602,9 +2602,9 @@ class RangeSet(Component):
                     "specify 'finite=False' when declaring the RangeSet"
                     % (r,))
 
-        parent = self.parent_block()
+        _block = self.parent_block()
         if self._init_bounds is not None:
-            bnds = self._init_bounds(parent, None)
+            bnds = self._init_bounds(_block, None)
             tmp = []
             for r in ranges:
                 tmp.extend(r.range_intersection(bnds.ranges()))
@@ -2619,7 +2619,7 @@ class RangeSet(Component):
                     "non-finite RangeSet component (%s)" % (self.name,))
 
             try:
-                _filter = Initializer(self._init_filter(parent, None))
+                _filter = Initializer(self._init_filter(_block, None))
                 if _filter.constant():
                     # _init_filter was the actual filter function; use it.
                     _filter = self._init_filter
@@ -2629,17 +2629,16 @@ class RangeSet(Component):
                 # should have been passed directly to the underlying sets.
                 _filter = self._init_filter
 
-            # If this is a finite set, then we can go adead and filter
+            # If this is a finite set, then we can go ahead and filter
             # all the ranges.  This allows pprint and len to be correct,
             # without special handling
             new_ranges = []
             old_ranges = list(self.ranges())
             old_ranges.reverse()
-            block = self.parent_component()
             while old_ranges:
                 r = old_ranges.pop()
                 for i,val in enumerate(_FiniteRangeSetData._range_gen(r)):
-                    if not _filter(block, val):
+                    if not _filter(_block, val):
                         split_r = r.range_difference((NumericRange(val,val,0),))
                         if len(split_r) == 2:
                             new_ranges.append(split_r[0])
@@ -2662,7 +2661,7 @@ class RangeSet(Component):
                     "non-finite RangeSet component (%s)" % (self.name,))
 
             try:
-                _validate = Initializer(self._init_validate(parent, None))
+                _validate = Initializer(self._init_validate(_block, None))
                 if _validate.constant():
                     # _init_validate was the actual validate function; use it.
                     _validate = self._init_validate
@@ -2674,7 +2673,7 @@ class RangeSet(Component):
 
             for val in self:
                 try:
-                    flag = _validate(parent, val)
+                    flag = _validate(_block, val)
                 except:
                     logger.error(
                         "Exception raised while validating element '%s' "
