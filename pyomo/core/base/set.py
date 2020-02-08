@@ -224,7 +224,7 @@ class SetInitializer(InitializerBase):
         if self._set is None:
             return Any
         else:
-            return self._set(parent, idx)
+            return process_setarg(self._set(parent, idx))
 
     def constant(self):
         return self._set is None or self._set.constant()
