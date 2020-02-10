@@ -65,7 +65,14 @@ jobs:
         Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
         Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS' -Wait
         cd gams\apifiles\Python\
-        $env:py_ver = (Get-Command python).FileVersionInfo.FileVersion
+        try
+        {
+            $env:py_ver = (Get-Command python3).FileVersionInfo.FileVersion
+        }
+        catch
+        {
+            $env:py_ver = (Get-Command python).FileVersionInfo.FileVersion
+        }
         Write-Host ("Received Python version: " + $env:py_ver)
         if(!$env:py_ver) {
           cd api
@@ -94,12 +101,26 @@ jobs:
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
         git clone --quiet https://github.com/PyUtilib/pyutilib.git
         cd pyutilib
-        python setup.py develop
+        try
+        {
+            python3 setup.py develop
+        }
+        catch
+        {
+            python setup.py develop
+        }
         cd ..
         Write-Host ("")
         Write-Host ("Install Pyomo...")
         Write-Host ("")
-        python setup.py develop
+        try
+        {
+            python3 setup.py develop
+        }
+        catch
+        {
+            python setup.py develop
+        }
         Write-Host ("")
         Write-Host "Pyomo download-extensions"
         Write-Host ("")
