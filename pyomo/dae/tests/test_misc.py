@@ -23,7 +23,6 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.dae import *
 from pyomo.dae.misc import *
 from pyomo.core.kernel.component_map import ComponentMap
-import pdb
 
 currdir = dirname(abspath(__file__)) + os.sep
 
