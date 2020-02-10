@@ -55,9 +55,9 @@ jobs:
         }
         catch
         {
-            Write-Host ("####################################################")
-            Write-Host ("WARNING: Pynumero_libraries is not available for Python ${{matrix.python-version}}")
-            Write-Host ("####################################################")
+            Write-Host ("##############################################################################")
+            Write-Host ("WARNING: Python ${{matrix.python-version}}: Pynumero_libraries not available. ")
+            Write-Host ("##############################################################################")
         }
         Write-Host ("")
         Write-Host ("Installing GAMS")
@@ -66,6 +66,7 @@ jobs:
         Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS' -Wait
         cd gams\apifiles\Python\
         $env:py_ver = (Get-Command python).FileVersionInfo.FileVersion
+        Write-Host ("Received Python version: " + $env:py_ver)
         if(!$env:py_ver) {
           cd api
           python setup.py -q install
@@ -76,10 +77,13 @@ jobs:
           cd api_37
           python setup.py -q install -noCheck
         }else { 
-          Write-Host ("WARNING: GAMS Python API bindings not available for Python " + ${{matrix.python-version}})
-          cd api_34
-          python setup.py -q install -noCheck
+          Write-Host ("########################################################################")
+          Write-Host ("WARNING: Python ${{matrix.python-version}}: GAMS Bindings not supported.")
+          Write-Host ("########################################################################")
         }
+        Write-Host ("")
+        Write-Host ("New Shell Environment: ")
+        gci env: | Sort Name
     - name: Install Pyomo and extensions
       shell: pwsh
       run: |
@@ -100,11 +104,12 @@ jobs:
         Write-Host "Pyomo download-extensions"
         Write-Host ("")
         Invoke-Expression "pyomo download-extensions"
+
     - name: Run nightly tests with test.pyomo
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
-        Write-Host "Setup and run nosetests..."
+        Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
         $env:PATH += ';' + $(Get-Location).Path + "\gams"
         $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
