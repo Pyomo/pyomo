@@ -177,8 +177,9 @@ def build_model():
             return model.storageTankSize_log[j] >= log(model.StorageTankSizeFactor[j]) + \
                 model.batchSize_log[i, j+1]
         def batch_size_rule(disjunct, i):
-            return -log(model.StorageTankSizeFactorByProd[i,j]) <= model.batchSize_log[i,j] - \
-                model.batchSize_log[i, j+1] <= log(model.StorageTankSizeFactorByProd[i,j])
+            return inequality(-log(model.StorageTankSizeFactorByProd[i,j]),
+                              model.batchSize_log[i,j] - model.batchSize_log[i, j+1],
+                              log(model.StorageTankSizeFactorByProd[i,j]))
         def no_batch_rule(disjunct, i):
             return model.batchSize_log[i,j] - model.batchSize_log[i,j+1] == 0
 
@@ -220,13 +221,11 @@ def build_model():
         return sum(model.inPhase[j,k] for k in model.PARALLELUNITS) == 1
     model.units_in_phase_xor = Constraint(model.STAGES, rule=units_in_phase_xor_rule)
 
+    return model.create_instance('batchProcessing1.dat')
 
-    # instance = model.create_instance('batchProcessing1.dat')
-    # solver = SolverFactory('baron')
-    # TransformationFactory('gdp.bigm').apply_to(instance)
-    # TransformationFactory('core.add_slack_variables').apply_to(instance)
-    # results = solver.solve(instance)
-    # instance.display()
-    # instance.solutions.store_to(results)
-    # print results
-    return model
+
+if __name__ == "__main__":
+    m = build_model()
+    TransformationFactory('gdp.bigm').apply_to(m)
+    SolverFactory('gams').solve(m, solver='baron', tee=True, add_options=['option optcr=1e-6;'])
+    m.min_cost.display()

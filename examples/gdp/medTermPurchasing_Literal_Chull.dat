@@ -71,15 +71,11 @@ param SupplyAndDemandUBs :=
 #    13  6   5
 #;
 
-param DemandLB: 
+param DemandLB:
         1   2   3   4   5   6 :=
     12  5   5   5   5   5   5
     13  5   5   5   5   5   5 ;
 
-# TODO you are apparently here!!
-param OperatingCosts :=
-        1   2   3   4   5   6 :=
-    
 
 param OperatingCosts :=
     1   1   0.6

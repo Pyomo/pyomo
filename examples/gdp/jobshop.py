@@ -2,13 +2,13 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.gdp import *
 
 #
@@ -30,7 +30,6 @@ from pyomo.gdp import *
 #
 
 def build_model():
-
     model = AbstractModel()
 
     model.JOBS = Set(ordered=True)
@@ -79,5 +78,15 @@ def build_model():
 
     # minimize makespan
     model.makespan = Objective(expr=model.ms)
-
     return model
+
+
+def build_small_concrete():
+    return build_model().create_instance('jobshop-small.dat')
+
+
+if __name__ == "__main__":
+    m = build_small_concrete()
+    TransformationFactory('gdp.bigm').apply_to(m)
+    SolverFactory('gams').solve(m, solver='baron', tee=True, add_options=['option optcr=1e-6;'])
+    m.makespan.display()
