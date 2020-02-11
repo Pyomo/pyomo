@@ -21,7 +21,6 @@ from pyomo.core.base.block import SortComponents
 from pyomo.common.log import LoggingIntercept
 
 from six import iterkeys, itervalues, iteritems, StringIO
-from collections import Counter
 
 logger = logging.getLogger('pyomo.dae')
 
