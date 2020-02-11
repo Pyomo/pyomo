@@ -21,6 +21,7 @@ from pyomo.core.base.block import SortComponents
 from pyomo.common.log import LoggingIntercept
 
 from six import iterkeys, itervalues, iteritems, StringIO
+from collections import Counter
 
 logger = logging.getLogger('pyomo.dae')
 
@@ -620,14 +621,20 @@ def get_index_set_except(comp, *sets):
         info['index_getter'] = (lambda incomplete_index, newval: newval)
         return info
 
-    # Otherwise need to know the location of each set within comp's index set
+    set_tuple = comp.index_set().set_tuple
+    counter = Counter(set_tuple)
+
+    for s in sets:
+        if counter[s] != 1:
+            msg = 'Cannot omit sets that appear multiple times'
+            raise Exception(msg)
+
+    # Need to know the location of each set within comp's index set
     # location will map:
     #     location_in_comp_index_set -> location_in_sets
-
-    # location needs special behavior for a single indexing set
     location = {}
     other_ind_sets = []
-    for ind_loc, ind_set in enumerate(comp.index_set().set_tuple):
+    for ind_loc, ind_set in enumerate(set_tuple):
         found_set = False
         for s_loc, s_set in enumerate(sets):
             if ind_set is s_set:
@@ -661,8 +668,6 @@ def get_index_set_except(comp, *sets):
         set_except = other_ind_sets[0].cross(*other_ind_sets[1:])
     else:
         raise ValueError('Did not expect this to happen')
-    # This may break horribly for components indexed multiple times by the same
-    # set. (Is this possible?)
 
     index_getter = (lambda incomplete_index, *newvals:
             _complete_index(location, incomplete_index, *newvals))
@@ -682,7 +687,7 @@ def _complete_index(loc, index, *newvals):
         index = (index,)
     keys = sorted(loc.keys())
     if len(keys) != len(newvals):
-        raise RuntimeError('Wrong number of values to complete index')
+        raise Exception('Wrong number of values to complete index')
     for i in sorted(loc.keys()):
         # Correctness relies on fact that indices i are visited in order 
         # from least to greatest.
