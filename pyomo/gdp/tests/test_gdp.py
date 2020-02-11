@@ -17,6 +17,8 @@ import sys
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir,'..','..','..','examples', 'gdp'))
+sys.path.append(exdir)
+from jobshop import build_model
 
 try:
     import new
@@ -31,8 +33,6 @@ from pyomo.environ import *
 
 from six import iteritems
 
-#DEBUG
-from nose.tools import set_trace
 
 try:
     import yaml
@@ -79,47 +79,28 @@ class CommonTests:
     #__metaclass__ = Labeler
 
     solve=True
-
+    
     def pyomo(self, *args, **kwds):
-        if self.solve:
-            args=['solve']+list(args)
-            if 'solver' in kwds:
-                args.append('--solver='+kwds['solver'])
-            else:
-                args.append('--solver=glpk')
-            args.append('--save-results=result.yml')
-        else:
-            args=['convert']+list(args)
-        if 'preprocess' in kwds:
-            pp = kwds['preprocess']
-            if pp == 'bigm':
-                args.append('--transform=gdp.bigm')
-                # ESJ: HACK for now: also apply the reclassify
-                # transformation in this case
-                args.append('--transform=gdp.reclassify')
-            elif pp == 'chull':
-                args.append('--transform=gdp.chull')
-                # ESJ: HACK for now: also apply the reclassify
-                # transformation in this case
-                args.append('--transform=gdp.reclassify')
-            elif pp == 'cuttingplane':
-                args.append('--transform=gdp.cuttingplane')
-        args.append('-c')
-        args.append('--symbolic-solver-labels')
-        os.chdir(currdir)
+        m_jobshop = build_model()
+        # This is awful, but it's the convention of the old method, so it will
+        # work for now
+        datafile = args[0]
+        m = m_jobshop.create_instance(join(exdir, datafile))
 
-        print('***')
-        #if pproc is not None:
-        #    pproc.activate()
-        #    print("Activating " + kwds['preprocess'])
-        #else:
-        #    print("ERROR: no transformation activated: " + pp)
-        print(' '.join(args))
-        output = main.main(args)
-        #if pproc is not None:
-        #    pproc = None
-        print('***')
-        return output
+        if 'preprocess' in kwds:
+            transformation = kwds['preprocess']
+
+        TransformationFactory('gdp.%s' % transformation).apply_to(m)
+        m.write('%s_result.lp' % self.problem,
+                io_options={'symbolic_solver_labels': True})
+
+        if self.solve:
+            solver = 'glpk'
+            if 'solver' in kwds:
+                solver = kwds['solver']
+            results = SolverFactory(solver).solve(m)
+            m.solutions.store_to(results)
+            results.write(filename='result.yml')
 
     def check(self, problem, solver):
         pass
@@ -145,8 +126,7 @@ class CommonTests:
     def test_bigm_jobshop_small(self):
         self.problem='test_bigm_jobshop_small'
         # Run the small jobshop example using the BigM transformation
-        self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop-small.dat'),
-                    preprocess='bigm' )
+        self.pyomo('jobshop-small.dat', preprocess='bigm')
         # ESJ: TODO: Right now the indicator variables have names they won't
         # have when they don't have to be reclassified. So I think this LP file
         # will need to change again.
@@ -155,8 +135,7 @@ class CommonTests:
     def test_bigm_jobshop_large(self):
         self.problem='test_bigm_jobshop_large'
         # Run the large jobshop example using the BigM transformation
-        self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop.dat'),
-                    preprocess='bigm')
+        self.pyomo('jobshop.dat', preprocess='bigm')
         # ESJ: TODO: this LP file also will need to change with the
         # indicator variable change.
         self.check( 'jobshop_large', 'bigm' )
@@ -172,31 +151,27 @@ class CommonTests:
     def test_chull_jobshop_small(self):
         self.problem='test_chull_jobshop_small'
         # Run the small jobshop example using the CHull transformation
-        self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop-small.dat'),
-                    preprocess='chull')
+        self.pyomo('jobshop-small.dat', preprocess='chull')
         self.check( 'jobshop_small', 'chull' )
 
     def test_chull_jobshop_large(self):
         self.problem='test_chull_jobshop_large'
         # Run the large jobshop example using the CHull transformation
-        self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop.dat'),
-                    preprocess='chull')
+        self.pyomo('jobshop.dat', preprocess='chull')
         self.check( 'jobshop_large', 'chull' )
 
     @unittest.skip("cutting plane LP file tests are too fragile")
     @unittest.skipIf('gurobi' not in solvers, 'Gurobi solver not available')
     def test_cuttingplane_jobshop_small(self):
         self.problem='test_cuttingplane_jobshop_small'
-        self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop-small.dat'),
-                    preprocess='cuttingplane')
+        self.pyomo('jobshop-small.dat', preprocess='cuttingplane')
         self.check( 'jobshop_small', 'cuttingplane' )
 
     @unittest.skip("cutting plane LP file tests are too fragile")
     @unittest.skipIf('gurobi' not in solvers, 'Gurobi solver not available')
     def test_cuttingplane_jobshop_large(self):
         self.problem='test_cuttingplane_jobshop_large'
-        self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop.dat'),
-                    preprocess='cuttingplane')
+        self.pyomo('jobshop.dat', preprocess='cuttingplane')
         self.check( 'jobshop_large', 'cuttingplane' )
 
 
