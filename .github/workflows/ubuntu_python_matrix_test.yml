@@ -31,10 +31,19 @@ jobs:
         echo ""
         echo "Install GAMS..."
         echo ""
-        wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/linux/linux_x64_64_sfx.exe
+        wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/linux/linux_x64_64_sfx.exe
         chmod +x linux_x64_64_sfx.exe
         ./linux_x64_64_sfx.exe -q -d gams
-        PATH=$PATH:/gams/gams24.3_linux_x64_64_sfx
+        cd gams/gams29.1_linux_x64_64_sfx/apifiles/Python/
+        py_ver=$(python -c 'import sys;print("%s%s" % sys.version_info[:2])')
+        gams_ver=api
+        for ver in api_*; do
+            if test ${ver:4} -le $py_ver; then
+                gams_ver=$ver
+            fi  
+        done
+        cd $gams_ver
+        python setup.py -q install -noCheck
     - name: Install Pyomo and extensions
       run: |
         echo "Clone Pyomo-model-libraries..."
@@ -55,6 +64,8 @@ jobs:
     - name: Run nightly tests with test.pyomo
       run: |
         echo "Run test.pyomo..."
+        export PATH=$PATH:$(pwd)/gams/gams29.1_linux_x64_64_sfx/
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/gams/gams29.1_linux_x64_64_sfx/
         pip install nose
         KEY_JOB=1
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
