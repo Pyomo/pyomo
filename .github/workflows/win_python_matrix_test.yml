@@ -31,9 +31,6 @@ jobs:
         Write-Host ("")
         Invoke-Expression "conda config --set always_yes yes"
         Invoke-Expression "conda config --set auto_update_conda false"
-        conda info
-        conda config --show-sources
-        conda list --show-channel-urls
         Write-Host ("")
         Write-Host ("Setting Conda Env Vars... ")
         Write-Host ("")
@@ -45,7 +42,7 @@ jobs:
         $env:MINICONDA_EXTRAS=""
         $env:MINICONDA_EXTRAS="numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn "
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + "pymysql pyro4 pint pathos " + $env:MINICONDA_EXTRAS
-        $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk ipopt coincbc"
+        $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk ipopt"
         $env:EXP = $env:CONDAFORGE + $env:ADDITIONAL_CF_PKGS
         Invoke-Expression $env:EXP
         $env:PYNUMERO = $env:CONDAFORGE + " pynumero_libraries"
@@ -64,7 +61,11 @@ jobs:
             conda deactivate
             conda activate test 
         }
-        conda list --show-channel-urls
+        Write-Host ("")
+        Write-Host ("Installing CBC...")
+        Write-Host ("")
+        Invoke-WebRequest -Uri "https://ampl.com/dl/open/cbc/cbc-win64.zip" -Outfile "cbc-win.zip"
+        Expand-Archive -Path .\cbc-win.zip -DestinationPath .\cbc\
         Write-Host ("")
         Write-Host ("Installing GAMS")
         Write-Host ("")
@@ -132,5 +133,6 @@ jobs:
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
         $env:PATH += ';' + $(Get-Location).Path + "\gams"
+        $env:PATH += ';' + $(Get-Location).Path + "\cbc"
         $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
         Invoke-Expression $env:EXP
