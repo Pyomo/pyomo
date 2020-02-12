@@ -1,6 +1,7 @@
 branches:
   only:
     - master
+    - appveyor_build_fix
 
 environment:
 
@@ -26,10 +27,10 @@ environment:
     #  PYTHON: "C:\\Miniconda36-x64"
     #  CATEGORY: "nightly"
 
-    - PYTHON_VERSION: 2.7
-      PYTHON: "C:\\Miniconda"
-      CATEGORY: "nightly"
-      EXTRAS: YES
+    #- PYTHON_VERSION: 2.7
+    #  PYTHON: "C:\\Miniconda"
+    #  CATEGORY: "nightly"
+    #  EXTRAS: YES
 
     #- PYTHON_VERSION: 3.4
     #  PYTHON: "C:\\Miniconda34-x64"
@@ -41,14 +42,14 @@ environment:
       CATEGORY: "nightly"
       EXTRAS: YES
 
-    - PYTHON_VERSION: 3.6
-      PYTHON: "C:\\Miniconda36"
-      CATEGORY: "nightly"
-      EXTRAS: YES
+    #- PYTHON_VERSION: 3.6
+    #  PYTHON: "C:\\Miniconda36"
+    #  CATEGORY: "nightly"
+    #  EXTRAS: YES
 
-    - PYTHON_VERSION: 3.7
-      PYTHON: "C:\\Miniconda37"
-      CATEGORY: "nightly"
+    #- PYTHON_VERSION: 3.7
+    #  PYTHON: "C:\\Miniconda37"
+    #  CATEGORY: "nightly"
       # [191115]: disable extras because of installation dependency 
       # issues with Miniconda 3.7 on appveyor
       #EXTRAS: YES
