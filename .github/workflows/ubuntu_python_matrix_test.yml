@@ -34,7 +34,7 @@ jobs:
         chmod +x linux_x64_64_sfx.exe
         ./linux_x64_64_sfx.exe -q -d gams
         cd gams/gams29.1_linux_x64_64_sfx/apifiles/Python/
-        y_ver=$(python -c 'import sys;print("%s%s" % sys.version_info[:2])')
+        py_ver=$(python -c 'import sys;print("%s%s" % sys.version_info[:2])')
         gams_ver=api
         for ver in api_*; do
             if test ${ver:4} -le $py_ver; then
