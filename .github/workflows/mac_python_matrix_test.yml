@@ -42,20 +42,18 @@ jobs:
         chmod +x osx_x64_64_sfx.exe
         ./osx_x64_64_sfx.exe -q -d gams
         cd gams/gams29.1_osx_x64_64_sfx/apifiles/Python/
-        py_ver="$(python --version)"
-        if [[ "$py_ver" == *"2.7"* ]]; then
-          cd api
-          python setup.py -q install
-        elif [[ "$py_ver" == *'3.6'* ]]; then
-          cd api_36
-          python setup.py -q install
-        elif [[ "$py_ver" == *'3.7'* || "$py_ver" == *'3.8'* ]]; then
-          cd api_37
-          python setup.py -q install -noCheck
-        else 
-          cd api_34
-          python setup.py -q install -noCheck
-        fi
+        py_ver=$(python -c 'import sys;print("%s%s" % sys.version_info[:2])')
+        echo $py_ver
+        gams_ver=api
+        for ver in api_*; do
+            echo $ver
+            if test ${ver:4} -le $py_ver; then
+                gams_ver=$ver
+            fi  
+        done
+        echo $gams_ver
+        cd $gams_ver
+        python setup.py -q install -noCheck
     - name: Install Pyomo and extensions
       run: |
         echo "Clone Pyomo-model-libraries..."
