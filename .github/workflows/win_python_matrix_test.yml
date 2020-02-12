@@ -11,7 +11,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false # This flag causes all of the matrix to continue to run, even if one matrix option fails
-      max-parallel: 5
       matrix:
         os: ['windows-latest']
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8] 
@@ -22,12 +21,17 @@ jobs:
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Install Pyomo dependencies
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host ("Current Enviroment variables: ")
         gci env: | Sort Name
+        Write-Host ("")
+        Write-Host ("Update conda, then force it to NOT update itself again...")
+        Write-Host ("")
+        Invoke-Expression "conda config --set always_yes yes"
+        Invoke-Expression "conda config --set auto_update_conda false"
         Write-Host ("")
         Write-Host ("Setting Conda Env Vars... ")
         Write-Host ("")
@@ -42,17 +46,33 @@ jobs:
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk ipopt"
         $env:EXP = $env:CONDAFORGE + $env:ADDITIONAL_CF_PKGS
         Invoke-Expression $env:EXP
+        $env:PYNUMERO = $env:CONDAFORGE + " pynumero_libraries"
+        Write-Host ("")
+        Write-Host ("Try to install Pynumero_libraries...")
+        Write-Host ("")
+        try
+        {
+            Invoke-Expression $env:PYNUMERO
+        }
+        catch
+        {
+            Write-Host ("####################################################")
+            Write-Host ("WARNING: Pynumero_libraries is not available for Python ${{matrix.python-version}}")
+            Write-Host ("####################################################")
+        }
+        Write-Host ("")
         Write-Host ("Installing GAMS")
+        Write-Host ("")
         Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
         Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS'
         $env:PATH += $(Get-Location).Path + "\gams"
+        Write-Host ("")
         Write-Host ("New Shell Environment: ")
         gci env: | Sort Name
-        Write-Host ("")
-        Write-Host ("Update conda, then force it to NOT update itself again...")
-        Write-Host ("")
-        Invoke-Expression "conda config --set always_yes yes"
-        Invoke-Expression "conda config --set auto_update_conda false"
+    - name: Install Pyomo and extensions
+      shell: pwsh
+      run: |
+        $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host ("")
         Write-Host ("Clone model library and install PyUtilib...")
         Write-Host ("")
@@ -65,16 +85,11 @@ jobs:
         Write-Host ("Install Pyomo...")
         Write-Host ("")
         python setup.py develop
-    - name: Install extensions
-      shell: pwsh
-      run: |
-        $env:PYTHONWARNINGS="ignore::UserWarning"
+        Write-Host ("")
         Write-Host "Pyomo download-extensions"
+        Write-Host ("")
         Invoke-Expression "pyomo download-extensions"
-        Invoke-Expression "pyomo build-extensions"
-        Write-Host "Calling solvers"
-        Invoke-Expression "glpsol -v"
-        Invoke-Expression "ipopt -v"
+
     - name: Run nightly tests with test.pyomo
       shell: pwsh
       run: |

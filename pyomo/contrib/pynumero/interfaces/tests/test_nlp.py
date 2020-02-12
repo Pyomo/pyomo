@@ -345,7 +345,7 @@ def execute_extended_nlp_interface(self, anlp):
     expected_hess = np.asarray(expected_hess, dtype=np.float64)
     self.assertTrue(np.array_equal(dense_hess, expected_hess))
 
-@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
+
 class TestAslNLP(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -363,7 +363,6 @@ class TestAslNLP(unittest.TestCase):
         anlp = AslNLP(self.filename)
         execute_extended_nlp_interface(self, anlp)
         
-@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestAmplNLP(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -441,7 +440,6 @@ class TestAmplNLP(unittest.TestCase):
         self.assertEqual(sum(ineq_constraint_idxs), 3)
 
 
-@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestPyomoNLP(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -550,7 +548,6 @@ class TestPyomoNLP(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             nlp = PyomoNLP(m)
 
-@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestUtils(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
