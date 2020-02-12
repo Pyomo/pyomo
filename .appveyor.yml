@@ -1,7 +1,7 @@
 branches:
   only:
-    - master
     - appveyor_build_fix
+    - master
 
 environment:
 
