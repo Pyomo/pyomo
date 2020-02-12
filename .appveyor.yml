@@ -59,9 +59,6 @@ install:
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PYTHON%\\Library\\bin;%PATH%"
   - "where python"
   - "where pip"
-  - "ls %PYTHON%\\"
-  - "ls %PYTHON%\\Library\\bin\\"
-  - "ls %PYTHON%\\Lib\\site-packages\\pip\\"
   - python --version
   - pip --version
   - "%PYTHON%\\Scripts\\pip --version"
