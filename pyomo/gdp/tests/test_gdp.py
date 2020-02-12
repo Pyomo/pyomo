@@ -91,7 +91,7 @@ class CommonTests:
             transformation = kwds['preprocess']
 
         TransformationFactory('gdp.%s' % transformation).apply_to(m)
-        m.write('%s_result.lp' % self.problem,
+        m.write(join(currdir, '%s_result.lp' % self.problem),
                 io_options={'symbolic_solver_labels': True})
 
         if self.solve:
@@ -100,7 +100,7 @@ class CommonTests:
                 solver = kwds['solver']
             results = SolverFactory(solver).solve(m)
             m.solutions.store_to(results)
-            results.write(filename='result.yml')
+            results.write(filename=join(currdir, 'result.yml'))
 
     def check(self, problem, solver):
         pass
