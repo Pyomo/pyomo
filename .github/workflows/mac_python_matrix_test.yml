@@ -42,16 +42,13 @@ jobs:
         chmod +x osx_x64_64_sfx.exe
         ./osx_x64_64_sfx.exe -q -d gams
         cd gams/gams29.1_osx_x64_64_sfx/apifiles/Python/
-        py_ver=$(python -c 'import sys;print("%s%s" % sys.version_info[:2])')
-        echo $py_ver
+        y_ver=$(python -c 'import sys;print("%s%s" % sys.version_info[:2])')
         gams_ver=api
         for ver in api_*; do
-            echo $ver
             if test ${ver:4} -le $py_ver; then
                 gams_ver=$ver
             fi  
         done
-        echo $gams_ver
         cd $gams_ver
         python setup.py -q install -noCheck
     - name: Install Pyomo and extensions
