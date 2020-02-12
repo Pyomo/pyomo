@@ -121,6 +121,7 @@ install:
   # the installation is not reliable and codecov is not available after
   # being installed.
   #
+  - pip install --upgrade pip
   - pip install codecov
   #
   # Install GAMS
@@ -132,7 +133,7 @@ install:
   # Clone but don't install pyomo-model-libraries
   #
   - "git clone https://github.com/Pyomo/pyomo-model-libraries.git"
-  - "python -m pip install git+https://github.com/PyUtilib/pyutilib"
+  - "pip install git+https://github.com/PyUtilib/pyutilib"
   - "python setup.py develop"
 
   # Set up python's coverage for covering subprocesses (important to do
