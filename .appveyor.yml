@@ -57,11 +57,8 @@ environment:
 
 install:
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PYTHON%\\Library\\bin;%PATH%"
-  - "ls %PYTHON%\\"
-  - "ls %PYTHON%\\Library\\"
   - "ls %PYTHON%\\Lib\\"
-  - "ls %PYTHON%\\libs\\"
-  - "ls %PYTHON%\\include\\"
+  - "ls %PYTHON%\\Lib\\site-packages\\"
   - python --version
   #
   # Set standardized ways to invoke conda for the various channels.  We
