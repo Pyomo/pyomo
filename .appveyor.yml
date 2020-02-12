@@ -62,8 +62,8 @@ install:
   - python --version
   - pip --version
   - "%PYTHON%\\Scripts\\pip --version"
-  - SET PIP=%PYTHON%\\Scripts\\pip
-  - pip --version
+  - "SET PIP=%PYTHON%\\Scripts\\pip"
+  - "%PIP% --version"
   #
   # Set standardized ways to invoke conda for the various channels.  We
   # are seeing strange issues where conda-forge and cachemeorg are
@@ -127,8 +127,8 @@ install:
   # the installation is not reliable and codecov is not available after
   # being installed.
   #
-  - %PIP% --version
-  - %PIP% install codecov
+  - "%PIP% --version"
+  - "%PIP% install codecov"
   #
   # Install GAMS
   #
