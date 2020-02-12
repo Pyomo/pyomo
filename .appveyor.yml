@@ -62,6 +62,8 @@ install:
   - python --version
   - pip --version
   - "%PYTHON%\\Scripts\\pip --version"
+  - SET PIP=%PYTHON%\\Scripts\\pip
+  - pip --version
   #
   # Set standardized ways to invoke conda for the various channels.  We
   # are seeing strange issues where conda-forge and cachemeorg are
@@ -125,8 +127,8 @@ install:
   # the installation is not reliable and codecov is not available after
   # being installed.
   #
-  - pip --version
-  - pip install codecov
+  - %PIP% --version
+  - %PIP% install codecov
   #
   # Install GAMS
   #
@@ -137,7 +139,7 @@ install:
   # Clone but don't install pyomo-model-libraries
   #
   - "git clone https://github.com/Pyomo/pyomo-model-libraries.git"
-  - "pip install git+https://github.com/PyUtilib/pyutilib"
+  - "%PIP% install git+https://github.com/PyUtilib/pyutilib"
   - "python setup.py develop"
 
   # Set up python's coverage for covering subprocesses (important to do
