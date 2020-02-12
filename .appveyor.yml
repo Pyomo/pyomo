@@ -130,6 +130,8 @@ install:
   - "ls %PYTHON%\\lib\\site-packages\\pip\\"
   - "ls %PYTHON%\\Scripts\\"
   - "%PIP% --version"
+  - "python -m pip install --upgrade pip"
+  - "%PIP% --version"
   - "%PIP% install codecov"
   #
   # Install GAMS
