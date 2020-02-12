@@ -25,12 +25,15 @@ jobs:
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host ("Current Enviroment variables: ")
-        gci env: | Sort Name
+        gci env:Path | Sort Name
         Write-Host ("")
         Write-Host ("Update conda, then force it to NOT update itself again...")
         Write-Host ("")
         Invoke-Expression "conda config --set always_yes yes"
         Invoke-Expression "conda config --set auto_update_conda false"
+        conda info
+        conda config --show-sources
+        conda list --show-channel-urls
         Write-Host ("")
         Write-Host ("Setting Conda Env Vars... ")
         Write-Host ("")
@@ -58,29 +61,25 @@ jobs:
             Write-Host ("##############################################################################")
             Write-Host ("WARNING: Python ${{matrix.python-version}}: Pynumero_libraries not available. ")
             Write-Host ("##############################################################################")
+            conda deactivate
+            conda activate test 
         }
+        conda list --show-channel-urls
         Write-Host ("")
         Write-Host ("Installing GAMS")
         Write-Host ("")
         Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
         Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS' -Wait
         cd gams\apifiles\Python\
-        try
-        {
-            $env:py_ver = (Get-Command python3).FileVersionInfo.FileVersion
-        }
-        catch
-        {
-            $env:py_ver = (Get-Command python).FileVersionInfo.FileVersion
-        }
-        Write-Host ("Received Python version: " + $env:py_ver)
-        if(!$env:py_ver) {
+        if(${{matrix.python-version}} -eq 2.7) {
           cd api
           python setup.py -q install
-        }elseif($env:py_ver -Match '3.6') {
+        }elseif(${{matrix.python-version}} -eq 3.6) {
+          Write-Host ("PYTHON ${{matrix.python-version}}")
           cd api_36
           python setup.py -q install
-        }elseif($env:py_ver -Match '3.7') {
+        }elseif(${{matrix.python-version}} -eq 3.7) {
+          Write-Host ("PYTHON ${{matrix.python-version}}")
           cd api_37
           python setup.py -q install -noCheck
         }else { 
