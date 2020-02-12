@@ -101,7 +101,7 @@ install:
   #- "SET CONDAENV=%PYTHON%\\envs\\pyomo_test_env"
   - "echo %PATH%"
   #
-  - "SET ADDITIONAL_CF_PKGS=setuptools pip coverage sphinx_rtd_theme"
+  - "SET ADDITIONAL_CF_PKGS=setuptools coverage sphinx_rtd_theme"
   #
   # Install extra packages (formerly pyomo.extras)
   #
@@ -127,6 +127,8 @@ install:
   # the installation is not reliable and codecov is not available after
   # being installed.
   #
+  - "ls %PYTHON%\\lib\\site-packages\\pip\\"
+  - "ls %PYTHON%\\Scripts\\"
   - "%PIP% --version"
   - "%PIP% install codecov"
   #
