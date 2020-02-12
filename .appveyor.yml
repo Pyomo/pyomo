@@ -121,7 +121,6 @@ install:
   # the installation is not reliable and codecov is not available after
   # being installed.
   #
-  - pip install --upgrade pip
   - pip install codecov
   #
   # Install GAMS
