@@ -63,6 +63,8 @@ install:
   - "ls %PYTHON%\\Library\\bin\\"
   - "ls %PYTHON%\\Lib\\site-packages\\pip\\"
   - python --version
+  - pip --version
+  - "%PYTHON%\\Scripts\\pip --version"
   #
   # Set standardized ways to invoke conda for the various channels.  We
   # are seeing strange issues where conda-forge and cachemeorg are
