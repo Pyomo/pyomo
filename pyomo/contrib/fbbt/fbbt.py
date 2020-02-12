@@ -1358,7 +1358,7 @@ def _fbbt_block(m, config):
                     var_ubs[v] = vub
 
     while len(improved_vars) > 0:
-        if n_fbbt > n_cons * config.max_iter:
+        if n_fbbt >= n_cons * config.max_iter:
             break
         v = improved_vars.pop()
         for c in var_to_con_map[v]:
