@@ -171,7 +171,7 @@ class TestDaeSetUtils(unittest.TestCase):
         set_except = info['set_except']
         index_getter = info['index_getter']
         self.assertTrue((m.time[1], 'd') in set_except)
-        self.assertTrue(index_getter((4, 'f'), 'b', 8), (4, 8, 'b', 'f'))
+        self.assertEqual(index_getter((4, 'f'), 'b', 8), (4, 8, 'b', 'f'))
 
 
 if __name__ == "__main__":
