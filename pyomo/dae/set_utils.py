@@ -26,7 +26,7 @@ def is_explicitly_indexed_by(comp, s):
     elif n >= 2:
         if s in set(comp.index_set().set_tuple):
             # set_tuple must be converted to a python:set so a different
-            # pyomo:set with the same elements will not be conflated.
+            # pyomo:Set with the same elements will not be conflated.
             # This works because pyomo:Set is hashable.
             return True
         else:
@@ -46,7 +46,7 @@ def is_implicitly_indexed_by(comp, s, stop_at=None):
     parent = comp.parent_block()
 
     # Stop when top-level block has been reached
-    while not (parent is None):
+    while parent is not None:
         # If we have reached our stopping point, quit.
         if parent is stop_at:
             return False
@@ -90,6 +90,11 @@ def get_index_set_except(comp, *sets):
         # raise exception. Probably latter.
         msg = 'Component must be indexed.'
         raise TypeError(msg)
+
+    for s in sets:
+        if not is_explicitly_indexed_by(comp, s):
+            msg = comp.name + ' is not indexed by ' + s.name
+            raise Exception(msg)
 
     if comp.dim() == 1:
         # In this case, assume that comp is indexed by *sets
