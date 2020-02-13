@@ -134,7 +134,8 @@ class TestDaeSetUtils(unittest.TestCase):
 	# Here (2,) is the partial index, corresponding to space.
         # Can be provided as a scalar or tuple. 4, the time index,
         # should be inserted before (2,)
-        self.assertEqual(index_getter(2, 4), (4, 2), index_getter((2,), 4))
+        self.assertEqual(index_getter((2,) 4), (4, 2))
+        self.assertEqual(index_getter(2, 4), (4, 2))
 
         # Case where every set is "omitted," now for multiple sets
         info = get_index_set_except(m.v2, m.space, m.time)
@@ -172,6 +173,13 @@ class TestDaeSetUtils(unittest.TestCase):
         index_getter = info['index_getter']
         self.assertTrue((m.time[1], 'd') in set_except)
         self.assertEqual(index_getter((4, 'f'), 'b', 8), (4, 8, 'b', 'f'))
+        
+        # The intended usage of this function looks something like:
+        index_set = m.v4.index_set()
+        for partial_index in set_except:
+            complete_index = index_getter(partial_index, 'a', m.space[2])
+            self.assertTrue(complete_index in index_set)
+            # Do something for every index of v4 at 'a' and space[2]
 
 
 if __name__ == "__main__":
