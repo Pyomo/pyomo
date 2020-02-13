@@ -47,6 +47,22 @@ jobs:
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + "pymysql pyro4 pint pathos " + $env:MINICONDA_EXTRAS
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk ipopt"
         $env:EXP = $env:CONDAFORGE + $env:ADDITIONAL_CF_PKGS
+        $env:CPLEX = $env:CONDAFORGE + "-c ibmdecisionoptimization cplex=12.10"
+        Write-Host ("")
+        Write-Host ("Try to install CPLEX...")
+        Write-Host ("")
+        try
+        {
+            Invoke-Expression $env:CPLEX
+        }
+        catch
+        {
+            Write-Host ("##########################################################################")
+            Write-Host ("WARNING: CPLEX Community Edition is not available for Python ${{ matrix.python-version }}")
+            Write-Host ("##########################################################################")
+            conda deactivate
+            conda activate test
+        }
         Invoke-Expression $env:EXP
         $env:PYNUMERO = $env:CONDAFORGE + " pynumero_libraries"
         Write-Host ("")
