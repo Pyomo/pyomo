@@ -94,7 +94,7 @@ def get_index_set_except(comp, *sets):
     for s in sets:
         if not is_explicitly_indexed_by(comp, s):
             msg = comp.name + ' is not indexed by ' + s.name
-            raise Exception(msg)
+            raise ValueError(msg)
 
     if comp.dim() == 1:
         # In this case, assume that comp is indexed by *sets
@@ -110,7 +110,7 @@ def get_index_set_except(comp, *sets):
     for s in sets:
         if counter[s] != 1:
             msg = 'Cannot omit sets that appear multiple times'
-            raise Exception(msg)
+            raise ValueError(msg)
 
     # Need to know the location of each set within comp's index set
     # location will map:
@@ -170,7 +170,7 @@ def _complete_index(loc, index, *newvals):
         index = (index,)
     keys = sorted(loc.keys())
     if len(keys) != len(newvals):
-        raise Exception('Wrong number of values to complete index')
+        raise ValueError('Wrong number of values to complete index')
     for i in sorted(loc.keys()):
         # Correctness relies on fact that indices i are visited in order 
         # from least to greatest.
