@@ -17,8 +17,6 @@ import pyomo.gdp.plugins.bigm
 
 from six import iterkeys
 
-# TODO DEBUG
-from nose.tools import set_trace
 
 class TestDisjunction(unittest.TestCase):
     def test_empty_disjunction(self):
@@ -277,100 +275,6 @@ class TestDisjunct(unittest.TestCase):
         self.assertFalse(m.disjunction.active)
         for i in range(3):
             self.assertFalse(m.disjunction[i].active)
-
-    def test_set_value_assign_disjunct(self):
-        m = ConcreteModel()
-        m.y = Var()
-        m.d = Disjunct()
-        m.d.v = Var()
-        m.d.c = Constraint(expr=m.d.v >= 8)
-        
-        new_d = Disjunct()
-        new_d.v = Var()
-        new_d.c = Constraint(expr=m.y <= 89)
-        new_d.b = Block()
-        @new_d.b.Constraint([0,1])
-        def c(b, i):
-            m = b.model()
-            if i == 0:
-                return m.y >= 18
-            else:
-                return b.parent_block().v >= 20
-        m.d = new_d
-
-        self.assertIsInstance(m.d, Disjunct)
-        self.assertIsInstance(m.d.c, Constraint)
-        self.assertIsInstance(m.d.b, Block)
-        self.assertIsInstance(m.d.b.c, Constraint)
-        self.assertEqual(len(m.d.b.c), 2)
-        self.assertIsInstance(m.d.v, Var)
-        self.assertIsInstance(m.d.indicator_var, Var)
-
-    def test_do_not_overwrite_transformed_disjunct(self):
-        m = ConcreteModel()
-        m.y = Var()
-        m.d = Disjunct()
-        m.d.v = Var(bounds=(0,10))
-        m.d.c = Constraint(expr=m.d.v >= 8)
-
-        m.empty = Disjunct()
-        m.disjunction = Disjunction(expr=[m.empty, m.d])
-
-        TransformationFactory('gdp.bigm').apply_to(m)
-        
-        new_d = Disjunct()
-        new_d.v = Var()
-        new_d.c = Constraint(expr=m.y <= 89)
-        new_d.b = Block()
-        @new_d.b.Constraint([0,1])
-        def c(b, i):
-            m = b.model()
-            if i == 0:
-                return m.y >= 18
-            else:
-                return b.parent_block().v >= 20
-        
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Attempting to call set_value on an already-"
-            "transformed disjunct! Since disjunct %s "
-            "has been transformed, replacing it here will "
-            "not affect the model." % m.d.name,
-            m.d.set_value,
-            new_d)
-
-    def test_set_value_assign_block(self):
-        print("TODO: I don't actually know how to test this at the moment...")
-        m = ConcreteModel()
-        m.y = Var()
-        m.d = Disjunct()
-        m.d.v = Var()
-        m.d.c = Constraint(expr=m.d.v >= 8)
-        
-        # [ESJ 08/16/2019]: I think this is becuase of #1106... This should be
-        # legal, right?
-        new_d = m.new_d = Block()
-        new_d.v = Var()
-        new_d.c = Constraint(expr=m.y <= 89)
-        new_d.b = Block()
-        new_d.b.v = Var()
-        @new_d.b.Constraint([0,1])
-        def c(b, i):
-            if i == 0:
-                return b.v >= 18
-            else:
-                return b.parent_block().v >= 20
-        m.del_component(m.new_d)
-        m.d.set_value(new_d)
-
-        self.assertIsInstance(m.d, Disjunct)
-        self.assertIsInstance(m.d.c, Constraint)
-        self.assertIsInstance(m.d.b, Block)
-        self.assertIsInstance(m.d.b.c, Constraint)
-        self.assertEqual(len(m.d.b.c), 2)
-        self.assertIsInstance(m.d.v, Var)
-        self.assertIsInstance(m.d.indicator_var, Var)
-
 
 if __name__ == '__main__':
     unittest.main()

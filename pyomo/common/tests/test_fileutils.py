@@ -28,6 +28,14 @@ from pyomo.common.fileutils import (
     PathManager, _system, _path, _exeExt, _libExt, _ExecutableData,
 )
 
+try:
+    samefile = os.path.samefile
+except AttributeError:
+    # os.path.samefile is not available in Python 2.7 under Windows.
+    # Mock up a dummy function for that platform.
+    def samefile(a,b):
+        return True
+
 _this_file = this_file()
 _this_file_dir = this_file_dir()
 
@@ -57,6 +65,18 @@ class TestFileUtils(unittest.TestCase):
         open(fname,'w').close()
         mode = os.stat(fname).st_mode
         os.chmod( fname, mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH )
+
+    def _check_file(self, found, ref):
+        #
+        # On OSX, the identified path is (sometimes) prepended with
+        # '/private/'. These two paths are in fact equivalent on OSX,
+        # but we will explicitly verify that fact.  We check the string
+        # first so that we can generate a more informative error in the
+        # case of "gross" failure.
+        #
+        self.assertTrue(
+            found.endswith(ref), "%s does not end with %s" % (found, ref))
+        self.assertTrue(samefile(ref, found))
 
     def test_this_file(self):
         self.assertEquals(_this_file, __file__.replace('.pyc','.py'))
@@ -107,78 +127,65 @@ class TestFileUtils(unittest.TestCase):
         open(os.path.join(self.tmpdir,fname),'w').close()
         open(os.path.join(subdir,fname),'w').close()
         open(os.path.join(subdir,'aaa'),'w').close()
+
         # we can find files in the CWD
-        self.assertEqual(
-            os.path.join(self.tmpdir,fname),
-            find_file(fname)
-        )
+        self._check_file(find_file(fname),os.path.join(self.tmpdir,fname))
+
         # unless we don't look in the cwd
-        self.assertEqual(
-            None,
-            find_file(fname, cwd=False)
-        )
+        self.assertIsNone(find_file(fname, cwd=False))
+
         # cwd overrides pathlist
-        self.assertEqual(
-            os.path.join(self.tmpdir,fname),
-            find_file(fname, pathlist=[subdir])
-        )
-        self.assertEqual(
-            os.path.join(subdir,fname),
-            find_file(fname, pathlist=[subdir], cwd=False)
-        )
+        self._check_file(find_file(fname, pathlist=[subdir]),
+                         os.path.join(self.tmpdir,fname))
+        
+        self._check_file(find_file(fname, pathlist=[subdir], cwd=False),
+                         os.path.join(subdir,fname))
+
         # ...unless the CWD match fails the MODE check
         #  (except on Windows, where all files have X_OK)
-        self.assertEqual(
-            ( os.path.join(self.tmpdir,fname)
-              if _system() in ('windows','cygwin')
-              else None ),
-            find_file(fname, pathlist=[subdir], mode=os.X_OK)
-        )
+        found = find_file(fname, pathlist=[subdir], mode=os.X_OK)
+        if _system() in ('windows','cygwin'):
+            self._check_file(found, os.path.join(self.tmpdir,fname))
+        else:
+            self.assertIsNone(found)
+
         self._make_exec(os.path.join(subdir,fname))
-        self.assertEqual(
-            ( os.path.join(self.tmpdir,fname)
-              if _system() in ('windows','cygwin')
-              else os.path.join(subdir,fname) ),
-            find_file(fname, pathlist=[subdir], mode=os.X_OK)
-        )
+        found = find_file(fname, pathlist=[subdir], mode=os.X_OK)
+        if _system() in ('windows','cygwin'):
+            ref = os.path.join(self.tmpdir,fname)
+        else:
+            ref = os.path.join(subdir,fname)
+        self._check_file(found, ref)
+
         # pathlist may also be a string
-        self.assertEqual(
-            os.path.join(subdir,fname),
-            find_file(fname, pathlist=os.pathsep+subdir+os.pathsep, cwd=False)
+        self._check_file(
+            find_file(fname, pathlist=os.pathsep+subdir+os.pathsep, cwd=False),
+            os.path.join(subdir,fname)
         )
 
         # implicit extensions work (even if they are not necessary)
-        self.assertEqual(
-            os.path.join(self.tmpdir,fname),
-            find_file(fname, ext='.py')
-        )
-        self.assertEqual(
-            os.path.join(self.tmpdir,fname),
-            find_file(fname, ext=['.py'])
-        )
+        self._check_file(find_file(fname, ext='.py'),
+                         os.path.join(self.tmpdir,fname))
+        self._check_file(find_file(fname, ext=['.py']),
+                         os.path.join(self.tmpdir,fname))
 
-        # implicit extensions work (and when they are not necessary)
-        self.assertEqual(
-            os.path.join(self.tmpdir,fname),
-            find_file(fname[:-3], ext='.py')
-        )
-        self.assertEqual(
-            os.path.join(self.tmpdir,fname),
-            find_file(fname[:-3], ext=['.py'])
-        )
+        # implicit extensions work (when they are necessary)
+        self._check_file(find_file(fname[:-3], ext='.py'),
+                         os.path.join(self.tmpdir,fname))
+
+        self._check_file(find_file(fname[:-3], ext=['.py']),
+                         os.path.join(self.tmpdir,fname))
 
         # only files are found
-        self.assertEqual(
-            os.path.join(subdir,subdir_name),
-            find_file( subdir_name,
-                       pathlist=[self.tmpdir, subdir], cwd=False )
-        )
+        self._check_file(find_file( subdir_name,
+                                    pathlist=[self.tmpdir, subdir], cwd=False ),
+                         os.path.join(subdir,subdir_name))
 
         # empty dirs are skipped
-        self.assertEqual(
-            os.path.join(subdir,subdir_name),
+        self._check_file(
             find_file( subdir_name,
-                       pathlist=['', self.tmpdir, subdir], cwd=False )
+                       pathlist=['', self.tmpdir, subdir], cwd=False ),
+            os.path.join(subdir,subdir_name)
         )
 
     def test_find_library(self):
@@ -219,57 +226,53 @@ class TestFileUtils(unittest.TestCase):
         open(os.path.join(config_bindir, f_in_configbin),'w').close()
 
 
-        self.assertEqual(
-            os.path.join(self.tmpdir, f_in_cwd_ldlib_path),
-            find_library(f_in_cwd_ldlib_path)
+        self._check_file(
+            find_library(f_in_cwd_ldlib_path),
+            os.path.join(self.tmpdir, f_in_cwd_ldlib_path)
         )
-        self.assertEqual(
+        self._check_file(
             os.path.join(ldlibdir, f_in_cwd_ldlib_path),
             find_library(f_in_cwd_ldlib_path, cwd=False)
         )
-        self.assertEqual(
+        self._check_file(
             os.path.join(ldlibdir, f_in_ldlib_extension) + libExt,
             find_library(f_in_ldlib_extension)
         )
-        self.assertEqual(
+        self._check_file(
             os.path.join(pathdir, f_in_path),
             find_library(f_in_path)
         )
-        self.assertEqual(
-            None,
+        self.assertIsNone(
             find_library(f_in_path, include_PATH=False)
         )
-        self.assertEqual(
+        self._check_file(
             os.path.join(pathdir, f_in_path),
             find_library(f_in_path, pathlist=os.pathsep+pathdir+os.pathsep)
         )
         # test an explicit pathlist overrides LD_LIBRARY_PATH
-        self.assertEqual(
+        self._check_file(
             os.path.join(pathdir, f_in_cwd_ldlib_path),
             find_library(f_in_cwd_ldlib_path, cwd=False, pathlist=[pathdir])
         )
         # test that the PYOMO_CONFIG_DIR 'lib' dir is included
-        self.assertEqual(
+        self._check_file(
             os.path.join(config_libdir, f_in_configlib),
             find_library(f_in_configlib)
         )
         # and the Bin dir
-        self.assertEqual(
+        self._check_file(
             os.path.join(config_bindir, f_in_configbin),
             find_library(f_in_configbin)
         )
         # ... but only if include_PATH is true
-        self.assertEqual(
-            None,
+        self.assertIsNone(
             find_library(f_in_configbin, include_PATH=False)
         )
         # And none of them if the pathlist is specified
-        self.assertEqual(
-            None,
+        self.assertIsNone(
             find_library(f_in_configlib, pathlist=pathdir)
         )
-        self.assertEqual(
-            None,
+        self.assertIsNone(
             find_library(f_in_configbin, pathlist=pathdir)
         )
 
@@ -314,49 +317,48 @@ class TestFileUtils(unittest.TestCase):
         self._make_exec(os.path.join(config_bindir, f_in_configbin))
 
 
-        self.assertEqual(
-            ( os.path.join(self.tmpdir,f_in_cwd_notexe)
-              if _system() in ('windows','cygwin')
-              else None ),
-            find_executable(f_in_cwd_notexe)
+        found = find_executable(f_in_cwd_notexe)
+        if _system() in ('windows','cygwin'):
+            self._check_file(found, os.path.join(self.tmpdir,f_in_cwd_notexe))
+        else:
+            self.assertIsNone(found)
+
+        self._check_file(
+            find_executable(f_in_cwd_ldlib_path),
+            os.path.join(self.tmpdir, f_in_cwd_ldlib_path)
         )
-        self.assertEqual(
-            os.path.join(self.tmpdir, f_in_cwd_ldlib_path),
-            find_executable(f_in_cwd_ldlib_path)
-        )
-        self.assertEqual(
+        self._check_file(
             os.path.join(pathdir, f_in_cwd_ldlib_path),
             find_executable(f_in_cwd_ldlib_path, cwd=False)
         )
-        self.assertEqual(
-            os.path.join(pathdir, f_in_path_extension) + exeExt,
-            find_executable(f_in_path_extension)
+        self._check_file(
+            find_executable(f_in_path_extension),
+            os.path.join(pathdir, f_in_path_extension) + exeExt
         )
-        self.assertEqual(
-            os.path.join(pathdir, f_in_path),
-            find_executable(f_in_path)
+        self._check_file(
+            find_executable(f_in_path),
+            os.path.join(pathdir, f_in_path)
         )
-        self.assertEqual(
-            None,
+        self.assertIsNone(
             find_executable(f_in_path, include_PATH=False)
         )
-        self.assertEqual(
-            os.path.join(pathdir, f_in_path),
-            find_executable(f_in_path, pathlist=os.pathsep+pathdir+os.pathsep)
+        self._check_file(
+            find_executable(f_in_path, pathlist=os.pathsep+pathdir+os.pathsep),
+            os.path.join(pathdir, f_in_path)
         )
+        
         # test an explicit pathlist overrides PATH
-        self.assertEqual(
+        self._check_file(
             os.path.join(ldlibdir, f_in_cwd_ldlib_path),
             find_executable(f_in_cwd_ldlib_path, cwd=False, pathlist=[ldlibdir])
         )
         # test that the PYOMO_CONFIG_DIR 'bin' dir is included
-        self.assertEqual(
+        self._check_file(
             os.path.join(config_bindir, f_in_configbin),
             find_executable(f_in_configbin)
         )
         # ... but only if the pathlist is not specified
-        self.assertEqual(
-            None,
+        self.assertIsNone(
             find_executable(f_in_configbin, pathlist=pathdir)
         )
 
@@ -387,11 +389,11 @@ class TestFileUtils(unittest.TestCase):
             self.fail("Expected casting Executable(f_in_path) to bool=True")
 
         # Test getting the path to the executable
-        self.assertEqual( Executable(f_in_path).path(),
+        self._check_file( Executable(f_in_path).path(),
                           os.path.join(pathdir, f_in_path) )
-        self.assertEqual( "%s" % Executable(f_in_path),
+        self._check_file( "%s" % Executable(f_in_path),
                           os.path.join(pathdir, f_in_path) )
-        self.assertEqual( Executable(f_in_path).executable,
+        self._check_file( Executable(f_in_path).executable,
                           os.path.join(pathdir, f_in_path) )
 
         # Test the above for a nonexistant file

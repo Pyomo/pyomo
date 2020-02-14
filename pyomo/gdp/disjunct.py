@@ -76,6 +76,8 @@ class _Initializer(object):
 
 class _DisjunctData(_BlockData):
 
+    _Block_reserved_words = set()
+
     @property
     def transformation_block(self):
         return self._transformation_block
@@ -86,33 +88,6 @@ class _DisjunctData(_BlockData):
         # pointer to transformation block if this disjunct has been
         # transformed. None indicates it hasn't been transformed.
         self._transformation_block = None
-
-    def set_value(self, val):
-        _indicator_var = self.indicator_var
-        # if _transformation_block is not None we should yell. else call base
-        # class, check that you have indicator_var and transformation block.
-        _transformation_block = self._transformation_block
-        if not _transformation_block is None:
-            # the disjunct has been transformed, so the truth no longer lives
-            # here and this is a bad idea!
-            raise GDP_Error("Attempting to call set_value on an already-"
-                            "transformed disjunct! Since disjunct %s "
-                            "has been transformed, replacing it here will "
-                            "not affect the model." % self.name)
-
-        # Call the base class set_value. (Note we are changing decl_order by
-        # doing things this way: the indicator var will always be last rather
-        # than first)
-        super(_DisjunctData, self).set_value(val)
-
-        if val:
-            if 'indicator_var' not in val:
-                self.add_component('indicator_var', _indicator_var)
-            if 'transformation_block' not in val:
-                self._transformation_block = _transformation_block
-        else:
-            self.add_component('indicator_var', _indicator_var)
-            self._transformation_block = _transformation_block 
 
     def activate(self):
         super(_DisjunctData, self).activate()
@@ -192,7 +167,6 @@ class SimpleDisjunct(_DisjunctData, Disjunct):
 
 
 class IndexedDisjunct(Disjunct):
-
     #
     # HACK: this should be implemented on ActiveIndexedComponent, but
     # that will take time and a PEP
@@ -205,6 +179,9 @@ class IndexedDisjunct(Disjunct):
     def active(self, value):
         for d in itervalues(self._data):
             d.active = value
+
+
+_DisjunctData._Block_reserved_words = set(dir(Disjunct()))
 
 
 class _DisjunctionData(ActiveComponentData):

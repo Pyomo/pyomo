@@ -1,4 +1,4 @@
-name: Ubuntu Pyomo Tests Workflow (Slim, Matrixed, Nightly)
+name: continuous-integration/github/pr/linux
 
 on:
   pull_request:
@@ -6,14 +6,13 @@ on:
       - master
 
 jobs:
-  build:
-
+  pyomo-linux-tests:
+    name: py${{ matrix.python-version }}
     runs-on: ubuntu-18.04
     strategy:
-      max-parallel: 4
+      fail-fast: false
       matrix:
-        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
-        # python-version: [2.7]
+        python-version: [3.5, 3.6, 3.7, 3.8]
 
     steps:
     - uses: actions/checkout@v1
@@ -21,27 +20,56 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Install Pyomo dependencies
       run: |
+        echo "Upgrade pip..."
         python -m pip install --upgrade pip
-        # pip install -r requirements.txt
-        git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
-        pip install --quiet git+https://github.com/PyUtilib/pyutilib
-        python setup.py develop
-        pip install numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos
-    - name: Install extensions
+        echo ""
+        echo "Install Pyomo dependencies..."
+        echo ""
+        pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos
+        echo ""
+        echo "Install CPLEX Community Edition..."
+        echo ""
+        pip install cplex || echo "CPLEX Community Edition is not available for ${{ matrix.python-version }}"
+        echo ""
+        echo "Install GAMS..."
+        echo ""
+        wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/linux/linux_x64_64_sfx.exe -O gams_installer.exe
+        chmod +x gams_installer.exe
+        ./gams_installer.exe -q -d gams
+        cd gams/*/apifiles/Python/
+        py_ver=$(python -c 'import sys;print("%s%s" % sys.version_info[:2])')
+        gams_ver=api
+        for ver in api_*; do
+            if test ${ver:4} -le $py_ver; then
+                gams_ver=$ver
+            fi  
+        done
+        cd $gams_ver
+        python setup.py -q install -noCheck
+    - name: Install Pyomo and extensions
       run: |
+        echo "Clone Pyomo-model-libraries..."
+        git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
+        echo ""
+        echo "Install PyUtilib..."
+        echo ""
+        pip install --quiet git+https://github.com/PyUtilib/pyutilib
+        echo ""
+        echo "Install Pyomo..."
+        echo ""
+        python setup.py develop
+        echo ""
+        echo "Download and install extensions..."
+        echo ""
         pyomo download-extensions
         pyomo build-extensions
-#     - name: Lint with flake8
-#       run: |
-#         pip install flake8
-#         # stop the build if there are Python syntax errors or undefined names
-#         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-#         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-#         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Run nightly tests with test.pyomo
       run: |
+        echo "Run test.pyomo..."
+        GAMS_DIR=`ls -d1 $(pwd)/gams/*/ | head -1`
+        export PATH=$PATH:$GAMS_DIR
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_DIR
         pip install nose
-        KEY_JOB=1
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries

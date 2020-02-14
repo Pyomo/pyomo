@@ -166,8 +166,7 @@ class PiecewiseLinearFunctionND(object):
     def __getstate__(self):
         """Required for older versions of the pickle
         protocol since this class uses __slots__"""
-        return dict((key, getattr(self, key))
-                    for key in self.__slots__)
+        return {key:getattr(self, key) for key in self.__slots__}
 
     def __setstate__(self, state):
         """Required for older versions of the pickle
