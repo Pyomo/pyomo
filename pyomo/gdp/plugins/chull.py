@@ -233,10 +233,12 @@ class ConvexHull_Transformation(Transformation):
 
         # HACK for backwards compatibility with the older GDP transformations
         #
-        # Until the writers are updated to find variables on things
-        # other than active blocks, we need to reclassify the Disjuncts
-        # as Blocks after transformation so that the writer will pick up
-        # all the variables that it needs (in this case, indicator_vars).
+        # Until the writers are updated to find variables on things other than
+        # active blocks, we need to reclassify the Disjuncts as Blocks after
+        # transformation so that the writer will pick up all the variables that
+        # it needs (in this case, indicator_vars and also variables which are
+        # declared in a single Disjunct and only used on that Disjunct (as they
+        # will not be disaggregated)).
         if _HACK_transform_whole_instance:
             HACK_GDP_Disjunct_Reclassifier().apply_to(instance)
 
@@ -287,12 +289,8 @@ class ConvexHull_Transformation(Transformation):
                 descent_order=TraversalStrategy.PostfixDFS):
             self._transform_disjunction(disjunction)
 
-    def _get_xor_constraint(self, disjunction, transBlock):
-        # NOTE: This differs from bigm because in chull there is no reason to
-        # but the XOR constraint on the parent block of the Disjunction. We
-        # don't move anything in the case of nested disjunctions, so to avoid
-        # name conflicts, we put everything together on the transformation
-        # block.
+    def _add_xor_constraint(self, disjunction, transBlock):
+        # Put XOR constraint on the transformation block
 
         # We never do this for just a DisjunctionData because we need
         # to know about the index set of its parent component. So if
@@ -325,7 +323,7 @@ class ConvexHull_Transformation(Transformation):
         else:
             transBlock = self._add_transformation_block(obj.parent_block())
         # and create the xor constraint
-        xorConstraint = self._get_xor_constraint(obj, transBlock)
+        xorConstraint = self._add_xor_constraint(obj, transBlock)
 
         # create the disjunction constraint and disaggregation
         # constraints and then relax each of the disjunctionDatas
@@ -360,7 +358,7 @@ class ConvexHull_Transformation(Transformation):
 
         parent_component = obj.parent_component()
         
-        orConstraint = self._get_xor_constraint(parent_component, transBlock)
+        orConstraint = self._add_xor_constraint(parent_component, transBlock)
         disaggregationConstraint = transBlock.disaggregationConstraints
         disaggregationConstraintMap = transBlock._disaggregationConstraintMap
 
@@ -383,14 +381,13 @@ class ConvexHull_Transformation(Transformation):
                     active = True,
                     sort=SortComponents.deterministic,
                     descend_into=Block):
-                # [ESJ 12/10/2019] TODO: I don't think I agree with
-                # this... Fixing is not a promise for the future. And especially
-                # since this is undocumented, we are asking for trouble with
-                # silent failures later...  we aren't going to disaggregate
-                # fixed variables. This means there is trouble if they are
-                # unfixed later...
+                # [ESJ 02/14/2020] We *will* disaggregate fixed variables on the
+                # philosophy that fixing is not a promise for the future and we
+                # are mathematically wrong if we don't transform these correctly
+                # and someone later unfixes them and keeps playing with their
+                # transformed model
                 for var in EXPR.identify_variables(
-                        cons.body, include_fixed=False):
+                        cons.body, include_fixed=True):
                     # Note the use of a list so that we will
                     # eventually disaggregate the vars in a
                     # deterministic order (the order that we found
@@ -675,10 +672,9 @@ class ConvexHull_Transformation(Transformation):
         assert innerdisjunct.active
         problemdisj = innerdisjunct
         if innerdisjunct.is_indexed():
-            # ESJ: This is different from bigm... Probably this one is right...
             for i in sorted(iterkeys(innerdisjunct)):
                 if innerdisjunct[i].active:
-                    # This is shouldn't be true, we will complain about it.
+                    # This shouldn't be true, we will complain about it.
                     problemdisj = innerdisjunct[i]
                     break
             
@@ -819,9 +815,6 @@ class ConvexHull_Transformation(Transformation):
                 continue
 
             if c.lower is not None:
-                # TODO: At the moment there is no reason for this to be in both
-                # lower and upper... I think there could be though if I say what
-                # the new constraint is going to be or something.
                 if __debug__ and logger.isEnabledFor(logging.DEBUG):
                     _name = c.getname(
                         fully_qualified=True, name_buffer=NAME_BUFFER)
@@ -865,8 +858,9 @@ class ConvexHull_Transformation(Transformation):
                 else:
                     newConstraint.add('ub', newConsExpr)
 
-    # TODO: Oh... I think these methods should be in util, some of them. They
-    # are the same as bigm
+    # TODO: Move these methods should be in util, some of them. They are the
+    # same as bigm. (But I'll wait for the bigm PR to stabilize rather than
+    # inviting annoying merge conflicts..)
     def get_src_disjunct(self, transBlock):
         if not hasattr(transBlock, '_srcDisjunct') or \
            not type(transBlock._srcDisjunct) is weakref_ref:

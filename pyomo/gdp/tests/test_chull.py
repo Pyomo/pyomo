@@ -1829,35 +1829,6 @@ class TestErrors(unittest.TestCase):
             chull.get_src_disjunction,
             m.another_global_cons)
 
-    # TODO: This isn't actually a problem for chull because we don't need to
-    # move anything for nested disjunctions... I catch it in bigm because I
-    # don't actually know what to do in that case--I can't get the
-    # transformation block. Here I don't care, but is it bad if there is
-    # different behavior? Because this is silent in chull.
-    # def test_transformed_disjunction_all_disjuncts_deactivated(self):
-    #     # I'm not sure I like that I can make this happen...
-    #     m = ConcreteModel()
-    #     m.x = Var(bounds=(0,8))
-    #     m.y = Var(bounds=(0,7))
-    #     m.disjunction = Disjunction(expr=[m.x == 0, m.x >= 4])
-    #     m.disjunction_disjuncts[0].nestedDisjunction = Disjunction(
-    #         expr=[m.y == 6, m.y <= 1])
-    #     m.disjunction.disjuncts[0].nestedDisjunction.disjuncts[0].deactivate()
-    #     m.disjunction.disjuncts[0].nestedDisjunction.disjuncts[1].deactivate()
-    #     TransformationFactory('gdp.chull').apply_to(
-    #         m, 
-    #         targets=m.disjunction.disjuncts[0].nestedDisjunction)
-
-    #     self.assertRaisesRegexp(
-    #         GDP_Error,
-    #         "Found transformed disjunction "
-    #         "disjunction_disjuncts\[0\].nestedDisjunction on disjunct "
-    #         "disjunction_disjuncts\[0\], "
-    #         "but none of its disjuncts have been transformed. "
-    #         "This is very strange.",
-    #         TransformationFactory('gdp.chull').apply_to,
-    #         m)
-
     def test_transform_empty_disjunction(self):
         m = ConcreteModel()
         m.empty = Disjunction(expr=[])
