@@ -420,16 +420,38 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m = models.makeTwoTermDisj_Nonlinear()
         self.diff_apply_to_and_create_using(m)
 
-    def test_var_global_because_objective(self):
+    # [ESJ 02/14/2020] In order to match bigm and the (unfortunate) expectation
+    # we have established, we never decide something is local based on where it
+    # is declared. We treat variables declared on Disjuncts as if they are
+    # declared globally. We need to use the bounds as if they are global and
+    # also disaggregate it if they appear in multiple disjuncts. (If not, then
+    # there is no need to disaggregate, and so we won't.)
+    def test_locally_declared_var_bounds_used_globally(self):
         m = models.localVar()
         chull = TransformationFactory('gdp.chull')
         chull.apply_to(m)
 
-        #TODO: desired behavior here has got to be an error about not having
-        #bounds on y. We don't know how to tranform this, but the issue is that
-        #right now we think we do!
-        self.assertTrue(False)
+        # check that we used the bounds on the local variable as if they are
+        # global. Which means checking the bounds constraints...
+        cons = chull.get_var_bounds_constraint(m.disj2.y)
+        lb = cons['lb']
+        self.assertIsNone(lb.lower)
+        self.assertEqual(value(lb.upper), 0)
+        repn = generate_standard_repn(lb.body)
+        self.assertTrue(repn.is_linear())
+        check_linear_coef(self, repn, m.disj2.indicator_var, 1)
+        check_linear_coef(self, repn, m.disj2.y, -1)
 
+        ub = cons['ub']
+        self.assertIsNone(ub.lower)
+        self.assertEqual(value(ub.upper), 0)
+        repn = generate_standard_repn(ub.body)
+        self.assertTrue(repn.is_linear())
+        check_linear_coef(self, repn, m.disj2.y, 1)
+        check_linear_coef(self, repn, m.disj2.indicator_var, -3)
+        
+    # [ESJ 02/14/2020] This is OK because they condition for "local" here is
+    # that it is used in only one Disjunct of the Disjunction. This is true.
     def test_local_var_not_disaggregated(self):
         m = models.localVar()
         m.del_component(m.objective)
@@ -443,6 +465,22 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
                           component("y"))
         self.assertEqual(
             len(m._pyomo_gdp_chull_relaxation.disaggregationConstraints), 1)
+
+    def test_locally_declared_variables_disaggregated(self):
+        m = models.localVar()
+        # make it so we need to disaggregate y
+        m.disj1.cons2 = Constraint(expr=m.disj2.y >= 3)
+
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+
+        # two birds one stone: test the mappings too
+        disj1y = chull.get_disaggregated_var(m.disj2.y, m.disj1)
+        disj2y = chull.get_disaggregated_var(m.disj2.y, m.disj2)
+        self.assertIs(disj1y, m.disj1._transformation_block().y)
+        self.assertIs(disj2y, m.disj2._transformation_block().y)
+        self.assertIs(chull.get_src_var(disj1y), m.disj2.y)
+        self.assertIs(chull.get_src_var(disj2y), m.disj2.y)
 
     def test_do_not_transform_user_deactivated_disjuncts(self):
         m = models.makeTwoTermDisj()

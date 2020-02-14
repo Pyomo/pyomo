@@ -412,6 +412,7 @@ class ConvexHull_Transformation(Transformation):
             disjuncts = [d for d in varsByDisjunct if var in varsByDisjunct[d]]
             if len(disjuncts) > 1:
                 varSet.append(var)
+            # var lives in exactly one disjunct (in this disjunction)
             elif self._contained_in(var, disjuncts[0]):
                 localVars[disjuncts[0]].append(var)
             elif self._contained_in(var, transBlock):
@@ -963,9 +964,16 @@ class ConvexHull_Transformation(Transformation):
                             (original_var.name, disjunction.name))
 
     def get_var_bounds_constraint(self, v):
-        # v is a disaggregated variable: get the indicator*lb <= it <=
-        # indicator*ub constraint for it
+        # There are two cases here: 1) if v is a disaggregated variable: get the
+        # indicator*lb <= it <= indicator*ub constraint for it. Or 2) v could
+        # have been local to one disjunct in the disjunction. This means that we
+        # have the same constraint stored in the same map but we have to get to
+        # it differently because the variable is declared on a disjunct, not on
+        # a transformation block.
         transBlock = v.parent_block()
+        # If this is a local variable (not disaggregated) we have the wrong block
+        if hasattr(transBlock, "_transformation_block"):
+            transBlock = transBlock._transformation_block()
         try:
             return transBlock._bigMConstraintMap[v]
         except:
