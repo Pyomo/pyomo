@@ -134,7 +134,7 @@ class TestDaeSetUtils(unittest.TestCase):
 	# Here (2,) is the partial index, corresponding to space.
         # Can be provided as a scalar or tuple. 4, the time index,
         # should be inserted before (2,)
-        self.assertEqual(index_getter((2,) 4), (4, 2))
+        self.assertEqual(index_getter((2,), 4), (4, 2))
         self.assertEqual(index_getter(2, 4), (4, 2))
 
         # Case where every set is "omitted," now for multiple sets
