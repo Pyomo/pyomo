@@ -150,7 +150,8 @@ class BendersCutGeneratorData(_BlockData):
         if not numpy_available:
             raise ImportError('BendersCutGenerator requires numpy.')
         _BlockData.__init__(self, component)
-        self.num_subproblems_by_rank = np.zeros(MPI.COMM_WORLD.Get_size())
+        
+        self.num_subproblems_by_rank = 0 #np.zeros(self.comm.Get_size())
         self.subproblems = list()
         self.complicating_vars_maps = list()
         self.master_vars = list()
@@ -162,13 +163,14 @@ class BendersCutGeneratorData(_BlockData):
         self.all_master_etas = list()
         self._subproblem_ndx_map = dict()  # map from ndx in self.subproblems (local) to the global subproblem ndx
 
+
     def global_num_subproblems(self):
         return int(self.num_subproblems_by_rank.sum())
 
     def local_num_subproblems(self):
         return len(self.subproblems)
 
-    def set_input(self, master_vars, tol=1e-6):
+    def set_input(self, master_vars, tol=1e-6, comm = None):
         """
         It is very important for master_vars to be in the same order for every process.
 
@@ -177,7 +179,13 @@ class BendersCutGeneratorData(_BlockData):
         master_vars
         tol
         """
-        self.num_subproblems_by_rank = np.zeros(MPI.COMM_WORLD.Get_size())
+        self.comm = None
+
+        if comm is not None:
+            self.comm = comm
+        else:
+            self.comm = MPI.COMM_WORLD
+        self.num_subproblems_by_rank = np.zeros(self.comm.Get_size())
         del self.cuts
         self.cuts = pe.ConstraintList()
         self.subproblems = list()
@@ -196,7 +204,7 @@ class BendersCutGeneratorData(_BlockData):
         _rank = np.argmin(self.num_subproblems_by_rank)
         self.num_subproblems_by_rank[_rank] += 1
         self.all_master_etas.append(master_eta)
-        if _rank == MPI.COMM_WORLD.Get_rank():
+        if _rank == self.comm.Get_rank():
             self.master_etas.append(master_eta)
             subproblem, complicating_vars_map = subproblem_fn(**subproblem_fn_kwargs)
             self.subproblems.append(subproblem)
@@ -274,7 +282,7 @@ class BendersCutGeneratorData(_BlockData):
         global_coeffs = np.zeros(total_num_subproblems*len(self.master_vars), dtype='d')
         global_eta_coeffs = np.zeros(total_num_subproblems, dtype='d')
 
-        comm = MPI.COMM_WORLD
+        comm = self.comm
         comm.Allreduce([constants, MPI.DOUBLE], [global_constants, MPI.DOUBLE])
         comm.Allreduce([eta_coeffs, MPI.DOUBLE], [global_eta_coeffs, MPI.DOUBLE])
         comm.Allreduce([coefficients, MPI.DOUBLE], [global_coeffs, MPI.DOUBLE])
