@@ -2363,26 +2363,7 @@ class IndexedDisjunctions(unittest.TestCase):
 
     def test_disjunction_data_target(self):
         ct.check_disjunction_data_target(self, 'bigm')
-        # m = models.makeThreeTermIndexedDisj()
-        # TransformationFactory('gdp.bigm').apply_to(m, targets=[m.disjunction[2]])
-
-        # # we got a transformation block on the model
-        # transBlock = m.component("_pyomo_gdp_bigm_relaxation")
-        # self.assertIsInstance(transBlock, Block)
-        # self.assertIsInstance(transBlock.component( "disjunction_xor"),
-        #                       Constraint)
-        # self.assertIsInstance(transBlock.disjunction_xor[2],
-        #                       constraint._GeneralConstraintData)
-        # self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
-        # self.assertEqual(len(transBlock.relaxedDisjuncts), 3)
-
-        # # suppose we transform the next one separately
-        # TransformationFactory('gdp.bigm').apply_to(m, targets=[m.disjunction[1]])
-        # self.assertIsInstance(transBlock.disjunction_xor[1],
-        #                       constraint._GeneralConstraintData)
-        # self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
-        # self.assertEqual(len(transBlock.relaxedDisjuncts), 3)
-
+       
     def check_relaxation_block(self, m, name, numDisjuncts):
         transBlock = m.component(name)
         self.assertIsInstance(transBlock, Block)
