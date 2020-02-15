@@ -2559,7 +2559,7 @@ class IndexedDisjunctions(unittest.TestCase):
         self.assertIsInstance(transBlock.disjunction_xor[1],
                               constraint._GeneralConstraintData)
         self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
-        self.assertEqual(len(transBlock.relaxedDisjuncts), 3)
+        self.assertEqual(len(transBlock.relaxedDisjuncts), 6)
 
     def check_relaxation_block(self, m, name, numDisjuncts):
         transBlock = m.component(name)

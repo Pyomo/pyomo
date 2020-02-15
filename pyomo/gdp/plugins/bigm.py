@@ -339,7 +339,16 @@ class BigM_Transformation(Transformation):
         # targets. But else, we created them earlier, and have just been passing
         # them through.
         if transBlock is None:
-            transBlock = self._add_transformation_block(obj.parent_block())
+            # It's possible that we have already created a transformation block
+            # for another disjunctionData from this same container. If that's
+            # the case, let's use the same transformation block. (Else it will
+            # be really confusing that the XOR constraint goes to that old block
+            # but we create a new one here.)
+            if not obj.parent_component()._algebraic_constraint is None:
+                transBlock = obj.parent_component()._algebraic_constraint().\
+                             parent_block()
+            else:
+                transBlock = self._add_transformation_block(obj.parent_block())
         if xorConstraint is None:
             xorConstraint = self._add_xor_constraint(obj.parent_component(),
                                                      transBlock)
