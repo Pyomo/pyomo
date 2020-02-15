@@ -1,5 +1,6 @@
 from pyomo.environ import *
 from pyomo.gdp import *
+from pyomo.core.base import constraint
 from pyomo.repn import generate_standard_repn
 import pyomo.gdp.tests.models as models
 from six import StringIO
@@ -30,6 +31,12 @@ def diff_apply_to_and_create_using(self, model, transformation):
     model.pprint(ostream=model_buf)
     model_output = model_buf.getvalue()
     self.assertMultiLineEqual(modelcopy_output, model_output)
+
+def check_relaxation_block(self, m, name, numdisjuncts):
+    transBlock = m.component(name)
+    self.assertIsInstance(transBlock, Block)
+    self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
+    self.assertEqual(len(transBlock.relaxedDisjuncts), numdisjuncts)
 
 # active status checks
 
@@ -128,6 +135,42 @@ def check_do_not_transform_twice_if_disjunction_reactivated(self,
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m)
 
+def check_constraints_deactivated_indexedDisjunction(self, transformation):
+    m = models.makeTwoTermMultiIndexedDisjunction()
+    TransformationFactory('gdp.%s' % transformation).apply_to(m)
+    
+    for i in m.disjunct.index_set():
+        self.assertFalse(m.disjunct[i].c.active)
+
+
+# transformation block
+
+def check_transformation_block_name_collision(self, transformation):
+    # make sure that if the model already has a block called
+    # _pyomo_gdp_bigm_relaxation that we come up with a different name for the
+    # transformation block (and put the relaxed disjuncts on it)
+    m = models.makeTwoTermDisj()
+    # add block with the name we are about to try to use
+    m.add_component("_pyomo_gdp_%s_relaxation" % transformation, Block(Any))
+    TransformationFactory('gdp.%s' % transformation).apply_to(m)
+
+    # check that we got a uniquely named block
+    transBlock = m.component("_pyomo_gdp_%s_relaxation_4" % transformation)
+    self.assertIsInstance(transBlock, Block)
+
+    # check that the relaxed disjuncts really are here.
+    disjBlock = transBlock.relaxedDisjuncts
+    self.assertIsInstance(disjBlock, Block)
+    self.assertEqual(len(disjBlock), 2)
+    self.assertIsInstance(disjBlock[0].component("d[0].c"), Constraint)
+    self.assertIsInstance(disjBlock[1].component("d[1].c1"), Constraint)
+    self.assertIsInstance(disjBlock[1].component("d[1].c2"), Constraint)
+
+    # we didn't add to the block that wasn't ours
+    self.assertEqual(len(m.component("_pyomo_gdp_%s_relaxation" %
+                                     transformation)), 0)
+
+
 # XOR constraints
 
 def check_indicator_vars(self, transformation):
@@ -161,6 +204,25 @@ def check_xor_constraint(self, transformation):
     check_linear_coef(self, repn, m.d[1].indicator_var, 1)
     self.assertEqual(xor.lower, 1)
     self.assertEqual(xor.upper, 1)
+
+def check_indexed_xor_constraints(self, transformation):
+    m = models.makeTwoTermMultiIndexedDisjunction()
+    TransformationFactory('gdp.%s' % transformation).apply_to(m)
+
+    xor = m.component("_pyomo_gdp_%s_relaxation" % transformation).\
+          component("disjunction_xor")
+    self.assertIsInstance(xor, Constraint)
+    for i in m.disjunction.index_set():
+        repn = generate_standard_repn(xor[i].body)
+        self.assertEqual(repn.constant, 0)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 2)
+        check_linear_coef(
+            self, repn, m.disjunction[i].disjuncts[0].indicator_var, 1)
+        check_linear_coef(
+            self, repn, m.disjunction[i].disjuncts[1].indicator_var, 1)
+        self.assertEqual(xor[i].lower, 1)
+        self.assertEqual(xor[i].upper, 1)
 
 # mappings
 
@@ -206,3 +268,33 @@ def check_disjunct_mapping(self, transformation):
     for i in [0,1]:
         self.assertIs(disjBlock[i]._srcDisjunct(), m.d[i])
         self.assertIs(trans.get_src_disjunct(disjBlock[i]), m.d[i])
+
+# targets
+
+def check_disjunction_data_target(self, transformation):
+    m = models.makeThreeTermIndexedDisj()
+    TransformationFactory('gdp.%s' % transformation).apply_to(
+        m, targets=[m.disjunction[2]])
+
+    # we got a transformation block on the model
+    transBlock = m.component("_pyomo_gdp_%s_relaxation" % transformation)
+    self.assertIsInstance(transBlock, Block)
+    self.assertIsInstance(transBlock.component("disjunction_xor"),
+                          Constraint)
+    self.assertIsInstance(transBlock.disjunction_xor[2],
+                          constraint._GeneralConstraintData)
+    self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
+    self.assertEqual(len(transBlock.relaxedDisjuncts), 3)
+
+    # suppose we transform the next one separately
+    TransformationFactory('gdp.%s' % transformation).apply_to(
+        m, targets=[m.disjunction[1]])
+    # we added to the same XOR constraint before
+    self.assertIsInstance(transBlock.disjunction_xor[1], 
+                          constraint._GeneralConstraintData)
+    # we used the same transformation block, so we have more relaxed
+    # disjuncts
+
+    # TODO: This was 3 in the bigm tests, but I think that is a bug... It should
+    # go to the same transformation block.
+    self.assertEqual(len(transBlock.relaxedDisjuncts), 6)

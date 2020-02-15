@@ -314,6 +314,9 @@ class ConvexHull_Transformation(Transformation):
         return orC
 
     def _transform_disjunction(self, obj):
+        if not obj.active:
+            return
+
         # put the transformation block on the parent block of the Disjunction,
         # unless this is a disjunction we have seen in a prior call to chull, in
         # which case we will use the same transformation block we created
@@ -330,7 +333,7 @@ class ConvexHull_Transformation(Transformation):
         for i in sorted(iterkeys(obj)):
             self._transform_disjunctionData(obj[i], i, transBlock)
 
-        # deactivate so we know we relaxed
+        # deactivate so the writers will be happy
         obj.deactivate()
 
     def _transform_disjunctionData(self, obj, index, transBlock=None):

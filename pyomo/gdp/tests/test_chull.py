@@ -58,25 +58,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(len(disjBlock), 2)
 
     def test_transformation_block_name_collision(self):
-        m = models.makeTwoTermDisj_Nonlinear()
-        # add block with the name we are about to try to use
-        m._pyomo_gdp_chull_relaxation = Block(Any)
-        TransformationFactory('gdp.chull').apply_to(m)
-
-        # check that we got a uniquely named block
-        transBlock = m.component("_pyomo_gdp_chull_relaxation_4")
-        self.assertIsInstance(transBlock, Block)
-
-        # check that the relaxed disjuncts really are here.
-        disjBlock = transBlock.relaxedDisjuncts
-        self.assertIsInstance(disjBlock, Block)
-        self.assertEqual(len(disjBlock), 2)
-        self.assertIsInstance(disjBlock[0].component("d[0].c"), Constraint)
-        self.assertIsInstance(disjBlock[1].component("d[1].c1"), Constraint)
-        self.assertIsInstance(disjBlock[1].component("d[1].c2"), Constraint)
-
-        # we didn't add to the block that wasn't ours
-        self.assertEqual(len(m._pyomo_gdp_chull_relaxation), 0)
+        ct.check_transformation_block_name_collision(self, 'chull')
 
     def test_disaggregated_vars(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -390,7 +372,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         ct.check_linear_coef(self, repn, m.disj2.y, 1)
         ct.check_linear_coef(self, repn, m.disj2.indicator_var, -3)
         
-    # [ESJ 02/14/2020] This is OK because they condition for "local" here is
+    # [ESJ 02/14/2020] This is OK because the condition for "local" here is
     # that it is used in only one Disjunct of the Disjunction. This is true.
     def test_local_var_not_disaggregated(self):
         m = models.localVar()
@@ -617,40 +599,18 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
             self.assertTrue(disVars[1].is_fixed())
             self.assertEqual(value(disVars[1]), 0)
 
+    def test_xor_constraints(self):
+        ct.check_indexed_xor_constraints(self, 'chull')
+
     def test_create_using(self):
         m = models.makeTwoTermMultiIndexedDisjunction()
         self.diff_apply_to_and_create_using(m)
 
+    def test_deactivated_constraints(self):
+        ct.check_constraints_deactivated_indexedDisjunction(self, 'chull')
+
     def test_disjunction_data_target(self):
-        m = models.makeThreeTermIndexedDisj()
-        TransformationFactory('gdp.chull').apply_to(m, 
-                                                    targets=[m.disjunction[2]])
-
-        # we got a transformation block on the model
-        transBlock = m.component("_pyomo_gdp_chull_relaxation")
-        self.assertIsInstance(transBlock, Block)
-        self.assertIsInstance(transBlock.component("disjunction_xor"),
-                              Constraint)
-        self.assertIsInstance(transBlock.disjunction_xor[2],
-                              constraint._GeneralConstraintData)
-        self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
-        self.assertEqual(len(transBlock.relaxedDisjuncts), 3)
-
-        # suppose we transform the next one separately
-        TransformationFactory('gdp.chull').apply_to(m, 
-                                                    targets=[m.disjunction[1]])
-        # we added to the same XOR constraint before
-        self.assertIsInstance(transBlock.disjunction_xor[1], 
-                              constraint._GeneralConstraintData)
-        # we used the same transformation block, so we have more relaxed
-        # disjuncts
-        self.assertEqual(len(transBlock.relaxedDisjuncts), 6)
-
-    def check_relaxation_block(self, m, name, numdisjuncts):
-        transBlock = m.component(name)
-        self.assertIsInstance(transBlock, Block)
-        self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
-        self.assertEqual(len(transBlock.relaxedDisjuncts), numdisjuncts)
+        ct.check_disjunction_data_target(self, 'chull')
 
     def test_disjunction_data_target_any_index(self):
         m = ConcreteModel()
@@ -667,9 +627,11 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
                 m, targets=[m.disjunction2[i]]) 
 
             if i == 0:
-                self.check_relaxation_block(m, "_pyomo_gdp_chull_relaxation", 2)
+                ct.check_relaxation_block(self, m,
+                                          "_pyomo_gdp_chull_relaxation", 2)
             if i == 2:
-                self.check_relaxation_block(m, "_pyomo_gdp_chull_relaxation", 4)
+                ct.check_relaxation_block(self, m,
+                                          "_pyomo_gdp_chull_relaxation", 4)
     
     def check_trans_block_disjunctions_of_disjunct_datas(self, m):
         transBlock1 = m.component("_pyomo_gdp_chull_relaxation")
@@ -965,11 +927,11 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
             TransformationFactory('gdp.chull').apply_to(m, targets=[m.b])
             
             if i == 1:
-                self.check_relaxation_block(m.b, "_pyomo_gdp_chull_relaxation",
-                                            2)
+                ct.check_relaxation_block(self, m.b,
+                                          "_pyomo_gdp_chull_relaxation", 2)
             if i == 2:
-                self.check_relaxation_block(m.b, "_pyomo_gdp_chull_relaxation",
-                                            4)
+                ct.check_relaxation_block(self, m.b,
+                                          "_pyomo_gdp_chull_relaxation", 4)
 
 # NOTE: These are copied from bigm...
 class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
