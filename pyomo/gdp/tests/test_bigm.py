@@ -18,6 +18,7 @@ from pyomo.repn import generate_standard_repn
 from pyomo.common.log import LoggingIntercept
 
 import pyomo.gdp.tests.models as models
+import common_tests as ct
 
 import random
 import sys
@@ -25,27 +26,9 @@ import sys
 from nose.tools import set_trace
 from six import iteritems, StringIO
 
-def check_linear_coef(self, repn, var, coef):
-    var_id = None
-    for i,v in enumerate(repn.linear_vars):
-        if v is var:
-            var_id = i
-    self.assertIsNotNone(var_id)
-    self.assertEqual(repn.linear_coefs[var_id], coef)
-
-
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):
-        modelcopy = TransformationFactory('gdp.bigm').create_using(model)
-        modelcopy_buf = StringIO()
-        modelcopy.pprint(ostream=modelcopy_buf)
-        modelcopy_output = modelcopy_buf.getvalue()
-
-        TransformationFactory('gdp.bigm').apply_to(model)
-        model_buf = StringIO()
-        model.pprint(ostream=model_buf)
-        model_output = model_buf.getvalue()
-        self.assertMultiLineEqual(modelcopy_output, model_output)
+        ct.diff_apply_to_and_create_using(self, model, 'gdp.bigm')
 
 class TwoTermDisj(unittest.TestCase, CommonTests):
     def setUp(self):
@@ -60,7 +43,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         transBlock = m.component("_pyomo_gdp_bigm_relaxation")
         self.assertIsInstance(transBlock, Block)
 
-       # check that we have the lbub set on the transformation block
+        # check that we have the lbub set on the transformation block
         lbub = transBlock.component("lbub")
         self.assertIsInstance(lbub, Set)
         self.assertEqual(len(lbub), 2)
@@ -81,78 +64,22 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             Constraint)
 
     def test_disjunction_deactivated(self):
-        m = models.makeTwoTermDisj()
-        TransformationFactory('gdp.bigm').apply_to(m, targets=(m,))
+        ct.check_disjunction_deactivated(self, 'bigm')
 
-        oldblock = m.component("disjunction")
-        self.assertIsInstance(oldblock, Disjunction)
-        self.assertFalse(oldblock.active)
-
-    def test_disjunctdatas_deactivated(self):
-        m = models.makeTwoTermDisj()
-        TransformationFactory('gdp.bigm').apply_to(m, targets=(m,))
-
-        oldblock = m.component("disjunction")
-        self.assertFalse(oldblock.disjuncts[0].active)
-        self.assertFalse(oldblock.disjuncts[1].active)
+    def test_disjunctDatas_deactivated(self):
+        ct.check_disjunctDatas_deactivated(self, 'bigm')
 
     def test_do_not_transform_twice_if_disjunction_reactivated(self):
-        m = models.makeTwoTermDisj()
-        # this is a hack, but just diff the pprint from this and from calling
-        # the transformation again.
-        TransformationFactory('gdp.bigm').apply_to(m)
-        first_buf = StringIO()
-        m.pprint(ostream=first_buf)
-        first_output = first_buf.getvalue()
-
-        TransformationFactory('gdp.bigm').apply_to(m)
-        second_buf = StringIO()
-        m.pprint(ostream=second_buf)
-        second_output = second_buf.getvalue()
-
-        self.assertMultiLineEqual(first_output, second_output)
-
-        # this is a stupid thing to do, but we should still know not to
-        # retransform because active status is now *not* the source of truth.
-        m.disjunction.activate()
-
-        # This is kind of the wrong error, but I'll live with it: at least we
-        # get an error.
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "The disjunct d\[0\] has been transformed, but a disjunction "
-            "it appears in has not. Putting the same disjunct in "
-            "multiple disjunctions is not supported.",
-            TransformationFactory('gdp.bigm').apply_to,
-            m)
+        ct.check_do_not_transform_twice_if_disjunction_reactivated(self, 'bigm')
 
     def test_xor_constraint_mapping(self):
-        m = models.makeTwoTermDisj()
-        bigm = TransformationFactory('gdp.bigm')
-        bigm.apply_to(m)
-        
-        transBlock = m._pyomo_gdp_bigm_relaxation
-        self.assertIs( bigm.get_src_disjunction(transBlock.disjunction_xor),
-                       m.disjunction)
-        self.assertIs( m.disjunction.algebraic_constraint(),
-                       transBlock.disjunction_xor)
+        ct.check_xor_constraint_mapping(self, 'bigm')
 
     def test_xor_constraint_mapping_two_disjunctions(self):
-        m = models.makeDisjunctionOfDisjunctDatas()
-        bigm = TransformationFactory('gdp.bigm')
-        bigm.apply_to(m)
-        
-        transBlock = m._pyomo_gdp_bigm_relaxation
-        transBlock2 = m._pyomo_gdp_bigm_relaxation_4
-        self.assertIs( bigm.get_src_disjunction(transBlock.disjunction_xor),
-                       m.disjunction)
-        self.assertIs( bigm.get_src_disjunction(transBlock2.disjunction2_xor),
-                       m.disjunction2)
+        ct.check_xor_constraint_mapping_two_disjunctions(self, 'bigm')
 
-        self.assertIs( m.disjunction.algebraic_constraint(),
-                       transBlock.disjunction_xor)
-        self.assertIs( m.disjunction2.algebraic_constraint(),
-                       transBlock2.disjunction2_xor)
+    def test_disjunct_mapping(self):
+        ct.check_disjunct_mapping(self, 'bigm')
 
     def test_disjunct_and_constraint_maps(self):
         m = models.makeTwoTermDisj()
@@ -234,32 +161,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             Constraint)
 
     def test_indicator_vars(self):
-        m = models.makeTwoTermDisj()
-        TransformationFactory('gdp.bigm').apply_to(m)
-        oldblock = m.component("d")
-        # have indicator variables on original disjuncts and they are still
-        # active.
-        self.assertIsInstance(oldblock[0].indicator_var, Var)
-        self.assertTrue(oldblock[0].indicator_var.active)
-        self.assertTrue(oldblock[0].indicator_var.is_binary())
-        self.assertIsInstance(oldblock[1].indicator_var, Var)
-        self.assertTrue(oldblock[1].indicator_var.active)
-        self.assertTrue(oldblock[1].indicator_var.is_binary())
+        ct.check_indicator_vars(self, 'bigm')
 
     def test_xor_constraints(self):
-        m = models.makeTwoTermDisj()
-        TransformationFactory('gdp.bigm').apply_to(m)
-        # make sure we created the xor constraint and put it on the relaxation
-        # block
-        xor = m._pyomo_gdp_bigm_relaxation.component("disjunction_xor")
-        self.assertIsInstance(xor, Constraint)
-        self.assertIs(m.d[0].indicator_var, xor.body.arg(0))
-        self.assertIs(m.d[1].indicator_var, xor.body.arg(1))
-        repn = generate_standard_repn(xor.body)
-        check_linear_coef(self, repn, m.d[0].indicator_var, 1)
-        check_linear_coef(self, repn, m.d[1].indicator_var, 1)
-        self.assertEqual(xor.lower, 1)
-        self.assertEqual(xor.upper, 1)
+        ct.check_xor_constraint(self, 'bigm')
 
     def test_or_constraints(self):
         m = models.makeTwoTermDisj()
@@ -272,27 +177,13 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertIs(m.d[0].indicator_var, orcons.body.arg(0))
         self.assertIs(m.d[1].indicator_var, orcons.body.arg(1))
         repn = generate_standard_repn(orcons.body)
-        check_linear_coef(self, repn, m.d[0].indicator_var, 1)
-        check_linear_coef(self, repn, m.d[1].indicator_var, 1)
+        ct.check_linear_coef(self, repn, m.d[0].indicator_var, 1)
+        ct.check_linear_coef(self, repn, m.d[1].indicator_var, 1)
         self.assertEqual(orcons.lower, 1)
         self.assertIsNone(orcons.upper)
 
     def test_deactivated_constraints(self):
-        m = models.makeTwoTermDisj()
-        TransformationFactory('gdp.bigm').apply_to(m)
-        oldblock = m.component("d")
-        # old constraints still there, deactivated
-        oldc1 = oldblock[1].component("c1")
-        self.assertIsInstance(oldc1, Constraint)
-        self.assertFalse(oldc1.active)
-
-        oldc2 = oldblock[1].component("c2")
-        self.assertIsInstance(oldc2, Constraint)
-        self.assertFalse(oldc2.active)
-
-        oldc = oldblock[0].component("c")
-        self.assertIsInstance(oldc, Constraint)
-        self.assertFalse(oldc.active)
+        ct.check_deactivated_constraints(self, 'bigm')
 
     def test_transformed_constraints(self):
         m = models.makeTwoTermDisj()
@@ -300,32 +191,11 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.checkMs(m, -3, 2, 7, 2)
 
     def test_do_not_transform_userDeactivated_disjuncts(self):
-        m = models.makeTwoTermDisj()
-        m.d[0].deactivate()
-        bigm = TransformationFactory('gdp.bigm') 
-        bigm.apply_to(m, targets=(m,))
-
-        self.assertFalse(m.disjunction.active)
-        self.assertFalse(m.d[1].active)
-
-        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
-        self.assertIs(disjBlock[0], m.d[1].transformation_block())
-        self.assertIs(bigm.get_src_disjunct(disjBlock[0]), m.d[1])
+        ct.check_user_deactivated_disjuncts(self, 'bigm')
 
     def test_do_not_transform_userDeactivated_IndexedDisjunction(self):
-        m = models.makeTwoTermIndexedDisjunction()
-        # If you truly want to transform nothing, deactivate everything
-        m.disjunction.deactivate()
-        for idx in m.disjunct:
-            m.disjunct[idx].deactivate()
-        TransformationFactory('gdp.bigm').apply_to(m)
-
-        # no transformation block, nothing transformed
-        self.assertIsNone(m.component("_pyomo_gdp_bigm_transformation"))
-        for idx in m.disjunct:
-            self.assertIsNone(m.disjunct[idx].transformation_block)
-        for idx in m.disjunction:
-            self.assertIsNone(m.disjunction[idx].algebraic_constraint)
+        ct.check_do_not_transform_userDeactivated_indexedDisjunction(self,
+                                                                     'bigm')
 
     # helper method to check the M values in all of the transformed
     # constraints (m, M) is the tuple for M.  This also relies on the
@@ -340,8 +210,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c['lb'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
-        check_linear_coef(self, repn, model.a, 1)
-        check_linear_coef(self, repn, model.d[0].indicator_var, cons1lb)
+        ct.check_linear_coef(self, repn, model.a, 1)
+        ct.check_linear_coef(self, repn, model.d[0].indicator_var, cons1lb)
         self.assertEqual(repn.constant, -cons1lb)
         self.assertEqual(c['lb'].lower, model.d[0].c.lower)
         self.assertIsNone(c['lb'].upper)
@@ -353,8 +223,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c['lb'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
-        check_linear_coef(self, repn, model.a, 1)
-        check_linear_coef(self, repn, model.d[1].indicator_var, cons2lb)
+        ct.check_linear_coef(self, repn, model.a, 1)
+        ct.check_linear_coef(self, repn, model.d[1].indicator_var, cons2lb)
         self.assertEqual(repn.constant, -cons2lb)
         self.assertEqual(c['lb'].lower, model.d[1].c1.lower)
         self.assertIsNone(c['lb'].upper)
@@ -362,8 +232,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c['ub'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
-        check_linear_coef(self, repn, model.a, 1)
-        check_linear_coef(self, repn, model.d[1].indicator_var, cons2ub)
+        ct.check_linear_coef(self, repn, model.a, 1)
+        ct.check_linear_coef(self, repn, model.d[1].indicator_var, cons2ub)
         self.assertEqual(repn.constant, -cons2ub)
         self.assertIsNone(c['ub'].lower)
         self.assertEqual(c['ub'].upper, model.d[1].c1.upper)
@@ -375,8 +245,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c['ub'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
-        check_linear_coef(self, repn, model.x, 1)
-        check_linear_coef(self, repn, model.d[1].indicator_var, cons3ub)
+        ct.check_linear_coef(self, repn, model.x, 1)
+        ct.check_linear_coef(self, repn, model.d[1].indicator_var, cons3ub)
         self.assertEqual(repn.constant, -cons3ub)
         self.assertIsNone(c['ub'].lower)
         self.assertEqual(c['ub'].upper, model.d[1].c2.upper)
@@ -643,10 +513,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         ub = transformedC['ub']
         repn = generate_standard_repn(lb.body)
         self.assertTrue(repn.is_linear())
-        check_linear_coef(self, repn, m.disj2.indicator_var, -2)
+        ct.check_linear_coef(self, repn, m.disj2.indicator_var, -2)
         repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
-        check_linear_coef(self, repn, m.disj2.indicator_var, 3)
+        ct.check_linear_coef(self, repn, m.disj2.indicator_var, 3)
 
 class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
     def test_nonlinear_bigM(self):
@@ -661,8 +531,8 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c['ub'].body)
         self.assertFalse(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
-        check_linear_coef(self, repn, m.x, 1)
-        check_linear_coef(self, repn, m.d[0].indicator_var, 94)
+        ct.check_linear_coef(self, repn, m.x, 1)
+        ct.check_linear_coef(self, repn, m.d[0].indicator_var, 94)
         self.assertEqual(repn.constant, -94)
         self.assertEqual(c['ub'].upper, m.d[0].c.upper)
         self.assertIsNone(c['ub'].lower)
@@ -695,8 +565,8 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c[1, 'ub'].body)
         self.assertFalse(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 1)
-        # check_linear_coef(self, repn, m.x, 1)
-        check_linear_coef(self, repn, m.disj_disjuncts[0].indicator_var, 114)
+        # ct.check_linear_coef(self, repn, m.x, 1)
+        ct.check_linear_coef(self, repn, m.disj_disjuncts[0].indicator_var, 114)
         self.assertEqual(repn.constant, -114)
         self.assertEqual(c[1, 'ub'].upper,
                          m.disj_disjuncts[0].constraint[1].upper)
@@ -705,8 +575,9 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c[2, 'lb'].body)
         self.assertFalse(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 1)
-        # check_linear_coef(self, repn, m.x, 1)
-        check_linear_coef(self, repn, m.disj_disjuncts[0].indicator_var, -104.5)
+        # ct.check_linear_coef(self, repn, m.x, 1)
+        ct.check_linear_coef(self, repn, m.disj_disjuncts[0].indicator_var,
+                             -104.5)
         self.assertEqual(repn.constant, 104.5)
         self.assertEqual(c[2, 'lb'].lower,
                          m.disj_disjuncts[0].constraint[2].lower)
@@ -717,9 +588,9 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c[1, 'ub'].body)
         self.assertFalse(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 3)
-        check_linear_coef(self, repn, m.x, -6)
-        check_linear_coef(self, repn, m.y, -6)
-        check_linear_coef(self, repn, m.disj_disjuncts[1].indicator_var, 217)
+        ct.check_linear_coef(self, repn, m.x, -6)
+        ct.check_linear_coef(self, repn, m.y, -6)
+        ct.check_linear_coef(self, repn, m.disj_disjuncts[1].indicator_var, 217)
         self.assertEqual(repn.constant, -199)
         self.assertEqual(c[1, 'ub'].upper,
                          m.disj_disjuncts[1].constraint[1].upper)
@@ -756,9 +627,9 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
             self.assertEqual(repn.constant, 0)
             self.assertTrue(repn.is_linear())
             self.assertEqual(len(repn.linear_vars), 2)
-            check_linear_coef(
+            ct.check_linear_coef(
                 self, repn, m.disjunction[i].disjuncts[0].indicator_var, 1)
-            check_linear_coef(
+            ct.check_linear_coef(
                 self, repn, m.disjunction[i].disjuncts[1].indicator_var, 1)
             self.assertEqual(xor[i].lower, 1)
             self.assertEqual(xor[i].upper, 1)
@@ -899,12 +770,12 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c1['lb'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c1lb)
-        check_linear_coef(
+        ct.check_linear_coef(
             self, repn, model.b.disjunct[0].indicator_var, disj1c1lb)
         repn = generate_standard_repn(c1['ub'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c1ub)
-        check_linear_coef(
+        ct.check_linear_coef(
             self, repn, model.b.disjunct[0].indicator_var, disj1c1ub)
 
         c2 = bigm.get_transformed_constraint(model.b.disjunct[1].c)
@@ -912,7 +783,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c2['ub'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c2)
-        check_linear_coef(
+        ct.check_linear_coef(
             self, repn, model.b.disjunct[1].indicator_var, disj1c2)
 
     def checkMs(self, model, disj1c1lb, disj1c1ub, disj1c2, disj2c1, disj2c2):
@@ -924,7 +795,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c['lb'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj2c1)
-        check_linear_coef(
+        ct.check_linear_coef(
             self, repn, model.simpledisj.indicator_var, disj2c1)
 
         c = bigm.get_transformed_constraint(model.simpledisj2.c)
@@ -932,7 +803,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c['ub'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj2c2)
-        check_linear_coef(
+        ct.check_linear_coef(
             self, repn, model.simpledisj2.indicator_var, disj2c2)
 
     def test_suffix_M_onBlock(self):
@@ -1261,22 +1132,22 @@ class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c[1, 'lb'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c1lb)
-        check_linear_coef(
+        ct.check_linear_coef(
             self, repn, m.b.simpledisj1.indicator_var, disj1c1lb)
         repn = generate_standard_repn(c[1, 'ub'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c1ub)
-        check_linear_coef(
+        ct.check_linear_coef(
             self, repn, m.b.simpledisj1.indicator_var, disj1c1ub)
         repn = generate_standard_repn(c[2, 'lb'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c2lb)
-        check_linear_coef(
+        ct.check_linear_coef(
             self, repn, m.b.simpledisj1.indicator_var, disj1c2lb)
         repn = generate_standard_repn(c[2, 'ub'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c2ub)
-        check_linear_coef(
+        ct.check_linear_coef(
             self, repn, m.b.simpledisj1.indicator_var, disj1c2ub)
 
         c = bigm.get_transformed_constraint(m.b.simpledisj2.c)
@@ -1284,12 +1155,12 @@ class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
         repn = generate_standard_repn(c[1, 'ub'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj2c1ub)
-        check_linear_coef(
+        ct.check_linear_coef(
             self, repn, m.b.simpledisj2.indicator_var, disj2c1ub)
         repn = generate_standard_repn(c[2, 'ub'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj2c2ub)
-        check_linear_coef(
+        ct.check_linear_coef(
             self, repn, m.b.simpledisj2.indicator_var, disj2c2ub)
 
     def test_suffix_M_constraintData_on_block(self):
@@ -1369,14 +1240,14 @@ class MultiTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear_vars), 3)
         for i in range(3):
-            check_linear_coef(self, repn, m.disjunct[i,1].indicator_var, 1)
+            ct.check_linear_coef(self, repn, m.disjunct[i,1].indicator_var, 1)
 
         repn = generate_standard_repn(xor[2].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear_vars), 3)
         for i in range(3):
-            check_linear_coef(self, repn, m.disjunct[i,2].indicator_var, 1)
+            ct.check_linear_coef(self, repn, m.disjunct[i,2].indicator_var, 1)
 
     def test_create_using(self):
         m = models.makeThreeTermIndexedDisj()
@@ -1423,12 +1294,12 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         self.assertEqual(repn.constant, -c11lb)
-        check_linear_coef(self, repn, model.disjunct[0].indicator_var, c11lb)
+        ct.check_linear_coef(self, repn, model.disjunct[0].indicator_var, c11lb)
         repn = generate_standard_repn(c[2, 'lb'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         self.assertEqual(repn.constant, -c12lb)
-        check_linear_coef(self, repn, model.disjunct[0].indicator_var, c12lb)
+        ct.check_linear_coef(self, repn, model.disjunct[0].indicator_var, c12lb)
 
         c = bigm.get_transformed_constraint(model.disjunct[1].c)
         self.assertEqual(len(c), 4)
@@ -1436,22 +1307,22 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         self.assertEqual(repn.constant, -c21lb)
-        check_linear_coef(self, repn, model.disjunct[1].indicator_var, c21lb)
+        ct.check_linear_coef(self, repn, model.disjunct[1].indicator_var, c21lb)
         repn = generate_standard_repn(c[1, 'ub'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         self.assertEqual(repn.constant, -c21ub)
-        check_linear_coef(self, repn, model.disjunct[1].indicator_var, c21ub)
+        ct.check_linear_coef(self, repn, model.disjunct[1].indicator_var, c21ub)
         repn = generate_standard_repn(c[2, 'lb'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         self.assertEqual(repn.constant, -c22lb)
-        check_linear_coef(self, repn, model.disjunct[1].indicator_var, c22lb)
+        ct.check_linear_coef(self, repn, model.disjunct[1].indicator_var, c22lb)
         repn = generate_standard_repn(c[2, 'ub'].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         self.assertEqual(repn.constant, -c22ub)
-        check_linear_coef(self, repn, model.disjunct[1].indicator_var, c22ub)
+        ct.check_linear_coef(self, repn, model.disjunct[1].indicator_var, c22ub)
 
     def test_arg_M_constraintdata(self):
         m = models.makeTwoTermDisj_IndexedConstraints_BoundedVars()
@@ -2112,25 +1983,25 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -M)
         self.assertEqual(len(repn.linear_vars), 2)
-        check_linear_coef(self, repn, variable, 1)
-        check_linear_coef(self, repn, indicator_var, M)
+        ct.check_linear_coef(self, repn, variable, 1)
+        ct.check_linear_coef(self, repn, indicator_var, M)
 
     def check_xor_relaxation(self, cons, indvar1, indvar2, indvar3, lb):
         repn = generate_standard_repn(cons.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 3)
-        check_linear_coef(self, repn, indvar1, 1)
-        check_linear_coef(self, repn, indvar2, 1)
+        ct.check_linear_coef(self, repn, indvar1, 1)
+        ct.check_linear_coef(self, repn, indvar2, 1)
         if not lb:
             self.assertEqual(cons.upper, 1)
             self.assertIsNone(cons.lower)
             self.assertEqual(repn.constant, -1)
-            check_linear_coef(self, repn, indvar3, 1)
+            ct.check_linear_coef(self, repn, indvar3, 1)
         else:
             self.assertEqual(cons.lower, 1)
             self.assertIsNone(cons.upper)
             self.assertEqual(repn.constant, 1)
-            check_linear_coef(self, repn, indvar3, -1)
+            ct.check_linear_coef(self, repn, indvar3, -1)
 
     def test_transformed_constraints(self):
         # We'll check all the transformed constraints to make sure
@@ -2365,8 +2236,8 @@ class IndexedDisjunction(unittest.TestCase):
             repn = generate_standard_repn(xorC[i].body)
             self.assertTrue(repn.is_linear())
             self.assertEqual(repn.constant, 0)
-            check_linear_coef(self, repn, m.disjunct[i, 0].indicator_var, 1)
-            check_linear_coef(self, repn, m.disjunct[i, 1].indicator_var, 1)
+            ct.check_linear_coef(self, repn, m.disjunct[i, 0].indicator_var, 1)
+            ct.check_linear_coef(self, repn, m.disjunct[i, 1].indicator_var, 1)
 
     def test_partial_deactivate_indexed_disjunction(self):
         """Test for partial deactivation of an indexed disjunction."""
@@ -2911,7 +2782,7 @@ class TestErrors(unittest.TestCase):
         self.assertIsNone(relaxed_xor['lb'].upper)
         # the other variables got eaten in the constant because they are fixed.
         self.assertEqual(len(repn.linear_vars), 1)
-        check_linear_coef(
+        ct.check_linear_coef(
             self, repn,
             m.disjunction.disjuncts[0].indicator_var,
             -1)
@@ -2920,7 +2791,7 @@ class TestErrors(unittest.TestCase):
         self.assertIsNone(relaxed_xor['ub'].lower)
         self.assertEqual(value(relaxed_xor['ub'].upper), 1)
         self.assertEqual(len(repn.linear_vars), 1)
-        check_linear_coef(
+        ct.check_linear_coef(
             self, repn,
             m.disjunction.disjuncts[0].indicator_var,
             -1)
@@ -2934,7 +2805,7 @@ class TestErrors(unittest.TestCase):
         repn = generate_standard_repn(lb.body)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear_vars), 1)
-        check_linear_coef(self, repn, m.x, 1)
+        ct.check_linear_coef(self, repn, m.x, 1)
 
         ub = x0[(1, 'ub')]
         self.assertIsNone(ub.lower)
@@ -2942,9 +2813,9 @@ class TestErrors(unittest.TestCase):
         repn = generate_standard_repn(ub.body)
         self.assertEqual(repn.constant, -8)
         self.assertEqual(len(repn.linear_vars), 2)
-        check_linear_coef(self, repn, m.x, 1)
-        check_linear_coef(self, repn, m.disjunction_disjuncts[0].indicator_var,
-                          8)
+        ct.check_linear_coef(self, repn, m.x, 1)
+        ct.check_linear_coef(self, repn,
+                             m.disjunction_disjuncts[0].indicator_var, 8)
 
     def test_retrieving_nondisjunctive_components(self):
         m = models.makeTwoTermDisj()

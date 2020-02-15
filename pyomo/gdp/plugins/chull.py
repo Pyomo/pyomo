@@ -858,6 +858,9 @@ class ConvexHull_Transformation(Transformation):
                 else:
                     newConstraint.add('ub', newConsExpr)
 
+        # deactivate now that we have transformed
+        obj.deactivate()
+
     # TODO: Move these methods should be in util, some of them. They are the
     # same as bigm. (But I'll wait for the bigm PR to stabilize rather than
     # inviting annoying merge conflicts..)
