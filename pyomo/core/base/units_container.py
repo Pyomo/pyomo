@@ -91,14 +91,13 @@ Notes:
 #    * Implement external function interface that specifies units for the arguments and the function itself
 
 
+import six
 from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value
 from pyomo.core.base.template_expr import IndexTemplate
 from pyomo.core.expr import current as expr
-import six
-try:
-    import pint as pint_module
-except ImportError:
-    pint_module = None
+from pyomo.common.importer import attempt_import
+
+pint_module, pint_available = attempt_import('pint', 'The "pint" package failed to import. This package is necessary to use Pyomo units.')
 
 class UnitsError(Exception):
     """
@@ -1063,12 +1062,6 @@ class PyomoUnitsContainer(object):
     """
     def __init__(self):
         """Create a PyomoUnitsContainer instance. """
-        if pint_module is None:
-            # pint was not imported for some reason
-            raise RuntimeError("The PyomoUnitsContainer in the units_container module requires"
-                              " the package 'pint', but this package could not be imported."
-                              " Please make sure you have 'pint' installed.")
-
         self._pint_registry = pint_module.UnitRegistry()
 
     def __getattr__(self, item):
@@ -1326,11 +1319,15 @@ class PyomoUnitsContainer(object):
         dest_quantity = src_quantity.to(to_pint_unit)
         return dest_quantity.magnitude
 
-#: Module level instance of a PyomoUnitsContainer to use for all units within a Pyomo model
+# Define a module level instance (singleton) of a
+# PyomoUnitsContainer to use for all units within
+# a Pyomo model. If pint is not available, this will
+# cause an error at the first usage
 # See module level documentation for an example.
-_pyomo_units_container = None
-def units():
-    global _pyomo_units_container
-    if _pyomo_units_container is None:
-        _pyomo_units_container = PyomoUnitsContainer()
-    return _pyomo_units_container
+if pint_available:
+    units = PyomoUnitsContainer()
+else:
+    # pint not available, assign the ModuleUnavailable object
+    # to the singleton
+    units = pint_module
+
