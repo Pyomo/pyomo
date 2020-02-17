@@ -241,6 +241,17 @@ def makeTwoTermDisjOnBlock():
 
     return m
 
+def add_disj_not_on_block(m):
+    def simpdisj_rule(disjunct):
+        m = disjunct.model()
+        disjunct.c = Constraint(expr=m.a >= 3)
+    m.simpledisj = Disjunct(rule=simpdisj_rule)
+    def simpledisj2_rule(disjunct):
+        m = disjunct.model()
+        disjunct.c = Constraint(expr=m.a <= 3.5)
+    m.simpledisj2 = Disjunct(rule=simpledisj2_rule)
+    m.disjunction2 = Disjunction(expr=[m.simpledisj, m.simpledisj2])
+    return m
 
 def makeDisjunctionsOnIndexedBlock():
     m = ConcreteModel()
