@@ -69,6 +69,11 @@ Notes:
           is not equal to 333.15 K). Therefore, there are several operations that are not allowable
           with non-absolute units, including addition, multiplication, and division.
 
+          This module does support conversion of offset units to abslute units numerically, using
+          convert_value_K_to_C, convert_value_C_to_K, convert_value_R_to_F, convert_value_F_to_R. These are useful for
+          converting input data to absolute units, and for coverting data to convenient units for
+          reporting.
+
           Please see the pint documentation `here <https://pint.readthedocs.io/en/0.9/nonmult.html>`_
           for more discussion. While pint implements "delta" units (e.g., delta_degC) to support correct
           unit conversions, it can be difficult to identify and guarantee valid operations in a general
@@ -92,7 +97,9 @@ Notes:
 
 
 import six
-from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value
+from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value, native_numeric_types
+from pyomo.core.base.var import _VarData
+from pyomo.core.base.param import _ParamData
 from pyomo.core.base.template_expr import IndexTemplate
 from pyomo.core.expr import current as expr
 from pyomo.common.importer import attempt_import
@@ -1013,10 +1020,21 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         # first check if the node is a leaf
         if type(node) in nonpyomo_leaf_types \
                 or not node.is_expression_type():
-            if isinstance(node, _PyomoUnit):
+            if type(node) in native_numeric_types:
+                # this is a number - return dimensionless                                                                      
+                return (None, None)
+            elif isinstance(node, _VarData) or \
+                 isinstance(node, _ParamData):
+                pyomo_unit, pint_unit = self._pyomo_units_container._get_units_tuple(node.get_units())
+                return (pyomo_unit, pint_unit)
+            elif isinstance(node, _PyomoUnit):
                 return (node, node._get_pint_unit())
-
-            # TODO: Check for Var or Param and return their units...
+            
+            # ToDo: maybe we should check if a general node has get_units() and raise an exception
+            # if not - instead of silently returning dimensionless
+            # pyomo_unit, pint_unit = self._pyomo_units_container._get_units_tuple(node.get_units())
+            # return (pyomo_unit, pint_unit)
+            
             # I have a leaf, but this is not a PyomoUnit - (treat as dimensionless)
             return (None, None)
 
@@ -1272,6 +1290,89 @@ class PyomoUnitsContainer(object):
         pyomo_unit2, pint_unit2 = self._get_units_tuple(expr2)
         return _UnitExtractionVisitor(self)._pint_units_equivalent(pint_unit1, pint_unit2)
 
+    def _pint_convert_temp_from_to(self, numerical_value, pint_from_units, pint_to_units):
+        if type(numerical_value) not in native_numeric_types:
+            raise UnitsError('Conversion routines for absolute and relative temperatures require a numerical value only.'
+                             ' Pyomo objects (Var, Param, expressions) are not supported. Please use value(x) to'
+                             ' extract the numerical value if necessary.')
+        
+        src_quantity = self._pint_registry.Quantity(numerical_value, pint_from_units)
+        dest_quantity = src_quantity.to(pint_to_units)
+        return dest_quantity.magnitude
+        
+    def convert_temp_K_to_C(self, value_in_K):
+        """Convert a value in Kelvin to degrees Celcius.
+        Note that this method converts a numerical value only. If you need temperature conversions in expressions,
+        please work in absolute temperatures only.
+        """
+        return self._pint_convert_temp_from_to(value_in_K, self._pint_registry.K, self._pint_registry.degC)
+
+    def convert_temp_C_to_K(self, value_in_C):
+        """Convert a value in degrees Celcius to Kelvin
+        Note that this method converts a numerical value only. If you need temperature conversions in expressions,
+        please work in absolute temperatures only.
+        """
+        return self._pint_convert_temp_from_to(value_in_C, self._pint_registry.degC, self._pint_registry.K)
+
+    def convert_temp_R_to_F(self, value_in_R):
+        """Convert a value in Rankine to degrees Fahrenheit.
+        Note that this method converts a numerical value only. If you need temperature conversions in expressions,
+        please work in absolute temperatures only.
+        """
+        return self._pint_convert_temp_from_to(value_in_R, self._pint_registry.rankine, self._pint_registry.degF)
+
+    def convert_temp_F_to_R(self, value_in_F):
+        """Convert a value in degrees Fahrenheit to Rankine.
+        Note that this method converts a numerical value only. If you need temperature conversions in expressions,
+        please work in absolute temperatures only.
+        """
+        return self._pint_convert_temp_from_to(value_in_F, self._pint_registry.degF, self._pint_registry.rankine)
+    
+    def convert(self, src, to_units=None):
+        """
+        This method returns an expression that represents the conversion
+        from one unit to another.
+
+        Parameters
+        ----------
+        src : Pyomo expression
+           The source value that will be converted. This could be a
+           Pyomo Var, Pyomo Param, or a more complex expression.
+        to_units : Pyomo units expression
+           The desired target units for the new expression
+
+        Returns
+        -------
+           ret : Pyomo expression
+
+        """
+        src_pyomo_unit, src_pint_unit = self._get_units_tuple(expr)
+        to_pyomo_unit, to_pint_unit = self._get_units_tuple(to_units)
+
+        # check if any units have offset
+        # CDL: This is no longer necessary since we don't allow
+        # offset units, but let's keep the code in case we change
+        # our mind about offset units
+        #  src_unit_container = pint.util.to_units_container(src_unit, self._pint_ureg)
+        # dest_unit_container = pint.util.to_units_container(dest_unit, self._pint_ureg)
+        # src_offset_units = [(u, e) for u, e in src_unit_container.items()
+        #                     if not self._pint_ureg._units[u].is_multiplicative]
+        # 
+        #  dest_offset_units = [(u, e) for u, e in dest_unit_container.items()
+        #                 if not self._pint_ureg._units[u].is_multiplicative]
+
+        # if len(src_offset_units) + len(dest_offset_units) != 0:
+        #     raise UnitsError('Offset unit detected in call to convert. Offset units are not supported at this time.')
+
+        # no offsets, we only need a factor to convert between the two
+        fac_b_src, base_units_src = self._pint_ureg.get_base_units(src_unit, check_nonmult=True)
+        fac_b_dest, base_units_dest = self._pint_ureg.get_base_units(to_unit, check_nonmult=True)
+
+        if base_units_src != base_units_dest:
+            raise UnitsError('Cannot convert {0:s} to {1:s}. Units are not compatible.'.format(src_unit, to_unit))
+
+        return fac_b_src/fac_b_dest*to_pyomo_unit/src_pyomo_unit*expr
+
     def convert_value(self, src, from_units=None, to_units=None):
         """
         This method performs explicit conversion of a numerical value (or
@@ -1293,7 +1394,7 @@ class PyomoUnitsContainer(object):
         src : float or Pyomo expression
            The source value that will be converted
         from_units : None or Pyomo units expression
-           The units on the src. If None, then this mehtod will try
+           The units on the src. If None, then this method will try
            to retrieve the units from the src as a Pyomo expression
         to_units : Pyomo units expression
            The desired target units for the new value
@@ -1318,6 +1419,33 @@ class PyomoUnitsContainer(object):
         src_quantity = value(src) * from_pint_unit
         dest_quantity = src_quantity.to(to_pint_unit)
         return dest_quantity.magnitude
+
+
+# ToDo:
+def _check_units_equivalent(self, expr, pyomo_units, allow_exceptions=True):
+    pass
+
+def _check_get_units(self, expr, allow_exceptions=True):
+    pass
+
+def check_model_units(self, model, allow_exceptions=True):
+    pass
+
+#    def get_units(self, expr, allow_exceptions=False):
+#        # returns the unit and whether o
+#        TODO
+
+#    def check_units_equivalent(self, expr1, pyomo_units):
+#        TODO
+
+    def check_consistency_and_get_units(self, expr1, allow_exceptions=False):
+        # return a tuple of the unit and a flag that indicates whether they were consistent or not
+        # return  unit, True or
+        # return  None, False
+        TODO
+
+    def check_units_equivalent(self, expr1, 
+
 
 # Define a module level instance (singleton) of a
 # PyomoUnitsContainer to use for all units within
