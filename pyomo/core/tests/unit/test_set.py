@@ -2225,6 +2225,35 @@ A : Size=1, Index=None, Ordered=True
                 "x index out of range"):
             i.x[-4]
 
+    def test_subsets(self):
+        a = SetOf([1])
+        b = SetOf([1])
+        c = SetOf([1])
+        d = SetOf([1])
+
+        x = a & b
+        self.assertEqual(len(x._sets), 2)
+        self.assertEqual(list(x.subsets()), [x])
+        self.assertEqual(list(x.subsets(False)), [x])
+        self.assertEqual(list(x.subsets(True)), [a,b])
+        x = a & b & c
+        self.assertEqual(len(x._sets), 2)
+        self.assertEqual(list(x.subsets()), [x])
+        self.assertEqual(list(x.subsets(False)), [x])
+        self.assertEqual(list(x.subsets(True)), [a,b,c])
+        x = (a & b) & (c & d)
+        self.assertEqual(len(x._sets), 2)
+        self.assertEqual(list(x.subsets()), [x])
+        self.assertEqual(list(x.subsets(False)), [x])
+        self.assertEqual(list(x.subsets(True)), [a,b,c,d])
+
+        x = (a & b) * (c & d)
+        self.assertEqual(len(x._sets), 2)
+        self.assertEqual(len(list(x.subsets())), 2)
+        self.assertEqual(list(x.subsets()), [a&b, c&d])
+        self.assertEqual(list(x.subsets(False)), [a&b, c&d])
+        self.assertEqual(len(list(x.subsets(True))), 4)
+        self.assertEqual(list(x.subsets(True)), [a,b,c,d])
 
 
 class TestSetDifference(unittest.TestCase):
@@ -2800,19 +2829,36 @@ J : Size=1, Index=None, Ordered=False
         x = a * b
         self.assertEqual(len(x._sets), 2)
         self.assertEqual(list(x.subsets()), [a,b])
+        self.assertEqual(list(x.subsets(True)), [a,b])
+        self.assertEqual(list(x.subsets(False)), [a,b])
         x = a * b * c
         self.assertEqual(len(x._sets), 2)
         self.assertEqual(list(x.subsets()), [a,b,c])
+        self.assertEqual(list(x.subsets(True)), [a,b,c])
+        self.assertEqual(list(x.subsets(False)), [a,b,c])
         x = (a * b) * (c * d)
         self.assertEqual(len(x._sets), 2)
         self.assertEqual(list(x.subsets()), [a,b,c,d])
+        self.assertEqual(list(x.subsets(True)), [a,b,c,d])
+        self.assertEqual(list(x.subsets(False)), [a,b,c,d])
 
         x = (a - b) * (c * d)
         self.assertEqual(len(x._sets), 2)
         self.assertEqual(len(list(x.subsets())), 3)
-        self.assertEqual(list(x.subsets())[-2:], [c,d])
+        self.assertEqual(len(list(x.subsets(False))), 3)
+        self.assertEqual(list(x.subsets()), [(a-b),c,d])
         self.assertEqual(len(list(x.subsets(True))), 4)
         self.assertEqual(list(x.subsets(True)), [a,b,c,d])
+
+    def test_set_tuple(self):
+        a = SetOf([1])
+        b = SetOf([1])
+        x = a * b
+        os = StringIO()
+        with LoggingIntercept(os, 'pyomo'):
+            self.assertEqual(x.set_tuple, [a,b])
+        self.assertIn('DEPRECATED: SetProduct.set_tuple is deprecated.',
+                      os.getvalue())
 
     def test_no_normalize_index(self):
         try:
