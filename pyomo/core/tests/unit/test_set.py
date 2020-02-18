@@ -3611,10 +3611,18 @@ class TestSet(unittest.TestCase):
         # Implicit construction
         m = ConcreteModel()
         m.I = Set([1,2,3], ordered=False)
-        self.assertEqual(len(m.I), 3)
+        self.assertEqual(len(m.I), 0)
+        m.I[1]
+        self.assertEqual(len(m.I), 1)
+        self.assertEqual(m.I[1], [])
+
+        self.assertEqual(m.I[2], [])
+        self.assertEqual(len(m.I), 2)
+
         m.I[1].add(1)
         m.I[2].add(2)
         m.I[3].add(4)
+        self.assertEqual(len(m.I), 3)
         self.assertEqual(list(m.I[1]), [1])
         self.assertEqual(list(m.I[2]), [2])
         self.assertEqual(list(m.I[3]), [4])
