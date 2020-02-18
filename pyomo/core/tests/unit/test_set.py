@@ -1731,8 +1731,8 @@ class TestSetUnion(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref="""
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain     : Size : Members
-    None :     1 : I | {3, 4} :    4 : {1, 2, 3, 4}
+    Key  : Dimen : Domain        : Size : Members
+    None :     1 : I | A_index_0 :    4 : {1, 2, 3, 4}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -1985,8 +1985,8 @@ class TestSetIntersection(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref="""
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain     : Size : Members
-    None :     1 : I & {3, 4} :    0 :      {}
+    Key  : Dimen : Domain        : Size : Members
+    None :     1 : I & A_index_0 :    0 :      {}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -2239,8 +2239,8 @@ class TestSetDifference(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref="""
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain     : Size : Members
-    None :     1 : I - {3, 4} :    2 : {1, 2}
+    Key  : Dimen : Domain        : Size : Members
+    None :     1 : I - A_index_0 :    2 : {1, 2}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -2441,8 +2441,8 @@ class TestSetSymmetricDifference(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref="""
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain     : Size : Members
-    None :     1 : I ^ {3, 4} :    4 : {1, 2, 3, 4}
+    Key  : Dimen : Domain        : Size : Members
+    None :     1 : I ^ A_index_0 :    4 : {1, 2, 3, 4}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -2696,8 +2696,8 @@ class TestSetProduct(unittest.TestCase):
         m.A.pprint(ostream=output)
         ref="""
 A : Size=1, Index=None, Ordered=True
-    Key  : Dimen : Domain   : Size : Members
-    None :     2 : I*{3, 4} :    4 : {(1, 3), (1, 4), (2, 3), (2, 4)}
+    Key  : Dimen : Domain      : Size : Members
+    None :     2 : I*A_index_0 :    4 : {(1, 3), (1, 4), (2, 3), (2, 4)}
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
