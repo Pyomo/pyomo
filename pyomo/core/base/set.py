@@ -3949,11 +3949,11 @@ DeclareGlobalSet(RangeSet(
     ranges=(NumericRange(0,1,0),),
 ), globals())
 
-DeclareGlobalSet(Set(
-    initialize=[None],
-    name='UnindexedComponent_set',
-    doc='A global Pyomo Set for unindexed (scalar) IndexedComponent objects',
-), globals())
+# DeclareGlobalSet(Set(
+#     initialize=[None],
+#     name='UnindexedComponent_set',
+#     doc='A global Pyomo Set for unindexed (scalar) IndexedComponent objects',
+# ), globals())
 
 
 RealSet = Reals.__class__
