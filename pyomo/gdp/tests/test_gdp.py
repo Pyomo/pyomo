@@ -15,10 +15,9 @@
 import os
 import sys
 from os.path import abspath, dirname, normpath, join
+from pyutilib.misc import import_file
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir,'..','..','..','examples', 'gdp'))
-sys.path.append(exdir)
-from jobshop import build_model
 
 try:
     import new
@@ -81,7 +80,8 @@ class CommonTests:
     solve=True
     
     def pyomo(self, *args, **kwds):
-        m_jobshop = build_model()
+        exfile = import_file(join(exdir, 'jobshop.py'))
+        m_jobshop = exfile.build_model()
         # This is awful, but it's the convention of the old method, so it will
         # work for now
         datafile = args[0]
