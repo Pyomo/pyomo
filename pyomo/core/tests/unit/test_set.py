@@ -33,7 +33,7 @@ from pyomo.core.base.util import (
 )
 from pyomo.core.base.set import (
     NumericRange as NR, NonNumericRange as NNR,
-    AnyRange, _AnySet, Any, _EmptySet, EmptySet, Binary,
+    AnyRange, _AnySet, Any, AnyWithNone, _EmptySet, EmptySet, Binary,
     Reals, NonNegativeReals, PositiveReals, NonPositiveReals, NegativeReals,
     Integers, PositiveIntegers, NegativeIntegers,
     NonPositiveIntegers, NonNegativeIntegers,
@@ -403,6 +403,17 @@ class InfiniteSetTester(unittest.TestCase):
         b = ConcreteModel()
         b.tmp = tmp
         self.assertEqual(str(tmp), 'tmp')
+
+    def test_AnyWithNone(self):
+        os = StringIO()
+        with LoggingIntercept(os, 'pyomo'):
+            self.assertIn(None, AnyWithNone)
+            self.assertIn(1, AnyWithNone)
+        self.assertIn("DEPRECATED: The AnyWithNone set is deprecated",
+                      os.getvalue())
+
+        self.assertEqual(Any, AnyWithNone)
+        self.assertEqual(AnyWithNone, Any)
 
     def test_EmptySet(self):
         self.assertNotIn(0, EmptySet)

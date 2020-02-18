@@ -3732,7 +3732,7 @@ class _AnyWithNoneSet(_AnySet):
     @deprecated("The AnyWithNone set is deprecated.  "
                 "Use Any, which includes None", version='TBD')
     def get(self, val, default=None):
-        return super(_AnySet, self).get(val, default)
+        return super(_AnyWithNoneSet, self).get(val, default)
 
 
 class _EmptySet(_FiniteSetMixin, _SetData, Set):
