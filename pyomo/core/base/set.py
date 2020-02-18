@@ -1927,27 +1927,22 @@ class Set(IndexedComponent):
         # will actually be constructed (and not Skipped).
         _block = self.parent_block()
 
-        if self._init_dimen is not None:
-            _d = self._init_dimen(_block, index)
-            if ( not normalize_index.flatten and _d is not UnknownSetDimen
-                 and _d is not None ):
-                logger.warning(
-                    "Ignoring non-None dimen (%s) for set %s%s "
-                    "(normalize_index.flatten is False, so dimen "
-                    "verification is not available)." % (
-                        _d, self.name,
-                        ("[%s]" % (index,) if self.is_indexed() else "") ))
-                _d = None
-        else:
-            _d = UnknownSetDimen
+        #Note: _init_dimen and _init_domain are guaranteed to be non-None
+        _d = self._init_dimen(_block, index)
+        if ( not normalize_index.flatten and _d is not UnknownSetDimen
+             and _d is not None ):
+            logger.warning(
+                "Ignoring non-None dimen (%s) for set %s%s "
+                "(normalize_index.flatten is False, so dimen "
+                "verification is not available)." % (
+                    _d, self.name,
+                    ("[%s]" % (index,) if self.is_indexed() else "") ))
+            _d = None
 
-        if self._init_domain is not None:
-            domain = self._init_domain(_block, index)
-            if _d is UnknownSetDimen and domain is not None \
-               and domain.dimen is not None:
-                _d = domain.dimen
-        else:
-            domain = None
+        domain = self._init_domain(_block, index)
+        if _d is UnknownSetDimen and domain is not None \
+           and domain.dimen is not None:
+            _d = domain.dimen
 
         if self._init_values is not None:
             self._init_values._dimen = _d
