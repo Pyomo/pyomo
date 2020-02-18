@@ -2510,8 +2510,13 @@ class RangeSet(Component):
     def __str__(self):
         if self.parent_block() is not None:
             return self.name
+        # Unconstructed floating components return their type
         if not self._constructed:
             return type(self).__name__
+        # Named, constructed components should return their name e.g., Reals
+        if type(self).__name__ != self._name:
+            return self.name
+        # Floating, unnamed constructed components return their ranges()
         ans = ' | '.join(str(_) for _ in self.ranges())
         if ' | ' in ans:
             return "(" + ans + ")"
