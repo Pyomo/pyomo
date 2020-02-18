@@ -1672,6 +1672,18 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 "step direction \(got \[0:4:-0.5\]\)"):
             RangeSet(0,4,-.5)
 
+    def test_check_values(self):
+        m = ConcreteModel()
+        m.I = RangeSet(5)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
+            self.assertTrue(m.I.check_values())
+        self.assertRegexpMatches(
+            output.getvalue(),
+            "^DEPRECATED: check_values\(\) is deprecated:")
+
+
 class Test_SetOperator(unittest.TestCase):
     def test_construct(self):
         p = Param(initialize=3)
@@ -5346,10 +5358,28 @@ class TestDeprecation(unittest.TestCase):
 
     def test_check_values(self):
         m = ConcreteModel()
-        m.J = Set(ordered=True, initialize=[1,3,2])
+        m.I = Set(ordered=True, initialize=[1,3,2])
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
+            self.assertTrue(m.I.check_values())
+        self.assertRegexpMatches(
+            output.getvalue(),
+            "^DEPRECATED: check_values\(\) is deprecated: Sets only "
+            "contain valid")
+
+        m.J = m.I*m.I
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertTrue(m.J.check_values())
+        self.assertRegexpMatches(
+            output.getvalue(),
+            "^DEPRECATED: check_values\(\) is deprecated:")
+
+        # We historically supported check_values on indexed sets
+        m.K = Set([1,2], ordered=True, initialize=[1,3,2])
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertTrue(m.K.check_values())
         self.assertRegexpMatches(
             output.getvalue(),
             "^DEPRECATED: check_values\(\) is deprecated: Sets only "

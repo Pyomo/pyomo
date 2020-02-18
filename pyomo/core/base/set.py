@@ -1867,7 +1867,7 @@ class Set(IndexedComponent):
                 self, self._init_values._init)
 
 
-    @deprecated("check_values is deprecated: Sets only contain valid members",
+    @deprecated("check_values() is deprecated: Sets only contain valid members",
                 version='TBD')
     def check_values(self):
         """
