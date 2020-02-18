@@ -322,9 +322,11 @@ class TuplizeValuesInitializer(InitializerBase):
         _val = self._init(parent, index)
         if self._dimen in {1, None, UnknownSetDimen}:
             return _val
-        if not _val:
+        elif _val is Set.Skip:
             return _val
-        if isinstance(_val[0], tuple):
+        elif not _val:
+            return _val
+        elif isinstance(_val[0], tuple):
             return _val
         return self._tuplize(_val, parent, index)
 
@@ -2845,6 +2847,40 @@ class SetOperator(_SetData, Set):
         if self.parent_block() is not None:
             return self.name
         return self._expression_str()
+
+    def __deepcopy__(self, memo):
+        # SetOperators form an expression system.  As we allow operators
+        # on abstract Set objects, it is important to *always* deepcopy
+        # SetOperators that have not been assigned to a Block.  For
+        # example, consider an abstract indexed model component whose
+        # domain is specified by a Set expression:
+        #
+        #   def x_init(m,i):
+        #       if i == 2:
+        #           return Set.Skip
+        #       else:
+        #           return []
+        #   m.x = Set( [1,2],
+        #              domain={1: m.A*m.B, 2: m.A*m.A},
+        #              initialize=x_init )
+        #
+        # We do not want to automatically add all the Set operators to
+        # the model at declaration time, as m.x[2] is never actually
+        # created.  Plus, doing so would require complex parsing of the
+        # initializers.  BUT, we need to ensure that the operators are
+        # deepcopied, otherwise when the model is cloned before
+        # construction the operators will still refer to the sets on the
+        # original abstract model (in particular, the Set x will have an
+        # unknown dimen).
+        #
+        # Our solution is to cause SetOperators to be automatically
+        # cloned if they haven't been assigned to a block.
+        if '__block_scope__' in memo:
+            if self.parent_block() is None:
+                # Hijack the block scope rules to cause this object to
+                # be deepcopied.
+                memo['__block_scope__'][id(self)] = True
+        return super(SetOperator, self).__deepcopy__(memo)
 
     def _expression_str(self):
         _args = []

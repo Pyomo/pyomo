@@ -1678,6 +1678,28 @@ class Test_SetOperator(unittest.TestCase):
             i.construct()
             self.assertEqual(output.getvalue(), ref)
 
+    def test_deepcopy(self):
+        # This tests the example in Set.__deepcopy__()
+        # This also tests that returning Set.Skip from a rule works...
+        a = AbstractModel()
+        a.A = Set(initialize=[1,2])
+        a.B = Set(initialize=[3,4])
+        def x_init(m,i):
+            if i == 2:
+                return Set.Skip
+            else:
+                return []
+        a.x = Set( [1,2],
+                   domain={1: a.A*a.B, 2: a.A*a.A},
+                   initialize=x_init )
+
+        i = a.create_instance()
+        self.assertEqual(len(i.x), 1)
+        self.assertIn(1, i.x)
+        self.assertNotIn(2, i.x)
+        self.assertEqual(i.x[1].dimen, 2)
+        self.assertEqual(i.x[1].domain, i.A*i.B)
+        self.assertEqual(i.x[1], [])
 
 class TestSetUnion(unittest.TestCase):
     def test_pickle(self):
