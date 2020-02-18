@@ -3056,6 +3056,19 @@ J : Size=1, Index=None, Ordered=False
             "DEPRECATED: Providing construction data to SetOperator objects "
             "is deprecated", output.getvalue().replace('\n',' '))
 
+    def test_setproduct_nondim_set(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2,3])
+        m.J = Set()
+        m.K = Set(initialize=[4,5,6])
+        m.Z = m.I * m.J * m.K
+        self.assertEqual(len(m.Z), 0)
+        self.assertNotIn((2,5), m.Z)
+
+        m.J.add(0)
+        self.assertEqual(len(m.Z), 9)
+        self.assertIn((2,0,5), m.Z)
+
 class TestGlobalSets(unittest.TestCase):
     def test_globals(self):
         self.assertEqual(Reals.__class__.__name__, 'GlobalSet')

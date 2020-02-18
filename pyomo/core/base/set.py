@@ -3572,7 +3572,7 @@ class SetProduct_FiniteSet(_FiniteSetMixin, SetProduct_InfiniteSet):
         """
         ans = 1
         for s in self._sets:
-            ans *= max(1, len(s))
+            ans *= max(0, len(s))
         return ans
 
 
