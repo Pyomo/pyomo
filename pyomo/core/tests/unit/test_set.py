@@ -284,6 +284,48 @@ class Test_SetInitializer(unittest.TestCase):
         a.setdefault(RangeSet(5))
         self.assertIs(type(a(None,None)), SetIntersection_InfiniteSet)
 
+    def test_indices(self):
+        a = SetInitializer(None)
+        self.assertFalse(a.contains_indices())
+        with self.assertRaisesRegex(
+                RuntimeError, 'does not contain embedded indices'):
+            a.indices()
+
+        a = SetInitializer([1,2,3])
+        self.assertFalse(a.contains_indices())
+        with self.assertRaisesRegex(
+                RuntimeError, 'does not contain embedded indices'):
+            a.indices()
+
+        # intersection initializers
+        a = SetInitializer({1: [1,2,3], 2: [4]})
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [1,2])
+
+        a.intersect(SetInitializer({1: [4], 2: [1,2]}))
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [1,2])
+
+        # intersection initializer mismatch
+        a = SetInitializer({1: [1,2,3], 2: [4]})
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [1,2])
+
+        a.intersect(SetInitializer({1: [4], 3: [1,2]}))
+        self.assertTrue(a.contains_indices())
+        with self.assertRaisesRegex(
+                ValueError, 'contains two sub-initializers with inconsistent'):
+            a.indices()
+
+        # intersection initializer mismatch (unindexed)
+        a = SetInitializer([1,2])
+        self.assertFalse(a.contains_indices())
+        a.intersect(SetInitializer([1,2]))
+        self.assertFalse(a.contains_indices())
+        with self.assertRaisesRegex(
+                RuntimeError, 'does not contain embedded indices'):
+            a.indices()
+
 
 class InfiniteSetTester(unittest.TestCase):
     def test_Reals(self):
