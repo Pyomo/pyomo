@@ -3459,6 +3459,12 @@ class SetProduct_InfiniteSet(SetProduct):
 
         # Get the dimentionality of all the component sets
         setDims = list(s.dimen for s in self._sets)
+
+        # For this search, if a subset has an unknown dimension, assume
+        # it is "None".
+        for i,d in enumerate(setDims):
+            if d is UnknownSetDimen:
+                setDims[i] = None
         # Find the starting index for each subset (based on dimentionality)
         index = [None]*len(setDims)
         lastIndex = 0
@@ -3480,7 +3486,10 @@ class SetProduct_InfiniteSet(SetProduct):
         # If there were no non-dimentioned sets, then we have checked
         # each subset, found a match, and can reach a verdict:
         if None not in setDims:
-            return val, index
+            if lastIndex == v_len:
+                return val, index
+            else:
+                return None
 
         # If a subset is non-dimentioned, then we will have broken out
         # of the forward loop early.  Start at the end and work

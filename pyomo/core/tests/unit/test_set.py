@@ -3089,6 +3089,22 @@ J : Size=1, Index=None, Ordered=False
         self.assertEqual(len(m.Z), 9)
         self.assertIn((2,0,5), m.Z)
 
+    def test_setproduct_toolong_val(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2,3])
+        m.J = Set(initialize=[4,5,6])
+        m.Z = m.I * m.J
+        self.assertIn((2,5), m.Z)
+        self.assertNotIn((2,5,3), m.Z)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2,3])
+        m.J = Set(initialize=[4,5,6], dimen=None)
+        m.Z = m.I * m.J
+        self.assertIn((2,5), m.Z)
+        self.assertNotIn((2,5,3), m.Z)
+
+
 class TestGlobalSets(unittest.TestCase):
     def test_globals(self):
         self.assertEqual(Reals.__class__.__name__, 'GlobalSet')
