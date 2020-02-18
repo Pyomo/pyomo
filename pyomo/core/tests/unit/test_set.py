@@ -29,7 +29,7 @@ from pyomo.core.expr import native_numeric_types, native_types
 import pyomo.core.base.set as SetModule
 from pyomo.core.base.indexed_component import normalize_index
 from pyomo.core.base.util import (
-    ConstantInitializer, ItemInitializer,
+    ConstantInitializer, ItemInitializer, IndexedCallInitializer,
 )
 from pyomo.core.base.set import (
     NumericRange as NR, NonNumericRange as NNR,
