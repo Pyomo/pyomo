@@ -25,6 +25,7 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import (
     native_types, native_numeric_types, as_numeric, value,
 )
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.util import (
     disable_methods, InitializerBase, Initializer, ConstantInitializer,
     CountedCallInitializer, ItemInitializer, IndexedCallInitializer,
@@ -1673,6 +1674,9 @@ _SETDATA_API = (
     'set_value', 'add', 'remove', 'discard', 'clear', 'update', 'pop',
 )
 
+
+@ModelComponentFactory.register(
+    "Set data that is used to define a model instance.")
 class Set(IndexedComponent):
     """
     A component used to index other Pyomo components.
@@ -2427,6 +2431,10 @@ class _FiniteRangeSetData( _SortedSetMixin,
     domain = _InfiniteRangeSetData.domain
 
 
+@ModelComponentFactory.register(
+    "A sequence of numeric values.  RangeSet(start,end,step) is a sequence "
+    "starting a value 'start', and increasing in values by 'step' until a "
+    "value greater than or equal to 'end' is reached.")
 class RangeSet(Component):
     """
     A set object that represents a set of numeric values

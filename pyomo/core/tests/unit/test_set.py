@@ -3959,11 +3959,6 @@ class TestSet(unittest.TestCase):
         m.pprint()
         m.pprint(ostream=buf)
         self.assertEqual(buf.getvalue().strip(), """
-1 RangeSet Declarations
-    I_index : Dimen=1, Size=3, Bounds=(1, 3)
-        Key  : Finite : Members
-        None :   True :   [1:3]
-
 6 Set Declarations
     I : Size=3, Index=I_index, Ordered=Insertion
         Key : Dimen : Domain   : Size : Members
@@ -3980,13 +3975,23 @@ class TestSet(unittest.TestCase):
         Key  : Dimen : Domain : Size : Members
         None :     2 :    Any :    2 : {(3, 4), (1, 2)}
     M : Size=1, Index=None, Ordered=False
-        Key  : Dimen : Domain      : Size : Members
-        None :     1 : Reals - [0] :  Inf : ([None..0) | (0..None])
+        Key  : Dimen : Domain            : Size : Members
+        None :     1 : Reals - M_index_1 :  Inf : ([None..0) | (0..None])
     N : Size=1, Index=None, Ordered=False
         Key  : Dimen : Domain           : Size : Members
         None :     1 : Integers - Reals :  Inf :      []
 
-7 Declarations: I_index I J K L M N""".strip())
+1 RangeSet Declarations
+    I_index : Dimen=1, Size=3, Bounds=(1, 3)
+        Key  : Finite : Members
+        None :   True :   [1:3]
+
+1 SetOf Declarations
+    M_index_1 : Dimen=1, Size=1, Bounds=(0, 0)
+        Key  : Ordered : Members
+        None :    True :     [0]
+
+8 Declarations: I_index I J K L M_index_1 M N""".strip())
 
     def test_pickle(self):
         m = ConcreteModel()
@@ -5530,6 +5535,16 @@ c : Size=3, Index=CHOICES, Active=True
             output = StringIO()
             m.pprint(ostream=output)
             ref = """
+2 Set Declarations
+    arc_keys : Set of arcs
+        Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain              : Size : Members
+        None :     2 : node_keys*node_keys :    2 : {(0, 0), (0, 1)}
+    node_keys : Set of nodes
+        Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    2 : {0, 1}
+
 1 Var Declarations
     arc_variables : Size=2, Index=arc_keys
         Key    : Lower : Value : Upper : Fixed : Stale : Domain
@@ -5541,16 +5556,6 @@ c : Size=3, Index=CHOICES, Active=True
         Key  : Active : Sense    : Expression
         None :   True : minimize : arc_variables[0,0] + arc_variables[0,1]
 
-2 Set Declarations
-    arc_keys : Set of arcs
-        Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain              : Size : Members
-        None :     2 : node_keys*node_keys :    2 : {(0, 0), (0, 1)}
-    node_keys : Set of nodes
-        Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    2 : {0, 1}
-
 4 Declarations: node_keys arc_keys arc_variables obj
 """.strip()
             self.assertEqual(output.getvalue().strip(), ref)
@@ -5560,6 +5565,16 @@ c : Size=3, Index=CHOICES, Active=True
             output = StringIO()
             m.pprint(ostream=output)
             ref = """
+2 Set Declarations
+    arc_keys : Set of arcs
+        Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain              : Size : Members
+        None :  None : node_keys*node_keys :    2 : {ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0)), ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))}
+    node_keys : Set of nodes
+        Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :  None :    Any :    2 : {NodeKey(id=0), NodeKey(id=1)}
+
 1 Var Declarations
     arc_variables : Size=2, Index=arc_keys
         Key                                                    : Lower : Value : Upper : Fixed : Stale : Domain
@@ -5570,16 +5585,6 @@ c : Size=3, Index=CHOICES, Active=True
     obj : Size=1, Index=None, Active=True
         Key  : Active : Sense    : Expression
         None :   True : minimize : arc_variables[ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0))] + arc_variables[ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))]
-
-2 Set Declarations
-    arc_keys : Set of arcs
-        Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain              : Size : Members
-        None :  None : node_keys*node_keys :    2 : {ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0)), ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))}
-    node_keys : Set of nodes
-        Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :  None :    Any :    2 : {NodeKey(id=0), NodeKey(id=1)}
 
 4 Declarations: node_keys arc_keys arc_variables obj
 """.strip()
