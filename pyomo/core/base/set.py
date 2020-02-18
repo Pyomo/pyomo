@@ -271,9 +271,9 @@ class SetIntersectInitializer(InitializerBase):
             # if B does not contain external indices
             return self._B.indices()
 
-class RangeSetInitializer(InitializerBase):
+class BoundsInitializer(InitializerBase):
     __slots__ = ('_init', 'default_step',)
-    def __init__(self, init, default_step=1):
+    def __init__(self, init, default_step=0):
         self._init = Initializer(init, treat_sequences_as_mappings=False)
         self.default_step = default_step
 
@@ -1839,8 +1839,7 @@ class Set(IndexedComponent):
             self._init_domain.intersect(SetInitializer(_within))
         _bounds = kwds.pop('bounds', None)
         if _bounds is not None:
-            self._init_domain.intersect(RangeSetInitializer(
-                _bounds, default_step=0))
+            self._init_domain.intersect(BoundsInitializer(_bounds))
 
         self._init_dimen = Initializer(
             kwds.pop('dimen', UnknownSetDimen),
@@ -2497,8 +2496,7 @@ class RangeSet(Component):
         self._init_filter = Initializer(kwds.pop('filter', None))
         self._init_bounds = kwds.pop('bounds', None)
         if self._init_bounds is not None:
-            self._init_bounds = RangeSetInitializer(
-                self._init_bounds, default_step=0)
+            self._init_bounds = BoundsInitializer(self._init_bounds)
 
         Component.__init__(self, **kwds)
         # Shortcut: if all the relevant construction information is
@@ -3843,9 +3841,7 @@ def DeclareGlobalSet(obj, caller_globals=None):
                 bounds = kwds.pop('bounds', None)
                 range_init = SetInitializer(base_set)
                 if bounds is not None:
-                    range_init.intersect(
-                        RangeSetInitializer(bounds, default_step=0)
-                    )
+                    range_init.intersect(BoundsInitializer(bounds))
                 name = name_kwd = kwds.pop('name', None)
                 cls_name = kwds.pop('class_name', None)
                 if name is None:

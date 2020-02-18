@@ -53,7 +53,7 @@ from pyomo.core.base.set import (
     SetProduct_OrderedSet,
     _SetData, _FiniteSetData, _InsertionOrderSetData, _SortedSetData,
     _FiniteSetMixin, _OrderedSetMixin,
-    SetInitializer, SetIntersectInitializer, RangeSetInitializer,
+    SetInitializer, SetIntersectInitializer, BoundsInitializer,
     UnknownSetDimen, UnindexedComponent_set,
     DeclareGlobalSet, IntegerSet, RealSet,
     simple_set_rule, set_options,
@@ -112,9 +112,9 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertIs(a(None,None), Reals)
 
         a = SetInitializer(None)
-        a.intersect(RangeSetInitializer(5))
+        a.intersect(BoundsInitializer(5, default_step=1))
         self.assertIs(type(a), SetInitializer)
-        self.assertIs(type(a._set), RangeSetInitializer)
+        self.assertIs(type(a._set), BoundsInitializer)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         self.assertEqual(a(None,None), RangeSet(5))
@@ -145,11 +145,11 @@ class Test_SetInitializer(unittest.TestCase):
 
         a = SetInitializer(Reals)
         a.intersect(SetInitializer(Integers))
-        a.intersect(RangeSetInitializer(3))
+        a.intersect(BoundsInitializer(3, default_step=1))
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), SetIntersectInitializer)
         self.assertIs(type(a._set._A), SetIntersectInitializer)
-        self.assertIs(type(a._set._B), RangeSetInitializer)
+        self.assertIs(type(a._set._B), BoundsInitializer)
         self.assertIs(a._set._A._A.val, Reals)
         self.assertIs(a._set._A._B.val, Integers)
         self.assertTrue(a.constant())
@@ -162,11 +162,11 @@ class Test_SetInitializer(unittest.TestCase):
         p = Param(initialize=3)
         a = SetInitializer(Reals)
         a.intersect(SetInitializer(Integers))
-        a.intersect(RangeSetInitializer(p, default_step=0))
+        a.intersect(BoundsInitializer(p, default_step=0))
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), SetIntersectInitializer)
         self.assertIs(type(a._set._A), SetIntersectInitializer)
-        self.assertIs(type(a._set._B), RangeSetInitializer)
+        self.assertIs(type(a._set._B), BoundsInitializer)
         self.assertIs(a._set._A._A.val, Reals)
         self.assertIs(a._set._A._B.val, Integers)
         self.assertTrue(a.constant())
@@ -185,11 +185,11 @@ class Test_SetInitializer(unittest.TestCase):
         p = Param(initialize=3)
         a = SetInitializer(Reals)
         a.intersect(SetInitializer({1:Integers}))
-        a.intersect(RangeSetInitializer(p, default_step=0))
+        a.intersect(BoundsInitializer(p, default_step=0))
         self.assertIs(type(a), SetInitializer)
         self.assertIs(type(a._set), SetIntersectInitializer)
         self.assertIs(type(a._set._A), SetIntersectInitializer)
-        self.assertIs(type(a._set._B), RangeSetInitializer)
+        self.assertIs(type(a._set._B), BoundsInitializer)
         self.assertIs(a._set._A._A.val, Reals)
         self.assertIs(type(a._set._A._B), ItemInitializer)
         self.assertFalse(a.constant())
@@ -207,50 +207,56 @@ class Test_SetInitializer(unittest.TestCase):
         self.assertFalse(s._sets[1].isfinite())
         self.assertTrue(s.isfinite())
 
-    def test_rangeset(self):
-        a = RangeSetInitializer(5)
+    def test_boundsinit(self):
+        a = BoundsInitializer(5, default_step=1)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
         self.assertEqual(s, RangeSet(5))
 
-        a = RangeSetInitializer((0,5))
+        a = BoundsInitializer((0,5), default_step=1)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
         self.assertEqual(s, RangeSet(0,5))
 
-        a = RangeSetInitializer((0,5,2))
+        a = BoundsInitializer((0,5,2))
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
         self.assertEqual(s, RangeSet(0,5,2))
 
-        a = RangeSetInitializer(5, default_step=0)
+        a = BoundsInitializer(())
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        s = a(None,None)
+        self.assertEqual(s, RangeSet(None,None,0))
+
+        a = BoundsInitializer(5)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
         self.assertEqual(s, RangeSet(1,5,0))
 
-        a = RangeSetInitializer((0,5), default_step=0)
+        a = BoundsInitializer((0,5))
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
         self.assertEqual(s, RangeSet(0,5,0))
 
-        a = RangeSetInitializer((0,5,2), default_step=0)
+        a = BoundsInitializer((0,5,2))
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         s = a(None,None)
         self.assertEqual(s, RangeSet(0,5,2))
 
-        a = RangeSetInitializer({1:5})
+        a = BoundsInitializer({1:5}, default_step=1)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
         s = a(None,1)
         self.assertEqual(s, RangeSet(5))
 
-        a = RangeSetInitializer({1:(0,5)})
+        a = BoundsInitializer({1:(0,5)}, default_step=1)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
         s = a(None,1)
@@ -267,7 +273,7 @@ class Test_SetInitializer(unittest.TestCase):
         a.setdefault(Reals)
         self.assertIs(a(None,None), Integers)
 
-        a = RangeSetInitializer(5)
+        a = BoundsInitializer(5, default_step=1)
         self.assertEqual(a(None,None), RangeSet(5))
         a.setdefault(Reals)
         self.assertEqual(a(None,None), RangeSet(5))
