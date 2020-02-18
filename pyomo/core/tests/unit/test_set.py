@@ -3214,17 +3214,19 @@ class TestGlobalSets(unittest.TestCase):
         self.assertEqual(list(iter(Binary)), [0,1])
 
     def test_declare(self):
+        NS = {}
         DeclareGlobalSet(RangeSet( name='TrinarySet',
                                    ranges=(NR(0,2,1),) ),
-                         globals())
-        self.assertEqual(list(TrinarySet), [0,1,2])
-        a = pickle.loads(pickle.dumps(TrinarySet))
-        self.assertIs(a, TrinarySet)
-        del SetModule.GlobalSets['TrinarySet']
-        del globals()['TrinarySet']
+                         NS)
+        self.assertEqual(list(NS['TrinarySet']), [0,1,2])
+        a = pickle.loads(pickle.dumps(NS['TrinarySet']))
+        self.assertIs(a, NS['TrinarySet'])
         with self.assertRaisesRegex(
                 NameError, "global name 'TrinarySet' is not defined"):
             TrinarySet
+        del SetModule.GlobalSets['TrinarySet']
+        del NS['TrinarySet']
+
         # Now test the automatic identification of the globals() scope
         DeclareGlobalSet(RangeSet( name='TrinarySet',
                                    ranges=(NR(0,2,1),) ))
@@ -3233,6 +3235,37 @@ class TestGlobalSets(unittest.TestCase):
         self.assertIs(a, TrinarySet)
         del SetModule.GlobalSets['TrinarySet']
         del globals()['TrinarySet']
+        with self.assertRaisesRegex(
+                NameError, "global name 'TrinarySet' is not defined"):
+            TrinarySet
+
+    def test_exceptions(self):
+        with self.assertRaisesRegex(
+                RuntimeError, "Duplicate Global Set declaration, Reals"):
+            DeclareGlobalSet(RangeSet( name='Reals', ranges=(NR(0,2,1),) ))
+
+        # But repeat delcarations are OK
+        a = Reals
+        DeclareGlobalSet(Reals)
+        self.assertIs(a, Reals)
+        self.assertIs(a, globals()['Reals'])
+        self.assertIs(a, SetModule.GlobalSets['Reals'])
+
+        NS = {}
+        ts = DeclareGlobalSet(
+            RangeSet(name='TrinarySet', ranges=(NR(0,2,1),)), NS)
+        self.assertIs(NS['TrinarySet'], ts)
+
+        # Repeat declaration is OK
+        DeclareGlobalSet(ts, NS)
+        self.assertIs(NS['TrinarySet'], ts)
+
+        # but conflicting one raises exception
+        NS['foo'] = None
+        with self.assertRaisesRegex(
+                RuntimeError, "Refusing to overwrite global object, foo"):
+            DeclareGlobalSet(
+                RangeSet( name='foo', ranges=(NR(0,2,1),) ), NS)
 
     def test_RealSet_IntegerSet(self):
         a = SetModule.RealSet()
@@ -3249,6 +3282,10 @@ class TestGlobalSets(unittest.TestCase):
         a = SetModule.IntegerSet(bounds=(1,3))
         self.assertEqual(a.bounds(), (1,3))
         self.assertEqual(list(a), [1,2,3])
+
+        with self.assertRaisesRegex(
+                RuntimeError, "Unexpected keyword arguments: \{'foo': 5\}"):
+            IntegerSet(foo=5)
 
     def test_intervals(self):
         output = StringIO()

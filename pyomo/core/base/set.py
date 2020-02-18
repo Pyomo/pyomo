@@ -3809,6 +3809,33 @@ def DeclareGlobalSet(obj, caller_globals=None):
     assert obj.parent_component() is obj
     assert obj.parent_block() is None
 
+    # Build the global set before registering its name so that we don't
+    # run afoul of the logic in GlobalSet.__new__
+    _name = obj.local_name
+    if _name in GlobalSets and obj is not GlobalSets[_name]:
+        raise RuntimeError("Duplicate Global Set declaration, %s"
+                           % (_name,))
+
+    # Push this object into the caller's module namespace
+    # Stack: 0: DeclareGlobalSet()
+    #        1: the caller
+    if caller_globals is None:
+        _stack = inspect.stack()
+        try:
+            caller_globals = _stack[1][0].f_globals
+        finally:
+            del _stack
+    if _name in caller_globals and obj is not caller_globals[_name]:
+        raise RuntimeError("Refusing to overwrite global object, %s"
+                           % (_name,))
+
+    if _name in GlobalSets:
+        _set = caller_globals[_name] = GlobalSets[_name]
+        return _set
+
+    # Handle duplicate registrations before defining the GlobalSet
+    # object to avoid inconsistent MRO order.
+
     class GlobalSet(GlobalSetBase, obj.__class__):
         __doc__ = """%s
 
@@ -3857,28 +3884,8 @@ def DeclareGlobalSet(obj, caller_globals=None):
             else:
                 ans = super(GlobalSet, cls).__new__(cls, **kwds)
             if kwds:
-                raise RuntimeError("Unexpected keyword argument")
+                raise RuntimeError("Unexpected keyword arguments: %s" % (kwds,))
             return ans
-
-    # Build the global set before registering its name so that we don't
-    # run afoul of the logic in GlobalSet.__new__
-    _name = obj.local_name
-    if ( _name in GlobalSets and _set is not GlobalSets[_name] ):
-        raise RuntimeError("Duplicate Global Set declaration, %s"
-                           % (_name,))
-
-    # Push this object into the caller's module namespace
-    # Stack: 0: DeclareGlobalSet()
-    #        1: the caller
-    if caller_globals is None:
-        _stack = inspect.stack()
-        try:
-            caller_globals = _stack[1][0].f_globals
-        finally:
-            del _stack
-    if _name in caller_globals:
-        raise RuntimeError("Refusing to overwrite global object, %s"
-                           % (_name,))
 
     _set = GlobalSet()
     # TODO: Can GlobalSets be a proper Block?
