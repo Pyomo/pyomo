@@ -2498,11 +2498,13 @@ class RangeSet(Component):
         # NOTE: We will need to revisit this if we ever allow passing
         # data into the construct method (which would override the
         # hard-coded values here).
-        if all(type(_) in native_types
-               or ( isinstance(_, _ComponentBase)
-                    and _.parent_component().is_constructed())
-               for _ in args):
-            self.construct()
+        try:
+            if all( type(_) in native_types
+                    or _.parent_component().is_constructed()
+                    for _ in args ):
+                self.construct()
+        except AttributeError:
+            pass
 
 
     def __str__(self):

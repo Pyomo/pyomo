@@ -775,14 +775,17 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(i, j)
 
         i = RangeSet(3)
+        self.assertTrue(i.is_constructed())
         self.assertEqual(len(i), 3)
         self.assertEqual(len(list(i.ranges())), 1)
 
         i = RangeSet(1,3)
+        self.assertTrue(i.is_constructed())
         self.assertEqual(len(i), 3)
         self.assertEqual(len(list(i.ranges())), 1)
 
         i = RangeSet(ranges=[NR(1,3,1)])
+        self.assertTrue(i.is_constructed())
         self.assertEqual(len(i), 3)
         self.assertEqual(list(i.ranges()), [NR(1,3,1)])
 
@@ -817,9 +820,25 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 "with a non-integer step"):
             RangeSet(0,None,0.5)
 
+        class _AlmostNumeric(object):
+            def __init__(self, val):
+                self.val = val
+            def __float__(self):
+                return self.val
+            def __add__(self, other):
+                return self.val+other
+            def __sub__(self, other):
+                return self.val-other
+
+        i = RangeSet(_AlmostNumeric(1))
+        self.assertFalse(i.is_constructed())
+        i.construct()
+        self.assertEqual(list(i), [1])
+
         output = StringIO()
         p = Param(initialize=5)
         i = RangeSet(p)
+        self.assertFalse(i.is_constructed())
         self.assertIs(type(i), AbstractFiniteSimpleRangeSet)
         p.construct()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
@@ -828,6 +847,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             ref = 'Constructing RangeSet, '\
                   'name=FiniteSimpleRangeSet, from data=None\n'
             self.assertEqual(output.getvalue(), ref)
+            self.assertTrue(i.is_constructed())
             self.assertIs(type(i), FiniteSimpleRangeSet)
             # Calling construct() twice bypasses construction the second
             # time around
