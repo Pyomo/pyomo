@@ -54,7 +54,7 @@ from pyomo.core.base.set import (
     _SetData, _FiniteSetData, _InsertionOrderSetData, _SortedSetData,
     _FiniteSetMixin, _OrderedSetMixin,
     SetInitializer, SetIntersectInitializer, RangeSetInitializer,
-    UnknownSetDimen,
+    UnknownSetDimen, UnindexedComponent_set,
     DeclareGlobalSet, IntegerSet, RealSet,
     simple_set_rule, set_options,
  )
@@ -292,6 +292,7 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertFalse(Reals.isfinite())
 
         self.assertEqual(Reals.dim(), 0)
+        self.assertIs(Reals.index_set(), UnindexedComponent_set)
         with self.assertRaisesRegex(
                 TypeError, "object of type 'GlobalSet' has no len\(\)"):
             len(Reals)
@@ -331,6 +332,7 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertFalse(Integers.isfinite())
 
         self.assertEqual(Integers.dim(), 0)
+        self.assertIs(Integers.index_set(), UnindexedComponent_set)
         with self.assertRaisesRegex(
                 TypeError, "object of type 'GlobalSet' has no len\(\)"):
             len(Integers)
@@ -370,6 +372,7 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertFalse(Any.isfinite())
 
         self.assertEqual(Any.dim(), 0)
+        self.assertIs(Any.index_set(), UnindexedComponent_set)
         with self.assertRaisesRegex(
                 TypeError, "object of type 'Any' has no len\(\)"):
             len(Any)
@@ -407,6 +410,7 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertTrue(EmptySet.isfinite())
 
         self.assertEqual(EmptySet.dim(), 0)
+        self.assertIs(EmptySet.index_set(), UnindexedComponent_set)
         self.assertEqual(len(EmptySet), 0)
         self.assertEqual(list(EmptySet), [])
         self.assertEqual(list(EmptySet.ranges()), [])

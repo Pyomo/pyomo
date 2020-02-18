@@ -2700,6 +2700,8 @@ class RangeSet(Component):
     #
     def dim(self):
         return 0
+    def index_set(self):
+        return UnindexedComponent_set
 
 
     def _pprint(self):
