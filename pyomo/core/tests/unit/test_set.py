@@ -4722,6 +4722,66 @@ I : Size=2, Index=I_index, Ordered=Insertion
         self.assertEqual(I.ord(0), i+1)
         self.assertTrue(I._is_sorted)
 
+    def test_process_setarg(self):
+        m = AbstractModel()
+        m.I = Set([1,2,3])
+        self.assertTrue(m.I.index_set().is_constructed())
+        self.assertTrue(m.I.index_set().isordered())
+        i = m.create_instance()
+        self.assertEqual(i.I.index_set(), [1,2,3])
+
+        m = AbstractModel()
+        m.I = Set({1,2,3})
+        self.assertTrue(m.I.index_set().is_constructed())
+        self.assertFalse(m.I.index_set().isordered())
+        i = m.create_instance()
+        self.assertEqual(i.I.index_set(), [1,2,3])
+
+        m = AbstractModel()
+        m.I = Set(RangeSet(3))
+        self.assertTrue(m.I.index_set().is_constructed())
+        self.assertTrue(m.I.index_set().isordered())
+        i = m.create_instance()
+        self.assertEqual(i.I.index_set(), [1,2,3])
+
+        m = AbstractModel()
+        m.p = Param(initialize=3)
+        m.I = Set(RangeSet(m.p))
+        self.assertFalse(m.I.index_set().is_constructed())
+        self.assertTrue(m.I.index_set().isordered())
+        i = m.create_instance()
+        self.assertEqual(i.I.index_set(), [1,2,3])
+
+        m = AbstractModel()
+        m.I = Set(lambda m: [1,2,3])
+        self.assertFalse(m.I.index_set().is_constructed())
+        self.assertTrue(m.I.index_set().isordered())
+        i = m.create_instance()
+        self.assertEqual(i.I.index_set(), [1,2,3])
+
+        def _i_idx(m):
+            return [1,2,3]
+        m = AbstractModel()
+        m.I = Set(_i_idx)
+        self.assertFalse(m.I.index_set().is_constructed())
+        self.assertTrue(m.I.index_set().isordered())
+        i = m.create_instance()
+        self.assertEqual(i.I.index_set(), [1,2,3])
+
+        # Note: generators are uncopyable, so we will mock up the same
+        # behavior as above using an unconstructed block
+        def _i_idx():
+            yield 1
+            yield 2
+            yield 3
+        m = Block()
+        m.I = Set(_i_idx())
+        self.assertFalse(m.I.index_set().is_constructed())
+        self.assertTrue(m.I.index_set().isordered())
+        i = ConcreteModel()
+        i.m = m
+        self.assertEqual(i.m.I.index_set(), [1,2,3])
+
     def test_set_options(self):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
