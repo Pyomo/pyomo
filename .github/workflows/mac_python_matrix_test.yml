@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - master
-      # Can add additional branches if desired
 
 jobs:
   pyomo-mac-tests:
@@ -13,11 +12,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.5, 3.6, 3.7, 3.8] # All available Python versions
+        python-version: [3.5, 3.6, 3.7, 3.8]
 
     steps:
-    - uses: actions/checkout@v1 # Checkout branch(es)
-    - name: Set up Python ${{ matrix.python-version }} # Initialize Python version
+    - uses: actions/checkout@v1
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
@@ -30,11 +29,32 @@ jobs:
         brew install pkg-config
         brew install unixodbc
         brew install freetds # Now install Python modules
+        echo "Upgrade pip..."
         python -m pip install --upgrade pip
         echo ""
         echo "Install Pyomo dependencies..."
         echo ""
         pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos
+        echo ""
+        echo "Install CPLEX Community Edition..."
+        echo ""
+        pip install cplex || echo "CPLEX Community Edition is not available for ${{ matrix.python-version }}"
+        echo ""
+        echo "Install GAMS..."
+        echo ""
+        wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/macosx/osx_x64_64_sfx.exe -O gams_installer.exe
+        chmod +x gams_installer.exe
+        ./gams_installer.exe -q -d gams
+        cd gams/*/apifiles/Python/
+        py_ver=$(python -c 'import sys;print("%s%s" % sys.version_info[:2])')
+        gams_ver=api
+        for ver in api_*; do
+            if test ${ver:4} -le $py_ver; then
+                gams_ver=$ver
+            fi  
+        done
+        cd $gams_ver
+        python setup.py -q install -noCheck
     - name: Install Pyomo and extensions
       run: |
         echo "Clone Pyomo-model-libraries..."
@@ -46,15 +66,17 @@ jobs:
         echo ""
         echo "Install Pyomo..."
         echo ""
-        python setup.py develop # Install Pyomo
+        python setup.py develop
         echo ""
-        echo "Install extensions..."
+        echo "Download and install extensions..."
         echo ""
-        pyomo download-extensions # Get Pyomo extensions
+        pyomo download-extensions
         pyomo build-extensions
-    - name: Run nightly, not fragile tests with test.pyomo
+    - name: Run nightly tests with test.pyomo
       run: |
         echo "Run test.pyomo..."
+        GAMS_DIR=`ls -d1 $(pwd)/gams/*/ | head -1`
+        export PATH=$PATH:$GAMS_DIR
+        export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_DIR
         pip install nose
-        KEY_JOB=1
-        test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries # Run nightly, stable tests
+        test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries

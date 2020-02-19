@@ -106,6 +106,7 @@ class _generic_component_decorator(object):
             rule.__name__,
             self._component(*self._args, rule=rule, **(self._kwds))
         )
+        return rule
 
 
 class _component_decorator(object):

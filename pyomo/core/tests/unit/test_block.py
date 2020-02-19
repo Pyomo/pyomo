@@ -14,6 +14,7 @@
 import os
 import sys
 import six
+import types
 
 from six import StringIO
 
@@ -2363,6 +2364,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue(hasattr(model, 'scalar_constraint'))
         self.assertIs(model.scalar_constraint._type, Constraint)
         self.assertEqual(len(model.scalar_constraint), 1)
+        self.assertIs(type(scalar_constraint), types.FunctionType)
 
         @model.Constraint(model.I)
         def vector_constraint(m, i):
@@ -2371,6 +2373,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue(hasattr(model, 'vector_constraint'))
         self.assertIs(model.vector_constraint._type, Constraint)
         self.assertEqual(len(model.vector_constraint), 3)
+        self.assertIs(type(vector_constraint), types.FunctionType)
 
     def test_reserved_words(self):
         m = ConcreteModel()
