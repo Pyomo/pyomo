@@ -414,14 +414,24 @@ class TestBlockVector(unittest.TestCase):
         self.assertEqual(len(self.ones), self.ones.nblocks)
 
     def test_argmax(self):
-        v = self.ones
-        with self.assertRaises(NotImplementedError) as ctx:
-            vv = v.argmax()
+        v = BlockVector(3)
+        a = np.array([3, 2, 1])
+        v.set_block(0, a.copy())
+        v.set_block(1, a.copy())
+        v.set_block(2, a.copy())
+        v.get_block(1)[1] = 5
+        argmax = v.argmax()
+        self.assertEqual(argmax, 4)
 
     def test_argmin(self):
-        v = self.ones
-        with self.assertRaises(NotImplementedError) as ctx:
-            vv = v.argmin()
+        v = BlockVector(3)
+        a = np.array([3, 2, 1])
+        v.set_block(0, a.copy())
+        v.set_block(1, a.copy())
+        v.set_block(2, a.copy())
+        v.get_block(1)[1] = -5
+        argmin = v.argmin()
+        self.assertEqual(argmin, 4)
 
     def test_cumprod(self):
 

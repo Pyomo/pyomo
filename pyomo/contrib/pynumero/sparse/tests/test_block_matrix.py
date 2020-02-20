@@ -245,11 +245,11 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertListEqual(dcol.tolist(), scol.tolist())
         self.assertListEqual(ddata.tolist(), sdata.tolist())
 
-    def test_has_undefined_rows(self):
-        self.assertFalse(self.basic_m.has_undefined_rows())
+    def test_has_undefined_row_sizes(self):
+        self.assertFalse(self.basic_m.has_undefined_row_sizes())
 
-    def test_has_undefined_cols(self):
-        self.assertFalse(self.basic_m.has_undefined_cols())
+    def test_has_undefined_col_sizes(self):
+        self.assertFalse(self.basic_m.has_undefined_col_sizes())
 
     def test_transpose(self):
 
@@ -885,8 +885,8 @@ class TestBlockMatrix(unittest.TestCase):
 
     def test_dimensions(self):
         bm = BlockMatrix(2, 2)
-        self.assertTrue(bm.has_undefined_rows())
-        self.assertTrue(bm.has_undefined_cols())
+        self.assertTrue(bm.has_undefined_row_sizes())
+        self.assertTrue(bm.has_undefined_col_sizes())
         with self.assertRaises(NotFullyDefinedBlockMatrixError):
             shape = bm.shape
         with self.assertRaises(NotFullyDefinedBlockMatrixError):
@@ -901,12 +901,12 @@ class TestBlockMatrix(unittest.TestCase):
         bm3 = bm2.copy()
         bm.set_block(0, 0, bm2)
         bm.set_block(1, 1, bm3)
-        self.assertFalse(bm.has_undefined_rows())
-        self.assertFalse(bm.has_undefined_cols())
+        self.assertFalse(bm.has_undefined_row_sizes())
+        self.assertFalse(bm.has_undefined_col_sizes())
         self.assertEqual(bm.shape, (8, 8))
         bm.set_block(0, 0, None)
-        self.assertFalse(bm.has_undefined_rows())
-        self.assertFalse(bm.has_undefined_cols())
+        self.assertFalse(bm.has_undefined_row_sizes())
+        self.assertFalse(bm.has_undefined_col_sizes())
         self.assertEqual(bm.shape, (8, 8))
         self.assertTrue(np.all(bm.row_block_sizes() == np.ones(2)*4))
         self.assertTrue(np.all(bm.col_block_sizes() == np.ones(2)*4))
