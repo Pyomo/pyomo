@@ -18,6 +18,7 @@ import pyomo.common
 import pyutilib.common
 import pyutilib.misc
 
+from pyomo.core import ComponentMap, Suffix, active_export_suffix_generator
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -122,10 +123,9 @@ class CPLEXBranchDirection:
     @staticmethod
     def to_str(branch_direction):
         try:
-            return {
-                CPLEXBranchDirection.down: "DN",
-                CPLEXBranchDirection.up: "UP",
-            }[branch_direction]
+            return {CPLEXBranchDirection.down: "DN", CPLEXBranchDirection.up: "UP"}[
+                branch_direction
+            ]
         except KeyError:
             return ""
 
@@ -136,7 +136,11 @@ class ORDFileSchema:
 
     @classmethod
     def ROW(cls, name, priority, branch_direction=None):
-        return " %s %s %s\n" % (CPLEXBranchDirection.to_str(branch_direction), name, priority)
+        return " %s %s %s\n" % (
+            CPLEXBranchDirection.to_str(branch_direction),
+            name,
+            priority,
+        )
 
 
 @SolverFactory.register('_cplex_shell', doc='Shell interface to the CPLEX LP/MIP solver')
@@ -228,20 +232,37 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             mst_file.write("</variables>\n")
             mst_file.write("</CPLEXSolution>\n")
 
+    # Expected names of `Suffix` components for branching priorities and directions respectively
+    SUFFIX_PRIORITY_NAME = "priority"
+    SUFFIX_DIRECTION_NAME = "direction"
+
     def _write_priorities_file(self, instance) -> None:
         """ Write a variable priorities file in the CPLEX ORD format. """
         from pyomo.core.base import Var
 
         if isinstance(instance, IBlock):
             smap = getattr(instance, "._symbol_maps")[self._smap_id]
+            suffixes = pyomo.core.kernel.suffix.export_suffix_generator(
+                instance, datatype=Suffix.INT, active=True, descend_into=False
+            )
         else:
             smap = instance.solutions.symbol_map[self._smap_id]
+            suffixes = active_export_suffix_generator(instance, datatype=Suffix.INT)
         byObject = smap.byObject
+        suffixes = dict(suffixes)
+
+        if self.SUFFIX_PRIORITY_NAME not in suffixes:
+            raise ValueError(
+                "Cannot write branching priorities file as `model.%s` Suffix has not been declared."
+                % (self.SUFFIX_PRIORITY_NAME,)
+            )
+
+        priorities = suffixes[self.SUFFIX_PRIORITY_NAME]
+        directions = suffixes.get(self.SUFFIX_DIRECTION_NAME, ComponentMap())
 
         with open(self._priorities_file_name, "w") as ord_file:
             ord_file.write(ORDFileSchema.HEADER)
-            for var in instance.component_data_objects(Var):
-                priority = var.branch_priority
+            for var, priority in priorities.items():
                 if priority is None:
                     continue
 
@@ -252,7 +273,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     continue
 
                 ord_file.write(
-                    ORDFileSchema.ROW(byObject[id(var)], priority, var.branch_direction)
+                    ORDFileSchema.ROW(byObject[id(var)], priority, directions.get(var))
                 )
 
             ord_file.write(ORDFileSchema.FOOTER)

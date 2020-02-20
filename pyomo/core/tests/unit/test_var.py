@@ -440,24 +440,6 @@ class TestSimpleVar(PyomoModel):
         self.assertEqual( type(tmp), int)
         self.assertEqual( tmp, 3 )
 
-    def test_branch_priority_attr(self):
-        """Test branch_priority attribute"""
-        self.model.x = Var()
-        self.instance = self.model.create_instance()
-
-        self.assertIsNone(self.instance.x.branch_priority)
-        self.instance.x.branch_priority = 1
-        self.assertEqual(self.instance.x.branch_priority, 1)
-
-    def test_branch_direction_attr(self):
-        """Test branch_direction attribute"""
-        self.model.x = Var()
-        self.instance = self.model.create_instance()
-
-        self.assertIsNone(self.instance.x.branch_direction)
-        self.instance.x.branch_direction = -1
-        self.assertEqual(self.instance.x.branch_direction, -1)
-
 
 class TestArrayVar(TestSimpleVar):
 

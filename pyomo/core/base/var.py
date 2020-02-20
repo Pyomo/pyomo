@@ -11,7 +11,6 @@
 __all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar']
 
 import logging
-from typing import Optional
 from weakref import ref as weakref_ref
 
 from pyomo.common.modeling import NoArgumentGiven
@@ -279,10 +278,6 @@ class _VarData(ComponentData, NumericValue):
         return self.name
 
 
-PriorityType = int
-BranchDirectionType = int
-
-
 class _GeneralVarData(_VarData):
     """
     This class defines the data for a single variable.
@@ -313,7 +308,7 @@ class _GeneralVarData(_VarData):
     these attributes in certain cases.
     """
 
-    __slots__ = ('_value', '_lb', '_ub', '_domain', 'fixed', 'stale', 'branch_priority', 'branch_direction')
+    __slots__ = ('_value', '_lb', '_ub', '_domain', 'fixed', 'stale')
 
     def __init__(self, domain=Reals, component=None):
         #
@@ -345,9 +340,6 @@ class _GeneralVarData(_VarData):
                 "instance of one of %s, or an object that declares a method "
                 "for bounds (like a Pyomo Set). Examples: NonNegativeReals, "
                 "Integers, Binary" % (domain, (RealSet, IntegerSet, BooleanSet)))
-
-        self.branch_priority = None  # type: Optional[PriorityType]
-        self.branch_direction = None  # type: Optional[BranchDirectionType]
 
     def __getstate__(self):
         state = super(_GeneralVarData, self).__getstate__()

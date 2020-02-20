@@ -14,7 +14,7 @@ import sys
 import pyutilib
 import pyutilib.th as unittest
 
-from pyomo.core import Binary, ConcreteModel, Constraint, Objective, Var, Integers, RangeSet, minimize, quicksum
+from pyomo.core import Binary, ConcreteModel, Constraint, Objective, Var, Integers, RangeSet, minimize, quicksum, Suffix
 from pyomo.opt import ProblemFormat, convert_problem, SolverFactory
 from pyomo.solvers.plugins.solvers.CPLEX import (CPLEXSHELL, MockCPLEX,
                                                  _validate_file_name)
@@ -98,19 +98,13 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
             priorities_file = ord_file.read()
         return priorities_file
 
-    def test_write_empty_priorities_file(self):
-        CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
-
-        with open(self.mock_cplex_shell._priorities_file_name, "r") as ord_file:
-            priorities_file = ord_file.read()
-
-        self.assertEqual(
-            priorities_file,
-            "* ENCODING=ISO-8859-1\nNAME             Priority Order\nENDATA\n",
-        )
+    def test_write_without_priority_suffix(self):
+        with self.assertRaises(ValueError):
+            CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
 
     def test_write_priority_to_priorities_file(self):
-        self.mock_model.x.branch_priority = 10
+        self.mock_model.priority = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        self.mock_model.priority.set_value(self.mock_model.x, 10)
 
         CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
         priorities_file = self.get_priorities_file_as_string(self.mock_cplex_shell)
@@ -119,11 +113,13 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
             priorities_file,
             "* ENCODING=ISO-8859-1\nNAME             Priority Order\n  x1 10\nENDATA\n",
         )
-        self.assertIsNone(self.mock_model.x.branch_direction)
 
     def test_write_priority_and_direction_to_priorities_file(self):
-        self.mock_model.x.branch_priority = 10
-        self.mock_model.x.branch_direction = -1
+        self.mock_model.priority = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        self.mock_model.priority.set_value(self.mock_model.x, 10)
+
+        self.mock_model.direction = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        self.mock_model.direction.set_value(self.mock_model.x, -1)
 
         CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
         priorities_file = self.get_priorities_file_as_string(self.mock_cplex_shell)
@@ -134,17 +130,21 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
         )
 
     def test_raise_due_to_invalid_priority(self):
-        self.mock_model.x.branch_priority = -1
+        self.mock_model.priority = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        self.mock_model.priority.set_value(self.mock_model.x, -1)
         with self.assertRaises(ValueError):
             CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
 
-        self.mock_model.x.branch_priority = 1.1
+        self.mock_model.priority.set_value(self.mock_model.x, 1.1)
         with self.assertRaises(ValueError):
             CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
 
     def test_use_default_due_to_invalid_direction(self):
-        self.mock_model.x.branch_priority = 10
-        self.mock_model.x.branch_direction = "invalid_branching_direction"
+        self.mock_model.priority = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        self.mock_model.priority.set_value(self.mock_model.x, 10)
+
+        self.mock_model.direction = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        self.mock_model.direction.set_value(self.mock_model.x, "invalid_branching_direction")
 
         CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
         priorities_file = self.get_priorities_file_as_string(self.mock_cplex_shell)
@@ -169,13 +169,16 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
         m.c = Constraint(expr=m.x >= 1)
         m.c2 = Constraint(expr=quicksum(m.y[i] for i in m.s) >= 10)
 
-        m.x.branch_priority = 1
+        m.priority = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        m.direction = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
 
-        for var in m.y.values():
-            var.branch_priority = 2
-            var.branch_direction = -1
+        m.priority.set_value(m.x, 1)
 
-        m.y[10].branch_direction = 1
+        # Ensure tests work for both options of `expand`
+        m.priority.set_value(m.y, 2, expand=False)
+        m.direction.set_value(m.y, -1, expand=True)
+
+        m.direction.set_value(m.y[10], 1)
         return m
 
     def test_use_variable_priorities(self):
