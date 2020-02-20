@@ -668,7 +668,7 @@ class BigM_Transformation(Transformation):
 
     def _estimate_M(self, expr, name):
         # Calculate a best guess at M
-        repn = generate_standard_repn(expr)
+        repn = generate_standard_repn(expr, quadratic=False)
         M = [0, 0]
 
         if not repn.is_nonlinear():
@@ -698,7 +698,7 @@ class BigM_Transformation(Transformation):
         else:
             # expression is nonlinear. Try using `contrib.fbbt` to estimate.
             expr_lb, expr_ub = compute_bounds_on_expr(expr)
-            if expr_lb == -inf or expr_ub == inf:
+            if expr_lb is None or expr_ub is None:
                 raise GDP_Error("Cannot estimate M for unbounded nonlinear "
                                 "expressions.\n\t(found while processing "
                                 "constraint %s)" % name)
