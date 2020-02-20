@@ -271,6 +271,15 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
                 var_direction = directions.get(var, CPLEXBranchDirection.default)
 
+                if not var.is_indexed():
+                    if id(var) not in byObject:
+                        continue
+
+                    ord_file.write(
+                        ORDFileSchema.ROW(byObject[id(var)], priority, var_direction)
+                    )
+                    continue
+
                 for child_var in var.values():
                     if id(child_var) not in byObject:
                         continue
