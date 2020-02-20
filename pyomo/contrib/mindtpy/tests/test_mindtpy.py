@@ -11,7 +11,7 @@ from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP
 from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
 from pyomo.environ import SolverFactory, value
 
-required_solvers = ('ipopt', 'glpk')
+required_solvers = ('ipopt', 'cplex_persistent')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:

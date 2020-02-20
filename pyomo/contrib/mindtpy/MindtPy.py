@@ -137,7 +137,7 @@ class MindtPySolver(object):
     ))
     CONFIG.declare("mip_solver", ConfigValue(
         default="gurobi",
-        domain=In(["gurobi", "cplex", "cbc", "glpk", "gams"]),
+        domain=In(["gurobi", "cplex", "cbc", "glpk", "gams","gurobi_persistent","cplex_persistent"]),
         description="MIP subsolver name",
         doc="Which MIP subsolver is going to be used for solving the mixed-"
             "integer master problems"

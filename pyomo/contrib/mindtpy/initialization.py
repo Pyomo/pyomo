@@ -11,7 +11,7 @@ from pyomo.core import (ConstraintList, Objective,
                         TransformationFactory, maximize, minimize, value, Var)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
-
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 def MindtPy_initialize_master(solve_data, config):
     """Initialize the decomposition algorithm.
@@ -125,7 +125,10 @@ def init_max_binaries(solve_data, config):
     getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
-    results = SolverFactory(config.mip_solver).solve(m, options=config.mip_solver_args)
+    opt = SolverFactory(config.mip_solver)
+    if isinstance(opt, PersistentSolver):
+        opt.set_instance(m)
+    results = opt.solve(m, options=config.mip_solver_args)
 
     solve_terminate_cond = results.solver.termination_condition
     if solve_terminate_cond is tc.optimal:

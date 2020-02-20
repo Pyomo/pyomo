@@ -13,7 +13,7 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt import SolverFactory
 from pyomo.opt.results import ProblemSense
-
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 class MindtPySolveData(object):
     """Data container to hold solve-instance data.
@@ -51,8 +51,11 @@ def model_is_valid(solve_data, config):
             config.logger.info(
                 "Your model is an LP (linear program). "
                 "Using LP solver %s to solve." % config.mip)
-            SolverFactory(config.mip).solve(
-                solve_data.original_model, **config.mip_options)
+            mipopt = SolverFactory(config.mip)
+            if isinstance(mipopt,PersistentSolver):
+                mipopt.set_instance(solve_data.original_model)
+
+            mipopt.solve(solve_data.original_model, **config.mip_options)
             return False
 
     if not hasattr(m, 'dual'):  # Set up dual value reporting

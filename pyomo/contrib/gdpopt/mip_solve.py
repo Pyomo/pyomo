@@ -14,6 +14,7 @@ from pyomo.gdp import Disjunct
 from pyomo.network import Port
 from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.opt import TerminationCondition as tc, SolverResults
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 
 def solve_linear_GDP(linear_GDP_model, solve_data, config):
@@ -75,8 +76,10 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
 
     try:
         with SuppressInfeasibleWarning():
-            results = SolverFactory(config.mip_solver).solve(
-                m, **config.mip_solver_args)
+            opt = SolverFactory(config.mip_solver)
+            if isinstance(opt,PersistentSolver):
+                opt.set_instance(m)
+            results = opt.solve(m, **config.mip_solver_args)
     except RuntimeError as e:
         if 'GAMS encountered an error during solve.' in str(e):
             config.logger.warning("GAMS encountered an error in solve. Treating as infeasible.")
@@ -109,7 +112,10 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
         main_objective = next(m.component_data_objects(Objective, active=True))
         GDPopt.objective_bound = Constraint(expr=(-obj_bound, main_objective.expr, obj_bound))
         with SuppressInfeasibleWarning():
-            results = SolverFactory(config.mip_solver).solve(
+            opt = SolverFactory(config.mip_solver)
+            if isinstance(opt,PersistentSolver):
+                opt.set_instance(m)
+            results = opt.solve(
                 m, **config.mip_solver_args)
         terminate_cond = results.solver.termination_condition
 
@@ -163,7 +169,10 @@ def distinguish_mip_infeasible_or_unbounded(m, config):
     tmp_args['options'] = tmp_args.get('options', {})
     tmp_args['options']['DualReductions'] = 0
     with SuppressInfeasibleWarning():
-        results = SolverFactory(config.mip_solver).solve(m, **tmp_args)
+        mipopt = SolverFactory(config.mip_solver)
+        if isinstance(mipopt,PersistentSolver):
+            mipopt.set_instance(m)
+        results = mipopt.solve(m, **tmp_args)
     termination_condition = results.solver.termination_condition
     return results, termination_condition
 

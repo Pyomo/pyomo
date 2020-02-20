@@ -7,7 +7,7 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
-
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 def solve_OA_master(solve_data, config):
     solve_data.mip_iter += 1
@@ -40,8 +40,10 @@ def solve_OA_master(solve_data, config):
 
     # master_mip.pprint() #print oa master problem for debugging
     with SuppressInfeasibleWarning():
-        master_mip_results = SolverFactory(config.mip_solver).solve(
-            master_mip, **config.mip_solver_args)
+        masteropt = SolverFactory(config.mip_solver)
+        if isinstance(masteropt, PersistentSolver):
+            masteropt.set_instance(master_mip)
+        master_mip_results = masteropt.solve(master_mip, **config.mip_solver_args)
     if master_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
@@ -169,5 +171,8 @@ def handle_master_mip_unbounded(master_mip, solve_data, config):
     main_objective = next(master_mip.component_data_objects(Objective, active=True))
     MindtPy.objective_bound = Constraint(expr=(-config.obj_bound, main_objective.expr, config.obj_bound))
     with SuppressInfeasibleWarning():
-        master_mip_results = SolverFactory(config.mip_solver).solve(
+        opt = SolverFactory(config.mip_solver)
+        if isinstance(opt,PersistentSolver):
+            opt.set_instance(master_mip)
+        master_mip_results = opt.solve(
             master_mip, **config.mip_solver_args)
