@@ -34,7 +34,7 @@ import numpy as np
 import six
 import abc
 
-__all__ = ['BlockMatrix']
+__all__ = ['BlockMatrix', 'NotFullyDefinedBlockMatrixError']
 
 
 class NotFullyDefinedBlockMatrixError(Exception):
@@ -42,13 +42,13 @@ class NotFullyDefinedBlockMatrixError(Exception):
 
 
 def assert_block_structure(mat):
-    msgr = 'Operation not allowed with None rows. ' \
-           'Specify at least one block in every row'
-    if mat.has_undefined_rows():
+    if mat.has_undefined_row_sizes():
+        msgr = 'Operation not allowed with None rows. ' \
+               'Specify at least one block in every row'
         raise NotFullyDefinedBlockMatrixError(msgr)
-    msgc = 'Operation not allowed with None columns. ' \
-           'Specify at least one block every column'
-    if mat.has_undefined_cols():
+    if mat.has_undefined_col_sizes():
+        msgc = 'Operation not allowed with None columns. ' \
+               'Specify at least one block every column'
         raise NotFullyDefinedBlockMatrixError(msgc)
 
 
@@ -100,7 +100,7 @@ class BlockMatrix(BaseBlockMatrix):
 
         # _brow_lengths and _bcol_lengths get converted to dtype=np.int64 as soon as
         # all of the dimensions are defined. Until then, users do not have access
-        # to these. See __setitem__, has_undefined_rows, has_undefined_cols,
+        # to these. See __setitem__, has_undefined_row_sizes, has_undefined_col_sizes,
         # row_block_sizes, col_block_sizes, and assert_block_structure
         self._brow_lengths = np.empty(nbrows, dtype=np.float64)
         self._bcol_lengths = np.empty(nbcols, dtype=np.float64)
@@ -167,7 +167,7 @@ class BlockMatrix(BaseBlockMatrix):
         numpy.ndarray
 
         """
-        if self.has_undefined_rows():
+        if self.has_undefined_row_sizes():
             raise NotFullyDefinedBlockMatrixError('Some block row lengths are not defined: {0}'.format(str(self._brow_lengths)))
         if copy:
             return self._brow_lengths.copy()
@@ -189,7 +189,7 @@ class BlockMatrix(BaseBlockMatrix):
         numpy.ndarray
 
         """
-        if self.has_undefined_cols():
+        if self.has_undefined_col_sizes():
             raise NotFullyDefinedBlockMatrixError('Some block column lengths are not defined: {0}'.format(str(self._bcol_lengths)))
         if copy:
             return self._bcol_lengths.copy()
@@ -234,10 +234,10 @@ class BlockMatrix(BaseBlockMatrix):
                                                          got=size,
                                                          exp=self._bcol_lengths[col]))
 
-    def is_row_defined(self, row):
+    def is_row_size_defined(self, row):
         return row not in self._undefined_brows
 
-    def is_col_defined(self, col):
+    def is_col_size_defined(self, col):
         return col not in self._undefined_bcols
 
     def block_shapes(self):
@@ -335,7 +335,7 @@ class BlockMatrix(BaseBlockMatrix):
 
         return data
 
-    def tocoo(self, copy=False):
+    def tocoo(self, copy=True):
         """
         Converts this matrix to COOrdinate format.
 
@@ -343,7 +343,7 @@ class BlockMatrix(BaseBlockMatrix):
         ----------
         copy: bool, optional
             This argument is in the signature solely for Scipy compatibility
-            reasons. It does not do anything
+            reasons. It does not do anything. The data is always copied.
 
         Returns
         -------
@@ -390,7 +390,7 @@ class BlockMatrix(BaseBlockMatrix):
 
         return coo_matrix((data, (row, col)), shape=shape)
 
-    def tocsr(self, copy=False):
+    def tocsr(self, copy=True):
         """
         Converts this matrix to Compressed Sparse Row format.
 
@@ -398,7 +398,7 @@ class BlockMatrix(BaseBlockMatrix):
         ----------
         copy: bool, optional
             This argument is in the signature solely for Scipy compatibility
-            reasons. It does not do anything
+            reasons. It does not do anything. The data is always copied.
 
         Returns
         -------
@@ -408,7 +408,7 @@ class BlockMatrix(BaseBlockMatrix):
 
         return self.tocoo().tocsr()
 
-    def tocsc(self):
+    def tocsc(self, copy=True):
         """
         Converts this matrix to Compressed Sparse Column format.
 
@@ -416,7 +416,7 @@ class BlockMatrix(BaseBlockMatrix):
         ----------
         copy: bool, optional
             This argument is in the signature solely for Scipy compatibility
-            reasons. It does not do anything
+            reasons. It does not do anything. The data is always copied.
 
         Returns
         -------
@@ -487,7 +487,8 @@ class BlockMatrix(BaseBlockMatrix):
                     result.set_block(i, j, accum)
             return result
         elif isspmatrix(other):
-            raise NotImplementedError('BlockMatrix multiply with spmatrix not supported')
+            raise NotImplementedError('BlockMatrix multiply with spmatrix not supported. Multiply a BlockMatrix '
+                                      'with another BlockMatrix of compatible dimensions.')
         else:
             raise NotImplementedError('Operation not supported by BlockMatrix')
 
@@ -545,7 +546,7 @@ class BlockMatrix(BaseBlockMatrix):
         """
         return not self._block_mask[idx, jdx]
 
-    def has_undefined_rows(self):
+    def has_undefined_row_sizes(self):
         """
         Indicates if the matrix has block-rows with undefined dimensions
 
@@ -556,7 +557,7 @@ class BlockMatrix(BaseBlockMatrix):
         """
         return len(self._undefined_brows) != 0
 
-    def has_undefined_cols(self):
+    def has_undefined_col_sizes(self):
         """
         Indicates if the matrix has block-columns with undefined dimensions
 
@@ -631,7 +632,8 @@ class BlockMatrix(BaseBlockMatrix):
                         self.set_block(i, j, mmm)
 
         else:
-            raise NotImplementedError("Format not supported")
+            raise NotImplementedError("Format not supported. BlockMatrix can only copy data from another BlockMatrix, "
+                                      "a numpy array, or a scipy sparse matrix.")
 
     def copyto(self, other, deep=True):
         """
@@ -690,9 +692,11 @@ class BlockMatrix(BaseBlockMatrix):
             elif isinstance(other, np.ndarray):
                 np.copyto(other, tmp_matrix.toarray())
             else:
-                raise NotImplementedError('Format not supported')
+                raise NotImplementedError("Format not supported. BlockMatrix can only copy data to another BlockMatrix, "
+                                          "a numpy array, or a scipy sparse coo, csr, or csc matrix.")
         else:
-            raise NotImplementedError('Format not supported')
+            raise NotImplementedError("Format not supported. BlockMatrix can only copy data to another BlockMatrix, "
+                                      "a numpy array, or a scipy sparse coo, csr, or csc matrix.")
 
     def copy(self, deep=True):
         """
@@ -778,10 +782,12 @@ class BlockMatrix(BaseBlockMatrix):
             self._block_mask[row, col] = True
 
     def __getitem__(self, item):
-        raise NotImplementedError('BlockMatrix does not support __getitem__.')
+        raise NotImplementedError('BlockMatrix does not support __getitem__. '
+                                  'Use get_block or set_block to access sub-blocks.')
 
     def __setitem__(self, item, val):
-        raise NotImplementedError('BlockMatrix does not support __setitem__.')
+        raise NotImplementedError('BlockMatrix does not support __setitem__. '
+                                  'Use get_block or set_block to access sub-blocks.')
 
     def __add__(self, other):
 
@@ -863,6 +869,11 @@ class BlockMatrix(BaseBlockMatrix):
             raise NotImplementedError('Operation not supported by BlockMatrix')
 
     def __mul__(self, other):
+        """
+        When doing A*B with numpy arrays, element-by-element multiplication is done. However, when doing
+        A*B with scipy sparse matrices, a matrix-matrix dot product is performed. We are following the
+        scipy sparse matrix API.
+        """
 
         bm, bn = self.bshape
         if np.isscalar(other):
@@ -932,6 +943,11 @@ class BlockMatrix(BaseBlockMatrix):
         raise NotImplementedError('Operation not supported by BlockMatrix')
 
     def __rmul__(self, other):
+        """
+        When doing A*B with numpy arrays, element-by-element multiplication is done. However, when doing
+        A*B with scipy sparse matrices, a matrix-matrix dot product is performed. We are following the
+        scipy sparse matrix API.
+        """
         bm, bn = self.bshape
         if np.isscalar(other):
             result = BlockMatrix(bm, bn)
@@ -1126,7 +1142,7 @@ class BlockMatrix(BaseBlockMatrix):
         """
         msgc = 'Operation not allowed with None columns. ' \
                'Specify at least one block in every column'
-        assert not self.has_undefined_cols(), msgc
+        assert not self.has_undefined_col_sizes(), msgc
 
         bm, bn = self.bshape
         # get cummulative sum of block sizes
@@ -1162,7 +1178,7 @@ class BlockMatrix(BaseBlockMatrix):
         """
         msgr = 'Operation not allowed with None rows. ' \
                'Specify at least one block in every row'
-        assert not self.has_undefined_rows(), msgr
+        assert not self.has_undefined_row_sizes(), msgr
 
         bm, bn = self.bshape
         # get cummulative sum of block sizes
@@ -1267,36 +1283,3 @@ class BlockMatrix(BaseBlockMatrix):
                 v = mat.getcol(i-offset).toarray().flatten()
             result.set_block(j, v)
         return result
-
-    def toMPIBlockMatrix(self, rank_ownership, mpi_comm):
-        """
-        Creates a parallel MPIBlockMatrix from this BlockMatrix
-
-        Parameters
-        ----------
-        rank_ownership: array_like
-            2D-array with processor ownership of each block. A block can be own by a
-            single processor or by all processors. Blocks own by all processors have
-            ownership -1. Blocks own by a single processor have ownership rank. where
-            rank=MPI.COMM_WORLD.Get_rank()
-        mpi_com: MPI communicator
-            An MPI communicator. Tyically MPI.COMM_WORLD
-
-        """
-        assert_block_structure(self)
-        from pyomo.contrib.pynumero.sparse.mpi_block_matrix import MPIBlockMatrix
-
-        # create mpi matrix
-        bm, bn = self.bshape
-        mat = MPIBlockMatrix(bm,
-                             bn,
-                             rank_ownership,
-                             mpi_comm,
-                             row_block_sizes=self.row_block_sizes(),
-                             col_block_sizes=self.col_block_sizes())
-
-        # populate matrix
-        rank = mpi_comm.Get_rank()
-        for i, j in mat.owned_blocks:
-            mat.set_block(i, j, self.get_block(i, j))
-        return mat

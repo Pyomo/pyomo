@@ -166,17 +166,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         args = [input_ for i, input_ in enumerate(inputs)]
 
         outputs = kwargs.pop('out', None)
-        out_no = []
-        if outputs:
-            out_args = []
-            for j, output in enumerate(outputs):
-                if isinstance(output, BlockVector):
-                    raise NotImplementedError(str(ufunc))
-                else:
-                    out_args.append(output)
-            kwargs['out'] = tuple(out_args)
-        else:
-            outputs = (None,) * ufunc.nout
+        if outputs is not None:
+            raise NotImplementedError(str(ufunc) + ' cannot be used with MPIBlockVector if the out keyword argument is given.')
 
         if ufunc in unary_funcs:
             results = self._unary_operation(ufunc, method, *args, **kwargs)
@@ -207,7 +198,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             return v
         elif type(x) == np.ndarray:
             return super(MPIBlockVector, self).__array_ufunc__(ufunc, method,
-                                                            *args, **kwargs)
+                                                               *args, **kwargs)
         else:
             raise NotImplementedError()
 
@@ -293,7 +284,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         return 1
 
-    # Note: this operation requires communication
     @property
     def has_none(self):
         """
@@ -1140,10 +1130,12 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         self._set_block_size(key, value.size)
 
     def __getitem__(self, item):
-        raise NotImplementedError('MPIBlockVector does not support __getitem__.')
+        raise NotImplementedError('MPIBlockVector does not support __getitem__. '
+                                  'Use get_block or set_block to access sub-blocks.')
 
     def __setitem__(self, key, value):
-        raise NotImplementedError('MPIBlockVector does not support __setitem__.')
+        raise NotImplementedError('MPIBlockVector does not support __setitem__. '
+                                  'Use get_block or set_block to access sub-blocks.')
 
     def __str__(self):
         msg = '{}{}:\n'.format(self.__class__.__name__, self.bshape)
@@ -1157,7 +1149,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def pprint(self, root=0):
         """Prints BlockVector in pretty format"""
-        self._assert_broadcasted_sizes()
+        assert_block_structure(self)
         msg = self.__repr__() + '\n'
         num_processors = self._mpiw.Get_size()
         local_mask = self._owned_mask.flatten()
@@ -1176,8 +1168,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 # checks only the mask of one of them since all must have the same
                 global_mask[bid] = processor_to_mask[0][bid]
 
-            disp_owner = self._rank_owner[bid] if self._rank_owner[bid] >= 0 else 'A'
-            is_none = '' if global_mask[bid] else '*'
+            disp_owner = self._rank_owner[bid] if self._rank_owner[bid] >= 0 else 'All'
+            is_none = '' if global_mask[bid] else 'None'
             repn = 'Owned by {} Shape({},){}'.format(disp_owner,
                                                      self._brow_lengths[bid],
                                                      is_none)

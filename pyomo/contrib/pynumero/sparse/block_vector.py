@@ -24,7 +24,7 @@ from .base_block import BaseBlockVector
 import numpy as np
 import operator
 
-__all__ = ['BlockVector']
+__all__ = ['BlockVector', 'NotFullyDefinedBlockVectorError']
 
 
 class NotFullyDefinedBlockVectorError(Exception):
@@ -40,8 +40,14 @@ def assert_block_structure(vec):
 class BlockVector(np.ndarray, BaseBlockVector):
     """
     Structured vector interface. This interface can be used to
-    performe operations on vectors composed by vectors. For example
-    bv = BlockVector([v1, v2, v3]), where vi are numpy.ndarrays or BlockVectors.
+    performe operations on vectors composed by vectors. For example,
+
+    bv = BlockVector(3)
+    bv.set_block(0, v0)
+    bv.set_block(1, v1)
+    bv.set_block(2, v2)
+
+    where vi are numpy.ndarrays or BlockVectors.
 
     Attributes
     ----------
@@ -118,17 +124,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
         args = [input_ for i, input_ in enumerate(inputs)]
         outputs = kwargs.pop('out', None)
-        out_no = []
-        if outputs:
-            out_args = []
-            for j, output in enumerate(outputs):
-                if isinstance(output, BlockVector):
-                    raise NotImplementedError(str(ufunc))
-                else:
-                    out_args.append(output)
-            kwargs['out'] = tuple(out_args)
-        else:
-            outputs = (None,) * ufunc.nout
+        if outputs is not None:
+            raise NotImplementedError(str(ufunc) + ' cannot be used with BlockVector if the out keyword argument is given.')
 
         if ufunc in unary_funcs:
             results = self._unary_operation(ufunc, method, *args, **kwargs)
@@ -603,6 +600,20 @@ class BlockVector(np.ndarray, BaseBlockVector):
         all_blocks = tuple(self.get_block(i).ravel(order=order) for i in range(self.nblocks))
         return np.concatenate(all_blocks)
 
+    def argmax(self, axis=None, out=None):
+        """
+        Returns the index of the larges element.
+        """
+        assert_block_structure(self)
+        return self.flatten().argmax(axis=axis, out=out)
+
+    def argmin(self, axis=None, out=None):
+        """
+        Returns the index of the smallest element.
+        """
+        assert_block_structure(self)
+        return self.flatten().argmin(axis=axis, out=out)
+
     def cumprod(self, axis=None, dtype=None, out=None):
         """
         Returns the cumulative product of the elements along the given axis.
@@ -629,7 +640,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         ----------
         value: scalar (optional)
             all entries of the cloned vector are set to this value
-        copy: bool (optinal)
+        copy: bool (optional)
             if True makes a deepcopy of each block in this vector. default True
 
         Returns
@@ -1237,10 +1248,12 @@ class BlockVector(np.ndarray, BaseBlockVector):
         super(BlockVector, self).__setitem__(key, value)
 
     def __getitem__(self, item):
-        raise NotImplementedError('BlockVector does not support __getitem__.')
+        raise NotImplementedError('BlockVector does not support __getitem__. '
+                                  'Use get_block or set_block to access sub-blocks.')
 
     def __setitem__(self, key, value):
-        raise NotImplementedError('BlockVector does not support __setitem__.')
+        raise NotImplementedError('BlockVector does not support __setitem__. '
+                                  'Use get_block or set_block to access sub-blocks.')
 
     def _comparison_helper(self, other, operation):
         assert_block_structure(self)
@@ -1417,12 +1430,6 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def tobytes(self, order='C'):
         BaseBlockVector.tobytes(self, order=order)
-
-    def argmax(self, axis=None, out=None):
-        BaseBlockVector.argmax(self, axis=axis, out=out)
-
-    def argmin(self, axis=None, out=None):
-        BaseBlockVector.argmax(self, axis=axis, out=out)
 
     def take(self, indices, axis=None, out=None, mode='raise'):
         BaseBlockVector.take(self, indices, axis=axis, out=out, mode=mode)

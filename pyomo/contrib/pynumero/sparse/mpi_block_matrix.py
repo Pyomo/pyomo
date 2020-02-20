@@ -26,13 +26,15 @@ from .mpi_block_vector import assert_block_structure as mpi_block_vector_assert_
 from .block_vector import BlockVector
 from .block_vector import assert_block_structure as block_vector_assert_block_structure
 from .block_matrix import BlockMatrix, NotFullyDefinedBlockMatrixError
-from .warnings import MPISpaceWarning
+from .block_matrix import assert_block_structure as block_matrix_assert_block_structure
 from .base_block import BaseBlockMatrix
 from warnings import warn
 from mpi4py import MPI
 import numpy as np
 from scipy.sparse import coo_matrix
 import operator
+
+__all__ = ['MPIBlockMatrix']
 
 # Array classifiers
 SINGLE_OWNER = 1
@@ -44,7 +46,7 @@ ALL_OWN_IT = 0
 
 
 def assert_block_structure(mat):
-    if mat.has_undefined_rows() or mat.has_undefined_cols():
+    if mat.has_undefined_row_sizes() or mat.has_undefined_col_sizes():
         msg = 'Call MPIBlockMatrix.broadcast_block_sizes() first. '
         raise NotFullyDefinedBlockMatrixError(msg)
 
@@ -106,22 +108,14 @@ class MPIBlockMatrix(BaseBlockMatrix):
         rank = self._mpiw.Get_rank()
 
         if isinstance(rank_ownership, list):
-            rank_owner_format = 1
-        elif isinstance(rank_ownership, np.ndarray):
-            rank_owner_format = 2
-            assert rank_ownership.ndim == 2, 'rank_ownership must be of size 2'
-        else:
+            rank_ownership = np.asarray(rank_ownership, dtype=np.int64)
+        if not isinstance(rank_ownership, np.ndarray):
             raise RuntimeError('rank_ownership must be a list of lists or a numpy array')
+        assert rank_ownership.ndim == 2, 'rank_ownership must be of size 2'
 
         for i in range(nbrows):
             for j in range(nbcols):
-
-                if rank_owner_format == 1:
-                    owner = rank_ownership[i][j]
-                else:
-                    owner = rank_ownership[i, j]
-                if owner != int(owner):
-                    raise ValueError('rank_ownership must contain integers only')
+                owner = rank_ownership[i, j]
                 assert owner < self._mpiw.Get_size(), \
                     'rank owner out of range'
                 self._rank_owner[i, j] = owner
@@ -187,7 +181,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
     @property
     def shared_blocks(self):
         """
-        Returns list with inidices of blocks shared by all processors
+        Returns list of 2-tuples with inidices of blocks shared by all processors
         """
         bm, bn = self.bshape
         owned_blocks = []
@@ -230,11 +224,11 @@ class MPIBlockMatrix(BaseBlockMatrix):
     def set_col_size(self, col, size):
         self._block_matrix.set_col_size(col, size)
 
-    def is_row_defined(self, row):
-        return self._block_matrix.is_row_defined(row)
+    def is_row_size_defined(self, row):
+        return self._block_matrix.is_row_size_defined(row)
 
-    def is_col_defined(self, col):
-        return self._block_matrix.is_col_defined(col)
+    def is_col_size_defined(self, col):
+        return self._block_matrix.is_col_size_defined(col)
 
     @property
     def T(self):
@@ -365,7 +359,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         """
         Send sizes of all blocks to all processors. After this method is called
         this MPIBlockMatrix knows it's dimensions of all rows and columns. This method
-        must be called before running any operations with the MPIBlockVector.
+        must be called before running any operations with the MPIBlockMatrix.
         """
         rank = self._mpiw.Get_rank()
         num_processors = self._mpiw.Get_size()
@@ -375,10 +369,10 @@ class MPIBlockMatrix(BaseBlockMatrix):
         local_row_data.fill(-1)
         local_col_data.fill(-1)
         for row_ndx in range(self.bshape[0]):
-            if self._block_matrix.is_row_defined(row_ndx):
+            if self._block_matrix.is_row_size_defined(row_ndx):
                 local_row_data[row_ndx] = self._block_matrix.get_row_size(row_ndx)
         for col_ndx in range(self.bshape[1]):
-            if self._block_matrix.is_col_defined(col_ndx):
+            if self._block_matrix.is_col_size_defined(col_ndx):
                 local_col_data[col_ndx] = self._block_matrix.get_col_size(col_ndx)
 
         send_data = np.concatenate([local_row_data, local_col_data])
@@ -494,7 +488,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         assert_block_structure(self)
         return self._block_matrix.block_shapes()
 
-    def has_undefined_rows(self):
+    def has_undefined_row_sizes(self):
         """
         Indicates if the matrix has block-rows with undefined dimensions
 
@@ -503,9 +497,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
         bool
 
         """
-        return self._block_matrix.has_undefined_rows()
+        return self._block_matrix.has_undefined_row_sizes()
 
-    def has_undefined_cols(self):
+    def has_undefined_col_sizes(self):
         """
         Indicates if the matrix has block-columns with undefined dimensions
 
@@ -514,7 +508,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         bool
 
         """
-        return self._block_matrix.has_undefined_cols()
+        return self._block_matrix.has_undefined_col_sizes()
 
     def reset_bcol(self, jdx):
         """
@@ -786,6 +780,12 @@ class MPIBlockMatrix(BaseBlockMatrix):
         return global_result
 
     def __mul__(self, other):
+        """
+        When doing A*B with numpy arrays, element-by-element multiplication is done. However, when doing
+        A*B with scipy sparse matrices, a matrix-matrix dot product is performed. We are following the
+        scipy sparse matrix API.
+        """
+
         assert_block_structure(self)
 
         if isinstance(other, MPIBlockVector):
@@ -811,6 +811,12 @@ class MPIBlockMatrix(BaseBlockMatrix):
             raise NotImplementedError('Operation not supported by MPIBlockMatrix')
 
     def __rmul__(self, other):
+        """
+        When doing A*B with numpy arrays, element-by-element multiplication is done. However, when doing
+        A*B with scipy sparse matrices, a matrix-matrix dot product is performed. We are following the
+        scipy sparse matrix API.
+        """
+
         assert_block_structure(self)
         m, n = self.bshape
         result = self.copy_structure()
@@ -1187,3 +1193,36 @@ class MPIBlockMatrix(BaseBlockMatrix):
                     v = sub_matrix.getrow(i-offset).toarray().flatten()
                 bv.set_block(col_bid, v)
         return bv
+
+    @staticmethod
+    def fromBlockMatrix(block_matrix, rank_ownership, mpi_comm):
+        """
+        Creates a parallel MPIBlockMatrix from blockmatrix
+
+        Parameters
+        ----------
+        block_matrix: BlockMatrix
+            The block matrix to use to create the MPIBlockMatrix
+        rank_ownership: array_like
+            2D-array with processor ownership of each block. A block can be own by a
+            single processor or by all processors. Blocks own by all processors have
+            ownership -1. Blocks own by a single processor have ownership rank. where
+            rank=MPI.COMM_WORLD.Get_rank()
+        mpi_comm: MPI communicator
+            An MPI communicator. Tyically MPI.COMM_WORLD
+        """
+        block_matrix_assert_block_structure(block_matrix)
+
+        # create mpi matrix
+        bm, bn = block_matrix.bshape
+        mat = MPIBlockMatrix(bm,
+                             bn,
+                             rank_ownership,
+                             mpi_comm)
+
+        # populate matrix
+        for i, j in mat.owned_blocks:
+            mat.set_block(i, j, block_matrix.get_block(i, j))
+
+        mat.broadcast_block_sizes()
+        return mat

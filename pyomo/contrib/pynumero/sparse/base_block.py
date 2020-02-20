@@ -13,14 +13,15 @@ import six
 
 # These classes are for checking types consistently and raising errors
 
-@six.add_metaclass(abc.ABCMeta)
+
 class BaseBlockVector(object):
     """Base class for block vectors"""
 
     def __init__(self):
         pass
 
-    # The following methods are not supported by block vectors
+    # We do not expect classes derived from BaseBlockVector to support
+    # the methods below.
     def argpartition(self, kth, axis=-1, kind='introselect', order=None):
         msg = "argpartition not implemented for {}".format(self.__class__.__name__)
         raise NotImplementedError(msg)
@@ -131,14 +132,14 @@ class BaseBlockVector(object):
         raise NotImplementedError(msg)
 
 
-
-@six.add_metaclass(abc.ABCMeta)
 class BaseBlockMatrix(object):
     """Base class for block matrices"""
 
     def __init__(self):
         pass
 
+    # We do not expect classes derived from BaseBlockVector to support
+    # the methods below.
     def tolil(self, copy=False):
         msg = "tolil not implemented for {}".format(self.__class__.__name__)
         raise NotImplementedError(msg)
