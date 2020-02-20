@@ -263,18 +263,23 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         with open(self._priorities_file_name, "w") as ord_file:
             ord_file.write(ORDFileSchema.HEADER)
             for var, priority in priorities.items():
-                if priority is None:
+                if priority is None or not var.active:
                     continue
 
                 if not (0 <= priority == int(priority)):
                     raise ValueError("`priority` must be a non-negative integer")
 
-                if id(var) not in byObject or not var.active:
-                    continue
+                var_direction = directions.get(var, CPLEXBranchDirection.default)
 
-                ord_file.write(
-                    ORDFileSchema.ROW(byObject[id(var)], priority, directions.get(var))
-                )
+                for child_var in var.values():
+                    if id(child_var) not in byObject:
+                        continue
+
+                    child_var_direction = directions.get(child_var, var_direction)
+
+                    ord_file.write(
+                        ORDFileSchema.ROW(byObject[id(child_var)], priority, child_var_direction)
+                    )
 
             ord_file.write(ORDFileSchema.FOOTER)
 
