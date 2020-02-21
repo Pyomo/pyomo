@@ -9,15 +9,14 @@
 #  ___________________________________________________________________________
 
 import os
-import sys
 
 import pyutilib
 import pyutilib.th as unittest
 
 from pyomo.core import Binary, ConcreteModel, Constraint, Objective, Var, Integers, RangeSet, minimize, quicksum, Suffix
-from pyomo.opt import ProblemFormat, convert_problem, SolverFactory
+from pyomo.opt import ProblemFormat, convert_problem, SolverFactory, BranchDirection
 from pyomo.solvers.plugins.solvers.CPLEX import (CPLEXSHELL, MockCPLEX,
-                                                 _validate_file_name)
+                                                 _validate_file_name, CPLEXBranchDirection)
 
 
 class _mock_cplex_128(object):
@@ -104,29 +103,34 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
 
     def test_write_priority_to_priorities_file(self):
         self.mock_model.priority = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
-        self.mock_model.priority.set_value(self.mock_model.x, 10)
+        priority_val = 10
+        self.mock_model.priority.set_value(self.mock_model.x, priority_val)
 
         CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
         priorities_file = self.get_priorities_file_as_string(self.mock_cplex_shell)
 
         self.assertEqual(
             priorities_file,
-            "* ENCODING=ISO-8859-1\nNAME             Priority Order\n  x1 10\nENDATA\n",
+            "* ENCODING=ISO-8859-1\nNAME             Priority Order\n  x1 %d\nENDATA\n"
+            % (priority_val,),
         )
 
     def test_write_priority_and_direction_to_priorities_file(self):
         self.mock_model.priority = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
-        self.mock_model.priority.set_value(self.mock_model.x, 10)
+        priority_val = 10
+        self.mock_model.priority.set_value(self.mock_model.x, priority_val)
 
         self.mock_model.direction = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
-        self.mock_model.direction.set_value(self.mock_model.x, -1)
+        direction_val = BranchDirection.down
+        self.mock_model.direction.set_value(self.mock_model.x, direction_val)
 
         CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
         priorities_file = self.get_priorities_file_as_string(self.mock_cplex_shell)
 
         self.assertEqual(
             priorities_file,
-            "* ENCODING=ISO-8859-1\nNAME             Priority Order\n DN x1 10\nENDATA\n",
+            "* ENCODING=ISO-8859-1\nNAME             Priority Order\n %s x1 %d\nENDATA\n"
+            % (CPLEXBranchDirection.to_str(direction_val), priority_val),
         )
 
     def test_raise_due_to_invalid_priority(self):
@@ -141,24 +145,27 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
 
     def test_use_default_due_to_invalid_direction(self):
         self.mock_model.priority = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
-        self.mock_model.priority.set_value(self.mock_model.x, 10)
+        priority_val = 10
+        self.mock_model.priority.set_value(self.mock_model.x, priority_val)
 
         self.mock_model.direction = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
-        self.mock_model.direction.set_value(self.mock_model.x, "invalid_branching_direction")
+        self.mock_model.direction.set_value(
+            self.mock_model.x, "invalid_branching_direction"
+        )
 
         CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
         priorities_file = self.get_priorities_file_as_string(self.mock_cplex_shell)
 
         self.assertEqual(
             priorities_file,
-            "* ENCODING=ISO-8859-1\nNAME             Priority Order\n  x1 10\nENDATA\n",
+            "* ENCODING=ISO-8859-1\nNAME             Priority Order\n  x1 %d\nENDATA\n"
+            % (priority_val,),
         )
 
 
 class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
     def setUp(self):
-        from pyomo.solvers.plugins.converter.model import PyomoMIPConverter  # register the `ProblemConverterFactory`
-        from pyomo.repn.plugins.cpxlp import ProblemWriter_cpxlp  # register the `WriterFactory`
+        pass
 
     def get_mock_model_with_priorities(self):
         m = ConcreteModel()
@@ -176,41 +183,41 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
 
         # Ensure tests work for both options of `expand`
         m.priority.set_value(m.y, 2, expand=False)
-        m.direction.set_value(m.y, -1, expand=True)
+        m.direction.set_value(m.y, BranchDirection.down, expand=True)
 
-        m.direction.set_value(m.y[10], 1)
+        m.direction.set_value(m.y[10], BranchDirection.up)
         return m
 
     def test_use_variable_priorities(self):
         model = self.get_mock_model_with_priorities()
-        with SolverFactory('_mock_cplex') as opt:
+        with SolverFactory("_mock_cplex") as opt:
             opt._presolve(model, priorities=True, keepfiles=True)
 
-            with open(opt._priorities_file_name, 'r') as ord_file:
+            with open(opt._priorities_file_name, "r") as ord_file:
                 priorities_file = ord_file.read()
 
         assert priorities_file == (
-            '* ENCODING=ISO-8859-1\n'
-            'NAME             Priority Order\n'
-            '  x1 1\n'
-            ' DN x2 2\n'
-            ' DN x3 2\n'
-            ' DN x4 2\n'
-            ' DN x5 2\n'
-            ' DN x6 2\n'
-            ' DN x7 2\n'
-            ' DN x8 2\n'
-            ' DN x9 2\n'
-            ' DN x10 2\n'
-            ' UP x11 2\n'
-            'ENDATA\n'
+            "* ENCODING=ISO-8859-1\n"
+            "NAME             Priority Order\n"
+            "  x1 1\n"
+            " DN x2 2\n"
+            " DN x3 2\n"
+            " DN x4 2\n"
+            " DN x5 2\n"
+            " DN x6 2\n"
+            " DN x7 2\n"
+            " DN x8 2\n"
+            " DN x9 2\n"
+            " DN x10 2\n"
+            " UP x11 2\n"
+            "ENDATA\n"
         )
 
         assert "read %s\n" % (opt._priorities_file_name,) in opt._command.script
 
     def test_ignore_variable_priorities(self):
         model = self.get_mock_model_with_priorities()
-        with SolverFactory('_mock_cplex') as opt:
+        with SolverFactory("_mock_cplex") as opt:
             opt._presolve(model, priorities=False, keepfiles=True)
 
             assert opt._priorities_file_name is None
@@ -220,35 +227,28 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
         """ Test that we can pass an LP file (not a pyomo model) along with a priorities file to `.solve()` """
         model = self.get_mock_model_with_priorities()
 
-        with SolverFactory('_mock_cplex') as pre_opt:
+        with SolverFactory("_mock_cplex") as pre_opt:
             pre_opt._presolve(model, priorities=True, keepfiles=True)
             lp_file = pre_opt._problem_files[0]
             priorities_file_name = pre_opt._priorities_file_name
 
-        with SolverFactory('_mock_cplex') as opt:
-            opt._presolve(lp_file, priorities=True, priorities_file=priorities_file_name, keepfiles=True)
+            with open(priorities_file_name, "r") as ord_file:
+                provided_priorities_file = ord_file.read()
+
+        with SolverFactory("_mock_cplex") as opt:
+            opt._presolve(
+                lp_file,
+                priorities=True,
+                priorities_file=priorities_file_name,
+                keepfiles=True,
+            )
 
             assert ".ord" in opt._command.script
 
-            with open(opt._priorities_file_name, 'r') as ord_file:
+            with open(opt._priorities_file_name, "r") as ord_file:
                 priorities_file = ord_file.read()
 
-        assert priorities_file == (
-            '* ENCODING=ISO-8859-1\n'
-            'NAME             Priority Order\n'
-            '  x1 1\n'
-            ' DN x2 2\n'
-            ' DN x3 2\n'
-            ' DN x4 2\n'
-            ' DN x5 2\n'
-            ' DN x6 2\n'
-            ' DN x7 2\n'
-            ' DN x8 2\n'
-            ' DN x9 2\n'
-            ' DN x10 2\n'
-            ' UP x11 2\n'
-            'ENDATA\n'
-        )
+        assert priorities_file == provided_priorities_file
 
 
 if __name__ == "__main__":

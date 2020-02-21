@@ -23,6 +23,7 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.solvers.mockmip import MockMIP
+from pyomo.core.base import Var, ComponentMap, Suffix, active_export_suffix_generator
 from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.solvers')
@@ -112,13 +113,7 @@ class CPLEX(OptSolver):
         return opt
 
 
-class CPLEXBranchDirection:
-    default = 0
-    down = -1
-    up = 1
-
-    ALL = {default, down, up}
-
+class CPLEXBranchDirection(BranchDirection):
     @staticmethod
     def to_str(branch_direction):
         try:
@@ -129,7 +124,7 @@ class CPLEXBranchDirection:
             return ""
 
 
-class ORDFileSchema:
+class ORDFileSchema(object):
     HEADER = "* ENCODING=ISO-8859-1\nNAME             Priority Order\n"
     FOOTER = "ENDATA\n"
 
@@ -192,9 +187,6 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
     # write a warm-start file in the CPLEX MST format.
     #
     def _warm_start(self, instance):
-
-        from pyomo.core.base import Var
-
         # for each variable in the symbol_map, add a child to the
         # variables element.  Both continuous and discrete are accepted
         # (and required, depending on other options), according to the
@@ -235,19 +227,19 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
     SUFFIX_PRIORITY_NAME = "priority"
     SUFFIX_DIRECTION_NAME = "direction"
 
-    def _write_priorities_file(self, instance) -> None:
+    def _write_priorities_file(self, instance):
         """ Write a variable priorities file in the CPLEX ORD format. """
-        from pyomo.core.base import Var, ComponentMap, Suffix, active_export_suffix_generator
+        priorities, directions = self._get_suffixes(instance)
+        rows = self._convert_priorities_to_rows(instance, priorities, directions)
+        self._write_priority_rows(rows)
 
+    def _get_suffixes(self, instance):
         if isinstance(instance, IBlock):
-            smap = getattr(instance, "._symbol_maps")[self._smap_id]
             suffixes = pyomo.core.kernel.suffix.export_suffix_generator(
                 instance, datatype=Suffix.INT, active=True, descend_into=False
             )
         else:
-            smap = instance.solutions.symbol_map[self._smap_id]
             suffixes = active_export_suffix_generator(instance, datatype=Suffix.INT)
-        byObject = smap.byObject
         suffixes = dict(suffixes)
 
         if self.SUFFIX_PRIORITY_NAME not in suffixes:
@@ -256,39 +248,49 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 % (self.SUFFIX_PRIORITY_NAME,)
             )
 
-        priorities = suffixes[self.SUFFIX_PRIORITY_NAME]
-        directions = suffixes.get(self.SUFFIX_DIRECTION_NAME, ComponentMap())
+        return (
+            suffixes[self.SUFFIX_PRIORITY_NAME],
+            suffixes.get(self.SUFFIX_DIRECTION_NAME, ComponentMap()),
+        )
 
+    def _convert_priorities_to_rows(self, instance, priorities, directions):
+        if isinstance(instance, IBlock):
+            smap = getattr(instance, "._symbol_maps")[self._smap_id]
+        else:
+            smap = instance.solutions.symbol_map[self._smap_id]
+        byObject = smap.byObject
+
+        rows = []
+        for var, priority in priorities.items():
+            if priority is None or not var.active:
+                continue
+
+            if not (0 <= priority == int(priority)):
+                raise ValueError("`priority` must be a non-negative integer")
+
+            var_direction = directions.get(var, CPLEXBranchDirection.default)
+
+            if not var.is_indexed():
+                if id(var) not in byObject:
+                    continue
+
+                rows.append((byObject[id(var)], priority, var_direction))
+                continue
+
+            for child_var in var.values():
+                if id(child_var) not in byObject:
+                    continue
+
+                child_var_direction = directions.get(child_var, var_direction)
+
+                rows.append((byObject[id(child_var)], priority, child_var_direction))
+        return rows
+
+    def _write_priority_rows(self, rows):
         with open(self._priorities_file_name, "w") as ord_file:
             ord_file.write(ORDFileSchema.HEADER)
-            for var, priority in priorities.items():
-                if priority is None or not var.active:
-                    continue
-
-                if not (0 <= priority == int(priority)):
-                    raise ValueError("`priority` must be a non-negative integer")
-
-                var_direction = directions.get(var, CPLEXBranchDirection.default)
-
-                if not var.is_indexed():
-                    if id(var) not in byObject:
-                        continue
-
-                    ord_file.write(
-                        ORDFileSchema.ROW(byObject[id(var)], priority, var_direction)
-                    )
-                    continue
-
-                for child_var in var.values():
-                    if id(child_var) not in byObject:
-                        continue
-
-                    child_var_direction = directions.get(child_var, var_direction)
-
-                    ord_file.write(
-                        ORDFileSchema.ROW(byObject[id(child_var)], priority, child_var_direction)
-                    )
-
+            for var_name, priority, direction in rows:
+                ord_file.write(ORDFileSchema.ROW(var_name, priority, direction))
             ord_file.write(ORDFileSchema.FOOTER)
 
     # over-ride presolve to extract the warm-start keyword, if specified.
