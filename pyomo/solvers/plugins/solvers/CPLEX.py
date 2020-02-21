@@ -18,7 +18,6 @@ import pyomo.common
 import pyutilib.common
 import pyutilib.misc
 
-from pyomo.core import ComponentMap, Suffix, active_export_suffix_generator
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
@@ -238,7 +237,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
     def _write_priorities_file(self, instance) -> None:
         """ Write a variable priorities file in the CPLEX ORD format. """
-        from pyomo.core.base import Var
+        from pyomo.core.base import Var, ComponentMap, Suffix, active_export_suffix_generator
 
         if isinstance(instance, IBlock):
             smap = getattr(instance, "._symbol_maps")[self._smap_id]
