@@ -15,8 +15,7 @@ import pyutilib.th as unittest
 
 from pyomo.core import Binary, ConcreteModel, Constraint, Objective, Var, Integers, RangeSet, minimize, quicksum, Suffix
 from pyomo.opt import ProblemFormat, convert_problem, SolverFactory, BranchDirection
-from pyomo.solvers.plugins.solvers.CPLEX import (CPLEXSHELL, MockCPLEX,
-                                                 _validate_file_name, CPLEXBranchDirection)
+from pyomo.solvers.plugins.solvers.CPLEX import CPLEXSHELL, MockCPLEX, _validate_file_name, ORDFileSchema
 
 
 class _mock_cplex_128(object):
@@ -130,7 +129,7 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
         self.assertEqual(
             priorities_file,
             "* ENCODING=ISO-8859-1\nNAME             Priority Order\n %s x1 %d\nENDATA\n"
-            % (CPLEXBranchDirection.to_str(direction_val), priority_val),
+            % (ORDFileSchema._direction_to_str(direction_val), priority_val),
         )
 
     def test_raise_due_to_invalid_priority(self):

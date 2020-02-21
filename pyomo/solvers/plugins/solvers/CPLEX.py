@@ -113,17 +113,6 @@ class CPLEX(OptSolver):
         return opt
 
 
-class CPLEXBranchDirection(BranchDirection):
-    @staticmethod
-    def to_str(branch_direction):
-        try:
-            return {CPLEXBranchDirection.down: "DN", CPLEXBranchDirection.up: "UP"}[
-                branch_direction
-            ]
-        except KeyError:
-            return ""
-
-
 class ORDFileSchema(object):
     HEADER = "* ENCODING=ISO-8859-1\nNAME             Priority Order\n"
     FOOTER = "ENDATA\n"
@@ -131,10 +120,19 @@ class ORDFileSchema(object):
     @classmethod
     def ROW(cls, name, priority, branch_direction=None):
         return " %s %s %s\n" % (
-            CPLEXBranchDirection.to_str(branch_direction),
+            cls._direction_to_str(branch_direction),
             name,
             priority,
         )
+
+    @staticmethod
+    def _direction_to_str(branch_direction):
+        try:
+            return {BranchDirection.down: "DN", BranchDirection.up: "UP"}[
+                branch_direction
+            ]
+        except KeyError:
+            return ""
 
 
 @SolverFactory.register('_cplex_shell', doc='Shell interface to the CPLEX LP/MIP solver')
@@ -268,7 +266,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             if not (0 <= priority == int(priority)):
                 raise ValueError("`priority` must be a non-negative integer")
 
-            var_direction = directions.get(var, CPLEXBranchDirection.default)
+            var_direction = directions.get(var, BranchDirection.default)
 
             if not var.is_indexed():
                 if id(var) not in byObject:
