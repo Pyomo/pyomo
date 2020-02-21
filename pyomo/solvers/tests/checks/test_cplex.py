@@ -211,7 +211,7 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
     def test_ignore_variable_priorities(self):
         model = self.get_mock_model_with_priorities()
         with SolverFactory('_mock_cplex') as opt:
-            opt._presolve(model, priorities=True, keepfiles=True)
+            opt._presolve(model, priorities=False, keepfiles=True)
 
             assert opt._priorities_file_name is None
             assert ".ord" not in opt._command.script
