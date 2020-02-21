@@ -183,8 +183,8 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
 
     def test_use_variable_priorities(self):
         model = self.get_mock_model_with_priorities()
-        with SolverFactory('cplex', solver_io='lp') as opt:
-            opt.solve(model, priorities=True, keepfiles=True)
+        with SolverFactory('_mock_cplex') as opt:
+            opt._presolve(model, priorities=True, keepfiles=True)
 
             with open(opt._priorities_file_name, 'r') as ord_file:
                 priorities_file = ord_file.read()
@@ -210,8 +210,8 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
 
     def test_ignore_variable_priorities(self):
         model = self.get_mock_model_with_priorities()
-        with SolverFactory('cplex', solver_io='lp') as opt:
-            opt.solve(model, priorities=False, keepfiles=True)
+        with SolverFactory('_mock_cplex') as opt:
+            opt._presolve(model, priorities=True, keepfiles=True)
 
             assert opt._priorities_file_name is None
             assert ".ord" not in opt._command.script
@@ -220,13 +220,13 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
         """ Test that we can pass an LP file (not a pyomo model) along with a priorities file to `.solve()` """
         model = self.get_mock_model_with_priorities()
 
-        with SolverFactory('cplex', solver_io='lp') as pre_opt:
+        with SolverFactory('_mock_cplex') as pre_opt:
             pre_opt._presolve(model, priorities=True, keepfiles=True)
             lp_file = pre_opt._problem_files[0]
             priorities_file_name = pre_opt._priorities_file_name
 
-        with SolverFactory('cplex', solver_io='lp') as opt:
-            opt.solve(lp_file, priorities=True, priorities_file=priorities_file_name, keepfiles=True)
+        with SolverFactory('_mock_cplex') as opt:
+            opt._presolve(lp_file, priorities=True, priorities_file=priorities_file_name, keepfiles=True)
 
             assert ".ord" in opt._command.script
 
