@@ -220,6 +220,23 @@ class MindtPySolver(object):
                     "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
         domain=bool
     ))
+    CONFIG.declare("lazy_callback", ConfigValue(
+        default=True,
+        description="Use lazy callback in solving the MILP master problem.",
+        domain=bool
+    ))
+    CONFIG.declare("solution_pool", ConfigValue(
+        default=False,
+        description="Use solution pool in solving the MILP master problem.",
+        domain=bool
+    ))
+    CONFIG.declare("add_slack", ConfigValue(
+        default=False,
+        description="whether add slack variable here."
+                    "slack variables here are used to deal with nonconvex MINLP",
+        domain=bool
+    ))
+
 
     def available(self, exception_flag=True):
         """Check if solver is available.
