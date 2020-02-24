@@ -195,32 +195,34 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
             with open(opt._priorities_file_name, "r") as ord_file:
                 priorities_file = ord_file.read()
 
-        assert priorities_file == (
-            "* ENCODING=ISO-8859-1\n"
-            "NAME             Priority Order\n"
-            "  x1 1\n"
-            " DN x2 2\n"
-            " DN x3 2\n"
-            " DN x4 2\n"
-            " DN x5 2\n"
-            " DN x6 2\n"
-            " DN x7 2\n"
-            " DN x8 2\n"
-            " DN x9 2\n"
-            " DN x10 2\n"
-            " UP x11 2\n"
-            "ENDATA\n"
+        self.assertEqual(
+            priorities_file,
+            (
+                "* ENCODING=ISO-8859-1\n"
+                "NAME             Priority Order\n"
+                "  x1 1\n"
+                " DN x2 2\n"
+                " DN x3 2\n"
+                " DN x4 2\n"
+                " DN x5 2\n"
+                " DN x6 2\n"
+                " DN x7 2\n"
+                " DN x8 2\n"
+                " DN x9 2\n"
+                " DN x10 2\n"
+                " UP x11 2\n"
+                "ENDATA\n"
+            ),
         )
-
-        assert "read %s\n" % (opt._priorities_file_name,) in opt._command.script
+        self.assertIn("read %s\n" % (opt._priorities_file_name,), opt._command.script)
 
     def test_ignore_variable_priorities(self):
         model = self.get_mock_model_with_priorities()
         with SolverFactory("_mock_cplex") as opt:
             opt._presolve(model, priorities=False, keepfiles=True)
 
-            assert opt._priorities_file_name is None
-            assert ".ord" not in opt._command.script
+            self.assertIsNone(opt._priorities_file_name)
+            self.assertNotIn(".ord", opt._command.script)
 
     def test_can_use_manual_priorities_file_with_lp_solve(self):
         """ Test that we can pass an LP file (not a pyomo model) along with a priorities file to `.solve()` """
@@ -242,12 +244,12 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
                 keepfiles=True,
             )
 
-            assert ".ord" in opt._command.script
+            self.assertIn(".ord", opt._command.script)
 
             with open(opt._priorities_file_name, "r") as ord_file:
                 priorities_file = ord_file.read()
 
-        assert priorities_file == provided_priorities_file
+        self.assertEqual(priorities_file, provided_priorities_file)
 
 
 if __name__ == "__main__":
