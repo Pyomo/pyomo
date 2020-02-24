@@ -514,7 +514,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         for line in output.split("\n"):
             tokens = re.split('[ \t]+',line.strip())
-            if len(tokens) > 3 and tokens[0] == "CPLEX" and tokens[1] == "Error":
+            if len(tokens) > 3 and ("CPLEX", "Error") in {tuple(tokens[0:2]), tuple(tokens[1:3])}:
             # IMPT: See below - cplex can generate an error line and then terminate fine, e.g., in CPLEX 12.1.
             #       To handle these cases, we should be specifying some kind of termination criterion always
             #       in the course of parsing a log file (we aren't doing so currently - just in some conditions).
@@ -522,6 +522,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 results.solver.error = " ".join(tokens)
             elif len(tokens) >= 3 and tokens[0] == "ILOG" and tokens[1] == "CPLEX":
                 cplex_version = tokens[2].rstrip(',')
+            elif len(tokens) >= 3 and tokens[1] == "Version":
+                cplex_version = tokens[3]
             elif len(tokens) >= 3 and tokens[0] == "Variables":
                 if results.problem.number_of_variables is None: # CPLEX 11.2 and subsequent versions have two Variables sections in the log file output.
                     results.problem.number_of_variables = int(tokens[2])
@@ -536,9 +538,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             elif len(tokens) >= 3 and tokens[0] == "Nonzeros":
                 if results.problem.number_of_nonzeros is None: # CPLEX 11.2 and subsequent has two Nonzeros sections.
                     results.problem.number_of_nonzeros = int(tokens[2])
-            elif len(tokens) >= 5 and tokens[4] == "MINIMIZE":
+            elif (len(tokens) >= 5 and tokens[4] == "MINIMIZE") or (len(tokens) >= 4 and tokens[3] == 'Minimize'):
                 results.problem.sense = ProblemSense.minimize
-            elif len(tokens) >= 5 and tokens[4] == "MAXIMIZE":
+            elif (len(tokens) >= 5 and tokens[4] == "MAXIMIZE") or (len(tokens) >= 4 and tokens[3] == 'Maximize'):
                 results.problem.sense = ProblemSense.maximize
             elif len(tokens) >= 4 and tokens[0] == "Solution" and tokens[1] == "time" and tokens[2] == "=":
                 # technically, I'm not sure if this is CPLEX user time or user+system - CPLEX doesn't appear
@@ -569,6 +571,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 # handle processing when the time limit has been exceeded, and we have a feasible solution.
                 results.solver.status = SolverStatus.ok
                 results.solver.termination_condition = TerminationCondition.maxTimeLimit
+                results.solver.termination_message = ' '.join(tokens)
+            elif len(tokens) >= 6 and tokens[0] == "MIP" and tuple(tokens[5:]) == ('no', 'integer', 'solution.'):
+                results.solver.termination_condition = TerminationCondition.noSolution
                 results.solver.termination_message = ' '.join(tokens)
             elif len(tokens) >= 10 and tokens[0] == "Current" and tokens[1] == "MIP" and tokens[2] == "best" and tokens[3] == "bound":
                 self._best_bound = float(tokens[5])
