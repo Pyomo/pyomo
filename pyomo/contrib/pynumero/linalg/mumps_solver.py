@@ -28,7 +28,7 @@ class MumpsCentralizedAssembledLinearSolver(object):
     Solve matrix * x = rhs for x.
 
     See the Mumps documentation for descriptions of the parameters. The section numbers 
-    listed below refert to the Mumps documentation for version 5.2.1.
+    listed below refer to the Mumps documentation for version 5.2.1.
 
     Parameters
     ----------
@@ -59,14 +59,15 @@ class MumpsCentralizedAssembledLinearSolver(object):
         
     def do_symbolic_factorization(self, matrix):
         """
-        Perform Mumps analysis.
+        Perform Mumps analysis. 
 
         Parameters
         ----------
         matrix: scipy.sparse.spmatrix or pyomo.contrib.pynumero.sparse.BlockMatrix
             This matrix must have the same nonzero structure as the matrix passed into
             do_numeric_factorization. The matrix will be converted to coo format if it 
-            is not already in coo format.
+            is not already in coo format. If sym is 1 or 2, the matrix must be lower 
+            or upper triangular.
         """
         if type(matrix) == np.ndarray:
             matrix = coo_matrix(matrix)
@@ -84,14 +85,15 @@ class MumpsCentralizedAssembledLinearSolver(object):
     def do_numeric_factorization(self, matrix):
         """
         Perform Mumps factorization. Note that do_symbolic_factorization should be called 
-        before do_numeric_factorization.
+        before do_numeric_factorization. 
 
         Parameters
         ----------
         matrix: scipy.sparse.spmatrix or pyomo.contrib.pynumero.sparse.BlockMatrix
             This matrix must have the same nonzero structure as the matrix passed into
             do_symbolic_factorization. The matrix will be converted to coo format if it 
-            is not already in coo format.
+            is not already in coo format. If sym is 1 or 2, the matrix must be lower 
+            or upper triangular.
         """
         if self._nnz is None:
             raise RuntimeError('Call do_symbolic_factorization first.')
@@ -126,8 +128,8 @@ class MumpsCentralizedAssembledLinearSolver(object):
             will be a BlockVector with the same block structure as rhs.
         """
         if isinstance(rhs, BlockVector):
-            rhs = rhs.flatten()
-            result = rhs
+            _rhs = rhs.flatten()
+            result = _rhs
         else:
             result = rhs.copy()
 
@@ -136,7 +138,7 @@ class MumpsCentralizedAssembledLinearSolver(object):
 
         if isinstance(rhs, BlockVector):
             _result = rhs.copy_structure()
-            _result.copy_from(result)
+            _result.copyfrom(result)
             result = _result
         
         return result
