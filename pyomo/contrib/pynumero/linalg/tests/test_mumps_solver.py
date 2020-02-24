@@ -43,9 +43,29 @@ class TestMumpsLinearSolver(unittest.TestCase):
         self.assertTrue(np.allclose(x, x2))
 
         solver = MumpsCentralizedAssembledLinearSolver(sym=2)
-        solver.do_symbolic_factorization(A_lower)
-        solver.do_numeric_factorization(A_lower)
-        x = solver.do_back_solve(b1)
+        x = solver.solve(A_lower, b1)
         self.assertTrue(np.allclose(x, x1))
-        x = solver.do_back_solve(b2)
+
+        block_A = BlockMatrix(2, 2)
+        block_A.set_row_size(0, 2)
+        block_A.set_row_size(1, 1)
+        block_A.set_col_size(0, 2)
+        block_A.set_col_size(1, 1)
+        block_A.copyfrom(A)
+
+        block_b1 = BlockVector(2)
+        block_b1.set_block(0, b1[0:2])
+        block_b1.set_block(1, b1[2:])
+        
+        block_b2 = BlockVector(2)
+        block_b2.set_block(0, b2[0:2])
+        block_b2.set_block(1, b2[2:])
+
+        solver = MumpsCentralizedAssembledLinearSolver(icntl_options={10: -3}, cntl_options={2: 1e-16})
+        solver.do_symbolic_factorization(block_A)
+        solver.do_numeric_factorization(block_A)
+        x = solver.do_back_solve(block_b1)
+        self.assertTrue(np.allclose(x, x1))
+        x = solver.do_back_solve(block_b2)
         self.assertTrue(np.allclose(x, x2))
+        self.assertEqual(solver.get_infog(15), 3)

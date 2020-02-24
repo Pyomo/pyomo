@@ -128,8 +128,8 @@ class MumpsCentralizedAssembledLinearSolver(object):
             will be a BlockVector with the same block structure as rhs.
         """
         if isinstance(rhs, BlockVector):
-            rhs = rhs.flatten()
-            result = rhs
+            _rhs = rhs.flatten()
+            result = _rhs
         else:
             result = rhs.copy()
 
@@ -138,7 +138,7 @@ class MumpsCentralizedAssembledLinearSolver(object):
 
         if isinstance(rhs, BlockVector):
             _result = rhs.copy_structure()
-            _result.copy_from(result)
+            _result.copyfrom(result)
             result = _result
         
         return result
