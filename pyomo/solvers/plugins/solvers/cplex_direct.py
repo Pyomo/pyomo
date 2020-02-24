@@ -483,6 +483,7 @@ class CPLEXDirect(DirectSolver):
 
         cpxprob = self._solver_model
         status = cpxprob.solution.get_status()
+        rtn_codes = cpxprob.solution.status
 
         if cpxprob.get_problem_type() in [cpxprob.problem_type.MILP,
                                           cpxprob.problem_type.MIQP,
@@ -500,30 +501,49 @@ class CPLEXDirect(DirectSolver):
         self.results.solver.name = ("CPLEX {0}".format(cpxprob.get_version()))
         self.results.solver.wallclock_time = self._wallclock_time
 
-        if status in [1, 101, 102]:
+        if status in {
+            rtn_codes.optimal,
+            rtn_codes.MIP_optimal,
+            rtn_codes.optimal_tolerance,
+        }:
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        elif status in [2, 40, 118, 133, 134]:
+        elif status in {
+            rtn_codes.unbounded,
+            40,
+            rtn_codes.MIP_unbounded,
+            rtn_codes.relaxation_unbounded,
+            134,
+        }:
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
-        elif status in [4, 119, 134]:
+        elif status in {
+            rtn_codes.infeasible_or_unbounded,
+            rtn_codes.MIP_infeasible_or_unbounded,
+            134,
+        }:
             # Note: status of 4 means infeasible or unbounded
             #       and 119 means MIP infeasible or unbounded
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = \
                 TerminationCondition.infeasibleOrUnbounded
             soln.status = SolutionStatus.unsure
-        elif status in [3, 103]:
+        elif status in {rtn_codes.infeasible, rtn_codes.MIP_infeasible}:
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
-        elif status in [10]:
+        elif status in {rtn_codes.abort_iteration_limit}:
             self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_condition = TerminationCondition.maxIterations
             soln.status = SolutionStatus.stoppedByLimit
-        elif status in [11, 25, 107, 131]:
+        elif status in {
+            rtn_codes.abort_time_limit,
+            rtn_codes.abort_dettime_limit,
+            rtn_codes.MIP_time_limit_feasible,
+            rtn_codes.MIP_dettime_limit_feasible,
+        }:
             self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_condition = TerminationCondition.maxTimeLimit
             soln.status = SolutionStatus.stoppedByLimit
