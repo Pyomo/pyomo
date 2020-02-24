@@ -520,6 +520,13 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             #       in the course of parsing a log file (we aren't doing so currently - just in some conditions).
                 results.solver.status=SolverStatus.error
                 results.solver.error = " ".join(tokens)
+
+                # Find the first token that starts with an integer, and strip non-integer characters for the return code
+                rc_token = next((token for token in tokens if re.match(r'\d', token)), None)
+                if rc_token:
+                    results.solver.return_code = int(re.sub(r'[^\d]', '', rc_token))
+                else:
+                    results.solver.return_code = 0
             elif len(tokens) >= 3 and tokens[0] == "ILOG" and tokens[1] == "CPLEX":
                 cplex_version = tokens[2].rstrip(',')
             elif len(tokens) >= 3 and tokens[1] == "Version":
