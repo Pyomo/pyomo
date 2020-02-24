@@ -29,12 +29,16 @@ from pyomo.contrib.pynumero.sparse.utils import is_symmetric_sparse
 from .base_block import BaseBlockMatrix
 from scipy.sparse.base import spmatrix
 import operator
-
 import numpy as np
 import six
 import abc
+import logging
+import warnings
 
 __all__ = ['BlockMatrix', 'NotFullyDefinedBlockMatrixError']
+
+
+logger = logging.getLogger(__name__)
 
 
 class NotFullyDefinedBlockMatrixError(Exception):
@@ -772,6 +776,14 @@ class BlockMatrix(BaseBlockMatrix):
         else:
             if isinstance(value, BaseBlockMatrix):
                 assert_block_structure(value)
+            elif isinstance(value, np.ndarray):
+                if value.ndim != 2:
+                    msg = 'blocks need to be sparse matrices or BlockMatrices'
+                    raise ValueError(msg)
+                msg = 'blocks need to be sparse matrices or BlockMatrices; a numpy array was given; copying the numpy array to a coo_matrix'
+                logger.warning(msg)
+                warnings.warn(msg)
+                value = coo_matrix(value)
             else:
                 assert isspmatrix(value), 'blocks need to be sparse matrices or BlockMatrices'
 
