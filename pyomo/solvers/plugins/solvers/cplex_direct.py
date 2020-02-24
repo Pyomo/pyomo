@@ -561,6 +561,8 @@ class CPLEXDirect(DirectSolver):
             self.results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
 
+        self.results.solver.termination_message = cpxprob.solution.get_status_string(status)
+
         if cpxprob.objective.get_sense() == cpxprob.objective.sense.minimize:
             self.results.problem.sense = minimize
         elif cpxprob.objective.get_sense() == cpxprob.objective.sense.maximize:
