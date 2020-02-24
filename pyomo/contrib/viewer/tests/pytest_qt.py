@@ -83,7 +83,6 @@ def test_model_information(qtbot):
     text = mw._dialog.text()
     mw._dialog.close()
     text = text.split("\n")
-    print [str(_) for _ in text]
     assert(str(text[0]).startswith("8")) # Active constraints
     assert(str(text[1]).startswith("7")) # Active equalities
     assert(str(text[2]).startswith("7")) # Free vars in active equalities
