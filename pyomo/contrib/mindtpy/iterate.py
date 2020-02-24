@@ -100,11 +100,11 @@ def MindtPy_iteration_loop(solve_data, config):
             # solve MILP master problem
             if config.strategy == 'OA':
                 master_mip, master_mip_results = solve_OA_master(solve_data, config)
-                if master_mip_results.solver.termination_condition is tc.optimal:
-                    handle_master_mip_optimal(master_mip, solve_data, config)
-                else:
-                    handle_master_mip_other_conditions(master_mip, master_mip_results,
-                                                    solve_data, config)
+                # if master_mip_results.solver.termination_condition is tc.optimal:
+                #     handle_master_mip_optimal(master_mip, solve_data, config)
+                # else:
+                #     handle_master_mip_other_conditions(master_mip, master_mip_results,
+                #                                     solve_data, config)
                 # Call the MILP post-solve callback
                 config.call_after_master_solve(master_mip, solve_data)
             else:

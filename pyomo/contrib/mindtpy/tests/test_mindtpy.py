@@ -38,6 +38,7 @@ class TestMindtPy(unittest.TestCase):
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
+            print(fabs(value(model.cost.expr) - 68))
             self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
     '''
     def test_OA_8PP_init_max_binary(self):
