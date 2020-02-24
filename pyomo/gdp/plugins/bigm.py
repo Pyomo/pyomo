@@ -584,7 +584,9 @@ class BigM_Transformation(Transformation):
             try:
                 newConstraint = Constraint(obj.index_set(),
                                            disjunctionRelaxationBlock.lbub)
-            except TypeError:
+            # HACK: We get burned by #191 here... When set rewrite is merged we
+            # can stop catching the AttributeError.
+            except (TypeError, AttributeError):
                 # The original constraint may have been indexed by a
                 # non-concrete set (like an Any).  We will give up on
                 # strict index verification and just blindly proceed.
