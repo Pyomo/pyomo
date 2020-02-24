@@ -547,6 +547,15 @@ class CPLEXDirect(DirectSolver):
             self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_condition = TerminationCondition.maxTimeLimit
             soln.status = SolutionStatus.stoppedByLimit
+        elif status in {
+            rtn_codes.MIP_time_limit_infeasible,
+            rtn_codes.MIP_dettime_limit_infeasible,
+        }:
+            # CPLEX doesn't have an exit status for `noSolution` so we assume this from the combination of
+            # maxTimeLimit + infeasible (instead of a generic `TerminationCondition.error`).
+            self.results.solver.status = SolverStatus.error
+            self.results.solver.termination_condition = TerminationCondition.noSolution
+            soln.status = SolutionStatus.error
         else:
             self.results.solver.status = SolverStatus.error
             self.results.solver.termination_condition = TerminationCondition.error
