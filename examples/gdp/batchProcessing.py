@@ -221,11 +221,11 @@ def build_model():
         return sum(model.inPhase[j,k] for k in model.PARALLELUNITS) == 1
     model.units_in_phase_xor = Constraint(model.STAGES, rule=units_in_phase_xor_rule)
 
-    return model.create_instance('batchProcessing1.dat')
+    return model
 
 
 if __name__ == "__main__":
-    m = build_model()
+    m = build_model().create_instance('batchProcessing1.dat')
     TransformationFactory('gdp.bigm').apply_to(m)
     SolverFactory('gams').solve(m, solver='baron', tee=True, add_options=['option optcr=1e-6;'])
     m.min_cost.display()

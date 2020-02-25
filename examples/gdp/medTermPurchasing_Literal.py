@@ -605,12 +605,8 @@ def build_model():
     return model
 
 
-def build_concrete():
-    return build_model().create_instance('medTermPurchasing_Literal_Chull.dat')
-
-
 if __name__ == "__main__":
-    m = build_concrete()
+    m = build_model().create_instance('medTermPurchasing_Literal_Chull.dat')
     TransformationFactory('gdp.bigm').apply_to(m)
     SolverFactory('gams').solve(m, solver='baron', tee=True, add_options=['option optcr=1e-6;'])
     m.profit.display()
