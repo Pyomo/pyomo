@@ -1,6 +1,5 @@
 """Tests for the MINDT solver plugin."""
 from math import fabs
-
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import \
@@ -25,7 +24,7 @@ else:
                  "Symbolic differentiation is not available")
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
-
+    
     def test_OA_8PP(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -34,20 +33,22 @@ class TestMindtPy(unittest.TestCase):
             opt.solve(model, strategy='OA',
                       init_strategy='rNLP',
                       mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0])
+                      nlp_solver=required_solvers[0],
+                      bound_tolerance=1E-4)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            print(fabs(value(model.cost.expr) - 68))
             self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
     '''
+    
     def test_OA_8PP_init_max_binary(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
             print('\n Solving problem with Outer Approximation')
             opt.solve(model, strategy='OA',
-                      init_strategy='max_binary',
+                    #   init_strategy='max_binary',
+                      init_strategy='rNLP',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0])
 

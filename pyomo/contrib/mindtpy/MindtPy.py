@@ -94,7 +94,7 @@ class MindtPySolver(object):
             "the integer variables (initial_binary)"
     ))
     CONFIG.declare("integer_cuts", ConfigValue(
-        default=True,
+        default=False,
         domain=bool,
         description="Integer cuts",
         doc="Add integer cuts after finding a feasible solution to the MINLP"
@@ -196,7 +196,7 @@ class MindtPySolver(object):
         description="Tolerance on variable bounds."
     ))
     CONFIG.declare("zero_tolerance", ConfigValue(
-        default=1E-15,
+        default=1E-10,
         description="Tolerance on variable equal to zero."
     ))
     CONFIG.declare("initial_feas", ConfigValue(

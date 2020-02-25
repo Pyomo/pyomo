@@ -22,6 +22,8 @@ from pyomo.core import Constraint, minimize, value
 from pyomo.core.expr import current as EXPR
 from math import fabs
 
+from pyomo.repn import generate_standard_repn
+
 class LazyOACallback(LazyConstraintCallback):
 
     def _get_gap(self):
@@ -87,6 +89,7 @@ class LazyOACallback(LazyConstraintCallback):
             solve_data.LB = max(
                 # self.get_lower_bounds(),
                 self.get_best_objective_value(),
+                # (1-self.get_MIP_relative_gap())*self.get_incumbent_objective_value(),
                 solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
         else:
@@ -124,16 +127,59 @@ class LazyOACallback(LazyConstraintCallback):
                 rhs = ((0 if constr.upper is None else constr.upper)
                        + (0 if constr.lower is None else constr.lower))
                 rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
+
+                # repn = get_standard_repn(constr.body)
                 # slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
                 # opt._add_var(slack_var)
-                for var in list(EXPR.identify_variables(constr.body)):
-                    var.set_value(self.get_values(opt._pyomo_var_to_solver_var_map[var]))
-                
-                cplex_expr, _ = opt._get_expr_from_pyomo_expr(copysign(1, sign_adjust * dual_value)
-                                                              * (sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs))
+
+                # for var in list(EXPR.identify_variables(constr.body)):
+                #     try:
+                #         var.set_value(self.get_values(opt._pyomo_var_to_solver_var_map[var]))
+                #     except ValueError as err:
+                #         err_msg = getattr(err, 'message', str(err))
+                #         var_val = self.get_values(opt._pyomo_var_to_solver_var_map[var])
+                #         rounded_val = int(round(var_val))
+                #         # Check to see if this is just a tolerance issue
+                #         if ignore_integrality \
+                #             and ('is not in domain Binary' in err_msg
+                #             or 'is not in domain Integers' in err_msg):
+                #             var.value = self.get_values(opt._pyomo_var_to_solver_var_map[var])
+                #         elif 'is not in domain Binary' in err_msg and (
+                #                 fabs(var_val - 1) <= config.integer_tolerance or
+                #                 fabs(var_val) <= config.integer_tolerance):
+                #             var.set_value(rounded_val)
+                #         # TODO What about PositiveIntegers etc?
+                #         elif 'is not in domain Integers' in err_msg and (
+                #                 fabs(var_val - rounded_val) <= config.integer_tolerance):
+                #             var.set_value(rounded_val)
+                #         # Value is zero, but shows up as slightly less than zero.
+                #         elif 'is not in domain NonNegativeReals' in err_msg and (
+                #                 fabs(var_val) <= config.zero_tolerance):
+                #             var.set_value(0)
+                #         else:
+                #             raise
+                self.copy_lazy_var_list_values(opt,list(EXPR.identify_variables(constr.body)),list(EXPR.identify_variables(constr.body)),config)
+                pyomo_expr = copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs)
+                cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
+                cplex_rhs = -generate_standard_repn(pyomo_expr).constant
+                # print(cplex_expr.variables,cplex_expr.coefficients)
+                # cplex_expr, _ = opt._get_expr_from_pyomo_expr(copysign(1, sign_adjust * dual_value)
+                #                                               * (sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs))
+                # print(cplex_expr.variables,cplex_expr.coefficients)
                 self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
                          sense="L",
-                         rhs=0)
+                         rhs=cplex_rhs)
+                # temp = (copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs))
+                # print(temp,'\n')
+                # myrepn = generate_standard_repn(temp)
+                # print(myrepn)
+                # print(-myrepn.constant)
+
+
+                # print(dir(temp))
+                # help(temp)
+                # solve_data.oa_cuts_expr.append(copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs) <= 0)
+                solve_data.oa_cuts_expr.append(pyomo_expr<=0)
 
             else:  # Inequality constraint (possibly two-sided)
                 if constr.has_ub() \
@@ -172,7 +218,6 @@ class LazyOACallback(LazyConstraintCallback):
         master_mip = self.master_mip
         cpx = opt._solver_model
         # for var in master_mip.Y.itervalues():
-        #     # help(master_mip.Y)
         #     print(var,self.get_values(opt._pyomo_var_to_solver_var_map[var]))
 
         self.handle_lazy_master_mip_optimal(master_mip, solve_data, config,opt)
@@ -248,6 +293,7 @@ def solve_OA_master(solve_data, config):
     solve_data.mip_iter += 1
     # master_mip = solve_data.mip.clone()
     MindtPy = solve_data.mip.MindtPy_utils
+    solve_data.oa_cuts_expr = []
     config.logger.info(
         'MIP %s: Solve master problem.' %
         (solve_data.mip_iter,))
@@ -283,18 +329,19 @@ def solve_OA_master(solve_data, config):
     with SuppressInfeasibleWarning():
         masteropt = SolverFactory(config.mip_solver)
         if isinstance(masteropt, PersistentSolver):
-            masteropt.set_instance(solve_data.mip)  # , symbolic_solver_labels=True)
+            masteropt.set_instance(solve_data.mip, symbolic_solver_labels=True)
             print('instance set!')
         if config.lazy_callback == True:
-            # for i in solve_data.mip.component_data_objects(Var, active=True):
-            #     print(i, '-------------')
             lazyoa = masteropt._solver_model.register_callback(LazyOACallback)
             lazyoa.master_mip = solve_data.mip
             lazyoa.solve_data = solve_data
             lazyoa.config = config
             lazyoa.opt = masteropt
-            
+            pass
         master_mip_results = masteropt.solve(solve_data.mip, **config.mip_solver_args, tee=True)
+        print(master_mip_results)
+        for cut in solve_data.oa_cuts_expr:
+            solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(cut)
     if master_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
