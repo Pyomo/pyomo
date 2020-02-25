@@ -115,6 +115,24 @@ class CPLEXDirectTests(unittest.TestCase):
 
     @unittest.skipIf(not cplexpy_available,
                      "The 'cplex' python bindings are not available")
+    def test_no_solution_mip(self):
+        model = ConcreteModel()
+        model.X = Var(within=Binary)
+        model.C2 = Constraint(expr=model.X >= 2)
+        model.O = Objective(expr=model.X)
+
+        with SolverFactory("cplex", solver_io="python") as opt:
+            # Set the `options` such that CPLEX cannot determine the problem as infeasible within the time allowed
+            opt.options['timelimit'] = 0
+            opt.options['preprocessing_presolve'] = 0
+
+            results = opt.solve(model, load_solutions=False)
+
+            self.assertEqual(results.solver.termination_condition,
+                             TerminationCondition.noSolution)
+
+    @unittest.skipIf(not cplexpy_available,
+                     "The 'cplex' python bindings are not available")
     def test_unbounded_mip(self):
         with SolverFactory("cplex", solver_io="python") as opt:
 
