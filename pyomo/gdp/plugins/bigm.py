@@ -35,6 +35,8 @@ from pyomo.common.deprecation import deprecation_warning
 from six import iterkeys, iteritems
 from weakref import ref as weakref_ref
 
+from nose.tools import set_trace
+
 logger = logging.getLogger('pyomo.gdp.bigm')
 
 NAME_BUFFER = {}
@@ -156,6 +158,18 @@ class BigM_Transformation(Transformation):
             block = block.parent_block()
         return suffix_list
 
+    def _get_bigm_arg_list(self, bigm_args, block):
+        # Gather what we know about blocks from args exactly once. We'll still
+        # check for constraints in the moment, but if that fails, we've
+        # preprocessed the time-consuming part of traversing up the tree.
+        arg_list = []
+        if bigm_args is None:
+            return arg_list
+        while block is not None:
+            if block in bigm_args:
+                arg_list.append({block: bigm_args[block]})
+            block = block.parent_block()
+        return arg_list
 
     def _apply_to(self, instance, **kwds):
         assert not NAME_BUFFER
@@ -368,8 +382,10 @@ class BigM_Transformation(Transformation):
             # disjunct level, so more efficient to make it here and
             # pass it down.)
             suffix_list = self._get_bigm_suffix_list(disjunct)
+            arg_list = self._get_bigm_arg_list(bigM, disjunct)
             # relax the disjunct
-            self._transform_disjunct(disjunct, transBlock, bigM, suffix_list)
+            self._transform_disjunct(disjunct, transBlock, bigM, arg_list,
+                                     suffix_list)
 
         # add or (or xor) constraint
         if xor:
@@ -383,7 +399,7 @@ class BigM_Transformation(Transformation):
         # and deactivate for the writers
         obj.deactivate()
 
-    def _transform_disjunct(self, obj, transBlock, bigM, suffix_list):
+    def _transform_disjunct(self, obj, transBlock, bigM, arg_list, suffix_list):
         # deactivated -> either we've already transformed or user deactivated
         if not obj.active:
             if obj.indicator_var.is_fixed():
@@ -405,7 +421,7 @@ class BigM_Transformation(Transformation):
                     "indicator_var to 0.)"
                     % ( obj.name, ))
                 
-        if obj._transformation_block is not None:
+        if not obj._transformation_block is None:
             # we've transformed it, which means this is the second time it's
             # appearing in a Disjunction
             raise GDP_Error(
@@ -435,12 +451,13 @@ class BigM_Transformation(Transformation):
         # comparing the two relaxations.
         #
         # Transform each component within this disjunct
-        self._transform_block_components(obj, obj, bigM, suffix_list)
+        self._transform_block_components(obj, obj, bigM, arg_list, suffix_list)
 
         # deactivate disjunct to keep the writers happy
         obj._deactivate_without_fixing_indicator()
 
-    def _transform_block_components(self, block, disjunct, bigM, suffix_list):
+    def _transform_block_components(self, block, disjunct, bigM, arg_list,
+                                    suffix_list):
         # We first need to find any transformed disjunctions that might be here
         # because we need to move their transformation blocks up onto the parent
         # block before we transform anything else on this block 
@@ -481,7 +498,7 @@ class BigM_Transformation(Transformation):
             # obj is what we are transforming, we pass disjunct
             # through so that we will have access to the indicator
             # variables down the line.
-            handler(obj, disjunct, bigM, suffix_list)
+            handler(obj, disjunct, bigM, arg_list, suffix_list)
 
     def _transfer_transBlock_data(self, fromBlock, toBlock):
         # We know that we have a list of transformed disjuncts on both. We need
@@ -505,7 +522,7 @@ class BigM_Transformation(Transformation):
         # currently everything is on the blocks that we just moved...
 
     def _warn_for_active_disjunction(self, disjunction, disjunct, bigMargs,
-                                     suffix_list):
+                                     arg_list, suffix_list):
         # this should only have gotten called if the disjunction is active
         assert disjunction.active
         problemdisj = disjunction
@@ -529,7 +546,7 @@ class BigM_Transformation(Transformation):
                         % (_probDisjName, disjunct.name))
 
     def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, bigMargs,
-                                  suffix_list):
+                                  arg_list, suffix_list):
         assert innerdisjunct.active
         problemdisj = innerdisjunct
         if innerdisjunct.is_indexed():
@@ -548,7 +565,7 @@ class BigM_Transformation(Transformation):
                         "transformed.".format(problemdisj.name,
                                               outerdisjunct.name))
 
-    def _transform_block_on_disjunct(self, block, disjunct, bigMargs,
+    def _transform_block_on_disjunct(self, block, disjunct, bigMargs, arg_list,
                                      suffix_list):
         # We look through everything on the component map of the block
         # and transform it just as we would if it was on the disjunct
@@ -557,7 +574,7 @@ class BigM_Transformation(Transformation):
         # the correct indicator variable.)
         for i in sorted(iterkeys(block)):
             self._transform_block_components( block[i], disjunct, bigMargs,
-                                              suffix_list)
+                                              arg_list, suffix_list)
 
     def _get_constraint_map_dict(self, transBlock):
         if not hasattr(transBlock, "_constraintMap"):
@@ -566,7 +583,7 @@ class BigM_Transformation(Transformation):
                 'transformedConstraints': ComponentMap()}
         return transBlock._constraintMap
 
-    def _transform_constraint(self, obj, disjunct, bigMargs,
+    def _transform_constraint(self, obj, disjunct, bigMargs, arg_list,
                               suffix_list):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
@@ -605,7 +622,7 @@ class BigM_Transformation(Transformation):
 
             # first, we see if an M value was specified in the arguments.
             # (This returns None if not)
-            M = self._get_M_from_args(c, bigMargs, bigm_src)
+            M = self._get_M_from_args(c, bigMargs, arg_list, bigm_src)
 
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 _name = obj.getname(
@@ -683,7 +700,7 @@ class BigM_Transformation(Transformation):
             # deactivate because we relaxed
             c.deactivate()
 
-    def _get_M_from_args(self, constraint, bigMargs, bigm_src):
+    def _get_M_from_args(self, constraint, bigMargs, arg_list, bigm_src):
         # check args: we first look in the keys for constraint and
         # constraintdata. In the absence of those, we traverse up the blocks,
         # and as a last resort check for a value for None
@@ -723,24 +740,12 @@ class BigM_Transformation(Transformation):
             bigm_src[constraint] = (bigMargs, parentcuid)
             return m
 
-        # traverse up the blocks
-        block = parent.parent_block()
-        while not block is None:
-            if block in bigMargs:
-                m = bigMargs[block]
-                used_args[block] = m
+        # use the precomputed traversal up the blocks
+        for arg in arg_list:
+            for block, val in iteritems(arg):
+                used_args[block] = val
                 bigm_src[constraint] = (bigMargs, block)
-                return m
-            # UGH and to be backwards compatible with what we should have done,
-            # we'll check the cuids of the blocks for now too.
-            blockcuid = ComponentUID(block)
-            if blockcuid in bigMargs:
-                deprecation_warning(deprecation_msg)
-                m = bigMargs[blockcuid]
-                used_args[blockcuid] = m
-                bigm_src[constraint] = (bigMargs, blockcuid)
-                return m
-            block = block.parent_block()
+                return val
                 
         # last check for value for None!
         if None in bigMargs:
