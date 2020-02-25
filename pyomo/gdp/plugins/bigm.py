@@ -207,7 +207,7 @@ class BigM_Transformation(Transformation):
         knownBlocks = set()
         for t in targets:
             # check that t is in fact a child of instance
-            elif not is_child_of(parent=instance, child=t,
+            if not is_child_of(parent=instance, child=t,
                                knownBlocks=knownBlocks):
                 raise GDP_Error("Target %s is not a component on instance %s!"
                                 % (t.name, instance.name))
