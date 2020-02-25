@@ -35,8 +35,6 @@ from pyomo.common.deprecation import deprecation_warning
 from six import iterkeys, iteritems
 from weakref import ref as weakref_ref
 
-from nose.tools import set_trace
-
 logger = logging.getLogger('pyomo.gdp.bigm')
 
 NAME_BUFFER = {}
@@ -208,23 +206,12 @@ class BigM_Transformation(Transformation):
         # in the tree rooted at instance.
         knownBlocks = set()
         for t in targets:
-            # [ESJ 08/22/2019] This can go away when we deprecate CUIDs. The
-            # warning is in util, but we have to deal with the consequences here
-            # because we need to have the instance in order to get the
-            # component.
-            if isinstance(t, ComponentUID):
-                tmp = t
-                t = t.find_component(instance)
-                if t is None:
-                    raise GDP_Error(
-                        "Target %s is not a component on the instance!" % tmp)
-
             # check that t is in fact a child of instance
-            if not is_child_of(parent=instance, child=t,
+            elif not is_child_of(parent=instance, child=t,
                                knownBlocks=knownBlocks):
                 raise GDP_Error("Target %s is not a component on instance %s!"
                                 % (t.name, instance.name))
-            if t.type() is Disjunction:
+            elif t.type() is Disjunction:
                 if t.parent_component() is t:
                     self._transform_disjunction(t, bigM)
                 else:
@@ -718,26 +705,6 @@ class BigM_Transformation(Transformation):
             m = bigMargs[parent]
             used_args[parent] = m
             bigm_src[constraint] = (bigMargs, parent)
-            return m
-
-        # We don't check what is in bigMargs until the end if we didn't use
-        # it... So just yell about CUIDs if we find them here.
-        deprecation_msg = ("In the future the bigM argument will no longer "
-                           "allow ComponentUIDs as keys. Keys should be "
-                           "constraints (in either a dict or ComponentMap)")
-        cuid = ComponentUID(constraint)
-        parentcuid = ComponentUID(constraint.parent_component())
-        if cuid in bigMargs:
-            deprecation_warning(deprecation_msg)
-            m = bigMargs[cuid]
-            used_args[cuid] = m
-            bigm_src[constraint] = (bigMargs, cuid)
-            return m
-        elif parentcuid in bigMargs:
-            deprecation_warning(deprecation_msg)
-            m = bigMargs[parentcuid]
-            used_args[parentcuid] = m
-            bigm_src[constraint] = (bigMargs, parentcuid)
             return m
 
         # use the precomputed traversal up the blocks

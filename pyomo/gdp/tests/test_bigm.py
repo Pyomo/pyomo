@@ -22,7 +22,6 @@ import pyomo.gdp.tests.models as models
 import random
 import sys
 
-from nose.tools import set_trace
 from six import iteritems, StringIO
 
 def check_linear_coef(self, repn, var, coef):
@@ -1527,25 +1526,6 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.bigm').apply_to(m)
         self.checkMs(m, -18, -19, -20, 20, -20, 20)
 
-    # This should go away when we deprecate CUIDs, but just to make sure that we
-    # are in fact supporting them at the moment...
-    def test_m_value_cuids_still_work_for_now(self):
-        m = models.makeTwoTermDisj_IndexedConstraints_BoundedVars()
-        # specify a suffix on None so we can be happy we overrode it.
-        m.BigM = Suffix(direction=Suffix.LOCAL)
-        m.BigM[None] = 20
-        # specify a suffix on a componentdata so we can be happy we overrode it
-        m.BigM[m.disjunct[0].c[1]] = 19
-
-        # give an arg
-        TransformationFactory('gdp.bigm').apply_to(
-            m,
-            bigM={None: 19, ComponentUID(m.disjunct[0].c[1]): 17,
-                  ComponentUID(m.disjunct[0].c[2]): 18})
-
-        # check that m values are what we expect
-        self.checkMs(m, -17, -18, -19, 19, -19, 19)
-
     def test_create_using(self):
         m = models.makeTwoTermDisj_IndexedConstraints_BoundedVars()
         self.diff_apply_to_and_create_using(m)
@@ -1618,59 +1598,18 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
             m,
             targets=[decoy.block])
 
-    # [ESJ 08/22/2019] This is a test for when targets can no longer be CUIDs
-    # def test_targets_cannot_be_cuids(self):
-    #     m = models.makeTwoTermDisj()
-    #     self.assertRaisesRegexp(
-    #         ValueError,
-    #         "invalid value for configuration 'targets':\n"
-    #         "\tFailed casting \[disjunction\]\n"
-    #         "\tto target_list\n"
-    #         "\tError: Expected Component or list of Components."
-    #         "\n\tRecieved %s" % type(ComponentUID(m.disjunction)),
-    #         TransformationFactory('gdp.bigm').apply_to,
-    #         m,
-    #         targets=[ComponentUID(m.disjunction)])
-
-    # test that cuid targets still work for now. This and the next test should
-    # go away when the above comes in.
-    def test_cuid_targets_still_work_for_now(self):
-        m = models.makeTwoSimpleDisjunctions()
-        bigm = TransformationFactory('gdp.bigm')
-        bigm.apply_to(
-            m,
-            targets=[ComponentUID(m.disjunction1)])
-
-        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
-        # only two disjuncts relaxed
-        self.assertEqual(len(disjBlock), 2)
-        self.assertIsInstance(disjBlock[0].component("disjunct1[0].c"),
-                              Constraint)
-        self.assertIsInstance(disjBlock[1].component("disjunct1[1].c"),
-                              Constraint)
-
-        pairs = [
-            (0, 0),
-            (1, 1)
-        ]
-        for i, j in pairs:
-            self.assertIs(disjBlock[i], m.disjunct1[j].transformation_block())
-            self.assertIs(bigm.get_src_disjunct(disjBlock[i]), m.disjunct1[j])
-
-        self.assertIsNone(m.disjunct2[0].transformation_block)
-        self.assertIsNone(m.disjunct2[1].transformation_block)
-
-    def test_cuid_target_error_still_works_for_now(self):
-        m = models.makeTwoSimpleDisjunctions()
-        m2 = ConcreteModel()
-        m2.oops = Block()
+    def test_targets_cannot_be_cuids(self):
+        m = models.makeTwoTermDisj()
         self.assertRaisesRegexp(
-            GDP_Error,
-            "Target %s is not a component on the instance!" % 
-            ComponentUID(m2.oops),
+            ValueError,
+            "invalid value for configuration 'targets':\n"
+            "\tFailed casting \[disjunction\]\n"
+            "\tto target_list\n"
+            "\tError: Expected Component or list of Components."
+            "\n\tRecieved %s" % type(ComponentUID(m.disjunction)),
             TransformationFactory('gdp.bigm').apply_to,
             m,
-            targets=ComponentUID(m2.oops))
+            targets=[ComponentUID(m.disjunction)])
 
     # [ESJ 09/14/2019] See my rant in #1072, but I think this is why we cannot
     # actually support this!

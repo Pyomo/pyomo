@@ -84,31 +84,17 @@ def clone_without_expression_components(expr, substitute=None):
 
 
 def target_list(x):
-    deprecation_msg = ("In future releases ComponentUID targets will no "
-                       "longer be supported. Specify targets as a "
-                       "Component or list of Components.")
     if isinstance(x, _ComponentBase):
-        return [ x ]
-    elif isinstance(x, ComponentUID):
-        deprecation_warning(deprecation_msg)
-        # [ESJ 08/22/2019] We are going to have to pass this through and deal
-        # with it in the transformations because we can't get the component here
-        # since we don't have the instance
         return [ x ]
     elif hasattr(x, '__iter__'):
         ans = []
         for i in x:
             if isinstance(i, _ComponentBase):
                 ans.append(i)
-            elif isinstance(i, ComponentUID):
-                deprecation_warning(deprecation_msg)
-                # Same as above...
-                ans.append(i)
             else:
                 raise ValueError(
                     "Expected Component or list of Components."
                     "\n\tRecieved %s" % (type(i),))
-
         return ans
     else:
         raise ValueError(
