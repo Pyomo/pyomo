@@ -13,6 +13,12 @@ from pyomo.core.base.sets import _SetProduct
 from pyomo.core.base.indexed_component_slice import _IndexedComponent_slice
 
 def identify_member_sets(index):
+    """
+    Identify all of the individual subsets in an indexing set. When the
+    Set rewrite is finished this function should no longer be needed,
+    the `subsets` method will provide this functionality.
+    """
+
     if index is None:
         return []
     queue = [index]
@@ -81,13 +87,13 @@ def generate_time_only_slices(obj, time):
 
 def generate_time_indexed_block_slices(block, time):
     # TODO: We should probably do a sanity check that time does not
-    # appeat in any sub-block / var indices.
+    # appear in any sub-block / var indices.
     queue = list( generate_time_only_slices(block, time) )
     while queue:
         _slice = queue.pop(0)
         # Pick a random block from this slice (i.e. TIME == TIME.first())
         #
-        # TODO: we should probably sometime check that the OTHER blocks
+        # TODO: we should probably check that the OTHER blocks
         # in the time set have the same variables.
         b = next(iter(_slice))
         # Any sub-blocks must be put on the queue to descend into and
@@ -104,6 +110,27 @@ def generate_time_indexed_block_slices(block, time):
         
 
 def flatten_dae_variables(model, time):
+    """
+    This function takes in a (hierarchical, block-structured) Pyomo
+    model and a `ContinuousSet` and returns two lists of "flattened"
+    variables. The first is a list of all `_VarData` that are not
+    indexed by the `ContinuousSet` and the second is a list of
+    `Reference` components such that each reference is indexed only by
+    the specified `ContinuousSet`. This function is convenient for
+    identifying variables that are implicitly indexed by the
+    `ContinuousSet`, for example, a singleton `Var` living on a `Block`
+    that is indexed by the `ContinuousSet`.
+
+    Parameters
+    ----------
+    model : Concrete Pyomo model
+
+    time : ``pyomo.dae.ContinuousSet``
+
+    Returns
+    -------
+    Two lists
+    """
     assert time.model() is model.model()
 
     block_queue = [model]
