@@ -99,30 +99,20 @@ class LazyOACallback(LazyConstraintCallback):
                 rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
                 
                 pyomo_expr = copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (var - value(var)) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs)
-                # self.copy_lazy_var_list_values(opt,list(EXPR.identify_variables(constr.body)),list(EXPR.identify_variables(constr.body)),config) # this is set value for value(constr.body)
-                # pyomo_expr = copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs)
-                # print(pyomo_expr)
                 cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
                 cplex_rhs = -generate_standard_repn(pyomo_expr).constant
-                # print(cplex_expr.variables,cplex_expr.coefficients)
-                # cplex_expr, _ = opt._get_expr_from_pyomo_expr(copysign(1, sign_adjust * dual_value)
-                #                                               * (sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs))
-                # print(cplex_expr.variables,cplex_expr.coefficients)
                 self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
                          sense="L",
                          rhs=cplex_rhs)
                 # solve_data.oa_cuts_expr.append(pyomo_expr<=0)
-
+                print('1-----------')
             else:  # Inequality constraint (possibly two-sided)
                 if constr.has_ub() \
                     and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
                         or (linearize_violated and constr.uslack() < 0) \
                         or (linearize_inactive and constr.uslack() > 0):
-                    # if use_slack_var:
-                    #     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
-                    '''
-                    self.copy_lazy_var_list_values(opt,list(EXPR.identify_variables(constr.body)),list(EXPR.identify_variables(constr.body)),config) # this is set value for value(constr.body)
-                    pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars)
+                    
+                    pyomo_expr = sum(value(jacs[constr][var])*(var - var.value) for var in constr_vars)
                     cplex_rhs = -generate_standard_repn(pyomo_expr).constant
                     cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
                     self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
@@ -144,12 +134,12 @@ class LazyOACallback(LazyConstraintCallback):
                              rhs=cplex_rhs)
                     print(cplex_expr.variables, cplex_expr.coefficients,cplex_rhs)
                     print('2------------')
-
+                    '''
                 if constr.has_lb() \
                     and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
                         or (linearize_violated and constr.lslack() < 0) \
                         or (linearize_inactive and constr.lslack() > 0):
-                    print('1.93------------')
+                    print('3------------')
                     # if use_slack_var:
                     #     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
                     pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars)
@@ -159,97 +149,6 @@ class LazyOACallback(LazyConstraintCallback):
                     self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
                              sense="G",
                              rhs=constr.lower.value+cplex_rhs)
-    
-    def add_lazy_oa_cuts2(self, target_model, dual_values, solve_data, config, opt,
-                         linearize_active=True,
-                         linearize_violated=True,
-                         linearize_inactive=False,
-                         use_slack_var=False):
-        """Linearizes nonlinear constraints.
-
-        For nonconvex problems, turn on 'use_slack_var'. Slack variables will
-        always be used for nonlinear equality constraints.
-        """
-        for (constr, dual_value) in zip(target_model.MindtPy_utils.constraint_list,
-                                        dual_values):
-            if constr.body.polynomial_degree() in (0, 1):
-                continue
-
-            constr_vars = list(identify_variables(constr.body))
-            jacs = solve_data.jacobians
-
-            # Equality constraint (makes the problem nonconvex)
-            if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
-                sign_adjust = -1 if solve_data.objective_sense == minimize else 1
-                rhs = ((0 if constr.upper is None else constr.upper)
-                       + (0 if constr.lower is None else constr.lower))
-                rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
-                '''
-                pyomo_expr = copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (var - value(var)) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs)
-                # print(pyomo_expr)
-                '''
-                self.copy_lazy_var_list_values(opt,list(EXPR.identify_variables(constr.body)),list(EXPR.identify_variables(constr.body)),config) # this is set value for value(constr.body)
-                pyomo_expr = copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs)
-                # print(pyomo_expr)
-                
-                cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
-                cplex_rhs = -generate_standard_repn(pyomo_expr).constant
-                # print(cplex_expr.variables,cplex_expr.coefficients)
-                # cplex_expr, _ = opt._get_expr_from_pyomo_expr(copysign(1, sign_adjust * dual_value)
-                #                                               * (sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs))
-                # print(cplex_expr.variables,cplex_expr.coefficients)
-                self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
-                         sense="L",
-                         rhs=cplex_rhs)
-                # solve_data.oa_cuts_expr.append(pyomo_expr<=0)
-
-            else:  # Inequality constraint (possibly two-sided)
-                if constr.has_ub() \
-                    and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
-                        or (linearize_violated and constr.uslack() < 0) \
-                        or (linearize_inactive and constr.uslack() > 0):
-                    # if use_slack_var:
-                    #     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
-                    '''
-                    self.copy_lazy_var_list_values(opt,list(EXPR.identify_variables(constr.body)),list(EXPR.identify_variables(constr.body)),config) # this is set value for value(constr.body)
-                    pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars)
-                    cplex_rhs = -generate_standard_repn(pyomo_expr).constant
-                    cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
-                    self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
-                             sense="L",
-                             rhs=constr.upper.value+cplex_rhs)
-                    print('2------------')
-                    '''
-                    print(list(EXPR.identify_variables(constr.body)))
-                    print(constr_vars)
-                    # self.copy_lazy_var_list_values(opt,list(EXPR.identify_variables(constr.body)),list(EXPR.identify_variables(constr.body)),config) # this is set value for value(constr.body)
-                    self.copy_lazy_var_list_values(opt, constr_vars, constr_vars, config) # this is set value for value(constr.body)
-                    pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars) - constr.upper.value
-                    # pyomo_expr = sum(round(value(jacs[constr][var]),4) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars) - constr.upper.value
-                    print(pyomo_expr)
-                    cplex_rhs = -generate_standard_repn(pyomo_expr).constant
-                    cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
-                    self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
-                             sense="L",
-                             rhs=cplex_rhs)
-                    print(cplex_expr.variables, cplex_expr.coefficients,cplex_rhs)
-                    print('2------------')
-
-                if constr.has_lb() \
-                    and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
-                        or (linearize_violated and constr.lslack() < 0) \
-                        or (linearize_inactive and constr.lslack() > 0):
-                    print('1.93------------')
-                    # if use_slack_var:
-                    #     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
-                    pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars)
-                    cplex_rhs = -generate_standard_repn(pyomo_expr).constant
-                    cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
-                    print('3------------')
-                    self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
-                             sense="G",
-                             rhs=constr.lower.value+cplex_rhs)
-
 
 
     def handle_lazy_master_mip_optimal(self, master_mip, solve_data, config, opt):
@@ -320,7 +219,6 @@ class LazyOACallback(LazyConstraintCallback):
                                 config)
             # self.add_lazy_oa_cuts(master_mip, dual_values, solve_data, config, opt)
             self.add_lazy_oa_cuts(solve_data.mip, dual_values, solve_data, config, opt)
-            # self.add_lazy_oa_cuts2(solve_data.mip, dual_values, solve_data, config, opt)
 
 
     def handle_lazy_NLP_subproblem_infeasible(self, fix_nlp, solve_data, config, opt):
@@ -354,7 +252,7 @@ class LazyOACallback(LazyConstraintCallback):
                 # add_feas_slacks(fix_nlp, solve_data)
                 # config.initial_feas = False
                 feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
-                self.copy_lazy_var_list_values(opt, feas_NLP.MindtPy_utils.variable_list,
+                copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
                                     solve_data.mip.MindtPy_utils.variable_list,
                                     config)
                 self.add_lazy_oa_cuts(solve_data.mip, dual_values, solve_data, config, opt)
