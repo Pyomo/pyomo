@@ -117,14 +117,18 @@ class CPLEXDirectTests(unittest.TestCase):
                      "The 'cplex' python bindings are not available")
     def test_no_solution_mip(self):
         model = ConcreteModel()
-        model.X = Var(within=Binary)
-        model.C2 = Constraint(expr=model.X >= 2)
-        model.O = Objective(expr=model.X)
+        model.S = RangeSet(0, 9)
+        model.P = list(range(10))
+        model.X = Var(model.S, within=Binary)
+        model.C = Constraint(expr=summation(model.X) == 1)
+        model.O = Objective(expr=sum_product(model.P, model.X))
 
         with SolverFactory("cplex", solver_io="python") as opt:
             # Set the `options` such that CPLEX cannot determine the problem as infeasible within the time allowed
             opt.options['timelimit'] = 0
             opt.options['preprocessing_presolve'] = 0
+            opt.options['simplex_limits_iterations'] = 1
+            opt.options['mip_limits_nodes'] = 1
 
             results = opt.solve(model, load_solutions=False)
 
