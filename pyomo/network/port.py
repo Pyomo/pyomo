@@ -460,27 +460,37 @@ class Port(IndexedComponent):
     @staticmethod
     def Extensive(port, name, index_set, include_splitfrac=None,
             write_var_sum=True):
-        """
-        Arc Expansion procedure for extensive variable properties
+        """Arc Expansion procedure for extensive variable properties
 
         This procedure is the rule to use when variable quantities should
-        be split for outlets and combined for inlets.
+        be conserved; that is, split for outlets and combined for inlets.
 
-        This will first go through every destination of the port and create
-        a new variable on the arc's expanded block of the same index as the
-        current variable being processed. It will also create a splitfrac
-        variable on the expanded block as well. Then it will generate
-        constraints for the new variable that relates it to the port member
-        variable by the split fraction. Following this, an indexed constraint
-        is written that states that the sum of all the new variables equals
-        the parent. However, if `write_var_sum=False` is passed, instead of
-        this last indexed constraint, a single constraint will be written
-        that states the sum of the split fractions equals 1.
+        This will first go through every destination of the port (i.e.,
+        arcs whose source is this Port) and create a new variable on the
+        arc's expanded block of the same index as the current variable
+        being processed to store the amount of the variable that flows
+        over the arc.  For ports that have multiple outgoing arcs, this
+        procedure will create a single splitfrac variable on the arc's
+        expanded block as well. Then it will generate constraints for
+        the new variable that relate it to the port member variable
+        using the split fraction, ensuring that all extensive variables
+        in the Port are split using the same ratio.  The generation of
+        the split fraction variable and constraint can be suppressed by
+        setting the `include_splitfrac` argument to `False`.
 
-        Then, this procedure will go through every source of the port and
-        create a new variable (unless it already exists), and then write
-        a constraint that states the sum of all the incoming new variables
-        must equal the parent variable.
+        Once all arc-specific variables are created, this
+        procedure will create the "balancing constraint" that ensures
+        that the sum of all the new variables equals the original port
+        member variable. This constraint can be suppressed by setting
+        the `write_var_sum` argument to `False`; in which case, a single
+        constraint will be written that states the sum of the split
+        fractions equals 1.
+
+        Finally, this procedure will go through every source for this
+        port and create a new arc variable (unless it already exists),
+        before generating the balancing constraint that ensures the sum
+        of all the incoming new arc variables equals the original port
+        variable.
 
         Model simplifications:
 
@@ -496,11 +506,12 @@ class Port(IndexedComponent):
             If the port only contains a single Extensive variable, the
             splitfrac variables and the splitting constraints will
             be skipped since they will be unnecessary. However, they
-            can be still be included by passing include_splitfrac=True.
+            can be still be included by passing `include_splitfrac=True`.
 
         .. note::
             If split fractions are skipped, the `write_var_sum=False`
             option is not allowed.
+
         """
         port_parent = port.parent_block()
         out_vars = Port._Split(port, name, index_set,
