@@ -121,7 +121,8 @@ class CPLEXDirectTests(unittest.TestCase):
         model.P = list(range(10))
         model.X = Var(model.S, within=Binary)
         model.C = Constraint(expr=summation(model.X) == 1)
-        model.O = Objective(expr=sum_product(model.P, model.X))
+        model.C = Constraint(expr=model.X[0] >= 2)
+        model.O = Objective(expr=sum_product(model.P, model.X), sense=minimize)
 
         with SolverFactory("cplex", solver_io="python") as opt:
             # Set the `options` such that CPLEX cannot determine the problem as infeasible within the time allowed
@@ -130,7 +131,7 @@ class CPLEXDirectTests(unittest.TestCase):
             opt.options['simplex_limits_iterations'] = 1
             opt.options['mip_limits_nodes'] = 1
 
-            results = opt.solve(model, load_solutions=False)
+            results = opt.solve(model)
 
             self.assertEqual(results.solver.termination_condition,
                              TerminationCondition.noSolution)
