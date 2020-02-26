@@ -181,13 +181,13 @@ class CPLEXDirect(DirectSolver):
                         raise
                     opt_cmd.set(float(option))
 
-            self._rc = None
+            self._error_code = None
             t0 = time.time()
 
             try:
                 self._solver_model.solve()
             except self._cplex.exceptions.CplexSolverError as e:
-                self._rc = e.args[2]  # See cplex.exceptions.error_codes
+                self._error_code = e.args[2]  # See cplex.exceptions.error_codes
 
             t1 = time.time()
             self._wallclock_time = t1 - t0
@@ -556,7 +556,7 @@ class CPLEXDirect(DirectSolver):
         elif status in {
             rtn_codes.MIP_time_limit_infeasible,
             rtn_codes.MIP_dettime_limit_infeasible,
-        } or self._rc == self._cplex.exceptions.error_codes.CPXERR_NO_SOLN:
+        } or self._error_code == self._cplex.exceptions.error_codes.CPXERR_NO_SOLN:
             # CPLEX doesn't have a solution status for `noSolution` so we assume this from the combination of
             # maxTimeLimit + infeasible (instead of a generic `TerminationCondition.error`).
             self.results.solver.status = SolverStatus.error
@@ -567,7 +567,7 @@ class CPLEXDirect(DirectSolver):
             self.results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
 
-        self.results.solver.return_code = self._rc
+        self.results.solver.return_code = self._error_code
         self.results.solver.termination_message = cpxprob.solution.get_status_string(status)
 
         if cpxprob.objective.get_sense() == cpxprob.objective.sense.minimize:
