@@ -312,7 +312,7 @@ class TuplizeValuesInitializer(InitializerBase):
         if args == (None,):
             return None
         else:
-            return super(TuplizeValuesInitializer, cls).__new__(cls, *args)
+            return super(TuplizeValuesInitializer, cls).__new__(cls)
 
     def __init__(self, _init):
         self._init = _init
@@ -326,7 +326,10 @@ class TuplizeValuesInitializer(InitializerBase):
             return _val
         elif not _val:
             return _val
-        elif isinstance(_val[0], tuple):
+
+        if not isinstance(_val, collections_Sequence):
+            _val = tuple(_val)
+        if isinstance(_val[0], tuple):
             return _val
         return self._tuplize(_val, parent, index)
 
@@ -415,7 +418,15 @@ class _SetData(_SetDataBase):
     __slots__ = ()
 
     def __contains__(self, value):
-        ans = self.get(value, _NotFound)
+        try:
+            ans = self.get(value, _NotFound)
+        except TypeError:
+            # In Python 3.x, Sets are unhashable
+            if isinstance(value, _SetData):
+                ans = _NotFound
+            else:
+                raise
+
         if ans is _NotFound:
             if isinstance(value, _SetData):
                 deprecation_warning(
@@ -1957,7 +1968,6 @@ class Set(IndexedComponent):
             elif _values is None:
                 raise ValueError(
                     "Set rule or initializer returned None instead of Set.Skip")
-
         if index is None and not self.is_indexed():
             obj = self._data[index] = self
         else:
@@ -1966,8 +1976,7 @@ class Set(IndexedComponent):
             obj._dimen = _d
         if domain is not None:
             obj._domain = domain
-            if self.parent_component().is_constructed():
-                domain.construct()
+            domain.construct()
         if self._init_validate is not None:
             try:
                 obj._validate = Initializer(self._init_validate(_block, index))

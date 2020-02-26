@@ -35,7 +35,7 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import *  # ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
     ComponentUID
-from pyomo.core.base.sets import Set,  _SetDataBase
+from pyomo.core.base.set import Set, RangeSet, GlobalSetBase, _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.suffix import ComponentMap
@@ -821,7 +821,7 @@ class _BlockData(ActiveComponentData):
                or k in self._decl:
                 setattr(self, k, src_raw_dict[k])
 
-    def _add_temporary_set(self, val):
+    def _add_implicit_sets(self, val):
         """TODO: This method has known issues (see tickets) and needs to be
         reviewed. [JDS 9/2014]"""
 
@@ -832,20 +832,24 @@ class _BlockData(ActiveComponentData):
         #
         if _component_sets is not None:
             for ctr, tset in enumerate(_component_sets):
-                if tset.parent_component()._name == "_unknown_":
-                    self._construct_temporary_set(
-                        tset,
-                        val.local_name + "_index_" + str(ctr)
-                    )
-        if isinstance(val._index, _SetDataBase) and \
-                val._index.parent_component().local_name == "_unknown_":
-            self._construct_temporary_set(val._index, val.local_name + "_index")
-        if isinstance(getattr(val, 'initialize', None), _SetDataBase) and \
-                val.initialize.parent_component().local_name == "_unknown_":
-            self._construct_temporary_set(val.initialize, val.local_name + "_index_init")
-        if getattr(val, 'domain', None) is not None and \
-           getattr(val.domain, 'local_name', None) == "_unknown_":
-            self._construct_temporary_set(val.domain, val.local_name + "_domain")
+                if tset.parent_component().parent_block() is None \
+                        and not isinstance(tset.parent_component(), GlobalSetBase):
+                    self.add_component("%s_index_%d" % (val.local_name, ctr), tset)
+        if getattr(val, '_index', None) is not None \
+                and isinstance(val._index, _SetDataBase) \
+                and val._index.parent_component().parent_block() is None \
+                and not isinstance(val._index.parent_component(), GlobalSetBase):
+            self.add_component("%s_index" % (val.local_name,), val._index.parent_component())
+        if getattr(val, 'initialize', None) is not None \
+                and isinstance(val.initialize, _SetDataBase) \
+                and val.initialize.parent_component().parent_block() is None \
+                and not isinstance(val.initialize.parent_component(), GlobalSetBase):
+            self.add_component("%s_index_init" % (val.local_name,), val.initialize.parent_component())
+        if getattr(val, 'domain', None) is not None \
+                and isinstance(val.domain, _SetDataBase) \
+                and val.domain.parent_block() is None \
+                and not isinstance(val.domain, GlobalSetBase):
+            self.add_component("%s_domain" % (val.local_name,), val.domain)
 
     def _construct_temporary_set(self, obj, name):
         """TODO: This method has known issues (see tickets) and needs to be
@@ -862,10 +866,10 @@ class _BlockData(ActiveComponentData):
                 self.add_component(name, tobj)
                 tobj.virtual = True
                 return tobj
-        elif isinstance(obj, Set):
+        elif isinstance(obj, (Set, RangeSet, SetOf)):
             self.add_component(name, obj)
             return obj
-        raise Exception("BOGUS")
+        raise Exception("BOGUS: %s" % (type(obj),))
 
     def _flag_vars_as_stale(self):
         """
@@ -1027,8 +1031,7 @@ component, use the block del_component() and add_component() methods.
         # kind of thing to an "update_parent()" method on the
         # components.
         #
-        if hasattr(val, '_index'):
-            self._add_temporary_set(val)
+        self._add_implicit_sets(val)
         #
         # Add the component to the underlying Component store
         #
@@ -1102,7 +1105,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         if getattr(_component, '_constructed', False):
             # NB: we don't have to construct the temporary / implicit
             # sets here: if necessary, that happens when
-            # _add_temporary_set() calls add_component().
+            # _add_implicit_sets() calls add_component().
             if id(self) in _BlockConstruction.data:
                 data = _BlockConstruction.data[id(self)].get(name, None)
             else:

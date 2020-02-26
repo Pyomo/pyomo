@@ -3287,7 +3287,7 @@ class TestGlobalSets(unittest.TestCase):
         a = pickle.loads(pickle.dumps(NS['TrinarySet']))
         self.assertIs(a, NS['TrinarySet'])
         with self.assertRaisesRegex(
-                NameError, "global name 'TrinarySet' is not defined"):
+                NameError, "name 'TrinarySet' is not defined"):
             TrinarySet
         del SetModule.GlobalSets['TrinarySet']
         del NS['TrinarySet']
@@ -3301,7 +3301,7 @@ class TestGlobalSets(unittest.TestCase):
         del SetModule.GlobalSets['TrinarySet']
         del globals()['TrinarySet']
         with self.assertRaisesRegex(
-                NameError, "global name 'TrinarySet' is not defined"):
+                NameError, "name 'TrinarySet' is not defined"):
             TrinarySet
 
     def test_exceptions(self):
@@ -4797,11 +4797,9 @@ I : Size=2, Index=I_index, Ordered=Insertion
         m.J = m.I.cross(Bindex)
         self.assertIs(m.J._sets[1]._domain, Integers)
 
-        # TODO: Once this is merged into IndexedContainer, the following
-        # should work
-        #
-        #m.K = Set(Bindex)
-        #self.assertIs(m.K.index_set()._domain, Integers)
+        m.K = Set(Bindex)
+        self.assertIs(m.K.index_set()._domain, Integers)
+        self.assertEqual(m.K.index_set(), [0,1,2,3,4])
 
     def test_no_normalize_index(self):
         try:

@@ -227,14 +227,13 @@ def _treemaker(scenlist):
     """
 
     num_scenarios = len(scenlist)
-    m = CreateAbstractScenarioTreeModel()
+    m = CreateAbstractScenarioTreeModel().create_instance()
     m.Stages.add('Stage1')
     m.Stages.add('Stage2')
     m.Nodes.add('RootNode')
     for i in scenlist:
         m.Nodes.add('LeafNode_Experiment'+str(i))
         m.Scenarios.add('Experiment'+str(i))
-    m = m.create_instance()
     m.NodeStage['RootNode'] = 'Stage1'
     m.ConditionalProbability['RootNode'] = 1.0
     for node in m.Nodes:

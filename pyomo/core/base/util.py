@@ -213,7 +213,7 @@ class InitializerBase(object):
         This will raise a RuntimeError if this initializer does not
         contain embedded indices
         """
-        raise RuntimeError("Initializer %s does not contain embedded indixes"
+        raise RuntimeError("Initializer %s does not contain embedded indices"
                            % (type(self).__name__,))
 
 

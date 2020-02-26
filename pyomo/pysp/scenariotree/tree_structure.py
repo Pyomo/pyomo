@@ -27,7 +27,7 @@ except ImportError:                         #pragma:nocover
 
 from pyomo.core import (value, minimize, maximize,
                         Var, Expression, Block,
-                        CounterLabeler, IntegerSet,
+                        CounterLabeler,
                         Objective, SOSConstraint, Set,
                         ComponentUID)
 from pyomo.core.base.suffix import ComponentMap

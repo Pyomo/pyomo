@@ -832,10 +832,13 @@ class ScenarioTreeInstanceFactory(object):
                 scenario_tree_model = scenario_tree_model.clone()
                 scenario_tree_model.Bundling = True
                 scenario_tree_model.Bundling._constructed = False
+                scenario_tree_model.Bundling._data.clear()
                 scenario_tree_model.Bundles.clear()
                 scenario_tree_model.Bundles._constructed = False
+                scenario_tree_model.Bundles._data.clear()
                 scenario_tree_model.BundleScenarios.clear()
                 scenario_tree_model.BundleScenarios._constructed = False
+                scenario_tree_model.BundleScenarios._data.clear()
                 scenario_tree_model.load(bundles)
 
         #

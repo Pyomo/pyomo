@@ -27,7 +27,33 @@ else:
     from collections import Sequence as collections_Sequence
 
 
-UnindexedComponent_set = set([None])
+# FIXME: This mocks up part of the Set API until we can break up the set
+# module to resolve circular dependencies and can make this a proper
+# GlobalSet
+#
+#UnindexedComponent_set = set([None])
+class _UnindexedComponent_set(object):
+    def __contains__(self, val):
+        return val is None
+    def get(self, value, default):
+        if value is None:
+            return value
+        return default
+    def __iter__(self):
+        yield None
+    def subsets(self):
+        return [self]
+    def __str__(self):
+        return 'UnindexedComponent_set'
+    def __len__(self):
+        return 1
+    def __reduce__(self):
+        # Cause pickle to preserve references to this object
+        return UnindexedComponent_set
+    def __deepcopy__(self, memo):
+        # Prevent deepcopy from duplicating this object
+        return self
+UnindexedComponent_set = _UnindexedComponent_set()
 
 sequence_types = {tuple, list}
 def normalize_index(x):
@@ -51,21 +77,13 @@ def normalize_index(x):
         # Note that casting a tuple to a tuple is cheap (no copy, no
         # new object)
         x = tuple(x)
-    elif hasattr(x, '__iter__') and isinstance(x, collections_Sequence):
-        if isinstance(x, string_types):
-            # This is very difficult to get to: it would require a user
-            # creating a custom derived string type
-            return x
-        sequence_types.add(x.__class__)
-        x = tuple(x)
     else:
-        return x
+        x = (x,)
 
     x_len = len(x)
     i = 0
     while i < x_len:
-        _xi = x[i]
-        _xi_class = _xi.__class__
+        _xi_class = x[i].__class__
         if _xi_class in native_types:
             i += 1
         elif _xi_class in sequence_types:
@@ -73,10 +91,11 @@ def normalize_index(x):
             # Note that casting a tuple to a tuple is cheap (no copy, no
             # new object)
             x = x[:i] + tuple(x[i]) + x[i + 1:]
-        elif _xi_class is not tuple and isinstance(_xi, collections_Sequence):
-            if isinstance(_xi, string_types):
+        elif issubclass(_xi_class, collections_Sequence):
+            if issubclass(_xi_class, string_types):
                 # This is very difficult to get to: it would require a
                 # user creating a custom derived string type
+                native_types.add(_xi_class)
                 i += 1
             else:
                 sequence_types.add(_xi_class)
@@ -185,7 +204,7 @@ class IndexedComponent(Component):
     _DEFAULT_INDEX_CHECKING_ENABLED = True
 
     def __init__(self, *args, **kwds):
-        from pyomo.core.base.sets import process_setarg
+        from pyomo.core.base.set import process_setarg
         #
         kwds.pop('noruleinit', None)
         Component.__init__(self, **kwds)
@@ -267,7 +286,7 @@ class IndexedComponent(Component):
         """Return the dimension of the index"""
         if not self.is_indexed():
             return 0
-        return getattr(self._index, 'dimen', 0)
+        return self._index.dimen
 
     def __len__(self):
         """
@@ -283,7 +302,7 @@ class IndexedComponent(Component):
     def __iter__(self):
         """Iterate over the keys in the dictionary"""
 
-        if not getattr(self._index, 'concrete', True):
+        if hasattr(self._index, 'isfinite') and not self._index.isfinite():
             #
             # If the index set is virtual (e.g., Any) then return the
             # data iterator.  Note that since we cannot check the length
@@ -318,7 +337,7 @@ You can silence this warning by one of three ways:
        where it is empty.
 """ % (self.name,) )
 
-            if not hasattr(self._index, 'ordered') or not self._index.ordered:
+            if not hasattr(self._index, 'isordered') or not self._index.isordered():
                 #
                 # If the index set is not ordered, then return the
                 # data iterator.  This is in an arbitrary order, which is

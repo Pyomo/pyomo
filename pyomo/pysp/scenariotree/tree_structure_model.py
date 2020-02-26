@@ -117,13 +117,13 @@ def CreateAbstractScenarioTreeModel():
 #
 def CreateConcreteTwoStageScenarioTreeModel(num_scenarios):
     m = CreateAbstractScenarioTreeModel()
+    m = m.create_instance()
     m.Stages.add('Stage1')
     m.Stages.add('Stage2')
     m.Nodes.add('RootNode')
     for i in range(1, num_scenarios+1):
         m.Nodes.add('LeafNode_Scenario'+str(i))
         m.Scenarios.add('Scenario'+str(i))
-    m = m.create_instance()
     m.NodeStage['RootNode'] = 'Stage1'
     m.ConditionalProbability['RootNode'] = 1.0
     for node in m.Nodes:
@@ -263,6 +263,7 @@ def ScenarioTreeModelFromNetworkX(
         raise ValueError(
             "The number of stages must be at least 2")
     m = CreateAbstractScenarioTreeModel()
+    m = m.create_instance()
     if stage_names is not None:
         unique_stage_names = set()
         for cnt, stage_name in enumerate(stage_names,1):
@@ -312,7 +313,7 @@ def ScenarioTreeModelFromNetworkX(
                 tree.nodes[u].get('bundle', None)
     _setup(root,
            networkx.dfs_successors(tree, root))
-    m = m.create_instance()
+
     def _add_node(u, stage, succ, pred):
         node_name = node_to_name[u]
         m.NodeStage[node_name] = m.Stages[stage]

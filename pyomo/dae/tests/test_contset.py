@@ -2,13 +2,13 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# 
+#
 # Unit Tests for ContinuousSet() Objects
 #
 
@@ -35,7 +35,7 @@ class TestContinuousSet(unittest.TestCase):
 
         model.t = ContinuousSet(initialize=[1, 2, 3])
         del model.t
-    
+
         model.t = ContinuousSet(bounds=(0, 5), initialize=[1, 3, 5])
         del model.t
 
@@ -63,40 +63,52 @@ class TestContinuousSet(unittest.TestCase):
     def test_valid_declaration(self):
         model = ConcreteModel()
         model.t = ContinuousSet(bounds=(0, 1))
-        self.assertTrue(len(model.t) == 2)
-        self.assertTrue(0 in model.t)
-        self.assertTrue(1 in model.t)
+        self.assertEqual(len(model.t), 2)
+        self.assertIn(0, model.t)
+        self.assertIn(1, model.t)
         del model.t
 
         model.t = ContinuousSet(initialize=[1, 2, 3])
-        self.assertTrue(len(model.t) == 3)
-        self.assertTrue(model.t.first() == 1)
-        self.assertTrue(model.t.last() == 3)
+        self.assertEqual(len(model.t), 3)
+        self.assertEqual(model.t.first(), 1)
+        self.assertEqual(model.t.last(), 3)
         del model.t
-        
+
+        model.t = ContinuousSet(bounds=(1, 3), initialize=[1, 2, 3])
+        self.assertEqual(len(model.t), 3)
+        self.assertEqual(model.t.first(), 1)
+        self.assertEqual(model.t.last(), 3)
+        del model.t
+
         model.t = ContinuousSet(bounds=(0, 4), initialize=[1, 2, 3])
-        self.assertTrue(len(model.t) == 5)
-        self.assertTrue(model.t.first() == 0)
-        self.assertTrue(model.t.last() == 4)
+        self.assertEqual(len(model.t), 5)
+        self.assertEqual(model.t.first(), 0)
+        self.assertEqual(model.t.last(), 4)
         del model.t
 
-        model.t = ContinuousSet(bounds=(0, 4), initialize=[1, 2, 3, 5])
-        self.assertTrue(len(model.t) == 5)
-        self.assertTrue(model.t.first() == 0)
-        self.assertTrue(model.t.last() == 5)
-        self.assertTrue(4 not in model.t)
-        del model.t
+        with self.assertRaisesRegexp(
+                ValueError, "value is not in the domain \[0..4\]"):
+            model.t = ContinuousSet(bounds=(0, 4), initialize=[1, 2, 3, 5])
+        # self.assertEqual(len(model.t), 5)
+        # self.assertEqual(model.t.first(), 0)
+        # self.assertEqual(model.t.last(), 5)
+        # self.assertNotIn(4, model.t)
+        # del model.t
 
-        model.t = ContinuousSet(bounds=(2, 6), initialize=[1, 2, 3, 5])
-        self.assertTrue(len(model.t) == 5)
-        self.assertTrue(model.t.first() == 1)
-        self.assertTrue(model.t.last() == 6)
-        del model.t
+        with self.assertRaisesRegexp(
+                ValueError, "value is not in the domain \[2..6\]"):
+            model.t = ContinuousSet(bounds=(2, 6), initialize=[1, 2, 3, 5])
+        # self.assertEqual(len(model.t), 5)
+        # self.assertEqual(model.t.first(), 1)
+        # self.assertEqual(model.t.last(), 6)
+        # del model.t
 
-        model.t = ContinuousSet(bounds=(2, 4), initialize=[1, 3, 5])
-        self.assertTrue(len(model.t) == 3)
-        self.assertTrue(2 not in model.t)
-        self.assertTrue(4 not in model.t)
+        with self.assertRaisesRegexp(
+                ValueError, "value is not in the domain \[2..4\]"):
+            model.t = ContinuousSet(bounds=(2, 4), initialize=[1, 3, 5])
+        # self.assertEqual(len(model.t), 3)
+        # self.assertNotIn(2, model.t)
+        # self.assertNotIn(4, model.t)
 
     # test invalid declarations
     def test_invalid_declaration(self):
@@ -172,7 +184,7 @@ class TestContinuousSet(unittest.TestCase):
 
 
 class TestIO(unittest.TestCase):
-    
+
     def setUp(self):
         #
         # Create Model
@@ -203,8 +215,10 @@ class TestIO(unittest.TestCase):
         OUTPUT.write("end;\n")
         OUTPUT.close()
         self.model.A = ContinuousSet(bounds=(0, 4))
-        self.instance = self.model.create_instance("diffset.dat")
-        self.assertEqual(len(self.instance.A), 4)
+        with self.assertRaisesRegexp(
+                ValueError, "The value is not in the domain \[0..4\]"):
+            self.instance = self.model.create_instance("diffset.dat")
+        #self.assertEqual(len(self.instance.A), 4)
 
     def test_io3(self):
         OUTPUT = open("diffset.dat", "w")
@@ -213,8 +227,10 @@ class TestIO(unittest.TestCase):
         OUTPUT.write("end;\n")
         OUTPUT.close()
         self.model.A = ContinuousSet(bounds=(2, 6))
-        self.instance = self.model.create_instance("diffset.dat")
-        self.assertEqual(len(self.instance.A), 4)
+        with self.assertRaisesRegexp(
+                ValueError, "The value is not in the domain \[2..6\]"):
+            self.instance = self.model.create_instance("diffset.dat")
+        #self.assertEqual(len(self.instance.A), 4)
 
     def test_io4(self):
         OUTPUT = open("diffset.dat", "w")
@@ -223,9 +239,11 @@ class TestIO(unittest.TestCase):
         OUTPUT.write("end;\n")
         OUTPUT.close()
         self.model.A = ContinuousSet(bounds=(2, 4))
-        self.instance = self.model.create_instance("diffset.dat")
-        self.assertEqual(len(self.instance.A), 3)
-    
+        with self.assertRaisesRegexp(
+                ValueError, "The value is not in the domain \[2..4\]"):
+            self.instance = self.model.create_instance("diffset.dat")
+        #self.assertEqual(len(self.instance.A), 3)
+
     def test_io5(self):
         OUTPUT = open("diffset.dat", "w")
         OUTPUT.write("data;\n")
