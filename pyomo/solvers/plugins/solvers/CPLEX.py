@@ -518,7 +518,23 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             # IMPT: See below - cplex can generate an error line and then terminate fine, e.g., in CPLEX 12.1.
             #       To handle these cases, we should be specifying some kind of termination criterion always
             #       in the course of parsing a log file (we aren't doing so currently - just in some conditions).
-                results.solver.status=SolverStatus.error
+                if (
+                    results.solver.status == SolverStatus.ok
+                    and results.solver.termination_condition
+                    in {
+                        TerminationCondition.optimal,
+                        TerminationCondition.infeasible,
+                        TerminationCondition.maxTimeLimit,
+                        TerminationCondition.noSolution,
+                        TerminationCondition.unbounded,
+                    }
+                ):
+                    # If we have already determined the termination condition, reduce it to a warning.
+                    # This is to be consistent with the code in the rest of this method that downgrades an error to a
+                    # warning upon determining these termination conditions.
+                    results.solver.status = SolverStatus.warning
+                else:
+                    results.solver.status = SolverStatus.error
                 results.solver.error = " ".join(tokens)
 
                 # Find the first token that starts with an integer, and strip non-integer characters for the return code
