@@ -562,9 +562,9 @@ class CPLEXDirect(DirectSolver):
         } or self._error_code == self._cplex.exceptions.error_codes.CPXERR_NO_SOLN:
             # CPLEX doesn't have a solution status for `noSolution` so we assume this from the combination of
             # maxTimeLimit + infeasible (instead of a generic `TerminationCondition.error`).
-            self.results.solver.status = SolverStatus.error
+            self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = TerminationCondition.noSolution
-            soln.status = SolutionStatus.error
+            soln.status = SolutionStatus.unknown
         else:
             self.results.solver.status = SolverStatus.error
             self.results.solver.termination_condition = TerminationCondition.error
