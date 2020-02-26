@@ -118,13 +118,12 @@ def assignTests(cls, problem_list):
 @unittest.skipUnless(yaml_available, "PyYAML module is not available.")
 class PW_Tests(unittest.TestCase): pass
 
-@unittest.category('nightly', 'expensive')
-class PiecewiseLinearTest_Nightly(PW_Tests): pass
-assignTests(PiecewiseLinearTest_Nightly, nightly_problems)
-
-@unittest.category('smoke', 'nightly', 'expensive')
 class PiecewiseLinearTest_Smoke(PW_Tests): pass
 assignTests(PiecewiseLinearTest_Smoke, smoke_problems)
+
+@unittest.category('nightly')
+class PiecewiseLinearTest_Nightly(PW_Tests): pass
+assignTests(PiecewiseLinearTest_Nightly, nightly_problems)
 
 @unittest.category('expensive')
 class PiecewiseLinearTest_Expensive(PW_Tests): pass

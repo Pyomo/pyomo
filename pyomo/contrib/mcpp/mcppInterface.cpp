@@ -11,6 +11,7 @@
 #include "interval.hpp"
 #include "mccormick.hpp"
 #include <sstream>
+#include <string>
 typedef mc::Interval I;
 typedef mc::McCormick<I> MC;
 
@@ -20,6 +21,13 @@ std::string lastDisplay;
 
 extern "C"
 {
+    const char* version_string = "19.11.12";
+
+    // Version number
+    const char* get_version() {
+        return version_string;
+    }
+
     // Functions to build up an MC object
     void* newVar(double lb, double pt, double ub, int count, int index)
     {

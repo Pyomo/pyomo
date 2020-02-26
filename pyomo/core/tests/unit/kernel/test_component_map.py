@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import pickle
-import collections
 
 import pyutilib.th as unittest
 from pyomo.core.kernel.component_map import ComponentMap
@@ -29,6 +28,16 @@ from pyomo.core.kernel.block import (block,
                                      block_dict,
                                      block_list)
 from pyomo.core.kernel.suffix import suffix
+
+import six
+
+if six.PY3:
+    from collections.abc import Mapping as collections_Mapping
+    from collections.abc import MutableMapping as collections_MutableMapping
+else:
+    from collections import Mapping as collections_Mapping
+    from collections import MutableMapping as collections_MutableMapping
+
 
 class TestComponentMap(unittest.TestCase):
 
@@ -105,10 +114,10 @@ class TestComponentMap(unittest.TestCase):
 
     def test_type(self):
         cmap = ComponentMap()
-        self.assertTrue(isinstance(cmap, collections.Mapping))
-        self.assertTrue(isinstance(cmap, collections.MutableMapping))
-        self.assertTrue(issubclass(type(cmap), collections.Mapping))
-        self.assertTrue(issubclass(type(cmap), collections.MutableMapping))
+        self.assertTrue(isinstance(cmap, collections_Mapping))
+        self.assertTrue(isinstance(cmap, collections_MutableMapping))
+        self.assertTrue(issubclass(type(cmap), collections_Mapping))
+        self.assertTrue(issubclass(type(cmap), collections_MutableMapping))
 
     def test_str(self):
         cmap = ComponentMap()

@@ -15,6 +15,7 @@ import types
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
@@ -44,11 +45,6 @@ def _raise_modifying_immutable_error(obj, index):
 class _NotValid(object):
     """A dummy type that is pickle-safe that we can use as the default
     value for Params to indicate that no valid value is present."""
-    pass
-
-class _NoArgument(object):
-    """A dummy type that is pickle-safe that we can use as the default
-    value for optional arguments where we cannot just use None."""
     pass
 
 
@@ -98,9 +94,9 @@ class _ParamData(ComponentData, NumericValue):
     # operations like validation efficient.  As it stands now, if
     # set_value is called without specifying an index, this call
     # involves a linear scan of the _data dict.
-    def set_value(self, value, idx=_NoArgument):
+    def set_value(self, value, idx=NoArgumentGiven):
         self._value = value
-        if idx is _NoArgument:
+        if idx is NoArgumentGiven:
             idx = self.index()
         self.parent_component()._validate_value(idx, value)
 
@@ -309,10 +305,7 @@ class Param(IndexedComponent):
             # Thus, we need to create a temporary dictionary that contains the
             # values from the ParamData objects.
             #
-            ans = {}
-            for key, param_value in self.iteritems():
-                ans[key] = param_value()
-            return ans
+            return {key:param_value() for key,param_value in self.iteritems()}
         elif not self.is_indexed():
             #
             # The parameter is a scalar, so we need to create a temporary
@@ -605,6 +598,7 @@ class Param(IndexedComponent):
                 return value
         except:
             del self._data[index]
+            raise
 
 
     def _validate_value(self, index, value, validate_domain=True):
@@ -980,8 +974,8 @@ class SimpleParam(_ParamData, Param):
                 "the Param has been constructed (there is currently no "
                 "value to return)." % (self.name,) )
 
-    def set_value(self, value, index=_NoArgument):
-        if index is _NoArgument:
+    def set_value(self, value, index=NoArgumentGiven):
+        if index is NoArgumentGiven:
             index = None
         if self._constructed and not self._mutable:
             _raise_modifying_immutable_error(self, index)

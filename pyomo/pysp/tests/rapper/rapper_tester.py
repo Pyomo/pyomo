@@ -1,4 +1,4 @@
-# Provide some test for rapper
+# Provide some test for rapper; most are smoke because PySP is tested elsewhere
 # Author: David L. Woodruff (circa March 2017 and Sept 2018)
 
 import pyutilib.th as unittest
@@ -14,7 +14,7 @@ import pyomo as pyomoroot
 
 __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
 __date__ = 'August 14, 2017'
-__version__ = 1.4
+__version__ = 1.5
 
 solvername = "ipopt" # could use almost any solver
 solver_available = pyo.SolverFactory(solvername).available(False)
@@ -109,6 +109,15 @@ class Testrapper(unittest.TestCase):
                                       fsfct = "pysp_instance_creation_callback",
                                 tree_model = self.farmer_concrete_tree)
         res, gap = stsolver.solve_ef(solvername, tee=True, need_gap=True)
+
+    def test_ef_cvar_construct(self):
+        """ construct the ef with cvar """
+        stsolver = rapper.StochSolver("ReferenceModel.py",
+                                      fsfct = "pysp_instance_creation_callback",
+                                      tree_model = self.farmer_concrete_tree)
+        ef = stsolver.make_ef(generate_weighted_cvar = True,
+                              cvar_weight = 0.1,
+                              risk_alpha = 0.9)
 
     @unittest.skipIf(not solver_available,
                      "%s solver is not available" % (solvername,))

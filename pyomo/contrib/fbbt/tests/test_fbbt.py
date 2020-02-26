@@ -1,6 +1,7 @@
 import pyutilib.th as unittest
 import pyomo.environ as pe
 from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr
+from pyomo.contrib.fbbt import interval
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.expr.numeric_expr import ProductExpression, UnaryFunctionExpression
 import math
@@ -696,6 +697,30 @@ class TestFBBT(unittest.TestCase):
         fbbt(m, deactivate_satisfied_constraints=True)
         self.assertFalse(m.c.active)
 
+    def test_iteration_limit(self):
+        m = pe.ConcreteModel()
+        m.x_set = pe.Set(initialize=[0, 1, 2], ordered=True)
+        m.c_set = pe.Set(initialize=[0, 1], ordered=True)
+        m.x = pe.Var(m.x_set)
+        m.c = pe.Constraint(m.c_set)
+        m.c[0] = m.x[0] == m.x[1]
+        m.c[1] = m.x[1] == m.x[2]
+        m.x[2].setlb(-1)
+        m.x[2].setub(1)
+        fbbt(m, max_iter=1)
+        self.assertEqual(m.x[1].lb, -1)
+        self.assertEqual(m.x[1].ub, 1)
+        self.assertEqual(m.x[0].lb, None)
+        self.assertEqual(m.x[0].ub, None)
+
+    def test_inf_bounds_on_expr(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var(bounds=(-1, 1))
+        m.y = pe.Var()
+        lb, ub = compute_bounds_on_expr(m.x + m.y)
+        self.assertEqual(lb, None)
+        self.assertEqual(ub, None)
+
     @unittest.skip('This test passes locally, but not on travis or appveyor. I will add an issue.')
     def test_skip_unknown_expression1(self):
 
@@ -755,3 +780,25 @@ class TestFBBT(unittest.TestCase):
         lb, ub = compute_bounds_on_expr(e)
         self.assertAlmostEqual(lb, -2, 14)
         self.assertAlmostEqual(ub, 2, 14)
+
+    def test_encountered_bugs1(self):
+        m = pe.Block(concrete=True)
+        m.x = pe.Var(bounds=(-0.035, -0.035))
+        m.y = pe.Var(bounds=(-0.023, -0.023))
+        m.c = pe.Constraint(expr=m.x**2 + m.y**2 <= 0.0256)
+        fbbt(m.c)
+        self.assertEqual(m.x.lb, -0.035)
+        self.assertEqual(m.x.ub, -0.035)
+        self.assertEqual(m.y.lb, -0.023)
+        self.assertEqual(m.y.ub, -0.023)
+
+    def test_encountered_bugs2(self):
+        m = pe.Block(concrete=True)
+        m.x = pe.Var(within=pe.Integers)
+        m.y = pe.Var(within=pe.Integers)
+        m.c = pe.Constraint(expr=m.x + m.y == 1)
+        fbbt(m.c)
+        self.assertEqual(m.x.lb, None)
+        self.assertEqual(m.x.ub, None)
+        self.assertEqual(m.y.lb, None)
+        self.assertEqual(m.y.ub, None)

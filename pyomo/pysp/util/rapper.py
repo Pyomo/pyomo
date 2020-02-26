@@ -154,25 +154,56 @@ class StochSolver:
             self.scenario_tree.linkInInstances(instances)        
 
     #=========================
-    def make_ef(self, verbose=False):
-        """ Make an ef object (used by solve_ef)
+    def make_ef(self,
+                verbose=False,
+                generate_weighted_cvar = False,
+                cvar_weight = None,
+                risk_alpha = None,
+                cc_indicator_var_name=None,
+                cc_alpha=0.0):
+        """ Make an ef object (used by solve_ef); all Args are optional.
         
         Args:
             verbose (boolean): indicates verbosity to PySP for construction
+            generate_weighted_cvar (boolean): indicates we want weighted CVar
+            cvar_weight (float): weight for the cvar term
+            risk_alpha (float): alpha value for cvar
+            cc_indicator_var_name (string): name of the Var used for chance constraint
+            cc_alpha (float): alpha for chance constraint
 
         Returns:
             ef_instance: the ef object
         """
-        return pyspef.create_ef_instance(self.scenario_tree, verbose_output=verbose)
+        return pyspef.create_ef_instance(self.scenario_tree,
+                                         verbose_output=verbose,
+                                         generate_weighted_cvar = generate_weighted_cvar,
+                                         cvar_weight = cvar_weight,
+                                         risk_alpha = risk_alpha,
+                                         cc_indicator_var_name = cc_indicator_var_name,
+                                         cc_alpha = cc_alpha)
     
-    def solve_ef(self, subsolver, sopts = None, tee = False, need_gap = False):
+    def solve_ef(self, subsolver, sopts = None, tee = False, need_gap = False,
+                 verbose=False,
+                 generate_weighted_cvar = False,
+                 cvar_weight = None,
+                 risk_alpha = None,
+                 cc_indicator_var_name=None,
+                 cc_alpha=0.0):
+
         """Solve the stochastic program directly using the extensive form.
+        All Args other than subsolver are optional.
        
         Args:
             subsolver (str): the solver to call (e.g., 'ipopt')
             sopts (dict):  solver options
             tee (bool): indicates dynamic solver output to terminal.
             need_gap (bool): indicates the need for the optimality gap
+            verbose (boolean): indicates verbosity to PySP for construction
+            generate_weighted_cvar (boolean): indicates we want weighted CVar
+            cvar_weight (float): weight for the cvar term
+            risk_alpha (float): alpha value for cvar
+            cc_indicator_var_name (string): name of the Var used for chance constraint
+            cc_alpha (float): alpha for chance constraint
 
         Returns: (`Pyomo solver result`, `float`)
 
@@ -188,7 +219,13 @@ class StochSolver:
 
         """
         
-        self.ef_instance = self.make_ef()
+        self.ef_instance = self.make_ef(verbose=verbose,
+                                        generate_weighted_cvar = generate_weighted_cvar,
+                                        cvar_weight = cvar_weight,
+                                        risk_alpha = risk_alpha,
+                                        cc_indicator_var_name = cc_indicator_var_name,
+                                        cc_alpha = cc_alpha)
+
         solver = SolverFactory(subsolver)
         if sopts is not None:
             for key in sopts:

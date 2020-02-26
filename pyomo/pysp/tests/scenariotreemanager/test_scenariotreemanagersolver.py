@@ -722,7 +722,6 @@ class _ScenarioTreeManagerSolverTesterBase(object):
 @unittest.skipIf(not has_networkx, "Networkx is not available")
 @unittest.skipIf(not has_networkx, "Networkx is not available")
 @unittest.skipIf(not has_dill, "Dill is not available")
-@unittest.category('smoke','nightly','expensive')
 class TestScenarioTreeManagerSolverSerial(
         unittest.TestCase,
         _ScenarioTreeManagerSolverTesterBase):

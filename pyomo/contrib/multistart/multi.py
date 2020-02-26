@@ -18,7 +18,7 @@ from pyomo.common.config import (
 )
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.multistart.high_conf_stop import should_stop
-from pyomo.contrib.multistart.reinit import reinitialize_variables
+from pyomo.contrib.multistart.reinit import reinitialize_variables, strategies
 from pyomo.core import Objective, Var, minimize, value
 from pyomo.opt import SolverFactory, SolverStatus
 from pyomo.opt import TerminationCondition as tc
@@ -42,9 +42,7 @@ class MultiStart(object):
 
     CONFIG = ConfigBlock("MultiStart")
     CONFIG.declare("strategy", ConfigValue(
-        default="rand", domain=In([
-            "rand", "midpoint_guess_and_bound",
-            "rand_guess_and_bound", "rand_distributed"]),
+        default="rand", domain=In(strategies.keys()),
         description="Specify the restart strategy. Defaults to rand.",
         doc="""Specify the restart strategy.
 
@@ -52,6 +50,7 @@ class MultiStart(object):
         - "midpoint_guess_and_bound": midpoint between current value and farthest bound
         - "rand_guess_and_bound": random choice between current value and farthest bound
         - "rand_distributed": random choice among evenly distributed values
+        - "midpoint": exact midpoint between the bounds. If using this option, multiple iterations are useless.
         """
     ))
     CONFIG.declare("solver", ConfigValue(

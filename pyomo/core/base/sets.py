@@ -43,7 +43,8 @@ def process_setarg(arg):
 
     This method is used by IndexedComponent
     """
-    if isinstance(arg,_SetDataBase):
+    import pyomo.core.base.set as new_set
+    if isinstance(arg, (_SetDataBase, new_set._SetDataBase)):
         # Argument is a non-indexed Set instance
         return arg
     elif isinstance(arg,IndexedSet):
@@ -336,7 +337,7 @@ class _OrderedSetData(_SetDataBase):
             self.value_list,
             key=None if _sorter is Set.SortedOrder else _sorter
         )
-        self.order_dict = dict((j,i) for i,j in enumerate(self.value_list))
+        self.order_dict = {j:i for i,j in enumerate(self.value_list)}
         self._is_sorted = 1
 
     def _clear(self):
@@ -874,11 +875,12 @@ class SimpleSetBase(Set):
              ("Ordered", _ordered),
              ("Bounds", self._bounds)],
             iteritems( {None: self} ),
-            None, #("Members",),
-            lambda k, v: [
+            None, # ("Members",),
+            lambda os, k, v: os.write(str(
                 "Virtual" if not self.concrete or v.virtual \
                     else v.value_list if v.ordered \
-                    else sorted(v), ] )
+                    else sorted(v), )+"\n"),
+        )
 
     def _set_repn(self, other):
         """

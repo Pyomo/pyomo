@@ -1,3 +1,5 @@
+.. rapperAPI_:
+
 rapper API
 ===============
 

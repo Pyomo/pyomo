@@ -7,7 +7,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.core.expr.numvalue import (NumericValue,
                                       is_numeric_data,
                                       value)
@@ -108,17 +108,15 @@ class IVariable(ICategorizedObject, NumericValue):
     def bounds(self, bounds_tuple):
         self.lb, self.ub = bounds_tuple
 
-    def fix(self, *val):
+    def fix(self, value=NoArgumentGiven):
         """
         Fix the variable. Sets the fixed indicator to
         :const:`True`. An optional value argument will
         update the variable's value before fixing.
         """
-        if len(val) == 1:
-            self.value = val[0]
-        elif len(val) > 1:
-            raise TypeError("fix expected at most 1 arguments, "
-                            "got %d" % (len(val)))
+        if value is not NoArgumentGiven:
+            self.value = value
+
         self.fixed = True
 
     def unfix(self):

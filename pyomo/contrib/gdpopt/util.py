@@ -2,20 +2,24 @@
 from __future__ import division
 
 import logging
-import six
-from math import fabs, floor, log
+import timeit
+from contextlib import contextmanager
+from math import fabs
 
+import six
+from pyutilib.misc import Container
+
+from pyomo.common import deprecated
+from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
+from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.core import (Block, Constraint,
-                        Objective, Reals, Var, minimize, value, Expression)
+                        Objective, Reals, Var, minimize, value, ConstraintList)
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.opt import SolverFactory
+from pyomo.opt import SolverFactory, SolverResults
 from pyomo.opt.results import ProblemSense
-from pyomo.common.log import LoggingIntercept
-import timeit
-from contextlib import contextmanager
 from pyomo.util.model_size import build_model_size_report
 
 
@@ -38,22 +42,36 @@ class _DoNothing(object):
         return _do_nothing
 
 
-class SuppressInfeasibleWarning(LoggingIntercept):
+class SuppressInfeasibleWarning(object):
     """Suppress the infeasible model warning message from solve().
 
     The "WARNING: Loading a SolverResults object with a warning status" warning
     message from calling solve() is often unwanted, but there is no clear way
     to suppress it.
 
+    This is modeled on LoggingIntercept from pyomo.common.log,
+    but different in function.
+
     """
 
-    def __init__(self):
-        super(SuppressInfeasibleWarning, self).__init__(
-            six.StringIO(), 'pyomo.core', logging.WARNING)
+    class InfeasibleWarningFilter(logging.Filter):
+        def filter(self, record):
+            return not record.getMessage().startswith(
+                "Loading a SolverResults object with a warning status into model=")
+
+    warning_filter = InfeasibleWarningFilter()
+
+    def __enter__(self):
+        logger = logging.getLogger('pyomo.core')
+        logger.addFilter(self.warning_filter)
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        logger = logging.getLogger('pyomo.core')
+        logger.removeFilter(self.warning_filter)
 
 
-def model_is_valid(solve_data, config):
-    """Validate that the model is solvable by GDPopt.
+def presolve_lp_nlp(solve_data, config):
+    """If the model is an LP or NLP, solve it directly.
 
     """
     m = solve_data.working_model
@@ -71,23 +89,37 @@ def model_is_valid(solve_data, config):
             config.logger.info(
                 "Your model is an NLP (nonlinear program). "
                 "Using NLP solver %s to solve." % config.nlp_solver)
-            SolverFactory(config.nlp_solver).solve(
+            results = SolverFactory(config.nlp_solver).solve(
                 solve_data.original_model, **config.nlp_solver_args)
-            return False
+            return True, results
         else:
             config.logger.info(
                 "Your model is an LP (linear program). "
                 "Using LP solver %s to solve." % config.mip_solver)
-            SolverFactory(config.mip_solver).solve(
+            results = SolverFactory(config.mip_solver).solve(
                 solve_data.original_model, **config.mip_solver_args)
-            return False
+            return True, results
 
     # TODO if any continuous variables are multipled with binary ones, need
     # to do some kind of transformation (Glover?) or throw an error message
-    return True
+    return False, None
 
 
 def process_objective(solve_data, config, move_linear_objective=False):
+    """Process model objective function.
+
+    Check that the model has only 1 valid objective.
+    If the objective is nonlinear, move it into the constraints.
+    If no objective function exists, emit a warning and create a dummy objective.
+
+    Parameters
+    ----------
+    solve_data (GDPoptSolveData): solver environment data class
+    config (ConfigBlock): solver configuration options
+    move_linear_objective (bool): if True, move even linear
+        objective functions to the constraints
+
+    """
     m = solve_data.working_model
     util_blk = getattr(m, solve_data.util_block_name)
     # Handle missing or multiple objectives
@@ -119,6 +151,11 @@ def process_objective(solve_data, config, move_linear_objective=False):
             mc_obj = McCormick(main_obj.expr)
             util_blk.objective_value.setub(mc_obj.upper())
             util_blk.objective_value.setlb(mc_obj.lower())
+        else:
+            # Use Pyomo's contrib.fbbt package
+            lb, ub = compute_bounds_on_expr(main_obj.expr)
+            util_blk.objective_value.setub(ub)
+            util_blk.objective_value.setlb(lb)
 
         if main_obj.sense == minimize:
             util_blk.objective_constr = Constraint(
@@ -257,7 +294,8 @@ def build_ordered_component_lists(model, solve_data):
     setattr(
         util_blk, 'disjunct_list', list(
             model.component_data_objects(
-                ctype=Disjunct, descend_into=(Block, Disjunct))))
+                ctype=Disjunct, active=True,
+                descend_into=(Block, Disjunct))))
     setattr(
         util_blk, 'disjunction_list', list(
             model.component_data_objects(
@@ -392,11 +430,27 @@ def get_main_elapsed_time(timing_data_obj):
             ))
 
 
+@deprecated(
+    "'restore_logger_level()' has been deprecated in favor of the more specific "
+    "'lower_logger_level_to()' function.", version='TBD', remove_in='TBD')
 @contextmanager
 def restore_logger_level(logger):
     old_logger_level = logger.getEffectiveLevel()
     yield
     logger.setLevel(old_logger_level)
+
+
+@contextmanager
+def lower_logger_level_to(logger, level=None):
+    """Increases logger verbosity by lowering reporting level."""
+    old_logger_level = logger.getEffectiveLevel()
+    if level is not None and old_logger_level > level:
+        # If logger level is higher (less verbose), decrease it
+        logger.setLevel(level)
+        yield
+        logger.setLevel(old_logger_level)
+    else:
+        yield  # Otherwise, leave the logger alone
 
 
 @contextmanager
@@ -421,3 +475,68 @@ def create_utility_block(model, name, solve_data):
     yield
     if created_util_block:
         model.del_component(name)
+
+
+@contextmanager
+def setup_solver_environment(model, config):
+    solve_data = GDPoptSolveData()  # data object for storing solver state
+    solve_data.config = config
+    solve_data.results = SolverResults()
+    solve_data.timing = Container()
+    min_logging_level = logging.INFO if config.tee else None
+    with time_code(solve_data.timing, 'total', is_main_timer=True), \
+            lower_logger_level_to(config.logger, min_logging_level), \
+            create_utility_block(model, 'GDPopt_utils', solve_data):
+
+        # Create a working copy of the original model
+        solve_data.original_model = model
+        solve_data.working_model = model.clone()
+        setup_results_object(solve_data, config)
+        solve_data.active_strategy = config.strategy
+        util_block = solve_data.working_model.GDPopt_utils
+
+        # Save model initial values.
+        # These can be used later to initialize NLP subproblems.
+        solve_data.initial_var_values = list(
+            v.value for v in util_block.variable_list)
+        solve_data.best_solution_found = None
+
+        # Integer cuts exclude particular discrete decisions
+        util_block.integer_cuts = ConstraintList(doc='integer cuts')
+
+        # Set up iteration counters
+        solve_data.master_iteration = 0
+        solve_data.mip_iteration = 0
+        solve_data.nlp_iteration = 0
+
+        # set up bounds
+        solve_data.LB = float('-inf')
+        solve_data.UB = float('inf')
+        solve_data.iteration_log = {}
+
+        # Flag indicating whether the solution improved in the past
+        # iteration or not
+        solve_data.feasible_solution_improved = False
+
+        yield solve_data  # yield setup solver environment
+
+        if (solve_data.best_solution_found is not None
+                and solve_data.best_solution_found is not solve_data.original_model):
+            # Update values on the original model
+            copy_var_list_values(
+                from_list=solve_data.best_solution_found.GDPopt_utils.variable_list,
+                to_list=solve_data.original_model.GDPopt_utils.variable_list,
+                config=config)
+
+    # Finalize results object
+    solve_data.results.problem.lower_bound = solve_data.LB
+    solve_data.results.problem.upper_bound = solve_data.UB
+    solve_data.results.solver.iterations = solve_data.master_iteration
+    solve_data.results.solver.timing = solve_data.timing
+    solve_data.results.solver.user_time = solve_data.timing.total
+    solve_data.results.solver.wallclock_time = solve_data.timing.total
+
+
+def indent(text, prefix):
+    """This should be replaced with textwrap.indent when we stop supporting python 2.7."""
+    return ''.join(prefix + line for line in text.splitlines(True))

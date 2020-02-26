@@ -482,7 +482,15 @@ def check_if_numeric_type_and_cache(obj):
     NumericConstant object.
 
     """
-    if obj.__class__ is (obj + 0).__class__:
+    obj_class = obj.__class__
+    if obj_class is (obj + 0).__class__:
+        #
+        # Coerce the value to a float, if possible
+        #
+        try:
+            obj = float(obj)
+        except:
+            pass
         #
         # obj may (or may not) be hashable, so we need this try
         # block so that things proceed normally for non-hashable
@@ -504,9 +512,9 @@ def check_if_numeric_type_and_cache(obj):
             # numeric type: add it to the native numeric types
             # so that future lookups will be faster.
             #
-            native_numeric_types.add(obj.__class__)
-            native_types.add(obj.__class__)
-            nonpyomo_leaf_types.add(obj.__class__)
+            native_numeric_types.add(obj_class)
+            native_types.add(obj_class)
+            nonpyomo_leaf_types.add(obj_class)
             #
             # Generate a warning, since Pyomo's management of third-party
             # numeric types is more robust when registering explicitly.
