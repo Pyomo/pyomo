@@ -556,6 +556,9 @@ class CPLEXDirect(DirectSolver):
         elif status in {
             rtn_codes.MIP_time_limit_infeasible,
             rtn_codes.MIP_dettime_limit_infeasible,
+            rtn_codes.node_limit_infeasible,
+            rtn_codes.mem_limit_infeasible,
+            rtn_codes.MIP_abort_infeasible,
         } or self._error_code == self._cplex.exceptions.error_codes.CPXERR_NO_SOLN:
             # CPLEX doesn't have a solution status for `noSolution` so we assume this from the combination of
             # maxTimeLimit + infeasible (instead of a generic `TerminationCondition.error`).
