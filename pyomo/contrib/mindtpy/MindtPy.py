@@ -62,7 +62,7 @@ class MindtPySolver(object):
         doc="Relative tolerance for bound feasibility checks"
     ))
     CONFIG.declare("iteration_limit", ConfigValue(
-        default=30,
+        default=1,
         domain=PositiveInt,
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods"

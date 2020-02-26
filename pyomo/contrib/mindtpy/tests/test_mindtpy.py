@@ -39,8 +39,8 @@ class TestMindtPy(unittest.TestCase):
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
             self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
-    '''
     
+    '''
     def test_OA_8PP_init_max_binary(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -95,8 +95,8 @@ class TestMindtPy(unittest.TestCase):
     #         # self.assertIs(results.solver.termination_condition,
     #         #               TerminationCondition.optimal)
     #         self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
+    
     '''
-
     def test_OA_MINLP_simple(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -111,7 +111,7 @@ class TestMindtPy(unittest.TestCase):
             #               TerminationCondition.optimal)
             self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
 
-
+    
     def test_OA_MINLP2_simple(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -140,7 +140,7 @@ class TestMindtPy(unittest.TestCase):
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
             self.assertTrue(abs(value(model.cost.expr) - (-5.512)) <= 1E-2)
-
+    
 
     def test_OA_Proposal(self):
         """Test the outer approximation decomposition algorithm."""
@@ -155,7 +155,7 @@ class TestMindtPy(unittest.TestCase):
             #               TerminationCondition.optimal)
             self.assertTrue(abs(value(model.obj.expr) - 0.66555) <= 1E-2)
 
-
+    
     def test_OA_Proposal_with_int_cuts(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
