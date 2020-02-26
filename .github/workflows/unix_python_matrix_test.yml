@@ -1,7 +1,7 @@
 name: continuous-integration/github/pr
 
 on:
-  pull-request:
+  pull_request:
     branches:
       - master
 
