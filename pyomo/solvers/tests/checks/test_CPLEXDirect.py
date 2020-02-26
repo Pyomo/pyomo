@@ -120,8 +120,8 @@ class CPLEXDirectTests(unittest.TestCase):
         model.S = RangeSet(0, 9)
         model.P = list(range(10))
         model.X = Var(model.S, within=Binary)
-        model.C = Constraint(expr=summation(model.X) == 1)
-        model.C = Constraint(expr=model.X[0] >= 2)
+        model.C1 = Constraint(expr=summation(model.X) == 1)
+        model.C2 = Constraint(expr=model.X[0] >= 2)
         model.O = Objective(expr=sum_product(model.P, model.X), sense=minimize)
 
         with SolverFactory("cplex", solver_io="python") as opt:
