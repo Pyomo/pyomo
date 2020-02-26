@@ -386,6 +386,29 @@ CPLEX>"""
         )
         self.assertEqual(results.solver.return_code, 1217)
 
+    def test_log_file_shows_presolve_infeasible(self):
+        log_file_text = """
+Infeasibility row 'c_e_x18_':  0  = -1.
+Presolve time = 0.00 sec. (0.00 ticks)
+Presolve - Infeasible.
+Solution time =    0.00 sec.
+Deterministic time = 0.00 ticks  (0.61 ticks/sec)
+CPLEX> CPLEX Error  1217: No solution exists.
+No file written.
+CPLEX>"""
+
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.solver.status, SolverStatus.error)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.infeasible
+        )
+        self.assertEqual(
+            results.solver.termination_message, "Presolve - Infeasible."
+        )
+        self.assertEqual(results.solver.return_code, 1217)
 
 if __name__ == "__main__":
     unittest.main()
