@@ -522,11 +522,11 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 results.solver.error = " ".join(tokens)
 
                 # Find the first token that starts with an integer, and strip non-integer characters for the return code
-                rc_token = next((token for token in tokens if re.match(r'\d', token)), None)
-                if rc_token:
-                    results.solver.return_code = int(re.sub(r'[^\d]', '', rc_token))
+                error_code_token = next((token for token in tokens if re.match(r'\d', token)), None)
+                if error_code_token:
+                    results.solver.return_code = int(re.sub(r'[^\d]', '', error_code_token))
                 else:
-                    results.solver.return_code = 0
+                    results.solver.return_code = None
             elif len(tokens) >= 3 and tokens[0] == "ILOG" and tokens[1] == "CPLEX":
                 cplex_version = tokens[2].rstrip(',')
             elif len(tokens) >= 3 and tokens[1] == "Version":
