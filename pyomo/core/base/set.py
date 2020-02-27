@@ -58,6 +58,55 @@ _inf = float('inf')
 
 FLATTEN_CROSS_PRODUCT = True
 
+"""Set objects
+
+Pyomo `Set` objects are designed to be "API-compatible" with Python
+`set` objects.  However, not all Set objects implement the full `set`
+API (e.g., only finite discrete Sets support `add()`).
+
+All Sets implement one of the following APIs:
+
+0. `class _SetDataBase(ComponentData)`
+   *(pure virtual interface)*
+
+1. `class _SetData(_SetDataBase)`
+   *(base class for all AML Sets)*
+
+2. `class _FiniteSetMixin(object)`
+   *(pure virtual interface, adds support for discrete/iterable sets)*
+
+4. `class _OrderedSetMixin(object)`
+   *(pure virtual interface, adds support for ordered Sets)*
+
+This is a bit of a change from python set objects.  First, the
+lowest-level (non-abstract) Data object supports infinite sets; that is,
+sets that contain an infinite number of values (this includes both
+bounded continuous ranges as well as unbounded discrete ranges).  As
+there are an infinite number of values, iteration is *not*
+supported. The base class also implements all Python set operations.
+Note that `_SetData` does *not* implement `len()`, as Python requires
+`len()` to return a positive integer.
+
+Finite sets add iteration and support for `len()`.  In addition, they
+support access to members through three methods: `data()` returns the
+members as a tuple (in the internal storage order), and may not be
+deterministic.  `ordered_data()` returns the members, and is guaranteed
+to be in a deterministic order (in the case of insertion order sets, up
+to the determinism of the script that populated the set).  Finally,
+`sorted_data()` returns the members in a sorted order (guaranteed
+deterministic, up to the implementation of < and ==).
+
+..TODO: should these three members all return generators?  This would
+further change the implementation of `data()`, but would allow consumers
+to potentially access the members in a more efficient manner.
+
+Ordered sets add support for `ord()` and `__getitem__`, as well as the
+`first`, `last`, `next` and `prev` methods for stepping over set
+members.
+
+Note that the base APIs are all declared (and to the extent possible,
+implemented) through Mixin classes.
+"""
 
 def process_setarg(arg):
     if isinstance(arg, _SetDataBase):
@@ -351,55 +400,11 @@ class TuplizeValuesInitializer(InitializerBase):
 
         return list(tuple(_val[d*i:d*(i+1)]) for i in xrange(len(_val)//d))
 
-#
-# DESIGN NOTES
-#
-# What do sets do?
-#
-# ALL:
-#   __contains__
-#
-# Note: FINITE implies DISCRETE. Infinite discrete sets cannot be iterated
-#
-# FINITE: ALL +
-#   __len__ (Note: Python len() requires __len__ to return non-negative int)
-#   __iter__, __reversed__
-#   add()
-#   sorted(), ordered_data()
-#
-# ORDERED: FINITE +
-#   __getitem__
-#   next(), prev(), first(), last()
-#   ord()
-#
-# When we do math, the least specific set dictates the API of the resulting set.
-#
-# Note that isfinite and isordered must be resolvable when the class
-# is instantiated (*before* construction).  We will key off these fields
-# when performing set operations to know what type of operation to
-# create, and we will allow set operations in Abstract before
-# construction.
-
-#
-# Set rewrite TODOs:
-#
-#   - Test index/ord for equivalence of 1 and (1,)
-#
-#   - Make sure that all classes implement the appropriate methods
-#     (e.g., bounds)
-#
-#   - Sets created with Set.Skip should produce intelligible errors
-#
-#   - Resolve nonnumeric range operations on tuples of numeric ranges
-#
-#   - Ensure the range operators raise exeptions for unexpected
-#     (non-range/non list arguments.
-#
-
 
 class _NotFound(object):
     "Internal type flag used to indicate if an object is not found in a set"
     pass
+
 
 # A trivial class that we can use to test if an object is a "legitimate"
 # set (either SimpleSet, or a member of an IndexedSet)
@@ -2273,6 +2278,7 @@ class OrderedSetOf(_OrderedSetMixin, SetOf):
 
 ############################################################################
 
+
 class _InfiniteRangeSetData(_SetData):
     """Data class for a infinite set.
 
@@ -2441,8 +2447,58 @@ class _FiniteRangeSetData( _SortedSetMixin,
     "starting a value 'start', and increasing in values by 'step' until a "
     "value greater than or equal to 'end' is reached.")
 class RangeSet(Component):
-    """
-    A set object that represents a set of numeric values
+    """A set object that represents a set of numeric values
+
+    `RangeSet` objects are based around `NumericRange` objects, which
+    include support for non-finite ranges (both continuous and
+    unbounded). Similarly, boutique ranges (like semi-continuous
+    domains) can be represented, e.g.:
+
+    ..code:
+        RangeSet(ranges=(NumericRange(0,0,0), NumericRange(1,100,0)))
+
+    The `RangeSet` object continues to support the notation for
+    specifying discrete ranges using "[first=1], last, [step=1]" values:
+
+    ..code:
+        RangeSet(3)          # [1, 2, 3]
+        RangeSet(2,5)        # [2, 3, 4, 5]
+        RangeSet(2,5,2)      # [2, 4]
+        RangeSet(2.5,4,0.5)  # [2.5, 3, 3.5, 4]
+
+    By implementing RangeSet using NumericRanges, the global Sets (like
+    `Reals`, `Integers`, `PositiveReals`, etc.) are trivial
+    instances of a RangeSet and support all Set operations.
+
+    Parameters
+    ----------
+    *args: tuple, optional
+        The range desined by ([start=1], end, [step=1]).  If only a
+        single positional parameter, `end` is supplied, then the
+        RangeSet will be the integers starting at 1 up through and
+        including end.  Providing two positional arguments, `x` and `y`,
+        will result in a range starting at x up to and including y,
+        incrementing by 1.  Providing a 3-tuple enables the
+        specification of a step other than 1.
+
+    finite: bool, optional
+        This sets if this range is finite (discrete and bounded) or infinite
+
+    ranges: iterable, optional
+        The list of range objects that compose this RangeSet
+
+    bounds: tuple, optional
+        The lower and upper bounds of values that are admissible in this
+        RangeSet
+
+    filter: function, optional
+        Function (rule) that returns True if the specified value is in
+        the RangeSet or False if it is not.
+
+    validate: function, optional
+        Data validation function (rule).  The function will be called
+        for every data member of the set, and if it returns False, a
+        ValueError will be raised.
 
     """
 
