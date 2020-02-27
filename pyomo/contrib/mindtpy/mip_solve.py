@@ -24,14 +24,15 @@ from math import fabs
 
 from pyomo.repn import generate_standard_repn
 
+
 class LazyOACallback(LazyConstraintCallback):
 
     def _get_gap(self):
         print('self.get_MIP_relative_gap: ', self.get_MIP_relative_gap())
-    
-    def copy_lazy_var_list_values(self,opt,from_list, to_list, config,
-                         skip_stale=False, skip_fixed=True,
-                         ignore_integrality=False):
+
+    def copy_lazy_var_list_values(self, opt, from_list, to_list, config,
+                                  skip_stale=False, skip_fixed=True,
+                                  ignore_integrality=False):
         """Copy variable values from one list to another.
 
         Rounds to Binary/Integer if neccessary
@@ -43,18 +44,21 @@ class LazyOACallback(LazyConstraintCallback):
             if skip_fixed and v_to.is_fixed():
                 continue  # Skip fixed variables.
             try:
-                v_to.set_value(self.get_values(opt._pyomo_var_to_solver_var_map[v_from]))
+                v_to.set_value(self.get_values(
+                    opt._pyomo_var_to_solver_var_map[v_from]))
                 if skip_stale:
                     v_to.stale = False
             except ValueError as err:
                 err_msg = getattr(err, 'message', str(err))
-                var_val = self.get_values(opt._pyomo_var_to_solver_var_map[v_from])
+                var_val = self.get_values(
+                    opt._pyomo_var_to_solver_var_map[v_from])
                 rounded_val = int(round(var_val))
                 # Check to see if this is just a tolerance issue
                 if ignore_integrality \
                     and ('is not in domain Binary' in err_msg
-                    or 'is not in domain Integers' in err_msg):
-                    v_to.value = self.get_values(opt._pyomo_var_to_solver_var_map[v_from])
+                         or 'is not in domain Integers' in err_msg):
+                    v_to.value = self.get_values(
+                        opt._pyomo_var_to_solver_var_map[v_from])
                 elif 'is not in domain Binary' in err_msg and (
                         fabs(var_val - 1) <= config.integer_tolerance or
                         fabs(var_val) <= config.integer_tolerance):
@@ -70,9 +74,7 @@ class LazyOACallback(LazyConstraintCallback):
                 else:
                     raise
             # print(v_to, v_to.value)
-    
-    
-    
+
     def add_lazy_oa_cuts(self, target_model, dual_values, solve_data, config, opt,
                          linearize_active=True,
                          linearize_violated=True,
@@ -97,102 +99,78 @@ class LazyOACallback(LazyConstraintCallback):
                 rhs = ((0 if constr.upper is None else constr.upper)
                        + (0 if constr.lower is None else constr.lower))
                 rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
-                
-                pyomo_expr = copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (var - value(var)) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs)
+
+                pyomo_expr = copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (
+                    var - value(var)) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs)
                 cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
                 cplex_rhs = -generate_standard_repn(pyomo_expr).constant
                 self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
                          sense="L",
                          rhs=cplex_rhs)
-                # solve_data.oa_cuts_expr.append(pyomo_expr<=0)
-                print('1-----------')
             else:  # Inequality constraint (possibly two-sided)
                 if constr.has_ub() \
                     and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
                         or (linearize_violated and constr.uslack() < 0) \
                         or (linearize_inactive and constr.uslack() > 0):
-                    
-                    pyomo_expr = sum(value(jacs[constr][var])*(var - var.value) for var in constr_vars)
+
+                    pyomo_expr = sum(
+                        value(jacs[constr][var])*(var - var.value) for var in constr_vars)
                     cplex_rhs = -generate_standard_repn(pyomo_expr).constant
                     cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
                     self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
                              sense="L",
                              rhs=constr.upper.value+cplex_rhs)
-                    print('2------------')
-                    '''
-                    print(list(EXPR.identify_variables(constr.body)))
-                    print(constr_vars)
-                    # self.copy_lazy_var_list_values(opt,list(EXPR.identify_variables(constr.body)),list(EXPR.identify_variables(constr.body)),config) # this is set value for value(constr.body)
-                    self.copy_lazy_var_list_values(opt, constr_vars, constr_vars, config) # this is set value for value(constr.body)
-                    pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars) - constr.upper.value
-                    # pyomo_expr = sum(round(value(jacs[constr][var]),4) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars) - constr.upper.value
-                    print(pyomo_expr)
-                    cplex_rhs = -generate_standard_repn(pyomo_expr).constant
-                    cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
-                    self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
-                             sense="L",
-                             rhs=cplex_rhs)
-                    print(cplex_expr.variables, cplex_expr.coefficients,cplex_rhs)
-                    print('2------------')
-                    '''
                 if constr.has_lb() \
                     and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
                         or (linearize_violated and constr.lslack() < 0) \
                         or (linearize_inactive and constr.lslack() > 0):
-                    print('3------------')
-                    # if use_slack_var:
-                    #     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
-                    pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars)
+                    pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(
+                        opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars)
                     cplex_rhs = -generate_standard_repn(pyomo_expr).constant
                     cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
-                    print('3------------')
                     self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
                              sense="G",
                              rhs=constr.lower.value+cplex_rhs)
-
 
     def handle_lazy_master_mip_optimal(self, master_mip, solve_data, config, opt):
         """Copy the result to working model and update upper or lower bound"""
         # proceed. Just need integer values
         MindtPy = master_mip.MindtPy_utils
-        main_objective = next(master_mip.component_data_objects(Objective, active=True))
-        # initialize(warmstart) subproblem
-        # for var in master_mip.MindtPy_utils.variable_list:
-        #     var.set_value(self.get_values(opt._pyomo_var_to_solver_var_map[var]))
-        
+        main_objective = next(
+            master_mip.component_data_objects(Objective, active=True))
+
         # this value copy is useful since we need to fix subproblem based on the solution of the master problem
         self.copy_lazy_var_list_values(opt,
-            master_mip.MindtPy_utils.variable_list,
-            solve_data.working_model.MindtPy_utils.variable_list,
-            config)
-        
+                                       master_mip.MindtPy_utils.variable_list,
+                                       solve_data.working_model.MindtPy_utils.variable_list,
+                                       config)
+
         if main_objective.sense == minimize:
             solve_data.LB = max(
-                # self.get_lower_bounds(),
                 self.get_best_objective_value(),
-                # (1-self.get_MIP_relative_gap())*self.get_incumbent_objective_value(),
                 solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
         else:
             solve_data.UB = min(
-                # self.get_upper_bounds(), 
                 self.get_best_objective_value(),
                 solve_data.UB)
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
             'MIP %s: OBJ: %s  LB: %s  UB: %s'
             % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr),
-            solve_data.LB, solve_data.UB))
-        
-    def handle_lazy_NLP_subproblem_optimal(self,fix_nlp, solve_data, config, opt):
+               solve_data.LB, solve_data.UB))
+
+    def handle_lazy_NLP_subproblem_optimal(self, fix_nlp, solve_data, config, opt):
         """Copies result to working model, updates bound, adds OA and integer cut,
         stores best solution if new one is best"""
         for c in fix_nlp.tmp_duals:
             if fix_nlp.dual.get(c, None) is None:
                 fix_nlp.dual[c] = fix_nlp.tmp_duals[c]
-        dual_values = list(fix_nlp.dual[c] for c in fix_nlp.MindtPy_utils.constraint_list)
+        dual_values = list(fix_nlp.dual[c]
+                           for c in fix_nlp.MindtPy_utils.constraint_list)
 
-        main_objective = next(fix_nlp.component_data_objects(Objective, active=True))
+        main_objective = next(
+            fix_nlp.component_data_objects(Objective, active=True))
         if main_objective.sense == minimize:
             solve_data.UB = min(value(main_objective.expr), solve_data.UB)
             solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
@@ -214,12 +192,12 @@ class LazyOACallback(LazyConstraintCallback):
         if config.strategy == 'OA':
             # don't need we don't need to solve the master_mip again, we just need to continue branch and bound.
             copy_var_list_values(fix_nlp.MindtPy_utils.variable_list,
-                                # master_mip.MindtPy_utils.variable_list,
-                                solve_data.mip.MindtPy_utils.variable_list,
-                                config)
+                                 # master_mip.MindtPy_utils.variable_list,
+                                 solve_data.mip.MindtPy_utils.variable_list,
+                                 config)
             # self.add_lazy_oa_cuts(master_mip, dual_values, solve_data, config, opt)
-            self.add_lazy_oa_cuts(solve_data.mip, dual_values, solve_data, config, opt)
-
+            self.add_lazy_oa_cuts(
+                solve_data.mip, dual_values, solve_data, config, opt)
 
     def handle_lazy_NLP_subproblem_infeasible(self, fix_nlp, solve_data, config, opt):
         """Solve feasibility problem, add cut according to strategy.
@@ -231,11 +209,12 @@ class LazyOACallback(LazyConstraintCallback):
         config.logger.info('NLP subproblem was locally infeasible.')
         for c in fix_nlp.component_data_objects(ctype=Constraint):
             rhs = ((0 if c.upper is None else c.upper)
-                + (0 if c.lower is None else c.lower))
+                   + (0 if c.lower is None else c.lower))
             sign_adjust = 1 if value(c.upper) is None else -1
             fix_nlp.dual[c] = (sign_adjust
-                    * max(0, sign_adjust * (rhs - value(c.body))))
-        dual_values = list(fix_nlp.dual[c] for c in fix_nlp.MindtPy_utils.constraint_list)
+                               * max(0, sign_adjust * (rhs - value(c.body))))
+        dual_values = list(fix_nlp.dual[c]
+                           for c in fix_nlp.MindtPy_utils.constraint_list)
 
         if config.strategy == 'PSC' or config.strategy == 'GBD':
             for var in fix_nlp.component_data_objects(ctype=Var, descend_into=True):
@@ -253,14 +232,14 @@ class LazyOACallback(LazyConstraintCallback):
                 # config.initial_feas = False
                 feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
                 copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
-                                    solve_data.mip.MindtPy_utils.variable_list,
-                                    config)
-                self.add_lazy_oa_cuts(solve_data.mip, dual_values, solve_data, config, opt)
+                                     solve_data.mip.MindtPy_utils.variable_list,
+                                     config)
+                self.add_lazy_oa_cuts(
+                    solve_data.mip, dual_values, solve_data, config, opt)
         # Add an integer cut to exclude this discrete option
         # var_values = list(v.value for v in fix_nlp.MindtPy_utils.variable_list)
         # if config.add_integer_cuts:
         #     add_int_cut(var_values, solve_data, config)  # excludes current discrete option
-
 
     def __call__(self):
         solve_data = self.solve_data
@@ -271,7 +250,8 @@ class LazyOACallback(LazyConstraintCallback):
         # for var in master_mip.Y.itervalues():
         #     print(var,self.get_values(opt._pyomo_var_to_solver_var_map[var]))
 
-        self.handle_lazy_master_mip_optimal(master_mip, solve_data, config,opt)
+        self.handle_lazy_master_mip_optimal(
+            master_mip, solve_data, config, opt)
 
         # Call the MILP post-solve callback
         # config.call_after_master_solve(master_mip, solve_data)
@@ -286,16 +266,17 @@ class LazyOACallback(LazyConstraintCallback):
         if fix_nlp_result.solver.termination_condition is tc.optimal:
             # handle_NLP_subproblem_optimal(fix_nlp, solve_data, config)
             print('nlp optimal!')
-            self.handle_lazy_NLP_subproblem_optimal(fix_nlp, solve_data, config, opt)
+            self.handle_lazy_NLP_subproblem_optimal(
+                fix_nlp, solve_data, config, opt)
         elif fix_nlp_result.solver.termination_condition is tc.infeasible:
             # handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config)
-            self.handle_lazy_NLP_subproblem_infeasible(fix_nlp, solve_data, config, opt)
+            self.handle_lazy_NLP_subproblem_infeasible(
+                fix_nlp, solve_data, config, opt)
             print('nlp infeasible!')
         else:
             print('nlp other condition!')
             # handle_NLP_subproblem_other_termination(fix_nlp, fix_nlp_result.solver.termination_condition,
             #                                         solve_data, config)
-        
 
 
 def solve_OA_master(solve_data, config):
@@ -312,7 +293,8 @@ def solve_OA_master(solve_data, config):
             c.deactivate()
 
     MindtPy.MindtPy_linear_cuts.activate()
-    main_objective = next(solve_data.mip.component_data_objects(Objective, active=True))
+    main_objective = next(
+        solve_data.mip.component_data_objects(Objective, active=True))
     main_objective.deactivate()
 
     sign_adjust = 1 if main_objective.sense == minimize else -1
@@ -328,7 +310,6 @@ def solve_OA_master(solve_data, config):
         MindtPy.MindtPy_oa_obj = Objective(
             expr=main_objective.expr,
             sense=main_objective.sense)
-
 
     # Deactivate extraneous IMPORT/EXPORT suffixes
     getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
@@ -347,7 +328,8 @@ def solve_OA_master(solve_data, config):
             lazyoa.config = config
             lazyoa.opt = masteropt
             pass
-        master_mip_results = masteropt.solve(solve_data.mip, **config.mip_solver_args, tee=True)
+        master_mip_results = masteropt.solve(
+            solve_data.mip, **config.mip_solver_args, tee=True)
         print(master_mip_results)
 
         if config.lazy_callback == True:
@@ -366,83 +348,23 @@ def solve_OA_master(solve_data, config):
         # Linear solvers will sometimes tell me that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
         # resolve with a solver option flag on.
-        master_mip_results, _ = distinguish_mip_infeasible_or_unbounded(solve_data.mip, config)
+        master_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
+            solve_data.mip, config)
 
     return solve_data.mip, master_mip_results
 
 
-# def solve_OA_master(solve_data, config):
-#     solve_data.mip_iter += 1
-#     master_mip = solve_data.mip.clone()
-#     MindtPy = master_mip.MindtPy_utils
-#     config.logger.info(
-#         'MIP %s: Solve master problem.' %
-#         (solve_data.mip_iter,))
-#     # Set up MILP
-#     for c in MindtPy.constraint_list:
-#         if c.body.polynomial_degree() not in (1, 0):
-#             c.deactivate()
-
-#     MindtPy.MindtPy_linear_cuts.activate()
-#     main_objective = next(master_mip.component_data_objects(Objective, active=True))
-#     main_objective.deactivate()
-
-#     sign_adjust = 1 if main_objective.sense == minimize else -1
-#     if config.add_slack == True:
-#         MindtPy.MindtPy_penalty_expr = Expression(
-#             expr=sign_adjust * config.OA_penalty_factor * sum(
-#                 v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
-
-#         MindtPy.MindtPy_oa_obj = Objective(
-#             expr=main_objective.expr + MindtPy.MindtPy_penalty_expr,
-#             sense=main_objective.sense)
-#     elif config.add_slack == False:
-#         MindtPy.MindtPy_oa_obj = Objective(
-#             expr=main_objective.expr,
-#             sense=main_objective.sense)
-
-
-#     # Deactivate extraneous IMPORT/EXPORT suffixes
-#     getattr(master_mip, 'ipopt_zL_out', _DoNothing()).deactivate()
-#     getattr(master_mip, 'ipopt_zU_out', _DoNothing()).deactivate()
-
-#     # master_mip.pprint() #print oa master problem for debugging
-#     with SuppressInfeasibleWarning():
-#         masteropt = SolverFactory(config.mip_solver)
-#         if isinstance(masteropt, PersistentSolver):
-#             masteropt.set_instance(master_mip)  # , symbolic_solver_labels=True)
-#             print('instance set!')
-#         if config.lazy_callback == True:
-#             # for i in solve_data.mip.component_data_objects(Var, active=True):
-#             #     print(i, '-------------')
-#             lazyoa = masteropt._solver_model.register_callback(LazyOACallback)
-#             lazyoa.solve_data = solve_data
-#             lazyoa.config = config
-#             lazyoa.opt = masteropt
-#             lazyoa.master_mip = master_mip
-#         print('1**************1')
-#         master_mip_results = masteropt.solve(master_mip, **config.mip_solver_args, tee=True)
-#     if master_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
-#         # Linear solvers will sometimes tell me that it's infeasible or
-#         # unbounded during presolve, but fails to distinguish. We need to
-#         # resolve with a solver option flag on.
-#         master_mip_results, _ = distinguish_mip_infeasible_or_unbounded(master_mip, config)
-
-#     return master_mip, master_mip_results
-
-
-def handle_master_mip_optimal(master_mip, solve_data, config,copy=True):
+def handle_master_mip_optimal(master_mip, solve_data, config, copy=True):
     """Copy the result to working model and update upper or lower bound"""
     # proceed. Just need integer values
     MindtPy = master_mip.MindtPy_utils
-    main_objective = next(master_mip.component_data_objects(Objective, active=True))
-    # initialize(warmstart) subproblem
-    if copy == True:
-        copy_var_list_values(
-            master_mip.MindtPy_utils.variable_list,
-            solve_data.working_model.MindtPy_utils.variable_list,
-            config)
-    
+    main_objective = next(
+        master_mip.component_data_objects(Objective, active=True))
+    copy_var_list_values(
+        master_mip.MindtPy_utils.variable_list,
+        solve_data.working_model.MindtPy_utils.variable_list,
+        config)
+
     if main_objective.sense == minimize:
         solve_data.LB = max(
             value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
@@ -505,7 +427,8 @@ def handle_master_mip_infeasible(master_mip, solve_data, config):
             'MindtPy initialization may have generated poor '
             'quality cuts.')
     # set optimistic bound to infinity
-    main_objective = next(master_mip.component_data_objects(Objective, active=True))
+    main_objective = next(
+        master_mip.component_data_objects(Objective, active=True))
     if main_objective.sense == minimize:
         solve_data.LB = float('inf')
         solve_data.LB_progress.append(solve_data.UB)
@@ -548,8 +471,10 @@ def handle_master_mip_unbounded(master_mip, solve_data, config):
         'Master MILP was unbounded. '
         'Resolving with arbitrary bound values of (-{0:.10g}, {0:.10g}) on the objective. '
         'You can change this bound with the option obj_bound.'.format(config.obj_bound))
-    main_objective = next(master_mip.component_data_objects(Objective, active=True))
-    MindtPy.objective_bound = Constraint(expr=(-config.obj_bound, main_objective.expr, config.obj_bound))
+    main_objective = next(
+        master_mip.component_data_objects(Objective, active=True))
+    MindtPy.objective_bound = Constraint(
+        expr=(-config.obj_bound, main_objective.expr, config.obj_bound))
     with SuppressInfeasibleWarning():
         opt = SolverFactory(config.mip_solver)
         if isinstance(opt, PersistentSolver):

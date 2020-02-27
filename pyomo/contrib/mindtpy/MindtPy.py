@@ -62,7 +62,7 @@ class MindtPySolver(object):
         doc="Relative tolerance for bound feasibility checks"
     ))
     CONFIG.declare("iteration_limit", ConfigValue(
-        default=1,
+        default=30,
         domain=PositiveInt,
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods"
@@ -94,7 +94,7 @@ class MindtPySolver(object):
             "the integer variables (initial_binary)"
     ))
     CONFIG.declare("integer_cuts", ConfigValue(
-        default=False,
+        default=True,
         domain=bool,
         description="Integer cuts",
         doc="Add integer cuts after finding a feasible solution to the MINLP"
@@ -137,7 +137,8 @@ class MindtPySolver(object):
     ))
     CONFIG.declare("mip_solver", ConfigValue(
         default="gurobi",
-        domain=In(["gurobi", "cplex", "cbc", "glpk", "gams","gurobi_persistent","cplex_persistent"]),
+        domain=In(["gurobi", "cplex", "cbc", "glpk", "gams",
+                   "gurobi_persistent", "cplex_persistent"]),
         description="MIP subsolver name",
         doc="Which MIP subsolver is going to be used for solving the mixed-"
             "integer master problems"
@@ -221,7 +222,7 @@ class MindtPySolver(object):
         domain=bool
     ))
     CONFIG.declare("lazy_callback", ConfigValue(
-        default=True,
+        default=False,
         description="Use lazy callback in solving the MILP master problem.",
         domain=bool
     ))
@@ -236,7 +237,6 @@ class MindtPySolver(object):
                     "slack variables here are used to deal with nonconvex MINLP",
         domain=bool
     ))
-
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -273,11 +273,10 @@ class MindtPySolver(object):
             TransformationFactory('contrib.integer_to_binary'). \
                 apply_to(solve_data.working_model)
 
-
         new_logging_level = logging.INFO if config.tee else None
         with time_code(solve_data.timing, 'total', is_main_timer=True), \
-             lower_logger_level_to(config.logger, new_logging_level), \
-             create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
+                lower_logger_level_to(config.logger, new_logging_level), \
+                create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
             config.logger.info("---Starting MindtPy---")
 
             MindtPy = solve_data.working_model.MindtPy_utils
@@ -362,7 +361,8 @@ class MindtPySolver(object):
             #     MindtPy.feas_inverse_map[n] = c
 
             # Create slack variables for OA cuts
-            lin.slack_vars = VarList(bounds=(0, config.max_slack), initialize=0, domain=NonNegativeReals)
+            lin.slack_vars = VarList(
+                bounds=(0, config.max_slack), initialize=0, domain=NonNegativeReals)
             # Create slack variables for feasibility problem
             feas.slack_var = Var(feas.constraint_set,
                                  domain=NonNegativeReals, initialize=1)

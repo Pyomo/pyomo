@@ -12,6 +12,10 @@ from pyomo.core import (ConstraintList, Objective,
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
+                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
+                                             handle_NLP_subproblem_other_termination)
+
 
 def MindtPy_initialize_master(solve_data, config):
     """Initialize the decomposition algorithm.
@@ -53,7 +57,15 @@ def MindtPy_initialize_master(solve_data, config):
         # if config.strategy == 'ECP':
         #     add_ecp_cut(solve_data, config)
         # else:
-        solve_NLP_subproblem(solve_data, config)
+
+        fix_nlp, fix_nlp_result = solve_NLP_subproblem(solve_data, config)
+        if fix_nlp_result.solver.termination_condition is tc.optimal:
+            handle_NLP_subproblem_optimal(fix_nlp, solve_data, config)
+        elif fix_nlp_result.solver.termination_condition is tc.infeasible:
+            handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config)
+        else:
+            handle_NLP_subproblem_other_termination(fix_nlp, fix_nlp_result.solver.termination_condition,
+                                                    solve_data, config)
 
 
 def init_rNLP(solve_data, config):
@@ -82,7 +94,7 @@ def init_rNLP(solve_data, config):
             % (solve_data.nlp_iter, value(main_objective.expr),
                solve_data.LB, solve_data.UB))
         if config.strategy == 'OA':
-            copy_var_list_values(m.MindtPy_utils.variable_list, 
+            copy_var_list_values(m.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config, ignore_integrality=True)
             add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
@@ -136,6 +148,7 @@ def init_max_binaries(solve_data, config):
             MindtPy.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
+
         pass  # good
     elif solve_terminate_cond is tc.infeasible:
         raise ValueError(
