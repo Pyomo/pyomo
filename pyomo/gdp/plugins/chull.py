@@ -201,7 +201,7 @@ class ConvexHull_Transformation(Transformation):
             _HACK_transform_whole_instance = True
         else:
             _HACK_transform_whole_instance = False
-        knownBlocks = set()
+        knownBlocks = {}
         for t in targets:
             # check that t is in fact a child of instance
             knownBlocks = is_child_of(parent=instance, child=t,

@@ -204,7 +204,7 @@ class BigM_Transformation(Transformation):
         # We need to check that all the targets are in fact on instance. As we
         # do this, we will use the set below to cache components we know to be
         # in the tree rooted at instance.
-        knownBlocks = set()
+        knownBlocks = {}
         for t in targets:
             # check that t is in fact a child of instance
             if not is_child_of(parent=instance, child=t,
