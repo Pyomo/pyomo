@@ -8,12 +8,10 @@ on:
 jobs:
   pyomo-tests:
     name: py${{ matrix.python-version }}
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     strategy:
       fail-fast: false # This flag causes all of the matrix to continue to run, even if one matrix option fails
-      max-parallel: 5
       matrix:
-        os: ['windows-latest']
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8] 
     steps:
     - uses: actions/checkout@v1
@@ -22,12 +20,20 @@ jobs:
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Install Pyomo dependencies
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host ("Current Enviroment variables: ")
-        gci env: | Sort Name
+        gci env:Path | Sort Name
+        Write-Host ("")
+        Write-Host ("Update conda, then force it to NOT update itself again...")
+        Write-Host ("")
+        Invoke-Expression "conda config --set always_yes yes"
+        Invoke-Expression "conda config --set auto_update_conda false"
+        conda info
+        conda config --show-sources
+        conda list --show-channel-urls
         Write-Host ("")
         Write-Host ("Setting Conda Env Vars... ")
         Write-Host ("")
@@ -41,45 +47,106 @@ jobs:
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + "pymysql pyro4 pint pathos " + $env:MINICONDA_EXTRAS
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk ipopt"
         $env:EXP = $env:CONDAFORGE + $env:ADDITIONAL_CF_PKGS
+        $env:CPLEX = $env:CONDAFORGE + "-c ibmdecisionoptimization cplex=12.10"
+        Write-Host ("")
+        Write-Host ("Try to install CPLEX...")
+        Write-Host ("")
+        try
+        {
+            Invoke-Expression $env:CPLEX
+        }
+        catch
+        {
+            Write-Host ("##########################################################################")
+            Write-Host ("WARNING: CPLEX Community Edition is not available for Python ${{ matrix.python-version }}")
+            Write-Host ("##########################################################################")
+            conda deactivate
+            conda activate test
+        }
         Invoke-Expression $env:EXP
+        $env:PYNUMERO = $env:CONDAFORGE + " pynumero_libraries"
+        Write-Host ("")
+        Write-Host ("Try to install Pynumero_libraries...")
+        Write-Host ("")
+        try
+        {
+            Invoke-Expression $env:PYNUMERO
+        }
+        catch
+        {
+            Write-Host ("##############################################################################")
+            Write-Host ("WARNING: Python ${{matrix.python-version}}: Pynumero_libraries not available. ")
+            Write-Host ("##############################################################################")
+            conda deactivate
+            conda activate test 
+        }
+        conda list --show-channel-urls
+        Write-Host ("")
         Write-Host ("Installing GAMS")
-        Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
-        Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS'
-        $env:PATH += $(Get-Location).Path + "\gams"
+        Write-Host ("")
+        Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
+        Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS' -Wait
+        cd gams\apifiles\Python\
+        if(${{matrix.python-version}} -eq 2.7) {
+          cd api
+          python setup.py -q install
+        }elseif(${{matrix.python-version}} -eq 3.6) {
+          Write-Host ("PYTHON ${{matrix.python-version}}")
+          cd api_36
+          python setup.py -q install
+        }elseif(${{matrix.python-version}} -eq 3.7) {
+          Write-Host ("PYTHON ${{matrix.python-version}}")
+          cd api_37
+          python setup.py -q install -noCheck
+        }else { 
+          Write-Host ("########################################################################")
+          Write-Host ("WARNING: Python ${{matrix.python-version}}: GAMS Bindings not supported.")
+          Write-Host ("########################################################################")
+        }
+        Write-Host ("")
         Write-Host ("New Shell Environment: ")
         gci env: | Sort Name
-        Write-Host ("")
-        Write-Host ("Update conda, then force it to NOT update itself again...")
-        Write-Host ("")
-        Invoke-Expression "conda config --set always_yes yes"
-        Invoke-Expression "conda config --set auto_update_conda false"
+    - name: Install Pyomo and extensions
+      shell: pwsh
+      run: |
+        $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host ("")
         Write-Host ("Clone model library and install PyUtilib...")
         Write-Host ("")
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
         git clone --quiet https://github.com/PyUtilib/pyutilib.git
         cd pyutilib
-        python setup.py develop
+        try
+        {
+            python3 setup.py develop
+        }
+        catch
+        {
+            python setup.py develop
+        }
         cd ..
         Write-Host ("")
         Write-Host ("Install Pyomo...")
         Write-Host ("")
-        python setup.py develop
-    - name: Install extensions
-      shell: pwsh
-      run: |
-        $env:PYTHONWARNINGS="ignore::UserWarning"
+        try
+        {
+            python3 setup.py develop
+        }
+        catch
+        {
+            python setup.py develop
+        }
+        Write-Host ("")
         Write-Host "Pyomo download-extensions"
+        Write-Host ("")
         Invoke-Expression "pyomo download-extensions"
-        Invoke-Expression "pyomo build-extensions"
-        Write-Host "Calling solvers"
-        Invoke-Expression "glpsol -v"
-        Invoke-Expression "ipopt -v"
+
     - name: Run nightly tests with test.pyomo
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
+        $env:PATH += ';' + $(Get-Location).Path + "\gams"
         $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
         Invoke-Expression $env:EXP

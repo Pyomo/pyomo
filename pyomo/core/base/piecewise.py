@@ -580,14 +580,14 @@ class _LOGPiecewise(object):
         S = range(1,n+1)
         # turn the GrayCode into a dictionary indexed
         # starting at 1
-        G = dict(enumerate(_GrayCode(n),start=1))
+        G = {k:v for k,v in enumerate(_GrayCode(n),start=1)}
 
-        L = dict((s,[k+1 for k in xrange(BIGL+1) \
+        L = {s:[k+1 for k in xrange(BIGL+1) \
                          if ((k == 0) or (G[k][s-1] == 1)) \
-                         and ((k == BIGL) or (G[k+1][s-1] == 1))]) for s in S)
-        R = dict((s,[k+1 for k in xrange(BIGL+1) \
+                         and ((k == BIGL) or (G[k+1][s-1] == 1))] for s in S}
+        R = {s:[k+1 for k in xrange(BIGL+1) \
                          if ((k == 0) or (G[k][s-1] == 0)) \
-                         and ((k == BIGL) or (G[k+1][s-1] == 0))]) for s in S)
+                         and ((k == BIGL) or (G[k+1][s-1] == 0))] for s in S}
 
         return S,L,R
 
@@ -662,9 +662,9 @@ class _MCPiecewise(object):
         polytopes = range(1,len_x_pts)
 
         # create constants (using future division)
-        SLOPE = dict((p,(y_pts[p]-y_pts[p-1])/(x_pts[p]-x_pts[p-1])) \
-                         for p in polytopes)
-        INTERSEPT = dict((p,y_pts[p-1] - (SLOPE[p]*x_pts[p-1])) for p in polytopes)
+        SLOPE = {p:(y_pts[p]-y_pts[p-1])/(x_pts[p]-x_pts[p-1])
+                 for p in polytopes}
+        INTERSEPT = {p:y_pts[p-1] - (SLOPE[p]*x_pts[p-1]) for p in polytopes}
 
         # create vars
         pblock.MC_poly_x = Var(polytopes)
