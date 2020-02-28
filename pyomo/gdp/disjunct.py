@@ -175,11 +175,6 @@ class IndexedDisjunct(Disjunct):
     def active(self):
         return any(d.active for d in itervalues(self._data))
 
-    @active.setter
-    def active(self, value):
-        for d in itervalues(self._data):
-            d.active = value
-
 
 _DisjunctData._Block_reserved_words = set(dir(Disjunct()))
 
@@ -455,8 +450,3 @@ class IndexedDisjunction(Disjunction):
     @property
     def active(self):
         return any(d.active for d in itervalues(self._data))
-
-    @active.setter
-    def active(self, value):
-        for d in itervalues(self._data):
-            d.active = value

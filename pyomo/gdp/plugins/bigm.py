@@ -38,10 +38,6 @@ from weakref import ref as weakref_ref
 logger = logging.getLogger('pyomo.gdp.bigm')
 
 NAME_BUFFER = {}
-used_args = ComponentMap() # If everything was sure to go well, this could be a
-                           # dictionary. But if someone messes up and gives us a
-                           # Var as a key in bigMargs, I need the error not to
-                           # be when I try to put it into this map!
 
 def _to_dict(val):
     if isinstance(val, (dict, ComponentMap)):
@@ -171,15 +167,20 @@ class BigM_Transformation(Transformation):
 
     def _apply_to(self, instance, **kwds):
         assert not NAME_BUFFER
-        assert not used_args
+        self.used_args = ComponentMap() # If everything was sure to go well,
+                                        # this could be a dictionary. But if
+                                        # someone messes up and gives us a Var
+                                        # as a key in bigMargs, I need the error
+                                        # not to be when I try to put it into
+                                        # this map!
         try:
             self._apply_to_impl(instance, **kwds)
         finally:
             # Clear the global name buffer now that we are done
             NAME_BUFFER.clear()
             # same for our bookkeeping about what we used from bigM arg dict
-            used_args.clear()
-
+            self.used_args.clear()
+    
     def _apply_to_impl(self, instance, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
 
@@ -229,12 +230,12 @@ class BigM_Transformation(Transformation):
 
         # issue warnings about anything that was in the bigM args dict that we
         # didn't use
-        if not bigM is None and len(bigM) > len(used_args):
+        if not bigM is None and len(bigM) > len(self.used_args):
             warning_msg = ("Unused arguments in the bigM map! "
                            "These arguments were not used by the "
                            "transformation:\n")
             for component, m in iteritems(bigM):
-                if not component in used_args:
+                if not component in self.used_args:
                     if hasattr(component, 'name'):
                         warning_msg += "\t%s\n" % component.name
                     else:
@@ -698,26 +699,26 @@ class BigM_Transformation(Transformation):
         parent = constraint.parent_component()
         if constraint in bigMargs:
             m = bigMargs[constraint]
-            used_args[constraint] = m
+            self.used_args[constraint] = m
             bigm_src[constraint] = (bigMargs, constraint)
             return m
         elif parent in bigMargs:
             m = bigMargs[parent]
-            used_args[parent] = m
+            self.used_args[parent] = m
             bigm_src[constraint] = (bigMargs, parent)
             return m
 
         # use the precomputed traversal up the blocks
         for arg in arg_list:
             for block, val in iteritems(arg):
-                used_args[block] = val
+                self.used_args[block] = val
                 bigm_src[constraint] = (bigMargs, block)
                 return val
                 
         # last check for value for None!
         if None in bigMargs:
             m = bigMargs[None]
-            used_args[None] = m
+            self.used_args[None] = m
             bigm_src[constraint] = (bigMargs, None)
             return m
         return None
