@@ -204,10 +204,11 @@ class ConvexHull_Transformation(Transformation):
         knownBlocks = {}
         for t in targets:
             # check that t is in fact a child of instance
-            knownBlocks = is_child_of(parent=instance, child=t,
-                                       knownBlocks=knownBlocks)
-
-            if t.type() is Disjunction:
+            if not is_child_of(parent=instance, child=t,
+                               knownBlocks=knownBlocks):
+                raise GDP_Error("Target %s is not a component on instance %s!"
+                                % (t.name, instance.name))
+            elif t.type() is Disjunction:
                 if t.parent_component() is t:
                     self._transformDisjunction(t, transBlock)
                 else:

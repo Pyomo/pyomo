@@ -441,6 +441,17 @@ class TwoTermDisj(unittest.TestCase):
                 self.assertIs(srcBigm[cons], var)
                 self.assertIs(bigm[var], cons)
 
+    def test_target_not_a_component_err(self):
+        decoy = ConcreteModel()
+        decoy.block = Block()
+        m = models.makeTwoSimpleDisjunctions()
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Target block is not a component on instance unknown!",
+            TransformationFactory('gdp.chull').apply_to,
+            m,
+            targets=[decoy.block])
+
     def test_do_not_transform_user_deactivated_disjuncts(self):
         # TODO
         pass
