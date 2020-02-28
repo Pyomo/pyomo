@@ -1887,12 +1887,11 @@ class Block(ActiveIndexedComponent):
     def _getitem_when_not_present(self, idx):
         return self._setitem_when_not_present(idx)
 
-    def find_component(self, label_or_component, context=None):
+    def find_component(self, label_or_component):
         """
         Return a block component given a name.
         """
-        return ComponentUID(
-            label_or_component, context=context).find_component_on(self)
+        return ComponentUID(label_or_component).find_component_on(self)
 
     def construct(self, data=None):
         """
