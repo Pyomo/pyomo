@@ -851,26 +851,6 @@ class _BlockData(ActiveComponentData):
                 and not isinstance(val.domain, GlobalSetBase):
             self.add_component("%s_domain" % (val.local_name,), val.domain)
 
-    def _construct_temporary_set(self, obj, name):
-        """TODO: This method has known issues (see tickets) and needs to be
-        reviewed. [JDS 9/2014]"""
-        if type(obj) is tuple:
-            if len(obj) == 1:  # pragma:nocover
-                raise Exception(
-                    "Unexpected temporary set construction for set "
-                    "%s on block %s" % (name, self.name))
-            else:
-                tobj = obj[0]
-                for t in obj[1:]:
-                    tobj = tobj * t
-                self.add_component(name, tobj)
-                tobj.virtual = True
-                return tobj
-        elif isinstance(obj, (Set, RangeSet, SetOf)):
-            self.add_component(name, obj)
-            return obj
-        raise Exception("BOGUS: %s" % (type(obj),))
-
     def _flag_vars_as_stale(self):
         """
         Configure *all* variables (on active blocks) and

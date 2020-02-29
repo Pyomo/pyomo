@@ -31,13 +31,12 @@ class TestContinuousSet(unittest.TestCase):
     def test_init(self):
         model = ConcreteModel()
         model.t = ContinuousSet(bounds=(0, 1))
-        del model.t
 
+        model = ConcreteModel()
         model.t = ContinuousSet(initialize=[1, 2, 3])
-        del model.t
 
+        model = ConcreteModel()
         model.t = ContinuousSet(bounds=(0, 5), initialize=[1, 3, 5])
-        del model.t
 
         # Expected ValueError because a ContinuousSet component
         # must contain at least two values upon construction
@@ -66,26 +65,26 @@ class TestContinuousSet(unittest.TestCase):
         self.assertEqual(len(model.t), 2)
         self.assertIn(0, model.t)
         self.assertIn(1, model.t)
-        del model.t
 
+        model = ConcreteModel()
         model.t = ContinuousSet(initialize=[1, 2, 3])
         self.assertEqual(len(model.t), 3)
         self.assertEqual(model.t.first(), 1)
         self.assertEqual(model.t.last(), 3)
-        del model.t
 
+        model = ConcreteModel()
         model.t = ContinuousSet(bounds=(1, 3), initialize=[1, 2, 3])
         self.assertEqual(len(model.t), 3)
         self.assertEqual(model.t.first(), 1)
         self.assertEqual(model.t.last(), 3)
-        del model.t
 
+        model = ConcreteModel()
         model.t = ContinuousSet(bounds=(0, 4), initialize=[1, 2, 3])
         self.assertEqual(len(model.t), 5)
         self.assertEqual(model.t.first(), 0)
         self.assertEqual(model.t.last(), 4)
-        del model.t
 
+        model = ConcreteModel()
         with self.assertRaisesRegexp(
                 ValueError, "value is not in the domain \[0..4\]"):
             model.t = ContinuousSet(bounds=(0, 4), initialize=[1, 2, 3, 5])
@@ -95,6 +94,7 @@ class TestContinuousSet(unittest.TestCase):
         # self.assertNotIn(4, model.t)
         # del model.t
 
+        model = ConcreteModel()
         with self.assertRaisesRegexp(
                 ValueError, "value is not in the domain \[2..6\]"):
             model.t = ContinuousSet(bounds=(2, 6), initialize=[1, 2, 3, 5])
@@ -103,6 +103,7 @@ class TestContinuousSet(unittest.TestCase):
         # self.assertEqual(model.t.last(), 6)
         # del model.t
 
+        model = ConcreteModel()
         with self.assertRaisesRegexp(
                 ValueError, "value is not in the domain \[2..4\]"):
             model.t = ContinuousSet(bounds=(2, 4), initialize=[1, 3, 5])
@@ -114,25 +115,30 @@ class TestContinuousSet(unittest.TestCase):
     def test_invalid_declaration(self):
         model = ConcreteModel()
         model.s = Set(initialize=[1, 2, 3])
-
         with self.assertRaises(TypeError):
             model.t = ContinuousSet(model.s, bounds=(0, 1))
 
+        model = ConcreteModel()
         with self.assertRaises(ValueError):
             model.t = ContinuousSet(bounds=(0, 0))
 
+        model = ConcreteModel()
         with self.assertRaises(ValueError):
             model.t = ContinuousSet(initialize=[1])
 
+        model = ConcreteModel()
         with self.assertRaises(ValueError):
             model.t = ContinuousSet(bounds=(None, 1))
 
+        model = ConcreteModel()
         with self.assertRaises(ValueError):
             model.t = ContinuousSet(bounds=(0, None))
 
+        model = ConcreteModel()
         with self.assertRaises(ValueError):
             model.t = ContinuousSet(initialize=[(1, 2), (3, 4)])
 
+        model = ConcreteModel()
         with self.assertRaises(ValueError):
             model.t = ContinuousSet(initialize=['foo', 'bar'])
 

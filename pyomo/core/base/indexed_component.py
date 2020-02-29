@@ -17,6 +17,7 @@ from pyomo.core.expr.numvalue import native_types
 from pyomo.core.base.indexed_component_slice import _IndexedComponent_slice
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
+from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
 
 from six import PY3, itervalues, iteritems, string_types
@@ -25,35 +26,6 @@ if PY3:
     from collections.abc import Sequence as collections_Sequence
 else:
     from collections import Sequence as collections_Sequence
-
-
-# FIXME: This mocks up part of the Set API until we can break up the set
-# module to resolve circular dependencies and can make this a proper
-# GlobalSet
-#
-#UnindexedComponent_set = set([None])
-class _UnindexedComponent_set(object):
-    def __contains__(self, val):
-        return val is None
-    def get(self, value, default):
-        if value is None:
-            return value
-        return default
-    def __iter__(self):
-        yield None
-    def subsets(self):
-        return [self]
-    def __str__(self):
-        return 'UnindexedComponent_set'
-    def __len__(self):
-        return 1
-    def __reduce__(self):
-        # Cause pickle to preserve references to this object
-        return UnindexedComponent_set
-    def __deepcopy__(self, memo):
-        # Prevent deepcopy from duplicating this object
-        return self
-UnindexedComponent_set = _UnindexedComponent_set()
 
 sequence_types = {tuple, list}
 def normalize_index(x):

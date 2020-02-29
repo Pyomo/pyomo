@@ -1,3 +1,8 @@
+1 RangeSet Declarations
+    t_domain : Dimen=1, Size=Inf, Bounds=(0, 1)
+        Key  : Finite : Members
+        None :  False : [0.0..1]
+
 4 Param Declarations
     p1 : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
         Key  : Value
@@ -549,7 +554,7 @@
         Key  : Dimen : Domain   : Size : Members
         None :     1 : [0.0..1] :   51 : {0, 0.00571, 0.027684, 0.058359, 0.086024, 0.1, 0.10571, 0.127684, 0.158359, 0.186024, 0.2, 0.20571, 0.227684, 0.258359, 0.286024, 0.3, 0.30571, 0.327684, 0.358359, 0.386024, 0.4, 0.40571, 0.427684, 0.458359, 0.486024, 0.5, 0.50571, 0.527684, 0.558359, 0.586024, 0.6, 0.60571, 0.627684, 0.658359, 0.686024, 0.7, 0.70571, 0.727684, 0.758359, 0.786024, 0.8, 0.80571, 0.827684, 0.858359, 0.886024, 0.9, 0.90571, 0.927684, 0.958359, 0.986024, 1}
 
-15 Declarations: t p1 p2 p3 p4 za zb zc dza dzb diffeq1 diffeq2 algeq1 dza_disc_eq dzb_disc_eq
+16 Declarations: t_domain t p1 p2 p3 p4 za zb zc dza dzb diffeq1 diffeq2 algeq1 dza_disc_eq dzb_disc_eq
 [[ 1.0000  0.0000 -0.0000]
  [ 0.9607  0.0327  0.0066]
  [ 0.9236  0.0547  0.0217]

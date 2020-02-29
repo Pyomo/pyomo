@@ -1,3 +1,8 @@
+1 RangeSet Declarations
+    t_domain : Dimen=1, Size=Inf, Bounds=(0, 20)
+        Key  : Finite : Members
+        None :  False : [0.0..20.0]
+
 2 Param Declarations
     b : Size=51, Index=t, Domain=Any, Default=(function), Mutable=False
         Key : Value
@@ -445,7 +450,7 @@
           b : {0: 0.25, 15: 0.025}
           c : {0: 5.0, 7: 50}
 
-12 Declarations: t b c omega theta domegadt dthetadt diffeq1 diffeq2 var_input domegadt_disc_eq dthetadt_disc_eq
+13 Declarations: t_domain t b c omega theta domegadt dthetadt diffeq1 diffeq2 var_input domegadt_disc_eq dthetadt_disc_eq
 [[ 0.0000  3.0400]
  [-0.1033  3.0297]
  [-0.2223  2.9972]

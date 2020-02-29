@@ -1217,7 +1217,6 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         m.J = SetOf([1,2,3])
 
         buf = StringIO()
-        m.pprint()
         m.pprint(ostream=buf)
         self.assertEqual(buf.getvalue().strip(), """
 4 RangeSet Declarations
@@ -4105,15 +4104,15 @@ class TestSet(unittest.TestCase):
         self.assertEqual(list(m.I), [0,2.,4])
         with self.assertRaisesRegexp(
                 ValueError, 'The value is not in the domain '
-                '\(Integers & \[0:None:2\]\) & \[0..9\]'):
+                '\(Integers & I_domain_index_0_index_1'):
             m.I.add(1.5)
         with self.assertRaisesRegexp(
                 ValueError, 'The value is not in the domain '
-                '\(Integers & \[0:None:2\]\) & \[0..9\]'):
+                '\(Integers & I_domain_index_0_index_1'):
             m.I.add(1)
         with self.assertRaisesRegexp(
                 ValueError, 'The value is not in the domain '
-                '\(Integers & \[0:None:2\]\) & \[0..9\]'):
+                '\(Integers & I_domain_index_0_index_1'):
             m.I.add(10)
 
 
@@ -4132,7 +4131,6 @@ class TestSet(unittest.TestCase):
         m.N = Integers - Reals
 
         buf = StringIO()
-        m.pprint()
         m.pprint(ostream=buf)
         self.assertEqual(buf.getvalue().strip(), """
 6 Set Declarations
@@ -4244,7 +4242,6 @@ class TestSet(unittest.TestCase):
         m.KK = Set([1,2], initialize=[], dimen=lambda m,i: i)
 
         output = StringIO()
-        m.pprint()
         m.I.pprint(ostream=output)
         m.II.pprint(ostream=output)
         m.J.pprint(ostream=output)
@@ -5787,11 +5784,14 @@ c : Size=3, Index=CHOICES, Active=True
             output = StringIO()
             m.pprint(ostream=output)
             ref = """
-2 Set Declarations
+3 Set Declarations
     arc_keys : Set of arcs
         Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain          : Size : Members
+        None :     2 : arc_keys_domain :    2 : {(0, 0), (0, 1)}
+    arc_keys_domain : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain              : Size : Members
-        None :     2 : node_keys*node_keys :    2 : {(0, 0), (0, 1)}
+        None :     2 : node_keys*node_keys :    4 : {(0, 0), (0, 1), (1, 0), (1, 1)}
     node_keys : Set of nodes
         Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
@@ -5808,7 +5808,7 @@ c : Size=3, Index=CHOICES, Active=True
         Key  : Active : Sense    : Expression
         None :   True : minimize : arc_variables[0,0] + arc_variables[0,1]
 
-4 Declarations: node_keys arc_keys arc_variables obj
+5 Declarations: node_keys arc_keys_domain arc_keys arc_variables obj
 """.strip()
             self.assertEqual(output.getvalue().strip(), ref)
 
@@ -5817,11 +5817,14 @@ c : Size=3, Index=CHOICES, Active=True
             output = StringIO()
             m.pprint(ostream=output)
             ref = """
-2 Set Declarations
+3 Set Declarations
     arc_keys : Set of arcs
         Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain          : Size : Members
+        None :  None : arc_keys_domain :    2 : {ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0)), ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))}
+    arc_keys_domain : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain              : Size : Members
-        None :  None : node_keys*node_keys :    2 : {ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0)), ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))}
+        None :  None : node_keys*node_keys :    4 : {(NodeKey(id=0), NodeKey(id=0)), (NodeKey(id=0), NodeKey(id=1)), (NodeKey(id=1), NodeKey(id=0)), (NodeKey(id=1), NodeKey(id=1))}
     node_keys : Set of nodes
         Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
@@ -5838,7 +5841,7 @@ c : Size=3, Index=CHOICES, Active=True
         Key  : Active : Sense    : Expression
         None :   True : minimize : arc_variables[ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=0))] + arc_variables[ArcKey(node_from=NodeKey(id=0), node_to=NodeKey(id=1))]
 
-4 Declarations: node_keys arc_keys arc_variables obj
+5 Declarations: node_keys arc_keys_domain arc_keys arc_variables obj
 """.strip()
             self.assertEqual(output.getvalue().strip(), ref)
 

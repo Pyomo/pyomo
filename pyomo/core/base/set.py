@@ -38,6 +38,9 @@ from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, normalize_index,
 )
+from pyomo.core.base.global_set import (
+    GlobalSets, GlobalSetBase,
+)
 from pyomo.core.base.misc import sorted_robust
 
 if six.PY3:
@@ -1881,6 +1884,13 @@ class Set(IndexedComponent):
            and self._init_values._init.__class__ is IndexedCallInitializer:
             self._init_values._init = CountedCallInitializer(
                 self, self._init_values._init)
+        # HACK: the DAT parser needs to know the domain of a set in
+        # order to correctly parse the data stream.
+        if not self.is_indexed():
+            if self._init_domain.constant():
+                self._domain = self._init_domain(self.parent_block(), None)
+            if self._init_dimen.constant():
+                self._dimen = self._init_dimen(self.parent_block(), None)
 
 
     @deprecated("check_values() is deprecated: Sets only contain valid members",
@@ -1981,7 +1991,7 @@ class Set(IndexedComponent):
             obj._dimen = _d
         if domain is not None:
             obj._domain = domain
-            domain.construct()
+            domain.parent_component().construct()
         if self._init_validate is not None:
             try:
                 obj._validate = Initializer(self._init_validate(_block, index))
@@ -2819,7 +2829,7 @@ class AbstractFiniteSimpleRangeSet(FiniteSimpleRangeSet):
 ############################################################################
 
 class SetOperator(_SetData, Set):
-    __slots__ = ('_sets','_implicit_subsets')
+    __slots__ = ('_sets',)
 
     def __init__(self, *args, **kwds):
         _SetData.__init__(self, component=self)
@@ -3829,28 +3839,6 @@ class _EmptySet(_FiniteSetMixin, _SetData, Set):
 
 
 ############################################################################
-
-GlobalSets = {}
-def _get_global_set(name):
-    return GlobalSets[name]
-_get_global_set.__safe_for_unpickling__ = True
-
-class GlobalSetBase(object):
-    """The base class for all Global sets"""
-    __slots__ = ()
-
-    def __reduce__(self):
-        # Cause pickle to preserve references to this object
-        return _get_global_set, (self.local_name,)
-
-    def __deepcopy__(self, memo):
-        # Prevent deepcopy from duplicating this object
-        return self
-
-    def __str__(self):
-        # Override str() to always print out the global set name
-        return self.name
-
 
 def DeclareGlobalSet(obj, caller_globals=None):
     """Declare a copy of a set as a global set in the calling module

@@ -2985,9 +2985,9 @@ class TestSetErrors(PyomoModel):
         #     pass
         a=Set()
         b=Set(a)
-        c=Set(within=b, dimen=2)
         with self.assertRaisesRegexp(
                 TypeError, "Cannot apply a Set operator to an indexed"):
+            c=Set(within=b, dimen=2)
             c.construct()
 
         a=Set()

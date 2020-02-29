@@ -1,4 +1,4 @@
-25 Set Declarations
+28 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {1, 2, 3}
@@ -26,9 +26,15 @@
         Key  : Dimen : Domain : Size : Members
         None :     2 :    A*B :   12 : {(1, 2), (1, 3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5), (3, 2), (3, 3), (3, 4), (3, 5)}
     Hsub : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain      : Size : Members
+        None :     2 : Hsub_domain :    3 : {(1, 2), (1, 3), (3, 3)}
+    Hsub_domain : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :    3 : {(1, 2), (1, 3), (3, 3)}
+        None :     2 :    A*B :   12 : {(1, 2), (1, 3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5), (3, 2), (3, 3), (3, 4), (3, 5)}
     I : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain   : Size : Members
+        None :     2 : I_domain :   12 : {(1, 2), (1, 3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5), (3, 2), (3, 3), (3, 4), (3, 5)}
+    I_domain : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain : Size : Members
         None :     2 :    A*B :   12 : {(1, 2), (1, 3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5), (3, 2), (3, 3), (3, 4), (3, 5)}
     J : Size=1, Index=None, Ordered=Insertion
@@ -47,8 +53,11 @@
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    2 : {1, 3}
     N : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain   : Size : Members
+        None :     2 : N_domain :    0 :      {}
+    N_domain : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :    0 :      {}
+        None :     2 :    A*B :   12 : {(1, 2), (1, 3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5), (3, 2), (3, 3), (3, 4), (3, 5)}
     O : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :    -- :    Any :    0 :      {}
@@ -101,4 +110,4 @@
         Key  : Finite : Members
         None :   True :   [1:4]
 
-26 Declarations: A B C_index C D E F G H Hsub I J K K_2 L M N O P_index P R S T U V_index V
+29 Declarations: A B C_index C D E F G H Hsub_domain Hsub I_domain I J K K_2 L M N_domain N O P_index P R S T U V_index V

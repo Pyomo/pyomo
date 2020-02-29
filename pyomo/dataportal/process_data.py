@@ -46,10 +46,19 @@ global Filename
 
 def _guess_set_dimen(index):
     d = 0
+    # Look through the subsets of this index and get their dimen
     for subset in index.subsets():
         sub_d = subset.dimen
+        # If the subset has an unknown dimen, then look at the subset's
+        # domain to guess the dimen.
         if sub_d is UnknownSetDimen:
-            d += 1
+            for domain_subset in subset.domain.subsets():
+                sub_d = domain_subset.domain.dimen
+                if sub_d in (UnknownSetDimen, None):
+                    # We will guess that None / Unknown domains are dimen==1
+                    d += 1
+                else:
+                    d += sub_d
         elif sub_d is None:
             return None
         else:
