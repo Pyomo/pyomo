@@ -209,7 +209,7 @@ class TestMindtPy(unittest.TestCase):
 
     # lazy callback tests
 
-    def test_OA_8PP(self):
+    def test_lazy_OA_8PP(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
@@ -226,7 +226,7 @@ class TestMindtPy(unittest.TestCase):
             #               TerminationCondition.optimal)
             self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
 
-    def test_OA_8PP_init_max_binary(self):
+    def test_lazy_OA_8PP_init_max_binary(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
@@ -242,7 +242,7 @@ class TestMindtPy(unittest.TestCase):
             #               TerminationCondition.optimal)
             self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
 
-    def test_OA_MINLP_simple(self):
+    def test_lazy_OA_MINLP_simple(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
@@ -259,7 +259,7 @@ class TestMindtPy(unittest.TestCase):
             #               TerminationCondition.optimal)
             self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
 
-    def test_OA_MINLP2_simple(self):
+    def test_lazy_OA_MINLP2_simple(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
@@ -276,7 +276,7 @@ class TestMindtPy(unittest.TestCase):
             #               TerminationCondition.optimal)
             self.assertTrue(abs(value(model.cost.expr) - 6.00976) <= 1E-2)
 
-    def test_OA_MINLP3_simple(self):
+    def test_lazy_OA_MINLP3_simple(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
@@ -292,7 +292,7 @@ class TestMindtPy(unittest.TestCase):
             #               TerminationCondition.optimal)
             self.assertTrue(abs(value(model.cost.expr) - (-5.512)) <= 1E-2)
 
-    def test_OA_Proposal(self):
+    def test_lazy_OA_Proposal(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()

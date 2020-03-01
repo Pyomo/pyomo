@@ -243,9 +243,6 @@ class LazyOACallback(LazyConstraintCallback):
         self.handle_lazy_master_mip_optimal(
             master_mip, solve_data, config, opt)
 
-        # Call the MILP post-solve callback
-        # config.call_after_master_solve(master_mip, solve_data)
-
         # solve subproblem
         # Solve NLP subproblem
         # The constraint linearization happens in the handlers
@@ -253,11 +250,9 @@ class LazyOACallback(LazyConstraintCallback):
 
         # add oa cuts
         if fix_nlp_result.solver.termination_condition is tc.optimal:
-            # handle_NLP_subproblem_optimal(fix_nlp, solve_data, config)
             self.handle_lazy_NLP_subproblem_optimal(
                 fix_nlp, solve_data, config, opt)
         elif fix_nlp_result.solver.termination_condition is tc.infeasible:
-            # handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config)
             self.handle_lazy_NLP_subproblem_infeasible(
                 fix_nlp, solve_data, config, opt)
         else:
@@ -267,9 +262,7 @@ class LazyOACallback(LazyConstraintCallback):
 
 def solve_OA_master(solve_data, config):
     solve_data.mip_iter += 1
-    # master_mip = solve_data.mip.clone()
     MindtPy = solve_data.mip.MindtPy_utils
-    # solve_data.oa_cuts_expr = []
     config.logger.info(
         'MIP %s: Solve master problem.' %
         (solve_data.mip_iter,))
@@ -286,6 +279,8 @@ def solve_OA_master(solve_data, config):
     sign_adjust = 1 if main_objective.sense == minimize else -1
     if MindtPy.find_component('MindtPy_oa_obj') is not None:
         del MindtPy.MindtPy_oa_obj
+    if MindtPy.find_component('MindtPy_penalty_expr') is not None:
+        del MindtPy.MindtPy_penalty_expr
     if config.add_slack == True:
         MindtPy.MindtPy_penalty_expr = Expression(
             expr=sign_adjust * config.OA_penalty_factor * sum(
@@ -307,7 +302,6 @@ def solve_OA_master(solve_data, config):
         masteropt = SolverFactory(config.mip_solver)
         if isinstance(masteropt, PersistentSolver):
             masteropt.set_instance(solve_data.mip, symbolic_solver_labels=True)
-            print('instance set!')
         if config.lazy_callback == True:
             lazyoa = masteropt._solver_model.register_callback(LazyOACallback)
             lazyoa.master_mip = solve_data.mip
@@ -327,8 +321,6 @@ def solve_OA_master(solve_data, config):
                     master_mip_results.problem.upper_bound, solve_data.UB)
                 solve_data.UB_progress.append(solve_data.UB)
 
-        # for cut in solve_data.oa_cuts_expr:
-        #     solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(cut)
     if master_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
