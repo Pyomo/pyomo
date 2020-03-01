@@ -27,9 +27,6 @@ from pyomo.repn import generate_standard_repn
 
 class LazyOACallback(LazyConstraintCallback):
 
-    def _get_gap(self):
-        print('self.get_MIP_relative_gap: ', self.get_MIP_relative_gap())
-
     def copy_lazy_var_list_values(self, opt, from_list, to_list, config,
                                   skip_stale=False, skip_fixed=True,
                                   ignore_integrality=False):
@@ -73,7 +70,6 @@ class LazyOACallback(LazyConstraintCallback):
                     v_to.set_value(0)
                 else:
                     raise
-            # print(v_to, v_to.value)
 
     def add_lazy_oa_cuts(self, target_model, dual_values, solve_data, config, opt,
                          linearize_active=True,
@@ -190,12 +186,11 @@ class LazyOACallback(LazyConstraintCallback):
             solve_data.best_solution_found = fix_nlp.clone()
 
         if config.strategy == 'OA':
-            # don't need we don't need to solve the master_mip again, we just need to continue branch and bound.
+            # In OA algorithm, OA cuts are generated based on the solution of the subproblem
+            # We need to first copy the value of variales from the subproblem and then add cuts
             copy_var_list_values(fix_nlp.MindtPy_utils.variable_list,
-                                 # master_mip.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config)
-            # self.add_lazy_oa_cuts(master_mip, dual_values, solve_data, config, opt)
             self.add_lazy_oa_cuts(
                 solve_data.mip, dual_values, solve_data, config, opt)
 
@@ -228,18 +223,15 @@ class LazyOACallback(LazyConstraintCallback):
         elif config.strategy == 'OA':
             config.logger.info('Solving feasibility problem')
             if config.initial_feas:
-                # add_feas_slacks(fix_nlp, solve_data)
-                # config.initial_feas = False
+                config.initial_feas = False
                 feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
+                # In OA algorithm, OA cuts are generated based on the solution of the subproblem
+                # We need to first copy the value of variales from the subproblem and then add cuts
                 copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
                                      solve_data.mip.MindtPy_utils.variable_list,
                                      config)
                 self.add_lazy_oa_cuts(
                     solve_data.mip, dual_values, solve_data, config, opt)
-        # Add an integer cut to exclude this discrete option
-        # var_values = list(v.value for v in fix_nlp.MindtPy_utils.variable_list)
-        # if config.add_integer_cuts:
-        #     add_int_cut(var_values, solve_data, config)  # excludes current discrete option
 
     def __call__(self):
         solve_data = self.solve_data
@@ -247,8 +239,6 @@ class LazyOACallback(LazyConstraintCallback):
         opt = self.opt
         master_mip = self.master_mip
         cpx = opt._solver_model
-        # for var in master_mip.Y.itervalues():
-        #     print(var,self.get_values(opt._pyomo_var_to_solver_var_map[var]))
 
         self.handle_lazy_master_mip_optimal(
             master_mip, solve_data, config, opt)
@@ -260,23 +250,19 @@ class LazyOACallback(LazyConstraintCallback):
         # Solve NLP subproblem
         # The constraint linearization happens in the handlers
         fix_nlp, fix_nlp_result = solve_NLP_subproblem(solve_data, config)
-        # fix_nlp.Y.pprint()
 
         # add oa cuts
         if fix_nlp_result.solver.termination_condition is tc.optimal:
             # handle_NLP_subproblem_optimal(fix_nlp, solve_data, config)
-            print('nlp optimal!')
             self.handle_lazy_NLP_subproblem_optimal(
                 fix_nlp, solve_data, config, opt)
         elif fix_nlp_result.solver.termination_condition is tc.infeasible:
             # handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config)
             self.handle_lazy_NLP_subproblem_infeasible(
                 fix_nlp, solve_data, config, opt)
-            print('nlp infeasible!')
         else:
-            print('nlp other condition!')
-            # handle_NLP_subproblem_other_termination(fix_nlp, fix_nlp_result.solver.termination_condition,
-            #                                         solve_data, config)
+            # TODO
+            pass
 
 
 def solve_OA_master(solve_data, config):
@@ -298,6 +284,8 @@ def solve_OA_master(solve_data, config):
     main_objective.deactivate()
 
     sign_adjust = 1 if main_objective.sense == minimize else -1
+    if MindtPy.find_component('MindtPy_oa_obj') is not None:
+        del MindtPy.MindtPy_oa_obj
     if config.add_slack == True:
         MindtPy.MindtPy_penalty_expr = Expression(
             expr=sign_adjust * config.OA_penalty_factor * sum(
@@ -310,7 +298,6 @@ def solve_OA_master(solve_data, config):
         MindtPy.MindtPy_oa_obj = Objective(
             expr=main_objective.expr,
             sense=main_objective.sense)
-
     # Deactivate extraneous IMPORT/EXPORT suffixes
     getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
     getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
@@ -327,10 +314,8 @@ def solve_OA_master(solve_data, config):
             lazyoa.solve_data = solve_data
             lazyoa.config = config
             lazyoa.opt = masteropt
-            pass
         master_mip_results = masteropt.solve(
-            solve_data.mip, **config.mip_solver_args, tee=True)
-        print(master_mip_results)
+            solve_data.mip, **config.mip_solver_args)
 
         if config.lazy_callback == True:
             if main_objective.sense == minimize:

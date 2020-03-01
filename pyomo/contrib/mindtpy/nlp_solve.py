@@ -59,7 +59,7 @@ def solve_NLP_subproblem(solve_data, config):
     # Solve the NLP
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.nlp_solver).solve(
-            fix_nlp, **config.nlp_solver_args)  # , tee=True)
+            fix_nlp, **config.nlp_solver_args)
     return fix_nlp, results
 
 

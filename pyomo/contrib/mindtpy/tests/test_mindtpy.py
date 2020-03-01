@@ -10,7 +10,7 @@ from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP
 from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
 from pyomo.environ import SolverFactory, value
 
-required_solvers = ('ipopt', 'cplex')  # 'cplex_persistent')
+required_solvers = ('ipopt', 'cplex_persistent')  # 'cplex_persistent')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:
@@ -24,7 +24,7 @@ else:
                  "Symbolic differentiation is not available")
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
-    '''
+
     def test_OA_8PP(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -149,7 +149,6 @@ class TestMindtPy(unittest.TestCase):
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
             self.assertTrue(abs(value(model.obj.expr) - 0.66555) <= 1E-2)
-    '''
 
     def test_OA_Proposal_with_int_cuts(self):
         """Test the outer approximation decomposition algorithm."""
@@ -160,7 +159,6 @@ class TestMindtPy(unittest.TestCase):
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
                       add_integer_cuts=True,
-                      #   integer_cuts=False,
                       integer_to_binary=True  # if we use lazy callback, we cannot set integer_to_binary True
                       )
 
@@ -210,7 +208,7 @@ class TestMindtPy(unittest.TestCase):
     #
 
     # lazy callback tests
-    '''
+
     def test_OA_8PP(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -220,7 +218,9 @@ class TestMindtPy(unittest.TestCase):
                       init_strategy='rNLP',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      bound_tolerance=1E-5)
+                      bound_tolerance=1E-5,
+                      lazy_callback=True,
+                      iteration_limit=1)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -234,7 +234,9 @@ class TestMindtPy(unittest.TestCase):
             opt.solve(model, strategy='OA',
                       init_strategy='max_binary',
                       mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0])
+                      nlp_solver=required_solvers[0],
+                      lazy_callback=True,
+                      iteration_limit=1)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -249,7 +251,9 @@ class TestMindtPy(unittest.TestCase):
                       init_strategy='initial_binary',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      obj_bound=10)
+                      obj_bound=10,
+                      lazy_callback=True,
+                      iteration_limit=1)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -264,7 +268,9 @@ class TestMindtPy(unittest.TestCase):
                       init_strategy='initial_binary',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      obj_bound=10)
+                      obj_bound=10,
+                      lazy_callback=True,
+                      iteration_limit=1)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -278,7 +284,9 @@ class TestMindtPy(unittest.TestCase):
             opt.solve(model, strategy='OA', init_strategy='initial_binary',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      obj_bound=10)
+                      obj_bound=10,
+                      lazy_callback=True,
+                      iteration_limit=1)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -291,28 +299,31 @@ class TestMindtPy(unittest.TestCase):
             print('\n Solving problem with Outer Approximation')
             opt.solve(model, strategy='OA',
                       mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0])
+                      nlp_solver=required_solvers[0],
+                      lazy_callback=True,
+                      iteration_limit=1)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
             self.assertTrue(abs(value(model.obj.expr) - 0.66555) <= 1E-2)
 
-    def test_OA_Proposal_with_int_cuts(self):
-        """Test the outer approximation decomposition algorithm."""
-        with SolverFactory('mindtpy') as opt:
-            model = ProposalModel()
-            print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0],
-                      add_integer_cuts=True,
-                      integer_to_binary=True  # if we use lazy callback, we cannot set integer_to_binary True
-                      )
+    # TODO fix the bug with integer_to_binary
+    # def test_OA_Proposal_with_int_cuts(self):
+    #     """Test the outer approximation decomposition algorithm."""
+    #     with SolverFactory('mindtpy') as opt:
+    #         model = ProposalModel()
+    #         print('\n Solving problem with Outer Approximation')
+    #         opt.solve(model, strategy='OA',
+    #                   mip_solver=required_solvers[1],
+    #                   nlp_solver=required_solvers[0],
+    #                   add_integer_cuts=True,
+    #                   integer_to_binary=True,  # if we use lazy callback, we cannot set integer_to_binary True
+    #                   lazy_callback=True,
+    #                   iteration_limit=1)
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
-            self.assertAlmostEquals(value(model.obj.expr), 0.66555, places=2)
-    '''
+    #         # self.assertIs(results.solver.termination_condition,
+    #         #               TerminationCondition.optimal)
+    #         self.assertAlmostEquals(value(model.obj.expr), 0.66555, places=2)
 
 
 if __name__ == "__main__":
