@@ -35,6 +35,9 @@ from pyomo.common.deprecation import deprecation_warning
 from six import iterkeys, iteritems
 from weakref import ref as weakref_ref
 
+#DEBUG
+from nose.tools import set_trace
+
 logger = logging.getLogger('pyomo.gdp.bigm')
 
 NAME_BUFFER = {}
@@ -230,17 +233,19 @@ class BigM_Transformation(Transformation):
 
         # issue warnings about anything that was in the bigM args dict that we
         # didn't use
-        if not bigM is None and len(bigM) > len(self.used_args):
-            warning_msg = ("Unused arguments in the bigM map! "
-                           "These arguments were not used by the "
-                           "transformation:\n")
-            for component, m in iteritems(bigM):
-                if not component in self.used_args:
+        if bigM is not None:
+            unused_args = ComponentSet(bigM.keys()) - \
+                          ComponentSet(self.used_args.keys())
+            if len(unused_args) > 0:
+                warning_msg = ("Unused arguments in the bigM map! "
+                               "These arguments were not used by the "
+                               "transformation:\n")
+                for component in unused_args:
                     if hasattr(component, 'name'):
                         warning_msg += "\t%s\n" % component.name
                     else:
                         warning_msg += "\t%s\n" % component
-            logger.warn(warning_msg)
+                logger.warn(warning_msg)
 
         # HACK for backwards compatibility with the older GDP transformations
         #
