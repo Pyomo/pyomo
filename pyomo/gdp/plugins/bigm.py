@@ -34,6 +34,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecation_warning
 from six import iterkeys, iteritems
 from weakref import ref as weakref_ref
+import sys
 
 #DEBUG
 from nose.tools import set_trace
@@ -804,12 +805,13 @@ class BigM_Transformation(Transformation):
         transBlock: _BlockData which is in the relaxedDisjuncts IndexedBlock
                     on a transformation block.
         """
-        if not hasattr(transBlock, '_srcDisjunct') or \
-           not type(transBlock._srcDisjunct) is weakref_ref:
+        try:
+            return transBlock._srcDisjunct()
+        except:
             raise GDP_Error("Block %s doesn't appear to be a transformation "
                             "block for a disjunct. No source disjunct found." 
-                            % transBlock.name)
-        return transBlock._srcDisjunct()
+                            "\n\t(original error: %s)" 
+                            % (transBlock.name, sys.exc_info()[1]))
 
     def get_src_constraint(self, transformedConstraint):
         """Return the original Constraint whose transformed counterpart is
@@ -828,12 +830,13 @@ class BigM_Transformation(Transformation):
         if not hasattr(transBlock, "_constraintMap"):
             raise GDP_Error("Constraint %s is not a transformed constraint" 
                             % transformedConstraint.name)
+        # if something goes wrong here, it's a bug in the mappings.
         return transBlock._constraintMap['srcConstraints'][transformedConstraint]
 
     def _find_parent_disjunct(self, constraint):
         # traverse up until we find the disjunct this constraint lives on
         parent_disjunct = constraint.parent_block()
-        while type(parent_disjunct) not in (_DisjunctData, SimpleDisjunct):
+        while not isinstance(parent_disjunct, (_DisjunctData, SimpleDisjunct)):
             if parent_disjunct is None:
                 raise GDP_Error(
                     "Constraint %s is not on a disjunct and so was not "
@@ -844,6 +847,8 @@ class BigM_Transformation(Transformation):
 
     def _get_constraint_transBlock(self, constraint):
         parent_disjunct = self._find_parent_disjunct(constraint)
+        # we know from _find_parent_disjunct that parent_disjunct is a Disjunct,
+        # so the below is OK
         transBlock = parent_disjunct._transformation_block
         if transBlock is None:
             raise GDP_Error("Constraint %s is on a disjunct which has not been "
@@ -918,5 +923,6 @@ class BigM_Transformation(Transformation):
                     Disjunct
         """
         transBlock = self._get_constraint_transBlock(constraint)
-        # This is a KeyError if it fails, but it is also my fault if it fails...
+        # This is a KeyError if it fails, but it is also my fault if it
+        # fails... (That is, it's a bug in the mapping.)
         return transBlock.bigm_src[constraint]

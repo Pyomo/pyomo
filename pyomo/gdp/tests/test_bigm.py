@@ -2916,7 +2916,7 @@ class TestErrors(unittest.TestCase):
         self.assertRaisesRegexp(
             GDP_Error,
             "Block b doesn't appear to be a transformation block for a "
-            "disjunct. No source disjunct found.",
+            "disjunct. No source disjunct found.*",
             bigm.get_src_disjunct,
             m.b)
 
