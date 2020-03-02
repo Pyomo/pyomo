@@ -1490,7 +1490,7 @@ class ScenarioTree(object):
 
         # the input stages must be ordered, for both output purposes
         # and knowledge of the final stage.
-        if not stage_ids.ordered:
+        if not stage_ids.isordered():
             raise ValueError(
                 "An ordered set of stage IDs must be supplied in "
                 "the ScenarioTree constructor")
@@ -1498,8 +1498,8 @@ class ScenarioTree(object):
         for node_id in node_ids:
             node_stage_id = node_stage_ids[node_id].value
             if node_stage_id != stage_ids.last():
-                if (len(stage_variable_ids[node_stage_id].value) == 0) and \
-                   (len(node_variable_ids[node_id].value) == 0):
+                if (len(stage_variable_ids[node_stage_id]) == 0) and \
+                   (len(node_variable_ids[node_id]) == 0):
                     raise ValueError(
                         "Scenario tree node %s, belonging to stage %s, "
                         "has not been declared with any variables. "
