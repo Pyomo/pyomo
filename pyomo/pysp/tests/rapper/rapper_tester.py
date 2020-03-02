@@ -63,6 +63,8 @@ class Testrapper(unittest.TestCase):
         if "ReferenceModel" in sys.modules:
             del sys.modules["ReferenceModel"]
 
+        sys.path.remove(self.tdir)
+        shutil.rmtree(self.tdir, ignore_errors=True)
         os.chdir(self.savecwd)
 
     def test_fct_contruct(self):
