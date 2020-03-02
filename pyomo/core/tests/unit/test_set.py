@@ -342,7 +342,7 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertEqual(Reals.dim(), 0)
         self.assertIs(Reals.index_set(), UnindexedComponent_set)
         with self.assertRaisesRegex(
-                TypeError, "object of type 'GlobalSet' has no len\(\)"):
+                TypeError, ".*'GlobalSet' has no len"):
             len(Reals)
         with self.assertRaisesRegex(
                 TypeError, "'GlobalSet' object is not iterable "
@@ -382,7 +382,7 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertEqual(Integers.dim(), 0)
         self.assertIs(Integers.index_set(), UnindexedComponent_set)
         with self.assertRaisesRegex(
-                TypeError, "object of type 'GlobalSet' has no len\(\)"):
+                TypeError, ".*'GlobalSet' has no len"):
             len(Integers)
         with self.assertRaisesRegex(
                 TypeError, "'GlobalSet' object is not iterable "
@@ -422,7 +422,7 @@ class InfiniteSetTester(unittest.TestCase):
         self.assertEqual(Any.dim(), 0)
         self.assertIs(Any.index_set(), UnindexedComponent_set)
         with self.assertRaisesRegex(
-                TypeError, "object of type 'Any' has no len\(\)"):
+                TypeError, ".*'Any' has no len"):
             len(Any)
         with self.assertRaisesRegex(
                 TypeError, "'GlobalSet' object is not iterable "
@@ -451,8 +451,9 @@ class InfiniteSetTester(unittest.TestCase):
         with LoggingIntercept(os, 'pyomo'):
             self.assertIn(None, AnyWithNone)
             self.assertIn(1, AnyWithNone)
-        self.assertIn("DEPRECATED: The AnyWithNone set is deprecated",
-                      os.getvalue())
+        self.assertRegexpMatches(
+            os.getvalue(),
+            "^DEPRECATED: The AnyWithNone set is deprecated")
 
         self.assertEqual(Any, AnyWithNone)
         self.assertEqual(AnyWithNone, Any)
@@ -854,12 +855,12 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         i = RangeSet(1,3,0)
         with self.assertRaisesRegexp(
-                TypeError, ".*'InfiniteSimpleRangeSet' has no len()"):
+                TypeError, ".*'InfiniteSimpleRangeSet' has no len"):
             len(i)
         self.assertEqual(len(list(i.ranges())), 1)
 
         with self.assertRaisesRegexp(
-                TypeError, ".*'GlobalSet' has no len()"):
+                TypeError, ".*'GlobalSet' has no len"):
             len(Integers)
         self.assertEqual(len(list(Integers.ranges())), 2)
 
@@ -2921,8 +2922,9 @@ J : Size=1, Index=None, Ordered=False
         os = StringIO()
         with LoggingIntercept(os, 'pyomo'):
             self.assertEqual(x.set_tuple, [a,b])
-        self.assertIn('DEPRECATED: SetProduct.set_tuple is deprecated.',
-                      os.getvalue())
+        self.assertRegexpMatches(
+            os.getvalue(),
+            '^DEPRECATED: SetProduct.set_tuple is deprecated.')
 
     def test_no_normalize_index(self):
         try:
@@ -3190,9 +3192,10 @@ J : Size=1, Index=None, Ordered=False
         with LoggingIntercept(output, 'pyomo.core'):
             m.create_instance(
                 data={None:{'J': {None: [(1,1),(1,2),(2,1),(2,2)]}}})
-        self.assertIn(
-            "DEPRECATED: Providing construction data to SetOperator objects "
-            "is deprecated", output.getvalue().replace('\n',' '))
+        self.assertRegexpMatches(
+            output.getvalue().replace('\n',' '),
+            "^DEPRECATED: Providing construction data to SetOperator objects "
+            "is deprecated")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
@@ -3202,9 +3205,10 @@ J : Size=1, Index=None, Ordered=False
                     "\(2, 1\)\]\}"):
                 m.create_instance(
                     data={None:{'J': {None: [(1,1),(1,2),(2,1)]}}})
-        self.assertIn(
-            "DEPRECATED: Providing construction data to SetOperator objects "
-            "is deprecated", output.getvalue().replace('\n',' '))
+        self.assertRegexpMatches(
+            output.getvalue().replace('\n',' '),
+            "^DEPRECATED: Providing construction data to SetOperator objects "
+            "is deprecated")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
@@ -3214,9 +3218,10 @@ J : Size=1, Index=None, Ordered=False
                     "\(2, 1\), \(2, 2\)\]\}"):
                 m.create_instance(
                     data={None:{'J': {None: [(1,3),(1,2),(2,1),(2,2)]}}})
-        self.assertIn(
-            "DEPRECATED: Providing construction data to SetOperator objects "
-            "is deprecated", output.getvalue().replace('\n',' '))
+        self.assertRegexpMatches(
+            output.getvalue().replace('\n',' '),
+            "^DEPRECATED: Providing construction data to SetOperator objects "
+            "is deprecated")
 
     def test_setproduct_nondim_set(self):
         m = ConcreteModel()
@@ -3438,9 +3443,9 @@ class TestSet(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core'):
             m.I = Set(virtual=True)
             self.assertEqual(len(m.I), 0)
-        self.assertEqual(
+        self.assertRegexpMatches(
             output.getvalue(),
-            "DEPRECATED: Pyomo Sets ignore the 'virtual' keyword argument\n")
+            "^DEPRECATED: Pyomo Sets ignore the 'virtual' keyword argument")
 
     def test_scalar_set_initialize_and_iterate(self):
         m = ConcreteModel()
