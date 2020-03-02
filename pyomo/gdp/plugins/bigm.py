@@ -320,7 +320,7 @@ class BigM_Transformation(Transformation):
         # if this is an IndexedDisjunction we have seen in a prior call to the
         # transformation, we already have a transformation block for it. We'll
         # use that.
-        if not obj._algebraic_constraint is None:
+        if obj._algebraic_constraint is not None:
             transBlock = obj._algebraic_constraint().parent_block()
         else:
             transBlock = self._add_transformation_block(obj.parent_block())
@@ -382,9 +382,9 @@ class BigM_Transformation(Transformation):
 
         # add or (or xor) constraint
         if xor:
-            xorConstraint.add(index, expr=or_expr == 1)
+            xorConstraint[index] = or_expr == 1
         else:
-            xorConstraint.add(index, expr=or_expr >= 1)
+            xorConstraint[index] = or_expr >= 1
         # Mark the DisjunctionData as transformed by mapping it to its XOR
         # constraint.
         obj._algebraic_constraint = weakref_ref(xorConstraint[index])
@@ -471,13 +471,11 @@ class BigM_Transformation(Transformation):
             # we leave the transformation block because it still has the XOR
             # constraints, which we want to be on the parent disjunct.
 
-        # Now look through the component map of block and transform
-        # everything we have a handler for. Yell if we don't know how
-        # to handle it.
-        for name, obj in list(iteritems(block.component_map())):
-            # This means non-ActiveComponent types cannot have handlers
-            if not hasattr(obj, 'active') or not obj.active:
-                continue
+        # Now look through the component map of block and transform everything
+        # we have a handler for. Yell if we don't know how to handle it. (Note
+        # that because we only iterate through active components, this means
+        # non-ActiveComponent types cannot have handlers.)
+        for obj in block.component_objects(active=True, descend_into=False):
             handler = self.handlers.get(obj.type(), None)
             if not handler:
                 if handler is None:
