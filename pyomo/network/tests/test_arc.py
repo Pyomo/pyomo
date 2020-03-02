@@ -1163,8 +1163,9 @@ class TestArc(unittest.TestCase):
 
         ref = """
 1 Set Declarations
-    time : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
-        [1, 2, 3]
+    time : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {1, 2, 3}
 
 5 Block Declarations
     cs1_expanded : Size=1, Index=None, Active=True
@@ -1261,6 +1262,7 @@ class TestArc(unittest.TestCase):
 """
         os = StringIO()
         m.pprint(ostream=os)
+        print os.getvalue()
         self.assertEqual(os.getvalue().strip(), ref.strip())
 
     def test_extensive_expansion(self):
