@@ -1262,7 +1262,6 @@ class TestArc(unittest.TestCase):
 """
         os = StringIO()
         m.pprint(ostream=os)
-        print os.getvalue()
         self.assertEqual(os.getvalue().strip(), ref.strip())
 
     def test_extensive_expansion(self):
