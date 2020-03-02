@@ -36,8 +36,6 @@ from six import iterkeys, iteritems
 from weakref import ref as weakref_ref
 import sys
 
-#DEBUG
-from nose.tools import set_trace
 
 logger = logging.getLogger('pyomo.gdp.bigm')
 

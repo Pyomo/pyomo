@@ -23,8 +23,6 @@ linear_solvers = pyomo.opt.check_available_solvers(
 import random
 from six import iteritems, iterkeys
 
-# DEBUG
-from nose.tools import set_trace
 
 EPS = TransformationFactory('gdp.chull').CONFIG.EPS
 
