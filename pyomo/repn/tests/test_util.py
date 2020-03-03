@@ -25,12 +25,16 @@ class TestRepnUtils(unittest.TestCase):
         with LoggingIntercept(log, 'pyomo.core', logging.WARNING):
             f = np.longdouble('1.1234567890123456789')
             a = ftoa(f)
-        self.assertNotEqual(f, float(a))
         self.assertEqual(a, '1.1234567890123457')
-        self.assertRegexpMatches(
-            log.getvalue(),
-            '.*Converting 1.1234567890123456789 to string '
-            'resulted in loss of precision')
+        # Depending on the platform, np.longdouble may or may not have
+        # higher precision than float:
+        if f == float(f):
+            test = self.assertNotRegexpMatches
+        else:
+            test = self.assertRegexpMatches
+        test( log.getvalue(),
+              '.*Converting 1.1234567890123456789 to string '
+              'resulted in loss of precision' )
 
 if __name__ == "__main__":
     unittest.main()
