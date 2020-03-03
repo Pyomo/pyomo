@@ -178,8 +178,12 @@ def Initializer(init,
             return ItemInitializer(init)
         else:
             return ConstantInitializer(init)
-    elif inspect.isgenerator(init) or hasattr(init, 'next') \
-         or hasattr(init, '__next__'):
+    elif inspect.isgenerator(init) or (
+            ( hasattr(init, 'next') or hasattr(init, '__next__') )
+              and not hasattr(init, '__len__')):
+        # This catches generators and iterators (like enumerate()), but
+        # skips "reusable" iterators like range() as well as Pyomo
+        # (finite) Set objects.
         if not allow_generators:
             raise ValueError("Generators are not allowed")
         # Deepcopying generators is problematic (e.g., it generates a
@@ -289,6 +293,8 @@ class CountedCallGenerator(object):
         self._count += 1
         return self._fcn(self._count)
 
+    next = __next__
+
     @staticmethod
     def _filter(x):
         if x is None:
@@ -299,9 +305,6 @@ class CountedCallGenerator(object):
     Set.End.  None is not a valid Set member in this case due to the
     likelihood that an error in the rule can incorrectly return None.""")
         return x
-
-
-    next = __next__
 
 
 class CountedCallInitializer(InitializerBase):

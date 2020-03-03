@@ -293,7 +293,7 @@ class SetInitializer(InitializerBase):
 
     def setdefault(self, val):
         if self._set is None:
-            self._set = ConstantInitializer(val)
+            self._set = Initializer(val)
 
 class SetIntersectInitializer(InitializerBase):
     __slots__ = ('_A','_B',)

@@ -2024,21 +2024,21 @@ class TestSetArgs1(PyomoModel):
             os.remove(currdir+"setA.dat")
         PyomoModel.tearDown(self)
 
-    def test_initialize1(self):
+    def test_initialize1_list(self):
         self.model.A = Set(initialize=[1,2,3,'A'])
         self.instance = self.model.create_instance()
         self.assertEqual(len(self.instance.A),4)
 
-    def test_initialize2(self):
+    def test_initialize2_listcomp(self):
         self.model.A = Set(initialize=[(i,j) for i in range(0,3) for j in range(1,4) if (i+j)%2 == 0])
         self.instance = self.model.create_instance()
         self.assertEqual(len(self.instance.A),4)
 
-    def test_initialize3(self):
-        with self.assertRaises(CloneError):
-            self.model.A = Set(initialize=(
-                (i,j) for i in range(0,3) for j in range(1,4) if (i+j)%2 == 0))
-            self.instance = self.model.create_instance()
+    def test_initialize3_generator(self):
+        self.model.A = Set(initialize=lambda m: (
+            (i,j) for i in range(0,3) for j in range(1,4) if (i+j)%2 == 0))
+        self.instance = self.model.create_instance()
+        self.assertEqual(len(self.instance.A),4)
 
         m = ConcreteModel()
         m.A = Set(initialize=(
