@@ -182,7 +182,10 @@ def Initializer(init,
          or hasattr(init, '__next__'):
         if not allow_generators:
             raise ValueError("Generators are not allowed")
-        return ConstantInitializer(init)
+        # Deepcopying generators is problematic (e.g., it generates a
+        # segfault in pypy3 7.3.0).  We will immediately expand the
+        # generator into a tuple and then store it as a constant.
+        return ConstantInitializer(tuple(init))
     else:
         return ConstantInitializer(init)
 

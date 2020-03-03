@@ -2707,9 +2707,14 @@ class TestSetsInPython3(unittest.TestCase):
         m.pprint(ostream=buf)
         self.assertEqual(ref, buf.getvalue())
         #
-        m2 = copy.deepcopy(m)
+        m2 = m.clone()
         buf = StringIO()
         m2.pprint(ostream=buf)
+        self.assertEqual(ref, buf.getvalue())
+        #
+        m3 = copy.deepcopy(m)
+        buf = StringIO()
+        m3.pprint(ostream=buf)
         self.assertEqual(ref, buf.getvalue())
         #
         # six.iterkeys()
@@ -2722,9 +2727,14 @@ class TestSetsInPython3(unittest.TestCase):
         m.pprint(ostream=buf)
         self.assertEqual(ref, buf.getvalue())
         #
-        m2 = copy.deepcopy(m)
+        m2 = m.clone()
         buf = StringIO()
         m2.pprint(ostream=buf)
+        self.assertEqual(ref, buf.getvalue())
+        #
+        m3 = copy.deepcopy(m)
+        buf = StringIO()
+        m3.pprint(ostream=buf)
         self.assertEqual(ref, buf.getvalue())
 
 
