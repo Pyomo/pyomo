@@ -15,7 +15,6 @@ import types
 from itertools import islice
 
 _using_chained_inequality = True
-
 import logging
 import traceback
 
@@ -550,7 +549,6 @@ class LogicalExpressionBase(LogicalValue):
     """
 
     __slots__ = ('_args_',)
-
     PRECEDENCE = 0
 
     def __init__(self, args):
@@ -605,7 +603,6 @@ class LogicalExpressionBase(LogicalValue):
     def __call__(self, exception=True):
         """
         Evaluate the value of the expression tree.
-        #0-0 leave it for now
         args:
             exception (bool): If :const:`False`, then
                 an exception raised while evaluating
@@ -620,7 +617,6 @@ class LogicalExpressionBase(LogicalValue):
     def __str__(self):
         """
         Returns a string description of the expression.
-        #leave it for now
         Note:
             The value of ``pyomo.core.expr.expr_common.TO_STRING_VERBOSE``
             is used to configure the execution of this method.
@@ -637,7 +633,6 @@ class LogicalExpressionBase(LogicalValue):
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         """
         Return a string representation of the expression tree.
-        #leave it for now
         args:
             verbose (bool): If :const:`True`, then the the string
                 representation consists of nested functions.  Otherwise,
@@ -764,26 +759,6 @@ class LogicalExpressionBase(LogicalValue):
             class.
         """
         return self.__class__(args)
-
-    # def create_potentially_variable_object(self):
-    #     """
-    #     Create a potentially variable version of this object.
-    #
-    #     This method returns an object that is a potentially variable
-    #     version of the current object.  In the simplest
-    #     case, this simply sets the value of `__class__`:
-    #
-    #         self.__class__ = self.__class__.__mro__[1]
-    #
-    #     Note that this method is allowed to modify the current object
-    #     and return it.  But in some cases it may create a new
-    #     potentially variable object.
-    #
-    #     Returns:
-    #         An object that is potentially variable.
-    #     """
-    #     self.__class__ = self.__class__.__mro__[1]
-    #     return self
 
     def is_constant(self):
         """Return True if this expression is an atomic constant
@@ -922,18 +897,30 @@ do the exact same thing as the class methods as well as overloaded operators.
 
 
 def Not(Y):
+    """
+    Construct a NotExpression using function"
+    """
     return NotExpression((Y,))
 
 
 def Equivalent(Y1, Y2):
+    """
+    Construct an EquivalenceExpression Y1 == Y2
+    """
     return EquivalenceExpression((Y1, Y2))
 
 
 def Xor(Y1, Y2):
+    """
+    Construct an XorExpression Y1 xor Y2
+    """
     return XorExpression((Y1, Y2))
 
 
 def Implies(Y1, Y2):
+    """
+    Construct an Implication using function, where Y1 implies Y2
+    """
     return ImplicationExpression((Y1, Y2))
 
 
@@ -954,6 +941,9 @@ def _flattened(args):
 
 
 def And(*args):
+    """
+    Construct an AndExpression between passed arguments.
+    """
     result = AndExpression([])
     for argdata in _flattened(args):
         result = result.add(argdata)
@@ -961,6 +951,9 @@ def And(*args):
 
 
 def Or(*args):
+    """
+    Construct an OrExpression between passed arguments.
+    """
     result = OrExpression([])
     for argdata in _flattened(args):
         result = result.add(argdata)
@@ -969,6 +962,8 @@ def Or(*args):
 
 def Exactly(n, *args):
     """Creates a new ExactlyExpression
+
+    Require exactly n arguments to be True, to make the expression True
 
     Usage: Exactly(2, m.Y1, m.Y2, m.Y3, ...)
 
@@ -980,6 +975,8 @@ def Exactly(n, *args):
 def AtMost(n, *args):
     """Creates a new AtMostExpression
 
+    Require at most n arguments to be True, to make the expression True
+
     Usage: AtMost(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
@@ -990,6 +987,8 @@ def AtMost(n, *args):
 def AtLeast(n, *args):
     """Creates a new AtLeastExpression
 
+    Require at least n arguments to be True, to make the expression True
+
     Usage: AtLeast(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
@@ -998,10 +997,13 @@ def AtLeast(n, *args):
 
 
 class UnaryLogicalExpression(LogicalExpressionBase):
-    """ 
+    """
     Abstract class for single-argument logical expressions.
     """
     def nargs(self):
+        """
+        Returns number of arguments in expression
+        """
         return 1
 
 
@@ -1029,6 +1031,9 @@ class BinaryLogicalExpression(LogicalExpressionBase):
     Abstract class for binary logical expressions.
     """
     def nargs(self):
+        """
+        Return the number of argument the expression has
+        """
         return 2
 
 
@@ -1099,13 +1104,15 @@ class ImplicationExpression(BinaryLogicalExpression):
 class MultiArgsExpression(LogicalExpressionBase):
     """
     The abstract class for MultiargsExpression. This class should never be initialized.
-    with __init__ .  args is a tempting name.
     """
     def __init__(self, args):
         self._args_ = args
         self._nargs = len(self._args_)
 
     def nargs(self):
+        """
+        Return the number of expression arguments
+        """
         return self._nargs
 
     def getname(self, *arg, **kwd):
@@ -1113,6 +1120,9 @@ class MultiArgsExpression(LogicalExpressionBase):
 
 
 def _add_to_and_or_expression(orig_expr, new_arg):
+    """
+    TODO stub documentation
+    """
     # Clone 'self', because AndExpression/OrExpression are immutable
     if new_arg.__class__ == orig_expr.__class__:
         # adding new AndExpression/OrExpression on the right
@@ -1132,8 +1142,6 @@ def _add_to_and_or_expression(orig_expr, new_arg):
 class AndExpression(MultiArgsExpression):
     """
     This is the node for AndExpression.
-    For coding only, given that AndExpression should have & as the
-    overloaded operator, it is necessary to perform a check. 
     """
     __slots__ = ()
 
@@ -1161,6 +1169,9 @@ class AndExpression(MultiArgsExpression):
 
 
 class OrExpression(MultiArgsExpression):
+    """
+    This is the node for OrExpression.
+    """
     __slots__ = ()
 
     PRECEDENCE = 4

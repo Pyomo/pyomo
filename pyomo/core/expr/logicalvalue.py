@@ -52,6 +52,9 @@ def as_logical(obj):
 
 
 class LogicalValue(object):
+    """
+    This is the base class for logical values used in Pyomo.
+    """
     __slots__ = ()
     __hash__ = None
 
