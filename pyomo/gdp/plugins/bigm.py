@@ -25,7 +25,7 @@ from pyomo.core.base.PyomoModel import ConcreteModel, AbstractModel
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.disjunct import _DisjunctData, SimpleDisjunct
+from pyomo.gdp.disjunct import _DisjunctData
 from pyomo.gdp.util import target_list, is_child_of
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from pyomo.repn import generate_standard_repn
@@ -834,7 +834,7 @@ class BigM_Transformation(Transformation):
     def _find_parent_disjunct(self, constraint):
         # traverse up until we find the disjunct this constraint lives on
         parent_disjunct = constraint.parent_block()
-        while not isinstance(parent_disjunct, (_DisjunctData, SimpleDisjunct)):
+        while not isinstance(parent_disjunct, _DisjunctData):
             if parent_disjunct is None:
                 raise GDP_Error(
                     "Constraint %s is not on a disjunct and so was not "

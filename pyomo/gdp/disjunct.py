@@ -220,7 +220,7 @@ class _DisjunctionData(ActiveComponentData):
             # IndexedDisjunct indexed by Any which has already been transformed,
             # the new Disjuncts are Blocks already. This catches them for who
             # they are anyway.
-            if isinstance(e, (_DisjunctData, SimpleDisjunct)):
+            if isinstance(e, _DisjunctData):
             #if hasattr(e, 'type') and e.type() == Disjunct:
                 self.disjuncts.append(e)
                 continue
