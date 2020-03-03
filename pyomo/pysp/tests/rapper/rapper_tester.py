@@ -1,5 +1,5 @@
 # Provide some test for rapper; most are smoke because PySP is tested elsewhere
-# Author: David L. Woodruff (circa March 2017 and Sept 2018)
+# Author: David L. Woodruff (circa March 2017; Sept 2018; Feb 2020)
 
 import pyutilib.th as unittest
 import tempfile
@@ -10,11 +10,12 @@ import json
 import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as rapper
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
+import pyomo.pysp.plugins.csvsolutionwriter as csvw
 import pyomo as pyomoroot
 
 __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
 __date__ = 'August 14, 2017'
-__version__ = 1.5
+__version__ = 1.6
 
 solvername = "ipopt" # could use almost any solver
 solver_available = pyo.SolverFactory(solvername).available(False)
@@ -62,6 +63,8 @@ class Testrapper(unittest.TestCase):
         if "ReferenceModel" in sys.modules:
             del sys.modules["ReferenceModel"]
 
+        sys.path.remove(self.tdir)
+        shutil.rmtree(self.tdir, ignore_errors=True)
         os.chdir(self.savecwd)
 
     def test_fct_contruct(self):
@@ -110,6 +113,19 @@ class Testrapper(unittest.TestCase):
                                 tree_model = self.farmer_concrete_tree)
         res, gap = stsolver.solve_ef(solvername, tee=True, need_gap=True)
 
+    @unittest.skipIf(not solver_available,
+                     "%s solver is not available" % (solvername,))
+    def test_ef_solve_with_csvwriter(self):
+        """ solve the ef and report gap"""
+        stsolver = rapper.StochSolver("ReferenceModel.py",
+                                      fsfct = "pysp_instance_creation_callback",
+                                tree_model = self.farmer_concrete_tree)
+        res, gap = stsolver.solve_ef(solvername, tee=True, need_gap=True)
+        csvw.write_csv_soln(stsolver.scenario_tree, "testcref")
+        with open("testcref.csv", 'r') as f:
+            line = f.readline()
+        assert(line.split(",")[0] == "FirstStage")
+            
     def test_ef_cvar_construct(self):
         """ construct the ef with cvar """
         stsolver = rapper.StochSolver("ReferenceModel.py",
