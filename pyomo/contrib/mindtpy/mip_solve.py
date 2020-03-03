@@ -8,8 +8,7 @@ from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-import cplex
-from cplex.callbacks import LazyConstraintCallback
+
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination, solve_NLP_feas)
@@ -23,6 +22,12 @@ from pyomo.core.expr import current as EXPR
 from math import fabs
 
 from pyomo.repn import generate_standard_repn
+
+try:
+    import cplex
+    from cplex.callbacks import LazyConstraintCallback
+except ImportError:
+    print("Cplex python API is not found. Therefore, lp-nlp is not supported")
 
 
 class LazyOACallback(LazyConstraintCallback):
