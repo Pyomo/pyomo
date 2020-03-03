@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: parallel/${{ matrix.TARGET }}/py${{ matrix.python-version }}
+    name: mpi/${{ matrix.TARGET }}/py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       max-parallel: 1
