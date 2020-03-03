@@ -12,6 +12,11 @@ import pyomo.pysp.util.rapper as rapper
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
 import pyomo.pysp.plugins.csvsolutionwriter as csvw
 import pyomo as pyomoroot
+try:
+    import networkx
+    havenetx = True
+except:
+    havenetx = False
 
 __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
 __date__ = 'August 14, 2017'
@@ -161,8 +166,8 @@ class Testrapper(unittest.TestCase):
             pass
         assert(nodename == 'RootNode')
 
-    @unittest.skipIf(not solver_available,
-                     "%s solver is not available" % (solvername,))
+    @unittest.skipIf(not solver_available or not havenetx,
+                     "solver or NetworkX not available")
     def test_NetX_ef_csvwriter(self):
         """ solve the ef and report gap"""
         import NetXReferenceModel as ref
