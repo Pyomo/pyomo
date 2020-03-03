@@ -1,4 +1,4 @@
-name: continuous-integration/github/pr/win
+name: continuous-integration/github/pr
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   pyomo-tests:
-    name: py${{ matrix.python-version }}
+    name: win/py${{ matrix.python-version }}
     runs-on: windows-latest
     strategy:
       fail-fast: false # This flag causes all of the matrix to continue to run, even if one matrix option fails
