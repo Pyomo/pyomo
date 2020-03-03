@@ -18,7 +18,7 @@ jobs:
         - os: ubuntu-latest
           TARGET: linux
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: setup conda
       uses: s-weigand/setup-conda@v1
       with:
