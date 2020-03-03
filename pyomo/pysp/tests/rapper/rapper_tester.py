@@ -174,7 +174,6 @@ class Testrapper(unittest.TestCase):
         csvw.write_csv_soln(stsolver.scenario_tree, "testcref")
         with open("testcref_StageCostDetail.csv", 'r') as f:
             line = f.readline()
-            print("debug line={}".format(line))
         assert(line.split(",")[0] == "Stage1")
 
 if __name__ == '__main__':
