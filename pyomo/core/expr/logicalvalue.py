@@ -244,47 +244,93 @@ class LogicalValue(object):
         return TypeError("Use value() for finding the value of a LogicalValue.")
 
     def __eq__(self, other):
+        """
+        Construct an EquivalenceExpression using operator '=='
+        """
         return _generate_logical_proposition(_equiv, self, other)
 
     def equivalent_to(self, other):
+        """
+        Construct an EquivalenceExpression using method "equivalent_to"
+        """
         return _generate_logical_proposition(_equiv, self, other)
 
     def __and__(self, other):
+        """
+        Construct an AndExpression using operator '&'
+        """
         return _generate_logical_proposition(_and, self, other)
 
     def __rand__(self, other):
+        """
+        Construct an AndExpression using operator '&'
+        """
         return _generate_logical_proposition(_and, other, self)
 
     def and_(self, other):
-        """Trailing underscore avoids name conflict with keyword 'and'."""
+        """
+        Construct an AndExpression using method "and_"
+
+        Trailing underscore avoids name conflict with keyword 'and'.
+
+        """
         return _generate_logical_proposition(_and, self, other)
 
     def __or__(self, other):
+        """
+        Construct an OrExpression using operator '|'
+        """
         return _generate_logical_proposition(_or, self, other)
 
     def __ror__(self, other):
+        """
+        Construct an OrExpression using operator '|'
+        """
         return _generate_logical_proposition(_or, other, self)
 
     def or_(self, other):
-        """Trailing underscore avoids name conflict with keyword 'or'."""
+        """
+        Construct an OrExpression using method "or_"
+
+        Trailing underscore avoids name conflict with keyword 'or'.
+
+        """
         return _generate_logical_proposition(_or, self, other)
 
     def __invert__(self):
+        """
+        Construct an XorExpression using operator '~'
+        """
         return _generate_logical_proposition(_inv, self, None)
 
     def __xor__(self, other):
+        """
+        Construct an XorExpression using operator '^'
+        """
         return _generate_logical_proposition(_xor, self, other)
 
     def xor(self, other):
+        """
+        Construct an EquivalenceExpression using method "xor"
+        """
         return _generate_logical_proposition(_xor, self, other)
 
     def __lshift__(self, other):
+        """
+        Construct an ImplicationExpression using operator '<<'
+        """
         return _generate_logical_proposition(_impl, other, self)
 
     def __rshift__(self, other):
+        """
+        Construct an ImplicationExpression using operator '>>'
+        """
         return _generate_logical_proposition(_impl, self, other)
 
     def implies(self, other):
+        """
+        Construct an ImplicationExpression using method "implies"
+        """
         return _generate_logical_proposition(_impl, self, other)
 
     def to_string(self, verbose=None, labeler=None, smap=None,
