@@ -1,4 +1,4 @@
-name: continuous-integration/github/pr/win
+name: continuous-integration/github/pr
 
 on:
   pull_request:
@@ -7,14 +7,14 @@ on:
 
 jobs:
   pyomo-tests:
-    name: py${{ matrix.python-version }}
+    name: win/py${{ matrix.python-version }}
     runs-on: windows-latest
     strategy:
       fail-fast: false # This flag causes all of the matrix to continue to run, even if one matrix option fails
       matrix:
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8] 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }} with Miniconda
       uses: goanpeca/setup-miniconda@v1 # Using an action created by user goanpeca to set up different Python Miniconda environments
       with:

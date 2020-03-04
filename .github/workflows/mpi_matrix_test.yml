@@ -1,4 +1,4 @@
-name: parallel_tests
+name: continuous-integration/github/pr
 
 on:
   pull_request:
@@ -7,13 +7,18 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: mpi/${{ matrix.TARGET }}/py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
     strategy:
       max-parallel: 1
       matrix:
+        os: [ubuntu-latest]
         python-version: [3.7]
+        include:
+        - os: ubuntu-latest
+          TARGET: linux
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: setup conda
       uses: s-weigand/setup-conda@v1
       with:
