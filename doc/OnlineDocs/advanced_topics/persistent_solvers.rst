@@ -133,15 +133,15 @@ indexed variables and/or constraints, the code must be slightly adapted:
 
 >>> for v in indexed_var.values():  # doctest: +SKIP
 ...     opt.add_var(v)
-... for c in indexed_con.values():
+>>> for v in indexed_con.values():
 ...     opt.add_constraint(v)
 
 This must be done when removing variables/constraints, too. Not doing this would
 result in AttributeError exceptions, for example:
 
->>> opt.add_var(v)          # doctest: +SKIP
+>>> opt.add_var(indexed_var)          # doctest: +SKIP
 >>> # ERROR: AttributeError: 'IndexedVar' object has no attribute 'is_binary'
->>> opt.add_constraint(c)   # doctest: +SKIP
+>>> opt.add_constraint(indexed_con)   # doctest: +SKIP
 >>> # ERROR: AttributeError: 'IndexedConstraint' object has no attribute 'body'
 
 The method "is_indexed" can be used to automate the process, for example:
