@@ -44,6 +44,13 @@ at least 70% coverage of the lines modified in the PR and prefer
 coverage closer to 90%. We also require that all tests pass before a PR
 will be merged.
 
+The Pyomo master branch (as of `this commit <https://github.com/Pyomo/pyomo/commit/49e2ff171ddcd083c62ac28379afcf33af2549ae>`) provides a Github Action
+workflow that will test any changes pushed to a branch using Ubuntu with
+Python 3.7. For existing forks, fetch and merge your fork (and branches) with
+Pyomo's master. For new forks, you will need to enable Github Actions
+in the 'Actions' tab on your fork. Then the test will begin to run
+automatically with each push to your fork.
+
 At any point in the development cycle, a "work in progress" pull request
 may be opened by including '[WIP]' at the beginning of the PR
 title. This allows your code changes to be tested by Pyomo's automatic

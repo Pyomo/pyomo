@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 """Main driver module for GDPopt solver.
 
+20.2.28 changes:
+- bugfixes on tests
+20.1.22 changes:
+- improved subsolver time limit support for GAMS interface
+- add maxTimeLimit exit condition for GDPopt-LBB
+- add token Big M for reactivated constraints in GDPopt-LBB
+- activate fbbt for branch-and-bound nodes
 20.1.15 changes:
 - internal cleanup of codebase
 - merge GDPbb capabilities (logic-based branch and bound)
@@ -43,7 +50,7 @@ from pyomo.contrib.gdpopt.util import (
     setup_solver_environment)
 from pyomo.opt.base import SolverFactory
 
-__version__ = (20, 1, 15)  # Note: date-based version number
+__version__ = (20, 2, 28)  # Note: date-based version number
 
 
 @SolverFactory.register(

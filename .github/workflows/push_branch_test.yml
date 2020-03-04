@@ -1,21 +1,22 @@
-name: continuous-integration/github/pr/linux
+name: continuous-integration/github/push
 
-on:
-  pull_request:
-    branches:
-      - master
+on: push
 
 jobs:
-  pyomo-linux-tests:
-    name: py${{ matrix.python-version }}
-    runs-on: ubuntu-18.04
+  pyomo-linux-branch-test:
+    name: ${{ matrix.TARGET }}/py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.5, 3.6, 3.7, 3.8]
+        os: [ubuntu-18.04]
+        include:
+        - os: ubuntu-18.04
+          TARGET: linux
+        python-version: [3.7]
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
