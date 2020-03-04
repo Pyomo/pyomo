@@ -133,7 +133,7 @@ indexed variables and/or constraints, the code must be slightly adapted:
 
 >>> for v in indexed_var.values():  # doctest: +SKIP
 ...     opt.add_var(v)
->>> for v in indexed_con.values():
+>>> for v in indexed_con.values():  # doctest: +SKIP
 ...     opt.add_constraint(v)
 
 This must be done when removing variables/constraints, too. Not doing this would
