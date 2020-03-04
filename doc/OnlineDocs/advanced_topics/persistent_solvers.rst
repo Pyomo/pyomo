@@ -132,14 +132,14 @@ The examples above all used simple variables and constraints; in order to use
 indexed variables and/or constraints, the code must be slightly adapted:
 
 >>> for v in indexed_var.values():  # doctest: +SKIP
-...     opt.add_var(v)              # doctest: +SKIP
-... for c in indexed_con.values():  # doctest: +SKIP
-...     opt.add_constraint(v)       # doctest: +SKIP
+...     opt.add_var(v)
+... for c in indexed_con.values():
+...     opt.add_constraint(v)
 
 This must be done when removing variables/constraints, too. Not doing this would
 result in AttributeError exceptions, for example:
 
->>> opt.add_var(v)   # doctest: +SKIP
+>>> opt.add_var(v)          # doctest: +SKIP
 >>> # ERROR: AttributeError: 'IndexedVar' object has no attribute 'is_binary'
 >>> opt.add_constraint(c)   # doctest: +SKIP
 >>> # ERROR: AttributeError: 'IndexedConstraint' object has no attribute 'body'
@@ -147,11 +147,11 @@ result in AttributeError exceptions, for example:
 The method "is_indexed" can be used to automate the process, for example:
 
 >>> def add_variable(opt, variable):     # doctest: +SKIP
-...     if var.is_indexed():             # doctest: +SKIP
-...         for v in variable.values():  # doctest: +SKIP
-...             opt.add_var(v)           # doctest: +SKIP
-...     else:                            # doctest: +SKIP
-...         opt.add_var(v)               # doctest: +SKIP
+...     if variable.is_indexed():
+...         for v in variable.values():
+...             opt.add_var(v)
+...     else:
+...         opt.add_var(v)
 
 Persistent Solver Performance
 -----------------------------
