@@ -21,7 +21,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: setup conda
+    - name: Setup conda environment
       uses: s-weigand/setup-conda@v1
       with:
         update-conda: true
@@ -36,7 +36,7 @@ jobs:
         echo ""
         pip install cython numpy scipy ipython openpyxl sympy pyyaml \
             pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql \
-            pyro4 pint pathos coverage
+            pyro4 pint pathos coverage nose
         echo ""
         echo "Install CPLEX Community Edition..."
         echo ""
@@ -98,7 +98,7 @@ jobs:
         export PATH=$PATH:$GAMS_DIR
         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_DIR
         export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_DIR
-        pip install nose
+        python -c 'import pyomo.environ'        
         mpirun -np 3 nosetests -v --eval-attr="mpi and (not fragile)" pyomo `pwd`/pyomo-model-libraries
     - name: Upload coverage to codecov
       run: |
