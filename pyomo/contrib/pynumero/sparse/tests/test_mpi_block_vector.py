@@ -9,41 +9,40 @@
 #  ___________________________________________________________________________
 import pyutilib.th as unittest
 
-import pyomo.contrib.pynumero as pn
-if not (pn.sparse.numpy_available and pn.sparse.scipy_available):
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run BlockVector tests")
-
-from scipy.sparse import coo_matrix, bmat
-import numpy as np
+SKIPTESTS=[]
+from pyomo.contrib.pynumero import numpy_available, scipy_available
+if numpy_available and scipy_available:
+    import numpy as np
+    from scipy.sparse import coo_matrix, bmat
+    from pyomo.contrib.pynumero.sparse import BlockVector
+else:
+    SKIPTESTS.append("Pynumero needs scipy and numpy>=1.13.0 to run BlockMatrix tests")
 
 try:
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
     if comm.Get_size() < 3:
-        raise unittest.SkipTest(
-            "These tests need at least 3 processors")
+        SKIPTESTS.append(
+            "Pynumero needs at least 3 processes to run BlockVector MPI tests"
+        )
 except ImportError:
-    raise unittest.SkipTest(
-        "Pynumero needs mpi4py to run mpi block vector tests")
+    SKIPTESTS.append("Pynumero needs mpi4py to run BlockVector MPI tests")
 
-try:
+if not SKIPTESTS:
     from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
-except ImportError:
-    raise unittest.SkipTest(
-        "Pynumero needs mpi4py to run mpi block vector tests")
-
-from pyomo.contrib.pynumero.sparse import BlockVector
 
 
-@unittest.skipIf(comm.Get_size() < 3, "Need at least 3 processors to run tests")
+@unittest.category("mpi")
 class TestMPIBlockVector(unittest.TestCase):
 
+    # Because the setUpClass is called before decorators around the
+    # class itself, we need to put the skipIf on the class setup and not
+    # the class.
+
     @classmethod
+    @unittest.skipIf(SKIPTESTS, SKIPTESTS)
     def setUpClass(cls):
         # test problem 1
-
-        if comm.Get_size() < 3:
-            raise unittest.SkipTest("Need at least 3 processors to run tests")
 
         v1 = MPIBlockVector(4, [0,1,0,1], comm)
 
