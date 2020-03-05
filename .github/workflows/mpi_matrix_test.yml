@@ -107,4 +107,4 @@ jobs:
       run: |
         find . -maxdepth 10 -name ".cov*"
         coverage combine
-        bash <(curl -s https://codecov.io/bash)
+        bash <(curl -s https://codecov.io/bash) -X gcov
