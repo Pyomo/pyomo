@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 from pyomo.contrib.pynumero.extensions.utils import find_pynumero_library
-from pkg_resources import resource_filename
 import numpy.ctypeslib as npct
 import numpy as np
 import platform
