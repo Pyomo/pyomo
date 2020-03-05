@@ -29,7 +29,13 @@ jobs:
         conda-channels: anaconda, conda-forge
     - name: Install dependencies
       run: |
+        echo ""
+        echo "Install conda packages"
+        echo ""
+        conda install mpi4py
+        echo ""
         echo "Upgrade pip..."
+        echo ""
         python -m pip install --upgrade pip
         echo ""
         echo "Install Pyomo dependencies..."
@@ -61,10 +67,6 @@ jobs:
         done
         cd $gams_ver
         python setup.py -q install -noCheck
-        echo ""
-        echo "Install conda packages"
-        echo ""
-        conda install mpi4py
     - name: Install Pyomo and extensions
       run: |
         echo "Clone Pyomo-model-libraries..."
@@ -81,6 +83,7 @@ jobs:
       run: |
         WORKSPACE=`pwd`
         COVERAGE_PROCESS_START=${WORKSPACE}/coveragerc
+        echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_PROCESS_START"
         cp ${WORKSPACE}/.coveragerc ${COVERAGE_PROCESS_START}
         echo "data_file=${WORKSPACE}/.coverage" >> ${COVERAGE_PROCESS_START}
         SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
