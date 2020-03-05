@@ -19,7 +19,6 @@ except ImportError:
 else:
     from pyomo.contrib.pynumero.sparse import BlockVector
 
-
 try:
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
@@ -29,7 +28,8 @@ try:
         )
 except ImportError:
     SKIPTESTS.append("Pynumero needs mpi4py to run BlockVector MPI tests")
-else:
+
+if not SKIPTESTS:
     from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
 
 

@@ -29,7 +29,8 @@ try:
         )
 except ImportError:
     SKIPTESTS.append("Pynumero needs mpi4py to run BlockMatrix MPI tests")
-else:
+
+if not SKIPTESTS:
     from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
     from pyomo.contrib.pynumero.sparse.mpi_block_matrix import (
         MPIBlockMatrix, NotFullyDefinedBlockMatrixError
