@@ -10,12 +10,15 @@
 import pyutilib.th as unittest
 
 SKIPTESTS=[]
-import pyomo.contrib.pynumero as pn
-if not (pn.sparse.numpy_available and pn.sparse.scipy_available):
-    SKIPTESTS.append("Pynumero needs scipy and numpy to run BlockVector tests")
 
-from scipy.sparse import coo_matrix, bmat
-import numpy as np
+try:
+    import numpy as np
+    from scipy.sparse import coo_matrix, bmat
+except ImportError:
+    SKIPTESTS.append("Pynumero needs scipy and numpy to run BlockVector tests")
+else:
+    from pyomo.contrib.pynumero.sparse import BlockVector
+
 
 try:
     from mpi4py import MPI
@@ -24,11 +27,10 @@ try:
         SKIPTESTS.append(
             "Pynumero needs at least 3 processes to run BlockVector MPI tests"
         )
-    from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
 except ImportError:
     SKIPTESTS.append("Pynumero needs mpi4py to run BlockVector MPI tests")
-
-from pyomo.contrib.pynumero.sparse import BlockVector
+else:
+    from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
 
 
 @unittest.category("mpi")
