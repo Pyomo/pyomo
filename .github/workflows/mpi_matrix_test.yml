@@ -1,12 +1,10 @@
 name: continuous-integration/github/pr
 
 on:
+  push:
   pull_request:
     branches:
       - master
-  push:
-    branches:
-      - *
 
 jobs:
   build:
