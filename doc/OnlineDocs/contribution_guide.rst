@@ -59,6 +59,128 @@ reviewed or merged by the core development team. In addition, any
 '[WIP]' pull request left open for an extended period of time without
 active development may be marked 'stale' and closed.
 
+Working on Forks and Branches
++++++++++++++++++++++++++++++
+
+All Pyomo development should be done on forks of the Pyomo
+repository. In order to fork the Pyomo repository, visit
+https://github.com/Pyomo/pyomo, click the "Fork" button in the upper
+right corner, and follow the instructions. You can then clone your
+fork of the repository with
+
+::
+
+   git clone https://github.com/<username>/pyomo.git
+
+We also recommend development be done on branches:
+
+::
+
+   cd pyomo/
+   git branch <branch_name>
+   git checkout <branch_name>
+
+Developement can then be performed. In order to push your branch to your fork, use
+
+::
+
+   git add <filename>
+   git status  # to check that you have added the correct files
+   git commit -m 'informative commit message to describe changes'
+   git push origin <branch_name>
+
+When your changes are ready for a pull request,
+
+    * visit https://github.com/<username>/pyomo.
+    * Just above the list of files and directories in the repository,
+      you should see a button that says "Branch: master". Click on
+      this button, and choose the correct branch.
+    * Click the "New pull request" button just to the right of the
+      "Branch: <branch_name>" button.
+    * Fill out the pull request template and click the green "Create
+      pull request" button.
+
+Merging the Pyomo master branch into your fork/branch
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We recommend updating your fork of Pyomo with changes to Pyomo master
+on a regular basis. This can be done either through GitHub or through
+the command line.
+
+Using GitHub to update your fork
+********************************
+
+    * visit https://github.com/Pyomo/pyomo.
+    * Click on the "New pull request" button just above the list of
+      files and directories.
+    * You will see the title "Compare changes" with some small text
+      below it which says "Compare changes across branches, commits,
+      tags, and more below. If you need to, you can also compare
+      across forks." Click the last part of this: "compare across
+      forks".
+    * You should now see four buttons just below this: "base
+      repository: Pyomo/pyomo", "base: master", "head repository:
+      Pyomo/pyomo", and "compare: master". Click the leftmost button
+      and choose "<username>/Pyomo".
+    * Then click the button which is second to the left, and choose
+      the branch which you want to merge Pyomo master into. The four
+      buttons should now read: "base repository: <username>/pyomo",
+      "base: <branch_name>", "head repository: Pyomo/pyomo", and
+      "compare: master".
+    * You should also now see a pull request template. If you fill out
+      the pull request template and click "Create pull request", this
+      will create a pull request which will update your fork and
+      branch with any changes that have been made to the master branch
+      of Pyomo.
+    * You can then merge the pull request by clicking the green "Merge
+      pull request" button.
+
+Using git commands to update your fork
+**************************************
+
+First, suppose you have set up your remotes with the following:
+
+::
+   
+   git clone https://github.com/<username>/pyomo.git
+   git remote rename origin my_fork
+   git remote add main_fork https://github.com/pyomo/pyomo.git
+
+You can see a list of your remotes with
+
+::
+
+   git remote -v
+
+In this case, you would push to your fork with
+
+::
+
+   git push my_fork <branch_name>
+
+In order to update a branch with changes from a branch of the Pyomo repository,
+
+::
+
+   git checkout <branch_to_update>
+   git fetch main_fork
+   git merge main_fork/<branch_to_update_from> --ff-only
+
+The "--ff-only" only allows a merge if the merge can be done by a
+fast-forward. If you do not require a fast-forward, you can drop this
+option. The most common concrete example of this would be
+
+::
+
+   git checkout master
+   git fetch main_fork
+   git merge main_fork/master --ff-only
+
+More information on git can be found at
+https://git-scm.com/book/en/v2. Section 2.5 has information on working
+with remotes.
+   
+
 Review Process
 --------------
 
