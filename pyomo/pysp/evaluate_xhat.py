@@ -13,6 +13,7 @@ import time
 import copy
 
 from pyomo.common import pyomo_command
+from pyomo.common.dependencies import yaml
 from pyomo.core import minimize
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
@@ -214,7 +215,6 @@ def run_evaluate_xhat(options,
                 with open(options.output_scenario_costs, 'w') as f:
                     json.dump(result, f, indent=2, sort_keys=True)
             elif options.output_scenario_costs.endswith('.yaml'):
-                import yaml
                 result = {}
                 for scenario in sp.scenario_tree.scenarios:
                     result[str(scenario.name)] = scenario._cost
