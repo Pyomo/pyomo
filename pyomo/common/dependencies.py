@@ -117,7 +117,7 @@ def attempt_import(name, error_message=None, only_catch_importerror=True,
 #
 
 yaml, yaml_available = attempt_import('yaml')
-if hasattr(yaml, 'SafeLoader'):
+if yaml_available and hasattr(yaml, 'SafeLoader'):
     yaml_load_args = {'Loader': yaml.SafeLoader}
 else:
     yaml_load_args = {}
