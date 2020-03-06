@@ -68,15 +68,19 @@ https://github.com/Pyomo/pyomo, click the "Fork" button in the
 upper right corner, and follow the instructions.
 
 This section discusses two recommended workflows for contributing
-pull-requests to Pyomo. The first workflow, labeled 'Working with my fork
-and the GitHub Online UI', does not require the use of 'remotes', and
+pull-requests to Pyomo. The first workflow, labeled
+:ref:`Working with my fork and the GitHub Online UI <forksgithubui>`,
+does not require the use of 'remotes', and
 suggests updating your fork using the GitHub online UI. The second
-workflow, labeled 'Working with remotes and the git command-line', outlines
+workflow, labeled
+:ref:`Working with remotes and the git command-line <forksremotes>`, outlines
 a process that defines separate remotes for your fork and the main
 Pyomo repository.
 
+.. _forksgithubui:
+
 Working with my fork and the GitHub Online UI
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
++++++++++++++++++++++++++++++++++++++++++++++
 
 After creating your fork (per the instructions above), you can
 then clone your fork of the repository with
@@ -130,7 +134,7 @@ the Pyomo master development branch into the feature branch on your
 fork and in your local clone of the repository.
 
 Using GitHub UI to merge Pyomo master into a branch on your fork
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+****************************************************************
 
 To update your fork, you will actually be merging a pull-request from
 the main Pyomo repository into your fork.
@@ -161,10 +165,10 @@ the main Pyomo repository into your fork.
     * You can then merge the pull request by clicking the green "Merge
       pull request" button from your fork on GitHub.
 
-
+.. _forksremotes:
 
 Working with remotes and the git command-line
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
++++++++++++++++++++++++++++++++++++++++++++++
 
 After you have created your fork, you can clone the fork and setup
 git 'remotes' that allow you to merge changes from (and to) different
