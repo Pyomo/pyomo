@@ -1442,9 +1442,10 @@ def check_model_units(self, model, allow_exceptions=True):
         # return a tuple of the unit and a flag that indicates whether they were consistent or not
         # return  unit, True or
         # return  None, False
-        TODO
+        pass
 
-    def check_units_equivalent(self, expr1, 
+    def check_units_equivalent(self, expr1, pyomo_units, allow_exceptions=False):
+        pass
 
 
 # Define a module level instance (singleton) of a
