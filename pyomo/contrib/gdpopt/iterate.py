@@ -36,12 +36,12 @@ def GDPopt_iteration_loop(solve_data, config):
             break
 
         # Solve NLP subproblem
-        if solve_data.current_strategy == 'LOA':
+        if solve_data.active_strategy == 'LOA':
             with time_code(solve_data.timing, 'nlp'):
                 nlp_result = solve_local_subproblem(mip_result, solve_data, config)
             if nlp_result.feasible:
                 add_outer_approximation_cuts(nlp_result, solve_data, config)
-        elif solve_data.current_strategy == 'GLOA':
+        elif solve_data.active_strategy == 'GLOA':
             with time_code(solve_data.timing, 'nlp'):
                 nlp_result = solve_global_subproblem(mip_result, solve_data, config)
             if nlp_result.feasible:
@@ -90,12 +90,13 @@ def algorithm_should_terminate(solve_data, config):
         return True
 
     # Check time limit
-    if get_main_elapsed_time(solve_data.timing) >= config.time_limit:
+    elapsed = get_main_elapsed_time(solve_data.timing)
+    if elapsed >= config.time_limit:
         config.logger.info(
             'GDPopt unable to converge bounds '
             'before time limit of {} seconds. '
             'Elapsed: {} seconds'
-            .format(config.time_limit, get_main_elapsed_time(solve_data.timing)))
+            .format(config.time_limit, elapsed))
         config.logger.info(
             'Final bound values: LB: {}  UB: {}'.
             format(solve_data.LB, solve_data.UB))

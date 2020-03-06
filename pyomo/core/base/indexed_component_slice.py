@@ -55,8 +55,7 @@ class _IndexedComponent_slice(object):
         "blanket" implementation of :py:meth:`__getattr__`, we need to
         explicitly implement these to avoid "accidentally" extending or
         evaluating this slice."""
-        return dict(
-            (k,getattr(self,k)) for k in self.__dict__)
+        return {k:getattr(self,k) for k in self.__dict__}
 
     def __setstate__(self, state):
         """Deserialize the state into this object. """

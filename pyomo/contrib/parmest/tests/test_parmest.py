@@ -17,6 +17,7 @@ import os
 import shutil
 import glob
 import subprocess
+import sys
 from itertools import product
 
 import pyomo.contrib.parmest.parmest as parmest
@@ -152,10 +153,10 @@ class parmest_object_Tester_RB(unittest.TestCase):
                    "rooney_biegler" + os.sep + "rooney_biegler.py"
         rbpath = os.path.abspath(rbpath) # paranoia strikes deep...
         if sys.version_info >= (3,5):
-            ret = subprocess.run(["python", rbpath])
+            ret = subprocess.run([sys.executable, rbpath])
             retcode = ret.returncode
         else:
-            retcode = subprocess.call(["python", rbpath])
+            retcode = subprocess.call([sys.executable, rbpath])
         assert(retcode == 0)
         
     @unittest.skip("Presently having trouble with mpiexec on appveyor")
@@ -168,7 +169,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
         rbpath = parmestpath + os.sep + "examples" + os.sep + \
                    "rooney_biegler" + os.sep + "rooney_biegler_parmest.py"
         rbpath = os.path.abspath(rbpath) # paranoia strikes deep...
-        rlist = ["mpiexec", "--allow-run-as-root", "-n", "2", "python", rbpath]
+        rlist = ["mpiexec", "--allow-run-as-root", "-n", "2", sys.executable, rbpath]
         if sys.version_info >= (3,5):
             ret = subprocess.run(rlist)
             retcode = ret.returncode

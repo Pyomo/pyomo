@@ -48,7 +48,7 @@ def taylor_series_expansion(expr, diff_mode=differentiate.Modes.reverse_numeric,
     res = value(expr)
     if order >= 1:
         derivs = differentiate(expr=expr, wrt_list=e_vars, mode=diff_mode)
-        res += sum(value(derivs[i]) * (e_vars[i] - e_vars[i].value) for i in range(len(e_vars)))
+        res += sum((e_vars[i] - e_vars[i].value) * value(derivs[i]) for i in range(len(e_vars)))
 
     """
     This last bit of code is just for higher order taylor series expansions.
@@ -68,6 +68,6 @@ def taylor_series_expansion(expr, diff_mode=differentiate.Modes.reverse_numeric,
                 tmp = coef
                 for ndx in ndx_list:
                     tmp *= (e_vars[ndx] - e_vars[ndx].value)
-                res += tmp * sum(value(_derivs[i]) * (e_vars[i] - e_vars[i].value) for i in range(len(e_vars)))
+                res += tmp * sum((e_vars[i] - e_vars[i].value) * value(_derivs[i]) for i in range(len(e_vars)))
 
     return res

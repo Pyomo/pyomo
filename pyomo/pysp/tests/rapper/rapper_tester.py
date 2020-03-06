@@ -1,5 +1,5 @@
 # Provide some test for rapper; most are smoke because PySP is tested elsewhere
-# Author: David L. Woodruff (circa March 2017 and Sept 2018)
+# Author: David L. Woodruff (circa March 2017; Sept 2018; Feb 2020)
 
 import pyutilib.th as unittest
 import tempfile
@@ -10,11 +10,17 @@ import json
 import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as rapper
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
+import pyomo.pysp.plugins.csvsolutionwriter as csvw
 import pyomo as pyomoroot
+try:
+    import networkx
+    havenetx = True
+except:
+    havenetx = False
 
 __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
 __date__ = 'August 14, 2017'
-__version__ = 1.5
+__version__ = 1.7
 
 solvername = "ipopt" # could use almost any solver
 solver_available = pyo.SolverFactory(solvername).available(False)
@@ -52,7 +58,14 @@ class Testrapper(unittest.TestCase):
         shutil.copyfile(farmpath + os.sep +"scenariodata" + os.sep + "ScenarioStructure.dat",
                         self.tdir + os.sep + "ScenarioStructure.dat")
         self.farmer_concrete_tree = \
-                abstract_tree.create_instance("ScenarioStructure.dat")
+                        abstract_tree.create_instance("ScenarioStructure.dat")
+        # added networkx example March 2020
+        self.farmer_netx_file = farmpath + os.sep + \
+                                    "concreteNetX" + os.sep + "ReferenceModel.py"
+
+        shutil.copyfile(self.farmer_netx_file,
+                        self.tdir + os.sep + "NetXReferenceModel.py")
+        
 
     def tearDown(self):
         # from GH: This step is key, as Python keys off the name of the module, not the location.
@@ -62,6 +75,8 @@ class Testrapper(unittest.TestCase):
         if "ReferenceModel" in sys.modules:
             del sys.modules["ReferenceModel"]
 
+        sys.path.remove(self.tdir)
+        shutil.rmtree(self.tdir, ignore_errors=True)
         os.chdir(self.savecwd)
 
     def test_fct_contruct(self):
@@ -110,6 +125,19 @@ class Testrapper(unittest.TestCase):
                                 tree_model = self.farmer_concrete_tree)
         res, gap = stsolver.solve_ef(solvername, tee=True, need_gap=True)
 
+    @unittest.skipIf(not solver_available,
+                     "%s solver is not available" % (solvername,))
+    def test_ef_solve_with_csvwriter(self):
+        """ solve the ef and report gap"""
+        stsolver = rapper.StochSolver("ReferenceModel.py",
+                                      fsfct = "pysp_instance_creation_callback",
+                                tree_model = self.farmer_concrete_tree)
+        res, gap = stsolver.solve_ef(solvername, tee=True, need_gap=True)
+        csvw.write_csv_soln(stsolver.scenario_tree, "testcref")
+        with open("testcref.csv", 'r') as f:
+            line = f.readline()
+        assert(line.split(",")[0] == "FirstStage")
+            
     def test_ef_cvar_construct(self):
         """ construct the ef with cvar """
         stsolver = rapper.StochSolver("ReferenceModel.py",
@@ -137,6 +165,21 @@ class Testrapper(unittest.TestCase):
         for nodename, varname, varvalue in rapper.xhat_walker(xhat):
             pass
         assert(nodename == 'RootNode')
+
+    @unittest.skipIf(not solver_available or not havenetx,
+                     "solver or NetworkX not available")
+    def test_NetX_ef_csvwriter(self):
+        """ solve the ef and report gap"""
+        import NetXReferenceModel as ref
+        tree_model = ref.pysp_scenario_tree_model_callback()
+        stsolver = rapper.StochSolver("NetXReferenceModel.py",
+                                      fsfct="pysp_instance_creation_callback",
+                                      tree_model=tree_model)
+        res, gap = stsolver.solve_ef(solvername, tee=True, need_gap=True)
+        csvw.write_csv_soln(stsolver.scenario_tree, "testcref")
+        with open("testcref_StageCostDetail.csv", 'r') as f:
+            line = f.readline()
+        assert(line.split(",")[0] == "Stage1")
 
 if __name__ == '__main__':
     unittest.main()

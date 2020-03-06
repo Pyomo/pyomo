@@ -35,7 +35,10 @@ class ConstructionTimer(object):
 
     def __str__(self):
         total_time = self.timer
-        idx = len(self.obj.index_set())
+        try:
+            idx = len(self.obj.index_set())
+        except AttributeError:
+            idx = 1
         try:
             name = self.obj.name
         except RuntimeError:
@@ -43,16 +46,22 @@ class ConstructionTimer(object):
                 name = self.obj.local_name
             except RuntimeError:
                 name = '(unknown)'
+        except AttributeError:
+            name = '(unknown)'
+        try:
+            _type = self.obj.type().__name__
+        except AttributeError:
+            _type = type(self.obj).__name__
         try:
             return self.fmt % ( 2 if total_time>=0.005 else 0,
-                                self.obj.type().__name__,
+                                _type,
                                 name,
                                 idx,
                                 'indicies' if idx > 1 else 'index',
                             ) % total_time
         except TypeError:
             return "ConstructionTimer object for %s %s; %s elapsed seconds" % (
-                self.obj.type().__name__,
+                _type,
                 name,
                 self.timer.toc("") )
 

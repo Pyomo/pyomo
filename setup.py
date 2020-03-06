@@ -138,7 +138,7 @@ def run_setup():
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Software Development :: Libraries :: Python Modules' ],
-      packages=find_packages(exclude=("admin","scripts",)),
+      packages=find_packages(exclude=("scripts",)),
       package_data={"pyomo.contrib.viewer":["*.ui"]},
       keywords=['optimization'],
       install_requires=requires,
