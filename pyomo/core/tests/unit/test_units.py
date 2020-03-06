@@ -33,7 +33,7 @@ class TestPyomoUnit(unittest.TestCase):
 
     def test_PyomoUnit_NumericValueMethods(self):
         m = ConcreteModel()
-        uc = units()
+        uc = units
         kg = uc.kg
 
         self.assertEqual(kg.getname(), 'kg')
@@ -177,7 +177,7 @@ class TestPyomoUnit(unittest.TestCase):
         # therefore, if the expression system changes and we get a different expression type,
         # we will know we need to change these tests
 
-        uc = units()
+        uc = units
         kg = uc.kg
         m = uc.m
 
@@ -382,7 +382,7 @@ class TestPyomoUnit(unittest.TestCase):
 
     # @unittest.skip('Skipped testing LinearExpression since StreamBasedExpressionVisitor does not handle LinearExpressions')
     def test_linear_expression(self):
-        uc = units()
+        uc = units
         model = ConcreteModel()
         kg = uc.kg
         m = uc.m
@@ -399,7 +399,7 @@ class TestPyomoUnit(unittest.TestCase):
         self._get_check_units_fail(linex2, uc, expr.LinearExpression)
 
     def test_dimensionless(self):
-        uc = units()
+        uc = units
         kg = uc.kg
         dless = uc.dimensionless
         self._get_check_units_ok(2.0 == 2.0*dless, uc, None, expr.EqualityExpression)
@@ -408,7 +408,7 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertEqual(None, uc.get_units(kg/kg))
 
     def test_temperatures(self):
-        uc = units()
+        uc = units
 
         # Pyomo units framework disallows "offset" units
         with self.assertRaises(UnitsError):
@@ -443,15 +443,23 @@ class TestPyomoUnit(unittest.TestCase):
         self._get_check_units_fail(2.0*K + 3.0*R, uc, expr.NPV_SumExpression)
         self._get_check_units_fail(2.0*delta_degC + 3.0*delta_degF, uc, expr.NPV_SumExpression)
 
+        self.assertAlmostEqual(uc.convert_temp_K_to_C(323.15), 50.0, places=5)
+        self.assertAlmostEqual(uc.convert_temp_C_to_K(50.0), 323.15, places=5)
+        self.assertAlmostEqual(uc.convert_temp_R_to_F(509.67), 50.0, places=5)
+        self.assertAlmostEqual(uc.convert_temp_F_to_R(50.0), 509.67, places=5)
+
+        with self.assertRaises(UnitsError):
+            uc.convert_temp_K_to_C(ex)
+
     def test_module_example(self):
         from pyomo.environ import ConcreteModel, Var, Objective, units
         model = ConcreteModel()
         model.acc = Var()
-        model.obj = Objective(expr=(model.acc*units().m/units().s**2 - 9.81*units().m/units().s**2)**2)
-        self.assertEqual('m ** 2 / s ** 4', str(units().get_units(model.obj.expr)))
+        model.obj = Objective(expr=(model.acc*units.m/units.s**2 - 9.81*units.m/units.s**2)**2)
+        self.assertEqual('m ** 2 / s ** 4', str(units.get_units(model.obj.expr)))
 
     def test_convert_value(self):
-        u = units()
+        u = units
         x = 0.4535923*u.kg
         expected_lb_value = 1.0
         actual_lb_value = u.convert_value(src=x, from_units=u.kg, to_units=u.lb)
@@ -462,6 +470,48 @@ class TestPyomoUnit(unittest.TestCase):
         with self.assertRaises(UnitsError):
             actual_lb_value = u.convert_value(src=x, from_units=u.meters, to_units=u.lb)
 
+    def test_convert(self):
+        u = units
+        m = ConcreteModel()
+        m.sx = Var(units=u.m, initialize=10)
+        m.sy = Var(units=u.m, initialize=5)
+        m.vx = Var(units=u.m/u.s, initialize=5)
+        m.vy = Var(units=u.m/u.s, initialize=5)
+        m.t = Var(units=u.s, bounds=(0,100), initialize=10)
+        m.v = Var(units=u.m/u.s, initialize=10)
+        m.ay = Param(initialize=-9.8, units=u.m/u.s**2)
+        m.angle = Var(bounds=(0.05*3.14, 0.45*3.14), initialize=0.2*3.14, units=u.radians)
+
+        def x_dist_rule(m):
+            return  m.sx == m.vx*m.t
+        m.x_dist = Constraint(rule=x_dist_rule)
+
+        def y_dist_rule(m):
+            return m.sy == m.vy*m.t + 1/2*m.ay*m.t**2
+        m.y_dist = Constraint(rule=y_dist_rule)
+
+        def vx_angle_rule(m):
+            return  m.vx == m.v * cos(m.angle)
+        m.vx_angle = Constraint(rule=vx_angle_rule)
+
+        def vy_angle_rule(m):
+            return m.vy == m.v  * sin(m.angle)
+        m.vy_angle = Constraint(rule=vy_angle_rule)
+
+        m.sy.fix(0.0)
+        m.sx.fix(10.0)
+        #m.angle.fix(0.25*3.14)
+        #m.v.fix(10)
+        #m.t.fix(5)
+        
+        # lets solve for the v and angle that minimize time to impact
+        m.obj = Objective(expr=m.t)
+
+        #SolverFactory('ipopt').solve(m, tee=True)
+        #m.pprint()
+        #m.display()
+        #self.assertTrue(False)
+        
 
 if __name__ == "__main__":
     unittest.main()
