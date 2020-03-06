@@ -9,14 +9,17 @@
 #  ___________________________________________________________________________
 import pyutilib.th as unittest
 
+from pyomo.contrib.pynumero import (
+    numpy_available, scipy_available, numpy as np
+)
+
 SKIPTESTS=[]
-from pyomo.contrib.pynumero import numpy_available, scipy_available
 if numpy_available and scipy_available:
-    import numpy as np
     from scipy.sparse import coo_matrix, bmat
-    from pyomo.contrib.pynumero.sparse import BlockVector
 else:
-    SKIPTESTS.append("Pynumero needs scipy and numpy>=1.13.0 to run BlockMatrix tests")
+    SKIPTESTS.append(
+        "Pynumero needs scipy and numpy>=1.13.0 to run BlockMatrix tests"
+    )
 
 try:
     from mpi4py import MPI
@@ -29,6 +32,7 @@ except ImportError:
     SKIPTESTS.append("Pynumero needs mpi4py to run BlockVector MPI tests")
 
 if not SKIPTESTS:
+    from pyomo.contrib.pynumero.sparse import BlockVector
     from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
 
 

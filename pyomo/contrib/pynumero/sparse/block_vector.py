@@ -20,9 +20,11 @@ where v_i are numpy arrays of dimension 1
 .. rubric:: Contents
 
 """
-from .base_block import BaseBlockVector
-import numpy as np
+
 import operator
+
+from pyomo.contrib.pynumero import numpy as np
+from .base_block import BaseBlockVector
 
 __all__ = ['BlockVector', 'NotFullyDefinedBlockVectorError']
 

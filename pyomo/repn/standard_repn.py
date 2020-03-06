@@ -22,7 +22,6 @@ from pyomo.core.base import (Constraint,
                              Objective,
                              ComponentMap)
 
-import pyomo.common
 from pyutilib.misc import Bunch
 from pyutilib.math.util import isclose as isclose_default
 
