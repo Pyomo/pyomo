@@ -77,6 +77,11 @@ workflow, labeled
 a process that defines separate remotes for your fork and the main
 Pyomo repository.
 
+More information on git can be found at
+https://git-scm.com/book/en/v2. Section 2.5 has information on working
+with remotes.
+
+
 .. _forksgithubui:
 
 Working with my fork and the GitHub Online UI
@@ -230,10 +235,6 @@ these changes to the master branch on your fork,
 
    git push my-fork master
    
-More information on git can be found at
-https://git-scm.com/book/en/v2. Section 2.5 has information on working
-with remotes.
-
 
 Review Process
 --------------
