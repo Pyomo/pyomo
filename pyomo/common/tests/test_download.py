@@ -161,3 +161,24 @@ class Test_FileDownloader(unittest.TestCase):
         with self.assertRaisesRegexp(
                 DeveloperError, 'target file name has not been initialized'):
             f.get_gzipped_binary_file('bogus')
+
+    def test_get_test_binary_file(self):
+        tmpdir = tempfile.mkdtemp()
+        try:
+            f = FileDownloader()
+            # Mock retrieve_url so network connections are not necessary
+            f.retrieve_url = lambda url: "\n"
+
+            # Binary files will preserve line endings
+            target = os.path.join(tmpdir, 'bin.txt')
+            f.set_destination_filename(target)
+            f.get_binary_file(None)
+            self.assertEqual(os.path.getsize(target), 1)
+
+            # Text files will convert line endings to the local platform
+            target = os.path.join(tmpdir, 'txt.txt')
+            f.set_destination_filename(target)
+            f.get_text_file(None)
+            self.assertEqual(os.path.getsize(target), len(os.linesep))
+        finally:
+            shutil.rmtree(tmpdir)

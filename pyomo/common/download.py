@@ -21,6 +21,7 @@ import zipfile
 from six.moves.urllib.request import urlopen
 
 from .config import PYOMO_CONFIG_DIR
+from .deprecation import deprecated
 from .errors import DeveloperError
 import pyomo.common
 
