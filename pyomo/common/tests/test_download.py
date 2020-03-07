@@ -137,15 +137,15 @@ class Test_FileDownloader(unittest.TestCase):
         self.assertFalse(any(c in ans[0] for c in '.-_'))
         self.assertIn(ans[1], (32,64))
 
-    def test_get_url(self):
+    def test_get_platform_url(self):
         f = FileDownloader()
         urlmap = {'bogus_sys': 'bogus'}
         with self.assertRaisesRegexp(
                 RuntimeError, "cannot infer the correct url for platform '.*'"):
-            f.get_url(urlmap)
+            f.get_platform_url(urlmap)
 
         urlmap[f.get_sysinfo()[0]] = 'correct'
-        self.assertEqual(f.get_url(urlmap), 'correct')
+        self.assertEqual(f.get_platform_url(urlmap), 'correct')
 
 
     def test_get_files_requires_set_destination(self):

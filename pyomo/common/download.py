@@ -58,7 +58,26 @@ class FileDownloader(object):
         return system, bits
 
 
+    @deprecated("get_url() is deprecated. Use get_platform_url()",
+                version='TBD')
     def get_url(self, urlmap):
+        return self.get_platform_url(urlmap)
+
+
+    def get_platform_url(self, urlmap):
+        """Select the url for this platform
+
+        Given a `urlmap` dict that maps the platform name (from
+        `FileDownloader.get_sysinfo()`) to a platform-specific URL,
+        return the URL that matches the current platform.
+
+        Parameters
+        ----------
+        urlmap: dict
+            Map of platform name (e.g., `linux`, `windows`, `cygwin`,
+            `darwin`) to URL
+
+        """
         system, bits = self.get_sysinfo()
         url = urlmap.get(system, None)
         if url is None:
