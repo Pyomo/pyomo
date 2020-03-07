@@ -8,8 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import io
 import os
 import platform
+import six
 import shutil
 import tempfile
 
@@ -166,14 +168,21 @@ class Test_FileDownloader(unittest.TestCase):
         tmpdir = tempfile.mkdtemp()
         try:
             f = FileDownloader()
+
             # Mock retrieve_url so network connections are not necessary
-            f.retrieve_url = lambda url: "\n"
+            if six.PY3:
+                f.retrieve_url = lambda url: bytes("\n", encoding='utf-8')
+            else:
+                f.retrieve_url = lambda url: bytes("\n")
 
             # Binary files will preserve line endings
             target = os.path.join(tmpdir, 'bin.txt')
             f.set_destination_filename(target)
             f.get_binary_file(None)
             self.assertEqual(os.path.getsize(target), 1)
+
+            # Mock retrieve_url so network connections are not necessary
+            f.retrieve_url = lambda url: "\n"
 
             # Text files will convert line endings to the local platform
             target = os.path.join(tmpdir, 'txt.txt')
