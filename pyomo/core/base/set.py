@@ -250,6 +250,15 @@ def simple_set_rule( fn ):
 class UnknownSetDimen(object): pass
 
 class SetInitializer(InitializerBase):
+    """An Initializer wrapper for returning Set objects
+
+    This initializer wraps another Initializer and converts the return
+    value to a proper Pyomo Set.  If the initializer is None, then Any
+    is returned.  This initializer can be 'intersected' with another
+    initializer to return the SetIntersect of the Sets returned by the
+    initializers.
+
+    """
     __slots__ = ('_set','verified')
 
     def __init__(self, init, allow_generators=True):
@@ -296,6 +305,13 @@ class SetInitializer(InitializerBase):
             self._set = Initializer(val)
 
 class SetIntersectInitializer(InitializerBase):
+    """An Initializer that returns the intersection of two SetInitializers
+
+    Users will typically not create a SetIntersectInitializer directly.
+    Instead, SetInitializer.intersect() may return a SetInitializer that
+    contains a SetIntersectInitializer instance.
+
+    """
     __slots__ = ('_A','_B',)
     def __init__(self, setA, setB):
         self._A = setA
@@ -324,6 +340,18 @@ class SetIntersectInitializer(InitializerBase):
             return self._B.indices()
 
 class BoundsInitializer(InitializerBase):
+    """An Initializer wrapper that converts bounds information to a RangeSet
+
+    The BoundsInitializer wraps another initializer that is expected to
+    return valid arguments to the RangeSet constructor.  Nominally, this
+    would be bounds information in the form of (lower bound, upper
+    bound), but could also be a single scalar or a 3-tuple.  Calling
+    this initializer will return a RangeSet object.
+
+    BoundsInitializer objects can be intersected with other
+    SetInitializer objects using the SetInitializer.intersect() method.
+
+    """
     __slots__ = ('_init', 'default_step',)
     def __init__(self, init, default_step=0):
         self._init = Initializer(init, treat_sequences_as_mappings=False)
@@ -358,6 +386,13 @@ class TuplizeError(PyomoException):
     pass
 
 class TuplizeValuesInitializer(InitializerBase):
+    """An initializer wrapper that will "tuplize" a sequence
+
+    This initializer takes the result of another initializer, and if it
+    is a sequence that does not already contain tuples, wil convert it
+    to a sequence of tuples, each of length 'dimen' before returning it.
+
+    """
     __slots__ = ('_init', '_dimen')
 
     def __new__(cls, *args):
@@ -1699,8 +1734,7 @@ _SETDATA_API = (
 @ModelComponentFactory.register(
     "Set data that is used to define a model instance.")
 class Set(IndexedComponent):
-    """
-    A component used to index other Pyomo components.
+    """A component used to index other Pyomo components.
 
     This class provides a Pyomo component that is API-compatible with
     Python `set` objects, with additional features, including:
@@ -1725,8 +1759,9 @@ class Set(IndexedComponent):
             constructed.  Values passed to `initialize` may be
             overridden by `data` passed to the :py:meth:`construct`
             method.
-        dimen : initializer(int)
-            Specify the Set's arity, or None if no arity is enforced
+        dimen : initializer(int), optional
+            Specify the Set's arity (the required tuple length for all
+            members of the Set), or None if no arity is enforced
         ordered : bool or Set.InsertionOrder or Set.SortedOrder or function
             Specifies whether the set is ordered. Possible values are:
                 False               Unordered
@@ -1741,8 +1776,8 @@ class Set(IndexedComponent):
             A set that defines the valid values that can be contained
             in this set
         bounds : initializer(tuple), optional
-            A 2-tuple that specifies the lower and upper bounds for
-            valid Set values
+            A tuple that specifies the bounds for valid Set values
+            (accpets 1-, 2-, or 3-tuple RangeSet arguments)
         filter : initializer(rule), optional
             A rule for determining membership in this set. This has the
             functional form:
@@ -1767,6 +1802,7 @@ class Set(IndexedComponent):
         valid set values.  If more than one is specified, Set values
         will be restricted to the intersection of `domain`, `within`,
         and `bounds`.
+
     """
 
     class End(object): pass

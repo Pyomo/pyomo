@@ -111,7 +111,7 @@ def disable_methods(methods):
     that override key methods to raise exceptions.  When the construct()
     method is called, the class instance changes type back to the
     original scalar component and the full class functionality is
-    restored.  The prevents most class methods from having to begin with
+    restored.  This prevents most class methods from having to begin with
     "`if not self.parent_component()._constructed: raise RuntimeError`"
     """
     def class_decorator(cls):
@@ -154,6 +154,14 @@ def Initializer(init,
                 allow_generators=False,
                 treat_sequences_as_mappings=True,
                 arg_not_specified=None):
+    """Standardized processing of Component keyword arguments
+
+    Component keyword arguments accept a number of possible inputs, from
+    scalars to dictionaries, to functions (rules) and generators.  This
+    function standardizes the processing of keyword arguments and
+    returns "initializer classes" that are specialized to the specific
+    data type provided.
+    """
     if init.__class__ in native_types:
         if init is arg_not_specified:
             return None
@@ -195,11 +203,19 @@ def Initializer(init,
 
 
 class InitializerBase(object):
+    """Base class for all Initializer objects"""
     __slots__ = ()
 
     verified = False
 
     def __getstate__(self):
+        """Class serializer
+
+        This class must declare __getstate__ because it is slotized.
+        This implementation should be sufficient for simple derived
+        classes (where __slots__ are only declared on the most derived
+        class).
+        """
         return {k:getattr(self,k) for k in self.__slots__}
 
     def __setstate__(self, state):
@@ -225,6 +241,7 @@ class InitializerBase(object):
 
 
 class ConstantInitializer(InitializerBase):
+    """Initializer for constant values"""
     __slots__ = ('val','verified')
 
     def __init__(self, val):
@@ -239,6 +256,7 @@ class ConstantInitializer(InitializerBase):
 
 
 class ItemInitializer(InitializerBase):
+    """Initializer for dict-like values supporting __getitem__()"""
     __slots__ = ('_dict',)
 
     def __init__(self, _dict):
@@ -255,6 +273,7 @@ class ItemInitializer(InitializerBase):
 
 
 class IndexedCallInitializer(InitializerBase):
+    """Initializer for functions and callable objects"""
     __slots__ = ('_fcn',)
 
     def __init__(self, _fcn):
@@ -273,18 +292,24 @@ class IndexedCallInitializer(InitializerBase):
 
 
 class CountedCallGenerator(object):
-    def __init__(self, fcn, scalar, parent, idx):
+    """Generator implementing the "counted call" initialization scheme
+
+    This generator implements the older "counted call" scheme, where the
+    first argument past the parent block is a monotonically-increasing
+    integer beginning at 1.
+    """
+    def __init__(self, ctype, fcn, scalar, parent, idx):
         # Note: this is called by a component using data from a Set (so
         # any tuple-like type should have already been checked and
         # converted to a tuple; or flattening is turned off and it is
         # the user's responsibility to sort things out.
         self._count = 0
         if scalar:
-            self._fcn = lambda c: self._filter(fcn(parent, c))
+            self._fcn = lambda c: self._filter(ctype, fcn(parent, c))
         elif idx.__class__ is tuple:
-            self._fcn = lambda c: self._filter(fcn(parent, c, *idx))
+            self._fcn = lambda c: self._filter(ctype, fcn(parent, c, *idx))
         else:
-            self._fcn = lambda c: self._filter(fcn(parent, c, idx))
+            self._fcn = lambda c: self._filter(ctype, fcn(parent, c, idx))
 
     def __iter__(self):
         return self
@@ -296,18 +321,21 @@ class CountedCallGenerator(object):
     next = __next__
 
     @staticmethod
-    def _filter(x):
+    def _filter(ctype, x):
         if x is None:
             raise ValueError(
-                """Counted Set rule returned None instead of Set.End.
-    Counted Set rules of the form fcn(model, count, *idx) will be called
+                """Counted %s rule returned None instead of %s.End.
+    Counted %s rules of the form fcn(model, count, *idx) will be called
     repeatedly with an increasing count parameter until the rule returns
-    Set.End.  None is not a valid Set member in this case due to the
-    likelihood that an error in the rule can incorrectly return None.""")
+    %s.End.  None is not a valid return value in this case due to the
+    likelihood that an error in the rule can incorrectly return None."""
+                % ((ctype.__name__,)*4))
         return x
 
 
 class CountedCallInitializer(InitializerBase):
+    """Initializer for functions implementing the "counted call" API.
+    """
     # Pyomo has a historical feature for some rules, where the number of
     # times[*1] the rule was called could be passed as an additional
     # argument between the block and the index.  This was primarily
@@ -330,12 +358,13 @@ class CountedCallInitializer(InitializerBase):
     # consistent form of the original implementation for backwards
     # compatability, but I believe that we should deprecate this syntax
     # entirely.
-    __slots__ = ('_fcn','_is_counted_rule', '_scalar',)
+    __slots__ = ('_fcn','_is_counted_rule', '_scalar','_ctype')
 
     def __init__(self, obj, _indexed_init):
         self._fcn = _indexed_init._fcn
         self._is_counted_rule = None
         self._scalar = not obj.is_indexed()
+        self._ctype = obj.type()
         if self._scalar:
             self._is_counted_rule = True
 
@@ -350,7 +379,8 @@ class CountedCallInitializer(InitializerBase):
             else:
                 return self._fcn(parent, idx)
         if self._is_counted_rule == True:
-            return CountedCallGenerator(self._fcn, self._scalar, parent, idx)
+            return CountedCallGenerator(
+                self._ctype, self._fcn, self._scalar, parent, idx)
 
         # Note that this code will only be called once, and only if
         # the object is not a scalar.
@@ -364,6 +394,7 @@ class CountedCallInitializer(InitializerBase):
 
 
 class ScalarCallInitializer(InitializerBase):
+    """Initializer for functions taking only the parent block argument."""
     __slots__ = ('_fcn',)
 
     def __init__(self, _fcn):
