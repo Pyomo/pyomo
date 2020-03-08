@@ -1,0 +1,45 @@
+DLW March 2020 parmest to mpi-sppy
+Scenario Creation Notes
+
+Big picture:
+- parmest wants to solve for Vars
+- we are going to assume that these same vars are fixed
+  by the scenario creation function, so
+- a scenario is probability and a list of var names with corresponding values
+
+Work plan (starting with semibatch)
+0 start with scenarios directly from experiments
+1 then add scenarios directly from bootstrap
+
+notes
+= I want to avoid requiring mpi-sppy for all parmest users, so
+I think that just means builiding a "stand-alone" driver tool
+that imports from parmest and mpi-sppy
+--- or maybe, for now at least, just write a csv file
+with one row per scenario: prob, var name, value, var name, value, ...
+
+= to get started, do the semibatch example
+
+= NOTE: parmest has a _pysp_instance_creation_callback but it is used internally
+
+Thinking bigger:
+
+= Does any of this have anything to do with Sirrola's ``Think about
+a generic description of uncertain parameters and their relationship to
+optimization models''
+
+
+
+============================================
+code notes:
+
+1. scenarios from experiments:
+
+- Create the object as in semibatch_parmest.py (call it parmest)
+- loop over exp nums calling mode=_instance_creation_callback(exp num, cb_data)
+   solve each model and grab the thetas
+      for theta in parmest.theta_names:
+          tvar = eval('model.'+theta)
+	  tval = pyo.value(tvar)
+
+2. scenarios from boostrap is already done: just write the bootstrap_theta df
