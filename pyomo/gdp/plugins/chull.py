@@ -24,7 +24,8 @@ from pyomo.core import (
     Any, RangeSet, Reals, value
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import clone_without_expression_components, target_list
+from pyomo.gdp.util import clone_without_expression_components, target_list, \
+    is_child_of
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 
 from six import iteritems, iterkeys
@@ -51,7 +52,7 @@ class ConvexHull_Transformation(Transformation):
         'LeeGrossmann', or 'GrossmannLee'
     EPS : float
         The value to use for epsilon [default: 1e-4]
-    targets : (block, disjunction, ComponentUID or list of those types)
+    targets : (block, disjunction, or list of those types)
         The targets to transform. This can be a block, disjunction, or a
         list of blocks and Disjunctions [default: the instance]
 
@@ -96,9 +97,10 @@ class ConvexHull_Transformation(Transformation):
         doc="""
 
         This specifies the target or list of targets to relax as either a
-        component, ComponentUID, or string that can be passed to a
-        ComponentUID; or an iterable of these types.  If None (default),
-        the entire model is transformed."""
+        component or a list of components. If None (default), the entire model
+        is transformed. Note that if the transformation is done out of place,
+        the list of targets should be attached to the model before it is cloned,
+        and the list will specify the targets on the cloned instance."""
     ))
     CONFIG.declare('perspective function', cfg.ConfigValue(
         default='FurmanSawayaGrossmann',
@@ -199,13 +201,14 @@ class ConvexHull_Transformation(Transformation):
             _HACK_transform_whole_instance = True
         else:
             _HACK_transform_whole_instance = False
-        for _t in targets:
-            t = _t.find_component(instance)
-            if t is None:
-                raise GDP_Error(
-                    "Target %s is not a component on the instance!" % _t)
-
-            if t.type() is Disjunction:
+        knownBlocks = {}
+        for t in targets:
+            # check that t is in fact a child of instance
+            if not is_child_of(parent=instance, child=t,
+                               knownBlocks=knownBlocks):
+                raise GDP_Error("Target %s is not a component on instance %s!"
+                                % (t.name, instance.name))
+            elif t.type() is Disjunction:
                 if t.parent_component() is t:
                     self._transformDisjunction(t, transBlock)
                 else:
