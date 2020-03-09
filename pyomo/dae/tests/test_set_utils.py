@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 """
-Unit Tests for pyomo.dae.misc
+Unit Tests for pyomo.dae.set_utils
 """
 import os
 from os.path import abspath, dirname
@@ -70,22 +70,24 @@ class TestDaeSetUtils(unittest.TestCase):
 
         self.assertFalse(is_explicitly_indexed_by(m.v, m.time))
         self.assertTrue(is_explicitly_indexed_by(m.b.v2, m.space))
+        self.assertTrue(is_explicitly_indexed_by(m.b.v3, m.time, m.space))
 
-        self.assertFalse(is_implicitly_indexed_by(m.v1, m.time))
-        self.assertFalse(is_implicitly_indexed_by(m.v2, m.set))
-        self.assertTrue(is_implicitly_indexed_by(m.b1[m.time[1]].v2, m.time))
+        self.assertFalse(is_in_block_indexed_by(m.v1, m.time))
+        self.assertFalse(is_in_block_indexed_by(m.v2, m.set))
+        self.assertTrue(is_in_block_indexed_by(m.b1[m.time[1]].v2, m.time))
 
-        self.assertTrue(is_implicitly_indexed_by(m.b2[m.time[1], 
-            m.space[1]].b.v1, m.time))
-        self.assertEqual(is_implicitly_indexed_by(m.b2[m.time[1], 
-            m.space[1]].b.v2, m.time),
-            is_explicitly_indexed_by(m.b2[m.time[1], 
-                m.space[1]].b.v2, m.time))
-        self.assertFalse(is_implicitly_indexed_by(m.b2[m.time[1], 
-            m.space[1]].b.v1, m.set))
+        self.assertTrue(is_in_block_indexed_by(
+            m.b2[m.time[1], m.space[1]].b.v1, m.time))
+        self.assertTrue(is_in_block_indexed_by(
+            m.b2[m.time[1], m.space[1]].b.v2, m.time))
+        self.assertTrue(is_explicitly_indexed_by(
+            m.b2[m.time[1], m.space[1]].b.v2, m.time))
+        self.assertFalse(is_in_block_indexed_by(
+            m.b2[m.time[1], m.space[1]].b.v1, m.set))
 
-        self.assertFalse(is_implicitly_indexed_by(m.b2[m.time[1],
-            m.space[1]].b.v1, m.space, stop_at=m.b2[m.time[1], m.space[1]]))
+        self.assertFalse(is_in_block_indexed_by(
+            m.b2[m.time[1], m.space[1]].b.v1, 
+            m.space, stop_at=m.b2[m.time[1], m.space[1]]))
 
 
     # Test get_index_set_except and _complete_index
@@ -107,6 +109,11 @@ class TestDaeSetUtils(unittest.TestCase):
         m.v2 = Var(m.time, m.space)
         m.v3 = Var(m.time, m.space, m.set1)
         m.v4 = Var(m.time, m.space, m.set1, m.set2)
+
+        # Multi-dimensional set:
+        m.set3 = Set(initialize=[('a', 1), ('b', 2)])
+        m.v5 = Var(m.set3)
+        m.v6 = Var(m.time, m.space, m.set3)
 
         disc = TransformationFactory('dae.collocation')
         disc.apply_to(m, wrt=m.time, nfe=5, ncp=2, scheme='LAGRANGE-RADAU')
@@ -180,6 +187,20 @@ class TestDaeSetUtils(unittest.TestCase):
             complete_index = index_getter(partial_index, 'a', m.space[2])
             self.assertTrue(complete_index in index_set)
             # Do something for every index of v4 at 'a' and space[2]
+
+        # Indexed by a multi-dimensional set
+        info = get_index_set_except(m.v5, m.set3)
+        set_except = info['set_except']
+        index_getter = info['index_getter']
+        self.assertEqual(set_except, [None])
+        self.assertEqual(index_getter((), ('a', 1)), ('a', 1))
+
+        info = get_index_set_except(m.v6, m.set3, m.time)
+        set_except = info['set_except']
+        index_getter = info['index_getter']
+        self.assertTrue(m.space[1] in set_except)
+        self.assertEqual(index_getter(m.space[1], ('b', 2), m.time[1]),
+                (m.time[1], m.space[1], 'b', 2))
 
 
 if __name__ == "__main__":

@@ -9,39 +9,59 @@
 #  ___________________________________________________________________________
 
 from collections import Counter
+from pyomo.kernel import ComponentSet
+from pyomo.core.base.set import SetProduct
+import pdb
 
 
-def is_explicitly_indexed_by(comp, s):
+def is_explicitly_indexed_by(comp, *sets, **kwargs):
     """
-    Returns True if component comp is directly indexed by set s.
+    Function for determining whether a pyomo component is indexed by a 
+    set or group of sets.
+
+    Args:
+        comp : some Pyomo component, possibly indexed
+        sets : Pyomo Sets to check indexing by
+
+    Returns:
+        A bool that is True if comp is directly indexed by every set in sets.
     """
     if not comp.is_indexed():
         return False
-    n = comp.index_set().dimen
-    if n == 1:
-        if comp.index_set() is s:
-            return True
-        else:
-            return False
-    elif n >= 2:
-        if s in set(comp.index_set().set_tuple):
-            # set_tuple must be converted to a python:set so a different
-            # pyomo:Set with the same elements will not be conflated.
-            # This works because pyomo:Set is hashable.
-            return True
-        else:
-            return False
+    for s in sets:
+        if isinstance(s, SetProduct):
+            msg = ('Checking for explicit indexing by a SetProduct '
+                  'is not supported')
+            raise TypeError(msg)
+
+    expand_all_set_operators = kwargs.pop('expand_all_set_operators', False)
+
+    projected_subsets = comp.index_set().subsets(expand_all_set_operators=
+                                                 expand_all_set_operators)
+    # Expanding all set operators here can be dangerous because it will not
+    # distinguish between operators that contain their operands (e.g. union,
+    # where you might consider the component to be considered indexed by 
+    # the operands) and operators that don't.
+    # Ideally would like to check for containment by inclusion and containment
+    # by product in one search of the set operators.
+    subset_set = ComponentSet(projected_subsets)
+
+    return all([_ in subset_set for _ in sets])
 
 
-def is_implicitly_indexed_by(comp, s, stop_at=None):
+def is_in_block_indexed_by(comp, s, stop_at=None):
     """
-    Returns True if any of comp's parent blocks are indexed by s.
-    Works by recursively checking parent blocks.
+    Function for determining whether a component is contained in a 
+    block that is indexed by a particular set.
 
-    If block stop_at (or its parent_component) is provided, function 
-    will return False if stop_at is reached, regardless of whether 
-    stop_at is indexed by s. Meant to be an "upper bound" for blocks 
-    to check, like a flowsheet.
+    Args: 
+        comp : Component whose parent blocks are checked
+        s : Set for which indices are checked
+        stop_at : Block at which to stop searching if reached, regardless
+                  of whether or not it is indexed by s
+                  
+    Returns:
+        Bool that is true if comp is contained in a block indexed by s
     """
     parent = comp.parent_block()
 
@@ -51,100 +71,106 @@ def is_implicitly_indexed_by(comp, s, stop_at=None):
         if parent is stop_at:
             return False
 
-        # Look at the potentially-indexed block containing our component.
+        # Look at the potentially-indexed block containing our component
         parent = parent.parent_component()
-        # Check again for stopping point in case IndexedBlock object was used.
+        # Check again for the stopping point in case an IndexedBlock was used
         if parent is stop_at:
             return False
 
-        # Check potentially-indexed block for index s.
+        # Check potentially-indexed block for index s:
         if is_explicitly_indexed_by(parent, s):
             return True
-        # Continue up the tree, checking the parent block of our potentially-
-        # indexed block, which I would like to assume contains the BlockData
-        # we started from.
+        # Continue up the tree, checking the parent block of our
+        # potentially-indexed block:
         else:
             parent = parent.parent_block()
-    # Return False if top-level block was reached.
+    # Return False if top-level block was reached
     return False
 
 
 def get_index_set_except(comp, *sets):
-    """
-    Returns a dictionary:
-      'set_except'   -> Pyomo Set or SetProduct indexing comp, with sets s 
-                        omitted.
-      'index_getter' -> Function to return an index for comp given an index
-                        from set_except and a value from each set s.
-                        Won't check if values are in s, so can be used to get
-                        an index for a component that has different s sets.
-    User should already have checked that comp is (directly) indexed
-    by each set s.
+    """ 
+    Function for getting indices of a component over a product of its
+    indexing sets other than those specified. Indices for the specified 
+    sets can be used to construct indices of the proper dimension for the 
+    original component via the index_getter function.
+
+    Args:
+        comp : Component whose indexing sets are to be manipulated
+        sets : Sets to omit from the set_except product
+
+    Returns:
+        A dictionary. Maps 'set_except' to a Pyomo Set or SetProduct
+        of comp's index set, excluding those in sets. Maps
+        'index_getter' to a function that returns an index of the
+        proper dimension for comp, given an element of set_except
+        and a value for each set excluded. These values must be provided
+        in the same order their Sets were provided in the sets argument.
     """
     n_set = len(sets)
-    s_set = set(sets)
-    info = {}
-
-    if not comp.is_indexed():
-        # This is not supported - should I return nothing or
-        # raise exception. Probably latter.
-        msg = 'Component must be indexed.'
+    s_set = ComponentSet(sets)
+    try:
+        total_s_dim = sum([s.dimen for s in sets])
+    except TypeError:
+        msg = ('get_index_set_except does not support sets with '
+              'dimen == None, including those with inconsistent dimen')
         raise TypeError(msg)
 
-    for s in sets:
-        if not is_explicitly_indexed_by(comp, s):
-            msg = comp.name + ' is not indexed by ' + s.name
-            raise ValueError(msg)
+    info = {}
 
-    if comp.dim() == 1:
-        # In this case, assume that comp is indexed by *sets
-        # Return the trivial set_except and index_getter
+    if not is_explicitly_indexed_by(comp, *sets):
+        msg = (comp.name + ' is not indexed by at least one of ' +
+                str([s.name for s in sets]))
+        raise ValueError(msg)
+
+    index_set = comp.index_set()
+    if isinstance(index_set, SetProduct):
+        projection_sets = list(index_set.subsets())
+        counter = Counter([id(_) for _ in projection_sets])
+        for s in sets:
+            if counter[id(s)] != 1:
+                msg = 'Cannot omit sets that appear multiple times'
+                raise ValueError(msg)
+        # Need to know the location of each set within comp's index_set
+        # location will map:
+        #     location_in_comp_index_set -> location_in_sets
+        location = {}
+        other_ind_sets = []
+        for ind_loc, ind_set in enumerate(projection_sets):
+            found_set = False
+            for s_loc, s_set in enumerate(sets):
+                if ind_set is s_set:
+                    location[ind_loc] = s_loc
+                    found_set = True
+                    break
+            if not found_set:
+                other_ind_sets.append(ind_set)
+    else:
+        # If index_set has no set_tuple, it must be a SimpleSet, and 
+        # len(sets) == 1 (because comp is indexed by every set in sets). 
+        # Location in sets and in comp's indexing set are the same.
+        location = {0: 0}
+        other_ind_sets = []
+
+    if comp.dim() == total_s_dim: 
+        # comp indexed by all sets and having this dimension
+        # is sufficient to know that comp is only indexed by 
+        # Sets in *sets
+
+        # In this case, return the trivial set_except and index_getter
+
+        # Problem: cannot construct location without a set tuple
+        #          is that a problem with this syntax?
+        #          Here len(newvals) should == 1
         info['set_except'] = [None]
-        # index_getter here will only accept a single argument
-        info['index_getter'] = (lambda incomplete_index, newval: newval)
-        return info
-
-    set_tuple = comp.index_set().set_tuple
-    counter = Counter(set_tuple)
-
-    for s in sets:
-        if counter[s] != 1:
-            msg = 'Cannot omit sets that appear multiple times'
-            raise ValueError(msg)
-
-    # Need to know the location of each set within comp's index set
-    # location will map:
-    #     location_in_comp_index_set -> location_in_sets
-    location = {}
-    other_ind_sets = []
-    for ind_loc, ind_set in enumerate(set_tuple):
-        found_set = False
-        for s_loc, s_set in enumerate(sets):
-            if ind_set is s_set:
-                location[ind_loc] = s_loc
-                found_set = True
-                break
-        if not found_set:
-            other_ind_sets.append(ind_set)
-
-    # Trivial case where s contains every index set of comp:
-    if comp.dim() == n_set:
-        # I choose to return a list, as in other cases, so this object
-        # can still be iterated over.
-        info['set_except'] = [None]
-        # The index_getter function simply returns an index corresponding
-        # to the values passed into it, re-ordered according to the order
-        # or indexing sets in the component - incomplete_index is 
-        # inconsequential.
+        # index_getter returns an index corresponding to the values passed to
+        # it, re-ordered according to order of indexing sets in component.
         info['index_getter'] = (lambda incomplete_index, *newvals:
-                newvals[0] if len(newvals) <= 1 else 
-                    tuple([newvals[location[i]] for i in location]))
+                newvals[0] if len(newvals) <= 1 else
+                tuple([newvals[location[i]] for i in location]))
         return info
 
-    # Now may assume other_ind_sets is nonempty and has length 
-    # comp.dim()-n_set
-
-    # Create "indexing set" for sets not specified by this function's arguments
+    # Now may assume other_ind_sets is nonempty.
     if len(other_ind_sets) == 1:
         set_except = other_ind_sets[0]
     elif len(other_ind_sets) >= 2:
@@ -162,17 +188,30 @@ def get_index_set_except(comp, *sets):
 
 def _complete_index(loc, index, *newvals):
     """
-    index is a partial index, newvals are the values for the remaining 
-    indexing sets
-    loc maps location in the new index to location in newvals
+    Function for inserting new values into a partial index.
+    Used by get_index_set_except function to construct the 
+    index_getter function for completing indices of a particular
+    component with particular sets excluded.
+
+    Args:
+        loc : Dictionary mapping location in the new index to
+              location in newvals
+        index : Partial index
+        newvals : New values to insert into index. Can be scalars
+                  or tuples (for higher-dimension sets)
+
+    Returns:
+        An index (tuple) with values from newvals inserted in 
+        locations specified by loc
     """
-    if not isinstance(index, tuple):
+    if type(index) is not tuple:
         index = (index,)
     keys = sorted(loc.keys())
     if len(keys) != len(newvals):
         raise ValueError('Wrong number of values to complete index')
     for i in sorted(loc.keys()):
-        # Correctness relies on fact that indices i are visited in order 
-        # from least to greatest.
-        index = index[0:i] + (newvals[loc[i]],) + index[i:]
+        newval = newvals[loc[i]]
+        if type(newval) is not tuple:
+            newval = (newval,)
+        index = index[0:i] + newval + index[i:]
     return index
