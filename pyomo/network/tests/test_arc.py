@@ -984,6 +984,81 @@ class TestArc(unittest.TestCase):
     1 Declarations: v_equality
 """)
 
+    def test_extensive_no_splitfrac_single_var(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+        m.p1 = Port(initialize={'v': (m.x, Port.Extensive, {'include_splitfrac':False})})
+        m.p2 = Port(initialize={'v': (m.y, Port.Extensive, {'include_splitfrac':False})})
+        m.p3 = Port(initialize={'v': (m.z, Port.Extensive, {'include_splitfrac':False})})
+        m.a1 = Arc(source=m.p1, destination=m.p2)
+        m.a2 = Arc(source=m.p1, destination=m.p3)
+
+        TransformationFactory('network.expand_arcs').apply_to(m)
+
+        os = StringIO()
+        m.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""3 Var Declarations
+    x : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+    y : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+    z : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+
+3 Constraint Declarations
+    p1_v_outsum : Size=1, Index=None, Active=True
+        Key  : Lower : Body                              : Upper : Active
+        None :   0.0 : a1_expanded.v + a2_expanded.v - x :   0.0 :   True
+    p2_v_insum : Size=1, Index=None, Active=True
+        Key  : Lower : Body              : Upper : Active
+        None :   0.0 : a1_expanded.v - y :   0.0 :   True
+    p3_v_insum : Size=1, Index=None, Active=True
+        Key  : Lower : Body              : Upper : Active
+        None :   0.0 : a2_expanded.v - z :   0.0 :   True
+
+2 Block Declarations
+    a1_expanded : Size=1, Index=None, Active=True
+        1 Var Declarations
+            v : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        1 Declarations: v
+    a2_expanded : Size=1, Index=None, Active=True
+        1 Var Declarations
+            v : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        1 Declarations: v
+
+2 Arc Declarations
+    a1 : Size=1, Index=None, Active=False
+        Key  : Ports    : Directed : Active
+        None : (p1, p2) :     True :  False
+    a2 : Size=1, Index=None, Active=False
+        Key  : Ports    : Directed : Active
+        None : (p1, p3) :     True :  False
+
+3 Port Declarations
+    p1 : Size=1, Index=None
+        Key  : Name : Size : Variable
+        None :    v :    1 :        x
+    p2 : Size=1, Index=None
+        Key  : Name : Size : Variable
+        None :    v :    1 :        y
+    p3 : Size=1, Index=None
+        Key  : Name : Size : Variable
+        None :    v :    1 :        z
+
+13 Declarations: x y z p1 p2 p3 a1 a2 a1_expanded a2_expanded p1_v_outsum p2_v_insum p3_v_insum
+""")
 
     def test_extensive_single_var(self):
         m = ConcreteModel()
@@ -1061,6 +1136,132 @@ class TestArc(unittest.TestCase):
 13 Declarations: x y z p1 p2 p3 a1 a2 a1_expanded a2_expanded p1_v_outsum p2_v_insum p3_v_insum
 """)
 
+    def test_extensive_no_splitfrac_expansion(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[1, 2, 3])
+
+        m.source = Block()
+        m.load1 = Block()
+        m.load2 = Block()
+
+        def source_block(b):
+            b.p_out = Var(b.model().time)
+            b.outlet = Port(initialize={'p': (b.p_out, Port.Extensive, {'include_splitfrac':False})})
+
+        def load_block(b):
+            b.p_in = Var(b.model().time)
+            b.inlet = Port(initialize={'p': (b.p_in, Port.Extensive, {'include_splitfrac':False})})
+
+        source_block(m.source)
+        load_block(m.load1)
+        load_block(m.load2)
+
+        m.cs1 = Arc(source=m.source.outlet, destination=m.load1.inlet)
+        m.cs2 = Arc(source=m.source.outlet, destination=m.load2.inlet)
+
+        TransformationFactory("network.expand_arcs").apply_to(m)
+
+        ref = """
+1 Set Declarations
+    time : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+
+5 Block Declarations
+    cs1_expanded : Size=1, Index=None, Active=True
+        1 Var Declarations
+            p : Size=3, Index=time
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  1 :  None :  None :  None : False :  True :  Reals
+                  2 :  None :  None :  None : False :  True :  Reals
+                  3 :  None :  None :  None : False :  True :  Reals
+
+        1 Declarations: p
+    cs2_expanded : Size=1, Index=None, Active=True
+        1 Var Declarations
+            p : Size=3, Index=time
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  1 :  None :  None :  None : False :  True :  Reals
+                  2 :  None :  None :  None : False :  True :  Reals
+                  3 :  None :  None :  None : False :  True :  Reals
+
+        1 Declarations: p
+    load1 : Size=1, Index=None, Active=True
+        1 Var Declarations
+            p_in : Size=3, Index=time
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  1 :  None :  None :  None : False :  True :  Reals
+                  2 :  None :  None :  None : False :  True :  Reals
+                  3 :  None :  None :  None : False :  True :  Reals
+
+        1 Constraint Declarations
+            inlet_p_insum : Size=3, Index=time, Active=True
+                Key : Lower : Body                              : Upper : Active
+                  1 :   0.0 : cs1_expanded.p[1] - load1.p_in[1] :   0.0 :   True
+                  2 :   0.0 : cs1_expanded.p[2] - load1.p_in[2] :   0.0 :   True
+                  3 :   0.0 : cs1_expanded.p[3] - load1.p_in[3] :   0.0 :   True
+
+        1 Port Declarations
+            inlet : Size=1, Index=None
+                Key  : Name : Size : Variable
+                None :    p :    3 : load1.p_in
+
+        3 Declarations: p_in inlet inlet_p_insum
+    load2 : Size=1, Index=None, Active=True
+        1 Var Declarations
+            p_in : Size=3, Index=time
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  1 :  None :  None :  None : False :  True :  Reals
+                  2 :  None :  None :  None : False :  True :  Reals
+                  3 :  None :  None :  None : False :  True :  Reals
+
+        1 Constraint Declarations
+            inlet_p_insum : Size=3, Index=time, Active=True
+                Key : Lower : Body                              : Upper : Active
+                  1 :   0.0 : cs2_expanded.p[1] - load2.p_in[1] :   0.0 :   True
+                  2 :   0.0 : cs2_expanded.p[2] - load2.p_in[2] :   0.0 :   True
+                  3 :   0.0 : cs2_expanded.p[3] - load2.p_in[3] :   0.0 :   True
+
+        1 Port Declarations
+            inlet : Size=1, Index=None
+                Key  : Name : Size : Variable
+                None :    p :    3 : load2.p_in
+
+        3 Declarations: p_in inlet inlet_p_insum
+    source : Size=1, Index=None, Active=True
+        1 Var Declarations
+            p_out : Size=3, Index=time
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  1 :  None :  None :  None : False :  True :  Reals
+                  2 :  None :  None :  None : False :  True :  Reals
+                  3 :  None :  None :  None : False :  True :  Reals
+
+        1 Constraint Declarations
+            outlet_p_outsum : Size=3, Index=time, Active=True
+                Key : Lower : Body                                                    : Upper : Active
+                  1 :   0.0 : cs1_expanded.p[1] + cs2_expanded.p[1] - source.p_out[1] :   0.0 :   True
+                  2 :   0.0 : cs1_expanded.p[2] + cs2_expanded.p[2] - source.p_out[2] :   0.0 :   True
+                  3 :   0.0 : cs1_expanded.p[3] + cs2_expanded.p[3] - source.p_out[3] :   0.0 :   True
+
+        1 Port Declarations
+            outlet : Size=1, Index=None
+                Key  : Name : Size : Variable
+                None :    p :    3 : source.p_out
+
+        3 Declarations: p_out outlet outlet_p_outsum
+
+2 Arc Declarations
+    cs1 : Size=1, Index=None, Active=False
+        Key  : Ports                        : Directed : Active
+        None : (source.outlet, load1.inlet) :     True :  False
+    cs2 : Size=1, Index=None, Active=False
+        Key  : Ports                        : Directed : Active
+        None : (source.outlet, load2.inlet) :     True :  False
+
+8 Declarations: time source load1 load2 cs1 cs2 cs1_expanded cs2_expanded
+"""
+        os = StringIO()
+        m.pprint(ostream=os)
+        self.assertEqual(os.getvalue().strip(), ref.strip())
 
     def test_extensive_expansion(self):
         m = ConcreteModel()
@@ -1332,9 +1533,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1360,9 +1561,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1388,9 +1589,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1416,9 +1617,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :     0 :  None :  None : False :  True :  Reals
+                  b :     0 :  None :  None : False :  True :  Reals
+                  c :     0 :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1459,9 +1660,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1487,9 +1688,9 @@ class TestArc(unittest.TestCase):
         2 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :     0 :  None :  None : False :  True :  Reals
+                  b :     0 :  None :  None : False :  True :  Reals
+                  c :     0 :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1504,9 +1705,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1532,9 +1733,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
@@ -1560,9 +1761,9 @@ class TestArc(unittest.TestCase):
         3 Var Declarations
             flow : Size=3, Index=comp
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
-                  a :     0 :  None :  None : False :  True : NonNegativeReals
-                  b :     0 :  None :  None : False :  True : NonNegativeReals
-                  c :     0 :  None :  None : False :  True : NonNegativeReals
+                  a :  None :  None :  None : False :  True :  Reals
+                  b :  None :  None :  None : False :  True :  Reals
+                  c :  None :  None :  None : False :  True :  Reals
             mass : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals

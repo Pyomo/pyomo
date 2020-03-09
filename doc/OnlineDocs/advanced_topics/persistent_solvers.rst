@@ -125,6 +125,34 @@ be modified and then updated with with solver:
 >>> m.x.setlb(1.0)  # doctest: +SKIP
 >>> opt.update_var(m.x)  # doctest: +SKIP
 
+Working with Indexed Variables and Constraints
+----------------------------------------------
+
+The examples above all used simple variables and constraints; in order to use
+indexed variables and/or constraints, the code must be slightly adapted:
+
+>>> for v in indexed_var.values():  # doctest: +SKIP
+...     opt.add_var(v)
+>>> for v in indexed_con.values():  # doctest: +SKIP
+...     opt.add_constraint(v)
+
+This must be done when removing variables/constraints, too. Not doing this would
+result in AttributeError exceptions, for example:
+
+>>> opt.add_var(indexed_var)          # doctest: +SKIP
+>>> # ERROR: AttributeError: 'IndexedVar' object has no attribute 'is_binary'
+>>> opt.add_constraint(indexed_con)   # doctest: +SKIP
+>>> # ERROR: AttributeError: 'IndexedConstraint' object has no attribute 'body'
+
+The method "is_indexed" can be used to automate the process, for example:
+
+>>> def add_variable(opt, variable):     # doctest: +SKIP
+...     if variable.is_indexed():
+...         for v in variable.values():
+...             opt.add_var(v)
+...     else:
+...         opt.add_var(v)
+
 Persistent Solver Performance
 -----------------------------
 In order to get the best performance out of the persistent solvers, use the
