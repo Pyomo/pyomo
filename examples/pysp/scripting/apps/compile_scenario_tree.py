@@ -102,7 +102,7 @@ def _pickle_compiled_scenario(worker,
             param._validate = None
         for set_ in block.component_objects(Set):
             set_.initialize = None
-            set_.filter = None
+            #set_.filter = None
         for ba in block.component_objects(BuildAction):
             ba._rule = None
 

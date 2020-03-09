@@ -144,7 +144,7 @@ def collectAbstractComponents(model):
                 data[domain] = _getAbstractDomain(obj)
 
                 # Get the initialization rule
-                data[rule] = _getAbstractInitialize(obj)
+                #data[rule] = _getAbstractInitialize(obj)
 
                 # Add this constraint
                 sets[name] = data

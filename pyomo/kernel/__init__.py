@@ -89,22 +89,7 @@ from pyomo.core.kernel.piecewise_library.transforms_nd import \
 from pyomo.core.kernel.set_types import \
     (RealSet,
      IntegerSet,
-     Reals,
-     PositiveReals,
-     NonPositiveReals,
-     NegativeReals,
-     NonNegativeReals,
-     PercentFraction,
-     UnitInterval,
-     Integers,
-     PositiveIntegers,
-     NonPositiveIntegers,
-     NegativeIntegers,
-     NonNegativeIntegers,
-     Boolean,
-     Binary,
-     RealInterval,
-     IntegerInterval)
+     BooleanSet)
 
 #
 # allow the use of standard kernel modeling components

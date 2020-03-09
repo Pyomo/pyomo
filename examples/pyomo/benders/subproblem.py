@@ -29,15 +29,15 @@ model.T = Param(within=PositiveIntegers)
 
 # derived set containing all valid week indices and subsets of interest.
 def weeks_rule(model):
-    return set(sequence(model.T()))
+    return list(sequence(model.T()))
 model.WEEKS = Set(initialize=weeks_rule, within=PositiveIntegers)
 
 def two_plus_weeks_rule(model):
-    return set(sequence(2, model.T()))
+    return list(sequence(2, model.T()))
 model.TWOPLUSWEEKS = Set(initialize=two_plus_weeks_rule, within=PositiveIntegers)
 
 def three_plus_weeks_rule(model):
-    return set(sequence(3, model.T()))
+    return list(sequence(3, model.T()))
 model.THREEPLUSWEEKS = Set(initialize=three_plus_weeks_rule, within=PositiveIntegers)
 
 # tons per hour produced

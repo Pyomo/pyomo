@@ -33,7 +33,7 @@ except AttributeError:                         #pragma:nocover
 
 
 from pyutilib.math import *
-from pyutilib.misc import tuplize, Container, PauseGC, Bunch
+from pyutilib.misc import Container, PauseGC, Bunch
 
 import pyomo.common
 from pyomo.common.deprecation import deprecation_warning
@@ -44,17 +44,17 @@ from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.expr import expr_common
 from pyomo.core.expr.symbol_map import SymbolMap
 
-from pyomo.core.base.var import _VarData, Var
+from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.set_types import *
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.base.indexed_component import IndexedComponent
-from pyomo.dataportal import DataPortal
+from pyomo.dataportal.DataPortal import DataPortal
 from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
 from pyomo.core.base.block import SimpleBlock
-from pyomo.core.base.sets import Set
+from pyomo.core.base.set import Set, UnknownSetDimen
 from pyomo.core.base.component import Component, ComponentUID
 from pyomo.core.base.plugin import ModelComponentFactory, TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
@@ -791,19 +791,6 @@ from solvers are immediately loaded into the original model instance.""")
                               namespaces,
                               profile_memory=profile_memory)
 
-    def _tuplize(self, data, setobj):
-        if data is None:            #pragma:nocover
-            return None
-        if setobj.dimen == 1:
-            return data
-        if len(list(data.keys())) == 1 and list(data.keys())[0] is None and len(data[None]) == 0: # dlw december 2017
-            return None
-        ans = {}
-        for key in data:
-            if type(data[key][0]) is tuple:
-                return data
-            ans[key] = tuplize(data[key], setobj.dimen, setobj.local_name)
-        return ans
 
     def _load_model_data(self, modeldata, namespaces, **kwds):
         """
@@ -892,12 +879,8 @@ from solvers are immediately loaded into the original model instance.""")
 
         for namespace in namespaces:
             if component_name in modeldata._data.get(namespace,{}):
-                if declaration.type() is Set:
-                    data = self._tuplize(modeldata._data[namespace][component_name],
-                                         declaration)
-                else:
-                    data = modeldata._data[namespace][component_name]
-            if not data is None:
+                data = modeldata._data[namespace][component_name]
+            if data is not None:
                 break
 
         if __debug__ and logger.isEnabledFor(logging.DEBUG):

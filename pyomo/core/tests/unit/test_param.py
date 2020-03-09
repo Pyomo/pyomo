@@ -729,11 +729,18 @@ class ArrayParam6(unittest.TestCase):
                 return 2+i
             return -(2+i)
         self.model.B = Param(B_index, [True,False], initialize=B_init)
-        try:
-            self.instance = self.model.create_instance()
-            self.fail("Expected ValueError because B_index returns a tuple")
-        except ValueError:
-            pass
+        # In the set rewrite, the following now works!
+        # try:
+        #     self.instance = self.model.create_instance()
+        #     self.fail("Expected ValueError because B_index returns a tuple")
+        # except ValueError:
+        #     pass
+        self.instance = self.model.create_instance()
+        self.assertEqual(set(self.instance.B.keys()),set([(0,0,0,True),(2,4,4,True),(0,0,0,False),(2,4,4,False)]))
+        self.assertEqual(self.instance.B[0,0,0,True],2)
+        self.assertEqual(self.instance.B[0,0,0,False],-2)
+        self.assertEqual(self.instance.B[2,4,4,True],4)
+        self.assertEqual(self.instance.B[2,4,4,False],-4)
 
     def test_index4(self):
         self.model.A = Set(initialize=range(0,4))
@@ -1043,7 +1050,7 @@ class TestIO(unittest.TestCase):
         self.model.A=Set()
         self.model.B=Param(self.model.A)
         self.instance = self.model.create_instance("param.dat")
-        self.assertEqual( self.instance.A.data(), set(['A','B','C']) )
+        self.assertEqual( set(self.instance.A.data()), set(['A','B','C']) )
 
     def test_io9(self):
         OUTPUT=open("param.dat","w")
@@ -1168,6 +1175,58 @@ class MiscParamTests(unittest.TestCase):
         def rule(model, i):
             return 0.0
         model.p = Param(model.A, initialize=rule)
+
+    def test_param_validate(self):
+        """Test Param `validate` and `within` throw ValueError when not valid.
+
+        The `within` argument will catch the ValueError, log extra information
+        with of an "ERROR" message, and reraise the ValueError.
+
+        1. Immutable Param (unindexed)
+        2. Immutable Param (indexed)
+        3. Immutable Param (arbitrary validation rule)
+        4. Mutable Param (unindexed)
+        5. Mutable Param (indexed)
+        6. Mutable Param (arbitrary validation rule)
+        """
+        def validation_rule(model, value):
+            """Arbitrary validation rule that always returns False."""
+            return False
+
+        # 1. Immutable Param (unindexed)
+        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+            m = ConcreteModel()
+            m.p1 = Param(initialize=-3, within=NonNegativeReals)
+
+        # 2. Immutable Param (indexed)
+        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+            m = ConcreteModel()
+            m.A = RangeSet(1, 2)
+            m.p2 = Param(m.A, initialize=-3, within=NonNegativeReals)
+
+        # 3. Immutable Param (arbitrary validation rule)
+        with self.assertRaisesRegex(ValueError, "Invalid parameter value"):
+            m = ConcreteModel()
+            m.p5 = Param(initialize=1, validate=validation_rule)
+
+        # 4. Mutable Param (unindexed)
+        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+            m = ConcreteModel()
+            m.p3 = Param(within=NonNegativeReals, mutable=True)
+            m.p3 = -3
+
+        # 5. Mutable Param (indexed)
+        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+            m = ConcreteModel()
+            m.A = RangeSet(1, 2)
+            m.p4 = Param(m.A, within=NonNegativeReals, mutable=True)
+            m.p4[1] = -3
+
+        # 6. Mutable Param (arbitrary validation rule)
+        with self.assertRaisesRegex(ValueError, "Invalid parameter value"):
+            m = ConcreteModel()
+            m.p6 = Param(mutable=True, validate=validation_rule)
+            m.p6 = 1
 
     def test_get_uninitialized(self):
         model=AbstractModel()

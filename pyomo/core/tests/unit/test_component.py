@@ -540,10 +540,16 @@ class TestComponentUID(unittest.TestCase):
 class TestEnviron(unittest.TestCase):
 
     def test_components(self):
-        self.assertTrue(set(x[0] for x in pyomo.core.base._pyomo.model_components()) >= set(['Set', 'Param', 'Var', 'Objective', 'Constraint']))
+        self.assertGreaterEqual(
+            set(x[0] for x in pyomo.core.base._pyomo.model_components()),
+            set(['Set', 'Param', 'Var', 'Objective', 'Constraint'])
+        )
 
     def test_sets(self):
-        self.assertTrue(set(x[0] for x in pyomo.core.base._pyomo.predefined_sets()) >= set(['Reals', 'Integers', 'Boolean']))
+        self.assertGreaterEqual(
+            set(x[0] for x in pyomo.core.base._pyomo.predefined_sets()),
+            set(['Reals', 'Integers', 'Boolean'])
+        )
 
 if __name__ == "__main__":
     unittest.main()

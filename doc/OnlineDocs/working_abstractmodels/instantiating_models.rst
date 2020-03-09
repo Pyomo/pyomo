@@ -32,7 +32,7 @@ is "empty":
 
    >>> model.pprint()
    1 Set Declarations
-       I : Dim=0, Dimen=1, Size=0, Domain=None, Ordered=False, Bounds=None
+       I : Size=0, Index=None, Ordered=Insertion
            Not constructed
    <BLANKLINE>
    1 Param Declarations
@@ -66,8 +66,9 @@ abstract ``model`` is left untouched.
    True
    >>> instance.pprint()
    1 Set Declarations
-       I : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
-           [1, 2, 3]
+       I : Size=1, Index=None, Ordered=Insertion
+           Key  : Dimen : Domain : Size : Members
+           None :     1 :    Any :    3 : {1, 2, 3}
    <BLANKLINE>
    1 Param Declarations
        p : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
@@ -102,8 +103,9 @@ several sources, including using a :ref:`dict <page-data-from-dict>`,
    >>> instance2 = model.create_instance({None: {'I': {None: [4,5]}}})
    >>> instance2.pprint()
    1 Set Declarations
-       I : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=(4, 5)
-           [4, 5]
+       I : Size=1, Index=None, Ordered=Insertion
+           Key  : Dimen : Domain : Size : Members
+           None :     1 :    Any :    2 : {4, 5}
    <BLANKLINE>
    1 Param Declarations
        p : Size=1, Index=None, Domain=Any, Default=None, Mutable=False

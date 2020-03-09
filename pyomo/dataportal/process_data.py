@@ -20,6 +20,7 @@ from pyutilib.misc import flatten
 
 from pyomo.dataportal.parse_datacmds import parse_data_commands
 from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
+from pyomo.core.base.set import UnknownSetDimen
 
 try:
     from collections import OrderedDict
@@ -42,6 +43,27 @@ logger = logging.getLogger('pyomo.core')
 global Lineno
 global Filename
 
+
+def _guess_set_dimen(index):
+    d = 0
+    # Look through the subsets of this index and get their dimen
+    for subset in index.subsets():
+        sub_d = subset.dimen
+        # If the subset has an unknown dimen, then look at the subset's
+        # domain to guess the dimen.
+        if sub_d is UnknownSetDimen:
+            for domain_subset in subset.domain.subsets():
+                sub_d = domain_subset.domain.dimen
+                if sub_d in (UnknownSetDimen, None):
+                    # We will guess that None / Unknown domains are dimen==1
+                    d += 1
+                else:
+                    d += sub_d
+        elif sub_d is None:
+            return None
+        else:
+            d += sub_d
+    return d
 
 def _process_token(token):
     if type(token) is tuple:
@@ -321,7 +343,10 @@ def _process_param(cmd, _model, _data, _default, index=None, param=None, ncolumn
                     finaldata = _process_data_list(pname, ncolumns-1, cmd)
                 elif not _model is None:
                     _param = getattr(_model, pname)
-                    finaldata = _process_data_list(pname, _param.dim(), cmd)
+                    _dim = _param.dim()
+                    if _dim is UnknownSetDimen:
+                        _dim = _guess_set_dimen(_param.index_set())
+                    finaldata = _process_data_list(pname, _dim, cmd)
                 else:
                     finaldata = _process_data_list(pname, 1, cmd)
                 for key in finaldata:
@@ -426,7 +451,7 @@ def _process_param(cmd, _model, _data, _default, index=None, param=None, ncolumn
                 d = 1
             else:
                 index = getattr(_model, sname)
-                d = index.dimen
+                d = _guess_set_dimen(index)
             #print "SET",sname,d,_model#,getattr(_model,sname).dimen, type(index)
             #d = getattr(_model,sname).dimen
             np = i-1
@@ -473,7 +498,10 @@ def _process_param(cmd, _model, _data, _default, index=None, param=None, ncolumn
             elif _model is None:
                 d = 1
             else:
-                d = getattr(_model, param[j-jstart]).dim()
+                _param = getattr(_model, pname)
+                d = _param.dim()
+                if d is UnknownSetDimen:
+                    d = _guess_set_dimen(_param.index_set())
             if nsets > 0:
                 np = i-1
                 dnp = d+np-1
@@ -544,6 +572,9 @@ def _process_data_list(param_name, dim, cmd):
     generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
     if generate_debug_messages:
         logger.debug("process_data_list %d %s",dim,cmd)
+    # We will assume all unspecified sets are dimen==1
+    #if dim is UnknownSetDimen:
+    #    dim = 1
 
     if len(cmd) % (dim+1) != 0:
         msg = "Parameter '%s' defined with '%d' dimensions, " \
@@ -583,7 +614,6 @@ def _process_include(cmd, _model, _data, _default, options=None):
     Filename = cmd[1]
     global Lineno
     Lineno = 0
-
     try:
         scenarios = parse_data_commands(filename=cmd[1])
     except IOError:

@@ -41,9 +41,14 @@ def deprecation_warning(msg, logger='pyomo.core', version=None, remove_in=None):
     Args:
         msg (str): the deprecation message to format
     """
-    msg = _default_msg(msg, version, remove_in)
-    logging.getLogger(logger).warning(
-        textwrap.fill('DEPRECATED: %s' % (msg,), width=70) )
+    msg = textwrap.fill('DEPRECATED: %s' % (_default_msg(msg, version, remove_in),),
+                        width=70)
+    try:
+        caller = inspect.getframeinfo(inspect.stack()[2][0])
+        msg += "\n(called from %s:%s)" % (caller.filename.strip(), caller.lineno)
+    except:
+        pass
+    logging.getLogger(logger).warning(msg)
 
 
 def deprecated(msg=None, logger='pyomo.core', version=None, remove_in=None):

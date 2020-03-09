@@ -56,7 +56,11 @@ environment:
 
 install:
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PYTHON%\\Library\\bin;%PATH%"
+  - "where python"
+  - "where pip"
   - python --version
+  - "SET PIP=%PYTHON%\\Scripts\\pip"
+  - "%PIP% --version"
   #
   # Set standardized ways to invoke conda for the various channels.  We
   # are seeing strange issues where conda-forge and cachemeorg are
@@ -94,7 +98,7 @@ install:
   #- "SET CONDAENV=%PYTHON%\\envs\\pyomo_test_env"
   - "echo %PATH%"
   #
-  - "SET ADDITIONAL_CF_PKGS=setuptools pip coverage sphinx_rtd_theme"
+  - "SET ADDITIONAL_CF_PKGS=setuptools coverage sphinx_rtd_theme"
   #
   # Install extra packages (formerly pyomo.extras)
   #
@@ -120,7 +124,9 @@ install:
   # the installation is not reliable and codecov is not available after
   # being installed.
   #
-  - python -m pip install codecov
+  - "python -m pip install --upgrade pip"
+  - "%PIP% --version"
+  - "%PIP% install codecov"
   #
   # Install GAMS
   #
@@ -131,7 +137,7 @@ install:
   # Clone but don't install pyomo-model-libraries
   #
   - "git clone https://github.com/Pyomo/pyomo-model-libraries.git"
-  - "python -m pip install git+https://github.com/PyUtilib/pyutilib"
+  - "%PIP% install git+https://github.com/PyUtilib/pyutilib"
   - "python setup.py develop"
 
   # Set up python's coverage for covering subprocesses (important to do

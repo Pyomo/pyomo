@@ -1330,7 +1330,7 @@ def _fbbt_block(m, config):
             else:
                 var_ubs[v] = value(v.ub)
             var_to_con_map[v].append(c)
-            n_cons += 1
+        n_cons += 1
 
     for _v in m.component_data_objects(ctype=Var, active=True, descend_into=True, sort=True):
         if _v.is_fixed():
@@ -1358,7 +1358,7 @@ def _fbbt_block(m, config):
                     var_ubs[v] = vub
 
     while len(improved_vars) > 0:
-        if n_fbbt > n_cons * config.max_iter:
+        if n_fbbt >= n_cons * config.max_iter:
             break
         v = improved_vars.pop()
         for c in var_to_con_map[v]:
@@ -1468,8 +1468,13 @@ def compute_bounds_on_expr(expr):
     bnds_dict = ComponentMap()
     visitor = _FBBTVisitorLeafToRoot(bnds_dict)
     visitor.dfs_postorder_stack(expr)
+    lb, ub = bnds_dict[expr]
+    if lb == -interval.inf:
+        lb = None
+    if ub == interval.inf:
+        ub = None
 
-    return bnds_dict[expr]
+    return lb, ub
 
 
 class BoundsManager(object):

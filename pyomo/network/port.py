@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -30,7 +30,7 @@ from pyomo.core.base.plugin import ModelComponentFactory, \
     IPyomoScriptModifyInstance, TransformationFactory
 from pyomo.core.kernel.component_map import ComponentMap
 
-from pyomo.network.util import replicate_var
+from pyomo.network.util import create_var, tighten_var_domain
 
 logger = logging.getLogger('pyomo.network')
 
@@ -381,13 +381,23 @@ class Port(IndexedComponent):
         if type(items) is dict:
             for key, val in iteritems(items):
                 if type(val) is tuple:
-                    port.add(val[0], key, val[1])
+                    if len(val) == 2:
+                        obj, rule = val
+                        port.add(obj, key, rule)
+                    else:
+                        obj, rule, kwds = val
+                        port.add(obj, key, rule, **kwds)
                 else:
                     port.add(val, key)
         else:
             for val in self._initialize:
                 if type(val) is tuple:
-                    port.add(val[0], rule=val[1])
+                    if len(val) == 2:
+                        obj, rule = val
+                        port.add(obj, rule=rule)
+                    else:
+                        obj, rule, kwds = val
+                        port.add(obj, rule=rule, **kwds)
                 else:
                     port.add(val)
 
@@ -448,29 +458,39 @@ class Port(IndexedComponent):
             Port._add_equality_constraint(arc, name, index_set)
 
     @staticmethod
-    def Extensive(port, name, index_set, include_splitfrac=False,
+    def Extensive(port, name, index_set, include_splitfrac=None,
             write_var_sum=True):
-        """
-        Arc Expansion procedure for extensive variable properties
+        """Arc Expansion procedure for extensive variable properties
 
         This procedure is the rule to use when variable quantities should
-        be split for outlets and combined for inlets.
+        be conserved; that is, split for outlets and combined for inlets.
 
-        This will first go through every destination of the port and create
-        a new variable on the arc's expanded block of the same index as the
-        current variable being processed. It will also create a splitfrac
-        variable on the expanded block as well. Then it will generate
-        constraints for the new variable that relates it to the port member
-        variable by the split fraction. Following this, an indexed constraint
-        is written that states that the sum of all the new variables equals
-        the parent. However, if `write_var_sum=False` is passed, instead of
-        this last indexed constraint, a single constraint will be written
-        that states the sum of the split fractions equals 1.
+        This will first go through every destination of the port (i.e.,
+        arcs whose source is this Port) and create a new variable on the
+        arc's expanded block of the same index as the current variable
+        being processed to store the amount of the variable that flows
+        over the arc.  For ports that have multiple outgoing arcs, this
+        procedure will create a single splitfrac variable on the arc's
+        expanded block as well. Then it will generate constraints for
+        the new variable that relate it to the port member variable
+        using the split fraction, ensuring that all extensive variables
+        in the Port are split using the same ratio.  The generation of
+        the split fraction variable and constraint can be suppressed by
+        setting the `include_splitfrac` argument to `False`.
 
-        Then, this procedure will go through every source of the port and
-        create a new variable (unless it already exists), and then write
-        a constraint that states the sum of all the incoming new variables
-        must equal the parent variable.
+        Once all arc-specific variables are created, this
+        procedure will create the "balancing constraint" that ensures
+        that the sum of all the new variables equals the original port
+        member variable. This constraint can be suppressed by setting
+        the `write_var_sum` argument to `False`; in which case, a single
+        constraint will be written that states the sum of the split
+        fractions equals 1.
+
+        Finally, this procedure will go through every source for this
+        port and create a new arc variable (unless it already exists),
+        before generating the balancing constraint that ensures the sum
+        of all the incoming new arc variables equals the original port
+        variable.
 
         Model simplifications:
 
@@ -486,11 +506,12 @@ class Port(IndexedComponent):
             If the port only contains a single Extensive variable, the
             splitfrac variables and the splitting constraints will
             be skipped since they will be unnecessary. However, they
-            can be still be included by passing include_splitfrac=True.
+            can be still be included by passing `include_splitfrac=True`.
 
         .. note::
             If split fractions are skipped, the `write_var_sum=False`
             option is not allowed.
+
         """
         port_parent = port.parent_block()
         out_vars = Port._Split(port, name, index_set,
@@ -520,6 +541,9 @@ class Port(IndexedComponent):
             evar = Port._create_evar(port.vars[name], name, eblock, index_set)
             in_vars.append(evar)
 
+        if len(sources) == 1:
+            tighten_var_domain(port.vars[name], in_vars[0], index_set)
+
         # Create constraint: var == sum of evars
         # Same logic as Port._Split
         cname = unique_component_name(port_parent, "%s_%s_insum" %
@@ -535,12 +559,11 @@ class Port(IndexedComponent):
         return in_vars
 
     @staticmethod
-    def _Split(port, name, index_set, include_splitfrac=False,
+    def _Split(port, name, index_set, include_splitfrac=None,
             write_var_sum=True):
         port_parent = port.parent_block()
         var = port.vars[name]
         out_vars = []
-        no_splitfrac = False
         dests = port.dests(active=True)
 
         if not len(dests):
@@ -556,7 +579,8 @@ class Port(IndexedComponent):
                         "Cannot fix splitfrac not at 1 for port '%s' with a "
                         "single dest '%s'" % (port.name, dests[0].name))
 
-            no_splitfrac = True
+            if include_splitfrac is not True:
+                include_splitfrac = False
 
             if len(dests[0].destination.sources(active=True)) == 1:
                 # This is a 1-to-1 connection, no need for evar, just equality.
@@ -571,7 +595,7 @@ class Port(IndexedComponent):
             evar = Port._create_evar(port.vars[name], name, eblock, index_set)
             out_vars.append(evar)
 
-            if no_splitfrac:
+            if include_splitfrac is False:
                 continue
 
             # Create and potentially initialize split fraction variables.
@@ -606,7 +630,7 @@ class Port(IndexedComponent):
                                     "splitfracs, please pass the "
                                     " include_splitfrac=True argument." %
                                     (port.name, arc.name))
-                        no_splitfrac = True
+                        include_splitfrac = False
                         continue
 
                 eblock.splitfrac = Var()
@@ -626,6 +650,9 @@ class Port(IndexedComponent):
             con = Constraint(index_set, rule=rule)
             eblock.add_component(cname, con)
 
+        if len(dests) == 1:
+            tighten_var_domain(port.vars[name], out_vars[0], index_set)
+
         if write_var_sum:
             # Create var total sum constraint: var == sum of evars
             # Need to alphanum port name in case it is indexed.
@@ -640,7 +667,7 @@ class Port(IndexedComponent):
             port_parent.add_component(cname, con)
         else:
             # OR create constraint on splitfrac vars: sum == 1
-            if no_splitfrac:
+            if include_splitfrac is False:
                 raise ValueError(
                     "Cannot choose to write split fraction sum constraint for "
                     "ports with a single destination or a single Extensive "
@@ -680,9 +707,8 @@ class Port(IndexedComponent):
         # before making a new one.
         evar = eblock.component(name)
         if evar is None:
-            evar = replicate_var(member, name, eblock, index_set)
+            evar = create_var(member, name, eblock, index_set)
         return evar
-
 
 class SimplePort(Port, _PortData):
 
@@ -693,5 +719,4 @@ class SimplePort(Port, _PortData):
 
 class IndexedPort(Port):
     pass
-
 

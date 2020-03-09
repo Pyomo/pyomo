@@ -175,6 +175,9 @@ class Test(unittest.TestCase):
         xfrm = TransformationFactory('core.relax_integrality')
         rinst = xfrm.create_using(instance_cloned)
         self.assertEqual(type(rinst.d.domain), RealSet)
+        self.assertEqual(rinst.d.bounds, (-2,3))
+        self.assertIs(instance.d.domain, Integers)
+        self.assertIs(instance_cloned.d.domain, Integers)
 
     def test_relax_integrality_simple_cloned(self):
         self.model.x = Var(within=Integers, bounds=(-2,3))
@@ -182,7 +185,10 @@ class Test(unittest.TestCase):
         instance_cloned = instance.clone()
         xfrm = TransformationFactory('core.relax_discrete')
         rinst = xfrm.create_using(instance_cloned)
-        self.assertNotEqual(type(rinst.x.domain), RealSet)
+        self.assertIs(rinst.x.domain, Reals)
+        self.assertEqual(rinst.x.bounds, (-2,3))
+        self.assertIs(instance.x.domain, Integers)
+        self.assertIs(instance_cloned.x.domain, Integers)
 
     def test_nonnegativity_transformation_1(self):
         self.model.a = Var()
@@ -204,15 +210,15 @@ class Test(unittest.TestCase):
         # Check that discrete variables are still discrete, and continuous
         # continuous
         for ndx in transformed.a:
-            self.assertTrue(isinstance(transformed.a[ndx].domain, RealSet))
+            self.assertIs(transformed.a[ndx].domain, NonNegativeReals)
         for ndx in transformed.b:
-            self.assertTrue(isinstance(transformed.b[ndx].domain, IntegerSet))
+            self.assertIs(transformed.b[ndx].domain, NonNegativeIntegers)
         for ndx in transformed.c:
-            self.assertTrue(isinstance(transformed.c[ndx].domain, IntegerSet))
+            self.assertIs(transformed.c[ndx].domain, NonNegativeIntegers)
         for ndx in transformed.d:
-            self.assertTrue(isinstance(transformed.d[ndx].domain, BooleanSet))
+            self.assertIs(transformed.d[ndx].domain, Binary)
         for ndx in transformed.e:
-            self.assertTrue(isinstance(transformed.e[ndx].domain, BooleanSet))
+            self.assertIs(transformed.e[ndx].domain, Binary)
 
     def test_nonnegativity_transformation_2(self):
         self.model.S = RangeSet(0,10)
