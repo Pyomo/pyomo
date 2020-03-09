@@ -3,7 +3,6 @@ import logging
 # This is an auto geometry generator for quadratic ROM
 import numpy as np
 from six import StringIO
-import pyomo.common
 from pyomo.contrib.trustregion.cache import GeometryCache
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
