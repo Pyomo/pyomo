@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['SolverInformation', 'SolverStatus', 'TerminationCondition', 'solve_optimal']
+__all__ = ['SolverInformation', 'SolverStatus', 'TerminationCondition', 'optimal_termination']
 
 from pyutilib.enum import Enum
 from pyomo.opt.results.container import MapContainer, ScalarType
@@ -68,10 +68,10 @@ TerminationCondition = Enum(
     )
 
 
-def solve_optimal(results):
+def optimal_termination(results):
     """
     This function returns True if the termination condition for the solver
-    is 'optimal', 'lcoallyOptimal', or 'globallyOptimal', and the status is 'ok'
+    is 'optimal', 'locallyOptimal', or 'globallyOptimal', and the status is 'ok'
 
     Parameters
     ----------
