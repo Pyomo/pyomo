@@ -70,7 +70,8 @@ TerminationCondition = Enum(
 
 def solve_optimal(results):
     """
-    This function returns True if the solve returned an optimal solution
+    This function returns True if the termination condition for the solver
+    is 'optimal', 'lcoallyOptimal', or 'globallyOptimal', and the status is 'ok'
 
     Parameters
     ----------
@@ -81,7 +82,9 @@ def solve_optimal(results):
     `bool`
     """
     if results.solver.status == SolverStatus.ok and \
-       results.solver.termination_condition == TerminationCondition.optimal:
+       (results.solver.termination_condition == TerminationCondition.optimal
+        or results.solver.termination_condition == TerminationCondition.locallyOptimal
+        or results.solver.termination_condition == TerminationCondition.globallyOptimal):
         return True
     return False
 
