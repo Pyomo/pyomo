@@ -101,7 +101,7 @@ from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value, n
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.template_expr import IndexTemplate
-from pyomo.core.expr import current as expr
+from pyomo.core.expr import current as EXPR
 from pyomo.common.importer import attempt_import
 
 pint_module, pint_available = attempt_import('pint', 'The "pint" package failed to import. This package is necessary to use Pyomo units.')
@@ -378,7 +378,7 @@ class _PyomoUnit(NumericValue):
         #     ostream.write('{:!~s}'.format(self._pint_unit))
 
 
-class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
+class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
     def __init__(self, pyomo_units_container, units_equivalence_tolerance=1e-12):
         """
         Visitor class used to determine units of an expression. Do not use
@@ -964,32 +964,32 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         return (list_of_unit_tuples[0][0]**0.5, list_of_unit_tuples[0][1]**0.5)
 
     node_type_method_map = {
-        expr.EqualityExpression: _get_unit_for_equivalent_children,
-        expr.InequalityExpression: _get_unit_for_equivalent_children,
-        expr.RangedExpression: _get_unit_for_equivalent_children,
-        expr.SumExpression: _get_unit_for_equivalent_children,
-        expr.NPV_SumExpression: _get_unit_for_equivalent_children,
-        expr.ProductExpression: _get_unit_for_product,
-        expr.MonomialTermExpression: _get_unit_for_product,
-        expr.NPV_ProductExpression: _get_unit_for_product,
-        expr.DivisionExpression: _get_unit_for_division,
-        expr.NPV_DivisionExpression: _get_unit_for_division,
-        expr.ReciprocalExpression: _get_unit_for_reciprocal,
-        expr.NPV_ReciprocalExpression: _get_unit_for_reciprocal,
-        expr.PowExpression: _get_unit_for_pow,
-        expr.NPV_PowExpression: _get_unit_for_pow,
-        expr.NegationExpression: _get_unit_for_single_child,
-        expr.NPV_NegationExpression: _get_unit_for_single_child,
-        expr.AbsExpression: _get_unit_for_single_child,
-        expr.NPV_AbsExpression: _get_unit_for_single_child,
-        expr.UnaryFunctionExpression: _get_unit_for_unary_function,
-        expr.NPV_UnaryFunctionExpression: _get_unit_for_unary_function,
-        expr.Expr_ifExpression: _get_unit_for_expr_if,
+        EXPR.EqualityExpression: _get_unit_for_equivalent_children,
+        EXPR.InequalityExpression: _get_unit_for_equivalent_children,
+        EXPR.RangedExpression: _get_unit_for_equivalent_children,
+        EXPR.SumExpression: _get_unit_for_equivalent_children,
+        EXPR.NPV_SumExpression: _get_unit_for_equivalent_children,
+        EXPR.ProductExpression: _get_unit_for_product,
+        EXPR.MonomialTermExpression: _get_unit_for_product,
+        EXPR.NPV_ProductExpression: _get_unit_for_product,
+        EXPR.DivisionExpression: _get_unit_for_division,
+        EXPR.NPV_DivisionExpression: _get_unit_for_division,
+        EXPR.ReciprocalExpression: _get_unit_for_reciprocal,
+        EXPR.NPV_ReciprocalExpression: _get_unit_for_reciprocal,
+        EXPR.PowExpression: _get_unit_for_pow,
+        EXPR.NPV_PowExpression: _get_unit_for_pow,
+        EXPR.NegationExpression: _get_unit_for_single_child,
+        EXPR.NPV_NegationExpression: _get_unit_for_single_child,
+        EXPR.AbsExpression: _get_unit_for_single_child,
+        EXPR.NPV_AbsExpression: _get_unit_for_single_child,
+        EXPR.UnaryFunctionExpression: _get_unit_for_unary_function,
+        EXPR.NPV_UnaryFunctionExpression: _get_unit_for_unary_function,
+        EXPR.Expr_ifExpression: _get_unit_for_expr_if,
         IndexTemplate: _get_dimensionless_no_children,
-        expr.GetItemExpression: _get_dimensionless_with_dimensionless_children,
-        expr.ExternalFunctionExpression: _get_dimensionless_with_dimensionless_children,
-        expr.NPV_ExternalFunctionExpression: _get_dimensionless_with_dimensionless_children,
-        expr.LinearExpression: _get_unit_for_linear_expression
+        EXPR.GetItemExpression: _get_dimensionless_with_dimensionless_children,
+        EXPR.ExternalFunctionExpression: _get_dimensionless_with_dimensionless_children,
+        EXPR.NPV_ExternalFunctionExpression: _get_dimensionless_with_dimensionless_children,
+        EXPR.LinearExpression: _get_unit_for_linear_expression
     }
 
     unary_function_method_map = {
@@ -1346,7 +1346,7 @@ class PyomoUnitsContainer(object):
            ret : Pyomo expression
 
         """
-        src_pyomo_unit, src_pint_unit = self._get_units_tuple(expr)
+        src_pyomo_unit, src_pint_unit = self._get_units_tuple(src)
         to_pyomo_unit, to_pint_unit = self._get_units_tuple(to_units)
 
         # check if any units have offset
@@ -1365,13 +1365,13 @@ class PyomoUnitsContainer(object):
         #     raise UnitsError('Offset unit detected in call to convert. Offset units are not supported at this time.')
 
         # no offsets, we only need a factor to convert between the two
-        fac_b_src, base_units_src = self._pint_ureg.get_base_units(src_unit, check_nonmult=True)
-        fac_b_dest, base_units_dest = self._pint_ureg.get_base_units(to_unit, check_nonmult=True)
+        fac_b_src, base_units_src = self._pint_registry.get_base_units(src_pint_unit, check_nonmult=True)
+        fac_b_dest, base_units_dest = self._pint_registry.get_base_units(to_pint_unit, check_nonmult=True)
 
         if base_units_src != base_units_dest:
             raise UnitsError('Cannot convert {0:s} to {1:s}. Units are not compatible.'.format(src_unit, to_unit))
 
-        return fac_b_src/fac_b_dest*to_pyomo_unit/src_pyomo_unit*expr
+        return fac_b_src/fac_b_dest*to_pyomo_unit/src_pyomo_unit*src
 
     def convert_value(self, src, from_units=None, to_units=None):
         """

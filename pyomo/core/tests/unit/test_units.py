@@ -473,44 +473,36 @@ class TestPyomoUnit(unittest.TestCase):
     def test_convert(self):
         u = units
         m = ConcreteModel()
-        m.sx = Var(units=u.m, initialize=10)
-        m.sy = Var(units=u.m, initialize=5)
-        m.vx = Var(units=u.m/u.s, initialize=5)
-        m.vy = Var(units=u.m/u.s, initialize=5)
-        m.t = Var(units=u.s, bounds=(0,100), initialize=10)
-        m.v = Var(units=u.m/u.s, initialize=10)
-        m.ay = Param(initialize=-9.8, units=u.m/u.s**2)
-        m.angle = Var(bounds=(0.05*3.14, 0.45*3.14), initialize=0.2*3.14, units=u.radians)
+        m.dx = Var(units=u.m, initialize=0.10188943773836046)
+        m.dy = Var(units=u.m, initialize=0.0)
+        m.vx = Var(units=u.m/u.s, initialize=0.7071067769802851)
+        m.vy = Var(units=u.m/u.s, initialize=0.7071067769802851)
+        m.t = Var(units=u.min, bounds=(1e-5,10.0), initialize=0.0024015570927624456)
+        m.theta = Var(bounds=(0, 0.49*3.14), initialize=0.7853981693583533, units=u.radians)
+        m.a = Param(initialize=-32.2, units=u.ft/u.s**2)
 
-        def x_dist_rule(m):
-            return  m.sx == m.vx*m.t
-        m.x_dist = Constraint(rule=x_dist_rule)
+        m.obj = Objective(expr = m.dx, sense=maximize)
+        m.vx_con = Constraint(expr = m.vx == 1.0*u.m/u.s*cos(m.theta))
+        m.vy_con = Constraint(expr = m.vy == 1.0*u.m/u.s*sin(m.theta))
+        m.dx_con = Constraint(expr = m.dx == m.vx*u.convert(m.t, to_units=u.s))
+#        m.dy_con = Constraint(expr = m.dy == m.vy*u.convert(m.t, to_units=u.s)
+#                              + 0.5*(-9.81)*(u.convert(m.t, to_units=u.s))**2)
+        m.dy_con = Constraint(expr = m.dy == m.vy*u.convert(m.t, to_units=u.s)
+                              + 0.5*(u.convert(m.a, to_units=u.m/u.s**2))*(u.convert(m.t, to_units=u.s))**2)
+        m.ground = Constraint(expr = m.dy == 0)
 
-        def y_dist_rule(m):
-            return m.sy == m.vy*m.t + 1/2*m.ay*m.t**2
-        m.y_dist = Constraint(rule=y_dist_rule)
+        self.assertAlmostEqual(value(m.obj), 0.10188943773836046, places=5)
+        self.assertAlmostEqual(value(m.vx_con.body), 0.0, places=5)
+        self.assertAlmostEqual(value(m.vy_con.body), 0.0, places=5)
+        self.assertAlmostEqual(value(m.dx_con.body), 0.0, places=5)
+        self.assertAlmostEqual(value(m.dy_con.body), 0.0, places=5)
+        self.assertAlmostEqual(value(m.ground.body), 0.0, places=5)
 
-        def vx_angle_rule(m):
-            return  m.vx == m.v * cos(m.angle)
-        m.vx_angle = Constraint(rule=vx_angle_rule)
+    def test_check_constraint(self):
+        pass
 
-        def vy_angle_rule(m):
-            return m.vy == m.v  * sin(m.angle)
-        m.vy_angle = Constraint(rule=vy_angle_rule)
-
-        m.sy.fix(0.0)
-        m.sx.fix(10.0)
-        #m.angle.fix(0.25*3.14)
-        #m.v.fix(10)
-        #m.t.fix(5)
-        
-        # lets solve for the v and angle that minimize time to impact
-        m.obj = Objective(expr=m.t)
-
-        #SolverFactory('ipopt').solve(m, tee=True)
-        #m.pprint()
-        #m.display()
-        #self.assertTrue(False)
+    def test_check_model(self):
+        pass
         
 
 if __name__ == "__main__":
