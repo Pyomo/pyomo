@@ -74,7 +74,6 @@ def generate_time_only_slices(obj, time):
     )
     # For each combination of regular indices, we can generate a single
     # slice over the time index
-#    time_sliced = {time_idx: time.first()}
     time_sliced = {time_idx: slice(None)}
     for key in _slice.wildcard_keys():
         if type(key) is not tuple:
