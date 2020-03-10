@@ -188,6 +188,19 @@ class TestContinuousSet(unittest.TestCase):
             temp = m.t.get_lower_element_boundary(0.5)
         self.assertIn('Returning the lower bound', log_out.getvalue())
 
+    def test_duplicate_construct(self):
+        m = ConcreteModel()
+        m.t = ContinuousSet(initialize=[1,2,3])
+        self.assertEqual(m.t, [1,2,3])
+        self.assertEqual(m.t._fe, [1,2,3])
+        m.t.add(1.5)
+        m.t.add(2.5)
+        self.assertEqual(m.t, [1,1.5,2,2.5,3])
+        self.assertEqual(m.t._fe, [1,2,3])
+        m.t.construct()
+        self.assertEqual(m.t, [1,1.5,2,2.5,3])
+        self.assertEqual(m.t._fe, [1,2,3])
+
 
 class TestIO(unittest.TestCase):
 
