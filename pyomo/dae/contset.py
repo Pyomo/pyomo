@@ -210,6 +210,8 @@ class ContinuousSet(SortedSimpleSet):
         """ Constructs a :py:class:`ContinuousSet` component
 
         """
+        if self._constructed:
+            return
         timer = ConstructionTimer(self)
         super(ContinuousSet, self).construct(values)
 
