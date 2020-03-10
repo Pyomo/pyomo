@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['SolverInformation', 'SolverStatus', 'TerminationCondition']
+__all__ = ['SolverInformation', 'SolverStatus', 'TerminationCondition', 'solve_optimal']
 
 from pyutilib.enum import Enum
 from pyomo.opt.results.container import MapContainer, ScalarType
@@ -67,6 +67,23 @@ TerminationCondition = Enum(
     'licensingProblems'        # Problem accessing solver license
     )
 
+
+def solve_optimal(results):
+    """
+    This function returns True if the solve returned an optimal solution
+
+    Parameters
+    ----------
+    results : Pyomo results object returned from solver.solve
+
+    Returns
+    -------
+    `bool`
+    """
+    if results.solver.status == SolverStatus.ok and \
+       results.solver.termination_condition == TerminationCondition.optimal:
+        return True
+    return False
 
 class BranchAndBoundStats(MapContainer):
 
