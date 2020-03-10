@@ -1389,7 +1389,8 @@ class ScenarioTree(object):
                     new_stage._derived_variable_templates[variable_name].append(match_template)
 
             # de-reference is required to access the parameter value
-
+            # TBD March 2020: make it so the stages always know their cost names.
+            # dlw March 2020: when coming from NetworkX, we don't know these yet!!
             cost_variable_string = stage_cost_variable_names[stage_name].value
             if cost_variable_string is not None:
                 if isVariableNameIndexed(cost_variable_string):

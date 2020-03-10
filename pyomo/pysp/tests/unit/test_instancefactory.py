@@ -14,6 +14,7 @@ from os.path import join, dirname, abspath, exists
 
 import pyutilib.th as unittest
 
+from pyomo.common.dependencies import yaml_available
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 from pyomo.pysp.scenariotree.tree_structure_model import \
@@ -27,13 +28,6 @@ try:
     has_networkx = True
 except:
     has_networkx = False
-
-has_yaml = False
-try:
-    import yaml
-    has_yaml = True
-except:
-    has_yaml = False
 
 thisfile = abspath(__file__)
 thisdir = dirname(thisfile)
@@ -400,7 +394,7 @@ class Test(unittest.TestCase):
     # model: name of directory with ReferenceModel.py file with model
     # scenario_tree: name of .dat file
     # data: name of directory with yaml files
-    @unittest.skipIf(not has_yaml, "PyYAML is not available")
+    @unittest.skipIf(not yaml_available, "PyYAML is not available")
     def test_init10(self):
         with ScenarioTreeInstanceFactory(
                 model=testdatadir,

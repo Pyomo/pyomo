@@ -14,6 +14,7 @@ import math
 import os
 import random
 
+from pyomo.common.dependencies import yaml, yaml_load_args
 import pyomo.common.plugin
 from pyomo.pysp import phextension
 from pyomo.pysp.phutils import *
@@ -30,14 +31,8 @@ from six.moves import xrange
 ###############
 def _parse_yaml_file(ph, filename):
 
-    try:
-        import yaml
-    except:
-        raise RuntimeError("***The PyYAML module is required "
-                           "to load file: "+filename)
-
     with open(filename) as f:
-        config_data = yaml.load(f)
+        config_data = yaml.load(f, **yaml_load_args)
 
     for node_or_stage_name, variable_dicts in iteritems(config_data):
 

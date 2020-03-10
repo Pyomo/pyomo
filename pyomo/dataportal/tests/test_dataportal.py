@@ -21,12 +21,6 @@ import pyutilib.th as unittest
 from pyomo.dataportal.factory import DataManagerFactory
 from pyomo.environ import *
 
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
-
 currdir=dirname(abspath(__file__))+os.sep
 example_dir=pyomo_dir+os.sep+".."+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep+"tab"+os.sep
 tutorial_dir=pyomo_dir+os.sep+".."+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep
@@ -1033,7 +1027,7 @@ class TestJsonPortal(TestTextPortal):
         return {'filename':os.path.abspath(tutorial_dir+os.sep+'json'+os.sep+name+self.suffix)}
 
 
-@unittest.skipIf(not yaml_available, "YAML not available available")
+@unittest.skipIf(not yaml_interface, "YAML interface not available")
 class TestYamlPortal(TestTextPortal):
 
     suffix = '.yaml'

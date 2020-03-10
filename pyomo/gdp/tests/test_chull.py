@@ -23,8 +23,6 @@ linear_solvers = pyomo.opt.check_available_solvers(
 import random
 from six import iteritems, iterkeys
 
-# DEBUG
-from nose.tools import set_trace
 
 EPS = TransformationFactory('gdp.chull').CONFIG.EPS
 
@@ -441,6 +439,17 @@ class TwoTermDisj(unittest.TestCase):
                 self.assertIs(srcBigm[cons], var)
                 self.assertIs(bigm[var], cons)
 
+    def test_target_not_a_component_err(self):
+        decoy = ConcreteModel()
+        decoy.block = Block()
+        m = models.makeTwoSimpleDisjunctions()
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Target block is not a component on instance unknown!",
+            TransformationFactory('gdp.chull').apply_to,
+            m,
+            targets=[decoy.block])
+
     def test_do_not_transform_user_deactivated_disjuncts(self):
         # TODO
         pass
@@ -682,7 +691,7 @@ class TestSpecialCases(unittest.TestCase):
             "in disjunct disjunct1\[1,1\]!.*",
             TransformationFactory('gdp.chull').create_using,
             m,
-            targets=[ComponentUID(m.disjunction1[1])])
+            targets=[m.disjunction1[1]])
         #
         # we will make that disjunction come first now...
         #
@@ -695,7 +704,7 @@ class TestSpecialCases(unittest.TestCase):
             "innerdisjunction\[0\] in disjunct disjunct1\[1,1\]!.*",
             TransformationFactory('gdp.chull').create_using,
             m,
-            targets=[ComponentUID(m.disjunction1[1])])
+            targets=[m.disjunction1[1]])
         # Deactivating the disjunction will allow us to get past it back
         # to the Disjunct (after we realize there are no active
         # DisjunctionData within the active Disjunction)
@@ -706,7 +715,7 @@ class TestSpecialCases(unittest.TestCase):
             "in disjunct disjunct1\[1,1\]!.*",
             TransformationFactory('gdp.chull').create_using,
             m,
-            targets=[ComponentUID(m.disjunction1[1])])
+            targets=[m.disjunction1[1]])
 
     def test_local_vars(self):
         m = ConcreteModel()
