@@ -33,7 +33,7 @@ exemap = {
 
 def get_gjh(downloader):
     system, bits = downloader.get_sysinfo()
-    url = downloader.get_url(urlmap)
+    url = downloader.get_platform_url(urlmap)
 
     downloader.set_destination_filename(
         os.path.join('bin', 'gjh'+exemap[system]))

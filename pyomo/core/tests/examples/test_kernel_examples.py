@@ -14,6 +14,7 @@
 
 import os
 import glob
+import sys
 from os.path import basename, dirname, abspath, join
 
 import pyutilib.subprocess
@@ -75,7 +76,7 @@ def create_test_method(example):
             if (not testing_solvers['ipopt','nl']) or \
                (not testing_solvers['mosek','python']):
                 self.skipTest("Ipopt or Mosek is not available")
-        rc, log = pyutilib.subprocess.run(['python',example])
+        rc, log = pyutilib.subprocess.run([sys.executable,example])
         self.assertEqual(rc, 0, msg=log)
     return testmethod
 

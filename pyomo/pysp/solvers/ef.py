@@ -18,6 +18,7 @@ import pyutilib.misc
 from pyutilib.pyro import shutdown_pyro_components
 
 import pyomo.solvers
+from pyomo.common.dependencies import yaml
 from pyomo.core.base import ComponentUID
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
@@ -820,7 +821,6 @@ def runef(options,
                     with open(options.output_scenario_costs, 'w') as f:
                         json.dump(result, f, indent=2, sort_keys=True)
                 elif options.output_scenario_costs.endswith('.yaml'):
-                    import yaml
                     result = {}
                     for scenario in sp.scenario_tree.scenarios:
                         result[str(scenario.name)] = scenario._cost

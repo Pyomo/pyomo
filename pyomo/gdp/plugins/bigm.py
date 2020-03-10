@@ -25,7 +25,7 @@ from pyomo.core.base.PyomoModel import ConcreteModel, AbstractModel
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.disjunct import _DisjunctData, SimpleDisjunct
+from pyomo.gdp.disjunct import _DisjunctData
 from pyomo.gdp.util import target_list, is_child_of
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from pyomo.repn import generate_standard_repn
@@ -34,14 +34,12 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecation_warning
 from six import iterkeys, iteritems
 from weakref import ref as weakref_ref
+import sys
+
 
 logger = logging.getLogger('pyomo.gdp.bigm')
 
 NAME_BUFFER = {}
-used_args = ComponentMap() # If everything was sure to go well, this could be a
-                           # dictionary. But if someone messes up and gives us a
-                           # Var as a key in bigMargs, I need the error not to
-                           # be when I try to put it into this map!
 
 def _to_dict(val):
     if isinstance(val, (dict, ComponentMap)):
@@ -156,18 +154,35 @@ class BigM_Transformation(Transformation):
             block = block.parent_block()
         return suffix_list
 
+    def _get_bigm_arg_list(self, bigm_args, block):
+        # Gather what we know about blocks from args exactly once. We'll still
+        # check for constraints in the moment, but if that fails, we've
+        # preprocessed the time-consuming part of traversing up the tree.
+        arg_list = []
+        if bigm_args is None:
+            return arg_list
+        while block is not None:
+            if block in bigm_args:
+                arg_list.append({block: bigm_args[block]})
+            block = block.parent_block()
+        return arg_list
 
     def _apply_to(self, instance, **kwds):
         assert not NAME_BUFFER
-        assert not used_args
+        self.used_args = ComponentMap() # If everything was sure to go well,
+                                        # this could be a dictionary. But if
+                                        # someone messes up and gives us a Var
+                                        # as a key in bigMargs, I need the error
+                                        # not to be when I try to put it into
+                                        # this map!
         try:
             self._apply_to_impl(instance, **kwds)
         finally:
             # Clear the global name buffer now that we are done
             NAME_BUFFER.clear()
             # same for our bookkeeping about what we used from bigM arg dict
-            used_args.clear()
-
+            self.used_args.clear()
+    
     def _apply_to_impl(self, instance, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
 
@@ -192,25 +207,14 @@ class BigM_Transformation(Transformation):
         # We need to check that all the targets are in fact on instance. As we
         # do this, we will use the set below to cache components we know to be
         # in the tree rooted at instance.
-        knownBlocks = set()
+        knownBlocks = {}
         for t in targets:
-            # [ESJ 08/22/2019] This can go away when we deprecate CUIDs. The
-            # warning is in util, but we have to deal with the consequences here
-            # because we need to have the instance in order to get the
-            # component.
-            if isinstance(t, ComponentUID):
-                tmp = t
-                t = t.find_component(instance)
-                if t is None:
-                    raise GDP_Error(
-                        "Target %s is not a component on the instance!" % tmp)
-
             # check that t is in fact a child of instance
             if not is_child_of(parent=instance, child=t,
                                knownBlocks=knownBlocks):
                 raise GDP_Error("Target %s is not a component on instance %s!"
                                 % (t.name, instance.name))
-            if t.type() is Disjunction:
+            elif t.type() is Disjunction:
                 if t.parent_component() is t:
                     self._transform_disjunction(t, bigM)
                 else:
@@ -228,17 +232,19 @@ class BigM_Transformation(Transformation):
 
         # issue warnings about anything that was in the bigM args dict that we
         # didn't use
-        if not bigM is None and len(bigM) > len(used_args):
-            warning_msg = ("Unused arguments in the bigM map! "
-                           "These arguments were not used by the "
-                           "transformation:\n")
-            for component, m in iteritems(bigM):
-                if not component in used_args:
+        if bigM is not None:
+            unused_args = ComponentSet(bigM.keys()) - \
+                          ComponentSet(self.used_args.keys())
+            if len(unused_args) > 0:
+                warning_msg = ("Unused arguments in the bigM map! "
+                               "These arguments were not used by the "
+                               "transformation:\n")
+                for component in unused_args:
                     if hasattr(component, 'name'):
                         warning_msg += "\t%s\n" % component.name
                     else:
                         warning_msg += "\t%s\n" % component
-            logger.warn(warning_msg)
+                logger.warn(warning_msg)
 
         # HACK for backwards compatibility with the older GDP transformations
         #
@@ -313,7 +319,7 @@ class BigM_Transformation(Transformation):
         # if this is an IndexedDisjunction we have seen in a prior call to the
         # transformation, we already have a transformation block for it. We'll
         # use that.
-        if not obj._algebraic_constraint is None:
+        if obj._algebraic_constraint is not None:
             transBlock = obj._algebraic_constraint().parent_block()
         else:
             transBlock = self._add_transformation_block(obj.parent_block())
@@ -368,14 +374,16 @@ class BigM_Transformation(Transformation):
             # disjunct level, so more efficient to make it here and
             # pass it down.)
             suffix_list = self._get_bigm_suffix_list(disjunct)
+            arg_list = self._get_bigm_arg_list(bigM, disjunct)
             # relax the disjunct
-            self._transform_disjunct(disjunct, transBlock, bigM, suffix_list)
+            self._transform_disjunct(disjunct, transBlock, bigM, arg_list,
+                                     suffix_list)
 
         # add or (or xor) constraint
         if xor:
-            xorConstraint.add(index, expr=or_expr == 1)
+            xorConstraint[index] = or_expr == 1
         else:
-            xorConstraint.add(index, expr=or_expr >= 1)
+            xorConstraint[index] = or_expr >= 1
         # Mark the DisjunctionData as transformed by mapping it to its XOR
         # constraint.
         obj._algebraic_constraint = weakref_ref(xorConstraint[index])
@@ -383,7 +391,7 @@ class BigM_Transformation(Transformation):
         # and deactivate for the writers
         obj.deactivate()
 
-    def _transform_disjunct(self, obj, transBlock, bigM, suffix_list):
+    def _transform_disjunct(self, obj, transBlock, bigM, arg_list, suffix_list):
         # deactivated -> either we've already transformed or user deactivated
         if not obj.active:
             if obj.indicator_var.is_fixed():
@@ -435,12 +443,13 @@ class BigM_Transformation(Transformation):
         # comparing the two relaxations.
         #
         # Transform each component within this disjunct
-        self._transform_block_components(obj, obj, bigM, suffix_list)
+        self._transform_block_components(obj, obj, bigM, arg_list, suffix_list)
 
         # deactivate disjunct to keep the writers happy
         obj._deactivate_without_fixing_indicator()
 
-    def _transform_block_components(self, block, disjunct, bigM, suffix_list):
+    def _transform_block_components(self, block, disjunct, bigM, arg_list,
+                                    suffix_list):
         # We first need to find any transformed disjunctions that might be here
         # because we need to move their transformation blocks up onto the parent
         # block before we transform anything else on this block 
@@ -461,13 +470,11 @@ class BigM_Transformation(Transformation):
             # we leave the transformation block because it still has the XOR
             # constraints, which we want to be on the parent disjunct.
 
-        # Now look through the component map of block and transform
-        # everything we have a handler for. Yell if we don't know how
-        # to handle it.
-        for name, obj in list(iteritems(block.component_map())):
-            # This means non-ActiveComponent types cannot have handlers
-            if not hasattr(obj, 'active') or not obj.active:
-                continue
+        # Now look through the component map of block and transform everything
+        # we have a handler for. Yell if we don't know how to handle it. (Note
+        # that because we only iterate through active components, this means
+        # non-ActiveComponent types cannot have handlers.)
+        for obj in block.component_objects(active=True, descend_into=False):
             handler = self.handlers.get(obj.type(), None)
             if not handler:
                 if handler is None:
@@ -481,7 +488,7 @@ class BigM_Transformation(Transformation):
             # obj is what we are transforming, we pass disjunct
             # through so that we will have access to the indicator
             # variables down the line.
-            handler(obj, disjunct, bigM, suffix_list)
+            handler(obj, disjunct, bigM, arg_list, suffix_list)
 
     def _transfer_transBlock_data(self, fromBlock, toBlock):
         # We know that we have a list of transformed disjuncts on both. We need
@@ -505,7 +512,7 @@ class BigM_Transformation(Transformation):
         # currently everything is on the blocks that we just moved...
 
     def _warn_for_active_disjunction(self, disjunction, disjunct, bigMargs,
-                                     suffix_list):
+                                     arg_list, suffix_list):
         # this should only have gotten called if the disjunction is active
         assert disjunction.active
         problemdisj = disjunction
@@ -529,7 +536,7 @@ class BigM_Transformation(Transformation):
                         % (_probDisjName, disjunct.name))
 
     def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, bigMargs,
-                                  suffix_list):
+                                  arg_list, suffix_list):
         assert innerdisjunct.active
         problemdisj = innerdisjunct
         if innerdisjunct.is_indexed():
@@ -548,7 +555,7 @@ class BigM_Transformation(Transformation):
                         "transformed.".format(problemdisj.name,
                                               outerdisjunct.name))
 
-    def _transform_block_on_disjunct(self, block, disjunct, bigMargs,
+    def _transform_block_on_disjunct(self, block, disjunct, bigMargs, arg_list,
                                      suffix_list):
         # We look through everything on the component map of the block
         # and transform it just as we would if it was on the disjunct
@@ -557,7 +564,7 @@ class BigM_Transformation(Transformation):
         # the correct indicator variable.)
         for i in sorted(iterkeys(block)):
             self._transform_block_components( block[i], disjunct, bigMargs,
-                                              suffix_list)
+                                              arg_list, suffix_list)
 
     def _get_constraint_map_dict(self, transBlock):
         if not hasattr(transBlock, "_constraintMap"):
@@ -566,7 +573,7 @@ class BigM_Transformation(Transformation):
                 'transformedConstraints': ComponentMap()}
         return transBlock._constraintMap
 
-    def _transform_constraint(self, obj, disjunct, bigMargs,
+    def _transform_constraint(self, obj, disjunct, bigMargs, arg_list,
                               suffix_list):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
@@ -584,7 +591,9 @@ class BigM_Transformation(Transformation):
             try:
                 newConstraint = Constraint(obj.index_set(),
                                            disjunctionRelaxationBlock.lbub)
-            except TypeError:
+            # HACK: We get burned by #191 here... When #1319 is merged we
+            # can revist this and I think stop catching the AttributeError.
+            except (TypeError, AttributeError):
                 # The original constraint may have been indexed by a
                 # non-concrete set (like an Any).  We will give up on
                 # strict index verification and just blindly proceed.
@@ -603,7 +612,7 @@ class BigM_Transformation(Transformation):
 
             # first, we see if an M value was specified in the arguments.
             # (This returns None if not)
-            M = self._get_M_from_args(c, bigMargs, bigm_src)
+            M = self._get_M_from_args(c, bigMargs, arg_list, bigm_src)
 
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 _name = obj.getname(
@@ -681,7 +690,7 @@ class BigM_Transformation(Transformation):
             # deactivate because we relaxed
             c.deactivate()
 
-    def _get_M_from_args(self, constraint, bigMargs, bigm_src):
+    def _get_M_from_args(self, constraint, bigMargs, arg_list, bigm_src):
         # check args: we first look in the keys for constraint and
         # constraintdata. In the absence of those, we traverse up the blocks,
         # and as a last resort check for a value for None
@@ -692,58 +701,26 @@ class BigM_Transformation(Transformation):
         parent = constraint.parent_component()
         if constraint in bigMargs:
             m = bigMargs[constraint]
-            used_args[constraint] = m
+            self.used_args[constraint] = m
             bigm_src[constraint] = (bigMargs, constraint)
             return m
         elif parent in bigMargs:
             m = bigMargs[parent]
-            used_args[parent] = m
+            self.used_args[parent] = m
             bigm_src[constraint] = (bigMargs, parent)
             return m
 
-        # We don't check what is in bigMargs until the end if we didn't use
-        # it... So just yell about CUIDs if we find them here.
-        deprecation_msg = ("In the future the bigM argument will no longer "
-                           "allow ComponentUIDs as keys. Keys should be "
-                           "constraints (in either a dict or ComponentMap)")
-        cuid = ComponentUID(constraint)
-        parentcuid = ComponentUID(constraint.parent_component())
-        if cuid in bigMargs:
-            deprecation_warning(deprecation_msg)
-            m = bigMargs[cuid]
-            used_args[cuid] = m
-            bigm_src[constraint] = (bigMargs, cuid)
-            return m
-        elif parentcuid in bigMargs:
-            deprecation_warning(deprecation_msg)
-            m = bigMargs[parentcuid]
-            used_args[parentcuid] = m
-            bigm_src[constraint] = (bigMargs, parentcuid)
-            return m
-
-        # traverse up the blocks
-        block = parent.parent_block()
-        while not block is None:
-            if block in bigMargs:
-                m = bigMargs[block]
-                used_args[block] = m
+        # use the precomputed traversal up the blocks
+        for arg in arg_list:
+            for block, val in iteritems(arg):
+                self.used_args[block] = val
                 bigm_src[constraint] = (bigMargs, block)
-                return m
-            # UGH and to be backwards compatible with what we should have done,
-            # we'll check the cuids of the blocks for now too.
-            blockcuid = ComponentUID(block)
-            if blockcuid in bigMargs:
-                deprecation_warning(deprecation_msg)
-                m = bigMargs[blockcuid]
-                used_args[blockcuid] = m
-                bigm_src[constraint] = (bigMargs, blockcuid)
-                return m
-            block = block.parent_block()
+                return val
                 
         # last check for value for None!
         if None in bigMargs:
             m = bigMargs[None]
-            used_args[None] = m
+            self.used_args[None] = m
             bigm_src[constraint] = (bigMargs, None)
             return m
         return None
@@ -826,12 +803,13 @@ class BigM_Transformation(Transformation):
         transBlock: _BlockData which is in the relaxedDisjuncts IndexedBlock
                     on a transformation block.
         """
-        if not hasattr(transBlock, '_srcDisjunct') or \
-           not type(transBlock._srcDisjunct) is weakref_ref:
+        try:
+            return transBlock._srcDisjunct()
+        except:
             raise GDP_Error("Block %s doesn't appear to be a transformation "
                             "block for a disjunct. No source disjunct found." 
-                            % transBlock.name)
-        return transBlock._srcDisjunct()
+                            "\n\t(original error: %s)" 
+                            % (transBlock.name, sys.exc_info()[1]))
 
     def get_src_constraint(self, transformedConstraint):
         """Return the original Constraint whose transformed counterpart is
@@ -850,12 +828,13 @@ class BigM_Transformation(Transformation):
         if not hasattr(transBlock, "_constraintMap"):
             raise GDP_Error("Constraint %s is not a transformed constraint" 
                             % transformedConstraint.name)
+        # if something goes wrong here, it's a bug in the mappings.
         return transBlock._constraintMap['srcConstraints'][transformedConstraint]
 
     def _find_parent_disjunct(self, constraint):
         # traverse up until we find the disjunct this constraint lives on
         parent_disjunct = constraint.parent_block()
-        while type(parent_disjunct) not in (_DisjunctData, SimpleDisjunct):
+        while not isinstance(parent_disjunct, _DisjunctData):
             if parent_disjunct is None:
                 raise GDP_Error(
                     "Constraint %s is not on a disjunct and so was not "
@@ -866,6 +845,8 @@ class BigM_Transformation(Transformation):
 
     def _get_constraint_transBlock(self, constraint):
         parent_disjunct = self._find_parent_disjunct(constraint)
+        # we know from _find_parent_disjunct that parent_disjunct is a Disjunct,
+        # so the below is OK
         transBlock = parent_disjunct._transformation_block
         if transBlock is None:
             raise GDP_Error("Constraint %s is on a disjunct which has not been "
@@ -940,5 +921,6 @@ class BigM_Transformation(Transformation):
                     Disjunct
         """
         transBlock = self._get_constraint_transBlock(constraint)
-        # This is a KeyError if it fails, but it is also my fault if it fails...
+        # This is a KeyError if it fails, but it is also my fault if it
+        # fails... (That is, it's a bug in the mapping.)
         return transBlock.bigm_src[constraint]

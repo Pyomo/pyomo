@@ -4,6 +4,8 @@ from pyomo.gdp import Disjunct, Disjunction
 
 
 def makeTwoTermDisj():
+    """Single two-term disjunction which has all of ==, <=, and >= constraints
+    """
     m = ConcreteModel()
     m.a = Var(bounds=(2, 7))
     m.x = Var(bounds=(4, 9))
@@ -21,6 +23,9 @@ def makeTwoTermDisj():
 
 
 def makeTwoTermDisj_Nonlinear():
+    """Single two-term disjunction which has all of ==, <=, and >= and 
+    one nonlinear constraint.
+    """
     m = ConcreteModel()
     m.w = Var(bounds=(2, 7))
     m.x = Var(bounds=(1, 8))
@@ -40,6 +45,10 @@ def makeTwoTermDisj_Nonlinear():
 
 
 def makeTwoTermDisj_IndexedConstraints():
+    """Single two-term disjunction with IndexedConstraints on both disjuncts.  
+    Does not bound the variables, so cannot be transformed by chull at all and 
+    requires specifying m values in bigm.
+    """
     m = ConcreteModel()
     m.s = Set(initialize=[1, 2])
     m.a = Var(m.s)
@@ -65,7 +74,8 @@ def makeTwoTermDisj_IndexedConstraints():
 
 
 def makeTwoTermDisj_IndexedConstraints_BoundedVars():
-    # same concept as above, but bounded variables
+    """Single two-term disjunction with IndexedConstraints on both disjuncts. 
+    """
     m = ConcreteModel()
     m.s = Set(initialize=[1, 2])
     m.lbs = Param(m.s, initialize={1: 2, 2: 4})
@@ -92,6 +102,12 @@ def makeTwoTermDisj_IndexedConstraints_BoundedVars():
     return m
 
 def localVar():
+    """Two-term disjunction which declares a local variable y on one of the 
+    disjuncts, which is used in the objective function as well.
+
+    Used to test that we will treat y as global in the transformations, 
+    despite where it is declared.
+    """
     # y appears in a global constraint and a single disjunct.
     m = ConcreteModel()
     m.x = Var(bounds=(0,3))
@@ -109,98 +125,9 @@ def localVar():
     m.objective = Objective(expr=m.x + m.disj2.y)
     return m
 
-def makeThreeTermDisj_IndexedConstraints():
-    m = ConcreteModel()
-    m.I = [1, 2, 3]
-    m.x = Var(m.I, bounds=(0, 10))
-
-    def c_rule(b, i):
-        m = b.model()
-        return m.x[i] >= i
-
-    def d_rule(d, j):
-        m = d.model()
-        d.c = Constraint(m.I[:j], rule=c_rule)
-    m.d = Disjunct(m.I, rule=d_rule)
-    m.disjunction = Disjunction(expr=[m.d[i] for i in m.I])
-    return m
-
-
-def makeTwoTermIndexedDisjunction():
-    m = ConcreteModel()
-    m.A = Set(initialize=[1, 2, 3])
-    m.B = Set(initialize=['a', 'b'])
-    m.x = Var(m.A, bounds=(-10, 10))
-
-    def disjunct_rule(d, i, k):
-        m = d.model()
-        if k == 'a':
-            d.cons_a = Constraint(expr=m.x[i] >= 5)
-        if k == 'b':
-            d.cons_b = Constraint(expr=m.x[i] <= 0)
-    m.disjunct = Disjunct(m.A, m.B, rule=disjunct_rule)
-
-    def disj_rule(m, i):
-        return [m.disjunct[i, k] for k in m.B]
-    m.disjunction = Disjunction(m.A, rule=disj_rule)
-    return m
-
-def makeIndexedDisjunction_SkipIndex():
-    m = ConcreteModel()
-    m.x = Var(bounds=(0, 10))
-    @m.Disjunct([0,1])
-    def disjuncts(d, i):
-        m = d.model()
-        d.cons = Constraint(expr=m.x == i)
-
-    @m.Disjunction([0,1])
-    def disjunctions(m, i):
-        if i == 0:
-            return Disjunction.Skip
-        return [m.disjuncts[i], m.disjuncts[0]]
-
-    return m
-
-def makeTwoTermMultiIndexedDisjunction():
-    m = ConcreteModel()
-    m.s = Set(initialize=[1, 2])
-    m.t = Set(initialize=['A', 'B'])
-    m.a = Var(m.s, m.t, bounds=(2, 7))
-
-    def d_rule(disjunct, flag, s, t):
-        m = disjunct.model()
-        if flag:
-            disjunct.c = Constraint(expr=m.a[s, t] == 0)
-        else:
-            disjunct.c = Constraint(expr=m.a[s, t] >= 5)
-    m.disjunct = Disjunct([0, 1], m.s, m.t, rule=d_rule)
-
-    def disj_rule(m, s, t):
-        return [m.disjunct[0, s, t], m.disjunct[1, s, t]]
-    m.disjunction = Disjunction(m.s, m.t, rule=disj_rule)
-    return m
-
-
-def makeTwoTermIndexedDisjunction_BoundedVars():
-    m = ConcreteModel()
-    m.s = Set(initialize=[1, 2, 3])
-    m.a = Var(m.s, bounds=(-100, 100))
-
-    def disjunct_rule(d, s, flag):
-        m = d.model()
-        if flag:
-            d.c = Constraint(expr=m.a[s] >= 6)
-        else:
-            d.c = Constraint(expr=m.a[s] <= 3)
-    m.disjunct = Disjunct(m.s, [0, 1], rule=disjunct_rule)
-
-    def disjunction_rule(m, s):
-        return [m.disjunct[s, flag] for flag in [0, 1]]
-    m.disjunction = Disjunction(m.s, rule=disjunction_rule)
-    return m
-
 
 def makeThreeTermIndexedDisj():
+    """Three-term indexed disjunction"""
     m = ConcreteModel()
     m.s = Set(initialize=[1, 2])
     m.a = Var(m.s, bounds=(2, 7))
@@ -221,12 +148,110 @@ def makeThreeTermIndexedDisj():
     return m
 
 
+def makeThreeTermDisj_IndexedConstraints():
+    """Three-term disjunction with indexed constraints on the disjuncts"""
+    m = ConcreteModel()
+    m.I = [1, 2, 3]
+    m.x = Var(m.I, bounds=(0, 10))
+
+    def c_rule(b, i):
+        m = b.model()
+        return m.x[i] >= i
+
+    def d_rule(d, j):
+        m = d.model()
+        d.c = Constraint(m.I[:j], rule=c_rule)
+    m.d = Disjunct(m.I, rule=d_rule)
+    m.disjunction = Disjunction(expr=[m.d[i] for i in m.I])
+    return m
+
+
+def makeTwoTermIndexedDisjunction():
+    """Two-term indexed disjunction"""
+    m = ConcreteModel()
+    m.A = Set(initialize=[1, 2, 3])
+    m.B = Set(initialize=['a', 'b'])
+    m.x = Var(m.A, bounds=(-10, 10))
+
+    def disjunct_rule(d, i, k):
+        m = d.model()
+        if k == 'a':
+            d.cons_a = Constraint(expr=m.x[i] >= 5)
+        if k == 'b':
+            d.cons_b = Constraint(expr=m.x[i] <= 0)
+    m.disjunct = Disjunct(m.A, m.B, rule=disjunct_rule)
+
+    def disj_rule(m, i):
+        return [m.disjunct[i, k] for k in m.B]
+    m.disjunction = Disjunction(m.A, rule=disj_rule)
+    return m
+
+
+def makeTwoTermIndexedDisjunction_BoundedVars():
+    """Two-term indexed disjunction.
+    Adds nothing to above--exists for historic reasons"""
+    m = ConcreteModel()
+    m.s = Set(initialize=[1, 2, 3])
+    m.a = Var(m.s, bounds=(-100, 100))
+
+    def disjunct_rule(d, s, flag):
+        m = d.model()
+        if flag:
+            d.c = Constraint(expr=m.a[s] >= 6)
+        else:
+            d.c = Constraint(expr=m.a[s] <= 3)
+    m.disjunct = Disjunct(m.s, [0, 1], rule=disjunct_rule)
+
+    def disjunction_rule(m, s):
+        return [m.disjunct[s, flag] for flag in [0, 1]]
+    m.disjunction = Disjunction(m.s, rule=disjunction_rule)
+    return m
+
+
+def makeIndexedDisjunction_SkipIndex():
+    """Two-term indexed disjunction where one of the two indices is skipped"""
+    m = ConcreteModel()
+    m.x = Var(bounds=(0, 10))
+    @m.Disjunct([0,1])
+    def disjuncts(d, i):
+        m = d.model()
+        d.cons = Constraint(expr=m.x == i)
+
+    @m.Disjunction([0,1])
+    def disjunctions(m, i):
+        if i == 0:
+            return Disjunction.Skip
+        return [m.disjuncts[i], m.disjuncts[0]]
+
+    return m
+
+def makeTwoTermMultiIndexedDisjunction():
+    """Two-term indexed disjunction with tuple indices"""
+    m = ConcreteModel()
+    m.s = Set(initialize=[1, 2])
+    m.t = Set(initialize=['A', 'B'])
+    m.a = Var(m.s, m.t, bounds=(2, 7))
+
+    def d_rule(disjunct, flag, s, t):
+        m = disjunct.model()
+        if flag:
+            disjunct.c = Constraint(expr=m.a[s, t] == 0)
+        else:
+            disjunct.c = Constraint(expr=m.a[s, t] >= 5)
+    m.disjunct = Disjunct([0, 1], m.s, m.t, rule=d_rule)
+
+    def disj_rule(m, s, t):
+        return [m.disjunct[0, s, t], m.disjunct[1, s, t]]
+    m.disjunction = Disjunction(m.s, m.t, rule=disj_rule)
+    return m
+
+
 def makeTwoTermDisjOnBlock():
+    """Two-term SimpleDisjunction on a block"""
     m = ConcreteModel()
     m.b = Block()
     m.a = Var(bounds=(0, 5))
 
-    # On a whim, verify that the decorator notation works
     @m.b.Disjunct([0, 1])
     def disjunct(disjunct, flag):
         m = disjunct.model()
@@ -254,6 +279,9 @@ def add_disj_not_on_block(m):
     return m
 
 def makeDisjunctionsOnIndexedBlock():
+    """Two disjunctions (one indexed an one not), each on a separate 
+    BlockData of an IndexedBlock of length 2
+    """
     m = ConcreteModel()
     m.s = Set(initialize=[1, 2])
     m.a = Var(m.s, bounds=(0, 70))
@@ -295,6 +323,8 @@ def makeDisjunctionsOnIndexedBlock():
 
 
 def makeTwoTermDisj_BlockOnDisj():
+    """SimpleDisjunction where one of the Disjuncts contains three different 
+    blocks: two simple and one indexed"""
     m = ConcreteModel()
     m.x = Var(bounds=(0, 1000))
     m.y = Var(bounds=(0, 800))
@@ -317,6 +347,15 @@ def makeTwoTermDisj_BlockOnDisj():
 
 
 def makeNestedDisjunctions():
+    """Three-term SimpleDisjunction built from two IndexedDisjuncts and one
+    SimpleDisjunct. The SimpleDisjunct and one of the DisjunctDatas each
+    contain a nested SimpleDisjunction (the disjuncts of which are declared 
+    on the same disjunct as the disjunction).
+
+    (makeNestedDisjunctions_NestedDisjuncts is a much simpler model. All 
+    this adds is that it has a nested disjunction on a DisjunctData as well
+    as on a SimpleDisjunct. So mostly exists for historical reasons.)
+    """
     m = ConcreteModel()
     m.x = Var(bounds=(-9, 9))
     m.z = Var(bounds=(0, 10))
@@ -362,6 +401,8 @@ def makeNestedDisjunctions():
 
 
 def makeNestedDisjunctions_FlatDisjuncts():
+    """Two-term SimpleDisjunction where one of the disjuncts contains a nested
+    SimpleDisjunction, the disjuncts of which are declared on the model"""
     m = ConcreteModel()
     m.x = Var(bounds=(0, 2))
     m.obj = Objective(expr=m.x)
@@ -379,6 +420,8 @@ def makeNestedDisjunctions_FlatDisjuncts():
 
 
 def makeNestedDisjunctions_NestedDisjuncts():
+    """Same as makeNestedDisjunctions_FlatDisjuncts except that the disjuncts
+    of the nested disjunction are declared on the parent disjunct."""
     m = ConcreteModel()
     m.x = Var(bounds=(0, 2))
     m.obj = Objective(expr=m.x)
@@ -396,6 +439,7 @@ def makeNestedDisjunctions_NestedDisjuncts():
 
 
 def makeTwoSimpleDisjunctions():
+    """Two SimpleDisjunctions on the same model."""
     m = ConcreteModel()
     m.a = Var(bounds=(-10, 50))
 
@@ -420,6 +464,9 @@ def makeTwoSimpleDisjunctions():
 
 
 def makeDisjunctInMultipleDisjunctions():
+    """This is not a transformable model! Two SimpleDisjunctions which have 
+    a shared disjunct.
+    """
     m = ConcreteModel()
     m.a = Var(bounds=(-10, 50))
 
@@ -446,6 +493,12 @@ def makeDisjunctInMultipleDisjunctions():
 
 
 def makeDuplicatedNestedDisjunction():
+    """Not a transformable model (because of disjuncts shared between 
+    disjunctions): A SimpleDisjunction where one of the disjuncts contains
+    two SimpleDisjunctions with the same Disjuncts. This is a lazy
+    way to test that we complain about untransformed disjunctions we encounter
+    while transforming a disjunct.
+    """
     m = ConcreteModel()
     m.x = Var(bounds=(0, 8))
 
@@ -472,6 +525,8 @@ def makeDuplicatedNestedDisjunction():
 
 
 def makeDisjunctWithRangeSet():
+    """Two-term SimpleDisjunction where one of the disjuncts contains a 
+    RangeSet"""
     m = ConcreteModel()
     m.x = Var(bounds=(0, 1))
     m.d1 = Disjunct()
@@ -482,6 +537,11 @@ def makeDisjunctWithRangeSet():
     return m
 
 def makeDisjunctionOfDisjunctDatas():
+    """Two SimpleDisjunctions, where each are disjunctions of DisjunctDatas.
+    This adds nothing to makeTwoSimpleDisjunctions but exists for convenience
+    because it has the same mathematical meaning as 
+    makeAnyIndexedDisjunctionOfDisjunctDatas
+    """
     m = ConcreteModel()
     m.x = Var(bounds=(-100, 100))
 
@@ -500,6 +560,13 @@ def makeDisjunctionOfDisjunctDatas():
     return m
 
 def makeAnyIndexedDisjunctionOfDisjunctDatas():
+    """An IndexedDisjunction indexed by Any, with two two-term DisjunctionDatas
+    build from DisjunctDatas. Identical mathematically to 
+    makeDisjunctionOfDisjunctDatas.
+
+    Used to test that the right things happen for a case where soemone
+    implements an algorithm which iteratively generates disjuncts and 
+    retransforms"""
     m = ConcreteModel()
     m.x = Var(bounds=(-100, 100))
 

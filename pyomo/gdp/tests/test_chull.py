@@ -25,8 +25,6 @@ linear_solvers = pyomo.opt.check_available_solvers(
 import random
 from six import iteritems, iterkeys
 
-# DEBUG
-from nose.tools import set_trace
 
 EPS = TransformationFactory('gdp.chull').CONFIG.EPS
 
@@ -403,6 +401,17 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertIs(disj2y, m.disj2._transformation_block().y)
         self.assertIs(chull.get_src_var(disj1y), m.disj2.y)
         self.assertIs(chull.get_src_var(disj2y), m.disj2.y)
+
+    def test_target_not_a_component_err(self):
+        decoy = ConcreteModel()
+        decoy.block = Block()
+        m = models.makeTwoSimpleDisjunctions()
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Target block is not a component on instance unknown!",
+            TransformationFactory('gdp.chull').apply_to,
+            m,
+            targets=[decoy.block])
 
     def test_do_not_transform_user_deactivated_disjuncts(self):
         ct.check_user_deactivated_disjuncts(self, 'chull')
@@ -855,14 +864,6 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
 
     def test_target_not_a_component_err(self):
         ct.check_target_not_a_component_error(self, 'chull')
-
-    # test that cuid targets still work for now. This and the next test should
-    # go away when we actually deprecate CUIDs
-    def test_cuid_targets_still_work_for_now(self):
-        ct.check_cuid_targets_still_work_for_now(self, 'chull')
-
-    def test_cuid_target_error_still_works_for_now(self):
-        ct.check_cuid_target_error_still_works_for_now(self, 'chull')
 
 class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
     # There are a couple tests for targets above, but since I had the patience

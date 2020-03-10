@@ -19,8 +19,6 @@ from pyomo.core.base.component import _ComponentBase, ComponentUID
 from pyomo.opt import TerminationCondition, SolverStatus
 from pyomo.common.deprecation import deprecation_warning
 
-# DEBUG
-from pdb import set_trace
 
 _acceptable_termination_conditions = set([
     TerminationCondition.optimal,
@@ -84,31 +82,17 @@ def clone_without_expression_components(expr, substitute=None):
 
 
 def target_list(x):
-    deprecation_msg = ("In future releases ComponentUID targets will no "
-                       "longer be supported. Specify targets as a "
-                       "Component or list of Components.")
     if isinstance(x, _ComponentBase):
-        return [ x ]
-    elif isinstance(x, ComponentUID):
-        deprecation_warning(deprecation_msg)
-        # [ESJ 08/22/2019] We are going to have to pass this through and deal
-        # with it in the transformations because we can't get the component here
-        # since we don't have the instance
         return [ x ]
     elif hasattr(x, '__iter__'):
         ans = []
         for i in x:
             if isinstance(i, _ComponentBase):
                 ans.append(i)
-            elif isinstance(i, ComponentUID):
-                deprecation_warning(deprecation_msg)
-                # Same as above...
-                ans.append(i)
             else:
                 raise ValueError(
                     "Expected Component or list of Components."
                     "\n\tRecieved %s" % (type(i),))
-
         return ans
     else:
         raise ValueError(
@@ -117,25 +101,31 @@ def target_list(x):
 
 # [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
 #  putting it here for now so that all the gdp transformations can use it.
-# Returns True if child is a node or leaf in the tree rooted at parent, False
-# otherwise. Accepts list of known components in the tree and updates this list
-# to enhance performance in future calls.
+#  Returns True if child is a node or leaf in the tree rooted at parent, False
+#  otherwise. Accepts list of known components in the tree and updates this list
+#  to enhance performance in future calls. Note that both child and parent must
+#  be blocks!
 def is_child_of(parent, child, knownBlocks=None):
-    # Note: we can get away with set() and not ComponentSet because we will only
-    # store Blocks (or their ilk), and Blocks are hashable (only derivatives of
-    # NumericValue are not hashable)
+    # Note: we can get away with a dictionary and not ComponentMap because we
+    # will only store Blocks (or their ilk), and Blocks are hashable (only
+    # derivatives of NumericValue are not hashable)
     if knownBlocks is None:
-        knownBlocks = set()
+        knownBlocks = {}
     tmp = set()
     node = child
     while True:
-        if node in knownBlocks:
-            knownBlocks.update(tmp)
+        known = knownBlocks.get(node)
+        if known:
+            knownBlocks.update({c: True for c in tmp})
             return True
+        if known is not None and not known:
+            knownBlocks.update({c: False for c in tmp})
+            return False
         if node is parent:
-            knownBlocks.update(tmp)
+            knownBlocks.update({c: True for c in tmp})
             return True
         if node is None:
+            knownBlocks.update({c: False for c in tmp})
             return False
 
         tmp.add(node)

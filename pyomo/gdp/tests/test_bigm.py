@@ -23,7 +23,6 @@ import common_tests as ct
 import random
 import sys
 
-from nose.tools import set_trace
 from six import iteritems, StringIO
 
 class CommonTests:
@@ -1316,25 +1315,6 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.bigm').apply_to(m)
         self.checkMs(m, -18, -19, -20, 20, -20, 20)
 
-    # This should go away when we deprecate CUIDs, but just to make sure that we
-    # are in fact supporting them at the moment...
-    def test_m_value_cuids_still_work_for_now(self):
-        m = models.makeTwoTermDisj_IndexedConstraints_BoundedVars()
-        # specify a suffix on None so we can be happy we overrode it.
-        m.BigM = Suffix(direction=Suffix.LOCAL)
-        m.BigM[None] = 20
-        # specify a suffix on a componentdata so we can be happy we overrode it
-        m.BigM[m.disjunct[0].c[1]] = 19
-
-        # give an arg
-        TransformationFactory('gdp.bigm').apply_to(
-            m,
-            bigM={None: 19, ComponentUID(m.disjunct[0].c[1]): 17,
-                  ComponentUID(m.disjunct[0].c[2]): 18})
-
-        # check that m values are what we expect
-        self.checkMs(m, -17, -18, -19, 19, -19, 19)
-
     def test_create_using(self):
         m = models.makeTwoTermDisj_IndexedConstraints_BoundedVars()
         self.diff_apply_to_and_create_using(m)
@@ -1362,13 +1342,8 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
     def test_target_not_a_component_err(self):
         ct.check_target_not_a_component_error(self, 'bigm')
 
-    # test that cuid targets still work for now. This and the next test should
-    # go away when the above comes in.
-    def test_cuid_targets_still_work_for_now(self):
-        ct.check_cuid_targets_still_work_for_now(self, 'bigm')
-
-    def test_cuid_target_error_still_works_for_now(self):
-        ct.check_cuid_target_error_still_works_for_now(self, 'bigm')
+    def test_targets_cannot_be_cuids(self):
+        ct.check_targets_cannot_be_cuids(self, 'bigm')
 
     # [ESJ 09/14/2019] See my rant in #1072, but I think this is why we cannot
     # actually support this!

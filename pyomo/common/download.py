@@ -21,6 +21,7 @@ import zipfile
 from six.moves.urllib.request import urlopen
 
 from .config import PYOMO_CONFIG_DIR
+from .deprecation import deprecated
 from .errors import DeveloperError
 import pyomo.common
 
@@ -58,7 +59,26 @@ class FileDownloader(object):
         return system, bits
 
 
+    @deprecated("get_url() is deprecated. Use get_platform_url()",
+                version='TBD')
     def get_url(self, urlmap):
+        return self.get_platform_url(urlmap)
+
+
+    def get_platform_url(self, urlmap):
+        """Select the url for this platform
+
+        Given a `urlmap` dict that maps the platform name (from
+        `FileDownloader.get_sysinfo()`) to a platform-specific URL,
+        return the URL that matches the current platform.
+
+        Parameters
+        ----------
+        urlmap: dict
+            Map of platform name (e.g., `linux`, `windows`, `cygwin`,
+            `darwin`) to URL
+
+        """
         system, bits = self.get_sysinfo()
         url = urlmap.get(system, None)
         if url is None:
@@ -144,14 +164,24 @@ class FileDownloader(object):
         return ans
 
 
-    def get_binary_file(self, url):
+    def get_file(self, url, mode):
         if self._fname is None:
             raise DeveloperError("target file name has not been initialized "
                                  "with set_destination_filename")
-        with open(self._fname, 'wb') as FILE:
+        with open(self._fname, mode) as FILE:
             raw_file = self.retrieve_url(url)
             FILE.write(raw_file)
             logger.info("  ...wrote %s bytes" % (len(raw_file),))
+
+
+    def get_binary_file(self, url):
+        """Retrieve the specified url and write as a binary file"""
+        return self.get_file(url, mode='wb')
+
+
+    def get_text_file(self, url):
+        """Retrieve the specified url and write as a text file"""
+        return self.get_file(url, mode='wt')
 
 
     def get_binary_file_from_zip_archive(self, url, srcname):

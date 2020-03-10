@@ -175,11 +175,6 @@ class IndexedDisjunct(Disjunct):
     def active(self):
         return any(d.active for d in itervalues(self._data))
 
-    @active.setter
-    def active(self, value):
-        for d in itervalues(self._data):
-            d.active = value
-
 
 _DisjunctData._Block_reserved_words = set(dir(Disjunct()))
 
@@ -225,7 +220,7 @@ class _DisjunctionData(ActiveComponentData):
             # IndexedDisjunct indexed by Any which has already been transformed,
             # the new Disjuncts are Blocks already. This catches them for who
             # they are anyway.
-            if isinstance(e, (_DisjunctData, SimpleDisjunct)):
+            if isinstance(e, _DisjunctData):
             #if hasattr(e, 'type') and e.type() == Disjunct:
                 self.disjuncts.append(e)
                 continue
@@ -455,8 +450,3 @@ class IndexedDisjunction(Disjunction):
     @property
     def active(self):
         return any(d.active for d in itervalues(self._data))
-
-    @active.setter
-    def active(self, value):
-        for d in itervalues(self._data):
-            d.active = value

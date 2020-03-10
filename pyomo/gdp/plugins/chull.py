@@ -198,24 +198,14 @@ class ConvexHull_Transformation(Transformation):
             _HACK_transform_whole_instance = True
         else:
             _HACK_transform_whole_instance = False
-        knownBlocks = set()
+        knownBlocks = {}
         for t in targets:
-            # [ESJ 10/18/2019] This can go away when we deprecate using CUIDs as
-            # targets. The warning is issued in util, but we need to make sure
-            # that we do the right thing here.
-            if isinstance(t, ComponentUID):
-                tmp = t
-                t = t.find_component(instance)
-                if t is None:
-                    raise GDP_Error(
-                        "Target %s is not a component on the instance!" % tmp)
-
             # check that t is in fact a child of instance
-            if not is_child_of(parent=instance, child=t, 
+            if not is_child_of(parent=instance, child=t,
                                knownBlocks=knownBlocks):
                 raise GDP_Error("Target %s is not a component on instance %s!"
-                                % (t.name, instance.name))                
-            if t.type() is Disjunction:
+                                % (t.name, instance.name))
+            elif t.type() is Disjunction:
                 if t.parent_component() is t:
                     self._transform_disjunction(t)
                 else:

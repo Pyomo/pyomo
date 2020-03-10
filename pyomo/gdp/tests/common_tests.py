@@ -367,18 +367,18 @@ def check_target_not_a_component_error(self, transformation):
         targets=[decoy.block])
 
 # [ESJ 08/22/2019] This is a test for when targets can no longer be CUIDs
-# def check_targets_cannot_be_cuids(self, transformation):
-#     m = models.makeTwoTermDisj()
-#     self.assertRaisesRegexp(
-#         ValueError,
-#         "invalid value for configuration 'targets':\n"
-#         "\tFailed casting \[disjunction\]\n"
-#         "\tto target_list\n"
-#         "\tError: Expected Component or list of Components."
-#         "\n\tRecieved %s" % type(ComponentUID(m.disjunction)),
-#         TransformationFactory('gdp.%s' % transformation).apply_to,
-#         m,
-#         targets=[ComponentUID(m.disjunction)])
+def check_targets_cannot_be_cuids(self, transformation):
+    m = models.makeTwoTermDisj()
+    self.assertRaisesRegexp(
+        ValueError,
+        "invalid value for configuration 'targets':\n"
+        "\tFailed casting \[disjunction\]\n"
+        "\tto target_list\n"
+        "\tError: Expected Component or list of Components."
+        "\n\tRecieved %s" % type(ComponentUID(m.disjunction)),
+        TransformationFactory('gdp.%s' % transformation).apply_to,
+        m,
+        targets=[ComponentUID(m.disjunction)])
 
 # test that cuid targets still work for now. This and the next test should
 # go away when the above comes in.
