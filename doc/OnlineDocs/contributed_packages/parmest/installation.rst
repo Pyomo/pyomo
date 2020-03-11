@@ -13,13 +13,14 @@ Python package dependencies
 #. pandas
 #. pyomo
 #. pyutilib
-#. matplotlib (optional, used for graphics)
-#. scipy.stats (optional, used for graphics)
-#. seaborn (optional, used for graphics)
-#. mpi4py.MPI (optional, used for parallel computing)
+#. matplotlib (optional)
+#. scipy.stats (optional)
+#. seaborn (optional)
+#. mpi4py.MPI (optional)
 
 IPOPT
 -------
+
 IPOPT can be downloaded from https://projects.coin-or.org/Ipopt. 
 
 Testing

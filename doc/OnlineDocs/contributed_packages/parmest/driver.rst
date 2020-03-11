@@ -4,7 +4,7 @@ Parameter Estimation using parmest
 =======================================
 
 Parameter Estimation using parmest requires a Pyomo model, experimental data which defines 
-multiple scenarios, and a list of thetas to estimate. 
+multiple scenarios, and a list of parameter names (thetas) to estimate. 
 parmest uses PySP [PyomoBookII]_ to solve a two-stage stochastic programming 
 problem, where the experimental data is used to create a scenario tree.
 The objective function needs to be written in PySP form with the 
@@ -22,13 +22,32 @@ The callback function returns a populated
 and initialized model for each scenario.
 
 To use parmest, the user creates a :class:`~pyomo.contrib.parmest.parmest.Estimator` object 
-and uses its methods for:
+which includes the following methods:
 
-* Parameter estimation, :class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est`
-* Bootstrap resampling for parameter estimation, :class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est_bootstrap`
-* Compute the objective at theta values, :class:`~pyomo.contrib.parmest.parmest.Estimator.objective_at_theta`
-* Compute likelihood ratio, :class:`~pyomo.contrib.parmest.parmest.Estimator.likelihood_ratio_test`
+.. autosummary::
+   :nosignatures:
 
+   ~pyomo.contrib.parmest.parmest.Estimator.theta_est
+   ~pyomo.contrib.parmest.parmest.Estimator.theta_est_bootstrap
+   ~pyomo.contrib.parmest.parmest.Estimator.theta_est_leaveNout
+   ~pyomo.contrib.parmest.parmest.Estimator.objective_at_theta
+   ~pyomo.contrib.parmest.parmest.Estimator.confidence_region_test
+   ~pyomo.contrib.parmest.parmest.Estimator.likelihood_ratio_test
+   ~pyomo.contrib.parmest.parmest.Estimator.leaveNout_bootstrap_test
+
+Additional functions are available in parmest to group data, plot results, and fit distributions to theta values.
+
+.. autosummary::
+   :nosignatures:
+
+   ~pyomo.contrib.parmest.parmest.group_data
+   ~pyomo.contrib.parmest.graphics.pairwise_plot
+   ~pyomo.contrib.parmest.graphics.grouped_boxplot
+   ~pyomo.contrib.parmest.graphics.grouped_violinplot
+   ~pyomo.contrib.parmest.graphics.fit_rect_dist
+   ~pyomo.contrib.parmest.graphics.fit_mvn_dist
+   ~pyomo.contrib.parmest.graphics.fit_kde_dist
+    
 A :class:`~pyomo.contrib.parmest.parmest.Estimator` object can be created using 
 the following code. A description of each argument is listed below.  Examples are provided in the :ref:`examplesection` Section.
 
@@ -58,7 +77,8 @@ The first argument is a function which uses data for a single scenario to return
 populated and initialized Pyomo model for that scenario.
 Parameters that the user would like to estimate must be defined as variables (Pyomo `Var`).
 The variables can be fixed (parmest unfixes variables that will be estimated). 
-The model does not have to be specifically written for parmest. That is, parmest can modify the objective for pySP, see :ref:`ObjFunction` below.
+The model does not have to be specifically written for parmest. That is, parmest can 
+modify the objective for pySP, see :ref:`ObjFunction` below.
 
 Data
 -----------------------

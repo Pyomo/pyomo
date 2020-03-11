@@ -9,7 +9,13 @@ Examples can be found in `pyomo/contrib/parmest/examples` and include:
 * Semibatch example [SemiBatch]_
 * Rooney Biegler example [RooneyBiegler]_
 
-Each example contains a Python file that contains the Pyomo model and a Python file to run parameter estimation.
+Each example includes a Python file that contains the Pyomo model and a Python file to run parameter estimation.
+
+Additional use cases include:
+
+* Data reconciliation (reactor design example)
+* Parameter estimation using data with duplicate sensors and time-series data (reactor design example)
+* Parameter estimation using mpi4py, the example saves results to a file for later analysis/graphics (semibatch example)
 
 The description below uses the reactor design example.
 The file **reactor_design.py** includes a function which returns an populated instance of the Pyomo model.  
@@ -29,7 +35,4 @@ theta values.
 
 The semibatch and Rooney Biegler examples are defined in a similar manner.  
 
-Additional use cases include:
 
-* Parameter estimation using data with duplicate sensors and time-series data (reactor design example)
-* Parameter estimation using mpi4py, the example saves results to a file for later analysis/graphics (semibatch example)

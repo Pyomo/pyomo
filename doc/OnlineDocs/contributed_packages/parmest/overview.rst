@@ -14,6 +14,7 @@ Functionality in parmest includes:
 * Bootstrap resampling for parameter estimation
 * Confidence regions based on single or multi-variate distributions
 * Likelihood ratio
+* Leave-N-out cross validation
 * Parallel processing
 
 Background
