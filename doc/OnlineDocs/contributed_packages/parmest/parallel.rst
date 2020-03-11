@@ -9,12 +9,12 @@ If you do NOT have mpi4py or a MPI installation, parmest still works (you should
 
 For example, the following command can be used to run the semibatch model in parallel::
 
-	mpiexec -n 4 python semibatch_parmest_parallel.py
+	mpiexec -n 4 python parmest_parallel_example.py
 
-The file **semibatch_parmest_parallel.py** is shown below. 
+The file **parmest_parallel_example.py** is shown below. 
 Results are saved to file for later analysis.
 
-.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/semibatch/semibatch_parmest_parallel.py
+.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/semibatch/parmest_parallel_example.py
    :language: python
    
 Installation

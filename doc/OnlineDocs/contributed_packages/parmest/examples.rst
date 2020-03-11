@@ -25,12 +25,12 @@ The _main_ program is included for easy testing of the model declaration.
 .. literalinclude:: ../../../../pyomo/contrib/parmest/examples/reactor_design/reactor_design.py
    :language: python
 
-The file **reactor_design_parmest.py** uses parmest to estimate values of `k1`, `k2`, and `k3` by minimizing the sum of 
+The file **parmest_example.py** uses parmest to estimate values of `k1`, `k2`, and `k3` by minimizing the sum of 
 squared error between model and observed values of `ca`, `cb`, `cc`, and `cd`.  The file also uses parmest to 
 run parameter estimation with bootstrap resampling and perform a likelihood ratio test over a range of 
 theta values.
 
-.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/reactor_design/reactor_design_parmest.py
+.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/reactor_design/parmest_example.py
    :language: python
 
 The semibatch and Rooney Biegler examples are defined in a similar manner.  
