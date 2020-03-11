@@ -694,6 +694,14 @@ class CPLEXDirect(DirectSolver):
             self.results.solver.termination_condition = TerminationCondition.maxIterations
             soln.status = SolutionStatus.stoppedByLimit
         elif status in {
+            rtn_codes.solution_limit,
+            rtn_codes.node_limit_feasible,
+            rtn_codes.mem_limit_feasible
+        }:
+            self.results.solver.status = SolverStatus.aborted
+            self.results.solver.termination_condition = TerminationCondition.unknown
+            soln.status = SolutionStatus.stoppedByLimit
+        elif status in {
             rtn_codes.abort_time_limit,
             rtn_codes.abort_dettime_limit,
             rtn_codes.MIP_time_limit_feasible,
