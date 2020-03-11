@@ -3904,11 +3904,7 @@ def DeclareGlobalSet(obj, caller_globals=None):
     # Stack: 0: DeclareGlobalSet()
     #        1: the caller
     if caller_globals is None:
-        _stack = inspect.stack()
-        try:
-            caller_globals = _stack[1][0].f_globals
-        finally:
-            del _stack
+        caller_globals = inspect.currentframe().f_back.f_globals
     if _name in caller_globals and obj is not caller_globals[_name]:
         raise RuntimeError("Refusing to overwrite global object, %s"
                            % (_name,))
