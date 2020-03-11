@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 try:
     import numpy as np
     import pandas as pd
@@ -184,14 +194,14 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
                   axis_limits=None, title=None, add_obj_contour=True, 
                   add_legend=True, filename=None):
     """
-    Plot pairwise relationship for theta values, and optionally confidence 
-    intervals and results from likelihood ratio tests
+    Plot pairwise relationship for theta values, and optionally alpha-level 
+    confidence intervals and objective value contours
     
     Parameters
     ----------
     theta_values: DataFrame, columns = variable names and (optionally) 'obj' and alpha values
         Theta values and (optionally) an objective value and results from 
-        leaveNout_bootstrap_analysis, likelihood_ratio_test, or 
+        leaveNout_bootstrap_test, likelihood_ratio_test, or 
         confidence_region_test
     theta_star: dict, keys = variable names, optional
         Theta* (or other individual values of theta, also used to 
@@ -200,7 +210,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         Confidence interval value, if an alpha value is given and the 
         distributions list is empty, the data will be filtered by True/False 
         values using the column name whose value equals alpha (see results from
-        leaveNout_bootstrap_analysis, likelihood_ratio_test, or 
+        leaveNout_bootstrap_test, likelihood_ratio_test, or 
         confidence_region_test)
     distributions: list of strings, optional
         Statistical distribution used used to define a confidence region, 
@@ -219,7 +229,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     filename: string, optional
         Filename used to save the figure
     """
-
+    
     if len(theta_values) == 0:
         return('Empty data')    
     if isinstance(theta_star, dict):
@@ -282,7 +292,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
                 legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
                 
             elif dist == 'MVN':
-                mvn_dist = fit_mvn_dist(thetas, alpha)
+                mvn_dist = fit_mvn_dist(thetas)
                 Z = mvn_dist.pdf(thetas)
                 score = stats.scoreatpercentile(Z, (1-alpha)*100) 
                 g.map_offdiag(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
@@ -291,7 +301,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
                 legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
                 
             elif dist == 'KDE':
-                kde_dist = fit_kde_dist(thetas, alpha)
+                kde_dist = fit_kde_dist(thetas)
                 Z = kde_dist.pdf(thetas.transpose())
                 score = stats.scoreatpercentile(Z, (1-alpha)*100) 
                 g.map_offdiag(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
@@ -315,12 +325,6 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         g.fig.subplots_adjust(top=0.9)
         g.fig.suptitle(title) 
         
-    if filename is None:
-        plt.show()
-    else:
-        plt.savefig(filename)
-        plt.close()
-    
     # Work in progress
     # Plot lower triangle graphics in separate figures, useful for presentations
     lower_triangle_only = False
@@ -351,12 +355,16 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
                 
         plt.close(g.fig)
     
-    plt.show()
+    if filename is None:
+        plt.show()
+    else:
+        plt.savefig(filename)
+        plt.close()
     
 
 def fit_rect_dist(theta_values, alpha):
     """
-    Fit a rectangular distribution to theta values
+    Fit an alpha-level rectangular distribution to theta values
     
     Parameters
     ----------
@@ -377,7 +385,7 @@ def fit_rect_dist(theta_values, alpha):
     
     return lower_bound, upper_bound
     
-def fit_mvn_dist(theta_values, alpha):
+def fit_mvn_dist(theta_values):
     """
     Fit a multivariate normal distribution to theta values
     
@@ -385,8 +393,6 @@ def fit_mvn_dist(theta_values, alpha):
     ----------
     theta_values: DataFrame, columns = variable names
         Theta values
-    alpha: float, optional
-        Confidence interval value
     
     Returns
     ---------
@@ -396,16 +402,14 @@ def fit_mvn_dist(theta_values, alpha):
                                     theta_values.cov(), allow_singular=True)
     return dist
 
-def fit_kde_dist(theta_values, alpha):
+def fit_kde_dist(theta_values):
     """
-    Fit a gaussian kernel-density estimate to theta values
+    Fit a Gaussian kernel-density distribution to theta values
     
     Parameters
     ----------
     theta_values: DataFrame, columns = variable names
         Theta values
-    alpha: float, optional
-        Confidence interval value
     
     Returns
     ---------
@@ -415,23 +419,7 @@ def fit_kde_dist(theta_values, alpha):
     
     return dist
 
-def grouped_boxplot(data1, data2, normalize=False, group_names=['data1', 'data2']):
-    """
-    Create a grouped boxplot that compares two datasets.  The datasets can be 
-    normalized by the median and standard deviation of data1.
-    
-    Parameters
-    ----------
-    data1: DataFrame, columns = variable names
-        Data set
-    data2: DataFrame, columns = variable names
-        Data set
-    normalize : bool (optional)
-        Normalize both datasets by the median and standard deviation of data1
-    group_names : list (optional)
-        Names used in the legend
-    """
-
+def _get_grouped_data(data1, data2, normalize, group_names):
     if normalize:
         data_median = data1.median()
         data_std = data1.std()
@@ -439,21 +427,83 @@ def grouped_boxplot(data1, data2, normalize=False, group_names=['data1', 'data2'
         data2 = (data2 - data_median)/data_std
         
     # Combine data1 and data2 to create a grouped histogram
-    df = pd.concat({group_names[0]: data1, 
+    data = pd.concat({group_names[0]: data1, 
                     group_names[1]: data2})
-    df.reset_index(level=0, inplace=True)
-    df.rename(columns={'level_0': 'set'}, inplace=True)
+    data.reset_index(level=0, inplace=True)
+    data.rename(columns={'level_0': 'set'}, inplace=True)
     
-    df_melt = df.melt(id_vars = 'set',
-                  value_vars = data1.columns,
-                  var_name = 'columns')
+    data = data.melt(id_vars='set', value_vars=data1.columns, var_name='columns')
+    
+    return data
+
+def grouped_boxplot(data1, data2, normalize=False, group_names=['data1', 'data2'],
+                    filename=None):
+    """
+    Plot a grouped boxplot to compare two datasets
+    
+    The datasets can be normalized by the median and standard deviation of data1.
+    
+    Parameters
+    ----------
+    data1: DataFrame, columns = variable names
+        Data set
+    data2: DataFrame, columns = variable names
+        Data set
+    normalize : bool, optional
+        Normalize both datasets by the median and standard deviation of data1
+    group_names : list, optional
+        Names used in the legend
+    filename: string, optional
+        Filename used to save the figure
+    """
+    data = _get_grouped_data(data1, data2, normalize, group_names)
+    
     plt.figure()
-    sns.boxplot(data = df_melt,
-                       hue = 'set',
-                       y = 'value',
-                       x = 'columns',
-                       order = data1.columns)
+    sns.boxplot(data=data, hue='set', y='value', x='columns', 
+                order=data1.columns)
+
+    plt.gca().legend().set_title('')
+    plt.gca().set_xlabel('')
+    plt.gca().set_ylabel('')
+    
+    if filename is None:
+        plt.show()
+    else:
+        plt.savefig(filename)
+        plt.close()
+
+def grouped_violinplot(data1, data2, normalize=False, group_names=['data1', 'data2'],
+                       filename=None):
+    """
+    Plot a grouped violinplot to compare two datasets
+    
+    The datasets can be normalized by the median and standard deviation of data1.
+    
+    Parameters
+    ----------
+    data1: DataFrame, columns = variable names
+        Data set
+    data2: DataFrame, columns = variable names
+        Data set
+    normalize : bool, optional
+        Normalize both datasets by the median and standard deviation of data1
+    group_names : list, optional
+        Names used in the legend
+    filename: string, optional
+        Filename used to save the figure
+    """
+    data = _get_grouped_data(data1, data2, normalize, group_names)
+    
+    plt.figure()
+    sns.violinplot(data=data, hue='set', y='value', x='columns',
+                   order=data1.columns, split=True)
     
     plt.gca().legend().set_title('')
     plt.gca().set_xlabel('')
     plt.gca().set_ylabel('')
+    
+    if filename is None:
+        plt.show()
+    else:
+        plt.savefig(filename)
+        plt.close()

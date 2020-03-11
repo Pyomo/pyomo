@@ -1,4 +1,13 @@
-# the matpolotlib stuff is to avoid $DISPLAY errors on Travis (DLW Oct 2018)
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -230,6 +239,28 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
         self.assertAlmostEqual(thetavals['k2'], 5.0/3.0, places=4) 
         self.assertAlmostEqual(thetavals['k3'], 1.0/6000.0, places=7) 
         
-
+@unittest.skipIf(not parmest.parmest_available,
+                 "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not graphics.imports_available,
+                 "parmest.graphics imports are unavailable")
+class parmest_graphics(unittest.TestCase):
+    
+    def setUp(self):
+        self.A = pd.DataFrame(np.random.randint(0,100,size=(100,4)), columns=list('ABCD'))
+        self.B = pd.DataFrame(np.random.randint(0,100,size=(100,4)), columns=list('ABCD'))
+        
+    def test_pairwise_plot(self):
+        filename=os.path.abspath(os.path.join(testdir, 'simple_pairwise_plot.png'))
+        parmest.pairwise_plot(self.A, alpha=0.8, distributions=['Rect', 'MVN', 'KDE'], filename=filename)
+        
+    def test_grouped_boxplot(self):
+        filename=os.path.abspath(os.path.join(testdir, 'simple_grouped_boxplot.png'))
+        parmest.grouped_boxplot(self.A, self.B, normalize=True, 
+                                group_names=['A', 'B'], filename=filename)
+        
+    def test_grouped_violinplot(self):
+        filename=os.path.abspath(os.path.join(testdir, 'simple_grouped_violinplot.png'))
+        parmest.grouped_violinplot(self.A, self.B, filename=filename)
+        
 if __name__ == '__main__':
     unittest.main()

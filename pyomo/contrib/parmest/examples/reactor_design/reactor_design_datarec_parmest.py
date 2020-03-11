@@ -1,12 +1,30 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import numpy as np
 import pandas as pd
 import matplotlib.pylab as plt
 import pyomo.contrib.parmest.parmest as parmest
-from reactor_design_datarec import reactor_design_model
+from reactor_design import reactor_design_model
 
 plt.close('all')
 
 np.random.seed(1234)
+
+def reactor_design_model_for_datarec(data):
+    
+    # Unfix inlet concentration for data rec
+    model = reactor_design_model(data)
+    model.caf.fixed = False
+    
+    return model
 
 ### Generate data based on real sv, caf, ca, cb, cc, and cd
 theta_real = {'k1': 5.0/6.0,
@@ -33,12 +51,9 @@ data['cd'] = np.random.triangular(1000,1800,3000,size=ndata)
 data['sv'] = sv_real
 data['caf'] = caf_real
 
-plt.figure()
-data[['ca', 'cb', 'cc', 'cd']].boxplot()
-
 data_std = data.std()
 
-# Define sum of squared error objective function
+# Define sum of squared error objective function for data rec
 def SSE(model, data): 
     expr = ((float(data['ca']) - model.ca)/float(data_std['ca']))**2 + \
            ((float(data['cb']) - model.cb)/float(data_std['cb']))**2 + \
@@ -50,12 +65,13 @@ def SSE(model, data):
 
 theta_names = [] # no variables to estimate, use initialized values
 
-pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE)
-obj, theta, data_rec = pest.theta_est(return_values=['ca', 'cb', 'cc', 'cd'])
+pest = parmest.Estimator(reactor_design_model_for_datarec, data, theta_names, SSE)
+obj, theta, data_rec = pest.theta_est(return_values=['ca', 'cb', 'cc', 'cd', 'caf'])
 print(obj)
 print(theta)
 
-parmest.grouped_boxplot(data[['ca', 'cb', 'cc', 'cd']], data_rec, 
+parmest.grouped_boxplot(data[['ca', 'cb', 'cc', 'cd']], 
+                        data_rec[['ca', 'cb', 'cc', 'cd']], 
                         group_names=['Data', 'Data Rec'])
 
 
@@ -63,23 +79,9 @@ parmest.grouped_boxplot(data[['ca', 'cb', 'cc', 'cd']], data_rec,
 
 theta_names = ['k1', 'k2', 'k3']
 data_rec['sv'] = data['sv']
-data_rec['caf'] = data['caf']
 
 pest = parmest.Estimator(reactor_design_model, data_rec, theta_names, SSE)
 obj, theta = pest.theta_est()
 print(obj)
 print(theta)
 print(theta_real)
-
-
-### Data reconciliation with parameter estimation
-
-theta_names = ['k1', 'k2', 'k3']
-
-pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE)
-obj, theta, data_rec2 = pest.theta_est(return_values=['ca', 'cb', 'cc', 'cd'])
-print(obj)
-print(theta)
-
-parmest.grouped_boxplot(data[['ca', 'cb', 'cc', 'cd']], data_rec2, 
-                        group_names=['Data', 'Data Rec'])

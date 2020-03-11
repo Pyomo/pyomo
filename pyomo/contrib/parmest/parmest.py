@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import re
 import importlib as im
 import types
@@ -19,8 +29,8 @@ from pyomo.environ import Block
 
 import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
-from pyomo.contrib.parmest.graphics import pairwise_plot, fit_rect_dist, fit_mvn_dist, \
-    fit_kde_dist, grouped_boxplot
+from pyomo.contrib.parmest.graphics import pairwise_plot, grouped_boxplot, grouped_violinplot, \
+    fit_rect_dist, fit_mvn_dist, fit_kde_dist
 
 __version__ = 0.1
 
@@ -253,17 +263,17 @@ def _treemaker(scenlist):
     
 def group_data(data, groupby_column_name, use_mean=None):
     """
-    Group data by experiment/scenario
+    Group data by scenario
     
     Parameters
     ----------
     data: DataFrame
         Data
     groupby_column_name: strings
-        Name of data column which contains experiment/scenario numbers
+        Name of data column which contains scenario numbers
     use_mean: list of column names or None, optional
         Name of data columns which should be reduced to a single value per 
-        experiment/scenario by taking the mean
+        scenario by taking the mean
         
     Returns
     ----------
@@ -296,8 +306,7 @@ class _SecondStateCostExpr(object):
 
 class Estimator(object):
     """
-    Parameter estimation class. Provides methods for parameter estimation, 
-    bootstrap resampling, and likelihood ratio test.
+    Parameter estimation class
 
     Parameters
     ----------
@@ -308,7 +317,7 @@ class Estimator(object):
         Data that is used to build an instance of the Pyomo model and build 
         the objective function
     theta_names: list of strings
-        List of Vars to estimate
+        List of Var names to estimate
     obj_function: function, optional
         Function used to formulate parameter estimation objective, generally
         sum of squared error between measurements and model variables.  
@@ -319,7 +328,7 @@ class Estimator(object):
     tee: bool, optional
         Indicates that ef solver output should be teed
     diagnostic_mode: bool, optional
-        if True, print diagnostics from the solver
+        If True, print diagnostics from the solver
     """
     def __init__(self, model_function, data, theta_names, obj_function=None, 
                  tee=False, diagnostic_mode=False):
@@ -662,7 +671,7 @@ class Estimator(object):
     
     def theta_est(self, solver="ef_ipopt", return_values=[], bootlist=None): 
         """
-        Run parameter estimation using all data
+        Parameter estimation using all scenarios in the data
 
         Parameters
         ----------
@@ -690,7 +699,7 @@ class Estimator(object):
     def theta_est_bootstrap(self, bootstrap_samples, samplesize=None, 
                             replacement=True, seed=None, return_samples=False):
         """
-        Run parameter estimation using N bootstrap samples
+        Parameter estimation using bootstrap resampling of the data
 
         Parameters
         ----------
@@ -746,27 +755,27 @@ class Estimator(object):
     
     
     def theta_est_leaveNout(self, lNo, lNo_samples=None, seed=None, 
-                            return_lNo_samples=False):
+                            return_samples=False):
         """
-        Run parameter estimation where N data points are left out
+        Parameter estimation where N data points are left out of each sample
 
         Parameters
         ----------
         lNo: int
-            Number of data points to leave out during estimation
+            Number of data points to leave out for parameter estimation
         lNo_samples: int
-            Size of each sample. If lNo_samples=None, the maximum number of 
-            combinations will be used
+            Number of leave-N-out samples. If lNo_samples=None, the maximum 
+            number of combinations will be used
         seed: int or None, optional
             Random seed
-        return_lNo_samples: bool, optional
+        return_samples: bool, optional
             Return a list of sample numbers that were left out
         
         Returns
         -------
         lNo_theta: DataFrame 
             Theta values for each sample and (if return_samples = True) 
-            the sample numbers used in each estimation
+            the sample numbers leaft out of each estimation
         """
         samplesize = len(self._numbers_list)-lNo
 
@@ -794,26 +803,26 @@ class Estimator(object):
         global_bootstrap_theta = task_mgr.allgather_global_data(lNo_theta)
         lNo_theta = pd.DataFrame(global_bootstrap_theta)   
         
-        if not return_lNo_samples:
+        if not return_samples:
             del lNo_theta['lNo']
                     
         return lNo_theta
     
     
-    def leaveNout_bootstrap_analysis(self, lNo, lNo_samples, bootstrap_samples, 
+    def leaveNout_bootstrap_test(self, lNo, lNo_samples, bootstrap_samples, 
                                      distribution, alphas, seed=None):
         """
-        Run a leaveNout-bootstrap analysis.  This analysis compares a theta_est 
-        using lNo data points to a bootstrap analysis using the remainder of 
-        the data. Results indicate if the estimate using lNo data points is 
-        inside or outside a confidence region for each value of alpha.
+        Leave-N-out bootstrap test to compare theta values where N data points are 
+        left out to a bootstrap analysis using the remaining data, 
+        results indicate if theta is within a confidence region
+        determined by the bootstrap analysis
 
         Parameters
         ----------
         lNo: int
-            Number of data points to leave out during estimation
+            Number of data points to leave out for parameter estimation
         lNo_samples: int
-            Leave N out sample size. If lNo_samples=None, the maximum number 
+            Leave-N-out sample size. If lNo_samples=None, the maximum number 
             of combinations will be used
         bootstrap_samples: int:
             Bootstrap sample size
@@ -878,7 +887,7 @@ class Estimator(object):
     
     def objective_at_theta(self, theta_values):
         """
-        Compute the objective over a range of theta values
+        Objective value for each theta
 
         Parameters
         ----------
@@ -888,7 +897,7 @@ class Estimator(object):
         Returns
         -------
         obj_at_theta: DataFrame
-            Objective values for each theta value (infeasible solutions are 
+            Objective value for each theta (infeasible solutions are 
             omitted).
         """
         # for parallel code we need to use lists and dicts in the loop
@@ -915,7 +924,8 @@ class Estimator(object):
     def likelihood_ratio_test(self, obj_at_theta, obj_value, alpha, 
                               return_thresholds=False):
         """
-        Compute the likelihood ratio for each value of alpha
+        Likelihood ratio test to identify theta values within a confidence 
+        region using the :math:`\chi^2` distribution
         
         Parameters
         ----------
@@ -953,8 +963,9 @@ class Estimator(object):
     def confidence_region_test(self, theta_values, distribution, alphas, 
                                test_theta_values=None):
         """
-        Generate a confidence region and determine if points are inside or 
-        outside that region for each value of alpha
+        Confidence region test to determine if theta values are within a 
+        rectangular, multivariate normal, or Gaussian kernel density distribution 
+        for a range of alpha values
         
         Parameters
         ----------
@@ -1000,7 +1011,7 @@ class Estimator(object):
                                   (test_theta_values < ub).all(axis=1))
                     
             elif distribution == 'MVN':
-                dist = fit_mvn_dist(theta_values, a)
+                dist = fit_mvn_dist(theta_values)
                 Z = dist.pdf(theta_values)
                 score = stats.scoreatpercentile(Z, (1-a)*100) 
                 training_results[a] = (Z >= score)
@@ -1011,7 +1022,7 @@ class Estimator(object):
                     test_result[a] = (Z >= score) 
                 
             elif distribution == 'KDE':
-                dist = fit_kde_dist(theta_values, a)
+                dist = fit_kde_dist(theta_values)
                 Z = dist.pdf(theta_values.transpose())
                 score = stats.scoreatpercentile(Z, (1-a)*100) 
                 training_results[a] = (Z >= score)
