@@ -706,7 +706,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         INPUT = open(self._soln_file, "r")
         results.problem.number_of_objectives=1
-        time_limit_exceeded = False
+        user_limit_exceeded = False
         mip_problem=False
         for line in INPUT:
             line = line.strip()
@@ -846,16 +846,16 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 elif solution_status in ["infeasible"]:
                     soln.status = SolutionStatus.infeasible
                     soln.gap = None
-                elif solution_status in ["time limit exceeded"]:
+                elif solution_status in ["time limit exceeded", "solution limit exceeded"]:
                     # we need to know if the solution is primal feasible, and if it is, set the solution status accordingly.
                     # for now, just set the flag so we can trigger the logic when we see the primalFeasible keyword.
-                    time_limit_exceeded = True
+                    user_limit_exceeded = True
             elif tokens[0].startswith("MIPNodes"):
                 if mip_problem:
                     n = eval(eval((" ".join(tokens).split('=')[1]).strip()).lstrip("\"").rstrip("\""))
                     results.solver.statistics.branch_and_bound.number_of_created_subproblems=n
                     results.solver.statistics.branch_and_bound.number_of_bounded_subproblems=n
-            elif tokens[0].startswith("primalFeasible") and (time_limit_exceeded is True):
+            elif tokens[0].startswith("primalFeasible") and user_limit_exceeded:
                 primal_feasible = int(((" ".join(tokens).split('=')[1]).strip()).lstrip("\"").rstrip("\""))
                 if primal_feasible == 1:
                     soln.status = SolutionStatus.feasible
