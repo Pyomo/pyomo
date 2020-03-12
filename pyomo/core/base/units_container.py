@@ -1079,13 +1079,30 @@ class PyomoUnitsContainer(object):
     and are not present on the class until they are requested.
 
     """
-    def __init__(self, create_usd=True):
-        """Create a PyomoUnitsContainer instance. """
+    def __init__(self):
+        """Create a PyomoUnitsContainer instance."""
         self._pint_registry = pint_module.UnitRegistry()
-        if create_usd:
-            # by default, currency is not in pint
-            # let's add it here
-            self._pint_registry.load_definitions("""USD = [currency]""".splitlines())
+
+    def load_definitions_from_file(self, definition_file):
+        """ This method loads additional units definitions from a user specified
+        definition file. An example of a definitions file can be found at:
+        https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
+
+        Example
+        -------
+        >>> u.load_additional_definitions('my_additional_units.txt')
+        """
+        self._pint_registry.load_definitions(definition_file)
+
+    def load_definitions_from_string(self, definition_string_list):
+        """ This method loads additional units definitions from a list of strings
+        (one for each line). An example of the definitions strings can be found at:
+        https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
+
+        For example, to add the currency dimension and US dollars as a unit, use
+        >>> u.load_additional_definitions(['USD = [currency]'])
+        """
+        self._pint_registry.load_definitions(definition_string_list)
 
     def __getattr__(self, item):
         """

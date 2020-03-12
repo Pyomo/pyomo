@@ -539,6 +539,7 @@ class TestPyomoUnit(unittest.TestCase):
 
     def test_usd(self):
         u = units
+        u.load_definitions_from_string(["USD = [currency]"])
         expr = 3.0*u.USD
         self._get_check_units_ok(expr, u, 'USD')
 
