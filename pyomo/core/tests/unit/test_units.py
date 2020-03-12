@@ -537,5 +537,10 @@ class TestPyomoUnit(unittest.TestCase):
         with self.assertRaises(UnitsError):
             u.assert_model_units_consistent(m)
 
+    def test_usd(self):
+        u = units
+        expr = 3.0*u.USD
+        self._get_check_units_ok(expr, u, 'USD')
+
 if __name__ == "__main__":
     unittest.main()

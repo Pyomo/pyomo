@@ -1079,9 +1079,13 @@ class PyomoUnitsContainer(object):
     and are not present on the class until they are requested.
 
     """
-    def __init__(self):
+    def __init__(self, create_usd=True):
         """Create a PyomoUnitsContainer instance. """
         self._pint_registry = pint_module.UnitRegistry()
+        if create_usd:
+            # by default, currency is not in pint
+            # let's add it here
+            self._pint_registry.load_definitions("""USD = [currency]""".splitlines())
 
     def __getattr__(self, item):
         """
