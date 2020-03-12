@@ -13,6 +13,7 @@ import os
 import pyutilib
 import pyutilib.th as unittest
 
+from pyomo.environ import *
 from pyomo.core import Binary, ConcreteModel, Constraint, Objective, Var, Integers, RangeSet, minimize, quicksum, Suffix
 from pyomo.opt import ProblemFormat, convert_problem, SolverFactory, BranchDirection
 from pyomo.solvers.plugins.solvers.CPLEX import CPLEXSHELL, MockCPLEX, _validate_file_name, ORDFileSchema
@@ -62,9 +63,6 @@ class CPLEX_utils(unittest.TestCase):
 
 class CPLEXShellWritePrioritiesFile(unittest.TestCase):
     def setUp(self):
-        from pyomo.solvers.plugins.converter.model import PyomoMIPConverter  # register the `ProblemConverterFactory`
-        from pyomo.repn.plugins.cpxlp import ProblemWriter_cpxlp  # register the `WriterFactory`
-
         self.mock_model = self.get_mock_model()
         self.mock_cplex_shell = self.get_mock_cplex_shell(self.mock_model)
         self.mock_cplex_shell._priorities_file_name = pyutilib.services.TempfileManager.create_tempfile(
@@ -163,9 +161,6 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
 
 
 class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
-    def setUp(self):
-        pass
-
     def get_mock_model_with_priorities(self):
         m = ConcreteModel()
         m.x = Var(domain=Integers)
