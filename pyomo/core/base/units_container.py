@@ -98,6 +98,7 @@ Notes:
 
 import six
 from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value, native_numeric_types
+from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.template_expr import IndexTemplate
@@ -447,7 +448,7 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         : bool
            True if they are equivalent, and False otherwise
         """
-        if lhs == rhs:
+        if id(lhs) == id(rhs):
             # units are the same objects (or both None)
             return True
         elif lhs is None:
@@ -1290,6 +1291,36 @@ class PyomoUnitsContainer(object):
         pyomo_unit2, pint_unit2 = self._get_units_tuple(expr2)
         return _UnitExtractionVisitor(self)._pint_units_equivalent(pint_unit1, pint_unit2)
 
+    def check_all_units_equivalent(self, *args):
+        """
+        Check if the units associated with each of the expressions are equivalent.
+
+        Parameters
+        ----------
+        args : an argument list of Pyomo expressions
+
+        Returns
+        -------
+        : bool
+           True if all the expressions have equivalent units, False otherwise.
+
+        Raises
+        ------
+        :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
+
+        """
+        if len(args) < 2:
+            raise UnitsError("check_all_units_equivalent called with less than two arguments.")
+
+        pyomo_unit_compare, pint_unit_compare = self._get_units_tuple(args[0])
+        for expr in args[1:]:
+            pyomo_unit, pint_unit = self._get_units_tuple(expr)
+            if not _UnitExtractionVisitor(self)._pint_units_equivalent(pint_unit_compare, pint_unit):
+                return False
+            
+        # got through all arguments with no failures - they must all be equivalent
+        return True
+
     def _pint_convert_temp_from_to(self, numerical_value, pint_from_units, pint_to_units):
         if type(numerical_value) not in native_numeric_types:
             raise UnitsError('Conversion routines for absolute and relative temperatures require a numerical value only.'
@@ -1420,33 +1451,52 @@ class PyomoUnitsContainer(object):
         dest_quantity = src_quantity.to(to_pint_unit)
         return dest_quantity.magnitude
 
+    def drop_units(self, expr, expected_units):
+        """
+        This method returns a dimensionless expression by dividing
+        expr by its units.
 
-# ToDo:
-def _check_units_equivalent(self, expr, pyomo_units, allow_exceptions=True):
-    pass
+        This is to support, for example, calls to intrinsic functions
+        that may contain expressions with units. To ensure that the
+        units are correct before dropping them, you must provide the
+        expected units. If the expected units do not match the units
+        on expr, a UnitsError exception will be raised.
 
-def _check_get_units(self, expr, allow_exceptions=True):
-    pass
+        Parameters
+        ----------
+        expr : Pyomo expression
+           The expression that will be converted
+        expected_units : Pyomo units expression
+           The expected units on expr. If this does not match the 
+           units on expr, then a UnitsError exception will be raised.
 
-def check_model_units(self, model, allow_exceptions=True):
-    pass
+        Returns
+        -------
+           Pyomo expression
 
-#    def get_units(self, expr, allow_exceptions=False):
-#        # returns the unit and whether o
-#        TODO
+        """
+        pyomo_expr_unit, pint_expr_unit = self._get_units_tuple(expr)
+        pyomo_expected_unit, pint_expected_unit = self._get_units_tuple(expected_units)
+        if not _UnitExtractionVisitor(self)._pint_units_equivalent(pint_expr_unit,
+                                                                   pint_expected_unit):
+            raise UnitsError("drop_units called, however the units on the expression: {}"
+                             " do not match the expected units: {}."
+                             "".format(str(pyomo_expr_unit), str(pyomo_expected_unit)))
 
-#    def check_units_equivalent(self, expr1, pyomo_units):
-#        TODO
+        return expr/pyomo_expr_unit
 
-    def check_consistency_and_get_units(self, expr1, allow_exceptions=False):
-        # return a tuple of the unit and a flag that indicates whether they were consistent or not
-        # return  unit, True or
-        # return  None, False
-        pass
+    def check_constraint_data_units(self, condata):
+        if condata.equality:
+            if condata.lower == 0.0:
+                assert condata.upper == 0.0
+                return self.check_units_consistency(condata.body)
+            return self.check_all_units_equivalent(condata.lower, condata.body)
+        return self.check_all_units_equivalent(condata.lower, condata.body, condata.upper)
 
-    def check_units_equivalent(self, expr1, pyomo_units, allow_exceptions=False):
-        pass
-
+    def assert_model_units_consistent(self, model, active=True):
+        for cdata in model.component_data_objects(ctype=Constraint, descend_into=True, active=active, ):
+            if not self.check_constraint_data_units(cdata):
+                raise UnitsError("Units on constraint {} are not consistent.".format(cdata))
 
 # Define a module level instance (singleton) of a
 # PyomoUnitsContainer to use for all units within
