@@ -26,7 +26,7 @@ from pyutilib.pyro import (TaskWorker,
 from pyomo.core import *
 from pyomo.opt import UndefinedData
 from pyomo.common import pyomo_command
-from pyomo.common.plugin import ExtensionPoint
+from pyomo.common.plugin import ExtensionPoint, SingletonPlugin
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
                        SolutionStatus)
@@ -1362,10 +1362,9 @@ def exec_phsolverserver(options):
                 module_to_find = string.split(module_to_find,"/")[-1]
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find], inspect.isclass):
-                import pyomo.common
                 # the second condition gets around goofyness related to issubclass returning
                 # True when the obj is the same as the test class.
-                if issubclass(obj, pyomo.common.plugin.SingletonPlugin) and name != "SingletonPlugin":
+                if issubclass(obj, SingletonPlugin) and name != "SingletonPlugin":
                     ph_extension_point = ExtensionPoint(IPHSolverServerExtension)
                     for plugin in ph_extension_point(all=True):
                         if isinstance(plugin, obj):

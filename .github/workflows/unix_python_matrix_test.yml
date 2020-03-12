@@ -6,7 +6,7 @@ on:
       - master
 
 jobs:
-  pyomo-mac-tests:
+  pyomo-unix-tests:
     name: ${{ matrix.TARGET }}/py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -21,7 +21,7 @@ jobs:
         python-version: [3.5, 3.6, 3.7, 3.8]
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:

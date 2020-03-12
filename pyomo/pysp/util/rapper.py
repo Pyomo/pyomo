@@ -132,12 +132,7 @@ class StochSolver:
                 tree_maker = getattr(m, treecbname)
 
                 tree = tree_maker()
-                if isinstance(tree, Pyo.ConcreteModel):
-                    tree_model = tree
-                else:
-                    raise RuntimeError("The tree returned by",treecbname,
-                                       "must be a ConcreteModel") 
-                    
+
                 scenario_instance_factory = ScenarioTreeInstanceFactory(scen_function, tree_model)
 
             else: 
