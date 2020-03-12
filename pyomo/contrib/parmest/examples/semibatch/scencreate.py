@@ -43,8 +43,8 @@ for exp_num in range(10):
 
 ### Parameter estimation with bootstrap resampling
 
-##bootstrap_theta = pest.theta_est_bootstrap(50)
-##print(bootstrap_theta.head())
+bootstrap_theta = pest.theta_est_bootstrap(10)
+print(bootstrap_theta.head())
 
 ###parmest.pairwise_plot(bootstrap_theta, theta, 0.8, ['MVN', 'KDE', 'Rect'])
 
