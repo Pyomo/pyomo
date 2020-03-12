@@ -1,6 +1,8 @@
 DLW March 2020 parmest to mpi-sppy
 Scenario Creation Notes
 
+= look at examples/semibatch/scencreate.py
+
 Big picture:
 - parmest wants to solve for Vars
 - we are going to assume that these same vars are fixed
@@ -36,7 +38,7 @@ code notes:
 1. scenarios from experiments:
 
 - Create the object as in semibatch_parmest.py (call it parmest)
-- loop over exp nums calling mode=_instance_creation_callback(exp num, cb_data)
+- loop over exp nums calling model =_instance_creation_callback(exp num, cb_data)
    solve each model and grab the thetas
       for theta in parmest.theta_names:
           tvar = eval('model.'+theta)

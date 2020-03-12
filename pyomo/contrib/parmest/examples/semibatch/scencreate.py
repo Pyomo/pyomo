@@ -5,6 +5,7 @@ from itertools import product
 import json
 import pyomo.contrib.parmest.parmest as parmest
 from semibatch import generate_model
+import pyomo.environ as pyo
 
 # Vars to estimate in parmest
 theta_names = ['k1', 'k2', 'E1', 'E2']
@@ -19,8 +20,22 @@ for exp_num in range(10):
 
 # Note, the model already includes a 'SecondStageCost' expression 
 # for sum of squared error that will be used in parameter estimation
-        
+
 pest = parmest.Estimator(generate_model, data, theta_names)
+
+# create one scenario for each experiment
+for exp_num in range(10):
+    fname = 'exp'+str(exp_num+1)+'.out'
+    print("fname=", fname)
+    model = pest._instance_creation_callback(exp_num, data)
+    opt = pyo.SolverFactory('ipopt')
+    results = opt.solve(model)  # solves and updates model
+    ## pyo.check_termination_optimal(results)
+    for theta in pest.theta_names:
+        tvar = eval('model.'+theta)
+        tval = pyo.value(tvar)
+        print("    tvar, tval=", tvar, tval)
+
 
 ###obj, theta = pest.theta_est()
 ###print(obj)
@@ -28,8 +43,8 @@ pest = parmest.Estimator(generate_model, data, theta_names)
 
 ### Parameter estimation with bootstrap resampling
 
-bootstrap_theta = pest.theta_est_bootstrap(50)
-print(bootstrap_theta.head())
+##bootstrap_theta = pest.theta_est_bootstrap(50)
+##print(bootstrap_theta.head())
 
 ###parmest.pairwise_plot(bootstrap_theta, theta, 0.8, ['MVN', 'KDE', 'Rect'])
 
