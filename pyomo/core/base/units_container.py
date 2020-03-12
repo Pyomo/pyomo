@@ -101,6 +101,7 @@ from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value, n
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.param import _ParamData
+from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base.template_expr import IndexTemplate
 from pyomo.core.expr import current as EXPR
 from pyomo.common.importer import attempt_import
@@ -751,6 +752,33 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         pyomo_unit, pint_unit = list_of_unit_tuples[0]
         return (pyomo_unit, pint_unit)
 
+    def _get_units_with_dimensionless_children(self, node, list_of_unit_tuples):
+        """
+        Check to make sure that any child arguments are unitless / dimensionless
+        and return the value from node.get_units()
+        This was written for ExternalFunctionExpression where the external
+        function has units assigned to its return value.
+
+        Parameters
+        ----------
+        node : Pyomo expression node
+            The parent node of the children
+
+        list_of_unit_tuples : list
+           This is a list of tuples (one for each of the children) where each tuple
+           is a PyomoUnit, pint unit pair
+
+        Returns
+        -------
+        : tuple (pyomo_unit, pint_unit)
+        """
+        for (pyomo_unit, pint_unit) in list_of_unit_tuples:
+            if not self._pint_unit_equivalent_to_dimensionless(pint_unit):
+                raise UnitsError('Expected no units or dimensionless units in {}, but found {}.'.format(str(node), str(pyomo_unit)))
+
+        # now return the units in node.get_units
+        return self._pyomo_units_container._get_units_tuple(node.get_units())
+
     def _get_dimensionless_with_dimensionless_children(self, node, list_of_unit_tuples):
         """
         Check to make sure that any child arguments are unitless / dimensionless (for functions like exp())
@@ -988,8 +1016,8 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         EXPR.Expr_ifExpression: _get_unit_for_expr_if,
         IndexTemplate: _get_dimensionless_no_children,
         EXPR.GetItemExpression: _get_dimensionless_with_dimensionless_children,
-        EXPR.ExternalFunctionExpression: _get_dimensionless_with_dimensionless_children,
-        EXPR.NPV_ExternalFunctionExpression: _get_dimensionless_with_dimensionless_children,
+        EXPR.ExternalFunctionExpression: _get_units_with_dimensionless_children,
+        EXPR.NPV_ExternalFunctionExpression: _get_units_with_dimensionless_children,
         EXPR.LinearExpression: _get_unit_for_linear_expression
     }
 
@@ -1024,20 +1052,23 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             if type(node) in native_numeric_types:
                 # this is a number - return dimensionless                                                                      
                 return (None, None)
-            elif isinstance(node, _VarData) or \
-                 isinstance(node, _ParamData):
-                pyomo_unit, pint_unit = self._pyomo_units_container._get_units_tuple(node.get_units())
-                return (pyomo_unit, pint_unit)
             elif isinstance(node, _PyomoUnit):
                 return (node, node._get_pint_unit())
-            
-            # ToDo: maybe we should check if a general node has get_units() and raise an exception
-            # if not - instead of silently returning dimensionless
-            # pyomo_unit, pint_unit = self._pyomo_units_container._get_units_tuple(node.get_units())
-            # return (pyomo_unit, pint_unit)
+            # CDL using the hasattr code below since it is more general
+            #elif isinstance(node, _VarData) or \
+            #     isinstance(node, _ParamData):
+            #    pyomo_unit, pint_unit = self._pyomo_units_container._get_units_tuple(node.get_units())
+            #    return (pyomo_unit, pint_unit)
+            elif hasattr(node, 'get_units'):
+                pyomo_unit, pint_unit = self._pyomo_units_container._get_units_tuple(node.get_units())
+                return (pyomo_unit, pint_unit)
             
             # I have a leaf, but this is not a PyomoUnit - (treat as dimensionless)
             return (None, None)
+
+        # not a leaf - check if it is a named expression
+        if hasattr(node, 'is_named_expression_type') and node.is_named_expression_type():
+            return self._get_unit_for_single_child(node, data)
 
         # not a leaf - get the appropriate function for type of the node
         node_func = self.node_type_method_map.get(type(node), None)

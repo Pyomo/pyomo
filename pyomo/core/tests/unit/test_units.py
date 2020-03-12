@@ -380,6 +380,14 @@ class TestPyomoUnit(unittest.TestCase):
         self._get_check_units_fail(model.ef(model.x*kg, model.y), uc, EXPR.ExternalFunctionExpression, UnitsError)
         self._get_check_units_fail(model.ef(2.0*kg, 1.0), uc, EXPR.NPV_ExternalFunctionExpression, UnitsError)
 
+        # test ExternalFunctionExpression, NPV_ExternalFunctionExpression
+        model.ef2 = ExternalFunction(python_callback_function, units=uc.kg)
+        self._get_check_units_ok(model.ef2(model.x, model.y), uc, 'kg', EXPR.ExternalFunctionExpression)
+        self._get_check_units_ok(model.ef2(1.0, 2.0), uc, 'kg', EXPR.NPV_ExternalFunctionExpression)
+        self._get_check_units_fail(model.ef2(model.x*kg, model.y), uc, EXPR.ExternalFunctionExpression, UnitsError)
+        self._get_check_units_fail(model.ef2(2.0*kg, 1.0), uc, EXPR.NPV_ExternalFunctionExpression, UnitsError)
+
+
     # @unittest.skip('Skipped testing LinearExpression since StreamBasedExpressionVisitor does not handle LinearExpressions')
     def test_linear_expression(self):
         uc = units
@@ -397,6 +405,14 @@ class TestPyomoUnit(unittest.TestCase):
 
         linex2 = sum_product(model.vv, {'A': kg, 'B': m, 'C':kg}, index=['A', 'B', 'C'])
         self._get_check_units_fail(linex2, uc, EXPR.LinearExpression)
+
+    def test_named_expression(self):
+        uc = units
+        m = ConcreteModel()
+        m.x = Var(units=uc.kg)
+        m.y = Var(units=uc.m)
+        m.e = Expression(expr=m.x/m.y)
+        self.assertEqual(str(uc.get_units(m.e)), 'kg / m')
 
     def test_dimensionless(self):
         uc = units

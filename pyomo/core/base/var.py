@@ -408,10 +408,10 @@ class _GeneralVarData(_VarData):
     def ub(self, val):
         raise AttributeError("Assignment not allowed. Use the setub method")
 
-    def get_units(self):                                                                                                       
-        """Return the units for this variable entry."""                                                                        
-        # parent_component() returns self if this is scalar, or the owning                                                     
-        # component if not scalar                                                                                              
+    def get_units(self):
+        """Return the units for this variable entry."""
+        # parent_component() returns self if this is scalar, or the owning
+        # component if not scalar
         return self.parent_component()._units
 
     # fixed is an attribute
@@ -577,8 +577,8 @@ class Var(IndexedComponent):
         for index, new_value in iteritems(new_values):
             self[index].set_value(new_value, valid)
 
-    def get_units(self):                                                                                                       
-        """Return the units expression for this Var."""                                                                        
+    def get_units(self):
+        """Return the units expression for this Var."""
         return self._units
 
     def construct(self, data=None):
