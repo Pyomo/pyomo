@@ -24,9 +24,8 @@ for exp_num in range(10):
 pest = parmest.Estimator(generate_model, data, theta_names)
 
 # create one scenario for each experiment
-for exp_num in range(10):
-    fname = 'exp'+str(exp_num+1)+'.out'
-    print("fname=", fname)
+for exp_num in pest._numbers_list:
+    print("Experiment number=", exp_num)
     model = pest._instance_creation_callback(exp_num, data)
     opt = pyo.SolverFactory('ipopt')
     results = opt.solve(model)  # solves and updates model
