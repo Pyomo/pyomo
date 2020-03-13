@@ -108,8 +108,10 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
 
         self.assertEqual(
             priorities_file,
-            "* ENCODING=ISO-8859-1\nNAME             Priority Order\n  x1 %d\nENDATA\n"
-            % (priority_val,),
+            "* ENCODING=ISO-8859-1\n"
+            "NAME             Priority Order\n"
+            "  x1 10\n"
+            "ENDATA\n"
         )
 
     def test_write_priority_and_direction_to_priorities_file(self):
@@ -126,7 +128,10 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
 
         self.assertEqual(
             priorities_file,
-            "* ENCODING=ISO-8859-1\nNAME             Priority Order\n DN x1 10\nENDATA\n"
+            "* ENCODING=ISO-8859-1\n"
+            "NAME             Priority Order\n"
+            " DN x1 10\n"
+            "ENDATA\n"
         )
 
     def test_raise_due_to_invalid_priority(self):
@@ -154,7 +159,10 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
 
         self.assertEqual(
             priorities_file,
-            "* ENCODING=ISO-8859-1\nNAME             Priority Order\n  x1 10\nENDATA\n"
+            "* ENCODING=ISO-8859-1\n"
+            "NAME             Priority Order\n"
+            "  x1 10\n"
+            "ENDATA\n"
         )
 
 
