@@ -7,7 +7,7 @@ various Python package dependencies and the IPOPT software
 library for non-linear optimization.
 
 Python package dependencies
--------------------------------
+---------------------------
 
 #. numpy
 #. pandas
@@ -19,7 +19,7 @@ Python package dependencies
 #. mpi4py.MPI (optional)
 
 IPOPT
--------
+-----
 
 IPOPT can be downloaded from https://projects.coin-or.org/Ipopt. 
 
