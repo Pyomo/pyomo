@@ -10,10 +10,13 @@
 
 import pyutilib.th as unittest
 
-from pyomo.core import ConcreteModel, Var, Constraint
-from pyomo.gdp import Disjunction, Disjunct
+from pyomo.core import ConcreteModel, Var, Constraint, Block, \
+    TransformationFactory
+from pyomo.gdp import Disjunction, Disjunct, GDP_Error
+import pyomo.gdp.plugins.bigm
 
 from six import iterkeys
+
 
 class TestDisjunction(unittest.TestCase):
     def test_empty_disjunction(self):
@@ -227,6 +230,51 @@ class TestDisjunct(unittest.TestCase):
         self.assertFalse(m.d.disjuncts[1].indicator_var.is_fixed())
         self.assertFalse(m.d.disjuncts[2].indicator_var.is_fixed())
 
+    def test_indexed_disjunct_active_property(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 12))
+        @m.Disjunct([0, 1, 2])
+        def disjunct(d, i):
+            m = d.model()
+            if i == 0:
+                d.cons = Constraint(expr=m.x >= 3)
+            if i == 1:
+                d.cons = Constraint(expr=m.x >= 8)
+            else:
+                d.cons = Constraint(expr=m.x == 12)
+
+        self.assertTrue(m.disjunct.active)
+        m.disjunct[1].deactivate()
+        self.assertTrue(m.disjunct.active)
+        m.disjunct[0].deactivate()
+        m.disjunct[2].deactivate()
+        self.assertFalse(m.disjunct.active)
+        m.disjunct.activate()
+        self.assertTrue(m.disjunct.active)
+        m.disjunct.deactivate()
+        self.assertFalse(m.disjunct.active)
+        for i in range(3):
+            self.assertFalse(m.disjunct[i].active)
+
+    def test_indexed_disjunction_active_property(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 12))
+        @m.Disjunction([0, 1, 2])
+        def disjunction(m, i):
+            return [m.x == i*5, m.x == i*5 + 1]
+        
+        self.assertTrue(m.disjunction.active)
+        m.disjunction[2].deactivate()
+        self.assertTrue(m.disjunction.active)
+        m.disjunction[0].deactivate()
+        m.disjunction[1].deactivate()
+        self.assertFalse(m.disjunction.active)
+        m.disjunction.activate()
+        self.assertTrue(m.disjunction.active)
+        m.disjunction.deactivate()
+        self.assertFalse(m.disjunction.active)
+        for i in range(3):
+            self.assertFalse(m.disjunction[i].active)
 
 if __name__ == '__main__':
     unittest.main()

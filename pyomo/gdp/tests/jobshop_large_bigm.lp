@@ -41,177 +41,177 @@ c_u_Feas(G)_:
 +1 t(G)
 <= -17
 
-c_e__gdp_bigm_relaxation_disj_xor(A_B_3)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(A_B_3)_:
 +1 NoClash(A_B_3_0)_indicator_var
 +1 NoClash(A_B_3_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(A_B_5)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(A_B_5)_:
 +1 NoClash(A_B_5_0)_indicator_var
 +1 NoClash(A_B_5_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(A_C_1)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(A_C_1)_:
 +1 NoClash(A_C_1_0)_indicator_var
 +1 NoClash(A_C_1_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(A_D_3)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(A_D_3)_:
 +1 NoClash(A_D_3_0)_indicator_var
 +1 NoClash(A_D_3_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(A_E_3)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(A_E_3)_:
 +1 NoClash(A_E_3_0)_indicator_var
 +1 NoClash(A_E_3_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(A_E_5)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(A_E_5)_:
 +1 NoClash(A_E_5_0)_indicator_var
 +1 NoClash(A_E_5_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(A_F_1)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(A_F_1)_:
 +1 NoClash(A_F_1_0)_indicator_var
 +1 NoClash(A_F_1_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(A_F_3)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(A_F_3)_:
 +1 NoClash(A_F_3_0)_indicator_var
 +1 NoClash(A_F_3_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(A_G_5)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(A_G_5)_:
 +1 NoClash(A_G_5_0)_indicator_var
 +1 NoClash(A_G_5_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(B_C_2)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(B_C_2)_:
 +1 NoClash(B_C_2_0)_indicator_var
 +1 NoClash(B_C_2_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(B_D_2)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(B_D_2)_:
 +1 NoClash(B_D_2_0)_indicator_var
 +1 NoClash(B_D_2_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(B_D_3)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(B_D_3)_:
 +1 NoClash(B_D_3_0)_indicator_var
 +1 NoClash(B_D_3_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(B_E_2)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(B_E_2)_:
 +1 NoClash(B_E_2_0)_indicator_var
 +1 NoClash(B_E_2_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(B_E_3)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(B_E_3)_:
 +1 NoClash(B_E_3_0)_indicator_var
 +1 NoClash(B_E_3_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(B_E_5)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(B_E_5)_:
 +1 NoClash(B_E_5_0)_indicator_var
 +1 NoClash(B_E_5_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(B_F_3)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(B_F_3)_:
 +1 NoClash(B_F_3_0)_indicator_var
 +1 NoClash(B_F_3_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(B_G_2)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(B_G_2)_:
 +1 NoClash(B_G_2_0)_indicator_var
 +1 NoClash(B_G_2_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(B_G_5)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(B_G_5)_:
 +1 NoClash(B_G_5_0)_indicator_var
 +1 NoClash(B_G_5_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(C_D_2)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(C_D_2)_:
 +1 NoClash(C_D_2_0)_indicator_var
 +1 NoClash(C_D_2_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(C_D_4)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(C_D_4)_:
 +1 NoClash(C_D_4_0)_indicator_var
 +1 NoClash(C_D_4_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(C_E_2)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(C_E_2)_:
 +1 NoClash(C_E_2_0)_indicator_var
 +1 NoClash(C_E_2_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(C_F_1)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(C_F_1)_:
 +1 NoClash(C_F_1_0)_indicator_var
 +1 NoClash(C_F_1_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(C_F_4)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(C_F_4)_:
 +1 NoClash(C_F_4_0)_indicator_var
 +1 NoClash(C_F_4_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(C_G_2)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(C_G_2)_:
 +1 NoClash(C_G_2_0)_indicator_var
 +1 NoClash(C_G_2_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(C_G_4)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(C_G_4)_:
 +1 NoClash(C_G_4_0)_indicator_var
 +1 NoClash(C_G_4_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(D_E_2)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(D_E_2)_:
 +1 NoClash(D_E_2_0)_indicator_var
 +1 NoClash(D_E_2_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(D_E_3)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(D_E_3)_:
 +1 NoClash(D_E_3_0)_indicator_var
 +1 NoClash(D_E_3_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(D_F_3)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(D_F_3)_:
 +1 NoClash(D_F_3_0)_indicator_var
 +1 NoClash(D_F_3_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(D_F_4)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(D_F_4)_:
 +1 NoClash(D_F_4_0)_indicator_var
 +1 NoClash(D_F_4_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(D_G_2)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(D_G_2)_:
 +1 NoClash(D_G_2_0)_indicator_var
 +1 NoClash(D_G_2_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(D_G_4)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(D_G_4)_:
 +1 NoClash(D_G_4_0)_indicator_var
 +1 NoClash(D_G_4_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(E_F_3)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(E_F_3)_:
 +1 NoClash(E_F_3_0)_indicator_var
 +1 NoClash(E_F_3_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(E_G_2)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(E_G_2)_:
 +1 NoClash(E_G_2_0)_indicator_var
 +1 NoClash(E_G_2_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(E_G_5)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(E_G_5)_:
 +1 NoClash(E_G_5_0)_indicator_var
 +1 NoClash(E_G_5_1)_indicator_var
 = 1
 
-c_e__gdp_bigm_relaxation_disj_xor(F_G_4)_:
+c_e__pyomo_gdp_bigm_relaxation_disj_xor(F_G_4)_:
 +1 NoClash(F_G_4_0)_indicator_var
 +1 NoClash(F_G_4_1)_indicator_var
 = 1
