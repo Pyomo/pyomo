@@ -244,7 +244,7 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
                  "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not graphics.imports_available,
                  "parmest.graphics imports are unavailable")
-@unittest.skip("Temporarily disabling to track down testing failures")
+#@unittest.skip("Temporarily disabling to track down testing failures")
 class parmest_graphics(unittest.TestCase):
     
     def setUp(self):
@@ -252,16 +252,19 @@ class parmest_graphics(unittest.TestCase):
         self.B = pd.DataFrame(np.random.randint(0,100,size=(100,4)), columns=list('ABCD'))
         
     def test_pairwise_plot(self):
-        filename=os.path.abspath(os.path.join(testdir, 'simple_pairwise_plot.png'))
+        # filename=os.path.abspath(os.path.join(testdir, 'simple_pairwise_plot.png'))
+        filename=None
         parmest.pairwise_plot(self.A, alpha=0.8, distributions=['Rect', 'MVN', 'KDE'], filename=filename)
         
     def test_grouped_boxplot(self):
-        filename=os.path.abspath(os.path.join(testdir, 'simple_grouped_boxplot.png'))
+        # filename=os.path.abspath(os.path.join(testdir, 'simple_grouped_boxplot.png'))
+        filename=None
         parmest.grouped_boxplot(self.A, self.B, normalize=True, 
                                 group_names=['A', 'B'], filename=filename)
         
     def test_grouped_violinplot(self):
-        filename=os.path.abspath(os.path.join(testdir, 'simple_grouped_violinplot.png'))
+        # filename=os.path.abspath(os.path.join(testdir, 'simple_grouped_violinplot.png'))
+        filename=None
         parmest.grouped_violinplot(self.A, self.B, filename=filename)
         
 if __name__ == '__main__':
