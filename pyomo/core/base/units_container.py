@@ -104,7 +104,7 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base.template_expr import IndexTemplate
 from pyomo.core.expr import current as EXPR
-from pyomo.common.importer import attempt_import
+from pyomo.common.dependencies import attempt_import
 
 pint_module, pint_available = attempt_import('pint', 'The "pint" package failed to import. This package is necessary to use Pyomo units.')
 

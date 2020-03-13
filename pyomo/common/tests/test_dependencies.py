@@ -1,16 +1,12 @@
-"""Testing for deprecated function."""
 import pyutilib.th as unittest
-from pyomo.common.importer import attempt_import, DeferredImportError
+from pyomo.common.dependencies import attempt_import, DeferredImportError
 
 from six import StringIO
 
 import logging
 logger = logging.getLogger('pyomo.common')
 
-
-class TestImporter(unittest.TestCase):
-    """Tests for deprecated function decorator."""
-
+class TestDependencies(unittest.TestCase):
     def test_import_error(self):
         module_obj, module_available = attempt_import('__there_is_no_module_named_this__', 'Testing import of a non-existant module')
         self.assertFalse(module_available)
