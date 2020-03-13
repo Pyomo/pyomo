@@ -6,20 +6,64 @@ import pyomo.contrib.parmest.parmest as parmest
 import pyomo.environ as pyo
 
 
-class _ParmestScen(object):
+class ScenarioSet(object):
     """
-    local class to hold scenarios
+    Class to hold scenario sets
+    Args:
+    name (str): name of the set (might be "")
     """
 
+    def __init__(self, name):
+        self.scens = list()  # use a df instead?
+        self.name = name  #  might be ""
+
+    def addone(self, scen):
+        """ Add a scenario to the set
+        Args:
+            scen (_ParmestScen): the scenario to add
+        """
+        assert(isinstance(self.scens, list))
+        self.scens.append(scen)
+
+    def Concatwith(self, set1,  newname):
+        """ Concatenate a set to this set and return a new set 
+        Args: 
+            set1 (ScenarioSet): to append to this
+        Returns:
+            a new ScenarioSet
+        """
+        assert(isinstance(self.scens, list))
+        newlist = self.scens + set1.scens
+        retval = ScenarioSet(newname)
+        retval.scens = newlist
+        
+
+    def write_csv(self, filename):
+        """ write a csv file with the scenarios in the set
+        Args:
+            filename (str): full path and full name of file
+        """
+        with open(filename, "w") as f:
+            for s in self.scens:
+                f.write("{}, {}".format(s.name, s.probability))
+                for n,v in s.ThetaVals.items():
+                    f.write(", {}, {}".format(n,v))
+                f.write('\n')
+
+
+class _ParmestScen(object):
+    # private class to hold scenarios
+
     def __init__(self, name, ThetaVals, probability):
-        # ThetaVals[name]=val
+        # ThetaVals is a dict: ThetaVals[name]=val
         self.name = name  # might be ""
+        assert(isinstance(ThetaVals, dict))
         self.ThetaVals = ThetaVals
-        self.probility = probability
+        self.probability = probability
 
         
 class ScenarioCreator(object):
-    """ Create, deliver and perhaps store scenarios from parmest
+    """ Create scenarios from parmest.
 
     Args:
         pest (Estimator): the parmest object
@@ -31,13 +75,17 @@ class ScenarioCreator(object):
         self.pest = pest
         self.solvername = solvername
         self.experiment_numbers = pest._numbers_list
-        self.Scenarios = list()  # list of _ParmestScen objects (often reset)
 
 
-    def ScenariosFromExperiments(self):
-        # Creates new self.Scenarios list using the experiments only.
+    def ScenariosFromExperiments(self, addtoSet):
+        """Creates new self.Scenarios list using the experiments only.
+        Args:
+            addtoSet (ScenarioSet): the scenarios will be added to this set
+        Returns:
+            a ScenarioSet
+        """
 
-        self.Scenarios = list()
+        assert(isinstance(addtoSet, ScenarioSet))
         prob = 1. / len(self.pest._numbers_list)
         for exp_num in self.pest._numbers_list:
             print("Experiment number=", exp_num)
@@ -51,7 +99,8 @@ class ScenarioCreator(object):
                 tval = pyo.value(tvar)
                 print("    theta, tval=", tvar, tval)
                 ThetaVals[theta] = tval
-            self.Scenarios.append(_ParmestScen("ExpScen"+str(exp_num), ThetaVals, prob))
+            addtoSet.addone(_ParmestScen("ExpScen"+str(exp_num), ThetaVals, prob))
+            
 
 if __name__ == "__main__":
     # quick test using semibatch
@@ -75,4 +124,6 @@ if __name__ == "__main__":
     
     scenmaker = ScenarioCreator(pest, "ipopt")
 
-    scenmaker.ScenariosFromExperiments()
+    experimentscens = ScenarioSet("Experiments")
+    scenmaker.ScenariosFromExperiments(experimentscens)
+    experimentscens.write_csv("delme_exp_csv.csv")
