@@ -62,6 +62,7 @@ class CPLEX_utils(unittest.TestCase):
 
 
 class CPLEXShellWritePrioritiesFile(unittest.TestCase):
+    """ Unit test on writing of priorities via `CPLEXSHELL._write_priorities_file()` """
     def setUp(self):
         self.mock_model = self.get_mock_model()
         self.mock_cplex_shell = self.get_mock_cplex_shell(self.mock_model)
@@ -167,6 +168,7 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
 
 
 class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
+    """ Integration test on the end-to-end application of priorities via the `Suffix` through a `solve()` """
     def get_mock_model_with_priorities(self):
         m = ConcreteModel()
         m.x = Var(domain=Integers)
