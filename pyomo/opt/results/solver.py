@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['SolverInformation', 'SolverStatus', 'TerminationCondition', 'check_optimal_termination']
+__all__ = ['SolverInformation', 'SolverStatus', 'TerminationCondition', 'check_optimal_termination', 'assert_optimal_termination']
 
 from pyutilib.enum import Enum
 from pyomo.opt.results.container import MapContainer, ScalarType
@@ -68,7 +68,7 @@ TerminationCondition = Enum(
     )
 
 
-def check_optimal_termination(results, suppress_exception=False):
+def check_optimal_termination(results):
     """
     This function returns True if the termination condition for the solver
     is 'optimal', 'locallyOptimal', or 'globallyOptimal', and the status is 'ok'
@@ -86,14 +86,25 @@ def check_optimal_termination(results, suppress_exception=False):
         or results.solver.termination_condition == TerminationCondition.locallyOptimal
         or results.solver.termination_condition == TerminationCondition.globallyOptimal):
         return True
+    return False
 
-    if not suppress_exception:
+
+def assert_optimal_termination(results):
+    """
+    This function checks if the termination condition for the solver
+    is 'optimal', 'locallyOptimal', or 'globallyOptimal', and the status is 'ok'
+    and it raises a RuntimeError exception if this is not true.
+
+    Parameters
+    ----------
+    results : Pyomo results object returned from solver.solve
+    """
+    if not check_optimal_termination(results):
         msg  = 'Solver failed to return an optimal solution. ' \
             'Solver status: {}, Termination condition: {}'.format(results.solver.status,
                                                                   results.solver.termination_condition)
         raise RuntimeError(msg)
-    return False
-
+    
 
 class BranchAndBoundStats(MapContainer):
 

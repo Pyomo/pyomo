@@ -23,7 +23,8 @@ import pyomo.opt
 from pyomo.opt import (TerminationCondition,
                        SolutionStatus,
                        SolverStatus,
-                       check_optimal_termination)
+                       check_optimal_termination,
+                       assert_optimal_termination)
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -62,13 +63,10 @@ class Test(unittest.TestCase):
             self.assertEqual(soln.solver.status,
                              SolverStatus.warning)
             
-            self.assertFalse(check_optimal_termination(soln, suppress_exception=True))
+            self.assertFalse(check_optimal_termination(soln))
 
             with self.assertRaises(RuntimeError):
-                check_optimal_termination(soln, suppress_exception=False)
-
-            with self.assertRaises(RuntimeError):
-                check_optimal_termination(soln)
+                assert_optimal_termination(soln)
 
     def test_infeasible2(self):
         with pyomo.opt.ReaderFactory("sol") as reader:
@@ -94,9 +92,7 @@ class Test(unittest.TestCase):
             self.assertEqual(soln.solver.status,
                              SolverStatus.ok)
             self.assertTrue(check_optimal_termination(soln))
-            self.assertTrue(check_optimal_termination(soln, suppress_exception=True))
-            self.assertTrue(check_optimal_termination(soln, suppress_exception=False))
-
+            assert_optimal_termination(soln)
 
     def test_bad_options(self):
         with pyomo.opt.ReaderFactory("sol") as reader:
