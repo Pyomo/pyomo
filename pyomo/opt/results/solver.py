@@ -202,6 +202,7 @@ class SolverInformation(MapContainer):
         self.declare('return_code')
         self.declare('message')
         self.declare('user_time', type=ScalarType.time)
+        self.declare('deterministic_time', type=ScalarType.float)
         self.declare('system_time', type=ScalarType.time)
         self.declare('wallclock_time', type=ScalarType.time)
         # Semantics: The specific condition that caused the solver to
