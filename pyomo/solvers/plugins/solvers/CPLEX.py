@@ -233,8 +233,11 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
     def _get_suffixes(self, instance):
         if isinstance(instance, IBlock):
-            suffixes = pyomo.core.kernel.suffix.export_suffix_generator(
-                instance, datatype=Suffix.INT, active=True, descend_into=False
+            suffixes = (
+                (suf.name, suf)
+                for suf in pyomo.core.kernel.suffix.export_suffix_generator(
+                    instance, datatype=Suffix.INT, active=True, descend_into=False
+                )
             )
         else:
             suffixes = active_export_suffix_generator(instance, datatype=Suffix.INT)
@@ -254,8 +257,12 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
     def _convert_priorities_to_rows(self, instance, priorities, directions):
         if isinstance(instance, IBlock):
             smap = getattr(instance, "._symbol_maps")[self._smap_id]
+            var_is_indexed = lambda var: hasattr(var, 'components')
+            var_iter = lambda var: var.components()
         else:
             smap = instance.solutions.symbol_map[self._smap_id]
+            var_is_indexed = lambda var: var.is_indexed()
+            var_iter = lambda var: var.values()
         byObject = smap.byObject
 
         rows = []
@@ -268,14 +275,14 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
             var_direction = directions.get(var, BranchDirection.default)
 
-            if not var.is_indexed():
+            if not var_is_indexed(var):
                 if id(var) not in byObject:
                     continue
 
                 rows.append((byObject[id(var)], priority, var_direction))
                 continue
 
-            for child_var in var.values():
+            for child_var in var_iter(var):
                 if id(child_var) not in byObject:
                     continue
 
