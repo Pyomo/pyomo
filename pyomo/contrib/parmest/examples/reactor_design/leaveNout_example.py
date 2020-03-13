@@ -50,8 +50,8 @@ parmest.pairwise_plot(lNo_theta, theta)
 
 ### Leave one out/boostrap analysis
 # Example use case: leave 50 data points out, run 75 bootstrap samples with the 
-# remining points, determine if the theta estimate using the points left out 
-# is inside or outside an alpha region based on the bootstap samples, repeat 
+# remaining points, determine if the theta estimate using the points left out 
+# is inside or outside an alpha region based on the bootstrap samples, repeat 
 # 10 times. Results are stored as a list of tuples, see API docs for information.
 lNo = 50
 lNo_samples = 10

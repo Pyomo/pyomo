@@ -365,7 +365,7 @@ class Estimator(object):
                 var_validate = eval('model.'+theta)
                 var_validate.fixed = False
             except:
-                print(theta +'is not a variable')
+                print(theta +' is not a variable')
         
         if self.obj_function:
             for obj in model.component_objects(Objective):
@@ -775,7 +775,7 @@ class Estimator(object):
         -------
         lNo_theta: DataFrame 
             Theta values for each sample and (if return_samples = True) 
-            the sample numbers leaft out of each estimation
+            the sample numbers left out of each estimation
         """
         samplesize = len(self._numbers_list)-lNo
 
@@ -1036,6 +1036,3 @@ class Estimator(object):
             return training_results, test_result
         else:
             return training_results
-
-
-    
