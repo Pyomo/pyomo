@@ -55,7 +55,7 @@ class ExternalFunction(Component):
         # block._add_temporary_set assumes ALL components define an
         # index.  Sigh.
         self._index = None
-
+        
     def get_units(self):
         """Return the units for this ExternalFunction"""
         return self._units
@@ -197,11 +197,7 @@ class PythonCallbackFunction(ExternalFunction):
                     "single positional positional arguments" )
         if not args:
             self._fcn = kwds.pop('function')
-        # CDL is this necessary?
-        #if kwds:
-        #    raise ValueError(
-        #        "PythonCallbackFunction constructor does not support "
-        #        "keyword arguments" )
+
         self._library = 'pyomo_ampl.so'
         self._function = 'pyomo_socket_server'
         ExternalFunction.__init__(self, *args, **kwds)
