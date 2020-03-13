@@ -213,7 +213,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         leaveNout_bootstrap_test, likelihood_ratio_test, or 
         confidence_region_test)
     distributions: list of strings, optional
-        Statistical distribution used used to define a confidence region, 
+        Statistical distribution used to define a confidence region, 
         options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, and 
         'Rect' for rectangular.
 		Confidence interval is a 2D slice, using linear interpolation at theta*.
