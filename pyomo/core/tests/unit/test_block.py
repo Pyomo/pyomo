@@ -14,6 +14,7 @@
 import os
 import sys
 import six
+import types
 
 from six import StringIO
 
@@ -646,6 +647,154 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(value(p), 6)
         self.block.x = None
         self.assertEqual(self.block.x._value, None)
+
+        ### creation of a circular reference
+        b = Block(concrete=True)
+        b.c = Block()
+        with self.assertRaisesRegexp(
+                ValueError, "Cannot assign the top-level block as a subblock "
+                "of one of its children \(c\): creates a circular hierarchy"):
+            b.c.d = b
+
+    def test_set_value(self):
+        b = Block(concrete=True)
+        with self.assertRaisesRegexp(
+                RuntimeError, "Block components do not support assignment "
+                "or set_value"):
+            b.set_value(None)
+
+        b.b = Block()
+        with self.assertRaisesRegexp(
+                RuntimeError, "Block components do not support assignment "
+                "or set_value"):
+            b.b = 5
+
+    def test_clear(self):
+        class DerivedBlock(SimpleBlock):
+            _Block_reserved_words = None
+
+        DerivedBlock._Block_reserved_words \
+            = set(['a','b','c']) | _BlockData._Block_reserved_words
+
+        m = ConcreteModel()
+        m.clear()
+        self.assertEqual(m._ctypes, {})
+        self.assertEqual(m._decl, {})
+        self.assertEqual(m._decl_order, [])
+
+        m.w = 5
+        m.x = Var()
+        m.y = Param()
+        m.z = Var()
+        m.clear()
+        self.assertFalse(hasattr(m, 'w'))
+        self.assertEqual(m._ctypes, {})
+        self.assertEqual(m._decl, {})
+        self.assertEqual(m._decl_order, [])
+
+        m.b = DerivedBlock()
+        m.b.a = a = Param()
+        m.b.x = Var()
+        m.b.b = b = Var()
+        m.b.y = Var()
+        m.b.z = Param()
+        m.b.c = c = Param()
+        m.b.clear()
+        self.assertEqual(m.b._ctypes, {Var: [1, 1, 1], Param:[0,2,2]})
+        self.assertEqual(m.b._decl, {'a':0, 'b':1, 'c':2})
+        self.assertEqual(len(m.b._decl_order), 3)
+        self.assertIs(m.b._decl_order[0][0], a)
+        self.assertIs(m.b._decl_order[1][0], b)
+        self.assertIs(m.b._decl_order[2][0], c)
+        self.assertEqual(m.b._decl_order[0][1], 2)
+        self.assertEqual(m.b._decl_order[1][1], None)
+        self.assertEqual(m.b._decl_order[2][1], None)
+
+    def test_transfer_attributes_from(self):
+        b = Block(concrete=True)
+        b.x = Var()
+        b.y = Var()
+        c = Block(concrete=True)
+        c.z = Param(initialize=5)
+        c.x = c_x = Param(initialize=5)
+        c.y = c_y = 5
+
+        b.clear()
+        b.transfer_attributes_from(c)
+        self.assertEqual(list(b.component_map()), ['z','x'])
+        self.assertEqual(list(c.component_map()), [])
+        self.assertIs(b.x, c_x)
+        self.assertIs(b.y, c_y)
+
+        class DerivedBlock(SimpleBlock):
+            _Block_reserved_words = set()
+            def __init__(self, *args, **kwds):
+                super(DerivedBlock, self).__init__(*args, **kwds)
+                self.x = Var()
+                self.y = Var()
+        DerivedBlock._Block_reserved_words = set(dir(DerivedBlock()))
+
+        b = DerivedBlock(concrete=True)
+        b_x = b.x
+        b_y = b.y
+        c = Block(concrete=True)
+        c.z = Param(initialize=5)
+        c.x = c_x = Param(initialize=5)
+        c.y = c_y = 5
+
+        b.clear()
+        b.transfer_attributes_from(c)
+        self.assertEqual(list(b.component_map()), ['y','z','x'])
+        self.assertEqual(list(c.component_map()), [])
+        self.assertIs(b.x, c_x)
+        self.assertIsNot(b.y, c_y)
+        self.assertIs(b.y, b_y)
+        self.assertEqual(value(b.y), value(c_y))
+
+        ### assignment of dict
+        b = DerivedBlock(concrete=True)
+        b_x = b.x
+        b_y = b.y
+        c = { 'z': Param(initialize=5),
+              'x': Param(initialize=5),
+              'y': 5 }
+
+        b.clear()
+        b.transfer_attributes_from(c)
+        self.assertEqual(list(b.component_map()), ['y','x','z'])
+        self.assertEqual(sorted(list(iterkeys(c))), ['x','y','z'])
+        self.assertIs(b.x, c['x'])
+        self.assertIsNot(b.y, c['y'])
+        self.assertIs(b.y, b_y)
+        self.assertEqual(value(b.y), value(c_y))
+
+        ### assignment of self
+        b = Block(concrete=True)
+        b.x = b_x = Var()
+        b.y = b_y = Var()
+        b.transfer_attributes_from(b)
+
+        self.assertEqual(list(b.component_map()), ['x','y'])
+        self.assertIs(b.x, b_x)
+        self.assertIs(b.y, b_y)
+
+        ### creation of a circular reference
+        b = Block(concrete=True)
+        b.c = Block()
+        b.c.d = Block()
+        b.c.d.e = Block()
+        with self.assertRaisesRegexp(
+                ValueError, '_BlockData.transfer_attributes_from\(\): '
+                'Cannot set a sub-block \(c.d.e\) to a parent block \(c\):'):
+            b.c.d.e.transfer_attributes_from(b.c)
+
+        ### bad data type
+        b = Block(concrete=True)
+        with self.assertRaisesRegexp(
+                ValueError,
+                '_BlockData.transfer_attributes_from\(\): expected a Block '
+                'or dict; received str'):
+            b.transfer_attributes_from('foo')
 
     def test_iterate_hierarchy_defaults(self):
         self.assertIs( TraversalStrategy.BFS,
@@ -2215,6 +2364,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue(hasattr(model, 'scalar_constraint'))
         self.assertIs(model.scalar_constraint._type, Constraint)
         self.assertEqual(len(model.scalar_constraint), 1)
+        self.assertIs(type(scalar_constraint), types.FunctionType)
 
         @model.Constraint(model.I)
         def vector_constraint(m, i):
@@ -2223,6 +2373,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue(hasattr(model, 'vector_constraint'))
         self.assertIs(model.vector_constraint._type, Constraint)
         self.assertEqual(len(model.vector_constraint), 3)
+        self.assertIs(type(vector_constraint), types.FunctionType)
 
     def test_reserved_words(self):
         m = ConcreteModel()
