@@ -71,6 +71,38 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
     @abstractmethod
     def set_duals_slacks_ub(self, duals):
         pass
+    
+    @abstractmethod
+    def get_primals(self):
+        pass
+
+    @abstractmethod
+    def get_slacks(self):
+        pass
+
+    @abstractmethod
+    def get_duals_eq(self):
+        pass
+
+    @abstractmethod
+    def get_duals_ineq(self):
+        pass
+
+    @abstractmethod
+    def get_duals_primals_lb(self):
+        pass
+
+    @abstractmethod
+    def get_duals_primals_ub(self):
+        pass
+
+    @abstractmethod
+    def get_duals_slacks_lb(self):
+        pass
+
+    @abstractmethod
+    def get_duals_slacks_ub(self):
+        pass
 
     @abstractmethod
     def set_barrier_parameter(self, barrier):
@@ -129,7 +161,7 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
         pass
 
     @abstractmethod
-    def evalute_ineq_constraints(self):
+    def evaluate_ineq_constraints(self):
         pass
 
     @abstractmethod
@@ -142,6 +174,38 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
 
     @abstractmethod
     def evaluate_jacobian_ineq(self):
+        pass
+
+    @abstractmethod
+    def get_primals_lb_compression_matrix(self):
+        pass
+
+    @abstractmethod
+    def get_primals_ub_compression_matrix(self):
+        pass
+
+    @abstractmethod
+    def get_ineq_lb_compression_matrix(self):
+        pass
+
+    @abstractmethod
+    def get_ineq_ub_compression_matrix(self):
+        pass
+
+    @abstractmethod
+    def get_primals_lb_compressed(self):
+        pass
+
+    @abstractmethod
+    def get_primals_ub_compressed(self):
+        pass
+
+    @abstractmethod
+    def get_ineq_lb_compressed(self):
+        pass
+
+    @abstractmethod
+    def get_ineq_ub_compressed(self):
         pass
 
 
@@ -235,6 +299,30 @@ class InteriorPointInterface(BaseInteriorPointInterface):
 
     def set_duals_slacks_ub(self, duals):
         self._duals_slacks_ub = duals
+    
+    def get_primals(self):
+        return self._nlp.get_primals()
+
+    def get_slacks(self):
+        return self._slacks
+
+    def get_duals_eq(self):
+        return self._nlp.get_duals_eq()
+
+    def get_duals_ineq(self):
+        return self._nlp.get_duals_ineq()
+
+    def get_duals_primals_lb(self):
+        return self._duals_primals_lb
+
+    def get_duals_primals_ub(self):
+        return self._duals_primals_ub
+
+    def get_duals_slacks_lb(self):
+        return self._duals_slacks_lb
+
+    def get_duals_slacks_ub(self):
+        return self._duals_slacks_ub
 
     def set_barrier_parameter(self, barrier):
         self._barrier = barrier
@@ -348,7 +436,7 @@ class InteriorPointInterface(BaseInteriorPointInterface):
     def evaluate_eq_constraints(self):
         return self._nlp.evaluate_eq_constraints()
 
-    def evalute_ineq_constraints(self):
+    def evaluate_ineq_constraints(self):
         return self._nlp.evaluate_ineq_constraints()
 
     def evaluate_grad_objective(self):
@@ -387,3 +475,27 @@ class InteriorPointInterface(BaseInteriorPointInterface):
             (1 / res, (np.arange(res.size), np.arange(res.size))),
             shape=(res.size, res.size))
         return res
+
+    def get_primals_lb_compression_matrix(self):
+        return self._primals_lb_compression_matrix
+
+    def get_primals_ub_compression_matrix(self):
+        return self._primals_ub_compression_matrix
+
+    def get_ineq_lb_compression_matrix(self):
+        return self._ineq_lb_compression_matrix
+
+    def get_ineq_ub_compression_matrix(self):
+        return self._ineq_ub_compression_matrix
+
+    def get_primals_lb_compressed(self):
+        return self._primals_lb_compressed
+
+    def get_primals_ub_compressed(self):
+        return self._primals_ub_compressed
+
+    def get_ineq_lb_compressed(self):
+        return self._ineq_lb_compressed
+
+    def get_ineq_ub_compressed(self):
+        return self._ineq_ub_compressed
