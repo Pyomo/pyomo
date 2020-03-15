@@ -58,7 +58,7 @@ class DeferredImportModule(object):
 
 class _DeferredImportIndicatorBase(object):
     def __bool__(self):
-        return self.__nonzero__
+        return self.__nonzero__()
 
     def __and__(self, other):
         return _DeferredAnd(self, other)
