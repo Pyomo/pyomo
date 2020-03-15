@@ -1,21 +1,20 @@
-from collections.abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod
 import six
 
 
 class LinearSolverInterface(six.with_metaclass(ABCMeta, object)):
     @abstractmethod
-    def do_symbolic_factorization(matrix):
+    def do_symbolic_factorization(self, matrix):
         pass
 
     @abstractmethod
-    def do_numeric_factorization(matrix):
+    def do_numeric_factorization(self, matrix):
         pass
 
     @abstractmethod
-    def do_back_solve(rhs):
+    def do_back_solve(self, rhs):
         pass
 
-    @abc.abstractmethod
-    def get_inertia():
+    @abstractmethod
+    def get_inertia(self):
         pass
-    
