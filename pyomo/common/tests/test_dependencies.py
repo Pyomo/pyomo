@@ -129,6 +129,16 @@ class TestDependencies(unittest.TestCase):
         _or_or = avail0 | avail1 | avail2
         self.assertTrue(_or_or)
 
+        # Verify rand / ror
+        _rand = True & avail1
+        self.assertIsInstance(_rand, _DeferredAnd)
+        self.assertTrue(_rand)
+
+        _ror = False | avail1
+        self.assertIsInstance(_ror, _DeferredOr)
+        self.assertTrue(_ror)
+
+
     def test_callbacks(self):
         ans = []
         def _record_avail(module, avail):

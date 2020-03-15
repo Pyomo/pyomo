@@ -56,7 +56,24 @@ class DeferredImportModule(object):
         return getattr(self._indicator_flag._module, attr)
 
 
-class DeferredImportIndicator(object):
+class _DeferredImportIndicatorBase(object):
+    def __bool__(self):
+        return self.__nonzero__
+
+    def __and__(self, other):
+        return _DeferredAnd(self, other)
+
+    def __or__(self, other):
+        return _DeferredOr(self, other)
+
+    def __rand__(self, other):
+        return _DeferredAnd(other, self)
+
+    def __ror__(self, other):
+        return _DeferredOr(other, self)
+
+
+class DeferredImportIndicator(_DeferredImportIndicatorBase):
     """Placeholder indicating if an import was successful.
 
     This object serves as a placeholder for the Boolean indicator if a
@@ -121,16 +138,8 @@ class DeferredImportIndicator(object):
         self.resolve()
         return self._available
 
-    __bool__ = __nonzero__
 
-    def __and__(self, other):
-        return _DeferredAnd(self, other)
-
-    def __or__(self, other):
-        return _DeferredOr(self, other)
-
-
-class _DeferredAnd(object):
+class _DeferredAnd(_DeferredImportIndicatorBase):
     def __init__(self, a, b):
         self._a = a
         self._b = b
@@ -138,16 +147,8 @@ class _DeferredAnd(object):
     def __nonzero__(self):
         return bool(self._a) and bool(self._b)
 
-    __bool__ = __nonzero__
 
-    def __and__(self, other):
-        return _DeferredAnd(self, other)
-
-    def __or__(self, other):
-        return _DeferredOr(self, other)
-
-
-class _DeferredOr(object):
+class _DeferredOr(_DeferredImportIndicatorBase):
     def __init__(self, a, b):
         self._a = a
         self._b = b
@@ -155,13 +156,6 @@ class _DeferredOr(object):
     def __nonzero__(self):
         return bool(self._a) or bool(self._b)
 
-    __bool__ = __nonzero__
-
-    def __and__(self, other):
-        return _DeferredAnd(self, other)
-
-    def __or__(self, other):
-        return _DeferredOr(self, other)
 
 try:
     from packaging import version as _version
@@ -323,4 +317,4 @@ pympler, pympler_available = attempt_import(
 numpy, numpy_available = attempt_import('numpy', alt_names=['np'])
 scipy, scipy_available = attempt_import('scipy', callback=_finalize_scipy)
 networkx, networkx_available = attempt_import('networkx', alt_names=['nx'])
-casadi, casadi_available = attempt_import('casadi')
+pandas, pandas_available = attempt_import('pandas')
