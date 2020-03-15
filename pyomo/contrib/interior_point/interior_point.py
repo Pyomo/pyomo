@@ -1,6 +1,6 @@
 from pyomo.contrib.interior_point.interface import InteriorPointInterface, BaseInteriorPointInterface
 from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
-from scipy.sparse import tril
+from scipy.sparse import tril, coo_matrix, identity
 import numpy as np
 
 
@@ -51,6 +51,9 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
         delta = linear_solver.do_back_solve(rhs)
 
         interface.set_primal_dual_kkt_solution(delta)
+        alpha_primal_max, alpha_dual_max = fraction_to_the_boundary(interface, 1-barrier_parameter)
+        print('alpha_primal_max: ', alpha_primal_max)
+        print('alpha_dual_max: ', alpha_dual_max)
         delta_primals = interface.get_delta_primals()
         delta_slacks = interface.get_delta_slacks()
         delta_duals_eq = interface.get_delta_duals_eq()
@@ -60,17 +63,150 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
         delta_duals_slacks_lb = interface.get_delta_duals_slacks_lb()
         delta_duals_slacks_ub = interface.get_delta_duals_slacks_ub()
 
-        alpha = 1
-        primals += alpha * delta_primals
-        slacks += alpha * delta_slacks
-        duals_eq += alpha * delta_duals_eq
-        duals_ineq += alpha * delta_duals_ineq
-        duals_primals_lb += alpha * delta_duals_primals_lb
-        duals_primals_ub += alpha * delta_duals_primals_ub
-        duals_slacks_lb += alpha * delta_duals_slacks_lb
-        duals_slacks_ub += alpha * delta_duals_slacks_ub
+        primals += alpha_primal_max * delta_primals
+        slacks += alpha_primal_max * delta_slacks
+        duals_eq += alpha_dual_max * delta_duals_eq
+        duals_ineq += alpha_dual_max * delta_duals_ineq
+        duals_primals_lb += alpha_dual_max * delta_duals_primals_lb
+        duals_primals_ub += alpha_dual_max * delta_duals_primals_ub
+        duals_slacks_lb += alpha_dual_max * delta_duals_slacks_lb
+        duals_slacks_ub += alpha_dual_max * delta_duals_slacks_ub
 
     return primals, duals_eq, duals_ineq
+
+
+def _fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix):
+    x_compressed = xl_compression_matrix * x
+    delta_x_compressed = xl_compression_matrix * delta_x
+
+    x = x_compressed
+    delta_x = delta_x_compressed
+    xl = xl_compressed
+
+    negative_indices = (delta_x < 0).nonzero()[0]
+    cols = negative_indices
+    nnz = len(cols)
+    rows = np.arange(nnz, dtype=np.int)
+    data = np.ones(nnz)
+    cm = coo_matrix((data, (rows, cols)), shape=(nnz, len(delta_x)))
+
+    x = cm * x
+    delta_x = cm * delta_x
+    xl = cm * xl
+
+    alpha = ((1 - tau) * (x - xl) + xl - x) / delta_x
+    if len(alpha) == 0:
+        return 1
+    else:
+        return alpha.min()
+
+
+def _fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix):
+    x_compressed = xu_compression_matrix * x
+    delta_x_compressed = xu_compression_matrix * delta_x
+
+    x = x_compressed
+    delta_x = delta_x_compressed
+    xu = xu_compressed
+
+    positive_indices = (delta_x > 0).nonzero()[0]
+    cols = positive_indices
+    nnz = len(cols)
+    rows = np.arange(nnz, dtype=np.int)
+    data = np.ones(nnz)
+    cm = coo_matrix((data, (rows, cols)), shape=(nnz, len(delta_x)))
+
+    x = cm * x
+    delta_x = cm * delta_x
+    xu = cm * xu
+
+    alpha = (xu - (1 - tau) * (xu - x) - x) / delta_x
+    if len(alpha) == 0:
+        return 1
+    else:
+        return alpha.min()
+
+
+def fraction_to_the_boundary(interface, tau):
+    """
+    Parameters
+    ----------
+    interface: pyomo.contrib.interior_point.interface.BaseInteriorPointInterface
+    tau: float
+
+    Returns
+    -------
+    alpha_primal_max: float
+    alpha_dual_max: float
+    """
+    primals = interface.get_primals()
+    slacks = interface.get_slacks()
+    duals_eq = interface.get_duals_eq()
+    duals_ineq = interface.get_duals_ineq()
+    duals_primals_lb = interface.get_duals_primals_lb()
+    duals_primals_ub = interface.get_duals_primals_ub()
+    duals_slacks_lb = interface.get_duals_slacks_lb()
+    duals_slacks_ub = interface.get_duals_slacks_ub()
+
+    delta_primals = interface.get_delta_primals()
+    delta_slacks = interface.get_delta_slacks()
+    delta_duals_eq = interface.get_delta_duals_eq()
+    delta_duals_ineq = interface.get_delta_duals_ineq()
+    delta_duals_primals_lb = interface.get_delta_duals_primals_lb()
+    delta_duals_primals_ub = interface.get_delta_duals_primals_ub()
+    delta_duals_slacks_lb = interface.get_delta_duals_slacks_lb()
+    delta_duals_slacks_ub = interface.get_delta_duals_slacks_ub()
+
+    primals_lb_compressed = interface.get_primals_lb_compressed()
+    primals_ub_compressed = interface.get_primals_ub_compressed()
+    ineq_lb_compressed = interface.get_ineq_lb_compressed()
+    ineq_ub_compressed = interface.get_ineq_ub_compressed()
+
+    primals_lb_compression_matrix = interface.get_primals_lb_compression_matrix()
+    primals_ub_compression_matrix = interface.get_primals_ub_compression_matrix()
+    ineq_lb_compression_matrix = interface.get_ineq_lb_compression_matrix()
+    ineq_ub_compression_matrix = interface.get_ineq_ub_compression_matrix()
+
+    return (min(_fraction_to_the_boundary_helper_lb(tau=tau,
+                                                    x=primals,
+                                                    delta_x=delta_primals,
+                                                    xl_compressed=primals_lb_compressed,
+                                                    xl_compression_matrix=primals_lb_compression_matrix),
+                _fraction_to_the_boundary_helper_ub(tau=tau,
+                                                    x=primals,
+                                                    delta_x=delta_primals,
+                                                    xu_compressed=primals_ub_compressed,
+                                                    xu_compression_matrix=primals_ub_compression_matrix),
+                _fraction_to_the_boundary_helper_lb(tau=tau,
+                                                    x=slacks,
+                                                    delta_x=delta_slacks,
+                                                    xl_compressed=ineq_lb_compressed,
+                                                    xl_compression_matrix=ineq_lb_compression_matrix),
+                _fraction_to_the_boundary_helper_ub(tau=tau,
+                                                    x=slacks,
+                                                    delta_x=delta_slacks,
+                                                    xu_compressed=ineq_ub_compressed,
+                                                    xu_compression_matrix=ineq_ub_compression_matrix)),
+            min(_fraction_to_the_boundary_helper_lb(tau=tau,
+                                                    x=duals_primals_lb,
+                                                    delta_x=delta_duals_primals_lb,
+                                                    xl_compressed=np.zeros(len(duals_primals_lb)),
+                                                    xl_compression_matrix=identity(len(duals_primals_lb), format='csr')),
+                _fraction_to_the_boundary_helper_lb(tau=tau,
+                                                    x=duals_primals_ub,
+                                                    delta_x=delta_duals_primals_ub,
+                                                    xl_compressed=np.zeros(len(duals_primals_ub)),
+                                                    xl_compression_matrix=identity(len(duals_primals_ub), format='csr')),
+                _fraction_to_the_boundary_helper_lb(tau=tau,
+                                                    x=duals_slacks_lb,
+                                                    delta_x=delta_duals_slacks_lb,
+                                                    xl_compressed=np.zeros(len(duals_slacks_lb)),
+                                                    xl_compression_matrix=identity(len(duals_slacks_lb), format='csr')),
+                _fraction_to_the_boundary_helper_lb(tau=tau,
+                                                    x=duals_slacks_ub,
+                                                    delta_x=delta_duals_slacks_ub,
+                                                    xl_compressed=np.zeros(len(duals_slacks_ub)),
+                                                    xl_compression_matrix=identity(len(duals_slacks_ub), format='csr'))))
 
 
 def check_convergence(interface, barrier):
