@@ -4,7 +4,7 @@ from scipy.sparse import tril
 import numpy as np
 
 
-def solve_interior_point(pyomo_model, max_iter=100):
+def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
     interface = InteriorPointInterface(pyomo_model)
     primals = interface.init_primals().copy()
     slacks = interface.init_slacks().copy()
@@ -21,14 +21,6 @@ def solve_interior_point(pyomo_model, max_iter=100):
 
     for _iter in range(max_iter):
         print('*********************************')
-        print('primals: ', primals)
-        print('slacks: ', slacks)
-        print('duals_eq: ', duals_eq)
-        print('duals_ineq: ', duals_ineq)
-        print('duals_primals_lb: ', duals_primals_lb)
-        print('duals_primals_ub: ', duals_primals_ub)
-        print('duals_slacks_lb: ', duals_slacks_lb)
-        print('duals_slacks_ub: ', duals_slacks_ub)
         interface.set_primals(primals)
         interface.set_slacks(slacks)
         interface.set_duals_eq(duals_eq)
@@ -37,19 +29,23 @@ def solve_interior_point(pyomo_model, max_iter=100):
         interface.set_duals_primals_ub(duals_primals_ub)
         interface.set_duals_slacks_lb(duals_slacks_lb)
         interface.set_duals_slacks_ub(duals_slacks_ub)
-        interface.set_barrier_parameter(barrier_parameter)
-
+        
         primal_inf, dual_inf, complimentarity_inf = check_convergence(interface=interface, barrier=0)
         print('primal_inf: ', primal_inf)
         print('dual_inf: ', dual_inf)
         print('complimentarity_inf: ', complimentarity_inf)
+        if max(primal_inf, dual_inf, complimentarity_inf) <= tol:
+            break
+        primal_inf, dual_inf, complimentarity_inf = check_convergence(interface=interface, barrier=barrier_parameter)
+        if max(primal_inf, dual_inf, complimentarity_inf) <= 0.1 * barrier_parameter:
+            barrier_parameter = max(minimum_barrier_parameter, min(0.5*barrier_parameter, barrier_parameter**1.5))
+        print('barrier_parameter: ', barrier_parameter)
 
+        interface.set_barrier_parameter(barrier_parameter)
         kkt = interface.evaluate_primal_dual_kkt_matrix()
-        print(kkt.toarray())
         kkt = tril(kkt.tocoo())
         rhs = interface.evaluate_primal_dual_kkt_rhs()
-        print(rhs.flatten())
-        linear_solver = MumpsInterface()  # icntl_options={1: 6, 2: 6, 3: 6, 4: 4})
+        linear_solver = MumpsInterface()
         linear_solver.do_symbolic_factorization(kkt)
         linear_solver.do_numeric_factorization(kkt)
         delta = linear_solver.do_back_solve(rhs)
@@ -74,7 +70,7 @@ def solve_interior_point(pyomo_model, max_iter=100):
         duals_slacks_lb += alpha * delta_duals_slacks_lb
         duals_slacks_ub += alpha * delta_duals_slacks_ub
 
-        barrier_parameter = max(minimum_barrier_parameter, min(0.5*barrier_parameter, barrier_parameter**1.5))
+    return primals, duals_eq, duals_ineq
 
 
 def check_convergence(interface, barrier):

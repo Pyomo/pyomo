@@ -328,10 +328,7 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         self._barrier = barrier
 
     def evaluate_primal_dual_kkt_matrix(self):
-        print('all duals: ', self._nlp.get_duals())
-        print('primals: ', self._nlp.get_primals())
         hessian = self._nlp.evaluate_hessian_lag()
-        print('hessian', hessian.toarray())
         jac_eq = self._nlp.evaluate_jacobian_eq()
         jac_ineq = self._nlp.evaluate_jacobian_ineq()
 
