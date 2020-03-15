@@ -71,7 +71,7 @@ Notes:
 
           This module does support conversion of offset units to abslute units numerically, using
           convert_value_K_to_C, convert_value_C_to_K, convert_value_R_to_F, convert_value_F_to_R. These are useful for
-          converting input data to absolute units, and for coverting data to convenient units for
+          converting input data to absolute units, and for converting data to convenient units for
           reporting.
 
           Please see the pint documentation `here <https://pint.readthedocs.io/en/0.9/nonmult.html>`_
@@ -449,7 +449,7 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         : bool
            True if they are equivalent, and False otherwise
         """
-        if id(lhs) == id(rhs):
+        if lhs is rhs:
             # units are the same objects (or both None)
             return True
         elif lhs is None:
@@ -1410,7 +1410,7 @@ class PyomoUnitsContainer(object):
         please work in absolute temperatures only.
         """
         return self._pint_convert_temp_from_to(value_in_F, self._pint_registry.degF, self._pint_registry.rankine)
-    
+
     def convert(self, src, to_units=None):
         """
         This method returns an expression that represents the conversion
@@ -1452,94 +1452,61 @@ class PyomoUnitsContainer(object):
         fac_b_dest, base_units_dest = self._pint_registry.get_base_units(to_pint_unit, check_nonmult=True)
 
         if base_units_src != base_units_dest:
-            raise UnitsError('Cannot convert {0:s} to {1:s}. Units are not compatible.'.format(src_unit, to_unit))
+            raise UnitsError('Cannot convert {0:s} to {1:s}. Units are not compatible.'.format(str(src_pyomo_unit), str(to_pyomo_unit)))
 
         return fac_b_src/fac_b_dest*to_pyomo_unit/src_pyomo_unit*src
 
-    def convert_value(self, src, from_units=None, to_units=None):
+    def convert_value(self, num_value, from_units=None, to_units=None):
         """
         This method performs explicit conversion of a numerical value (or
         expression evaluated to a numerical value) from one unit to
         another, and returns the new value.
 
-        If src is a native numerical type (e.g. float), then
-        from_units must be specified. If src is a Pyomo expression AND
-        from_units is None, then this code will retrieve the
-        from_units from the expression itself. Note that this method
-        returns a numerical value (not another Pyomo expression), so
-        any Pyomo expression passed in src will be evaluated.
-
-        If from_units is provided, but it does not agree with the units
-        in src, then an expection is raised.
+        The argument "num_value" must be a native numeric type (e.g. float).
+        Note that this method returns a numerical value only, and not an
+        expression with units.
 
         Parameters
         ----------
-        src : float or Pyomo expression
-           The source value that will be converted
-        from_units : None or Pyomo units expression
-           The units on the src. If None, then this method will try
-           to retrieve the units from the src as a Pyomo expression
+        num_value : float or other native numeric type
+           The value that will be converted
+        from_units : Pyomo units expression
+           The units to convert from
         to_units : Pyomo units expression
-           The desired target units for the new value
+           The units to convert to
 
         Returns
         -------
            float : The converted value
 
         """
-        src_pyomo_unit, src_pint_unit = self._get_units_tuple(src)
-        if from_units is None:
-            from_pyomo_unit, from_pint_unit = src_pyomo_unit, src_pint_unit
-        else:
-            from_pyomo_unit, from_pint_unit = self._get_units_tuple(from_units)
-            if src_pint_unit is not None and \
-               not _UnitExtractionVisitor(self)._pint_units_equivalent(src_pint_unit, from_pint_unit):
-                raise UnitsError('convert_value called with a src argument that contains units'
-                                 ' that do not agree with the from_units argument.')
+        if type(num_value) not in native_numeric_types:
+            raise UnitsError('The argument "num_value" in convert_value must be a native numeric type, but'
+                             ' instead type {} was found.'.format(type(num_value)))
+        
+        from_pyomo_unit, from_pint_unit = self._get_units_tuple(from_units)
         to_pyomo_unit, to_pint_unit = self._get_units_tuple(to_units)
 
+        # ToDo: This check may be overkill - pint will raise an error that may be sufficient
+        fac_b_src, base_units_src = self._pint_registry.get_base_units(from_pint_unit, check_nonmult=True)
+        fac_b_dest, base_units_dest = self._pint_registry.get_base_units(to_pint_unit, check_nonmult=True)
+        if base_units_src != base_units_dest:
+            raise UnitsError('Cannot convert {0:s} to {1:s}. Units are not compatible.'.format(str(from_pyomo_unit), str(to_pyomo_unit)))
+
         # convert the values
-        src_quantity = value(src) * from_pint_unit
+        src_quantity = num_value * from_pint_unit
         dest_quantity = src_quantity.to(to_pint_unit)
         return dest_quantity.magnitude
-
-    def drop_units(self, expr, expected_units):
-        """
-        This method returns a dimensionless expression by dividing
-        expr by its units.
-
-        This is to support, for example, calls to intrinsic functions
-        that may contain expressions with units. To ensure that the
-        units are correct before dropping them, you must provide the
-        expected units. If the expected units do not match the units
-        on expr, a UnitsError exception will be raised.
-
-        Parameters
-        ----------
-        expr : Pyomo expression
-           The expression that will be converted
-        expected_units : Pyomo units expression
-           The expected units on expr. If this does not match the 
-           units on expr, then a UnitsError exception will be raised.
-
-        Returns
-        -------
-           Pyomo expression
-
-        """
-        pyomo_expr_unit, pint_expr_unit = self._get_units_tuple(expr)
-        pyomo_expected_unit, pint_expected_unit = self._get_units_tuple(expected_units)
-        if not _UnitExtractionVisitor(self)._pint_units_equivalent(pint_expr_unit,
-                                                                   pint_expected_unit):
-            raise UnitsError("drop_units called, however the units on the expression: {}"
-                             " do not match the expected units: {}."
-                             "".format(str(pyomo_expr_unit), str(pyomo_expected_unit)))
-
-        return expr/pyomo_expr_unit
 
     def check_constraint_data_units(self, condata):
         if condata.equality:
             if condata.lower == 0.0:
+                # Pyomo can rearrange expressions, resulting in a value
+                # of 0 for the RHS that does not have units associated
+                # Therefore, if the RHS is 0, we allow it to be unitless
+                # and check the consistency of the body only
+                # ToDo: If we modify the constraint to keep the original
+                # expression, we should verify against that instead
                 assert condata.upper == 0.0
                 return self.check_units_consistency(condata.body)
             return self.check_all_units_equivalent(condata.lower, condata.body)

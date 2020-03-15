@@ -476,15 +476,20 @@ class TestPyomoUnit(unittest.TestCase):
 
     def test_convert_value(self):
         u = units
-        x = 0.4535923*u.kg
+        x = 0.4535923
         expected_lb_value = 1.0
-        actual_lb_value = u.convert_value(src=x, from_units=u.kg, to_units=u.lb)
+        actual_lb_value = u.convert_value(num_value=x, from_units=u.kg, to_units=u.lb)
         self.assertAlmostEqual(expected_lb_value, actual_lb_value, places=5)
-        actual_lb_value = u.convert_value(src=x, to_units=u.lb)
+        actual_lb_value = u.convert_value(num_value=value(x*u.kg), from_units=u.kg, to_units=u.lb)
         self.assertAlmostEqual(expected_lb_value, actual_lb_value, places=5)
 
         with self.assertRaises(UnitsError):
-            actual_lb_value = u.convert_value(src=x, from_units=u.meters, to_units=u.lb)
+            # cannot convert from meters to pounds
+            actual_lb_value = u.convert_value(num_value=x, from_units=u.meters, to_units=u.lb)
+
+        with self.assertRaises(UnitsError):
+            # num_value must be a native numerical type
+            actual_lb_value = u.convert_value(num_value=x*u.kg, from_units=u.kg, to_units=u.lb)
 
     def test_convert(self):
         u = units
@@ -505,29 +510,15 @@ class TestPyomoUnit(unittest.TestCase):
                               + 0.5*(u.convert(m.a, to_units=u.m/u.s**2))*(u.convert(m.t, to_units=u.s))**2)
         m.ground = Constraint(expr = m.dy == 0)
 
+        with self.assertRaises(UnitsError):
+            u.convert(m.a, to_units=u.kg)
+
         self.assertAlmostEqual(value(m.obj), 0.10188943773836046, places=5)
         self.assertAlmostEqual(value(m.vx_con.body), 0.0, places=5)
         self.assertAlmostEqual(value(m.vy_con.body), 0.0, places=5)
         self.assertAlmostEqual(value(m.dx_con.body), 0.0, places=5)
         self.assertAlmostEqual(value(m.dy_con.body), 0.0, places=5)
         self.assertAlmostEqual(value(m.ground.body), 0.0, places=5)
-
-    def test_drop_units(self):
-        u = units
-        expr = u.drop_units(u.kg, expected_units=u.kg)
-        self._get_check_units_ok(expr, u, expected_type=None)
-
-        expr = u.drop_units(u.kg**0.682, expected_units=u.kg**0.682)
-        self._get_check_units_ok(expr, u, expected_type=None)
-
-        expr = u.drop_units(u.kg**0.682/u.min, expected_units=u.kg**0.682/u.min)
-        self._get_check_units_ok(expr, u, expected_type=None)
-
-        with self.assertRaises(UnitsError):
-            expr = u.drop_units(u.kg, expected_units=u.lb)
-
-        with self.assertRaises(UnitsError):
-            expr = u.drop_units(u.kg**0.682/u.min, expected_units=u.kg**0.682/u.s)
 
     def test_assert_model_units_consistent(self):
         u = units
