@@ -21,6 +21,8 @@ import sys
 from pyutilib.pyro import using_pyro3, using_pyro4
 import pyutilib.services
 import pyutilib.th as unittest
+
+from pyomo.common.dependencies import networkx_available as have_networkx
 from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _get_test_dispatcher,
                                   _poll,
@@ -38,13 +40,6 @@ try:
         have_dot = False
 except:
     have_dot = False
-
-have_networkx = False
-try:
-    import networkx
-    have_networkx = True
-except ImportError:
-    have_networkx = False
 
 thisdir = dirname(abspath(__file__))
 baselineDir = join(thisdir, "baselines")

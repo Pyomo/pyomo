@@ -34,11 +34,9 @@ from pyomo.opt import undefined
 
 import pyomo.environ as aml
 
-try:
-    import networkx
-    has_networkx = True                           #pragma:nocover
-except:                                           #pragma:nocover
-    has_networkx = False
+from pyomo.common.dependencies import (
+    networkx, networkx_available as has_networkx
+)
 
 try:
     import dill
@@ -719,7 +717,6 @@ class _ScenarioTreeManagerSolverTesterBase(object):
 # create the actual testing classes
 #
 
-@unittest.skipIf(not has_networkx, "Networkx is not available")
 @unittest.skipIf(not has_networkx, "Networkx is not available")
 @unittest.skipIf(not has_dill, "Dill is not available")
 class TestScenarioTreeManagerSolverSerial(

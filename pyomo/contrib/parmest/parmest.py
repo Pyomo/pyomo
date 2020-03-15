@@ -2,13 +2,13 @@ import re
 import importlib as im
 import types
 import json
-try:
-    import numpy as np
-    import pandas as pd
-    from scipy import stats
-    parmest_available = True
-except ImportError:
-    parmest_available = False
+
+from pyomo.common.dependencies import (
+    numpy as np, numpy_available,
+    pandas as pd, pandas_available,
+    scipy, scipy_available,
+)
+parmest_available = numpy_available & pandas_available & scipy_available
 
 import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as st
@@ -811,7 +811,7 @@ class Estimator(object):
         S = len(self.callback_data)
         thresholds = {}
         for a in alpha:
-            chi2_val = stats.chi2.ppf(a, 2)
+            chi2_val = scipy.stats.chi2.ppf(a, 2)
             thresholds[a] = obj_value * ((chi2_val / (S - 2)) + 1)
             LR[a] = LR['obj'] < thresholds[a]
         

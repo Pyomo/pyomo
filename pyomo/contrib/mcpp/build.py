@@ -14,12 +14,15 @@ import tempfile
 
 import distutils.core
 from distutils.command.build_ext import build_ext
-from setuptools.extension import Extension
 
 from pyomo.common.config import PYOMO_CONFIG_DIR
 from pyomo.common.fileutils import this_file_dir, find_dir
 
 def _generate_configuration():
+    # defer the import until use (this eventually imports pkg_resources,
+    # which is slow to import)
+    from setuptools.extension import Extension
+
     # Try and find MC++.  Defer to the MCPP_ROOT if it is set;
     # otherwise, look in common locations for a mcpp directory.
     pathlist=[

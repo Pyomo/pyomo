@@ -14,12 +14,10 @@ import pyomo.core
 
 import six
 
-try:
-    import networkx
-    # The code below conforms to the networkx>=2.0 API
-    has_networkx = int(networkx.__version__.split('.')[0]) >= 2
-except ImportError:                               #pragma:nocover
-    has_networkx = False
+from pyomo.common.dependencies import attempt_import
+
+# The code below conforms to the networkx>=2.0 API
+networkx, networkx_available = attempt_import('networkx', minimum_version="2.0")
 
 def CreateAbstractScenarioTreeModel():
     from pyomo.core import (AbstractModel, Set, Param, Boolean)
@@ -230,10 +228,6 @@ def ScenarioTreeModelFromNetworkX(
                    networkx.DiGraph())
         >>> model = ScenarioTreeModelFromNetworkX(G)
     """
-
-    if not has_networkx:                          #pragma:nocover
-        raise ValueError(
-            "networkx>=2.0 module is not available")
 
     if not networkx.is_tree(tree):
         raise TypeError(
