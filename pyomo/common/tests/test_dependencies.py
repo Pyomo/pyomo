@@ -9,11 +9,15 @@
 #  ___________________________________________________________________________
 
 import inspect
+from six import StringIO
+
 import pyutilib.th as unittest
 
+from pyomo.common.log import LoggingIntercept
 from pyomo.common.dependencies import (
     attempt_import, ModuleUnavailable, DeferredImportModule,
     DeferredImportIndicator, DeferredImportError,
+    _DeferredAnd, _DeferredOr
 )
 
 import pyomo.common.tests.dep_mod as dep_mod
@@ -49,7 +53,7 @@ class TestDependencies(unittest.TestCase):
         self.assertIs(dep_mod.bogus_nonexisting_module_available, False)
         self.assertIs(type(dep_mod.bogus_nonexisting_module),
                       ModuleUnavailable)
-        
+
     def test_min_version(self):
         mod, avail = attempt_import('pyomo.common.tests.dep_mod',
                                     minimum_version='1.0',
@@ -77,3 +81,103 @@ class TestDependencies(unittest.TestCase):
                 DeferredImportError, "Failed import "
                 "\(version 1.5 does not satisfy the minimum version 2.0\)"):
             mod.hello
+
+    def test_and_or(self):
+        mod0, avail0 = attempt_import('pyutilib',
+                                      defer_check=True)
+        mod1, avail1 = attempt_import('pyomo.common.tests.dep_mod',
+                                      defer_check=True)
+        mod2, avail2 = attempt_import('pyomo.common.tests.dep_mod',
+                                      minimum_version='2.0',
+                                      defer_check=True)
+
+        _and = avail0 & avail1
+        self.assertIsInstance(_and, _DeferredAnd)
+
+        _or = avail1 | avail2
+        self.assertIsInstance(_or, _DeferredOr)
+
+        # Nothing has been resolved yet
+        self.assertIsNone(avail0._available)
+        self.assertIsNone(avail1._available)
+        self.assertIsNone(avail2._available)
+
+        # Shortcut boolean evaluation only partially resolves things
+        self.assertTrue(_or)
+        self.assertIsNone(avail0._available)
+        self.assertTrue(avail1._available)
+        self.assertIsNone(avail2._available)
+
+        self.assertTrue(_and)
+        self.assertTrue(avail0._available)
+        self.assertTrue(avail1._available)
+        self.assertIsNone(avail2._available)
+
+        # Testing compound operations
+        _and_and = avail0 & avail1 & avail2
+        self.assertFalse(_and_and)
+
+        _and_or = avail0 & avail1 | avail2
+        self.assertTrue(_and_or)
+
+        # Verify operator prescedence
+        _or_and = avail0 | avail2 & avail2
+        self.assertTrue(_or_and)
+        _or_and = (avail0 | avail2) & avail2
+        self.assertFalse(_or_and)
+
+        _or_or = avail0 | avail1 | avail2
+        self.assertTrue(_or_or)
+
+    def test_callbacks(self):
+        ans = []
+        def _record_avail(module, avail):
+            ans.append(avail)
+
+        mod0, avail0 = attempt_import('pyutilib',
+                                      defer_check=True,
+                                      callback=_record_avail)
+        mod1, avail1 = attempt_import('pyomo.common.tests.dep_mod',
+                                      minimum_version='2.0',
+                                      defer_check=True,
+                                      callback=_record_avail)
+
+        self.assertEqual(ans, [])
+        self.assertTrue(avail0)
+        self.assertEqual(ans, [True])
+        self.assertFalse(avail1)
+        self.assertEqual(ans, [True,False])
+
+    def test_import_exceptions(self):
+        mod, avail = attempt_import('pyomo.common.tests.dep_mod_except',
+                                    defer_check=True)
+        with self.assertRaisesRegex(ValueError, "cannot import module"):
+            bool(avail)
+        # second test will not re-trigger the exception
+        self.assertFalse(avail)
+
+        mod, avail = attempt_import('pyomo.common.tests.dep_mod_except',
+                                    defer_check=True,
+                                    only_catch_importerror=False)
+        self.assertFalse(avail)
+        self.assertFalse(avail)
+
+    def test_generate_warning(self):
+        mod, avail = attempt_import('pyomo.common.tests.dep_mod_except',
+                                    defer_check=True,
+                                    only_catch_importerror=False)
+
+        # Test generate warning
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.common'):
+            mod.generate_import_warning()
+        self.assertEqual(
+            log.getvalue(), "The pyomo.common.tests.dep_mod_except module "
+            "(an optional Pyomo dependency) failed to import\n")
+
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.core.base'):
+            mod.generate_import_warning('pyomo.core.base')
+        self.assertEqual(
+            log.getvalue(), "The pyomo.common.tests.dep_mod_except module "
+            "(an optional Pyomo dependency) failed to import\n")

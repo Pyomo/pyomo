@@ -81,15 +81,23 @@ class DeferredImportIndicator(object):
 
     def resolve(self):
         if self._module is None:
-            # Only attempt the import once
-            self._module, self._available = attempt_import(
-                name=self._names[0],
-                error_message=self._error_message,
-                only_catch_importerror=self._only_catch_importerror,
-                minimum_version=self._minimum_version,
-                defer_check=False,
-                callback=self._callback,
-            )
+            try:
+                # Only attempt the import once
+                self._module, self._available = attempt_import(
+                    name=self._names[0],
+                    error_message=self._error_message,
+                    only_catch_importerror=self._only_catch_importerror,
+                    minimum_version=self._minimum_version,
+                    defer_check=False,
+                    callback=self._callback,
+                )
+            except:
+                # make sure that we cache the result
+                self._module = ModuleUnavailable(
+                    "Exception raised when importing %s" % (self._names[0],))
+                self._available = False
+                raise
+
             # Replace myself in the original globals() where I was
             # declared
             self.replace_self_in_globals(self._original_globals)
@@ -105,9 +113,7 @@ class DeferredImportIndicator(object):
                  and isinstance(_globals[name], DeferredImportModule)
                  and _globals[name]._indicator_flag is self ):
                 _globals[name] = self._module
-            for flag_name in (name
-
-    + '_available', 'has_' + name):
+            for flag_name in (name+'_available', 'has_'+name, 'have_'+name):
                 if flag_name in _globals and _globals[flag_name] is self:
                     _globals[flag_name] = self._available
 
@@ -117,6 +123,45 @@ class DeferredImportIndicator(object):
 
     __bool__ = __nonzero__
 
+    def __and__(self, other):
+        return _DeferredAnd(self, other)
+
+    def __or__(self, other):
+        return _DeferredOr(self, other)
+
+
+class _DeferredAnd(object):
+    def __init__(self, a, b):
+        self._a = a
+        self._b = b
+
+    def __nonzero__(self):
+        return bool(self._a) and bool(self._b)
+
+    __bool__ = __nonzero__
+
+    def __and__(self, other):
+        return _DeferredAnd(self, other)
+
+    def __or__(self, other):
+        return _DeferredOr(self, other)
+
+
+class _DeferredOr(object):
+    def __init__(self, a, b):
+        self._a = a
+        self._b = b
+
+    def __nonzero__(self):
+        return bool(self._a) or bool(self._b)
+
+    __bool__ = __nonzero__
+
+    def __and__(self, other):
+        return _DeferredAnd(self, other)
+
+    def __or__(self, other):
+        return _DeferredOr(self, other)
 
 try:
     from packaging import version as _version
@@ -128,9 +173,7 @@ except ImportError:
     from pkg_resources import parse_version as _parser
 
 def _check_version(module, min_version):
-    version = getattr(module
-
-    , '__version__', '0')
+    version = getattr(module, '__version__', '0.0.0')
     return _parser(min_version) <= _parser(version)
 
 
@@ -256,27 +299,25 @@ def attempt_import(name, error_message=None, only_catch_importerror=True,
 #
 
 yaml_load_args = {}
-def _yaml_importer_callback(module, available):
+def _finalize_yaml(module, available):
     # Recent versions of PyYAML issue warnings if the Loader argument is
     # not set
     if available and hasattr(module, 'SafeLoader'):
         yaml_load_args['Loader'] = module.SafeLoader
 
 def _finalize_scipy(module, available):
-    if not available:
-        return
-    # Import key subpackages that we will want to assume are present
-    import scipy.sparse
-    import scipy.spatial
+    if available:
+        # Import key subpackages that we will want to assume are present
+        import scipy.sparse
+        import scipy.spatial
+        import scipy.stats
 
 def _finalize_pympler(module, available):
-    if not available:
-        return
-    # Import key subpackages that we will want to assume are present
-    import pympler.muppy
+    if available:
+        # Import key subpackages that we will want to assume are present
+        import pympler.muppy
 
-yaml, yaml_available = attempt_import(
-    'yaml', callback=_yaml_importer_callback)
+yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
 pympler, pympler_available = attempt_import(
     'pympler', callback=_finalize_pympler)
 numpy, numpy_available = attempt_import('numpy', alt_names=['np'])
