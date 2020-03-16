@@ -102,24 +102,11 @@ class parmest_object_Tester_RB(unittest.TestCase):
 
         del theta_est['samples']
         
-        filename = os.path.abspath(os.path.join(testdir, 'pairwise_bootstrap.png'))
-        if os.path.isfile(filename):
-            os.remove(filename)
-        parmest.pairwise_plot(theta_est, filename=filename)
-        #self.assertTrue(os.path.isfile(filename))
+        parmest.pairwise_plot(theta_est)
         
-        filename = os.path.abspath(os.path.join(testdir, 'pairwise_bootstrap_theta.png'))
-        if os.path.isfile(filename):
-            os.remove(filename)
-        parmest.pairwise_plot(theta_est, thetavals, filename=filename)
-        #self.assertTrue(os.path.isfile(filename))
-        
-        filename = os.path.abspath(os.path.join(testdir, 'pairwise_bootstrap_theta_CI.png'))
-        if os.path.isfile(filename):
-            os.remove(filename)
-        parmest.pairwise_plot(theta_est, thetavals, 0.8, ['MVN', 'KDE', 'Rect'],
-                                         filename=filename)
-        #self.assertTrue(os.path.isfile(filename))
+        parmest.pairwise_plot(theta_est, thetavals)
+   
+        parmest.pairwise_plot(theta_est, thetavals, 0.8, ['MVN', 'KDE', 'Rect'])
         
     @unittest.skipIf(not graphics.imports_available,
                      "parmest.graphics imports are unavailable")
@@ -137,11 +124,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
         
         self.assertTrue(set(LR.columns) >= set([0.8, 0.85, 0.9, 0.95]))
         
-        filename = os.path.abspath(os.path.join(testdir, 'pairwise_LR_plot.png'))
-        if os.path.isfile(filename):
-            os.remove(filename)
-        parmest.pairwise_plot(LR, thetavals, 0.8,  filename=filename)
-        #self.assertTrue(os.path.isfile(filename))
+        parmest.pairwise_plot(LR, thetavals, 0.8)
 
     def test_diagnostic_mode(self):
         self.pest.diagnostic_mode = True
@@ -256,20 +239,14 @@ class parmest_graphics(unittest.TestCase):
         self.B = pd.DataFrame(np.random.randint(0,100,size=(100,4)), columns=list('ABCD'))
         
     def test_pairwise_plot(self):
-        # filename=os.path.abspath(os.path.join(testdir, 'simple_pairwise_plot.png'))
-        filename=None
-        parmest.pairwise_plot(self.A, alpha=0.8, distributions=['Rect', 'MVN', 'KDE'], filename=filename)
+        parmest.pairwise_plot(self.A, alpha=0.8, distributions=['Rect', 'MVN', 'KDE'])
         
     def test_grouped_boxplot(self):
-        # filename=os.path.abspath(os.path.join(testdir, 'simple_grouped_boxplot.png'))
-        filename=None
         parmest.grouped_boxplot(self.A, self.B, normalize=True, 
-                                group_names=['A', 'B'], filename=filename)
+                                group_names=['A', 'B'])
         
     def test_grouped_violinplot(self):
-        # filename=os.path.abspath(os.path.join(testdir, 'simple_grouped_violinplot.png'))
-        filename=None
-        parmest.grouped_violinplot(self.A, self.B, filename=filename)
+        parmest.grouped_violinplot(self.A, self.B)
         
 if __name__ == '__main__':
     unittest.main()
