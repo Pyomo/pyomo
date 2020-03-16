@@ -25,16 +25,11 @@ try:
     import cPickle as pickle
 except:                                           #pragma:nocover
     import pickle
-try:
-    import dill
-    dill_available = True
-except ImportError:                               #pragma:nocover
-    dill_available = False
 
 import pyutilib.misc
 from pyutilib.misc import PauseGC
 
-from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import attempt_import, dill, dill_available
 from pyomo.common import pyomo_command
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,

@@ -12,9 +12,6 @@ import os
 import shutil
 import tempfile
 
-import distutils.core
-from distutils.command.build_ext import build_ext
-
 from pyomo.common.config import PYOMO_CONFIG_DIR
 from pyomo.common.fileutils import this_file_dir, find_dir
 
@@ -70,21 +67,24 @@ def _generate_configuration():
     return package_config
 
 
-class _BuildWithoutPlatformInfo(build_ext, object):
-    # Python3.x puts platform information into the generated SO file
-    # name, which is usually fine for python extensions, but since this
-    # is not a "real" extension, we will hijack things to remove the
-    # platform information from the filename so that Pyomo can more
-    # easily locate it.  Note that build_ext is not a new-style class in
-    # Python 2.7, so we will add an explicit inheritance from object so
-    # that super() works.
-    def get_ext_filename(self, ext_name):
-        filename = super(_BuildWithoutPlatformInfo, self).get_ext_filename(
-            ext_name).split('.')
-        filename = '.'.join([filename[0],filename[-1]])
-        return filename
-
 def build_mcpp():
+    import distutils.core
+    from distutils.command.build_ext import build_ext
+
+    class _BuildWithoutPlatformInfo(build_ext, object):
+        # Python3.x puts platform information into the generated SO file
+        # name, which is usually fine for python extensions, but since this
+        # is not a "real" extension, we will hijack things to remove the
+        # platform information from the filename so that Pyomo can more
+        # easily locate it.  Note that build_ext is not a new-style class in
+        # Python 2.7, so we will add an explicit inheritance from object so
+        # that super() works.
+        def get_ext_filename(self, ext_name):
+            filename = super(_BuildWithoutPlatformInfo, self).get_ext_filename(
+                ext_name).split('.')
+            filename = '.'.join([filename[0],filename[-1]])
+            return filename
+
     package_config = _generate_configuration()
     package_config['cmdclass'] = {'build_ext': _BuildWithoutPlatformInfo}
     dist = distutils.core.Distribution(package_config)

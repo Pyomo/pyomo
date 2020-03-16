@@ -18,12 +18,13 @@ import ssl
 import sys
 import zipfile
 
-from six.moves.urllib.request import urlopen
-
 from .config import PYOMO_CONFIG_DIR
 from .deprecation import deprecated
 from .errors import DeveloperError
 import pyomo.common
+from pyomo.common.dependencies import attempt_import
+
+request = attempt_import('six.moves.urllib.request')[0]
 
 logger = logging.getLogger('pyomo.common.download')
 
@@ -155,10 +156,10 @@ class FileDownloader(object):
             if self.insecure:
                 ctx.check_hostname = False
                 ctx.verify_mode = ssl.CERT_NONE
-            fetch = urlopen(url, context=ctx)
+            fetch = request.urlopen(url, context=ctx)
         except AttributeError:
             # Revert to pre-2.7.9 syntax
-            fetch = urlopen(url)
+            fetch = request.urlopen(url)
         ans = fetch.read()
         logger.info("  ...downloaded %s bytes" % (len(ans),))
         return ans
