@@ -33,12 +33,13 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
     barrier_parameter = 0.1
     interface.set_barrier_parameter(barrier_parameter)
 
-    logger.info('{_iter:<20}{primal_inf:<20}{dual_inf:<20}{compl_inf:<20}{barrier:<20}{time:<20}'.format(_iter='Iter',
-                                                                                                         primal_inf='Primal Inf',
-                                                                                                         dual_inf='Dual Inf',
-                                                                                                         compl_inf='Compl Inf',
-                                                                                                         barrier='Barrier',
-                                                                                                         time='Elapsed Time (s)'))
+    logger.info('{_iter:<20}{objective:<20}{primal_inf:<20}{dual_inf:<20}{compl_inf:<20}{barrier:<20}{time:<20}'.format(_iter='Iter',
+                                                                                                                        objective='Objective',
+                                                                                                                        primal_inf='Primal Inf',
+                                                                                                                        dual_inf='Dual Inf',
+                                                                                                                        compl_inf='Compl Inf',
+                                                                                                                        barrier='Barrier',
+                                                                                                                        time='Elapsed Time (s)'))
 
     for _iter in range(max_iter):
         interface.set_primals(primals)
@@ -51,12 +52,14 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
         interface.set_duals_slacks_ub(duals_slacks_ub)
         
         primal_inf, dual_inf, complimentarity_inf = check_convergence(interface=interface, barrier=0)
-        logger.info('{_iter:<20}{primal_inf:<20.3e}{dual_inf:<20.3e}{compl_inf:<20.3e}{barrier:<20.3e}{time:<20.2e}'.format(_iter=_iter,
-                                                                                                                            primal_inf=primal_inf,
-                                                                                                                            dual_inf=dual_inf,
-                                                                                                                            compl_inf=complimentarity_inf,
-                                                                                                                            barrier=barrier_parameter,
-                                                                                                                            time=time.time() - t0))
+        objective = interface.evaluate_objective()
+        logger.info('{_iter:<20}{objective:<20.3e}{primal_inf:<20.3e}{dual_inf:<20.3e}{compl_inf:<20.3e}{barrier:<20.3e}{time:<20.2e}'.format(_iter=_iter,
+                                                                                                                                              objective=objective,
+                                                                                                                                              primal_inf=primal_inf,
+                                                                                                                                              dual_inf=dual_inf,
+                                                                                                                                              compl_inf=complimentarity_inf,
+                                                                                                                                              barrier=barrier_parameter,
+                                                                                                                                              time=time.time() - t0))
         if max(primal_inf, dual_inf, complimentarity_inf) <= tol:
             break
         primal_inf, dual_inf, complimentarity_inf = check_convergence(interface=interface, barrier=barrier_parameter)
