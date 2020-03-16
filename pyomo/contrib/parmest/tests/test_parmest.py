@@ -19,6 +19,10 @@ try:
     imports_not_present = False
 except:
     imports_not_present = True
+
+import platform
+is_osx = platform.mac_ver()[0] != ''
+
 import pyutilib.th as unittest
 import tempfile
 import sys
@@ -244,7 +248,7 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
                  "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not graphics.imports_available,
                  "parmest.graphics imports are unavailable")
-@unittest.skip("Temporarily disabling to track down testing failures")
+@unittest.skipIf(is_osx, "Disabling graphics tests on OSX due to issue in Matplotlib, see Pyomo PR #1337")
 class parmest_graphics(unittest.TestCase):
     
     def setUp(self):
