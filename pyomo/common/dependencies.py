@@ -84,7 +84,7 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
     """
 
     def __init__(self, name, alt_names, error_message, only_catch_importerror,
-                 minimum_version, original_globals, callback):
+                 minimum_version, original_globals, callback, importer):
         self._names = [name]
         if alt_names:
             self._names += list(alt_names)
