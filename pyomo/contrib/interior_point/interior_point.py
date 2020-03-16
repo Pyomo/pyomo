@@ -2,9 +2,15 @@ from pyomo.contrib.interior_point.interface import InteriorPointInterface, BaseI
 from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
 from scipy.sparse import tril, coo_matrix, identity
 import numpy as np
+import logging
+import time
+
+
+logger = logging.getLogger('interior_point')
 
 
 def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
+    t0 = time.time()
     interface = InteriorPointInterface(pyomo_model)
     primals = interface.init_primals().copy()
     slacks = interface.init_slacks().copy()
@@ -19,8 +25,14 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
     barrier_parameter = 0.1
     interface.set_barrier_parameter(barrier_parameter)
 
+    logger.info('{_iter:<20}{primal_inf:<20}{dual_inf:<20}{compl_inf:<20}{barrier:<20}{time:<20}'.format(_iter='Iter',
+                                                                                                         primal_inf='Primal Inf',
+                                                                                                         dual_inf='Dual Inf',
+                                                                                                         compl_inf='Compl Inf',
+                                                                                                         barrier='Barrier',
+                                                                                                         time='Elapsed Time (s)'))
+
     for _iter in range(max_iter):
-        print('*********************************')
         interface.set_primals(primals)
         interface.set_slacks(slacks)
         interface.set_duals_eq(duals_eq)
@@ -31,15 +43,17 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
         interface.set_duals_slacks_ub(duals_slacks_ub)
         
         primal_inf, dual_inf, complimentarity_inf = check_convergence(interface=interface, barrier=0)
-        print('primal_inf: ', primal_inf)
-        print('dual_inf: ', dual_inf)
-        print('complimentarity_inf: ', complimentarity_inf)
+        logger.info('{_iter:<20}{primal_inf:<20.3e}{dual_inf:<20.3e}{compl_inf:<20.3e}{barrier:<20.3e}{time:<20.2e}'.format(_iter=_iter,
+                                                                                                                            primal_inf=primal_inf,
+                                                                                                                            dual_inf=dual_inf,
+                                                                                                                            compl_inf=complimentarity_inf,
+                                                                                                                            barrier=barrier_parameter,
+                                                                                                                            time=time.time() - t0))
         if max(primal_inf, dual_inf, complimentarity_inf) <= tol:
             break
         primal_inf, dual_inf, complimentarity_inf = check_convergence(interface=interface, barrier=barrier_parameter)
         if max(primal_inf, dual_inf, complimentarity_inf) <= 0.1 * barrier_parameter:
             barrier_parameter = max(minimum_barrier_parameter, min(0.5*barrier_parameter, barrier_parameter**1.5))
-        print('barrier_parameter: ', barrier_parameter)
 
         interface.set_barrier_parameter(barrier_parameter)
         kkt = interface.evaluate_primal_dual_kkt_matrix()
@@ -52,8 +66,6 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
 
         interface.set_primal_dual_kkt_solution(delta)
         alpha_primal_max, alpha_dual_max = fraction_to_the_boundary(interface, 1-barrier_parameter)
-        print('alpha_primal_max: ', alpha_primal_max)
-        print('alpha_dual_max: ', alpha_dual_max)
         delta_primals = interface.get_delta_primals()
         delta_slacks = interface.get_delta_slacks()
         delta_duals_eq = interface.get_delta_duals_eq()

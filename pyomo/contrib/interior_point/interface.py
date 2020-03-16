@@ -224,8 +224,7 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         self._primals_ub_compressed = self._primals_ub_compression_matrix * ub
         self._ineq_lb_compressed = self._ineq_lb_compression_matrix * ineq_lb
         self._ineq_ub_compressed = self._ineq_ub_compression_matrix * ineq_ub
-        self._init_slacks = self._nlp.evaluate_ineq_constraints()
-        self._slacks = self._init_slacks
+        self._slacks = self.init_slacks()
         self._duals_primals_lb = np.ones(self._primals_lb_compression_matrix.shape[0])
         self._duals_primals_ub = np.ones(self._primals_ub_compression_matrix.shape[0])
         self._duals_slacks_lb = np.ones(self._ineq_lb_compression_matrix.shape[0])
@@ -252,29 +251,37 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         return primals
 
     def init_slacks(self):
-        return self._init_slacks
+        slacks = self._nlp.evaluate_ineq_constraints()
+        lb = self._nlp.ineq_lb().copy()
+        ub = self._nlp.ineq_ub().copy()
+        out_of_bounds = ((slacks > ub) + (slacks < lb)).nonzero()[0]
+        neg_inf_indices = np.isneginf(lb).nonzero()[0]
+        np.put(lb, neg_inf_indices, ub[neg_inf_indices])
+        pos_inf_indices = np.isposinf(lb).nonzero()[0]
+        np.put(lb, pos_inf_indices, 0)
+        pos_inf_indices = np.isposinf(ub).nonzero()[0]
+        np.put(ub, pos_inf_indices, lb[pos_inf_indices])
+        tmp = 0.5 * (lb + ub)
+        np.put(slacks, out_of_bounds, tmp[out_of_bounds])
+        return slacks
 
     def init_duals_eq(self):
-        return np.array([0.62574833])
-        # return np.ones(self._nlp.n_eq_constraints())
-        # return self._nlp.init_duals_eq()
+        return self._nlp.init_duals_eq()
 
     def init_duals_ineq(self):
-        return np.array([1.81287416])
-        # return np.ones(self._nlp.n_ineq_constraints())
-        # return self._nlp.init_duals_ineq()
+        return self._nlp.init_duals_ineq()
 
     def init_duals_primals_lb(self):
-        return np.ones(self._primals_lb_compression_matrix.shape[0])
+        return np.ones(self._primals_lb_compressed.size)
 
     def init_duals_primals_ub(self):
-        return np.ones(self._primals_ub_compression_matrix.shape[0])
+        return np.ones(self._primals_ub_compressed.size)
 
     def init_duals_slacks_lb(self):
-        return np.ones(self._ineq_lb_compression_matrix.shape[0])
+        return np.ones(self._ineq_lb_compressed.size)
 
     def init_duals_slacks_ub(self):
-        return np.ones(self._ineq_ub_compression_matrix.shape[0])
+        return np.ones(self._ineq_ub_compressed.size)
     
     def set_primals(self, primals):
         self._nlp.set_primals(primals)
