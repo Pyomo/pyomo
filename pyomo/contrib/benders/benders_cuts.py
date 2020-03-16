@@ -70,6 +70,7 @@ solver_dual_sign_convention['gurobi_direct'] = -1
 solver_dual_sign_convention['gurobi_persistent'] = -1
 solver_dual_sign_convention['cplex'] = -1
 solver_dual_sign_convention['cplex_direct'] = -1
+solver_dual_sign_convention['cplexdirect'] = -1
 solver_dual_sign_convention['cplex_persistent'] = -1
 solver_dual_sign_convention['glpk'] = -1
 solver_dual_sign_convention['cbc'] = -1
@@ -243,7 +244,7 @@ class BendersCutGeneratorData(_BlockData):
 
             subproblem_solver = self.subproblem_solvers[local_subproblem_ndx]
             if subproblem_solver.name not in solver_dual_sign_convention:
-                raise NotImplementedError('BendersCutGenerator is unaware of the dual sign convention of subproblem solver ' + self.subproblem_solver.name)
+                raise NotImplementedError('BendersCutGenerator is unaware of the dual sign convention of subproblem solver ' + subproblem_solver.name)
             sign_convention = solver_dual_sign_convention[subproblem_solver.name]
 
             if isinstance(subproblem_solver, PersistentSolver):
