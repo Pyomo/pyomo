@@ -1,7 +1,6 @@
 import pyutilib.th as unittest
 from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
 import pyomo.environ as pe
-import subprocess
 try:
     import mpi4py
     mpi4py_available = True
