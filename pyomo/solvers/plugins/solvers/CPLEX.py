@@ -25,6 +25,7 @@ from pyomo.opt.solver import *
 from pyomo.solvers.mockmip import MockMIP
 from pyomo.core.base import Var, ComponentMap, Suffix, active_export_suffix_generator
 from pyomo.core.kernel.block import IBlock
+from pyomo.util.components import iter_component
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -257,12 +258,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
     def _convert_priorities_to_rows(self, instance, priorities, directions):
         if isinstance(instance, IBlock):
             smap = getattr(instance, "._symbol_maps")[self._smap_id]
-            var_is_indexed = lambda var: hasattr(var, 'components')
-            var_iter = lambda var: var.components()
         else:
             smap = instance.solutions.symbol_map[self._smap_id]
-            var_is_indexed = lambda var: var.is_indexed()
-            var_iter = lambda var: var.values()
         byObject = smap.byObject
 
         rows = []
@@ -275,14 +272,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
             var_direction = directions.get(var, BranchDirection.default)
 
-            if not var_is_indexed(var):
-                if id(var) not in byObject:
-                    continue
-
-                rows.append((byObject[id(var)], priority, var_direction))
-                continue
-
-            for child_var in var_iter(var):
+            for child_var in iter_component(var):
                 if id(child_var) not in byObject:
                     continue
 
