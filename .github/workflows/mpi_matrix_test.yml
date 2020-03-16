@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - par_benders_test
   pull_request:
     branches:
       - master
@@ -35,7 +36,7 @@ jobs:
         echo ""
         echo "Install conda packages"
         echo ""
-        conda install mpi4py
+        conda install mpi4py ipopt
         echo ""
         echo "Upgrade pip..."
         echo ""

@@ -149,8 +149,8 @@ class TestBenders(unittest.TestCase):
             m.benders.add_subproblem(subproblem_fn=create_subproblem,
                                      subproblem_fn_kwargs=subproblem_fn_kwargs,
                                      master_eta=m.eta[s],
-                                     subproblem_solver='glpk')
-        opt = pe.SolverFactory('glpk')
+                                     subproblem_solver='cplex_direct')
+        opt = pe.SolverFactory('cplex_direct')
 
         for i in range(30):
             res = opt.solve(m, tee=False)
@@ -257,8 +257,8 @@ class MPITestBenders(unittest.TestCase):
             m.benders.add_subproblem(subproblem_fn=create_subproblem,
                                      subproblem_fn_kwargs=subproblem_fn_kwargs,
                                      master_eta=m.eta[s],
-                                     subproblem_solver='glpk')
-        opt = pe.SolverFactory('glpk')
+                                     subproblem_solver='cplex_direct')
+        opt = pe.SolverFactory('cplex_direct')
 
         for i in range(30):
             res = opt.solve(m, tee=False)
@@ -406,8 +406,8 @@ class MPITestBenders(unittest.TestCase):
             m.benders.add_subproblem(subproblem_fn=create_subproblem,
                                      subproblem_fn_kwargs=subproblem_fn_kwargs,
                                      master_eta=m.eta[s],
-                                     subproblem_solver='glpk')
-        opt = pe.SolverFactory('glpk')
+                                     subproblem_solver='cplex_direct')
+        opt = pe.SolverFactory('cplex_direct')
 
         for i in range(30):
             res = opt.solve(m, tee=False)
