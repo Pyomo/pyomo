@@ -96,6 +96,7 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
         self._minimum_version = minimum_version
         self._original_globals = original_globals
         self._callback = callback
+        self._importer = importer
         self._module = None
         self._available = None
 
@@ -108,8 +109,9 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                     error_message=self._error_message,
                     only_catch_importerror=self._only_catch_importerror,
                     minimum_version=self._minimum_version,
-                    defer_check=False,
                     callback=self._callback,
+                    importer=self._importer,
+                    defer_check=False,
                 )
             except:
                 # make sure that we cache the result
@@ -176,7 +178,7 @@ def _check_version(module, min_version):
 
 def attempt_import(name, error_message=None, only_catch_importerror=True,
                    minimum_version=None, alt_names=None, callback=None,
-                   defer_check=True):
+                   importer=None, defer_check=True):
 
     """Attempt to import the specified module.
 
@@ -231,6 +233,12 @@ def attempt_import(name, error_message=None, only_catch_importerror=True,
         A function with the signature "`fcn(module, available)`" that
         will be called after the import is first attempted.
 
+    importer: function, optional
+        A function that will perform the import and return the imported
+        module (or raise an ImportError).  This is useful for cases
+        where there are several equivalent modules and you want to
+        import/return the first one that is available.
+
     defer_check: bool, optional
         If True (the default), then the attempted import is deferred
         until the first use of either the module or the availability
@@ -258,11 +266,15 @@ def attempt_import(name, error_message=None, only_catch_importerror=True,
             only_catch_importerror=only_catch_importerror,
             minimum_version=minimum_version,
             original_globals=inspect.currentframe().f_back.f_globals,
-            callback=callback)
+            callback=callback,
+            importer=importer)
         return DeferredImportModule(indicator), indicator
 
     try:
-        module = importlib.import_module(name)
+        if importer is None:
+            module = importlib.import_module(name)
+        else:
+            module = importer()
         if minimum_version is None or _check_version(module, minimum_version):
             if callback is not None:
                 callback(module, True)

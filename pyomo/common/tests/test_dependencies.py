@@ -193,3 +193,20 @@ class TestDependencies(unittest.TestCase):
         self.assertEqual(
             log.getvalue(), "The pyomo.common.tests.dep_mod_except module "
             "(an optional Pyomo dependency) failed to import\n")
+
+    def test_importer(self):
+        attempted_import = []
+        def _importer():
+            attempted_import.append(True)
+            return attempt_import('pyomo.common.tests.dep_mod',
+                                  defer_check=False)[0]
+
+        mod, avail = attempt_import('foo',
+                                    importer=_importer,
+                                    defer_check=True)
+
+        self.assertEqual(attempted_import, [])
+        self.assertIsInstance(mod, DeferredImportModule)
+        self.assertTrue(avail)
+        self.assertEqual(attempted_import, [True])
+        self.assertIs(mod._indicator_flag._module, dep_mod)
