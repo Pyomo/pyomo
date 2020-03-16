@@ -1,5 +1,6 @@
 from pyomo.contrib.interior_point.interface import InteriorPointInterface, BaseInteriorPointInterface
 from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
+from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix
 from scipy.sparse import tril, coo_matrix, identity
 import numpy as np
 import logging
@@ -20,6 +21,13 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
     duals_primals_ub = interface.init_duals_primals_ub().copy()
     duals_slacks_lb = interface.init_duals_slacks_lb().copy()
     duals_slacks_ub = interface.init_duals_slacks_ub().copy()
+
+    _process_init(primals, interface.get_primals_lb(), interface.get_primals_ub())
+    _process_init(slacks, interface.get_ineq_lb(), interface.get_ineq_ub())
+    _process_init_duals(duals_primals_lb)
+    _process_init_duals(duals_primals_ub)
+    _process_init_duals(duals_slacks_lb)
+    _process_init_duals(duals_slacks_ub)
     
     minimum_barrier_parameter = 1e-9
     barrier_parameter = 0.1
@@ -85,6 +93,35 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
         duals_slacks_ub += alpha_dual_max * delta_duals_slacks_ub
 
     return primals, duals_eq, duals_ineq
+
+
+def _process_init(x, lb, ub):
+        if np.any((ub - lb) < 0):
+            raise ValueError('Lower bounds for variables/inequalities should not be larger than upper bounds.')
+        if np.any((ub - lb) == 0):
+            raise ValueError('Variables and inequalities should not have equal lower and upper bounds.')
+
+        lb_mask = build_bounds_mask(lb)
+        ub_mask = build_bounds_mask(ub)
+
+        lb_only = np.logical_and(lb_mask, np.logical_not(ub_mask))
+        ub_only = np.logical_and(ub_mask, np.logical_not(lb_mask))
+        lb_and_ub = np.logical_and(lb_mask, ub_mask)
+        out_of_bounds = ((x >= ub) + (x <= lb))
+        out_of_bounds_lb_only = np.logical_and(out_of_bounds, lb_only).nonzero()[0]
+        out_of_bounds_ub_only = np.logical_and(out_of_bounds, ub_only).nonzero()[0]
+        out_of_bounds_lb_and_ub = np.logical_and(out_of_bounds, lb_and_ub).nonzero()[0]
+
+        np.put(x, out_of_bounds_lb_only, lb + 1)
+        np.put(x, out_of_bounds_ub_only, ub - 1)
+
+        cm = build_compression_matrix(lb_and_ub).tocsr()
+        np.put(x, out_of_bounds_lb_and_ub, 0.5 * cm.transpose() * (cm*lb + cm*ub))
+
+
+def _process_init_duals(x):
+    out_of_bounds = (x <= 0).nonzero()[0]
+    np.put(x, out_of_bounds, 1)
 
 
 def _fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix):

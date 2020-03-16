@@ -105,6 +105,22 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
         pass
 
     @abstractmethod
+    def get_primals_lb(self):
+        pass
+
+    @abstractmethod
+    def get_primals_ub(self):
+        pass
+
+    @abstractmethod
+    def get_ineq_lb(self):
+        pass
+
+    @abstractmethod
+    def get_ineq_ub(self):
+        pass
+
+    @abstractmethod
     def set_barrier_parameter(self, barrier):
         pass
 
@@ -236,33 +252,11 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         self._barrier = None
 
     def init_primals(self):
-        primals = self._nlp.init_primals().copy()
-        lb = self._nlp.primals_lb().copy()
-        ub = self._nlp.primals_ub().copy()
-        out_of_bounds = ((primals > ub) + (primals < lb)).nonzero()[0]
-        neg_inf_indices = np.isneginf(lb).nonzero()[0]
-        np.put(lb, neg_inf_indices, ub[neg_inf_indices])
-        pos_inf_indices = np.isposinf(lb).nonzero()[0]
-        np.put(lb, pos_inf_indices, 0)
-        pos_inf_indices = np.isposinf(ub).nonzero()[0]
-        np.put(ub, pos_inf_indices, lb[pos_inf_indices])
-        tmp = 0.5 * (lb + ub)
-        np.put(primals, out_of_bounds, tmp[out_of_bounds])
+        primals = self._nlp.init_primals()
         return primals
 
     def init_slacks(self):
         slacks = self._nlp.evaluate_ineq_constraints()
-        lb = self._nlp.ineq_lb().copy()
-        ub = self._nlp.ineq_ub().copy()
-        out_of_bounds = ((slacks > ub) + (slacks < lb)).nonzero()[0]
-        neg_inf_indices = np.isneginf(lb).nonzero()[0]
-        np.put(lb, neg_inf_indices, ub[neg_inf_indices])
-        pos_inf_indices = np.isposinf(lb).nonzero()[0]
-        np.put(lb, pos_inf_indices, 0)
-        pos_inf_indices = np.isposinf(ub).nonzero()[0]
-        np.put(ub, pos_inf_indices, lb[pos_inf_indices])
-        tmp = 0.5 * (lb + ub)
-        np.put(slacks, out_of_bounds, tmp[out_of_bounds])
         return slacks
 
     def init_duals_eq(self):
@@ -330,6 +324,18 @@ class InteriorPointInterface(BaseInteriorPointInterface):
 
     def get_duals_slacks_ub(self):
         return self._duals_slacks_ub
+
+    def get_primals_lb(self):
+        return self._nlp.primals_lb()
+
+    def get_primals_ub(self):
+        return self._nlp.primals_ub()
+
+    def get_ineq_lb(self):
+        return self._nlp.ineq_lb()
+
+    def get_ineq_ub(self):
+        return self._nlp.ineq_ub()
 
     def set_barrier_parameter(self, barrier):
         self._barrier = barrier
