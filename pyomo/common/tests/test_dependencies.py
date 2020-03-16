@@ -27,19 +27,22 @@ from pyomo.common.tests.dep_mod import (
     bogus_nonexisting_module_available as has_bogus_nem,
 )
 
-bogus_nonexisting_module, bogus_nonexisting_module_available \
-    = attempt_import('bogus_nonexisting_module', defer_check=True)
+bogus, bogus_available \
+    = attempt_import('nonexisting.module.bogus', defer_check=True)
 
 class TestDependencies(unittest.TestCase):
     def test_local_deferred_import(self):
-        self.assertIs(type(bogus_nonexisting_module_available),
-                      DeferredImportIndicator)
-        self.assertIs(type(bogus_nonexisting_module), DeferredImportModule)
-        if bogus_nonexisting_module_available:
-            self.fail("Casting bogus_nonexisting_module_available "
-                      "to bool returned True")
-        self.assertIs(bogus_nonexisting_module_available, False)
-        self.assertIs(type(bogus_nonexisting_module), ModuleUnavailable)
+        self.assertIs(type(bogus_available), DeferredImportIndicator)
+        self.assertIs(type(bogus), DeferredImportModule)
+        if bogus_available:
+            self.fail("Casting bogus_available to bool returned True")
+        self.assertIs(bogus_available, False)
+        # Note: this also tests the implicit alt_names for dotted imports
+        self.assertIs(type(bogus), ModuleUnavailable)
+        with self.assertRaisesRegexp(
+                DeferredImportError, "The nonexisting.module.bogus module "
+                "\(an optional Pyomo dependency\) failed to import"):
+            bogus.hello
 
     def test_imported_deferred_import(self):
         self.assertIs(type(has_bogus_nem), DeferredImportIndicator)
@@ -51,8 +54,7 @@ class TestDependencies(unittest.TestCase):
         self.assertIs(has_bogus_nem, False)
         self.assertIs(type(bogus_nem), ModuleUnavailable)
         self.assertIs(dep_mod.bogus_nonexisting_module_available, False)
-        self.assertIs(type(dep_mod.bogus_nonexisting_module),
-                      ModuleUnavailable)
+        self.assertIs(type(dep_mod.bogus_nonexisting_module), ModuleUnavailable)
 
     def test_min_version(self):
         mod, avail = attempt_import('pyomo.common.tests.dep_mod',

@@ -85,9 +85,12 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
 
     def __init__(self, name, alt_names, error_message, only_catch_importerror,
                  minimum_version, original_globals, callback):
-        self._names = (name,)
+        self._names = [name]
         if alt_names:
-            self._names += tuple(alt_names)
+            self._names += list(alt_names)
+        for _n in tuple(self._names):
+            if '.' in _n:
+                self._names.append(_n.split('.')[-1])
         self._error_message = error_message
         self._only_catch_importerror = only_catch_importerror
         self._minimum_version = minimum_version
