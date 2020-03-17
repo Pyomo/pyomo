@@ -56,6 +56,7 @@ class _ImplicitAny(Any.__class__):
     def __getstate__(self):
         state = super(_ImplicitAny, self).__getstate__()
         state['_owner'] = self._owner()
+        return state
 
     def __setstate__(self, state):
         _owner = state.pop('_owner')
