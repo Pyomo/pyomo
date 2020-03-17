@@ -679,6 +679,8 @@ class Estimator(object):
             "ef_ipopt" or "k_aug". Default is "ef_ipopt".
         return_values: list, optional
             List of Variable names used to return values from the model
+        bootlist: list, optional
+            List of bootstrap sample numbers, used internally when calling theta_est_bootstrap
             
         Returns
         -------
@@ -692,6 +694,10 @@ class Estimator(object):
             A dictionary of dictionaries for the Hessian.
             The Hessian is not returned if the solver is ef_ipopt.
         """
+        assert isinstance(solver, str)
+        assert isinstance(return_values, list)
+        assert isinstance(bootlist, (type(None), list))
+        
         return self._Q_opt(solver=solver, return_values=return_values,
                            bootlist=bootlist)
     
@@ -721,6 +727,12 @@ class Estimator(object):
             Theta values for each sample and (if return_samples = True) 
             the sample numbers used in each estimation
         """
+        assert isinstance(bootstrap_samples, int)
+        assert isinstance(samplesize, (type(None), int))
+        assert isinstance(replacement, bool)
+        assert isinstance(seed, (type(None), int))
+        assert isinstance(return_samples, bool)
+        
         if samplesize is None:
             samplesize = len(self._numbers_list)  
         
@@ -738,7 +750,7 @@ class Estimator(object):
         
         bootstrap_theta = list()
         for idx, sample in local_list:
-            objval, thetavals = self.theta_est(bootlist=sample)
+            objval, thetavals = self.theta_est(bootlist=list(sample))
             thetavals['samples'] = sample
             bootstrap_theta.append(thetavals)
             
@@ -777,6 +789,11 @@ class Estimator(object):
             Theta values for each sample and (if return_samples = True) 
             the sample numbers left out of each estimation
         """
+        assert isinstance(lNo, int)
+        assert isinstance(lNo_samples, (type(None), int))
+        assert isinstance(seed, (type(None), int))
+        assert isinstance(return_samples, bool)
+        
         samplesize = len(self._numbers_list)-lNo
 
         if seed is not None:
@@ -792,7 +809,7 @@ class Estimator(object):
         
         lNo_theta = list()
         for idx, sample in local_list:
-            objval, thetavals = self.theta_est(bootlist=sample)
+            objval, thetavals = self.theta_est(bootlist=list(sample))
             lNo_s = list(set(range(len(self.callback_data))) - set(sample))
             thetavals['lNo'] = np.sort(lNo_s)
             lNo_theta.append(thetavals)
@@ -851,6 +868,12 @@ class Estimator(object):
         indicates if the theta estimate is in (True) or out (False) of the 
         alpha region for a given distribution (based on the bootstrap results)
         """
+        assert isinstance(lNo, int)
+        assert isinstance(lNo_samples, (type(None), int))
+        assert isinstance(bootstrap_samples, int)
+        assert distribution in ['Rect', 'MVN', 'KDE']
+        assert isinstance(alphas, list)
+        assert isinstance(seed, (type(None), int))
         
         if seed is not None:
             np.random.seed(seed)
@@ -900,6 +923,8 @@ class Estimator(object):
             Objective value for each theta (infeasible solutions are 
             omitted).
         """
+        assert isinstance(theta_values, pd.DataFrame)
+        
         # for parallel code we need to use lists and dicts in the loop
         theta_names = theta_values.columns
         all_thetas = theta_values.to_dict('records')
@@ -921,7 +946,7 @@ class Estimator(object):
         return obj_at_theta
     
     
-    def likelihood_ratio_test(self, obj_at_theta, obj_value, alpha, 
+    def likelihood_ratio_test(self, obj_at_theta, obj_value, alphas, 
                               return_thresholds=False):
         """
         Likelihood ratio test to identify theta values within a confidence 
@@ -932,9 +957,9 @@ class Estimator(object):
         obj_at_theta: DataFrame, columns = theta_names + 'obj'
             Objective values for each theta value (returned by 
             objective_at_theta)
-        obj_value: float
+        obj_value: int or float
             Objective value from parameter estimation using all data
-        alpha: list
+        alphas: list
             List of alpha values to use in the chi2 test
         return_thresholds: bool, optional
             Return the threshold value for each alpha
@@ -947,10 +972,15 @@ class Estimator(object):
         thresholds: dictionary
             If return_threshold = True, the thresholds are also returned.
         """
+        assert isinstance(obj_at_theta, pd.DataFrame)
+        assert isinstance(obj_value, (int, float))
+        assert isinstance(alphas, list)
+        assert isinstance(return_thresholds, bool)
+            
         LR = obj_at_theta.copy()
         S = len(self.callback_data)
         thresholds = {}
-        for a in alpha:
+        for a in alphas:
             chi2_val = stats.chi2.ppf(a, 2)
             thresholds[a] = obj_value * ((chi2_val / (S - 2)) + 1)
             LR[a] = LR['obj'] < thresholds[a]
@@ -992,11 +1022,18 @@ class Estimator(object):
             If test_theta_values is not None, returns test theta value along 
             with True (inside) or False (outside) for each alpha
         """
+        assert isinstance(theta_values, pd.DataFrame)
+        assert distribution in ['Rect', 'MVN', 'KDE']
+        assert isinstance(alphas, list)
+        assert isinstance(test_theta_values, (type(None), dict, pd.DataFrame))
+        
         if isinstance(test_theta_values, dict):
             test_theta_values = pd.Series(test_theta_values).to_frame().transpose()
             
         training_results = theta_values.copy()
-        test_result = test_theta_values.copy()
+        
+        if test_theta_values is not None:
+            test_result = test_theta_values.copy()
         
         for a in alphas:
             
