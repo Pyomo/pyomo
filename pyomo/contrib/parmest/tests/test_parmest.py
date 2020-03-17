@@ -102,16 +102,21 @@ class parmest_object_Tester_RB(unittest.TestCase):
 
         del theta_est['samples']
         
-        parmest.pairwise_plot(theta_est)
+        # apply cofidence region test
+        CR = self.pest.confidence_region_test(theta_est, 'MVN', [0.5, 0.75, 1.0])
         
+        self.assertTrue(set(CR.columns) >= set([0.5, 0.75, 1.0]))
+        self.assertTrue(CR[0.5].sum() == 5) 
+        self.assertTrue(CR[0.75].sum() == 7)
+        self.assertTrue(CR[1.0].sum() == 10) # all true
+        
+        parmest.pairwise_plot(theta_est)
         parmest.pairwise_plot(theta_est, thetavals)
-   
         parmest.pairwise_plot(theta_est, thetavals, 0.8, ['MVN', 'KDE', 'Rect'])
         
     @unittest.skipIf(not graphics.imports_available,
                      "parmest.graphics imports are unavailable")
     def test_likelihood_ratio(self):
-        # tbd: write the plot file(s) to a temp dir and delete in cleanup
         objval, thetavals = self.pest.theta_est()
         
         asym = np.arange(10, 30, 2)
@@ -120,12 +125,32 @@ class parmest_object_Tester_RB(unittest.TestCase):
         
         obj_at_theta = self.pest.objective_at_theta(theta_vals)
         
-        LR = self.pest.likelihood_ratio_test(obj_at_theta, objval, [0.8, 0.85, 0.9, 0.95])
+        LR = self.pest.likelihood_ratio_test(obj_at_theta, objval, [0.8, 0.9, 1.0])
         
-        self.assertTrue(set(LR.columns) >= set([0.8, 0.85, 0.9, 0.95]))
+        self.assertTrue(set(LR.columns) >= set([0.8, 0.9, 1.0]))
+        self.assertTrue(LR[0.8].sum() == 7) 
+        self.assertTrue(LR[0.9].sum() == 11)
+        self.assertTrue(LR[1.0].sum() == 60) # all true
         
         parmest.pairwise_plot(LR, thetavals, 0.8)
 
+    def test_leaveNout(self):
+        lNo_theta = self.pest.theta_est_leaveNout(1) 
+        self.assertTrue(lNo_theta.shape == (6,2))
+        
+        results = self.pest.leaveNout_bootstrap_test(1, None, 3, 'Rect', [0.5, 1.0])
+        self.assertTrue(len(results) == 6) # 6 lNo samples
+        i = 1
+        samples = results[i][0] # list of N samples that are left out
+        lno_theta = results[i][1] 
+        bootstrap_theta = results[i][2] 
+        self.assertTrue(samples == [1]) # sample 1 was left out
+        self.assertTrue(lno_theta.shape[0] == 1) # lno estimate for sample 1
+        self.assertTrue(set(lno_theta.columns) >= set([0.5, 1.0]))
+        self.assertTrue(lno_theta[1.0].sum() == 1) # all true
+        self.assertTrue(bootstrap_theta.shape[0] == 3) # bootstrap for sample 1
+        self.assertTrue(bootstrap_theta[1.0].sum() == 3) # all true
+        
     def test_diagnostic_mode(self):
         self.pest.diagnostic_mode = True
 
