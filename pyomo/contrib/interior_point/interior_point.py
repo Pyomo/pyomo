@@ -1,5 +1,6 @@
 from pyomo.contrib.interior_point.interface import InteriorPointInterface, BaseInteriorPointInterface
 from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
+from pyomo.contrib.interior_point.linalg.scipy_interface import ScipyInterface
 from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix
 from scipy.sparse import tril, coo_matrix, identity
 import numpy as np
@@ -33,13 +34,18 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
     barrier_parameter = 0.1
     interface.set_barrier_parameter(barrier_parameter)
 
-    logger.info('{_iter:<20}{objective:<20}{primal_inf:<20}{dual_inf:<20}{compl_inf:<20}{barrier:<20}{time:<20}'.format(_iter='Iter',
-                                                                                                                        objective='Objective',
-                                                                                                                        primal_inf='Primal Inf',
-                                                                                                                        dual_inf='Dual Inf',
-                                                                                                                        compl_inf='Compl Inf',
-                                                                                                                        barrier='Barrier',
-                                                                                                                        time='Elapsed Time (s)'))
+    alpha_primal_max = 1
+    alpha_dual_max = 1
+
+    logger.info('{_iter:<10}{objective:<15}{primal_inf:<15}{dual_inf:<15}{compl_inf:<15}{barrier:<15}{alpha_p:<15}{alpha_d:<15}{time:<20}'.format(_iter='Iter',
+                                                                                                                                                  objective='Objective',
+                                                                                                                                                  primal_inf='Primal Inf',
+                                                                                                                                                  dual_inf='Dual Inf',
+                                                                                                                                                  compl_inf='Compl Inf',
+                                                                                                                                                  barrier='Barrier',
+                                                                                                                                                  alpha_p='Prim Step Size',
+                                                                                                                                                  alpha_d='Dual Step Size',
+                                                                                                                                                  time='Elapsed Time (s)'))
 
     for _iter in range(max_iter):
         interface.set_primals(primals)
@@ -53,13 +59,15 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
         
         primal_inf, dual_inf, complimentarity_inf = check_convergence(interface=interface, barrier=0)
         objective = interface.evaluate_objective()
-        logger.info('{_iter:<20}{objective:<20.3e}{primal_inf:<20.3e}{dual_inf:<20.3e}{compl_inf:<20.3e}{barrier:<20.3e}{time:<20.2e}'.format(_iter=_iter,
-                                                                                                                                              objective=objective,
-                                                                                                                                              primal_inf=primal_inf,
-                                                                                                                                              dual_inf=dual_inf,
-                                                                                                                                              compl_inf=complimentarity_inf,
-                                                                                                                                              barrier=barrier_parameter,
-                                                                                                                                              time=time.time() - t0))
+        logger.info('{_iter:<10}{objective:<15.3e}{primal_inf:<15.3e}{dual_inf:<15.3e}{compl_inf:<15.3e}{barrier:<15.3e}{alpha_p:<15.3e}{alpha_d:<15.3e}{time:<20.2e}'.format(_iter=_iter,
+                                                                                                                                                                              objective=objective,
+                                                                                                                                                                              primal_inf=primal_inf,
+                                                                                                                                                                              dual_inf=dual_inf,
+                                                                                                                                                                              compl_inf=complimentarity_inf,
+                                                                                                                                                                              barrier=barrier_parameter,
+                                                                                                                                                                              alpha_p=alpha_primal_max,
+                                                                                                                                                                              alpha_d=alpha_dual_max,
+                                                                                                                                                                              time=time.time() - t0))
         if max(primal_inf, dual_inf, complimentarity_inf) <= tol:
             break
         primal_inf, dual_inf, complimentarity_inf = check_convergence(interface=interface, barrier=barrier_parameter)
@@ -68,9 +76,8 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
 
         interface.set_barrier_parameter(barrier_parameter)
         kkt = interface.evaluate_primal_dual_kkt_matrix()
-        kkt = tril(kkt.tocoo())
         rhs = interface.evaluate_primal_dual_kkt_rhs()
-        linear_solver = MumpsInterface()
+        linear_solver = MumpsInterface()  # icntl_options={1: 6, 2: 6, 3: 6, 4: 4})
         linear_solver.do_symbolic_factorization(kkt)
         linear_solver.do_numeric_factorization(kkt)
         delta = linear_solver.do_back_solve(rhs)
@@ -85,7 +92,7 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
         delta_duals_primals_ub = interface.get_delta_duals_primals_ub()
         delta_duals_slacks_lb = interface.get_delta_duals_slacks_lb()
         delta_duals_slacks_ub = interface.get_delta_duals_slacks_ub()
-
+        
         primals += alpha_primal_max * delta_primals
         slacks += alpha_primal_max * delta_slacks
         duals_eq += alpha_dual_max * delta_duals_eq
@@ -99,27 +106,27 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
 
 
 def _process_init(x, lb, ub):
-        if np.any((ub - lb) < 0):
-            raise ValueError('Lower bounds for variables/inequalities should not be larger than upper bounds.')
-        if np.any((ub - lb) == 0):
-            raise ValueError('Variables and inequalities should not have equal lower and upper bounds.')
+    if np.any((ub - lb) < 0):
+        raise ValueError('Lower bounds for variables/inequalities should not be larger than upper bounds.')
+    if np.any((ub - lb) == 0):
+        raise ValueError('Variables and inequalities should not have equal lower and upper bounds.')
 
-        lb_mask = build_bounds_mask(lb)
-        ub_mask = build_bounds_mask(ub)
+    lb_mask = build_bounds_mask(lb)
+    ub_mask = build_bounds_mask(ub)
 
-        lb_only = np.logical_and(lb_mask, np.logical_not(ub_mask))
-        ub_only = np.logical_and(ub_mask, np.logical_not(lb_mask))
-        lb_and_ub = np.logical_and(lb_mask, ub_mask)
-        out_of_bounds = ((x >= ub) + (x <= lb))
-        out_of_bounds_lb_only = np.logical_and(out_of_bounds, lb_only).nonzero()[0]
-        out_of_bounds_ub_only = np.logical_and(out_of_bounds, ub_only).nonzero()[0]
-        out_of_bounds_lb_and_ub = np.logical_and(out_of_bounds, lb_and_ub).nonzero()[0]
+    lb_only = np.logical_and(lb_mask, np.logical_not(ub_mask))
+    ub_only = np.logical_and(ub_mask, np.logical_not(lb_mask))
+    lb_and_ub = np.logical_and(lb_mask, ub_mask)
+    out_of_bounds = ((x >= ub) + (x <= lb))
+    out_of_bounds_lb_only = np.logical_and(out_of_bounds, lb_only).nonzero()[0]
+    out_of_bounds_ub_only = np.logical_and(out_of_bounds, ub_only).nonzero()[0]
+    out_of_bounds_lb_and_ub = np.logical_and(out_of_bounds, lb_and_ub).nonzero()[0]
 
-        np.put(x, out_of_bounds_lb_only, lb + 1)
-        np.put(x, out_of_bounds_ub_only, ub - 1)
+    np.put(x, out_of_bounds_lb_only, lb[out_of_bounds_lb_only] + 1)
+    np.put(x, out_of_bounds_ub_only, ub[out_of_bounds_ub_only] - 1)
 
-        cm = build_compression_matrix(lb_and_ub).tocsr()
-        np.put(x, out_of_bounds_lb_and_ub, 0.5 * cm.transpose() * (cm*lb + cm*ub))
+    cm = build_compression_matrix(lb_and_ub).tocsr()
+    np.put(x, out_of_bounds_lb_and_ub, (0.5 * cm.transpose() * (cm*lb + cm*ub))[out_of_bounds_lb_and_ub])
 
 
 def _process_init_duals(x):
@@ -219,46 +226,51 @@ def fraction_to_the_boundary(interface, tau):
     ineq_lb_compression_matrix = interface.get_ineq_lb_compression_matrix()
     ineq_ub_compression_matrix = interface.get_ineq_ub_compression_matrix()
 
-    return (min(_fraction_to_the_boundary_helper_lb(tau=tau,
-                                                    x=primals,
-                                                    delta_x=delta_primals,
-                                                    xl_compressed=primals_lb_compressed,
-                                                    xl_compression_matrix=primals_lb_compression_matrix),
-                _fraction_to_the_boundary_helper_ub(tau=tau,
-                                                    x=primals,
-                                                    delta_x=delta_primals,
-                                                    xu_compressed=primals_ub_compressed,
-                                                    xu_compression_matrix=primals_ub_compression_matrix),
-                _fraction_to_the_boundary_helper_lb(tau=tau,
-                                                    x=slacks,
-                                                    delta_x=delta_slacks,
-                                                    xl_compressed=ineq_lb_compressed,
-                                                    xl_compression_matrix=ineq_lb_compression_matrix),
-                _fraction_to_the_boundary_helper_ub(tau=tau,
-                                                    x=slacks,
-                                                    delta_x=delta_slacks,
-                                                    xu_compressed=ineq_ub_compressed,
-                                                    xu_compression_matrix=ineq_ub_compression_matrix)),
-            min(_fraction_to_the_boundary_helper_lb(tau=tau,
-                                                    x=duals_primals_lb,
-                                                    delta_x=delta_duals_primals_lb,
-                                                    xl_compressed=np.zeros(len(duals_primals_lb)),
-                                                    xl_compression_matrix=identity(len(duals_primals_lb), format='csr')),
-                _fraction_to_the_boundary_helper_lb(tau=tau,
-                                                    x=duals_primals_ub,
-                                                    delta_x=delta_duals_primals_ub,
-                                                    xl_compressed=np.zeros(len(duals_primals_ub)),
-                                                    xl_compression_matrix=identity(len(duals_primals_ub), format='csr')),
-                _fraction_to_the_boundary_helper_lb(tau=tau,
-                                                    x=duals_slacks_lb,
-                                                    delta_x=delta_duals_slacks_lb,
-                                                    xl_compressed=np.zeros(len(duals_slacks_lb)),
-                                                    xl_compression_matrix=identity(len(duals_slacks_lb), format='csr')),
-                _fraction_to_the_boundary_helper_lb(tau=tau,
-                                                    x=duals_slacks_ub,
-                                                    delta_x=delta_duals_slacks_ub,
-                                                    xl_compressed=np.zeros(len(duals_slacks_ub)),
-                                                    xl_compression_matrix=identity(len(duals_slacks_ub), format='csr'))))
+    alpha_primal_max_a = _fraction_to_the_boundary_helper_lb(tau=tau,
+                                                             x=primals,
+                                                             delta_x=delta_primals,
+                                                             xl_compressed=primals_lb_compressed,
+                                                             xl_compression_matrix=primals_lb_compression_matrix)
+    alpha_primal_max_b = _fraction_to_the_boundary_helper_ub(tau=tau,
+                                                             x=primals,
+                                                             delta_x=delta_primals,
+                                                             xu_compressed=primals_ub_compressed,
+                                                             xu_compression_matrix=primals_ub_compression_matrix)
+    alpha_primal_max_c = _fraction_to_the_boundary_helper_lb(tau=tau,
+                                                             x=slacks,
+                                                             delta_x=delta_slacks,
+                                                             xl_compressed=ineq_lb_compressed,
+                                                             xl_compression_matrix=ineq_lb_compression_matrix)
+    alpha_primal_max_d = _fraction_to_the_boundary_helper_ub(tau=tau,
+                                                             x=slacks,
+                                                             delta_x=delta_slacks,
+                                                             xu_compressed=ineq_ub_compressed,
+                                                             xu_compression_matrix=ineq_ub_compression_matrix)
+    alpha_primal_max = min(alpha_primal_max_a, alpha_primal_max_b, alpha_primal_max_c, alpha_primal_max_d)
+
+    alpha_dual_max_a = _fraction_to_the_boundary_helper_lb(tau=tau,
+                                                           x=duals_primals_lb,
+                                                           delta_x=delta_duals_primals_lb,
+                                                           xl_compressed=np.zeros(len(duals_primals_lb)),
+                                                           xl_compression_matrix=identity(len(duals_primals_lb), format='csr'))
+    alpha_dual_max_b = _fraction_to_the_boundary_helper_lb(tau=tau,
+                                                           x=duals_primals_ub,
+                                                           delta_x=delta_duals_primals_ub,
+                                                           xl_compressed=np.zeros(len(duals_primals_ub)),
+                                                           xl_compression_matrix=identity(len(duals_primals_ub), format='csr'))
+    alpha_dual_max_c = _fraction_to_the_boundary_helper_lb(tau=tau,
+                                                           x=duals_slacks_lb,
+                                                           delta_x=delta_duals_slacks_lb,
+                                                           xl_compressed=np.zeros(len(duals_slacks_lb)),
+                                                           xl_compression_matrix=identity(len(duals_slacks_lb), format='csr'))
+    alpha_dual_max_d = _fraction_to_the_boundary_helper_lb(tau=tau,
+                                                           x=duals_slacks_ub,
+                                                           delta_x=delta_duals_slacks_ub,
+                                                           xl_compressed=np.zeros(len(duals_slacks_ub)),
+                                                           xl_compression_matrix=identity(len(duals_slacks_ub), format='csr'))
+    alpha_dual_max = min(alpha_dual_max_a, alpha_dual_max_b, alpha_dual_max_c, alpha_dual_max_d)
+    
+    return alpha_primal_max, alpha_dual_max
 
 
 def check_convergence(interface, barrier):

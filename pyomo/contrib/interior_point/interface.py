@@ -375,7 +375,7 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         return kkt
 
     def evaluate_primal_dual_kkt_rhs(self):
-        grad_obj = self._nlp.evaluate_grad_objective()
+        grad_obj = self.evaluate_grad_objective()
         jac_eq = self._nlp.evaluate_jacobian_eq()
         jac_ineq = self._nlp.evaluate_jacobian_ineq()
 
@@ -450,7 +450,7 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         return self._nlp.evaluate_ineq_constraints()
 
     def evaluate_grad_objective(self):
-        return self._nlp.evaluate_grad_objective()
+        return self._nlp.get_obj_factor() * self._nlp.evaluate_grad_objective()
 
     def evaluate_jacobian_eq(self):
         return self._nlp.evaluate_jacobian_eq()

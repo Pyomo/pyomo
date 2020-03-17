@@ -1,6 +1,6 @@
 from .base_linear_solver_interface import LinearSolverInterface
 from pyomo.contrib.pynumero.linalg.mumps_solver import MumpsCentralizedAssembledLinearSolver
-from scipy.sparse import isspmatrix_coo
+from scipy.sparse import isspmatrix_coo, tril
 
 
 class MumpsInterface(LinearSolverInterface):
@@ -19,8 +19,6 @@ class MumpsInterface(LinearSolverInterface):
             icntl_options[13] = 1
         if 24 not in icntl_options:
             icntl_options[24] = 0
-        if 1 not in cntl_options:
-            cntl_options[1] = 0
             
         for k, v in cntl_options.items():
             self.set_cntl(k, v)
@@ -32,6 +30,7 @@ class MumpsInterface(LinearSolverInterface):
     def do_symbolic_factorization(self, matrix):
         if not isspmatrix_coo(matrix):
             matrix = matrix.tocoo()
+        matrix = tril(matrix)
         nrows, ncols = matrix.shape
         self._dim = nrows
         self._mumps.do_symbolic_factorization(matrix)
@@ -39,6 +38,7 @@ class MumpsInterface(LinearSolverInterface):
     def do_numeric_factorization(self, matrix):
         if not isspmatrix_coo(matrix):
             matrix = matrix.tocoo()
+        matrix = tril(matrix)
         self._mumps.do_numeric_factorization(matrix)
 
     def do_back_solve(self, rhs):
@@ -59,9 +59,6 @@ class MumpsInterface(LinearSolverInterface):
         self._mumps.set_icntl(key, value)
 
     def set_cntl(self, key, value):
-        if key == 1:
-            if value != 0:
-                raise ValueError('CNTL(1) must be 0 for the MumpsInterface.')
         self._mumps.set_cntl(key, value)
 
     def get_info(self, key):
