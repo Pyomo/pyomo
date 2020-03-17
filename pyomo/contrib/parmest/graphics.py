@@ -203,7 +203,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         Theta values and (optionally) an objective value and results from 
         leaveNout_bootstrap_test, likelihood_ratio_test, or 
         confidence_region_test
-    theta_star: dict, keys = variable names, optional
+    theta_star: dict or Series, keys = variable names, optional
         Theta* (or other individual values of theta, also used to 
         slice higher dimensional contour intervals in 2D)
     alpha: float, optional
@@ -229,6 +229,15 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     filename: string, optional
         Filename used to save the figure
     """
+    assert isinstance(theta_values, pd.DataFrame)
+    assert isinstance(theta_star, (type(None), dict, pd.Series, pd.DataFrame))
+    assert isinstance(alpha, (type(None), int, float))
+    assert isinstance(distributions, list)
+    assert set(distributions).issubset(set(['MVN', 'KDE', 'Rect']))
+    assert isinstance(axis_limits, (type(None), dict))
+    assert isinstance(title, (type(None), str))
+    assert isinstance(add_obj_contour, bool)
+    assert isinstance(filename, (type(None), str))
     
     if len(theta_values) == 0:
         return('Empty data')    
@@ -309,9 +318,6 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
                             theta_star=theta_star)
                 legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
             
-            else:
-                print('Invalid distribution')
-            
     _set_axis_limits(g, axis_limits, thetas, theta_star)
     
     for ax in g.axes.flatten():
@@ -377,6 +383,9 @@ def fit_rect_dist(theta_values, alpha):
     ---------
     tuple containing lower bound and upper bound for each variable
     """
+    assert isinstance(theta_values, pd.DataFrame)
+    assert isinstance(alpha, (int, float))
+    
     tval = stats.t.ppf(1-(1-alpha)/2, len(theta_values)-1) # Two-tail
     m = theta_values.mean()
     s = theta_values.std()
@@ -398,6 +407,8 @@ def fit_mvn_dist(theta_values):
     ---------
     scipy.stats.multivariate_normal distribution
     """
+    assert isinstance(theta_values, pd.DataFrame)
+    
     dist = stats.multivariate_normal(theta_values.mean(), 
                                     theta_values.cov(), allow_singular=True)
     return dist
@@ -415,6 +426,8 @@ def fit_kde_dist(theta_values):
     ---------
     scipy.stats.gaussian_kde distribution
     """
+    assert isinstance(theta_values, pd.DataFrame)
+
     dist = stats.gaussian_kde(theta_values.transpose().values)
     
     return dist
@@ -456,6 +469,12 @@ def grouped_boxplot(data1, data2, normalize=False, group_names=['data1', 'data2'
     filename: string, optional
         Filename used to save the figure
     """
+    assert isinstance(data1, pd.DataFrame)
+    assert isinstance(data2, pd.DataFrame)
+    assert isinstance(normalize, bool)
+    assert isinstance(group_names, list)
+    assert isinstance(filename, (type(None), str))
+        
     data = _get_grouped_data(data1, data2, normalize, group_names)
     
     plt.figure()
@@ -492,6 +511,12 @@ def grouped_violinplot(data1, data2, normalize=False, group_names=['data1', 'dat
     filename: string, optional
         Filename used to save the figure
     """
+    assert isinstance(data1, pd.DataFrame)
+    assert isinstance(data2, pd.DataFrame)
+    assert isinstance(normalize, bool)
+    assert isinstance(group_names, list)
+    assert isinstance(filename, (type(None), str))
+    
     data = _get_grouped_data(data1, data2, normalize, group_names)
     
     plt.figure()
