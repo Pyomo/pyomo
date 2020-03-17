@@ -62,25 +62,25 @@ class TestPyomoUnit(unittest.TestCase):
         with self.assertRaises(TypeError):
             x = int(kg)
 
-        self.assertTrue(uc.check_units_consistency(kg < m.kg, uc))
-        self.assertTrue(uc.check_units_consistency(kg > m.kg, uc))
-        self.assertTrue(uc.check_units_consistency(kg <= m.kg, uc))
-        self.assertTrue(uc.check_units_consistency(kg >= m.kg, uc))
-        self.assertTrue(uc.check_units_consistency(kg == m.kg, uc))
-        self.assertTrue(uc.check_units_consistency(kg + m.kg, uc))
-        self.assertTrue(uc.check_units_consistency(kg - m.kg, uc))
+        uc.assert_units_consistent(kg < m.kg)
+        uc.assert_units_consistent(kg > m.kg)
+        uc.assert_units_consistent(kg <= m.kg)
+        uc.assert_units_consistent(kg >= m.kg)
+        uc.assert_units_consistent(kg == m.kg)
+        uc.assert_units_consistent(kg + m.kg)
+        uc.assert_units_consistent(kg - m.kg)
 
         with self.assertRaises(InconsistentUnitsError):
-            uc.check_units_consistency(kg + 3)
+            uc.assert_units_consistent(kg + 3)
 
         with self.assertRaises(InconsistentUnitsError):
-            uc.check_units_consistency(kg - 3)
+            uc.assert_units_consistent(kg - 3)
 
         with self.assertRaises(InconsistentUnitsError):
-            uc.check_units_consistency(3 + kg)
+            uc.assert_units_consistent(3 + kg)
 
         with self.assertRaises(InconsistentUnitsError):
-            uc.check_units_consistency(3 - kg)
+            uc.assert_units_consistent(3 - kg)
 
         # should not assert
         # check __mul__
@@ -96,9 +96,8 @@ class TestPyomoUnit(unittest.TestCase):
 
         # check rpow
         x = 2 ** kg  # creation is allowed, only fails when units are "checked"
-        self.assertFalse(uc.check_units_consistency(x, allow_exceptions=False))
         with self.assertRaises(UnitsError):
-            uc.check_units_consistency(x)
+            uc.assert_units_consistent(x)
 
         x = kg
         x += kg
@@ -148,7 +147,7 @@ class TestPyomoUnit(unittest.TestCase):
         if expected_type is not None:
             self.assertEqual(expected_type, type(x))
 
-        self.assertTrue(pyomo_units_container.check_units_consistency(x))
+        pyomo_units_container.assert_units_consistent(x)
         if str_check is not None:
             self.assertEqual(str_check, str(pyomo_units_container.get_units(x)))
         else:
@@ -159,13 +158,8 @@ class TestPyomoUnit(unittest.TestCase):
         if expected_type is not None:
             self.assertEqual(expected_type, type(x))
 
-        self.assertFalse(pyomo_units_container.check_units_consistency(x, allow_exceptions=False))
         with self.assertRaises(expected_error):
-            pyomo_units_container.check_units_consistency(x, allow_exceptions=True)
-
-        with self.assertRaises(expected_error):
-            # allow_exceptions=True should also be the default
-            pyomo_units_container.check_units_consistency(x)
+            pyomo_units_container.assert_units_consistent(x)
 
         # we also expect get_units to fail
         with self.assertRaises(expected_error):
@@ -450,11 +444,11 @@ class TestPyomoUnit(unittest.TestCase):
 
         ex = 2.0*delta_degC + 3.0*delta_degC + 1.0*delta_degC
         self.assertEqual(type(ex), EXPR.NPV_SumExpression)
-        self.assertTrue(uc.check_units_consistency(ex))
+        uc.assert_units_consistent(ex)
 
         ex = 2.0*delta_degF + 3.0*delta_degF
         self.assertEqual(type(ex), EXPR.NPV_SumExpression)
-        self.assertTrue(uc.check_units_consistency(ex))
+        uc.assert_units_consistent(ex)
 
         self._get_check_units_fail(2.0*K + 3.0*R, uc, EXPR.NPV_SumExpression)
         self._get_check_units_fail(2.0*delta_degC + 3.0*delta_degF, uc, EXPR.NPV_SumExpression)
@@ -520,7 +514,7 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertAlmostEqual(value(m.dy_con.body), 0.0, places=5)
         self.assertAlmostEqual(value(m.ground.body), 0.0, places=5)
 
-    def test_assert_model_units_consistent(self):
+    def test_assert_units_consistent(self):
         u = units
         m = ConcreteModel()
         m.dx = Var(units=u.m, initialize=0.10188943773836046)
@@ -539,14 +533,15 @@ class TestPyomoUnit(unittest.TestCase):
                               + 0.5*(u.convert(m.a, to_units=u.m/u.s**2))*(u.convert(m.t, to_units=u.s))**2)
         m.ground = Constraint(expr = m.dy == 0)
 
-        u.assert_model_units_consistent(m)
+        print(isinstance(m, Block))
+        u.assert_units_consistent(m)
         m.broken = Constraint(expr = m.dy == 42.0*u.kg)
         with self.assertRaises(UnitsError):
-            u.assert_model_units_consistent(m)
+            u.assert_units_consistent(m)
 
     def test_usd(self):
         u = units
-        u.load_definitions_from_string(["USD = [currency]"])
+        u.load_definitions_from_strings(["USD = [currency]"])
         expr = 3.0*u.USD
         self._get_check_units_ok(expr, u, 'USD')
 

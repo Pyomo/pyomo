@@ -12,93 +12,104 @@
 
 """Pyomo Units Container Module
 
-.. warning:: This module is in beta and is not yet complete.
+This module provides support for including units within Pyomo expressions. This module
+can be used to define units on a model, and to check the consistency of units
+within the underlying constraints and expressions in the model. The module also
+supports conversion of units within expressions to support construction of constraints
+that contain embedded unit conversions.
 
-This module provides support for including units within Pyomo expressions, and provides
-methods for checking the consistency of units within those expresions.
-
-To use this package within your Pyomo model, you first need an instance of a PyomoUnitsContainer.
-You can use the module level instance obtained by calling `:func:units()`.
-
-Examples: 
-    To use a unit within an expression, simply reference the desired
-    unit as an attribute on the PyomoUnitsContainer. This module has a
-    singleton units container that can be accessed with the module
-    function `:func:units()`.
+To use this package within your Pyomo model, you first need an instance of a
+PyomoUnitsContainer. You can use the module level instance already defined as
+'units'. This object 'contains' the units - that is, you can access units on
+this module using common notation.
 
     .. doctest::
 
-       >>> # import components and units module level function
-       >>> from pyomo.environ import ConcreteModel, Var, Objective, units
-       >>> un = units()
+       >>> from pyomo.environ import units as u
+       >>> print(3.0*u.kg)
+       3.0*kg
+
+Units can be assigned to Var, Param, and ExternalFunction components, and can
+be used directly in expressions (e.g., defining constraints). You can also
+verify that the units are consistent on a model, or on individual components
+like the objective function, constraint, or expression using
+`assert_units_consistent`. There are other methods that may be helpful
+for verifying correct units on a model.
+
+    .. doctest::
+
+       >>> from pyomo.environ import ConcreteModel, Var, Objective
+       >>> from pyomo.environ import units as u
        >>> model = ConcreteModel()
-       >>> model.acc = Var()
-       >>> model.obj = Objective(expr=(model.acc*un.m/un.s**2 - 9.81*un.m/un.s**2)**2)
-       >>> print(un.get_units(model.obj.expr))
+       >>> model.acc = Var(initialize=5.0, units=u.m/u.s**2)
+       >>> model.obj = Objective(expr=(model.acc - 9.81*u.m/u.s**2)**2)
+       >>> u.assert_units_consistent(model.obj) # raise exc if units invalid on obj
+       >>> u.assert_units_consistent(model) # raise exc if units invalid anywhere on the model
+       >>> u.assert_units_equivalent(model.obj.expr, u.m**2/u.s**4) # raise exc if units not equivalent
+       >>> print(u.get_units(model.obj.expr)) # print the units on the objective
        m ** 2 / s ** 4
+       >>> print(u.check_units_equivalent(model.acc.get_units(), u.m/u.s**2))
+       True
 
-.. note:: This module has a module level instance of a PyomoUnitsContainer that you can access using
-          `:func:units()`. This should typically be used for creating, retreiving, and checking units
+The implementation is currently based on the `pint
+<http://pint.readthedocs.io>`_ package and supports all the units that
+are supported by pint.  The list of units that are supported by pint
+can be found at the following url:
+https://github.com/hgrecco/pint/blob/master/pint/default_en.txt.
 
-.. note:: This is a work in progress. Once the components units implementations are complete, the units will eventually
-          work similar to the following.
+If you need a unit that is not in the standard set of defined units,
+you can create your own units by adding to the unit definitions within
+pint. See :method:`PyomoUnitsContainer.load_definitions_from_file` or
+:method:`PyomoUnitsContainer.load_definitions_from_strings` for more
+information.
 
-          .. code-block:: python
+.. note:: In this implementation of units, "offset" units for
+          temperature are not supported within expressions (i.e. the
+          non-absolute temperature units including degrees C and
+          degrees F).  This is because there are many non-obvious
+          combinations that are not allowable. This concern becomes
+          clear if you first convert the non-absolute temperature
+          units to absolute and then perform the operation. For
+          example, if you write 30 degC + 30 degC == 60 degC, but
+          convert each entry to Kelvin, the expression is not true
+          (i.e., 303.15 K + 303.15 K is not equal to 333.15
+          K). Therefore, there are several operations that are not
+          allowable with non-absolute units, including addition,
+          multiplication, and division.
 
-             from pyomo.environ import ConcreteModel, Var, Objective, units
-             un = units()
-             model = ConcreteModel()
-             model.x = Var(units=un.kg/un.m)
-             model.obj = Objective(expr=(model.x - 97.2*un.kg/un.m)**2)
+          This module does support conversion of offset units to
+          absolute units numerically, using convert_value_K_to_C,
+          convert_value_C_to_K, convert_value_R_to_F,
+          convert_value_F_to_R.  These are useful for converting input
+          data to absolute units, and for converting data to
+          convenient units for reporting.
 
-Notes:
-    * The implementation is currently based on the `pint <http://pint.readthedocs.io>`_
-      package and supports all the units that are supported by pint.
-    * The list of units that are supported by pint can be found at
-      the following url: https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
-    * Currently, we do NOT test units of unary functions that include native data types
-      e.g. explicit float (3.0) since these are removed by the expression system
-      before getting to the code that checks the units.
-
-.. note:: In this implementation of units, "offset" units for temperature are not supported within
-          expressions (i.e. the non-absolute temperature units including degrees C and degrees F).
-          This is because there are many non-obvious combinations that are not allowable. This
-          concern becomes clear if you first convert the non-absolute temperature units to absolute
-          and then perform the operation. For example, if you write 30 degC + 30 degC == 60 degC,
-          but convert each entry to Kelvin, the expression is not true (i.e., 303.15 K + 303.15 K
-          is not equal to 333.15 K). Therefore, there are several operations that are not allowable
-          with non-absolute units, including addition, multiplication, and division.
-
-          This module does support conversion of offset units to abslute units numerically, using
-          convert_value_K_to_C, convert_value_C_to_K, convert_value_R_to_F, convert_value_F_to_R. These are useful for
-          converting input data to absolute units, and for converting data to convenient units for
-          reporting.
-
-          Please see the pint documentation `here <https://pint.readthedocs.io/en/0.9/nonmult.html>`_
-          for more discussion. While pint implements "delta" units (e.g., delta_degC) to support correct
-          unit conversions, it can be difficult to identify and guarantee valid operations in a general
-          algebraic modeling environment. While future work may support units with relative scale, the current
-          implementation requires use of absolute temperature units (i.e. K and R) within expressions and
-          a direct conversion of numeric values using specific functions for converting input data and reporting.
+          Please see the pint documentation `here
+          <https://pint.readthedocs.io/en/0.9/nonmult.html>`_ for more
+          discussion. While pint implements "delta" units (e.g.,
+          delta_degC) to support correct unit conversions, it can be
+          difficult to identify and guarantee valid operations in a
+          general algebraic modeling environment. While future work
+          may support units with relative scale, the current
+          implementation requires use of absolute temperature units
+          (i.e. K and R) within expressions and a direct conversion of
+          numeric values using specific functions for converting input
+          data and reporting.
 
 """
 # TODO
-#    * implement specific functions for converting numeric values of absolute temperatures
-#    * implement convert functionality
 #    * create a new pint unit definition file (and load from that file)
-#      since the precision in pint seems insufficient for 1e-8 constraint tolerances
-#    * clean up use of unit and units in the naming
-#    * implement and test pickling and un-pickling
-#    * implement ignore_unit(x, expected_unit) that returns a dimensionless version of the expression
-#      (Note that this may need to be a special expression object that may appear in the tree)
-#    * Add units capabilities to Var and Param
-#    * Investigate issues surrounding absolute and relative temperatures (delta units)
-#    * Implement external function interface that specifies units for the arguments and the function itself
-
+#       since the precision in pint seems insufficient for 1e-8 constraint tolerances
+#    * Investigate when we can and cannot handle offset units and expand capabilities if possible
+#    * Further investigate issues surrounding absolute and relative temperatures (delta units)
+#    * Extend external function interface to support units for the arguments in addition to the function itself
 
 import six
 from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value, native_numeric_types
 from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.objective import Objective
+from pyomo.core.base.block import Block, SubclassOf
+from pyomo.core.base.expression import Expression
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.external import ExternalFunction
@@ -135,7 +146,7 @@ class _PyomoUnit(NumericValue):
 
     Users should not create instances of _PyomoUnit directly, but rather access
     units as attributes on an instance of a :class:`PyomoUnitsContainer`.
-    This module contains a global PyomoUnitContainer :py:data:`units`.
+    This module contains a global PyomoUnitsContainer object :py:data:`units`.
     See module documentation for more information.
     """
     def __init__(self, pint_unit, pint_registry):
@@ -384,8 +395,9 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
     def __init__(self, pyomo_units_container, units_equivalence_tolerance=1e-12):
         """
         Visitor class used to determine units of an expression. Do not use
-        this class directly, but rather use :func:`get_units` or
-        :func:`check_units_consistency`.
+        this class directly, but rather use
+        :method:`PyomoUnitsContainer.assert_units_consistent`
+        or :method:`PyomoUnitsContainer.get_units`
 
         Parameters
         ----------
@@ -754,9 +766,9 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
     def _get_units_with_dimensionless_children(self, node, list_of_unit_tuples):
         """
-        Check to make sure that any child arguments are unitless / dimensionless
-        and return the value from node.get_units()
-        This was written for ExternalFunctionExpression where the external
+        Check to make sure that any child arguments are unitless /
+        dimensionless and return the value from node.get_units() This
+        was written for ExternalFunctionExpression where the external
         function has units assigned to its return value.
 
         Parameters
@@ -771,6 +783,7 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         Returns
         -------
         : tuple (pyomo_unit, pint_unit)
+
         """
         for (pyomo_unit, pint_unit) in list_of_unit_tuples:
             if not self._pint_unit_equivalent_to_dimensionless(pint_unit):
@@ -781,10 +794,11 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
     def _get_dimensionless_with_dimensionless_children(self, node, list_of_unit_tuples):
         """
-        Check to make sure that any child arguments are unitless / dimensionless (for functions like exp())
-        and return (None, None) if successful. Although odd that this does not just return
-        a boolean, it is done this way to match the signature of the other methods used to get
-        units for expressions.
+        Check to make sure that any child arguments are unitless /
+        dimensionless (for functions like exp()) and return (None,
+        None) if successful. Although odd that this does not just
+        return a boolean, it is done this way to match the signature
+        of the other methods used to get units for expressions.
 
         Parameters
         ----------
@@ -798,6 +812,7 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         Returns
         -------
         : tuple (None, None)
+
         """
         for (pyomo_unit, pint_unit) in list_of_unit_tuples:
             if not self._pint_unit_equivalent_to_dimensionless(pint_unit):
@@ -1094,9 +1109,9 @@ class PyomoUnitsContainer(object):
 
     This is the class that is used to create, contain, and interact
     with units in Pyomo.  The module
-    (:mod:`pyomo.core.base.units_container`) also contains a function
-    `:func:units()` that returns a singleton instance of a
-    PyomoUnitsContainer. This singleton should typically be used
+    (:mod:`pyomo.core.base.units_container`) also contains a module
+    level units container :py:data:`units` that is an instance of a
+    PyomoUnitsContainer. This module instance should typically be used
     instead of creating your own instance of a
     :py:class:`PyomoUnitsContainer`.  For an overview of the usage of
     this class, see the module documentation
@@ -1115,23 +1130,38 @@ class PyomoUnitsContainer(object):
         self._pint_registry = pint_module.UnitRegistry()
 
     def load_definitions_from_file(self, definition_file):
-        """ This method loads additional units definitions from a user specified
-        definition file. An example of a definitions file can be found at:
+        """
+        This method loads additional units definitions from a user
+        specified definition file. An example of a definitions file
+        can be found at:
         https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
 
         Example
         -------
-        >>> u.load_additional_definitions('my_additional_units.txt')
+        If we have a file called my_additional_units.txt with the
+        following lines:
+
+        ``usd = [currency]``
+
+        Then we can add this to the container with:
+
+        >>> u.load_definitions_from_file('my_additional_units.txt')
+        >>> print(u.USD)
+        USD
         """
         self._pint_registry.load_definitions(definition_file)
 
-    def load_definitions_from_string(self, definition_string_list):
-        """ This method loads additional units definitions from a list of strings
-        (one for each line). An example of the definitions strings can be found at:
+    def load_definitions_from_strings(self, definition_string_list):
+        """
+        This method loads additional units definitions from a list of
+        strings (one for each line). An example of the definitions
+        strings can be found at:
         https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
 
         For example, to add the currency dimension and US dollars as a unit, use
-        >>> u.load_additional_definitions(['USD = [currency]'])
+        >>> u.load_definitions_from_strings(['USD = [currency]'])
+        >>> print(u.USD)
+        USD
         """
         self._pint_registry.load_definitions(definition_string_list)
 
@@ -1177,10 +1207,7 @@ class PyomoUnitsContainer(object):
         if pint_unit is None:
             raise AttributeError('Attribute {0} not found.'.format(str(item)))
 
-    def create_PyomoUnit(self, pint_unit):
-        return _PyomoUnit(pint_unit, self._pint_registry)
-
-    # TODO: Add support to specify a units definition file instead of this programatic interface
+    # We added support to specify a units definition file instead of this programatic interface
     # def create_new_base_dimension(self, dimension_name, base_unit_name):
     #     """
     #     Use this method to create a new base dimension (e.g. a new dimension other than Length, Mass) for the unit manager.
@@ -1283,96 +1310,6 @@ class PyomoUnitsContainer(object):
         # visitor code to only track the pint units
         return pyomo_unit
 
-    def check_units_consistency(self, expr, allow_exceptions=True):
-        """
-        Check the consistency of the units within an expression. IF allow_exceptions is False,
-        then this function swallows the exception and returns only True or False. Otherwise,
-        it will throw an exception if the units are inconsistent.
-
-        Parameters
-        ----------
-        expr : Pyomo expression
-            The source expression to check.
-
-        allow_exceptions: bool
-            True if you want any exceptions to be thrown, False if you only want a boolean
-            (and the exception is ignored).
-
-        Returns
-        -------
-        : bool
-           True if units are consistent, and False if not
-
-        Raises
-        ------
-        :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
-
-        """
-        try:
-            pyomo_unit, pint_unit = self._get_units_tuple(expr=expr)
-        except (UnitsError, InconsistentUnitsError):
-            if allow_exceptions:
-                raise
-            return False
-
-        return True
-
-
-    def check_units_equivalent(self, expr1, expr2):
-        """
-        Check if the units associated with each of the expressions are equivalent.
-
-        Parameters
-        ----------
-        expr1 : Pyomo expression
-           The first expression.
-        expr2 : Pyomo expression
-           The second expression.
-
-        Returns
-        -------
-        : bool
-           True if the expressions have equivalent units, False otherwise.
-
-        Raises
-        ------
-        :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
-
-        """
-        pyomo_unit1, pint_unit1 = self._get_units_tuple(expr1)
-        pyomo_unit2, pint_unit2 = self._get_units_tuple(expr2)
-        return _UnitExtractionVisitor(self)._pint_units_equivalent(pint_unit1, pint_unit2)
-
-    def check_all_units_equivalent(self, *args):
-        """
-        Check if the units associated with each of the expressions are equivalent.
-
-        Parameters
-        ----------
-        args : an argument list of Pyomo expressions
-
-        Returns
-        -------
-        : bool
-           True if all the expressions have equivalent units, False otherwise.
-
-        Raises
-        ------
-        :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
-
-        """
-        if len(args) < 2:
-            raise UnitsError("check_all_units_equivalent called with less than two arguments.")
-
-        pyomo_unit_compare, pint_unit_compare = self._get_units_tuple(args[0])
-        for expr in args[1:]:
-            pyomo_unit, pint_unit = self._get_units_tuple(expr)
-            if not _UnitExtractionVisitor(self)._pint_units_equivalent(pint_unit_compare, pint_unit):
-                return False
-            
-        # got through all arguments with no failures - they must all be equivalent
-        return True
-
     def _pint_convert_temp_from_to(self, numerical_value, pint_from_units, pint_to_units):
         if type(numerical_value) not in native_numeric_types:
             raise UnitsError('Conversion routines for absolute and relative temperatures require a numerical value only.'
@@ -1384,37 +1321,45 @@ class PyomoUnitsContainer(object):
         return dest_quantity.magnitude
         
     def convert_temp_K_to_C(self, value_in_K):
-        """Convert a value in Kelvin to degrees Celcius.
-        Note that this method converts a numerical value only. If you need temperature conversions in expressions,
-        please work in absolute temperatures only.
+        """
+        Convert a value in Kelvin to degrees Celcius.  Note that this method
+        converts a numerical value only. If you need temperature
+        conversions in expressions, please work in absolute
+        temperatures only.
         """
         return self._pint_convert_temp_from_to(value_in_K, self._pint_registry.K, self._pint_registry.degC)
 
     def convert_temp_C_to_K(self, value_in_C):
-        """Convert a value in degrees Celcius to Kelvin
-        Note that this method converts a numerical value only. If you need temperature conversions in expressions,
-        please work in absolute temperatures only.
+        """
+        Convert a value in degrees Celcius to Kelvin Note that this
+        method converts a numerical value only. If you need
+        temperature conversions in expressions, please work in
+        absolute temperatures only.
         """
         return self._pint_convert_temp_from_to(value_in_C, self._pint_registry.degC, self._pint_registry.K)
 
     def convert_temp_R_to_F(self, value_in_R):
-        """Convert a value in Rankine to degrees Fahrenheit.
-        Note that this method converts a numerical value only. If you need temperature conversions in expressions,
-        please work in absolute temperatures only.
+        """
+        Convert a value in Rankine to degrees Fahrenheit.  Note that
+        this method converts a numerical value only. If you need
+        temperature conversions in expressions, please work in
+        absolute temperatures only.
         """
         return self._pint_convert_temp_from_to(value_in_R, self._pint_registry.rankine, self._pint_registry.degF)
 
     def convert_temp_F_to_R(self, value_in_F):
-        """Convert a value in degrees Fahrenheit to Rankine.
-        Note that this method converts a numerical value only. If you need temperature conversions in expressions,
-        please work in absolute temperatures only.
+        """
+        Convert a value in degrees Fahrenheit to Rankine.  Note that
+        this method converts a numerical value only. If you need
+        temperature conversions in expressions, please work in
+        absolute temperatures only.
         """
         return self._pint_convert_temp_from_to(value_in_F, self._pint_registry.degF, self._pint_registry.rankine)
 
     def convert(self, src, to_units=None):
         """
-        This method returns an expression that represents the conversion
-        from one unit to another.
+        This method returns an expression that contains the
+        explicit conversion from one unit to another.
 
         Parameters
         ----------
@@ -1427,7 +1372,6 @@ class PyomoUnitsContainer(object):
         Returns
         -------
            ret : Pyomo expression
-
         """
         src_pyomo_unit, src_pint_unit = self._get_units_tuple(src)
         to_pyomo_unit, to_pint_unit = self._get_units_tuple(to_units)
@@ -1458,9 +1402,8 @@ class PyomoUnitsContainer(object):
 
     def convert_value(self, num_value, from_units=None, to_units=None):
         """
-        This method performs explicit conversion of a numerical value (or
-        expression evaluated to a numerical value) from one unit to
-        another, and returns the new value.
+        This method performs explicit conversion of a numerical value
+        from one unit to another, and returns the new value.
 
         The argument "num_value" must be a native numeric type (e.g. float).
         Note that this method returns a numerical value only, and not an
@@ -1498,7 +1441,12 @@ class PyomoUnitsContainer(object):
         dest_quantity = src_quantity.to(to_pint_unit)
         return dest_quantity.magnitude
 
-    def check_constraint_data_units(self, condata):
+    def _assert_units_consistent_constraint_data(self, condata):
+        """
+        Raise an exception if the any units in lower, body, upper on a
+        ConstraintData object are not consistent or are not equivalent
+        with each other.
+        """
         if condata.equality:
             if condata.lower == 0.0:
                 # Pyomo can rearrange expressions, resulting in a value
@@ -1508,24 +1456,129 @@ class PyomoUnitsContainer(object):
                 # ToDo: If we modify the constraint to keep the original
                 # expression, we should verify against that instead
                 assert condata.upper == 0.0
-                return self.check_units_consistency(condata.body)
-            return self.check_all_units_equivalent(condata.lower, condata.body)
-        return self.check_all_units_equivalent(condata.lower, condata.body, condata.upper)
+                self._assert_units_consistent_expression(condata.body)
+            else:
+                self.assert_units_equivalent(condata.lower, condata.body)
+        else:
+            self.assert_units_equivalent(condata.lower, condata.body, condata.upper)
 
-    def assert_model_units_consistent(self, model, active=True):
-        for cdata in model.component_data_objects(ctype=Constraint, descend_into=True, active=active, ):
-            if not self.check_constraint_data_units(cdata):
-                raise UnitsError("Units on constraint {} are not consistent.".format(cdata))
+    def _assert_units_consistent_expression(self, expr):
+        """
+        Raise an exception if any units in expr are inconsistent.
 
-# Define a module level instance (singleton) of a
-# PyomoUnitsContainer to use for all units within
-# a Pyomo model. If pint is not available, this will
-# cause an error at the first usage
-# See module level documentation for an example.
+        Parameters
+        ----------
+        expr : Pyomo expression
+            The source expression to check.
+
+        Raises
+        ------
+        :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
+
+        """
+        # this call will raise an error if an inconsistency is found
+        pyomo_unit, pint_unit = self._get_units_tuple(expr=expr)
+
+    def check_units_equivalent(self, *args):
+        """
+        Returns True if the units associated with each of the
+        expressions passed as arguments are all equivalent (and False
+        otherwise).
+
+        Note that this method will raise an exception if the units are
+        inconsistent within an expression (since the units for that
+        expression are not valid).
+
+        Parameters
+        ----------
+        args : an argument list of Pyomo expressions
+
+        Returns
+        -------
+        bool : True if all the expressions passed as argments have the same units
+        """
+        pyomo_unit_compare, pint_unit_compare = self._get_units_tuple(args[0])
+        for expr in args[1:]:
+            pyomo_unit, pint_unit = self._get_units_tuple(expr)
+            if not _UnitExtractionVisitor(self)._pint_units_equivalent(pint_unit_compare, pint_unit):
+                return False
+        # made it through all of them successfully
+        return True
+
+    def assert_units_equivalent(self, *args):
+        """
+        Raise an exception if the units are inconsistent within an
+        expression, or not equivalent across all the passed
+        expressions.
+
+        Parameters
+        ----------
+        args : an argument list of Pyomo expressions
+            The Pyomo expressions to test
+
+        Raises
+        ------
+        :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
+        """
+        # this call will raise an exception if an inconsistency is found
+        pyomo_unit_compare, pint_unit_compare = self._get_units_tuple(args[0])
+        for expr in args[1:]:
+            # this call will raise an exception if an inconsistency is found
+            pyomo_unit, pint_unit = self._get_units_tuple(expr)
+            if not _UnitExtractionVisitor(self)._pint_units_equivalent(pint_unit_compare, pint_unit):
+                raise UnitsError("Units between {} and {} are not consistent.".format(str(pyomo_unit_compare), str(pyomo_unit)))
+
+    def assert_units_consistent(self, obj):
+        """
+        This method raises an exception if the units are not
+        consistent on the passed in object.  Argument obj can be one
+        of the following components: Pyomo Block (or Model),
+        Constraint, Objective, Expression, or it can be a Pyomo
+        expression object
+
+        Paramters
+        ---------
+        obj : Pyomo component (Block, Model, Constraint, Objective, or Expression) or Pyomo expression
+           The object or expression to test
+
+        Raises
+        ------
+        :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
+        """
+        if isinstance(obj, Block):
+            # check all the constraints, objectives, and Expression objects
+            for cdata in obj.component_data_objects(ctype=SubclassOf(Constraint), descend_into=True):
+                self._assert_units_consistent_constraint_data(cdata)
+
+            for data in obj.component_data_objects(ctype=(SubclassOf(Objective), SubclassOf(Expression)), descend_into=True):
+                self._assert_units_consistent_expression(data.expr)
+
+        elif isinstance(obj, Constraint):
+            if obj.is_indexed():
+                for cdata in obj.values():
+                    self._assert_units_consistent_constraint_data(cdata)
+            else:
+                self._assert_units_consistent_constraint_data(obj)
+
+        elif isinstance(obj, Objective) or isinstance(obj, Expression):
+            if obj.is_indexed():
+                for data in obj.values():
+                    self._assert_units_consistent_expression(data.expr)
+            else:
+                self._assert_units_consistent_expression(obj.expr)
+        else:
+            # doesn't appear to be one of the components: Block, Constraint, Objective, or Expression
+            # therefore, let's just check the units of the object itself
+            self._assert_units_consistent_expression(obj)
+
+
+# Define a module level instance of a PyomoUnitsContainer to use for
+# all units within a Pyomo model. If pint is not available, this will
+# cause an error at the first usage See module level documentation for
+# an example.
 if pint_available:
     units = PyomoUnitsContainer()
 else:
     # pint not available, assign the ModuleUnavailable object
     # to the singleton
     units = pint_module
-
