@@ -42,24 +42,28 @@ def _raise_modifying_immutable_error(obj, index):
         "declare the parameter as mutable [i.e., Param(mutable=True)]"
         % (name,))
 
-class _ImplicitAnyClass(Any.__class__):
+class _ImplicitAny(Any.__class__):
     """An Any that issues a deprecation warning for non-Real values.
 
     This is a helper class to implement the deprecation warnings for the
     change of Param's implicit domain from Any to Reals.
 
     """
+    def __init__(self, owner, **kwds):
+        super(_ImplicitAny, self).__init__(**kwds)
+        self._owner = weakref_ref(owner)
+
     def __contains__(self, val):
         if val not in Reals:
             deprecation_warning(
                 "The default domain for Param objects is 'Any'.  However, "
                 "we will be changing that default to 'Reals' in the "
-                "future.  If you really intend the domain of this Param "
+                "future.  If you really intend the domain of this Param (%s) "
                 "to be 'Any', you can suppress this warning by explicitly "
-                "specifying 'within=Any' to the Param constructor.",
+                "specifying 'within=Any' to the Param constructor."
+                % (self._owner().name,),
                 version='TBD', remove_in='6.0')
         return True
-_ImplicitAny = _ImplicitAnyClass(name='Any')
 
 class _NotValid(object):
     """A dummy type that is pickle-safe that we can use as the default
@@ -243,7 +247,7 @@ class Param(IndexedComponent):
                 "The 'repn' keyword is not a validate keyword argument for Param")
         #
         if self.domain is None:
-            self.domain = _ImplicitAny
+            self.domain = _ImplicitAny(owner=self, name='Any')
         #
         kwd.setdefault('ctype', Param)
         IndexedComponent.__init__(self, *args, **kwd)
