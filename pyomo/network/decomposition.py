@@ -23,8 +23,8 @@ import copy, logging, time
 from six import iteritems, itervalues
 
 from pyomo.common.dependencies import (
-    networkx as nx, networkx_available
-    numpy, numpy_available
+    networkx as nx, networkx_available,
+    numpy, numpy_available,
 )
 
 imports_available = networkx_available & numpy_available
