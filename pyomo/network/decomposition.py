@@ -22,7 +22,12 @@ from pyutilib.misc import Options
 import copy, logging, time
 from six import iteritems, itervalues
 
-from pyomo.common.dependencies import networkx as nx, numpy
+from pyomo.common.dependencies import (
+    networkx as nx, networkx_available
+    numpy, numpy_available
+)
+
+imports_available = networkx_available & numpy_available
 
 logger = logging.getLogger('pyomo.network')
 
