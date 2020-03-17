@@ -414,7 +414,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             # to start with a letter.  We will (randomly) choose "s_"
             # (for 'shortened')
             var_labeler = con_labeler = ShortNameLabeler(
-                63, prefix='s_', suffix='_', caseInsensitive=True,
+                60, prefix='s_', suffix='_', caseInsensitive=True,
                 legalRegex='^[a-zA-Z]')
         elif labeler is None:
             var_labeler = NumericLabeler('x')
