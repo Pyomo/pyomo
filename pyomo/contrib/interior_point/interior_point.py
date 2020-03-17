@@ -11,9 +11,21 @@ import time
 logger = logging.getLogger('interior_point')
 
 
-def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
+def solve_interior_point(interface, linear_solver, max_iter=100, tol=1e-8):
+    """
+    Parameters
+    ----------
+    interface: pyomo.contrib.interior_point.interface.BaseInteriorPointInterface
+        The interior point interface. This object handles the function evaluation, 
+        building the KKT matrix, and building the KKT right hand side.
+    linear_solver: pyomo.contrib.interior_point.linalg.base_linear_solver_interface.LinearSolverInterface
+        A linear solver with the interface defined by LinearSolverInterface.
+    max_iter: int
+        The maximum number of iterations
+    tol: float
+        The tolerance for terminating the algorithm.
+    """
     t0 = time.time()
-    interface = InteriorPointInterface(pyomo_model)
     primals = interface.init_primals().copy()
     slacks = interface.init_slacks().copy()
     duals_eq = interface.init_duals_eq().copy()
@@ -77,7 +89,6 @@ def solve_interior_point(pyomo_model, max_iter=100, tol=1e-8):
         interface.set_barrier_parameter(barrier_parameter)
         kkt = interface.evaluate_primal_dual_kkt_matrix()
         rhs = interface.evaluate_primal_dual_kkt_rhs()
-        linear_solver = MumpsInterface()  # icntl_options={1: 6, 2: 6, 3: 6, 4: 4})
         linear_solver.do_symbolic_factorization(kkt)
         linear_solver.do_numeric_factorization(kkt)
         delta = linear_solver.do_back_solve(rhs)
