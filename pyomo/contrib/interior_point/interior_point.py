@@ -1,6 +1,4 @@
 from pyomo.contrib.interior_point.interface import InteriorPointInterface, BaseInteriorPointInterface
-from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
-from pyomo.contrib.interior_point.linalg.scipy_interface import ScipyInterface
 from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix
 from scipy.sparse import tril, coo_matrix, identity
 import numpy as np
