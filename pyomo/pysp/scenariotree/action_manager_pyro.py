@@ -100,7 +100,7 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
                 break
 
             try:
-                dispatchers = pyutilib.pyro.util.get_dispatchers(
+                dispatchers = pyu_pyro.util.get_dispatchers(
                     host=self.host,
                     port=self.port,
                     caller_name="Client")
