@@ -13,9 +13,17 @@ except:
     numpy_available = False
 
 
+ipopt_opt = pe.SolverFactory('ipopt')
+ipopt_available = ipopt_opt.available()
+
+cplex_opt = pe.SolverFactory('cplex_direct')
+cplex_available = cplex_opt.available()
+
+
 class TestBenders(unittest.TestCase):
     @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
+    @unittest.skipIf(not ipopt_available, 'ipopt is not available.')
     def test_grothey(self):
         def create_master():
             m = pe.ConcreteModel()
@@ -58,6 +66,7 @@ class TestBenders(unittest.TestCase):
 
     @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
+    @unittest.skipIf(not cplex_available, 'cplex is not available.')
     def test_farmer(self):
         class Farmer(object):
             def __init__(self):
@@ -166,6 +175,7 @@ class TestBenders(unittest.TestCase):
 class MPITestBenders(unittest.TestCase):
     @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
+    @unittest.skipIf(not cplex_available, 'cplex is not available.')
     def test_farmer(self):
         class Farmer(object):
             def __init__(self):
@@ -271,6 +281,7 @@ class MPITestBenders(unittest.TestCase):
 
     @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
+    @unittest.skipIf(not ipopt_available, 'ipopt is not available.')
     def test_grothey(self):
         def create_master():
             m = pe.ConcreteModel()
@@ -313,6 +324,7 @@ class MPITestBenders(unittest.TestCase):
 
     @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
+    @unittest.skipIf(not cplex_available, 'cplex is not available.')
     def test_four_scen_farmer(self):
         class FourScenFarmer(object):
             def __init__(self):
