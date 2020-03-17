@@ -7,7 +7,7 @@ from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.data_class import SubproblemResult
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
-                                       is_feasible)
+                                       is_feasible, get_main_elapsed_time)
 from pyomo.core import Constraint, TransformationFactory, minimize, value, Objective
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.component_set import ComponentSet
@@ -41,7 +41,15 @@ def solve_linear_subproblem(mip_model, solve_data, config):
     if not mip_solver.available():
         raise RuntimeError("MIP solver %s is not available." % config.mip_solver)
     with SuppressInfeasibleWarning():
-        results = mip_solver.solve(mip_model, **config.mip_solver_args)
+        mip_args = dict(config.mip_solver_args)
+        elapsed = get_main_elapsed_time(solve_data.timing)
+        remaining = max(config.time_limit - elapsed, 1)
+        if config.mip_solver == 'gams':
+            mip_args['add_options'] = mip_args.get('add_options', [])
+            mip_args['add_options'].append('option reslim=%s;' % remaining)
+        elif config.mip_solver == 'multisolve':
+            mip_args['time_limit'] = min(mip_args.get('time_limit', float('inf')), remaining)
+        results = mip_solver.solve(mip_model, **mip_args)
 
     subprob_result = SubproblemResult()
     subprob_result.feasible = True
@@ -96,7 +104,15 @@ def solve_NLP(nlp_model, solve_data, config):
                            config.nlp_solver)
     with SuppressInfeasibleWarning():
         try:
-            results = nlp_solver.solve(nlp_model, **config.nlp_solver_args)
+            nlp_args = dict(config.nlp_solver_args)
+            elapsed = get_main_elapsed_time(solve_data.timing)
+            remaining = max(config.time_limit - elapsed, 1)
+            if config.nlp_solver == 'gams':
+                nlp_args['add_options'] = nlp_args.get('add_options', [])
+                nlp_args['add_options'].append('option reslim=%s;' % remaining)
+            elif config.nlp_solver == 'multisolve':
+                nlp_args['time_limit'] = min(nlp_args.get('time_limit', float('inf')), remaining)
+            results = nlp_solver.solve(nlp_model, **nlp_args)
         except ValueError as err:
             if 'Cannot load a SolverResults object with bad status: error' in str(err):
                 results = SolverResults()
@@ -187,7 +203,15 @@ def solve_MINLP(model, solve_data, config):
         raise RuntimeError("MINLP solver %s is not available." %
                            config.minlp_solver)
     with SuppressInfeasibleWarning():
-        results = minlp_solver.solve(model, **config.minlp_solver_args)
+        minlp_args = dict(config.minlp_solver_args)
+        elapsed = get_main_elapsed_time(solve_data.timing)
+        remaining = max(config.time_limit - elapsed, 1)
+        if config.minlp_solver == 'gams':
+            minlp_args['add_options'] = minlp_args.get('add_options', [])
+            minlp_args['add_options'].append('option reslim=%s;' % remaining)
+        elif config.minlp_solver == 'multisolve':
+            minlp_args['time_limit'] = min(minlp_args.get('time_limit', float('inf')), remaining)
+        results = minlp_solver.solve(model, **minlp_args)
 
     subprob_result = SubproblemResult()
     subprob_result.feasible = True
@@ -208,6 +232,14 @@ def solve_MINLP(model, solve_data, config):
         # value?
         config.logger.info(
             'MINLP subproblem failed to converge within iteration limit.')
+        if is_feasible(model, config):
+            config.logger.info(
+                'MINLP solution is still feasible. '
+                'Using potentially suboptimal feasible solution.')
+        else:
+            subprob_result.feasible = False
+    elif term_cond == tc.maxTimeLimit:
+        config.logger.info('MINLP subproblem failed to converge within time limit.')
         if is_feasible(model, config):
             config.logger.info(
                 'MINLP solution is still feasible. '

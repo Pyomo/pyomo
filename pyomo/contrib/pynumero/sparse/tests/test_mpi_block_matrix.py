@@ -7,49 +7,51 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
+import warnings
 import pyutilib.th as unittest
 
-import pyomo.contrib.pynumero as pn
-if not (pn.sparse.numpy_available and pn.sparse.scipy_available):
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run BlockVector tests")
+from pyomo.contrib.pynumero import (
+    numpy_available, scipy_available, numpy as np
+)
 
-from scipy.sparse import coo_matrix, bmat
-import numpy as np
+SKIPTESTS=[]
+if numpy_available and scipy_available:
+    from scipy.sparse import coo_matrix, bmat
+else:
+    SKIPTESTS.append(
+        "Pynumero needs scipy and numpy>=1.13.0 to run BlockMatrix tests"
+    )
 
 try:
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
     if comm.Get_size() < 3:
-        raise unittest.SkipTest(
-            "These tests need at least 3 processors")
+        SKIPTESTS.append(
+            "Pynumero needs at least 3 processes to run BlockMatrix MPI tests"
+        )
 except ImportError:
-    raise unittest.SkipTest(
-        "Pynumero needs mpi4py to run mpi block matrix tests")
+    SKIPTESTS.append("Pynumero needs mpi4py to run BlockMatrix MPI tests")
 
-try:
+if not SKIPTESTS:
+    from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
     from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
-except ImportError:
-    raise unittest.SkipTest(
-        "Pynumero needs mpi4py to run mpi block matrix tests")
-try:
-    from pyomo.contrib.pynumero.sparse.mpi_block_matrix import (MPIBlockMatrix, NotFullyDefinedBlockMatrixError)
-except ImportError:
-    raise unittest.SkipTest(
-        "Pynumero needs mpi4py to run mpi block matrix tests")
+    from pyomo.contrib.pynumero.sparse.mpi_block_matrix import (
+        MPIBlockMatrix, NotFullyDefinedBlockMatrixError
+    )
 
-from pyomo.contrib.pynumero.sparse import (BlockVector,
-                                           BlockMatrix)
-import warnings
 
-@unittest.skipIf(comm.Get_size() < 3, "Need at least 3 processors to run tests")
+@unittest.category("mpi")
 class TestMPIBlockMatrix(unittest.TestCase):
 
+    # Because the setUpClass is called before decorators around the
+    # class itself, we need to put the skipIf on the class setup and not
+    # the class.
+
     @classmethod
+    @unittest.skipIf(SKIPTESTS, SKIPTESTS)
     def setUpClass(cls):
         # test problem 1
-
-        if comm.Get_size() < 3:
-            raise unittest.SkipTest("Need at least 3 processors to run tests")
 
         row = np.array([0, 3, 1, 2, 3, 0])
         col = np.array([0, 0, 1, 2, 3, 3])

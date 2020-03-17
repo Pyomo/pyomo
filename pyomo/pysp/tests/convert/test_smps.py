@@ -16,6 +16,7 @@ import difflib
 import filecmp
 import shutil
 import subprocess
+import sys
 import pyutilib.subprocess
 import pyutilib.services
 import pyutilib.th as unittest
@@ -74,7 +75,7 @@ class TestConvertSMPSSimple(unittest.TestCase):
             shutil.rmtree(options['--output-directory'],
                           ignore_errors=True)
 
-        cmd = ['python','-m','pyomo.pysp.convert.smps']
+        cmd = [sys.executable,'-m','pyomo.pysp.convert.smps']
         for name, val in options.items():
             cmd.append(name)
             if val is not None:
@@ -247,7 +248,7 @@ class _SMPSTesterBase(object):
             shutil.rmtree(options['--output-directory'], ignore_errors=True)
 
     def _get_cmd(self):
-        cmd = ['python','-m','pyomo.pysp.convert.smps']
+        cmd = [sys.executable,'-m','pyomo.pysp.convert.smps']
         for name, val in self.options.items():
             cmd.append(name)
             if val is not None:

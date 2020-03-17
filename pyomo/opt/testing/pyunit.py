@@ -19,12 +19,6 @@ from inspect import getfile
 import pyutilib.th as unittest
 import pyutilib.subprocess
 
-try:
-    import yaml
-    using_yaml=True
-except ImportError:
-    using_yaml=False
-
 def _failIfPyomoResultsDiffer(self, cmd=None, baseline=None, cwd=None):
     if cwd is None:
         cwd = os.path.dirname(os.path.abspath(getfile(self.__class__)))
@@ -61,14 +55,10 @@ class TestCase(unittest.TestCase):
         unittest.TestCase.__init__(self, methodName)
 
     def failIfPyomoResultsDiffer(self, cmd, baseline, cwd=None):
-        if not using_yaml:
-            self.fail("Cannot compare Pyomo results because PyYaml is not installed")
         _failIfPyomoResultsDiffer(self, cmd=cmd, baseline=baseline, cwd=cwd)
 
     @unittest.nottest
     def add_pyomo_results_test(cls, name=None, cmd=None, fn=None, baseline=None, cwd=None):
-        if not using_yaml:
-            return
         if cmd is None and fn is None:
             print("ERROR: must specify either the 'cmd' or 'fn' option to define how the output file is generated")
             return

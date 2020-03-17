@@ -21,15 +21,10 @@ import pyutilib.th as unittest
 import pyutilib.misc
 import pyutilib.services
 
+from pyomo.common.dependencies import yaml_available
 import pyomo.opt
 
 from six import iterkeys
-
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
