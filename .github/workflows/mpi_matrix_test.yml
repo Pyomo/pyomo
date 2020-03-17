@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - par_benders_test
   pull_request:
     branches:
       - master
