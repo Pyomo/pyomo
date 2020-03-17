@@ -14,10 +14,10 @@ except:
 
 
 ipopt_opt = pe.SolverFactory('ipopt')
-ipopt_available = ipopt_opt.available()
+ipopt_available = ipopt_opt.available(exception_flag=False)
 
 cplex_opt = pe.SolverFactory('cplex_direct')
-cplex_available = cplex_opt.available()
+cplex_available = cplex_opt.available(exception_flag=False)
 
 
 class TestBenders(unittest.TestCase):
